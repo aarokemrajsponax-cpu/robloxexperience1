@@ -100,6 +100,7 @@ export type Panel = {
 }
 
 local stack: { Panel } = {}
+Root.sticky = { Round = true } :: { [string]: boolean }
 local dip: ((boolean) -> ())? = nil
 
 function Root.onDip(fn: (boolean) -> ())
@@ -222,7 +223,9 @@ ContextActionService:BindActionAtPriority("MaisonClosePanel", function(_, inputS
 	if inputState ~= Enum.UserInputState.Begin then
 		return Enum.ContextActionResult.Pass
 	end
-	if #stack > 0 then
+	local top = stack[#stack]
+	-- Decision panels (the round summary) stay until a choice is made.
+	if top and not Root.sticky[top.name] then
 		Root.close()
 		return Enum.ContextActionResult.Sink
 	end
