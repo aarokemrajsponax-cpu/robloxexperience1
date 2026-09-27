@@ -42,6 +42,18 @@ File names decide the script type:
 
 From then on, saving a file here updates Studio instantly.
 
+## Auto-sync from GitHub (easiest)
+
+In the project folder (the one with `rojo.exe`), open PowerShell and run:
+
+```powershell
+irm https://raw.githubusercontent.com/aarokemrajsponax-cpu/robloxexperience1/claude/nice-brown-a88p9r/play.ps1 | iex
+```
+
+Then click **Rojo → Connect** in Studio. It starts Rojo for you and pulls
+every new change from GitHub within a few seconds, so updates pushed to
+the branch show up in Studio without downloading anything by hand.
+
 ## Building a place file without Studio
 
 ```sh
