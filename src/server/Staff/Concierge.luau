@@ -1,0 +1,165 @@
+--!strict
+-- The Concierge: stands at the lectern, greets guests, walks new guests to the Salon,
+-- and answers when spoken to. Dry, warm, unhurried. Never runs.
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Layout = require(ReplicatedStorage.Shared.Layout)
+local Voice = require(ReplicatedStorage.Shared.Voice)
+local Dialogue = require(script.Parent.Parent.Dialogue)
+local Rig = require(script.Parent.Rig)
+
+local Concierge = {}
+
+local V = Voice.Concierge
+local staff: Rig.Staff? = nil
+local leading: Player? = nil
+
+-- Set by the table service so the Concierge knows when a guest has sat down.
+Concierge.isSeated = function(_player: Player): boolean
+	return false
+end
+-- Set by the client bridge: opens How to play on the guest's screen.
+Concierge.openHowTo = function(_player: Player) end
+
+local function characterRoot(player: Player): BasePart?
+	local character = player.Character
+	if not character then
+		return nil
+	end
+	local root = character:FindFirstChild("HumanoidRootPart")
+	if root and root:IsA("BasePart") then
+		return root
+	end
+	return nil
+end
+
+-- Walks ahead of the guest to the Salon door, pausing if they fall behind.
+function Concierge.lead(player: Player, roomId: string)
+	local s = staff
+	if not s then
+		return
+	end
+	if roomId ~= "salon" then
+		Dialogue.say(player, V.speaker, V.closedRoom)
+		return
+	end
+	if s.busy then
+		Dialogue.say(player, V.speaker, V.lost)
+		return
+	end
+	s.busy = true
+	leading = player
+	Dialogue.say(player, V.speaker, V.thisWay, nil, nil, 2.5)
+	local door = Layout.RoomDoors.salon.centre
+	local waypoint = door + Layout.RoomDoors.salon.facing * 4 -- just inside the Foyer
+	local arrival = Layout.Salon.arrival
+
+	local function stop(): boolean
+		return player.Parent ~= Players or Concierge.isSeated(player) or characterRoot(player) == nil
+	end
+	local function behind(): boolean
+		local root = characterRoot(player)
+		if not root then
+			return false
+		end
+		local far = (root.Position - s.root.Position).Magnitude > 14
+		if far then
+			Rig.face(s, root.Position)
+		end
+		return far
+	end
+
+	task.spawn(function()
+		local reached = Rig.walkTo(s, waypoint, behind, stop)
+		if reached then
+			reached = Rig.walkTo(s, arrival, behind, stop)
+		end
+		if reached and not stop() then
+			local root = characterRoot(player)
+			if root then
+				Rig.face(s, root.Position)
+			end
+			Dialogue.say(player, V.speaker, V.arrived, nil, nil, 3)
+			task.wait(2.5)
+		end
+		leading = nil
+		Rig.goHome(s)
+		s.busy = false
+	end)
+end
+
+local function menu(player: Player)
+	Dialogue.say(player, V.speaker, V.returning:gsub("{name}", player.DisplayName), {
+		{ id = "room", text = V.choices.takeMe },
+		{ id = "how", text = V.choices.how },
+		{ id = "bye", text = V.choices.bye },
+	}, function(choice)
+		if choice == "room" then
+			Concierge.lead(player, "salon")
+		elseif choice == "how" then
+			Dialogue.close(player)
+			Concierge.openHowTo(player)
+		else
+			Dialogue.say(player, V.speaker, V.goodNight, nil, nil, 2)
+		end
+	end)
+end
+
+-- Called once per visit when a guest first steps into the Foyer.
+function Concierge.greet(player: Player, firstVisit: boolean)
+	if firstVisit then
+		Dialogue.say(player, V.speaker, V.firstVisit, nil, nil, 3.5)
+		task.delay(1.2, function()
+			if player.Parent == Players and not Concierge.isSeated(player) then
+				Concierge.lead(player, "salon")
+			end
+		end)
+	else
+		Dialogue.say(player, V.speaker, (V.returning:gsub("{name}", player.DisplayName)), nil, nil, 3.5)
+	end
+end
+
+function Concierge.line(player: Player, line: string, hold: number?)
+	Dialogue.say(player, V.speaker, line, nil, nil, hold)
+end
+
+function Concierge.isLeading(player: Player): boolean
+	return leading == player
+end
+
+function Concierge.spawn(parent: Instance)
+	local s = Rig.build("Concierge", Rig.look("Concierge"), Layout.Foyer.conciergeHome, parent)
+	staff = s
+	s.model:SetAttribute("Staff", "Concierge")
+	local head = s.model:FindFirstChild("Head")
+	local anchor: BasePart = if head and head:IsA("BasePart") then head else s.root
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.Name = "SpeakPrompt"
+	prompt.ActionText = "Speak"
+	prompt.ObjectText = "The Concierge"
+	prompt.HoldDuration = 0
+	prompt.MaxActivationDistance = 9
+	prompt.RequiresLineOfSight = false
+	prompt.Style = Enum.ProximityPromptStyle.Custom
+	prompt.KeyboardKeyCode = Enum.KeyCode.E
+	prompt.GamepadKeyCode = Enum.KeyCode.ButtonX
+	prompt.Parent = anchor
+	prompt.Triggered:Connect(function(player: Player)
+		if s.busy and leading ~= player then
+			Dialogue.say(player, V.speaker, V.waiting, nil, nil, 2.5)
+			return
+		end
+		Rig.face(s, (characterRoot(player) or s.root).Position)
+		menu(player)
+		task.delay(6, function()
+			if not s.busy then
+				Rig.face(s, s.home.Position + s.home.LookVector * 10)
+			end
+		end)
+	end)
+	return s
+end
+
+return Concierge

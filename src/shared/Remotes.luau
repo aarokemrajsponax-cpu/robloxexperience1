@@ -1,0 +1,74 @@
+--!strict
+-- One folder of remotes. The server creates them; clients wait for them.
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+
+local Remotes = {}
+
+local FOLDER = "MaisonRemotes"
+
+Remotes.Events = {
+	"Table", -- server -> client table state; client -> server table actions
+	"Dialogue", -- server -> client lines and choices
+	"DialogueChoice", -- client -> server
+	"Guest", -- server -> client profile / settings / season
+	"Setting", -- client -> server setting change
+	"Funnel", -- client -> server first-evening funnel steps that only the client can see
+	"Board", -- server -> client leaderboard refresh
+}
+
+Remotes.Functions = {
+	"GetBoard",
+	"QuickSit",
+}
+
+local folder: Folder? = nil
+
+local function getFolder(): Folder
+	local cached = folder
+	if cached then
+		return cached
+	end
+	local result: Folder
+	if RunService:IsServer() then
+		local existing = ReplicatedStorage:FindFirstChild(FOLDER)
+		if existing and existing:IsA("Folder") then
+			result = existing
+		else
+			result = Instance.new("Folder")
+			result.Name = FOLDER
+			result.Parent = ReplicatedStorage
+		end
+		for _, name in Remotes.Events do
+			if not result:FindFirstChild(name) then
+				local e = Instance.new("RemoteEvent")
+				e.Name = name
+				e.Parent = result
+			end
+		end
+		for _, name in Remotes.Functions do
+			if not result:FindFirstChild(name) then
+				local f = Instance.new("RemoteFunction")
+				f.Name = name
+				f.Parent = result
+			end
+		end
+	else
+		result = ReplicatedStorage:WaitForChild(FOLDER) :: Folder
+	end
+	folder = result
+	return result
+end
+
+function Remotes.event(name: string): RemoteEvent
+	local f = getFolder()
+	return f:WaitForChild(name) :: RemoteEvent
+end
+
+function Remotes.func(name: string): RemoteFunction
+	local f = getFolder()
+	return f:WaitForChild(name) :: RemoteFunction
+end
+
+return Remotes

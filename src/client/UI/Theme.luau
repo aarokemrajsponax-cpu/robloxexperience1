@@ -1,0 +1,273 @@
+--!strict
+-- The look of every panel: smoked liquid glass with a gold hairline, serif display type,
+-- a clean sans for everything else, brass keys that press in. Text follows the Text size
+-- and Lettering settings live.
+
+local HapticService = game:GetService("HapticService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Brand = require(ReplicatedStorage.Shared.Brand)
+local Ease = require(ReplicatedStorage.Shared.Ease)
+local Settings = require(ReplicatedStorage.Shared.Settings)
+local State = require(script.Parent.Parent.State)
+
+local Theme = {}
+
+local C = Brand.Colours
+
+Theme.colours = {
+	glass = Color3.fromRGB(12, 13, 16),
+	bone = C.bone,
+	smoke = C.smoke,
+	dim = C.dim,
+	gold = C.gold,
+	lightGold = C.lightGold,
+	deepGold = C.deepGold,
+	accent = C.gold,
+	base = C.room,
+}
+
+type TextKind = "display" | "body" | "bodyMedium" | "bodyBold" | "caps"
+type Registered = { label: TextLabel | TextButton, size: number, kind: TextKind }
+
+local registry: { Registered } = {}
+local textScale = 1
+local displayFont = Brand.Fonts.display
+
+local clickSound: (() -> ())? = nil
+function Theme.onClick(fn: () -> ())
+	clickSound = fn
+end
+
+local function fontFor(kind: TextKind): Font
+	if kind == "display" then
+		return displayFont
+	elseif kind == "bodyMedium" or kind == "caps" then
+		return Brand.Fonts.bodyMedium
+	elseif kind == "bodyBold" then
+		return Brand.Fonts.bodyBold
+	end
+	return Brand.Fonts.body
+end
+
+local function applyText(r: Registered)
+	local label = r.label :: any
+	label.FontFace = fontFor(r.kind)
+	label.TextSize = math.floor(r.size * textScale + 0.5)
+end
+
+function Theme.refresh()
+	for i = #registry, 1, -1 do
+		local r = registry[i]
+		if r.label.Parent == nil then
+			table.remove(registry, i)
+		else
+			applyText(r)
+		end
+	end
+end
+
+State.watch("textSize", function(value)
+	textScale = Settings.textScale(value)
+	Theme.refresh()
+end)
+State.watch("lettering", function(value)
+	local enum = Brand.Lettering[value] or Enum.Font.Bodoni
+	displayFont = Font.fromEnum(enum)
+	Theme.refresh()
+end)
+State.watch("houseStyle", function(value)
+	local style = Brand.HouseStyles[value]
+	if style then
+		Theme.colours.accent = style.accent
+		Theme.colours.base = style.base
+	end
+end)
+
+-- Spaces capitals for small labels.
+function Theme.track(text: string): string
+	local out = {}
+	for _, cp in utf8.codes(text) do
+		local ch = utf8.char(cp)
+		table.insert(out, if ch == " " then "  " else ch)
+	end
+	return table.concat(out, " ")
+end
+
+function Theme.text(parent: Instance, text: string, size: number, kind: TextKind?, props: { [string]: any }?): TextLabel
+	local k: TextKind = kind or "body"
+	local label = Instance.new("TextLabel")
+	label.BackgroundTransparency = 1
+	label.Text = if k == "caps" then Theme.track(string.upper(text)) else text
+	label.TextColor3 = if k == "display" then C.bone elseif k == "caps" then C.gold else C.bone
+	label.TextWrapped = true
+	label.AutomaticSize = Enum.AutomaticSize.Y
+	label.Size = UDim2.new(1, 0, 0, 0)
+	label.TextXAlignment = Enum.TextXAlignment.Center
+	label.RichText = false
+	if props then
+		for key, value in props do
+			(label :: any)[key] = value
+		end
+	end
+	local r = { label = label, size = size, kind = k }
+	applyText(r)
+	table.insert(registry, r)
+	label.Parent = parent
+	return label
+end
+
+function Theme.hairline(parent: Instance, width: UDim?, order: number?): Frame
+	local line = Instance.new("Frame")
+	line.Name = "Hairline"
+	line.BorderSizePixel = 0
+	line.BackgroundColor3 = C.gold
+	line.BackgroundTransparency = 0.25
+	line.Size = UDim2.new(width or UDim.new(0.4, 0), UDim.new(0, 1))
+	line.LayoutOrder = order or 0
+	line.Parent = parent
+	return line
+end
+
+-- A smoked-glass panel. Returns the CanvasGroup (for fades) and the content frame.
+function Theme.glass(parent: Instance, name: string, size: UDim2, position: UDim2?, anchor: Vector2?): (CanvasGroup, Frame)
+	local group = Instance.new("CanvasGroup")
+	group.Name = name
+	group.BackgroundTransparency = 1
+	group.Size = size
+	group.Position = position or UDim2.fromScale(0.5, 0.5)
+	group.AnchorPoint = anchor or Vector2.new(0.5, 0.5)
+	group.GroupTransparency = 0
+	group.Parent = parent
+
+	local fill = Instance.new("Frame")
+	fill.Name = "Fill"
+	fill.Size = UDim2.fromScale(1, 1)
+	fill.BackgroundColor3 = Theme.colours.glass
+	fill.BackgroundTransparency = 0.16
+	fill.BorderSizePixel = 0
+	fill.Parent = group
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 3)
+	corner.Parent = fill
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = C.gold
+	stroke.Transparency = 0.45
+	stroke.Thickness = 1
+	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	stroke.Parent = fill
+	local sheen = Instance.new("UIGradient")
+	sheen.Rotation = 90
+	sheen.Color = ColorSequence.new(Color3.fromRGB(46, 46, 52), Theme.colours.glass)
+	sheen.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0),
+		NumberSequenceKeypoint.new(0.18, 0.1),
+		NumberSequenceKeypoint.new(1, 0.2),
+	})
+	sheen.Parent = fill
+	-- A soft highlight along the top edge
+	local highlight = Instance.new("Frame")
+	highlight.Name = "Highlight"
+	highlight.BorderSizePixel = 0
+	highlight.BackgroundColor3 = C.lightGold
+	highlight.BackgroundTransparency = 0.7
+	highlight.Size = UDim2.new(1, -12, 0, 1)
+	highlight.Position = UDim2.new(0, 6, 0, 1)
+	highlight.Parent = group
+
+	local content = Instance.new("Frame")
+	content.Name = "Content"
+	content.BackgroundTransparency = 1
+	content.Size = UDim2.fromScale(1, 1)
+	content.Parent = group
+	local pad = Instance.new("UIPadding")
+	pad.PaddingTop = UDim.new(0, 22)
+	pad.PaddingBottom = UDim.new(0, 22)
+	pad.PaddingLeft = UDim.new(0, 24)
+	pad.PaddingRight = UDim.new(0, 24)
+	pad.Parent = content
+	return group, content
+end
+
+function Theme.list(parent: Instance, padding: number?, horizontal: boolean?): UIListLayout
+	local list = Instance.new("UIListLayout")
+	list.SortOrder = Enum.SortOrder.LayoutOrder
+	list.FillDirection = if horizontal then Enum.FillDirection.Horizontal else Enum.FillDirection.Vertical
+	list.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	list.VerticalAlignment = Enum.VerticalAlignment.Center
+	list.Padding = UDim.new(0, padding or 10)
+	list.Parent = parent
+	return list
+end
+
+function Theme.haptic()
+	if State.get("vibration") ~= "On" then
+		return
+	end
+	pcall(function()
+		local effect = Instance.new("HapticEffect")
+		effect.Type = Enum.HapticEffectType.UIClick
+		effect.Parent = workspace
+		effect:Play()
+		task.delay(0.3, function()
+			effect:Destroy()
+		end)
+	end)
+	pcall(function()
+		HapticService:SetMotor(Enum.UserInputType.Gamepad1, Enum.VibrationMotor.Small, 0.25)
+		task.delay(0.05, function()
+			HapticService:SetMotor(Enum.UserInputType.Gamepad1, Enum.VibrationMotor.Small, 0)
+		end)
+	end)
+end
+
+-- A brass key: presses in, clicks softly, a tiny vibration on phones.
+function Theme.key(parent: Instance, text: string, primary: boolean?, onPress: () -> (), width: number?): TextButton
+	local button = Instance.new("TextButton")
+	button.Name = "Key_" .. text
+	button.AutoButtonColor = false
+	button.BackgroundColor3 = if primary then C.gold else Color3.fromRGB(20, 20, 24)
+	button.BackgroundTransparency = if primary then 0.08 else 0.3
+	button.BorderSizePixel = 0
+	button.Size = UDim2.new(0, width or 200, 0, 44)
+	button.Text = Theme.track(string.upper(text))
+	button.TextColor3 = if primary then Color3.fromRGB(24, 18, 8) else C.lightGold
+	button.Selectable = true
+	local r = { label = button, size = 15, kind = "caps" :: TextKind }
+	applyText(r)
+	table.insert(registry, r)
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 2)
+	corner.Parent = button
+	local stroke = Instance.new("UIStroke")
+	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	stroke.Color = C.gold
+	stroke.Transparency = if primary then 0.2 else 0.5
+	stroke.Parent = button
+	local scale = Instance.new("UIScale")
+	scale.Parent = button
+	button.MouseEnter:Connect(function()
+		Ease.play(stroke, Ease.quick, { Transparency = 0 })
+	end)
+	button.MouseLeave:Connect(function()
+		Ease.play(stroke, Ease.quick, { Transparency = if primary then 0.2 else 0.5 })
+		Ease.play(scale, Ease.quick, { Scale = 1 })
+	end)
+	button.MouseButton1Down:Connect(function()
+		Ease.play(scale, Ease.quick, { Scale = 0.965 })
+	end)
+	button.MouseButton1Up:Connect(function()
+		Ease.play(scale, Ease.quick, { Scale = 1 })
+	end)
+	button.Activated:Connect(function()
+		if clickSound then
+			clickSound()
+		end
+		Theme.haptic()
+		onPress()
+	end)
+	button.Parent = parent
+	return button
+end
+
+return Theme

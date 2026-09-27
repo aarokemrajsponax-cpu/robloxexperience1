@@ -4,6 +4,8 @@
 *.rbxm
 *.rbxmx
 
+# Generated
+sourcemap.json
+
 # Editor / OS
 .DS_Store
-sourcemap.json
