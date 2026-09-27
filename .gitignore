@@ -1,0 +1,9 @@
+# Built place files
+*.rbxl
+*.rbxlx
+*.rbxm
+*.rbxmx
+
+# Editor / OS
+.DS_Store
+sourcemap.json
