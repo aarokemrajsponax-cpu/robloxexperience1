@@ -353,6 +353,54 @@ do
 	check("config rejects wrong type", not Config.set("Rooms.salon.firstDeal", "nine"))
 end
 
+-- 8. The Nightly: the date decides everything, identically everywhere.
+do
+	local Nightly = loadModule("Nightly")
+	-- 28 September 2026 is a Monday (Velvet rules); 2 October 2026 a Friday (Midnight Friday).
+	local monday = Nightly.at(os.time({ year = 2026, month = 9, day = 28, hour = 12 }) + 0)
+	check("28 Sep 2026 is Monday, Velvet rules", monday.weekday == "monday" and monday.room == "velvet", monday.weekday .. "/" .. monday.room)
+	check("the night's key is the UTC date", monday.key == "2026-09-28", monday.key)
+	local friday = Nightly.at(monday.day * 86400 + 4 * 86400 + 3600)
+	check("Fridays are Midnight Fridays", friday.weekday == "friday" and friday.room == "midnight", friday.weekday)
+	local sunday = Nightly.at(monday.day * 86400 - 86400 + 60)
+	check("Sundays play Obsidian rules", sunday.weekday == "sunday" and sunday.room == "obsidian", sunday.weekday)
+	check("every weekday has rules", (function()
+		for i = 0, 6 do
+			local n = Nightly.at(monday.day * 86400 + i * 86400 + 100)
+			if Rooms.get(n.room) == nil then return false end
+		end
+		return true
+	end)())
+	check("same date and round, same seed", Nightly.seed("2026-09-28", 3) == Nightly.seed("2026-09-28", 3))
+	check("rounds get different seeds", Nightly.seed("2026-09-28", 1) ~= Nightly.seed("2026-09-28", 2))
+	check("dates get different seeds", Nightly.seed("2026-09-28", 1) ~= Nightly.seed("2026-09-29", 1))
+	-- Identical deals for every guest: generate the Friday deal twice, compare piece by piece.
+	local room = Rooms.get("midnight")
+	local a = Deal.generate(Nightly.seed(friday.key, 1), room, 1, "harvest", { allowMythic = false })
+	local b = Deal.generate(Nightly.seed(friday.key, 1), room, 1, "harvest", { allowMythic = false })
+	local same = #a.pieces == #b.pieces
+	for i, p in a.pieces do
+		local q = b.pieces[i]
+		if p.id ~= q.id or p.rare ~= q.rare or p.seasonal ~= q.seasonal then same = false end
+	end
+	check("the Nightly deal is identical on every server", same)
+	-- Mythics never appear in the Nightly, even at absurd odds.
+	Config.set("Rooms.midnight.mythicChance", 2)
+	local mythic = false
+	for r = 1, 5 do
+		for _, p in Deal.generate(Nightly.seed(friday.key, r), room, r, nil, { allowMythic = false }).pieces do
+			if p.mythic then mythic = true end
+		end
+	end
+	Config.set("Rooms.midnight.mythicChance", 15000)
+	check("no Mythics in the Nightly", not mythic)
+	-- Board order: higher score first; equal scores go to the earlier finish.
+	local t0 = monday.day * 86400
+	check("a higher score ranks higher", Nightly.sortKey(5000, t0 + 3600) > Nightly.sortKey(4999, t0 + 60))
+	check("ties go to the earlier finish", Nightly.sortKey(5000, t0 + 60) > Nightly.sortKey(5000, t0 + 3600))
+	check("the score reads back from the sort key", Nightly.scoreFromSortKey(Nightly.sortKey(12345, t0 + 999)) == 12345)
+end
+
 print(("\n%d passed, %d failed"):format(passed, failed))
 if failed > 0 then
 	os.exit(1)

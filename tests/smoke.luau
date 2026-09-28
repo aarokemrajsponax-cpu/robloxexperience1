@@ -347,8 +347,8 @@ for _, d in maison:GetDescendants() do
 	end
 end
 print(("built: %d parts, %d lights, %d surface guis"):format(parts, lights, guis))
-check("part budget (under 4,000)", parts < 4000, parts)
-check("light budget (under 120)", lights < 120, lights)
+check("part budget (under 6,500)", parts < 6500, parts)
+check("light budget (under 260)", lights < 260, lights)
 
 -- Season lighting setup (server)
 local okSeason, errSeason = pcall(function()
@@ -389,7 +389,7 @@ check("62 collectable pieces", Catalogue.totalCollectable() == 62, Catalogue.tot
 ---------------------------------------------------------------------------------------------------
 local Layout = module("ReplicatedStorage", "Shared", "Layout")
 local tables = CollectionService.GetTagged(CollectionService, "MaisonTable")
-check("six Salon tables", #tables == 6, #tables)
+check("24 tables, six in each room", #tables == 24, #tables)
 local ids = {}
 for _, t in tables do
 	local id = t:GetAttribute("TableId")
@@ -415,7 +415,9 @@ for _, t in tables do
 	end
 	check(id .. " streams as one persistent model", t.ModelStreamingMode == Enum.ModelStreamingMode.Persistent)
 	local centre = t:GetAttribute("Centre")
-	check(id .. " sits inside the Salon", centre ~= nil and Layout.zoneAt(centre + Vector3.new(0, 3, 0)) == "salon", centre)
+	check(id .. " sits inside its room", centre ~= nil and Layout.zoneAt(centre + Vector3.new(0, 3, 0)) == t:GetAttribute("Room"), centre)
+	check(id .. " has the Nightly prompt", chair ~= nil and chair:FindFirstChild("NightlyPrompt") ~= nil)
+	check(id .. " has a clock rail", t:FindFirstChild("ClockRail") ~= nil)
 	-- The case plates and counter face up toward the guest's camera.
 	local counter = t:FindFirstChild("Counter")
 	check(id .. " counter faces the guest's camera", counter ~= nil and counter.CFrame.LookVector.Y > 0.8 and counter.CFrame.LookVector.Z < 0)
@@ -482,68 +484,86 @@ local function blocked(p: Vector3, r: number, y0: number, y1: number)
 end
 
 local FLOOR = Layout.FLOOR
-local salonDoor = Layout.RoomDoors.salon.centre
-local firstTable = Layout.Salon.tables[1]
-local chair = firstTable + Vector3.new(0, 0, Layout.Table.chairZ - 1.6)
-local route = {
-	{ Layout.Street.spawn.Position, 0 },
-	{ Vector3.new(0, 0, -16), 0 }, -- foot of the steps
-	{ Vector3.new(0, FLOOR, -9), FLOOR }, -- through the front door
-	{ Vector3.new(0, FLOOR, 0), FLOOR },
-	{ Vector3.new(-24, FLOOR, 4), FLOOR },
-	{ salonDoor + Vector3.new(4, 0, 0), FLOOR }, -- in front of the Salon door
-	{ salonDoor + Vector3.new(-4.5, 0, 0), FLOOR }, -- through it
-	{ Vector3.new(salonDoor.X - 4.5, FLOOR, chair.Z), FLOOR }, -- along the wall, past the first table
-	{ Vector3.new(chair.X + 3.5, FLOOR, chair.Z), FLOOR },
-	{ Vector3.new(chair.X, FLOOR, chair.Z), FLOOR },
-}
-local walkBlocked = nil
-for i = 1, #route - 1 do
-	local a, b = route[i][1], route[i + 1][1]
-	local steps = math.ceil((b - a).Magnitude / 0.5)
-	for s = 0, steps do
-		local t = s / steps
-		local p = a:Lerp(b, t)
-		-- The front steps: each is 1 stud high and 1.5 deep (humanoids step up 1 stud freely).
-		local function stepGround(z: number): number
-			if z >= -8 then
-				return FLOOR
-			elseif z >= -11.5 then
-				return 3
-			elseif z >= -13 then
-				return 2
-			elseif z >= -14.5 then
-				return 1
+
+-- The front steps: each is 1 stud high and 1.5 deep (humanoids step up 1 stud freely).
+local function stepGround(z: number): number
+	if z >= -8 then
+		return FLOOR
+	elseif z >= -11.5 then
+		return 3
+	elseif z >= -13 then
+		return 2
+	elseif z >= -14.5 then
+		return 1
+	end
+	return 0
+end
+
+local function walk(route: { { any } }, radius: number, ignore: ((BasePart) -> boolean)?): string?
+	for i = 1, #route - 1 do
+		local a, b = route[i][1], route[i + 1][1]
+		local steps = math.ceil((b - a).Magnitude / 0.5)
+		for s = 0, steps do
+			local p = a:Lerp(b, s / steps)
+			local ground = if route[i][2] == route[i + 1][2] then route[i][2] else stepGround(p.Z)
+			-- Capsule from knee height (steps are climbable) to head height.
+			local hit = blocked(Vector3.new(p.X, 0, p.Z), radius, ground + 1.2, ground + 5.2)
+			if hit and not (ignore and ignore(hit)) then
+				return string.format("%s at (%.1f, %.1f) on leg %d", hit:GetFullName(), p.X, p.Z, i)
 			end
-			return 0
-		end
-		local ground = if route[i][2] == route[i + 1][2] then route[i][2] else stepGround(p.Z)
-		-- Capsule from knee height (steps are climbable) to head height.
-		local hit = blocked(Vector3.new(p.X, 0, p.Z), 1.0, ground + 1.2, ground + 5.2)
-		if hit and not walkBlocked then
-			walkBlocked = string.format("%s at (%.1f, %.1f) on leg %d", hit:GetFullName(), p.X, p.Z, i)
 		end
 	end
+	return nil
 end
-check("a guest can walk from the street spawn to a Salon chair", walkBlocked == nil, walkBlocked)
+
+-- The Midnight Room's doors and rope are solid until a guest earns it; the client opens them.
+local function earned(part: BasePart): boolean
+	return part:GetAttribute("Gated") == true or (part.Parent ~= nil and part.Parent.Name == "Door_midnight" and (part.Name == "Rope" or part.Name == "Stanchion" or part.Name == "StanchionTop"))
+end
+
+for _, roomId in { "salon", "velvet", "obsidian", "midnight" } do
+	local door = Layout.RoomDoors[roomId]
+	local spec = Layout.Rooms[roomId]
+	local inward = -door.facing -- from the Foyer into the room
+	local firstTable = spec.tables[1]
+	local chair = firstTable + Vector3.new(0, 0, Layout.Table.chairZ - 1.6)
+	local inside = door.centre + inward * 4.5
+	local route = {
+		{ Layout.Street.spawn.Position, 0 },
+		{ Vector3.new(0, 0, -16), 0 }, -- foot of the steps
+		{ Vector3.new(0, FLOOR, -9), FLOOR }, -- through the front door
+		{ Vector3.new(0, FLOOR, 0), FLOOR },
+	}
+	for _, point in door.approach do
+		table.insert(route, { point, FLOOR })
+	end
+	for _, leg in {
+		{ door.centre + door.facing * 6, FLOOR }, -- in front of the room's door
+		{ inside, FLOOR }, -- through it
+		{ Vector3.new(inside.X, FLOOR, chair.Z), FLOOR }, -- along the wall, past the first table
+		{ Vector3.new(chair.X - inward.X * 3.5, FLOOR, chair.Z), FLOOR },
+		{ Vector3.new(chair.X, FLOOR, chair.Z), FLOOR },
+	} do
+		table.insert(route, leg)
+	end
+	local why = walk(route, 1.0, if roomId == "midnight" then earned else nil)
+	check("a guest can walk from the street spawn to a chair in " .. roomId, why == nil, why)
+	-- The Concierge's walk from the lectern to the room's arrival point.
+	local home = Layout.Foyer.conciergeHome.Position
+	local legs = { { home, FLOOR } }
+	for _, point in door.approach do
+		table.insert(legs, { point, FLOOR })
+	end
+	table.insert(legs, { door.centre + door.facing * 4, FLOOR })
+	table.insert(legs, { spec.arrival, FLOOR })
+	local cwhy = walk(legs, 0.9, if roomId == "midnight" then earned else nil)
+	check("the Concierge has a clear walk to " .. roomId, cwhy == nil, cwhy)
+end
 check("the street spawn is clear", blocked(Layout.Street.spawn.Position, 1, 1.2, 5) == nil)
 check("the Foyer spawn is clear", blocked(Layout.Foyer.spawn.Position, 1, FLOOR + 1.2, FLOOR + 5) == nil)
--- The Concierge's route to the Salon must be clear too.
-local conciergeBlocked = nil
-local home = Layout.Foyer.conciergeHome.Position
-local legs = { { home, Vector3.new(home.X, FLOOR, 12) }, { Vector3.new(home.X, FLOOR, 12), salonDoor + Vector3.new(4, 0, 0) }, { salonDoor + Vector3.new(4, 0, 0), Layout.Salon.arrival } }
-for i, leg in legs do
-	local a, b = leg[1], leg[2]
-	local steps = math.ceil((b - a).Magnitude / 0.5)
-	for s = 0, steps do
-		local p = a:Lerp(b, s / steps)
-		local hit = blocked(Vector3.new(p.X, 0, p.Z), 0.9, FLOOR + 1.2, FLOOR + 5.2)
-		if hit and not conciergeBlocked then
-			conciergeBlocked = string.format("%s at (%.1f, %.1f) on leg %d", hit:GetFullName(), p.X, p.Z, i)
-		end
-	end
-end
-check("the Concierge has a clear walk to the Salon", conciergeBlocked == nil, conciergeBlocked)
+-- Until it's earned, the Midnight Room's doorway is closed.
+local closed = walk({ { Layout.RoomDoors.midnight.centre + Vector3.new(-4, 0, 0), FLOOR }, { Layout.RoomDoors.midnight.centre + Vector3.new(4, 0, 0), FLOOR } }, 1.0)
+check("the Midnight Room is closed until earned", closed ~= nil)
 
 -- Pieces laid out on the felt stay inside it and never overlap.
 for count = 4, 28 do

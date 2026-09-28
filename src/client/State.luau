@@ -22,6 +22,9 @@ local welcomed = Instance.new("BindableEvent")
 State.Welcomed = welcomed.Event
 local phaseChanged = Instance.new("BindableEvent")
 State.PhaseChanged = phaseChanged.Event
+local unlocked = Instance.new("BindableEvent")
+State.Unlocked = unlocked.Event -- (room)
+State.unlocked = {} :: { [string]: boolean }
 
 local guestEvent = Remotes.event("Guest")
 
@@ -38,6 +41,14 @@ guestEvent.OnClientEvent:Connect(function(message: any)
 	if message.op == "welcome" then
 		State.guest = message
 		State.settings = Settings.sanitize(message.settings)
+		if type(message.unlocked) == "table" then
+			for room, on in message.unlocked do
+				if on then
+					State.unlocked[room] = true
+					unlocked:Fire(room)
+				end
+			end
+		end
 		applyOverrides(message.overrides)
 		welcomed:Fire(message)
 		for key, value in State.settings do
@@ -45,6 +56,9 @@ guestEvent.OnClientEvent:Connect(function(message: any)
 		end
 	elseif message.op == "config" then
 		applyOverrides(message.overrides)
+	elseif message.op == "unlock" and type(message.room) == "string" then
+		State.unlocked[message.room] = true
+		unlocked:Fire(message.room)
 	end
 end)
 

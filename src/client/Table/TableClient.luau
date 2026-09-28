@@ -29,6 +29,7 @@ local State = require(script.Parent.Parent.State)
 local Root = require(script.Parent.Parent.UI.Root)
 local Hud = require(script.Parent.Parent.UI.Hud)
 local RoundPanel = require(script.Parent.Parent.UI.RoundPanel)
+local NightlyCard = require(script.Parent.Parent.UI.NightlyCard)
 local Toast = require(script.Parent.Parent.UI.Toast)
 local Counter = require(script.Parent.Counter)
 local Guide = require(script.Parent.Guide)
@@ -62,6 +63,10 @@ type Snapshot = { score: number, streak: number, runLength: number, lastCase: st
 local seatedModel: Model? = nil
 local centre = Vector3.zero
 local roomId = "salon"
+local tableMode = "room" -- "room", "nightly" or "rehearsal"
+local clockBudget: number? = nil
+local lowPlayed = false
+local rail: { gui: SurfaceGui, fill: Frame }? = nil
 local round = 1
 local openCases: { string } = {}
 local pieces: { [number]: Piece } = {}
@@ -71,6 +76,7 @@ local server: Snapshot = { score = 0, streak = 0, runLength = 0, lastCase = nil,
 local local_: Snapshot = { score = 0, streak = 0, runLength = 0, lastCase = nil, multiplier = 1 }
 local clockLeft: number? = nil
 local clockRunning = false
+local paused = false
 
 -- Input state
 local held: number? = nil
@@ -289,6 +295,72 @@ local function caseGlow(caseId: string)
 		task.delay(1, function()
 			a:Destroy()
 		end)
+	end
+end
+
+-- The clock rail: a slim brass rail on the table's far edge that drains (timed rooms only).
+local function railFor(model: Model): { gui: SurfaceGui, fill: Frame }?
+	local part = model:FindFirstChild("ClockRail")
+	if not part or not part:IsA("BasePart") then
+		return nil
+	end
+	local gui = part:FindFirstChild("RailGui")
+	if gui and gui:IsA("SurfaceGui") then
+		local fill = gui:FindFirstChild("Fill")
+		if fill and fill:IsA("Frame") then
+			return { gui = gui, fill = fill }
+		end
+	end
+	local g = Instance.new("SurfaceGui")
+	g.Name = "RailGui"
+	g.Face = Enum.NormalId.Front
+	g.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	g.PixelsPerStud = 60
+	g.LightInfluence = 0.3
+	g.Brightness = 1.4
+	g.Parent = part
+	local track = Instance.new("Frame")
+	track.Size = UDim2.fromScale(1, 1)
+	track.BackgroundColor3 = Color3.fromRGB(26, 22, 14)
+	track.BorderSizePixel = 0
+	track.Parent = g
+	local fill = Instance.new("Frame")
+	fill.Name = "Fill"
+	fill.Size = UDim2.fromScale(1, 1)
+	fill.BackgroundColor3 = Brand.Colours.gold
+	fill.BorderSizePixel = 0
+	fill.Parent = g
+	return { gui = g, fill = fill }
+end
+
+local function showRail(on: boolean)
+	local model = seatedModel
+	if not model then
+		return
+	end
+	local part = model:FindFirstChild("ClockRail")
+	if part and part:IsA("BasePart") then
+		part.LocalTransparencyModifier = 0
+		part.Transparency = if on then 0 else 1
+	end
+	rail = if on then railFor(model) else nil
+	if rail then
+		rail.gui.Enabled = on
+	end
+end
+
+local function updateRail()
+	local r = rail
+	if not r or not clockLeft or not clockBudget then
+		return
+	end
+	local fraction = math.clamp((clockLeft :: number) / (clockBudget :: number), 0, 1)
+	r.fill.Size = UDim2.fromScale(fraction, 1)
+	local low = (clockLeft :: number) <= 10
+	r.fill.BackgroundColor3 = if low then Color3.fromRGB(200, 96, 60) else Brand.Colours.gold
+	if low and not lowPlayed and clockRunning then
+		lowPlayed = true
+		Sound.play("low", 0.4, 0.6)
 	end
 end
 
@@ -540,6 +612,7 @@ local function renderDeal(message: { [string]: any })
 	clearPieces()
 	round = message.round
 	roomId = message.room or roomId
+	tableMode = message.mode or "room"
 	openCases = message.cases
 	local list = message.pieces :: { { [string]: any } }
 	local slots = Layout.pieceSlots(centre, #list)
@@ -612,14 +685,20 @@ local function renderDeal(message: { [string]: any })
 	padCase = 1
 	playing = true
 	local r = room()
-	RoundCard.land(centre, r.name, Voice.roundLabel(round, State.get("roundNumbers")), "Round")
+	RoundCard.land(centre, if tableMode == "room" then r.name else "Tonight's table", Voice.roundLabel(round, State.get("roundNumbers")), if tableMode == "room" then "Round" else r.name .. " rules")
 	lampTo(2.4, 1.2)
+	lowPlayed = false
 	if message.clock then
 		clockLeft = message.clock.left
 		clockRunning = message.clock.running
+		clockBudget = message.clock.budget
+		showRail(true)
+		updateRail()
 	else
 		clockLeft = nil
 		clockRunning = false
+		clockBudget = nil
+		showRail(false)
 	end
 	server.score = message.score
 	local_.score = message.score
@@ -710,15 +789,19 @@ local function onRoundEnd(message: { [string]: any })
 	Sound.play("round", 0.4, 1)
 	Sound.briefDip(3)
 	RoundCard.land(centre, "Round " .. Voice.roundLabel(message.round, State.get("roundNumbers")), message.grade, string.format("%s points", RoundPanel.number(message.score)))
+	if message.last then
+		return -- the Nightly card follows
+	end
 	task.delay(1.1, function()
 		if seatedModel == nil then
 			return
 		end
+		local inRoom = tableMode == "room"
 		RoundPanel.round(message, {
 			primary = Voice.Table.nextRound,
 			onPrimary = sendNext,
-			secondary = Voice.Table.bank,
-			onSecondary = sendBank,
+			secondary = if inRoom then Voice.Table.bank else nil,
+			onSecondary = if inRoom then sendBank else nil,
 			onLeave = TableClient.leave,
 		})
 	end)
@@ -743,6 +826,29 @@ local function onBanked(message: { [string]: any })
 				tableEvent:FireServer({ op = "again" })
 			end,
 			onLeave = TableClient.leave,
+		})
+	end)
+end
+
+local function onNightlyCard(message: { [string]: any })
+	playing = false
+	release()
+	clearPieces()
+	showRail(false)
+	lampTo(1.6, 1.2)
+	Sound.play("complete", 0.4, 1)
+	local_ = { score = 0, streak = 0, runLength = 0, lastCase = nil, multiplier = 1 }
+	server = table.clone(local_)
+	RoundCard.land(centre, "Tonight's table", message.grade, string.format("%s points", RoundPanel.number(message.score)))
+	task.delay(1.0, function()
+		if seatedModel == nil then
+			return
+		end
+		NightlyCard.show(message, {
+			rehearse = function()
+				tableEvent:FireServer({ op = "again" })
+			end,
+			leave = TableClient.leave,
 		})
 	end)
 end
@@ -943,6 +1049,10 @@ local function onSeated(message: { [string]: any })
 end
 
 local function onLeft(message: { [string]: any })
+	showRail(false)
+	if Root.isOpen("NightlyCard") then
+		Root.close("NightlyCard")
+	end
 	local model = seatedModel
 	seatedModel = nil
 	playing = false
@@ -950,6 +1060,7 @@ local function onLeft(message: { [string]: any })
 	clearPieces()
 	RoundCard.destroy()
 	RoundPanel.close()
+	paused = false
 	unbindInput()
 	Hands.detach()
 	if model then
@@ -1006,13 +1117,27 @@ function TableClient.start()
 			onRoundEnd(message)
 		elseif op == "banked" then
 			onBanked(message)
+		elseif op == "nightlyCard" then
+			onNightlyCard(message)
 		elseif op == "clock" then
 			if message.clock then
 				clockLeft = message.clock.left
 				clockRunning = message.clock.running
+				clockBudget = message.clock.budget
 			end
 		elseif op == "left" then
 			onLeft(message)
+		end
+	end)
+	-- The clock freezes while a panel is open in the four rooms (never in the Nightly).
+	Root.PanelsChanged:Connect(function()
+		if seatedModel == nil then
+			return
+		end
+		local open = Root.isOpen() and Root.top() ~= "Round"
+		if tableMode == "room" and open ~= paused then
+			paused = open
+			tableEvent:FireServer({ op = "pause", on = open })
 		end
 	end)
 	UserInputService.InputBegan:Connect(pointerDown)
@@ -1020,8 +1145,11 @@ function TableClient.start()
 	UserInputService.InputEnded:Connect(pointerUp)
 	RunService.Heartbeat:Connect(function(dt)
 		if clockLeft and clockRunning and playing then
-			clockLeft = math.max(0, (clockLeft :: number) - dt)
+			if not paused then
+				clockLeft = math.max(0, (clockLeft :: number) - dt)
+			end
 			updateHudLine()
+			updateRail()
 		end
 	end)
 	-- Settings that change the table apply at once.

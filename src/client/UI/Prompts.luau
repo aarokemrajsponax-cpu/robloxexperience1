@@ -31,7 +31,8 @@ local function build(prompt: ProximityPrompt): BillboardGui
 	gui.Name = "Prompt"
 	gui.AlwaysOnTop = true
 	gui.Size = UDim2.fromOffset(210, 46)
-	gui.StudsOffset = Vector3.new(0, 2.2, 0)
+	local offset = prompt:GetAttribute("Offset")
+	gui.StudsOffset = Vector3.new(0, if type(offset) == "number" then offset else 2.2, 0)
 	gui.LightInfluence = 0
 	gui.ResetOnSpawn = false
 	gui.Active = true

@@ -335,6 +335,9 @@ local function roomDoor(m: Model, roomId: string)
 		if spec.open then
 			leaf.CanCollide = false
 		end
+		if spec.gated then
+			leaf:SetAttribute("Gated", true)
+		end
 	end
 	-- The room's name, in serif, above the door (the client fades it in as you approach).
 	-- A part's Front face is its LookVector, which here faces into the Foyer.
@@ -355,7 +358,7 @@ local function roomDoor(m: Model, roomId: string)
 		Kit.part(model, "Rope", Vector3.new(0.25, 0.25, (b - a).Magnitude), CFrame.lookAt((a + b) / 2, b), L.rope)
 	end
 	-- Closed rooms: a wall behind the leaves so the doorway never shows the void.
-	if not spec.open then
+	if not spec.open and not spec.gated then
 		Kit.part(model, "Backing", Vector3.new(w, h, 0.4), base * CFrame.new(0, h / 2, 1.1), L.wall)
 	end
 end
@@ -406,7 +409,7 @@ function Foyer.build(parent: Instance): Model
 			column(root, x, z)
 		end
 	end
-	for _, z in { -2, 16, 38 } do
+	for _, z in { -2, 16, 25 } do
 		sconce(root, Vector3.new(F.minX + 0.3, FLOOR + 9, z), Vector3.new(1, 0, 0))
 		sconce(root, Vector3.new(F.maxX - 0.3, FLOOR + 9, z), Vector3.new(-1, 0, 0))
 	end

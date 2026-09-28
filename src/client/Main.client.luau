@@ -97,16 +97,16 @@ ContextActionService:BindAction("MaisonRun", function(_, state, input)
 	return Enum.ContextActionResult.Pass
 end, false, Enum.KeyCode.LeftShift, Enum.KeyCode.ButtonL3)
 
-local function quickSit()
+local function quickSit(mode: string?)
 	if TableClient.isSeated() then
 		return
 	end
 	task.spawn(function()
 		local ok, seated = pcall(function()
-			return Remotes.func("QuickSit"):InvokeServer()
+			return Remotes.func("QuickSit"):InvokeServer(mode or "room")
 		end)
 		if not ok or not seated then
-			Toast.show("The Salon", "Every table is taken. One will be free shortly.", 4)
+			Toast.show(if mode == "nightly" then "Tonight's table" else "The Salon", "Every table is taken. One will be free shortly.", 4)
 		end
 	end)
 end
@@ -145,8 +145,14 @@ local function onPlay()
 	State.setPhase("play")
 	State.funnel(3)
 	startHud()
-	if State.isFirstVisit() and not TableClient.isSeated() then
-		Hud.showStraight(quickSit)
+	local guest = State.guest
+	if guest and guest.launch == "nightly" then
+		-- Arrived from a friend's Nightly invite: straight to tonight's table.
+		task.delay(0.6, quickSit, "nightly")
+	elseif State.isFirstVisit() and not TableClient.isSeated() then
+		Hud.showStraight(function()
+			quickSit("room")
+		end)
 	end
 end
 
@@ -158,7 +164,7 @@ HowToPlay.onFinish = function()
 		task.spawn(onPlay)
 		task.wait(1.8)
 	end
-	quickSit()
+	quickSit("room")
 end
 
 TableClient.Seated.Event:Connect(function()

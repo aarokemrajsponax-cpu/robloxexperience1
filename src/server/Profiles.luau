@@ -13,6 +13,7 @@ local ProfileStore = require(script.Parent.Vendor.ProfileStore)
 local Profiles = {}
 
 export type RegisterEntry = { first: number, count: number, best: string }
+export type NightlyRecord = { day: number, key: string, score: number, grade: string, rounds: { string }, room: string, finished: boolean }
 
 export type Data = {
 	schema: number,
@@ -22,7 +23,8 @@ export type Data = {
 	settings: { [string]: any },
 	flags: { [string]: boolean },
 	register: { [string]: RegisterEntry },
-	stats: { runs: number, rounds: number, filings: number, correct: number, flawless: number },
+	stats: { runs: number, rounds: number, filings: number, correct: number, flawless: number, nightlies: number },
+	nightly: NightlyRecord,
 	best: { [string]: number },
 	bestRound: { [string]: number },
 	gilt: number,
@@ -38,7 +40,8 @@ local TEMPLATE: Data = {
 	settings = {},
 	flags = {},
 	register = {},
-	stats = { runs = 0, rounds = 0, filings = 0, correct = 0, flawless = 0 },
+	stats = { runs = 0, rounds = 0, filings = 0, correct = 0, flawless = 0, nightlies = 0 },
+	nightly = { day = -1, key = "", score = 0, grade = "", rounds = {}, room = "", finished = false },
 	best = { salon = 0, velvet = 0, obsidian = 0, midnight = 0 },
 	bestRound = { salon = 0, velvet = 0, obsidian = 0, midnight = 0 },
 	gilt = 0,

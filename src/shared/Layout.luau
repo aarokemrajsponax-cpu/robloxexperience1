@@ -56,10 +56,12 @@ Layout.Foyer = {
 
 -- The four room doors, as seen from the Foyer. `facing` points into the Foyer.
 Layout.RoomDoors = {
-	salon = { centre = Vector3.new(-30, 3, 4), facing = Vector3.new(1, 0, 0), open = true },
-	velvet = { centre = Vector3.new(-30, 3, 31), facing = Vector3.new(1, 0, 0), open = false },
-	midnight = { centre = Vector3.new(30, 3, 4), facing = Vector3.new(-1, 0, 0), open = false },
-	obsidian = { centre = Vector3.new(30, 3, 31), facing = Vector3.new(-1, 0, 0), open = false },
+	-- `approach`: clear points across the Foyer toward each door (around the piano and lectern).
+	salon = { centre = Vector3.new(-30, 3, 4), facing = Vector3.new(1, 0, 0), open = true, gated = false, approach = { Vector3.new(-12, 3, 8) } },
+	velvet = { centre = Vector3.new(-30, 3, 35), facing = Vector3.new(1, 0, 0), open = true, gated = false, approach = { Vector3.new(-4, 3, 14), Vector3.new(-14, 3, 24) } },
+	-- The Midnight Room's door opens only for guests who have earned it (see the gate).
+	midnight = { centre = Vector3.new(30, 3, 4), facing = Vector3.new(-1, 0, 0), open = false, gated = true, approach = { Vector3.new(4, 3, 8), Vector3.new(16, 3, 7) } },
+	obsidian = { centre = Vector3.new(30, 3, 35), facing = Vector3.new(-1, 0, 0), open = true, gated = false, approach = { Vector3.new(4, 3, 12), Vector3.new(26, 3, 12), Vector3.new(26, 3, 28) } },
 }
 Layout.RoomDoorWidth = 8
 Layout.RoomDoorHeight = 12
@@ -79,6 +81,57 @@ Layout.Salon = {
 		Vector3.new(-70, 3, 18.5),
 	},
 	fireplace = CFrame.lookAt(Vector3.new(-56, 3, 27.4), Vector3.new(-56, 3, 0)),
+}
+
+Layout.Velvet = {
+	zone = box(-80, 0, 30, -32, 24, 62),
+	minX = -80, maxX = -32, minZ = 30, maxZ = 62, height = 18,
+	arrival = Vector3.new(-34.5, 3, 35),
+	tables = {
+		Vector3.new(-42, 3, 38.5),
+		Vector3.new(-56, 3, 38.5),
+		Vector3.new(-70, 3, 38.5),
+		Vector3.new(-42, 3, 53),
+		Vector3.new(-56, 3, 53),
+		Vector3.new(-70, 3, 53),
+	},
+}
+
+Layout.Obsidian = {
+	zone = box(32, 0, 30, 80, 24, 62),
+	minX = 32, maxX = 80, minZ = 30, maxZ = 62, height = 18,
+	arrival = Vector3.new(34.5, 3, 35),
+	tables = {
+		Vector3.new(42, 3, 38.5),
+		Vector3.new(56, 3, 38.5),
+		Vector3.new(70, 3, 38.5),
+		Vector3.new(42, 3, 53),
+		Vector3.new(56, 3, 53),
+		Vector3.new(70, 3, 53),
+	},
+}
+
+Layout.Midnight = {
+	zone = box(32, 0, -6, 80, 24, 28),
+	minX = 32, maxX = 80, minZ = -6, maxZ = 28, height = 18,
+	arrival = Vector3.new(34.5, 3, 4),
+	tables = {
+		Vector3.new(42, 3, 4),
+		Vector3.new(56, 3, 4),
+		Vector3.new(70, 3, 4),
+		Vector3.new(42, 3, 18.5),
+		Vector3.new(56, 3, 18.5),
+		Vector3.new(70, 3, 18.5),
+	},
+	window = Vector3.new(80, 13, 11), -- the round window in the far wall
+}
+
+-- The four rooms in order, for code that treats them alike.
+Layout.Rooms = {
+	salon = Layout.Salon,
+	velvet = Layout.Velvet,
+	obsidian = Layout.Obsidian,
+	midnight = Layout.Midnight,
 }
 
 -- Table geometry, relative to a table centre on the floor.
@@ -102,11 +155,17 @@ function Layout.inBox(b: Box, p: Vector3): boolean
 	return p.X >= b.min.X and p.X <= b.max.X and p.Y >= b.min.Y and p.Y <= b.max.Y and p.Z >= b.min.Z and p.Z <= b.max.Z
 end
 
-export type ZoneName = "street" | "foyer" | "salon" | "none"
+export type ZoneName = "street" | "foyer" | "salon" | "velvet" | "obsidian" | "midnight" | "none"
 
 function Layout.zoneAt(p: Vector3): ZoneName
 	if Layout.inBox(Layout.Salon.zone, p) then
 		return "salon"
+	elseif Layout.inBox(Layout.Velvet.zone, p) then
+		return "velvet"
+	elseif Layout.inBox(Layout.Obsidian.zone, p) then
+		return "obsidian"
+	elseif Layout.inBox(Layout.Midnight.zone, p) then
+		return "midnight"
 	elseif Layout.inBox(Layout.Foyer.zone, p) then
 		return "foyer"
 	elseif Layout.inBox(Layout.Street.zone, p) then

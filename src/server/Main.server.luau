@@ -38,6 +38,13 @@ TableService.say = function(player, line)
 	Concierge.line(player, line, 3)
 end
 Concierge.isSeated = TableService.isSeated
+Concierge.canEnter = function(player, room)
+	if room ~= "midnight" then
+		return true
+	end
+	local data = require(script.Parent.Profiles).get(player)
+	return data ~= nil and data.flags.midnight == true
+end
 Concierge.openHowTo = function(player)
 	Remotes.event("Guest"):FireClient(player, { op = "howto" })
 end

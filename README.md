@@ -39,11 +39,34 @@ Leave that window open. Every change pushed to the branch reaches Studio within 
   config module overlaid live by Roblox Configs, and the first-evening analytics funnel.
 - **Intro, title, How to play, Settings, Leaderboard**: all in smoked glass with gold hairlines.
 
+## What's in Delivery 2 — the four rooms and the Nightly
+
+- **All four rooms** off the Foyer, each with six tables and its own look:
+  - **The Velvet Room**: deep green walls, lamps on long cords, smoked mirrors, and a tall case
+    clock whose hands keep your own time. The clock waits for your first lift.
+  - **The Obsidian Room**: black stone, one hard key light over each table, gold only on the edges.
+    Every case is open and lookalikes are dealt together.
+  - **The Midnight Room**: ink blue, one small lamp per table, the city through a round window.
+    Nothing is named and nothing is pointed out. Roped off until you reach round IV in Obsidian;
+    then the Concierge tells you, and the door opens for you alone.
+- **Timed rooms**: a slim brass rail on the table drains with the clock, turns amber in the last
+  ten seconds, and freezes while a panel is open (never in the Nightly).
+- **The Nightly**: one table for everyone on Roblox, every night at 00:00 UTC. The same five rounds
+  and the same pieces for everyone, rules by weekday (Midnight Fridays). **Tonight's table** is a
+  second prompt on every chair. One scored attempt a night, unlimited rehearsals after, and leaving
+  early still counts. The **Nightly card** shows the date, the rules, your score, your grade, five
+  round hallmarks, your place among your connections and your percentile, with **Share** (Roblox
+  capture sharing with launch data) and **Invite** (a friend lands straight at tonight's table).
+- **The Tonight board** in the Foyer: tonight's rules, how many guests have sat it, the top five,
+  and the Salon's week. The **Leaderboard** now has Tonight plus every room, this week and all time.
+- **The Concierge** asks which room and walks you to any of them (Midnight once earned), and tells
+  returning guests "Tonight's table is laid." when they haven't sat it yet.
+
 ## Where things live
 
 | Folder | What |
 | --- | --- |
-| `src/shared` | Rules used by server and client: `Config` (every tunable number), `Catalogue`, `Seasons`, `Rooms`, `Deal`, `Scoring`, `Clock`, `Settings`, `Voice` (every line), `Layout` (where everything sits), `PieceModels` (the 3D pieces) |
+| `src/shared` | Rules used by server and client: `Config` (every tunable number), `Catalogue`, `Seasons`, `Rooms`, `Deal`, `Scoring`, `Clock`, `Nightly`, `Settings`, `Voice` (every line), `Layout` (where everything sits), `PieceModels` (the 3D pieces) |
 | `src/server` | `Main` boots it; `World/` builds the house; `Staff/` the Concierge and Doorman; `TableService`, `Profiles`, `Boards`, `Season`, `LiveConfig`, `Analytics`, `Guests`, `Dialogue` |
 | `src/client` | `Main` boots it; `UI/` every panel; `Table/` the table on your screen; `World/Ambient` (doors, weather, acoustics); `Camera`, `Sound`, `State` |
 | `tests` | `run.luau` (the rules), `smoke.luau` (builds the house and walks it) |
@@ -67,6 +90,8 @@ slots are empty. Put ids in `Config.Assets` (or in Configs as above):
 | `Sounds.round` / `complete` | a short warm two-note cadence; a longer one |
 | `Sounds.door`, `chair` | a heavy door easing open; a chair on carpet |
 | `Music.street` / `foyer` / `salon` | muffled city · jazz piano · soft deep house around 92 BPM |
+| `Music.velvet` / `obsidian` / `midnight` | slower and brushed · minimal and taut · sparse piano and room tone |
+| `Sounds.low` | the clock's last ten seconds: one soft low tick, played once |
 
 **Staff looks** (`Config.Assets.Concierge` / `Doorman`): a black tailcoat shirt and trousers
 (classic clothing ids), white gloves, and optionally a hair accessory. Until then they're

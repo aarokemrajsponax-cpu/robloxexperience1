@@ -11,6 +11,7 @@ local Catalogue = require(ReplicatedStorage.Shared.Catalogue)
 local Clock = require(ReplicatedStorage.Shared.Clock)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Deal = require(ReplicatedStorage.Shared.Deal)
+local Nightly = require(ReplicatedStorage.Shared.Nightly)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Rooms = require(ReplicatedStorage.Shared.Rooms)
 local Scoring = require(ReplicatedStorage.Shared.Scoring)
@@ -26,11 +27,19 @@ local TableService = {}
 
 type SessionPiece = Deal.DealtPiece & { uid: number, filed: boolean }
 
+export type Mode = "room" | "nightly" | "rehearsal"
+
 type Session = {
 	player: Player,
 	model: Model,
 	seat: Seat,
 	room: Rooms.Room,
+	mode: Mode,
+	night: Nightly.Night?,
+	roundGrades: { string },
+	paused: boolean,
+	finished: boolean,
+	startedAt: number,
 	state: "playing" | "roundEnd" | "banked" | "ended",
 	round: number,
 	seed: number,
@@ -68,6 +77,7 @@ local lastMessage: { [Player]: number } = {}
 -- Hooks the rest of the server can set.
 TableService.onSeated = function(_player: Player) end
 TableService.say = function(_player: Player, _line: string) end
+TableService.onUnlock = function(_player: Player, _room: string) end
 
 local function send(player: Player, message: { [string]: any })
 	tableEvent:FireClient(player, message)
@@ -138,9 +148,38 @@ local function clockState(s: Session): { [string]: any }?
 	return { budget = c.budget, left = c.left, running = c.running }
 end
 
+local function unlockMidnight(s: Session)
+	local data = Profiles.get(s.player)
+	if not data or data.flags.midnight then
+		return
+	end
+	data.flags.midnight = true
+	task.delay(2.4, TableService.say, s.player, Voice.Concierge.midnightUnlocked)
+	TableService.onUnlock(s.player, "midnight")
+	Analytics.custom(s.player, "Midnight unlocked", s.round)
+end
+
 local function dealRound(s: Session)
-	s.seed = Seed.fresh()
-	local result = Deal.generate(s.seed, s.room, s.round, Season.current().id, { allowMythic = true })
+	local night = s.night
+	local result
+	if s.mode ~= "room" and night then
+		-- The Nightly: the date decides every piece, identical on every server. Never Mythics.
+		s.seed = Nightly.seed(night.key, s.round)
+		result = Deal.generate(s.seed, s.room, s.round, Season.current().id, { allowMythic = false })
+		if s.mode == "nightly" and s.round == 1 then
+			-- Seeing the deal is the attempt: leaving now still counts.
+			local data = Profiles.get(s.player)
+			if data then
+				data.nightly = { day = night.day, key = night.key, score = 0, grade = "Cleared", rounds = {}, room = night.room, finished = false }
+			end
+		end
+	else
+		s.seed = Seed.fresh()
+		result = Deal.generate(s.seed, s.room, s.round, Season.current().id, { allowMythic = true })
+		if s.room.id == "obsidian" and s.round >= 4 then
+			unlockMidnight(s)
+		end
+	end
 	s.cases = result.cases
 	s.pieces = {}
 	s.dealSize = #result.pieces
@@ -169,6 +208,8 @@ local function dealRound(s: Session)
 	setLids(s.model, s.cases)
 	send(s.player, {
 		op = "deal",
+		mode = s.mode,
+		night = if night then night.key else nil,
 		round = s.round,
 		room = s.room.id,
 		cases = s.cases,
@@ -196,14 +237,21 @@ local function dealRound(s: Session)
 	end
 end
 
-local function newSession(player: Player, model: Model, seat: Seat): Session
-	local roomId = tostring(model:GetAttribute("Room") or "salon")
+local function newSession(player: Player, model: Model, seat: Seat, mode: Mode): Session
+	local night: Nightly.Night? = if mode ~= "room" then Nightly.at() else nil
+	local roomId = if night then night.room else tostring(model:GetAttribute("Room") or "salon")
 	local room = Rooms.get(roomId) or (Rooms.get("salon") :: Rooms.Room)
 	return {
 		player = player,
 		model = model,
 		seat = seat,
 		room = room,
+		mode = mode,
+		night = night,
+		roundGrades = {},
+		paused = false,
+		finished = false,
+		startedAt = os.time(),
 		state = "playing",
 		round = 1,
 		seed = 0,
@@ -248,8 +296,26 @@ local function resetRun(s: Session)
 	s.fileTimes = {}
 	s.flagged = false
 	s.log = {}
+	s.roundGrades = {}
+	s.finished = false
+	s.startedAt = os.time()
 	s.model:SetAttribute("Score", 0)
 	s.model:SetAttribute("Multiplier", 1)
+end
+
+-- Gilt is earned only, with a gentle daily soft cap (Appendix I1). Returns what was paid.
+local function payGilt(data: Profiles.Data, earned: number): number
+	local g = Config.data.Gilt
+	local today = math.floor(os.time() / 86400)
+	if data.giltDay.day ~= today then
+		data.giltDay = { day = today, earned = 0 }
+	end
+	local full = math.max(0, math.min(earned, g.dailySoftCap - data.giltDay.earned))
+	local reduced = math.floor((earned - full) * g.softCapRate)
+	local paid = full + reduced
+	data.giltDay.earned += paid
+	data.gilt += paid
+	return paid
 end
 
 -- Banks the run: records it, pays Gilt, and posts it to the boards. Returns the summary.
@@ -284,18 +350,7 @@ local function bank(s: Session, reason: string?): { [string]: any }
 			summary.newBest = previous > 0
 		end
 		summary.best = data.best[roomId]
-		-- Gilt: earned only, with a gentle daily soft cap.
-		local g = Config.data.Gilt
-		local earned = Scoring.giltForRun(s.score)
-		local today = math.floor(os.time() / 86400)
-		if data.giltDay.day ~= today then
-			data.giltDay = { day = today, earned = 0 }
-		end
-		local full = math.max(0, math.min(earned, g.dailySoftCap - data.giltDay.earned))
-		local reduced = math.floor((earned - full) * g.softCapRate)
-		local paid = full + reduced
-		data.giltDay.earned += paid
-		data.gilt += paid
+		local paid = payGilt(data, Scoring.giltForRun(s.score))
 		summary.gilt = paid
 		summary.giltTotal = data.gilt
 		Analytics.source(player, "Gilt", paid, data.gilt, "Banked run: " .. roomId)
@@ -306,6 +361,69 @@ local function bank(s: Session, reason: string?): { [string]: any }
 	Analytics.step(player, 10)
 	Analytics.custom(player, "Run banked", s.score, { room = s.room.id, rounds = s.roundsCleared, grade = grade })
 	return summary
+end
+
+-- The end of a Nightly attempt (or rehearsal): the Nightly card, the board, the log.
+local function finishNightly(s: Session, reason: string?, notify: boolean)
+	if s.finished then
+		return
+	end
+	s.finished = true
+	s.state = "banked"
+	if s.clock then
+		s.clock.running = false
+	end
+	local night = s.night :: Nightly.Night
+	local player = s.player
+	local accuracy = if s.runFilings > 0 then s.runCorrect / s.runFilings else 0
+	local _, grade = Scoring.runGrade(accuracy, s.runBestStreak, s.runCorrect)
+	local rounds = table.clone(s.roundGrades)
+	for i = #rounds + 1, Config.data.Nightly.rounds do
+		rounds[i] = "" -- an empty mark for a round the clock ended
+	end
+	local scored = s.mode == "nightly"
+	local card: { [string]: any } = {
+		op = "nightlyCard",
+		key = night.key,
+		room = s.room.id,
+		score = s.score,
+		grade = grade,
+		rounds = rounds,
+		scored = scored,
+		reason = reason,
+		gilt = 0,
+	}
+	local data = Profiles.get(player)
+	if scored and data then
+		data.nightly = { day = night.day, key = night.key, score = s.score, grade = grade, rounds = rounds, room = night.room, finished = true }
+		data.stats.nightlies += 1
+		local paid = payGilt(data, Config.data.Nightly.gilt)
+		card.gilt = paid
+		Analytics.source(player, "Gilt", paid, data.gilt, "The Nightly")
+	end
+	local finishedAt = os.time()
+	local log = s.log
+	local flagged = s.flagged
+	local score = s.score
+	task.spawn(function()
+		if scored then
+			local standing = Boards.submitNightly(player, night.key, score, finishedAt, flagged)
+			card.rank = standing.rank
+			card.total = standing.total
+			card.percentile = standing.percentile
+			card.connections = Boards.nightlyConnections(player, night.key, score)
+			Boards.saveNightlyLog(player, night.key, log)
+			Analytics.custom(player, "Nightly attempt", score, {
+				room = night.room,
+				grade = grade,
+				percentile = standing.percentile,
+				seconds = finishedAt - s.startedAt,
+			})
+		end
+		if notify and player.Parent == Players then
+			send(player, card)
+		end
+	end)
 end
 
 local function endSession(player: Player, why: string)
@@ -326,7 +444,10 @@ local function endSession(player: Player, why: string)
 	s.model:SetAttribute("Multiplier", 1)
 	setLids(s.model, { "watches", "jewelry", "money", "keys", "accessories", "collectibles" })
 	local summary: { [string]: any }? = nil
-	if s.score > 0 and why ~= "banked" then
+	if s.mode == "nightly" and not s.finished and s.state ~= "banked" then
+		-- Leaving a scored Nightly still counts: the attempt is recorded as it stands.
+		finishNightly(s, "left", false)
+	elseif s.mode == "room" and s.score > 0 and why ~= "banked" then
 		summary = bank(s, why)
 		if s.remaining > 0 and s.remaining < s.dealSize then
 			Analytics.custom(player, "Left mid-round", s.round, { room = s.room.id })
@@ -354,6 +475,7 @@ local function roundComplete(s: Session)
 	s.roundsCleared += 1
 	s.model:SetAttribute("Score", s.score)
 
+	table.insert(s.roundGrades, grade)
 	local data = Profiles.get(s.player)
 	if data then
 		data.stats.rounds += 1
@@ -361,10 +483,11 @@ local function roundComplete(s: Session)
 			data.stats.flawless += 1
 		end
 		local roomId = s.room.id
-		if s.round > (data.bestRound[roomId] or 0) then
+		if s.mode == "room" and s.round > (data.bestRound[roomId] or 0) then
 			data.bestRound[roomId] = s.round
 		end
 	end
+	local last = s.mode ~= "room" and s.round >= Config.data.Nightly.rounds
 	if s.round == 1 then
 		Analytics.step(s.player, 8)
 	elseif s.round == 3 then
@@ -380,7 +503,13 @@ local function roundComplete(s: Session)
 		accuracy = accuracy,
 		bestStreak = s.roundBestStreak,
 		mistakes = s.roundMistakes,
+		mode = s.mode,
+		room = s.room.id,
+		last = last,
 	})
+	if last then
+		finishNightly(s, nil, true)
+	end
 end
 
 local function register(player: Player, piece: SessionPiece, roomId: string)
@@ -485,7 +614,7 @@ local function file(s: Session, uid: number, caseId: string)
 		s.lastCase = nil
 		s.roundMistakes += 1
 		local wrongSetting = if data then data.settings.wrongCase else nil
-		if wrongSetting == "Costs points too" then
+		if wrongSetting == "Costs points too" and s.mode == "room" then
 			penalty = math.min(s.score, Scoring.wrongPenalty(s.round))
 			s.score -= penalty
 		end
@@ -517,6 +646,11 @@ local function file(s: Session, uid: number, caseId: string)
 end
 
 local function clockRanOut(s: Session)
+	if s.mode ~= "room" then
+		-- In the Nightly the run ends where the clock stops, and still counts.
+		finishNightly(s, Voice.fill(Voice.Table.clockRanOut, { round = Voice.roman(s.round) }), true)
+		return
+	end
 	s.state = "banked"
 	if s.clock then
 		s.clock.running = false
@@ -528,9 +662,20 @@ local function clockRanOut(s: Session)
 end
 
 -- Seats a guest at a table. `teleport` walks them there instantly (Straight to the table).
-function TableService.seat(player: Player, model: Model, teleport: boolean?): (boolean, string?)
+function TableService.seat(player: Player, model: Model, teleport: boolean?, wanted: Mode?): (boolean, string?)
 	if sessions[player] then
 		return false, "seated"
+	end
+	local data = Profiles.get(player)
+	local mode: Mode = wanted or "room"
+	if mode == "nightly" then
+		-- One scored attempt per UTC day; after that, unlimited unscored rehearsals.
+		local night = Nightly.at()
+		if data and data.nightly.day == night.day then
+			mode = "rehearsal"
+		end
+	elseif model:GetAttribute("Room") == "midnight" and not (data and data.flags.midnight) then
+		return false, "locked"
 	end
 	if occupants[model] then
 		return false, "taken"
@@ -561,7 +706,7 @@ function TableService.seat(player: Player, model: Model, teleport: boolean?): (b
 		occupants[model] = nil
 		return false, "unavailable"
 	end
-	local s = newSession(player, model, seat)
+	local s = newSession(player, model, seat, mode)
 	sessions[player] = s
 	model:SetAttribute("Occupant", player.UserId)
 	table.insert(s.connections, humanoid.Seated:Connect(function(active: boolean, part: BasePart?)
@@ -572,7 +717,7 @@ function TableService.seat(player: Player, model: Model, teleport: boolean?): (b
 	table.insert(s.connections, humanoid.Died:Connect(function()
 		endSession(player, "died")
 	end))
-	send(player, { op = "seated", table = model:GetAttribute("TableId"), room = s.room.id, centre = model:GetAttribute("Centre") })
+	send(player, { op = "seated", table = model:GetAttribute("TableId"), room = s.room.id, mode = s.mode, centre = model:GetAttribute("Centre") })
 	Analytics.step(player, 5)
 	TableService.onSeated(player)
 	task.delay(0.6, function()
@@ -592,7 +737,7 @@ function TableService.freeTable(roomId: string, near: Vector3?): Model?
 	local best: Model? = nil
 	local bestDistance = math.huge
 	for _, m in tables() do
-		if m:GetAttribute("Room") == roomId and not occupants[m] then
+		if (roomId == "any" or m:GetAttribute("Room") == roomId) and m:GetAttribute("Room") ~= "midnight" and not occupants[m] then
 			local centre = m:GetAttribute("Centre")
 			local d = if near and typeof(centre) == "Vector3" then (centre - near).Magnitude else 0
 			if d < bestDistance then
@@ -643,8 +788,13 @@ local function onMessage(player: Player, message: unknown)
 			s.round += 1
 			dealRound(s)
 		end
+	elseif op == "pause" then
+		-- The clock freezes while a panel is open, except in the Nightly (nobody pauses to think).
+		if s.mode == "room" then
+			s.paused = m.on == true
+		end
 	elseif op == "bank" then
-		if s.state == "roundEnd" or s.state == "playing" then
+		if s.mode == "room" and (s.state == "roundEnd" or s.state == "playing") then
 			s.state = "banked"
 			local summary = bank(s, nil)
 			send(player, summary)
@@ -652,6 +802,14 @@ local function onMessage(player: Player, message: unknown)
 		end
 	elseif op == "again" then
 		if s.state == "banked" then
+			if s.mode ~= "room" then
+				-- After the card: another go at tonight's table, scored only if it's a new night.
+				local night = Nightly.at()
+				local data = Profiles.get(player)
+				s.mode = if data and data.nightly.day == night.day then "rehearsal" else "nightly"
+				s.night = night
+				s.room = Rooms.get(night.room) or s.room
+			end
 			resetRun(s)
 			dealRound(s)
 		end
@@ -671,7 +829,18 @@ function TableService.start()
 		local prompt = seat and seat:FindFirstChild("SitPrompt")
 		if prompt and prompt:IsA("ProximityPrompt") then
 			prompt.Triggered:Connect(function(player: Player)
-				local ok, why = TableService.seat(player, m, false)
+				local ok, why = TableService.seat(player, m, false, "room")
+				if not ok and why == "taken" then
+					TableService.say(player, "That table is taken. Another is free.")
+				elseif not ok and why == "locked" then
+					TableService.say(player, Voice.Concierge.midnightLocked)
+				end
+			end)
+		end
+		local nightly = seat and seat:FindFirstChild("NightlyPrompt")
+		if nightly and nightly:IsA("ProximityPrompt") then
+			nightly.Triggered:Connect(function(player: Player)
+				local ok, why = TableService.seat(player, m, false, "nightly")
 				if not ok and why == "taken" then
 					TableService.say(player, "That table is taken. Another is free.")
 				end
@@ -682,7 +851,7 @@ function TableService.start()
 	RunService.Heartbeat:Connect(function(dt: number)
 		for _, s in sessions do
 			local c = s.clock
-			if c and c.running and s.state == "playing" then
+			if c and c.running and s.state == "playing" and not s.paused then
 				c.left -= dt
 				if c.left <= 0 then
 					clockRanOut(s)
@@ -698,6 +867,10 @@ function TableService.start()
 				local prompt = seat and seat:FindFirstChild("SitPrompt")
 				if prompt and prompt:IsA("ProximityPrompt") then
 					prompt.Enabled = not occupants[m]
+				end
+				local nightly = seat and seat:FindFirstChild("NightlyPrompt")
+				if nightly and nightly:IsA("ProximityPrompt") then
+					nightly.Enabled = not occupants[m]
 				end
 			end
 			task.wait(0.5)

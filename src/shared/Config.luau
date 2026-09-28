@@ -90,6 +90,22 @@ local defaults = {
 
 	Grades = { Flawless = 95, Immaculate = 84, Polished = 68, Steady = 48 },
 
+	-- The Nightly (Appendix H1). Rules by UTC weekday.
+	Nightly = {
+		rounds = 5,
+		gilt = 120,
+		boardTop = 100,
+		boardHours = 72, -- how long a night's board is kept in memory
+		connectionsChecked = 50,
+		sunday = "obsidian",
+		monday = "velvet",
+		tuesday = "obsidian",
+		wednesday = "velvet",
+		thursday = "obsidian",
+		friday = "midnight",
+		saturday = "velvet",
+	},
+
 	Clock = {
 		lowAt = 10, -- seconds left when the clock turns to its low state
 		refundBoostFromMultiplier = 4,
@@ -152,9 +168,10 @@ local defaults = {
 			complete = "rbxasset://sounds/electronicpingshort.wav",
 			door = "",
 			chair = "rbxasset://sounds/action_get_up.mp3",
+			low = "rbxasset://sounds/electronicpingshort.wav", -- the clock's last ten seconds, played low
 		},
-		Music = { street = "", foyer = "", salon = "" },
-		Ambience = { street = "", foyer = "", salon = "" },
+		Music = { street = "", foyer = "", salon = "", velvet = "", obsidian = "", midnight = "" },
+		Ambience = { street = "", foyer = "", salon = "", velvet = "", obsidian = "", midnight = "" },
 		Animations = {
 			idle = "rbxassetid://507766666",
 			walk = "rbxassetid://507777826",

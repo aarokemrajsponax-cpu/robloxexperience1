@@ -8,49 +8,13 @@ local Brand = require(ReplicatedStorage.Shared.Brand)
 local Voice = require(ReplicatedStorage.Shared.Voice)
 local Root = require(script.Parent.Root)
 local Theme = require(script.Parent.Theme)
+local Hallmark = require(script.Parent.Hallmark)
+local Rooms = require(ReplicatedStorage.Shared.Rooms)
 local State = require(script.Parent.Parent.State)
 
 local RoundPanel = {}
 
 local NAME = "Round"
-
-local function hallmark(parent: Instance, grade: string, order: number): Frame
-	local mark = Instance.new("Frame")
-	mark.Name = "Hallmark"
-	mark.BackgroundColor3 = Color3.fromRGB(20, 18, 14)
-	mark.BackgroundTransparency = 0.2
-	mark.Size = UDim2.fromOffset(190, 46)
-	mark.LayoutOrder = order
-	mark.Parent = parent
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0.5, 0)
-	corner.Parent = mark
-	local outer = Instance.new("UIStroke")
-	outer.Color = Brand.Colours.gold
-	outer.Thickness = 1.5
-	outer.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	outer.Parent = mark
-	local inner = Instance.new("Frame")
-	inner.BackgroundTransparency = 1
-	inner.AnchorPoint = Vector2.new(0.5, 0.5)
-	inner.Position = UDim2.fromScale(0.5, 0.5)
-	inner.Size = UDim2.new(1, -8, 1, -8)
-	inner.Parent = mark
-	local innerCorner = Instance.new("UICorner")
-	innerCorner.CornerRadius = UDim.new(0.5, 0)
-	innerCorner.Parent = inner
-	local innerStroke = Instance.new("UIStroke")
-	innerStroke.Color = Brand.Colours.deepGold
-	innerStroke.Thickness = 1
-	innerStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	innerStroke.Parent = inner
-	Theme.text(inner, string.upper(grade), 15, "caps", {
-		AutomaticSize = Enum.AutomaticSize.None,
-		Size = UDim2.fromScale(1, 1),
-		TextColor3 = Brand.Colours.lightGold,
-	})
-	return mark
-end
 
 local function line(parent: Instance, left: string, right: string, order: number)
 	local row = Instance.new("Frame")
@@ -95,7 +59,7 @@ local function panel(heading: string, sub: string?, grade: string, rows: { { str
 		Theme.text(content, sub, 11, "caps", { LayoutOrder = 1 })
 	end
 	Theme.text(content, heading, 24, "display", { LayoutOrder = 2 })
-	hallmark(content, grade, 3)
+	Hallmark.big(content, grade, 3)
 	for i, r in rows do
 		line(content, r[1], r[2], 3 + i)
 	end
@@ -139,7 +103,9 @@ function RoundPanel.round(message: { [string]: any }, actions: Actions)
 	end
 	table.insert(rows, { "The run so far", number(message.score) })
 	local roundText = Voice.roundLabel(message.round, State.get("roundNumbers"))
-	panel("Round " .. roundText, "The Salon", message.grade, rows, actions)
+	local room = Rooms.get(message.room or "salon")
+	local sub = if message.mode and message.mode ~= "room" then "Tonight's table" else (if room then room.name else "")
+	panel("Round " .. roundText, sub, message.grade, rows, actions)
 end
 
 function RoundPanel.banked(message: { [string]: any }, actions: Actions)

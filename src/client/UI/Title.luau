@@ -7,6 +7,7 @@ local Workspace = game:GetService("Workspace")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local Ease = require(ReplicatedStorage.Shared.Ease)
+local Rooms = require(ReplicatedStorage.Shared.Rooms)
 local Root = require(script.Parent.Root)
 local Theme = require(script.Parent.Theme)
 
@@ -72,9 +73,17 @@ function Title.show(choices: Choices)
 		Theme.text(column, seasonLine, 15, "display", { LayoutOrder = 6, TextColor3 = Brand.Colours.lightGold })
 	end
 
+	-- One quiet line for tonight's table.
+	local nightlyRoom = Rooms.get(tostring(Workspace:GetAttribute("NightlyRoom") or ""))
+	if nightlyRoom then
+		local ruleName = string.gsub(nightlyRoom.name, "^The ", "")
+		ruleName = string.gsub(ruleName, " Room$", "")
+		Theme.text(column, "Tonight's table: " .. ruleName .. " rules.", 14, "body", { LayoutOrder = 7, TextColor3 = Brand.Colours.smoke })
+	end
+
 	local spacer2 = spacer:Clone()
 	spacer2.Size = UDim2.fromOffset(1, 14)
-	spacer2.LayoutOrder = 7
+	spacer2.LayoutOrder = 8
 	spacer2.Parent = column
 
 	local keys = Instance.new("Frame")
@@ -82,7 +91,7 @@ function Title.show(choices: Choices)
 	keys.BackgroundTransparency = 1
 	keys.AutomaticSize = Enum.AutomaticSize.Y
 	keys.Size = UDim2.new(1, 0, 0, 0)
-	keys.LayoutOrder = 8
+	keys.LayoutOrder = 9
 	keys.Parent = column
 	Theme.list(keys, 10)
 	local play = Theme.key(keys, "Play", true, choices.play, 240)

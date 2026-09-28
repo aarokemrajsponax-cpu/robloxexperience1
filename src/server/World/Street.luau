@@ -127,8 +127,9 @@ local function neighbours(parent: Instance)
 	}
 	for i, s in specs do
 		local x0, x1, h, look = s[1] :: number, s[2] :: number, s[3] :: number, s[4] :: Kit.Look
-		Kit.span(m, "Building" .. i, Vector3.new(x0, 0, z - 0.5), Vector3.new(x1, h, z + 4), look)
-		Kit.span(m, "Cornice" .. i, Vector3.new(x0, h, z - 1.2), Vector3.new(x1, h + 1, z + 4), L.facadeTrim)
+		-- Shallow enough that the back face hides inside the rooms' walls (no fighting faces).
+		Kit.span(m, "Building" .. i, Vector3.new(x0, 0, z - 0.5), Vector3.new(x1, h, z + 3), look)
+		Kit.span(m, "Cornice" .. i, Vector3.new(x0, h, z - 1.2), Vector3.new(x1, h + 1, z + 3), L.facadeTrim)
 		local cols = math.floor((x1 - x0) / 8)
 		for c = 0, cols - 1 do
 			for r, y in { 10, 24, 38 } do

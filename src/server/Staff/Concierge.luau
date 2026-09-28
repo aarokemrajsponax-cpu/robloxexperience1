@@ -22,6 +22,10 @@ Concierge.isSeated = function(_player: Player): boolean
 end
 -- Set by the client bridge: opens How to play on the guest's screen.
 Concierge.openHowTo = function(_player: Player) end
+-- Set by the server: may this guest enter a room (the Midnight Room is earned)?
+Concierge.canEnter = function(_player: Player, _room: string): boolean
+	return true
+end
 
 local function characterRoot(player: Player): BasePart?
 	local character = player.Character
@@ -35,14 +39,19 @@ local function characterRoot(player: Player): BasePart?
 	return nil
 end
 
--- Walks ahead of the guest to the Salon door, pausing if they fall behind.
+-- Walks ahead of the guest to a room, pausing if they fall behind.
 function Concierge.lead(player: Player, roomId: string)
 	local s = staff
 	if not s then
 		return
 	end
-	if roomId ~= "salon" then
-		Dialogue.say(player, V.speaker, V.closedRoom)
+	local doorSpec = Layout.RoomDoors[roomId]
+	local roomSpec = Layout.Rooms[roomId]
+	if not doorSpec or not roomSpec then
+		return
+	end
+	if not Concierge.canEnter(player, roomId) then
+		Dialogue.say(player, V.speaker, V.midnightLocked, nil, nil, 3.5)
 		return
 	end
 	if s.busy then
@@ -52,9 +61,8 @@ function Concierge.lead(player: Player, roomId: string)
 	s.busy = true
 	leading = player
 	Dialogue.say(player, V.speaker, V.thisWay, nil, nil, 2.5)
-	local door = Layout.RoomDoors.salon.centre
-	local waypoint = door + Layout.RoomDoors.salon.facing * 4 -- just inside the Foyer
-	local arrival = Layout.Salon.arrival
+	local waypoint = doorSpec.centre + doorSpec.facing * 4 -- just inside the Foyer
+	local arrival = roomSpec.arrival
 
 	local function stop(): boolean
 		return player.Parent ~= Players or Concierge.isSeated(player) or characterRoot(player) == nil
@@ -72,7 +80,15 @@ function Concierge.lead(player: Player, roomId: string)
 	end
 
 	task.spawn(function()
-		local reached = Rig.walkTo(s, waypoint, behind, stop)
+		local reached = true
+		for _, point in doorSpec.approach do
+			if reached then
+				reached = Rig.walkTo(s, point, behind, stop)
+			end
+		end
+		if reached then
+			reached = Rig.walkTo(s, waypoint, behind, stop)
+		end
 		if reached then
 			reached = Rig.walkTo(s, arrival, behind, stop)
 		end
@@ -81,10 +97,14 @@ function Concierge.lead(player: Player, roomId: string)
 			if root then
 				Rig.face(s, root.Position)
 			end
-			Dialogue.say(player, V.speaker, V.arrived, nil, nil, 3)
+			Dialogue.say(player, V.speaker, V.arrivedIn[roomId] or V.arrived, nil, nil, 3)
 			task.wait(2.5)
 		end
 		leading = nil
+		Rig.walkTo(s, waypoint)
+		for i = #doorSpec.approach, 1, -1 do
+			Rig.walkTo(s, doorSpec.approach[i])
+		end
 		Rig.goHome(s)
 		s.busy = false
 	end)
@@ -97,7 +117,17 @@ local function menu(player: Player)
 		{ id = "bye", text = V.choices.bye },
 	}, function(choice)
 		if choice == "room" then
-			Concierge.lead(player, "salon")
+			local rooms = {
+				{ id = "salon", text = "The Salon" },
+				{ id = "velvet", text = "The Velvet Room" },
+				{ id = "obsidian", text = "The Obsidian Room" },
+			}
+			if Concierge.canEnter(player, "midnight") then
+				table.insert(rooms, { id = "midnight", text = "The Midnight Room" })
+			end
+			Dialogue.say(player, V.speaker, V.whichRoom, rooms, function(roomId)
+				Concierge.lead(player, roomId)
+			end)
 		elseif choice == "how" then
 			Dialogue.close(player)
 			Concierge.openHowTo(player)
@@ -107,8 +137,9 @@ local function menu(player: Player)
 	end)
 end
 
--- Called once per visit when a guest first steps into the Foyer.
-function Concierge.greet(player: Player, firstVisit: boolean)
+-- Called once per visit when a guest first steps into the Foyer. Returning guests hear the one
+-- thing that matters tonight.
+function Concierge.greet(player: Player, firstVisit: boolean, nightlyPending: boolean?)
 	if firstVisit then
 		Dialogue.say(player, V.speaker, V.firstVisit, nil, nil, 3.5)
 		task.delay(1.2, function()
@@ -118,6 +149,13 @@ function Concierge.greet(player: Player, firstVisit: boolean)
 		end)
 	else
 		Dialogue.say(player, V.speaker, (V.returning:gsub("{name}", player.DisplayName)), nil, nil, 3.5)
+		if nightlyPending then
+			task.delay(3.8, function()
+				if player.Parent == Players and not Concierge.isSeated(player) then
+					Dialogue.say(player, V.speaker, V.tonightLaid, nil, nil, 3.5)
+				end
+			end)
+		end
 	end
 end
 

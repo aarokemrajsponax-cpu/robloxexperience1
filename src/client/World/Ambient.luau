@@ -87,6 +87,23 @@ local function addDoor(model: Model, radius: number)
 end
 
 local wired: { [Instance]: boolean } = {}
+local gated: { [string]: Model } = {}
+
+-- An earned door (the Midnight Room): on this guest's screen only, the rope comes down and the
+-- doors open. The server still checks the unlock before anyone can sit.
+local function openGate(model: Model)
+	for _, d in model:GetChildren() do
+		if d:IsA("BasePart") then
+			if d:GetAttribute("Gated") then
+				d.CanCollide = false
+			elseif d.Name == "Stanchion" or d.Name == "StanchionTop" or d.Name == "Rope" then
+				d.LocalTransparencyModifier = 1
+				d.CanCollide = false
+			end
+		end
+	end
+	addDoor(model, 11)
+end
 
 local function wire(tag: string, instance: Instance)
 	if wired[instance] then
@@ -97,6 +114,14 @@ local function wire(tag: string, instance: Instance)
 		addDoor(instance, 16)
 	elseif tag == "RoomDoor" and instance:IsA("Model") and instance:GetAttribute("Open") == true then
 		addDoor(instance, 11)
+	elseif tag == "RoomDoor" and instance:IsA("Model") then
+		local room = instance:GetAttribute("Room")
+		if type(room) == "string" then
+			gated[room] = instance
+			if State.unlocked[room] then
+				openGate(instance)
+			end
+		end
 	elseif tag == "RoomName" and instance:IsA("BasePart") then
 		local gui = instance:FindFirstChildOfClass("SurfaceGui") or instance:WaitForChild("SurfaceGui", 5)
 		if gui and gui:IsA("SurfaceGui") then
@@ -106,6 +131,59 @@ local function wire(tag: string, instance: Instance)
 				end
 			end
 			table.insert(names, { gui = gui, position = instance.Position })
+		end
+	end
+end
+
+State.Unlocked:Connect(function(room: string)
+	local model = gated[room]
+	if model then
+		gated[room] = nil
+		openGate(model)
+	end
+end)
+
+-- The Velvet Room's case clock keeps the guest's own time; its pendulum swings.
+local clockModel: Model? = nil
+local function stepCaseClock(t: number)
+	local model = clockModel
+	if not model or not model.Parent then
+		local maison = Workspace:FindFirstChild("Maison")
+		local velvet = maison and maison:FindFirstChild("Velvet")
+		local found = velvet and velvet:FindFirstChild("CaseClock")
+		clockModel = if found and found:IsA("Model") then found else nil
+		model = clockModel
+		if not model then
+			return
+		end
+	end
+	local now = os.date("*t")
+	local minuteAngle = (now.min + now.sec / 60) / 60 * math.pi * 2
+	local hourAngle = ((now.hour % 12) + now.min / 60) / 12 * math.pi * 2
+	local hands: { { name: string, angle: number, reach: number } } = {
+		{ name = "HourHand", angle = hourAngle, reach = 0.25 },
+		{ name = "MinuteHand", angle = minuteAngle, reach = 0.4 },
+	}
+	for _, spec in hands do
+		local hand = (model :: Model):FindFirstChild(spec.name)
+		if hand and hand:IsA("BasePart") then
+			local pivot = hand:GetAttribute("Pivot")
+			if typeof(pivot) == "CFrame" then
+				hand.CFrame = pivot * CFrame.Angles(0, 0, spec.angle) * CFrame.new(0, spec.reach, 0)
+			end
+		end
+	end
+	local swing = math.sin(t * math.pi) * 0.16
+	local pendulum = (model :: Model):FindFirstChild("Pendulum")
+	local bob = (model :: Model):FindFirstChild("Bob")
+	if pendulum and pendulum:IsA("BasePart") then
+		local pivot = pendulum:GetAttribute("Pivot")
+		if typeof(pivot) == "CFrame" then
+			local swung = pivot * CFrame.Angles(0, 0, swing)
+			pendulum.CFrame = swung * CFrame.new(0, -1.5, 0)
+			if bob and bob:IsA("BasePart") then
+				bob.CFrame = swung * CFrame.new(0, -3, 0)
+			end
 		end
 	end
 end
@@ -337,6 +415,7 @@ function Ambient.start()
 			stepWeather(dt, camera.CFrame.Position)
 		end
 		stepFlicker(t)
+		stepCaseClock(t)
 		local pos = rootPosition()
 		if not pos then
 			return

@@ -6,6 +6,9 @@ local Workspace = game:GetService("Workspace")
 local Street = require(script.Parent.Street)
 local Foyer = require(script.Parent.Foyer)
 local Salon = require(script.Parent.Salon)
+local Velvet = require(script.Parent.Velvet)
+local Obsidian = require(script.Parent.Obsidian)
+local Midnight = require(script.Parent.Midnight)
 
 local Build = {}
 
@@ -19,6 +22,9 @@ function Build.run(): Folder
 	Street.build(root)
 	Foyer.build(root)
 	Salon.build(root)
+	Velvet.build(root)
+	Obsidian.build(root)
+	Midnight.build(root)
 	root.Parent = Workspace
 	return root
 end

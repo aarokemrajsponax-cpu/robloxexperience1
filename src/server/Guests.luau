@@ -9,6 +9,7 @@ local Workspace = game:GetService("Workspace")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Layout = require(ReplicatedStorage.Shared.Layout)
+local Nightly = require(ReplicatedStorage.Shared.Nightly)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Settings = require(ReplicatedStorage.Shared.Settings)
 
@@ -27,6 +28,7 @@ type Visit = {
 	zone: string,
 	settingTimes: { number },
 	funnel: { [number]: boolean },
+	launch: string?,
 }
 
 local visits: { [Player]: Visit } = {}
@@ -57,6 +59,9 @@ local function payload(player: Player, data: Profiles.Data, visit: Visit): { [st
 		best = data.best,
 		registered = registered,
 		saved = not Profiles.isMock(),
+		unlocked = { midnight = data.flags.midnight == true },
+		nightly = { played = data.nightly.day == Nightly.at().day, score = data.nightly.score, grade = data.nightly.grade },
+		launch = visit.launch,
 	}
 end
 
@@ -99,7 +104,15 @@ local function welcome(player: Player, data: Profiles.Data)
 		zone = "none",
 		settingTimes = {},
 		funnel = {},
+		launch = nil,
 	}
+	-- Invites carry launch data so a friend lands where you are (§13).
+	local okJoin, join = pcall(function()
+		return player:GetJoinData()
+	end)
+	if okJoin and join and type(join.LaunchData) == "string" and #join.LaunchData <= 40 then
+		visit.launch = join.LaunchData
+	end
 	visits[player] = visit
 	if data.visits == 0 then
 		data.firstVisit = os.time()
@@ -135,7 +148,9 @@ local function trackZones()
 						Analytics.step(player, 4)
 						if not visit.greeted then
 							visit.greeted = true
-							Concierge.greet(player, visit.firstVisit)
+							local data = Profiles.get(player)
+							local pending = data ~= nil and data.nightly.day ~= Nightly.at().day
+							Concierge.greet(player, visit.firstVisit, pending)
 						end
 					end
 				end
@@ -196,19 +211,23 @@ function Guests.start()
 	Profiles.Loaded:Connect(welcome)
 	Remotes.event("Setting").OnServerEvent:Connect(onSetting)
 	Remotes.event("Funnel").OnServerEvent:Connect(onFunnel)
-	Remotes.func("QuickSit").OnServerInvoke = function(player: Player)
+	Remotes.func("QuickSit").OnServerInvoke = function(player: Player, wanted: unknown)
 		if TableService.isSeated(player) then
 			return true
 		end
+		local mode: TableService.Mode = if wanted == "nightly" then "nightly" else "room"
 		local character = player.Character
 		local root = character and character:FindFirstChild("HumanoidRootPart")
 		local near = if root and root:IsA("BasePart") then root.Position else nil
-		local model = TableService.freeTable("salon", near)
+		local model = TableService.freeTable(if mode == "nightly" then "any" else "salon", near)
 		if not model then
 			return false
 		end
-		local ok = TableService.seat(player, model, true)
+		local ok = TableService.seat(player, model, true, mode)
 		return ok
+	end
+	TableService.onUnlock = function(player: Player, room: string)
+		guestEvent:FireClient(player, { op = "unlock", room = room })
 	end
 	Players.PlayerRemoving:Connect(function(player)
 		visits[player] = nil
