@@ -1,0 +1,1322 @@
+--!nocheck
+-- Boots the whole client under Lune against the real built house: the intro, the title, Play,
+-- the walk in, a Salon table (deal, lift, file with a gamepad, the round card, the next
+-- round, banking), the Nightly card, the Library (a whole Tête-à-Tête on screen, parcels, the
+-- result card), the panels (settings, the leaderboard, how to play) and the Concierge's
+-- dialogue. Every Roblox call the client makes goes through real Lune instances or a small
+-- stand-in, so a crash anywhere on these paths fails the test.
+--
+-- Usage (from the repo root):  rojo sourcemap default.project.json -o sourcemap.json
+--                              lune run tests/client.luau
+
+local fs = require("@lune/fs")
+local luau = require("@lune/luau")
+local roblox = require("@lune/roblox")
+local serde = require("@lune/serde")
+local process = require("@lune/process")
+
+local Instance, Vector3, Vector2 = roblox.Instance, roblox.Vector3, roblox.Vector2
+
+-- Lune 0.10's CFrame.lookAt faces away from its target (see tests/smoke.luau).
+local function lookAt(at, target, up)
+	up = up or Vector3.new(0, 1, 0)
+	local look = (target - at).Unit
+	local right = look:Cross(up)
+	if right.Magnitude < 1e-6 then
+		right = look:Cross(Vector3.new(0, 0, 1))
+	end
+	right = right.Unit
+	local up2 = right:Cross(look)
+	return roblox.CFrame.fromMatrix(at, right, up2, -look)
+end
+local CFrame = setmetatable({ lookAt = lookAt }, { __index = roblox.CFrame })
+
+local passed, failed = 0, 0
+local function check(name: string, ok: boolean, detail: any?)
+	if ok then
+		passed += 1
+	else
+		failed += 1
+		print("FAIL  " .. name .. (if detail ~= nil then "  -> " .. tostring(detail) else ""))
+	end
+end
+
+---------------------------------------------------------------------------------------------------
+-- A fake clock, a scheduler and signals
+---------------------------------------------------------------------------------------------------
+local now = 100
+local timers = {}
+local errors = {}
+-- Roblox lets code read a destroyed instance (its Parent is nil); Lune raises instead. Those
+-- reads are counted, not failed.
+local destroyedReads = 0
+local function record(trace: string)
+	if string.find(trace, "Instance has been destroyed", 1, true) then
+		destroyedReads += 1
+		return
+	end
+	table.insert(errors, trace)
+	print("ERROR  " .. trace)
+end
+local function schedule(at, fn, ...)
+	table.insert(timers, { at = at, fn = fn, args = table.pack(...) })
+end
+
+local function run(fn, ...)
+	local co = coroutine.create(fn)
+	local ok, err = coroutine.resume(co, ...)
+	if not ok then
+		record(debug.traceback(co, tostring(err)))
+	end
+	return co
+end
+
+local function resume(co, ...)
+	if coroutine.status(co) ~= "suspended" then
+		return
+	end
+	local ok, err = coroutine.resume(co, ...)
+	if not ok then
+		record(debug.traceback(co, tostring(err)))
+	end
+end
+
+local function signal()
+	local s = { handlers = {}, waiting = {} }
+	function s:Connect(fn)
+		local entry = { fn = fn, live = true }
+		table.insert(self.handlers, entry)
+		return {
+			Connected = true,
+			Disconnect = function()
+				entry.live = false
+			end,
+		}
+	end
+	function s:Once(fn)
+		local c
+		c = self:Connect(function(...)
+			c.Disconnect()
+			fn(...)
+		end)
+		return c
+	end
+	function s:Wait()
+		table.insert(self.waiting, coroutine.running())
+		return coroutine.yield()
+	end
+	function s:Fire(...)
+		for _, h in table.clone(self.handlers) do
+			if h.live then
+				run(h.fn, ...)
+			end
+		end
+		local waiting = self.waiting
+		self.waiting = {}
+		for _, co in waiting do
+			resume(co, ...)
+		end
+	end
+	return s
+end
+
+local heartbeat = signal()
+local renderStepped = signal()
+
+local function step(dt: number)
+	local target = now + dt
+	while true do
+		table.sort(timers, function(a, b)
+			return a.at < b.at
+		end)
+		local t = timers[1]
+		if not t or t.at > target then
+			break
+		end
+		table.remove(timers, 1)
+		now = math.max(now, t.at)
+		if type(t.fn) == "thread" then
+			resume(t.fn, table.unpack(t.args, 1, t.args.n))
+		else
+			run(t.fn, table.unpack(t.args, 1, t.args.n))
+		end
+	end
+	now = target
+	renderStepped:Fire(dt)
+	heartbeat:Fire(dt)
+end
+
+local function advance(seconds: number)
+	local left = seconds
+	while left > 1e-9 do
+		local dt = math.min(1 / 20, left)
+		step(dt)
+		left -= dt
+	end
+end
+
+local taskShim = {
+	spawn = function(fn, ...)
+		if type(fn) == "thread" then
+			resume(fn, ...)
+			return fn
+		end
+		return run(fn, ...)
+	end,
+	delay = function(t, fn, ...)
+		schedule(now + (t or 0), fn, ...)
+	end,
+	defer = function(fn, ...)
+		schedule(now, fn, ...)
+	end,
+	wait = function(t)
+		local co = coroutine.running()
+		schedule(now + (t or 1 / 60), co)
+		coroutine.yield()
+		return t or 1 / 60
+	end,
+	cancel = function() end,
+}
+
+---------------------------------------------------------------------------------------------------
+-- What Lune's instances don't do: events, a few methods, per-instance signals
+---------------------------------------------------------------------------------------------------
+local nextSid = 0
+local instanceSignals = {}
+local function sid(inst)
+	local id = inst:GetAttribute("TestSid")
+	if not id then
+		nextSid += 1
+		id = nextSid
+		inst:SetAttribute("TestSid", id)
+	end
+	return id
+end
+local function signalOf(inst, name)
+	local key = tostring(sid(inst)) .. ":" .. name
+	local s = instanceSignals[key]
+	if not s then
+		s = signal()
+		instanceSignals[key] = s
+	end
+	return s
+end
+
+local events = {
+	Instance = { "Changed", "Destroying", "ChildAdded", "ChildRemoved", "DescendantAdded", "DescendantRemoving", "AncestryChanged", "AttributeChanged" },
+	GuiButton = { "Activated", "MouseButton1Click", "MouseButton1Down", "MouseButton1Up" },
+	GuiObject = { "MouseEnter", "MouseLeave", "SelectionGained", "SelectionLost", "InputBegan", "InputEnded", "InputChanged" },
+	Humanoid = { "Seated", "Died", "Running", "StateChanged", "MoveToFinished" },
+	ProximityPrompt = { "Triggered", "TriggerEnded", "PromptShown", "PromptHidden", "PromptButtonHoldBegan", "PromptButtonHoldEnded" },
+	BindableEvent = { "Event" },
+	Sound = { "Ended", "Loaded", "Played" },
+}
+for class, list in events do
+	for _, name in list do
+		roblox.implementProperty(class, name, function(self)
+			return signalOf(self, name)
+		end)
+	end
+end
+roblox.implementMethod("BindableEvent", "Fire", function(self, ...)
+	signalOf(self, "Event"):Fire(...)
+end)
+roblox.implementMethod("Instance", "GetPropertyChangedSignal", function(self, prop)
+	return signalOf(self, "prop:" .. prop)
+end)
+roblox.implementMethod("Instance", "GetAttributeChangedSignal", function(self, name)
+	return signalOf(self, "attr:" .. name)
+end)
+roblox.implementMethod("Instance", "WaitForChild", function(self, name)
+	return self:FindFirstChild(name)
+end)
+for _, m in { "Play", "Stop", "Pause", "Resume" } do
+	roblox.implementMethod("Sound", m, function() end)
+end
+roblox.implementMethod("ParticleEmitter", "Emit", function() end)
+roblox.implementMethod("ParticleEmitter", "Clear", function() end)
+
+local function corners(cf, size)
+	local out = {}
+	for _, sx in { -0.5, 0.5 } do
+		for _, sy in { -0.5, 0.5 } do
+			for _, sz in { -0.5, 0.5 } do
+				table.insert(out, cf * Vector3.new(size.X * sx, size.Y * sy, size.Z * sz))
+			end
+		end
+	end
+	return out
+end
+local function boundingBox(model)
+	local lo, hi
+	for _, d in model:GetDescendants() do
+		if d:IsA("BasePart") then
+			for _, c in corners(d.CFrame, d.Size) do
+				lo = if lo then Vector3.new(math.min(lo.X, c.X), math.min(lo.Y, c.Y), math.min(lo.Z, c.Z)) else c
+				hi = if hi then Vector3.new(math.max(hi.X, c.X), math.max(hi.Y, c.Y), math.max(hi.Z, c.Z)) else c
+			end
+		end
+	end
+	if not lo then
+		return CFrame.new(), Vector3.new()
+	end
+	return CFrame.new((lo + hi) / 2), hi - lo
+end
+roblox.implementMethod("Model", "GetBoundingBox", function(self)
+	return boundingBox(self)
+end)
+roblox.implementMethod("Model", "GetPivot", function(self)
+	local pp = self.PrimaryPart
+	return if pp then pp.CFrame else (boundingBox(self))
+end)
+roblox.implementMethod("Model", "PivotTo", function(self, target)
+	local pivot = if self.PrimaryPart then self.PrimaryPart.CFrame else (boundingBox(self))
+	local delta = target * pivot:Inverse()
+	for _, d in self:GetDescendants() do
+		if d:IsA("BasePart") then
+			d.CFrame = delta * d.CFrame
+		end
+	end
+end)
+roblox.implementMethod("Model", "GetScale", function(self)
+	return self:GetAttribute("TestScale") or 1
+end)
+roblox.implementMethod("Model", "ScaleTo", function(self, s)
+	self:SetAttribute("TestScale", s)
+end)
+-- A pinhole camera, the same one the test uses to find things on screen.
+local function lens(cam)
+	local vp = cam.ViewportSize
+	local ty = math.tan(math.rad(cam.FieldOfView) / 2)
+	return vp, ty * vp.X / vp.Y, ty
+end
+roblox.implementMethod("Camera", "ScreenPointToRay", function(self, x, y)
+	local vp, tx, ty = lens(self)
+	local cf = self.CFrame
+	local nx, ny = x / vp.X * 2 - 1, 1 - y / vp.Y * 2
+	return { Origin = cf.Position, Direction = (cf.LookVector + cf.RightVector * nx * tx + cf.UpVector * ny * ty).Unit }
+end)
+roblox.implementMethod("WorldRoot", "Raycast", function()
+	return nil -- no physics here: the table falls back to the nearest piece under the pointer
+end)
+local function toScreen(cam, p)
+	local vp, tx, ty = lens(cam)
+	local rel = cam.CFrame:PointToObjectSpace(p)
+	local nx, ny = (rel.X / -rel.Z) / tx, (rel.Y / -rel.Z) / ty
+	return Vector2.new((nx + 1) / 2 * vp.X, (1 - ny) / 2 * vp.Y)
+end
+
+---------------------------------------------------------------------------------------------------
+-- The DataModel, services and the local guest
+---------------------------------------------------------------------------------------------------
+local game = Instance.new("DataModel")
+local workspace = game:GetService("Workspace")
+local camera = Instance.new("Camera")
+camera.Parent = workspace
+workspace.CurrentCamera = camera
+camera.ViewportSize = Vector2.new(1280, 720)
+camera.FieldOfView = 70
+camera.CFrame = CFrame.new(0, 10, -60)
+
+-- Enums newer than Lune's database resolve to stand-in tokens.
+local fakeEnums = {}
+local EnumShim = setmetatable({}, {
+	__index = function(_, key)
+		local ok, value = pcall(function()
+			return roblox.Enum[key]
+		end)
+		if ok and value ~= nil then
+			return value
+		end
+		if not fakeEnums[key] then
+			fakeEnums[key] = setmetatable({}, {
+				__index = function(t, item)
+					local token = key .. "." .. item
+					rawset(t, item, token)
+					return token
+				end,
+			})
+		end
+		return fakeEnums[key]
+	end,
+})
+
+local CollectionService = {
+	AddTag = function(_, instance, tag)
+		instance:AddTag(tag)
+	end,
+	RemoveTag = function(_, instance, tag)
+		instance:RemoveTag(tag)
+	end,
+	HasTag = function(_, instance, tag)
+		return instance:HasTag(tag)
+	end,
+	GetTagged = function(_, tag)
+		local out = {}
+		for _, d in game:GetDescendants() do
+			if d:HasTag(tag) then
+				table.insert(out, d)
+			end
+		end
+		return out
+	end,
+	GetInstanceAddedSignal = function()
+		return signal()
+	end,
+	GetInstanceRemovedSignal = function()
+		return signal()
+	end,
+}
+
+local tweens = 0
+local function okSetAll(instance)
+	local ok = pcall(function()
+		return instance.Parent
+	end)
+	return ok
+end
+local TweenService = {
+	Create = function(_, instance, info, goal)
+		local completed = signal()
+		local t
+		t = {
+			PlaybackState = "Begin",
+			Completed = completed,
+			Play = function()
+				tweens += 1
+				local seconds = (info and info.Time or 0) + (info and info.DelayTime or 0)
+				local repeating = info and info.RepeatCount and info.RepeatCount < 0
+				schedule(now + seconds, function()
+					if t.PlaybackState == "Cancelled" then
+						return
+					end
+					for k, v in goal do
+						-- The goal is written for real, which validates every tweened property. (A
+						-- tween on something already destroyed does nothing, as in Roblox.)
+						local okSet, why = pcall(function()
+							instance[k] = v
+						end)
+						if not okSet and not string.find(tostring(why), "destroyed") then
+							error(why)
+						end
+					end
+					-- Value objects announce their new value (the table's glides listen for it).
+					if okSetAll(instance) and instance:IsA("ValueBase") and goal.Value ~= nil then
+						signalOf(instance, "Changed"):Fire(goal.Value)
+					end
+					if not repeating then
+						completed:Fire(roblox.Enum.PlaybackState.Completed)
+					end
+				end)
+			end,
+			Cancel = function()
+				t.PlaybackState = "Cancelled"
+			end,
+			Pause = function() end,
+		}
+		return t
+	end,
+}
+
+-- The guest on this screen.
+local playerGui = Instance.new("PlayerGui")
+local character = Instance.new("Model")
+character.Name = "Ada"
+local root = Instance.new("Part")
+root.Name = "HumanoidRootPart"
+root.Size = Vector3.new(2, 2, 1)
+root.CFrame = CFrame.new(0, 5, -40)
+root.Position = Vector3.new(0, 5, -40)
+root.Parent = character
+local head = Instance.new("Part")
+head.Name = "Head"
+head.Size = Vector3.new(1, 1, 1)
+head.CFrame = CFrame.new(0, 6.5, -40)
+head.Parent = character
+local humanoid = Instance.new("Humanoid")
+humanoid.Parent = character
+character.PrimaryPart = root
+character.Parent = workspace
+
+local controls = { enabled = true }
+function controls:Enable()
+	self.enabled = true
+end
+function controls:Disable()
+	self.enabled = false
+end
+local PLAYER_MODULE = { __stub = "PlayerModule" }
+local playerScripts = {
+	WaitForChild = function(_, name)
+		return if name == "PlayerModule" then PLAYER_MODULE else nil
+	end,
+}
+local attrs = {}
+local LocalPlayer = setmetatable({
+	Name = "Ada",
+	DisplayName = "Ada",
+	UserId = 1,
+	AccountAge = 400,
+	Character = character,
+	CharacterAdded = signal(),
+	CharacterRemoving = signal(),
+	PlayerGui = playerGui,
+	CameraMinZoomDistance = 0.5,
+	CameraMaxZoomDistance = 400,
+	DevEnableMouseLock = true,
+}, {
+	__index = {
+		WaitForChild = function(_, name)
+			if name == "PlayerGui" then
+				return playerGui
+			elseif name == "PlayerScripts" then
+				return playerScripts
+			end
+			return nil
+		end,
+		FindFirstChild = function(_, name)
+			if name == "PlayerGui" then
+				return playerGui
+			end
+			return nil
+		end,
+		GetAttribute = function(_, k)
+			return attrs[k]
+		end,
+		SetAttribute = function(_, k, v)
+			attrs[k] = v
+		end,
+		GetAttributeChangedSignal = function()
+			return signal()
+		end,
+		IsA = function(_, class)
+			return class == "Player" or class == "Instance"
+		end,
+	},
+})
+
+local Players = {
+	LocalPlayer = LocalPlayer,
+	PlayerAdded = signal(),
+	PlayerRemoving = signal(),
+	GetPlayers = function()
+		return { LocalPlayer }
+	end,
+	GetPlayerByUserId = function(_, id)
+		return if id == 1 then LocalPlayer else nil
+	end,
+	GetPlayerFromCharacter = function(_, c)
+		return if c == character then LocalPlayer else nil
+	end,
+}
+
+local UserInputService = {
+	TouchEnabled = false,
+	KeyboardEnabled = true,
+	MouseEnabled = true,
+	GamepadEnabled = false,
+	PreferredInput = EnumShim.PreferredInput.KeyboardAndMouse,
+	InputBegan = signal(),
+	InputChanged = signal(),
+	InputEnded = signal(),
+	LastInputTypeChanged = signal(),
+	GetLastInputType = function()
+		return roblox.Enum.UserInputType.MouseMovement
+	end,
+	GetConnectedGamepads = function()
+		return {}
+	end,
+	GetMouseLocation = function()
+		return Vector2.new(640, 360)
+	end,
+}
+
+local actions = {}
+local ContextActionService = {
+	BindAction = function(_, name, fn, _touch, ...)
+		actions[name] = { fn = fn, keys = { ... } }
+	end,
+	BindActionAtPriority = function(_, name, fn, _touch, _priority, ...)
+		actions[name] = { fn = fn, keys = { ... } }
+	end,
+	UnbindAction = function(_, name)
+		actions[name] = nil
+	end,
+}
+
+local GuiService = { SelectedObject = nil, MenuIsOpen = false, MenuOpened = signal(), MenuClosed = signal() }
+local shared = { invites = 0 }
+shared.SocialService = {
+		PromptGameInvite = function()
+			shared.invites += 1
+		end,
+		CanSendGameInviteAsync = function()
+			return true
+		end,
+	}
+
+local services = {
+	Players = Players,
+	CollectionService = CollectionService,
+	TweenService = TweenService,
+	UserInputService = UserInputService,
+	ContextActionService = ContextActionService,
+	GuiService = GuiService,
+	SocialService = shared.SocialService,
+	CaptureService = {
+		CaptureScreenshot = function(_, cb)
+			cb("rbxtemp://capture")
+		end,
+		PromptShareCapture = function() end,
+	},
+	HapticService = {
+		SetMotor = function() end,
+		IsVibrationSupported = function()
+			return false
+		end,
+	},
+	ContentProvider = { PreloadAsync = function() end },
+	ProximityPromptService = { PromptShown = signal(), PromptHidden = signal(), PromptTriggered = signal() },
+	StarterGui = {
+		SetCoreGuiEnabled = function() end,
+		SetCore = function() end,
+	},
+	RunService = {
+		Heartbeat = heartbeat,
+		RenderStepped = renderStepped,
+		Stepped = signal(),
+		IsServer = function()
+			return true -- the builders run first, as the server; the client never asks
+		end,
+		IsClient = function()
+			return true
+		end,
+		IsStudio = function()
+			return true
+		end,
+		BindToRenderStep = function(_, _name, _priority, fn)
+			renderStepped:Connect(fn)
+		end,
+		UnbindFromRenderStep = function() end,
+	},
+}
+
+---------------------------------------------------------------------------------------------------
+-- The remotes, as the client sees them
+---------------------------------------------------------------------------------------------------
+local sent = {} -- what the client sent the server, in order
+local remoteEvents = {}
+local invokeResults = { QuickSit = true, GetBoard = {} }
+local RemotesStub = {
+	Events = {},
+	Functions = {},
+	event = function(name)
+		if not remoteEvents[name] then
+			remoteEvents[name] = {
+				OnClientEvent = signal(),
+				FireServer = function(_, message, ...)
+					table.insert(sent, { remote = name, message = message, extra = table.pack(...) })
+				end,
+			}
+		end
+		return remoteEvents[name]
+	end,
+	func = function(name)
+		return {
+			InvokeServer = function(_, ...)
+				table.insert(sent, { remote = name, message = table.pack(...) })
+				return invokeResults[name]
+			end,
+		}
+	end,
+}
+local function serverSays(remote, message)
+	RemotesStub.event(remote).OnClientEvent:Fire(message)
+end
+local function sentOps(remote, op)
+	local n = 0
+	for _, s in sent do
+		if s.remote == remote and type(s.message) == "table" and s.message.op == op then
+			n += 1
+		end
+	end
+	return n
+end
+
+---------------------------------------------------------------------------------------------------
+-- Module loading from the Rojo sourcemap
+---------------------------------------------------------------------------------------------------
+local sourcemap = serde.decode("json", fs.readFile("sourcemap.json"))
+local proxies, cache = {}, {}
+local sources = {}
+local requireModule
+
+local function proxyFor(node, parent, path)
+	if proxies[node] then
+		return proxies[node]
+	end
+	local p = {}
+	proxies[node] = p
+	setmetatable(p, {
+		__index = function(_, key)
+			if key == "Parent" then
+				return parent
+			elseif key == "Name" then
+				return node.name
+			end
+			for _, child in node.children or {} do
+				if child.name == key then
+					return proxyFor(child, p, path .. "." .. child.name)
+				end
+			end
+			error(`{key} is not a valid member of {node.name}`)
+		end,
+	})
+	rawset(p, "__node", node)
+	rawset(p, "__path", path)
+	return p
+end
+local rootProxy = proxyFor(sourcemap, nil, "game")
+
+local function service(name)
+	if services[name] then
+		return services[name]
+	end
+	for _, child in sourcemap.children do
+		if child.name == name then
+			return proxyFor(child, rootProxy, child.name)
+		end
+	end
+	return game:GetService(name)
+end
+local gameShim = setmetatable({
+	GetService = function(_, name)
+		return service(name)
+	end,
+}, {
+	__index = function(_, key)
+		return service(key)
+	end,
+})
+
+local Random = {}
+Random.__index = Random
+function Random.new(seed)
+	local state = (math.floor(seed or 1) * 2654435761 + 12345) % 4294967296
+	if state == 0 then
+		state = 1
+	end
+	return setmetatable({ state = state }, Random)
+end
+function Random:next()
+	local s = self.state
+	s = bit32.bxor(s, bit32.lshift(s, 13) % 4294967296)
+	s = bit32.bxor(s, bit32.rshift(s, 17))
+	s = bit32.bxor(s, bit32.lshift(s, 5) % 4294967296)
+	self.state = s
+	return s / 4294967296
+end
+function Random:NextNumber(a, b)
+	local r = self:next()
+	return if a then a + r * (b - a) else r
+end
+function Random:NextInteger(a, b)
+	return a + math.floor(self:next() * (b - a + 1))
+end
+
+local fakeOs = setmetatable({
+	clock = function()
+		return now
+	end,
+}, { __index = os })
+
+-- Parts made by the client start with a readable Position too.
+local InstanceShim = {
+	new = function(class, parent)
+		-- Classes newer than Lune's database become plain stand-ins.
+		local okNew, made = pcall(Instance.new, class)
+		if not okNew then
+			if class == "ExperienceInviteOptions" or class == "HapticEffect" then
+				return { ClassName = class, Play = function() end, Destroy = function() end }
+			end
+			error(made)
+		end
+		local i = made
+		if i:IsA("BasePart") then
+			i.Position = Vector3.zero
+		elseif i:IsA("Sound") then
+			i.IsPlaying = false
+			i.TimePosition = 0
+		end
+		if parent then
+			i.Parent = parent
+		end
+		return i
+	end,
+}
+
+local globals = {
+	Instance = InstanceShim,
+	Vector3 = Vector3,
+	Vector2 = Vector2,
+	CFrame = CFrame,
+	Color3 = roblox.Color3,
+	Enum = EnumShim,
+	UDim = roblox.UDim,
+	UDim2 = roblox.UDim2,
+	Font = {
+		new = roblox.Font.new,
+		fromName = roblox.Font.fromName,
+		fromEnum = function(e)
+			local ok, f = pcall(roblox.Font.fromEnum, e)
+			return if ok then f else roblox.Font.new("rbxasset://fonts/families/BuilderSans.json")
+		end,
+	},
+	NumberRange = roblox.NumberRange,
+	NumberSequence = roblox.NumberSequence,
+	NumberSequenceKeypoint = roblox.NumberSequenceKeypoint,
+	ColorSequence = roblox.ColorSequence,
+	ColorSequenceKeypoint = roblox.ColorSequenceKeypoint,
+	PhysicalProperties = roblox.PhysicalProperties,
+	Rect = roblox.Rect,
+	Ray = roblox.Ray,
+	Content = {
+		fromUri = function(uri)
+			return uri
+		end,
+	},
+	RaycastParams = {
+		new = function()
+			return {}
+		end,
+	},
+	Random = Random,
+	TweenInfo = {
+		new = function(time, style, direction, repeatCount, reverses, delayTime)
+			return {
+				Time = time or 1,
+				EasingStyle = style or roblox.Enum.EasingStyle.Quad,
+				EasingDirection = direction or roblox.Enum.EasingDirection.Out,
+				RepeatCount = repeatCount or 0,
+				Reverses = reverses or false,
+				DelayTime = delayTime or 0,
+			}
+		end,
+	},
+	task = taskShim,
+	game = gameShim,
+	workspace = workspace,
+	os = fakeOs,
+	warn = function(...)
+		print("warn:", ...)
+	end,
+}
+
+local stubs = {
+	["ReplicatedStorage.Shared.Remotes"] = RemotesStub,
+}
+
+function requireModule(proxy)
+	if proxy == PLAYER_MODULE then
+		return {
+			GetControls = function()
+				return controls
+			end,
+		}
+	end
+	local node = rawget(proxy, "__node")
+	if cache[node] ~= nil then
+		return cache[node]
+	end
+	local stub = stubs[rawget(proxy, "__path")]
+	if stub then
+		cache[node] = stub
+		return stub
+	end
+	local path
+	for _, f in node.filePaths or {} do
+		if string.find(f, "%.luau$") then
+			path = f
+		end
+	end
+	assert(path, "no source for " .. node.name)
+	local env = { script = proxy, require = requireModule }
+	for k, v in globals do
+		env[k] = v
+	end
+	local fn = luau.load(sources[path] or fs.readFile(path), { debugName = path, environment = env, injectGlobals = true })
+	local result = fn()
+	cache[node] = if result == nil then true else result
+	return result
+end
+
+local function module(...)
+	local p = rootProxy
+	for _, name in { ... } do
+		p = p[name]
+	end
+	return requireModule(p)
+end
+
+-- Load every source file up front (Lune reads files asynchronously, which would otherwise
+-- pause a coroutine in the middle of a frame).
+local function preload(node)
+	for _, f in node.filePaths or {} do
+		if string.find(f, "%.luau$") then
+			sources[f] = fs.readFile(f)
+		end
+	end
+	for _, c in node.children or {} do
+		preload(c)
+	end
+end
+preload(sourcemap)
+
+---------------------------------------------------------------------------------------------------
+-- 1. Build the house, then boot the client
+---------------------------------------------------------------------------------------------------
+local ok, err = pcall(function()
+	module("ServerScriptService", "Server", "World", "Build").run()
+end)
+check("the house builds", ok, err)
+-- Lune keeps Position apart from CFrame and has no default for it: copy it across once.
+local function syncPositions(parent)
+	for _, d in parent:GetDescendants() do
+		if d:IsA("BasePart") then
+			d.Position = d.CFrame.Position
+		end
+	end
+end
+syncPositions(game)
+workspace:SetAttribute("MaisonReady", true)
+workspace:SetAttribute("Season", "autumn")
+workspace:SetAttribute("SeasonName", "Autumn")
+
+local Config = module("ReplicatedStorage", "Shared", "Config")
+local Catalogue = module("ReplicatedStorage", "Shared", "Catalogue")
+
+local function find(parent, pred)
+	for _, d in parent:GetDescendants() do
+		if pred(d) then
+			return d
+		end
+	end
+	return nil
+end
+-- Text is compared without spacing or case (the house letter-spaces its capitals).
+local function norm(text: string): string
+	return (string.lower(string.gsub(text, "%s+", "")))
+end
+local function textOnScreen(text)
+	local wanted = norm(text)
+	return find(playerGui, function(d)
+		return (d:IsA("TextLabel") or d:IsA("TextButton")) and d.Visible ~= false and string.find(norm(d.Text), wanted, 1, true) ~= nil
+	end)
+end
+local function press(text)
+	local wanted = norm(text)
+	local button = find(playerGui, function(d)
+		return d:IsA("TextButton") and norm(d.Text) == wanted
+	end)
+	if not button then
+		return false
+	end
+	signalOf(button, "Activated"):Fire()
+	return true
+end
+local function pad(key)
+	local input = { KeyCode = key, UserInputType = roblox.Enum.UserInputType.Gamepad1, UserInputState = roblox.Enum.UserInputState.Begin, Position = Vector3.zero }
+	for name, action in actions do
+		for _, k in action.keys do
+			if k == key then
+				local result = action.fn(name, roblox.Enum.UserInputState.Begin, input)
+				if result ~= roblox.Enum.ContextActionResult.Pass then
+					return true
+				end
+			end
+		end
+	end
+	return false
+end
+
+local mainNode = rootProxy.StarterPlayer.StarterPlayerScripts.Client.Main
+run(function()
+	requireModule(mainNode)
+end)
+advance(1)
+check("the client boots without an error", #errors == 0, errors[1])
+check("the screen layers exist", playerGui:FindFirstChild("MaisonPanels") ~= nil and playerGui:FindFirstChild("MaisonHud") ~= nil)
+check("controls are off before Play", controls.enabled == false)
+check("the camera drifts under the title", camera.CameraType == roblox.Enum.CameraType.Scriptable)
+
+serverSays("Guest", {
+	op = "welcome",
+	firstVisit = true,
+	displayName = "Ada",
+	settings = {},
+	overrides = {},
+	nights = 1,
+	gilt = 0,
+	best = { salon = 0, velvet = 0, obsidian = 0, midnight = 0 },
+	registered = 0,
+	saved = false,
+	unlocked = { midnight = false },
+	nightly = { played = false, score = 0, grade = "" },
+})
+advance(12)
+check("the title shows Play", textOnScreen("Play") ~= nil)
+check("no errors through the intro and title", #errors == 0, errors[1])
+
+---------------------------------------------------------------------------------------------------
+-- 2. Play: the camera hands over and the guest can walk
+---------------------------------------------------------------------------------------------------
+local pressed = press("Play")
+check("Play can be pressed", pressed)
+advance(3)
+check("controls are on after Play", controls.enabled == true)
+check("the walking camera is Roblox's own follow camera", camera.CameraType == roblox.Enum.CameraType.Custom, tostring(camera.CameraType))
+check("the camera follows the guest", camera.CameraSubject == humanoid)
+check("walking speed is set", humanoid.WalkSpeed == Config.data.Movement.walkSpeed, humanoid.WalkSpeed)
+check("Shift runs", (function()
+	local action = actions.MaisonRun
+	if not action then
+		return false
+	end
+	action.fn("MaisonRun", roblox.Enum.UserInputState.Begin, { KeyCode = roblox.Enum.KeyCode.LeftShift })
+	local running = humanoid.WalkSpeed == Config.data.Movement.runSpeed
+	action.fn("MaisonRun", roblox.Enum.UserInputState.End, { KeyCode = roblox.Enum.KeyCode.LeftShift })
+	return running and humanoid.WalkSpeed == Config.data.Movement.walkSpeed
+end)())
+check("a first visit offers Straight to the table", textOnScreen("Straight to the table") ~= nil)
+check("no errors after Play", #errors == 0, errors[1])
+
+---------------------------------------------------------------------------------------------------
+-- 3. The Concierge speaks, with choices
+---------------------------------------------------------------------------------------------------
+serverSays("Dialogue", { op = "say", speaker = "THE CONCIERGE", line = "Good evening. The tables are set.", choices = { { id = "room", text = "Take me to a room" }, { id = "bye", text = "Good night" } } })
+advance(1)
+check("the Concierge's line is on screen", textOnScreen("The tables are set") ~= nil)
+advance(4)
+check("no errors in the dialogue", #errors == 0, errors[1])
+
+---------------------------------------------------------------------------------------------------
+-- 4. A Salon table: seated, a deal, lift and file with a gamepad, the round, the bank
+---------------------------------------------------------------------------------------------------
+local salonTable
+for _, m in CollectionService:GetTagged("MaisonTable") do
+	if m:GetAttribute("Room") == "salon" and salonTable == nil then
+		salonTable = m
+	end
+end
+check("a Salon table exists", salonTable ~= nil)
+UserInputService.PreferredInput = EnumShim.PreferredInput.Gamepad
+serverSays("Table", { op = "seated", table = salonTable:GetAttribute("TableId"), room = "salon", mode = "room" })
+advance(2)
+check("seated: controls are off", controls.enabled == false)
+check("seated: the camera frames the table", camera.CameraType == roblox.Enum.CameraType.Scriptable)
+check("seated: Leave is on screen", textOnScreen("Leave") ~= nil)
+
+local function pieceList(n, cases)
+	local out = {}
+	local i = 0
+	for _, p in Catalogue.Core do
+		if table.find(cases, p.case) then
+			i += 1
+			table.insert(out, { uid = i, id = p.id, name = p.name, case = p.case, value = p.value, rare = i == 2, seasonal = false, mythic = false })
+			if i >= n then
+				break
+			end
+		end
+	end
+	return out
+end
+local cases = { Catalogue.Cases[1].id, Catalogue.Cases[2].id, Catalogue.Cases[3].id, Catalogue.Cases[4].id }
+local deal = pieceList(8, cases)
+serverSays("Table", { op = "deal", round = 1, room = "salon", mode = "room", cases = cases, pieces = deal, score = 0 })
+advance(2)
+local piecesFolder = workspace:FindFirstChild("MaisonLocal") and workspace.MaisonLocal:FindFirstChild("Pieces")
+check("the deal lands on the felt", piecesFolder ~= nil and #piecesFolder:GetChildren() == 8, piecesFolder and #piecesFolder:GetChildren())
+check("no errors rendering the deal", #errors == 0, errors[1])
+
+-- Lift the first piece and file it with the gamepad (A lifts, the D-pad picks a case, A files).
+local liftedBefore = sentOps("Table", "lift")
+check("A lifts a piece", pad(roblox.Enum.KeyCode.ButtonA))
+advance(0.5)
+check("the lift is sent", sentOps("Table", "lift") == liftedBefore + 1)
+local filedBefore = sentOps("Table", "file")
+check("A files it into the chosen case", pad(roblox.Enum.KeyCode.ButtonA))
+advance(0.5)
+check("the filing is sent", sentOps("Table", "file") == filedBefore + 1)
+local lastFile
+for _, s in sent do
+	if s.remote == "Table" and s.message.op == "file" then
+		lastFile = s.message
+	end
+end
+serverSays("Table", { op = "filed", uid = lastFile.uid, case = lastFile.case, correct = false, points = 0, setBonus = 0, penalty = 0, score = 0, streak = 0, multiplier = 1, runLength = 0 })
+advance(1)
+-- File every piece correctly, via the pad, answering as the server would.
+for _, p in deal do
+	serverSays("Table", { op = "filed", uid = p.uid, case = p.case, correct = true, points = 10, setBonus = 0, penalty = 0, score = p.uid * 10, streak = p.uid, multiplier = 1, runLength = 1 })
+	advance(0.2)
+end
+check("no errors while filing", #errors == 0, errors[1])
+serverSays("Table", { op = "roundEnd", round = 1, room = "salon", mode = "room", score = 360, grade = "Polished", bestStreak = 8, bonus = { perfect = 0, streak = 40, time = 0 }, last = false })
+advance(3)
+check("the round panel offers the next round", textOnScreen("Next round") ~= nil)
+check("and banking the run", textOnScreen("Bank the run") ~= nil)
+press("Next round")
+advance(0.5)
+check("Next round is sent", sentOps("Table", "next") == 1)
+serverSays("Table", { op = "deal", round = 2, room = "salon", mode = "room", cases = cases, pieces = pieceList(10, cases), score = 360 })
+advance(2)
+check("round II is dealt", #piecesFolder:GetChildren() == 10, #piecesFolder:GetChildren())
+
+-- With a mouse: press on a piece, drag it over its case, let go.
+UserInputService.PreferredInput = EnumShim.PreferredInput.KeyboardAndMouse
+local Layout = module("ReplicatedStorage", "Shared", "Layout")
+local target
+for _, m in piecesFolder:GetChildren() do
+	if m:GetAttribute("Uid") == 1 then
+		target = m
+	end
+end
+local function mouse(kind, at)
+	return { UserInputType = kind, Position = Vector3.new(at.X, at.Y, 0), KeyCode = roblox.Enum.KeyCode.Unknown, UserInputState = roblox.Enum.UserInputState.Begin }
+end
+local frame = salonTable:GetAttribute("Frame")
+local wantCase = Catalogue.byId[target:GetAttribute("Uid") and pieceList(10, cases)[1].id].case
+local from = toScreen(camera, target:GetPivot().Position)
+local to = toScreen(camera, Layout.caseCentre(frame, Catalogue.caseIndex[wantCase]) + Vector3.new(0, 0.3, 0))
+local filesBefore = sentOps("Table", "file")
+local liftsBeforeDrag = sentOps("Table", "lift")
+UserInputService.InputBegan:Fire(mouse(roblox.Enum.UserInputType.MouseButton1, from), false)
+UserInputService.InputChanged:Fire(mouse(roblox.Enum.UserInputType.MouseMovement, from + Vector2.new(24, 0)), false)
+advance(0.1)
+local dragging = sentOps("Table", "lift") - liftsBeforeDrag
+UserInputService.InputChanged:Fire(mouse(roblox.Enum.UserInputType.MouseMovement, (from + to) / 2), false)
+UserInputService.InputChanged:Fire(mouse(roblox.Enum.UserInputType.MouseMovement, to), false)
+UserInputService.InputEnded:Fire(mouse(roblox.Enum.UserInputType.MouseButton1, to), false)
+advance(0.5)
+local dropped
+for _, s in sent do
+	if s.remote == "Table" and s.message.op == "file" then
+		dropped = s.message
+	end
+end
+check("a mouse drag lifts the piece", dragging > 0)
+check("letting go over its case files it", sentOps("Table", "file") == filesBefore + 1 and dropped.uid == 1 and dropped.case == wantCase, dropped and string.format("uid %s case %s want %s files %d->%d", tostring(dropped.uid), dropped.case, wantCase, filesBefore, sentOps("Table", "file")))
+UserInputService.PreferredInput = EnumShim.PreferredInput.Gamepad
+serverSays("Table", { op = "banked", score = 360, grade = "Polished", rounds = 1, accuracy = 0.9, gilt = 12, best = 360, newBest = true })
+advance(2)
+check("the banked card offers another run", textOnScreen("Another run") ~= nil)
+check("no errors through a whole run", #errors == 0, errors[1])
+
+-- The rival's plate appears at the table when the house has picked one.
+serverSays("Guest", { op = "rival", rival = { name = "Ben", fact = "40 points ahead of you on tonight's table.", ahead = false } })
+advance(0.5)
+local rivalPlate = find(workspace, function(d)
+	return d.Name == "RivalPlate"
+end)
+check("the rival's plate is on the table", rivalPlate ~= nil)
+serverSays("Guest", { op = "rival", rival = { name = "Ben", fact = "5 points behind you on tonight's table.", ahead = true } })
+advance(1.5)
+check("no errors turning the plate", #errors == 0, errors[1])
+
+serverSays("Table", { op = "left", summary = { score = 360, grade = "Polished" } })
+advance(2)
+check("leaving hands the camera back", camera.CameraType == roblox.Enum.CameraType.Custom)
+check("leaving gives the controls back", controls.enabled == true)
+check("the felt is cleared", #piecesFolder:GetChildren() == 0)
+check("the rival's plate goes with the table", find(workspace, function(d)
+	return d.Name == "RivalPlate"
+end) == nil)
+
+---------------------------------------------------------------------------------------------------
+-- 5. The Nightly card
+---------------------------------------------------------------------------------------------------
+serverSays("Table", { op = "seated", table = salonTable:GetAttribute("TableId"), room = "velvet", mode = "nightly" })
+advance(1.5)
+serverSays("Table", { op = "deal", round = 1, room = "velvet", mode = "nightly", cases = cases, pieces = pieceList(10, cases), score = 0, clock = { left = 30, running = true, budget = 30 } })
+advance(3)
+check("a timed deal shows the clock rail", find(salonTable, function(d)
+	return d.Name == "RailGui"
+end) ~= nil)
+serverSays("Table", { op = "nightlyCard", key = "2026-09-29", room = "velvet", score = 4210, grade = "Immaculate", rounds = { "Flawless", "Immaculate", "", "", "" }, scored = true, gilt = 120, rank = 12, total = 300, percentile = 4, connections = { place = 2, of = 5 } })
+advance(2)
+check("the Nightly card shows the score", textOnScreen("4,210") ~= nil)
+check("with Share and Invite", textOnScreen("Share") ~= nil and textOnScreen("Invite") ~= nil)
+press("Invite")
+check("Invite opens Roblox's invite prompt", shared.invites == 1)
+press("Leave")
+advance(0.5)
+serverSays("Table", { op = "left" })
+advance(2)
+check("no errors through the Nightly", #errors == 0, errors[1])
+
+---------------------------------------------------------------------------------------------------
+-- 6. The Library: a whole Tête-à-Tête on screen
+---------------------------------------------------------------------------------------------------
+local ownHalf, rivalHalf
+for _, half in CollectionService:GetTagged("DuelHalf") do
+	if half:GetAttribute("Duel") == "library-1" then
+		if half:GetAttribute("Side") == "a" then
+			ownHalf = half
+		else
+			rivalHalf = half
+		end
+	end
+end
+check("the Library's first table has two halves", ownHalf ~= nil and rivalHalf ~= nil)
+serverSays("Table", { op = "seated", table = ownHalf:GetAttribute("TableId"), room = "library", mode = "duel" })
+serverSays("Table", { op = "duelWaiting" })
+advance(1.5)
+check("waiting: Invite a friend is offered", textOnScreen("Invite a friend") ~= nil)
+check("waiting: the empty chair says so", find(workspace, function(d)
+	return d:IsA("TextLabel") and d.Text == "Waiting for a guest opposite"
+end) ~= nil)
+press("Invite a friend")
+check("inviting keeps the chair", sentOps("Table", "inviting") == 1 and shared.invites == 2)
+serverSays("Table", { op = "duelStart", side = "a", rival = "Ben", ranked = true, standIn = false, eligible = true })
+advance(1)
+check("start: the invite key goes", textOnScreen("Invite a friend") == nil)
+local duelCases = { Catalogue.Cases[1].id, Catalogue.Cases[2].id, Catalogue.Cases[3].id, Catalogue.Cases[4].id }
+local hand = pieceList(14, duelCases)
+serverSays("Table", { op = "deal", mode = "duel", room = "library", side = "a", round = 1, cases = duelCases, pieces = hand, score = 14, wins = { a = 0, b = 0 }, clock = { left = 60, running = true, budget = 60 } })
+local rivalHand = {}
+for i, p in hand do
+	local q = table.clone(p)
+	q.uid = 100 + i
+	table.insert(rivalHand, q)
+end
+serverSays("Table", { op = "rivalDeal", side = "b", cases = duelCases, pieces = rivalHand })
+advance(2)
+check("the hand is on your felt", #piecesFolder:GetChildren() == 14, #piecesFolder:GetChildren())
+local duelFolder = workspace.MaisonLocal:FindFirstChild("Duel")
+check("the rival's felt is shown", duelFolder ~= nil and #duelFolder:GetChildren() >= 14, duelFolder and #duelFolder:GetChildren())
+-- A wrong case: the fumble stops the next lift for a moment.
+pad(roblox.Enum.KeyCode.ButtonA)
+advance(0.2)
+pad(roblox.Enum.KeyCode.ButtonA)
+advance(0.1)
+local fileMsg
+for _, s in sent do
+	if s.remote == "Table" and s.message.op == "file" then
+		fileMsg = s.message
+	end
+end
+local liftsBefore = sentOps("Table", "lift")
+serverSays("Table", { op = "filed", uid = fileMsg.uid, case = fileMsg.case, correct = false, points = 0, setBonus = 0, penalty = 0, score = 14, streak = 0, multiplier = 1, runLength = 0, remaining = 14, fumble = 0.8 })
+pad(roblox.Enum.KeyCode.ButtonA)
+advance(0.2)
+check("a fumble stops the hand from lifting", sentOps("Table", "lift") == liftsBefore)
+advance(1)
+pad(roblox.Enum.KeyCode.ButtonA)
+advance(0.2)
+check("after the fumble the hand lifts again", sentOps("Table", "lift") == liftsBefore + 1)
+pad(roblox.Enum.KeyCode.ButtonB)
+-- The rival files; a parcel comes our way and opens on our felt.
+serverSays("Table", { op = "rivalFiled", uid = 101, case = hand[1].case, correct = true, remaining = 13 })
+serverSays("Table", { op = "parcel", from = "b", to = "a", id = 1, count = 2, fuse = 2 })
+advance(1)
+check("the parcel is on its way", find(duelFolder, function(d)
+	return d.Name == "Parcel"
+end) ~= nil)
+serverSays("Table", { op = "parcel", from = "b", to = "a", id = 2, count = 1, fuse = 2 })
+serverSays("Table", { op = "parcelShrink", side = "a", id = 1, count = 1 })
+serverSays("Table", { op = "parcelCancel", side = "a", id = 2 })
+advance(1.2)
+serverSays("Table", {
+	op = "parcelOpen",
+	side = "a",
+	id = 1,
+	remaining = 15,
+	pieces = { { uid = 50, id = hand[1].id, name = hand[1].name, case = hand[1].case, value = 10, rare = false, seasonal = false, mythic = false } },
+})
+advance(1)
+check("the parcel's pieces land on your felt", #piecesFolder:GetChildren() == 15, #piecesFolder:GetChildren())
+-- A parcel on the rival's felt too.
+serverSays("Table", { op = "parcel", from = "a", to = "b", id = 3, count = 1, fuse = 2 })
+advance(2)
+serverSays("Table", { op = "parcelOpen", side = "b", id = 3, remaining = 14, pieces = { { uid = 150, id = hand[2].id, name = hand[2].name, case = hand[2].case, value = 10, rare = false, seasonal = false, mythic = false } } })
+advance(1)
+check("no errors through parcels", #errors == 0, errors[1])
+-- The rival's connection drops, then returns.
+serverSays("Table", { op = "rivalAway", seconds = 20, name = "Ben" })
+advance(1)
+check("the house says the rival's chair is held", textOnScreen("connection dropped") ~= nil)
+serverSays("Table", { op = "rivalBack", name = "Ben" })
+advance(4)
+serverSays("Table", { op = "handEnd", winner = "a", wins = { a = 1, b = 0 }, hand = 1 })
+advance(2)
+check("the hand clears", #piecesFolder:GetChildren() == 0, #piecesFolder:GetChildren())
+check("the hand card lands", find(workspace, function(d)
+	return d:IsA("TextLabel") and d.Text == "Hand to you"
+end) ~= nil)
+serverSays("Table", { op = "duelEnd", won = true, wins = { a = 3, b = 1 }, reason = "won", ranked = true, standIn = false, rival = "Ben", before = 1500, after = 1523, placementLeft = 4, gilt = 60 })
+advance(2)
+check("the result card: the table is yours", textOnScreen("The table is yours") ~= nil)
+check("the result card shows the hands and the rating", textOnScreen("3 – 1") ~= nil and textOnScreen("1523") ~= nil)
+check("placement is explained", textOnScreen("4 more before your Mark is shown") ~= nil)
+press("Another")
+check("Another is sent", sentOps("Table", "again") >= 1)
+serverSays("Table", { op = "rematchAsked", by = "Ben" })
+advance(1)
+-- Shown across to another table by the queue.
+serverSays("Table", { op = "left", moving = true })
+serverSays("Table", { op = "seated", table = rivalHalf:GetAttribute("TableId"), room = "library", mode = "duel" })
+advance(2)
+check("moving tables keeps the controls off", controls.enabled == false)
+serverSays("Table", { op = "left" })
+advance(2)
+check("leaving the Library gives the controls back", controls.enabled == true)
+check("no errors through a whole Tête-à-Tête", #errors == 0, errors[1])
+
+---------------------------------------------------------------------------------------------------
+-- 7. The panels
+---------------------------------------------------------------------------------------------------
+UserInputService.PreferredInput = EnumShim.PreferredInput.KeyboardAndMouse
+check("Settings opens", press("Settings"))
+advance(1)
+check("no errors in Settings", #errors == 0, errors[1])
+local Root = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "Root")
+Root.close()
+advance(1)
+invokeResults.GetBoard = {
+	["nightly:tonight"] = { entries = { { userId = 1, name = "Ada", score = 4210 }, { userId = 2, name = "Ben", score = 3900 } }, available = true, count = 2 },
+	["library:all"] = { entries = { { userId = 2, name = "Ben", score = 1540 } }, available = true },
+}
+local BoardPanel = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "BoardPanel")
+BoardPanel.open()
+advance(1)
+check("the leaderboard shows tonight's names", textOnScreen("Ben") ~= nil)
+check("the Library tab is there", press("Library"))
+advance(0.5)
+check("the Library board shows ratings", textOnScreen("1540") ~= nil)
+Root.close()
+advance(1)
+local HowToPlay = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "HowToPlay")
+HowToPlay.open()
+advance(1)
+check("how to play opens", textOnScreen("Pick one up") ~= nil)
+Root.close()
+advance(1)
+serverSays("Guest", { op = "inviteLibrary" })
+check("the Concierge's invite opens the prompt", shared.invites == 3)
+check("no errors in the panels", #errors == 0, errors[1])
+
+---------------------------------------------------------------------------------------------------
+-- 8. A respawn hands straight back to the follow camera
+---------------------------------------------------------------------------------------------------
+camera.CameraType = roblox.Enum.CameraType.Scriptable
+LocalPlayer.CharacterAdded:Fire(character)
+advance(1)
+check("a respawn gives the follow camera back", camera.CameraType == roblox.Enum.CameraType.Custom)
+check("and the controls", controls.enabled == true)
+
+advance(10)
+check("no errors at all", #errors == 0, #errors)
+print(string.format("%d passed, %d failed (%d tweens played, %d reads of destroyed instances)", passed, failed, tweens, destroyedReads))
+if failed > 0 then
+	process.exit(1)
+end

@@ -155,7 +155,9 @@ dressed from body colours with a shirt front, a tie, coat tails and the gold lap
 
 `tools/check.sh` type-checks every script against Roblox's API, runs the rule tests, builds
 the house under [Lune](https://github.com/lune-org/lune) and walks its routes, and plays whole
-Tête-à-Tête evenings against the real server code on a fake clock (`tests/duel.luau`):
+Tête-à-Tête evenings against the real server code on a fake clock (`tests/duel.luau`), and boots
+the whole client against the built house: title, Play, walking, a table by gamepad and by mouse,
+the Nightly card, a Tête-à-Tête on screen and the panels (`tests/client.luau`):
 
 ```sh
 TOOLS=/path/to/tools ./tools/check.sh
