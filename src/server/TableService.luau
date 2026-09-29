@@ -20,6 +20,7 @@ local Voice = require(ReplicatedStorage.Shared.Voice)
 
 local Analytics = require(script.Parent.Analytics)
 local Boards = require(script.Parent.Boards)
+local Gilt = require(script.Parent.Gilt)
 local Profiles = require(script.Parent.Profiles)
 local Season = require(script.Parent.Season)
 
@@ -78,6 +79,10 @@ local lastMessage: { [Player]: number } = {}
 TableService.onSeated = function(_player: Player) end
 TableService.say = function(_player: Player, _line: string) end
 TableService.onUnlock = function(_player: Player, _room: string) end
+-- Set by the server: is the guest busy elsewhere (a Library duel)?
+TableService.isBusy = function(_player: Player): boolean
+	return false
+end
 
 local function send(player: Player, message: { [string]: any })
 	tableEvent:FireClient(player, message)
@@ -303,21 +308,6 @@ local function resetRun(s: Session)
 	s.model:SetAttribute("Multiplier", 1)
 end
 
--- Gilt is earned only, with a gentle daily soft cap (Appendix I1). Returns what was paid.
-local function payGilt(data: Profiles.Data, earned: number): number
-	local g = Config.data.Gilt
-	local today = math.floor(os.time() / 86400)
-	if data.giltDay.day ~= today then
-		data.giltDay = { day = today, earned = 0 }
-	end
-	local full = math.max(0, math.min(earned, g.dailySoftCap - data.giltDay.earned))
-	local reduced = math.floor((earned - full) * g.softCapRate)
-	local paid = full + reduced
-	data.giltDay.earned += paid
-	data.gilt += paid
-	return paid
-end
-
 -- Banks the run: records it, pays Gilt, and posts it to the boards. Returns the summary.
 local function bank(s: Session, reason: string?): { [string]: any }
 	local player = s.player
@@ -350,10 +340,9 @@ local function bank(s: Session, reason: string?): { [string]: any }
 			summary.newBest = previous > 0
 		end
 		summary.best = data.best[roomId]
-		local paid = payGilt(data, Scoring.giltForRun(s.score))
+		local paid = Gilt.pay(player, data, Scoring.giltForRun(s.score), "Banked run: " .. roomId)
 		summary.gilt = paid
 		summary.giltTotal = data.gilt
-		Analytics.source(player, "Gilt", paid, data.gilt, "Banked run: " .. roomId)
 	end
 	if not s.flagged then
 		Boards.submit(player, s.room.id, s.score)
@@ -397,9 +386,7 @@ local function finishNightly(s: Session, reason: string?, notify: boolean)
 	if scored and data then
 		data.nightly = { day = night.day, key = night.key, score = s.score, grade = grade, rounds = rounds, room = night.room, finished = true }
 		data.stats.nightlies += 1
-		local paid = payGilt(data, Config.data.Nightly.gilt)
-		card.gilt = paid
-		Analytics.source(player, "Gilt", paid, data.gilt, "The Nightly")
+		card.gilt = Gilt.pay(player, data, Config.data.Nightly.gilt, "The Nightly")
 	end
 	local finishedAt = os.time()
 	local log = s.log
@@ -663,7 +650,7 @@ end
 
 -- Seats a guest at a table. `teleport` walks them there instantly (Straight to the table).
 function TableService.seat(player: Player, model: Model, teleport: boolean?, wanted: Mode?): (boolean, string?)
-	if sessions[player] then
+	if sessions[player] or TableService.isBusy(player) then
 		return false, "seated"
 	end
 	local data = Profiles.get(player)
@@ -737,7 +724,8 @@ function TableService.freeTable(roomId: string, near: Vector3?): Model?
 	local best: Model? = nil
 	local bestDistance = math.huge
 	for _, m in tables() do
-		if (roomId == "any" or m:GetAttribute("Room") == roomId) and m:GetAttribute("Room") ~= "midnight" and not occupants[m] then
+		local r = m:GetAttribute("Room")
+		if (roomId == "any" or r == roomId) and r ~= "midnight" and r ~= "library" and not occupants[m] then
 			local centre = m:GetAttribute("Centre")
 			local d = if near and typeof(centre) == "Vector3" then (centre - near).Magnitude else 0
 			if d < bestDistance then
@@ -825,6 +813,9 @@ end
 function TableService.start()
 	tableEvent.OnServerEvent:Connect(onMessage)
 	for _, m in tables() do
+		if m:GetAttribute("Duel") ~= nil then
+			continue -- the Library's duel tables belong to the duel service
+		end
 		local seat = chairOf(m)
 		local prompt = seat and seat:FindFirstChild("SitPrompt")
 		if prompt and prompt:IsA("ProximityPrompt") then
@@ -863,6 +854,9 @@ function TableService.start()
 	task.spawn(function()
 		while true do
 			for _, m in tables() do
+				if m:GetAttribute("Duel") ~= nil then
+					continue
+				end
 				local seat = chairOf(m)
 				local prompt = seat and seat:FindFirstChild("SitPrompt")
 				if prompt and prompt:IsA("ProximityPrompt") then

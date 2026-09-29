@@ -96,9 +96,15 @@ local function place(player: Player, character: Model, visit: Visit)
 	player:SetAttribute("Arrived", if toStreet then "street" else "foyer")
 end
 
-local function welcome(player: Player, data: Profiles.Data)
-	local visit: Visit = {
-		firstVisit = data.visits == 0,
+-- Every guest gets a visit record (and a character) the moment they arrive, whether or not
+-- their saved profile has loaded yet; the profile fills in the details when it does.
+local function provisional(player: Player): Visit
+	local visit = visits[player]
+	if visit then
+		return visit
+	end
+	local v: Visit = {
+		firstVisit = false,
 		spawnedOnce = false,
 		greeted = false,
 		zone = "none",
@@ -106,6 +112,12 @@ local function welcome(player: Player, data: Profiles.Data)
 		funnel = {},
 		launch = nil,
 	}
+	visits[player] = v
+	return v
+end
+
+local function arrive(player: Player)
+	local visit = provisional(player)
 	-- Invites carry launch data so a friend lands where you are (§13).
 	local okJoin, join = pcall(function()
 		return player:GetJoinData()
@@ -113,7 +125,25 @@ local function welcome(player: Player, data: Profiles.Data)
 	if okJoin and join and type(join.LaunchData) == "string" and #join.LaunchData <= 40 then
 		visit.launch = join.LaunchData
 	end
-	visits[player] = visit
+	player.CharacterAdded:Connect(function(character)
+		place(player, character, provisional(player))
+	end)
+	-- Shift means run in the house, so Shift Lock stays off.
+	player.DevEnableMouseLock = false
+	-- If the profile is slow (another server still holds it, or the data store is busy), the
+	-- guest still gets a character to walk around in.
+	task.delay(8, function()
+		if player.Parent == Players and player.Character == nil then
+			pcall(function()
+				player:LoadCharacterAsync()
+			end)
+		end
+	end)
+end
+
+local function welcome(player: Player, data: Profiles.Data)
+	local visit = provisional(player)
+	visit.firstVisit = data.visits == 0
 	if data.visits == 0 then
 		data.firstVisit = os.time()
 	end
@@ -125,13 +155,10 @@ local function welcome(player: Player, data: Profiles.Data)
 		data.nights.count += 1
 	end
 	player:SetAttribute("FirstVisit", visit.firstVisit)
-	-- Shift means run in the house, so Shift Lock stays off.
-	player.DevEnableMouseLock = false
-	player.CharacterAdded:Connect(function(character)
-		place(player, character, visit)
-	end)
 	guestEvent:FireClient(player, payload(player, data, visit))
-	player:LoadCharacterAsync()
+	if player.Character == nil then
+		player:LoadCharacterAsync()
+	end
 end
 
 local function trackZones()
@@ -208,6 +235,10 @@ function Guests.start()
 			item:Destroy()
 		end
 	end
+	for _, player in Players:GetPlayers() do
+		task.spawn(arrive, player)
+	end
+	Players.PlayerAdded:Connect(arrive)
 	Profiles.Loaded:Connect(welcome)
 	Remotes.event("Setting").OnServerEvent:Connect(onSetting)
 	Remotes.event("Funnel").OnServerEvent:Connect(onFunnel)

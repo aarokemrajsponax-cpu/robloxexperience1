@@ -130,7 +130,7 @@ function Salon.build(parent: Instance): Model
 		ceiling = FLOOR + S.height,
 	}
 	for i, centre in S.tables do
-		SortingTable.build(tables, "salon", i, centre, style)
+		SortingTable.build(tables, "salon", i, Layout.tableFrame(centre), style)
 	end
 	-- A soft fill so velvet and felt never go fully black
 	local fill = Kit.part(root, "FillLight", Vector3.new(1, 1, 1), CFrame.new(-56, FLOOR + 12, 11), { color = Color3.new(), material = Enum.Material.SmoothPlastic, transparency = 1 }, { collide = false, query = false, shadow = false })

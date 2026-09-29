@@ -82,7 +82,7 @@ function Midnight.build(parent: Instance): Model
 		ceiling = FLOOR + M.height,
 	}
 	for i, centre in M.tables do
-		SortingTable.build(tables, "midnight", i, centre, style)
+		SortingTable.build(tables, "midnight", i, Layout.tableFrame(centre), style)
 	end
 	return root
 end

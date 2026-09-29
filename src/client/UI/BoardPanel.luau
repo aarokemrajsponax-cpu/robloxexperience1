@@ -29,7 +29,18 @@ local BOARDS = {
 	{ id = "velvet", label = "Velvet" },
 	{ id = "obsidian", label = "Obsidian" },
 	{ id = "midnight", label = "Midnight" },
+	{ id = "library", label = "Library" },
 }
+
+-- Boards with a single period: tonight's table, and the Library's ratings.
+local function single(board: string): string?
+	if board == "nightly" then
+		return "nightly:tonight"
+	elseif board == "library" then
+		return "library:all"
+	end
+	return nil
+end
 
 local function fill(list: Frame, key: string)
 	for _, c in list:GetChildren() do
@@ -136,19 +147,19 @@ function BoardPanel.open()
 	local allKey: TextButton? = nil
 
 	local function key(): string
-		return if board == "nightly" then "nightly:tonight" else board .. ":" .. period
+		return single(board) or board .. ":" .. period
 	end
 	local function render()
 		for id, k in boardKeys do
 			k.BackgroundTransparency = if id == board then 0.05 else 0.3
 		end
-		periodRow.Visible = board ~= "nightly"
+		periodRow.Visible = single(board) == nil
 		if weekKey and allKey then
 			weekKey.BackgroundTransparency = if period == "week" then 0.05 else 0.3
 			allKey.BackgroundTransparency = if period == "all" then 0.05 else 0.3
 		end
 		local room = Rooms.get(board)
-		title.Text = if board == "nightly" then "Tonight's table" else (if room then room.name else board)
+		title.Text = if board == "nightly" then "Tonight's table" elseif board == "library" then "The Library · ratings" else (if room then room.name else board)
 		fill(list, key())
 	end
 	for i, b in BOARDS do

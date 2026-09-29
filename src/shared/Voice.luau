@@ -29,6 +29,11 @@ Voice.Concierge = {
 		midnight = "The Midnight Room. Mind the dark.",
 	},
 	whichRoom = "Which room this evening?",
+	standInOffer = "Nobody's free just now. A Stand-in can sit opposite you, if you'd rather not wait.",
+	standInYes = "A Stand-in, please",
+	standInWait = "I'll wait",
+	duelSeated = "Same pieces, both of you. First to three hands.",
+	rematch = "They'll want another.",
 	closedRoom = "Not tonight. The Salon is open.",
 	lost = "The Salon is through there, if you'd like me to walk you.",
 	goodNight = "Good night.",
@@ -62,6 +67,26 @@ Voice.Table = {
 	bank = "Bank the run",
 	straightToTable = "Straight to the table",
 	clockRanOut = "The clock ran out in round {round}.",
+}
+
+Voice.Library = {
+	title = "Tête-à-Tête",
+	waiting = "Waiting for a guest opposite",
+	ranked = "Ranked",
+	friendly = "Friendly · not ranked",
+	standIn = "A Stand-in · not ranked",
+	handWon = "Hand to you",
+	handLost = "Hand to {name}",
+	won = "The table is yours",
+	lost = "{name} takes the table",
+	forfeit = "{name} left the table",
+	parcelIn = "A parcel is on its way",
+	another = "Another",
+	rematchAsked = "{name} would like another.",
+	placement = "{n} more before your Mark is shown",
+	rating = "Rating",
+	gilt = "Gilt",
+	hands = "Hands",
 }
 
 Voice.Foyer = {

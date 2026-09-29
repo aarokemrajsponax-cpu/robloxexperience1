@@ -10,5 +10,6 @@ TOOLS="${TOOLS:?set TOOLS to the folder holding rojo, luau-lsp, luau and globalT
 python3 tests/bundle.py > "$TOOLS/bundle.luau"
 "$TOOLS/luau" "$TOOLS/bundle.luau"
 "$TOOLS/lune" run tests/smoke.luau
+"$TOOLS/lune" run tests/duel.luau
 "$TOOLS/rojo" build default.project.json -o "$TOOLS/MaisonNoir.rbxl" >/dev/null
 echo "check: ok"

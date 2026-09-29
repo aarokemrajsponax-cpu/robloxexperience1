@@ -278,35 +278,21 @@ local function stair(m: Model)
 		local b = Vector3.new(x, FLOOR + steps + 3.2, st.toZ)
 		Kit.part(model, "Handrail", Vector3.new(0.3, 0.3, (b - a).Magnitude), CFrame.lookAt((a + b) / 2, b), L.brass)
 	end
-	-- The landing door, closed
-	local doorPos = Vector3.new(st.x, FLOOR + steps + 5, F.maxZ - 0.3)
-	local door = Kit.part(model, "ClubDoor", Vector3.new(8, 10, 0.4), CFrame.new(doorPos), L.blackLacquer)
-	Kit.part(model, "ClubDoorFrame", Vector3.new(8.8, 10.6, 0.3), CFrame.new(doorPos + Vector3.new(0, 0.1, 0.15)), L.brass)
-	Kit.engrave(door, Enum.NormalId.Front, { { text = Kit.track(Voice.Foyer.stair), size = 0.08, font = Brand.Fonts.display } }, { ppu = 40 })
-	-- The velvet rope across the foot of the stair
-	local ropeZ = F.stairRopeZ
-	local posts = { st.x - 4.5, st.x + 4.5 }
-	for _, x in posts do
-		Kit.post(model, "Stanchion", 3.2, 0.3, Vector3.new(x, FLOOR, ropeZ), L.brass)
-		Kit.part(model, "StanchionBase", Vector3.new(1.1, 0.25, 1.1), CFrame.new(x, FLOOR + 0.12, ropeZ), L.brass)
-		Kit.ball(model, "StanchionTop", 0.5, Vector3.new(x, FLOOR + 3.3, ropeZ), L.brass)
-	end
-	local sag = 6
-	for i = 0, sag - 1 do
-		local t0, t1 = i / sag, (i + 1) / sag
-		local function pt(t: number): Vector3
-			return Vector3.new(posts[1] + (posts[2] - posts[1]) * t, FLOOR + 3 - math.sin(t * math.pi) * 0.7, ropeZ)
-		end
-		local a, b = pt(t0), pt(t1)
-		Kit.part(model, "Rope", Vector3.new(0.25, 0.25, (b - a).Magnitude + 0.05), CFrame.lookAt((a + b) / 2, b), L.rope)
-	end
-	local sign = Kit.part(model, "RopeSign", Vector3.new(2.6, 1, 0.1), CFrame.new(st.x, FLOOR + 2, ropeZ - 0.25), L.brass, { collide = false })
+	-- The landing opens onto the Club Floor: a brass-framed arch, no door.
+	local archPos = Vector3.new(st.x, FLOOR + steps + 5, F.maxZ + 1)
+	Kit.part(model, "ArchL", Vector3.new(0.6, 10.6, 2.4), CFrame.new(archPos + Vector3.new(-4.3, 0.3, 0)), L.brass)
+	Kit.part(model, "ArchR", Vector3.new(0.6, 10.6, 2.4), CFrame.new(archPos + Vector3.new(4.3, 0.3, 0)), L.brass)
+	Kit.part(model, "ArchHead", Vector3.new(9.2, 0.8, 2.4), CFrame.new(archPos + Vector3.new(0, 5.4, 0)), L.brass)
+	local nameplate = Kit.part(model, "ArchName", Vector3.new(8, 1.2, 0.1), CFrame.new(archPos + Vector3.new(0, 6.6, -1.25)), { color = Color3.new(), material = Enum.Material.SmoothPlastic, transparency = 1 }, { collide = false, query = false, shadow = false })
+	Kit.engrave(nameplate, Enum.NormalId.Front, { { text = Kit.track(Voice.Foyer.stair), size = 0.7, font = Brand.Fonts.display, color = Brand.Colours.lightGold } }, { ppu = 60, lit = false })
+	-- A brass sign at the foot of the stair
+	local signPos = Vector3.new(st.x - 6.4, FLOOR, st.fromZ - 1.5)
+	Kit.post(model, "SignPost", 3, 0.2, signPos, L.brass, { collide = false })
+	local sign = Kit.part(model, "StairSign", Vector3.new(2.6, 1.3, 0.1), CFrame.new(signPos + Vector3.new(0, 3.4, 0)), L.brass, { collide = false })
 	Kit.engrave(sign, Enum.NormalId.Front, {
 		{ text = Kit.track(Voice.Foyer.stair), size = 0.34, font = Brand.Fonts.display, color = Color3.fromRGB(40, 30, 12) },
-		{ text = Voice.Foyer.closed, size = 0.28, font = Brand.Fonts.body, color = Color3.fromRGB(50, 38, 14) },
+		{ text = "The Library", size = 0.26, font = Brand.Fonts.body, color = Color3.fromRGB(50, 38, 14) },
 	}, { ppu = 80, brightness = 1 })
-	-- An invisible barrier so nobody climbs the roped stair yet.
-	Kit.span(model, "StairBarrier", Vector3.new(st.x - 5, FLOOR, ropeZ - 0.2), Vector3.new(st.x + 5, FLOOR + 12, ropeZ + 0.2), { color = Color3.new(), material = Enum.Material.SmoothPlastic, transparency = 1 }, { shadow = false, query = false })
 end
 
 local function roomDoor(m: Model, roomId: string)

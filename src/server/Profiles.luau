@@ -14,6 +14,7 @@ local Profiles = {}
 
 export type RegisterEntry = { first: number, count: number, best: string }
 export type NightlyRecord = { day: number, key: string, score: number, grade: string, rounds: { string }, room: string, finished: boolean }
+export type DuelRecord = { r: number, rd: number, vol: number, matches: number, wins: number, losses: number, termMatches: number, term: string, best: number }
 
 export type Data = {
 	schema: number,
@@ -25,6 +26,7 @@ export type Data = {
 	register: { [string]: RegisterEntry },
 	stats: { runs: number, rounds: number, filings: number, correct: number, flawless: number, nightlies: number },
 	nightly: NightlyRecord,
+	duel: DuelRecord,
 	best: { [string]: number },
 	bestRound: { [string]: number },
 	gilt: number,
@@ -42,6 +44,7 @@ local TEMPLATE: Data = {
 	register = {},
 	stats = { runs = 0, rounds = 0, filings = 0, correct = 0, flawless = 0, nightlies = 0 },
 	nightly = { day = -1, key = "", score = 0, grade = "", rounds = {}, room = "", finished = false },
+	duel = { r = 1500, rd = 350, vol = 0.06, matches = 0, wins = 0, losses = 0, termMatches = 0, term = "", best = 0 },
 	best = { salon = 0, velvet = 0, obsidian = 0, midnight = 0 },
 	bestRound = { salon = 0, velvet = 0, obsidian = 0, midnight = 0 },
 	gilt = 0,

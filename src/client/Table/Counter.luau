@@ -193,4 +193,14 @@ function Counter.setMultiplier(model: Model, m: number)
 	end
 end
 
+-- The dial's own words (in the Library it shows the hands won, yours to theirs).
+function Counter.setDialText(model: Model, text: string)
+	local d = displays[model]
+	if d and d.dial then
+		d.dial.Text = text
+		d.dial.TextColor3 = Brand.Colours.deepGold
+		TweenService:Create(d.dial, TweenInfo.new(0.8), { TextColor3 = ENGRAVED }):Play()
+	end
+end
+
 return Counter

@@ -30,6 +30,7 @@ for _, id in Rooms.order do
 	cache[id .. ":all"] = { entries = {}, available = false }
 end
 cache["nightly:tonight"] = { entries = {}, available = false, count = 0 }
+cache["library:all"] = { entries = {}, available = false }
 
 local names: { [number]: string } = {}
 local tonightKey = Nightly.at().key
@@ -332,6 +333,28 @@ function Boards.submit(player: Player, room: string, score: number)
 	end)
 end
 
+-- Records a Library rating (ratings go down as well as up, so this sets rather than keeps the best).
+function Boards.submitRating(player: Player, rating: number)
+	names[player.UserId] = player.DisplayName
+	local value = math.floor(rating + 0.5)
+	local board = cache["library:all"]
+	for i = #board.entries, 1, -1 do
+		if board.entries[i].userId == player.UserId then
+			table.remove(board.entries, i)
+		end
+	end
+	merge("library:all", { userId = player.UserId, name = player.DisplayName, score = value })
+	publish()
+	task.spawn(function()
+		local store = allTimeStore("library")
+		if store then
+			pcall(function()
+				store:SetAsync(tostring(player.UserId), value)
+			end)
+		end
+	end)
+end
+
 -- Records a scored Nightly attempt and returns where it stands tonight. Flagged results are
 -- kept off the public board until reviewed.
 function Boards.submitNightly(player: Player, key: string, score: number, finishedAt: number, flagged: boolean): Standing
@@ -471,6 +494,7 @@ function Boards.start()
 			for _, id in Rooms.order do
 				refreshRoom(id)
 			end
+			refreshRoom("library")
 			refreshNightly()
 			publish()
 			task.wait(Config.data.Boards.refreshSeconds)

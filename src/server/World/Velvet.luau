@@ -98,7 +98,7 @@ function Velvet.build(parent: Instance): Model
 		ceiling = FLOOR + V.height,
 	}
 	for i, centre in V.tables do
-		SortingTable.build(tables, "velvet", i, centre, style)
+		SortingTable.build(tables, "velvet", i, Layout.tableFrame(centre), style)
 	end
 	local fill = Kit.part(root, "FillLight", Vector3.new(1, 1, 1), CFrame.new(-56, FLOOR + 12, 46), { color = Color3.new(), material = Enum.Material.SmoothPlastic, transparency = 1 }, { collide = false, query = false, shadow = false })
 	Kit.pointLight(fill, 0.4, 40, Color3.fromRGB(170, 210, 180))

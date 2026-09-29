@@ -62,6 +62,32 @@ Leave that window open. Every change pushed to the branch reaches Studio within 
 - **The Concierge** asks which room and walks you to any of them (Midnight once earned), and tells
   returning guests "Tonight's table is laid." when they haven't sat it yet.
 
+## What's in Delivery 3 — the Club Floor and the Library
+
+- **The Grand Stair** opens to the **Club Floor**: a gallery hall with portraits, a chandelier and
+  benches, the **Library** door on the left and the (still closed) **Ballroom** doors on the right.
+- **The Library**: dark shelves to the ceiling, a rolling ladder, green reading lamps, and two
+  long tables for **Tête-à-Tête**. Two guests sit at opposite ends; the same pieces are dealt to
+  both felts; first to three hands takes the table.
+  - Hands grow from 14 to 26 pieces and 4 to 6 open cases, with more lookalikes each hand.
+  - **Parcels**: three in a row into one case (up to three per run), and a streak of 6, 10 and
+    15, each send a sealed parcel of lookalikes across the table. It burns on a two-second fuse
+    in your near corner, then spills onto your felt. Your own parcels cancel the ones waiting
+    for you first.
+  - A wrong case costs a **fumble**: your hand can't lift for 0.8 seconds.
+  - Each hand is capped at 60 seconds (the brass rail drains); at the cap, fewer pieces left wins,
+    then accuracy, then whoever filed last earlier.
+  - You see your rival's felt at the far end of the table, their pieces going into their cases,
+    and the brass counters show pieces left. The dial shows hands won.
+  - **Ratings** (Glicko-2), **Marks** from Brass to Onyx shown after five placement evenings, and
+    **Terms** by the quarter. Ranked needs the Member standing and an account three days old;
+    everything else is friendly.
+  - Waiting alone for 25 seconds, the Concierge offers a **Stand-in**: a hollow figure fitted to
+    your rating. Clearly marked, never ranked.
+  - Leaving mid-evening hands the table to the other guest. **Another** asks your rival for a
+    rematch.
+  - The **Leaderboard** has a Library tab with ratings.
+
 ## Where things live
 
 | Folder | What |
@@ -113,8 +139,9 @@ dressed from body colours with a shirt front, a tie, coat tails and the gold lap
 
 ## Checks
 
-`tools/check.sh` type-checks every script against Roblox's API, runs the rule tests and builds
-the house under [Lune](https://github.com/lune-org/lune):
+`tools/check.sh` type-checks every script against Roblox's API, runs the rule tests, builds
+the house under [Lune](https://github.com/lune-org/lune) and walks its routes, and plays whole
+Tête-à-Tête evenings against the real server code on a fake clock (`tests/duel.luau`):
 
 ```sh
 TOOLS=/path/to/tools ./tools/check.sh

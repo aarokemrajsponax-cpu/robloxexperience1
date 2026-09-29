@@ -126,6 +126,36 @@ Layout.Midnight = {
 	window = Vector3.new(80, 13, 11), -- the round window in the far wall
 }
 
+-- The Club Floor, up the Grand Stair: a gallery hall, and the Library off it.
+Layout.CLUB = Layout.FLOOR + 17
+
+Layout.Club = {
+	zone = box(-20, 18, 44, 24, 36, 66),
+	minX = -20, maxX = 24, minZ = 44, maxZ = 66, height = 14,
+	libraryDoor = Vector3.new(-14, 20, 66),
+	ballroomDoor = Vector3.new(12, 20, 66),
+	doorWidth = 8,
+	doorHeight = 11,
+}
+
+Layout.Library = {
+	zone = box(-36, 18, 68, 2, 40, 100),
+	minX = -36, maxX = 2, minZ = 68, maxZ = 100, height = 16, -- behind the hall's north wall (z 66..68)
+	arrival = Vector3.new(-14, 20, 70),
+	-- Each duel is a long table: two halves end to end, the guests at opposite ends.
+	duels = {
+		{ id = "library-1", centre = Vector3.new(-25, 20, 83) },
+		{ id = "library-2", centre = Vector3.new(-9, 20, 83) },
+	},
+}
+
+-- The two halves of a duel table: side "a" faces +Z, side "b" faces -Z, cases meeting in the middle.
+function Layout.duelFrames(centre: Vector3): (CFrame, CFrame)
+	local half = Layout.Table.depth / 2
+	return Layout.tableFrame(centre - Vector3.new(0, 0, half), Vector3.new(0, 0, 1)),
+		Layout.tableFrame(centre + Vector3.new(0, 0, half), Vector3.new(0, 0, -1))
+end
+
 -- The four rooms in order, for code that treats them alike.
 Layout.Rooms = {
 	salon = Layout.Salon,
@@ -155,7 +185,7 @@ function Layout.inBox(b: Box, p: Vector3): boolean
 	return p.X >= b.min.X and p.X <= b.max.X and p.Y >= b.min.Y and p.Y <= b.max.Y and p.Z >= b.min.Z and p.Z <= b.max.Z
 end
 
-export type ZoneName = "street" | "foyer" | "salon" | "velvet" | "obsidian" | "midnight" | "none"
+export type ZoneName = "street" | "foyer" | "salon" | "velvet" | "obsidian" | "midnight" | "club" | "library" | "none"
 
 function Layout.zoneAt(p: Vector3): ZoneName
 	if Layout.inBox(Layout.Salon.zone, p) then
@@ -166,6 +196,10 @@ function Layout.zoneAt(p: Vector3): ZoneName
 		return "obsidian"
 	elseif Layout.inBox(Layout.Midnight.zone, p) then
 		return "midnight"
+	elseif Layout.inBox(Layout.Library.zone, p) then
+		return "library"
+	elseif Layout.inBox(Layout.Club.zone, p) then
+		return "club"
 	elseif Layout.inBox(Layout.Foyer.zone, p) then
 		return "foyer"
 	elseif Layout.inBox(Layout.Street.zone, p) then
@@ -174,16 +208,28 @@ function Layout.zoneAt(p: Vector3): ZoneName
 	return "none"
 end
 
--- The centre of case `index` (1-6) on a table centred at `centre`.
-function Layout.caseCentre(centre: Vector3, index: number): Vector3
+-- A table's frame: at its centre on the floor, with local +Z pointing the way the seated guest
+-- faces (toward the cases). Tables in the four rooms face +Z; duel and Ballroom tables turn.
+function Layout.tableFrame(centre: Vector3, forward: Vector3?): CFrame
+	local f = forward or Vector3.new(0, 0, 1)
+	return CFrame.lookAt(centre, centre - Vector3.new(f.X, 0, f.Z).Unit)
+end
+
+-- The centre of case `index` (1-6) in the table's own coordinates.
+function Layout.caseLocal(index: number): Vector3
 	local t = Layout.Table
 	local total = 6 * t.caseWidth + 5 * t.caseGap
 	local x = -total / 2 + t.caseWidth / 2 + (index - 1) * (t.caseWidth + t.caseGap)
-	return centre + Vector3.new(x, t.topY, t.caseRowZ)
+	return Vector3.new(x, t.topY, t.caseRowZ)
+end
+
+-- The centre of case `index` in the world.
+function Layout.caseCentre(frame: CFrame, index: number): Vector3
+	return frame:PointToWorldSpace(Layout.caseLocal(index))
 end
 
 -- Felt slots for pieces: a grid in front of the cases, filled from the centre out.
-function Layout.pieceSlots(centre: Vector3, count: number): { Vector3 }
+function Layout.pieceSlots(frame: CFrame, count: number): { Vector3 }
 	local t = Layout.Table
 	local cols = if count <= 12 then 5 else 6
 	local rows = math.ceil(count / cols)
@@ -198,7 +244,7 @@ function Layout.pieceSlots(centre: Vector3, count: number): { Vector3 }
 		local inRow = math.min(cols, count - row * cols)
 		local x = (col - (inRow - 1) / 2) * dx
 		local z = t.feltMaxZ - dz * (row + 0.5)
-		slots[i] = centre + Vector3.new(x, t.topY, z)
+		slots[i] = frame:PointToWorldSpace(Vector3.new(x, t.topY, z))
 	end
 	return slots
 end

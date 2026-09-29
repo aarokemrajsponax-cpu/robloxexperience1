@@ -90,6 +90,69 @@ local defaults = {
 
 	Grades = { Flawless = 95, Immaculate = 84, Polished = 68, Steady = 48 },
 
+	-- Tête-à-Tête in the Library (Appendix H2).
+	Library = {
+		handsToWin = 3,
+		pieces = { 14, 17, 20, 23, 26 }, -- per hand
+		cases = { 4, 5, 6, 6, 6 },
+		lookalike = { 0.30, 0.40, 0.50, 0.60, 0.70 },
+		guideDelay = 0.8,
+		fumble = 0.8, -- seconds a wrong case stops your hand
+		parcelRunFrom = 3, -- a same-case run this long starts sending parcels
+		parcelRunMax = 3, -- at most this many parcels per run
+		streakParcelAt6 = 6,
+		streakParcelAt10 = 10,
+		streakParcelAt15 = 15,
+		parcelFuse = 2.0,
+		handCap = 60,
+		betweenHands = 4,
+		ratingStart = 1500,
+		ratingDeviation = 350,
+		ratingVolatility = 0.06,
+		ratingTau = 0.5,
+		placementMatches = 5,
+		queueWindow = 100,
+		queueWiden = 50,
+		queueWidenEvery = 5,
+		queueWindowMax = 400,
+		standInAt = 25,
+		disconnectGrace = 20,
+		rankedAccountDays = 3,
+		standInSlowSeconds = 1.8, -- a Stand-in at rating 1000
+		standInFastSeconds = 0.55, -- a Stand-in at rating 2100
+		standInLowAccuracy = 0.78,
+		standInHighAccuracy = 0.97,
+		giltWin = 60,
+		giltLoss = 25,
+	},
+
+	-- Marks: the ranked tiers (Appendix H4). Rating below each threshold is the tier before it.
+	Marks = {
+		silver = 1200,
+		gold = 1400,
+		platinum = 1600,
+		diamond = 1800,
+		onyx = 2000,
+		termCompress = 0.6, -- at a Term's end: 1500 + (rating - 1500) * 0.6
+		termMinDeviation = 150,
+		noirTop = 100,
+		noirMinMatches = 20,
+	},
+
+	-- House Standing thresholds (§11). Member opens ranked play. Tune in playtest.
+	Standing = {
+		memberNights = 3,
+		memberRounds = 20,
+		patronNights = 14,
+		patronRounds = 150,
+		connoisseurNights = 40,
+		connoisseurRounds = 600,
+		custodianNights = 100,
+		custodianRounds = 2000,
+		keeperNights = 250,
+		keeperRounds = 6000,
+	},
+
 	-- The Nightly (Appendix H1). Rules by UTC weekday.
 	Nightly = {
 		rounds = 5,
@@ -211,7 +274,7 @@ function Config.get(path: string): any
 		if type(node) ~= "table" then
 			return nil
 		end
-		node = node[segment]
+		node = node[tonumber(segment) or segment]
 	end
 	return node
 end
@@ -224,12 +287,13 @@ function Config.set(path: string, value: any): boolean
 		table.insert(segments, segment)
 	end
 	for i = 1, #segments - 1 do
-		node = node[segments[i]]
+		node = node[tonumber(segments[i]) or segments[i]]
 		if type(node) ~= "table" then
 			return false
 		end
 	end
-	local leaf = segments[#segments]
+	local leaf: any = segments[#segments]
+	leaf = tonumber(leaf) or leaf
 	local current = node[leaf]
 	if current == nil or type(current) == "table" then
 		return false

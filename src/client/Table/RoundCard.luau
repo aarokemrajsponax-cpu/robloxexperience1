@@ -92,20 +92,20 @@ local function make(): Part
 end
 
 -- Face up on the felt, text reading toward the guest.
-local function resting(centre: Vector3): CFrame
-	local pos = centre + Vector3.new(0, Layout.Table.topY + 0.08, -0.9)
-	return CFrame.lookAt(pos, pos + Vector3.new(0, 1, 0), Vector3.new(0, 0, 1))
+local function resting(frame: CFrame): CFrame
+	local pos = frame:PointToWorldSpace(Vector3.new(0, Layout.Table.topY + 0.08, -0.9))
+	return CFrame.lookAt(pos, pos + Vector3.new(0, 1, 0), frame:VectorToWorldSpace(Vector3.new(0, 0, 1)))
 end
 
-function RoundCard.land(centre: Vector3, top: string, middle: string, bottom: string): Tween
+function RoundCard.land(frame: CFrame, top: string, middle: string, bottom: string): Tween
 	local p = card or make()
 	card = p
 	labels[1].Text = string.upper(top)
 	labels[2].Text = middle
 	labels[3].Text = bottom
-	local goal = resting(centre)
+	local goal = resting(frame)
 	-- Start above and to the side, face down, then slide and flip onto the felt.
-	p.CFrame = CFrame.new(goal.Position + Vector3.new(-4.5, 3, 1.5)) * goal.Rotation * CFrame.Angles(0, math.rad(179), 0)
+	p.CFrame = CFrame.new(goal.Position + frame:VectorToWorldSpace(Vector3.new(-4.5, 3, 1.5))) * goal.Rotation * CFrame.Angles(0, math.rad(179), 0)
 	p.Transparency = 0
 	local t = TweenService:Create(p, Ease.scaled(TweenInfo.new(0.95, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)), { CFrame = goal })
 	t:Play()
@@ -118,7 +118,7 @@ function RoundCard.clear()
 	if not p then
 		return
 	end
-	local goal = p.CFrame + Vector3.new(6, 0.5, 0)
+	local goal = p.CFrame + p.CFrame.RightVector * -6 + Vector3.new(0, 0.5, 0)
 	local t = TweenService:Create(p, Ease.scaled(TweenInfo.new(0.6, Enum.EasingStyle.Quint, Enum.EasingDirection.In)), { CFrame = goal })
 	t:Play()
 	t.Completed:Once(function()

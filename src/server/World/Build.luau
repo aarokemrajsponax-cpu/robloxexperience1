@@ -9,6 +9,7 @@ local Salon = require(script.Parent.Salon)
 local Velvet = require(script.Parent.Velvet)
 local Obsidian = require(script.Parent.Obsidian)
 local Midnight = require(script.Parent.Midnight)
+local Library = require(script.Parent.Library)
 
 local Build = {}
 
@@ -25,6 +26,7 @@ function Build.run(): Folder
 	Velvet.build(root)
 	Obsidian.build(root)
 	Midnight.build(root)
+	Library.build(root)
 	root.Parent = Workspace
 	return root
 end

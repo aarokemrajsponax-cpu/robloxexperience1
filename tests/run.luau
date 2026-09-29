@@ -401,6 +401,75 @@ do
 	check("the score reads back from the sort key", Nightly.scoreFromSortKey(Nightly.sortKey(12345, t0 + 999)) == 12345)
 end
 
+-- 9. Ratings, Marks, Terms, Tête-à-Tête rules, Standing.
+do
+	local Rating = loadModule("Rating")
+	local Duel = loadModule("Duel")
+	local Standing = loadModule("Standing")
+	-- Glickman's worked example (Glicko-2 paper, 2012): 1500/200/0.06 against three opponents.
+	local player = { r = 1500, rd = 200, vol = 0.06 }
+	local opps = { { r = 1400, rd = 30, vol = 0.06 }, { r = 1550, rd = 100, vol = 0.06 }, { r = 1700, rd = 300, vol = 0.06 } }
+	local after = Rating.update(player, opps, { 1, 0, 0 }, 0.5)
+	check("Glicko-2 rating matches the paper (1464.06)", math.abs(after.r - 1464.06) < 0.05, after.r)
+	check("Glicko-2 deviation matches the paper (151.52)", math.abs(after.rd - 151.52) < 0.05, after.rd)
+	check("Glicko-2 volatility matches the paper (0.05999)", math.abs(after.vol - 0.05999) < 0.00002, after.vol)
+	local win = Rating.update(Rating.new(), { Rating.new() }, { 1 })
+	local loss = Rating.update(Rating.new(), { Rating.new() }, { 0 })
+	check("a win raises a new rating, a loss lowers it", win.r > 1500 and loss.r < 1500)
+	check("even ratings are a coin flip", math.abs(Rating.winChance(Rating.new(), Rating.new()) - 0.5) < 1e-9)
+	check("Brass below 1200", Rating.mark(1199).label == "Brass")
+	check("Silver III at 1200", Rating.mark(1200).label == "Silver III", Rating.mark(1200).label)
+	check("Silver I at 1399", Rating.mark(1399).label == "Silver I", Rating.mark(1399).label)
+	check("Gold II at 1500", Rating.mark(1500).label == "Gold II", Rating.mark(1500).label)
+	check("Diamond I at 1999", Rating.mark(1999).label == "Diamond I", Rating.mark(1999).label)
+	check("Onyx at 2000", Rating.mark(2000).label == "Onyx")
+	local compressed = Rating.newTerm({ r = 2100, rd = 60, vol = 0.06 })
+	check("Term end eases 2100 to 1860 and lifts the deviation to 150", math.abs(compressed.r - 1860) < 1e-9 and compressed.rd == 150)
+	check("Sep 27 2026 is the Autumn Term", Rating.term(os.time({ year = 2026, month = 9, day = 27, hour = 12 })).id == "2026-autumn")
+	check("Jan 10 2027 is the Winter Term of 2026", Rating.term(os.time({ year = 2027, month = 1, day = 10, hour = 12 })).id == "2026-winter")
+	check("hand sizes 14 to 26", Duel.hand(1).pieces == 14 and Duel.hand(5).pieces == 26)
+	check("hand I opens four cases", Duel.hand(1).cases == 4)
+	local r1 = Duel.room(1)
+	local deal = Deal.generate(42, r1, 1, nil, { allowMythic = true })
+	check("a hand deals exactly its size", #deal.pieces == 14, #deal.pieces)
+	check("hand deals never hold Mythics", (function()
+		for s = 1, 200 do
+			for _, p in Deal.generate(s, Duel.room(3), 1, nil, { allowMythic = true }).pieces do
+				if p.mythic then return false end
+			end
+		end
+		return true
+	end)())
+	local run2 = Duel.parcels(2, 0, 2)
+	local run3 = Duel.parcels(3, 0, 3)
+	local run5max = Duel.parcels(6, 3, 5)
+	local _, streak6 = Duel.parcels(1, 0, 6)
+	check("no parcel for a run of two", run2 == 0)
+	check("a run of three sends a parcel", run3 == 1)
+	check("at most three parcels per run", run5max == 0)
+	check("a streak of six sends a parcel", streak6 == 1)
+	local picks = Duel.lookalikes({ "watches", "jewelry", "money", "keys" }, 5, Random.new(7))
+	check("parcel pieces come from open cases", (function()
+		for _, id in picks do
+			local case = Catalogue.byId[id].case
+			if case ~= "watches" and case ~= "jewelry" and case ~= "money" and case ~= "keys" then return false end
+		end
+		return #picks == 5
+	end)())
+	check("capped hand: fewer pieces left wins", Duel.capWinner({ remaining = 2, accuracy = 0.5, lastFilingAt = 9 }, { remaining = 3, accuracy = 1, lastFilingAt = 1 }) == "a")
+	check("capped hand: then higher accuracy", Duel.capWinner({ remaining = 2, accuracy = 0.8, lastFilingAt = 1 }, { remaining = 2, accuracy = 0.9, lastFilingAt = 9 }) == "b")
+	check("capped hand: then the earlier last filing", Duel.capWinner({ remaining = 2, accuracy = 0.9, lastFilingAt = 5 }, { remaining = 2, accuracy = 0.9, lastFilingAt = 4 }) == "b")
+	local slow, lowAcc = Duel.standInPace(1000)
+	local fast, highAcc = Duel.standInPace(2100)
+	check("Stand-ins get faster and surer with rating", fast < slow and highAcc > lowAcc)
+	check("a new guest is a Guest", (Standing.of(0, 0)) == "Guest")
+	check("3 nights and 20 rounds make a Member", (Standing.of(3, 20)) == "Member")
+	check("Member needs both", (Standing.of(10, 5)) == "Guest")
+	check("config reads array paths", Config.get("Library.pieces.2") == 17)
+	check("config sets array paths", Config.set("Library.pieces.2", 18) and Config.get("Library.pieces.2") == 18)
+	Config.set("Library.pieces.2", 17)
+end
+
 print(("\n%d passed, %d failed"):format(passed, failed))
 if failed > 0 then
 	os.exit(1)

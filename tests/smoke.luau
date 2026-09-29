@@ -340,7 +340,7 @@ local parts, lights, guis = 0, 0, 0
 for _, d in maison:GetDescendants() do
 	if d:IsA("BasePart") then
 		parts += 1
-	elseif d:IsA("Light") then
+	elseif d:IsA("Light") and d.Enabled then
 		lights += 1
 	elseif d:IsA("SurfaceGui") then
 		guis += 1
@@ -348,7 +348,7 @@ for _, d in maison:GetDescendants() do
 end
 print(("built: %d parts, %d lights, %d surface guis"):format(parts, lights, guis))
 check("part budget (under 6,500)", parts < 6500, parts)
-check("light budget (under 260)", lights < 260, lights)
+check("light budget (under 140 lit)", lights < 140, lights)
 
 -- Season lighting setup (server)
 local okSeason, errSeason = pcall(function()
@@ -389,7 +389,7 @@ check("62 collectable pieces", Catalogue.totalCollectable() == 62, Catalogue.tot
 ---------------------------------------------------------------------------------------------------
 local Layout = module("ReplicatedStorage", "Shared", "Layout")
 local tables = CollectionService.GetTagged(CollectionService, "MaisonTable")
-check("24 tables, six in each room", #tables == 24, #tables)
+check("28 tables: six in each room, four duel halves in the Library", #tables == 28, #tables)
 local ids = {}
 for _, t in tables do
 	local id = t:GetAttribute("TableId")
@@ -400,7 +400,9 @@ for _, t in tables do
 	check(id .. " chair can't be sat in by walking into it", chair ~= nil and chair.CanTouch == false)
 	local prompt = chair and chair:FindFirstChild("SitPrompt")
 	check(id .. " has a Sit prompt (custom style)", prompt ~= nil and prompt.Style == Enum.ProximityPromptStyle.Custom)
-	check(id .. " chair faces the table (+Z)", chair ~= nil and chair.CFrame.LookVector.Z > 0.99)
+	local frame = t:GetAttribute("Frame")
+	local forward = if typeof(frame) == "CFrame" then frame:VectorToWorldSpace(Vector3.new(0, 0, 1)) else Vector3.new(0, 0, 1)
+	check(id .. " chair faces its table", chair ~= nil and chair.CFrame.LookVector:Dot(forward) > 0.99)
 	for _, name in { "Felt", "Counter", "Dial", "Bulb", "Lamp" } do
 		check(id .. " has " .. name, t:FindFirstChild(name) ~= nil)
 	end
@@ -416,12 +418,16 @@ for _, t in tables do
 	check(id .. " streams as one persistent model", t.ModelStreamingMode == Enum.ModelStreamingMode.Persistent)
 	local centre = t:GetAttribute("Centre")
 	check(id .. " sits inside its room", centre ~= nil and Layout.zoneAt(centre + Vector3.new(0, 3, 0)) == t:GetAttribute("Room"), centre)
-	check(id .. " has the Nightly prompt", chair ~= nil and chair:FindFirstChild("NightlyPrompt") ~= nil)
+	if t:GetAttribute("Duel") == nil then
+		check(id .. " has the Nightly prompt", chair ~= nil and chair:FindFirstChild("NightlyPrompt") ~= nil)
+	else
+		check(id .. " (a duel half) has no Nightly prompt", chair ~= nil and chair:FindFirstChild("NightlyPrompt") == nil)
+	end
 	check(id .. " has a clock rail", t:FindFirstChild("ClockRail") ~= nil)
 	-- The case plates and counter face up toward the guest's camera.
 	local counter = t:FindFirstChild("Counter")
-	check(id .. " counter faces the guest's camera", counter ~= nil and counter.CFrame.LookVector.Y > 0.8 and counter.CFrame.LookVector.Z < 0)
-	check(id .. " counter reads upright (top toward the cases)", counter ~= nil and counter.CFrame.UpVector.Z > 0.8)
+	check(id .. " counter faces the guest's camera", counter ~= nil and counter.CFrame.LookVector.Y > 0.8 and counter.CFrame.LookVector:Dot(forward) < 0)
+	check(id .. " counter reads upright (top toward the cases)", counter ~= nil and counter.CFrame.UpVector:Dot(forward) > 0.8)
 end
 
 local front = CollectionService.GetTagged(CollectionService, "FrontDoors")
@@ -559,6 +565,74 @@ for _, roomId in { "salon", "velvet", "obsidian", "midnight" } do
 	local cwhy = walk(legs, 0.9, if roomId == "midnight" then earned else nil)
 	check("the Concierge has a clear walk to " .. roomId, cwhy == nil, cwhy)
 end
+-- Duel tables: the two halves face each other and their case rows meet in the middle.
+for _, duel in Layout.Library.duels do
+	local halves = {}
+	for _, t in tables do
+		if t:GetAttribute("Duel") == duel.id then
+			halves[t:GetAttribute("Side")] = t
+		end
+	end
+	check(duel.id .. " has both halves", halves.a ~= nil and halves.b ~= nil)
+	if halves.a and halves.b then
+		local fa, fb = halves.a:GetAttribute("Frame"), halves.b:GetAttribute("Frame")
+		local forwardA = fa:VectorToWorldSpace(Vector3.new(0, 0, 1))
+		local forwardB = fb:VectorToWorldSpace(Vector3.new(0, 0, 1))
+		check(duel.id .. " halves face each other", forwardA:Dot(forwardB) < -0.99)
+		local caseA = Layout.caseCentre(fa, 3)
+		local caseB = Layout.caseCentre(fb, 4)
+		check(duel.id .. " case rows meet in the middle", (caseA - caseB).Magnitude < 3.5, (caseA - caseB).Magnitude)
+		local chairA, chairB = halves.a.Chair, halves.b.Chair
+		check(duel.id .. " guests sit at opposite ends", (chairA.CFrame.Position - chairB.CFrame.Position).Magnitude > 15, (chairA.CFrame.Position - chairB.CFrame.Position).Magnitude)
+		check(duel.id .. " guest a faces guest b", chairA.CFrame.LookVector:Dot((chairB.CFrame.Position - chairA.CFrame.Position).Unit) > 0.99)
+	end
+end
+
+-- Up the Grand Stair to the Library: steps of one stud, then the Club Floor at y = 20.
+do
+	local st = Layout.Foyer.stair
+	local depth = (st.toZ - st.fromZ) / st.topY
+	local function stairGround(z: number): number
+		if z < st.fromZ then
+			return FLOOR
+		elseif z >= st.toZ then
+			return Layout.CLUB
+		end
+		return FLOOR + math.floor((z - st.fromZ) / depth) + 1
+	end
+	local duel = Layout.Library.duels[1]
+	local frameA = Layout.duelFrames(duel.centre)
+	local chairA = frameA:PointToWorldSpace(Vector3.new(0, 0, Layout.Table.chairZ - 1.6))
+	local legs = {
+		{ Vector3.new(0, 0, 0), Vector3.new(st.x, 0, 12) },
+		{ Vector3.new(st.x, 0, 12), Vector3.new(st.x, 0, st.fromZ - 1) },
+		{ Vector3.new(st.x, 0, st.fromZ - 1), Vector3.new(st.x, 0, st.toZ + 1) }, -- the stair
+		{ Vector3.new(st.x, 0, st.toZ + 1), Vector3.new(st.x, 0, 50) }, -- through the arch
+		{ Vector3.new(st.x, 0, 50), Vector3.new(Layout.Club.libraryDoor.X, 0, 60) },
+		{ Vector3.new(Layout.Club.libraryDoor.X, 0, 60), Vector3.new(Layout.Club.libraryDoor.X, 0, 71) }, -- into the Library
+		{ Vector3.new(Layout.Club.libraryDoor.X, 0, 71), Vector3.new(chairA.X + 3.5, 0, 71) },
+		{ Vector3.new(chairA.X + 3.5, 0, 71), Vector3.new(chairA.X + 3.5, 0, chairA.Z) },
+		{ Vector3.new(chairA.X + 3.5, 0, chairA.Z), Vector3.new(chairA.X, 0, chairA.Z) },
+	}
+	local why = nil
+	for i, leg in legs do
+		local a, b = leg[1], leg[2]
+		local n = math.ceil((b - a).Magnitude / 0.4)
+		for k = 0, n do
+			local p = a:Lerp(b, k / n)
+			local ground = if p.Z >= st.fromZ - 1 then stairGround(p.Z) else FLOOR
+			-- On the stair itself the next two steps are within a body's reach; a humanoid
+			-- climbs one-stud risers, so only check above knee height there.
+			local onStair = p.Z >= st.fromZ - 1 and p.Z < st.toZ
+			local hit = blocked(Vector3.new(p.X, 0, p.Z), 0.9, ground + (if onStair then 2.2 else 1.2), ground + 5.2)
+			if hit and not why then
+				why = string.format("%s at (%.1f, %.1f) on leg %d", hit:GetFullName(), p.X, p.Z, i)
+			end
+		end
+	end
+	check("a guest can climb the Grand Stair and reach a Library chair", why == nil, why)
+end
+
 check("the street spawn is clear", blocked(Layout.Street.spawn.Position, 1, 1.2, 5) == nil)
 check("the Foyer spawn is clear", blocked(Layout.Foyer.spawn.Position, 1, FLOOR + 1.2, FLOOR + 5) == nil)
 -- Until it's earned, the Midnight Room's doorway is closed.
@@ -567,7 +641,7 @@ check("the Midnight Room is closed until earned", closed ~= nil)
 
 -- Pieces laid out on the felt stay inside it and never overlap.
 for count = 4, 28 do
-	local slots = Layout.pieceSlots(Vector3.new(), count)
+	local slots = Layout.pieceSlots(CFrame.new(), count)
 	local okSlots = #slots == count
 	for i, s in slots do
 		if math.abs(s.X) > Layout.Table.width / 2 - 0.6 or s.Z < Layout.Table.feltMinZ - 0.01 or s.Z > Layout.Table.feltMaxZ + 0.01 then

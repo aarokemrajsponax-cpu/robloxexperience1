@@ -61,7 +61,7 @@ function Obsidian.build(parent: Instance): Model
 		ceiling = FLOOR + O.height,
 	}
 	for i, centre in O.tables do
-		SortingTable.build(tables, "obsidian", i, centre, style)
+		SortingTable.build(tables, "obsidian", i, Layout.tableFrame(centre), style)
 	end
 	return root
 end

@@ -77,6 +77,18 @@ function Hud.setLine(score: string, multiplier: number, clock: number?)
 	lineText.Text = table.concat(parts, "   ·   ")
 end
 
+-- In the Library: pieces left on your felt against theirs.
+function Hud.setDuelLine(mine: number, theirs: number?, clock: number?)
+	local parts = { string.format("%d left", mine) }
+	if theirs then
+		table.insert(parts, string.format("rival %d", theirs))
+	end
+	if clock then
+		table.insert(parts, string.format("%d s", math.ceil(clock)))
+	end
+	lineText.Text = table.concat(parts, "   ·   ")
+end
+
 function Hud.showStraight(onPress: () -> ())
 	if straightKey then
 		return

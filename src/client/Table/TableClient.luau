@@ -20,6 +20,8 @@ local PieceModels = require(ReplicatedStorage.Shared.PieceModels)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Rooms = require(ReplicatedStorage.Shared.Rooms)
 local Scoring = require(ReplicatedStorage.Shared.Scoring)
+local Config = require(ReplicatedStorage.Shared.Config)
+local Duel = require(ReplicatedStorage.Shared.Duel)
 local Settings = require(ReplicatedStorage.Shared.Settings)
 local Voice = require(ReplicatedStorage.Shared.Voice)
 
@@ -30,8 +32,10 @@ local Root = require(script.Parent.Parent.UI.Root)
 local Hud = require(script.Parent.Parent.UI.Hud)
 local RoundPanel = require(script.Parent.Parent.UI.RoundPanel)
 local NightlyCard = require(script.Parent.Parent.UI.NightlyCard)
+local DuelPanel = require(script.Parent.Parent.UI.DuelPanel)
 local Toast = require(script.Parent.Parent.UI.Toast)
 local Counter = require(script.Parent.Counter)
+local DuelView = require(script.Parent.DuelView)
 local Guide = require(script.Parent.Guide)
 local Hands = require(script.Parent.Hands)
 local RoundCard = require(script.Parent.RoundCard)
@@ -62,6 +66,7 @@ type Snapshot = { score: number, streak: number, runLength: number, lastCase: st
 
 local seatedModel: Model? = nil
 local centre = Vector3.zero
+local tableFrame = CFrame.new() -- the table's own frame: +Z toward the cases
 local roomId = "salon"
 local tableMode = "room" -- "room", "nightly" or "rehearsal"
 local clockBudget: number? = nil
@@ -124,6 +129,9 @@ local function feltTop(): number
 end
 
 local function room(): Rooms.Room
+	if roomId == "library" then
+		return Duel.room(round)
+	end
 	return Rooms.get(roomId) or (Rooms.get("salon") :: Rooms.Room)
 end
 
@@ -132,7 +140,7 @@ local function caseIndex(caseId: string): number
 end
 
 local function caseCentre(caseId: string): Vector3
-	return Layout.caseCentre(centre, caseIndex(caseId))
+	return Layout.caseCentre(tableFrame, caseIndex(caseId))
 end
 
 local function isOpen(caseId: string): boolean
@@ -364,15 +372,27 @@ local function updateRail()
 	end
 end
 
+-- In the Library the brass counter counts down: pieces left on your felt.
+local duelRemaining = 0
+local fumbleUntil = 0
+
 local function updateHudLine()
+	if tableMode == "duel" then
+		Hud.setDuelLine(duelRemaining, DuelView.rivalRemaining(), if clockLeft then clockLeft else nil)
+		return
+	end
 	Hud.setLine(RoundPanel.number(local_.score), local_.multiplier, if clockLeft then clockLeft else nil)
 end
 
 local function setScore(value: number, multiplier: number)
 	local model = seatedModel
 	if model then
-		Counter.set(model, value)
-		Counter.setMultiplier(model, multiplier)
+		if tableMode == "duel" then
+			Counter.set(model, duelRemaining)
+		else
+			Counter.set(model, value)
+			Counter.setMultiplier(model, multiplier)
+		end
 	end
 	updateHudLine()
 end
@@ -388,6 +408,10 @@ local function predict(p: Piece, caseId: string): boolean
 			local_.runLength = 1
 		end
 		local_.lastCase = caseId
+		if tableMode == "duel" then
+			duelRemaining = math.max(0, duelRemaining - 1)
+			return correct
+		end
 		local mult = room().tuning.multiplier
 		local_.score += Scoring.filingPoints(p, local_.streak, mult) + Scoring.setBonus(local_.runLength)
 		local_.multiplier = Scoring.multiplier(local_.streak)
@@ -396,6 +420,11 @@ local function predict(p: Piece, caseId: string): boolean
 		local_.runLength = 0
 		local_.lastCase = nil
 		local_.multiplier = 1
+		if tableMode == "duel" then
+			-- A wrong case costs a short fumble: the hand can't lift for a moment.
+			fumbleUntil = os.clock() + Config.data.Library.fumble
+			return correct
+		end
 		if State.get("wrongCase") == "Costs points too" then
 			local_.score = math.max(0, local_.score - Scoring.wrongPenalty(round))
 		end
@@ -480,6 +509,14 @@ local function lift(uid: number, mode: "drag" | "tap" | "pad")
 	if not p or p.filed or p.pending or not playing then
 		return
 	end
+	if os.clock() < fumbleUntil then
+		-- Fumbling: the piece gives a small shake and stays put.
+		glideTo(p, p.slot * CFrame.Angles(0, math.rad(8), 0), 0.08)
+		task.delay(0.1, function()
+			glideTo(p, p.slot, 0.15)
+		end)
+		return
+	end
 	if held and held ~= uid then
 		release()
 	end
@@ -557,10 +594,11 @@ local function caseAt(screen: Vector2): string?
 	if not point then
 		return nil
 	end
-	for _, c in Catalogue.Cases do
-		local cc = caseCentre(c.id)
-		local dx = math.abs(point.X - cc.X)
-		local dz = point.Z - cc.Z
+	local localPoint = tableFrame:PointToObjectSpace(point)
+	for i, c in Catalogue.Cases do
+		local cc = Layout.caseLocal(i)
+		local dx = math.abs(localPoint.X - cc.X)
+		local dz = localPoint.Z - cc.Z
 		if dx <= T.caseWidth / 2 + 0.08 and dz >= -T.caseDepth / 2 - 0.7 and dz <= T.caseDepth / 2 + 0.4 then
 			return c.id
 		end
@@ -607,6 +645,62 @@ local function padHighlight()
 	end
 end
 
+-- One piece model on the felt, parked at `from` (or just above its slot) until it glides in.
+local function makePiece(data: { [string]: any }, slot: CFrame, scale: number, alwaysNames: boolean): Piece
+	local model = PieceModels.build(data.id, Brand.Colours.felt)
+	if data.rare or data.mythic then
+		PieceModels.gild(model)
+	end
+	if scale ~= 1 then
+		model:ScaleTo(scale)
+	end
+	model:SetAttribute("Uid", data.uid)
+	model:PivotTo(slot + Vector3.new(0, 3, 1.5))
+	model.Parent = piecesFolder
+	local p: Piece = {
+		uid = data.uid,
+		id = data.id,
+		name = data.name,
+		case = data.case,
+		value = data.value,
+		rare = data.rare,
+		seasonal = data.seasonal,
+		mythic = data.mythic,
+		model = model,
+		slot = slot,
+		filed = false,
+		pending = false,
+		label = nil,
+	}
+	if (data.rare or data.mythic) and State.get("glow") ~= "Off" then
+		local a = Instance.new("Attachment")
+		a.Parent = model.PrimaryPart
+		local e = Instance.new("ParticleEmitter")
+		e.Rate = if State.get("glow") == "Subtle" then 1.5 else 3
+		e.Lifetime = NumberRange.new(0.6, 1)
+		e.Speed = NumberRange.new(0, 0.2)
+		e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.1), NumberSequenceKeypoint.new(1, 0) })
+		e.Color = ColorSequence.new(Brand.Colours.lightGold)
+		e.LightEmission = 1
+		e.Parent = a
+	end
+	if alwaysNames then
+		p.label = nameLabel(p)
+	end
+	return p
+end
+
+-- Order pieces left-to-right, back-to-front for the gamepad.
+local function sortOrder()
+	table.sort(order, function(a, b)
+		local pa, pb = pieces[a].slot.Position, pieces[b].slot.Position
+		if math.abs(pa.Z - pb.Z) > 0.3 then
+			return pa.Z > pb.Z
+		end
+		return pa.X < pb.X
+	end)
+end
+
 -- Rendering a deal: pieces arrive one by one with a short staggered glide.
 local function renderDeal(message: { [string]: any })
 	clearPieces()
@@ -615,38 +709,14 @@ local function renderDeal(message: { [string]: any })
 	tableMode = message.mode or "room"
 	openCases = message.cases
 	local list = message.pieces :: { { [string]: any } }
-	local slots = Layout.pieceSlots(centre, #list)
+	local slots = Layout.pieceSlots(tableFrame, #list)
 	local scale = pieceScale()
 	local rng = Random.new(message.round * 7919 + #list)
 	local alwaysNames = State.get("pieceNames") == "Always on" and namesAllowed()
 	for i, data in list do
-		local model = PieceModels.build(data.id, Brand.Colours.felt)
-		if data.rare or data.mythic then
-			PieceModels.gild(model)
-		end
-		if scale ~= 1 then
-			model:ScaleTo(scale)
-		end
-		model:SetAttribute("Uid", data.uid)
 		local rot = CFrame.Angles(0, math.rad(rng:NextNumber(-25, 25)), 0)
-		local slot = CFrame.new(slots[i]) * rot
-		model:PivotTo(slot + Vector3.new(0, 3, 1.5))
-		model.Parent = piecesFolder
-		local p: Piece = {
-			uid = data.uid,
-			id = data.id,
-			name = data.name,
-			case = data.case,
-			value = data.value,
-			rare = data.rare,
-			seasonal = data.seasonal,
-			mythic = data.mythic,
-			model = model,
-			slot = slot,
-			filed = false,
-			pending = false,
-			label = nil,
-		}
+		local slot = CFrame.new(slots[i]) * tableFrame.Rotation * rot
+		local p = makePiece(data, slot, scale, alwaysNames)
 		pieces[p.uid] = p
 		table.insert(order, p.uid)
 		task.delay((i - 1) * 0.06, function()
@@ -657,35 +727,22 @@ local function renderDeal(message: { [string]: any })
 				end
 			end
 		end)
-		if (data.rare or data.mythic) and State.get("glow") ~= "Off" then
-			local a = Instance.new("Attachment")
-			a.Parent = model.PrimaryPart
-			local e = Instance.new("ParticleEmitter")
-			e.Rate = if State.get("glow") == "Subtle" then 1.5 else 3
-			e.Lifetime = NumberRange.new(0.6, 1)
-			e.Speed = NumberRange.new(0, 0.2)
-			e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.1), NumberSequenceKeypoint.new(1, 0) })
-			e.Color = ColorSequence.new(Brand.Colours.lightGold)
-			e.LightEmission = 1
-			e.Parent = a
-		end
-		if alwaysNames then
-			p.label = nameLabel(p)
-		end
 	end
-	-- Order pieces left-to-right, back-to-front for the gamepad.
-	table.sort(order, function(a, b)
-		local pa, pb = pieces[a].slot.Position, pieces[b].slot.Position
-		if math.abs(pa.Z - pb.Z) > 0.3 then
-			return pa.Z > pb.Z
-		end
-		return pa.X < pb.X
-	end)
+	sortOrder()
 	padIndex = 1
 	padCase = 1
 	playing = true
 	local r = room()
-	RoundCard.land(centre, if tableMode == "room" then r.name else "Tonight's table", Voice.roundLabel(round, State.get("roundNumbers")), if tableMode == "room" then "Round" else r.name .. " rules")
+	if tableMode == "duel" then
+		duelRemaining = #list
+		fumbleUntil = 0
+		local wins = message.wins or { a = 0, b = 0 }
+		local side = message.side or "a"
+		local rivalSide = if side == "a" then "b" else "a"
+		RoundCard.land(tableFrame, "Tête-à-Tête", "Hand " .. tostring(round), string.format("%d – %d", wins[side] or 0, wins[rivalSide] or 0))
+	else
+		RoundCard.land(tableFrame, if tableMode == "room" then r.name else "Tonight's table", Voice.roundLabel(round, State.get("roundNumbers")), if tableMode == "room" then "Round" else r.name .. " rules")
+	end
 	lampTo(2.4, 1.2)
 	lowPlayed = false
 	if message.clock then
@@ -700,8 +757,14 @@ local function renderDeal(message: { [string]: any })
 		clockBudget = nil
 		showRail(false)
 	end
-	server.score = message.score
-	local_.score = message.score
+	if tableMode == "duel" then
+		-- Every hand starts clean; in the rooms the streak carries from round to round.
+		local_ = { score = message.score, streak = 0, runLength = 0, lastCase = nil, multiplier = 1 }
+		server = table.clone(local_)
+	else
+		server.score = message.score
+		local_.score = message.score
+	end
 	setScore(local_.score, local_.multiplier)
 	if State.inputKind() == "gamepad" then
 		task.delay(0.6, padHighlight)
@@ -734,6 +797,53 @@ local function renderDeal(message: { [string]: any })
 	end
 end
 
+-- A parcel opened on your felt: its lookalikes spill out of `from`, and the felt re-lays so
+-- every piece has room.
+local function addPieces(list: { { [string]: any } }, from: Vector3?, remaining: number?)
+	if not playing then
+		return
+	end
+	local unfiled = {}
+	for _, uid in order do
+		local p = pieces[uid]
+		if p and not p.filed then
+			table.insert(unfiled, p)
+		end
+	end
+	local slots = Layout.pieceSlots(tableFrame, #unfiled + #list)
+	local rng = Random.new(#unfiled * 131 + #list)
+	for i, p in unfiled do
+		local slot = CFrame.new(slots[i]) * p.slot.Rotation
+		p.slot = slot
+		if held ~= p.uid and not p.pending then
+			glideTo(p, slot, 0.35)
+		end
+	end
+	local scale = pieceScale()
+	local alwaysNames = State.get("pieceNames") == "Always on" and namesAllowed()
+	for j, data in list do
+		local rot = CFrame.Angles(0, math.rad(rng:NextNumber(-25, 25)), 0)
+		local slot = CFrame.new(slots[#unfiled + j]) * tableFrame.Rotation * rot
+		local p = makePiece(data, slot, scale, alwaysNames)
+		if from then
+			p.model:PivotTo(CFrame.new(from) * slot.Rotation)
+		end
+		pieces[p.uid] = p
+		table.insert(order, p.uid)
+		task.delay((j - 1) * 0.05, function()
+			if pieces[p.uid] == p then
+				glideTo(p, slot, 0.45, Enum.EasingStyle.Back)
+			end
+		end)
+	end
+	sortOrder()
+	duelRemaining = if remaining then remaining else duelRemaining + #list
+	setScore(local_.score, local_.multiplier)
+	if State.inputKind() == "gamepad" then
+		padHighlight()
+	end
+end
+
 local function onFiled(message: { [string]: any })
 	local p = pieces[message.uid]
 	server.score = message.score
@@ -758,6 +868,14 @@ local function onFiled(message: { [string]: any })
 	if message.clock then
 		clockLeft = message.clock.left
 		clockRunning = message.clock.running
+	end
+	if tableMode == "duel" then
+		if type(message.remaining) == "number" then
+			duelRemaining = message.remaining
+		end
+		if type(message.fumble) == "number" then
+			fumbleUntil = math.max(fumbleUntil, os.clock() + message.fumble)
+		end
 	end
 	setScore(local_.score, local_.multiplier)
 	if State.inputKind() == "gamepad" then
@@ -788,7 +906,7 @@ local function onRoundEnd(message: { [string]: any })
 	lampTo(1.6, 1.2)
 	Sound.play("round", 0.4, 1)
 	Sound.briefDip(3)
-	RoundCard.land(centre, "Round " .. Voice.roundLabel(message.round, State.get("roundNumbers")), message.grade, string.format("%s points", RoundPanel.number(message.score)))
+	RoundCard.land(tableFrame, "Round " .. Voice.roundLabel(message.round, State.get("roundNumbers")), message.grade, string.format("%s points", RoundPanel.number(message.score)))
 	if message.last then
 		return -- the Nightly card follows
 	end
@@ -815,7 +933,7 @@ local function onBanked(message: { [string]: any })
 	Sound.play("complete", 0.4, 1)
 	local_ = { score = 0, streak = 0, runLength = 0, lastCase = nil, multiplier = 1 }
 	server = table.clone(local_)
-	RoundCard.land(centre, "The run", message.grade, string.format("%s points", RoundPanel.number(message.score)))
+	RoundCard.land(tableFrame, "The run", message.grade, string.format("%s points", RoundPanel.number(message.score)))
 	task.delay(1.0, function()
 		if seatedModel == nil then
 			return
@@ -839,13 +957,50 @@ local function onNightlyCard(message: { [string]: any })
 	Sound.play("complete", 0.4, 1)
 	local_ = { score = 0, streak = 0, runLength = 0, lastCase = nil, multiplier = 1 }
 	server = table.clone(local_)
-	RoundCard.land(centre, "Tonight's table", message.grade, string.format("%s points", RoundPanel.number(message.score)))
+	RoundCard.land(tableFrame, "Tonight's table", message.grade, string.format("%s points", RoundPanel.number(message.score)))
 	task.delay(1.0, function()
 		if seatedModel == nil then
 			return
 		end
 		NightlyCard.show(message, {
 			rehearse = function()
+				tableEvent:FireServer({ op = "again" })
+			end,
+			leave = TableClient.leave,
+		})
+	end)
+end
+
+-- The Library: a hand won or lost. The pieces clear and the next hand is dealt shortly.
+local function onHandEnd(message: { [string]: any })
+	playing = false
+	release()
+	clockRunning = false
+	local won = message.winner == DuelView.mySide()
+	lampTo(if won then 2.8 else 1.2, 0.8)
+	Sound.play(if won then "round" else "low", 0.4, 1)
+	task.delay(0.9, function()
+		if seatedModel ~= nil and not playing then
+			clearPieces()
+		end
+	end)
+end
+
+local function onDuelEnd(message: { [string]: any })
+	playing = false
+	release()
+	clearPieces()
+	showRail(false)
+	clockLeft = nil
+	lampTo(1.6, 1.2)
+	Sound.play("complete", 0.4, 1)
+	task.delay(1.2, function()
+		if seatedModel == nil then
+			return
+		end
+		DuelPanel.show(message, {
+			side = DuelView.mySide(),
+			again = function()
 				tableEvent:FireServer({ op = "again" })
 			end,
 			leave = TableClient.leave,
@@ -973,9 +1128,10 @@ local function pointerMoved(input: InputObject)
 		if point and p then
 			-- Keep the piece over the table.
 			local hw, minZ, maxZ = T.width / 2 - 0.4, T.feltMinZ - 0.6, T.caseRowZ + T.caseDepth / 2
-			local lx = math.clamp(point.X - centre.X, -hw, hw)
-			local lz = math.clamp(point.Z - centre.Z, minZ, maxZ)
-			local at = Vector3.new(centre.X + lx, point.Y, centre.Z + lz)
+			local localPoint = tableFrame:PointToObjectSpace(point)
+			local lx = math.clamp(localPoint.X, -hw, hw)
+			local lz = math.clamp(localPoint.Z, minZ, maxZ)
+			local at = tableFrame:PointToWorldSpace(Vector3.new(lx, localPoint.Y, lz))
 			p.model:PivotTo(CFrame.new(at) * p.slot.Rotation)
 			Guide.move(at)
 			Hands.follow(at)
@@ -1025,10 +1181,18 @@ local function onSeated(message: { [string]: any })
 	seatedModel = model
 	local c = model:GetAttribute("Centre")
 	centre = if typeof(c) == "Vector3" then c else model:GetPivot().Position
+	local f = model:GetAttribute("Frame")
+	tableFrame = if typeof(f) == "CFrame" then f else CFrame.new(centre)
 	roomId = message.room or "salon"
+	tableMode = message.mode or "room"
 	State.seated = true
 	local_ = { score = 0, streak = 0, runLength = 0, lastCase = nil, multiplier = 1 }
 	server = table.clone(local_)
+	duelRemaining = 0
+	fumbleUntil = 0
+	if tableMode == "duel" then
+		DuelView.seated(model, tableFrame)
+	end
 	Counter.own(model, true)
 	Counter.set(model, 0, true)
 	Counter.setMultiplier(model, 1)
@@ -1036,7 +1200,7 @@ local function onSeated(message: { [string]: any })
 	if ctl then
 		ctl:Disable()
 	end
-	CameraRig.toTable(centre)
+	CameraRig.toTable(tableFrame, tableMode == "duel")
 	Hud.setSeated(true)
 	updateHudLine()
 	Hands.attach()
@@ -1060,6 +1224,9 @@ local function onLeft(message: { [string]: any })
 	clearPieces()
 	RoundCard.destroy()
 	RoundPanel.close()
+	DuelPanel.close()
+	DuelView.clear()
+	tableMode = "room"
 	paused = false
 	unbindInput()
 	Hands.detach()
@@ -1127,6 +1294,24 @@ function TableClient.start()
 			end
 		elseif op == "left" then
 			onLeft(message)
+		elseif op == "handEnd" then
+			onHandEnd(message)
+			DuelView.handle(message)
+		elseif op == "duelEnd" then
+			DuelView.handle(message)
+			onDuelEnd(message)
+		elseif op == "duelStart" or op == "duelWaiting" then
+			DuelPanel.close()
+			DuelView.handle(message)
+		elseif op == "parcelOpen" then
+			local from = DuelView.handle(message)
+			if message.side == DuelView.mySide() then
+				addPieces(message.pieces, from, message.remaining)
+			end
+			updateHudLine()
+		else
+			DuelView.handle(message)
+			updateHudLine()
 		end
 	end)
 	-- The clock freezes while a panel is open in the four rooms (never in the Nightly).

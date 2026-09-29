@@ -50,6 +50,16 @@ Concierge.openHowTo = function(player)
 end
 TableService.start()
 
+local DuelService = require(script.Parent.DuelService)
+DuelService.say = function(player, line)
+	Concierge.line(player, line, 3)
+end
+DuelService.start(TableService.isSeated)
+TableService.isBusy = DuelService.isSeated
+Concierge.isSeated = function(player)
+	return TableService.isSeated(player) or DuelService.isSeated(player)
+end
+
 local Guests = require(script.Parent.Guests)
 Guests.start()
 
