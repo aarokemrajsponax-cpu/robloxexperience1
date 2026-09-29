@@ -18,8 +18,14 @@ local LiveConfig = require(script.Parent.LiveConfig)
 local Profiles = require(script.Parent.Profiles)
 local TableService = require(script.Parent.TableService)
 local Concierge = require(script.Parent.Staff.Concierge)
+local Voice = require(ReplicatedStorage.Shared.Voice)
 
 local Guests = {}
+
+-- Seats a friend opposite the guest who invited them to the Library (set by Main).
+Guests.joinLibrary = function(_player: Player, _inviterId: number): boolean
+	return false
+end
 
 type Visit = {
 	firstVisit: boolean,
@@ -244,6 +250,19 @@ function Guests.start()
 	Remotes.event("Funnel").OnServerEvent:Connect(onFunnel)
 	Remotes.func("QuickSit").OnServerInvoke = function(player: Player, wanted: unknown)
 		if TableService.isSeated(player) then
+			return true
+		end
+		-- An invite to the Library: the Concierge shows the friend straight upstairs.
+		if type(wanted) == "string" and string.sub(wanted, 1, 7) == "library" then
+			local character = player.Character
+			if character then
+				character:PivotTo(CFrame.new(Layout.Library.arrival + Vector3.new(0, 2, 0)))
+			end
+			local inviter = tonumber(string.match(wanted, "^library:(%d+)$"))
+			if inviter and Guests.joinLibrary(player, inviter) then
+				return true
+			end
+			Concierge.line(player, Voice.Concierge.friendAway, 4)
 			return true
 		end
 		local mode: TableService.Mode = if wanted == "nightly" then "nightly" else "room"

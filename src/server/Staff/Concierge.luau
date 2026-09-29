@@ -22,6 +22,7 @@ Concierge.isSeated = function(_player: Player): boolean
 end
 -- Set by the client bridge: opens How to play on the guest's screen.
 Concierge.openHowTo = function(_player: Player) end
+Concierge.inviteToLibrary = function(_player: Player) end
 -- Set by the server: may this guest enter a room (the Midnight Room is earned)?
 Concierge.canEnter = function(_player: Player, _room: string): boolean
 	return true
@@ -113,6 +114,7 @@ end
 local function menu(player: Player)
 	Dialogue.say(player, V.speaker, V.returning:gsub("{name}", player.DisplayName), {
 		{ id = "room", text = V.choices.takeMe },
+		{ id = "library", text = V.choices.library },
 		{ id = "how", text = V.choices.how },
 		{ id = "bye", text = V.choices.bye },
 	}, function(choice)
@@ -127,6 +129,16 @@ local function menu(player: Player)
 			end
 			Dialogue.say(player, V.speaker, V.whichRoom, rooms, function(roomId)
 				Concierge.lead(player, roomId)
+			end)
+		elseif choice == "library" then
+			Dialogue.say(player, V.speaker, V.libraryWay, {
+				{ id = "invite", text = V.choices.inviteFriend },
+				{ id = "fine", text = V.choices.thanks },
+			}, function(next)
+				if next == "invite" then
+					Dialogue.close(player)
+					Concierge.inviteToLibrary(player)
+				end
 			end)
 		elseif choice == "how" then
 			Dialogue.close(player)

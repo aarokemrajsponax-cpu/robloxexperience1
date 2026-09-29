@@ -126,6 +126,12 @@ local defaults = {
 		giltLoss = 25,
 	},
 
+	Rivals = {
+		activeDays = 14, -- a rival must have been here within this many days
+		connectionsChecked = 20, -- connections looked up when choosing a rival (once a week)
+		cardEverySeconds = 120, -- how often a guest's public card is written while they play
+	},
+
 	-- Marks: the ranked tiers (Appendix H4). Rating below each threshold is the tier before it.
 	Marks = {
 		silver = 1200,

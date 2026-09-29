@@ -55,6 +55,7 @@ type Side = {
 	rating: Rating.Record,
 	eligible: boolean,
 	again: boolean,
+	before: Rating.Record?,
 }
 
 type Match = {
@@ -71,6 +72,7 @@ type Match = {
 	nextParcel: number,
 	cases: { string },
 	rng: Random,
+	away: { key: string, userId: number, untilAt: number, pausedAt: number }?,
 }
 
 type DuelTable = {
@@ -79,6 +81,8 @@ type DuelTable = {
 	seated: { [string]: Player? },
 	since: { [string]: number },
 	offered: { [string]: boolean },
+	holdUntil: { [string]: number },
+	friendly: boolean,
 	match: Match?,
 }
 
@@ -88,6 +92,8 @@ local seatedAt: { [Player]: { duel: DuelTable, side: string } } = {}
 local connections: { [Player]: { RBXScriptConnection } } = {}
 
 DuelService.say = function(_player: Player, _line: string) end
+-- Called when an evening ends (for Rivals and the Soirée).
+DuelService.onFinished = function(_a: Player?, _b: Player?, _winner: string, _ranked: boolean, _standIn: boolean) end
 
 local function other(key: string): string
 	return if key == "a" then "b" else "a"
@@ -177,6 +183,7 @@ local function newSide(key: string, model: Model, player: Player?, bot: Bot?, na
 		rating = rating,
 		eligible = if player then eligible(player) else false,
 		again = false,
+		before = nil,
 	}
 end
 
@@ -484,23 +491,28 @@ matchEnd = function(match: Match, winner: string, reason: string, leaver: string
 		return
 	end
 	match.state = "over"
-	local a, b = match.sides.a, match.sides.b
+	match.away = nil
 	local records: { [string]: { before: number, after: number, markBefore: string, markAfter: string } } = {}
-	if match.ranked and a.player and b.player then
+	if match.ranked then
+		-- The provisional loss written at the start is replaced by the real result.
 		for key, side in match.sides do
 			local rival = match.sides[other(key)]
-			local score = if key == winner then 1 else 0
-			local updated = Rating.update(side.rating, { rival.rating }, { score })
-			local data = Profiles.get(side.player :: Player)
-			local before = side.rating.r
-			if data then
+			local before = side.before or side.rating
+			local rivalBefore = rival.before or rival.rating
+			local won = key == winner
+			local updated = Rating.update(before, { rivalBefore }, { if won then 1 else 0 })
+			records[key] = { before = before.r, after = updated.r, markBefore = Rating.mark(before.r).label, markAfter = Rating.mark(updated.r).label }
+			local player = side.player
+			local data = if player then Profiles.get(player) else nil
+			if data and player then
 				data.duel.r, data.duel.rd, data.duel.vol = updated.r, updated.rd, updated.vol
-				data.duel.term = Rating.term().id
-				data.duel.termMatches += 1
 				data.duel.best = math.max(data.duel.best, updated.r)
-				Boards.submitRating(side.player :: Player, updated.r)
+				if won then
+					data.duel.losses = math.max(0, data.duel.losses - 1)
+					data.duel.wins += 1
+				end
+				Boards.submitRating(player, updated.r)
 			end
-			records[key] = { before = before, after = updated.r, markBefore = Rating.mark(before).label, markAfter = Rating.mark(updated.r).label }
 		end
 	end
 	for key, side in match.sides do
@@ -511,11 +523,12 @@ matchEnd = function(match: Match, winner: string, reason: string, leaver: string
 			local gilt = 0
 			local placementLeft = nil
 			if data then
-				data.duel.matches += if match.ranked then 1 else 0
-				if won then
-					data.duel.wins += 1
-				else
-					data.duel.losses += 1
+				if not match.ranked then
+					if won then
+						data.duel.wins += 1
+					else
+						data.duel.losses += 1
+					end
 				end
 				gilt = Gilt.pay(player, data, if won then Config.data.Library.giltWin else Config.data.Library.giltLoss, "Tête-à-Tête")
 				if match.ranked then
@@ -547,6 +560,29 @@ matchEnd = function(match: Match, winner: string, reason: string, leaver: string
 			})
 		end
 	end
+	DuelService.onFinished(match.sides.a.player, match.sides.b.player, winner, match.ranked, match.standIn)
+end
+
+-- Remembers each other as recent opponents (for Rivals, when a guest has no connections here).
+local function remember(a: Side, b: Side)
+	for _, pair in { { a, b }, { b, a } } do
+		local me, them = pair[1], pair[2]
+		local player, rival = me.player, them.player
+		local data = if player then Profiles.get(player) else nil
+		if data and rival then
+			local recent = data.duel.recent or {}
+			data.duel.recent = recent
+			for i = #recent, 1, -1 do
+				if recent[i].userId == rival.UserId then
+					table.remove(recent, i)
+				end
+			end
+			table.insert(recent, 1, { userId = rival.UserId, name = rival.DisplayName, at = os.time() })
+			while #recent > 10 do
+				table.remove(recent)
+			end
+		end
+	end
 end
 
 local function startMatch(tbl: DuelTable, standIn: boolean)
@@ -571,7 +607,8 @@ local function startMatch(tbl: DuelTable, standIn: boolean)
 	if not sides.a or not sides.b then
 		return
 	end
-	local ranked = not standIn and sides.a.eligible and sides.b.eligible
+	-- Friendly when either guest isn't eligible, when a friend was invited, or with a Stand-in.
+	local ranked = not standIn and not tbl.friendly and sides.a.eligible and sides.b.eligible
 	local match: Match = {
 		id = id,
 		seed = Seed.hash(id),
@@ -586,9 +623,32 @@ local function startMatch(tbl: DuelTable, standIn: boolean)
 		nextParcel = 0,
 		cases = {},
 		rng = Random.new(Seed.hash(id .. ":parcels")),
+		away = nil,
 	}
 	tbl.match = match
 	tbl.offered = {}
+	tbl.holdUntil = {}
+	if ranked then
+		-- A ranked evening is written as a loss the moment it starts and corrected at the end,
+		-- so leaving (or losing the connection for good) can never dodge the result.
+		local term = Rating.term().id
+		for key, side in sides do
+			local rival = sides[other(key)]
+			local data = if side.player then Profiles.get(side.player) else nil
+			side.before = side.rating
+			if data then
+				local loss = Rating.update(side.rating, { rival.rating }, { 0 })
+				data.duel.r, data.duel.rd, data.duel.vol = loss.r, loss.rd, loss.vol
+				data.duel.losses += 1
+				data.duel.matches += 1
+				data.duel.termMatches += 1
+				data.duel.term = term
+			end
+		end
+	end
+	if not standIn then
+		remember(sides.a, sides.b)
+	end
 	for key, side in sides do
 		local rival = sides[other(key)]
 		send(side.player, {
@@ -618,6 +678,28 @@ local function clearStandIn(tbl: DuelTable)
 	end
 end
 
+local function disconnectAll(player: Player)
+	local conns = connections[player]
+	if conns then
+		for _, c in conns do
+			c:Disconnect()
+		end
+	end
+	connections[player] = nil
+end
+
+local function standUp(player: Player, tbl: DuelTable, key: string)
+	local seat = tbl.halves[key]:FindFirstChild("Chair")
+	local weld = seat and seat:FindFirstChild("SeatWeld")
+	if weld then
+		weld:Destroy()
+	end
+	local humanoid = humanoidOf(player)
+	if humanoid then
+		humanoid.Sit = false
+	end
+end
+
 local function unseat(player: Player)
 	local at = seatedAt[player]
 	if not at then
@@ -627,43 +709,105 @@ local function unseat(player: Player)
 	local tbl = at.duel
 	tbl.seated[at.side] = nil
 	tbl.since[at.side] = nil
-	local conns = connections[player]
-	if conns then
-		for _, c in conns do
-			c:Disconnect()
-		end
-	end
-	connections[player] = nil
+	tbl.offered[at.side] = nil
+	tbl.holdUntil[at.side] = nil
+	disconnectAll(player)
 	local match = tbl.match
 	if match and match.state ~= "over" then
-		-- Leaving mid-match counts as a loss.
+		-- Leaving mid-evening hands the table to the other guest (a ranked loss was already
+		-- written when it began).
 		matchEnd(match, other(at.side), "forfeit", at.side)
-		-- The leaver's result still counts: a loss.
-		local data = Profiles.get(player)
-		if data then
-			data.duel.losses += 1
+		if not match.ranked then
+			local data = Profiles.get(player)
+			if data then
+				data.duel.losses += 1
+			end
 		end
 	end
 	if match then
 		tbl.match = nil
+		tbl.friendly = false
 		clearStandIn(tbl)
 		-- The guest left behind waits for a new opponent.
 		local stayKey = other(at.side)
 		if tbl.seated[stayKey] then
 			tbl.since[stayKey] = os.clock()
+			tbl.offered[stayKey] = nil
 			send(tbl.seated[stayKey], { op = "duelWaiting" })
 		end
 	end
-	local seat = tbl.halves[at.side]:FindFirstChild("Chair")
-	local weld = seat and seat:FindFirstChild("SeatWeld")
-	if weld then
-		weld:Destroy()
+	if not tbl.seated.a and not tbl.seated.b then
+		tbl.friendly = false
 	end
+	standUp(player, tbl, at.side)
 	send(player, { op = "left" })
 end
 
 function DuelService.isSeated(player: Player): boolean
 	return seatedAt[player] ~= nil
+end
+
+-- Seats a guest in one half's chair and tells their screen. Yields briefly.
+local function seatAt(player: Player, tbl: DuelTable, key: string): boolean
+	local model = tbl.halves[key]
+	local humanoid = humanoidOf(player)
+	local seat = model:FindFirstChild("Chair")
+	if not humanoid or not seat or not seat:IsA("Seat") then
+		return false
+	end
+	tbl.seated[key] = player
+	seat:Sit(humanoid)
+	local waited = 0
+	while humanoid.SeatPart ~= seat and waited < 1.5 do
+		task.wait(0.05)
+		waited += 0.05
+	end
+	if humanoid.SeatPart ~= seat or player.Parent ~= Players then
+		if tbl.seated[key] == player then
+			tbl.seated[key] = nil
+		end
+		return false
+	end
+	seatedAt[player] = { duel = tbl, side = key }
+	tbl.since[key] = os.clock()
+	tbl.offered[key] = nil
+	connections[player] = {
+		humanoid.Seated:Connect(function(active: boolean, part: BasePart?)
+			if not active or part ~= seat then
+				unseat(player)
+			end
+		end),
+		humanoid.Died:Connect(function()
+			unseat(player)
+		end),
+	}
+	send(player, { op = "seated", table = model:GetAttribute("TableId"), room = "library", mode = "duel", centre = model:GetAttribute("Centre") })
+	return true
+end
+
+-- After a guest sits: start if someone is opposite, otherwise wait.
+local function settle(tbl: DuelTable, key: string)
+	local player = tbl.seated[key]
+	if not player then
+		return
+	end
+	if tbl.seated[other(key)] and not tbl.match then
+		startMatch(tbl, false)
+	else
+		send(player, { op = "duelWaiting" })
+		DuelService.say(player, Voice.Concierge.waiting)
+	end
+end
+
+-- Moves a guest into a chair across the house: beside it first, then seated.
+local function showTo(player: Player, tbl: DuelTable, key: string): boolean
+	local seat = tbl.halves[key]:FindFirstChild("Chair")
+	local character = player.Character
+	if not seat or not seat:IsA("Seat") or not character then
+		return false
+	end
+	character:PivotTo(seat.CFrame * CFrame.new(0, 3, 2.5))
+	return seatAt(player, tbl, key)
 end
 
 function DuelService.sit(player: Player, model: Model, isSeatedElsewhere: (Player) -> boolean): (boolean, string?)
@@ -680,51 +824,90 @@ function DuelService.sit(player: Player, model: Model, isSeatedElsewhere: (Playe
 		return false, "unavailable"
 	end
 	local key = sideKey :: string
-	if tbl.seated[key] or (tbl.match and tbl.match.sides[key] and tbl.match.sides[key].bot) then
+	if tbl.seated[key] or tbl.match then
 		return false, "taken"
 	end
-	local humanoid = humanoidOf(player)
 	local seat = model:FindFirstChild("Chair")
-	if not humanoid or not seat or not seat:IsA("Seat") then
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if not humanoidOf(player) or not seat or not seat:IsA("Seat") or not root then
 		return false, "unavailable"
 	end
-	local root = (player.Character :: Model):FindFirstChild("HumanoidRootPart") :: BasePart?
-	if not root or (root.Position - seat.Position).Magnitude > 12 then
+	if (root.Position - seat.Position).Magnitude > 12 then
 		return false, "far"
 	end
-	tbl.seated[key] = player
-	seat:Sit(humanoid)
-	local waited = 0
-	while humanoid.SeatPart ~= seat and waited < 1.5 do
-		task.wait(0.05)
-		waited += 0.05
-	end
-	if humanoid.SeatPart ~= seat then
-		tbl.seated[key] = nil
+	if not seatAt(player, tbl, key) then
 		return false, "unavailable"
 	end
-	seatedAt[player] = { duel = tbl, side = key }
-	tbl.since[key] = os.clock()
-	connections[player] = {
-		humanoid.Seated:Connect(function(active: boolean, part: BasePart?)
-			if not active or part ~= seat then
-				unseat(player)
-			end
-		end),
-		humanoid.Died:Connect(function()
-			unseat(player)
-		end),
-	}
-	send(player, { op = "seated", table = model:GetAttribute("TableId"), room = "library", mode = "duel", centre = model:GetAttribute("Centre") })
 	Analytics.custom(player, "Library seated", nil, nil)
-	local otherKey = other(key)
-	if tbl.seated[otherKey] and not tbl.match then
-		startMatch(tbl, false)
-	else
-		send(player, { op = "duelWaiting" })
-		DuelService.say(player, Voice.Concierge.waiting)
-	end
+	settle(tbl, key)
 	return true, nil
+end
+
+-- The queue: guests waiting alone at different tables, paired by rating (Appendix H2). The
+-- later guest is shown across to the earlier guest's table.
+local function tryPairs(now: number)
+	type Entry = { tbl: DuelTable, key: string, player: Player, since: number, rating: number, ranked: boolean, done: boolean }
+	local list: { Entry } = {}
+	for _, tbl in duels do
+		local a, b = tbl.seated.a, tbl.seated.b
+		if not tbl.match and (a == nil) ~= (b == nil) then
+			local key = if a then "a" else "b"
+			local player = (a or b) :: Player
+			local held = tbl.holdUntil[key]
+			if seatedAt[player] and not (held and now < held) then
+				table.insert(list, {
+					tbl = tbl,
+					key = key,
+					player = player,
+					since = tbl.since[key] or now,
+					rating = ratingOf(player).r,
+					ranked = eligible(player),
+					done = false,
+				})
+			end
+		end
+	end
+	table.sort(list, function(x, y)
+		return x.since < y.since
+	end)
+	for i, x in list do
+		if not x.done then
+			for j = i + 1, #list do
+				local y = list[j]
+				if not y.done and y.tbl ~= x.tbl then
+					local ok = Duel.pairable(
+						{ rating = x.rating, waited = now - x.since, ranked = x.ranked },
+						{ rating = y.rating, waited = now - y.since, ranked = y.ranked }
+					)
+					if ok then
+						x.done, y.done = true, true
+						local host, mover = x, y
+						local targetKey = other(host.key)
+						-- Leave the old chair quietly (the screen is told it's moving, not leaving).
+						seatedAt[mover.player] = nil
+						mover.tbl.seated[mover.key] = nil
+						mover.tbl.since[mover.key] = nil
+						mover.tbl.offered[mover.key] = nil
+						disconnectAll(mover.player)
+						standUp(mover.player, mover.tbl, mover.key)
+						send(mover.player, { op = "left", moving = true })
+						host.tbl.seated[targetKey] = mover.player -- held while they cross the room
+						DuelService.say(mover.player, Voice.Concierge.foundRival)
+						task.spawn(function()
+							host.tbl.seated[targetKey] = nil
+							if showTo(mover.player, host.tbl, targetKey) then
+								settle(host.tbl, targetKey)
+							else
+								send(mover.player, { op = "left" })
+							end
+						end)
+						break
+					end
+				end
+			end
+		end
+	end
 end
 
 local function offerStandIn(tbl: DuelTable, key: string)
@@ -747,6 +930,117 @@ local function offerStandIn(tbl: DuelTable, key: string)
 	end)
 end
 
+-- A friend who followed an invite: seated opposite the guest who invited them, for a friendly
+-- evening. Returns false if the inviter isn't waiting at a table.
+function DuelService.joinFriend(player: Player, inviterId: number): boolean
+	if seatedAt[player] then
+		return true
+	end
+	for _, tbl in duels do
+		for key, seated in tbl.seated do
+			if seated and seated.UserId == inviterId and not tbl.match and not tbl.seated[other(key)] and seatedAt[seated] then
+				local target = other(key)
+				tbl.friendly = true
+				if showTo(player, tbl, target) then
+					settle(tbl, target)
+					return true
+				end
+				tbl.friendly = false
+				return false
+			end
+		end
+	end
+	return false
+end
+
+-- A dropped connection mid-evening: the chair is held for a short grace, the hand pauses, and
+-- the rival is told. Back in time, the guest is seated again where they were.
+local function dropped(player: Player): boolean
+	local at = seatedAt[player]
+	local tbl = at and at.duel
+	local match = tbl and tbl.match
+	if not at or not tbl or not match or match.state == "over" then
+		return false
+	end
+	local rival = match.sides[other(at.side)]
+	if rival.player == nil then
+		return false -- nobody to wait for them but a Stand-in
+	end
+	seatedAt[player] = nil
+	disconnectAll(player)
+	tbl.seated[at.side] = nil
+	match.sides[at.side].player = nil
+	local grace = Config.data.Library.disconnectGrace
+	match.away = { key = at.side, userId = player.UserId, untilAt = os.clock() + grace, pausedAt = os.clock() }
+	send(rival.player, { op = "rivalAway", seconds = grace, name = player.DisplayName })
+	return true
+end
+
+local function rejoin(player: Player)
+	local found: { tbl: DuelTable, match: Match, key: string }? = nil
+	for _, tbl in duels do
+		local match = tbl.match
+		local away = match and match.away
+		if match and away and away.userId == player.UserId then
+			found = { tbl = tbl, match = match, key = away.key }
+		end
+	end
+	if not found then
+		return
+	end
+	local tbl, match, key = found.tbl, found.match, found.key
+	local character = player.Character or player.CharacterAdded:Wait()
+	task.wait(1) -- let the arrival place them first
+	if match.away == nil or match.away.userId ~= player.UserId or match.state == "over" or character.Parent == nil then
+		return
+	end
+	local side = match.sides[key]
+	side.player = player
+	if not showTo(player, tbl, key) then
+		side.player = nil
+		return
+	end
+	local paused = os.clock() - match.away.pausedAt
+	match.away = nil
+	match.handStarted += paused
+	for _, s in match.sides do
+		for _, parcel in s.waiting do
+			parcel.opensAt += paused
+		end
+		if s.bot then
+			s.bot.nextAt += paused
+		end
+	end
+	local rival = match.sides[other(key)]
+	send(player, {
+		op = "duelStart",
+		side = key,
+		rival = rival.name,
+		ranked = match.ranked,
+		standIn = match.standIn,
+		mark = markLabel(player),
+		rivalMark = markLabel(rival.player),
+		eligible = side.eligible,
+	})
+	if match.state == "hand" then
+		local left = math.max(0, Config.data.Library.handCap - (os.clock() - match.handStarted))
+		send(player, {
+			op = "deal",
+			mode = "duel",
+			room = "library",
+			side = key,
+			round = match.hand,
+			cases = match.cases,
+			pieces = list(side),
+			score = side.remaining,
+			wins = match.wins,
+			clock = { left = left, running = true, budget = Config.data.Library.handCap },
+		})
+		send(player, { op = "rivalDeal", side = other(key), cases = match.cases, pieces = list(rival) })
+	end
+	send(rival.player, { op = "rivalBack", name = player.DisplayName })
+end
+
 local function onMessage(player: Player, message: unknown)
 	local at = seatedAt[player]
 	if not at or type(message) ~= "table" then
@@ -756,7 +1050,7 @@ local function onMessage(player: Player, message: unknown)
 	local tbl = at.duel
 	local match = tbl.match
 	if m.op == "file" then
-		if match and type(m.uid) == "number" and type(m.case) == "string" then
+		if match and not match.away and type(m.uid) == "number" and type(m.case) == "string" then
 			file(match, match.sides[at.side], m.uid :: number, m.case :: string)
 		end
 	elseif m.op == "leave" then
@@ -765,6 +1059,12 @@ local function onMessage(player: Player, message: unknown)
 			humanoid.Sit = false
 		end
 		unseat(player)
+	elseif m.op == "inviting" then
+		-- A guest inviting a friend keeps their table for two minutes: no queue, no Stand-in.
+		if not match then
+			tbl.holdUntil[at.side] = os.clock() + 120
+			tbl.offered[at.side] = true
+		end
 	elseif m.op == "again" then
 		if match and match.state == "over" then
 			local mine = match.sides[at.side]
@@ -792,7 +1092,7 @@ function DuelService.start(isSeatedElsewhere: (Player) -> boolean)
 			if type(id) == "string" and type(side) == "string" then
 				local tbl = duels[id]
 				if not tbl then
-					tbl = { id = id, halves = {}, seated = {}, since = {}, offered = {}, match = nil }
+					tbl = { id = id, halves = {}, seated = {}, since = {}, offered = {}, holdUntil = {}, friendly = false, match = nil }
 					duels[id] = tbl
 				end
 				tbl.halves[side] = half
@@ -810,11 +1110,26 @@ function DuelService.start(isSeatedElsewhere: (Player) -> boolean)
 		end
 	end
 	tableEvent.OnServerEvent:Connect(onMessage)
+	local nextPairs = 0
 	RunService.Heartbeat:Connect(function()
 		local now = os.clock()
 		for _, tbl in duels do
 			local match = tbl.match
-			if match and match.state == "hand" then
+			if match and match.away then
+				if now >= match.away.untilAt then
+					local key = match.away.key
+					matchEnd(match, other(key), "forfeit", key)
+					tbl.match = nil
+					tbl.friendly = false
+					clearStandIn(tbl)
+					local stay = tbl.seated[other(key)]
+					if stay then
+						tbl.since[other(key)] = now
+						tbl.offered[other(key)] = nil
+						send(stay, { op = "duelWaiting" })
+					end
+				end
+			elseif match and match.state == "hand" then
 				for _, side in match.sides do
 					openParcels(match, side, now)
 					if side.bot then
@@ -834,14 +1149,19 @@ function DuelService.start(isSeatedElsewhere: (Player) -> boolean)
 			elseif not match then
 				-- A guest waiting alone is offered a Stand-in after a while.
 				for key, since in tbl.since do
-					if tbl.seated[key] and now - since >= Config.data.Library.standInAt then
+					local held = tbl.holdUntil[key]
+					if tbl.seated[key] and now - since >= Config.data.Library.standInAt and not (held and now < held) then
 						offerStandIn(tbl, key)
 					end
 				end
 			end
 		end
+		if now >= nextPairs then
+			nextPairs = now + 0.5
+			tryPairs(now)
+		end
 	end)
-	-- Hide a chair's prompt while it's occupied.
+	-- Hide a chair's prompt while it's occupied or its table is mid-evening.
 	task.spawn(function()
 		while true do
 			for _, tbl in duels do
@@ -849,16 +1169,21 @@ function DuelService.start(isSeatedElsewhere: (Player) -> boolean)
 					local seat = half:FindFirstChild("Chair")
 					local prompt = seat and seat:FindFirstChild("SitPrompt")
 					if prompt and prompt:IsA("ProximityPrompt") then
-						local match = tbl.match
-						local botHere = match ~= nil and match.sides[key] ~= nil and match.sides[key].bot ~= nil
-						prompt.Enabled = tbl.seated[key] == nil and not botHere
+						prompt.Enabled = tbl.seated[key] == nil and tbl.match == nil
 					end
 				end
 			end
 			task.wait(0.5)
 		end
 	end)
-	Players.PlayerRemoving:Connect(unseat)
+	Players.PlayerRemoving:Connect(function(player: Player)
+		if not dropped(player) then
+			unseat(player)
+		end
+	end)
+	Players.PlayerAdded:Connect(function(player: Player)
+		rejoin(player)
+	end)
 end
 
 return DuelService

@@ -79,6 +79,8 @@ local lastMessage: { [Player]: number } = {}
 TableService.onSeated = function(_player: Player) end
 TableService.say = function(_player: Player, _line: string) end
 TableService.onUnlock = function(_player: Player, _room: string) end
+-- Called after a scored Nightly is on the board (for Rivals).
+TableService.onNightlyFinished = function(_player: Player) end
 -- Set by the server: is the guest busy elsewhere (a Library duel)?
 TableService.isBusy = function(_player: Player): boolean
 	return false
@@ -406,6 +408,7 @@ local function finishNightly(s: Session, reason: string?, notify: boolean)
 				percentile = standing.percentile,
 				seconds = finishedAt - s.startedAt,
 			})
+			TableService.onNightlyFinished(player)
 		end
 		if notify and player.Parent == Players then
 			send(player, card)

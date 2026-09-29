@@ -25,6 +25,10 @@ State.PhaseChanged = phaseChanged.Event
 local unlocked = Instance.new("BindableEvent")
 State.Unlocked = unlocked.Event -- (room)
 State.unlocked = {} :: { [string]: boolean }
+-- This week's rival: { name, fact, ahead } or nil.
+State.rival = nil :: { name: string, fact: string, ahead: boolean }?
+local rivalChanged = Instance.new("BindableEvent")
+State.RivalChanged = rivalChanged.Event
 
 local guestEvent = Remotes.event("Guest")
 
@@ -56,6 +60,14 @@ guestEvent.OnClientEvent:Connect(function(message: any)
 		end
 	elseif message.op == "config" then
 		applyOverrides(message.overrides)
+	elseif message.op == "rival" then
+		local r = message.rival
+		if type(r) == "table" and type(r.name) == "string" and type(r.fact) == "string" then
+			State.rival = { name = r.name, fact = r.fact, ahead = r.ahead == true }
+		else
+			State.rival = nil
+		end
+		rivalChanged:Fire()
 	elseif message.op == "unlock" and type(message.room) == "string" then
 		State.unlocked[message.room] = true
 		unlocked:Fire(message.room)

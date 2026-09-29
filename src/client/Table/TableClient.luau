@@ -33,12 +33,14 @@ local Hud = require(script.Parent.Parent.UI.Hud)
 local RoundPanel = require(script.Parent.Parent.UI.RoundPanel)
 local NightlyCard = require(script.Parent.Parent.UI.NightlyCard)
 local DuelPanel = require(script.Parent.Parent.UI.DuelPanel)
+local Invite = require(script.Parent.Parent.UI.Invite)
 local Toast = require(script.Parent.Parent.UI.Toast)
 local Counter = require(script.Parent.Counter)
 local DuelView = require(script.Parent.DuelView)
 local Guide = require(script.Parent.Guide)
 local Hands = require(script.Parent.Hands)
 local RoundCard = require(script.Parent.RoundCard)
+local RivalPlate = require(script.Parent.RivalPlate)
 
 local TableClient = {}
 
@@ -375,6 +377,7 @@ end
 -- In the Library the brass counter counts down: pieces left on your felt.
 local duelRemaining = 0
 local fumbleUntil = 0
+local awayPaused = false
 
 local function updateHudLine()
 	if tableMode == "duel" then
@@ -1192,6 +1195,8 @@ local function onSeated(message: { [string]: any })
 	fumbleUntil = 0
 	if tableMode == "duel" then
 		DuelView.seated(model, tableFrame)
+	else
+		RivalPlate.show(tableFrame)
 	end
 	Counter.own(model, true)
 	Counter.set(model, 0, true)
@@ -1226,6 +1231,7 @@ local function onLeft(message: { [string]: any })
 	RoundPanel.close()
 	DuelPanel.close()
 	DuelView.clear()
+	RivalPlate.hide()
 	tableMode = "room"
 	paused = false
 	unbindInput()
@@ -1239,6 +1245,11 @@ local function onLeft(message: { [string]: any })
 		end
 	end
 	Hud.setSeated(false)
+	Hud.setExtraKey(nil, nil)
+	if message.moving then
+		-- Being shown across to another table: the next "seated" follows at once.
+		return
+	end
 	local ctl = getControls()
 	if ctl then
 		ctl:Enable()
@@ -1302,6 +1313,25 @@ function TableClient.start()
 			onDuelEnd(message)
 		elseif op == "duelStart" or op == "duelWaiting" then
 			DuelPanel.close()
+			DuelView.handle(message)
+			if op == "duelWaiting" then
+				Hud.setExtraKey("Invite a friend", Invite.library)
+			else
+				Hud.setExtraKey(nil, nil)
+			end
+		elseif op == "rivalAway" then
+			-- The hand pauses while their chair is held.
+			awayPaused = playing
+			playing = false
+			clockRunning = false
+			release()
+			DuelView.handle(message)
+		elseif op == "rivalBack" then
+			if awayPaused then
+				playing = true
+				clockRunning = true
+			end
+			awayPaused = false
 			DuelView.handle(message)
 		elseif op == "parcelOpen" then
 			local from = DuelView.handle(message)

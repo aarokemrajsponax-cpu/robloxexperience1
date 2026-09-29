@@ -48,6 +48,9 @@ end
 Concierge.openHowTo = function(player)
 	Remotes.event("Guest"):FireClient(player, { op = "howto" })
 end
+Concierge.inviteToLibrary = function(player)
+	Remotes.event("Guest"):FireClient(player, { op = "inviteLibrary" })
+end
 TableService.start()
 
 local DuelService = require(script.Parent.DuelService)
@@ -60,7 +63,25 @@ Concierge.isSeated = function(player)
 	return TableService.isSeated(player) or DuelService.isSeated(player)
 end
 
+local Rivals = require(script.Parent.Rivals)
+Rivals.send = function(player, info)
+	Remotes.event("Guest"):FireClient(player, { op = "rival", rival = info })
+end
+local function rivalsAfter(player: Player?)
+	if player then
+		Rivals.publish(player, true)
+		Rivals.refresh(player)
+	end
+end
+TableService.onNightlyFinished = rivalsAfter
+DuelService.onFinished = function(a, b)
+	rivalsAfter(a)
+	rivalsAfter(b)
+end
+Rivals.start()
+
 local Guests = require(script.Parent.Guests)
+Guests.joinLibrary = DuelService.joinFriend
 Guests.start()
 
 local Profiles = require(script.Parent.Profiles)

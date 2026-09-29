@@ -26,6 +26,7 @@ barList.HorizontalAlignment = Enum.HorizontalAlignment.Right
 bar.Visible = false
 
 local leaveKey: TextButton? = nil
+local extraKey: TextButton? = nil
 local straightKey: TextButton? = nil
 
 -- The slim top line, for phones.
@@ -60,6 +61,19 @@ function Hud.start(openSettings: () -> (), leave: () -> ())
 	leaveKey = leaveButton
 	local settingsButton = Theme.key(bar, "Settings", false, openSettings, 120)
 	settingsButton.LayoutOrder = 2
+end
+
+-- One optional key beside Leave (in the Library, "Invite a friend" while you wait).
+function Hud.setExtraKey(text: string?, onPress: (() -> ())?)
+	if extraKey then
+		extraKey:Destroy()
+		extraKey = nil
+	end
+	if text and onPress then
+		local key = Theme.key(bar, text, false, onPress, 170)
+		key.LayoutOrder = 0
+		extraKey = key
+	end
 end
 
 function Hud.setSeated(seated: boolean)

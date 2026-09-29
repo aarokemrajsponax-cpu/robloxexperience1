@@ -25,6 +25,7 @@ local Toast = require(script.Parent.UI.Toast)
 local SettingsPanel = require(script.Parent.UI.SettingsPanel)
 local BoardPanel = require(script.Parent.UI.BoardPanel)
 local HowToPlay = require(script.Parent.UI.HowToPlay)
+local Invite = require(script.Parent.UI.Invite)
 local Counter = require(script.Parent.Table.Counter)
 local TableClient = require(script.Parent.Table.TableClient)
 local Ambient = require(script.Parent.World.Ambient)
@@ -146,9 +147,13 @@ local function onPlay()
 	State.funnel(3)
 	startHud()
 	local guest = State.guest
-	if guest and guest.launch == "nightly" then
+	local launch = if guest and type(guest.launch) == "string" then guest.launch else ""
+	if launch == "nightly" then
 		-- Arrived from a friend's Nightly invite: straight to tonight's table.
 		task.delay(0.6, quickSit, "nightly")
+	elseif string.sub(launch, 1, 7) == "library" then
+		-- Arrived from an invite to the Library: shown up to the friend's table.
+		task.delay(0.6, quickSit, launch)
 	elseif State.isFirstVisit() and not TableClient.isSeated() then
 		Hud.showStraight(function()
 			quickSit("room")
@@ -174,6 +179,8 @@ end)
 Remotes.event("Guest").OnClientEvent:Connect(function(message: any)
 	if type(message) == "table" and message.op == "howto" then
 		HowToPlay.open()
+	elseif type(message) == "table" and message.op == "inviteLibrary" then
+		Invite.library()
 	end
 end)
 

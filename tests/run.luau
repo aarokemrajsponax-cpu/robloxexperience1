@@ -459,6 +459,20 @@ do
 	check("capped hand: fewer pieces left wins", Duel.capWinner({ remaining = 2, accuracy = 0.5, lastFilingAt = 9 }, { remaining = 3, accuracy = 1, lastFilingAt = 1 }) == "a")
 	check("capped hand: then higher accuracy", Duel.capWinner({ remaining = 2, accuracy = 0.8, lastFilingAt = 1 }, { remaining = 2, accuracy = 0.9, lastFilingAt = 9 }) == "b")
 	check("capped hand: then the earlier last filing", Duel.capWinner({ remaining = 2, accuracy = 0.9, lastFilingAt = 5 }, { remaining = 2, accuracy = 0.9, lastFilingAt = 4 }) == "b")
+	check("queue window starts at ±100", Duel.window(0) == 100 and Duel.window(4.9) == 100)
+	check("queue window widens by 50 every 5 s", Duel.window(5) == 150 and Duel.window(12) == 200)
+	check("queue window stops at ±400", Duel.window(300) == 400)
+	local okNear, rankedNear = Duel.pairable({ rating = 1500, waited = 0, ranked = true }, { rating = 1590, waited = 0, ranked = true })
+	check("two ranked guests within 100 pair, ranked", okNear and rankedNear)
+	local okFar = Duel.pairable({ rating = 1500, waited = 0, ranked = true }, { rating = 1750, waited = 0, ranked = true })
+	check("two ranked guests 250 apart wait at first", not okFar)
+	local okLater = Duel.pairable({ rating = 1500, waited = 20, ranked = true }, { rating = 1750, waited = 20, ranked = true })
+	check("after 20 s the window reaches 250", okLater)
+	local okBoth, rankedBoth = Duel.pairable({ rating = 1500, waited = 0, ranked = false }, { rating = 2100, waited = 0, ranked = false })
+	check("two unranked guests pair at once, friendly", okBoth and not rankedBoth)
+	check("a ranked guest waits for ranked first", not (Duel.pairable({ rating = 1500, waited = 3, ranked = true }, { rating = 1500, waited = 3, ranked = false })))
+	local okMixed, rankedMixed = Duel.pairable({ rating = 1500, waited = 31, ranked = true }, { rating = 1500, waited = 0, ranked = false })
+	check("then plays friendly once the window is wide", okMixed and not rankedMixed)
 	local slow, lowAcc = Duel.standInPace(1000)
 	local fast, highAcc = Duel.standInPace(2100)
 	check("Stand-ins get faster and surer with rating", fast < slow and highAcc > lowAcc)
@@ -468,6 +482,39 @@ do
 	check("config reads array paths", Config.get("Library.pieces.2") == 17)
 	check("config sets array paths", Config.set("Library.pieces.2", 18) and Config.get("Library.pieces.2") == 18)
 	Config.set("Library.pieces.2", 17)
+end
+
+-- 10. Rivals.
+do
+	local Rival = loadModule("Rival")
+	local now = 2000000000
+	local function card(r, matches, key, score, seenAgo)
+		return { name = "x", r = r, matches = matches, nightlyKey = key, nightlyScore = score, seen = now - seenAgo }
+	end
+	local me = card(1500, 10, "", 0, 0)
+	local picked = Rival.pick(me, {
+		{ userId = 1, card = card(1700, 5, "", 0, 3600) },
+		{ userId = 2, card = card(1540, 8, "", 0, 86400 * 3) },
+		{ userId = 3, card = card(1505, 9, "", 0, 86400 * 30) }, -- not seen lately
+		{ userId = 4, card = card(1500, 0, "", 0, 60) }, -- never played ranked
+	}, now)
+	check("rival: the closest rating among connections seen lately", picked and picked.userId == 2, picked and picked.userId)
+	local fresh = Rival.pick(card(1500, 0, "", 0, 0), {
+		{ userId = 5, card = card(1500, 0, "", 0, 86400) },
+		{ userId = 6, card = card(1500, 0, "", 0, 600) },
+	}, now)
+	check("rival: without ratings, whoever was here most recently", fresh and fresh.userId == 6)
+	check("rival: nobody seen lately, nobody picked", Rival.pick(me, { { userId = 7, card = card(1500, 3, "", 0, 86400 * 20) } }, now) == nil)
+	local text, ahead = Rival.fact(card(1500, 0, "n1", 900, 0), card(1500, 0, "n1", 1300, 0), "n1")
+	check("rival fact: ahead of you on tonight's table", text == "400 points ahead of you on tonight's table." and ahead == false, text)
+	text, ahead = Rival.fact(card(1500, 0, "n1", 1301, 0), card(1500, 0, "n1", 1300, 0), "n1")
+	check("rival fact: the plate turns when you pass them", text == "1 point behind you on tonight's table." and ahead == true, text)
+	text = Rival.fact(card(1500, 0, "n0", 900, 0), card(1500, 0, "n1", 1300, 0), "n1")
+	check("rival fact: they've sat tonight's table and you haven't", text == "Has sat tonight's table. You haven't yet.", text)
+	text, ahead = Rival.fact(card(1480, 6, "", 0, 0), card(1520, 6, "", 0, 0), "n1")
+	check("rival fact: the Library when there's no Nightly", text == "40 rating points ahead of you in the Library." and not ahead, text)
+	check("rival: weeks start on Monday", Rival.week(os.time({ year = 2026, month = 9, day = 28, hour = 1 })) == Rival.week(os.time({ year = 2026, month = 10, day = 4, hour = 23 })))
+	check("rival: a new week on Monday", Rival.week(os.time({ year = 2026, month = 10, day = 5, hour = 1 })) == Rival.week(os.time({ year = 2026, month = 9, day = 28, hour = 1 })) + 1)
 end
 
 print(("\n%d passed, %d failed"):format(passed, failed))

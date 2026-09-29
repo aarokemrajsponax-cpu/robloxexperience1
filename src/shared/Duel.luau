@@ -109,6 +109,34 @@ function Duel.capWinner(a: SideResult, b: SideResult): "a" | "b"
 	return if a.lastFilingAt <= b.lastFilingAt then "a" else "b"
 end
 
+-- The queue's rating window for a guest who has waited `seconds`: ±100, widening by 50 every
+-- 5 seconds, up to ±400.
+function Duel.window(seconds: number): number
+	local c = Config.data.Library
+	local steps = math.floor(math.max(0, seconds) / c.queueWidenEvery)
+	return math.min(c.queueWindowMax, c.queueWindow + steps * c.queueWiden)
+end
+
+export type Waiting = { rating: number, waited: number, ranked: boolean }
+
+-- Whether two waiting guests should be seated together, and whether the evening is ranked.
+-- Two ranked guests pair when their ratings sit inside both windows. Anyone else plays
+-- friendly: at once with another unranked guest, and with a ranked guest once that guest's
+-- window has fully widened (nobody near their level is about).
+function Duel.pairable(a: Waiting, b: Waiting): (boolean, boolean)
+	if a.ranked and b.ranked then
+		local gap = math.abs(a.rating - b.rating)
+		if gap <= math.min(Duel.window(a.waited), Duel.window(b.waited)) then
+			return true, true
+		end
+		return false, false
+	end
+	local maxed = Config.data.Library.queueWindowMax
+	local aReady = not a.ranked or Duel.window(a.waited) >= maxed
+	local bReady = not b.ranked or Duel.window(b.waited) >= maxed
+	return aReady and bReady, false
+end
+
 -- How a Stand-in fitted to a rating plays: seconds per filing and chance of the right case.
 function Duel.standInPace(rating: number): (number, number)
 	local c = Config.data.Library

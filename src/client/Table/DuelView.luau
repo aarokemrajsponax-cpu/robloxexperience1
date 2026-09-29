@@ -550,6 +550,10 @@ function DuelView.handle(message: { [string]: any }): Vector3?
 		dialText(message.wins)
 		lampTo(ownModel, if message.won then 3 else 1.2, 1)
 		lampTo(rivalModel, if message.won then 1.2 else 3, 1)
+	elseif op == "rivalAway" then
+		Toast.show(Voice.Library.rivalAway, Voice.fill(Voice.Library.holding, { seconds = tostring(message.seconds) }), 4)
+	elseif op == "rivalBack" then
+		Toast.show(Voice.Library.title, Voice.fill(Voice.Library.rivalBack, { name = tostring(message.name) }), 3)
 	elseif op == "rematchAsked" then
 		Toast.show(Voice.Library.title, Voice.fill(Voice.Library.rematchAsked, { name = tostring(message.by) }), 5)
 	end

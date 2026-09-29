@@ -127,6 +127,7 @@ local taskShim = {
 -- Guests, their characters and what they receive
 ---------------------------------------------------------------------------------------------------
 local PlayersService = { PlayerRemoving = signal(), PlayerAdded = signal() }
+local workspace = {}
 
 local function humanoid()
 	return {
@@ -148,6 +149,10 @@ local function newGuest(name: string, userId: number)
 		FindFirstChild = function(_, n)
 			return if n == "HumanoidRootPart" then root elseif n == "Humanoid" then h else nil
 		end,
+		PivotTo = function(_, cf)
+			root.Position = cf.Position
+		end,
+		Parent = workspace,
 	}
 	return {
 		Name = name,
@@ -159,6 +164,7 @@ local function newGuest(name: string, userId: number)
 		humanoid = h,
 		root = root,
 		inbox = {},
+		CharacterAdded = signal(),
 	}
 end
 
@@ -202,7 +208,7 @@ local function profileFor(player)
 			nights = { count = 6 },
 			stats = { rounds = 40 },
 			settings = { offerStandIn = "Yes" },
-			duel = { r = 1500, rd = 350, vol = 0.06, matches = 0, wins = 0, losses = 0, termMatches = 0, term = "", best = 0 },
+			duel = { r = 1500, rd = 350, vol = 0.06, matches = 0, wins = 0, losses = 0, termMatches = 0, term = "", best = 0, recent = {} },
 			gilt = 0,
 		}
 		profiles[player] = data
@@ -819,6 +825,8 @@ end)())
 -- 5. Another: one asks, the other is told; both ask, a new evening starts
 ---------------------------------------------------------------------------------------------------
 clearInbox(ada, ben)
+local benLossesBeforeSecond = profileFor(ben).duel.losses
+local benRatingBeforeSecond = profileFor(ben).duel.r
 send(ada, { op = "again" })
 check("the rival is told someone wants another", last(ben, "rematchAsked") ~= nil and last(ben, "rematchAsked").by == "Ada")
 send(ben, { op = "again" })
@@ -843,12 +851,12 @@ check("at the cap, fewer pieces left takes it", capped and capped.winner == "a",
 ---------------------------------------------------------------------------------------------------
 advance(L.betweenHands + 0.2)
 clearInbox(ada, ben)
-local lossesBefore = profileFor(ben).duel.losses
 send(ben, { op = "leave" })
 check("the leaver is told they've left", last(ben, "left") ~= nil)
 local forfeit = last(ada, "duelEnd")
 check("leaving hands the table to the other guest", forfeit and forfeit.won == true and forfeit.reason == "forfeit")
-check("the leaver gets a loss", profileFor(ben).duel.losses == lossesBefore + 1)
+check("the leaver gets a loss", profileFor(ben).duel.losses == benLossesBeforeSecond + 1, profileFor(ben).duel.losses)
+check("the leaver's rating takes the loss", profileFor(ben).duel.r < benRatingBeforeSecond, profileFor(ben).duel.r)
 check("the one left waits for a new guest", last(ada, "duelWaiting") ~= nil)
 check("the leaver is no longer seated", DuelService.isSeated(ben) == false)
 check("the stayer is still seated", DuelService.isSeated(ada) == true)
@@ -923,10 +931,126 @@ check("a new account plays friendly, not ranked", eveStart and eveStart.ranked =
 advance(3)
 eve.Parent = nil
 PlayersService.PlayerRemoving:Fire(eve)
-check("a guest who leaves the game forfeits", last(fay, "duelEnd") ~= nil and last(fay, "duelEnd").reason == "forfeit")
+check("a dropped connection holds the chair first", last(fay, "rivalAway") ~= nil and last(fay, "rivalAway").seconds == L.disconnectGrace)
+check("no forfeit during the grace", last(fay, "duelEnd") == nil)
+local fayFiled = #take(fay, "filed")
+fileOne(fay, true)
+advance(0.3)
+check("the hand waits while the chair is held", #take(fay, "filed") == fayFiled)
+advance(L.disconnectGrace + 0.5)
+check("after the grace the evening is forfeit", last(fay, "duelEnd") ~= nil and last(fay, "duelEnd").reason == "forfeit" and last(fay, "duelEnd").won == true)
 check("nothing is sent to a guest who has gone", last(eve, "duelEnd") == nil)
+check("the one left waits again", last(fay, "duelWaiting") ~= nil)
 fay.humanoid.Died:Fire()
 check("a guest who falls is unseated", DuelService.isSeated(fay) == false)
+
+---------------------------------------------------------------------------------------------------
+-- 10. The queue: guests alone at different tables are paired by rating
+---------------------------------------------------------------------------------------------------
+local gus, hal = newGuest("Gus", 7), newGuest("Hal", 8)
+profileFor(hal).duel.r = 1560
+sit(gus, l1a)
+advance(0.2)
+sit(hal, l2a)
+advance(1)
+local moved = last(hal, "left")
+check("the later guest is shown across", moved ~= nil and moved.moving == true)
+check("they're seated opposite the first", (last(hal, "seated") or {}).table == "library-1b", (last(hal, "seated") or {}).table)
+check("the paired evening is ranked", last(hal, "duelStart") ~= nil and last(hal, "duelStart").ranked == true and last(gus, "duelStart").rival == "Hal")
+check("the house explains the move", (function()
+	for _, s in said do
+		if s.player == hal and string.find(s.line, "other table") then
+			return true
+		end
+	end
+	return false
+end)())
+gus.side, hal.side = "a", "b"
+advance(2.6)
+check("ranked: a provisional loss is written at the start", profileFor(gus).duel.losses == 1 and profileFor(gus).duel.r < 1500)
+-- Hal's connection drops for good: forfeit after the grace, and the loss stands.
+hal.Parent = nil
+PlayersService.PlayerRemoving:Fire(hal)
+advance(L.disconnectGrace + 0.5)
+local gusEnd = last(gus, "duelEnd")
+check("a ranked dropout is forfeit after the grace", gusEnd ~= nil and gusEnd.won == true and gusEnd.reason == "forfeit")
+check("the winner's provisional loss is undone", profileFor(gus).duel.losses == 0 and profileFor(gus).duel.wins == 1 and profileFor(gus).duel.r > 1500)
+check("the dropout keeps the loss", profileFor(hal).duel.losses == 1 and profileFor(hal).duel.r < 1560)
+send(gus, { op = "leave" })
+
+-- Far apart: they wait until the window has widened enough.
+local ivy, jon = newGuest("Ivy", 10), newGuest("Jon", 11)
+profileFor(jon).duel.r = 1880
+sit(ivy, l1a)
+sit(jon, l2a)
+advance(6)
+check("guests far apart aren't paired at first", last(jon, "duelStart") == nil and last(ivy, "duelStart") == nil)
+advance(25)
+check("the widened window pairs them", last(jon, "duelStart") ~= nil and last(ivy, "duelStart") ~= nil)
+send(ivy, { op = "leave" })
+send(jon, { op = "leave" })
+advance(0.5)
+
+---------------------------------------------------------------------------------------------------
+-- 11. Invite to the Library: the chair is kept; the friend is seated opposite, friendly
+---------------------------------------------------------------------------------------------------
+local kim, lou = newGuest("Kim", 12), newGuest("Lou", 13)
+kim.side, lou.side = "a", "b"
+local offersBefore = #dialogues
+sit(kim, l2a)
+send(kim, { op = "inviting" })
+local mia = newGuest("Mia", 14)
+sit(mia, l1a)
+advance(L.standInAt + 6)
+check("an inviting guest isn't offered a Stand-in", (function()
+	for i = offersBefore + 1, #dialogues do
+		if dialogues[i].player == kim then
+			return false
+		end
+	end
+	return true
+end)())
+check("an inviting guest isn't paired by the queue", last(kim, "duelStart") == nil)
+send(mia, { op = "leave" })
+local joined = false
+run(function()
+	joined = DuelService.joinFriend(lou, kim.UserId)
+end)
+advance(0.2)
+check("the invited friend is seated opposite", joined and (last(lou, "seated") or {}).table == "library-2b")
+check("an invited evening is friendly", last(lou, "duelStart") ~= nil and last(lou, "duelStart").ranked == false)
+check("an invite to someone not waiting is refused", (function()
+	local r
+	run(function()
+		r = DuelService.joinFriend(newGuest("Ned", 15), 99)
+	end)
+	return r == false
+end)())
+
+---------------------------------------------------------------------------------------------------
+-- 12. Back within the grace: seated again, the hand resumes
+---------------------------------------------------------------------------------------------------
+advance(2.6)
+check("the invited evening deals", last(lou, "deal") ~= nil)
+fileOne(lou, true)
+advance(0.3)
+local louLeft = last(lou, "filed").remaining
+lou.Parent = nil
+PlayersService.PlayerRemoving:Fire(lou)
+advance(5)
+local lou2 = newGuest("Lou", 13)
+lou2.side = "b"
+PlayersService.PlayerAdded:Fire(lou2)
+advance(1.5)
+check("back in time, the guest is seated again", (last(lou2, "seated") or {}).table == "library-2b")
+check("the evening is sent again", last(lou2, "duelStart") ~= nil and last(lou2, "deal") ~= nil)
+check("the felt is as they left it", last(lou2, "deal") and #last(lou2, "deal").pieces == louLeft, last(lou2, "deal") and #last(lou2, "deal").pieces)
+check("the rival is told they're back", last(kim, "rivalBack") ~= nil)
+local before2 = #take(lou2, "filed")
+fileOne(lou2, true)
+advance(0.3)
+check("the hand carries on", #take(lou2, "filed") == before2 + 1)
+check("the evening wasn't forfeit", last(kim, "duelEnd") == nil)
 
 print(string.format("%d passed, %d failed", passed, failed))
 if failed > 0 then

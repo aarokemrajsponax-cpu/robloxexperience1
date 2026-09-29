@@ -86,7 +86,21 @@ Leave that window open. Every change pushed to the branch reaches Studio within 
     your rating. Clearly marked, never ranked.
   - Leaving mid-evening hands the table to the other guest. **Another** asks your rival for a
     rematch.
+  - **The queue**: guests waiting alone at different tables are paired by rating (±100,
+    widening by 50 every 5 seconds up to ±400); the later guest is shown across to the other
+    table. Ranked guests with nobody near their level play friendly once the window is wide.
+  - **Invite to the Library**: from the Concierge ("The Library" → "Invite a friend") or the
+    "Invite a friend" key while you wait. Your chair is kept for two minutes; the friend lands
+    in the Library and is seated opposite you. Invited evenings are friendly.
+  - **A dropped connection** holds the chair for 20 seconds and pauses the hand; back in time,
+    the guest is seated again with the felt as they left it. Otherwise it's a forfeit.
+  - Ranked evenings are written as a loss the moment they start and corrected at the end, so
+    leaving can never dodge a result.
   - The **Leaderboard** has a Library tab with ratings.
+- **Rivals**: once a week the house picks you a rival from your Roblox connections who play
+  here, closest to you in the Library (or whoever was here most recently), or else someone you
+  played recently. A small brass plate on your table's rim carries their name and one fact
+  (*"40 points ahead of you on tonight's table."*). Pass them and the plate turns, gold side up.
 
 ## Where things live
 
