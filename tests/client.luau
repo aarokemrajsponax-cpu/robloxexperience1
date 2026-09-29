@@ -1273,6 +1273,136 @@ check("leaving the Library gives the controls back", controls.enabled == true)
 check("no errors through a whole Tête-à-Tête", #errors == 0, errors[1])
 
 ---------------------------------------------------------------------------------------------------
+-- 6b. The Ballroom: a Lights Out evening on screen
+---------------------------------------------------------------------------------------------------
+local ballroomTable
+for _, m in CollectionService:GetTagged("BallroomTable") do
+	if m:GetAttribute("Seat") == 3 then
+		ballroomTable = m
+	end
+end
+check("the Ballroom's table 3 exists", ballroomTable ~= nil)
+UserInputService.PreferredInput = EnumShim.PreferredInput.Gamepad
+serverSays("Table", { op = "seated", table = ballroomTable:GetAttribute("TableId"), room = "ballroom", mode = "ballroom", seat = 3 })
+serverSays("Table", { op = "gathering", startsIn = 30 })
+advance(2)
+check("Ballroom: seated at the table", controls.enabled == false and camera.CameraType == roblox.Enum.CameraType.Scriptable)
+check("Ballroom: the gathering is announced", textOnScreen("The evening begins in 30 seconds") ~= nil)
+local names = {}
+for i = 1, 20 do
+	names[tostring(i)] = { name = if i == 3 then "Ada" else "Stand-in", standIn = i ~= 3 }
+end
+serverSays("Table", { op = "eveningStart", seat = 3, names = names, capacity = 16, tab = "random", counted = false, real = 1 })
+local opening = pieceList(6, cases)
+serverSays("Table", { op = "deal", mode = "ballroom", room = "ballroom", round = 1, cases = cases, pieces = opening, score = 6 })
+advance(2)
+check("Ballroom: six pieces on the felt", #piecesFolder:GetChildren() == 6, #piecesFolder:GetChildren())
+check("Ballroom: the four tabs are shown", textOnScreen("Nearly out") ~= nil and textOnScreen("Leader") ~= nil)
+check("Ballroom: the status line counts the felt", textOnScreen("felt 6 of 16") ~= nil)
+-- Arrivals from the dumbwaiter.
+for i = 1, 3 do
+	serverSays("Table", { op = "arrive", pieces = { { uid = 200 + i, id = opening[i].id, name = opening[i].name, case = opening[i].case, value = 10, rare = false, seasonal = false, mythic = false } }, remaining = 6 + i })
+	advance(0.5)
+end
+check("Ballroom: arrivals land on the felt", #piecesFolder:GetChildren() == 9, #piecesFolder:GetChildren())
+-- The shoulder button moves the tab.
+check("Ballroom: R1 moves to the next tab", pad(roblox.Enum.KeyCode.ButtonR1))
+local tabMsg
+for _, sm in sent do
+	if sm.remote == "Table" and sm.message.op == "tab" then
+		tabMsg = sm.message
+	end
+end
+check("Ballroom: the new tab is sent", tabMsg ~= nil and tabMsg.tab == "rivals", tabMsg and tabMsg.tab)
+check("Ballroom: pressing a tab sends it", press("Leader") and (function()
+	local lastTab
+	for _, sm in sent do
+		if sm.remote == "Table" and sm.message.op == "tab" then
+			lastTab = sm.message.tab
+		end
+	end
+	return lastTab == "leader"
+end)())
+-- File one with the pad.
+local ballFiles = sentOps("Table", "file")
+pad(roblox.Enum.KeyCode.ButtonA)
+advance(0.3)
+pad(roblox.Enum.KeyCode.ButtonA)
+advance(0.3)
+check("Ballroom: filing works as at any table", sentOps("Table", "file") == ballFiles + 1)
+-- A parcel on its way to us, then open on the felt; one of ours cancelled.
+serverSays("Table", { op = "parcel", from = 7, to = 3, id = 11, count = 2, fuse = 2.5 })
+serverSays("Table", { op = "parcel", from = 3, to = 9, id = 12, count = 1, fuse = 2.5 })
+advance(1)
+local ballFolder = workspace.MaisonLocal:FindFirstChild("Ballroom")
+check("Ballroom: parcels fly between tables", ballFolder ~= nil and #ballFolder:GetChildren() == 2, ballFolder and #ballFolder:GetChildren())
+serverSays("Table", { op = "parcelShrink", seat = 3, id = 11, count = 1 })
+serverSays("Table", { op = "parcelLanded", seat = 9, id = 12, count = 1, felt = 12 })
+advance(1.6)
+serverSays("Table", { op = "parcelOpen", side = "mine", seat = 3, id = 11, pieces = { { uid = 300, id = opening[2].id, name = opening[2].name, case = opening[2].case, value = 10, rare = false, seasonal = false, mythic = false } }, remaining = 9 })
+advance(1)
+-- (The filed piece stays in its case, so the folder holds ten.)
+check("Ballroom: a parcel's pieces spill onto the felt", #piecesFolder:GetChildren() == 10, #piecesFolder:GetChildren())
+-- Over sixteen: the rail counts three seconds.
+serverSays("Table", { op = "flicker", on = true, seconds = 3 })
+advance(0.5)
+check("Ballroom: over sixteen shows the rail", find(ballroomTable, function(d)
+	return d.Name == "RailGui" and d.Enabled
+end) ~= nil)
+serverSays("Table", { op = "flicker", on = false })
+ballroomTable:SetAttribute("Flicker", true)
+advance(0.5)
+ballroomTable:SetAttribute("Flicker", false)
+ballroomTable:SetAttribute("KeyLeader", true)
+advance(0.5)
+check("Ballroom: the Key leader glints", find(ballroomTable, function(d)
+	return d.Name == "KeyGlint"
+end) ~= nil)
+serverSays("Table", { op = "lampOut", seat = 9, place = 20, by = 3, byName = "Ada", keys = 1, leader = 3, alive = 19 })
+advance(0.5)
+check("Ballroom: a Key when your parcel puts a lamp out", textOnScreen("Table 9's lamp went out on your parcel") ~= nil)
+serverSays("Table", { op = "closingTime" })
+serverSays("Table", { op = "cases", cases = { cases[1], cases[2], cases[3], cases[4], Catalogue.Cases[5].id, Catalogue.Cases[6].id } })
+advance(1)
+check("Ballroom: Closing Time is announced", textOnScreen("Closing Time") ~= nil)
+-- Our lamp goes out.
+serverSays("Table", { op = "out", place = 4, keys = 1, by = "Ben", reason = "over", of = 20 })
+advance(1.5)
+check("Ballroom: the out card lands", textOnScreen("Your lamp is out") ~= nil and textOnScreen("4th of 20") ~= nil)
+check("Ballroom: the felt clears", #piecesFolder:GetChildren() == 0)
+press("Stay for the next evening")
+press("Next evening")
+advance(0.5)
+serverSays("Table", { op = "eveningEnd", winner = 12, winnerName = "Ben", keys = 5, seconds = 300, counted = false, results = {} })
+advance(3)
+check("Ballroom: the camera finds the last lamp from the Gallery", camera.CFrame.Position.Y > 35, camera.CFrame.Position.Y)
+serverSays("Table", { op = "eveningResult", place = 4, of = 20, keys = 1, points = 53, gilt = 40, counted = false, won = false })
+advance(8)
+check("Ballroom: the result card", textOnScreen("4th of 20") ~= nil and textOnScreen("not counted for records") ~= nil)
+check("Ballroom: the camera is back at the table", camera.CFrame.Position.Y < 35)
+press("Watch from the Gallery")
+check("Ballroom: to the Gallery is sent", sentOps("Table", "gallery") == 1)
+serverSays("Table", { op = "left" })
+advance(2)
+check("Ballroom: leaving gives the controls back", controls.enabled == true)
+check("no errors through a Lights Out evening", #errors == 0, errors[1])
+-- Standing in the Ballroom without a chair: Next evening and Watch.
+root.Position = Vector3.new(61, 21, 90)
+root.CFrame = CFrame.new(61, 21, 90)
+advance(1)
+check("in the Ballroom without a chair: Next evening is offered", textOnScreen("Next evening") ~= nil)
+check("and Watch", press("Watch"))
+advance(7)
+check("watching drifts the camera", camera.CameraType == roblox.Enum.CameraType.Scriptable)
+press("Next evening")
+check("Next evening is sent", sentOps("Table", "nextEvening") == 1)
+root.Position = Vector3.new(0, 5, -40)
+root.CFrame = CFrame.new(0, 5, -40)
+advance(1)
+check("leaving the Ballroom drops its keys and the camera", textOnScreen("Next evening") == nil and camera.CameraType == roblox.Enum.CameraType.Custom)
+check("no errors in the Ballroom", #errors == 0, errors[1])
+
+---------------------------------------------------------------------------------------------------
 -- 7. The panels
 ---------------------------------------------------------------------------------------------------
 UserInputService.PreferredInput = EnumShim.PreferredInput.KeyboardAndMouse

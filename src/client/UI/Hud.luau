@@ -27,6 +27,7 @@ bar.Visible = false
 
 local leaveKey: TextButton? = nil
 local extraKey: TextButton? = nil
+local extraKeys: { TextButton } = {}
 local straightKey: TextButton? = nil
 
 -- The slim top line, for phones.
@@ -74,6 +75,24 @@ function Hud.setExtraKey(text: string?, onPress: (() -> ())?)
 		key.LayoutOrder = 0
 		extraKey = key
 	end
+end
+
+-- Keys beside Leave and Settings (in the Ballroom, "Next evening" and "Watch").
+function Hud.setExtraKeys(list: { { text: string, onPress: () -> () } })
+	for _, k in extraKeys do
+		k:Destroy()
+	end
+	extraKeys = {}
+	for i, spec in list do
+		local key = Theme.key(bar, spec.text, i == 1, spec.onPress, 160)
+		key.LayoutOrder = -10 + i
+		table.insert(extraKeys, key)
+	end
+end
+
+-- A free line of text on the phone's top line.
+function Hud.setTextLine(text: string)
+	lineText.Text = text
 end
 
 function Hud.setSeated(seated: boolean)

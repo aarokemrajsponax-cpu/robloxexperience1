@@ -149,6 +149,33 @@ Layout.Library = {
 	},
 }
 
+-- The Ballroom, through the Club hall's right-hand door: twenty tables in a ring around a
+-- marble floor, each under its own lamp, and the Gallery above the entrance for watching.
+Layout.Ballroom = {
+	zone = box(4, 18, 68, 118, 52, 182),
+	minX = 4, maxX = 118, minZ = 68, maxZ = 182, height = 30,
+	centre = Vector3.new(61, 20, 125),
+	-- Wide enough that two neighbouring tables leave a walkable gap at their inner corners.
+	radius = 47,
+	arrival = Vector3.new(12, 20, 72),
+	-- The Gallery: a balcony along the south wall, reached by a stair along the west wall.
+	gallery = { minX = 4, maxX = 118, minZ = 68, maxZ = 76, floorY = 32 },
+	galleryArrival = Vector3.new(61, 32, 72.5),
+	stair = { x0 = 5, x1 = 11, bottomZ = 100, topZ = 76, steps = 12 },
+	-- Where the camera watches from (the Gallery rail, looking into the ring).
+	galleryView = CFrame.lookAt(Vector3.new(61, 40, 73), Vector3.new(61, 22, 125)),
+	board = CFrame.lookAt(Vector3.new(61, 28, 76.3), Vector3.new(61, 28, 125)),
+}
+
+-- Table `i` of the Ballroom's ring (1 to 20): its centre, facing the middle of the room.
+function Layout.ballroomFrame(i: number, count: number?): CFrame
+	local n = count or 20
+	local B = Layout.Ballroom
+	local angle = -math.pi / 2 + (i - 1) / n * math.pi * 2
+	local centre = B.centre + Vector3.new(math.cos(angle) * B.radius, 0, math.sin(angle) * B.radius)
+	return Layout.tableFrame(centre, (B.centre - centre).Unit)
+end
+
 -- The two halves of a duel table: side "a" faces +Z, side "b" faces -Z, cases meeting in the middle.
 function Layout.duelFrames(centre: Vector3): (CFrame, CFrame)
 	local half = Layout.Table.depth / 2
@@ -185,7 +212,7 @@ function Layout.inBox(b: Box, p: Vector3): boolean
 	return p.X >= b.min.X and p.X <= b.max.X and p.Y >= b.min.Y and p.Y <= b.max.Y and p.Z >= b.min.Z and p.Z <= b.max.Z
 end
 
-export type ZoneName = "street" | "foyer" | "salon" | "velvet" | "obsidian" | "midnight" | "club" | "library" | "none"
+export type ZoneName = "street" | "foyer" | "salon" | "velvet" | "obsidian" | "midnight" | "club" | "library" | "ballroom" | "none"
 
 function Layout.zoneAt(p: Vector3): ZoneName
 	if Layout.inBox(Layout.Salon.zone, p) then
@@ -198,6 +225,8 @@ function Layout.zoneAt(p: Vector3): ZoneName
 		return "midnight"
 	elseif Layout.inBox(Layout.Library.zone, p) then
 		return "library"
+	elseif Layout.inBox(Layout.Ballroom.zone, p) then
+		return "ballroom"
 	elseif Layout.inBox(Layout.Club.zone, p) then
 		return "club"
 	elseif Layout.inBox(Layout.Foyer.zone, p) then

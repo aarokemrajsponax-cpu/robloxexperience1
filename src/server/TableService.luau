@@ -728,7 +728,7 @@ function TableService.freeTable(roomId: string, near: Vector3?): Model?
 	local bestDistance = math.huge
 	for _, m in tables() do
 		local r = m:GetAttribute("Room")
-		if (roomId == "any" or r == roomId) and r ~= "midnight" and r ~= "library" and not occupants[m] then
+		if (roomId == "any" or r == roomId) and r ~= "midnight" and r ~= "library" and r ~= "ballroom" and not occupants[m] then
 			local centre = m:GetAttribute("Centre")
 			local d = if near and typeof(centre) == "Vector3" then (centre - near).Magnitude else 0
 			if d < bestDistance then
@@ -816,8 +816,8 @@ end
 function TableService.start()
 	tableEvent.OnServerEvent:Connect(onMessage)
 	for _, m in tables() do
-		if m:GetAttribute("Duel") ~= nil then
-			continue -- the Library's duel tables belong to the duel service
+		if m:GetAttribute("Duel") ~= nil or m:GetAttribute("Ballroom") then
+			continue -- the Library's and the Ballroom's tables have their own services
 		end
 		local seat = chairOf(m)
 		local prompt = seat and seat:FindFirstChild("SitPrompt")
@@ -857,7 +857,7 @@ function TableService.start()
 	task.spawn(function()
 		while true do
 			for _, m in tables() do
-				if m:GetAttribute("Duel") ~= nil then
+				if m:GetAttribute("Duel") ~= nil or m:GetAttribute("Ballroom") then
 					continue
 				end
 				local seat = chairOf(m)

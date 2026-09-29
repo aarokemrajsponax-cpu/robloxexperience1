@@ -484,6 +484,52 @@ do
 	Config.set("Library.pieces.2", 17)
 end
 
+-- 11. Lights Out.
+do
+	local LightsOut = loadModule("LightsOut")
+	check("lights out: pieces every 1.6 s at first", math.abs(LightsOut.pace(0) - 1.6) < 1e-9 and math.abs(LightsOut.pace(19.9) - 1.6) < 1e-9)
+	check("lights out: 0.1 s quicker every 20 s", math.abs(LightsOut.pace(20) - 1.5) < 1e-9 and math.abs(LightsOut.pace(100) - 1.1) < 1e-9)
+	check("lights out: never quicker than 0.6 s before Closing Time", math.abs(LightsOut.pace(299) - 0.6) < 1e-9)
+	check("lights out: Closing Time tightens by 0.05 every 10 s", math.abs(LightsOut.pace(300) - 0.55) < 1e-9 and math.abs(LightsOut.pace(310) - 0.5) < 1e-9)
+	check("lights out: down to 0.35 s", math.abs(LightsOut.pace(1000) - 0.35) < 1e-9)
+	check("lights out: Closing Time from 5:00", LightsOut.isClosingTime(300) and not LightsOut.isClosingTime(299))
+	check("lights out: lookalikes 0.35, +0.05 every 30 s, up to 0.75", math.abs(LightsOut.lookalike(0) - 0.35) < 1e-9 and math.abs(LightsOut.lookalike(60) - 0.45) < 1e-9 and math.abs(LightsOut.lookalike(9999) - 0.75) < 1e-9)
+	check("lights out: five cases, the sixth at 1:00", LightsOut.casesOpen(59) == 5 and LightsOut.casesOpen(60) == 6)
+	check("lights out: key bonus steps", LightsOut.keyBonus(1) == 0 and LightsOut.keyBonus(2) == 0.25 and LightsOut.keyBonus(5) == 0.5 and LightsOut.keyBonus(8) == 0.75 and LightsOut.keyBonus(40) == 1)
+	local w1, r1, c1 = LightsOut.parcels(3, 0, 3, 0, 0)
+	check("lights out: a run of three sends one parcel", w1 == 1 and r1 == 1 and c1 == 0)
+	local w2, r2 = LightsOut.parcels(7, 4, 7, 0, 0)
+	check("lights out: at most four per run", w2 == 0 and r2 == 0)
+	local w3, _, c3 = LightsOut.parcels(3, 0, 3, 2, 0)
+	check("lights out: two Keys send 1.25, the quarter carries", w3 == 1 and math.abs(c3 - 0.25) < 1e-9)
+	local w4, _, c4 = LightsOut.parcels(4, 1, 4, 2, 0.75)
+	check("lights out: the carry becomes a whole parcel", w4 == 2 and math.abs(c4) < 1e-9, w4)
+	local w5 = LightsOut.parcels(1, 0, 6, 16, 0)
+	check("lights out: a streak of six with sixteen Keys sends two", w5 == 2)
+	local rng = Random.new(3)
+	local seats = {
+		{ index = 1, alive = true, keys = 0, felt = 5, lastSender = 4 },
+		{ index = 2, alive = true, keys = 3, felt = 9 },
+		{ index = 3, alive = false, keys = 9, felt = 17 },
+		{ index = 4, alive = true, keys = 1, felt = 14 },
+	}
+	check("lights out: Rivals goes to whoever last sent to you", LightsOut.target("rivals", seats[1], seats, rng) == 4)
+	check("lights out: Leader goes to the most Keys still lit", LightsOut.target("leader", seats[1], seats, rng) == 2)
+	check("lights out: Nearly out goes to the fullest felt still lit", LightsOut.target("nearlyOut", seats[1], seats, rng) == 4)
+	local randomOk = true
+	for _ = 1, 50 do
+		local t = LightsOut.target("random", seats[1], seats, rng)
+		if t == 1 or t == 3 then
+			randomOk = false
+		end
+	end
+	check("lights out: Random never picks you or a lamp that's out", randomOk)
+	check("lights out: nobody left, no target", LightsOut.target("random", seats[1], { seats[1], seats[3] }, rng) == nil)
+	check("lights out: points by place plus 8 per Key", LightsOut.points(1, 3) == 124 and LightsOut.points(7, 0) == 25 and LightsOut.points(20, 1) == 8)
+	local roomT = LightsOut.room(70)
+	check("lights out: the dumbwaiter's rules follow the clock", roomT.tuning.casesRound1 == 6 and math.abs(roomT.tuning.lookalike - 0.45) < 1e-9)
+end
+
 -- 10. Rivals.
 do
 	local Rival = loadModule("Rival")

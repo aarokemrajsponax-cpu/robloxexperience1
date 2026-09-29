@@ -22,6 +22,7 @@ local Rooms = require(ReplicatedStorage.Shared.Rooms)
 local Scoring = require(ReplicatedStorage.Shared.Scoring)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Duel = require(ReplicatedStorage.Shared.Duel)
+local LightsOut = require(ReplicatedStorage.Shared.LightsOut)
 local Settings = require(ReplicatedStorage.Shared.Settings)
 local Voice = require(ReplicatedStorage.Shared.Voice)
 
@@ -33,10 +34,12 @@ local Hud = require(script.Parent.Parent.UI.Hud)
 local RoundPanel = require(script.Parent.Parent.UI.RoundPanel)
 local NightlyCard = require(script.Parent.Parent.UI.NightlyCard)
 local DuelPanel = require(script.Parent.Parent.UI.DuelPanel)
+local BallroomPanel = require(script.Parent.Parent.UI.BallroomPanel)
 local Invite = require(script.Parent.Parent.UI.Invite)
 local Toast = require(script.Parent.Parent.UI.Toast)
 local Counter = require(script.Parent.Counter)
 local DuelView = require(script.Parent.DuelView)
+local BallroomView = require(script.Parent.BallroomView)
 local Guide = require(script.Parent.Guide)
 local Hands = require(script.Parent.Hands)
 local RoundCard = require(script.Parent.RoundCard)
@@ -133,6 +136,8 @@ end
 local function room(): Rooms.Room
 	if roomId == "library" then
 		return Duel.room(round)
+	elseif roomId == "ballroom" then
+		return LightsOut.room(0)
 	end
 	return Rooms.get(roomId) or (Rooms.get("salon") :: Rooms.Room)
 end
@@ -375,13 +380,24 @@ local function updateRail()
 end
 
 -- In the Library the brass counter counts down: pieces left on your felt.
+-- In the Ballroom it counts the pieces on your felt.
 local duelRemaining = 0
 local fumbleUntil = 0
 local awayPaused = false
+local ballroomKeys = 0
+
+-- The Library and the Ballroom count pieces, not points.
+local function counting(): boolean
+	return tableMode == "duel" or tableMode == "ballroom"
+end
 
 local function updateHudLine()
 	if tableMode == "duel" then
 		Hud.setDuelLine(duelRemaining, DuelView.rivalRemaining(), if clockLeft then clockLeft else nil)
+		return
+	elseif tableMode == "ballroom" then
+		Hud.setTextLine(string.format("felt %d of %d   ·   %d Keys", duelRemaining, Config.data.Ballroom.capacity, ballroomKeys))
+		BallroomView.setFelt(duelRemaining, ballroomKeys)
 		return
 	end
 	Hud.setLine(RoundPanel.number(local_.score), local_.multiplier, if clockLeft then clockLeft else nil)
@@ -390,7 +406,7 @@ end
 local function setScore(value: number, multiplier: number)
 	local model = seatedModel
 	if model then
-		if tableMode == "duel" then
+		if counting() then
 			Counter.set(model, duelRemaining)
 		else
 			Counter.set(model, value)
@@ -411,7 +427,7 @@ local function predict(p: Piece, caseId: string): boolean
 			local_.runLength = 1
 		end
 		local_.lastCase = caseId
-		if tableMode == "duel" then
+		if counting() then
 			duelRemaining = math.max(0, duelRemaining - 1)
 			return correct
 		end
@@ -423,9 +439,9 @@ local function predict(p: Piece, caseId: string): boolean
 		local_.runLength = 0
 		local_.lastCase = nil
 		local_.multiplier = 1
-		if tableMode == "duel" then
+		if counting() then
 			-- A wrong case costs a short fumble: the hand can't lift for a moment.
-			fumbleUntil = os.clock() + Config.data.Library.fumble
+			fumbleUntil = os.clock() + (if tableMode == "ballroom" then Config.data.Ballroom.fumble else Config.data.Library.fumble)
 			return correct
 		end
 		if State.get("wrongCase") == "Costs points too" then
@@ -743,6 +759,10 @@ local function renderDeal(message: { [string]: any })
 		local side = message.side or "a"
 		local rivalSide = if side == "a" then "b" else "a"
 		RoundCard.land(tableFrame, "Tête-à-Tête", "Hand " .. tostring(round), string.format("%d – %d", wins[side] or 0, wins[rivalSide] or 0))
+	elseif tableMode == "ballroom" then
+		duelRemaining = #list
+		fumbleUntil = 0
+		RoundCard.land(tableFrame, "Lights Out", "The evening begins", "Sixteen to a felt")
 	else
 		RoundCard.land(tableFrame, if tableMode == "room" then r.name else "Tonight's table", Voice.roundLabel(round, State.get("roundNumbers")), if tableMode == "room" then "Round" else r.name .. " rules")
 	end
@@ -760,7 +780,7 @@ local function renderDeal(message: { [string]: any })
 		clockBudget = nil
 		showRail(false)
 	end
-	if tableMode == "duel" then
+	if counting() then
 		-- Every hand starts clean; in the rooms the streak carries from round to round.
 		local_ = { score = message.score, streak = 0, runLength = 0, lastCase = nil, multiplier = 1 }
 		server = table.clone(local_)
@@ -872,9 +892,12 @@ local function onFiled(message: { [string]: any })
 		clockLeft = message.clock.left
 		clockRunning = message.clock.running
 	end
-	if tableMode == "duel" then
+	if counting() then
 		if type(message.remaining) == "number" then
 			duelRemaining = message.remaining
+		end
+		if type(message.keys) == "number" then
+			ballroomKeys = message.keys
 		end
 		if type(message.fumble) == "number" then
 			fumbleUntil = math.max(fumbleUntil, os.clock() + message.fumble)
@@ -1193,8 +1216,11 @@ local function onSeated(message: { [string]: any })
 	server = table.clone(local_)
 	duelRemaining = 0
 	fumbleUntil = 0
+	ballroomKeys = 0
 	if tableMode == "duel" then
 		DuelView.seated(model, tableFrame)
+	elseif tableMode == "ballroom" then
+		BallroomView.seated(model, tableFrame, message.seat)
 	else
 		RivalPlate.show(tableFrame)
 	end
@@ -1231,6 +1257,8 @@ local function onLeft(message: { [string]: any })
 	RoundPanel.close()
 	DuelPanel.close()
 	DuelView.clear()
+	BallroomPanel.close()
+	BallroomView.clear()
 	RivalPlate.hide()
 	tableMode = "room"
 	paused = false
@@ -1262,6 +1290,133 @@ local function onLeft(message: { [string]: any })
 	TableClient.Left:Fire()
 end
 
+-- Lights Out: messages only the Ballroom sends (its parcels carry seat numbers, not sides).
+local BALLROOM_OPS = {
+	gathering = true,
+	eveningStart = true,
+	eveningBegins = true,
+	tab = true,
+	parcelLanded = true,
+	lampOut = true,
+	closingTime = true,
+	cases = true,
+	eveningEnd = true,
+	eveningResult = true,
+	queued = true,
+	arrive = true,
+	flicker = true,
+	out = true,
+}
+local function isBallroom(message: { [string]: any }): boolean
+	local op = message.op
+	if BALLROOM_OPS[op] then
+		return true
+	end
+	local parcelOp = op == "parcel" or op == "parcelShrink" or op == "parcelCancel" or op == "parcelOpen"
+	return parcelOp and type(message.id) == "number" and (type(message.to) == "number" or type(message.seat) == "number")
+end
+
+local ballroomActions = {
+	gallery = function()
+		tableEvent:FireServer({ op = "gallery" })
+	end,
+	stay = function() end, -- still in the chair: the next evening gathers around you
+	leave = function()
+		TableClient.leave()
+	end,
+}
+
+local function dumbwaiter(): Vector3?
+	local model = seatedModel
+	local at = model and model:GetAttribute("Dumbwaiter")
+	return if typeof(at) == "Vector3" then at else nil
+end
+
+local function onBallroom(message: { [string]: any })
+	local op = message.op
+	if seatedModel == nil or tableMode ~= "ballroom" then
+		-- Watching from the Gallery or the floor: only the room's moments.
+		BallroomView.handle(message)
+		return
+	end
+	if op == "arrive" then
+		addPieces(message.pieces, dumbwaiter(), message.remaining)
+		Sound.play("drop", 0.08, 1.4)
+	elseif op == "parcelOpen" then
+		local from = BallroomView.handle(message)
+		addPieces(message.pieces, from, message.remaining)
+	elseif op == "cases" then
+		openCases = message.cases
+		local newest = openCases[#openCases]
+		if newest then
+			caseGlow(newest)
+		end
+		BallroomView.handle(message)
+	elseif op == "flicker" then
+		if message.on then
+			clockBudget = message.seconds
+			clockLeft = message.seconds
+			clockRunning = true
+			lowPlayed = false
+			showRail(true)
+			updateRail()
+			Toast.show(Voice.Ballroom.title, Voice.Ballroom.overCapacity, 1.5)
+			Sound.play("low", 0.5, 0.6)
+		else
+			clockLeft = nil
+			clockRunning = false
+			showRail(false)
+		end
+	elseif op == "out" then
+		playing = false
+		release()
+		clearPieces()
+		showRail(false)
+		clockLeft = nil
+		BallroomView.handle(message)
+		Sound.play("wrong", 0.5, 0.6)
+		task.delay(0.9, function()
+			if TableClient.isSeated() and tableMode == "ballroom" then
+				BallroomPanel.out(message, ballroomActions)
+			end
+		end)
+	elseif op == "eveningEnd" then
+		playing = false
+		release()
+		clearPieces()
+		showRail(false)
+		clockLeft = nil
+		BallroomPanel.close()
+		BallroomView.handle(message)
+	elseif op == "eveningResult" then
+		-- After the last lamp's moment.
+		task.delay(6, function()
+			if TableClient.isSeated() and tableMode == "ballroom" then
+				BallroomPanel.result(message, ballroomActions)
+			end
+		end)
+	elseif op == "gathering" then
+		BallroomPanel.close()
+		BallroomView.handle(message)
+	elseif op == "eveningStart" then
+		ballroomKeys = 0
+		BallroomPanel.close()
+		BallroomView.handle(message)
+	elseif op == "lampOut" then
+		BallroomView.handle(message)
+		if message.by == BallroomView.mySeat() and type(message.keys) == "number" then
+			ballroomKeys = message.keys
+			local model = seatedModel
+			if model then
+				Counter.setDialText(model, tostring(ballroomKeys))
+			end
+		end
+	else
+		BallroomView.handle(message)
+	end
+	updateHudLine()
+end
+
 function TableClient.onSeated(cb: () -> ())
 	table.insert(toTableCallbacks, cb)
 end
@@ -1276,6 +1431,10 @@ function TableClient.start()
 			return
 		end
 		local op = message.op
+		if (tableMode == "ballroom" or tableMode ~= "duel") and isBallroom(message) then
+			onBallroom(message)
+			return
+		end
 		if op == "seated" then
 			onSeated(message)
 		elseif op == "deal" then

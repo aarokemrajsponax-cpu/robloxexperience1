@@ -115,6 +115,7 @@ local function menu(player: Player)
 	Dialogue.say(player, V.speaker, V.returning:gsub("{name}", player.DisplayName), {
 		{ id = "room", text = V.choices.takeMe },
 		{ id = "library", text = V.choices.library },
+		{ id = "ballroom", text = V.choices.ballroom },
 		{ id = "how", text = V.choices.how },
 		{ id = "bye", text = V.choices.bye },
 	}, function(choice)
@@ -140,6 +141,8 @@ local function menu(player: Player)
 					Concierge.inviteToLibrary(player)
 				end
 			end)
+		elseif choice == "ballroom" then
+			Dialogue.say(player, V.speaker, V.ballroomWay, nil, nil, 3.5)
 		elseif choice == "how" then
 			Dialogue.close(player)
 			Concierge.openHowTo(player)

@@ -7,6 +7,7 @@ local Workspace = game:GetService("Workspace")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local Duel = require(ReplicatedStorage.Shared.Duel)
+local LightsOut = require(ReplicatedStorage.Shared.LightsOut)
 local Rooms = require(ReplicatedStorage.Shared.Rooms)
 local State = require(script.Parent.Parent.State)
 
@@ -97,7 +98,7 @@ end
 
 -- The delay before the guide appears, or nil for no guide at all.
 function Guide.delayFor(roomId: string): number?
-	local room = if roomId == "library" then Duel.room(1) else Rooms.get(roomId)
+	local room = if roomId == "library" then Duel.room(1) elseif roomId == "ballroom" then LightsOut.room(0) else Rooms.get(roomId)
 	if not room then
 		return nil
 	end

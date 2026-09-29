@@ -11,6 +11,7 @@ python3 tests/bundle.py > "$TOOLS/bundle.luau"
 "$TOOLS/luau" "$TOOLS/bundle.luau"
 "$TOOLS/lune" run tests/smoke.luau
 "$TOOLS/lune" run tests/duel.luau
+"$TOOLS/lune" run tests/ballroom.luau
 "$TOOLS/lune" run tests/client.luau
 "$TOOLS/rojo" build default.project.json -o "$TOOLS/MaisonNoir.rbxl" >/dev/null
 echo "check: ok"

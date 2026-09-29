@@ -252,6 +252,15 @@ function Guests.start()
 		if TableService.isSeated(player) then
 			return true
 		end
+		-- An invite to watch Lights Out: straight up to the Ballroom's Gallery.
+		if wanted == "ballroom" then
+			local character = player.Character
+			if character then
+				local B = Layout.Ballroom
+				character:PivotTo(CFrame.lookAt(B.galleryArrival + Vector3.new(0, 3, 0), Vector3.new(B.centre.X, B.galleryArrival.Y + 3, B.centre.Z)))
+			end
+			return true
+		end
 		-- An invite to the Library: the Concierge shows the friend straight upstairs.
 		if type(wanted) == "string" and string.sub(wanted, 1, 7) == "library" then
 			local character = player.Character

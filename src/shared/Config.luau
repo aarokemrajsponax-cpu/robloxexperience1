@@ -126,6 +126,46 @@ local defaults = {
 		giltLoss = 25,
 	},
 
+	-- Lights Out in the Ballroom (Appendix H3). Seconds unless noted.
+	Ballroom = {
+		tables = 20,
+		gatherSeconds = 30, -- after the first guest sits, Stand-ins fill the empty chairs
+		minRealForRecords = 8, -- an evening counts for records only with this many real guests
+		capacity = 16, -- pieces a felt holds
+		overSeconds = 3.0, -- over capacity this long and the lamp goes out
+		openingDeal = 6,
+		casesOpen = 5,
+		sixthCaseAt = 60,
+		paceStart = 1.6, -- seconds between arrivals
+		paceStep = 0.10,
+		paceEvery = 20,
+		paceMin = 0.60,
+		closingAt = 300, -- Closing Time
+		closingStep = 0.05,
+		closingEvery = 10,
+		closingMin = 0.35,
+		lookalikeStart = 0.35,
+		lookalikeStep = 0.05,
+		lookalikeEvery = 30,
+		lookalikeMax = 0.75,
+		guideDelay = 0.6,
+		fumble = 0.6,
+		parcelRunMax = 4,
+		parcelFuse = 2.5,
+		keyWindow = 5, -- a parcel that landed this recently puts the lamp out
+		keyBonus = { { 2, 0.25 }, { 4, 0.50 }, { 8, 0.75 }, { 16, 1.00 } }, -- { keys, extra parcels }
+		points = { 100, 70, 55, 45, 40, 25, 25, 25, 25, 25, 10, 10, 10, 10, 10, 0, 0, 0, 0, 0 }, -- by place
+		pointsPerKey = 8,
+		giltBase = 10, -- every guest who sits an evening
+		giltTopFive = 30,
+		giltWin = 80,
+		afterEvening = 8, -- the winner's moment before the next evening gathers
+		standInSlow = 1.35, -- a Stand-in's seconds per filing, slowest and fastest
+		standInFast = 0.62,
+		standInLowAccuracy = 0.82,
+		standInHighAccuracy = 0.96,
+	},
+
 	Rivals = {
 		activeDays = 14, -- a rival must have been here within this many days
 		connectionsChecked = 20, -- connections looked up when choosing a rival (once a week)
@@ -239,8 +279,8 @@ local defaults = {
 			chair = "rbxasset://sounds/action_get_up.mp3",
 			low = "rbxasset://sounds/electronicpingshort.wav", -- the clock's last ten seconds, played low
 		},
-		Music = { street = "", foyer = "", salon = "", velvet = "", obsidian = "", midnight = "" },
-		Ambience = { street = "", foyer = "", salon = "", velvet = "", obsidian = "", midnight = "" },
+		Music = { street = "", foyer = "", salon = "", velvet = "", obsidian = "", midnight = "", club = "", library = "", ballroom = "" },
+		Ambience = { street = "", foyer = "", salon = "", velvet = "", obsidian = "", midnight = "", club = "", library = "", ballroom = "" },
 		Animations = {
 			idle = "rbxassetid://507766666",
 			walk = "rbxassetid://507777826",

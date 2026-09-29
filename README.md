@@ -102,6 +102,39 @@ Leave that window open. Every change pushed to the branch reaches Studio within 
   played recently. A small brass plate on your table's rim carries their name and one fact
   (*"40 points ahead of you on tonight's table."*). Pass them and the plate turns, gold side up.
 
+## What's in Delivery 4 — the Ballroom and Lights Out
+
+- **The Ballroom**, through the tall doors on the right of the Club hall: a black-and-gold hall
+  with a marble floor, mirrors, drapes and a great chandelier. **Twenty tables in a ring**, each
+  under its own lamp on a long cord, each with a brass **dumbwaiter** that sends the pieces up.
+  **The Gallery** runs above the entrance (a stair along the west wall), with benches for
+  watching. The evening's board on the Gallery's front says what's happening.
+- **Lights Out** (Appendix H3):
+  - Sit in any chair and the evening **gathers for 30 seconds**; then **Stand-ins** fill every
+    empty chair (hollow figures, paced across a range of skill). Twenty lamps, always.
+  - The same six pieces open every felt; then the dumbwaiters send **the same piece to every
+    felt** every 1.6 seconds, 0.1 s quicker every 20 seconds down to 0.6 s. Lookalikes grow from
+    35% to 75%. Five cases, the sixth at 1:00. **Closing Time** at 5:00 tightens to 0.35 s.
+  - A felt holds **sixteen**. Go over and your lamp flickers (the brass rail counts three
+    seconds); get back under or **your lamp goes out** and the room grows a little darker.
+  - **Parcels** as in the Library (at most four per run) go where your tab points: four brass
+    tabs, **Random · Rivals · Leader · Nearly out** (Tab key, or the shoulder buttons).
+  - **Keys**: a lamp that goes out within five seconds of your parcel landing gives you a Key
+    and every Key it held. Keys make your parcels heavier (+25% at 2, up to +100% at 16), and
+    the Key leader's lamp glints for everyone.
+  - **Out?** A card offers **Watch from the Gallery**, **Next evening** (stay in your chair) or
+    Leave. Guests standing in the Ballroom get **Next evening**, **Watch** (the camera drifts
+    between the tables still lit) and **Invite** (a friend lands in the Gallery).
+  - **The last lamp**: the whole Ballroom goes dark except the winner's lamp, every camera finds
+    it from the Gallery, and the Concierge says *"The last lamp in the house is yours."*
+  - With no real guest still lit, the evening ends at once and the next one gathers: fast
+    re-entry first.
+  - **Records** (Last Lamps, top-five finishes, Keys) and the **weekly board** (Soirée points:
+    100 · 70 · 55 · 45 · 40 · 25 · 10 · 0, +8 per Key) count only evenings with at least eight
+    real guests. Gilt is paid every evening.
+  - **Live results from every server** on the Tonight board and in the leaderboard:
+    *"Table 12 kept the last lamp with nine Keys."*
+
 ## Where things live
 
 | Folder | What |
@@ -155,9 +188,11 @@ dressed from body colours with a shirt front, a tie, coat tails and the gold lap
 
 `tools/check.sh` type-checks every script against Roblox's API, runs the rule tests, builds
 the house under [Lune](https://github.com/lune-org/lune) and walks its routes, and plays whole
-Tête-à-Tête evenings against the real server code on a fake clock (`tests/duel.luau`), and boots
+Tête-à-Tête evenings (`tests/duel.luau`) and Lights Out evenings (`tests/ballroom.luau`) against
+the real server code on a fake clock, and boots
 the whole client against the built house: title, Play, walking, a table by gamepad and by mouse,
-the Nightly card, a Tête-à-Tête on screen and the panels (`tests/client.luau`):
+the Nightly card, a Tête-à-Tête and a Lights Out evening on screen, and the panels
+(`tests/client.luau`):
 
 ```sh
 TOOLS=/path/to/tools ./tools/check.sh

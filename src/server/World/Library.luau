@@ -7,7 +7,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local Layout = require(ReplicatedStorage.Shared.Layout)
-local Voice = require(ReplicatedStorage.Shared.Voice)
 local Kit = require(script.Parent.Kit)
 local SortingTable = require(script.Parent.SortingTable)
 
@@ -106,14 +105,6 @@ local function hall(root: Model)
 		Kit.part(m, "JambR", Vector3.new(0.6, C.doorHeight, 2.4), CFrame.new(d + Vector3.new(C.doorWidth / 2 + 0.3, C.doorHeight / 2, 1)), L.brass)
 		Kit.part(m, "Head", Vector3.new(C.doorWidth + 1.8, 0.7, 2.4), CFrame.new(d + Vector3.new(0, C.doorHeight + 0.35, 1)), L.brass)
 	end
-	-- The Ballroom opens with Delivery 4: closed doors and a quiet plate for now.
-	local bd = C.ballroomDoor
-	Kit.part(m, "BallroomDoors", Vector3.new(C.doorWidth, C.doorHeight, 0.4), CFrame.new(bd + Vector3.new(0, C.doorHeight / 2, 1)), L.blackLacquer)
-	local plate = Kit.part(m, "BallroomPlate", Vector3.new(2.8, 1, 0.1), CFrame.new(bd + Vector3.new(0, 5.5, 0.75)), L.brass, { collide = false })
-	Kit.engrave(plate, Enum.NormalId.Front, {
-		{ text = Kit.track("THE BALLROOM"), size = 0.34, font = Brand.Fonts.display, color = Color3.fromRGB(40, 30, 12) },
-		{ text = Voice.Foyer.closed, size = 0.28, font = Brand.Fonts.body, color = Color3.fromRGB(50, 38, 14) },
-	}, { ppu = 80, brightness = 1 })
 end
 
 local function shelvesAlong(m: Model, a: Vector3, b: Vector3, facing: Vector3, rng: Random)

@@ -57,10 +57,49 @@ local DuelService = require(script.Parent.DuelService)
 DuelService.say = function(player, line)
 	Concierge.line(player, line, 3)
 end
-DuelService.start(TableService.isSeated)
-TableService.isBusy = DuelService.isSeated
-Concierge.isSeated = function(player)
+local BallroomService = require(script.Parent.BallroomService)
+DuelService.start(function(player)
+	return TableService.isSeated(player) or BallroomService.isSeated(player)
+end)
+BallroomService.say = function(player, line)
+	Concierge.line(player, line, 4)
+end
+BallroomService.start(function(player)
 	return TableService.isSeated(player) or DuelService.isSeated(player)
+end)
+TableService.isBusy = function(player)
+	return DuelService.isSeated(player) or BallroomService.isSeated(player)
+end
+Concierge.isSeated = function(player)
+	return TableService.isSeated(player) or DuelService.isSeated(player) or BallroomService.isSeated(player)
+end
+-- Lights Out records: Last Lamps, top-five finishes and Keys (only evenings with enough real
+-- guests count), and the weekly board of points.
+BallroomService.onFinished = function(player, place, keys, counted)
+	local data = require(script.Parent.Profiles).get(player)
+	if not data or not counted then
+		return
+	end
+	local b = data.ballroom
+	b.evenings += 1
+	b.keys += keys
+	b.bestKeys = math.max(b.bestKeys, keys)
+	if place == 1 then
+		b.lastLamps += 1
+	end
+	if place <= 5 then
+		b.topFive += 1
+	end
+	local week = require(ReplicatedStorage.Shared.Rival).week()
+	if b.week ~= week then
+		b.week = week
+		b.weekPoints = 0
+	end
+	b.weekPoints += require(ReplicatedStorage.Shared.LightsOut).points(place, keys)
+	Boards.submit(player, "ballroom", b.weekPoints)
+end
+BallroomService.onResult = function(tableNumber, name, keys)
+	Boards.ballroomResult(tableNumber, name, keys)
 end
 
 local Rivals = require(script.Parent.Rivals)

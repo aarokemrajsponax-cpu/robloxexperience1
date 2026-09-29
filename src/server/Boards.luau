@@ -6,6 +6,7 @@
 local CollectionService = game:GetService("CollectionService")
 local DataStoreService = game:GetService("DataStoreService")
 local MemoryStoreService = game:GetService("MemoryStoreService")
+local MessagingService = game:GetService("MessagingService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserService = game:GetService("UserService")
@@ -31,6 +32,12 @@ for _, id in Rooms.order do
 end
 cache["nightly:tonight"] = { entries = {}, available = false, count = 0 }
 cache["library:all"] = { entries = {}, available = false }
+cache["ballroom:week"] = { entries = {}, available = false }
+cache["ballroom:all"] = { entries = {}, available = false }
+-- Lights Out results from every server, newest first (§9.8): "Table 12 kept the last lamp..."
+cache["ballroom:feed"] = { entries = {}, available = true }
+local FEED_TOPIC = "MaisonBallroomResults"
+local FEED_KEEP = 8
 
 local names: { [number]: string } = {}
 local tonightKey = Nightly.at().key
@@ -199,6 +206,19 @@ local function drawTonight()
 			rule.BackgroundColor3 = Brand.Colours.deepGold
 			rule.BorderSizePixel = 0
 			rule.Parent = g
+			local feed = cache["ballroom:feed"].entries
+			if #feed > 0 then
+				line(g, next(), "The Ballroom, just now", 0.04, Brand.Fonts.body, Brand.Colours.smoke)
+				for i = 1, math.min(2, #feed) do
+					line(g, next(), feed[i].name, 0.036, Brand.Fonts.display, Brand.Colours.bone)
+				end
+				local rule2 = Instance.new("Frame")
+				rule2.LayoutOrder = next()
+				rule2.Size = UDim2.new(0.5, 0, 0, 2)
+				rule2.BackgroundColor3 = Brand.Colours.deepGold
+				rule2.BorderSizePixel = 0
+				rule2.Parent = g
+			end
 			line(g, next(), "The Salon · this week", 0.04, Brand.Fonts.body, Brand.Colours.smoke)
 			local week = cache["salon:week"]
 			if #week.entries == 0 then
@@ -468,6 +488,37 @@ function Boards.saveNightlyLog(player: Player, key: string, log: { { any } })
 	end)
 end
 
+local WORDS = { "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve" }
+
+-- "Table 12 kept the last lamp with nine Keys."
+function Boards.resultLine(tableNumber: number, keys: number): string
+	local k = if keys == 0 then "no Keys" elseif keys == 1 then "one Key" else (WORDS[keys] or tostring(keys)) .. " Keys"
+	return string.format("Table %d kept the last lamp with %s.", tableNumber, k)
+end
+
+local function addFeed(text: string)
+	local entries = cache["ballroom:feed"].entries
+	if entries[1] and entries[1].name == text then
+		return
+	end
+	table.insert(entries, 1, { userId = 0, name = text, score = 0 })
+	while #entries > FEED_KEEP do
+		table.remove(entries)
+	end
+	publish()
+end
+
+-- A Lights Out evening has ended: post it here at once and to every other server.
+function Boards.ballroomResult(tableNumber: number, _name: string, keys: number)
+	local text = Boards.resultLine(tableNumber, keys)
+	addFeed(text)
+	task.spawn(function()
+		pcall(function()
+			MessagingService:PublishAsync(FEED_TOPIC, { text = text, at = os.time() })
+		end)
+	end)
+end
+
 function Boards.get(): { [string]: Board }
 	return cache
 end
@@ -490,11 +541,22 @@ function Boards.start()
 	end)
 	drawTonight()
 	task.spawn(function()
+		pcall(function()
+			MessagingService:SubscribeAsync(FEED_TOPIC, function(message: any)
+				local data = message and message.Data
+				if type(data) == "table" and type(data.text) == "string" and #data.text <= 80 then
+					addFeed(data.text)
+				end
+			end)
+		end)
+	end)
+	task.spawn(function()
 		while true do
 			for _, id in Rooms.order do
 				refreshRoom(id)
 			end
 			refreshRoom("library")
+			refreshRoom("ballroom")
 			refreshNightly()
 			publish()
 			task.wait(Config.data.Boards.refreshSeconds)

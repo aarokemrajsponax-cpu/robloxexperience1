@@ -347,7 +347,9 @@ for _, d in maison:GetDescendants() do
 	end
 end
 print(("built: %d parts, %d lights, %d surface guis"):format(parts, lights, guis))
-check("part budget (under 6,500)", parts < 6500, parts)
+-- The Ballroom's twenty tables brought the house past 6,500; the world streams by distance, so
+-- a phone holds the room it's in, not the whole house.
+check("part budget (under 7,500)", parts < 7500, parts)
 check("light budget (under 140 lit)", lights < 140, lights)
 
 -- Season lighting setup (server)
@@ -389,7 +391,7 @@ check("62 collectable pieces", Catalogue.totalCollectable() == 62, Catalogue.tot
 ---------------------------------------------------------------------------------------------------
 local Layout = module("ReplicatedStorage", "Shared", "Layout")
 local tables = CollectionService.GetTagged(CollectionService, "MaisonTable")
-check("28 tables: six in each room, four duel halves in the Library", #tables == 28, #tables)
+check("48 tables: six in each room, four duel halves in the Library, twenty in the Ballroom", #tables == 48, #tables)
 local ids = {}
 for _, t in tables do
 	local id = t:GetAttribute("TableId")
@@ -418,7 +420,9 @@ for _, t in tables do
 	check(id .. " streams as one persistent model", t.ModelStreamingMode == Enum.ModelStreamingMode.Persistent)
 	local centre = t:GetAttribute("Centre")
 	check(id .. " sits inside its room", centre ~= nil and Layout.zoneAt(centre + Vector3.new(0, 3, 0)) == t:GetAttribute("Room"), centre)
-	if t:GetAttribute("Duel") == nil then
+	if t:GetAttribute("Ballroom") then
+		check(id .. " (the Ballroom) has no Nightly prompt", chair ~= nil and chair:FindFirstChild("NightlyPrompt") == nil)
+	elseif t:GetAttribute("Duel") == nil then
 		check(id .. " has the Nightly prompt", chair ~= nil and chair:FindFirstChild("NightlyPrompt") ~= nil)
 	else
 		check(id .. " (a duel half) has no Nightly prompt", chair ~= nil and chair:FindFirstChild("NightlyPrompt") == nil)
@@ -631,6 +635,90 @@ do
 		end
 	end
 	check("a guest can climb the Grand Stair and reach a Library chair", why == nil, why)
+end
+
+-- The Ballroom: twenty tables in a ring, each facing the middle, none touching.
+do
+	local ring = {}
+	for _, t in tables do
+		if t:GetAttribute("Ballroom") then
+			ring[t:GetAttribute("Seat")] = t
+		end
+	end
+	local n = 0
+	for _ in ring do
+		n += 1
+	end
+	check("the Ballroom has twenty tables", n == 20, n)
+	local B = Layout.Ballroom
+	for i, t in ring do
+		local frame = t:GetAttribute("Frame")
+		local forward = frame:VectorToWorldSpace(Vector3.new(0, 0, 1))
+		local toMiddle = (B.centre - frame.Position).Unit
+		check("ballroom table " .. i .. " faces the middle", forward:Dot(toMiddle) > 0.99)
+		local chair = t:FindFirstChild("Chair")
+		check("ballroom table " .. i .. " has its chair on the outside", chair ~= nil and (chair.CFrame.Position - B.centre).Magnitude > B.radius)
+		check("ballroom table " .. i .. " has a dumbwaiter", typeof(t:GetAttribute("Dumbwaiter")) == "Vector3" and t:FindFirstChild("Dumbwaiter") ~= nil)
+		check("ballroom table " .. i .. " has no Nightly prompt", chair ~= nil and chair:FindFirstChild("NightlyPrompt") == nil)
+		local next_ = ring[i % 20 + 1]
+		if next_ then
+			local gap = (next_:GetAttribute("Centre") - t:GetAttribute("Centre")).Magnitude
+			check("ballroom tables " .. i .. " and " .. (i % 20 + 1) .. " don't touch", gap > Layout.Table.width + 0.5, gap)
+		end
+		local cp = chair and chair.CFrame.Position
+		check("ballroom chair " .. i .. " is inside the room", cp ~= nil and Layout.inBox(B.zone, cp + Vector3.new(0, 1, 0)))
+	end
+	-- From the Club hall into the Ballroom, under the Gallery, to table 1's chair.
+	local chair1 = ring[1] and ring[1].Chair.CFrame.Position
+	local door = Layout.Club.ballroomDoor
+	local why = walk({
+		{ Vector3.new(door.X, 0, 58), Layout.CLUB },
+		{ Vector3.new(door.X, 0, 72), Layout.CLUB },
+		{ Vector3.new(chair1.X - 3.5, 0, 72), Layout.CLUB },
+		{ Vector3.new(chair1.X - 3.5, 0, chair1.Z), Layout.CLUB },
+	}, 0.9)
+	check("a guest can walk from the Club hall into the Ballroom to a chair", why == nil, why)
+	-- Across the floor between the tables to the middle.
+	local between = Layout.ballroomFrame(1.5):PointToWorldSpace(Vector3.new(0, 0, -6))
+	local whyMiddle = walk({ { Vector3.new(between.X, 0, between.Z), Layout.CLUB }, { B.centre, Layout.CLUB } }, 0.9)
+	check("the middle of the Ballroom can be reached between two tables", whyMiddle == nil, whyMiddle)
+	-- Up the stair to the Gallery.
+	local S = B.stair
+	local function ground(z: number): number
+		if z > S.bottomZ then
+			return Layout.CLUB
+		elseif z < S.topZ then
+			return B.gallery.floorY
+		end
+		local k = math.floor((S.bottomZ - z) / 2) + 1
+		return Layout.CLUB + math.min(k, S.steps)
+	end
+	local sx = (S.x0 + S.x1) / 2
+	-- Each leg: from, to, and how the ground runs ("floor", "stair" or "gallery").
+	local legs = {
+		{ Vector3.new(door.X + 1, 0, 72), Vector3.new(door.X + 1, 0, S.bottomZ + 3), "floor" },
+		{ Vector3.new(door.X + 1, 0, S.bottomZ + 3), Vector3.new(sx, 0, S.bottomZ + 3), "floor" },
+		{ Vector3.new(sx, 0, S.bottomZ + 3), Vector3.new(sx, 0, S.topZ - 1), "stair" },
+		{ Vector3.new(sx, 0, S.topZ - 1), Vector3.new(sx, 0, 72.5), "gallery" },
+		{ Vector3.new(sx, 0, 72.5), Vector3.new(B.galleryArrival.X, 0, 72.5), "gallery" },
+	}
+	local whyStair = nil
+	for i, leg in legs do
+		local a, b = leg[1], leg[2]
+		local steps = math.ceil((b - a).Magnitude / 0.4)
+		for k = 0, steps do
+			local p = a:Lerp(b, k / steps)
+			local onStair = leg[3] == "stair"
+			local g = if leg[3] == "floor" then Layout.CLUB elseif leg[3] == "gallery" then B.gallery.floorY else ground(p.Z)
+			local hit = blocked(Vector3.new(p.X, 0, p.Z), 0.9, g + (if onStair then 2.2 else 1.2), g + 5.2)
+			if hit and not whyStair then
+				whyStair = string.format("%s at (%.1f, %.1f) on leg %d", hit:GetFullName(), p.X, p.Z, i)
+			end
+		end
+	end
+	check("a guest can climb to the Gallery and walk along it", whyStair == nil, whyStair)
+	check("the Gallery arrival is clear", blocked(B.galleryArrival, 0.9, B.gallery.floorY + 1.2, B.gallery.floorY + 5) == nil)
+	check("the Ballroom arrival is clear", blocked(B.arrival, 0.9, Layout.CLUB + 1.2, Layout.CLUB + 5) == nil)
 end
 
 check("the street spawn is clear", blocked(Layout.Street.spawn.Position, 1, 1.2, 5) == nil)

@@ -152,6 +152,54 @@ function CameraRig.isAtTable(): boolean
 	return tableCentre ~= nil
 end
 
+-- A held shot (the Ballroom's last lamp from the Gallery): glide there, hold, then glide back to
+-- where the camera was (the table, or the follow camera).
+local momentId = 0
+function CameraRig.moment(shot: CFrame, hold: number)
+	momentId += 1
+	local id = momentId
+	local wasTable = tableCentre
+	local wasWide = tableWide
+	stopTweens()
+	local c = cam()
+	c.FieldOfView = 55
+	glide(shot, TweenInfo.new(1.4, Enum.EasingStyle.Quint, Enum.EasingDirection.InOut))
+	task.delay(1.4 + hold, function()
+		if id ~= momentId then
+			return
+		end
+		if wasTable and tableCentre == wasTable then
+			CameraRig.toTable(wasTable, wasWide)
+		elseif tableCentre == nil then
+			CameraRig.handoff(1.2)
+		end
+	end)
+end
+
+-- Watching from the Gallery: a slow drift from one composed shot to the next.
+local watchId = 0
+function CameraRig.watch(nextShot: () -> CFrame?, every: number)
+	watchId += 1
+	local id = watchId
+	task.spawn(function()
+		while id == watchId do
+			local shot = nextShot()
+			if shot then
+				cam().FieldOfView = 50
+				glide(shot, TweenInfo.new(math.min(3, every * 0.5), Enum.EasingStyle.Sine, Enum.EasingDirection.InOut))
+			end
+			task.wait(every)
+		end
+	end)
+end
+
+function CameraRig.stopWatching()
+	watchId += 1
+	if tableCentre == nil then
+		task.spawn(CameraRig.handoff, 1)
+	end
+end
+
 -- While walking, the camera is Roblox's own follow camera, untouched: it handles mouse, touch
 -- and gamepad, zoom and walls, and stays exactly in step with the avatar.
 

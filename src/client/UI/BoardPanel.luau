@@ -30,6 +30,7 @@ local BOARDS = {
 	{ id = "obsidian", label = "Obsidian" },
 	{ id = "midnight", label = "Midnight" },
 	{ id = "library", label = "Library" },
+	{ id = "ballroom", label = "Ballroom" },
 }
 
 -- Boards with a single period: tonight's table, and the Library's ratings.
@@ -159,7 +160,7 @@ function BoardPanel.open()
 			allKey.BackgroundTransparency = if period == "all" then 0.05 else 0.3
 		end
 		local room = Rooms.get(board)
-		title.Text = if board == "nightly" then "Tonight's table" elseif board == "library" then "The Library · ratings" else (if room then room.name else board)
+		title.Text = if board == "nightly" then "Tonight's table" elseif board == "library" then "The Library · ratings" elseif board == "ballroom" then "The Ballroom · points" else (if room then room.name else board)
 		fill(list, key())
 	end
 	for i, b in BOARDS do

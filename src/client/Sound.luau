@@ -154,6 +154,9 @@ local REVERB: { [string]: Enum.ReverbType } = {
 	velvet = Enum.ReverbType.Room,
 	obsidian = Enum.ReverbType.StoneRoom,
 	midnight = Enum.ReverbType.PaddedCell,
+	club = Enum.ReverbType.Hallway,
+	library = Enum.ReverbType.LivingRoom,
+	ballroom = Enum.ReverbType.ConcertHall,
 	none = Enum.ReverbType.Room,
 }
 

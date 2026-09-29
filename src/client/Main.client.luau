@@ -29,6 +29,7 @@ local Invite = require(script.Parent.UI.Invite)
 local Counter = require(script.Parent.Table.Counter)
 local TableClient = require(script.Parent.Table.TableClient)
 local Ambient = require(script.Parent.World.Ambient)
+local BallroomView = require(script.Parent.Table.BallroomView)
 
 local player = Players.LocalPlayer
 
@@ -50,6 +51,7 @@ Prompts.start()
 Counter.start()
 TableClient.start()
 Ambient.start()
+BallroomView.start()
 
 -- Controls stay off until Play.
 local controls: any = nil
@@ -151,6 +153,9 @@ local function onPlay()
 	if launch == "nightly" then
 		-- Arrived from a friend's Nightly invite: straight to tonight's table.
 		task.delay(0.6, quickSit, "nightly")
+	elseif launch == "ballroom" then
+		-- Arrived to watch a friend's evening: straight up to the Gallery.
+		task.delay(0.6, quickSit, "ballroom")
 	elseif string.sub(launch, 1, 7) == "library" then
 		-- Arrived from an invite to the Library: shown up to the friend's table.
 		task.delay(0.6, quickSit, launch)
