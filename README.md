@@ -212,6 +212,43 @@ a Nightly attempt or a Mythic's odds.
   sold) and the top 10% a dated invitation card. A **gilded countdown board** by the Grand Stair
   (the only clock in the Foyer) and a Soirée tab on the leaderboard.
 
+## Deliveries 8 and 9 — the rest of the house
+
+- **Music that moves with the house.** Every space has its own track, crossfading as you walk.
+  The Foyer's music comes **from the grand piano itself**: heard in the Foyer, muffled through
+  the street door and up the stair, brighter on a Soirée weekend. **The Pianist** sits at the
+  keys (swaying until the Pianist animation is published). A room's music fills out as the run
+  builds (`min(1, 0.25 + round × 0.12)`), and the **Ballroom band thins as lamps go out**: the
+  whole band, bass and brushes at ten, a single piano and a ticking clock for the final two
+  (`Config.Assets.Band`). Ambience per space plus a seasonal layer. Numbers in `Config.Music`.
+- **A Private Evening** (a private server): nothing counts for records (no boards, no ranked
+  Library, no counted Ballroom evenings, no Soirée; the Nightly plays as a rehearsal). The host
+  asks the Concierge to **Set the evening**: the Ballroom's pace, and whether Stand-ins fill the
+  empty chairs. `Config.Private`.
+- **The Black Card**, a card on the Concierge's lectern (a monthly Roblox subscription): the
+  Leather-Bound Ledger while held, one cardholder look each month to keep, a black-lacquer
+  nameplate. Hidden in a guest's first ten minutes and until its id is set
+  (`Config.Products.blackCard`).
+- **The Terrace**, on the Obsidian Room's roof, through French doors in the Club hall's east
+  wall. The doors open only in High Summer; weather falls on it for real.
+- **The house dresses for every season**: lanterns for All Hallows (and Lights Out by
+  candlelight), garlands and a wreath for Yuletide (and wrapped parcels with ribbon fuses),
+  copper candelabra for The Long Table, flowers in the season's colour all year.
+- **Your Suite**, on the Velvet Room's roof through the Club hall's west door: eleven spots, nineteen
+  pieces (Gilt, the Boutique, Standing, the Introduction's painting, the Gold Key chair), the
+  bell to furnish it, the wardrobe where your looks hang. The Gold Key opens the Dressing Room
+  and the Study. Each guest sees only their own Suite, and nobody else in it.
+- **Circles** at the Livre d'Or: names chosen from word lists, a crest from 12 emblems × 8
+  colours (each crest one Circle's), 2,000 Gilt to found. Join by invitation or by asking the
+  host. The week is the five best members' points; the top Circles hang on the Tonight board and
+  have their own board tab; the crest sits on the nameplate. `Config.Circles.enabled` turns it off.
+- **Notifications**: the opt-in is asked for once, after a first Nightly. At most one a day:
+  your rival passed you, the Soirée has started, the Term ends in three days. Each needs its
+  template id in `Config.Notifications.messages` and the Open Cloud key in the experience's
+  secrets (see the launch kit).
+- **The launch kit**: page text, icon, thumbnails and the gameplay video's shot list are in
+  [`LAUNCH.md`](LAUNCH.md).
+
 ## Where things live
 
 | Folder | What |
@@ -219,7 +256,7 @@ a Nightly attempt or a Mythic's odds.
 | `src/shared` | Rules used by server and client: `Config` (every tunable number), `Catalogue`, `Seasons`, `Rooms`, `Deal`, `Scoring`, `Clock`, `Nightly`, `Settings`, `Voice` (every line), `Layout` (where everything sits), `PieceModels` (the 3D pieces) |
 | `src/server` | `Main` boots it; `World/` builds the house; `Staff/` the Concierge and Doorman; `TableService`, `Profiles`, `Boards`, `Season`, `LiveConfig`, `Analytics`, `Guests`, `Dialogue` |
 | `src/client` | `Main` boots it; `UI/` every panel; `Table/` the table on your screen; `World/Ambient` (doors, weather, acoustics); `Camera`, `Sound`, `State` |
-| `tests` | `run.luau` (the rules), `smoke.luau` (builds the house and walks it) |
+| `tests` | `run.luau` (the rules), `smoke.luau` (builds the house, dresses it for every season and walks it), `duel`, `ballroom`, `shop`, `client` |
 
 ## Changing a number without touching code
 
@@ -241,9 +278,14 @@ slots are empty. Put ids in `Config.Assets` (or in Configs as above):
 | `Sounds.door`, `chair` | a heavy door easing open; a chair on carpet |
 | `Music.street` / `foyer` / `salon` | muffled city · jazz piano · soft deep house around 92 BPM |
 | `Music.velvet` / `obsidian` / `midnight` | slower and brushed · minimal and taut · sparse piano and room tone |
+| `Music.library` / `club` / `ballroom` | a hushed bed of piano and low strings · the hall between · a full late-night band |
+| `Music.boutique` / `vault` / `suite` / `terrace` | quiet, warm, expensive; the Terrace a little brighter |
+| `MusicLayers.<room>` | an optional fuller layer of the same track that rises as the run builds |
+| `Band.full` / `bass` / `piano` / `clock` | the Ballroom's band in stems: all of it; bass and brushes; one piano; a ticking clock |
+| `Ambience.<space>`, `SeasonAmbience.<season>` | rain on glass, the distant city; a fire (frost), crickets (summer) |
 | `Sounds.low` | the clock's last ten seconds: one soft low tick, played once |
 
-**Staff looks** (`Config.Assets.Concierge` / `Doorman`): a black tailcoat shirt and trousers
+**Staff looks** (`Config.Assets.Concierge` / `Doorman` / `Pianist`): a black tailcoat shirt and trousers
 (classic clothing ids), white gloves, and optionally a hair accessory. Until then they're
 dressed from body colours with a shirt front, a tie, coat tails and the gold lapel key.
 
@@ -257,7 +299,7 @@ dressed from body colours with a shirt front, a tie, coat tails and the gold lap
 | Gesture | an open palm toward a doorway: "this way" |
 | Walk-and-lead | an upright, measured walk, hands behind the back |
 | Slow applause | three slow claps, chin slightly raised |
-| Pianist playing | seated at the keys, gentle hands, a slight sway |
+| Pianist playing (`Animations.pianist`) | arms and upper body only (the code seats them): gentle hands along the keys, a slight sway |
 | Tailor folding | folding a garment on the counter, smoothing it once |
 | Sitting at the table | settle into the chair, forearms toward the felt |
 
