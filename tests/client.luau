@@ -519,6 +519,7 @@ local Players = {
 	end,
 }
 
+local keysDown = {}
 local UserInputService = {
 	TouchEnabled = false,
 	KeyboardEnabled = true,
@@ -538,6 +539,13 @@ local UserInputService = {
 	GetMouseLocation = function()
 		return Vector2.new(640, 360)
 	end,
+	IsKeyDown = function(_, key)
+		return keysDown[key.Name] == true
+	end,
+	IsMouseButtonPressed = function()
+		return false
+	end,
+	MouseBehavior = roblox.Enum.MouseBehavior.Default,
 }
 
 local actions = {}
@@ -1768,6 +1776,34 @@ check("out of season the Terrace doors are shut", terraceDoor ~= nil and terrace
 serverSays("Shop", { op = "state", owned = {}, equipped = {}, gilt = 0, goldKey = true, credits = {}, suite = {}, ledger = { page = 2, pages = 50, progress = 0.1, leather = false, term = "2026-autumn" } })
 advance(0.5)
 check("for a Gold Key holder they open", terraceDoor.CanCollide == false)
+
+-- Photo mode, from Settings.
+check("Settings opens", press("Settings"))
+advance(0.5)
+check("photo mode is a key in Settings", press("Photo"))
+advance(0.5)
+check("photo mode: a free camera", camera.CameraType == roblox.Enum.CameraType.Scriptable and controls.enabled == false)
+check("photo mode: depth of field", game:GetService("Lighting"):FindFirstChild("MaisonPhotoFocus") ~= nil)
+check("photo mode: its bar, and no interface", textOnScreen("Capture") ~= nil and playerGui:FindFirstChild("MaisonHud").Enabled == false)
+local photoStart = camera.CFrame.Position
+keysDown.W = true
+advance(0.6)
+keysDown.W = nil
+check("photo mode: W moves the camera, and the avatar stays put", (camera.CFrame.Position - photoStart).Magnitude > 3)
+keysDown.W = true
+advance(8)
+keysDown.W = nil
+check("photo mode: the camera stays within reach of you", (camera.CFrame.Position - root.Position).Magnitude <= 28.5, (camera.CFrame.Position - root.Position).Magnitude)
+press("Grade ›")
+advance(0.2)
+check("photo mode: film grades", textOnScreen("NOIR") ~= nil)
+advance(1)
+check("photo mode: Done hands the camera back", press("Done") and (function()
+	advance(1)
+	return camera.CameraType == roblox.Enum.CameraType.Custom and controls.enabled == true and game:GetService("Lighting"):FindFirstChild("MaisonPhotoFocus") == nil
+end)())
+check("and the interface", playerGui:FindFirstChild("MaisonHud").Enabled == true)
+check("no errors in photo mode", #errors == 0, errors[1])
 
 ---------------------------------------------------------------------------------------------------
 -- 8. A respawn hands straight back to the follow camera

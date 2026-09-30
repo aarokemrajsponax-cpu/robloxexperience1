@@ -153,9 +153,13 @@ function SettingsPanel.open()
 		Root.close(NAME)
 		require(script.Parent.LedgerPanel).open()
 	end, 150).LayoutOrder = 2
+	Theme.key(keys, "Photo", false, function()
+		Root.close(NAME)
+		require(script.Parent.PhotoMode).enter()
+	end, 150).LayoutOrder = 3
 	Theme.key(keys, "Close", true, function()
 		Root.close(NAME)
-	end, 150).LayoutOrder = 3
+	end, 150).LayoutOrder = 4
 	Root.open(NAME, group)
 end
 

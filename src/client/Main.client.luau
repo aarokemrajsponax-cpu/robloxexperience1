@@ -295,18 +295,15 @@ Remotes.event("Guest").OnClientEvent:Connect(function(message: any)
 	end
 end)
 
--- A gesture from the Wardrobe: G, or up on the D-pad, while walking.
-ContextActionService:BindAction("MaisonGesture", function(_, state)
-	if state ~= Enum.UserInputState.Begin or TableClient.isSeated() or Root.isOpen() then
-		return Enum.ContextActionResult.Pass
-	end
+-- A gesture from the Wardrobe: G, or up on the D-pad, while walking (and in photo mode).
+local function playGesture(): boolean
 	local style = Closet.style("gesture")
 	local id = if style then (Config.data.Assets.Animations :: any)[style.animation] else nil
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	local animator = humanoid and humanoid:FindFirstChildOfClass("Animator")
 	if type(id) ~= "string" or id == "" or not animator then
-		return Enum.ContextActionResult.Pass
+		return false
 	end
 	local anim = Instance.new("Animation")
 	anim.AnimationId = id
@@ -316,8 +313,33 @@ ContextActionService:BindAction("MaisonGesture", function(_, state)
 	if ok and track then
 		track:Play(0.2)
 	end
-	return Enum.ContextActionResult.Sink
+	return true
+end
+ContextActionService:BindAction("MaisonGesture", function(_, state)
+	if state ~= Enum.UserInputState.Begin or TableClient.isSeated() or Root.isOpen() then
+		return Enum.ContextActionResult.Pass
+	end
+	return if playGesture() then Enum.ContextActionResult.Sink else Enum.ContextActionResult.Pass
 end, false, Enum.KeyCode.G, Enum.KeyCode.DPadUp)
+
+-- Photo mode (from Settings): the character stands still while the camera roams.
+local PhotoMode = require(script.Parent.UI.PhotoMode)
+PhotoMode.canEnter = function()
+	return not TableClient.isSeated()
+end
+PhotoMode.onEnter = function()
+	setControls(false)
+end
+PhotoMode.onExit = function()
+	CameraRig.follow()
+	setControls(true)
+	applySpeed()
+end
+PhotoMode.gesture = function()
+	if not playGesture() then
+		Toast.show("Photo", "Gestures come from the Boutique and the Ledger; wear one in the Wardrobe.", 3)
+	end
+end
 
 -- Respawns never replay the intro; they hand straight back to the follow camera.
 player.CharacterAdded:Connect(function()
