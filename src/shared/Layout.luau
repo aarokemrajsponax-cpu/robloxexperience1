@@ -67,6 +67,19 @@ Layout.Boutique = {
 	arrival = Vector3.new(19, 3, 47),
 }
 
+-- The Vault: through the Foyer's back wall, left of the stair. Glass cabinets of everything a
+-- guest has filed, a centre cabinet for Mythics, and the Archivist who keeps the Register.
+Layout.Vault = {
+	zone = box(-22, 0, 44, 6, 17, 62),
+	minX = -22, maxX = 6, minZ = 44, maxZ = 62, height = 13,
+	door = Vector3.new(-3, 3, 42), -- the doorway in the Foyer's back wall
+	doorWidth = 7,
+	archivistHome = CFrame.lookAt(Vector3.new(3, 3, 49), Vector3.new(-8, 3, 49)),
+	desk = CFrame.lookAt(Vector3.new(1, 3, 49), Vector3.new(-8, 3, 49)),
+	centre = Vector3.new(-8, 3, 53),
+	arrival = Vector3.new(-3, 3, 47),
+}
+
 -- The four room doors, as seen from the Foyer. `facing` points into the Foyer.
 Layout.RoomDoors = {
 	-- `approach`: clear points across the Foyer toward each door (around the piano and lectern).
@@ -225,7 +238,7 @@ function Layout.inBox(b: Box, p: Vector3): boolean
 	return p.X >= b.min.X and p.X <= b.max.X and p.Y >= b.min.Y and p.Y <= b.max.Y and p.Z >= b.min.Z and p.Z <= b.max.Z
 end
 
-export type ZoneName = "street" | "foyer" | "salon" | "velvet" | "obsidian" | "midnight" | "club" | "library" | "ballroom" | "boutique" | "none"
+export type ZoneName = "street" | "foyer" | "salon" | "velvet" | "obsidian" | "midnight" | "club" | "library" | "ballroom" | "boutique" | "vault" | "none"
 
 function Layout.zoneAt(p: Vector3): ZoneName
 	if Layout.inBox(Layout.Salon.zone, p) then
@@ -244,6 +257,8 @@ function Layout.zoneAt(p: Vector3): ZoneName
 		return "club"
 	elseif Layout.inBox(Layout.Boutique.zone, p) then
 		return "boutique"
+	elseif Layout.inBox(Layout.Vault.zone, p) then
+		return "vault"
 	elseif Layout.inBox(Layout.Foyer.zone, p) then
 		return "foyer"
 	elseif Layout.inBox(Layout.Street.zone, p) then

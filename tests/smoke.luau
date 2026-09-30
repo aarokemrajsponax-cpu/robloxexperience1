@@ -745,6 +745,29 @@ do
 	check("the Boutique arrival is clear", blocked(Bq.arrival, 0.9, FLOOR + 1.2, FLOOR + 5) == nil)
 end
 
+-- The Vault: through the Foyer's back wall, the Archivist's desk and seven cabinets.
+do
+	local V = Layout.Vault
+	local why = walk({
+		{ Vector3.new(V.door.X, 0, 30), FLOOR },
+		{ Vector3.new(V.door.X, 0, 47), FLOOR },
+		{ Vector3.new(-1.5, 0, 47), FLOOR },
+	}, 0.9)
+	check("a guest can walk from the Foyer into the Vault to the Archivist's desk", why == nil, why)
+	local cabinets = CollectionService.GetTagged(CollectionService, "VaultCabinet")
+	check("the Vault has six case cabinets and the Mythics'", #cabinets == 7, #cabinets)
+	check("the Register can be read", (function()
+		for _, d in maison:GetDescendants() do
+			if d:IsA("ProximityPrompt") and d.Name == "RegisterPrompt" then
+				return true
+			end
+		end
+		return false
+	end)())
+	check("the Vault is its own zone", Layout.zoneAt(Vector3.new(-8, 5, 50)) == "vault")
+	check("the way round the centre cabinet is clear", walk({ { Vector3.new(-3, 0, 47), FLOOR }, { Vector3.new(-3, 0, 57), FLOOR }, { Vector3.new(-14, 0, 57), FLOOR } }, 0.9) == nil)
+end
+
 check("the street spawn is clear", blocked(Layout.Street.spawn.Position, 1, 1.2, 5) == nil)
 check("the Foyer spawn is clear", blocked(Layout.Foyer.spawn.Position, 1, FLOOR + 1.2, FLOOR + 5) == nil)
 -- Until it's earned, the Midnight Room's doorway is closed.

@@ -1492,6 +1492,37 @@ advance(0.5)
 check("a page turning is announced", textOnScreen("Page 3 turned") ~= nil)
 check("no errors in the Boutique", #errors == 0, errors[1])
 
+-- The Register and the Vault.
+local catalogueForTest = module("ReplicatedStorage", "Shared", "Catalogue")
+local firstCore = catalogueForTest.coreForCase(catalogueForTest.Cases[1].id)[1]
+invokeResults.ShopAsk = {
+	register = { [firstCore.id] = { first = 1790000000, count = 7, best = "velvet" } },
+	mythics = { { id = "blackDiamond", serial = 412, at = 1790000000, room = "midnight" } },
+	standing = "Member", next = { name = "Patron", nights = 14, rounds = 150 }, nights = 5, rounds = 40,
+	commissions = { { label = "This evening", text = "File twelve pieces of watches in the Velvet Room", progress = 4, target = 12, done = false, gilt = 150 } },
+	odds = { { room = "The Salon", chance = 40000 } }, badges = 3, total = 62,
+}
+serverSays("Shop", { op = "open", panel = "register" })
+advance(1)
+check("the Register opens with your standing", textOnScreen("Member") ~= nil and textOnScreen("File twelve pieces") ~= nil)
+check("a case page shows the found piece in 3D", press(catalogueForTest.Cases[1].name) and textOnScreen(firstCore.name) ~= nil and find(playerGui, function(d)
+	return d:IsA("ViewportFrame")
+end) ~= nil)
+check("the Mythics page prints the odds and the serial", press("Mythics") and textOnScreen("1 in 40,000") ~= nil and textOnScreen("No. 00412") ~= nil)
+advance(1)
+Root2.close()
+advance(1)
+root.Position = Vector3.new(-8, 5, 50)
+root.CFrame = CFrame.new(-8, 5, 50)
+advance(1.5)
+local vaultFolder = workspace.MaisonLocal:FindFirstChild("Vault")
+check("walking into the Vault fills its cabinets with your finds", vaultFolder ~= nil and #vaultFolder:GetChildren() == 2, vaultFolder and #vaultFolder:GetChildren())
+root.Position = Vector3.new(0, 5, -40)
+root.CFrame = CFrame.new(0, 5, -40)
+advance(1.5)
+check("and empties them when you leave", workspace.MaisonLocal:FindFirstChild("Vault") == nil)
+check("no errors in the Register and the Vault", #errors == 0, errors[1])
+
 ---------------------------------------------------------------------------------------------------
 -- 8. A respawn hands straight back to the follow camera
 ---------------------------------------------------------------------------------------------------

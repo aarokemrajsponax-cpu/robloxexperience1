@@ -31,6 +31,8 @@ local BoutiquePanel = require(script.Parent.UI.BoutiquePanel)
 local WardrobePanel = require(script.Parent.UI.WardrobePanel)
 local LedgerPanel = require(script.Parent.UI.LedgerPanel)
 local GiftPanel = require(script.Parent.UI.GiftPanel)
+local RegisterPanel = require(script.Parent.UI.RegisterPanel)
+local VaultView = require(script.Parent.World.VaultView)
 local Counter = require(script.Parent.Table.Counter)
 local TableClient = require(script.Parent.Table.TableClient)
 local Ambient = require(script.Parent.World.Ambient)
@@ -64,6 +66,8 @@ Closet.Message:Connect(function(op: string, m: any)
 			WardrobePanel.open()
 		elseif m.panel == "ledger" then
 			LedgerPanel.open()
+		elseif m.panel == "register" then
+			RegisterPanel.open()
 		end
 	elseif op == "gift" and type(m.item) == "table" then
 		task.delay(2.5, GiftPanel.show, tostring(m.from), m.item)
@@ -80,6 +84,7 @@ Counter.start()
 TableClient.start()
 Ambient.start()
 BallroomView.start()
+VaultView.start()
 
 -- Controls stay off until Play.
 local controls: any = nil

@@ -170,6 +170,8 @@ local REVERB: { [string]: Enum.ReverbType } = {
 	club = Enum.ReverbType.Hallway,
 	library = Enum.ReverbType.LivingRoom,
 	ballroom = Enum.ReverbType.ConcertHall,
+	boutique = Enum.ReverbType.LivingRoom,
+	vault = Enum.ReverbType.StoneRoom,
 	none = Enum.ReverbType.Room,
 }
 

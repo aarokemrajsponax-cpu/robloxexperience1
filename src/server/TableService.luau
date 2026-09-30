@@ -79,6 +79,10 @@ local lastMessage: { [Player]: number } = {}
 TableService.onSeated = function(_player: Player) end
 TableService.say = function(_player: Player, _line: string) end
 TableService.onUnlock = function(_player: Player, _room: string) end
+-- Called on each correct filing in the rooms and the Nightly (for the Register and Commissions).
+TableService.onRegister = function(_player: Player, _pieceId: string, _roomId: string, _isNew: boolean) end
+-- Called at the end of every cleared round.
+TableService.onRound = function(_player: Player, _roomId: string, _grade: string) end
 -- Called on every filing (for the Ledger).
 TableService.onFiling = function(_player: Player, _correct: boolean) end
 -- Called after a scored Nightly is on the board (for Rivals).
@@ -479,6 +483,7 @@ local function roundComplete(s: Session)
 			data.bestRound[roomId] = s.round
 		end
 	end
+	TableService.onRound(s.player, s.room.id, grade)
 	local last = s.mode ~= "room" and s.round >= Config.data.Nightly.rounds
 	if s.round == 1 then
 		Analytics.step(s.player, 8)
@@ -520,6 +525,7 @@ local function register(player: Player, piece: SessionPiece, roomId: string)
 		data.register[piece.id] = { first = os.time(), count = 1, best = roomId }
 	end
 	data.stats.correct += 1
+	TableService.onRegister(player, piece.id, roomId, entry == nil)
 end
 
 local function checkFairPlay(s: Session, now: number)

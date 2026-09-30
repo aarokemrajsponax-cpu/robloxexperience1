@@ -25,6 +25,8 @@ staffFolder.Parent = maison
 local Concierge = require(script.Parent.Staff.Concierge)
 local Doorman = require(script.Parent.Staff.Doorman)
 local Tailor = require(script.Parent.Staff.Tailor)
+local Archivist = require(script.Parent.Staff.Archivist)
+task.spawn(Archivist.spawn, staffFolder)
 task.spawn(Concierge.spawn, staffFolder)
 task.spawn(Doorman.spawn, staffFolder)
 task.spawn(Tailor.spawn, staffFolder)
@@ -36,6 +38,7 @@ local Boards = require(script.Parent.Boards)
 Boards.start()
 
 local LedgerService = require(script.Parent.LedgerService)
+local Collection = require(script.Parent.Collection)
 
 local TableService = require(script.Parent.TableService)
 TableService.say = function(player, line)
@@ -81,6 +84,7 @@ end
 -- guests count), and the weekly board of points.
 BallroomService.onFinished = function(player, place, keys, counted)
 	LedgerService.add(player, "ballroom", place)
+	Collection.ballroom(player, place)
 	local data = require(script.Parent.Profiles).get(player)
 	if not data or not counted then
 		return
@@ -114,10 +118,30 @@ Shop.handOver = function(player, from, itemName)
 	Concierge.line(player, string.format("A gift for you, from %s: %s.", from, itemName), 4)
 end
 Shop.start()
+Archivist.onSpeak = function(player)
+	local V = require(ReplicatedStorage.Shared.Voice)
+	Dialogue.say(player, V.Archivist.speaker, V.Archivist.kept, nil, nil, 2.5)
+	Shop.open(player, "register")
+end
 Tailor.onSpeak = function(player)
 	Dialogue.say(player, require(ReplicatedStorage.Shared.Voice).Tailor.speaker, require(ReplicatedStorage.Shared.Voice).Tailor.time, nil, nil, 2.5)
 	Shop.open(player, "boutique")
 end
+Collection.say = function(player, line)
+	Concierge.line(player, line, 4)
+end
+Collection.notice = function(player, title, line)
+	Remotes.event("Shop"):FireClient(player, { op = "notice", title = title, line = line })
+end
+Collection.announce = function(text)
+	Boards.announce(text)
+end
+Collection.ledger = function(player, source)
+	LedgerService.add(player, source)
+end
+Shop.register = Collection.view
+TableService.onRegister = Collection.filed
+TableService.onRound = Collection.round
 TableService.onFiling = function(player, correct)
 	if correct then
 		LedgerService.add(player, "filing")
@@ -137,15 +161,18 @@ end
 TableService.onNightlyFinished = function(player)
 	rivalsAfter(player)
 	LedgerService.add(player, "nightly")
+	Collection.nightly(player)
 end
 DuelService.onFinished = function(a, b, winner, _ranked, standIn)
 	rivalsAfter(a)
 	rivalsAfter(b)
 	if a then
 		LedgerService.add(a, "library", if winner == "a" then 1 else 0)
+		Collection.library(a, winner == "a")
 	end
 	if b then
 		LedgerService.add(b, "library", if winner == "b" then 1 else 0)
+		Collection.library(b, winner == "b")
 	end
 	local _ = standIn
 end
@@ -159,6 +186,16 @@ Guests.onSettingChanged = function(player, key)
 	end
 end
 Guests.start()
+local guestsUnlock = TableService.onUnlock
+TableService.onUnlock = function(player, room)
+	guestsUnlock(player, room)
+	if room == "midnight" then
+		Collection.badge(player, "midnight")
+	end
+end
+require(script.Parent.Profiles).Loaded:Connect(function(player)
+	Collection.arrived(player)
+end)
 
 local Profiles = require(script.Parent.Profiles)
 Profiles.start()

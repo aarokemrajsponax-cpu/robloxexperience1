@@ -172,6 +172,29 @@ a Nightly attempt or a Mythic's odds.
   my Mark, the Ballroom's default parcel tab, rival updates, and offering a Stand-in.
 - Lights Out now pays Gilt as Appendix I1: 20 + 4 × (21 − your place).
 
+## What's in Delivery 6 — the Register, the Vault, Mythics, Standing, Commissions, badges
+
+- **The Vault**, through the Foyer's back wall left of the stair: six tall glass cabinets (one
+  per case) that fill with the pieces **you** have filed as you walk in, and a centre cabinet
+  for your Mythics with their serial numbers. **The Archivist** keeps the Register at a desk by
+  the door: *"Everything you've found is kept here."*
+- **The Register** is a book: a page for you (House Standing and what the next one needs,
+  pieces found, badges, the Commissions), a page per case, the seasonal pieces and the Mythics.
+  Every piece is its real 3D model turning in the page; unfound pieces are shadows. The Mythic
+  odds are printed, per room.
+- **Mythics**: filing one gives it a serial number from a count shared by every server
+  (*Black Diamond · No. 00412*); the Concierge tells you, and every server's Tonight board
+  announces it.
+- **House Standing**: Guest → Member → Patron → Connoisseur → Custodian → Keeper of the House;
+  the Concierge tells you when you rise.
+- **The Evening Commission** and **the Week's Commission**: one gentle goal a day and a bigger
+  one a week, the same for everyone (*"File twelve pieces of jewelry in the Velvet Room"*).
+  150 and 600 Gilt, and Ledger points. Missing either costs nothing.
+- **Badges** (§11): first round, first Flawless, Midnight unlocked, a season's full set,
+  Register milestones (10, 25, 50), first Nightly, first Library win, first Last Lamp, a Mark,
+  a Mythic, the Founding Term. Each needs a badge created in the Creator Dashboard and its id in
+  `Config.Badges`; `Config.FoundingTerm` names the first Term at launch.
+
 ## Where things live
 
 | Folder | What |

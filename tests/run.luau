@@ -630,6 +630,28 @@ do
 	check("ledger: a steady guest finishes within the Term", week >= 5 and week <= 13, week)
 end
 
+-- 13. Commissions.
+do
+	local Commissions = loadModule("Commissions")
+	local t = os.time({ year = 2026, month = 10, day = 7, hour = 12 })
+	local a, b = Commissions.evening(t), Commissions.evening(t + 3600)
+	check("commissions: the same goal all evening, for everyone", a.id == b.id and a.text == b.text)
+	check("commissions: a new one tomorrow", Commissions.evening(t + 86400).id ~= a.id)
+	check("commissions: the week's holds all week", Commissions.weekly(t).id == Commissions.weekly(t + 86400).id or os.date("!*t", t + 86400).wday == 2)
+	local kinds = {}
+	for d = 0, 60 do
+		local g = Commissions.evening(t + d * 86400)
+		kinds[g.kind] = true
+		assert(g.target >= 1 and #g.text > 5)
+	end
+	check("commissions: evenings vary across the kinds", kinds.file and kinds.rounds and kinds.nightly)
+	local g = { id = "x", kind = "file", room = "velvet", case = "jewelry", target = 12, text = "" }
+	check("commissions: a filing in the right room and case counts", Commissions.progress(g, "file", "velvet", "jewelry") == 1)
+	check("commissions: the wrong case doesn't", Commissions.progress(g, "file", "velvet", "watches") == 0)
+	check("commissions: the wrong room doesn't", Commissions.progress(g, "file", "salon", "jewelry") == 0)
+	check("commissions: Gilt as Appendix I1", Commissions.reward(false) == 150 and Commissions.reward(true) == 600)
+end
+
 -- 10. Rivals.
 do
 	local Rival = loadModule("Rival")

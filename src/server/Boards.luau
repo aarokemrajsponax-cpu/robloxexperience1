@@ -208,7 +208,7 @@ local function drawTonight()
 			rule.Parent = g
 			local feed = cache["ballroom:feed"].entries
 			if #feed > 0 then
-				line(g, next(), "The Ballroom, just now", 0.04, Brand.Fonts.body, Brand.Colours.smoke)
+				line(g, next(), "In the house, just now", 0.04, Brand.Fonts.body, Brand.Colours.smoke)
 				for i = 1, math.min(2, #feed) do
 					line(g, next(), feed[i].name, 0.036, Brand.Fonts.display, Brand.Colours.bone)
 				end
@@ -506,6 +506,16 @@ local function addFeed(text: string)
 		table.remove(entries)
 	end
 	publish()
+end
+
+-- News for the Tonight board from every server (a Mythic found).
+function Boards.announce(text: string)
+	addFeed(text)
+	task.spawn(function()
+		pcall(function()
+			MessagingService:PublishAsync(FEED_TOPIC, { text = text, at = os.time() })
+		end)
+	end)
 end
 
 -- A Lights Out evening has ended: post it here at once and to every other server.

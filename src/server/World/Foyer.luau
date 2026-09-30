@@ -95,6 +95,7 @@ local function shell(m: Model)
 	wallAlongX(m, "WallNorth", F.maxZ, F.maxZ + 2, F.minX - 2, F.maxX + 2, {
 		{ st.x - 4, st.x + 4, 10, FLOOR + st.topY },
 		{ b.X - 4, b.X + 4, 10, FLOOR },
+		{ Layout.Vault.door.X - Layout.Vault.doorWidth / 2, Layout.Vault.door.X + Layout.Vault.doorWidth / 2, 10, FLOOR },
 	})
 	-- The front wall either side of the façade (the façade covers the middle).
 	local hw = Layout.Street.houseHalfWidth

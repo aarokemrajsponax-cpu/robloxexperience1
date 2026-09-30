@@ -25,6 +25,11 @@ local Season = require(script.Parent.Season)
 
 local Shop = {}
 
+-- The Register's view of a guest (set by Main).
+Shop.register = function(_data: Profiles.Data): any
+	return nil
+end
+
 -- The Concierge's handover of a gift (set by Main).
 Shop.handOver = function(_recipient: Player, _from: string, _itemName: string) end
 
@@ -468,6 +473,8 @@ local function onAsk(player: Player, request: unknown): any
 		return { ok = prompt(player, "season"), prompted = true }
 	elseif op == "ledger" then
 		return LedgerService.view(data)
+	elseif op == "register" then
+		return Shop.register(data)
 	elseif op == "wardrobe" then
 		local out = {}
 		for _, kind in Wardrobe.Kinds do
@@ -555,7 +562,7 @@ end
 function Shop.start()
 	MarketplaceService.ProcessReceipt = processReceipt
 	local CollectionService = game:GetService("CollectionService")
-	local panels: { [string]: string } = { BoutiqueCounter = "boutique", WardrobeMirror = "wardrobe", LedgerBook = "ledger" }
+	local panels: { [string]: string } = { BoutiqueCounter = "boutique", WardrobeMirror = "wardrobe", LedgerBook = "ledger", RegisterBook = "register" }
 	for tag, panel in panels do
 		for _, part in CollectionService:GetTagged(tag) do
 			local p = part:FindFirstChildOfClass("ProximityPrompt")

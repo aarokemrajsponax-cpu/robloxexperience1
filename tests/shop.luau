@@ -369,9 +369,26 @@ local stubs = {
 	end,
 }
 
+local mythicCounts = {}
+local awarded = {}
 local services = {
 	Players = PlayersService,
 	MarketplaceService = MarketplaceService,
+	DataStoreService = {
+		GetDataStore = function()
+			return {
+				UpdateAsync = function(_, key, fn)
+					mythicCounts[key] = fn(mythicCounts[key])
+					return mythicCounts[key]
+				end,
+			}
+		end,
+	},
+	BadgeService = {
+		AwardBadge = function(_, userId, id)
+			table.insert(awarded, { userId = userId, id = id })
+		end,
+	},
 	CollectionService = {
 		GetTagged = function()
 			return {}
@@ -859,6 +876,63 @@ for _ = 1, 15 do
 	end
 end
 check("more than ten asks a second wait a moment", limited)
+
+---------------------------------------------------------------------------------------------------
+-- 12. The Register's side: Commissions, Mythic serials, badges, Standing
+---------------------------------------------------------------------------------------------------
+local Collection = module("ServerScriptService", "Server", "Collection")
+local Commissions = module("ReplicatedStorage", "Shared", "Commissions")
+local notices, lines, announced = {}, {}, {}
+Collection.notice = function(player, title, line)
+	table.insert(notices, { player = player, title = title, line = line })
+end
+Collection.say = function(player, line)
+	table.insert(lines, { player = player, line = line })
+end
+Collection.announce = function(text)
+	table.insert(announced, text)
+end
+local fay = guest("Fay", 6)
+local g = Commissions.evening(fakeOs.time())
+local giltBefore = profiles[fay].Data.gilt
+for _ = 1, g.target do
+	if g.kind == "file" then
+		Collection.filed(fay, module("ReplicatedStorage", "Shared", "Catalogue").coreForCase(g.case)[1].id, g.room, false)
+	elseif g.kind == "rounds" then
+		Collection.round(fay, g.room, "Steady")
+	elseif g.kind == "flawless" then
+		Collection.round(fay, "salon", "Flawless")
+	elseif g.kind == "nightly" then
+		Collection.nightly(fay)
+	end
+end
+local view = Collection.view(profiles[fay].Data)
+check("the Evening Commission completes: " .. g.text, view.commissions[1].done == true, view.commissions[1].progress)
+check("it pays 150 Gilt", profiles[fay].Data.gilt - giltBefore == 150, profiles[fay].Data.gilt - giltBefore)
+check("and says so", #notices >= 1 and notices[#notices].player == fay)
+check("finishing it twice pays once", (function()
+	local before = profiles[fay].Data.gilt
+	Collection.event(fay, g.kind, g.room, g.case)
+	return profiles[fay].Data.gilt == before
+end)())
+Config.set("Badges.mythic", 777)
+Collection.filed(fay, "blackDiamond", "midnight", true)
+advance(0.5)
+check("a Mythic gets the next serial number", profiles[fay].Data.mythics[1] and profiles[fay].Data.mythics[1].serial == 1)
+check("the finder is told its number", string.find(lines[#lines].line, "No. 00001", 1, true) ~= nil, lines[#lines] and lines[#lines].line)
+check("every server hears of it", string.find(announced[#announced], "Black Diamond", 1, true) ~= nil)
+check("the Mythic badge is awarded", awarded[#awarded] and awarded[#awarded].id == 777)
+Collection.filed(ben, "blackDiamond", "midnight", true)
+advance(0.5)
+check("the next Black Diamond is No. 00002", profiles[ben].Data.mythics[1].serial == 2)
+local count = #awarded
+Collection.badge(fay, "mythic")
+check("a badge is only awarded once", #awarded == count)
+profiles[fay].Data.nights.count = 20
+profiles[fay].Data.stats.rounds = 200
+Collection.standing(fay)
+check("rising in Standing is announced", string.find(lines[#lines].line, "Patron", 1, true) ~= nil, lines[#lines].line)
+check("the Register view has the odds for all four rooms", #view.odds == 4)
 
 print(string.format("%d passed, %d failed", passed, failed))
 if failed > 0 then

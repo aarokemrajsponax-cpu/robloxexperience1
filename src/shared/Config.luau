@@ -195,6 +195,33 @@ local defaults = {
 		giftTimeout = 120, -- seconds a chosen gift waits for its purchase
 	},
 
+	-- The Founding Term's id (for example "2026-autumn"): set it at launch; guests who play in it
+	-- get the Founding Term badge and its dated rewards.
+	FoundingTerm = "",
+
+	-- Commissions (Appendix I1): Gilt for the Evening's and the Week's.
+	Commissions = {
+		eveningGilt = 150,
+		weekGilt = 600,
+	},
+
+	-- Badges (§11): create each in the Creator Dashboard and put its id here; 0 = not awarded.
+	Badges = {
+		firstRound = 0,
+		firstFlawless = 0,
+		midnight = 0,
+		seasonSet = 0,
+		register10 = 0,
+		register25 = 0,
+		register50 = 0,
+		firstNightly = 0,
+		firstLibraryWin = 0,
+		firstLastLamp = 0,
+		mark = 0,
+		mythic = 0,
+		foundingTerm = 0,
+	},
+
 	Rivals = {
 		activeDays = 14, -- a rival must have been here within this many days
 		connectionsChecked = 20, -- connections looked up when choosing a rival (once a week)

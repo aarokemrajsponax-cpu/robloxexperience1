@@ -12,6 +12,7 @@ local Midnight = require(script.Parent.Midnight)
 local Library = require(script.Parent.Library)
 local Ballroom = require(script.Parent.Ballroom)
 local BoutiqueRoom = require(script.Parent.Boutique)
+local VaultRoom = require(script.Parent.Vault)
 
 local Build = {}
 
@@ -31,6 +32,7 @@ function Build.run(): Folder
 	Library.build(root)
 	Ballroom.build(root)
 	BoutiqueRoom.build(root)
+	VaultRoom.build(root)
 	root.Parent = Workspace
 	return root
 end

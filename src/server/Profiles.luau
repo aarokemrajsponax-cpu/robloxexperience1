@@ -45,6 +45,11 @@ export type Data = {
 	introduction: boolean,
 	ledger: { term: string, points: number, freeClaimed: number, leatherClaimed: number, leather: { [string]: boolean } },
 	gifts: { { from: string, item: string, at: number } },
+	-- The Register and the Vault (Delivery 6)
+	badges: { [string]: boolean },
+	mythics: { { id: string, serial: number, at: number, room: string } },
+	commissions: { evening: { key: string, progress: number, done: boolean }, week: { key: string, progress: number, done: boolean } },
+	standing: string,
 }
 
 local TEMPLATE: Data = {
@@ -74,6 +79,10 @@ local TEMPLATE: Data = {
 	introduction = false,
 	ledger = { term = "", points = 0, freeClaimed = 0, leatherClaimed = 0, leather = {} },
 	gifts = {},
+	badges = {},
+	mythics = {},
+	commissions = { evening = { key = "", progress = 0, done = false }, week = { key = "", progress = 0, done = false } },
+	standing = "Guest",
 }
 
 -- Each migration moves data from schema n to n + 1. Add new ones at the end.
