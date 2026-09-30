@@ -52,6 +52,8 @@ export type Data = {
 	standing: string,
 	-- The Black Card: held now (re-checked with Roblox every visit), and the months claimed.
 	blackCard: { active: boolean, months: { [string]: boolean } },
+	-- The Suite: the piece in each spot (Suite.Spots); a missing spot shows the house's own piece.
+	suite: { [string]: string },
 }
 
 local TEMPLATE: Data = {
@@ -86,6 +88,7 @@ local TEMPLATE: Data = {
 	commissions = { evening = { key = "", progress = 0, done = false }, week = { key = "", progress = 0, done = false } },
 	standing = "Guest",
 	blackCard = { active = false, months = {} },
+	suite = {},
 }
 
 -- Each migration moves data from schema n to n + 1. Add new ones at the end.

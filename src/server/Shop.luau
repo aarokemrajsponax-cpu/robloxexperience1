@@ -14,6 +14,7 @@ local Boutique = require(ReplicatedStorage.Shared.Boutique)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Standing = require(ReplicatedStorage.Shared.Standing)
+local Suite = require(ReplicatedStorage.Shared.Suite)
 local Wardrobe = require(ReplicatedStorage.Shared.Wardrobe)
 
 local Analytics = require(script.Parent.Analytics)
@@ -134,6 +135,7 @@ local function mine(data: Profiles.Data): { [string]: any }
 		gilt = data.gilt,
 		goldKey = data.goldKey,
 		blackCard = { held = data.blackCard.active, offered = BlackCard.offered() },
+		suite = data.suite,
 		credits = data.credits,
 		ledger = { page = ledger.page, pages = ledger.pages, progress = ledger.progress, leather = ledger.leather, term = ledger.term },
 	}
@@ -448,6 +450,8 @@ local function onAsk(player: Player, request: unknown): any
 		return buy(player, data, r.item :: string, recipient)
 	elseif op == "buyGilt" and type(r.item) == "string" then
 		return buyWithGilt(player, data, r.item :: string)
+	elseif op == "equip" and r.kind == "suite" then
+		return { ok = false, why = "Suite pieces are placed from the bell in your Suite." }
 	elseif op == "equip" and type(r.kind) == "string" and type(r.id) == "string" then
 		local ok = Dressing.equip(player, r.kind :: string, r.id :: string)
 		Shop.push(player)
@@ -480,6 +484,10 @@ local function onAsk(player: Player, request: unknown): any
 		return LedgerService.view(data)
 	elseif op == "register" then
 		return Shop.register(data)
+	elseif op == "suite" then
+		return Shop.suite(data)
+	elseif op == "place" and type(r.spot) == "string" and type(r.id) == "string" then
+		return Shop.place(player, data, r.spot :: string, r.id :: string)
 	elseif op == "blackCard" then
 		return { offered = BlackCard.offered(), held = data.blackCard.active, price = BlackCard.price(), look = (Wardrobe.cardholderLook() or {} :: any).name }
 	elseif op == "holdCard" then
@@ -512,6 +520,44 @@ local function onAsk(player: Player, request: unknown): any
 		return { kinds = out, equipped = data.equipped, names = Wardrobe.KindNames }
 	end
 	return nil
+end
+
+-- The Suite, spot by spot: what's there and what the guest could put there.
+function Shop.suite(data: Profiles.Data): { [string]: any }
+	local spots = {}
+	for _, spot in Suite.Spots do
+		local options = {}
+		for _, item in Suite.piecesFor(spot.id) do
+			local mine = Dressing.canWear(data, item)
+			table.insert(options, { id = item.id, name = item.name, line = item.line, owned = mine })
+		end
+		table.insert(spots, {
+			id = spot.id,
+			name = spot.name,
+			room = spot.room,
+			open = Suite.roomOpen(spot.room, data.goldKey),
+			house = spot.house,
+			placed = data.suite[spot.id] or "",
+			options = options,
+		})
+	end
+	return { spots = spots, rooms = Suite.RoomNames }
+end
+
+-- Puts a piece in a spot of the guest's Suite ("" takes it away).
+function Shop.place(player: Player, data: Profiles.Data, spotId: string, id: string): { [string]: any }
+	local item = if id ~= "" then Wardrobe.get(id) else nil
+	if id ~= "" and not item then
+		return { ok = false, why = "That piece isn't known." }
+	end
+	local ok, why = Suite.canPlace(spotId, item, item ~= nil and Dressing.canWear(data, item), data.goldKey)
+	if not ok then
+		return { ok = false, why = why }
+	end
+	-- (An empty spot shows the house's own piece, or nothing.)
+	(data.suite :: { [string]: string? })[spotId] = if id ~= "" then id else nil
+	Shop.push(player)
+	return { ok = true }
 end
 
 local function syncGoldKey(player: Player)
@@ -574,7 +620,7 @@ end
 function Shop.start()
 	MarketplaceService.ProcessReceipt = processReceipt
 	local CollectionService = game:GetService("CollectionService")
-	local panels: { [string]: string } = { BoutiqueCounter = "boutique", WardrobeMirror = "wardrobe", LedgerBook = "ledger", RegisterBook = "register", BlackCardLectern = "blackCard" }
+	local panels: { [string]: string } = { BoutiqueCounter = "boutique", WardrobeMirror = "wardrobe", LedgerBook = "ledger", RegisterBook = "register", BlackCardLectern = "blackCard", SuiteFurnish = "suite" }
 	for tag, panel in panels do
 		for _, part in CollectionService:GetTagged(tag) do
 			local p = part:FindFirstChildOfClass("ProximityPrompt")

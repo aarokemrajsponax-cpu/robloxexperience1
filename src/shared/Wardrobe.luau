@@ -119,8 +119,29 @@ local items: { Item } = {
 	{ id = "look_custodian", name = "The Custodian's Dress Coat", kind = "look", source = "standing", gilt = 4000, standing = "Custodian", line = "For Custodians.", style = { outfit = "custodian" } },
 	{ id = "look_keeper", name = "The Keeper's Robe", kind = "look", source = "standing", gilt = 4000, standing = "Keeper of the House", line = "For the Keepers of the House.", style = { outfit = "keeper" } },
 
-	-- Suite pieces (the Suite opens in a later delivery; the Introduction's painting waits there).
-	{ id = "suite_painting", name = "A Suite Painting", kind = "suite", source = "introduction", line = "A small oil of the house at night.", style = { furniture = "painting" } },
+	-- Suite pieces (Suite.luau says where each goes).
+	{ id = "suite_painting", name = "A Suite Painting", kind = "suite", source = "introduction", line = "A small oil of the house at night.", style = { spot = "painting", colour = rgb(40, 44, 70), accent = GOLD } },
+	-- The Suite's furniture (Appendix I: Gilt 300–3,000; the Boutique 49–299). `colour` is the
+	-- main fabric or wood, `accent` the trim.
+	{ id = "suite_chair_velvet", name = "Oxblood Wing Chair", kind = "suite", source = "gilt", gilt = 600, line = "Deep velvet, high wings.", style = { spot = "chair", colour = rgb(92, 20, 30), accent = GOLD } },
+	{ id = "suite_chair_leather", name = "Club Leather Armchair", kind = "suite", source = "gilt", gilt = 900, line = "Worn in by nobody but you.", style = { spot = "chair", colour = rgb(84, 44, 26), accent = rgb(40, 24, 16), material = "Leather" } },
+	{ id = "suite_chair_emerald", name = "Emerald Club Chair", kind = "suite", source = "boutique", robux = 149, line = "Green as the old baize.", style = { spot = "chair", colour = rgb(18, 70, 46), accent = GOLD } },
+	{ id = "suite_chair_goldkey", name = "The Gold Key Chair", kind = "suite", source = "goldKey", line = "Gold Key holders only.", style = { spot = "chair", colour = rgb(20, 16, 10), accent = rgb(236, 196, 98) } },
+	{ id = "suite_sofa_chesterfield", name = "Chesterfield", kind = "suite", source = "gilt", gilt = 1500, line = "Buttoned leather, rolled arms.", style = { spot = "sofa", colour = rgb(70, 30, 20), accent = rgb(34, 20, 14), material = "Leather" } },
+	{ id = "suite_sofa_ivory", name = "Ivory Salon Sofa", kind = "suite", source = "boutique", robux = 249, line = "Pale silk, gilt feet.", style = { spot = "sofa", colour = rgb(228, 218, 196), accent = GOLD } },
+	{ id = "suite_rug_persian", name = "Night Garden Rug", kind = "suite", source = "gilt", gilt = 800, line = "Deep reds, knotted by hand.", style = { spot = "rug", colour = rgb(96, 24, 28), accent = rgb(196, 150, 80) } },
+	{ id = "suite_rug_black", name = "Black Fringed Rug", kind = "suite", source = "gilt", gilt = 400, line = "Black wool, a gold border.", style = { spot = "rug", colour = rgb(14, 14, 16), accent = GOLD } },
+	{ id = "suite_painting_portrait", name = "A Portrait of a Stranger", kind = "suite", source = "gilt", gilt = 1200, line = "Nobody knows who sat for it.", style = { spot = "painting", colour = rgb(70, 46, 34), accent = GOLD } },
+	{ id = "suite_painting_skyline", name = "The City at Three", kind = "suite", source = "boutique", robux = 99, line = "Lit windows, one by one.", style = { spot = "painting", colour = rgb(16, 22, 44), accent = rgb(216, 186, 120) } },
+	{ id = "suite_lamp_brass", name = "Brass Floor Lamp", kind = "suite", source = "gilt", gilt = 300, line = "A pleated silk shade.", style = { spot = "lamp", colour = rgb(236, 214, 170), accent = GOLD } },
+	{ id = "suite_lamp_green", name = "Library Lamp", kind = "suite", source = "gilt", gilt = 450, line = "The green glass shade.", style = { spot = "lamp", colour = rgb(26, 90, 58), accent = GOLD } },
+	{ id = "suite_bar_walnut", name = "Walnut Drinks Cabinet", kind = "suite", source = "standing", gilt = 2000, standing = "Patron", line = "For Patrons of the house.", style = { spot = "bar", colour = rgb(66, 38, 24), accent = GOLD } },
+	{ id = "suite_bar_lacquer", name = "Black Lacquer Bar", kind = "suite", source = "boutique", robux = 299, line = "Mirrored inside, lit when opened.", style = { spot = "bar", colour = rgb(10, 10, 12), accent = rgb(236, 216, 166) } },
+	{ id = "suite_shelf_books", name = "A Wall of Books", kind = "suite", source = "gilt", gilt = 1000, line = "Leather spines, never read.", style = { spot = "shelf", colour = rgb(40, 24, 16), accent = rgb(110, 30, 26) } },
+	{ id = "suite_mirror_gilt", name = "Gilt Pier Glass", kind = "suite", source = "gilt", gilt = 1400, line = "Tall enough for the whole look.", style = { spot = "mirror", colour = rgb(200, 206, 214), accent = GOLD } },
+	{ id = "suite_chaise_velvet", name = "Velvet Chaise", kind = "suite", source = "gilt", gilt = 1800, line = "For waiting while someone dresses.", style = { spot = "chaise", colour = rgb(46, 10, 18), accent = GOLD } },
+	{ id = "suite_desk_partners", name = "Partners' Desk", kind = "suite", source = "standing", gilt = 3000, standing = "Connoisseur", line = "For Connoisseurs.", style = { spot = "desk", colour = rgb(52, 30, 20), accent = rgb(26, 70, 48) } },
+	{ id = "suite_globe", name = "Library Globe", kind = "suite", source = "gilt", gilt = 700, line = "Old borders, brass meridian.", style = { spot = "globe", colour = rgb(196, 170, 120), accent = GOLD } },
 }
 
 -- Season collections: a look, a table style and a trail for each season, sold only in it.

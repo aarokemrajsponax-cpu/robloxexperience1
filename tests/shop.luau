@@ -600,7 +600,7 @@ local TEMPLATE = {
 	gilt = 0, giltDay = { day = -1, earned = 0 }, purchases = {},
 	owned = {}, equipped = { look = "", table = "", lamp = "", chime = "", trail = "", nameplate = "", card = "", flourish = "", gesture = "" },
 	credits = {}, receipts = {}, pending = { product = "", item = "", giftTo = 0, at = 0 },
-	goldKey = false, introduction = false, blackCard = { active = false, months = {} },
+	goldKey = false, introduction = false, blackCard = { active = false, months = {} }, suite = {},
 	ledger = { term = "", points = 0, freeClaimed = 0, leatherClaimed = 0, leather = {} },
 	gifts = {},
 }
@@ -1066,6 +1066,38 @@ check("cancelled: the looks stay", hd.owned[monthLook.id] == true and hd.owned[a
 check("cancelled: the nameplate can't be worn", not askAs(hana, { op = "equip", kind = "nameplate", id = "plate_blackcard" }).ok)
 check("cancelled: no month is claimed without the card", BlackCard.claimMonth(hd, nextMonth + 32 * 86400) == nil)
 Config.data.Products.blackCard = ""
+
+---------------------------------------------------------------------------------------------------
+-- The Suite: buy a piece for Gilt, place it; the Gold Key rooms
+---------------------------------------------------------------------------------------------------
+local ivy = guest("Ivy", 9)
+local id = profiles[ivy].Data
+id.gilt = 5000
+local view = askAs(ivy, { op = "suite" })
+check("the Suite lists its spots", view and #view.spots == 11, view and #view.spots)
+local rugSpot
+for _, sp in view.spots do
+	if sp.id == "rug" then
+		rugSpot = sp
+	end
+end
+check("each spot lists the pieces that go there", rugSpot ~= nil and #rugSpot.options >= 2 and rugSpot.house == true)
+check("Suite furniture is sold for Gilt", askAs(ivy, { op = "buyGilt", item = "suite_rug_black" }).ok and id.owned.suite_rug_black and id.gilt == 4600)
+check("placing it", askAs(ivy, { op = "place", spot = "rug", id = "suite_rug_black" }).ok and id.suite.rug == "suite_rug_black")
+check("the state tells the guest's screen", lastOp(ivy, "state").suite.rug == "suite_rug_black")
+check("a piece only goes in its own spot", not askAs(ivy, { op = "place", spot = "sofa", id = "suite_rug_black" }).ok)
+check("a piece not yet owned can't be placed", not askAs(ivy, { op = "place", spot = "rug", id = "suite_rug_persian" }).ok)
+check("nonsense spots are refused", not askAs(ivy, { op = "place", spot = "roof", id = "" }).ok)
+askAs(ivy, { op = "buyGilt", item = "suite_mirror_gilt" })
+local shut = askAs(ivy, { op = "place", spot = "mirror", id = "suite_mirror_gilt" })
+check("the Dressing Room opens with the Gold Key", not shut.ok and string.find(shut.why, "Gold Key", 1, true) ~= nil)
+check("the Gold Key chair needs the Gold Key", not askAs(ivy, { op = "place", spot = "chair", id = "suite_chair_goldkey" }).ok)
+id.goldKey = true
+check("with the Gold Key: the Dressing Room", askAs(ivy, { op = "place", spot = "mirror", id = "suite_mirror_gilt" }).ok)
+check("with the Gold Key: its chair", askAs(ivy, { op = "place", spot = "chair", id = "suite_chair_goldkey" }).ok)
+check("clearing a spot brings back the house's piece", askAs(ivy, { op = "place", spot = "rug", id = "" }).ok and id.suite.rug == nil)
+check("Suite pieces aren't worn", not askAs(ivy, { op = "equip", kind = "suite", id = "suite_rug_black" }).ok)
+check("Patrons' pieces wait for Patrons", not askAs(ivy, { op = "buyGilt", item = "suite_bar_walnut" }).ok)
 
 print(string.format("%d passed, %d failed", passed, failed))
 if failed > 0 then

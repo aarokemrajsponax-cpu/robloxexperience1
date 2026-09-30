@@ -29,6 +29,8 @@ local Invite = require(script.Parent.UI.Invite)
 local Closet = require(script.Parent.Closet)
 local BoutiquePanel = require(script.Parent.UI.BoutiquePanel)
 local BlackCardPanel = require(script.Parent.UI.BlackCardPanel)
+local SuitePanel = require(script.Parent.UI.SuitePanel)
+local SuiteView = require(script.Parent.World.SuiteView)
 local WardrobePanel = require(script.Parent.UI.WardrobePanel)
 local LedgerPanel = require(script.Parent.UI.LedgerPanel)
 local GiftPanel = require(script.Parent.UI.GiftPanel)
@@ -72,6 +74,8 @@ Closet.Message:Connect(function(op: string, m: any)
 			RegisterPanel.open()
 		elseif m.panel == "blackCard" then
 			BlackCardPanel.open()
+		elseif m.panel == "suite" then
+			SuitePanel.open()
 		end
 	elseif op == "gift" and type(m.item) == "table" then
 		task.delay(2.5, GiftPanel.show, tostring(m.from), m.item)
@@ -90,6 +94,7 @@ TableClient.start()
 Ambient.start()
 BallroomView.start()
 VaultView.start()
+SuiteView.start()
 StaffLife.start()
 
 -- Controls stay off until Play.

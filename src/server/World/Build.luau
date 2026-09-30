@@ -14,6 +14,7 @@ local Ballroom = require(script.Parent.Ballroom)
 local BoutiqueRoom = require(script.Parent.Boutique)
 local VaultRoom = require(script.Parent.Vault)
 local Terrace = require(script.Parent.Terrace)
+local SuiteRoom = require(script.Parent.Suite)
 
 local Build = {}
 
@@ -35,6 +36,7 @@ function Build.run(): Folder
 	BoutiqueRoom.build(root)
 	VaultRoom.build(root)
 	Terrace.build(root)
+	SuiteRoom.build(root)
 	root.Parent = Workspace
 	return root
 end

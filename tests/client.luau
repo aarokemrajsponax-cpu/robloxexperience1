@@ -1581,6 +1581,59 @@ advance(1.5)
 check("and empties them when you leave", workspace.MaisonLocal:FindFirstChild("Vault") == nil)
 check("no errors in the Register and the Vault", #errors == 0, errors[1])
 
+-- The Suite: your own furniture, drawn only for you; the Gold Key rooms; nobody else in it.
+serverSays("Shop", { op = "state", owned = { "suite_rug_black" }, equipped = {}, gilt = 800, goldKey = false, credits = {}, suite = { rug = "suite_rug_black" }, ledger = { page = 2, pages = 50, progress = 0.1, leather = false, term = "2026-autumn" } })
+advance(0.5)
+local SuiteLayout = Layout.Suite
+root.Position = SuiteLayout.arrival + Vector3.new(0, 3, 0)
+root.CFrame = CFrame.new(SuiteLayout.arrival + Vector3.new(0, 3, 0))
+advance(1)
+local suiteFolder = workspace.MaisonLocal:FindFirstChild("Suite")
+check("walking into the Suite draws your furniture", suiteFolder ~= nil and suiteFolder:FindFirstChild("rug") ~= nil and suiteFolder:FindFirstChild("sofa") ~= nil)
+check("the house's own pieces fill the spots you haven't", suiteFolder ~= nil and #suiteFolder:GetChildren() == 4, suiteFolder and #suiteFolder:GetChildren())
+local alcove = CollectionService:GetTagged("SuiteAlcove")[1]
+check("without the Gold Key its rooms stay shut", alcove ~= nil and alcove.CanCollide == true)
+serverSays("Shop", { op = "state", owned = { "suite_rug_black", "suite_mirror_gilt" }, equipped = {}, gilt = 800, goldKey = true, credits = {}, suite = { rug = "suite_rug_black", mirror = "suite_mirror_gilt" }, ledger = { page = 2, pages = 50, progress = 0.1, leather = false, term = "2026-autumn" } })
+advance(0.5)
+suiteFolder = workspace.MaisonLocal:FindFirstChild("Suite")
+check("with the Gold Key its rooms open", alcove.CanCollide == false and alcove.LocalTransparencyModifier == 1)
+check("and the Dressing Room's glass stands", suiteFolder ~= nil and suiteFolder:FindFirstChild("mirror") ~= nil)
+invokeResults.ShopAsk = {
+	rooms = { main = "The Suite", dressing = "The Dressing Room", study = "The Study" },
+	spots = {
+		{ id = "rug", name = "The rug", room = "main", open = true, house = true, placed = "suite_rug_black", options = { { id = "suite_rug_black", name = "Black Fringed Rug", owned = true }, { id = "suite_rug_persian", name = "Night Garden Rug", owned = false } } },
+		{ id = "desk", name = "The Study: the desk", room = "study", open = false, house = false, placed = "", options = {} },
+	},
+}
+serverSays("Shop", { op = "open", panel = "suite" })
+advance(1)
+check("the bell opens the Suite's furnishing", textOnScreen("Your Suite") ~= nil and textOnScreen("Black Fringed Rug") ~= nil)
+check("pieces not yet yours say where they come from", textOnScreen("800 Gilt, in the Boutique") ~= nil)
+check("closed rooms say so", textOnScreen("Opens with the Gold Key") ~= nil)
+invokeResults.ShopAsk = { ok = true }
+local placeBefore = 0
+for _, sm in sent do
+	if sm.remote == "ShopAsk" and sm.message[1] and sm.message[1].op == "place" then
+		placeBefore += 1
+	end
+end
+check("› chooses the next piece", press("›"))
+advance(0.5)
+local lastPlace
+for _, sm in sent do
+	if sm.remote == "ShopAsk" and sm.message[1] and sm.message[1].op == "place" then
+		lastPlace = sm.message[1]
+	end
+end
+check("and places it", lastPlace ~= nil and lastPlace.spot == "rug" and lastPlace.id == "", lastPlace and lastPlace.id)
+Root2.close()
+advance(0.5)
+root.Position = Vector3.new(0, 5, -40)
+root.CFrame = CFrame.new(0, 5, -40)
+advance(1)
+check("leaving the Suite puts it away", workspace.MaisonLocal:FindFirstChild("Suite") == nil)
+check("no errors in the Suite", #errors == 0, errors[1])
+
 ---------------------------------------------------------------------------------------------------
 -- 8. A respawn hands straight back to the follow camera
 ---------------------------------------------------------------------------------------------------

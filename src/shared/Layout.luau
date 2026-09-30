@@ -181,6 +181,37 @@ Layout.Terrace = {
 	arrival = Vector3.new(34, 22, 54),
 }
 
+-- Your Suite (§3): on the Velvet Room's roof, through a door in the Club hall's west wall and
+-- down a short corridor. The main room, and two more (the Dressing Room and the Study) that open
+-- with the Gold Key. Every spot's frame faces the way the piece faces.
+Layout.Suite = {
+	zone = box(-78, 21.5, 38, -22, 40, 62), -- above the Velvet Room's ceiling
+	floorY = 22,
+	height = 12,
+	main = { minX = -62, maxX = -36, minZ = 40, maxZ = 60 },
+	dressing = { minX = -76, maxX = -62, minZ = 50, maxZ = 60, door = Vector3.new(-62, 22, 55) },
+	study = { minX = -76, maxX = -62, minZ = 40, maxZ = 50, door = Vector3.new(-62, 22, 45) },
+	door = Vector3.new(-21, 20, 54), -- in the Club hall's west wall (x -22..-20)
+	doorWidth = 5,
+	doorHeight = 10,
+	arrival = Vector3.new(-39, 22, 54),
+	spots = {
+		sofa = CFrame.lookAt(Vector3.new(-49, 22, 45), Vector3.new(-49, 22, 60)),
+		chair = CFrame.lookAt(Vector3.new(-42.5, 22, 51), Vector3.new(-60, 22, 51)),
+		rug = CFrame.new(-49, 22, 51),
+		lamp = CFrame.new(-43, 22, 44.5),
+		painting = CFrame.lookAt(Vector3.new(-49, 30.5, 59.6), Vector3.new(-49, 30.5, 40)),
+		bar = CFrame.lookAt(Vector3.new(-57, 22, 41.2), Vector3.new(-57, 22, 60)),
+		shelf = CFrame.lookAt(Vector3.new(-58, 22, 59.2), Vector3.new(-58, 22, 40)),
+		mirror = CFrame.lookAt(Vector3.new(-75.4, 22, 55), Vector3.new(-60, 22, 55)),
+		chaise = CFrame.lookAt(Vector3.new(-69, 22, 58.2), Vector3.new(-69, 22, 40)),
+		desk = CFrame.lookAt(Vector3.new(-71, 22, 45), Vector3.new(-60, 22, 45)),
+		globe = CFrame.new(-66, 22, 41.8),
+	} :: { [string]: CFrame },
+	furnish = CFrame.lookAt(Vector3.new(-38, 22, 58.8), Vector3.new(-38, 22, 40)), -- the bell to furnish
+	wardrobe = CFrame.lookAt(Vector3.new(-40, 22, 40.8), Vector3.new(-40, 22, 60)), -- your looks hang here
+}
+
 Layout.Library = {
 	zone = box(-36, 18, 68, 2, 40, 100),
 	minX = -36, maxX = 2, minZ = 68, maxZ = 100, height = 16, -- behind the hall's north wall (z 66..68)
@@ -255,11 +286,13 @@ function Layout.inBox(b: Box, p: Vector3): boolean
 	return p.X >= b.min.X and p.X <= b.max.X and p.Y >= b.min.Y and p.Y <= b.max.Y and p.Z >= b.min.Z and p.Z <= b.max.Z
 end
 
-export type ZoneName = "street" | "foyer" | "salon" | "velvet" | "obsidian" | "midnight" | "club" | "library" | "ballroom" | "boutique" | "vault" | "terrace" | "none"
+export type ZoneName = "street" | "foyer" | "salon" | "velvet" | "obsidian" | "midnight" | "club" | "library" | "ballroom" | "boutique" | "vault" | "terrace" | "suite" | "none"
 
 function Layout.zoneAt(p: Vector3): ZoneName
 	if Layout.inBox(Layout.Terrace.zone, p) then
 		return "terrace"
+	elseif Layout.inBox(Layout.Suite.zone, p) then
+		return "suite"
 	elseif Layout.inBox(Layout.Salon.zone, p) then
 		return "salon"
 	elseif Layout.inBox(Layout.Velvet.zone, p) then

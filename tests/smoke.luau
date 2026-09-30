@@ -848,6 +848,40 @@ do
 	check("flowers on the lectern in every season", maison.SeasonDress:FindFirstChild("Blooms") ~= nil)
 end
 
+---------------------------------------------------------------------------------------------------
+-- The Suite: through the Club hall's west door, the drawing room, the Gold Key rooms shut
+---------------------------------------------------------------------------------------------------
+do
+	local S = Layout.Suite
+	table.clear(solids)
+	for _, d in maison:GetDescendants() do
+		if d:IsA("BasePart") and d.CanCollide and not d:IsA("Seat") then
+			table.insert(solids, d)
+		end
+	end
+	local CLUB = Layout.CLUB
+	local why = walk({ { Vector3.new(-12, 0, S.door.Z), CLUB }, { Vector3.new(-21.5, 0, S.door.Z), CLUB } }, 0.9)
+		or walk({ { Vector3.new(-25, 0, S.door.Z), S.floorY }, { S.arrival, S.floorY }, { Vector3.new(-40, 0, 48), S.floorY }, { Vector3.new(-53, 0, 49), S.floorY } }, 0.9)
+	check("a guest can walk from the Club hall into their Suite", why == nil, why)
+	check("the Suite is its own space", Layout.zoneAt(S.arrival + Vector3.new(0, 3, 0)) == "suite")
+	check("the Velvet Room below is still the Velvet Room", Layout.zoneAt(Layout.Velvet.arrival + Vector3.new(0, 3, 0)) == "velvet")
+	local shut = walk({ { Vector3.new(-58, 0, S.dressing.door.Z), S.floorY }, { Vector3.new(-66, 0, S.dressing.door.Z), S.floorY } }, 0.9)
+	check("the Dressing Room is shut to the world (each holder's screen opens it)", shut ~= nil and string.find(shut, "AlcoveDoor", 1, true) ~= nil, shut)
+	local found = {}
+	for _, d in maison:GetDescendants() do
+		if d:IsA("ProximityPrompt") then
+			found[d.Name] = true
+		end
+	end
+	check("the Suite's bell furnishes it", found.FurnishPrompt == true and #CollectionService.GetTagged(CollectionService, "SuiteFurnish") == 1)
+	check("and your looks hang in its wardrobe", found.SuiteWardrobePrompt == true)
+	for spot, cf in S.spots do
+		local p = cf.Position
+		local inRoom = (p.X >= S.dressing.minX and p.X <= S.main.maxX and p.Z >= S.main.minZ and p.Z <= S.main.maxZ)
+		check("the Suite's " .. spot .. " stands inside the Suite", inRoom, p)
+	end
+end
+
 print(("\n%d passed, %d failed"):format(passed, failed))
 if failed > 0 then
 	process.exit(1)
