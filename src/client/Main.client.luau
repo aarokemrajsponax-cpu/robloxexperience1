@@ -59,6 +59,7 @@ Theme.onClick(Sound.ui)
 Root.onDip(Sound.dip)
 
 Closet.start()
+require(script.Parent.NotifyAsk).start()
 Sound.wornChime = function()
 	local style = Closet.style("chime")
 	return if style then style.sound else nil

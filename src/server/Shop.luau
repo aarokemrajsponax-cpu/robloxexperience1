@@ -485,6 +485,9 @@ local function onAsk(player: Player, request: unknown): any
 		return LedgerService.view(data)
 	elseif op == "register" then
 		return Shop.register(data)
+	elseif op == "notify" and (r.answer == "granted" or r.answer == "declined") then
+		Analytics.custom(player, if r.answer == "granted" then "Notification opt-in granted" else "Notification opt-in declined", nil, nil)
+		return { ok = true }
 	elseif op == "circle" then
 		return CircleService.view(player, data)
 	elseif op == "circleFound" then

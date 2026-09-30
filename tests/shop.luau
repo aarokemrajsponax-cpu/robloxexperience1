@@ -391,12 +391,14 @@ local services = {
 			local data = if name == "MaisonNoir_Mythics" then mythicCounts else (dataStores[name] or {})
 			dataStores[name] = data
 			return {
+				-- As on Roblox: returning nil cancels the write, and UpdateAsync returns nil.
 				UpdateAsync = function(_, key, fn)
 					local new = fn(data[key])
-					if new ~= nil then
-						data[key] = new
+					if new == nil then
+						return nil
 					end
-					return data[key]
+					data[key] = new
+					return new
 				end,
 				GetAsync = function(_, key)
 					return data[key]
@@ -1201,6 +1203,37 @@ check("leaving a Circle", askAs(lee, { op = "circleLeave" }).ok and profiles[lee
 askAs(kit, { op = "circleLeave" })
 askAs(jo, { op = "circleLeave" })
 check("the last one out gives the crest back", askAs(kit, { op = "circleFound", choice = { adjective = 2, noun = 2, emblem = 3, colour = 2 } }).ok)
+
+---------------------------------------------------------------------------------------------------
+-- Notifications: one a day, only with a template, the Term's last three days
+---------------------------------------------------------------------------------------------------
+local Notify = module("ServerScriptService", "Server", "Notify")
+local posted = {}
+Notify.post = function(userId, messageId, params, launch, category)
+	table.insert(posted, { userId = userId, messageId = messageId, params = params, launch = launch, category = category })
+	return true
+end
+local sentOk
+run(function()
+	sentOk = Notify.send(501, "rivalPassed", { name = "Ada" }, "nightly")
+end)
+check("no template, no notification", sentOk == false and #posted == 0)
+Config.data.Notifications.messages.rivalPassed = "tmpl-rival"
+run(function()
+	sentOk = Notify.send(501, "rivalPassed", { name = "Ada" }, "nightly")
+end)
+check("a notification goes out with its template and landing spot", sentOk == true and #posted == 1 and posted[1].messageId == "tmpl-rival" and posted[1].launch == "nightly" and posted[1].params.name == "Ada")
+run(function()
+	sentOk = Notify.send(501, "rivalPassed", { name = "Ada" }, "nightly")
+end)
+check("at most one a day", sentOk == false and #posted == 1)
+run(function()
+	sentOk = Notify.send(502, "rivalPassed", { name = "Ada" }, "nightly")
+end)
+check("another guest can still hear today", sentOk == true and #posted == 2)
+check("the Term's last three days", (Notify.termEnding(os.time({ year = 2026, month = 11, day = 29, hour = 12 }))) == true)
+check("but not before", (Notify.termEnding(os.time({ year = 2026, month = 11, day = 20, hour = 12 }))) == false)
+Config.data.Notifications.messages.rivalPassed = ""
 
 print(string.format("%d passed, %d failed", passed, failed))
 if failed > 0 then

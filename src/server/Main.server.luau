@@ -23,6 +23,10 @@ Dialogue.start()
 -- A Private Evening (a private server): records off, the host arranges the Ballroom.
 require(script.Parent.Private).publish()
 
+-- Notifications (Open Cloud; the key lives in the experience's secrets).
+local Notify = require(script.Parent.Notify)
+Notify.start()
+
 -- Circles: the week's top Circles on the boards, the crest on nameplates.
 local CircleService = require(script.Parent.CircleService)
 
@@ -186,6 +190,20 @@ local function rivalsAfter(player: Player?)
 end
 TableService.onNightlyFinished = function(player, percentile)
 	rivalsAfter(player)
+	-- Notifications: the rival hears if they've been passed; a first Nightly is the moment to ask.
+	task.spawn(function()
+		local data = require(script.Parent.Profiles).get(player)
+		if not data then
+			return
+		end
+		local info = Rivals.info(player)
+		Notify.rivalPassed(player, data.rival.userId, info ~= nil and info.ahead)
+		if not data.flags.notifyAsked then
+			data.flags.notifyAsked = true
+			Remotes.event("Shop"):FireClient(player, { op = "askNotify" })
+			Analytics.custom(player, "Notification opt-in asked", nil, nil)
+		end
+	end)
 	CircleService.add(player, "nightly", percentile)
 	LedgerService.add(player, "nightly")
 	Collection.nightly(player)

@@ -229,6 +229,19 @@ local defaults = {
 		storeName = "MaisonNoir_Circles",
 	},
 
+	-- Notifications (§13): Roblox experience notifications, for opted-in guests aged 13+. Asked
+	-- for only after a first Nightly; at most one a day. Sent through Open Cloud with an API key kept
+	-- in the experience's secrets (never in code), using message templates made on the Creator
+	-- Dashboard. With no template id set, that kind isn't sent.
+	Notifications = {
+		enabled = true,
+		secret = "OpenCloudNotifications", -- the secret's name in the experience's secrets store
+		messages = { rivalPassed = "", soiree = "", termEnding = "" }, -- template ids
+		recentDays = 14, -- guests seen this recently hear about the Soirée and the Term's end
+		maxBatch = 500, -- per Soirée or Term, from the one server that claims the job
+		checkSeconds = 600,
+	},
+
 	-- The Black Card (§12, Appendix I): a monthly subscription. The Leather-Bound Ledger while it's
 	-- held, one cardholder look each month to keep, and a black-lacquer nameplate while active.
 	BlackCard = {
