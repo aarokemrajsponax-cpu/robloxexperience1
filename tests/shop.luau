@@ -171,6 +171,13 @@ local function newGuest(name: string, userId: number)
 		root = root,
 		inbox = {},
 		CharacterAdded = signal(),
+		attrs = {},
+		SetAttribute = function(self, k, v)
+			self.attrs[k] = v
+		end,
+		GetAttribute = function(self, k)
+			return self.attrs[k]
+		end,
 	}
 end
 
@@ -319,6 +326,7 @@ function taskShimDelay(t, fn)
 end
 
 local shopEvents = {}
+local broadcasts = {}
 local customEvents = {}
 local stubs = {
 	["ReplicatedStorage.Shared.Remotes"] = function()
@@ -329,7 +337,9 @@ local stubs = {
 					FireClient = function(_, player, message)
 						table.insert(player.inbox, message)
 					end,
-					FireAllClients = function() end,
+					FireAllClients = function(_, message)
+						table.insert(broadcasts, { remote = name, message = message })
+					end,
 					OnServerEvent = signal(),
 				}
 			end,
@@ -1234,6 +1244,77 @@ check("another guest can still hear today", sentOk == true and #posted == 2)
 check("the Term's last three days", (Notify.termEnding(os.time({ year = 2026, month = 11, day = 29, hour = 12 }))) == true)
 check("but not before", (Notify.termEnding(os.time({ year = 2026, month = 11, day = 20, hour = 12 }))) == false)
 Config.data.Notifications.messages.rivalPassed = ""
+
+---------------------------------------------------------------------------------------------------
+-- Salutes: bought for the whole house; the giver's star; a short queue; always-on shelf
+---------------------------------------------------------------------------------------------------
+local SaluteService = module("ServerScriptService", "Server", "SaluteService")
+local notes = {}
+SaluteService.note = function(text, everywhere)
+	table.insert(notes, { text = text, everywhere = everywhere })
+end
+local mo = guest("Mo", 13)
+local sh = askAs(mo, { op = "shelves" })
+check("the Boutique always has its staples", sh.always and #sh.always == 7, sh.always and #sh.always)
+check("the staples aren't also in the rotation", (function()
+	for _, c in sh.today do
+		for _, a in sh.always do
+			if a.id == c.id then
+				return false
+			end
+		end
+	end
+	return true
+end)())
+check("a staple can always be bought", askAs(mo, { op = "buy", item = sh.always[1].id }).ok ~= nil)
+check("salutes are listed", sh.salutes and #sh.salutes == 5 and sh.salutes[1].ready == false)
+check("an unset salute isn't offered", not askAs(mo, { op = "salute", id = "goldLeaf" }).ok)
+Config.data.Products.salute_goldLeaf = 7001
+Config.data.Products.salute_grand = 7005
+local promptsBefore2 = #prompts
+check("a salute asks Roblox for the product", askAs(mo, { op = "salute", id = "goldLeaf" }).ok and #prompts == promptsBefore2 + 1 and prompts[#prompts].id == 7001)
+local broadcastsBefore = #broadcasts
+receipt(mo, 7001, "SAL-1")
+advance(0.5)
+local played
+for i = broadcastsBefore + 1, #broadcasts do
+	if broadcasts[i].remote == "Salute" then
+		played = broadcasts[i].message
+	end
+end
+check("everyone in the house sees the salute", played ~= nil and played.id == "goldLeaf" and played.by == "Mo" and played.effects[1] == "goldLeaf")
+check("with the giver's name", played ~= nil and string.find(played.line, "Mo showered the house", 1, true) ~= nil)
+check("the Tonight board hears of it (this house only)", #notes >= 1 and notes[#notes].everywhere == false)
+check("the giver carries a gold star", type(mo:GetAttribute("BenefactorUntil")) == "number" and mo:GetAttribute("BenefactorUntil") > fakeOs.time())
+check("no Gilt changes hands", profiles[mo].Data.gilt == 0)
+receipt(mo, 7001, "SAL-1")
+advance(0.5)
+local count1 = 0
+for _, b in broadcasts do
+	if b.remote == "Salute" then
+		count1 += 1
+	end
+end
+check("a receipt plays once, however often Roblox asks", count1 == 1, count1)
+receipt(mo, 7005, "SAL-2")
+advance(25)
+check("the Grand Salute is announced in every house", notes[#notes].everywhere == true and string.find(notes[#notes].text, "Grand Salute", 1, true) ~= nil)
+check("and plays all four", (function()
+	for i = #broadcasts, 1, -1 do
+		if broadcasts[i].remote == "Salute" then
+			return #broadcasts[i].message.effects == 4
+		end
+	end
+	return false
+end)())
+for i = 1, 6 do
+	SaluteService.play(nil, "goldLeaf", "The house")
+end
+check("a few salutes wait their turn, then the queue is full", SaluteService.full() and not askAs(mo, { op = "salute", id = "goldLeaf" }).ok)
+advance(200)
+check("and it empties as they play", SaluteService.waiting() == 0)
+Config.data.Products.salute_goldLeaf = 0
+Config.data.Products.salute_grand = 0
 
 print(string.format("%d passed, %d failed", passed, failed))
 if failed > 0 then

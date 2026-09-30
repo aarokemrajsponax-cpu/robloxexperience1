@@ -17,6 +17,7 @@ Remotes.Events = {
 	"Funnel", -- client -> server first-evening funnel steps that only the client can see
 	"Board", -- server -> client leaderboard refresh
 	"Shop", -- server -> client: what you own and wear, Gilt, the Ledger, gifts
+	"Salute", -- server -> client: a salute for the whole house; the owner's events
 }
 
 Remotes.Functions = {

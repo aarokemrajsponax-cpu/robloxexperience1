@@ -23,6 +23,7 @@ export type Item = {
 	gilt: number?, -- a Gilt price
 	standing: string?, -- the House Standing needed to buy it
 	season: string?, -- a season collection piece: sold only in its season
+	always: boolean?, -- always on the Boutique's shelves ("Always in the house"), not in the rotation
 	style: { [string]: any },
 }
 
@@ -49,7 +50,10 @@ local SILVER = rgb(186, 190, 198)
 
 local items: { Item } = {
 	-- Table styles: the felt and the case rims of whichever table you sit at.
-	{ id = "table_oxblood", name = "Oxblood Felt", kind = "table", source = "boutique", robux = 249, line = "Deep red felt, gold rims.", style = { felt = rgb(74, 18, 26), rim = GOLD } },
+	{ id = "table_oxblood", name = "Oxblood Felt", kind = "table", source = "boutique", robux = 249, always = true, line = "Deep red felt, gold rims.", style = { felt = rgb(74, 18, 26), rim = GOLD } },
+	{ id = "table_sapphire", name = "Sapphire Silk", kind = "table", source = "boutique", robux = 299, line = "Blue silk, silver rims.", style = { felt = rgb(20, 40, 90), rim = SILVER } },
+	{ id = "table_rose", name = "Rose Velvet", kind = "table", source = "boutique", robux = 349, line = "Dusky rose, gold rims.", style = { felt = rgb(112, 46, 60), rim = GOLD } },
+	{ id = "table_gilded", name = "Gilded Baize", kind = "table", source = "boutique", robux = 599, line = "Bronze baize, rims of pale gold. The finest table in the house.", style = { felt = rgb(64, 50, 22), rim = rgb(250, 222, 150) } },
 	{ id = "table_ivory", name = "Ivory Felt", kind = "table", source = "boutique", robux = 349, line = "Pale felt that makes every piece read.", style = { felt = rgb(214, 204, 186), rim = GOLD } },
 	{ id = "table_midnight", name = "Midnight Baize", kind = "table", source = "boutique", robux = 449, line = "Ink-blue baize and silver rims.", style = { felt = rgb(18, 24, 52), rim = SILVER } },
 	{ id = "table_emerald", name = "Emerald Club", kind = "table", source = "gilt", gilt = 2000, line = "The old club green.", style = { felt = rgb(16, 52, 36), rim = GOLD } },
@@ -60,7 +64,9 @@ local items: { Item } = {
 	-- Lamp styles: the colour of your table's lamp (Ballroom lamp styles, Appendix I3).
 	{ id = "lamp_rose", name = "Rose Glass", kind = "lamp", source = "boutique", robux = 149, line = "A lamp with a blush in it.", style = { colour = rgb(255, 196, 196) } },
 	{ id = "lamp_moon", name = "Moonlight", kind = "lamp", source = "boutique", robux = 149, line = "Cool and silver.", style = { colour = rgb(206, 222, 255) } },
-	{ id = "lamp_candle", name = "Candlelight", kind = "lamp", source = "boutique", robux = 149, line = "Warm as a candle.", style = { colour = rgb(255, 188, 120) } },
+	{ id = "lamp_emerald", name = "Emerald Glass", kind = "lamp", source = "boutique", robux = 149, line = "The green of an old club.", style = { colour = rgb(170, 240, 200) } },
+	{ id = "lamp_amber", name = "Amber", kind = "lamp", source = "boutique", robux = 149, line = "Honey-coloured, low and warm.", style = { colour = rgb(255, 170, 90) } },
+	{ id = "lamp_candle", name = "Candlelight", kind = "lamp", source = "boutique", robux = 149, always = true, line = "Warm as a candle.", style = { colour = rgb(255, 188, 120) } },
 	{ id = "lamp_absinthe", name = "Absinthe", kind = "lamp", source = "boutique", robux = 149, line = "A faint green, very late.", style = { colour = rgb(212, 246, 196) } },
 
 	-- Chimes: the sound of a correct filing (need an uploaded sound in Config.Assets.Sounds.chimes).
@@ -70,7 +76,10 @@ local items: { Item } = {
 	{ id = "chime_glass", name = "The Glass Harmonica", kind = "chime", source = "boutique", robux = 99, line = "A wet finger on crystal.", style = { sound = "glass" } },
 
 	-- Guide trails: the colour of the thread that shows the way.
-	{ id = "trail_champagne", name = "Champagne", kind = "trail", source = "boutique", robux = 79, line = "Pale gold and fizzing.", style = { colour = rgb(246, 226, 170) } },
+	{ id = "trail_onyx", name = "Onyx Smoke", kind = "trail", source = "boutique", robux = 79, line = "A grey thread, like smoke.", style = { colour = rgb(120, 120, 132) } },
+	{ id = "trail_ruby", name = "Ruby", kind = "trail", source = "boutique", robux = 99, line = "A red thread, bright as a stone.", style = { colour = rgb(224, 64, 84) } },
+	{ id = "trail_aurora", name = "Aurora", kind = "trail", source = "boutique", robux = 149, line = "Green-white, like northern light.", style = { colour = rgb(150, 255, 214) } },
+	{ id = "trail_champagne", name = "Champagne", kind = "trail", source = "boutique", robux = 79, always = true, line = "Pale gold and fizzing.", style = { colour = rgb(246, 226, 170) } },
 	{ id = "trail_sapphire", name = "Sapphire", kind = "trail", source = "boutique", robux = 99, line = "A deep blue thread.", style = { colour = rgb(96, 136, 232) } },
 	{ id = "trail_pearl", name = "Pearl", kind = "trail", source = "boutique", robux = 149, line = "White with a sheen of colour.", style = { colour = rgb(244, 240, 232) } },
 	{ id = "trail_rosegold", name = "Rose Gold", kind = "trail", source = "gilt", gilt = 800, line = "Copper warmed with pink.", style = { colour = rgb(232, 170, 146) } },
@@ -78,7 +87,9 @@ local items: { Item } = {
 	{ id = "trail_ember", name = "Ember", kind = "trail", source = "gilt", gilt = 800, line = "The last of the fire.", style = { colour = rgb(236, 128, 76) } },
 
 	-- Nameplate frames: the plate over your head.
-	{ id = "plate_silver", name = "Engraved Silver", kind = "nameplate", source = "boutique", robux = 99, line = "A plate of hand-engraved silver.", style = { frame = SILVER, fill = rgb(20, 22, 26) } },
+	{ id = "plate_filigree", name = "Gold Filigree", kind = "nameplate", source = "boutique", robux = 149, line = "Fine gold wire on black.", style = { frame = GOLD, fill = rgb(26, 20, 12), line = rgb(250, 230, 170) } },
+	{ id = "plate_enamel", name = "Midnight Enamel", kind = "nameplate", source = "boutique", robux = 99, line = "Blue enamel, a silver edge.", style = { frame = SILVER, fill = rgb(14, 20, 44) } },
+	{ id = "plate_silver", name = "Engraved Silver", kind = "nameplate", source = "boutique", robux = 99, always = true, line = "A plate of hand-engraved silver.", style = { frame = SILVER, fill = rgb(20, 22, 26) } },
 	{ id = "plate_onyx", name = "Onyx Rim", kind = "nameplate", source = "boutique", robux = 99, line = "Black stone, a hairline of gold.", style = { frame = rgb(24, 24, 26), fill = rgb(10, 10, 12), line = GOLD } },
 	{ id = "plate_pearl", name = "Pearl Inlay", kind = "nameplate", source = "boutique", robux = 99, line = "Mother of pearl, set in brass.", style = { frame = rgb(232, 226, 214), fill = rgb(30, 28, 26) } },
 	{ id = "plate_blackcard", name = "The Black Lacquer Nameplate", kind = "nameplate", source = "blackCard", line = "While you hold the Black Card.", style = { frame = rgb(58, 54, 60), fill = rgb(4, 4, 6), line = rgb(232, 226, 214) } },
@@ -87,10 +98,14 @@ local items: { Item } = {
 	-- Round-card backs: the card that lands on the felt between rounds.
 	{ id = "card_damask", name = "Damask", kind = "card", source = "boutique", robux = 99, line = "A woven pattern in burgundy.", style = { back = rgb(62, 18, 28), pattern = "damask" } },
 	{ id = "card_pinstripe", name = "Pinstripe", kind = "card", source = "boutique", robux = 99, line = "Charcoal with a fine chalk stripe.", style = { back = rgb(34, 34, 38), pattern = "pinstripe" } },
-	{ id = "card_monogram", name = "Monogram", kind = "card", source = "boutique", robux = 99, line = "The house initials, repeated.", style = { back = rgb(20, 18, 14), pattern = "monogram" } },
+	{ id = "card_deco", name = "Art Deco", kind = "card", source = "boutique", robux = 99, line = "Teal and gold, in fine stripes.", style = { back = rgb(16, 40, 44), pattern = "pinstripe" } },
+	{ id = "card_marble", name = "White Marble", kind = "card", source = "boutique", robux = 99, line = "Pale stone, veined.", style = { back = rgb(226, 220, 208), pattern = "damask" } },
+	{ id = "card_monogram", name = "Monogram", kind = "card", source = "boutique", robux = 99, always = true, line = "The house initials, repeated.", style = { back = rgb(20, 18, 14), pattern = "monogram" } },
 
 	-- Victory flourishes: a Library win, and the last lamp in the Ballroom.
-	{ id = "flourish_leaf", name = "Gold Leaf", kind = "flourish", source = "boutique", robux = 149, line = "Flakes of gold leaf, drifting.", style = { colour = rgb(236, 206, 120), kind = "leaf" } },
+	{ id = "flourish_stardust", name = "Stardust", kind = "flourish", source = "boutique", robux = 199, line = "A drift of cold silver light.", style = { colour = rgb(200, 220, 255), kind = "leaf" } },
+	{ id = "flourish_petals", name = "Rose Petals", kind = "flourish", source = "boutique", robux = 199, line = "Petals falling on the felt.", style = { colour = rgb(240, 150, 170), kind = "leaf" } },
+	{ id = "flourish_leaf", name = "Gold Leaf", kind = "flourish", source = "boutique", robux = 149, always = true, line = "Flakes of gold leaf, drifting.", style = { colour = rgb(236, 206, 120), kind = "leaf" } },
 	{ id = "flourish_snuff", name = "Candle Snuff", kind = "flourish", source = "boutique", robux = 199, line = "A curl of smoke and a spark.", style = { colour = rgb(220, 214, 206), kind = "snuff" } },
 	{ id = "flourish_spray", name = "Champagne", kind = "flourish", source = "boutique", robux = 249, line = "A spray of pale gold.", style = { colour = rgb(250, 232, 176), kind = "spray" } },
 
@@ -132,7 +147,10 @@ local items: { Item } = {
 	{ id = "suite_rug_persian", name = "Night Garden Rug", kind = "suite", source = "gilt", gilt = 800, line = "Deep reds, knotted by hand.", style = { spot = "rug", colour = rgb(96, 24, 28), accent = rgb(196, 150, 80) } },
 	{ id = "suite_rug_black", name = "Black Fringed Rug", kind = "suite", source = "gilt", gilt = 400, line = "Black wool, a gold border.", style = { spot = "rug", colour = rgb(14, 14, 16), accent = GOLD } },
 	{ id = "suite_painting_portrait", name = "A Portrait of a Stranger", kind = "suite", source = "gilt", gilt = 1200, line = "Nobody knows who sat for it.", style = { spot = "painting", colour = rgb(70, 46, 34), accent = GOLD } },
-	{ id = "suite_painting_skyline", name = "The City at Three", kind = "suite", source = "boutique", robux = 99, line = "Lit windows, one by one.", style = { spot = "painting", colour = rgb(16, 22, 44), accent = rgb(216, 186, 120) } },
+	{ id = "suite_painting_ballroom", name = "The Last Lamp", kind = "suite", source = "boutique", robux = 149, line = "A painting of one table still lit.", style = { spot = "painting", colour = rgb(30, 22, 18), accent = GOLD } },
+	{ id = "suite_rug_moon", name = "Moonlit Rug", kind = "suite", source = "boutique", robux = 149, line = "Ink blue, a silver border.", style = { spot = "rug", colour = rgb(20, 24, 48), accent = rgb(200, 206, 214) } },
+	{ id = "suite_lamp_crystal", name = "Crystal Lamp", kind = "suite", source = "boutique", robux = 99, line = "Cut glass, cold white light.", style = { spot = "lamp", colour = rgb(230, 240, 255), accent = rgb(200, 206, 214) } },
+	{ id = "suite_painting_skyline", name = "The City at Three", kind = "suite", source = "boutique", robux = 99, always = true, line = "Lit windows, one by one.", style = { spot = "painting", colour = rgb(16, 22, 44), accent = rgb(216, 186, 120) } },
 	{ id = "suite_lamp_brass", name = "Brass Floor Lamp", kind = "suite", source = "gilt", gilt = 300, line = "A pleated silk shade.", style = { spot = "lamp", colour = rgb(236, 214, 170), accent = GOLD } },
 	{ id = "suite_lamp_green", name = "Library Lamp", kind = "suite", source = "gilt", gilt = 450, line = "The green glass shade.", style = { spot = "lamp", colour = rgb(26, 90, 58), accent = GOLD } },
 	{ id = "suite_bar_walnut", name = "Walnut Drinks Cabinet", kind = "suite", source = "standing", gilt = 2000, standing = "Patron", line = "For Patrons of the house.", style = { spot = "bar", colour = rgb(66, 38, 24), accent = GOLD } },
@@ -216,11 +234,22 @@ function Wardrobe.deliverable(item: Item): boolean
 	return true
 end
 
+-- "Always in the house": the Boutique's permanent shelf, never out of stock.
+function Wardrobe.alwaysPool(): { Item }
+	local out = {}
+	for _, item in items do
+		if item.source == "boutique" and item.robux and item.always and Wardrobe.deliverable(item) then
+			table.insert(out, item)
+		end
+	end
+	return out
+end
+
 -- The Boutique's pool: everything sold for Robux in the rotation that can be delivered now.
 function Wardrobe.boutiquePool(): { Item }
 	local out = {}
 	for _, item in items do
-		if item.source == "boutique" and item.robux and Wardrobe.deliverable(item) then
+		if item.source == "boutique" and item.robux and not item.always and Wardrobe.deliverable(item) then
 			table.insert(out, item)
 		end
 	end

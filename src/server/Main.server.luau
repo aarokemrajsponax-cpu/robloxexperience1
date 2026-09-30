@@ -139,6 +139,9 @@ Dressing.crestOf = CircleService.crest
 Dressing.start()
 local Shop = require(script.Parent.Shop)
 CircleService.board = Boards.setCircles
+local SaluteService = require(script.Parent.SaluteService)
+SaluteService.note = Boards.note
+SaluteService.benefactor = Dressing.nameplate
 CircleService.changed = function(player)
 	Dressing.nameplate(player)
 	Shop.push(player)

@@ -175,7 +175,44 @@ local function render()
 		order += 1
 		return order
 	end
-	if currentTab == "today" or currentTab == "week" then
+	if currentTab == "always" then
+		note(frame, "Always in the house: the staples, never out of stock.", add())
+		for _, c in s.always or {} do
+			row(frame, c, add(), "robux")
+		end
+	elseif currentTab == "salutes" then
+		note(frame, "A moment for the whole house. Everyone sees it and hears who gave it; your name goes on the Tonight board, and a gold star sits on your nameplate for half an hour. It changes no score and gives no Gilt.", add())
+		if (s.saluteWaiting or 0) > 0 then
+			note(frame, string.format("%d salute%s playing or waiting its turn.", s.saluteWaiting, if s.saluteWaiting == 1 then "" else "s"), add())
+		end
+		for _, sa in s.salutes or {} do
+			local r = Instance.new("Frame")
+			r.BackgroundColor3 = Color3.fromRGB(16, 16, 20)
+			r.BackgroundTransparency = 0.35
+			r.Size = UDim2.new(1, 0, 0, 76)
+			r.LayoutOrder = add()
+			r.Parent = frame
+			local texts = Instance.new("Frame")
+			texts.BackgroundTransparency = 1
+			texts.Position = UDim2.fromOffset(14, 8)
+			texts.Size = UDim2.new(1, -14 - 170, 1, -16)
+			texts.Parent = r
+			Theme.list(texts, 2).HorizontalAlignment = Enum.HorizontalAlignment.Left
+			Theme.text(texts, sa.name, 17, "display", { LayoutOrder = 1, TextXAlignment = Enum.TextXAlignment.Left })
+			Theme.text(texts, sa.line or "", 12, "body", { LayoutOrder = 2, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Brand.Colours.smoke, TextWrapped = true })
+			if sa.ready then
+				local k = Theme.key(r, robux(sa.price), true, function()
+					after(Closet.ask({ op = "salute", id = sa.id }))
+				end, 150)
+				k.AnchorPoint = Vector2.new(1, 0.5)
+				k.Position = UDim2.new(1, -10, 0.5, 0)
+				k.Size = UDim2.fromOffset(150, 36)
+			else
+				local t = Theme.text(r, "Soon", 12, "caps", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -14, 0.5, 0) })
+				t.TextColor3 = Brand.Colours.dim
+			end
+		end
+	elseif currentTab == "today" or currentTab == "week" then
 		local cards = if currentTab == "today" then s.today else s.featured
 		note(frame, if currentTab == "today" then "Six pieces, changed at midnight." else "Two pieces for the whole week.", add())
 		for _, c in cards do
@@ -284,12 +321,14 @@ function BoutiquePanel.open(tab: string?)
 	Theme.list(tabs, 6, true).HorizontalAlignment = Enum.HorizontalAlignment.Left
 	tabKeys = {}
 	local specs = {
+		{ "always", "Always here" },
 		{ "today", "Today" },
 		{ "week", "This week" },
 		{ "season", "In season" },
 		{ "gilt", "For Gilt" },
 		{ "goldKey", "The Gold Key" },
 		{ "ledger", "The Ledger" },
+		{ "salutes", "Salutes" },
 		{ "introduction", "The Introduction" },
 	}
 	for i, spec in specs do

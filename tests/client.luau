@@ -1637,6 +1637,29 @@ advance(1)
 check("leaving the Suite puts it away", workspace.MaisonLocal:FindFirstChild("Suite") == nil)
 check("no errors in the Suite", #errors == 0, errors[1])
 
+-- A Salute: everyone sees it, and who gave it.
+serverSays("Salute", { op = "salute", id = "grand", by = "Ben", userId = 1, seconds = 6, effects = { "goldLeaf", "encore", "chandelier", "fireworks" }, line = "Ben gave the house the Grand Salute." })
+advance(2)
+check("a salute names its giver", textOnScreen("Ben gave the house the Grand Salute") ~= nil)
+check("gold leaf drifts down", workspace.MaisonLocal:FindFirstChild("GoldLeaf") ~= nil)
+check("fireworks over the house", workspace.MaisonLocal:FindFirstChild("Firework") ~= nil)
+check("the spotlight finds the giver", workspace.MaisonLocal:FindFirstChild("Spotlight") ~= nil)
+advance(14)
+check("and it all clears away", workspace.MaisonLocal:FindFirstChild("GoldLeaf") == nil and workspace.MaisonLocal:FindFirstChild("Spotlight") == nil)
+invokeResults.ShopAsk = {
+	always = {}, today = {}, featured = {}, gilt = {}, guests = {}, credits = {}, balance = 0, standing = "Guest",
+	season = { id = "autumn", name = "Autumn", pieces = {} },
+	goldKey = { owned = false }, ledger = { view = { term = "2026-autumn", page = 1, pages = 50, leather = false } },
+	salutes = { { id = "goldLeaf", name = "A Shower of Gold Leaf", line = "Gold leaf drifts down.", price = 49, ready = true } },
+	saluteWaiting = 0,
+}
+serverSays("Shop", { op = "open", panel = "salutes" })
+advance(1)
+check("the piano's card opens the Salutes", textOnScreen("A Shower of Gold Leaf") ~= nil and textOnScreen("changes no score") ~= nil)
+Root2.close()
+advance(0.5)
+check("no errors in a salute", #errors == 0, errors[1])
+
 ---------------------------------------------------------------------------------------------------
 -- 8. A respawn hands straight back to the follow camera
 ---------------------------------------------------------------------------------------------------

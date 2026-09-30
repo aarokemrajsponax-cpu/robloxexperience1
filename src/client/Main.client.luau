@@ -33,6 +33,7 @@ local BlackCardPanel = require(script.Parent.UI.BlackCardPanel)
 local SuitePanel = require(script.Parent.UI.SuitePanel)
 local CirclePanel = require(script.Parent.UI.CirclePanel)
 local SuiteView = require(script.Parent.World.SuiteView)
+local SaluteView = require(script.Parent.World.SaluteView)
 local WardrobePanel = require(script.Parent.UI.WardrobePanel)
 local LedgerPanel = require(script.Parent.UI.LedgerPanel)
 local GiftPanel = require(script.Parent.UI.GiftPanel)
@@ -81,6 +82,8 @@ Closet.Message:Connect(function(op: string, m: any)
 			SuitePanel.open()
 		elseif m.panel == "circles" then
 			CirclePanel.open()
+		elseif m.panel == "salutes" then
+			BoutiquePanel.open("salutes")
 		end
 	elseif op == "gift" and type(m.item) == "table" then
 		task.delay(2.5, GiftPanel.show, tostring(m.from), m.item)
@@ -102,6 +105,7 @@ Ambient.start()
 BallroomView.start()
 VaultView.start()
 SuiteView.start()
+SaluteView.start()
 StaffLife.start()
 
 -- Controls stay off until Play.

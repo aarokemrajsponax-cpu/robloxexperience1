@@ -14,12 +14,14 @@ local Boutique = require(ReplicatedStorage.Shared.Boutique)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Standing = require(ReplicatedStorage.Shared.Standing)
+local Salutes = require(ReplicatedStorage.Shared.Salutes)
 local Suite = require(ReplicatedStorage.Shared.Suite)
 local Wardrobe = require(ReplicatedStorage.Shared.Wardrobe)
 
 local Analytics = require(script.Parent.Analytics)
 local BlackCard = require(script.Parent.BlackCard)
 local CircleService = require(script.Parent.CircleService)
+local SaluteService = require(script.Parent.SaluteService)
 local Dressing = require(script.Parent.Dressing)
 local Gilt = require(script.Parent.Gilt)
 local LedgerService = require(script.Parent.LedgerService)
@@ -55,6 +57,9 @@ local function productId(key: string): number
 end
 
 local PRODUCT_KEYS = { "introduction", "ledger", "season" }
+for _, salute in Salutes.List do
+	table.insert(PRODUCT_KEYS, "salute_" .. salute.id)
+end
 for _, tier in Wardrobe.Tiers do
 	table.insert(PRODUCT_KEYS, "tier" .. tostring(tier))
 end
@@ -196,6 +201,16 @@ local function shelves(player: Player, data: Profiles.Data): { [string]: any }
 		intro = { price = livePrice(productId("introduction"), Enum.InfoType.Product), items = cards(introductionItems()) }
 	end
 	return {
+		always = cards(Boutique.always()),
+		salutes = (function()
+			local out = {}
+			for _, s in Salutes.List do
+				local id = productId("salute_" .. s.id)
+				table.insert(out, { id = s.id, name = s.name, line = s.line, price = livePrice(id, Enum.InfoType.Product), ready = id ~= 0 })
+			end
+			return out
+		end)(),
+		saluteWaiting = SaluteService.waiting(),
 		today = cards(Boutique.today()),
 		featured = cards(Boutique.featured()),
 		season = { id = season.id, name = season.name, price = livePrice(productId("season"), Enum.InfoType.Product), pieces = cards(seasonPieces) },
@@ -285,6 +300,8 @@ local function grant(player: Player, data: Profiles.Data, key: string)
 		for _, item in introductionItems() do
 			own(player, data, item)
 		end
+	elseif string.sub(key, 1, 7) == "salute_" then
+		SaluteService.play(player, string.sub(key, 8))
 	elseif key == "ledger" then
 		LedgerService.bindLeather(player, data)
 	elseif key == "season" then
@@ -485,6 +502,13 @@ local function onAsk(player: Player, request: unknown): any
 		return LedgerService.view(data)
 	elseif op == "register" then
 		return Shop.register(data)
+	elseif op == "salute" and type(r.id) == "string" then
+		if not Salutes.byId[r.id :: string] or productId("salute_" .. (r.id :: string)) == 0 then
+			return { ok = false, why = "That salute isn't offered yet." }
+		elseif SaluteService.full() then
+			return { ok = false, why = "A few salutes are already waiting their turn. Try again in a minute." }
+		end
+		return { ok = prompt(player, "salute_" .. (r.id :: string)), prompted = true }
 	elseif op == "notify" and (r.answer == "granted" or r.answer == "declined") then
 		Analytics.custom(player, if r.answer == "granted" then "Notification opt-in granted" else "Notification opt-in declined", nil, nil)
 		return { ok = true }
@@ -638,7 +662,7 @@ end
 function Shop.start()
 	MarketplaceService.ProcessReceipt = processReceipt
 	local CollectionService = game:GetService("CollectionService")
-	local panels: { [string]: string } = { BoutiqueCounter = "boutique", WardrobeMirror = "wardrobe", LedgerBook = "ledger", RegisterBook = "register", BlackCardLectern = "blackCard", SuiteFurnish = "suite", CircleBook = "circles" }
+	local panels: { [string]: string } = { BoutiqueCounter = "boutique", WardrobeMirror = "wardrobe", LedgerBook = "ledger", RegisterBook = "register", BlackCardLectern = "blackCard", SuiteFurnish = "suite", CircleBook = "circles", SaluteDesk = "salutes" }
 	for tag, panel in panels do
 		for _, part in CollectionService:GetTagged(tag) do
 			local p = part:FindFirstChildOfClass("ProximityPrompt")

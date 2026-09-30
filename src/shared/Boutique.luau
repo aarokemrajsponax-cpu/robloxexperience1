@@ -50,8 +50,18 @@ function Boutique.today(time: number?): { Wardrobe.Item }
 	return pick(Wardrobe.boutiquePool(), "boutique-day-" .. day(time), Boutique.dailyCount, avoid)
 end
 
--- Whether an item is on the shelves right now (today, featured, or its season's collection).
+-- The permanent shelf: always there, the same in every server.
+function Boutique.always(): { Wardrobe.Item }
+	return Wardrobe.alwaysPool()
+end
+
+-- Whether an item is on the shelves right now (always, today, featured, or its season's).
 function Boutique.onSale(itemId: string, seasonId: string, time: number?): boolean
+	for _, item in Boutique.always() do
+		if item.id == itemId then
+			return true
+		end
+	end
 	for _, item in Boutique.today(time) do
 		if item.id == itemId then
 			return true

@@ -192,6 +192,14 @@ local defaults = {
 		season = 0, -- a season collection
 		goldKey = 0, -- a game pass
 		blackCard = "", -- the Black Card subscription's id ("EXP-..."); "" means it isn't offered
+		-- Salutes: one developer product each (suggested prices in Salutes.luau).
+		salute_goldLeaf = 0,
+		salute_encore = 0,
+		salute_chandelier = 0,
+		salute_fireworks = 0,
+		salute_grand = 0,
+		saluteQueue = 4, -- salutes waiting their turn in one house, at most
+		benefactorMinutes = 30, -- the giver's nameplate carries a gold star this long
 		introductionDays = 7,
 		giftTimeout = 120, -- seconds a chosen gift waits for its purchase
 	},

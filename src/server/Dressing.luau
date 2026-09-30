@@ -127,6 +127,21 @@ function Dressing.nameplate(player: Player)
 			mark.Text = string.upper(Rating.mark(data.duel.r).label)
 			mark.Parent = plate
 		end
+		-- A gold star while the guest is the evening's benefactor (they gave the house a Salute).
+		local until_ = player:GetAttribute("BenefactorUntil")
+		if type(until_) == "number" and until_ > os.time() then
+			local star = Instance.new("TextLabel")
+			star.Name = "Benefactor"
+			star.BackgroundTransparency = 1
+			star.AnchorPoint = Vector2.new(0, 0.5)
+			star.Position = UDim2.new(1, 2, 0.5, 0)
+			star.Size = UDim2.new(0.18, 0, 1, 0)
+			star.FontFace = Brand.Fonts.display
+			star.TextScaled = true
+			star.TextColor3 = Brand.Colours.lightGold
+			star.Text = "★"
+			star.Parent = plate
+		end
 		-- The Circle's crest at the plate's left end (each can be hidden in Settings).
 		local glyph, colour = Dressing.crestOf(data)
 		if glyph and data.settings.showCrest ~= "Off" then

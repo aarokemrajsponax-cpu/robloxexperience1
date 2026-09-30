@@ -208,6 +208,20 @@ local function piano(m: Model)
 	end
 	local lamp = Kit.part(model, "PianoLamp", Vector3.new(0.4, 0.4, 0.4), at(0, 7.6, -2), L.brass, { collide = false })
 	Kit.spotLight(lamp, Enum.NormalId.Bottom, 1.4, 12, 60)
+	-- A small brass card on the piano: ask for an encore, or salute the whole house.
+	local card = Kit.part(model, "SaluteCard", Vector3.new(0.9, 0.05, 0.6), at(1.8, 4.05, -1.2) * CFrame.Angles(0, math.rad(20), 0), L.brass, { collide = false })
+	local p = Instance.new("ProximityPrompt")
+	p.Name = "SalutePrompt"
+	p.ActionText = "Salute the house"
+	p.ObjectText = "An encore, gold leaf, fireworks"
+	p.KeyboardKeyCode = Enum.KeyCode.F
+	p.GamepadKeyCode = Enum.KeyCode.ButtonY
+	p.HoldDuration = 0
+	p.MaxActivationDistance = 9
+	p.RequiresLineOfSight = false
+	p.Style = Enum.ProximityPromptStyle.Custom
+	p.Parent = card
+	CollectionService:AddTag(card, "SaluteDesk")
 end
 
 local function lectern(m: Model)

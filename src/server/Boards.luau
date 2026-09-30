@@ -545,6 +545,15 @@ function Boards.setCircles(entries: { { name: string, score: number, crest: stri
 	publish()
 end
 
+-- A line for the Tonight board's feed: this house only, or (like a Mythic) every house.
+function Boards.note(text: string, everywhere: boolean)
+	if everywhere then
+		Boards.announce(text)
+	else
+		addFeed(text)
+	end
+end
+
 -- News for the Tonight board from every server (a Mythic found).
 function Boards.announce(text: string)
 	addFeed(text)
