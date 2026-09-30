@@ -452,6 +452,7 @@ local playerScripts = {
 	end,
 }
 local attrs = {}
+local playerAttrSignals = {}
 local LocalPlayer = setmetatable({
 	Name = "Ada",
 	DisplayName = "Ada",
@@ -485,9 +486,13 @@ local LocalPlayer = setmetatable({
 		end,
 		SetAttribute = function(_, k, v)
 			attrs[k] = v
+			if playerAttrSignals[k] then
+				playerAttrSignals[k]:Fire()
+			end
 		end,
-		GetAttributeChangedSignal = function()
-			return signal()
+		GetAttributeChangedSignal = function(_, k)
+			playerAttrSignals[k] = playerAttrSignals[k] or signal()
+			return playerAttrSignals[k]
 		end,
 		IsA = function(_, class)
 			return class == "Player" or class == "Instance"
@@ -996,6 +1001,20 @@ check("Shift runs", (function()
 end)())
 check("a first visit offers Straight to the table", textOnScreen("Straight to the table") ~= nil)
 check("no errors after Play", #errors == 0, errors[1])
+
+-- The Black Card on the lectern: not there until it's offered, and never in a guest's first minutes.
+local blackCard = CollectionService:GetTagged("BlackCardLectern")[1]
+check("the lectern holds the Black Card", blackCard ~= nil)
+check("while it isn't offered, the card isn't there", blackCard.LocalTransparencyModifier == 1 and blackCard:FindFirstChildOfClass("ProximityPrompt").Enabled == false)
+workspace:SetAttribute("BlackCardOffered", true)
+signalOf(workspace, "attr:BlackCardOffered"):Fire()
+advance(0.2)
+check("offered: the card lies on the lectern", blackCard.LocalTransparencyModifier == 0 and blackCard:FindFirstChildOfClass("ProximityPrompt").Enabled == true)
+LocalPlayer:SetAttribute("Quiet", true)
+advance(0.2)
+check("a guest's first minutes: the card isn't there", blackCard.LocalTransparencyModifier == 1)
+LocalPlayer:SetAttribute("Quiet", nil)
+advance(0.2)
 
 ---------------------------------------------------------------------------------------------------
 -- 3. The Concierge speaks, with choices

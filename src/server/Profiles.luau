@@ -50,6 +50,8 @@ export type Data = {
 	mythics: { { id: string, serial: number, at: number, room: string } },
 	commissions: { evening: { key: string, progress: number, done: boolean }, week: { key: string, progress: number, done: boolean } },
 	standing: string,
+	-- The Black Card: held now (re-checked with Roblox every visit), and the months claimed.
+	blackCard: { active: boolean, months: { [string]: boolean } },
 }
 
 local TEMPLATE: Data = {
@@ -83,6 +85,7 @@ local TEMPLATE: Data = {
 	mythics = {},
 	commissions = { evening = { key = "", progress = 0, done = false }, week = { key = "", progress = 0, done = false } },
 	standing = "Guest",
+	blackCard = { active = false, months = {} },
 }
 
 -- Each migration moves data from schema n to n + 1. Add new ones at the end.

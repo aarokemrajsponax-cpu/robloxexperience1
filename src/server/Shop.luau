@@ -17,6 +17,7 @@ local Standing = require(ReplicatedStorage.Shared.Standing)
 local Wardrobe = require(ReplicatedStorage.Shared.Wardrobe)
 
 local Analytics = require(script.Parent.Analytics)
+local BlackCard = require(script.Parent.BlackCard)
 local Dressing = require(script.Parent.Dressing)
 local Gilt = require(script.Parent.Gilt)
 local LedgerService = require(script.Parent.LedgerService)
@@ -132,6 +133,7 @@ local function mine(data: Profiles.Data): { [string]: any }
 		equipped = data.equipped,
 		gilt = data.gilt,
 		goldKey = data.goldKey,
+		blackCard = { held = data.blackCard.active, offered = BlackCard.offered() },
 		credits = data.credits,
 		ledger = { page = ledger.page, pages = ledger.pages, progress = ledger.progress, leather = ledger.leather, term = ledger.term },
 	}
@@ -460,7 +462,10 @@ local function onAsk(player: Player, request: unknown): any
 		end)
 		return { ok = true, prompted = true }
 	elseif op == "ledgerLeather" then
-		if LedgerService.view(data).leather then
+		local view = LedgerService.view(data)
+		if view.card then
+			return { ok = false, why = "The Leather-Bound Ledger comes with your Black Card." }
+		elseif view.leather then
 			return { ok = false, why = "This Term's Leather-Bound Ledger is yours." }
 		end
 		return { ok = prompt(player, "ledger"), prompted = true }
@@ -475,6 +480,15 @@ local function onAsk(player: Player, request: unknown): any
 		return LedgerService.view(data)
 	elseif op == "register" then
 		return Shop.register(data)
+	elseif op == "blackCard" then
+		return { offered = BlackCard.offered(), held = data.blackCard.active, price = BlackCard.price(), look = (Wardrobe.cardholderLook() or {} :: any).name }
+	elseif op == "holdCard" then
+		if data.blackCard.active then
+			return { ok = false, why = "You hold the Black Card." }
+		elseif not BlackCard.offered() then
+			return { ok = false, why = "The Black Card isn't offered yet." }
+		end
+		return { ok = BlackCard.offer(player), prompted = true }
 	elseif op == "wardrobe" then
 		local out = {}
 		for _, kind in Wardrobe.Kinds do
@@ -485,11 +499,9 @@ local function onAsk(player: Player, request: unknown): any
 					table.insert(pieces, card(item, data))
 				end
 			end
-			if data.goldKey then
-				for _, item in Wardrobe.all do
-					if item.source == "goldKey" and item.kind == kind then
-						table.insert(pieces, card(item, data))
-					end
+			for _, item in Wardrobe.all do
+				if item.kind == kind and not data.owned[item.id] and ((item.source == "goldKey" and data.goldKey) or (item.source == "blackCard" and Dressing.canWear(data, item))) then
+					table.insert(pieces, card(item, data))
 				end
 			end
 			table.sort(pieces, function(a, b)
@@ -562,7 +574,7 @@ end
 function Shop.start()
 	MarketplaceService.ProcessReceipt = processReceipt
 	local CollectionService = game:GetService("CollectionService")
-	local panels: { [string]: string } = { BoutiqueCounter = "boutique", WardrobeMirror = "wardrobe", LedgerBook = "ledger", RegisterBook = "register" }
+	local panels: { [string]: string } = { BoutiqueCounter = "boutique", WardrobeMirror = "wardrobe", LedgerBook = "ledger", RegisterBook = "register", BlackCardLectern = "blackCard" }
 	for tag, panel in panels do
 		for _, part in CollectionService:GetTagged(tag) do
 			local p = part:FindFirstChildOfClass("ProximityPrompt")
@@ -591,6 +603,18 @@ function Shop.start()
 			end
 		end
 	end)
+	BlackCard.changed = function(player: Player, notice: string?)
+		local data = Profiles.get(player)
+		if data then
+			LedgerService.claim(player, data)
+		end
+		Dressing.nameplate(player)
+		Shop.push(player)
+		if notice then
+			shopEvent:FireClient(player, { op = "notice", title = "The Black Card", line = notice })
+		end
+	end
+	BlackCard.start()
 	Profiles.Loaded:Connect(function(player: Player, data: Profiles.Data)
 		LedgerService.claim(player, data)
 		task.spawn(syncGoldKey, player)

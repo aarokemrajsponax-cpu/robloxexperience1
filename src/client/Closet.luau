@@ -15,6 +15,7 @@ Closet.owned = {} :: { [string]: boolean }
 Closet.equipped = {} :: { [string]: string }
 Closet.gilt = 0
 Closet.goldKey = false
+Closet.blackCard = { held = false, offered = false }
 Closet.credits = {} :: { [string]: number }
 Closet.ledger = { page = 0, pages = 50, progress = 0, leather = false, term = "" } :: { [string]: any }
 
@@ -64,6 +65,9 @@ function Closet.start()
 			Closet.equipped = if type(m.equipped) == "table" then m.equipped else {}
 			Closet.gilt = if type(m.gilt) == "number" then m.gilt else 0
 			Closet.goldKey = m.goldKey == true
+			if type(m.blackCard) == "table" then
+				Closet.blackCard = { held = m.blackCard.held == true, offered = m.blackCard.offered == true }
+			end
 			Closet.credits = if type(m.credits) == "table" then m.credits else {}
 			if type(m.ledger) == "table" then
 				Closet.ledger = m.ledger

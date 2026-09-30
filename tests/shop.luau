@@ -184,6 +184,7 @@ end)
 local prompts = {}
 local productPrices = {}
 local passOwners = {}
+local subscribers = {}
 local MarketplaceService = {
 	PromptGamePassPurchaseFinished = signal(),
 	PromptProductPurchase = function(_, player, id)
@@ -197,6 +198,15 @@ local MarketplaceService = {
 	end,
 	UserOwnsGamePassAsync = function(_, userId, id)
 		return passOwners[userId .. ":" .. id] == true
+	end,
+	GetUserSubscriptionStatusAsync = function(_, player, id)
+		return { IsSubscribed = subscribers[player.UserId .. ":" .. id] == true, IsRenewing = true }
+	end,
+	GetSubscriptionProductInfoAsync = function(_, _id)
+		return { DisplayPrice = "$4.99" }
+	end,
+	PromptSubscriptionPurchase = function(_, player, id)
+		table.insert(prompts, { player = player, id = id, kind = "subscription" })
 	end,
 }
 
@@ -590,7 +600,7 @@ local TEMPLATE = {
 	gilt = 0, giltDay = { day = -1, earned = 0 }, purchases = {},
 	owned = {}, equipped = { look = "", table = "", lamp = "", chime = "", trail = "", nameplate = "", card = "", flourish = "", gesture = "" },
 	credits = {}, receipts = {}, pending = { product = "", item = "", giftTo = 0, at = 0 },
-	goldKey = false, introduction = false,
+	goldKey = false, introduction = false, blackCard = { active = false, months = {} },
 	ledger = { term = "", points = 0, freeClaimed = 0, leatherClaimed = 0, leather = {} },
 	gifts = {},
 }
@@ -1007,6 +1017,55 @@ check("the medal can be worn", askAs(gus, { op = "equip", kind = "nameplate", id
 loadedSignal:Fire(gus, profiles[gus].Data)
 advance(0.5)
 check("it's awarded once", #profiles[gus].Data.soiree.claimed > 0)
+
+---------------------------------------------------------------------------------------------------
+-- The Black Card: offered on the lectern once its id is set; the Leather-Bound Ledger while held,
+-- a look each month to keep, the black-lacquer nameplate while active
+---------------------------------------------------------------------------------------------------
+local BlackCard = module("ServerScriptService", "Server", "BlackCard")
+local WardrobeRules = module("ReplicatedStorage", "Shared", "Wardrobe")
+local hana = guest("Hana", 8)
+local info = askAs(hana, { op = "blackCard" })
+check("the Black Card isn't offered without its id", info and info.offered == false)
+check("holding it says so", askAs(hana, { op = "holdCard" }).ok == false)
+Config.data.Products.blackCard = "EXP-1"
+info = askAs(hana, { op = "blackCard" })
+check("once its id is set, it's offered with Roblox's price", info.offered == true and info.price == "$4.99" and type(info.look) == "string")
+local promptsBefore = #prompts
+check("Hold the card asks Roblox", askAs(hana, { op = "holdCard" }).ok == true and #prompts == promptsBefore + 1 and prompts[#prompts].kind == "subscription")
+subscribers[hana.UserId .. ":EXP-1"] = true
+run(BlackCard.check, hana)
+advance(0.5)
+local hd = profiles[hana].Data
+local monthLook = WardrobeRules.cardholderLook(fakeOs.time())
+check("held: the card is on the guest", hd.blackCard.active == true)
+check("held: this month's cardholder look is theirs", monthLook ~= nil and hd.owned[monthLook.id] == true)
+check("held: a quiet notice says so", lastOp(hana, "notice") ~= nil and string.find(lastOp(hana, "notice").line, monthLook.name, 1, true) ~= nil)
+local lv = LedgerService.view(hd)
+check("held: the Leather-Bound Ledger comes with it", lv.leather == true and lv.card == true)
+check("held: the Leather-Bound Ledger isn't sold to a cardholder", string.find(askAs(hana, { op = "ledgerLeather" }).why or "", "Black Card", 1, true) ~= nil)
+check("held: the black-lacquer nameplate can be worn", askAs(hana, { op = "equip", kind = "nameplate", id = "plate_blackcard" }).ok)
+check("held: the state tells the guest's screen", lastOp(hana, "state").blackCard.held == true)
+run(BlackCard.check, hana)
+advance(0.5)
+local ownedLooks = 0
+for id in hd.owned do
+	if string.find(id, "^look_card") then
+		ownedLooks += 1
+	end
+end
+check("the month's look is given once", ownedLooks == 1)
+local nextMonth = fakeOs.time() + 32 * 86400
+local another = BlackCard.claimMonth(hd, nextMonth)
+check("next month brings the next look", another ~= nil and another.id ~= monthLook.id and hd.owned[another.id] == true)
+subscribers[hana.UserId .. ":EXP-1"] = false
+run(BlackCard.check, hana)
+advance(0.5)
+check("cancelled: the card is gone", hd.blackCard.active == false and LedgerService.view(hd).leather == false)
+check("cancelled: the looks stay", hd.owned[monthLook.id] == true and hd.owned[another.id] == true)
+check("cancelled: the nameplate can't be worn", not askAs(hana, { op = "equip", kind = "nameplate", id = "plate_blackcard" }).ok)
+check("cancelled: no month is claimed without the card", BlackCard.claimMonth(hd, nextMonth + 32 * 86400) == nil)
+Config.data.Products.blackCard = ""
 
 print(string.format("%d passed, %d failed", passed, failed))
 if failed > 0 then

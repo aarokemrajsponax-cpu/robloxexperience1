@@ -28,6 +28,11 @@ local function book(data: Profiles.Data): Profiles.Data
 	return data
 end
 
+-- The Leather-Bound edition: bought for this Term, or held with the Black Card.
+local function leather(data: Profiles.Data): boolean
+	return data.ledger.leather[data.ledger.term] == true or (data.blackCard ~= nil and data.blackCard.active)
+end
+
 -- Grants every reward on pages reached but not yet given. Returns the pages newly turned.
 function LedgerService.claim(player: Player, data: Profiles.Data): { number }
 	book(data)
@@ -47,7 +52,7 @@ function LedgerService.claim(player: Player, data: Profiles.Data): { number }
 			end
 		end
 	end
-	if data.ledger.leather[term] then
+	if leather(data) then
 		while data.ledger.leatherClaimed < reached do
 			data.ledger.leatherClaimed += 1
 			for _, reward in Ledger.rewards(term, "leather", data.ledger.leatherClaimed) do
@@ -109,7 +114,8 @@ function LedgerService.view(data: Profiles.Data): { [string]: any }
 		page = page,
 		pages = Config.data.Ledger.pages,
 		progress = Ledger.progress(data.ledger.points),
-		leather = data.ledger.leather[term] == true,
+		leather = leather(data),
+		card = data.blackCard ~= nil and data.blackCard.active and data.ledger.leather[term] ~= true,
 		nextFree = names("free", nextPage),
 		nextLeather = names("leather", nextPage),
 		nextPage = nextPage,

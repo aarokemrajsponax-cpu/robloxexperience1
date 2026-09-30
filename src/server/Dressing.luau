@@ -93,6 +93,9 @@ function Dressing.nameplate(player: Player)
 	sizeLimit.Parent = name
 	if data then
 		local frame = equippedItem(data, "nameplate")
+		if not frame and data.blackCard.active then
+			frame = Wardrobe.get("plate_blackcard")
+		end
 		if not frame and data.goldKey then
 			frame = Wardrobe.get("plate_goldkey")
 		end
@@ -239,6 +242,8 @@ end
 function Dressing.canWear(data: Profiles.Data, item: Wardrobe.Item): boolean
 	if item.source == "goldKey" then
 		return data.goldKey
+	elseif item.source == "blackCard" and item.kind == "nameplate" then
+		return data.blackCard.active
 	end
 	return data.owned[item.id] == true
 end

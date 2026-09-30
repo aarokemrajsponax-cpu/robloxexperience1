@@ -191,6 +191,7 @@ local defaults = {
 		ledger = 0, -- the Leather-Bound Ledger, per Term
 		season = 0, -- a season collection
 		goldKey = 0, -- a game pass
+		blackCard = "", -- the Black Card subscription's id ("EXP-..."); "" means it isn't offered
 		introductionDays = 7,
 		giftTimeout = 120, -- seconds a chosen gift waits for its purchase
 	},
@@ -212,6 +213,12 @@ local defaults = {
 
 	Staff = {
 		lostAfter = 25, -- seconds a new guest lingers in the Foyer before the Concierge offers the walk
+	},
+
+	-- The Black Card (§12, Appendix I): a monthly subscription. The Leather-Bound Ledger while it's
+	-- held, one cardholder look each month to keep, and a black-lacquer nameplate while active.
+	BlackCard = {
+		quietMinutes = 10, -- a guest's first minutes in the house: the card on the lectern stays hidden
 	},
 
 	-- A Private Evening (a private server, §12): the owner's house for friends. Nothing played
@@ -406,6 +413,13 @@ local defaults = {
 			custodian = { shirt = 0, pants = 0, accessories = "" },
 			keeper = { shirt = 0, pants = 0, accessories = "" },
 			term = { shirt = 0, pants = 0, accessories = "" },
+			-- The Black Card's cardholder looks, one each month in turn.
+			card1 = { shirt = 0, pants = 0, accessories = "" },
+			card2 = { shirt = 0, pants = 0, accessories = "" },
+			card3 = { shirt = 0, pants = 0, accessories = "" },
+			card4 = { shirt = 0, pants = 0, accessories = "" },
+			card5 = { shirt = 0, pants = 0, accessories = "" },
+			card6 = { shirt = 0, pants = 0, accessories = "" },
 		},
 		Concierge = { shirt = 0, pants = 0, accessories = "" },
 		Doorman = { shirt = 0, pants = 0, accessories = "" },

@@ -223,6 +223,25 @@ local function lectern(m: Model)
 	local lamp = Kit.part(model, "LecternLamp", Vector3.new(0.7, 0.35, 0.35), cf * CFrame.new(0.9, 4.6, 0.5), L.greenVelvet, { collide = false })
 	Kit.post(model, "LampStem", 0.6, 0.1, (cf * CFrame.new(0.9, 4.05, 0.5)).Position, L.brass, { collide = false })
 	Kit.pointLight(lamp, 1, 8, Color3.fromRGB(255, 214, 150))
+	-- The Black Card, a single black card with a gold edge laid beside the book (§12). Each
+	-- guest's screen hides it in their first minutes, or while the card isn't offered.
+	local cardCf = cf * CFrame.new(-0.95, 4.12, 0.35) * CFrame.Angles(math.rad(14), math.rad(8), 0)
+	Kit.part(model, "BlackCardEdge", Vector3.new(0.62, 0.02, 0.4), cardCf * CFrame.new(0, -0.012, 0), L.brass, { collide = false, shadow = false })
+	local card = Kit.part(model, "BlackCard", Vector3.new(0.58, 0.03, 0.36), cardCf, { color = Color3.fromRGB(6, 6, 8), material = Enum.Material.Glass }, { collide = false, shadow = false })
+	local p = Instance.new("ProximityPrompt")
+	p.Name = "BlackCardPrompt"
+	p.ActionText = "Look"
+	p.ObjectText = "The Black Card"
+	-- Its own key, so it never takes the Concierge's.
+	p.KeyboardKeyCode = Enum.KeyCode.F
+	p.GamepadKeyCode = Enum.KeyCode.ButtonY
+	p.HoldDuration = 0
+	p.MaxActivationDistance = 7
+	p.RequiresLineOfSight = false
+	p.Style = Enum.ProximityPromptStyle.Custom
+	p:SetAttribute("Offset", 0.4)
+	p.Parent = card
+	CollectionService:AddTag(card, "BlackCardLectern")
 end
 
 local function board(m: Model, name: string, cf: CFrame, width: number, height: number): Part

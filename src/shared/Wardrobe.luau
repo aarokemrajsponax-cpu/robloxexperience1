@@ -11,7 +11,7 @@ local Seasons = require(script.Parent.Seasons)
 local Wardrobe = {}
 
 export type Kind = "look" | "table" | "lamp" | "chime" | "trail" | "gesture" | "flourish" | "nameplate" | "card" | "suite"
-export type Source = "boutique" | "gilt" | "goldKey" | "introduction" | "ledger" | "season" | "standing"
+export type Source = "blackCard" | "boutique" | "gilt" | "goldKey" | "introduction" | "ledger" | "season" | "standing"
 
 export type Item = {
 	id: string,
@@ -81,6 +81,7 @@ local items: { Item } = {
 	{ id = "plate_silver", name = "Engraved Silver", kind = "nameplate", source = "boutique", robux = 99, line = "A plate of hand-engraved silver.", style = { frame = SILVER, fill = rgb(20, 22, 26) } },
 	{ id = "plate_onyx", name = "Onyx Rim", kind = "nameplate", source = "boutique", robux = 99, line = "Black stone, a hairline of gold.", style = { frame = rgb(24, 24, 26), fill = rgb(10, 10, 12), line = GOLD } },
 	{ id = "plate_pearl", name = "Pearl Inlay", kind = "nameplate", source = "boutique", robux = 99, line = "Mother of pearl, set in brass.", style = { frame = rgb(232, 226, 214), fill = rgb(30, 28, 26) } },
+	{ id = "plate_blackcard", name = "The Black Lacquer Nameplate", kind = "nameplate", source = "blackCard", line = "While you hold the Black Card.", style = { frame = rgb(58, 54, 60), fill = rgb(4, 4, 6), line = rgb(232, 226, 214) } },
 	{ id = "plate_goldkey", name = "The Gold Key Nameplate", kind = "nameplate", source = "goldKey", line = "Gold-edged, for Gold Key holders.", style = { frame = rgb(236, 196, 98), fill = rgb(16, 14, 10), line = rgb(236, 196, 98) } },
 
 	-- Round-card backs: the card that lands on the felt between rounds.
@@ -106,6 +107,13 @@ local items: { Item } = {
 	{ id = "look_gk1", name = "Gold Key Smoking Jacket", kind = "look", source = "goldKey", line = "Gold Key holders only.", style = { outfit = "goldKey1" } },
 	{ id = "look_gk2", name = "Gold Key Gown", kind = "look", source = "goldKey", line = "Gold Key holders only.", style = { outfit = "goldKey2" } },
 	{ id = "look_gk3", name = "Gold Key Tails", kind = "look", source = "goldKey", line = "Gold Key holders only.", style = { outfit = "goldKey3" } },
+	-- The Black Card's cardholder looks: one each month, kept for good.
+	{ id = "look_card1", name = "The Cardholder's Dinner Jacket", kind = "look", source = "blackCard", line = "A Black Card month's look.", style = { outfit = "card1" } },
+	{ id = "look_card2", name = "The Cardholder's Column Gown", kind = "look", source = "blackCard", line = "A Black Card month's look.", style = { outfit = "card2" } },
+	{ id = "look_card3", name = "The Cardholder's Velvet Tails", kind = "look", source = "blackCard", line = "A Black Card month's look.", style = { outfit = "card3" } },
+	{ id = "look_card4", name = "The Cardholder's Satin Wrap", kind = "look", source = "blackCard", line = "A Black Card month's look.", style = { outfit = "card4" } },
+	{ id = "look_card5", name = "The Cardholder's Midnight Suit", kind = "look", source = "blackCard", line = "A Black Card month's look.", style = { outfit = "card5" } },
+	{ id = "look_card6", name = "The Cardholder's Opera Coat", kind = "look", source = "blackCard", line = "A Black Card month's look.", style = { outfit = "card6" } },
 	{ id = "look_patron", name = "The Patron's Waistcoat", kind = "look", source = "standing", gilt = 4000, standing = "Patron", line = "For Patrons of the house.", style = { outfit = "patron" } },
 	{ id = "look_connoisseur", name = "The Connoisseur's Coat", kind = "look", source = "standing", gilt = 4000, standing = "Connoisseur", line = "For Connoisseurs.", style = { outfit = "connoisseur" } },
 	{ id = "look_custodian", name = "The Custodian's Dress Coat", kind = "look", source = "standing", gilt = 4000, standing = "Custodian", line = "For Custodians.", style = { outfit = "custodian" } },
@@ -159,6 +167,18 @@ end
 
 -- Whether the house can actually deliver an item: looks need clothing, chimes a sound and
 -- gestures an animation uploaded and named in Config.
+-- The cardholder look for the month containing `time` (UTC): the six take turns.
+function Wardrobe.cardholderLook(time: number?): Item?
+	local d = os.date("!*t", time or os.time())
+	local index = ((d.year * 12 + d.month - 1) % 6) + 1
+	return Wardrobe.get("look_card" .. index)
+end
+
+-- The month a cardholder look is claimed for ("2026-10").
+function Wardrobe.cardMonth(time: number?): string
+	return os.date("!%Y-%m", time or os.time()) :: string
+end
+
 function Wardrobe.deliverable(item: Item): boolean
 	local assets = Config.data.Assets :: any
 	if item.kind == "look" then
