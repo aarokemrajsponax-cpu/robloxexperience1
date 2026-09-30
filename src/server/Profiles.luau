@@ -35,6 +35,16 @@ export type Data = {
 	gilt: number,
 	giltDay: { day: number, earned: number },
 	purchases: { [string]: number },
+	-- The Boutique (Delivery 5)
+	owned: { [string]: boolean },
+	equipped: { [string]: string },
+	credits: { [string]: number }, -- Boutique credit by price tier, from a purchase with no choice on file
+	receipts: { string }, -- the last purchase ids granted (idempotent receipts)
+	pending: { product: string, item: string, giftTo: number, at: number },
+	goldKey: boolean,
+	introduction: boolean,
+	ledger: { term: string, points: number, freeClaimed: number, leatherClaimed: number, leather: { [string]: boolean } },
+	gifts: { { from: string, item: string, at: number } },
 }
 
 local TEMPLATE: Data = {
@@ -55,6 +65,15 @@ local TEMPLATE: Data = {
 	gilt = 0,
 	giltDay = { day = -1, earned = 0 },
 	purchases = {},
+	owned = {},
+	equipped = { look = "", table = "", lamp = "", chime = "", trail = "", nameplate = "", card = "", flourish = "", gesture = "" },
+	credits = {},
+	receipts = {},
+	pending = { product = "", item = "", giftTo = 0, at = 0 },
+	goldKey = false,
+	introduction = false,
+	ledger = { term = "", points = 0, freeClaimed = 0, leatherClaimed = 0, leather = {} },
+	gifts = {},
 }
 
 -- Each migration moves data from schema n to n + 1. Add new ones at the end.
@@ -86,6 +105,15 @@ function Profiles.get(player: Player): Data?
 	local profile = active[player]
 	if profile and profile:IsActive() then
 		return profile.Data :: Data
+	end
+	return nil
+end
+
+-- The live ProfileStore profile (for receipts, which must wait for a save).
+function Profiles.profile(player: Player): any
+	local profile = active[player]
+	if profile and profile:IsActive() then
+		return profile
 	end
 	return nil
 end

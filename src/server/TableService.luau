@@ -79,6 +79,8 @@ local lastMessage: { [Player]: number } = {}
 TableService.onSeated = function(_player: Player) end
 TableService.say = function(_player: Player, _line: string) end
 TableService.onUnlock = function(_player: Player, _room: string) end
+-- Called on every filing (for the Ledger).
+TableService.onFiling = function(_player: Player, _correct: boolean) end
 -- Called after a scored Nightly is on the board (for Rivals).
 TableService.onNightlyFinished = function(_player: Player) end
 -- Set by the server: is the guest busy elsewhere (a Library duel)?
@@ -570,6 +572,7 @@ local function file(s: Session, uid: number, caseId: string)
 	local mult = s.room.tuning.multiplier
 	local correct = piece.case == caseId
 	local points, setBonus, penalty = 0, 0, 0
+	TableService.onFiling(s.player, correct)
 	if correct then
 		piece.filed = true
 		s.remaining -= 1

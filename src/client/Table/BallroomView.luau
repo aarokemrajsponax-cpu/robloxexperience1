@@ -29,6 +29,7 @@ local Theme = require(script.Parent.Parent.UI.Theme)
 local Toast = require(script.Parent.Parent.UI.Toast)
 local Hud = require(script.Parent.Parent.UI.Hud)
 local Parcels = require(script.Parent.Parcels)
+local Flourish = require(script.Parent.Flourish)
 local Invite = require(script.Parent.Parent.UI.Invite)
 
 local BallroomView = {}
@@ -416,6 +417,7 @@ local function lastLamp(message: { [string]: any })
 	if winner == mySeat then
 		Sound.play("complete", 0.5, 1)
 		Sound.shimmer()
+		task.delay(1.4, Flourish.play, target + Vector3.new(0, 1, 0))
 	else
 		Sound.play("round", 0.3, 0.8)
 	end

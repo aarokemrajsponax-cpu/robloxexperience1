@@ -22,6 +22,9 @@ local Voice = require(ReplicatedStorage.Shared.Voice)
 
 local Guests = {}
 
+-- Called after a guest changes a setting (set by Main: the nameplate redraws for showMark).
+Guests.onSettingChanged = function(_player: Player, _key: string) end
+
 -- Seats a friend opposite the guest who invited them to the Library (set by Main).
 Guests.joinLibrary = function(_player: Player, _inviterId: number): boolean
 	return false
@@ -216,6 +219,7 @@ local function onSetting(player: Player, key: unknown, value: unknown)
 	if data then
 		data.settings[key] = value
 		Analytics.custom(player, "Setting changed", nil, { key = key, value = tostring(value) })
+		Guests.onSettingChanged(player, key)
 	end
 end
 

@@ -63,8 +63,16 @@ local pool: { [string]: { Sound } } = {}
 local warned: { [string]: boolean } = {}
 
 local function idFor(name: string): string
-	local id = (Config.data.Assets.Sounds :: any)[name]
+	local sounds = Config.data.Assets.Sounds :: any
+	-- "chime:harp" is a chime from the Boutique.
+	local chime = string.match(name, "^chime:(%w+)$")
+	local id = if chime then (sounds.chimes or {})[chime] else sounds[name]
 	return if type(id) == "string" then id else ""
+end
+
+-- The chime a guest wears from the Boutique (set by Main from the Closet), or nil.
+Sound.wornChime = function(): string?
+	return nil
 end
 
 local function take(name: string): Sound?
@@ -125,6 +133,11 @@ function Sound.chime(streak: number)
 	local index = math.clamp(streak, 1, #STEPS)
 	local semis = STEPS[index]
 	local voice = CHIMES[State.get("chime")] or CHIMES.Bells
+	local worn = Sound.wornChime()
+	if worn and idFor("chime:" .. worn) ~= "" then
+		Sound.play("chime:" .. worn, voice.volume, 2 ^ (semis / 12))
+		return
+	end
 	Sound.play("chime", voice.volume, voice.base * 2 ^ (semis / 12))
 end
 

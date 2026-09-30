@@ -80,6 +80,15 @@ function Analytics.source(player: Player, currency: string, amount: number, bala
 	end)
 end
 
+function Analytics.sink(player: Player, currency: string, amount: number, balance: number, sku: string)
+	if not enabled() or amount <= 0 then
+		return
+	end
+	pcall(function()
+		AnalyticsService:LogEconomyEvent(player, Enum.AnalyticsEconomyFlowType.Sink, currency, amount, balance, Enum.AnalyticsEconomyTransactionType.Shop.Name, sku)
+	end)
+end
+
 function Analytics.start()
 	Players.PlayerRemoving:Connect(function(player)
 		logged[player] = nil

@@ -525,9 +525,109 @@ do
 	end
 	check("lights out: Random never picks you or a lamp that's out", randomOk)
 	check("lights out: nobody left, no target", LightsOut.target("random", seats[1], { seats[1], seats[3] }, rng) == nil)
+	check("lights out: Gilt is 100 for the last lamp, 24 for 20th", LightsOut.gilt(1) == 100 and LightsOut.gilt(20) == 24 and LightsOut.gilt(11) == 60)
 	check("lights out: points by place plus 8 per Key", LightsOut.points(1, 3) == 124 and LightsOut.points(7, 0) == 25 and LightsOut.points(20, 1) == 8)
 	local roomT = LightsOut.room(70)
 	check("lights out: the dumbwaiter's rules follow the clock", roomT.tuning.casesRound1 == 6 and math.abs(roomT.tuning.lookalike - 0.45) < 1e-9)
+end
+
+-- 12. The Boutique, the Wardrobe and the Ledger.
+do
+	local Wardrobe = loadModule("Wardrobe")
+	local Boutique = loadModule("Boutique")
+	local Ledger = loadModule("Ledger")
+	local Config = loadModule("Config")
+	local ids, dupes = {}, 0
+	for _, item in Wardrobe.all do
+		if ids[item.id] then
+			dupes += 1
+		end
+		ids[item.id] = true
+	end
+	check("wardrobe: every id is unique", dupes == 0, dupes)
+	local tiersOk = true
+	for _, item in Wardrobe.all do
+		if item.robux and not table.find(Wardrobe.Tiers, item.robux) and Wardrobe.tierFor(item.robux) < item.robux then
+			tiersOk = false
+		end
+	end
+	check("wardrobe: every Robux price maps to a tier at or above it", tiersOk)
+	check("wardrobe: 349 sells at the 399 tier", Wardrobe.tierFor(349) == 399 and Wardrobe.tierFor(49) == 49)
+	check("wardrobe: nothing sold changes score (no kinds outside style)", (function()
+		for _, item in Wardrobe.all do
+			if not Wardrobe.KindNames[item.kind] then
+				return false
+			end
+		end
+		return true
+	end)())
+	check("wardrobe: a look without clothing isn't sold", not Wardrobe.deliverable(Wardrobe.get("look_gown")))
+	Config.set("Assets.Looks.gown.shirt", 123)
+	check("wardrobe: with clothing set it is", Wardrobe.deliverable(Wardrobe.get("look_gown")))
+	Config.set("Assets.Looks.gown.shirt", 0)
+	check("wardrobe: a chime needs its sound", not Wardrobe.deliverable(Wardrobe.get("chime_harp")))
+	check("wardrobe: table styles need nothing uploaded", Wardrobe.deliverable(Wardrobe.get("table_oxblood")))
+	local pool = Wardrobe.boutiquePool()
+	check("boutique: the pool has only deliverable Robux pieces", #pool >= 15, #pool)
+	local t = os.time({ year = 2026, month = 10, day = 7, hour = 12 })
+	local today = Boutique.today(t)
+	local featured = Boutique.featured(t)
+	check("boutique: six pieces a day", #today == 6)
+	check("boutique: two featured a week", #featured == 2)
+	local same = true
+	for i, item in Boutique.today(t + 3600) do
+		if item.id ~= today[i].id then
+			same = false
+		end
+	end
+	check("boutique: the same shelves all day, everywhere", same)
+	local changed = false
+	for i, item in Boutique.today(t + 86400) do
+		if item.id ~= today[i].id then
+			changed = true
+		end
+	end
+	check("boutique: new shelves the next day", changed)
+	local overlap = false
+	for _, a in today do
+		for _, b in featured do
+			if a.id == b.id then
+				overlap = true
+			end
+		end
+	end
+	check("boutique: today's pieces never repeat the featured pair", not overlap)
+	check("boutique: featured holds all week", Boutique.featured(t + 86400)[1].id == featured[1].id or os.date("!*t", t + 86400).wday == 2)
+	check("boutique: today's piece is on sale", Boutique.onSale(today[1].id, "harvest", t))
+	check("boutique: a season's piece only in its season", not Boutique.onSale("season_harvest_table", "frost", t) and Boutique.onSale("season_harvest_table", "harvest", t))
+	check("boutique: a Gilt piece isn't sold for Robux", not Boutique.onSale("table_emerald", "harvest", t))
+	check("ledger: 1,000 points a page", Ledger.page(999) == 0 and Ledger.page(1000) == 1 and Ledger.page(12345) == 12)
+	check("ledger: fifty pages at most", Ledger.page(10 ^ 7) == 50 and Ledger.progress(10 ^ 7) == 1)
+	check("ledger: points by source", Ledger.points("filing", 10) == 30 and Ledger.points("nightly") == 300 and Ledger.points("library", 1) == 250 and Ledger.points("library", 0) == 150)
+	check("ledger: Ballroom points by place", Ledger.points("ballroom", 1) == 250 and Ledger.points("ballroom", 11) == 150 and Ledger.points("ballroom", 20) == 150)
+	local free1 = Ledger.rewards("2026-autumn", "free", 1)
+	check("ledger: free pages give Gilt", free1[1].kind == "gilt" and free1[1].amount == 100)
+	local free5 = Ledger.rewards("2026-autumn", "free", 5)
+	check("ledger: every fifth free page gives a cosmetic", free5[1].kind == "item" and Wardrobe.get(free5[1].id) ~= nil)
+	local free50 = Ledger.rewards("2026-autumn", "free", 50)
+	check("ledger: the free row ends with the Term's gesture", Wardrobe.get(free50[1].id).kind == "gesture")
+	local leather = Ledger.rewards("2026-autumn", "leather", 7)
+	check("ledger: Leather-Bound pages give two cosmetics", #leather == 2 and leather[1].id ~= leather[2].id)
+	local leather50 = Ledger.rewards("2026-autumn", "leather", 50)
+	check("ledger: the Term's signature look on the last page", Wardrobe.get(leather50[1].id).kind == "look")
+	check("ledger: editions resolve from their id alone", Ledger.item("ledger:2027-winter:leather:12a") ~= nil)
+	-- Pacing (Appendix I2 asks for around week 9 of 13): a steady guest plays 30 minutes on four
+	-- nights a week, files about 400 pieces a session, sits the Nightly and does the Evening
+	-- Commission most nights.
+	local perSession = Ledger.points("filing", 400) + Ledger.points("nightly") + Ledger.points("evening") * 0.6
+	local week = 0
+	local total = 0
+	while Ledger.page(total) < 50 and week < 30 do
+		week += 1
+		total += perSession * 4
+	end
+	print(string.format("  (the Ledger at the brief's point values: finished in week %d)", week))
+	check("ledger: a steady guest finishes within the Term", week >= 5 and week <= 13, week)
 end
 
 -- 10. Rivals.

@@ -24,14 +24,18 @@ staffFolder.Name = "Staff"
 staffFolder.Parent = maison
 local Concierge = require(script.Parent.Staff.Concierge)
 local Doorman = require(script.Parent.Staff.Doorman)
+local Tailor = require(script.Parent.Staff.Tailor)
 task.spawn(Concierge.spawn, staffFolder)
 task.spawn(Doorman.spawn, staffFolder)
+task.spawn(Tailor.spawn, staffFolder)
 
 local Analytics = require(script.Parent.Analytics)
 Analytics.start()
 
 local Boards = require(script.Parent.Boards)
 Boards.start()
+
+local LedgerService = require(script.Parent.LedgerService)
 
 local TableService = require(script.Parent.TableService)
 TableService.say = function(player, line)
@@ -76,6 +80,7 @@ end
 -- Lights Out records: Last Lamps, top-five finishes and Keys (only evenings with enough real
 -- guests count), and the weekly board of points.
 BallroomService.onFinished = function(player, place, keys, counted)
+	LedgerService.add(player, "ballroom", place)
 	local data = require(script.Parent.Profiles).get(player)
 	if not data or not counted then
 		return
@@ -102,6 +107,23 @@ BallroomService.onResult = function(tableNumber, name, keys)
 	Boards.ballroomResult(tableNumber, name, keys)
 end
 
+local Dressing = require(script.Parent.Dressing)
+Dressing.start()
+local Shop = require(script.Parent.Shop)
+Shop.handOver = function(player, from, itemName)
+	Concierge.line(player, string.format("A gift for you, from %s: %s.", from, itemName), 4)
+end
+Shop.start()
+Tailor.onSpeak = function(player)
+	Dialogue.say(player, require(ReplicatedStorage.Shared.Voice).Tailor.speaker, require(ReplicatedStorage.Shared.Voice).Tailor.time, nil, nil, 2.5)
+	Shop.open(player, "boutique")
+end
+TableService.onFiling = function(player, correct)
+	if correct then
+		LedgerService.add(player, "filing")
+	end
+end
+
 local Rivals = require(script.Parent.Rivals)
 Rivals.send = function(player, info)
 	Remotes.event("Guest"):FireClient(player, { op = "rival", rival = info })
@@ -112,15 +134,30 @@ local function rivalsAfter(player: Player?)
 		Rivals.refresh(player)
 	end
 end
-TableService.onNightlyFinished = rivalsAfter
-DuelService.onFinished = function(a, b)
+TableService.onNightlyFinished = function(player)
+	rivalsAfter(player)
+	LedgerService.add(player, "nightly")
+end
+DuelService.onFinished = function(a, b, winner, _ranked, standIn)
 	rivalsAfter(a)
 	rivalsAfter(b)
+	if a then
+		LedgerService.add(a, "library", if winner == "a" then 1 else 0)
+	end
+	if b then
+		LedgerService.add(b, "library", if winner == "b" then 1 else 0)
+	end
+	local _ = standIn
 end
 Rivals.start()
 
 local Guests = require(script.Parent.Guests)
 Guests.joinLibrary = DuelService.joinFriend
+Guests.onSettingChanged = function(player, key)
+	if key == "showMark" then
+		Dressing.nameplate(player)
+	end
+end
 Guests.start()
 
 local Profiles = require(script.Parent.Profiles)

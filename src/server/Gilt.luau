@@ -1,6 +1,6 @@
 --!strict
 -- Gilt, the house's earned currency (Appendix I1). Earned only by playing, never bought,
--- with a gentle daily soft cap. The Gold Key's +20% arrives with the Boutique (Delivery 5).
+-- with a gentle daily soft cap. The Gold Key adds 20%.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -10,9 +10,15 @@ local Analytics = require(script.Parent.Analytics)
 
 local Gilt = {}
 
+-- Called after every payment (the Ledger and the Shop tell the guest's screen).
+Gilt.changed = function(_player: Player) end
+
 -- Pays `earned` Gilt to a profile and returns what was actually paid (after the soft cap).
 function Gilt.pay(player: Player, data: Profiles.Data, earned: number, source: string): number
 	local g = Config.data.Gilt
+	if data.goldKey then
+		earned = math.floor(earned * (1 + g.goldKeyBonus) + 0.5)
+	end
 	local today = math.floor(os.time() / 86400)
 	if data.giltDay.day ~= today then
 		data.giltDay = { day = today, earned = 0 }
@@ -23,6 +29,7 @@ function Gilt.pay(player: Player, data: Profiles.Data, earned: number, source: s
 	data.giltDay.earned += paid
 	data.gilt += paid
 	Analytics.source(player, "Gilt", paid, data.gilt, source)
+	Gilt.changed(player)
 	return paid
 end
 

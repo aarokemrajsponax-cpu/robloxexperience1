@@ -107,7 +107,7 @@ function RivalPlate.show(f: CFrame)
 	frame = f
 	local info = State.rival
 	clear()
-	if info then
+	if info and State.get("rivalUpdates") ~= "Off" then
 		build(f, info)
 	end
 end

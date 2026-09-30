@@ -16,11 +16,13 @@ Remotes.Events = {
 	"Setting", -- client -> server setting change
 	"Funnel", -- client -> server first-evening funnel steps that only the client can see
 	"Board", -- server -> client leaderboard refresh
+	"Shop", -- server -> client: what you own and wear, Gilt, the Ledger, gifts
 }
 
 Remotes.Functions = {
 	"GetBoard",
 	"QuickSit",
+	"ShopAsk", -- client -> server: the Boutique's shelves, choosing, equipping, the Ledger
 }
 
 local folder: Folder? = nil

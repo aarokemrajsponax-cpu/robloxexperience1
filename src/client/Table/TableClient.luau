@@ -44,6 +44,7 @@ local Guide = require(script.Parent.Guide)
 local Hands = require(script.Parent.Hands)
 local RoundCard = require(script.Parent.RoundCard)
 local RivalPlate = require(script.Parent.RivalPlate)
+local Flourish = require(script.Parent.Flourish)
 
 local TableClient = {}
 
@@ -1020,6 +1021,9 @@ local function onDuelEnd(message: { [string]: any })
 	clockLeft = nil
 	lampTo(1.6, 1.2)
 	Sound.play("complete", 0.4, 1)
+	if message.won then
+		Flourish.play(tableFrame:PointToWorldSpace(Vector3.new(0, T.topY + 1, 0)))
+	end
 	task.delay(1.2, function()
 		if seatedModel == nil then
 			return

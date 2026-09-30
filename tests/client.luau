@@ -1436,6 +1436,63 @@ check("the Concierge's invite opens the prompt", shared.invites == 3)
 check("no errors in the panels", #errors == 0, errors[1])
 
 ---------------------------------------------------------------------------------------------------
+-- 7b. The Boutique, the Wardrobe, the Ledger and a gift
+---------------------------------------------------------------------------------------------------
+local oxblood = { id = "table_oxblood", name = "Oxblood Felt", kind = "table", kindName = "Table styles", line = "Deep red felt.", robux = 249, owned = false, style = {} }
+local ledgerView = { term = "2026-autumn", points = 2100, page = 2, pages = 50, progress = 0.1, leather = false, nextFree = { "100 Gilt" }, nextLeather = { "x", "y" }, nextPage = 3 }
+invokeResults.ShopAsk = {
+	today = { oxblood }, featured = {}, season = { id = "harvest", name = "Harvest Nights", price = 599, pieces = {} },
+	gilt = {}, goldKey = { owned = false, price = 499 }, ledger = { view = ledgerView, price = 399 },
+	introduction = nil, guests = { { userId = 2, name = "Ben" } }, standing = "Guest", balance = 0, credits = {},
+	ok = true, prompted = true,
+}
+serverSays("Shop", { op = "state", owned = {}, equipped = {}, gilt = 1200, goldKey = false, credits = {}, ledger = { page = 2, pages = 50, progress = 0.1, leather = false, term = "2026-autumn" } })
+serverSays("Shop", { op = "open", panel = "boutique" })
+advance(1)
+check("the Boutique opens from the counter", textOnScreen("The Boutique") ~= nil)
+check("today's piece is on the shelf with its live price", textOnScreen("Oxblood Felt") ~= nil and textOnScreen("249") ~= nil)
+check("the Gilt balance shows", textOnScreen("1,200 Gilt") ~= nil)
+check("Buy asks the server", press("Buy · " .. utf8.char(0xE002) .. " 249") and (function()
+	for _, sm in sent do
+		if sm.remote == "ShopAsk" and sm.message[1] and sm.message[1].op == "buy" then
+			return true
+		end
+	end
+	return false
+end)())
+check("Gift lists the guests", press("Gift") and textOnScreen("Ben") ~= nil)
+press("Not now")
+advance(0.5)
+check("the Gold Key tab", press("The Gold Key") and textOnScreen("+20% on all Gilt") ~= nil)
+check("the Ledger tab", press("The Ledger") and textOnScreen("Page 2 of 50") ~= nil)
+local Root2 = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "Root")
+Root2.close()
+advance(1)
+invokeResults.ShopAsk = { kinds = { table = { oxblood } }, equipped = { table = "" }, names = {} }
+serverSays("Shop", { op = "open", panel = "wardrobe" })
+advance(1)
+check("the Wardrobe lists what you own", textOnScreen("The Wardrobe") ~= nil and textOnScreen("Oxblood Felt") ~= nil)
+Root2.close()
+advance(1)
+invokeResults.ShopAsk = ledgerView
+serverSays("Shop", { op = "open", panel = "ledger" })
+advance(1)
+check("the Ledger opens as a book", textOnScreen("Page 2") ~= nil and textOnScreen("100 Gilt") ~= nil)
+Root2.close()
+advance(1)
+serverSays("Shop", { op = "gift", from = "Ben", item = oxblood })
+advance(3.5)
+check("a gift arrives wrapped", textOnScreen("From Ben") ~= nil)
+press("Open it")
+advance(1)
+check("opening it shows what it is", textOnScreen("Oxblood Felt") ~= nil)
+press("Later")
+serverSays("Shop", { op = "pages", pages = { 3 } })
+advance(0.5)
+check("a page turning is announced", textOnScreen("Page 3 turned") ~= nil)
+check("no errors in the Boutique", #errors == 0, errors[1])
+
+---------------------------------------------------------------------------------------------------
 -- 8. A respawn hands straight back to the follow camera
 ---------------------------------------------------------------------------------------------------
 camera.CameraType = roblox.Enum.CameraType.Scriptable

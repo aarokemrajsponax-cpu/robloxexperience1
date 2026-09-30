@@ -139,10 +139,23 @@ function SettingsPanel.open()
 		end
 	end
 
-	local close = Theme.key(content, "Close", true, function()
+	local keys = Instance.new("Frame")
+	keys.BackgroundTransparency = 1
+	keys.Size = UDim2.new(1, 0, 0, 44)
+	keys.LayoutOrder = 4
+	keys.Parent = content
+	Theme.list(keys, 8, true)
+	Theme.key(keys, "The Wardrobe", false, function()
 		Root.close(NAME)
-	end, 200)
-	close.LayoutOrder = 4
+		require(script.Parent.WardrobePanel).open()
+	end, 150).LayoutOrder = 1
+	Theme.key(keys, "The Ledger", false, function()
+		Root.close(NAME)
+		require(script.Parent.LedgerPanel).open()
+	end, 150).LayoutOrder = 2
+	Theme.key(keys, "Close", true, function()
+		Root.close(NAME)
+	end, 150).LayoutOrder = 3
 	Root.open(NAME, group)
 end
 

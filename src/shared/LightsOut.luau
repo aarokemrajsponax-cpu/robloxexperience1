@@ -143,6 +143,12 @@ end
 LightsOut.Tabs = { "random", "rivals", "leader", "nearlyOut" }
 LightsOut.TabNames = { random = "Random", rivals = "Rivals", leader = "Leader", nearlyOut = "Nearly out" }
 
+-- Gilt for an evening (Appendix I1): 20 + 4 × (21 − your place), 100 for the last lamp, 24 for 20th.
+function LightsOut.gilt(place: number): number
+	local c = cfg()
+	return c.giltBase + c.giltPerPlace * math.max(0, c.tables + 1 - place)
+end
+
 -- Soirée and weekly-board points for a place (1 = the last lamp), plus 8 per Key.
 function LightsOut.points(place: number, keys: number): number
 	local list = cfg().points

@@ -569,10 +569,7 @@ finish = function(e: Evening)
 			local data = Profiles.get(player)
 			local gilt = 0
 			if data then
-				local c = cfg()
-				local base: number, topFive: number, win: number = c.giltBase, c.giltTopFive, c.giltWin
-				local g = base + (if place <= 5 then topFive else 0) + (if place == 1 then win else 0)
-				gilt = Gilt.pay(player, data, g, "Lights Out")
+				gilt = Gilt.pay(player, data, LightsOut.gilt(place), "Lights Out")
 			end
 			send(player, {
 				op = "eveningResult",
@@ -743,6 +740,7 @@ local function unseat(player: Player, reason: string)
 		lampOut(e, s, os.clock(), reason)
 	end
 	standUp(s)
+	s.model:SetAttribute("Occupant", nil)
 	s.player = nil
 	s.name = ""
 	send(player, { op = "left" })
@@ -783,7 +781,11 @@ function BallroomService.seatGuest(player: Player, index: number): boolean
 	end
 	seatOf[player] = index
 	s.name = player.DisplayName
-	s.tab = "random"
+	s.model:SetAttribute("Occupant", player.UserId)
+	-- The guest's own default tab (Settings: "Ballroom parcels go to").
+	local data = Profiles.get(player)
+	local wanted = data and data.settings and data.settings.parcelsTo
+	s.tab = if wanted == "Rivals" then "rivals" elseif wanted == "Leader" then "leader" elseif wanted == "Nearly out" then "nearlyOut" else "random"
 	nextEvening[player] = nil
 	connections[player] = {
 		humanoid.Seated:Connect(function(active: boolean, part: BasePart?)

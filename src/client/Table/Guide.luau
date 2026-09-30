@@ -7,6 +7,7 @@ local Workspace = game:GetService("Workspace")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local Duel = require(ReplicatedStorage.Shared.Duel)
+local Closet = require(script.Parent.Parent.Closet)
 local LightsOut = require(ReplicatedStorage.Shared.LightsOut)
 local Rooms = require(ReplicatedStorage.Shared.Rooms)
 local State = require(script.Parent.Parent.State)
@@ -77,7 +78,9 @@ end
 
 local function style()
 	local b = beam :: Beam
-	local colour = Brand.TrailColours[State.get("trailColour")] or Brand.TrailColours.House
+	-- A trail from the Boutique or the Ledger wins over the setting's colour.
+	local worn = Closet.style("trail")
+	local colour = if worn and typeof(worn.colour) == "Color3" then worn.colour else (Brand.TrailColours[State.get("trailColour")] or Brand.TrailColours.House)
 	b.Color = ColorSequence.new(colour)
 	local trail = State.get("trail")
 	local pace = State.get("trailPace")

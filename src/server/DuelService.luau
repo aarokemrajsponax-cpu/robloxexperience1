@@ -689,6 +689,7 @@ local function disconnectAll(player: Player)
 end
 
 local function standUp(player: Player, tbl: DuelTable, key: string)
+	tbl.halves[key]:SetAttribute("Occupant", nil)
 	local seat = tbl.halves[key]:FindFirstChild("Chair")
 	local weld = seat and seat:FindFirstChild("SeatWeld")
 	if weld then
@@ -771,6 +772,7 @@ local function seatAt(player: Player, tbl: DuelTable, key: string): boolean
 	seatedAt[player] = { duel = tbl, side = key }
 	tbl.since[key] = os.clock()
 	tbl.offered[key] = nil
+	model:SetAttribute("Occupant", player.UserId)
 	connections[player] = {
 		humanoid.Seated:Connect(function(active: boolean, part: BasePart?)
 			if not active or part ~= seat then

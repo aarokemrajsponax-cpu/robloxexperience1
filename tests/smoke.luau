@@ -721,6 +721,30 @@ do
 	check("the Ballroom arrival is clear", blocked(B.arrival, 0.9, Layout.CLUB + 1.2, Layout.CLUB + 5) == nil)
 end
 
+-- The Boutique: open to walk into, with its counter, mirror and Ledger.
+do
+	local Bq = Layout.Boutique
+	local door = Layout.Foyer.boutiqueDoor.Position
+	local why = walk({
+		{ Vector3.new(door.X, 0, 30), FLOOR },
+		{ Vector3.new(door.X, 0, 47), FLOOR },
+		{ Vector3.new(21, 0, 47), FLOOR },
+		{ Vector3.new(21, 0, 53.5), FLOOR },
+	}, 0.9)
+	check("a guest can walk from the Foyer into the Boutique to the counter", why == nil, why)
+	local found = {}
+	for _, d in maison:GetDescendants() do
+		if d:IsA("ProximityPrompt") then
+			found[d.Name] = true
+		end
+	end
+	check("the Boutique counter has its prompt", found.BoutiquePrompt == true)
+	check("the Tailor's mirror has its prompt", found.WardrobePrompt == true)
+	check("the Ledger has its prompt", found.LedgerPrompt == true)
+	check("the Boutique is its own zone", Layout.zoneAt(Vector3.new(21, 5, 50)) == "boutique")
+	check("the Boutique arrival is clear", blocked(Bq.arrival, 0.9, FLOOR + 1.2, FLOOR + 5) == nil)
+end
+
 check("the street spawn is clear", blocked(Layout.Street.spawn.Position, 1, 1.2, 5) == nil)
 check("the Foyer spawn is clear", blocked(Layout.Foyer.spawn.Position, 1, FLOOR + 1.2, FLOOR + 5) == nil)
 -- Until it's earned, the Midnight Room's doorway is closed.

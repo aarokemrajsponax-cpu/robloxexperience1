@@ -352,22 +352,18 @@ end
 local function boutiqueDoor(m: Model)
 	local model = Kit.model(m, "BoutiqueDoor")
 	local cf = F.boutiqueDoor
-	Kit.part(model, "Glass", Vector3.new(7.6, 9.6, 0.2), cf * CFrame.new(0, 4.8, 0.4), { color = Color3.fromRGB(60, 50, 40), material = Enum.Material.Glass, reflectance = 0.35, transparency = 0.3 })
-	Kit.part(model, "Backing", Vector3.new(8, 10, 0.4), cf * CFrame.new(0, 5, 1.1), L.wall)
-	Kit.part(model, "Frame", Vector3.new(8.6, 10.6, 0.3), cf * CFrame.new(0, 5, 0.6), L.brass)
+	-- Open glass doors in a brass frame: the Boutique is a room you walk into.
+	Kit.part(model, "FrameL", Vector3.new(0.4, 10.4, 1.2), cf * CFrame.new(-4.2, 5.2, 0.6), L.brass)
+	Kit.part(model, "FrameR", Vector3.new(0.4, 10.4, 1.2), cf * CFrame.new(4.2, 5.2, 0.6), L.brass)
+	Kit.part(model, "FrameTop", Vector3.new(8.8, 0.5, 1.2), cf * CFrame.new(0, 10.25, 0.6), L.brass)
+	for _, side in { -1, 1 } do
+		-- Each leaf swung back against the wall inside.
+		local hinge = cf * CFrame.new(side * 4, 0, 1.2)
+		Kit.part(model, "Leaf", Vector3.new(0.15, 9.6, 3.8), hinge * CFrame.new(-side * 0.2, 4.8, 1.9), { color = Color3.fromRGB(60, 50, 40), material = Enum.Material.Glass, reflectance = 0.35, transparency = 0.45 }, { collide = false })
+		Kit.part(model, "LeafFrame", Vector3.new(0.2, 9.8, 0.2), hinge * CFrame.new(-side * 0.2, 4.9, 3.8), L.brass, { collide = false })
+	end
 	local sign = Kit.part(model, "Sign", Vector3.new(6, 1.2, 0.1), cf * CFrame.new(0, 11.6, -0.3), { color = Color3.new(), material = Enum.Material.SmoothPlastic, transparency = 1 }, { collide = false, query = false, shadow = false })
 	Kit.engrave(sign, Enum.NormalId.Front, { { text = Kit.track(Voice.Foyer.boutique), size = 0.7, font = Brand.Fonts.display, color = Brand.Colours.lightGold } }, { ppu = 60, lit = false })
-	-- Rope
-	local p = { -3.2, 3.2 }
-	for _, x in p do
-		local pos = (cf * CFrame.new(x, 0, -1.8)).Position
-		Kit.post(model, "Stanchion", 3.2, 0.3, pos, L.brass)
-		Kit.ball(model, "StanchionTop", 0.5, pos + Vector3.new(0, 3.3, 0), L.brass)
-	end
-	local a = (cf * CFrame.new(p[1], 3, -1.8)).Position
-	local b = (cf * CFrame.new(p[2], 3, -1.8)).Position
-	Kit.part(model, "Rope", Vector3.new(0.25, 0.25, (b - a).Magnitude), CFrame.lookAt((a + b) / 2, b), L.rope)
-	Kit.span(model, "Barrier", (cf * CFrame.new(-4, 0, -1.8)).Position, (cf * CFrame.new(4, 10, -1.6)).Position, { color = Color3.new(), material = Enum.Material.SmoothPlastic, transparency = 1 }, { shadow = false, query = false })
 end
 
 local function entranceDoors(m: Model)

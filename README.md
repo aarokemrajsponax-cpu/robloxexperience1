@@ -135,6 +135,43 @@ Leave that window open. Every change pushed to the branch reaches Studio within 
   - **Live results from every server** on the Tonight board and in the leaderboard:
     *"Table 12 kept the last lamp with nine Keys."*
 
+## What's in Delivery 5 — the Boutique and the money
+
+Robux buys style, never score. Nothing sold changes a deal, a clock, a guide, a rating, a Mark,
+a Nightly attempt or a Mythic's odds.
+
+- **The Boutique**, through open glass doors in the Foyer's back wall: mirror panels, glass
+  counters lit from within, **the Tailor** behind the long counter (speak to them, or ring the
+  bell), a **dress form** wearing the week's featured piece, **the Tailor's mirror** (your
+  Wardrobe) and **the Ledger** open on a lectern.
+- **The shelves**: six pieces a day and two featured each week (the same everywhere, turning at
+  midnight UTC), the season's collection (a table style, a trail and a look, only in its
+  season), the house's own pieces for **Gilt**, **the Gold Key**, the Leather-Bound Ledger and,
+  in a guest's first week only, **the Introduction**.
+- **What you can wear**: table styles (your felt and rims, at any table), lamp styles,
+  guide-trail colours, nameplate frames (every guest now has an engraved nameplate, with their
+  Mark after five ranked evenings), round-card backs, victory flourishes (a Library win, the last
+  lamp), chimes, gestures (G or D-pad up) and house looks. Chimes, gestures and looks are only
+  sold once their sound, animation or clothing is set in `Config.Assets`.
+- **Gifts**: anything on the shelves can be bought for another guest in the house; the
+  Concierge hands it over as a wrapped box. If they've left, the buyer keeps it as credit.
+- **Receipts are idempotent**: a purchase is written into the profile, the profile is saved,
+  and only then is Roblox told it was granted. A retried receipt never grants twice. One
+  developer product per price tier; the server keeps the guest's choice with their profile and
+  logs the item. A purchase with no choice on file becomes Boutique credit.
+- **Prices are always read live** from Roblox (`MarketplaceService`), never written in text.
+- **The Gold Key** (a pass): the gold-edged nameplate, three looks, the chair and table trim,
+  and +20% on all Gilt.
+- **The Ledger**: fifty pages a Term, 1,000 points a page, turned by everything you play
+  (3 a filing, 300 for the Nightly, 150 a Library evening +100 a win, 150 a Ballroom evening
+  +10 a place above 11th). The free row pays Gilt and a cosmetic every fifth page, and the Term's
+  gesture on page 50; the Leather-Bound row adds two pieces a page and the signature look.
+  Bought late, it grants every page already reached. At these numbers a steady guest (30
+  minutes, four nights a week) finishes around week 8; tune `Ledger.points.filing` live.
+- **Settings** now open the Wardrobe and the Ledger too, and the Club settings are live: show
+  my Mark, the Ballroom's default parcel tab, rival updates, and offering a Stand-in.
+- Lights Out now pays Gilt as Appendix I1: 20 + 4 × (21 − your place).
+
 ## Where things live
 
 | Folder | What |
@@ -188,7 +225,7 @@ dressed from body colours with a shirt front, a tie, coat tails and the gold lap
 
 `tools/check.sh` type-checks every script against Roblox's API, runs the rule tests, builds
 the house under [Lune](https://github.com/lune-org/lune) and walks its routes, and plays whole
-Tête-à-Tête evenings (`tests/duel.luau`) and Lights Out evenings (`tests/ballroom.luau`) against
+Tête-à-Tête evenings (`tests/duel.luau`) and Lights Out evenings (`tests/ballroom.luau`) and the money (`tests/shop.luau`) against
 the real server code on a fake clock, and boots
 the whole client against the built house: title, Play, walking, a table by gamepad and by mouse,
 the Nightly card, a Tête-à-Tête and a Lights Out evening on screen, and the panels

@@ -762,7 +762,7 @@ print(string.format("  (the evening lasted %d s, %d Keys to the winner)", ended 
 local result = last(ada, "eveningResult")
 check("the result card says first", result and result.place == 1 and result.won == true)
 check("eveningResult has the fields the client reads", fieldsPresent(result or {}, { "place", "of", "keys", "points", "gilt", "counted", "won" }))
-check("the winner is paid Gilt", result and result.gilt == C.giltBase + C.giltTopFive + C.giltWin)
+check("the winner is paid 100 Gilt", result and result.gilt == 100, result and result.gilt)
 check("the Concierge says the last lamp is yours", (function()
 	for _, s in said do
 		if s.player == ada and string.find(s.line, "last lamp") then

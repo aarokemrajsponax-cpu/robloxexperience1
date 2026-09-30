@@ -26,6 +26,11 @@ local SettingsPanel = require(script.Parent.UI.SettingsPanel)
 local BoardPanel = require(script.Parent.UI.BoardPanel)
 local HowToPlay = require(script.Parent.UI.HowToPlay)
 local Invite = require(script.Parent.UI.Invite)
+local Closet = require(script.Parent.Closet)
+local BoutiquePanel = require(script.Parent.UI.BoutiquePanel)
+local WardrobePanel = require(script.Parent.UI.WardrobePanel)
+local LedgerPanel = require(script.Parent.UI.LedgerPanel)
+local GiftPanel = require(script.Parent.UI.GiftPanel)
 local Counter = require(script.Parent.Table.Counter)
 local TableClient = require(script.Parent.Table.TableClient)
 local Ambient = require(script.Parent.World.Ambient)
@@ -46,6 +51,29 @@ end)
 Theme.onClick(Sound.ui)
 Root.onDip(Sound.dip)
 
+Closet.start()
+Sound.wornChime = function()
+	local style = Closet.style("chime")
+	return if style then style.sound else nil
+end
+Closet.Message:Connect(function(op: string, m: any)
+	if op == "open" then
+		if m.panel == "boutique" then
+			BoutiquePanel.open()
+		elseif m.panel == "wardrobe" then
+			WardrobePanel.open()
+		elseif m.panel == "ledger" then
+			LedgerPanel.open()
+		end
+	elseif op == "gift" and type(m.item) == "table" then
+		task.delay(2.5, GiftPanel.show, tostring(m.from), m.item)
+	elseif op == "pages" and type(m.pages) == "table" then
+		local last = m.pages[#m.pages]
+		Toast.show("The Ledger", string.format("Page %d turned.", last or 0), 2.5)
+	elseif op == "notice" then
+		Toast.show(tostring(m.title), tostring(m.line), 4)
+	end
+end)
 Dialogue.start()
 Prompts.start()
 Counter.start()
@@ -188,6 +216,30 @@ Remotes.event("Guest").OnClientEvent:Connect(function(message: any)
 		Invite.library()
 	end
 end)
+
+-- A gesture from the Wardrobe: G, or up on the D-pad, while walking.
+ContextActionService:BindAction("MaisonGesture", function(_, state)
+	if state ~= Enum.UserInputState.Begin or TableClient.isSeated() or Root.isOpen() then
+		return Enum.ContextActionResult.Pass
+	end
+	local style = Closet.style("gesture")
+	local id = if style then (Config.data.Assets.Animations :: any)[style.animation] else nil
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	local animator = humanoid and humanoid:FindFirstChildOfClass("Animator")
+	if type(id) ~= "string" or id == "" or not animator then
+		return Enum.ContextActionResult.Pass
+	end
+	local anim = Instance.new("Animation")
+	anim.AnimationId = id
+	local ok, track = pcall(function()
+		return animator:LoadAnimation(anim)
+	end)
+	if ok and track then
+		track:Play(0.2)
+	end
+	return Enum.ContextActionResult.Sink
+end, false, Enum.KeyCode.G, Enum.KeyCode.DPadUp)
 
 -- Respawns never replay the intro; they hand straight back to the follow camera.
 player.CharacterAdded:Connect(function()

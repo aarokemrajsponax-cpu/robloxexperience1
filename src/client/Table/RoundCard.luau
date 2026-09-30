@@ -7,6 +7,7 @@ local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
+local Closet = require(script.Parent.Parent.Closet)
 local Ease = require(ReplicatedStorage.Shared.Ease)
 local Layout = require(ReplicatedStorage.Shared.Layout)
 
@@ -77,6 +78,7 @@ local function make(): Part
 	back.PixelsPerStud = 60
 	back.Parent = p
 	local pattern = Instance.new("Frame")
+	pattern.Name = "Pattern"
 	pattern.Size = UDim2.fromScale(1, 1)
 	pattern.BackgroundColor3 = Color3.fromRGB(18, 16, 14)
 	pattern.Parent = back
@@ -97,9 +99,56 @@ local function resting(frame: CFrame): CFrame
 	return CFrame.lookAt(pos, pos + Vector3.new(0, 1, 0), frame:VectorToWorldSpace(Vector3.new(0, 0, 1)))
 end
 
+-- The back of the card in the guest's own style (a round-card back from the Boutique).
+local function dressBack(p: Part)
+	local back = p:FindFirstChildWhichIsA("SurfaceGui")
+	for _, g in p:GetChildren() do
+		if g:IsA("SurfaceGui") and g.Face == Enum.NormalId.Back then
+			back = g
+		end
+	end
+	local pattern = back and back:FindFirstChild("Pattern")
+	if not pattern or not pattern:IsA("Frame") then
+		return
+	end
+	local style = Closet.style("card")
+	pattern.BackgroundColor3 = if style and typeof(style.back) == "Color3" then style.back else Color3.fromRGB(18, 16, 14)
+	local stripes = pattern:FindFirstChild("Stripes")
+	if stripes then
+		stripes:Destroy()
+	end
+	if style and style.pattern == "pinstripe" then
+		local holder = Instance.new("Frame")
+		holder.Name = "Stripes"
+		holder.BackgroundTransparency = 1
+		holder.Size = UDim2.fromScale(1, 1)
+		holder.Parent = pattern
+		for i = 1, 9 do
+			local line = Instance.new("Frame")
+			line.BorderSizePixel = 0
+			line.BackgroundColor3 = Color3.fromRGB(210, 206, 196)
+			line.BackgroundTransparency = 0.7
+			line.Position = UDim2.fromScale(i / 10, 0)
+			line.Size = UDim2.new(0, 1, 1, 0)
+			line.Parent = holder
+		end
+	elseif style and style.pattern == "damask" then
+		local g = Instance.new("UIGradient")
+		g.Name = "Stripes"
+		g.Rotation = 45
+		g.Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 0),
+			NumberSequenceKeypoint.new(0.5, 0.35),
+			NumberSequenceKeypoint.new(1, 0),
+		})
+		g.Parent = pattern
+	end
+end
+
 function RoundCard.land(frame: CFrame, top: string, middle: string, bottom: string): Tween
 	local p = card or make()
 	card = p
+	dressBack(p)
 	labels[1].Text = string.upper(top)
 	labels[2].Text = middle
 	labels[3].Text = bottom

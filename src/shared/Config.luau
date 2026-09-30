@@ -156,14 +156,43 @@ local defaults = {
 		keyBonus = { { 2, 0.25 }, { 4, 0.50 }, { 8, 0.75 }, { 16, 1.00 } }, -- { keys, extra parcels }
 		points = { 100, 70, 55, 45, 40, 25, 25, 25, 25, 25, 10, 10, 10, 10, 10, 0, 0, 0, 0, 0 }, -- by place
 		pointsPerKey = 8,
-		giltBase = 10, -- every guest who sits an evening
-		giltTopFive = 30,
-		giltWin = 80,
+		giltBase = 20, -- Gilt for an evening: 20 + 4 × (21 − your place), 100 for the last lamp
+		giltPerPlace = 4,
 		afterEvening = 8, -- the winner's moment before the next evening gathers
 		standInSlow = 1.35, -- a Stand-in's seconds per filing, slowest and fastest
 		standInFast = 0.62,
 		standInLowAccuracy = 0.82,
 		standInHighAccuracy = 0.96,
+	},
+
+	-- The Ledger (Appendix I2): tune so ~30 minutes on four nights a week finishes around week 9.
+	Ledger = {
+		pages = 50,
+		pointsPerPage = 1000,
+		freeGilt = 100, -- the free row's Gilt pages
+		points = {
+			filing = 3, -- per correct filing, four rooms and the Nightly
+			nightly = 300,
+			evening = 400, -- the Evening Commission
+			week = 1500, -- the Week's Commission
+			library = 150, -- per Library match
+			libraryWin = 100,
+			ballroom = 150, -- per Ballroom evening
+			ballroomPerPlace = 10, -- for each place above 11th
+		},
+	},
+
+	-- Developer products and passes (Appendix I3). Create them in the Creator Dashboard and put
+	-- their ids here (or in Roblox Configs); 0 means not on sale yet. Prices are always read live.
+	Products = {
+		tier49 = 0, tier79 = 0, tier99 = 0, tier149 = 0, tier199 = 0,
+		tier249 = 0, tier299 = 0, tier399 = 0, tier499 = 0, tier599 = 0,
+		introduction = 0, -- once per account, first 7 days, only in the Boutique
+		ledger = 0, -- the Leather-Bound Ledger, per Term
+		season = 0, -- a season collection
+		goldKey = 0, -- a game pass
+		introductionDays = 7,
+		giftTimeout = 120, -- seconds a chosen gift waits for its purchase
 	},
 
 	Rivals = {
@@ -234,6 +263,7 @@ local defaults = {
 		runMax = 400,
 		dailySoftCap = 2500,
 		softCapRate = 0.25,
+		goldKeyBonus = 0.2, -- the Gold Key: +20% on all Gilt
 	},
 
 	FirstMinute = {
@@ -278,6 +308,8 @@ local defaults = {
 			door = "",
 			chair = "rbxasset://sounds/action_get_up.mp3",
 			low = "rbxasset://sounds/electronicpingshort.wav", -- the clock's last ten seconds, played low
+			-- Chimes sold in the Boutique: a sound each. A chime is only sold once its sound is set.
+			chimes = { harp = "", musicBox = "", celesta = "", glass = "" },
 		},
 		Music = { street = "", foyer = "", salon = "", velvet = "", obsidian = "", midnight = "", club = "", library = "", ballroom = "" },
 		Ambience = { street = "", foyer = "", salon = "", velvet = "", obsidian = "", midnight = "", club = "", library = "", ballroom = "" },
@@ -287,6 +319,24 @@ local defaults = {
 			bow = "",
 			gesture = "",
 			applause = "",
+			tipHat = "",
+			term = "",
+		},
+		-- House looks: clothing for each outfit (Shirt and Pants template ids, accessory ids
+		-- comma-separated). A look is only sold once its clothing is set.
+		Looks = {
+			velvet = { shirt = 0, pants = 0, accessories = "" },
+			gown = { shirt = 0, pants = 0, accessories = "" },
+			tux = { shirt = 0, pants = 0, accessories = "" },
+			cape = { shirt = 0, pants = 0, accessories = "" },
+			goldKey1 = { shirt = 0, pants = 0, accessories = "" },
+			goldKey2 = { shirt = 0, pants = 0, accessories = "" },
+			goldKey3 = { shirt = 0, pants = 0, accessories = "" },
+			patron = { shirt = 0, pants = 0, accessories = "" },
+			connoisseur = { shirt = 0, pants = 0, accessories = "" },
+			custodian = { shirt = 0, pants = 0, accessories = "" },
+			keeper = { shirt = 0, pants = 0, accessories = "" },
+			term = { shirt = 0, pants = 0, accessories = "" },
 		},
 		Concierge = { shirt = 0, pants = 0, accessories = "" },
 		Doorman = { shirt = 0, pants = 0, accessories = "" },

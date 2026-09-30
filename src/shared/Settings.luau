@@ -47,11 +47,11 @@ Settings.Definitions = {
 	choice("trailColour", "The guide", "Trail colour", { "House", "Ice", "Rose", "Mint", "Violet" }, true),
 	choice("trailPace", "The guide", "Trail pace", { "Normal", "Lively", "Calm" }, true),
 	-- The Club
-	choice("showMark", "The Club", "Show my Mark on my nameplate", { "On", "Off" }, false),
+	choice("showMark", "The Club", "Show my Mark on my nameplate", { "On", "Off" }, true),
 	choice("showCrest", "The Club", "Show my Circle's crest", { "On", "Off" }, false),
-	choice("parcelsTo", "The Club", "Ballroom parcels go to", { "Random", "Rivals", "Leader", "Nearly out" }, false),
-	choice("rivalUpdates", "The Club", "Rival updates in the house", { "On", "Off" }, false),
-	choice("offerStandIn", "The Club", "Offer a Stand-in while I wait", { "Yes", "No" }, false),
+	choice("parcelsTo", "The Club", "Ballroom parcels go to", { "Random", "Rivals", "Leader", "Nearly out" }, true),
+	choice("rivalUpdates", "The Club", "Rival updates in the house", { "On", "Off" }, true),
+	choice("offerStandIn", "The Club", "Offer a Stand-in while I wait", { "Yes", "No" }, true),
 	-- Sound
 	choice("music", "Sound", "Music", { "On", "Off" }, true),
 	level("musicLevel", "Sound", "Music volume", 65, true),

@@ -54,6 +54,19 @@ Layout.Foyer = {
 	boutiqueDoor = CFrame.lookAt(Vector3.new(19, 3, 41.5), Vector3.new(19, 3, 0)),
 }
 
+-- The Boutique: a narrow mirrored shop through the Foyer's back wall, under the Club Floor.
+Layout.Boutique = {
+	zone = box(12, 0, 44, 30, 17, 62),
+	minX = 12, maxX = 30, minZ = 44, maxZ = 62, height = 14,
+	-- The Tailor behind the long counter at the far end, facing the door.
+	tailorHome = CFrame.lookAt(Vector3.new(21, 3, 58.5), Vector3.new(21, 3, 40)),
+	counter = CFrame.new(21, 3, 56),
+	mirror = CFrame.lookAt(Vector3.new(13.2, 3, 51), Vector3.new(30, 3, 51)),
+	dressForm = CFrame.lookAt(Vector3.new(27, 3, 49), Vector3.new(12, 3, 49)),
+	ledger = CFrame.lookAt(Vector3.new(15.5, 3, 46.8), Vector3.new(21, 3, 52)),
+	arrival = Vector3.new(19, 3, 47),
+}
+
 -- The four room doors, as seen from the Foyer. `facing` points into the Foyer.
 Layout.RoomDoors = {
 	-- `approach`: clear points across the Foyer toward each door (around the piano and lectern).
@@ -212,7 +225,7 @@ function Layout.inBox(b: Box, p: Vector3): boolean
 	return p.X >= b.min.X and p.X <= b.max.X and p.Y >= b.min.Y and p.Y <= b.max.Y and p.Z >= b.min.Z and p.Z <= b.max.Z
 end
 
-export type ZoneName = "street" | "foyer" | "salon" | "velvet" | "obsidian" | "midnight" | "club" | "library" | "ballroom" | "none"
+export type ZoneName = "street" | "foyer" | "salon" | "velvet" | "obsidian" | "midnight" | "club" | "library" | "ballroom" | "boutique" | "none"
 
 function Layout.zoneAt(p: Vector3): ZoneName
 	if Layout.inBox(Layout.Salon.zone, p) then
@@ -229,6 +242,8 @@ function Layout.zoneAt(p: Vector3): ZoneName
 		return "ballroom"
 	elseif Layout.inBox(Layout.Club.zone, p) then
 		return "club"
+	elseif Layout.inBox(Layout.Boutique.zone, p) then
+		return "boutique"
 	elseif Layout.inBox(Layout.Foyer.zone, p) then
 		return "foyer"
 	elseif Layout.inBox(Layout.Street.zone, p) then
