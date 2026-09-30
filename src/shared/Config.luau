@@ -214,6 +214,13 @@ local defaults = {
 		lostAfter = 25, -- seconds a new guest lingers in the Foyer before the Concierge offers the walk
 	},
 
+	-- A Private Evening (a private server, §12): the owner's house for friends. Nothing played
+	-- there counts for records; the owner sets the Ballroom's pace and whether Stand-ins sit in.
+	Private = {
+		paces = { gentle = 1.3, house = 1.0, brisk = 0.8 }, -- × seconds between arrivals
+		inStudio = false, -- true makes a Studio playtest behave as a Private Evening (for testing)
+	},
+
 	-- Music (§14). Every space has its own track (Assets.Music), crossfading as you move.
 	Music = {
 		level = 0.5, -- a track's volume before the guest's own Music level

@@ -19,6 +19,7 @@ local Seed = require(ReplicatedStorage.Shared.Seed)
 local Voice = require(ReplicatedStorage.Shared.Voice)
 
 local Analytics = require(script.Parent.Analytics)
+local Private = require(script.Parent.Private)
 local Boards = require(script.Parent.Boards)
 local Gilt = require(script.Parent.Gilt)
 local Profiles = require(script.Parent.Profiles)
@@ -670,7 +671,7 @@ function TableService.seat(player: Player, model: Model, teleport: boolean?, wan
 	if mode == "nightly" then
 		-- One scored attempt per UTC day; after that, unlimited unscored rehearsals.
 		local night = Nightly.at()
-		if data and data.nightly.day == night.day then
+		if (data and data.nightly.day == night.day) or not Private.records() then
 			mode = "rehearsal"
 		end
 	elseif model:GetAttribute("Room") == "midnight" and not (data and data.flags.midnight) then
@@ -806,7 +807,7 @@ local function onMessage(player: Player, message: unknown)
 				-- After the card: another go at tonight's table, scored only if it's a new night.
 				local night = Nightly.at()
 				local data = Profiles.get(player)
-				s.mode = if data and data.nightly.day == night.day then "rehearsal" else "nightly"
+				s.mode = if (data and data.nightly.day == night.day) or not Private.records() then "rehearsal" else "nightly"
 				s.night = night
 				s.room = Rooms.get(night.room) or s.room
 			end

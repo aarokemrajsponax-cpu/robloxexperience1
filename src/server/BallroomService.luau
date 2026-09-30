@@ -22,6 +22,7 @@ local Seed = require(ReplicatedStorage.Shared.Seed)
 local Voice = require(ReplicatedStorage.Shared.Voice)
 
 local Analytics = require(script.Parent.Analytics)
+local Private = require(script.Parent.Private)
 local Gilt = require(script.Parent.Gilt)
 local Profiles = require(script.Parent.Profiles)
 local Season = require(script.Parent.Season)
@@ -75,6 +76,7 @@ type Evening = {
 	pace: number,
 	alive: number,
 	real: number,
+	of: number, -- tables lit at the start (fewer on a Private Evening without Stand-ins)
 	counts: boolean,
 	rng: Random,
 	nextUid: number,
@@ -314,7 +316,7 @@ local function lampOut(e: Evening, s: SeatState, now: number, reason: string)
 	s.keys = 0
 	s.model:SetAttribute("Keys", 0)
 	local leader = keyLeader()
-	dimRoom(0.25 + 0.75 * e.alive / cfg().tables)
+	dimRoom(0.25 + 0.75 * e.alive / e.of)
 	broadcast({
 		op = "lampOut",
 		seat = s.index,
@@ -326,7 +328,7 @@ local function lampOut(e: Evening, s: SeatState, now: number, reason: string)
 		alive = e.alive,
 	})
 	if s.player then
-		send(s.player, { op = "out", place = s.place, keys = keysHeld, by = if by then by.name else nil, reason = reason, of = cfg().tables })
+		send(s.player, { op = "out", place = s.place, keys = keysHeld, by = if by then by.name else nil, reason = reason, of = e.of })
 		Analytics.custom(s.player, "Ballroom lamp out", s.place, { reason = reason })
 	end
 	if e.alive <= 1 or realAlive() == 0 then
@@ -565,7 +567,7 @@ finish = function(e: Evening)
 	for _, s in seats do
 		local player = s.player
 		if player then
-			local place = s.place or cfg().tables
+			local place = s.place or e.of
 			local data = Profiles.get(player)
 			local gilt = 0
 			if data then
@@ -574,7 +576,7 @@ finish = function(e: Evening)
 			send(player, {
 				op = "eveningResult",
 				place = place,
-				of = cfg().tables,
+				of = e.of,
 				keys = s.keys,
 				points = LightsOut.points(place, s.keys),
 				gilt = gilt,
@@ -611,18 +613,31 @@ end
 local function eveningStart(e: Evening, now: number)
 	e.state = "playing"
 	e.startedAt = now
-	e.pace = LightsOut.pace(0)
+	e.pace = LightsOut.pace(0) * Private.paceScale()
 	e.nextArrivalAt = now + e.pace
 	e.cases = Deal.casesOpen(LightsOut.room(0), 1)
-	-- Stand-ins fill the empty chairs, their pace spread across the room.
+	-- Stand-ins fill the empty chairs, their pace spread across the room. On a Private Evening
+	-- the host may leave them empty, once at least two guests are seated.
 	local names: { [string]: { name: string, standIn: boolean } } = {}
 	local real = 0
-	for i, s in seats do
-		resetSeat(s)
-		s.alive = true
+	for _, s in seats do
 		if s.player then
 			real += 1
-		else
+		end
+	end
+	local fill = Private.standIns() or real < 2
+	local lit = 0
+	for i, s in seats do
+		resetSeat(s)
+		s.alive = s.player ~= nil or fill
+		if s.alive then
+			lit += 1
+		end
+		if not s.player and not fill then
+			s.model:SetAttribute("Out", true)
+			setLamp(s, 0, 0.6)
+			continue
+		elseif not s.player then
 			local t = e.rng:NextNumber()
 			s.bot = {
 				seconds = cfg().standInFast + (cfg().standInSlow - cfg().standInFast) * t,
@@ -636,14 +651,18 @@ local function eveningStart(e: Evening, now: number)
 		names[tostring(i)] = { name = s.name, standIn = s.player == nil }
 	end
 	e.real = real
-	e.alive = #seats
-	e.counts = real >= cfg().minRealForRecords
+	e.alive = lit
+	e.of = lit
+	e.counts = real >= cfg().minRealForRecords and Private.records()
 	-- The opening deal: the same six pieces on every felt.
 	local opening: { Deal.DealtPiece } = {}
 	for _ = 1, cfg().openingDeal do
 		table.insert(opening, nextPiece(e, 0))
 	end
 	for _, s in seats do
+		if not s.alive then
+			continue
+		end
 		local list = {}
 		for _, dealt in opening do
 			table.insert(list, publicPiece(give(e, s, dealt)))
@@ -676,6 +695,7 @@ gather = function(now: number)
 		pace = cfg().paceStart,
 		alive = 0,
 		real = 0,
+		of = cfg().tables,
 		counts = false,
 		rng = Random.new(Seed.hash(id)),
 		nextUid = 0,
@@ -952,7 +972,7 @@ local function tick(now: number)
 				send(s.player, { op = "arrive", pieces = { publicPiece(p) }, remaining = s.count })
 			end
 		end
-		e.pace = LightsOut.pace(t)
+		e.pace = LightsOut.pace(t) * Private.paceScale()
 		e.nextArrivalAt += e.pace
 	end
 	for _, s in seats do

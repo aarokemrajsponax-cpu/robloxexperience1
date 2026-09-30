@@ -126,7 +126,7 @@ function BallroomPanel.result(message: { [string]: any }, actions: Actions)
 	if (message.gilt or 0) > 0 then
 		table.insert(rows, { Voice.Ballroom.gilt, "+" .. RoundPanel.number(message.gilt) })
 	end
-	card(Voice.Ballroom.title, heading, nil, rows, if message.counted then nil else Voice.Ballroom.notCountedNote, actions, "stay")
+	card(Voice.Ballroom.title, heading, nil, rows, if message.counted then nil elseif game:GetService("Workspace"):GetAttribute("PrivateEvening") == true then Voice.Private.line else Voice.Ballroom.notCountedNote, actions, "stay")
 end
 
 function BallroomPanel.close()

@@ -16,6 +16,7 @@ local Soiree = require(ReplicatedStorage.Shared.Soiree)
 local Wardrobe = require(ReplicatedStorage.Shared.Wardrobe)
 
 local Analytics = require(script.Parent.Analytics)
+local Private = require(script.Parent.Private)
 local Profiles = require(script.Parent.Profiles)
 
 local SoireeService = {}
@@ -41,7 +42,7 @@ end
 -- A result from the Ballroom or the Library.
 function SoireeService.record(player: Player, format: "ballroom" | "library", result: { place: number?, keys: number?, won: boolean? })
 	local weekend = Soiree.at()
-	if not weekend.active or weekend.format ~= format then
+	if not weekend.active or weekend.format ~= format or not Private.records() then
 		return
 	end
 	local data = Profiles.get(player)

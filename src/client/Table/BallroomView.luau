@@ -441,7 +441,7 @@ function BallroomView.handle(message: { [string]: any }): Vector3?
 		playing = true
 		highlightTabs()
 		showTabs(true)
-		Toast.show(Voice.Ballroom.title, if message.counted then Voice.Ballroom.counted else Voice.Ballroom.notCounted, 4)
+		Toast.show(Voice.Ballroom.title, if message.counted then Voice.Ballroom.counted elseif Workspace:GetAttribute("PrivateEvening") == true then Voice.Private.line else Voice.Ballroom.notCounted, 4)
 	elseif op == "eveningBegins" then
 		lit = message.alive or lit
 	elseif op == "tab" then

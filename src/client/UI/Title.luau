@@ -8,6 +8,7 @@ local Workspace = game:GetService("Workspace")
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local Ease = require(ReplicatedStorage.Shared.Ease)
 local Rooms = require(ReplicatedStorage.Shared.Rooms)
+local Voice = require(ReplicatedStorage.Shared.Voice)
 local Root = require(script.Parent.Root)
 local Theme = require(script.Parent.Theme)
 
@@ -79,6 +80,10 @@ function Title.show(choices: Choices)
 		local ruleName = string.gsub(nightlyRoom.name, "^The ", "")
 		ruleName = string.gsub(ruleName, " Room$", "")
 		Theme.text(column, "Tonight's table: " .. ruleName .. " rules.", 14, "body", { LayoutOrder = 7, TextColor3 = Brand.Colours.smoke })
+	end
+	-- A Private Evening says so, plainly, before anyone plays.
+	if Workspace:GetAttribute("PrivateEvening") == true then
+		Theme.text(column, Voice.Private.title .. "  ·  " .. Voice.Private.line, 13, "body", { LayoutOrder = 7, TextColor3 = Brand.Colours.lightGold })
 	end
 
 	local spacer2 = spacer:Clone()

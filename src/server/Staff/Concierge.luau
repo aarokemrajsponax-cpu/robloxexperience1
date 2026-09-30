@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Layout = require(ReplicatedStorage.Shared.Layout)
 local Voice = require(ReplicatedStorage.Shared.Voice)
 local Dialogue = require(script.Parent.Parent.Dialogue)
+local Private = require(script.Parent.Parent.Private)
 local Rig = require(script.Parent.Rig)
 
 local Concierge = {}
@@ -111,15 +112,42 @@ function Concierge.lead(player: Player, roomId: string)
 	end)
 end
 
+-- A Private Evening's host arranges the Ballroom: the pace, then the empty chairs.
+local function setEvening(player: Player)
+	local P = Voice.Private
+	local current = Private.get()
+	local paces = {}
+	for _, id in { "gentle", "house", "brisk" } do
+		table.insert(paces, { id = id, text = (if current.pace == id then "· " else "") .. (P.paces :: any)[id] })
+	end
+	Dialogue.say(player, V.speaker, P.setEvening .. "  " .. P.pace .. ":", paces, function(pace)
+		Private.set(player, "pace", pace)
+		local chairs = {}
+		for _, id in { "fill", "none" } do
+			table.insert(chairs, { id = id, text = (if Private.get().standIns == id then "· " else "") .. (P.standInChoices :: any)[id] })
+		end
+		Dialogue.say(player, V.speaker, P.standIns .. ":", chairs, function(standIns)
+			Private.set(player, "standIns", standIns)
+			Dialogue.say(player, V.speaker, P.done, nil, nil, 2)
+		end)
+	end)
+end
+
 local function menu(player: Player)
-	Dialogue.say(player, V.speaker, V.returning:gsub("{name}", player.DisplayName), {
+	local choices = {
 		{ id = "room", text = V.choices.takeMe },
 		{ id = "library", text = V.choices.library },
 		{ id = "ballroom", text = V.choices.ballroom },
 		{ id = "how", text = V.choices.how },
 		{ id = "bye", text = V.choices.bye },
-	}, function(choice)
-		if choice == "room" then
+	}
+	if Private.isHost(player) then
+		table.insert(choices, 4, { id = "evening", text = V.choices.setEvening })
+	end
+	Dialogue.say(player, V.speaker, V.returning:gsub("{name}", player.DisplayName), choices, function(choice)
+		if choice == "evening" then
+			setEvening(player)
+		elseif choice == "room" then
 			local rooms = {
 				{ id = "salon", text = "The Salon" },
 				{ id = "velvet", text = "The Velvet Room" },

@@ -19,6 +19,9 @@ Season.start()
 local Dialogue = require(script.Parent.Dialogue)
 Dialogue.start()
 
+-- A Private Evening (a private server): records off, the host arranges the Ballroom.
+require(script.Parent.Private).publish()
+
 local staffFolder = Instance.new("Folder")
 staffFolder.Name = "Staff"
 staffFolder.Parent = maison

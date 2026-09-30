@@ -18,6 +18,7 @@ local Nightly = require(ReplicatedStorage.Shared.Nightly)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Rooms = require(ReplicatedStorage.Shared.Rooms)
 local Voice = require(ReplicatedStorage.Shared.Voice)
+local Private = require(script.Parent.Private)
 
 local Boards = {}
 
@@ -320,7 +321,7 @@ end
 
 -- Records a banked run. Keeps each guest's best on both boards.
 function Boards.submit(player: Player, room: string, score: number)
-	if score <= 0 then
+	if score <= 0 or not Private.records() then
 		return
 	end
 	names[player.UserId] = player.DisplayName
@@ -356,6 +357,9 @@ end
 
 -- Records a Library rating (ratings go down as well as up, so this sets rather than keeps the best).
 function Boards.submitRating(player: Player, rating: number)
+	if not Private.records() then
+		return
+	end
 	names[player.UserId] = player.DisplayName
 	local value = math.floor(rating + 0.5)
 	local board = cache["library:all"]

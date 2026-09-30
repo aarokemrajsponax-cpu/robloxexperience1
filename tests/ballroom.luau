@@ -363,6 +363,7 @@ local stubs = {
 local tweens = 0
 local services = {
 	Players = PlayersService,
+	Workspace = roblox.Instance.new("Folder"),
 	CollectionService = {
 		GetTagged = function(_, tag)
 			return tagged[tag] or {}
@@ -840,6 +841,43 @@ end
 advance(1)
 check("leavers are recorded with a counted evening", finished[#finished].counted == true)
 advance(C.afterEvening + 1)
+
+---------------------------------------------------------------------------------------------------
+-- 9. A Private Evening: nothing counts; the host keeps the chairs for friends and sets the pace
+---------------------------------------------------------------------------------------------------
+local Private = module("ServerScriptService", "Server", "Private")
+local LightsOutRules = module("ReplicatedStorage", "Shared", "LightsOut")
+Config.data.Private.inStudio = true
+local friends = {}
+for i = 1, 8 do
+	table.insert(friends, guest("Friend" .. i, 300 + i))
+end
+check("the host can arrange the evening", Private.set(friends[1], "standIns", "none") and Private.set(friends[1], "pace", "brisk"))
+check("nonsense isn't arranged", not Private.set(friends[1], "pace", "ludicrous") and not Private.set(friends[1], "tables", "3"))
+for i, g in friends do
+	sit(g, i)
+end
+advance(C.gatherSeconds + 0.5)
+local start9 = last(friends[1], "eveningStart")
+check("a Private Evening never counts, even with eight guests", start9 ~= nil and start9.counted == false)
+local standIns9 = 0
+for _, n in (start9 and start9.names or {}) do
+	if n.standIn then
+		standIns9 += 1
+	end
+end
+check("with Stand-ins off, only the guests' lamps are lit", start9 ~= nil and count(start9.names) == 8 and standIns9 == 0 and BallroomService.evening().alive == 8, start9 and count(start9.names))
+check("the host's pace: brisk", math.abs(BallroomService.evening().pace - LightsOutRules.pace(0) * Config.data.Private.paces.brisk) < 1e-6, BallroomService.evening().pace)
+local finishedBefore9 = #finished
+for i = 8, 1, -1 do
+	send(friends[i], { op = "leave" })
+end
+advance(1)
+check("results say how many were lit", last(friends[8], "out") ~= nil and last(friends[8], "out").of == 8, last(friends[8], "out") and last(friends[8], "out").of)
+check("and the evening isn't recorded", #finished > finishedBefore9 and finished[#finished].counted == false)
+advance(C.afterEvening + 1)
+Config.data.Private.inStudio = false
+check("a public server is not a Private Evening", not Private.evening() and Private.standIns() and Private.paceScale() == 1)
 
 print(string.format("%d passed, %d failed", passed, failed))
 if failed > 0 then

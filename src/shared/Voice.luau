@@ -51,7 +51,21 @@ Voice.Concierge = {
 		thanks = "Thank you",
 		fine = "I'm fine, thank you",
 		bye = "Good night",
+		setEvening = "Set the evening",
 	},
+}
+
+-- A Private Evening (a private server).
+Voice.Private = {
+	title = "A Private Evening",
+	line = "Your own house tonight. Nothing here counts for records.",
+	setEvening = "How would you like the Ballroom tonight?",
+	pace = "The pace",
+	standIns = "The empty chairs",
+	paces = { gentle = "Gentle", house = "The house's pace", brisk = "Brisk" },
+	standInChoices = { fill = "Stand-ins fill them", none = "Only our guests" },
+	done = "It's arranged.",
+	notOwner = "The evening is arranged by the host.",
 }
 
 Voice.Doorman = {

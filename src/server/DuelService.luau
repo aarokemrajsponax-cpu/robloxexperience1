@@ -20,6 +20,7 @@ local Standing = require(ReplicatedStorage.Shared.Standing)
 local Voice = require(ReplicatedStorage.Shared.Voice)
 
 local Analytics = require(script.Parent.Analytics)
+local Private = require(script.Parent.Private)
 local Boards = require(script.Parent.Boards)
 local Dialogue = require(script.Parent.Dialogue)
 local Gilt = require(script.Parent.Gilt)
@@ -608,7 +609,7 @@ local function startMatch(tbl: DuelTable, standIn: boolean)
 		return
 	end
 	-- Friendly when either guest isn't eligible, when a friend was invited, or with a Stand-in.
-	local ranked = not standIn and not tbl.friendly and sides.a.eligible and sides.b.eligible
+	local ranked = not standIn and not tbl.friendly and sides.a.eligible and sides.b.eligible and Private.records()
 	local match: Match = {
 		id = id,
 		seed = Seed.hash(id),
