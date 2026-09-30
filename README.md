@@ -249,6 +249,39 @@ a Nightly attempt or a Mythic's odds.
 - **The launch kit**: page text, icon, thumbnails and the gameplay video's shot list are in
   [`LAUNCH.md`](LAUNCH.md).
 
+## Play it, sell it, host it, feel at home in it
+
+- **Playing in Studio.** Press **Play** and you're in your own character at once with the normal
+  follow camera (no intro, no title; `Config.Studio.skipTitle`). The live game keeps its intro
+  and title, and there W/A/S/D count as Play. If anything ever fails, a guest is handed their
+  character instead of being left behind a drifting camera.
+- **Ways to spend Robux**, all style, spectacle or gifts, never score:
+  - **Salutes** (a brass card on the piano, and a Salutes tab in the Boutique): a moment bought
+    for the whole house. Gold leaf over every guest (49), an encore with a spotlight on you (79),
+    every lamp flaring (99), fireworks over the roofs (149), or the Grand Salute: all four,
+    announced in every house (399). The giver's name goes on the Tonight board, with a gold star on
+    their nameplate for half an hour. Also offered after you keep the last lamp.
+  - **Always here**: seven staples always on the Boutique's shelves, beside the daily six and the
+    week's two; seventeen more pieces (felts up to the Gilded Baize at 599, lamps, threads,
+    nameplates, card backs, flourishes, Suite pieces).
+  - **Gifts**: any piece for another guest; **give the Gold Key** to someone; admire a guest and
+    choose them a gift from what they'd like.
+  - The Gold Key now also opens **the Terrace all year**.
+- **House controls** (the owner's panel): only you see the **House** key (or press **;**).
+  Events (Golden Hour, Lucky Hour, the Page-Turner, a Night of Giants, the Quickstep,
+  Featherlight, Gold Rain, a Treasure Hunt), in this house or every house, for 5/15/30 minutes;
+  any Salute for free; another season for a while; crown a Guest of Honour, spotlight, bring,
+  gift Gilt to one guest or everyone, or show someone out; announcements (typed ones filtered by
+  Roblox) here or everywhere; and a summons that invites guests in every house to join yours.
+  Events change Gilt, Ledger pages and Mythic luck, never a score. Other trusted people:
+  `Config.Admin.userIds`.
+- **Feeling at home**: the Concierge remembers your last highlight, your milestones and who
+  admired you; the table you use most carries your name while you're here and is offered as
+  "your usual"; walk up to any guest and **Admire** them (R, or L1); sign the **Livre d'Or** once
+  a night with a chosen line for the next guests to read.
+- **Photo mode** (Settings → Photo): a free camera, depth of field, film grades, your gesture,
+  and a clean capture with the MAISON NOIR mark, shared through Roblox.
+
 ## Where things live
 
 | Folder | What |

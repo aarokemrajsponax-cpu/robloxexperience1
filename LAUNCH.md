@@ -134,6 +134,9 @@ All in `src/shared/Config.luau` (or live, in Creator Hub → Configs, as `Sectio
 | --- | --- | --- |
 | The Founding Term | `FoundingTerm` | the Term you launch in, e.g. `2026-autumn` |
 | Every product id | `Products.*` | from Creator Hub → Monetization |
+| Salutes | `Products.salute_goldLeaf` / `encore` / `chandelier` / `fireworks` / `grand` | five developer products; suggested 49 / 79 / 99 / 149 / 399 |
+| Giving the Gold Key | `Products.goldKeyGift` | a developer product at the Gold Key's price (499) |
+| Trusted helpers for House controls | `Admin.userIds` | their Roblox user ids (you, as owner, are always allowed) |
 | The Black Card | `Products.blackCard` | the subscription's id (`EXP-…`), or leave `""` to launch without it |
 | Badges | `Badges.*` | from Creator Hub → Badges |
 | Circles | `Circles.enabled` | `true` at launch, or `false` for later (§19 #10) |
@@ -157,6 +160,14 @@ Create a notification string), then paste each id into `Notifications.messages`:
 | `rivalPassed` | `{experienceName}: {name} just passed you on tonight's table.` | `name` |
 | `soiree` | `{name} has started at {experienceName}. Your best evenings this weekend count.` | `name` |
 | `termEnding` | `{term} ends in three days at {experienceName}. The Ledger's last pages are waiting.` | `term` |
+
+**Making the developer products** (once each, for the tiers, the Introduction, the Ledger, the
+season collection, the five Salutes and the Gold Key gift):
+1. Creator Hub → **Creations** → your experience → **Monetization** → **Developer Products**.
+2. **Create a Developer Product**. Name it (e.g. *A Shower of Gold Leaf*), set the price, add a
+   small image if you like, **Save**.
+3. Click the product, copy its **Product ID**, and paste it into `src/shared/Config.luau` beside
+   its name (or live, in Creator Hub → **Configs**, as `Products_salute_goldLeaf`).
 
 **Private servers** (A Private Evening): Creator Hub → your experience → **Monetization** →
 **Private Servers** → Enable, price **199** Robux a month (Appendix I).
