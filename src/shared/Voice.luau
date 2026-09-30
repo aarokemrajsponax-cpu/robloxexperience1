@@ -42,6 +42,16 @@ Voice.Concierge = {
 	closedRoom = "Not tonight. The Salon is open.",
 	lost = "The Salon is through there, if you'd like me to walk you.",
 	goodNight = "Good night.",
+	-- The house remembers you (Memory.luau).
+	memory = {
+		milestone = "Your {n} night at the house. We're glad of it.",
+		away = "It's been a while. Your table was kept.",
+		awayNoTable = "It's been a while. Nothing has moved.",
+		lastTime = "Last time, {highlight}.",
+		admired = "{n} guests admired you last time you were here.",
+		admiredOne = "A guest admired you last time you were here.",
+		usual = "Your usual table?",
+	},
 	choices = {
 		takeMe = "Take me to a room",
 		how = "How does this work",

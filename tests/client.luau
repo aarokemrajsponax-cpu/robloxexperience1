@@ -1721,6 +1721,45 @@ check("and asks the server to go", (function()
 end)())
 check("no errors in House controls", #errors == 0, errors[1])
 
+-- Guests noticing each other.
+serverSays("Shop", { op = "admired", from = "Ben" })
+advance(0.5)
+check("being admired is noticed", textOnScreen("Ben admires you") ~= nil)
+local AdmireCard = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "AdmireCard")
+AdmireCard.show({ ok = true, name = "Ben", userId = 2, counted = true, pieces = { { kind = "table", kindName = "Table styles", id = "table_oxblood", name = "Oxblood Felt", where = "always" } } })
+advance(0.5)
+check("admiring shows what they wear and where it's from", textOnScreen("Oxblood Felt") ~= nil and textOnScreen("Always here") ~= nil)
+invokeResults.ShopAsk = {
+	always = { { id = "table_oxblood", name = "Oxblood Felt", kind = "table", kindName = "Table styles", line = "Deep red felt.", robux = 249, owned = false, style = {} } },
+	today = {}, featured = {}, gilt = {}, guests = { { userId = 2, name = "Ben" } }, credits = {}, balance = 0, standing = "Guest",
+	season = { id = "autumn", name = "Autumn", pieces = {} },
+	goldKey = { owned = false }, ledger = { view = { term = "2026-autumn", page = 1, pages = 50, leather = false } },
+	salutes = {}, saluteWaiting = 0,
+}
+check("a gift for them opens the Boutique for them", press("A gift for Ben"))
+advance(1)
+check("every piece becomes a gift to them", textOnScreen("Choosing a gift for Ben") ~= nil and find(playerGui, function(d)
+	return d:IsA("TextButton") and string.find(norm(d.Text), "gift", 1, true) == 1
+end) ~= nil)
+Root2.close()
+advance(0.5)
+-- A regular's usual table.
+salonTable:SetAttribute("Regular", "Ada")
+signalOf(salonTable, "attr:Regular"):Fire()
+advance(0.3)
+local platesGui = salonTable:FindFirstChild("RegularPlate")
+check("a regular's usual table carries their name", platesGui ~= nil and string.find(platesGui:FindFirstChildWhichIsA("TextLabel").Text, "Ada's usual table", 1, true) ~= nil)
+-- The Livre d'Or.
+invokeResults.ShopAsk = { lines = { "What an evening.", "The Salon, always." }, entries = { { name = "Ben", text = "Until midnight.", at = 0 } }, signedToday = false, now = 7200 }
+serverSays("Shop", { op = "open", panel = "guestBook" })
+advance(1)
+check("the Livre d'Or shows who signed", textOnScreen("Until midnight") ~= nil and textOnScreen("2 hours ago") ~= nil)
+check("and offers lines to sign with", press("The Salon, always."))
+advance(0.5)
+Root2.close()
+advance(0.5)
+check("no errors among guests", #errors == 0, errors[1])
+
 ---------------------------------------------------------------------------------------------------
 -- 8. A respawn hands straight back to the follow camera
 ---------------------------------------------------------------------------------------------------

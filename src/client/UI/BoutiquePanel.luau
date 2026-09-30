@@ -25,6 +25,8 @@ local currentTab = "today"
 local list: ScrollingFrame? = nil
 local tabKeys: { [string]: TextButton } = {}
 local balance: TextLabel? = nil
+-- Shopping for someone else (from admiring them): every Buy becomes a gift to them.
+local giftFor: { userId: number, name: string }? = nil
 
 function BoutiquePanel.swatch(style: { [string]: any }?): Color3
 	if style then
@@ -129,6 +131,13 @@ local function row(parent: Instance, card: Card, order: number, mode: "robux" | 
 			k.Size = UDim2.fromOffset(150, 34)
 			k.LayoutOrder = 2
 		end
+	elseif mode == "robux" and giftFor then
+		local recipient = giftFor
+		local give = Theme.key(actions, "Gift · " .. robux(card.robux), true, function()
+			after(Closet.ask({ op = "buy", item = card.id, giftTo = recipient.userId }))
+		end, 150)
+		give.Size = UDim2.fromOffset(150, 34)
+		give.LayoutOrder = 1
 	elseif mode == "robux" then
 		local buy = Theme.key(actions, "Buy · " .. robux(card.robux), true, function()
 			after(Closet.ask({ op = "buy", item = card.id }))
@@ -295,18 +304,19 @@ local function refresh()
 	end)
 end
 
-function BoutiquePanel.open(tab: string?)
+function BoutiquePanel.open(tab: string?, forGuest: { userId: number, name: string }?)
 	if Root.isOpen(NAME) then
 		return
 	end
 	currentTab = tab or "today"
+	giftFor = forGuest
 	local size = Root.size()
 	local w = math.min(620, size.X - 24)
 	local h = math.min(640, size.Y - 40)
 	local group, content = Theme.glass(Root.panels, NAME, UDim2.fromOffset(w, h))
 	Theme.list(content, 8).VerticalAlignment = Enum.VerticalAlignment.Top
 	Theme.text(content, "The Boutique", 26, "display", { LayoutOrder = 1 })
-	Theme.text(content, "Style, never score. Prices are Roblox's own.", 12, "body", { LayoutOrder = 2, TextColor3 = Brand.Colours.dim })
+	Theme.text(content, if forGuest then "Choosing a gift for " .. forGuest.name .. ". They'll hear it's from you." else "Style, never score. Prices are Roblox's own.", 12, "body", { LayoutOrder = 2, TextColor3 = if forGuest then Brand.Colours.lightGold else Brand.Colours.dim })
 
 	local tabs = Instance.new("ScrollingFrame")
 	tabs.BackgroundTransparency = 1
@@ -381,6 +391,7 @@ function BoutiquePanel.open(tab: string?)
 		conn:Disconnect()
 		list = nil
 		balance = nil
+		giftFor = nil
 	end)
 	task.spawn(function()
 		local s = Closet.ask({ op = "shelves" })

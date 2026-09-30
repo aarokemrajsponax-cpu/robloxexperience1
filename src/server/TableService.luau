@@ -83,7 +83,7 @@ TableService.onUnlock = function(_player: Player, _room: string) end
 -- Called on each correct filing in the rooms and the Nightly (for the Register and Commissions).
 TableService.onRegister = function(_player: Player, _pieceId: string, _roomId: string, _isNew: boolean) end
 -- Called at the end of every cleared round.
-TableService.onRound = function(_player: Player, _roomId: string, _grade: string) end
+TableService.onRound = function(_player: Player, _roomId: string, _grade: string, _tableId: string?) end
 -- Called on every filing (for the Ledger).
 TableService.onFiling = function(_player: Player, _correct: boolean) end
 -- Called after a scored Nightly is on the board (for Rivals).
@@ -488,7 +488,8 @@ local function roundComplete(s: Session)
 			data.bestRound[roomId] = s.round
 		end
 	end
-	TableService.onRound(s.player, s.room.id, grade)
+	local tableId = s.model:GetAttribute("TableId")
+	TableService.onRound(s.player, s.room.id, grade, if type(tableId) == "string" then tableId else nil)
 	local last = s.mode ~= "room" and s.round >= Config.data.Nightly.rounds
 	if s.round == 1 then
 		Analytics.step(s.player, 8)

@@ -56,6 +56,9 @@ export type Data = {
 	suite: { [string]: string },
 	-- Circles: the one you're in ("" for none), and your points this week.
 	circle: { id: string, week: number, points: number },
+	-- What the house remembers about you: the last visit, the last thing worth mentioning, the
+	-- tables you sit at most, admiration, and the day you last signed the Livre d'Or.
+	memory: { lastSeen: number, highlight: string, highlightAt: number, tables: { [string]: number }, admired: number, admiredSince: number, signedDay: number },
 }
 
 local TEMPLATE: Data = {
@@ -92,6 +95,7 @@ local TEMPLATE: Data = {
 	blackCard = { active = false, months = {} },
 	suite = {},
 	circle = { id = "", week = -1, points = 0 },
+	memory = { lastSeen = 0, highlight = "", highlightAt = 0, tables = {}, admired = 0, admiredSince = 0, signedDay = -1 },
 }
 
 -- Each migration moves data from schema n to n + 1. Add new ones at the end.

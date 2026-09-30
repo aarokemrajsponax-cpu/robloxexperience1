@@ -48,6 +48,7 @@ local Analytics = require(script.Parent.Analytics)
 Analytics.start()
 
 local Boards = require(script.Parent.Boards)
+local Memory = require(script.Parent.Memory)
 Boards.start()
 
 local LedgerService = require(script.Parent.LedgerService)
@@ -102,6 +103,9 @@ end
 -- Lights Out records: Last Lamps, top-five finishes and Keys (only evenings with enough real
 -- guests count), and the weekly board of points.
 BallroomService.onFinished = function(player, place, keys, counted)
+	if place == 1 then
+		Memory.highlight(player, "you kept the last lamp in the Ballroom")
+	end
 	LedgerService.add(player, "ballroom", place)
 	if counted then
 		SoireeService.record(player, "ballroom", { place = place, keys = keys })
@@ -186,7 +190,25 @@ Collection.ledger = function(player, source)
 end
 Shop.register = Collection.view
 TableService.onRegister = Collection.filed
-TableService.onRound = Collection.round
+-- The house remembers: your usual table, and the last thing worth mentioning.
+Memory.note = function(text)
+	Boards.note(text, false)
+end
+Memory.start()
+local Social = require(script.Parent.Social)
+Social.season = function()
+	return Season.current().id
+end
+Social.start()
+Concierge.usualRoom = Memory.usualRoom
+TableService.onRound = function(player, roomId, grade, tableId)
+	Collection.round(player, roomId, grade)
+	Memory.round(player, tableId)
+	if grade == "Flawless" then
+		local room = require(ReplicatedStorage.Shared.Rooms).get(roomId)
+		Memory.highlight(player, "a Flawless round in " .. (if room then room.name else "the house"))
+	end
+end
 TableService.onFiling = function(player, correct)
 	if correct then
 		LedgerService.add(player, "filing")
@@ -224,6 +246,10 @@ TableService.onNightlyFinished = function(player, percentile)
 	Collection.nightly(player)
 end
 DuelService.onFinished = function(a, b, winner, ranked, standIn)
+	local winnerPlayer = if winner == "a" then a elseif winner == "b" then b else nil
+	if winnerPlayer and not standIn then
+		Memory.highlight(winnerPlayer, "you won at a table in the Library")
+	end
 	-- Circles count ranked wins only (a friendly between two members can't be farmed).
 	if ranked and not standIn then
 		local won = if winner == "a" then a elseif winner == "b" then b else nil

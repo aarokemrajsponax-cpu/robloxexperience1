@@ -35,6 +35,9 @@ local CirclePanel = require(script.Parent.UI.CirclePanel)
 local SuiteView = require(script.Parent.World.SuiteView)
 local SaluteView = require(script.Parent.World.SaluteView)
 local EventBanner = require(script.Parent.UI.EventBanner)
+local AdmireCard = require(script.Parent.UI.AdmireCard)
+local GuestBookPanel = require(script.Parent.UI.GuestBookPanel)
+local RegularPlates = require(script.Parent.World.RegularPlates)
 local AdminPanel = require(script.Parent.UI.AdminPanel)
 local WardrobePanel = require(script.Parent.UI.WardrobePanel)
 local LedgerPanel = require(script.Parent.UI.LedgerPanel)
@@ -86,6 +89,8 @@ Closet.Message:Connect(function(op: string, m: any)
 			CirclePanel.open()
 		elseif m.panel == "salutes" then
 			BoutiquePanel.open("salutes")
+		elseif m.panel == "guestBook" then
+			GuestBookPanel.open()
 		end
 	elseif op == "gift" and type(m.item) == "table" then
 		task.delay(2.5, GiftPanel.show, tostring(m.from), m.item)
@@ -109,6 +114,12 @@ VaultView.start()
 SuiteView.start()
 SaluteView.start()
 EventBanner.start()
+AdmireCard.openBoutique = function(tab, forGuest)
+	BoutiquePanel.open(tab, forGuest)
+end
+AdmireCard.isSeated = TableClient.isSeated
+AdmireCard.start()
+RegularPlates.start()
 StaffLife.start()
 
 -- Controls stay off until Play.

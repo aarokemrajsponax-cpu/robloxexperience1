@@ -301,6 +301,21 @@ local function wallOfNames(m: Model)
 	p.Style = Enum.ProximityPromptStyle.Custom
 	p.Parent = book
 	CollectionService:AddTag(book, "CircleBook")
+	-- ...and where guests sign their name with a line for the next guest to read. (Its own part,
+	-- so each prompt opens its own page.)
+	local page = Kit.part(model, "Page", Vector3.new(1.4, 0.02, 1), cf * CFrame.new(0, 3.92, 0) * CFrame.Angles(math.rad(16), 0, 0), L.bone, { collide = false, shadow = false })
+	local sign = Instance.new("ProximityPrompt")
+	sign.Name = "SignPrompt"
+	sign.ActionText = "Sign the book"
+	sign.ObjectText = "The Livre d'Or"
+	sign.KeyboardKeyCode = Enum.KeyCode.F
+	sign.GamepadKeyCode = Enum.KeyCode.ButtonY
+	sign.HoldDuration = 0
+	sign.MaxActivationDistance = 8
+	sign.RequiresLineOfSight = false
+	sign.Style = Enum.ProximityPromptStyle.Custom
+	sign.Parent = page
+	CollectionService:AddTag(page, "GuestBook")
 end
 
 local function stair(m: Model)

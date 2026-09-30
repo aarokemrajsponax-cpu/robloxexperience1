@@ -15,6 +15,7 @@ local Settings = require(ReplicatedStorage.Shared.Settings)
 
 local Analytics = require(script.Parent.Analytics)
 local LiveConfig = require(script.Parent.LiveConfig)
+local Memory = require(script.Parent.Memory)
 local Profiles = require(script.Parent.Profiles)
 local TableService = require(script.Parent.TableService)
 local Concierge = require(script.Parent.Staff.Concierge)
@@ -211,7 +212,7 @@ local function trackZones()
 							visit.greeted = true
 							local data = Profiles.get(player)
 							local pending = data ~= nil and data.nightly.day ~= Nightly.at().day
-							Concierge.greet(player, visit.firstVisit, pending)
+							Concierge.greet(player, visit.firstVisit, pending, if visit.firstVisit then nil else Memory.greeting(player))
 						end
 					end
 				end

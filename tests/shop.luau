@@ -689,6 +689,7 @@ local TEMPLATE = {
 	owned = {}, equipped = { look = "", table = "", lamp = "", chime = "", trail = "", nameplate = "", card = "", flourish = "", gesture = "" },
 	credits = {}, receipts = {}, pending = { product = "", item = "", giftTo = 0, at = 0 },
 	goldKey = false, introduction = false, blackCard = { active = false, months = {} }, suite = {}, circle = { id = "", week = -1, points = 0 },
+	memory = { lastSeen = 0, highlight = "", highlightAt = 0, tables = {}, admired = 0, admiredSince = 0, signedDay = -1 },
 	ledger = { term = "", points = 0, freeClaimed = 0, leatherClaimed = 0, leather = {} },
 	gifts = {},
 }
@@ -1248,6 +1249,7 @@ check("the last one out gives the crest back", askAs(kit, { op = "circleFound", 
 ---------------------------------------------------------------------------------------------------
 -- Notifications: one a day, only with a template, the Term's last three days
 ---------------------------------------------------------------------------------------------------
+do
 local Notify = module("ServerScriptService", "Server", "Notify")
 local posted = {}
 Notify.post = function(userId, messageId, params, launch, category)
@@ -1275,10 +1277,12 @@ check("another guest can still hear today", sentOk == true and #posted == 2)
 check("the Term's last three days", (Notify.termEnding(os.time({ year = 2026, month = 11, day = 29, hour = 12 }))) == true)
 check("but not before", (Notify.termEnding(os.time({ year = 2026, month = 11, day = 20, hour = 12 }))) == false)
 Config.data.Notifications.messages.rivalPassed = ""
+end
 
 ---------------------------------------------------------------------------------------------------
 -- Salutes: bought for the whole house; the giver's star; a short queue; always-on shelf
 ---------------------------------------------------------------------------------------------------
+do
 local SaluteService = module("ServerScriptService", "Server", "SaluteService")
 local notes = {}
 SaluteService.note = function(text, everywhere)
@@ -1346,10 +1350,12 @@ advance(200)
 check("and it empties as they play", SaluteService.waiting() == 0)
 Config.data.Products.salute_goldLeaf = 0
 Config.data.Products.salute_grand = 0
+end
 
 ---------------------------------------------------------------------------------------------------
 -- House controls: the owner's panel
 ---------------------------------------------------------------------------------------------------
+do
 local AdminService = module("ServerScriptService", "Server", "AdminService")
 local GiltService = module("ServerScriptService", "Server", "Gilt")
 Config.data.Admin.studioEveryone = false
@@ -1478,6 +1484,69 @@ run(function()
 	joinSignal:Fire(ned, { op = "join", jobId = "made-up-house" })
 end)
 check("only a house that was really summoned", #teleports == 1)
+end
+
+---------------------------------------------------------------------------------------------------
+-- The house remembers; guests admire each other; the Livre d'Or
+---------------------------------------------------------------------------------------------------
+do
+local Memory = module("ServerScriptService", "Server", "Memory")
+local Social = module("ServerScriptService", "Server", "Social")
+local memNotes = {}
+Memory.note = function(text)
+	table.insert(memNotes, text)
+end
+run(Memory.start)
+check("ordinals read as a person would say them", Memory.ordinal(1) == "1st" and Memory.ordinal(2) == "2nd" and Memory.ordinal(3) == "3rd" and Memory.ordinal(11) == "11th" and Memory.ordinal(22) == "22nd" and Memory.ordinal(100) == "100th")
+-- A guest who kept the last lamp last time comes back.
+local pia = newGuest("Pia", 20)
+pia.Character = nil
+table.insert(guests, pia)
+newProfile(pia, TEMPLATE)
+local pd = profiles[pia].Data
+pd.firstVisit = fakeOs.time() - 30 * 86400
+pd.nights.count = 6
+pd.memory.lastSeen = fakeOs.time() - 86400
+pd.memory.highlight = "you kept the last lamp in the Ballroom"
+pd.memory.highlightAt = fakeOs.time() - 86400
+loadedSignal:Fire(pia, pd)
+advance(0.2)
+check("the welcome remembers last time", Memory.greeting(pia) == "Last time, you kept the last lamp in the Ballroom.", Memory.greeting(pia))
+check("and the house notes this visit", pd.memory.lastSeen >= fakeOs.time() - 1)
+pd.nights.count = 10
+check("a milestone is celebrated", Memory.greeting(pia) == "Your 10th night at the house. We're glad of it." and memNotes[#memNotes] == "Pia's 10th night at the house.")
+pd.nights.count = 6
+-- The table you sit at most becomes your usual.
+for _ = 1, 4 do
+	Memory.round(pia, "velvet-2")
+end
+check("four rounds isn't a habit yet", Memory.usual(pd) == nil)
+Memory.round(pia, "velvet-2")
+Memory.round(pia, "salon-1")
+check("five rounds at a table makes it your usual", Memory.usual(pd) == "velvet-2")
+-- Admiring: they hear who; it's counted once in a while; you see where their pieces are from.
+local quin = guest("Quin", 21)
+local sh = askAs(quin, { op = "shelves" })
+pd.equipped.table = sh.always[1].id
+pd.owned[sh.always[1].id] = true
+local card = askAs(quin, { op = "admire", userId = pia.UserId })
+check("admiring a guest shows what they wear", card.ok and card.name == "Pia" and #card.pieces >= 1 and card.pieces[1].name == sh.always[1].name)
+check("and where it's from", card.pieces[1].where == "always")
+check("they hear who admired them", lastOp(pia, "admired") ~= nil and lastOp(pia, "admired").from == "Quin")
+check("the house counts it for their next welcome", pd.memory.admiredSince == 1 and pd.memory.admired == 1)
+advance(4)
+local again = askAs(quin, { op = "admire", userId = pia.UserId })
+check("admiring again soon isn't counted twice", again.ok and again.counted == false and pd.memory.admiredSince == 1)
+check("nobody admires themselves", askAs(quin, { op = "admire", userId = quin.UserId }).ok == false)
+-- The Livre d'Or.
+local book = askAs(quin, { op = "guestBook" })
+check("the Livre d'Or offers its lines", #book.lines == 16 and book.signedToday == false)
+local signed = askAs(quin, { op = "sign", line = 3 })
+check("signing it", signed.entries and signed.entries[1].name == "Quin" and signed.entries[1].text == "The Salon, always." and signed.signedToday)
+check("once a night", askAs(quin, { op = "sign", line = 4 }).ok == false)
+check("lines are chosen, never typed", askAs(pia, { op = "sign", line = 99 }).ok == false)
+check("everyone reads the signatures", askAs(pia, { op = "guestBook" }).entries[1].name == "Quin")
+end
 
 print(string.format("%d passed, %d failed", passed, failed))
 if failed > 0 then

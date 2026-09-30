@@ -22,6 +22,7 @@ local Analytics = require(script.Parent.Analytics)
 local BlackCard = require(script.Parent.BlackCard)
 local CircleService = require(script.Parent.CircleService)
 local SaluteService = require(script.Parent.SaluteService)
+local Social = require(script.Parent.Social)
 local Dressing = require(script.Parent.Dressing)
 local Gilt = require(script.Parent.Gilt)
 local LedgerService = require(script.Parent.LedgerService)
@@ -512,6 +513,12 @@ local function onAsk(player: Player, request: unknown): any
 	elseif op == "notify" and (r.answer == "granted" or r.answer == "declined") then
 		Analytics.custom(player, if r.answer == "granted" then "Notification opt-in granted" else "Notification opt-in declined", nil, nil)
 		return { ok = true }
+	elseif op == "admire" and type(r.userId) == "number" then
+		return Social.admire(player, r.userId :: number)
+	elseif op == "guestBook" then
+		return Social.guestBook(player, data)
+	elseif op == "sign" and type(r.line) == "number" then
+		return Social.sign(player, data, r.line :: number)
 	elseif op == "circle" then
 		return CircleService.view(player, data)
 	elseif op == "circleFound" then
@@ -662,7 +669,7 @@ end
 function Shop.start()
 	MarketplaceService.ProcessReceipt = processReceipt
 	local CollectionService = game:GetService("CollectionService")
-	local panels: { [string]: string } = { BoutiqueCounter = "boutique", WardrobeMirror = "wardrobe", LedgerBook = "ledger", RegisterBook = "register", BlackCardLectern = "blackCard", SuiteFurnish = "suite", CircleBook = "circles", SaluteDesk = "salutes" }
+	local panels: { [string]: string } = { BoutiqueCounter = "boutique", WardrobeMirror = "wardrobe", LedgerBook = "ledger", RegisterBook = "register", BlackCardLectern = "blackCard", SuiteFurnish = "suite", CircleBook = "circles", SaluteDesk = "salutes", GuestBook = "guestBook" }
 	for tag, panel in panels do
 		for _, part in CollectionService:GetTagged(tag) do
 			local p = part:FindFirstChildOfClass("ProximityPrompt")

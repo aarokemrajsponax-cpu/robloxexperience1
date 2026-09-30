@@ -24,6 +24,10 @@ end
 -- Set by the client bridge: opens How to play on the guest's screen.
 Concierge.openHowTo = function(_player: Player) end
 Concierge.inviteToLibrary = function(_player: Player) end
+-- The room of a guest's usual table, or nil (set by Main from Memory).
+Concierge.usualRoom = function(_player: Player): string?
+	return nil
+end
 -- Set by the server: may this guest enter a room (the Midnight Room is earned)?
 Concierge.canEnter = function(_player: Player, _room: string): boolean
 	return true
@@ -144,8 +148,15 @@ local function menu(player: Player)
 	if Private.isHost(player) then
 		table.insert(choices, 4, { id = "evening", text = V.choices.setEvening })
 	end
+	-- A regular is offered their usual table.
+	local usual = Concierge.usualRoom(player)
+	if usual then
+		table.insert(choices, 1, { id = "usual", text = V.memory.usual })
+	end
 	Dialogue.say(player, V.speaker, V.returning:gsub("{name}", player.DisplayName), choices, function(choice)
-		if choice == "evening" then
+		if choice == "usual" and usual then
+			Concierge.lead(player, usual)
+		elseif choice == "evening" then
 			setEvening(player)
 		elseif choice == "room" then
 			local rooms = {
@@ -182,7 +193,7 @@ end
 
 -- Called once per visit when a guest first steps into the Foyer. Returning guests hear the one
 -- thing that matters tonight.
-function Concierge.greet(player: Player, firstVisit: boolean, nightlyPending: boolean?)
+function Concierge.greet(player: Player, firstVisit: boolean, nightlyPending: boolean?, remembered: string?)
 	if firstVisit then
 		Dialogue.say(player, V.speaker, V.firstVisit, nil, nil, 3.5)
 		task.delay(1.2, function()
@@ -192,8 +203,18 @@ function Concierge.greet(player: Player, firstVisit: boolean, nightlyPending: bo
 		end)
 	else
 		Dialogue.say(player, V.speaker, (V.returning:gsub("{name}", player.DisplayName)), nil, nil, 3.5)
-		if nightlyPending then
+		-- One thing the house remembers (last time, a milestone, being missed).
+		local extra = 0
+		if remembered then
+			extra = 3.8
 			task.delay(3.8, function()
+				if player.Parent == Players and not Concierge.isSeated(player) then
+					Dialogue.say(player, V.speaker, remembered, nil, nil, 4)
+				end
+			end)
+		end
+		if nightlyPending then
+			task.delay(3.8 + extra, function()
 				if player.Parent == Players and not Concierge.isSeated(player) then
 					Dialogue.say(player, V.speaker, V.tonightLaid, nil, nil, 3.5)
 				end
