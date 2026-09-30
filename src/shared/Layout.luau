@@ -280,7 +280,17 @@ Layout.Table = {
 	feltMaxZ = 1.45,
 	counterZ = -3.55, -- the brass counter on the near edge
 	lampY = 9.5,
+	-- The sorting camera looks down the table from above the chair at this angle (degrees above
+	-- the felt); the case plates and the counter are turned to face it.
+	cameraPitch = 56,
 }
+
+-- The direction from the felt toward the sorting camera, in the table's own frame (+Z toward
+-- the cases).
+function Layout.towardCamera(): Vector3
+	local pitch = math.rad(Layout.Table.cameraPitch)
+	return Vector3.new(0, math.sin(pitch), -math.cos(pitch))
+end
 
 function Layout.inBox(b: Box, p: Vector3): boolean
 	return p.X >= b.min.X and p.X <= b.max.X and p.Y >= b.min.Y and p.Y <= b.max.Y and p.Z >= b.min.Z and p.Z <= b.max.Z

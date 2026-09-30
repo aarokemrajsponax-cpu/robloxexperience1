@@ -46,6 +46,7 @@ local Hands = require(script.Parent.Hands)
 local RoundCard = require(script.Parent.RoundCard)
 local RivalPlate = require(script.Parent.RivalPlate)
 local Flourish = require(script.Parent.Flourish)
+local SortFeedback = require(script.Parent.SortFeedback)
 
 local TableClient = {}
 
@@ -97,6 +98,11 @@ local press: { uid: number, at: Vector2, input: InputObject }? = nil
 local padIndex = 1
 local padCase = 1
 local highlight: Highlight? = nil
+local caseHover: Highlight? = nil
+local hoverCase: string? = nil
+local lastSlide = 0
+local seatings = 0
+local hintPending = false
 local controls: any = nil
 local toTableCallbacks: { () -> () } = {}
 
@@ -117,6 +123,10 @@ end
 local piecesFolder = Instance.new("Folder")
 piecesFolder.Name = "Pieces"
 piecesFolder.Parent = localFolder()
+
+-- A dragged piece follows the pointer on a short spring and leans into its movement, so it has a
+-- little weight instead of being glued to the cursor.
+local drag = { uid = nil :: number?, target = nil :: Vector3?, pos = nil :: Vector3?, vel = Vector3.zero }
 
 local function getControls(): any
 	if controls then
@@ -223,6 +233,39 @@ local function setHighlight(model: Model?)
 	h.Enabled = true
 end
 
+-- The case under a held piece glows softly, so you can see where it will go before you let go.
+-- (Any case, right or wrong: it shows where you are, never where the piece belongs.)
+local function setHoverCase(caseId: string?)
+	if caseId == hoverCase then
+		return
+	end
+	hoverCase = caseId
+	local model = seatedModel
+	local part = if caseId and model then model:FindFirstChild("Case" .. caseIndex(caseId)) else nil
+	if not part then
+		if caseHover then
+			caseHover.Enabled = false
+		end
+		return
+	end
+	if not caseHover then
+		local h = Instance.new("Highlight")
+		h.Name = "CaseHover"
+		h.FillColor = Brand.Colours.lightGold
+		h.OutlineColor = Brand.Colours.lightGold
+		h.DepthMode = Enum.HighlightDepthMode.Occluded
+		h.Parent = localFolder()
+		caseHover = h
+	end
+	local h = caseHover :: Highlight
+	h.Adornee = part
+	h.FillTransparency = 1
+	h.OutlineTransparency = 0.6
+	h.Enabled = true
+	TweenService:Create(h, TweenInfo.new(0.12, Enum.EasingStyle.Quad), { FillTransparency = 0.72, OutlineTransparency = 0.05 }):Play()
+	Sound.play("hover", 0.18)
+end
+
 local function pieceScale(): number
 	return Settings.pieceScale(State.get("pieceSize"))
 end
@@ -244,6 +287,40 @@ local function glideTo(p: Piece, goal: CFrame, seconds: number, style: Enum.Easi
 	t:Play()
 end
 
+-- A short arc: up and over, landing at `goal`, the piece's size easing to `scaleTo` on the way.
+-- Returns the arc's length in seconds (the movement setting shortens it).
+local function arcTo(p: Piece, goal: CFrame, seconds: number, height: number, scaleTo: number?, style: Enum.EasingStyle?): number
+	local model = p.model
+	local startCF = model:GetPivot()
+	local startScale = model:GetScale()
+	local p0, p2 = startCF.Position, goal.Position
+	local via = p0:Lerp(p2, 0.5) + Vector3.new(0, height, 0)
+	local value = Instance.new("NumberValue")
+	value.Value = 0
+	value.Changed:Connect(function(a: number)
+		if not model.Parent then
+			return
+		end
+		if scaleTo and math.abs(scaleTo - startScale) > 1e-3 then
+			model:ScaleTo(startScale + (scaleTo - startScale) * math.clamp(a, 0, 1))
+		end
+		if a >= 1 then
+			model:PivotTo(goal)
+			return
+		end
+		local u = 1 - a
+		local pos = p0 * (u * u) + via * (2 * u * a) + p2 * (a * a)
+		model:PivotTo(CFrame.new(pos) * startCF.Rotation:Lerp(goal.Rotation, a))
+	end)
+	local info = Ease.scaled(TweenInfo.new(seconds, style or Enum.EasingStyle.Quad, Enum.EasingDirection.Out))
+	local t = TweenService:Create(value, info, { Value = 1 })
+	t.Completed:Once(function()
+		value:Destroy()
+	end)
+	t:Play()
+	return info.Time
+end
+
 local function clearPieces()
 	for _, p in pieces do
 		p.model:Destroy()
@@ -253,7 +330,9 @@ local function clearPieces()
 	held = nil
 	heldMode = nil
 	press = nil
+	drag.uid = nil
 	setHighlight(nil)
+	setHoverCase(nil)
 	Guide.hide()
 	Hands.reach(nil)
 end
@@ -291,6 +370,7 @@ local function caseGlow(caseId: string)
 		TweenService:Create(glow, TweenInfo.new(0.9, Enum.EasingStyle.Sine), { Transparency = 1 }):Play()
 		local light = glow:FindFirstChildOfClass("PointLight")
 		if light then
+			light.Enabled = true
 			light.Brightness = 2.2 * strength
 			TweenService:Create(light, TweenInfo.new(0.9, Enum.EasingStyle.Sine), { Brightness = 0 }):Play()
 		end
@@ -312,6 +392,53 @@ local function caseGlow(caseId: string)
 		task.delay(1, function()
 			a:Destroy()
 		end)
+	end
+end
+
+-- A wrong case flashes red for a moment, whatever the glow setting: a mistake is always shown.
+local WRONG = Color3.fromRGB(226, 84, 64)
+local function caseFlash(caseId: string)
+	local model = seatedModel
+	if not model then
+		return
+	end
+	local glow = model:FindFirstChild("CaseGlow" .. caseIndex(caseId))
+	if glow and glow:IsA("BasePart") then
+		glow.Color = WRONG
+		glow.Transparency = 0.3
+		local t = TweenService:Create(glow, TweenInfo.new(0.6, Enum.EasingStyle.Sine), { Transparency = 1 })
+		t.Completed:Once(function()
+			glow.Color = Brand.Colours.lightGold
+		end)
+		t:Play()
+		local light = glow:FindFirstChildOfClass("PointLight")
+		if light then
+			light.Enabled = true
+			light.Color = WRONG
+			light.Brightness = 1.6
+			local lt = TweenService:Create(light, TweenInfo.new(0.6, Enum.EasingStyle.Sine), { Brightness = 0 })
+			lt.Completed:Once(function()
+				light.Color = Brand.Colours.lightGold
+			end)
+			lt:Play()
+		end
+	end
+	local case = model:FindFirstChild("Case" .. caseIndex(caseId))
+	if case and case:IsA("BasePart") then
+		local h = Instance.new("Highlight")
+		h.Name = "WrongCase"
+		h.Adornee = case
+		h.FillColor = WRONG
+		h.OutlineColor = WRONG
+		h.FillTransparency = 0.55
+		h.OutlineTransparency = 0
+		h.DepthMode = Enum.HighlightDepthMode.Occluded
+		h.Parent = localFolder()
+		local t = TweenService:Create(h, TweenInfo.new(0.55, Enum.EasingStyle.Sine), { FillTransparency = 1, OutlineTransparency = 1 })
+		t.Completed:Once(function()
+			h:Destroy()
+		end)
+		t:Play()
 	end
 end
 
@@ -377,7 +504,7 @@ local function updateRail()
 	r.fill.BackgroundColor3 = if low then Color3.fromRGB(200, 96, 60) else Brand.Colours.gold
 	if low and not lowPlayed and clockRunning then
 		lowPlayed = true
-		Sound.play("low", 0.4, 0.6)
+		Sound.play("low", 0.4)
 	end
 end
 
@@ -453,24 +580,49 @@ local function predict(p: Piece, caseId: string): boolean
 	return correct
 end
 
-local function intoCase(p: Piece, caseId: string)
+-- Into its case: a short arc up and over the glass, shrinking to fit as it goes, and a soft
+-- landing. Returns when (in seconds) it lands.
+local function intoCase(p: Piece, caseId: string): number
 	p.filed = true
+	if drag.uid == p.uid then
+		drag.uid = nil
+	end
 	showName(p, false)
 	local c = caseCentre(caseId)
 	local jitter = Vector3.new((p.uid % 5 - 2) * 0.18, 0, ((p.uid // 5) % 3 - 1) * 0.2)
 	local goal = CFrame.new(c + Vector3.new(0, 0.18, 0) + jitter) * CFrame.Angles(0, math.rad(p.uid * 37 % 360), 0)
-	glideTo(p, goal, 0.32)
-	task.delay(0.3, function()
-		if p.model.Parent then
-			p.model:ScaleTo(p.model:GetScale() * 0.7)
-		end
-	end)
+	return arcTo(p, goal, Config.data.Sorting.fileSeconds, 0.7, pieceScale() * 0.7)
 end
 
-local function backToFelt(p: Piece)
+-- Back to its place on the felt. After a wrong case it first gives a small "no" shake over the
+-- case it was offered to.
+local function backToFelt(p: Piece, shakeFirst: boolean?)
 	p.filed = false
-	glideTo(p, p.slot, 0.45, Enum.EasingStyle.Quint)
+	if drag.uid == p.uid then
+		drag.uid = nil
+	end
 	showName(p, false)
+	local seconds = Config.data.Sorting.returnSeconds
+	if shakeFirst and Ease.motionScale >= 0.5 then
+		local model = p.model
+		local here = model:GetPivot()
+		local side = tableFrame.RightVector
+		local steps = { 0.16, -0.13, 0.08, 0 }
+		for i, offset in steps do
+			task.delay(0.045 * (i - 1), function()
+				if model.Parent and not p.filed and pieces[p.uid] == p and held ~= p.uid then
+					model:PivotTo(here + side * offset)
+				end
+			end)
+		end
+		task.delay(0.045 * #steps, function()
+			if model.Parent and not p.filed and pieces[p.uid] == p and held ~= p.uid then
+				arcTo(p, p.slot, seconds, 0.4, pieceScale(), Enum.EasingStyle.Quint)
+			end
+		end)
+		return
+	end
+	arcTo(p, p.slot, seconds, 0.35, pieceScale(), Enum.EasingStyle.Quint)
 end
 
 local function release()
@@ -482,6 +634,8 @@ local function release()
 	end
 	held = nil
 	heldMode = nil
+	drag.uid = nil
+	setHoverCase(nil)
 	Guide.hide()
 	Hands.reach(nil)
 	if State.inputKind() ~= "gamepad" then
@@ -500,16 +654,33 @@ local function file(uid: number, caseId: string)
 	end
 	held = nil
 	heldMode = nil
+	drag.uid = nil
+	setHoverCase(nil)
 	Guide.hide()
 	p.pending = true
+	local before = table.clone(local_)
 	local correct = predict(p, caseId)
+	local S = Config.data.Sorting
+	local over = caseCentre(caseId) + Vector3.new(0, 0.7, 0)
 	if correct then
-		intoCase(p, caseId)
+		local lands = intoCase(p, caseId)
 		Sound.chime(local_.streak)
 		if p.rare or p.mythic then
 			Sound.shimmer()
 		end
-		caseGlow(caseId)
+		task.delay(lands, function()
+			Sound.play("place", 0.4)
+			caseGlow(caseId)
+		end)
+		SortFeedback.correct(over, if counting() then nil else local_.score - before.score, local_.multiplier)
+		SortFeedback.filed(true)
+		CameraRig.punch(S.punch)
+		if not counting() and SortFeedback.isMoment(local_.streak) then
+			task.delay(0.15, function()
+				SortFeedback.streak(local_.streak, local_.multiplier)
+				Sound.play("combo", 0.45)
+			end)
+		end
 		Hands.reach(caseCentre(caseId) + Vector3.new(0, 0.6, 0))
 		task.delay(0.35, function()
 			if held == nil then
@@ -517,8 +688,15 @@ local function file(uid: number, caseId: string)
 			end
 		end)
 	else
-		backToFelt(p)
+		caseFlash(caseId)
+		backToFelt(p, true)
 		Sound.wrong()
+		if before.streak >= 3 then
+			Sound.play("streakLost", 0.3)
+		end
+		SortFeedback.wrong(over, before.streak, if counting() then nil else before.score - local_.score)
+		SortFeedback.filed(false)
+		CameraRig.shake(S.shake, 0.24)
 		Hands.reach(nil)
 	end
 	setScore(local_.score, local_.multiplier)
@@ -543,12 +721,19 @@ local function lift(uid: number, mode: "drag" | "tap" | "pad")
 	end
 	held = uid
 	heldMode = mode
-	local above = p.slot.Position + Vector3.new(0, 0.9, 0)
-	if mode ~= "drag" then
-		glideTo(p, CFrame.new(above) * p.slot.Rotation, 0.22)
+	local above = p.slot.Position + Vector3.new(0, Config.data.Sorting.dragLift, 0)
+	if mode == "drag" then
+		-- The spring takes it from here: it rises where it is and follows the pointer.
+		local here = p.model:GetPivot().Position
+		drag.uid = uid
+		drag.pos = here
+		drag.target = here + Vector3.new(0, Config.data.Sorting.dragLift, 0)
+		drag.vel = Vector3.zero
+	else
+		glideTo(p, CFrame.new(above) * p.slot.Rotation, 0.2, Enum.EasingStyle.Back)
 	end
 	showName(p, true)
-	Sound.play("pickup", 0.35, 1)
+	Sound.play("pickup", 0.4)
 	Guide.show(roomId, above, caseCentre(p.case) + Vector3.new(0, 0.7, 0))
 	Hands.reach(above)
 	setHighlight(p.model)
@@ -744,8 +929,8 @@ local function renderDeal(message: { [string]: any })
 		task.delay((i - 1) * 0.06, function()
 			if pieces[p.uid] == p then
 				glideTo(p, slot, 0.5)
-				if (i - 1) % 3 == 0 then
-					Sound.play("drop", 0.12, 1.3)
+				if (i - 1) % 2 == 0 then
+					Sound.play("deal", 0.16)
 				end
 			end
 		end)
@@ -754,6 +939,14 @@ local function renderDeal(message: { [string]: any })
 	padIndex = 1
 	padCase = 1
 	playing = true
+	if hintPending then
+		hintPending = false
+		task.delay(0.6, function()
+			if playing and seatedModel ~= nil then
+				SortFeedback.showHint()
+			end
+		end)
+	end
 	local r = room()
 	if tableMode == "duel" then
 		duelRemaining = #list
@@ -1150,24 +1343,67 @@ local function pointerMoved(input: InputObject)
 		end
 		return
 	end
+	local t = input.UserInputType
+	if t ~= Enum.UserInputType.MouseMovement and t ~= Enum.UserInputType.Touch then
+		return
+	end
+	if seatedModel == nil or not playing then
+		return
+	end
+	local pos = Vector2.new(input.Position.X, input.Position.Y)
 	if held and heldMode == "drag" then
-		local t = input.UserInputType
-		if t ~= Enum.UserInputType.MouseMovement and t ~= Enum.UserInputType.Touch then
-			return
-		end
-		local point = pointOnFelt(Vector2.new(input.Position.X, input.Position.Y), 0.9)
+		local point = pointOnFelt(pos, Config.data.Sorting.dragLift)
 		local p = pieces[held :: number]
 		if point and p then
-			-- Keep the piece over the table.
+			-- Keep the piece over the table; the spring (below) carries it there.
 			local hw, minZ, maxZ = T.width / 2 - 0.4, T.feltMinZ - 0.6, T.caseRowZ + T.caseDepth / 2
 			local localPoint = tableFrame:PointToObjectSpace(point)
 			local lx = math.clamp(localPoint.X, -hw, hw)
 			local lz = math.clamp(localPoint.Z, minZ, maxZ)
-			local at = tableFrame:PointToWorldSpace(Vector3.new(lx, localPoint.Y, lz))
-			p.model:PivotTo(CFrame.new(at) * p.slot.Rotation)
-			Guide.move(at)
-			Hands.follow(at)
+			drag.target = tableFrame:PointToWorldSpace(Vector3.new(lx, localPoint.Y, lz))
 		end
+		setHoverCase(caseAt(pos))
+	elseif held and heldMode == "tap" and t == Enum.UserInputType.MouseMovement then
+		setHoverCase(caseAt(pos))
+	elseif not held and t == Enum.UserInputType.MouseMovement and State.inputKind() == "mouse" then
+		-- A piece under the mouse lights up: it can be picked up.
+		local uid = pieceAt(pos)
+		local p = if uid then pieces[uid] else nil
+		setHighlight(if p then p.model else nil)
+	end
+end
+
+-- Every frame: the dragged piece closes on the pointer and leans into its movement; the felt
+-- whispers under it when it moves quickly.
+local function stepDrag(dt: number)
+	local uid = drag.uid
+	if not uid then
+		return
+	end
+	local p = pieces[uid]
+	local target, pos = drag.target, drag.pos
+	if not p or held ~= uid or heldMode ~= "drag" or p.filed or p.pending or not target or not pos then
+		drag.uid = nil
+		return
+	end
+	local S = Config.data.Sorting
+	local step = math.max(dt, 1 / 240)
+	local nextPos = pos:Lerp(target, 1 - math.exp(-S.dragFollow * step))
+	local velocity = (nextPos - pos) / step
+	drag.vel = drag.vel:Lerp(velocity, 1 - math.exp(-14 * step))
+	drag.pos = nextPos
+	local localVel = tableFrame:VectorToObjectSpace(drag.vel)
+	local most = math.rad(S.dragTilt)
+	local pitch = math.clamp(localVel.Z * 0.03, -most, most)
+	local roll = math.clamp(-localVel.X * 0.03, -most, most)
+	local lean = tableFrame.Rotation * CFrame.Angles(pitch, 0, roll) * tableFrame.Rotation:Inverse()
+	p.model:PivotTo(CFrame.new(nextPos) * lean * p.slot.Rotation)
+	Guide.move(nextPos)
+	Hands.follow(nextPos)
+	local speed = drag.vel.Magnitude
+	if speed > 7 and os.clock() - lastSlide > 0.16 then
+		lastSlide = os.clock()
+		Sound.play("slide", math.clamp(speed / 60, 0.06, 0.2))
 	end
 end
 
@@ -1237,12 +1473,25 @@ local function onSeated(message: { [string]: any })
 	if ctl then
 		ctl:Disable()
 	end
-	CameraRig.toTable(tableFrame, tableMode == "duel")
+	local wasSeated = CameraRig.isAtTable()
+	local ignore: { Instance } = { model, localFolder() }
+	if player.Character then
+		table.insert(ignore, player.Character)
+	end
+	local distance = CameraRig.toTable(tableFrame, tableMode == "duel", ignore)
+	local blur = Config.data.Sorting.focusBlur
+	Root.setFocus(if blur > 0 then { FocusDistance = distance, InFocusRadius = 8, FarIntensity = blur } else nil)
+	SortFeedback.frame(true)
 	Hud.setSeated(true)
 	updateHudLine()
 	Hands.attach()
 	bindInput()
-	Sound.play("chair", 0.3, 1)
+	if not wasSeated then
+		seatings += 1
+		hintPending = seatings <= 2
+		Sound.play("enter", 0.35)
+	end
+	Sound.play("chair", 0.3)
 	TableClient.Seated:Fire()
 	for _, cb in toTableCallbacks do
 		task.spawn(cb)
@@ -1289,6 +1538,10 @@ local function onLeft(message: { [string]: any })
 	if ctl then
 		ctl:Enable()
 	end
+	hintPending = false
+	SortFeedback.frame(false)
+	Root.setFocus(nil)
+	Sound.play("leave", 0.3)
 	CameraRig.leaveTable()
 	local summary = message.summary
 	if type(summary) == "table" and (summary.score or 0) > 0 then
@@ -1348,7 +1601,7 @@ local function onBallroom(message: { [string]: any })
 	end
 	if op == "arrive" then
 		addPieces(message.pieces, dumbwaiter(), message.remaining)
-		Sound.play("drop", 0.08, 1.4)
+		Sound.play("deal", 0.2)
 	elseif op == "parcelOpen" then
 		local from = BallroomView.handle(message)
 		addPieces(message.pieces, from, message.remaining)
@@ -1368,7 +1621,7 @@ local function onBallroom(message: { [string]: any })
 			showRail(true)
 			updateRail()
 			Toast.show(Voice.Ballroom.title, Voice.Ballroom.overCapacity, 1.5)
-			Sound.play("low", 0.5, 0.6)
+			Sound.play("low", 0.5)
 		else
 			clockLeft = nil
 			clockRunning = false
@@ -1381,7 +1634,7 @@ local function onBallroom(message: { [string]: any })
 		showRail(false)
 		clockLeft = nil
 		BallroomView.handle(message)
-		Sound.play("wrong", 0.5, 0.6)
+		Sound.play("low", 0.5)
 		task.delay(0.9, function()
 			if TableClient.isSeated() and tableMode == "ballroom" then
 				BallroomPanel.out(message, ballroomActions)
@@ -1524,6 +1777,7 @@ function TableClient.start()
 	UserInputService.InputBegan:Connect(pointerDown)
 	UserInputService.InputChanged:Connect(pointerMoved)
 	UserInputService.InputEnded:Connect(pointerUp)
+	RunService.RenderStepped:Connect(stepDrag)
 	RunService.Heartbeat:Connect(function(dt)
 		if clockLeft and clockRunning and playing then
 			if not paused then

@@ -39,6 +39,11 @@ function Theme.onClick(fn: () -> ())
 	clickSound = fn
 end
 
+local hoverSound: (() -> ())? = nil
+function Theme.onHover(fn: () -> ())
+	hoverSound = fn
+end
+
 local function fontFor(kind: TextKind): Font
 	if kind == "display" then
 		return displayFont
@@ -221,18 +226,41 @@ function Theme.haptic()
 	end)
 end
 
--- A brass key: presses in, clicks softly, a tiny vibration on phones.
+-- The gold outline a gamepad's selection draws around a key (instead of Roblox's default).
+local function selectionRing(): Frame
+	local ring = Instance.new("Frame")
+	ring.Name = "Selection"
+	ring.BackgroundTransparency = 1
+	ring.Size = UDim2.new(1, 8, 1, 8)
+	ring.Position = UDim2.fromOffset(-4, -4)
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 4)
+	corner.Parent = ring
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = C.lightGold
+	stroke.Thickness = 2
+	stroke.Parent = ring
+	return ring
+end
+
+-- A brass key. Under the pointer (or a gamepad's selection) it lifts a touch and its edge
+-- brightens; pressed, it sinks; let go, it springs back with a soft click and a brief glint to
+-- say it was taken; a tiny vibration on phones.
 function Theme.key(parent: Instance, text: string, primary: boolean?, onPress: () -> (), width: number?): TextButton
 	local button = Instance.new("TextButton")
 	button.Name = "Key_" .. text
 	button.AutoButtonColor = false
-	button.BackgroundColor3 = if primary then C.gold else Color3.fromRGB(20, 20, 24)
-	button.BackgroundTransparency = if primary then 0.08 else 0.3
+	local baseColour = if primary then C.gold else Color3.fromRGB(20, 20, 24)
+	local hoverColour = if primary then C.lightGold else Color3.fromRGB(34, 32, 30)
+	local baseFill = if primary then 0.08 else 0.3
+	button.BackgroundColor3 = baseColour
+	button.BackgroundTransparency = baseFill
 	button.BorderSizePixel = 0
 	button.Size = UDim2.new(0, width or 200, 0, 44)
 	button.Text = Theme.track(string.upper(text))
 	button.TextColor3 = if primary then Color3.fromRGB(24, 18, 8) else C.lightGold
 	button.Selectable = true
+	button.SelectionImageObject = selectionRing()
 	local r = { label = button, size = 15, kind = "caps" :: TextKind }
 	applyText(r)
 	table.insert(registry, r)
@@ -246,24 +274,60 @@ function Theme.key(parent: Instance, text: string, primary: boolean?, onPress: (
 	stroke.Parent = button
 	local scale = Instance.new("UIScale")
 	scale.Parent = button
+	-- The glint: a band of light across the key when it is taken.
+	local glint = Instance.new("Frame")
+	glint.Name = "Glint"
+	glint.BackgroundColor3 = C.lightGold
+	glint.BackgroundTransparency = 1
+	glint.BorderSizePixel = 0
+	glint.Size = UDim2.fromScale(1, 1)
+	glint.ZIndex = button.ZIndex + 1
+	glint.Parent = button
+	local glintCorner = Instance.new("UICorner")
+	glintCorner.CornerRadius = UDim.new(0, 2)
+	glintCorner.Parent = glint
+
+	local over = false
+	local function lit(on: boolean)
+		over = on
+		Ease.play(stroke, Ease.quick, { Transparency = if on then 0 else (if primary then 0.2 else 0.5) })
+		Ease.play(scale, Ease.info(0.16, Enum.EasingStyle.Quad), { Scale = if on then 1.025 else 1 })
+		Ease.play(button, Ease.quick, {
+			BackgroundColor3 = if on then hoverColour else baseColour,
+			BackgroundTransparency = if on then math.max(0, baseFill - 0.1) else baseFill,
+		})
+	end
 	button.MouseEnter:Connect(function()
-		Ease.play(stroke, Ease.quick, { Transparency = 0 })
+		if not over and hoverSound then
+			hoverSound()
+		end
+		lit(true)
 	end)
 	button.MouseLeave:Connect(function()
-		Ease.play(stroke, Ease.quick, { Transparency = if primary then 0.2 else 0.5 })
-		Ease.play(scale, Ease.quick, { Scale = 1 })
+		lit(false)
+	end)
+	button.SelectionGained:Connect(function()
+		if hoverSound then
+			hoverSound()
+		end
+		lit(true)
+	end)
+	button.SelectionLost:Connect(function()
+		lit(false)
 	end)
 	button.MouseButton1Down:Connect(function()
-		Ease.play(scale, Ease.quick, { Scale = 0.965 })
+		Ease.play(scale, Ease.info(0.08, Enum.EasingStyle.Quad), { Scale = 0.965 })
 	end)
 	button.MouseButton1Up:Connect(function()
-		Ease.play(scale, Ease.quick, { Scale = 1 })
+		Ease.play(scale, Ease.info(0.26, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = if over then 1.025 else 1 })
 	end)
 	button.Activated:Connect(function()
 		if clickSound then
 			clickSound()
 		end
 		Theme.haptic()
+		glint.BackgroundTransparency = 0.55
+		Ease.play(glint, Ease.info(0.35, Enum.EasingStyle.Quad), { BackgroundTransparency = 1 })
 		onPress()
 	end)
 	button.Parent = parent

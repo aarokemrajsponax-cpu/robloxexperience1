@@ -1015,11 +1015,11 @@ if MODE ~= "full" then
 	end)())
 	check(where .. ": the Settings key is there", textOnScreen("Settings") ~= nil)
 	if MODE == "studio" then
-		check("Studio: the build number shows in the corner", textOnScreen("Build 20") ~= nil)
+		check("Studio: the build number shows in the corner", textOnScreen("Build " .. module("ReplicatedStorage", "Shared", "Build").number) ~= nil)
 		local cover = playerGui.MaisonIntro:FindFirstChild("Cover")
 		check("Studio: no black cover over the screen", cover == nil or cover.Visible == false or cover.BackgroundTransparency >= 1)
 	else
-		check("the live game: no build number on screen", textOnScreen("Build 20") == nil)
+		check("the live game: no build number on screen", textOnScreen("Build " .. module("ReplicatedStorage", "Shared", "Build").number) == nil)
 		-- The intro plays over the live house; walking skips it, and the cover lifts.
 		local cover = playerGui.MaisonIntro:FindFirstChild("Cover")
 		UserInputService.InputBegan:Fire({ UserInputType = roblox.Enum.UserInputType.Keyboard, KeyCode = roblox.Enum.KeyCode.W })
@@ -1125,10 +1125,53 @@ end
 check("a Salon table exists", salonTable ~= nil)
 UserInputService.PreferredInput = EnumShim.PreferredInput.Gamepad
 serverSays("Table", { op = "seated", table = salonTable:GetAttribute("TableId"), room = "salon", mode = "room" })
+local fovAtSeat = camera.FieldOfView
 advance(2)
 check("seated: controls are off", controls.enabled == false)
 check("seated: the camera frames the table", camera.CameraType == roblox.Enum.CameraType.Scriptable)
 check("seated: Leave is on screen", textOnScreen("Leave") ~= nil)
+
+-- The sorting camera: in without a snap, then the whole table in view, from above the chair.
+do
+	local Sorting = Config.data.Sorting
+	local LayoutM = module("ReplicatedStorage", "Shared", "Layout")
+	local T = LayoutM.Table
+	local frame = salonTable:GetAttribute("Frame")
+	check("sorting: the field of view eases in (nothing snaps as you sit)", fovAtSeat == 70, fovAtSeat)
+	check("sorting: the sorting camera's own field of view", math.abs(camera.FieldOfView - Sorting.cameraFov) < 1e-3, camera.FieldOfView)
+	local must = {
+		Vector3.new(-T.width / 2 + 0.35, T.topY, -T.depth / 2 + 0.35),
+		Vector3.new(T.width / 2 - 0.35, T.topY, -T.depth / 2 + 0.35),
+		Vector3.new(-T.width / 2 + 0.35, T.topY, T.depth / 2 - 0.35),
+		Vector3.new(T.width / 2 - 0.35, T.topY, T.depth / 2 - 0.35),
+	}
+	for i = 1, 6 do
+		table.insert(must, LayoutM.caseLocal(i) + Vector3.new(0, 0.55, T.caseDepth / 2))
+	end
+	table.insert(must, Vector3.new(-1.7, T.topY + 0.5, T.counterZ))
+	table.insert(must, Vector3.new(2.55, T.topY + 0.5, T.counterZ))
+	for _, size in { Vector2.new(1280, 720), Vector2.new(1024, 768), Vector2.new(2340, 1080) } do
+		camera.ViewportSize = size
+		signalOf(camera, "prop:ViewportSize"):Fire()
+		local outside
+		for _, p in must do
+			local at = toScreen(camera, frame:PointToWorldSpace(p))
+			if at.X < 0 or at.X > size.X or at.Y < 0 or at.Y > size.Y then
+				outside = at
+			end
+		end
+		check(string.format("sorting: the felt, all six cases and the counter fit a %dx%d screen", size.X, size.Y), outside == nil, outside)
+	end
+	camera.ViewportSize = Vector2.new(1280, 720)
+	signalOf(camera, "prop:ViewportSize"):Fire()
+	local eye = frame:PointToObjectSpace(camera.CFrame.Position)
+	local look = frame:VectorToObjectSpace(camera.CFrame.LookVector)
+	check("sorting: the camera sits above the chair, looking down the table at the cases", eye.Z < 0 and eye.Y > T.topY + 4 and look.Z > 0.3 and look.Y < -0.5, tostring(eye) .. " " .. tostring(look))
+	local focusFx = game:GetService("Lighting"):FindFirstChild("MaisonFocus")
+	check("sorting: the room behind the table falls softly out of focus", focusFx ~= nil and focusFx.Enabled and math.abs(focusFx.FarIntensity - Sorting.focusBlur) < 1e-6 and focusFx.FocusDistance > 5, focusFx and focusFx.FarIntensity)
+	local frameGui = playerGui:FindFirstChild("MaisonSortFrame")
+	check("sorting: the edges of the screen darken", frameGui ~= nil and frameGui.Top.BackgroundTransparency < 1 and frameGui.Bottom.BackgroundTransparency < 1)
+end
 
 local function pieceList(n, cases)
 	local out = {}
@@ -1151,6 +1194,8 @@ advance(2)
 local piecesFolder = workspace:FindFirstChild("MaisonLocal") and workspace.MaisonLocal:FindFirstChild("Pieces")
 check("the deal lands on the felt", piecesFolder ~= nil and #piecesFolder:GetChildren() == 8, piecesFolder and #piecesFolder:GetChildren())
 check("no errors rendering the deal", #errors == 0, errors[1])
+check("the first deal says what to do", textOnScreen("Put every piece in the case where it belongs") ~= nil)
+check("and how, for the controls in your hands", textOnScreen("A picks up") ~= nil)
 
 -- Lift the first piece and file it with the gamepad (A lifts, the D-pad picks a case, A files).
 local liftedBefore = sentOps("Table", "lift")
@@ -1186,6 +1231,106 @@ serverSays("Table", { op = "deal", round = 2, room = "salon", mode = "room", cas
 advance(2)
 check("round II is dealt", #piecesFolder:GetChildren() == 10, #piecesFolder:GetChildren())
 
+-- What a filing says back, with a mouse: drag a piece to a case and let go.
+do
+	local Sorting = Config.data.Sorting
+	local LayoutM = module("ReplicatedStorage", "Shared", "Layout")
+	local frame = salonTable:GetAttribute("Frame")
+	local round2 = pieceList(10, cases)
+	local function modelOf(uid)
+		for _, m in piecesFolder:GetChildren() do
+			if m:GetAttribute("Uid") == uid then
+				return m
+			end
+		end
+		return nil
+	end
+	local function pointer(kind, at)
+		return { UserInputType = kind, Position = Vector3.new(at.X, at.Y, 0), KeyCode = roblox.Enum.KeyCode.Unknown, UserInputState = roblox.Enum.UserInputState.Begin }
+	end
+	local function verdictWords()
+		local out = {}
+		for _, d in workspace:GetDescendants() do
+			if d:IsA("TextLabel") and d:FindFirstAncestorWhichIsA("BillboardGui") and d:FindFirstAncestorWhichIsA("BillboardGui").Name == "Verdict" then
+				table.insert(out, norm(d.Text))
+			end
+		end
+		return table.concat(out, "|")
+	end
+	local function clearVerdicts()
+		advance(Sorting.verdictSeconds + 0.6)
+	end
+	local rest = camera.CFrame
+	local function drag(uid, caseIndex, answer)
+		UserInputService.PreferredInput = EnumShim.PreferredInput.KeyboardAndMouse
+		local m = modelOf(uid)
+		local from = toScreen(camera, m:GetPivot().Position)
+		local to = toScreen(camera, LayoutM.caseCentre(frame, caseIndex) + Vector3.new(0, 0.3, 0))
+		UserInputService.InputBegan:Fire(pointer(roblox.Enum.UserInputType.MouseButton1, from), false)
+		UserInputService.InputChanged:Fire(pointer(roblox.Enum.UserInputType.MouseMovement, from + Vector2.new(24, 0)), false)
+		advance(0.05)
+		UserInputService.InputChanged:Fire(pointer(roblox.Enum.UserInputType.MouseMovement, to), false)
+		local justMoved = m:GetPivot().Position
+		advance(0.4)
+		local settled = m:GetPivot().Position
+		UserInputService.InputEnded:Fire(pointer(roblox.Enum.UserInputType.MouseButton1, to), false)
+		local hover = workspace.MaisonLocal:FindFirstChild("CaseHover")
+		return justMoved, settled, hover, to
+	end
+
+	-- A wrong case: piece 5 offered to a case that isn't its own.
+	local wrongPiece = round2[5]
+	local wrongIndex = if Catalogue.caseIndex[wrongPiece.case] == 1 then 2 else 1
+	local target = LayoutM.caseCentre(frame, wrongIndex)
+	local justMoved, settled, hover, pointerAt = drag(5, wrongIndex)
+	check("drag: the piece doesn't jump to the pointer, it travels there", (toScreen(camera, justMoved) - pointerAt).Magnitude > 40, (toScreen(camera, justMoved) - pointerAt).Magnitude)
+	check("drag: and is under the pointer a moment later", (toScreen(camera, settled) - pointerAt).Magnitude < 12, (toScreen(camera, settled) - pointerAt).Magnitude)
+	check("drag: the case under a held piece lights up", hover ~= nil and hover.Adornee ~= nil and hover.Adornee.Name == "Case" .. wrongIndex, hover and hover.Adornee and hover.Adornee.Name)
+	check("drag: and goes dark when you let go", hover.Enabled == false)
+	advance(0.05)
+	local words = verdictWords()
+	check("a wrong case says so: WRONG CASE", string.find(words, "wrongcase", 1, true) ~= nil, words)
+	check("and says try again", string.find(words, "tryagain", 1, true) ~= nil, words)
+	check("and names the streak it cost", string.find(words, "streakof8lost", 1, true) ~= nil, words)
+	check("the wrong case flashes red", workspace.MaisonLocal:FindFirstChild("WrongCase") ~= nil)
+	serverSays("Table", { op = "filed", uid = 5, case = cases[wrongIndex], correct = false, points = 0, setBonus = 0, penalty = 0, score = 360, streak = 0, multiplier = 1, runLength = 0 })
+	advance(1)
+	local slot5 = modelOf(5):GetPivot().Position
+	check("the piece goes back to its place on the felt", (slot5 - target).Magnitude > 1, slot5)
+	check("the camera's small shake settles exactly back", (camera.CFrame.Position - rest.Position).Magnitude < 1e-3)
+	clearVerdicts()
+	check("the message goes again", verdictWords() == "")
+
+	-- Three right in a row: pieces 6, 7 and 8 into their own cases.
+	local score = 360
+	for n, uid in { 6, 7, 8 } do
+		local p = round2[uid]
+		local before = modelOf(uid):GetScale()
+		drag(uid, Catalogue.caseIndex[p.case])
+		advance(0.05)
+		local said = verdictWords()
+		check(string.format("a right case says so (%d): CORRECT", n), string.find(said, "correct", 1, true) ~= nil and string.find(said, "wrong", 1, true) == nil, said)
+		check(string.format("with the points it earned (%d)", n), string.find(said, "+", 1, true) ~= nil, said)
+		advance(0.6)
+		local m = modelOf(uid)
+		local inCase = (m:GetPivot().Position - LayoutM.caseCentre(frame, Catalogue.caseIndex[p.case])).Magnitude < 1
+		check(string.format("the piece arcs into its case and shrinks to fit (%d)", n), inCase and m:GetScale() < before * 0.8, m:GetScale())
+		score += 20
+		serverSays("Table", { op = "filed", uid = uid, case = p.case, correct = true, points = 20, setBonus = 0, penalty = 0, score = score, streak = n, multiplier = 1 + n // 2, runLength = 1 })
+		if n == 3 then
+			advance(0.3)
+			check("three in a row is called out", textOnScreen("Now ×2") ~= nil)
+			check("the first-seating hint has gone after three right", textOnScreen("Put every piece in the case where it belongs") == nil)
+		end
+		clearVerdicts()
+	end
+	check("the camera's lean-in eases back to the sorting field of view", math.abs(camera.FieldOfView - Sorting.cameraFov) < 1e-3, camera.FieldOfView)
+	advance(2)
+	check("the streak call-out goes again", textOnScreen("Now ×2") == nil)
+	check("no errors while sorting by hand", #errors == 0, errors[1])
+	UserInputService.PreferredInput = EnumShim.PreferredInput.Gamepad
+end
+
 -- The music: the Salon's track, and its fuller layer rising with the run.
 local SoundModule = module("StarterPlayer", "StarterPlayerScripts", "Client", "Sound")
 local MusicRules = module("ReplicatedStorage", "Shared", "Music")
@@ -1208,6 +1353,98 @@ check("music: the piano leaks, muffled, into the street", piano ~= nil and piano
 check("music: the Salon falls quiet when you leave", salonTrack.Volume == 0 and salonLayer.Volume == 0)
 SoundModule.enterZone("salon")
 advance(3)
+
+-- The sound bank: the house's sheet, a different take each time, a little drift.
+do
+	local Sheet = module("ReplicatedStorage", "Shared", "SoundSheet")
+	local Wardrobe = module("ReplicatedStorage", "Shared", "Wardrobe")
+	local assets = Config.data.Assets
+	local function soundNamed(name)
+		return find(game, function(d)
+			return d:IsA("Sound") and d.Name == name
+		end)
+	end
+	local function within(region, takes)
+		for _, take in takes do
+			if math.abs(region.Min - take[1]) < 1e-3 and math.abs(region.Max - take[2]) < 1e-3 then
+				return true
+			end
+		end
+		return false
+	end
+	local needed = { "pickup", "place", "drop", "deal", "slide", "hover", "wrong", "streakLost", "combo", "shimmer", "round", "complete", "low", "enter", "leave", "chair", "door", "click", "tick", "reward", "chime", "chime_harp", "chime_musicBox", "chime_celesta", "chime_glass" }
+	local missing
+	for _, name in needed do
+		local takes = Sheet.cues[name]
+		if not takes or #takes < 2 then
+			missing = name
+		end
+	end
+	check("the sound sheet holds every sound the house plays, in at least two takes", missing == nil, missing)
+	local inOrder = true
+	local last = 0
+	for _, takes in Sheet.cues do
+		for _, take in takes do
+			if take[2] <= take[1] or take[2] > Sheet.length + 1e-6 then
+				inOrder = false
+			end
+		end
+	end
+	check("every take lies inside the sheet", inOrder and Sheet.length > 0)
+
+	check("without the sheet, the Boutique's chimes aren't sold", not Wardrobe.deliverable(Wardrobe.get("chime_harp")))
+	SoundModule.play("chime", 0.5)
+	local chime = soundNamed("chime")
+	check("without the sheet, a softened built-in stand-in plays", chime ~= nil and chime.SoundId == "rbxasset://sounds/electronicpingshort.wav" and chime:FindFirstChild("Soften") ~= nil)
+
+	assets.SoundSheet = "rbxassetid://4242"
+	SoundModule.play("pickup", 0.4)
+	local s = soundNamed("pickup")
+	local first = s and s.PlaybackRegion
+	check("with the sheet set, a sound plays one of its takes", s ~= nil and s.SoundId == "rbxassetid://4242" and s.PlaybackRegionsEnabled == true and within(first, Sheet.cues.pickup))
+	local repeated = false
+	local previous = first.Min
+	local speeds, volumes = {}, {}
+	for _ = 1, 8 do
+		SoundModule.play("pickup", 0.4)
+		if s.PlaybackRegion.Min == previous then
+			repeated = true
+		end
+		previous = s.PlaybackRegion.Min
+		speeds[s.PlaybackSpeed] = true
+		volumes[s.Volume] = true
+	end
+	check("never the same take twice running", not repeated)
+	local function count(t)
+		local n = 0
+		for _ in t do
+			n += 1
+		end
+		return n
+	end
+	check("each play drifts a little in pitch and in volume", count(speeds) > 3 and count(volumes) > 3)
+	SoundModule.play("chime", 0.5, 1.5)
+	check("the chime keeps its exact pitch (it climbs in steps)", math.abs(chime.PlaybackSpeed - 1.5) < 1e-9 and chime:FindFirstChild("Soften").Enabled == false, chime.PlaybackSpeed)
+	assets.Sounds.wrong = "rbxassetid://99"
+	SoundModule.play("wrong", 0.4)
+	local w = soundNamed("wrong")
+	check("a sound set by name replaces the sheet's takes", w.SoundId == "rbxassetid://99" and w.PlaybackRegionsEnabled == false)
+	assets.Sounds.wrong = ""
+	check("with the sheet set, the Boutique's chimes can be sold", Wardrobe.deliverable(Wardrobe.get("chime_harp")) and Wardrobe.deliverable(Wardrobe.get("chime_glass")))
+
+	-- A room with no music of its own plays one of the house's tracks.
+	assets.Tracks.table = "rbxassetid://777"
+	SoundModule.enterZone("velvet")
+	advance(3)
+	local velvet = loopNamed("Music_velvet")
+	check("music: a room with no track of its own plays the house's table track", velvet ~= nil and velvet.SoundId == "rbxassetid://777" and velvet.Volume > 0, velvet and velvet.SoundId)
+	SoundModule.enterZone("salon")
+	advance(3)
+	check("music: and a room's own track still wins", salonTrack.SoundId == "rbxassetid://101" and salonTrack.Volume > 0 and velvet.Volume == 0)
+	assets.Tracks.table = ""
+	assets.SoundSheet = ""
+	check("no errors in the sound bank", #errors == 0, errors[1])
+end
 
 -- With a mouse: press on a piece, drag it over its case, let go.
 UserInputService.PreferredInput = EnumShim.PreferredInput.KeyboardAndMouse
@@ -1261,8 +1498,12 @@ advance(1.5)
 check("no errors turning the plate", #errors == 0, errors[1])
 
 serverSays("Table", { op = "left", summary = { score = 360, grade = "Polished" } })
+local fovAtLeave = camera.FieldOfView
 advance(2)
 check("leaving hands the camera back", camera.CameraType == roblox.Enum.CameraType.Custom)
+check("leaving: the field of view eases back out (no snap)", fovAtLeave == Config.data.Sorting.cameraFov and camera.FieldOfView == 70, string.format("%s -> %s", tostring(fovAtLeave), tostring(camera.FieldOfView)))
+check("leaving: the room comes back into focus", not game:GetService("Lighting").MaisonFocus.Enabled)
+check("leaving: the screen's edges clear", playerGui.MaisonSortFrame.Top.BackgroundTransparency == 1)
 check("leaving gives the controls back", controls.enabled == true)
 check("the felt is cleared", #piecesFolder:GetChildren() == 0)
 check("the rival's plate goes with the table", find(workspace, function(d)

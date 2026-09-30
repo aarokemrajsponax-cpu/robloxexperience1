@@ -7,6 +7,7 @@
 
 local Config = require(script.Parent.Config)
 local Seasons = require(script.Parent.Seasons)
+local SoundSheet = require(script.Parent.SoundSheet)
 
 local Wardrobe = {}
 
@@ -225,7 +226,10 @@ function Wardrobe.deliverable(item: Item): boolean
 		return type(look) == "table" and ((look.shirt or 0) ~= 0 or (look.pants or 0) ~= 0 or (look.accessories or "") ~= "")
 	elseif item.kind == "chime" then
 		local chimes = assets.Sounds and assets.Sounds.chimes
-		return type(chimes) == "table" and (chimes[item.style.sound] or "") ~= ""
+		local own = type(chimes) == "table" and (chimes[item.style.sound] or "") ~= ""
+		-- Or the house's sound sheet, which carries every chime the Boutique sells.
+		local sheet = (assets.SoundSheet or "") ~= "" and SoundSheet.cues["chime_" .. tostring(item.style.sound)] ~= nil
+		return own or sheet
 	elseif item.kind == "gesture" then
 		return ((assets.Animations and assets.Animations[item.style.animation]) or "") ~= ""
 	elseif item.kind == "suite" then

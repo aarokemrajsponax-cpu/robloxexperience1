@@ -64,7 +64,9 @@ State.watch("movement", function(value)
 	Ease.motionScale = if value == "Still" then 0 elseif value == "Calm" then 0.6 else 1
 end)
 Theme.onClick(Sound.ui)
+Theme.onHover(Sound.hover)
 Root.onDip(Sound.dip)
+Sound.preload()
 
 Closet.start()
 pcall(function()

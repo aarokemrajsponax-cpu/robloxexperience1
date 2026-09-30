@@ -103,6 +103,29 @@ Voice.Table = {
 	clockRanOut = "The clock ran out in round {round}.",
 }
 
+-- What a filing says back: plain enough that nobody wonders whether it went in.
+Voice.Sorting = {
+	correct = "Correct",
+	wrong = "Wrong case",
+	tryAgain = "Try again",
+	streakLost = "Streak of {n} lost",
+	inARow = "{n} in a row",
+	multiplier = "Now ×{n}",
+	objective = "Put every piece in the case where it belongs",
+	hints = {
+		mouse = "Drag a piece onto its case  ·  or click it, then its case  ·  keys 1 to 6",
+		touch = "Drag a piece onto its case  ·  or tap it, then its case",
+		gamepad = "A picks up  ·  D-pad chooses a case  ·  A puts it in",
+	},
+	-- Called out as a streak grows (Config.Sorting.streakMoments); the rest say "{n} in a row".
+	moments = {
+		[5] = "Five in a row. Lovely.",
+		[8] = "Eight. The house is watching.",
+		[12] = "Twelve without a slip.",
+		[20] = "Twenty. Remarkable.",
+	},
+}
+
 Voice.Library = {
 	title = "Tête-à-Tête",
 	waiting = "Waiting for a guest opposite",

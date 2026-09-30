@@ -32,7 +32,7 @@ export type Style = {
 
 -- The camera looks down at the table from above the chair; plates and the counter face it.
 -- Both are in the table's own coordinates (+Z toward the cases).
-local TOWARD_CAMERA = Vector3.new(0, 0.9, -0.42).Unit
+local TOWARD_CAMERA = Layout.towardCamera()
 local UP_TOWARD_CASES = Vector3.new(0, 0, 1)
 
 -- A part placed in the table's frame.

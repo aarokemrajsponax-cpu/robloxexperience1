@@ -17,7 +17,7 @@ local RivalPlate = {}
 local T = Layout.Table
 local ENGRAVED = Color3.fromRGB(58, 44, 18)
 -- Like the case plates: tilted to face the seated camera, top edge toward the cases.
-local TOWARD_CAMERA = Vector3.new(0, 0.9, -0.42).Unit
+local TOWARD_CAMERA = Layout.towardCamera()
 local UP_TOWARD_CASES = Vector3.new(0, 0, 1)
 
 local plate: Part? = nil

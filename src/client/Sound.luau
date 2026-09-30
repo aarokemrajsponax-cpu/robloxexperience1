@@ -2,6 +2,7 @@
 -- Music, effects and ambience, each with its own volume; the signature chime that climbs with
 -- a streak; per-space acoustics; and the dip under round cards and panels.
 
+local ContentProvider = game:GetService("ContentProvider")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SoundService = game:GetService("SoundService")
 local TweenService = game:GetService("TweenService")
@@ -9,6 +10,7 @@ local Workspace = game:GetService("Workspace")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Music = require(ReplicatedStorage.Shared.Music)
+local SoundSheet = require(ReplicatedStorage.Shared.SoundSheet)
 local State = require(script.Parent.State)
 
 local Sound = {}
@@ -60,9 +62,47 @@ function Sound.briefDip(seconds: number?)
 	end)
 end
 
--- Effects: one pool of sounds per id so nothing is created per frame.
+-- Effects. Each one comes from, in order:
+--   1. a sound set for that name in Config.Assets.Sounds (yours wins);
+--   2. the house's sound sheet: one uploaded file holding every table sound, each in several
+--      takes (Config.Assets.SoundSheet; where each take sits is in Shared.SoundSheet);
+--   3. Roblox's own built-in sounds, softened, until the sheet is set.
+-- Every play picks a different take from last time and drifts a little in pitch and volume, so
+-- the same action never sounds exactly the same twice.
+local PING = "rbxasset://sounds/electronicpingshort.wav"
+local GET_UP = "rbxasset://sounds/action_get_up.mp3"
+local LAND = "rbxasset://sounds/action_jump_land.mp3"
+-- The stand-ins, each with the pitch and level that make it closest to the real thing.
+local BUILT_IN: { [string]: { id: string, pitch: number, volume: number } } = {
+	chime = { id = PING, pitch = 1, volume = 1 },
+	round = { id = PING, pitch = 0.9, volume = 1 },
+	complete = { id = PING, pitch = 0.8, volume = 1 },
+	combo = { id = PING, pitch = 1.5, volume = 0.8 },
+	low = { id = PING, pitch = 0.6, volume = 1 },
+	pickup = { id = GET_UP, pitch = 1.1, volume = 0.8 },
+	chair = { id = GET_UP, pitch = 1, volume = 1 },
+	enter = { id = GET_UP, pitch = 0.9, volume = 0.6 },
+	place = { id = LAND, pitch = 1.1, volume = 0.8 },
+	drop = { id = LAND, pitch = 1, volume = 1 },
+	deal = { id = LAND, pitch = 1.3, volume = 0.6 },
+	wrong = { id = LAND, pitch = 0.7, volume = 0.8 },
+}
+-- How far each sound may drift per play: pitch as a fraction, volume as a fraction. Tuned sounds
+-- (the chime, which climbs in steps) keep their pitch.
+local DRIFT: { [string]: { pitch: number, volume: number } } = {
+	chime = { pitch = 0, volume = 0.06 },
+	combo = { pitch = 0, volume = 0.05 },
+	round = { pitch = 0, volume = 0.05 },
+	complete = { pitch = 0, volume = 0.05 },
+	low = { pitch = 0, volume = 0.05 },
+	slide = { pitch = 0.08, volume = 0.25 },
+	deal = { pitch = 0.07, volume = 0.2 },
+	hover = { pitch = 0.05, volume = 0.15 },
+}
+local DEFAULT_DRIFT = { pitch = 0.045, volume = 0.12 }
+
 local pool: { [string]: { Sound } } = {}
-local warned: { [string]: boolean } = {}
+local lastTake: { [string]: number } = {}
 
 local function idFor(name: string): string
 	local sounds = Config.data.Assets.Sounds :: any
@@ -72,16 +112,53 @@ local function idFor(name: string): string
 	return if type(id) == "string" then id else ""
 end
 
+local function sheetId(): string
+	local id = (Config.data.Assets :: any).SoundSheet
+	return if type(id) == "string" then id else ""
+end
+
+-- The sheet's cue for a name ("chime:harp" is the cue "chime_harp").
+local function cueName(name: string): string
+	return (string.gsub(name, ":", "_"))
+end
+
+type Source = { id: string, region: { number }?, soften: boolean, pitch: number, volume: number }
+
+local function source(name: string): Source?
+	local own = idFor(name)
+	if own ~= "" then
+		return { id = own, region = nil, soften = false, pitch = 1, volume = 1 }
+	end
+	local sheet = sheetId()
+	local takes = SoundSheet.cues[cueName(name)]
+	if sheet ~= "" and takes and #takes > 0 then
+		local n = #takes
+		local pick = math.random(1, n)
+		if n > 1 and pick == lastTake[name] then
+			pick = pick % n + 1
+		end
+		lastTake[name] = pick
+		return { id = sheet, region = takes[pick], soften = false, pitch = 1, volume = 1 }
+	end
+	local fallback = BUILT_IN[name]
+	if fallback then
+		return { id = fallback.id, region = nil, soften = true, pitch = fallback.pitch, volume = fallback.volume }
+	end
+	return nil
+end
+
+-- Whether a sound has anything to play (the Boutique only sells a chime that does).
+function Sound.has(name: string): boolean
+	return idFor(name) ~= "" or (sheetId() ~= "" and SoundSheet.cues[cueName(name)] ~= nil)
+end
+
 -- The chime a guest wears from the Boutique (set by Main from the Closet), or nil.
 Sound.wornChime = function(): string?
 	return nil
 end
 
-local function take(name: string): Sound?
-	local id = idFor(name)
-	if id == "" then
-		return nil
-	end
+-- One pool of sounds per name, so nothing is created per play.
+local function take(name: string, id: string): Sound
 	local list = pool[name]
 	if not list then
 		list = {}
@@ -96,30 +173,68 @@ local function take(name: string): Sound?
 		end
 	end
 	if #list >= 6 then
-		return list[1]
+		local oldest = list[1]
+		oldest.SoundId = id
+		return oldest
 	end
 	local s = Instance.new("Sound")
 	s.Name = name
 	s.SoundId = id
 	s.SoundGroup = effects
 	s.Parent = SoundService
-	s.Loaded:Once(function() end)
 	table.insert(list, s)
 	return s
 end
 
+-- Roblox's built-in stand-ins are bright and electronic: a low shelf takes the edge off them.
+local function soften(s: Sound, on: boolean)
+	local eq = s:FindFirstChild("Soften")
+	if on and not eq then
+		local e = Instance.new("EqualizerSoundEffect")
+		e.Name = "Soften"
+		e.HighGain = -12
+		e.MidGain = -3
+		e.LowGain = 2
+		e.Parent = s
+	elseif eq and eq:IsA("EqualizerSoundEffect") then
+		eq.Enabled = on
+	end
+end
+
 function Sound.play(name: string, volume: number?, pitch: number?)
-	local s = take(name)
-	if not s then
-		if not warned[name] then
-			warned[name] = true
-		end
+	local src = source(name)
+	if not src then
 		return
 	end
-	s.Volume = volume or 0.6
-	s.PlaybackSpeed = pitch or 1
-	s.TimePosition = 0
+	local s = take(name, src.id)
+	local drift = DRIFT[name] or DEFAULT_DRIFT
+	s.Volume = (volume or 0.6) * src.volume * (1 + (math.random() * 2 - 1) * drift.volume)
+	s.PlaybackSpeed = (pitch or 1) * src.pitch * (1 + (math.random() * 2 - 1) * drift.pitch)
+	local region = src.region
+	if region then
+		s.PlaybackRegionsEnabled = true
+		s.PlaybackRegion = NumberRange.new(region[1], region[2])
+		s.TimePosition = region[1]
+	else
+		s.PlaybackRegionsEnabled = false
+		s.TimePosition = 0
+	end
+	soften(s, src.soften)
 	s:Play()
+end
+
+-- Loads the sheet as the guest arrives, so the first pickup plays at once.
+function Sound.preload()
+	local id = sheetId()
+	if id == "" then
+		return
+	end
+	local s = take("preload", id)
+	task.spawn(function()
+		pcall(function()
+			ContentProvider:PreloadAsync({ s })
+		end)
+	end)
 end
 
 -- The chime rings one step higher with each correct filing in a streak.
@@ -136,7 +251,7 @@ function Sound.chime(streak: number)
 	local semis = STEPS[index]
 	local voice = CHIMES[State.get("chime")] or CHIMES.Bells
 	local worn = Sound.wornChime()
-	if worn and idFor("chime:" .. worn) ~= "" then
+	if worn and Sound.has("chime:" .. worn) then
 		Sound.play("chime:" .. worn, voice.volume, 2 ^ (semis / 12))
 		return
 	end
@@ -145,6 +260,10 @@ end
 
 -- Rare pieces add a bright three-note shimmer on top.
 function Sound.shimmer()
+	if Sound.has("shimmer") then
+		Sound.play("shimmer", 0.35)
+		return
+	end
 	local voice = CHIMES[State.get("chime")] or CHIMES.Bells
 	for i, semis in { 24, 28, 31 } do
 		task.delay((i - 1) * 0.07, function()
@@ -154,11 +273,15 @@ function Sound.shimmer()
 end
 
 function Sound.wrong()
-	Sound.play("wrong", 0.35, 0.7)
+	Sound.play("wrong", 0.45)
 end
 
 function Sound.ui()
-	Sound.play("ui", 0.25, 1.1)
+	Sound.play("click", 0.3)
+end
+
+function Sound.hover()
+	Sound.play("tick", 0.1)
 end
 
 -- Each space has its own acoustics.
@@ -216,6 +339,30 @@ local function asset(tree: string, key: string): string
 	return if type(id) == "string" then id else ""
 end
 
+-- The house track a space plays when it has no music of its own. The street, the Club and the
+-- Boutique hear the Foyer's piano instead.
+local TRACK_FOR: { [string]: string } = {
+	foyer = "lounge",
+	vault = "lounge",
+	suite = "lounge",
+	terrace = "lounge",
+	salon = "table",
+	velvet = "table",
+	obsidian = "table",
+	midnight = "table",
+	library = "table",
+	ballroom = "ballroom",
+}
+
+local function musicFor(zone: string): string
+	local own = asset("Music", zone)
+	if own ~= "" then
+		return own
+	end
+	local track = TRACK_FOR[zone]
+	return if track then asset("Tracks", track) else ""
+end
+
 -- The piano's sound source: the Foyer's grand piano, once it has streamed in.
 local function pianoPart(): BasePart?
 	local maison = Workspace:FindFirstChild("Maison")
@@ -263,7 +410,7 @@ local function remix()
 
 	-- The Foyer: the piano, heard in the room and, muffled, from the spaces around it.
 	local part = pianoPart()
-	local foyerId = asset("Music", "foyer")
+	local foyerId = musicFor("foyer")
 	if part and foyerId ~= "" then
 		local s = loop("Piano", foyerId, music, part)
 		if s then
@@ -289,7 +436,7 @@ local function remix()
 	if zone ~= "foyer" and zone ~= "ballroom" then
 		local layer = asset("MusicLayers", zone)
 		local base = if intensity and layer == "" then 0.7 + 0.3 * intensity else 1
-		want("Music_" .. zone, asset("Music", zone), level * base, music)
+		want("Music_" .. zone, musicFor(zone), level * base, music)
 		if intensity and layer ~= "" then
 			want("Layer_" .. zone, layer, level * intensity, music)
 		end
@@ -311,7 +458,7 @@ local function remix()
 			end
 		else
 			local lit = mix.lit or Config.data.Ballroom.tables
-			want("Music_ballroom", asset("Music", "ballroom"), level * (0.55 + 0.45 * math.clamp(lit / Config.data.Ballroom.tables, 0, 1)), music)
+			want("Music_ballroom", musicFor("ballroom"), level * (0.55 + 0.45 * math.clamp(lit / Config.data.Ballroom.tables, 0, 1)), music)
 		end
 	end
 

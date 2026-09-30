@@ -414,6 +414,26 @@ local defaults = {
 		npcWalkSpeed = 9,
 	},
 
+	-- How sorting feels at the table: the camera, the hand, and what a filing says back.
+	Sorting = {
+		cameraFov = 46, -- the sorting camera's field of view
+		wideFovExtra = 4, -- more for the Library's wide shot of both halves
+		frameFill = 0.9, -- how much of the screen the table may fill (1 = edge to edge)
+		enterSeconds = 1.05, -- the swing from walking into the sorting camera
+		leaveSeconds = 0.95, -- and back down behind you when you stand
+		focusBlur = 0.2, -- the room behind the table softly out of focus (0 = off)
+		dragFollow = 26, -- how tightly a dragged piece follows the finger or mouse
+		dragTilt = 14, -- the most (degrees) a dragged piece leans into its movement
+		dragLift = 0.9, -- studs a held piece rises off the felt
+		fileSeconds = 0.3, -- a piece's arc into its case
+		returnSeconds = 0.42, -- a wrong piece's way back to its place
+		punch = 0.9, -- degrees the camera leans in on a correct filing (0 = off)
+		shake = 0.07, -- studs the camera shakes on a wrong case (0 = off)
+		verdictSeconds = 0.95, -- how long "Correct" and "Wrong case" stay up
+		streakMoments = { 3, 5, 8, 12, 16, 20, 30 }, -- streaks the house calls out
+		hintFilings = 3, -- the first-seating hint goes after this many correct filings
+	},
+
 	Profiles = {
 		storeName = "MaisonNoir_Profiles",
 		schemaVersion = 1,
@@ -432,21 +452,41 @@ local defaults = {
 
 	-- Asset ids. 0 or "" means "not set yet"; the code then plays nothing / uses a placeholder.
 	Assets = {
-		-- Placeholders from Roblox's built-in sounds until real ones are chosen (see README).
-		-- Use "rbxassetid://<id>" for an uploaded or Creator Store sound; "" plays nothing.
+		-- The house's own sounds and music are in the repo, ready to upload once each (assets/audio,
+		-- see the README): the sound sheet and three tracks. Paste each id as "rbxassetid://<id>".
+		-- Until the sheet is set the table plays Roblox's built-in stand-ins, softened.
+		SoundSheet = "", -- assets/audio/maison-sounds.ogg: every table sound, several takes of each
+		-- A sound set here replaces the sheet's takes for that one name ("" = use the sheet).
 		Sounds = {
-			chime = "rbxasset://sounds/electronicpingshort.wav", -- pitched per streak step
-			pickup = "rbxasset://sounds/action_get_up.mp3",
-			drop = "rbxasset://sounds/action_jump_land.mp3",
-			wrong = "rbxasset://sounds/action_jump_land.mp3", -- played low and quiet: a muted knock
-			ui = "",
-			round = "rbxasset://sounds/electronicpingshort.wav",
-			complete = "rbxasset://sounds/electronicpingshort.wav",
+			chime = "", -- pitched up a step with each correct filing in a streak
+			pickup = "",
+			place = "", -- a piece settling into its case
+			drop = "",
+			deal = "",
+			slide = "", -- a piece dragged quickly over the felt
+			hover = "", -- a held piece over a case
+			wrong = "",
+			streakLost = "",
+			combo = "", -- a streak called out
+			shimmer = "", -- a gilded piece filed
+			round = "",
+			complete = "",
+			low = "", -- the clock's last ten seconds
+			enter = "", -- sitting down to sort
+			leave = "",
+			chair = "",
 			door = "",
-			chair = "rbxasset://sounds/action_get_up.mp3",
-			low = "rbxasset://sounds/electronicpingshort.wav", -- the clock's last ten seconds, played low
-			-- Chimes sold in the Boutique: a sound each. A chime is only sold once its sound is set.
+			click = "", -- a key pressed
+			tick = "", -- a key under the pointer
+			reward = "",
+			-- Chimes sold in the Boutique. A chime is sold once its sound is set here or the sheet is.
 			chimes = { harp = "", musicBox = "", celesta = "", glass = "" },
+		},
+		-- The house's three tracks (assets/audio). A space with no track of its own below plays one.
+		Tracks = {
+			lounge = "", -- maison-lounge.ogg: the Foyer's piano, the Suite, the Vault, the Terrace
+			table = "", -- maison-table.ogg: the four sorting rooms and the Library
+			ballroom = "", -- maison-ballroom.ogg: the band
 		},
 		Music = { street = "", foyer = "", salon = "", velvet = "", obsidian = "", midnight = "", club = "", library = "", ballroom = "", boutique = "", vault = "", suite = "", terrace = "" },
 		-- A fuller layer for each room that rises as the run builds (optional).

@@ -89,8 +89,12 @@ focus.FocusDistance = 0.05
 focus.InFocusRadius = 0
 focus.Parent = Lighting
 
-local blurGoal = { FarIntensity = 0.55, NearIntensity = 0.4 }
+local blurGoal = { FarIntensity = 0.55, NearIntensity = 0.4, FocusDistance = 0.05, InFocusRadius = 0 }
 local clearGoal = { FarIntensity = 0, NearIntensity = 0 }
+
+-- A resting focus under no panel: at the table, the felt sharp and the room behind it soft.
+export type Focus = { FocusDistance: number, InFocusRadius: number, FarIntensity: number }
+local baseFocus: Focus? = nil
 
 export type Panel = {
 	name: string,
@@ -114,13 +118,17 @@ local function updateFocus()
 			anyBlur = true
 		end
 	end
+	local base = baseFocus
 	if anyBlur then
 		focus.Enabled = true
 		Ease.play(focus, Ease.panel, blurGoal)
+	elseif base then
+		focus.Enabled = true
+		Ease.play(focus, Ease.settle, { FocusDistance = base.FocusDistance, InFocusRadius = base.InFocusRadius, FarIntensity = base.FarIntensity, NearIntensity = 0 })
 	else
 		local t = Ease.play(focus, Ease.panel, clearGoal)
 		t.Completed:Once(function()
-			if #stack == 0 then
+			if #stack == 0 and baseFocus == nil then
 				focus.Enabled = false
 			end
 		end)
@@ -130,19 +138,40 @@ local function updateFocus()
 	end
 end
 
+function Root.setFocus(goal: Focus?)
+	baseFocus = goal
+	updateFocus()
+end
+
 local panelChanged = Instance.new("BindableEvent")
 Root.PanelsChanged = panelChanged.Event
+
+-- Each panel eases in from a touch smaller and lower, and eases away the same way.
+local function openScale(group: CanvasGroup): UIScale
+	local existing = group:FindFirstChild("OpenScale")
+	if existing and existing:IsA("UIScale") then
+		return existing
+	end
+	local s = Instance.new("UIScale")
+	s.Name = "OpenScale"
+	s.Parent = group
+	return s
+end
 
 local function show(group: CanvasGroup)
 	group.Visible = true
 	group.GroupTransparency = 1
 	local startPos = group.Position
-	group.Position = startPos + UDim2.fromOffset(0, 8)
+	group.Position = startPos + UDim2.fromOffset(0, 10)
+	local s = openScale(group)
+	s.Scale = 0.965
 	Ease.play(group, Ease.scaled(Ease.panel), { GroupTransparency = 0, Position = startPos })
+	Ease.play(s, Ease.scaled(Ease.info(0.42, Enum.EasingStyle.Quint)), { Scale = 1 })
 end
 
 local function hide(group: CanvasGroup, destroy: boolean)
 	local startPos = group.Position
+	Ease.play(openScale(group), Ease.scaled(Ease.quick), { Scale = 0.98 })
 	local t = Ease.play(group, Ease.scaled(Ease.quick), { GroupTransparency = 1, Position = startPos + UDim2.fromOffset(0, 6) })
 	t.Completed:Once(function()
 		group.Position = startPos
