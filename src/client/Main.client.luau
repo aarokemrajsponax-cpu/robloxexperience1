@@ -209,6 +209,13 @@ local function onPlay()
 	elseif launch == "ballroom" then
 		-- Arrived to watch a friend's evening: straight up to the Gallery.
 		task.delay(0.6, quickSit, "ballroom")
+	elseif launch == "soiree" then
+		-- A Soirée notification: this weekend's format, straight to it.
+		local format = game:GetService("Workspace"):GetAttribute("SoireeFormat")
+		task.delay(0.6, quickSit, if format == "library" then "library" else "ballroom")
+	elseif launch == "ledger" then
+		-- The Term ends in three days: the Ledger, open.
+		task.delay(0.8, LedgerPanel.open)
 	elseif string.sub(launch, 1, 7) == "library" then
 		-- Arrived from an invite to the Library: shown up to the friend's table.
 		task.delay(0.6, quickSit, launch)

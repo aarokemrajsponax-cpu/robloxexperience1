@@ -300,7 +300,10 @@ function Guests.start()
 			if inviter and Guests.joinLibrary(player, inviter) then
 				return true
 			end
-			Concierge.line(player, Voice.Concierge.friendAway, 4)
+			-- (Plain "library" is a Soirée weekend's notification: just shown upstairs.)
+			if inviter then
+				Concierge.line(player, Voice.Concierge.friendAway, 4)
+			end
 			return true
 		end
 		local mode: TableService.Mode = if wanted == "nightly" then "nightly" else "room"
