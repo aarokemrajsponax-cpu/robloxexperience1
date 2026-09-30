@@ -46,6 +46,9 @@ Layout.Foyer = {
 	conciergeHome = CFrame.lookAt(Vector3.new(9, 3, 4.2), Vector3.new(9, 3, -10)),
 	chandelier = Vector3.new(0, 27, 16),
 	piano = CFrame.lookAt(Vector3.new(18, 3, 20), Vector3.new(0, 3, 20)),
+	-- The Pianist on the bench, facing the keys (the bench is 5 studs in front of the piano).
+	pianist = CFrame.lookAt(Vector3.new(18, 3, 20), Vector3.new(0, 3, 20)) * CFrame.new(0, 0, -5) * CFrame.Angles(0, math.pi, 0),
+	pianoBenchTop = 2.25, -- above the floor
 	tonightBoard = CFrame.lookAt(Vector3.new(-29.4, 13, 17), Vector3.new(0, 13, 17)),
 	wallOfNames = CFrame.lookAt(Vector3.new(-19, 14, 41.4), Vector3.new(-19, 14, 0)),
 	livreDOr = CFrame.lookAt(Vector3.new(-19, 3, 36), Vector3.new(-19, 3, 0)),

@@ -893,6 +893,13 @@ workspace:SetAttribute("Season", "autumn")
 workspace:SetAttribute("SeasonName", "Autumn")
 
 local Config = module("ReplicatedStorage", "Shared", "Config")
+-- Music ids, so the mixing has something to mix.
+Config.data.Assets.Music.foyer = "rbxassetid://100"
+Config.data.Assets.Music.salon = "rbxassetid://101"
+Config.data.Assets.MusicLayers.salon = "rbxassetid://102"
+for i, stem in { "full", "bass", "piano", "clock" } do
+	Config.data.Assets.Band[stem] = "rbxassetid://11" .. i
+end
 local Catalogue = module("ReplicatedStorage", "Shared", "Catalogue")
 
 local function find(parent, pred)
@@ -1071,6 +1078,29 @@ check("Next round is sent", sentOps("Table", "next") == 1)
 serverSays("Table", { op = "deal", round = 2, room = "salon", mode = "room", cases = cases, pieces = pieceList(10, cases), score = 360 })
 advance(2)
 check("round II is dealt", #piecesFolder:GetChildren() == 10, #piecesFolder:GetChildren())
+
+-- The music: the Salon's track, and its fuller layer rising with the run.
+local SoundModule = module("StarterPlayer", "StarterPlayerScripts", "Client", "Sound")
+local MusicRules = module("ReplicatedStorage", "Shared", "Music")
+local function loopNamed(name)
+	return find(game, function(d)
+		return d:IsA("Sound") and d.Name == name
+	end)
+end
+SoundModule.enterZone("salon")
+advance(3)
+local salonTrack, salonLayer = loopNamed("Music_salon"), loopNamed("Layer_salon")
+check("music: the Salon plays its own track", salonTrack ~= nil and math.abs(salonTrack.Volume - Config.data.Music.level) < 1e-6, salonTrack and salonTrack.Volume)
+check("music: the fuller layer sits at round II's intensity", salonLayer ~= nil and math.abs(salonLayer.Volume - Config.data.Music.level * MusicRules.intensity(2)) < 1e-6, salonLayer and salonLayer.Volume)
+local piano = loopNamed("Piano")
+check("music: the Foyer's music comes from the piano", piano ~= nil and piano.Parent and piano.Parent.Name == "Case" and piano.Parent.Parent.Name == "GrandPiano")
+check("music: the piano isn't heard in the Salon", piano ~= nil and piano.Volume == 0, piano and piano.Volume)
+SoundModule.enterZone("street")
+advance(3)
+check("music: the piano leaks, muffled, into the street", piano ~= nil and piano.Volume > 0 and piano:FindFirstChildOfClass("EqualizerSoundEffect").HighGain < 0)
+check("music: the Salon falls quiet when you leave", salonTrack.Volume == 0 and salonLayer.Volume == 0)
+SoundModule.enterZone("salon")
+advance(3)
 
 -- With a mouse: press on a piece, drag it over its case, let go.
 UserInputService.PreferredInput = EnumShim.PreferredInput.KeyboardAndMouse
@@ -1361,6 +1391,15 @@ end) ~= nil)
 serverSays("Table", { op = "lampOut", seat = 9, place = 20, by = 3, byName = "Ada", keys = 1, leader = 3, alive = 19 })
 advance(0.5)
 check("Ballroom: a Key when your parcel puts a lamp out", textOnScreen("Table 9's lamp went out on your parcel") ~= nil)
+SoundModule.enterZone("ballroom")
+advance(3)
+check("music: the whole band while the room is lit", loopNamed("Band_full") and loopNamed("Band_full").Volume > 0 and (loopNamed("Band_piano") == nil or loopNamed("Band_piano").Volume == 0))
+serverSays("Table", { op = "lampOut", seat = 5, place = 10, by = 0, keys = 1, leader = 3, alive = 10 })
+advance(3)
+check("music: bass and brushes at ten", loopNamed("Band_bass").Volume > 0 and loopNamed("Band_full").Volume == 0)
+serverSays("Table", { op = "lampOut", seat = 6, place = 3, by = 0, keys = 1, leader = 3, alive = 2 })
+advance(3)
+check("music: a piano and a ticking clock for the final two", loopNamed("Band_piano").Volume > 0 and loopNamed("Band_clock").Volume > 0 and loopNamed("Band_bass").Volume == 0)
 serverSays("Table", { op = "closingTime" })
 serverSays("Table", { op = "cases", cases = { cases[1], cases[2], cases[3], cases[4], Catalogue.Cases[5].id, Catalogue.Cases[6].id } })
 advance(1)

@@ -5,8 +5,10 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SoundService = game:GetService("SoundService")
 local TweenService = game:GetService("TweenService")
+local Workspace = game:GetService("Workspace")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local Music = require(ReplicatedStorage.Shared.Music)
 local State = require(script.Parent.State)
 
 local Sound = {}
@@ -175,59 +177,208 @@ local REVERB: { [string]: Enum.ReverbType } = {
 	none = Enum.ReverbType.Room,
 }
 
--- Music per space, crossfading as you move. Ids live in Config.Assets.Music.
-local tracks: { [string]: Sound } = {}
-local function track(zone: string): Sound?
-	local id = (Config.data.Assets.Music :: any)[zone]
-	if type(id) ~= "string" or id == "" then
+-- Music per space, crossfading as you move (ids in Config.Assets.Music). The Foyer's music comes
+-- from the piano itself, so it carries, muffled, into the street and up the stair. A room's
+-- music fills out as the run builds; the Ballroom band thins as lamps go out.
+local mix = { zone = "", intensity = nil :: number?, lit = nil :: number?, soiree = false }
+local loops: { [string]: Sound? } = {}
+local targets: { [string]: number } = {}
+
+local function loop(key: string, id: string, into: SoundGroup, parent: Instance?): Sound?
+	if id == "" then
 		return nil
 	end
-	local s = tracks[zone]
+	local s = loops[key]
+	if s and s.SoundId ~= id then
+		s:Destroy()
+		loops[key] = nil
+		s = nil
+	end
 	if not s then
 		local ns = Instance.new("Sound")
-		ns.Name = "Music_" .. zone
+		ns.Name = key
 		ns.SoundId = id
 		ns.Looped = true
 		ns.Volume = 0
-		ns.SoundGroup = music
-		ns.Parent = SoundService
-		tracks[zone] = ns
+		ns.SoundGroup = into
+		ns.Parent = parent or SoundService
+		loops[key] = ns
 		s = ns
 	end
 	return s
 end
 
-local currentZone = ""
-function Sound.enterZone(zone: string)
-	if zone == currentZone then
+local function asset(tree: string, key: string): string
+	local t = (Config.data.Assets :: any)[tree]
+	local id = if type(t) == "table" then t[key] else nil
+	return if type(id) == "string" then id else ""
+end
+
+-- The piano's sound source: the Foyer's grand piano, once it has streamed in.
+local function pianoPart(): BasePart?
+	local maison = Workspace:FindFirstChild("Maison")
+	local piano = maison and maison:FindFirstChild("GrandPiano", true)
+	local case = piano and piano:FindFirstChild("Case")
+	return if case and case:IsA("BasePart") then case else nil
+end
+
+local PIANO_HEARD = { foyer = true, street = true, club = true, boutique = true }
+
+local function fadeTo(s: Sound, volume: number)
+	local key = s.Name
+	if targets[key] == volume and (volume == 0 or s.IsPlaying) then
 		return
 	end
-	currentZone = zone
+	targets[key] = volume
+	if volume > 0 and not s.IsPlaying then
+		s:Resume()
+		if not s.IsPlaying then
+			s:Play()
+		end
+	end
+	local t = TweenService:Create(s, TweenInfo.new(Config.data.Music.crossfade), { Volume = volume })
+	t:Play()
+	if volume == 0 then
+		t.Completed:Once(function()
+			if targets[key] == 0 then
+				s:Pause()
+			end
+		end)
+	end
+end
+
+local function remix()
+	local c = Config.data.Music
+	local zone = mix.zone
+	local level = c.level
+	local wanted: { [string]: number } = {}
+	local function want(key: string, id: string, volume: number, into: SoundGroup, parent: Instance?)
+		local s = loop(key, id, into, parent)
+		if s then
+			wanted[key] = volume
+		end
+	end
+
+	-- The Foyer: the piano, heard in the room and, muffled, from the spaces around it.
+	local part = pianoPart()
+	local foyerId = asset("Music", "foyer")
+	if part and foyerId ~= "" then
+		local s = loop("Piano", foyerId, music, part)
+		if s then
+			s.RollOffMode = Enum.RollOffMode.InverseTapered
+			s.RollOffMinDistance = 12
+			s.RollOffMaxDistance = c.pianoReach
+			local eq = s:FindFirstChildOfClass("EqualizerSoundEffect")
+			if not eq then
+				local ne = Instance.new("EqualizerSoundEffect")
+				ne.Parent = s
+				eq = ne
+			end
+			local high = if zone == "foyer" then (if mix.soiree then c.soireeBrighter else 0) else c.muffled
+			TweenService:Create(eq :: EqualizerSoundEffect, TweenInfo.new(c.crossfade), { HighGain = high, MidGain = if zone == "foyer" then 0 else high / 3 }):Play()
+			wanted.Piano = if PIANO_HEARD[zone] then level * 1.6 else 0
+		end
+	elseif zone == "foyer" then
+		want("Music_foyer", foyerId, level, music)
+	end
+
+	-- Every other space: its own track, filling out as the run builds.
+	local intensity = mix.intensity
+	if zone ~= "foyer" and zone ~= "ballroom" then
+		local layer = asset("MusicLayers", zone)
+		local base = if intensity and layer == "" then 0.7 + 0.3 * intensity else 1
+		want("Music_" .. zone, asset("Music", zone), level * base, music)
+		if intensity and layer ~= "" then
+			want("Layer_" .. zone, layer, level * intensity, music)
+		end
+	end
+
+	-- The Ballroom: the band in stems when they are set, thinning as lamps go out.
+	if zone == "ballroom" then
+		local band = Music.band(mix.lit or Config.data.Ballroom.tables)
+		local stems = Music.stems(band)
+		local any = false
+		for _, stem in { "full", "bass", "piano", "clock" } do
+			if asset("Band", stem) ~= "" then
+				any = true
+			end
+		end
+		if any then
+			for stem, share in stems do
+				want("Band_" .. stem, asset("Band", stem), level * share, music)
+			end
+		else
+			local lit = mix.lit or Config.data.Ballroom.tables
+			want("Music_ballroom", asset("Music", "ballroom"), level * (0.55 + 0.45 * math.clamp(lit / Config.data.Ballroom.tables, 0, 1)), music)
+		end
+	end
+
+	-- Ambience: the space's own, and the season's layer beneath it.
+	want("Ambience_" .. zone, asset("Ambience", zone), 0.5, ambience)
+	local season = tostring(Workspace:GetAttribute("Season") or "")
+	want("Season_" .. season, asset("SeasonAmbience", season), 0.3, ambience)
+
+	for key, s in loops do
+		if s then
+			fadeTo(s, wanted[key] or 0)
+		end
+	end
+end
+
+function Sound.enterZone(zone: string)
+	if zone == mix.zone then
+		return
+	end
+	mix.zone = zone
 	pcall(function()
 		SoundService.AmbientReverb = REVERB[zone] or Enum.ReverbType.Room
 	end)
-	for name, s in tracks do
-		if name ~= zone then
-			local t = TweenService:Create(s, TweenInfo.new(2.5), { Volume = 0 })
-			t:Play()
-			t.Completed:Once(function()
-				if currentZone ~= name then
-					s:Pause()
-				end
-			end)
-		end
-	end
-	local s = track(zone)
-	if s then
-		if not s.IsPlaying then
-			s:Resume()
-			if not s.IsPlaying then
-				s:Play()
-			end
-		end
-		TweenService:Create(s, TweenInfo.new(2.5), { Volume = 0.5 }):Play()
+	remix()
+end
+
+-- How far the run has built (Music.intensity), or nil away from a table.
+function Sound.setIntensity(intensity: number?)
+	if intensity ~= mix.intensity then
+		mix.intensity = intensity
+		remix()
 	end
 end
+
+-- Lamps still lit in the Ballroom, or nil between evenings.
+function Sound.setLamps(lit: number?)
+	if lit ~= mix.lit then
+		local before = if mix.lit then Music.band(mix.lit) else nil
+		mix.lit = lit
+		if not lit or not before or Music.band(lit) ~= before or asset("Band", "full") == "" then
+			remix()
+		end
+	end
+end
+
+local function watchWorld()
+	mix.soiree = Workspace:GetAttribute("SoireeActive") == true
+	Workspace:GetAttributeChangedSignal("SoireeActive"):Connect(function()
+		mix.soiree = Workspace:GetAttribute("SoireeActive") == true
+		remix()
+	end)
+	Workspace:GetAttributeChangedSignal("Season"):Connect(remix)
+	-- The piano streams in after the guest arrives: hand the Foyer's music to it once it does.
+	task.spawn(function()
+		for _ = 1, 60 do
+			if pianoPart() then
+				local old = loops.Music_foyer
+				if old then
+					old:Destroy()
+					loops.Music_foyer = nil
+				end
+				remix()
+				return
+			end
+			task.wait(1)
+		end
+	end)
+end
+watchWorld()
 
 applyVolumes()
 

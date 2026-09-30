@@ -214,6 +214,19 @@ local defaults = {
 		lostAfter = 25, -- seconds a new guest lingers in the Foyer before the Concierge offers the walk
 	},
 
+	-- Music (§14). Every space has its own track (Assets.Music), crossfading as you move.
+	Music = {
+		level = 0.5, -- a track's volume before the guest's own Music level
+		crossfade = 2.5, -- seconds
+		intensityBase = 0.25, -- the run builds: intensity = min(1, base + round × perRound)
+		intensityPerRound = 0.12,
+		bandBassAt = 10, -- the Ballroom band: the whole band above this many lamps, bass and brushes down to it
+		bandPianoAt = 2, -- and a single piano and a ticking clock for the final two
+		pianoReach = 95, -- studs the Foyer piano carries (it leaks through the street door)
+		muffled = -18, -- dB taken off the piano's highs when heard from another space
+		soireeBrighter = 3, -- dB added to the piano's highs on a Soirée weekend
+	},
+
 	-- Commissions (Appendix I1): Gilt for the Evening's and the Week's.
 	Commissions = {
 		eveningGilt = 150,
@@ -353,8 +366,14 @@ local defaults = {
 			-- Chimes sold in the Boutique: a sound each. A chime is only sold once its sound is set.
 			chimes = { harp = "", musicBox = "", celesta = "", glass = "" },
 		},
-		Music = { street = "", foyer = "", salon = "", velvet = "", obsidian = "", midnight = "", club = "", library = "", ballroom = "" },
-		Ambience = { street = "", foyer = "", salon = "", velvet = "", obsidian = "", midnight = "", club = "", library = "", ballroom = "" },
+		Music = { street = "", foyer = "", salon = "", velvet = "", obsidian = "", midnight = "", club = "", library = "", ballroom = "", boutique = "", vault = "", suite = "", terrace = "" },
+		-- A fuller layer for each room that rises as the run builds (optional).
+		MusicLayers = { salon = "", velvet = "", obsidian = "", midnight = "", library = "" },
+		-- The Ballroom band in stems, so it thins as lamps go out. Unset stems fall back to Music.ballroom.
+		Band = { full = "", bass = "", piano = "", clock = "" },
+		Ambience = { street = "", foyer = "", salon = "", velvet = "", obsidian = "", midnight = "", club = "", library = "", ballroom = "", terrace = "" },
+		-- A seasonal layer under the ambience, by season id: rain on glass, a fire, crickets.
+		SeasonAmbience = { frost = "", yule = "", summer = "", harvest = "", longtable = "", bloom = "" },
 		Animations = {
 			idle = "rbxassetid://507766666",
 			walk = "rbxassetid://507777826",
@@ -363,6 +382,7 @@ local defaults = {
 			applause = "",
 			tipHat = "",
 			term = "",
+			pianist = "", -- the Pianist playing (looped); with none set they sway at the keys
 		},
 		-- House looks: clothing for each outfit (Shirt and Pants template ids, accessory ids
 		-- comma-separated). A look is only sold once its clothing is set.
@@ -382,6 +402,7 @@ local defaults = {
 		},
 		Concierge = { shirt = 0, pants = 0, accessories = "" },
 		Doorman = { shirt = 0, pants = 0, accessories = "" },
+		Pianist = { shirt = 0, pants = 0, accessories = "" },
 	},
 }
 

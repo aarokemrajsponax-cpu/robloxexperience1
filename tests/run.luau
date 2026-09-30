@@ -703,6 +703,17 @@ do
 	check("rival: a new week on Monday", Rival.week(os.time({ year = 2026, month = 10, day = 5, hour = 1 })) == Rival.week(os.time({ year = 2026, month = 9, day = 28, hour = 1 })) + 1)
 end
 
+do
+	local Music = loadModule("Music")
+	check("music: sparse in round I", math.abs(Music.intensity(1) - 0.37) < 1e-9, Music.intensity(1))
+	check("music: fuller each round", Music.intensity(4) > Music.intensity(3))
+	check("music: full by round VII and held there", Music.intensity(7) == 1 and Music.intensity(12) == 1)
+	check("band: the whole band at twenty", Music.band(20) == "full" and Music.band(11) == "full")
+	check("band: bass and brushes at ten", Music.band(10) == "bass" and Music.band(3) == "bass")
+	check("band: a single piano and a ticking clock for the final two", Music.band(2) == "piano" and Music.band(1) == "piano")
+	check("band: the final two keep the clock", Music.stems("piano").clock ~= nil and Music.stems("full").full == 1)
+end
+
 print(("\n%d passed, %d failed"):format(passed, failed))
 if failed > 0 then
 	os.exit(1)

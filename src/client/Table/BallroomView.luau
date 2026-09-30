@@ -116,6 +116,7 @@ end
 -- The status line and the tabs
 ---------------------------------------------------------------------------------------------------
 local function status()
+	Sound.setLamps(if lit > 0 then lit else nil)
 	local label = statusLabel
 	if not label then
 		return
@@ -535,6 +536,7 @@ function BallroomView.clear()
 	playing = false
 	showTabs(false)
 	status()
+	Sound.setLamps(nil)
 end
 
 function BallroomView.start()

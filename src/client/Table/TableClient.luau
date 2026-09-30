@@ -16,6 +16,7 @@ local Brand = require(ReplicatedStorage.Shared.Brand)
 local Catalogue = require(ReplicatedStorage.Shared.Catalogue)
 local Ease = require(ReplicatedStorage.Shared.Ease)
 local Layout = require(ReplicatedStorage.Shared.Layout)
+local Music = require(ReplicatedStorage.Shared.Music)
 local PieceModels = require(ReplicatedStorage.Shared.PieceModels)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Rooms = require(ReplicatedStorage.Shared.Rooms)
@@ -727,6 +728,7 @@ local function renderDeal(message: { [string]: any })
 	round = message.round
 	roomId = message.room or roomId
 	tableMode = message.mode or "room"
+	Sound.setIntensity(Music.intensity(round))
 	openCases = message.cases
 	local list = message.pieces :: { { [string]: any } }
 	local slots = Layout.pieceSlots(tableFrame, #list)
@@ -1264,6 +1266,7 @@ local function onLeft(message: { [string]: any })
 	BallroomPanel.close()
 	BallroomView.clear()
 	RivalPlate.hide()
+	Sound.setIntensity(nil)
 	tableMode = "room"
 	paused = false
 	unbindInput()
