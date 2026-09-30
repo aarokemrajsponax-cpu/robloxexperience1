@@ -402,6 +402,12 @@ local defaults = {
 		skipTitle = true, -- Play in Studio drops you straight into your own character
 	},
 
+	-- The composed title screen over the street (§15). Off: every guest is their own character
+	-- from the first second, and the intro plays over the live house (any key skips it).
+	Title = {
+		show = false,
+	},
+
 	Movement = {
 		walkSpeed = 12,
 		runSpeed = 19,

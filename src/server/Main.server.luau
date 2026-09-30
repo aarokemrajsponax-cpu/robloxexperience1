@@ -1,31 +1,72 @@
 --!strict
--- Maison Noir: server boot. Order matters: config, world, lighting, staff, then guests.
+-- Maison Noir: server boot. Guests come first: nobody spawns until the house is built, and then
+-- everyone is placed where they belong. Every other part of the house starts on its own, so a
+-- part that fails (a Roblox service unavailable in Studio, say) is reported and never stops
+-- anyone from walking in.
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
+
+-- Before anything else: Roblox must not spawn anyone by itself. (In Studio the Baseplate
+-- template's SpawnLocation sits in the middle of the Foyer, just behind the front doors.)
+Players.CharacterAutoLoads = false
+for _, name in { "Baseplate", "SpawnLocation" } do
+	local item = Workspace:FindFirstChild(name)
+	if item and item:IsA("BasePart") then
+		item:Destroy()
+	end
+end
+
+local Build = require(ReplicatedStorage.Shared.Build)
+print(string.format("[Maison] %s (server)", Build.label))
+
+local failed: { string } = {}
+-- Runs one part of the house's start; a failure is reported (with where it happened) and the
+-- rest of the house carries on.
+local function boot(name: string, fn: () -> ())
+	local message = ""
+	local ok = xpcall(fn, function(e: any)
+		message = debug.traceback(tostring(e))
+	end)
+	if not ok then
+		table.insert(failed, name)
+		warn(string.format("[Maison] %s didn't start: %s", name, message))
+	end
+end
 
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 Remotes.event("Guest") -- creates every remote before any client asks for one
 
 local LiveConfig = require(script.Parent.LiveConfig)
-LiveConfig.start(3)
+boot("Live Configs", function()
+	LiveConfig.start(3)
+end)
 
-local Build = require(script.Parent.World.Build)
-local maison = Build.run()
+local World = require(script.Parent.World.Build)
+local maison: Instance = Workspace
+boot("The house", function()
+	maison = World.run()
+end)
+Workspace:SetAttribute("MaisonReady", true)
+
+-- Guests next, before anything else can go wrong: characters, placing, the welcome.
+local Guests = require(script.Parent.Guests)
+boot("Guests", Guests.start)
 
 local Season = require(script.Parent.Season)
 Season.dress = require(script.Parent.World.SeasonDress).apply
-Season.start()
+boot("Seasons", Season.start)
 
 local Dialogue = require(script.Parent.Dialogue)
-Dialogue.start()
+boot("Dialogue", Dialogue.start)
 
 -- A Private Evening (a private server): records off, the host arranges the Ballroom.
-require(script.Parent.Private).publish()
+boot("Private Evening", require(script.Parent.Private).publish)
 
 -- Notifications (Open Cloud; the key lives in the experience's secrets).
 local Notify = require(script.Parent.Notify)
-Notify.start()
+boot("Notifications", Notify.start)
 
 -- Circles: the week's top Circles on the boards, the crest on nameplates.
 local CircleService = require(script.Parent.CircleService)
@@ -45,11 +86,11 @@ task.spawn(Tailor.spawn, staffFolder)
 task.spawn(Pianist.spawn, staffFolder)
 
 local Analytics = require(script.Parent.Analytics)
-Analytics.start()
+boot("Analytics", Analytics.start)
 
 local Boards = require(script.Parent.Boards)
 local Memory = require(script.Parent.Memory)
-Boards.start()
+boot("Boards", Boards.start)
 
 local LedgerService = require(script.Parent.LedgerService)
 local Collection = require(script.Parent.Collection)
@@ -58,7 +99,7 @@ SoireeService.notice = function(player, title, line)
 	Remotes.event("Shop"):FireClient(player, { op = "notice", title = title, line = line })
 end
 SoireeService.board = Boards.setSoiree
-SoireeService.start()
+boot("The Soirée", SoireeService.start)
 
 local TableService = require(script.Parent.TableService)
 TableService.say = function(player, line)
@@ -78,21 +119,25 @@ end
 Concierge.inviteToLibrary = function(player)
 	Remotes.event("Guest"):FireClient(player, { op = "inviteLibrary" })
 end
-TableService.start()
+boot("Tables", TableService.start)
 
 local DuelService = require(script.Parent.DuelService)
 DuelService.say = function(player, line)
 	Concierge.line(player, line, 3)
 end
 local BallroomService = require(script.Parent.BallroomService)
-DuelService.start(function(player)
-	return TableService.isSeated(player) or BallroomService.isSeated(player)
+boot("The Library", function()
+	DuelService.start(function(player)
+		return TableService.isSeated(player) or BallroomService.isSeated(player)
+	end)
 end)
 BallroomService.say = function(player, line)
 	Concierge.line(player, line, 4)
 end
-BallroomService.start(function(player)
-	return TableService.isSeated(player) or DuelService.isSeated(player)
+boot("The Ballroom", function()
+	BallroomService.start(function(player)
+		return TableService.isSeated(player) or DuelService.isSeated(player)
+	end)
 end)
 TableService.isBusy = function(player)
 	return DuelService.isSeated(player) or BallroomService.isSeated(player)
@@ -140,7 +185,7 @@ end
 
 local Dressing = require(script.Parent.Dressing)
 Dressing.crestOf = CircleService.crest
-Dressing.start()
+boot("Dressing", Dressing.start)
 local Shop = require(script.Parent.Shop)
 CircleService.board = Boards.setCircles
 local SaluteService = require(script.Parent.SaluteService)
@@ -157,16 +202,16 @@ AdminService.isSeated = function(player)
 end
 LedgerService.boost = AdminService.ledgerBoost
 TableService.mythicLuck = AdminService.mythicLuck
-AdminService.start()
+boot("House controls", AdminService.start)
 CircleService.changed = function(player)
 	Dressing.nameplate(player)
 	Shop.push(player)
 end
-CircleService.start()
+boot("Circles", CircleService.start)
 Shop.handOver = function(player, from, itemName)
 	Concierge.line(player, string.format("A gift for you, from %s: %s.", from, itemName), 4)
 end
-Shop.start()
+boot("The Boutique", Shop.start)
 Archivist.onSpeak = function(player)
 	local V = require(ReplicatedStorage.Shared.Voice)
 	Dialogue.say(player, V.Archivist.speaker, V.Archivist.kept, nil, nil, 2.5)
@@ -194,12 +239,12 @@ TableService.onRegister = Collection.filed
 Memory.note = function(text)
 	Boards.note(text, false)
 end
-Memory.start()
+boot("Memory", Memory.start)
 local Social = require(script.Parent.Social)
 Social.season = function()
 	return Season.current().id
 end
-Social.start()
+boot("Social", Social.start)
 Concierge.usualRoom = Memory.usualRoom
 TableService.onRound = function(player, roomId, grade, tableId)
 	Collection.round(player, roomId, grade)
@@ -277,16 +322,14 @@ DuelService.onFinished = function(a, b, winner, ranked, standIn)
 	end
 	local _ = standIn
 end
-Rivals.start()
+boot("Rivals", Rivals.start)
 
-local Guests = require(script.Parent.Guests)
 Guests.joinLibrary = DuelService.joinFriend
 Guests.onSettingChanged = function(player, key)
 	if key == "showMark" then
 		Dressing.nameplate(player)
 	end
 end
-Guests.start()
 local guestsUnlock = TableService.onUnlock
 TableService.onUnlock = function(player, room)
 	guestsUnlock(player, room)
@@ -298,7 +341,12 @@ require(script.Parent.Profiles).Loaded:Connect(function(player)
 	Collection.arrived(player)
 end)
 
+-- Last: saved profiles (everything listening for them is connected by now).
 local Profiles = require(script.Parent.Profiles)
-Profiles.start()
+boot("Profiles", Profiles.start)
 
-Workspace:SetAttribute("MaisonReady", true)
+if #failed == 0 then
+	print("[Maison] The house is open.")
+else
+	warn("[Maison] The house is open, but these parts didn't start: " .. table.concat(failed, ", "))
+end

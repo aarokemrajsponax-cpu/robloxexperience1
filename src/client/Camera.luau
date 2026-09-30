@@ -97,8 +97,9 @@ function CameraRig.follow()
 	if humanoid then
 		c.CameraSubject = humanoid
 	end
-	player.CameraMinZoomDistance = 6
-	player.CameraMaxZoomDistance = 20
+	-- Roblox's usual freedom: zoom right in to first person, or out to see the room.
+	player.CameraMinZoomDistance = 0.5
+	player.CameraMaxZoomDistance = 40
 end
 
 -- A composed view of the table that fits the felt and all six cases on any screen shape. The

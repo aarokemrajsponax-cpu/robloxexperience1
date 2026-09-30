@@ -190,9 +190,10 @@ function Intro.play(onShown: (() -> ())?)
 	group:Destroy()
 end
 
--- Removes the cover without the intro (respawns never replay it).
+-- Removes the cover without the intro (Studio, and respawns never replay it).
 function Intro.clear()
 	cover.BackgroundTransparency = 1
+	cover.Visible = false
 end
 
 return Intro

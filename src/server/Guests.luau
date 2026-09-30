@@ -48,12 +48,18 @@ local visits: { [Player]: Visit } = {}
 local guestEvent = Remotes.event("Guest")
 
 local function setupCollisionGroups()
+	-- Guests pass through each other and through the staff (never through the house).
+	for _, name in { "Guests", "Staff" } do
+		pcall(function()
+			if not PhysicsService:IsCollisionGroupRegistered(name) then
+				PhysicsService:RegisterCollisionGroup(name)
+			end
+		end)
+	end
 	pcall(function()
-		PhysicsService:RegisterCollisionGroup("Guests")
-		PhysicsService:RegisterCollisionGroup("Staff")
+		PhysicsService:CollisionGroupSetCollidable("Guests", "Guests", false)
+		PhysicsService:CollisionGroupSetCollidable("Guests", "Staff", false)
 	end)
-	PhysicsService:CollisionGroupSetCollidable("Guests", "Guests", false)
-	PhysicsService:CollisionGroupSetCollidable("Guests", "Staff", false)
 end
 
 local function payload(player: Player, data: Profiles.Data, visit: Visit): { [string]: any }
@@ -78,6 +84,9 @@ local function payload(player: Player, data: Profiles.Data, visit: Visit): { [st
 	}
 end
 
+-- Gives a guest their character, once (defined below).
+local spawnCharacter: (player: Player, respawn: boolean?) -> ()
+
 local function place(player: Player, character: Model, visit: Visit)
 	-- First-ever visit, first spawn: the Street. Everyone else arrives in the Foyer.
 	local toStreet = visit.firstVisit and not visit.spawnedOnce
@@ -98,8 +107,8 @@ local function place(player: Player, character: Model, visit: Visit)
 		humanoid.JumpPower = 35
 		humanoid.Died:Connect(function()
 			task.delay(3, function()
-				if player.Parent == Players then
-					player:LoadCharacterAsync()
+				if player.Parent == Players and player.Character == character then
+					spawnCharacter(player, true)
 				end
 			end)
 		end)
@@ -132,6 +141,22 @@ local function provisional(player: Player): Visit
 	return v
 end
 
+-- The saved profile and the fallback timer may both ask; the character comes once.
+local loading: { [Player]: boolean } = {}
+spawnCharacter = function(player: Player, respawn: boolean?)
+	if loading[player] or player.Parent ~= Players or (player.Character ~= nil and not respawn) then
+		return
+	end
+	loading[player] = true
+	local ok, err = pcall(function()
+		player:LoadCharacterAsync()
+	end)
+	loading[player] = nil
+	if not ok then
+		warn("[Maison] Couldn't give " .. player.Name .. " a character:", err)
+	end
+end
+
 local function arrive(player: Player)
 	local visit = provisional(player)
 	-- Invites carry launch data so a friend lands where you are (§13).
@@ -144,17 +169,17 @@ local function arrive(player: Player)
 	player.CharacterAdded:Connect(function(character)
 		place(player, character, provisional(player))
 	end)
+	-- A character Roblox spawned before the house was ready (in Studio, at the Baseplate
+	-- template's spawn, which sits inside the Foyer): put it where it belongs, now.
+	local existing = player.Character
+	if existing then
+		task.spawn(place, player, existing, visit)
+	end
 	-- Shift means run in the house, so Shift Lock stays off.
 	player.DevEnableMouseLock = false
 	-- If the profile is slow (another server still holds it, or the data store is busy), the
 	-- guest still gets a character to walk around in.
-	task.delay(4, function()
-		if player.Parent == Players and player.Character == nil then
-			pcall(function()
-				player:LoadCharacterAsync()
-			end)
-		end
-	end)
+	task.delay(4, spawnCharacter, player)
 end
 
 local function welcome(player: Player, data: Profiles.Data)
@@ -172,9 +197,7 @@ local function welcome(player: Player, data: Profiles.Data)
 	end
 	player:SetAttribute("FirstVisit", visit.firstVisit)
 	guestEvent:FireClient(player, payload(player, data, visit))
-	if player.Character == nil then
-		player:LoadCharacterAsync()
-	end
+	spawnCharacter(player)
 end
 
 local function trackZones()

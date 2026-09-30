@@ -15,6 +15,11 @@ local roblox = require("@lune/roblox")
 local serde = require("@lune/serde")
 local process = require("@lune/process")
 
+-- "full" walks everything, with the optional title screen switched on. "live" and "studio" boot
+-- the client exactly as a guest meets it in the live game, and as the owner meets it pressing
+-- Play in Studio: their own character, Roblox's camera and controls, from the first second.
+local MODE = process.args[1] or "full"
+
 local Instance, Vector3, Vector2 = roblox.Instance, roblox.Vector3, roblox.Vector2
 
 -- Lune 0.10's CFrame.lookAt faces away from its target (see tests/smoke.luau).
@@ -442,12 +447,13 @@ humanoid.Parent = character
 character.PrimaryPart = root
 character.Parent = workspace
 
-local controls = { enabled = true }
+local controls = { enabled = true, disabledCount = 0 }
 function controls:Enable()
 	self.enabled = true
 end
 function controls:Disable()
 	self.enabled = false
+	self.disabledCount += 1
 end
 local PLAYER_MODULE = { __stub = "PlayerModule" }
 local playerScripts = {
@@ -609,7 +615,7 @@ local services = {
 			return true
 		end,
 		IsStudio = function()
-			return true
+			return MODE ~= "live"
 		end,
 		BindToRenderStep = function(_, _name, _priority, fn)
 			renderStepped:Connect(fn)
@@ -910,8 +916,14 @@ workspace:SetAttribute("Season", "autumn")
 workspace:SetAttribute("SeasonName", "Autumn")
 
 local Config = module("ReplicatedStorage", "Shared", "Config")
--- This test walks the whole title (the live game's path), not the Studio shortcut.
-Config.data.Studio.skipTitle = false
+if MODE == "full" then
+	-- This run walks the optional title screen too, not the Studio shortcut.
+	Config.data.Studio.skipTitle = false
+	Config.data.Title.show = true
+else
+	-- As in real life, the character arrives a moment after the client starts.
+	LocalPlayer.Character = nil
+end
 -- Music ids, so the mixing has something to mix.
 Config.data.Assets.Music.foyer = "rbxassetid://100"
 Config.data.Assets.Music.salon = "rbxassetid://101"
@@ -971,6 +983,67 @@ run(function()
 end)
 advance(1)
 check("the client boots without an error", #errors == 0, errors[1])
+
+if MODE ~= "full" then
+	local where = if MODE == "live" then "the live game" else "Studio"
+	check(where .. ": the client says it started (the failsafe stands down)", LocalPlayer:GetAttribute("MaisonClient") == "ready")
+	check(where .. ": no drifting camera over the street", camera.CameraType ~= roblox.Enum.CameraType.Scriptable, tostring(camera.CameraType))
+	-- The character arrives from the server a moment later.
+	advance(1.5)
+	LocalPlayer.Character = character
+	LocalPlayer.CharacterAdded:Fire(character)
+	local scripted = false
+	for _ = 1, 30 do
+		advance(0.1)
+		if camera.CameraType == roblox.Enum.CameraType.Scriptable then
+			scripted = true
+		end
+	end
+	check(where .. ": the camera is never taken over", not scripted)
+	check(where .. ": Roblox's own follow camera, on your character", camera.CameraType == roblox.Enum.CameraType.Custom and camera.CameraSubject == humanoid, tostring(camera.CameraType))
+	check(where .. ": your controls are never taken away", controls.enabled == true and controls.disabledCount == 0, controls.disabledCount)
+	check(where .. ": walking speed is set", humanoid.WalkSpeed == Config.data.Movement.walkSpeed, humanoid.WalkSpeed)
+	check(where .. ": Shift runs", (function()
+		local action = actions.MaisonRun
+		if not action then
+			return false
+		end
+		action.fn("MaisonRun", roblox.Enum.UserInputState.Begin, { KeyCode = roblox.Enum.KeyCode.LeftShift })
+		local running = humanoid.WalkSpeed == Config.data.Movement.runSpeed
+		action.fn("MaisonRun", roblox.Enum.UserInputState.End, { KeyCode = roblox.Enum.KeyCode.LeftShift })
+		return running
+	end)())
+	check(where .. ": the Settings key is there", textOnScreen("Settings") ~= nil)
+	if MODE == "studio" then
+		check("Studio: the build number shows in the corner", textOnScreen("Build 20") ~= nil)
+		local cover = playerGui.MaisonIntro:FindFirstChild("Cover")
+		check("Studio: no black cover over the screen", cover == nil or cover.Visible == false or cover.BackgroundTransparency >= 1)
+	else
+		check("the live game: no build number on screen", textOnScreen("Build 20") == nil)
+		-- The intro plays over the live house; walking skips it, and the cover lifts.
+		local cover = playerGui.MaisonIntro:FindFirstChild("Cover")
+		UserInputService.InputBegan:Fire({ UserInputType = roblox.Enum.UserInputType.Keyboard, KeyCode = roblox.Enum.KeyCode.W })
+		advance(2)
+		check("the live game: pressing W skips the intro and the cover lifts", cover == nil or cover.BackgroundTransparency >= 0.99, cover and cover.BackgroundTransparency)
+	end
+	-- Sitting down works as ever: the server seats you, the table's camera takes over, Leave gives
+	-- your character back.
+	local salon
+	for _, m in CollectionService:GetTagged("MaisonTable") do
+		if m:GetAttribute("Room") == "salon" and salon == nil then
+			salon = m
+		end
+	end
+	serverSays("Table", { op = "seated", table = salon:GetAttribute("TableId"), room = "salon", mode = "room" })
+	advance(2)
+	check(where .. ": sitting at a table frames it", camera.CameraType == roblox.Enum.CameraType.Scriptable and controls.enabled == false)
+	serverSays("Table", { op = "left" })
+	advance(3)
+	check(where .. ": leaving the table gives your character back", camera.CameraType == roblox.Enum.CameraType.Custom and controls.enabled == true)
+	check(where .. ": no errors", #errors == 0, errors[1])
+	print(string.format("%s: %d passed, %d failed", MODE, passed, failed))
+	process.exit(if failed > 0 then 1 else 0)
+end
 check("the screen layers exist", playerGui:FindFirstChild("MaisonPanels") ~= nil and playerGui:FindFirstChild("MaisonHud") ~= nil)
 check("controls are off before Play", controls.enabled == false)
 check("the camera drifts under the title", camera.CameraType == roblox.Enum.CameraType.Scriptable)

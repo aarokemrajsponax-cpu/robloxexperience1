@@ -8,6 +8,7 @@ local RunService = game:GetService("RunService")
 local StarterGui = game:GetService("StarterGui")
 local Workspace = game:GetService("Workspace")
 
+local Build = require(ReplicatedStorage.Shared.Build)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Ease = require(ReplicatedStorage.Shared.Ease)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
@@ -66,7 +67,9 @@ Theme.onClick(Sound.ui)
 Root.onDip(Sound.dip)
 
 Closet.start()
-require(script.Parent.NotifyAsk).start()
+pcall(function()
+	require(script.Parent.NotifyAsk).start()
+end)
 Sound.wornChime = function()
 	local style = Closet.style("chime")
 	return if style then style.sound else nil
@@ -103,29 +106,53 @@ Closet.Message:Connect(function(op: string, m: any)
 		Toast.show(tostring(m.title), tostring(m.line), 4)
 	end
 end)
-Dialogue.start()
-Prompts.start()
-BlackCardPanel.start()
-Counter.start()
-TableClient.start()
-Ambient.start()
-BallroomView.start()
-VaultView.start()
-SuiteView.start()
-SaluteView.start()
-EventBanner.start()
+-- Every part of the house on this screen starts on its own: one that fails is reported and the
+-- rest carry on, so a guest can always walk in and play.
+local function start(name: string, fn: () -> ()): boolean
+	local message = ""
+	local ok = xpcall(fn, function(e: any)
+		message = debug.traceback(tostring(e))
+	end)
+	if not ok then
+		warn(string.format("[Maison] %s didn't start on this screen: %s", name, message))
+	end
+	return ok
+end
+start("Dialogue", Dialogue.start)
+if not start("Prompts", Prompts.start) then
+	-- Without the house's own prompts, Roblox's standard ones: every Sit and Speak still works.
+	local function plain(p: Instance)
+		if p:IsA("ProximityPrompt") then
+			p.Style = Enum.ProximityPromptStyle.Default
+		end
+	end
+	for _, d in Workspace:GetDescendants() do
+		plain(d)
+	end
+	Workspace.DescendantAdded:Connect(plain)
+end
+start("The Black Card", BlackCardPanel.start)
+start("The counter", Counter.start)
+start("Tables", TableClient.start)
+start("The house around you", Ambient.start)
+start("The Ballroom", BallroomView.start)
+start("The Vault", VaultView.start)
+start("The Suite", SuiteView.start)
+start("Salutes", SaluteView.start)
+start("Events", EventBanner.start)
 AdmireCard.openBoutique = function(tab, forGuest)
 	BoutiquePanel.open(tab, forGuest)
 end
 AdmireCard.isSeated = TableClient.isSeated
-AdmireCard.start()
+start("Admire", AdmireCard.start)
 require(script.Parent.UI.BallroomPanel).openSalutes = function()
 	BoutiquePanel.open("salutes")
 end
-RegularPlates.start()
-StaffLife.start()
+start("Usual tables", RegularPlates.start)
+start("Staff", StaffLife.start)
 
--- Controls stay off until Play.
+-- The player's own controls (Roblox's): taken away only at a table, in photo mode, or under the
+-- optional title screen.
 local controls: any = nil
 local function getControls(): any
 	if controls then
@@ -149,7 +176,6 @@ local function setControls(on: boolean)
 		end
 	end
 end
-setControls(false)
 
 -- Walk by default; hold Shift (or click the left stick) to run.
 local running = false
@@ -227,7 +253,7 @@ local function waitForCharacter(): Model
 end
 
 local playing = false
-local function onPlay()
+local function onPlay(fromTitle: boolean?)
 	if playing then
 		return
 	end
@@ -235,8 +261,12 @@ local function onPlay()
 	Title.hide()
 	State.funnel(2)
 	waitForCharacter()
-	State.setPhase("handoff")
-	CameraRig.handoff(1.6)
+	if fromTitle then
+		State.setPhase("handoff")
+		CameraRig.handoff(1.6)
+	else
+		CameraRig.follow()
+	end
 	setControls(true)
 	applySpeed()
 	State.setPhase("play")
@@ -372,19 +402,56 @@ local function walkToPlay()
 	ContextActionService:BindAction("MaisonWalkToPlay", function(_, state)
 		if state == Enum.UserInputState.Begin and State.phase == "title" and not Root.isOpen() then
 			ContextActionService:UnbindAction("MaisonWalkToPlay")
-			task.spawn(onPlay)
+			task.spawn(onPlay, true)
 			return Enum.ContextActionResult.Sink
 		end
 		return Enum.ContextActionResult.Pass
 	end, false, Enum.KeyCode.W, Enum.KeyCode.A, Enum.KeyCode.S, Enum.KeyCode.D, Enum.KeyCode.Up, Enum.KeyCode.Down, Enum.KeyCode.Left, Enum.KeyCode.Right, Enum.KeyCode.Space)
 end
 
--- Boot
+-- Boot. The client has started; a separate safety script (Failsafe) stands down.
+player:SetAttribute("MaisonClient", "ready")
+print(string.format("[Maison] %s (client)", Build.label))
+if RunService:IsStudio() then
+	-- In Studio, the build in the corner, to see at a glance that Studio has the latest code.
+	pcall(function()
+		local stamp = Instance.new("TextLabel")
+		stamp.Name = "Build"
+		stamp.BackgroundTransparency = 1
+		stamp.AnchorPoint = Vector2.new(0, 1)
+		stamp.Position = UDim2.new(0, 8, 1, -6)
+		stamp.Size = UDim2.fromOffset(420, 16)
+		stamp.TextXAlignment = Enum.TextXAlignment.Left
+		stamp.TextSize = 12
+		stamp.TextColor3 = Color3.fromRGB(200, 190, 160)
+		stamp.TextTransparency = 0.3
+		stamp.Text = Build.label
+		stamp.Parent = Root.hud
+	end)
+end
 if RunService:IsStudio() and Config.data.Studio.skipTitle then
 	-- Testing in Studio: no intro, no title; straight into your own character and camera.
-	State.setPhase("title")
-	task.spawn(onPlay)
+	Intro.clear()
+	State.setPhase("play")
+	task.spawn(onPlay, false)
+elseif not Config.data.Title.show then
+	-- The live game: you are your own character from the first second, with Roblox's camera and
+	-- controls. The intro plays over the live house and any key, click or tap skips it.
+	task.spawn(function()
+		local ok = pcall(function()
+			Intro.play(function()
+				State.funnel(1)
+			end)
+		end)
+		if not ok then
+			pcall(Intro.clear)
+		end
+	end)
+	State.setPhase("play")
+	task.spawn(onPlay, false)
 else
+	-- The composed title screen over the street (Config.Title.show).
+	setControls(false)
 	State.setPhase("intro")
 	CameraRig.titleDrift()
 	guardTitleCamera()
@@ -400,14 +467,20 @@ else
 	if not playing then
 		State.setPhase("title")
 		local okTitle, err = pcall(function()
-			Title.show({ play = onPlay, how = HowToPlay.open, board = BoardPanel.open })
+			Title.show({
+				play = function()
+					onPlay(true)
+				end,
+				how = HowToPlay.open,
+				board = BoardPanel.open,
+			})
 		end)
 		if okTitle then
 			walkToPlay()
 		else
 			-- Never leave a guest stuck behind a broken title: hand them their character.
 			warn("[Maison] The title failed; playing straight away:", err)
-			task.spawn(onPlay)
+			task.spawn(onPlay, true)
 		end
 	end
 end
@@ -416,6 +489,6 @@ end
 task.delay(60, function()
 	if not playing and not Title.isShowing() then
 		warn("[Maison] Still not playing after a minute; handing over the character.")
-		onPlay()
+		onPlay(true)
 	end
 end)

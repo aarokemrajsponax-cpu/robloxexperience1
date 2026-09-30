@@ -251,10 +251,16 @@ a Nightly attempt or a Mythic's odds.
 
 ## Play it, sell it, host it, feel at home in it
 
-- **Playing in Studio.** Press **Play** and you're in your own character at once with the normal
-  follow camera (no intro, no title; `Config.Studio.skipTitle`). The live game keeps its intro
-  and title, and there W/A/S/D count as Play. If anything ever fails, a guest is handed their
-  character instead of being left behind a drifting camera.
+- **Playing, in Studio and live.** Press **Play** and you're your own character at once: Roblox's
+  own camera (zoom right in or out) and controls, walking from the first second. Studio shows the
+  build in the bottom-left corner and prints it in Output (`[Maison] Build 20 ...`), so you can see
+  Studio has the latest code. The live game plays the intro over the house (any key skips it);
+  the old title screen is off (`Config.Title.show`). Roblox never spawns anyone by itself
+  (`Players.CharacterAutoLoads` is off in the Rojo project and at the very top of the server), so
+  nobody lands inside the Foyer's floor behind the front doors; every guest is placed in the
+  street (first visit) or the Foyer. Every part of the house starts on its own, so one that fails
+  is reported in Output and never stops anyone from walking in, and a separate safety script
+  hands back Roblox's own camera, controls and prompts if the house's client ever doesn't start.
 - **Ways to spend Robux**, all style, spectacle or gifts, never score:
   - **Salutes** (a brass card on the piano, and a Salutes tab in the Boutique): a moment bought
     for the whole house. Gold leaf over every guest (49), an encore with a spotlight on you (79),
@@ -344,7 +350,8 @@ Tête-à-Tête evenings (`tests/duel.luau`) and Lights Out evenings (`tests/ball
 the real server code on a fake clock, and boots
 the whole client against the built house: title, Play, walking, a table by gamepad and by mouse,
 the Nightly card, a Tête-à-Tête and a Lights Out evening on screen, and the panels
-(`tests/client.luau`):
+(`tests/client.luau`, plus `studio` and `live` runs that boot it exactly as you and your guests
+meet it; `tests/guests.luau` checks arriving, spawning and placing):
 
 ```sh
 TOOLS=/path/to/tools ./tools/check.sh
