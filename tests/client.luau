@@ -898,6 +898,8 @@ workspace:SetAttribute("Season", "autumn")
 workspace:SetAttribute("SeasonName", "Autumn")
 
 local Config = module("ReplicatedStorage", "Shared", "Config")
+-- This test walks the whole title (the live game's path), not the Studio shortcut.
+Config.data.Studio.skipTitle = false
 -- Music ids, so the mixing has something to mix.
 Config.data.Assets.Music.foyer = "rbxassetid://100"
 Config.data.Assets.Music.salon = "rbxassetid://101"
@@ -977,6 +979,7 @@ serverSays("Guest", {
 })
 advance(12)
 check("the title shows Play", textOnScreen("Play") ~= nil)
+check("on the title, W/A/S/D count as Play (nobody is left watching)", actions.MaisonWalkToPlay ~= nil)
 check("no errors through the intro and title", #errors == 0, errors[1])
 
 ---------------------------------------------------------------------------------------------------

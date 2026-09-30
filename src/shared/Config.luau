@@ -367,6 +367,11 @@ local defaults = {
 		straightToTableOfferSeconds = 12,
 	},
 
+	-- Testing in Studio (never affects the live game).
+	Studio = {
+		skipTitle = true, -- Play in Studio drops you straight into your own character
+	},
+
 	Movement = {
 		walkSpeed = 12,
 		runSpeed = 19,

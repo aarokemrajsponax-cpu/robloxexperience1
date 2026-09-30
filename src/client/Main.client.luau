@@ -4,6 +4,7 @@
 local ContextActionService = game:GetService("ContextActionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local StarterGui = game:GetService("StarterGui")
 local Workspace = game:GetService("Workspace")
 
@@ -300,15 +301,56 @@ local function guardTitleCamera()
 	end)
 end
 
--- Boot
-State.setPhase("intro")
-CameraRig.titleDrift()
-guardTitleCamera()
-Intro.play(function()
-	State.funnel(1)
-end)
-State.waitForWelcome(12)
-if not playing then
-	State.setPhase("title")
-	Title.show({ play = onPlay, how = HowToPlay.open, board = BoardPanel.open })
+-- On the title, walking counts as Play: anyone who reaches for W, A, S, D or the arrows is
+-- taken straight into the house with their own character.
+local function walkToPlay()
+	ContextActionService:BindAction("MaisonWalkToPlay", function(_, state)
+		if state == Enum.UserInputState.Begin and State.phase == "title" and not Root.isOpen() then
+			ContextActionService:UnbindAction("MaisonWalkToPlay")
+			task.spawn(onPlay)
+			return Enum.ContextActionResult.Sink
+		end
+		return Enum.ContextActionResult.Pass
+	end, false, Enum.KeyCode.W, Enum.KeyCode.A, Enum.KeyCode.S, Enum.KeyCode.D, Enum.KeyCode.Up, Enum.KeyCode.Down, Enum.KeyCode.Left, Enum.KeyCode.Right, Enum.KeyCode.Space)
 end
+
+-- Boot
+if RunService:IsStudio() and Config.data.Studio.skipTitle then
+	-- Testing in Studio: no intro, no title; straight into your own character and camera.
+	State.setPhase("title")
+	task.spawn(onPlay)
+else
+	State.setPhase("intro")
+	CameraRig.titleDrift()
+	guardTitleCamera()
+	local okIntro = pcall(function()
+		Intro.play(function()
+			State.funnel(1)
+		end)
+	end)
+	if not okIntro then
+		warn("[Maison] The intro failed; going straight to the title.")
+	end
+	State.waitForWelcome(12)
+	if not playing then
+		State.setPhase("title")
+		local okTitle, err = pcall(function()
+			Title.show({ play = onPlay, how = HowToPlay.open, board = BoardPanel.open })
+		end)
+		if okTitle then
+			walkToPlay()
+		else
+			-- Never leave a guest stuck behind a broken title: hand them their character.
+			warn("[Maison] The title failed; playing straight away:", err)
+			task.spawn(onPlay)
+		end
+	end
+end
+-- A last guard: if a guest is somehow still without their character after a minute (a title
+-- that never drew, a panel stuck over it), give them the house anyway.
+task.delay(60, function()
+	if not playing and not Title.isShowing() then
+		warn("[Maison] Still not playing after a minute; handing over the character.")
+		onPlay()
+	end
+end)
