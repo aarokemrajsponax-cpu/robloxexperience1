@@ -23,6 +23,9 @@ Dialogue.start()
 -- A Private Evening (a private server): records off, the host arranges the Ballroom.
 require(script.Parent.Private).publish()
 
+-- Circles: the week's top Circles on the boards, the crest on nameplates.
+local CircleService = require(script.Parent.CircleService)
+
 local staffFolder = Instance.new("Folder")
 staffFolder.Name = "Staff"
 staffFolder.Parent = maison
@@ -104,6 +107,7 @@ BallroomService.onFinished = function(player, place, keys, counted)
 	if not data or not counted then
 		return
 	end
+	CircleService.add(player, "ballroom", require(ReplicatedStorage.Shared.LightsOut).points(place, keys))
 	local b = data.ballroom
 	b.evenings += 1
 	b.keys += keys
@@ -127,8 +131,15 @@ BallroomService.onResult = function(tableNumber, name, keys)
 end
 
 local Dressing = require(script.Parent.Dressing)
+Dressing.crestOf = CircleService.crest
 Dressing.start()
 local Shop = require(script.Parent.Shop)
+CircleService.board = Boards.setCircles
+CircleService.changed = function(player)
+	Dressing.nameplate(player)
+	Shop.push(player)
+end
+CircleService.start()
 Shop.handOver = function(player, from, itemName)
 	Concierge.line(player, string.format("A gift for you, from %s: %s.", from, itemName), 4)
 end
@@ -173,12 +184,20 @@ local function rivalsAfter(player: Player?)
 		Rivals.refresh(player)
 	end
 end
-TableService.onNightlyFinished = function(player)
+TableService.onNightlyFinished = function(player, percentile)
 	rivalsAfter(player)
+	CircleService.add(player, "nightly", percentile)
 	LedgerService.add(player, "nightly")
 	Collection.nightly(player)
 end
-DuelService.onFinished = function(a, b, winner, _ranked, standIn)
+DuelService.onFinished = function(a, b, winner, ranked, standIn)
+	-- Circles count ranked wins only (a friendly between two members can't be farmed).
+	if ranked and not standIn then
+		local won = if winner == "a" then a elseif winner == "b" then b else nil
+		if won then
+			CircleService.add(won, "library")
+		end
+	end
 	if not standIn then
 		if a then
 			SoireeService.record(a, "library", { won = winner == "a" })

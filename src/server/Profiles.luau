@@ -54,6 +54,8 @@ export type Data = {
 	blackCard: { active: boolean, months: { [string]: boolean } },
 	-- The Suite: the piece in each spot (Suite.Spots); a missing spot shows the house's own piece.
 	suite: { [string]: string },
+	-- Circles: the one you're in ("" for none), and your points this week.
+	circle: { id: string, week: number, points: number },
 }
 
 local TEMPLATE: Data = {
@@ -89,6 +91,7 @@ local TEMPLATE: Data = {
 	standing = "Guest",
 	blackCard = { active = false, months = {} },
 	suite = {},
+	circle = { id = "", week = -1, points = 0 },
 }
 
 -- Each migration moves data from schema n to n + 1. Add new ones at the end.

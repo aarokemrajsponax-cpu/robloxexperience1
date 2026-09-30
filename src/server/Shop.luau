@@ -19,6 +19,7 @@ local Wardrobe = require(ReplicatedStorage.Shared.Wardrobe)
 
 local Analytics = require(script.Parent.Analytics)
 local BlackCard = require(script.Parent.BlackCard)
+local CircleService = require(script.Parent.CircleService)
 local Dressing = require(script.Parent.Dressing)
 local Gilt = require(script.Parent.Gilt)
 local LedgerService = require(script.Parent.LedgerService)
@@ -484,6 +485,20 @@ local function onAsk(player: Player, request: unknown): any
 		return LedgerService.view(data)
 	elseif op == "register" then
 		return Shop.register(data)
+	elseif op == "circle" then
+		return CircleService.view(player, data)
+	elseif op == "circleFound" then
+		local result = CircleService.found(player, data, r.choice)
+		Shop.push(player)
+		return result
+	elseif op == "circleInvite" and type(r.userId) == "number" then
+		return CircleService.invite(player, data, r.userId :: number)
+	elseif op == "circleRequest" and type(r.userId) == "number" then
+		return CircleService.request(player, data, r.userId :: number)
+	elseif op == "circleAnswer" and type(r.kind) == "string" and type(r.circle) == "string" and type(r.from) == "number" then
+		return CircleService.answer(player, data, r.kind :: string, r.circle :: string, r.from :: number, r.yes == true)
+	elseif op == "circleLeave" then
+		return CircleService.leave(player, data)
 	elseif op == "suite" then
 		return Shop.suite(data)
 	elseif op == "place" and type(r.spot) == "string" and type(r.id) == "string" then
@@ -620,7 +635,7 @@ end
 function Shop.start()
 	MarketplaceService.ProcessReceipt = processReceipt
 	local CollectionService = game:GetService("CollectionService")
-	local panels: { [string]: string } = { BoutiqueCounter = "boutique", WardrobeMirror = "wardrobe", LedgerBook = "ledger", RegisterBook = "register", BlackCardLectern = "blackCard", SuiteFurnish = "suite" }
+	local panels: { [string]: string } = { BoutiqueCounter = "boutique", WardrobeMirror = "wardrobe", LedgerBook = "ledger", RegisterBook = "register", BlackCardLectern = "blackCard", SuiteFurnish = "suite", CircleBook = "circles" }
 	for tag, panel in panels do
 		for _, part in CollectionService:GetTagged(tag) do
 			local p = part:FindFirstChildOfClass("ProximityPrompt")

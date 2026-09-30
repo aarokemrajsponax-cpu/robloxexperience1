@@ -38,6 +38,7 @@ cache["ballroom:all"] = { entries = {}, available = false }
 -- Lights Out results from every server, newest first (§9.8): "Table 12 kept the last lamp..."
 cache["ballroom:feed"] = { entries = {}, available = true }
 cache["soiree:current"] = { entries = {}, available = false }
+cache["circles:week"] = { entries = {}, available = false }
 local FEED_TOPIC = "MaisonBallroomResults"
 local FEED_KEEP = 8
 
@@ -220,6 +221,21 @@ local function drawTonight()
 				rule2.BackgroundColor3 = Brand.Colours.deepGold
 				rule2.BorderSizePixel = 0
 				rule2.Parent = g
+			end
+			-- The top Circles of the week hang here too.
+			local circles = cache["circles:week"]
+			if circles and #circles.entries > 0 then
+				line(g, next(), "Circles · this week", 0.04, Brand.Fonts.body, Brand.Colours.smoke)
+				for i = 1, math.min(3, #circles.entries) do
+					local e = circles.entries[i]
+					row(g, next(), i, e.name, e.score, 0.05)
+				end
+				local rule3 = Instance.new("Frame")
+				rule3.LayoutOrder = next()
+				rule3.Size = UDim2.new(0.5, 0, 0, 2)
+				rule3.BackgroundColor3 = Brand.Colours.deepGold
+				rule3.BorderSizePixel = 0
+				rule3.Parent = g
 			end
 			line(g, next(), "The Salon · this week", 0.04, Brand.Fonts.body, Brand.Colours.smoke)
 			local week = cache["salon:week"]
@@ -516,6 +532,16 @@ end
 -- The Soirée's board this weekend (drawn by the Soirée service).
 function Boards.setSoiree(_key: string, entries: { Entry })
 	cache["soiree:current"] = { entries = entries, available = true }
+	publish()
+end
+
+-- The week's top Circles (drawn by the Circle service).
+function Boards.setCircles(entries: { { name: string, score: number, crest: string } })
+	local list = {}
+	for _, e in entries do
+		table.insert(list, { userId = 0, name = e.crest .. "  " .. e.name, score = e.score })
+	end
+	cache["circles:week"] = { entries = list, available = true }
 	publish()
 end
 

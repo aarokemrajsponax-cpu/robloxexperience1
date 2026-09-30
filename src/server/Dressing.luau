@@ -40,6 +40,11 @@ end
 ---------------------------------------------------------------------------------------------------
 -- Nameplates
 ---------------------------------------------------------------------------------------------------
+-- A guest's Circle crest: its glyph and colour, or nil (set by Main from CircleService).
+Dressing.crestOf = function(_data: Profiles.Data): (string?, Color3?)
+	return nil, nil
+end
+
 function Dressing.nameplate(player: Player)
 	local character = player.Character
 	local head = character and character:FindFirstChild("Head")
@@ -121,6 +126,21 @@ function Dressing.nameplate(player: Player)
 			mark.TextColor3 = Brand.Colours.gold
 			mark.Text = string.upper(Rating.mark(data.duel.r).label)
 			mark.Parent = plate
+		end
+		-- The Circle's crest at the plate's left end (each can be hidden in Settings).
+		local glyph, colour = Dressing.crestOf(data)
+		if glyph and data.settings.showCrest ~= "Off" then
+			local crest = Instance.new("TextLabel")
+			crest.Name = "Crest"
+			crest.BackgroundTransparency = 1
+			crest.AnchorPoint = Vector2.new(1, 0.5)
+			crest.Position = UDim2.new(0, -2, 0.5, 0)
+			crest.Size = UDim2.new(0.18, 0, 1, 0)
+			crest.FontFace = Brand.Fonts.display
+			crest.TextScaled = true
+			crest.TextColor3 = colour or Brand.Colours.gold
+			crest.Text = glyph
+			crest.Parent = plate
 		end
 	end
 	gui.Parent = head

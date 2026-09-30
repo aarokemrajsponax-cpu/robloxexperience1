@@ -32,6 +32,7 @@ local BOARDS = {
 	{ id = "library", label = "Library" },
 	{ id = "ballroom", label = "Ballroom" },
 	{ id = "soiree", label = "Soirée" },
+	{ id = "circles", label = "Circles" },
 }
 
 -- Boards with a single period: tonight's table, and the Library's ratings.
@@ -42,6 +43,8 @@ local function single(board: string): string?
 		return "library:all"
 	elseif board == "soiree" then
 		return "soiree:current"
+	elseif board == "circles" then
+		return "circles:week"
 	end
 	return nil
 end
@@ -163,7 +166,7 @@ function BoardPanel.open()
 			allKey.BackgroundTransparency = if period == "all" then 0.05 else 0.3
 		end
 		local room = Rooms.get(board)
-		title.Text = if board == "nightly" then "Tonight's table" elseif board == "library" then "The Library · ratings" elseif board == "ballroom" then "The Ballroom · points" elseif board == "soiree" then "The Soirée · this weekend" else (if room then room.name else board)
+		title.Text = if board == "nightly" then "Tonight's table" elseif board == "library" then "The Library · ratings" elseif board == "ballroom" then "The Ballroom · points" elseif board == "soiree" then "The Soirée · this weekend" elseif board == "circles" then "Circles · this week" else (if room then room.name else board)
 		fill(list, key())
 	end
 	for i, b in BOARDS do

@@ -274,6 +274,19 @@ local function wallOfNames(m: Model)
 	local book = Kit.part(model, "Book", Vector3.new(1.7, 0.3, 1.2), cf * CFrame.new(0, 3.75, 0) * CFrame.Angles(math.rad(16), 0, 0), L.leather)
 	Kit.part(model, "Gilt", Vector3.new(1.72, 0.08, 1.22), cf * CFrame.new(0, 3.72, 0) * CFrame.Angles(math.rad(16), 0, 0), L.brass, { collide = false })
 	Kit.engrave(book, Enum.NormalId.Top, { { text = Voice.Foyer.livre, size = 0.4, font = Brand.Fonts.display } }, { ppu = 80 })
+	-- The Livre d'Or is where Circles are founded and joined (§9.7).
+	local p = Instance.new("ProximityPrompt")
+	p.Name = "CirclePrompt"
+	p.ActionText = "Circles"
+	p.ObjectText = "The Livre d'Or"
+	p.KeyboardKeyCode = Enum.KeyCode.E
+	p.GamepadKeyCode = Enum.KeyCode.ButtonX
+	p.HoldDuration = 0
+	p.MaxActivationDistance = 8
+	p.RequiresLineOfSight = false
+	p.Style = Enum.ProximityPromptStyle.Custom
+	p.Parent = book
+	CollectionService:AddTag(book, "CircleBook")
 end
 
 local function stair(m: Model)

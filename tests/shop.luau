@@ -382,17 +382,62 @@ local stubs = {
 local mythicCounts = {}
 local memoryMaps = {}
 local awarded = {}
+local dataStores, orderedStores, guidCount = {}, {}, 0
 local services = {
 	Players = PlayersService,
 	MarketplaceService = MarketplaceService,
 	DataStoreService = {
-		GetDataStore = function()
+		GetDataStore = function(_, name)
+			local data = if name == "MaisonNoir_Mythics" then mythicCounts else (dataStores[name] or {})
+			dataStores[name] = data
 			return {
 				UpdateAsync = function(_, key, fn)
-					mythicCounts[key] = fn(mythicCounts[key])
-					return mythicCounts[key]
+					local new = fn(data[key])
+					if new ~= nil then
+						data[key] = new
+					end
+					return data[key]
+				end,
+				GetAsync = function(_, key)
+					return data[key]
+				end,
+				SetAsync = function(_, key, value)
+					data[key] = value
+				end,
+				RemoveAsync = function(_, key)
+					data[key] = nil
 				end,
 			}
+		end,
+		GetOrderedDataStore = function(_, name)
+			local data = orderedStores[name] or {}
+			orderedStores[name] = data
+			return {
+				SetAsync = function(_, key, value)
+					data[key] = value
+				end,
+				GetSortedAsync = function(_, _ascending, size)
+					local rows = {}
+					for k, v in data do
+						table.insert(rows, { key = k, value = v })
+					end
+					table.sort(rows, function(x, y)
+						return x.value > y.value
+					end)
+					while #rows > size do
+						table.remove(rows)
+					end
+					return { GetCurrentPage = function()
+						return rows
+					end }
+				end,
+			}
+		end,
+	},
+	HttpService = {
+		GenerateGUID = function()
+			guidCount += 1
+			return string.format("%08x-0000-0000-0000-000000000000", guidCount)
 		end,
 	},
 	MemoryStoreService = {
@@ -600,7 +645,7 @@ local TEMPLATE = {
 	gilt = 0, giltDay = { day = -1, earned = 0 }, purchases = {},
 	owned = {}, equipped = { look = "", table = "", lamp = "", chime = "", trail = "", nameplate = "", card = "", flourish = "", gesture = "" },
 	credits = {}, receipts = {}, pending = { product = "", item = "", giftTo = 0, at = 0 },
-	goldKey = false, introduction = false, blackCard = { active = false, months = {} }, suite = {},
+	goldKey = false, introduction = false, blackCard = { active = false, months = {} }, suite = {}, circle = { id = "", week = -1, points = 0 },
 	ledger = { term = "", points = 0, freeClaimed = 0, leatherClaimed = 0, leather = {} },
 	gifts = {},
 }
@@ -1098,6 +1143,64 @@ check("with the Gold Key: its chair", askAs(ivy, { op = "place", spot = "chair",
 check("clearing a spot brings back the house's piece", askAs(ivy, { op = "place", spot = "rug", id = "" }).ok and id.suite.rug == nil)
 check("Suite pieces aren't worn", not askAs(ivy, { op = "equip", kind = "suite", id = "suite_rug_black" }).ok)
 check("Patrons' pieces wait for Patrons", not askAs(ivy, { op = "buyGilt", item = "suite_bar_walnut" }).ok)
+
+---------------------------------------------------------------------------------------------------
+-- Circles: found one at the Livre d'Or, invite, ask and be welcomed, the week's points, leave
+---------------------------------------------------------------------------------------------------
+local CircleService = module("ServerScriptService", "Server", "CircleService")
+local CircleRules = module("ReplicatedStorage", "Shared", "Circle")
+local jo = guest("Jo", 10)
+local kit = guest("Kit", 11)
+local lee = guest("Lee", 12)
+local jd = profiles[jo].Data
+local boardCircles = {}
+CircleService.board = function(entries)
+	boardCircles = entries
+end
+local cv = askAs(jo, { op = "circle" })
+check("the Livre d'Or offers the words and crests", cv.enabled and #cv.adjectives == 20 and #cv.nouns == 20 and #cv.emblems == 12 and #cv.colourNames == 8)
+local choice = { adjective = 1, noun = 1, emblem = 3, colour = 2 }
+check("founding costs 2,000 Gilt", not askAs(jo, { op = "circleFound", choice = choice }).ok)
+jd.gilt = 2500
+check("typed names are refused (only choices)", not askAs(jo, { op = "circleFound", choice = { adjective = "Velvet" } }).ok)
+local founded = askAs(jo, { op = "circleFound", choice = choice })
+check("a Circle is founded", founded.ok and founded.name == "The Velvet Ravens" and jd.circle.id ~= "" and jd.gilt == 500, founded.why)
+profiles[kit].Data.gilt = 3000
+check("a crest belongs to one Circle", not askAs(kit, { op = "circleFound", choice = { adjective = 2, noun = 2, emblem = 3, colour = 2 } }).ok)
+check("invite a guest in the house", askAs(jo, { op = "circleInvite", userId = kit.UserId }).ok and lastOp(kit, "circleOffer") ~= nil)
+local offerMsg = lastOp(kit, "circleOffer")
+check("the invitation lands", offerMsg.kind == "invite" and offerMsg.name == "The Velvet Ravens" and offerMsg.fromName == "Jo")
+check("and can be accepted", askAs(kit, { op = "circleAnswer", kind = "invite", circle = offerMsg.circle, from = offerMsg.from, yes = true }).ok and profiles[kit].Data.circle.id == jd.circle.id)
+check("an answer only counts once", not askAs(kit, { op = "circleAnswer", kind = "invite", circle = offerMsg.circle, from = offerMsg.from, yes = true }).ok)
+check("Lee asks to join; the host is asked", askAs(lee, { op = "circleRequest", userId = kit.UserId }).ok and lastOp(jo, "circleOffer") ~= nil and lastOp(jo, "circleOffer").kind == "request")
+local req = lastOp(jo, "circleOffer")
+check("only the host can say yes", not askAs(kit, { op = "circleAnswer", kind = "request", circle = req.circle, from = req.from, yes = true }).ok)
+check("the host welcomes them", askAs(jo, { op = "circleAnswer", kind = "request", circle = req.circle, from = req.from, yes = true }).ok and profiles[lee].Data.circle.id == jd.circle.id)
+-- The week's points.
+run(CircleService.add, jo, "nightly", 5)
+run(CircleService.add, kit, "library")
+run(CircleService.add, lee, "ballroom", 55)
+advance(0.5)
+local mine = askAs(jo, { op = "circle" })
+check("members' points: Nightly 95, a Library win 10, the Ballroom's points", mine.circle and mine.circle.score == 160, mine.circle and mine.circle.score)
+check("the house's rule: the five best count", CircleRules.weekScore({ 90, 80, 70, 60, 50, 40, 30 }) == 350)
+check("the members are listed with the host", #mine.circle.members == 3 and mine.circle.host == true)
+local weekBoard = nil
+for name, data in orderedStores do
+	if string.find(name, "_Week_", 1, true) then
+		weekBoard = data
+	end
+end
+check("the week's score is written for every server", weekBoard ~= nil and weekBoard[jd.circle.id] == 160, weekBoard and weekBoard[jd.circle.id])
+run(function()
+	CircleService.start()
+end)
+advance(1)
+check("the top Circles go to the board", #boardCircles >= 1 and boardCircles[1].name == "The Velvet Ravens" and boardCircles[1].score == 160)
+check("leaving a Circle", askAs(lee, { op = "circleLeave" }).ok and profiles[lee].Data.circle.id == "")
+askAs(kit, { op = "circleLeave" })
+askAs(jo, { op = "circleLeave" })
+check("the last one out gives the crest back", askAs(kit, { op = "circleFound", choice = { adjective = 2, noun = 2, emblem = 3, colour = 2 } }).ok)
 
 print(string.format("%d passed, %d failed", passed, failed))
 if failed > 0 then

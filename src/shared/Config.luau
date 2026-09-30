@@ -215,6 +215,20 @@ local defaults = {
 		lostAfter = 25, -- seconds a new guest lingers in the Foyer before the Concierge offers the walk
 	},
 
+	-- Circles (§9.7, Appendix H7): clubs of up to twenty. One switch turns them off.
+	Circles = {
+		enabled = true,
+		maxMembers = 20,
+		minMembers = 2, -- a Circle hangs on the boards once it has this many
+		foundGilt = 2000,
+		best = 5, -- a Circle's week is its five best members' points
+		libraryWin = 10,
+		boardTop = 5,
+		refreshSeconds = 120,
+		inviteSeconds = 90, -- an invitation or a request waits this long for an answer
+		storeName = "MaisonNoir_Circles",
+	},
+
 	-- The Black Card (§12, Appendix I): a monthly subscription. The Leather-Bound Ledger while it's
 	-- held, one cardholder look each month to keep, and a black-lacquer nameplate while active.
 	BlackCard = {

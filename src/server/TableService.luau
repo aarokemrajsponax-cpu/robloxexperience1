@@ -87,7 +87,7 @@ TableService.onRound = function(_player: Player, _roomId: string, _grade: string
 -- Called on every filing (for the Ledger).
 TableService.onFiling = function(_player: Player, _correct: boolean) end
 -- Called after a scored Nightly is on the board (for Rivals).
-TableService.onNightlyFinished = function(_player: Player) end
+TableService.onNightlyFinished = function(_player: Player, _percentile: number?) end
 -- Set by the server: is the guest busy elsewhere (a Library duel)?
 TableService.isBusy = function(_player: Player): boolean
 	return false
@@ -415,7 +415,7 @@ local function finishNightly(s: Session, reason: string?, notify: boolean)
 				percentile = standing.percentile,
 				seconds = finishedAt - s.startedAt,
 			})
-			TableService.onNightlyFinished(player)
+			TableService.onNightlyFinished(player, standing.percentile)
 		end
 		if notify and player.Parent == Players then
 			send(player, card)

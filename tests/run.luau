@@ -714,6 +714,18 @@ do
 	check("band: the final two keep the clock", Music.stems("piano").clock ~= nil and Music.stems("full").full == 1)
 end
 
+do
+	local Circle = loadModule("Circle")
+	check("circle: a name from the lists", Circle.name({ adjective = 2, noun = 2, emblem = 1, colour = 1 }) == "The Quiet Keys")
+	check("circle: about twenty words each, twelve emblems, eight colours", #Circle.Adjectives == 20 and #Circle.Nouns == 20 and #Circle.Emblems == 12 and #Circle.Colours == 8)
+	check("circle: only real choices", Circle.valid({ adjective = 1, noun = 20, emblem = 12, colour = 8 }) and not Circle.valid({ adjective = 0, noun = 1, emblem = 1, colour = 1 }) and not Circle.valid({ adjective = 1.5, noun = 1, emblem = 1, colour = 1 }) and not Circle.valid("The Velvet Ravens"))
+	check("circle: top 5% on the Nightly = 95", Circle.points("nightly", 5) == 95 and Circle.points("nightly", 100) == 0)
+	check("circle: 10 a Library win", Circle.points("library") == 10)
+	check("circle: the Ballroom's own points", Circle.points("ballroom", 55) == 55)
+	check("circle: the five best members count", Circle.weekScore({ 10, 95, 3, 40, 70, 55, 12 }) == 95 + 70 + 55 + 40 + 12)
+	check("circle: a crest is its own key", Circle.crestKey({ adjective = 1, noun = 1, emblem = 3, colour = 2 }) ~= Circle.crestKey({ adjective = 1, noun = 1, emblem = 2, colour = 3 }))
+end
+
 print(("\n%d passed, %d failed"):format(passed, failed))
 if failed > 0 then
 	os.exit(1)

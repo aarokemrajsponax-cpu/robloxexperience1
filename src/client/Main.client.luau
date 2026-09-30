@@ -30,6 +30,7 @@ local Closet = require(script.Parent.Closet)
 local BoutiquePanel = require(script.Parent.UI.BoutiquePanel)
 local BlackCardPanel = require(script.Parent.UI.BlackCardPanel)
 local SuitePanel = require(script.Parent.UI.SuitePanel)
+local CirclePanel = require(script.Parent.UI.CirclePanel)
 local SuiteView = require(script.Parent.World.SuiteView)
 local WardrobePanel = require(script.Parent.UI.WardrobePanel)
 local LedgerPanel = require(script.Parent.UI.LedgerPanel)
@@ -76,12 +77,16 @@ Closet.Message:Connect(function(op: string, m: any)
 			BlackCardPanel.open()
 		elseif m.panel == "suite" then
 			SuitePanel.open()
+		elseif m.panel == "circles" then
+			CirclePanel.open()
 		end
 	elseif op == "gift" and type(m.item) == "table" then
 		task.delay(2.5, GiftPanel.show, tostring(m.from), m.item)
 	elseif op == "pages" and type(m.pages) == "table" then
 		local last = m.pages[#m.pages]
 		Toast.show("The Ledger", string.format("Page %d turned.", last or 0), 2.5)
+	elseif op == "circleOffer" then
+		CirclePanel.offer(m)
 	elseif op == "notice" then
 		Toast.show(tostring(m.title), tostring(m.line), 4)
 	end
