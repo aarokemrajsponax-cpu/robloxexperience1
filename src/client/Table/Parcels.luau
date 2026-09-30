@@ -13,14 +13,20 @@ local Parcels = {}
 
 export type Built = { model: Model, fuse: BasePart, label: TextLabel, spark: ParticleEmitter }
 
+-- In Yuletide the parcels are wrapped boxes with ribbon fuses (§10).
+local WRAPS = { Color3.fromRGB(150, 22, 32), Color3.fromRGB(24, 82, 50), Color3.fromRGB(226, 216, 196) }
+local wrapCount = 0
+
 function Parcels.build(count: number): Built
+	local yule = game:GetService("Workspace"):GetAttribute("Season") == "yule"
+	wrapCount += 1
 	local m = Instance.new("Model")
 	m.Name = "Parcel"
 	local box = Instance.new("Part")
 	box.Name = "Box"
 	box.Size = Vector3.new(0.72, 0.5, 0.6)
-	box.Color = Color3.fromRGB(26, 22, 20)
-	box.Material = Enum.Material.Leather
+	box.Color = if yule then WRAPS[wrapCount % #WRAPS + 1] else Color3.fromRGB(26, 22, 20)
+	box.Material = if yule then Enum.Material.Foil else Enum.Material.Leather
 	box.Anchored = true
 	box.CanCollide = false
 	box.CanQuery = false
@@ -33,8 +39,8 @@ function Parcels.build(count: number): Built
 		local ribbon = Instance.new("Part")
 		ribbon.Name = "Ribbon"
 		ribbon.Size = size
-		ribbon.Color = Brand.Colours.gold
-		ribbon.Material = Enum.Material.Metal
+		ribbon.Color = if yule and box.Color ~= WRAPS[1] then WRAPS[1] else Brand.Colours.gold
+		ribbon.Material = if yule then Enum.Material.Fabric else Enum.Material.Metal
 		ribbon.Anchored = true
 		ribbon.CanCollide = false
 		ribbon.CanQuery = false
@@ -57,7 +63,7 @@ function Parcels.build(count: number): Built
 	local fuse = Instance.new("Part")
 	fuse.Name = "Fuse"
 	fuse.Size = Vector3.new(0.05, 0.05, 0.6)
-	fuse.Color = Color3.fromRGB(214, 190, 150)
+	fuse.Color = if yule then WRAPS[1] else Color3.fromRGB(214, 190, 150)
 	fuse.Material = Enum.Material.Fabric
 	fuse.Anchored = true
 	fuse.CanCollide = false

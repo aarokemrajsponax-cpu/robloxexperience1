@@ -169,6 +169,18 @@ Layout.Club = {
 	doorHeight = 11,
 }
 
+-- The Terrace (§3, High Summer): the Obsidian Room's roof, through French doors in the Club
+-- hall's east wall and two steps up. The doors open only in High Summer.
+Layout.Terrace = {
+	zone = box(26, 21.5, 30, 82, 44, 64), -- above the Obsidian Room's ceiling
+	minX = 30, maxX = 80, minZ = 30, maxZ = 62,
+	floorY = 22, -- the top of the Obsidian Room's ceiling
+	door = Vector3.new(25, 20, 54), -- in the Club hall's east wall (x 24..26)
+	doorWidth = 6,
+	doorHeight = 10,
+	arrival = Vector3.new(34, 22, 54),
+}
+
 Layout.Library = {
 	zone = box(-36, 18, 68, 2, 40, 100),
 	minX = -36, maxX = 2, minZ = 68, maxZ = 100, height = 16, -- behind the hall's north wall (z 66..68)
@@ -243,10 +255,12 @@ function Layout.inBox(b: Box, p: Vector3): boolean
 	return p.X >= b.min.X and p.X <= b.max.X and p.Y >= b.min.Y and p.Y <= b.max.Y and p.Z >= b.min.Z and p.Z <= b.max.Z
 end
 
-export type ZoneName = "street" | "foyer" | "salon" | "velvet" | "obsidian" | "midnight" | "club" | "library" | "ballroom" | "boutique" | "vault" | "none"
+export type ZoneName = "street" | "foyer" | "salon" | "velvet" | "obsidian" | "midnight" | "club" | "library" | "ballroom" | "boutique" | "vault" | "terrace" | "none"
 
 function Layout.zoneAt(p: Vector3): ZoneName
-	if Layout.inBox(Layout.Salon.zone, p) then
+	if Layout.inBox(Layout.Terrace.zone, p) then
+		return "terrace"
+	elseif Layout.inBox(Layout.Salon.zone, p) then
 		return "salon"
 	elseif Layout.inBox(Layout.Velvet.zone, p) then
 		return "velvet"

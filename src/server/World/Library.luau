@@ -48,7 +48,13 @@ local function hall(root: Model)
 	Kit.span(m, "RunnerN", Vector3.new(-18, Y, C.minZ + 8), Vector3.new(-10, Y + 0.05, C.maxZ), L.carpet, { collide = false, query = false })
 	Kit.span(m, "Ceiling", Vector3.new(C.minX - 2, top, C.minZ - 2), Vector3.new(C.maxX + 2, top + 1, C.maxZ + 2), L.wall)
 	Kit.span(m, "WallW", Vector3.new(C.minX - 2, Y, C.minZ - 2), Vector3.new(C.minX, top, C.maxZ + 2), L.greenVelvet)
-	Kit.span(m, "WallE", Vector3.new(C.maxX, Y, C.minZ - 2), Vector3.new(C.maxX + 2, top, C.maxZ + 2), L.greenVelvet)
+	-- The east wall, with the Terrace's French doors (Terrace.luau hangs the doors).
+	local T = Layout.Terrace
+	local tz0, tz1 = T.door.Z - T.doorWidth / 2, T.door.Z + T.doorWidth / 2
+	Kit.span(m, "WallE", Vector3.new(C.maxX, Y, C.minZ - 2), Vector3.new(C.maxX + 2, top, tz0), L.greenVelvet)
+	Kit.span(m, "WallE", Vector3.new(C.maxX, Y, tz1), Vector3.new(C.maxX + 2, top, C.maxZ + 2), L.greenVelvet)
+	Kit.span(m, "WallEOverDoor", Vector3.new(C.maxX, Y + T.doorHeight, tz0), Vector3.new(C.maxX + 2, top, tz1), L.greenVelvet)
+	Kit.span(m, "TerraceThreshold", Vector3.new(C.maxX, Y - 1, tz0), Vector3.new(C.maxX + 2, Y, tz1), L.blackMarble)
 	-- The south wall above the Foyer's back wall, with the arch from the stair
 	Kit.span(m, "WallS_W", Vector3.new(C.minX, Y, C.minZ), Vector3.new(4, top, C.minZ + 0.2), L.greenVelvet, { collide = false, query = false })
 	Kit.span(m, "WallS_E", Vector3.new(12, Y, C.minZ), Vector3.new(C.maxX, top, C.minZ + 0.2), L.greenVelvet, { collide = false, query = false })
@@ -60,13 +66,17 @@ local function hall(root: Model)
 	})
 	-- Wainscot and rail
 	Kit.span(m, "WainscotW", Vector3.new(C.minX, Y, C.minZ), Vector3.new(C.minX + 0.4, Y + 3.8, C.maxZ), L.walnut, { collide = false, query = false })
-	Kit.span(m, "WainscotE", Vector3.new(C.maxX - 0.4, Y, C.minZ), Vector3.new(C.maxX, Y + 3.8, C.maxZ), L.walnut, { collide = false, query = false })
+	Kit.span(m, "WainscotE", Vector3.new(C.maxX - 0.4, Y, C.minZ), Vector3.new(C.maxX, Y + 3.8, tz0), L.walnut, { collide = false, query = false })
+	Kit.span(m, "WainscotE", Vector3.new(C.maxX - 0.4, Y, tz1), Vector3.new(C.maxX, Y + 3.8, C.maxZ), L.walnut, { collide = false, query = false })
 	Kit.span(m, "RailW", Vector3.new(C.minX, Y + 3.8, C.minZ), Vector3.new(C.minX + 0.45, Y + 4, C.maxZ), L.brass, { collide = false, query = false, shadow = false })
-	Kit.span(m, "RailE", Vector3.new(C.maxX - 0.45, Y + 3.8, C.minZ), Vector3.new(C.maxX, Y + 4, C.maxZ), L.brass, { collide = false, query = false, shadow = false })
+	Kit.span(m, "RailE", Vector3.new(C.maxX - 0.45, Y + 3.8, C.minZ), Vector3.new(C.maxX, Y + 4, tz0), L.brass, { collide = false, query = false, shadow = false })
+	Kit.span(m, "RailE", Vector3.new(C.maxX - 0.45, Y + 3.8, tz1), Vector3.new(C.maxX, Y + 4, C.maxZ), L.brass, { collide = false, query = false, shadow = false })
 	-- Portraits along the walls, each under a picture light
-	for i, z in { 50, 58 } do
+	for i, zw in { 50, 58 } do
 		for _, side in { -1, 1 } do
 			local x = if side < 0 then C.minX + 0.3 else C.maxX - 0.3
+			-- On the east wall they hang either side of the Terrace doors.
+			local z = if side < 0 then zw else (if i == 1 then 47 else 61.5)
 			local cf = CFrame.lookAt(Vector3.new(x, Y + 7.5, z), Vector3.new(0, Y + 7.5, z))
 			Kit.part(m, "PortraitFrame" .. i, Vector3.new(4.2, 5.4, 0.3), cf, L.brass, { collide = false })
 			Kit.part(m, "Portrait" .. i, Vector3.new(3.6, 4.8, 0.1), cf * CFrame.new(0, 0, -0.18), { color = Color3.fromRGB(34 + i * 6, 26, 22), material = Enum.Material.Fabric }, { collide = false })
@@ -76,9 +86,10 @@ local function hall(root: Model)
 	end
 	-- Benches against the side walls, under the portraits
 	for _, x in { C.minX + 1.4, C.maxX - 1.4 } do
-		Kit.part(m, "Bench", Vector3.new(1.6, 0.6, 4), CFrame.new(x, Y + 1.3, 54), L.leather)
+		local bz = if x > 0 then 61.5 else 54 -- the east bench clears the Terrace doors
+		Kit.part(m, "Bench", Vector3.new(1.6, 0.6, 4), CFrame.new(x, Y + 1.3, bz), L.leather)
 		for _, dz in { -1.7, 1.7 } do
-			Kit.part(m, "BenchLeg", Vector3.new(1.2, 1, 0.25), CFrame.new(x, Y + 0.5, 54 + dz), L.darkWood)
+			Kit.part(m, "BenchLeg", Vector3.new(1.2, 1, 0.25), CFrame.new(x, Y + 0.5, bz + dz), L.darkWood)
 		end
 	end
 	-- A small chandelier

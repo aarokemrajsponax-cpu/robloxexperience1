@@ -292,7 +292,13 @@ local function flakeShape(kind: string, near: boolean): (Vector3, Enum.Material,
 	return Vector3.new(0.26, 0.02, 0.18) * s, Enum.Material.SmoothPlastic, Enum.PartType.Block
 end
 
+-- Weather falls for real in the street and on the Terrace.
+local onTerrace = false
 local function spawnPoint(camPos: Vector3): Vector3
+	if onTerrace then
+		local T = Layout.Terrace
+		return Vector3.new(rng:NextNumber(T.minX, T.maxX), rng:NextNumber(T.floorY + 6, T.floorY + 22), rng:NextNumber(T.minZ, T.maxZ))
+	end
 	local x = math.clamp(camPos.X + rng:NextNumber(-45, 45), -75, 75)
 	local z = rng:NextNumber(-64, -12)
 	return Vector3.new(x, rng:NextNumber(12, 32), z)
@@ -368,8 +374,16 @@ local function stepWeather(dt: number, camPos: Vector3)
 	if #flakes == 0 then
 		return
 	end
-	-- Only while the street is in view: from the street, or looking out from the doorway.
-	local inStreet = camPos.Z < -4 and camPos.Z > -80
+	-- Only while the street is in view (from the street, or looking out from the doorway), or
+	-- out on the Terrace.
+	local terrace = Layout.inBox(Layout.Terrace.zone, camPos)
+	if terrace ~= onTerrace then
+		onTerrace = terrace
+		for _, f in flakes do
+			f.part.Position = spawnPoint(camPos)
+		end
+	end
+	local inStreet = (camPos.Z < -4 and camPos.Z > -80) or terrace
 	for _, f in flakes do
 		f.part.LocalTransparencyModifier = if inStreet then 0 else 1
 	end
@@ -382,7 +396,11 @@ local function stepWeather(dt: number, camPos: Vector3)
 	for _, f in flakes do
 		local swayX = math.sin(weatherClock * f.sway + f.phase) * 0.6
 		local p = f.part.Position + (f.velocity + Vector3.new(swayX, 0, 0)) * dt
-		if p.Y < 0.1 or p.Y > 40 or p.Z > -10.5 then
+		local T = Layout.Terrace
+		local gone = if onTerrace
+			then p.Y < T.floorY + 0.1 or p.Y > T.floorY + 30 or p.X < T.minX or p.X > T.maxX or p.Z < T.minZ or p.Z > T.maxZ
+			else p.Y < 0.1 or p.Y > 40 or p.Z > -10.5
+		if gone then
 			resetFlake(f, camPos, colours, weatherKind)
 		else
 			if weatherKind == "leaves" or weatherKind == "petals" or weatherKind == "confetti" or weatherKind == "clover" then

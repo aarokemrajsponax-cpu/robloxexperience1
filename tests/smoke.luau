@@ -791,6 +791,63 @@ for count = 4, 28 do
 	check(("%d pieces fit the felt without overlapping"):format(count), okSlots)
 end
 
+---------------------------------------------------------------------------------------------------
+-- The Terrace, and the house dressed for every season
+---------------------------------------------------------------------------------------------------
+do
+	local T = Layout.Terrace
+	local SeasonDress = module("ServerScriptService", "Server", "World", "SeasonDress")
+	local SeasonsRules = module("ReplicatedStorage", "Shared", "Seasons")
+	check("the Terrace is its own space", Layout.zoneAt(T.arrival + Vector3.new(0, 3, 0)) == "terrace")
+	check("the Obsidian Room below it is still the Obsidian Room", Layout.zoneAt(Layout.Obsidian.tables[1] + Vector3.new(0, 3, 0)) == "obsidian")
+	local function refreshSolids()
+		table.clear(solids)
+		for _, d in maison:GetDescendants() do
+			if d:IsA("BasePart") and d.CanCollide and not d:IsA("Seat") then
+				table.insert(solids, d)
+			end
+		end
+	end
+	local CLUB = Layout.CLUB
+	local function walkOut()
+		return walk({ { Vector3.new(18, 0, T.door.Z), CLUB }, { Vector3.new(25.6, 0, T.door.Z), CLUB } }, 0.9)
+			or walk({ { Vector3.new(27, 0, T.door.Z), T.floorY }, { T.arrival, T.floorY }, { Vector3.new(34, 0, 40), T.floorY }, { Vector3.new(55, 0, 40), T.floorY } }, 0.9)
+	end
+	local worst, worstLights = 0, 0
+	for _, season in SeasonsRules.List do
+		local okDress, dressErr = pcall(SeasonDress.apply, season.id)
+		check("the house dresses for " .. season.name, okDress, dressErr)
+		local n, l = 0, 0
+		for _, d in maison:GetDescendants() do
+			if d:IsA("BasePart") then
+				n += 1
+			elseif d:IsA("Light") and d.Enabled then
+				l += 1
+			end
+		end
+		worst, worstLights = math.max(worst, n), math.max(worstLights, l)
+		refreshSolids()
+		local why = walkOut()
+		if season.id == "summer" then
+			check("High Summer: the Terrace doors open and a guest can walk out", why == nil, why)
+		else
+			check(season.name .. ": the Terrace doors are shut", why ~= nil and string.find(why, "TerraceDoor", 1, true) ~= nil, why)
+		end
+	end
+	print(("dressed: at most %d parts, %d lights"):format(worst, worstLights))
+	check("every season's dressing stays inside the part budget", worst < 7500, worst)
+	check("and the light budget", worstLights < 140, worstLights)
+	SeasonDress.apply("yule")
+	local dress = maison:FindFirstChild("SeasonDress")
+	check("Yuletide hangs garlands and a wreath", dress ~= nil and dress:FindFirstChild("Garland") ~= nil and dress:FindFirstChild("Wreath") ~= nil)
+	SeasonDress.apply("hallows")
+	check("All Hallows: lanterns out", maison.SeasonDress:FindFirstChild("Lantern") ~= nil)
+	check("All Hallows: Lights Out by candlelight", workspace:GetAttribute("Candlelight") == true)
+	SeasonDress.apply("frost")
+	check("after All Hallows the lamps come back", workspace:GetAttribute("Candlelight") == false)
+	check("flowers on the lectern in every season", maison.SeasonDress:FindFirstChild("Blooms") ~= nil)
+end
+
 print(("\n%d passed, %d failed"):format(passed, failed))
 if failed > 0 then
 	process.exit(1)

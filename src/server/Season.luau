@@ -100,7 +100,16 @@ local function apply(s: Seasons.Season, seconds: number)
 	tintLamps(s.key, seconds)
 end
 
+-- Dresses the house for a season (set by Main: SeasonDress.apply).
+Season.dress = function(_id: string) end
+
 local function publish(s: Seasons.Season)
+	local ok, err = pcall(function()
+		Season.dress(s.id)
+	end)
+	if not ok then
+		warn("[Maison] Dressing the house for the season failed:", err)
+	end
 	Workspace:SetAttribute("Season", s.id)
 	Workspace:SetAttribute("SeasonName", s.name)
 	Workspace:SetAttribute("SeasonLine", s.line)

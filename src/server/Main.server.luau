@@ -14,6 +14,7 @@ local Build = require(script.Parent.World.Build)
 local maison = Build.run()
 
 local Season = require(script.Parent.Season)
+Season.dress = require(script.Parent.World.SeasonDress).apply
 Season.start()
 
 local Dialogue = require(script.Parent.Dialogue)
