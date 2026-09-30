@@ -29,6 +29,10 @@ function Closet.wearing(kind: string): Wardrobe.Item?
 	if type(id) ~= "string" or id == "" then
 		return nil
 	end
+	local medal = string.match(id, "^soiree:([%d%-]+):medal$")
+	if medal then
+		return Wardrobe.soireeMedal(medal)
+	end
 	return Wardrobe.get(id) or Ledger.item(id)
 end
 

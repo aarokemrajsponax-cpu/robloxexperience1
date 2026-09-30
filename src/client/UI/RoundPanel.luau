@@ -11,6 +11,7 @@ local Theme = require(script.Parent.Theme)
 local Hallmark = require(script.Parent.Hallmark)
 local Rooms = require(ReplicatedStorage.Shared.Rooms)
 local State = require(script.Parent.Parent.State)
+local Share = require(script.Parent.Share)
 
 local RoundPanel = {}
 
@@ -52,7 +53,7 @@ local function panel(heading: string, sub: string?, grade: string, rows: { { str
 	end
 	local size = Root.size()
 	local w = math.min(420, size.X - 24)
-	local h = 250 + #rows * 26 + (if actions.secondary then 54 else 0)
+	local h = 250 + #rows * 26 + (if actions.secondary then 54 else 0) + (if grade == "Flawless" then 52 else 0)
 	local group, content = Theme.glass(Root.panels, NAME, UDim2.fromOffset(w, h), UDim2.new(0.5, 0, 0.5, 20))
 	Theme.list(content, 8).VerticalAlignment = Enum.VerticalAlignment.Top
 	if sub then
@@ -81,10 +82,15 @@ local function panel(heading: string, sub: string?, grade: string, rows: { { str
 			onSecondary()
 		end, 260).LayoutOrder = 2
 	end
+	if grade == "Flawless" then
+		Theme.key(keys, "Share", false, function()
+			Share.moment("salon")
+		end, 260).LayoutOrder = 3
+	end
 	Theme.key(keys, "Leave", false, function()
 		Root.close(NAME)
 		actions.onLeave()
-	end, 260).LayoutOrder = 3
+	end, 260).LayoutOrder = 4
 	-- Round cards don't blur the table: the felt stays in focus behind them.
 	Root.open(NAME, group, nil, false)
 	pcall(function()

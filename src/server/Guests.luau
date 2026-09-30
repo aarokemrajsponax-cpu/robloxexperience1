@@ -38,6 +38,9 @@ type Visit = {
 	settingTimes: { number },
 	funnel: { [number]: boolean },
 	launch: string?,
+	foyerSince: number?,
+	offered: boolean,
+	clubShown: boolean,
 }
 
 local visits: { [Player]: Visit } = {}
@@ -120,6 +123,9 @@ local function provisional(player: Player): Visit
 		settingTimes = {},
 		funnel = {},
 		launch = nil,
+		foyerSince = nil,
+		offered = false,
+		clubShown = false,
 	}
 	visits[player] = v
 	return v
@@ -178,6 +184,25 @@ local function trackZones()
 			-- Nothing happens to a guest still looking at the title.
 			if root and root:IsA("BasePart") and visit.funnel[3] then
 				local zone = Layout.zoneAt(root.Position)
+				-- A new guest lingering in the Foyer for a while is offered the walk.
+				if zone == "foyer" and visit.firstVisit and not visit.offered and not TableService.isSeated(player) then
+					visit.foyerSince = visit.foyerSince or os.clock()
+					if os.clock() - (visit.foyerSince :: number) > Config.data.Staff.lostAfter and not Concierge.isLeading(player) then
+						visit.offered = true
+						Concierge.offerHelp(player)
+					end
+				elseif zone ~= "foyer" then
+					visit.foyerSince = nil
+				end
+				-- The first climb to the Club Floor gets its own three steps.
+				if zone == "club" and not visit.clubShown then
+					visit.clubShown = true
+					local data = Profiles.get(player)
+					if data and not data.flags.clubHowTo then
+						data.flags.clubHowTo = true
+						guestEvent:FireClient(player, { op = "clubHowTo" })
+					end
+				end
 				if zone ~= visit.zone then
 					visit.zone = zone
 					if zone == "foyer" then

@@ -195,6 +195,23 @@ a Nightly attempt or a Mythic's odds.
   a Mythic, the Founding Term. Each needs a badge created in the Creator Dashboard and its id in
   `Config.Badges`; `Config.FoundingTerm` names the first Term at launch.
 
+## Delivery 8, first part — the house comes alive, and the Soirée
+
+- **The Concierge notices you**: the Concierge, the Tailor and the Archivist turn their heads
+  toward you as you pass (on your own screen, so everyone is looked at). A new guest lingering
+  in the Foyer for 25 seconds is walked over to and offered the way to a table. A new House
+  Standing or Mark: *"The house has noticed."*
+- **The Club Floor's own how-to-play**, the first time you climb the stair: *Same pieces, both
+  of you · Three in a row sends a parcel · Keep your lamp lit.*
+- **Share** keys at the moments worth sharing (a Last Lamp, a Library win or new Mark, a
+  Flawless round), with launch data so a friend lands in the right room.
+- **The Soirée**, every weekend (Saturday to Monday, UTC), alternating Ballroom and Library
+  weekends; holiday windows re-dress it (*The All Hallows Soirée*). Your best five Ballroom
+  evenings or fifteen Library evenings count (Appendix H5 points). Three plays earn the Soirée's
+  stamp; after the weekend the top 1% get **the Soirée Medal** (a dated nameplate frame, never
+  sold) and the top 10% a dated invitation card. A **gilded countdown board** by the Grand Stair
+  (the only clock in the Foyer) and a Soirée tab on the leaderboard.
+
 ## Where things live
 
 | Folder | What |

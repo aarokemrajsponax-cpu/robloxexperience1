@@ -199,6 +199,21 @@ local defaults = {
 	-- get the Founding Term badge and its dated rewards.
 	FoundingTerm = "",
 
+	-- The Soirée (Appendix H5).
+	Soiree = {
+		libraryWin = 30,
+		libraryLoss = 5,
+		ballroomBest = 5, -- best evenings that count
+		libraryBest = 15, -- best matches that count
+		medalTop = 0.01,
+		invitationTop = 0.10,
+		stampPlays = 3,
+	},
+
+	Staff = {
+		lostAfter = 25, -- seconds a new guest lingers in the Foyer before the Concierge offers the walk
+	},
+
 	-- Commissions (Appendix I1): Gilt for the Evening's and the Week's.
 	Commissions = {
 		eveningGilt = 150,

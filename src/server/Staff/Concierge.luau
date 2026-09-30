@@ -174,6 +174,46 @@ function Concierge.greet(player: Player, firstVisit: boolean, nightlyPending: bo
 	end
 end
 
+-- A new guest standing lost in the Foyer: the Concierge drifts over and offers the walk.
+function Concierge.offerHelp(player: Player)
+	local s = staff
+	local root = characterRoot(player)
+	if not s or s.busy or not root then
+		return
+	end
+	s.busy = true
+	task.spawn(function()
+		local toward = root.Position - s.root.Position
+		local flat = Vector3.new(toward.X, 0, toward.Z)
+		if flat.Magnitude > 6 then
+			local goal = s.root.Position + flat.Unit * (flat.Magnitude - 4)
+			Rig.walkTo(s, Vector3.new(goal.X, s.home.Position.Y, goal.Z), nil, function()
+				return player.Parent ~= Players or Concierge.isSeated(player)
+			end)
+		end
+		Rig.face(s, root.Position)
+		s.busy = false
+		Dialogue.say(player, V.speaker, V.lost, {
+			{ id = "yes", text = V.choices.takeMe },
+			{ id = "no", text = V.choices.fine },
+		}, function(choice)
+			if choice == "yes" then
+				Concierge.lead(player, "salon")
+			else
+				Dialogue.say(player, V.speaker, V.goodNight, nil, nil, 1.5)
+				if staff and not staff.busy then
+					Rig.goHome(staff)
+				end
+			end
+		end)
+		task.delay(12, function()
+			if staff and not staff.busy and leading == nil then
+				Rig.goHome(staff)
+			end
+		end)
+	end)
+end
+
 function Concierge.line(player: Player, line: string, hold: number?)
 	Dialogue.say(player, V.speaker, line, nil, nil, hold)
 end

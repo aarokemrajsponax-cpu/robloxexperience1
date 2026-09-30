@@ -350,6 +350,22 @@ local function roomDoor(m: Model, roomId: string)
 	end
 end
 
+-- The Soirée's countdown: the only clock ever allowed in the Foyer.
+local function soireeBoard(m: Model)
+	local model = Kit.model(m, "SoireeBoard")
+	local cf = F.soireeBoard
+	Kit.part(model, "EaselLegL", Vector3.new(0.2, 6.2, 0.2), cf * CFrame.new(-1.3, 3.1, 0.4) * CFrame.Angles(math.rad(-8), 0, 0), L.brass)
+	Kit.part(model, "EaselLegR", Vector3.new(0.2, 6.2, 0.2), cf * CFrame.new(1.3, 3.1, 0.4) * CFrame.Angles(math.rad(-8), 0, 0), L.brass)
+	Kit.part(model, "EaselBack", Vector3.new(0.2, 5.8, 0.2), cf * CFrame.new(0, 2.9, 1.3) * CFrame.Angles(math.rad(18), 0, 0), L.brass, { collide = false })
+	local face = Kit.part(model, "Board", Vector3.new(3.4, 2.2, 0.1), cf * CFrame.new(0, 4.6, 0.2) * CFrame.Angles(math.rad(-8), 0, 0), L.blackLacquer, { collide = false })
+	Kit.part(model, "BoardFrame", Vector3.new(3.6, 2.4, 0.08), cf * CFrame.new(0, 4.6, 0.26) * CFrame.Angles(math.rad(-8), 0, 0), L.brass, { collide = false })
+	Kit.engrave(face, Enum.NormalId.Front, {
+		{ text = "THE SOIRÉE", size = 0.3, font = Brand.Fonts.display, color = Brand.Colours.lightGold },
+		{ text = "Every weekend", size = 0.18, font = Brand.Fonts.body, color = Brand.Colours.bone },
+	}, { ppu = 90, lit = false })
+	CollectionService:AddTag(face, "SoireeBoard")
+end
+
 local function boutiqueDoor(m: Model)
 	local model = Kit.model(m, "BoutiqueDoor")
 	local cf = F.boutiqueDoor
@@ -410,6 +426,7 @@ function Foyer.build(parent: Instance): Model
 		roomDoor(root, id)
 	end
 	boutiqueDoor(root)
+	soireeBoard(root)
 	entranceDoors(root)
 	-- A soft fill so the marble never goes pitch black.
 	local fill = Kit.part(root, "FillLight", Vector3.new(1, 1, 1), CFrame.new(0, FLOOR + 14, 16), { color = Color3.new(), material = Enum.Material.SmoothPlastic, transparency = 1 }, { collide = false, query = false, shadow = false })

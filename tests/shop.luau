@@ -370,6 +370,7 @@ local stubs = {
 }
 
 local mythicCounts = {}
+local memoryMaps = {}
 local awarded = {}
 local services = {
 	Players = PlayersService,
@@ -384,6 +385,40 @@ local services = {
 			}
 		end,
 	},
+	MemoryStoreService = {
+		GetSortedMap = function(_, name)
+			memoryMaps[name] = memoryMaps[name] or {}
+			local m = memoryMaps[name]
+			return {
+				UpdateAsync = function(_, key, fn)
+					local value, sortKey = fn(m[key] and m[key].value, m[key] and m[key].sortKey)
+					m[key] = { key = key, value = value, sortKey = sortKey }
+				end,
+				GetSizeAsync = function()
+					local n = 0
+					for _ in m do
+						n += 1
+					end
+					return n
+				end,
+				GetRangeAsync = function(_, _dir, count)
+					local list = {}
+					for _, v in m do
+						table.insert(list, v)
+					end
+					table.sort(list, function(a, b)
+						return a.sortKey > b.sortKey
+					end)
+					local out = {}
+					for i = 1, math.min(count, #list) do
+						out[i] = list[i]
+					end
+					return out
+				end,
+			}
+		end,
+	},
+	Workspace = { SetAttribute = function() end },
 	BadgeService = {
 		AwardBadge = function(_, userId, id)
 			table.insert(awarded, { userId = userId, id = id })
@@ -931,8 +966,47 @@ check("a badge is only awarded once", #awarded == count)
 profiles[fay].Data.nights.count = 20
 profiles[fay].Data.stats.rounds = 200
 Collection.standing(fay)
-check("rising in Standing is announced", string.find(lines[#lines].line, "Patron", 1, true) ~= nil, lines[#lines].line)
+check("rising in Standing is announced", lines[#lines].line == "The house has noticed." and string.find(notices[#notices].line, "Patron", 1, true) ~= nil, lines[#lines].line)
 check("the Register view has the odds for all four rooms", #view.odds == 4)
+
+---------------------------------------------------------------------------------------------------
+-- 13. The Soirée: results, the stamp, and the medal after the weekend
+---------------------------------------------------------------------------------------------------
+local SoireeShared = module("ReplicatedStorage", "Shared", "Soiree")
+local SoireeService = module("ServerScriptService", "Server", "SoireeService")
+local soireeNotices = {}
+SoireeService.start()
+SoireeService.notice = function(player, title, line)
+	table.insert(soireeNotices, { player = player, title = title, line = line })
+end
+-- Move the house clock to a Saturday of this weekend's format.
+local weekend = SoireeShared.at(fakeOs.time())
+startTime = weekend.startsAt + 3600 - math.floor(now)
+local w = SoireeShared.at(fakeOs.time())
+check("the house clock is in a Soirée", w.active)
+local gus = guest("Gus", 7)
+for i = 1, 3 do
+	SoireeService.record(gus, w.format, { place = i, keys = 1, won = true })
+end
+advance(0.5)
+local st = profiles[gus].Data.soiree
+check("results count toward the weekend", st.plays == 3 and st.score > 0, st.score)
+check("three plays earn the Soirée's stamp", st.stamps[w.key] == true and #soireeNotices >= 1)
+local other = if w.format == "ballroom" then "library" else "ballroom"
+SoireeService.record(gus, other, { place = 1, keys = 9, won = true })
+check("the other format doesn't count this weekend", profiles[gus].Data.soiree.plays == 3)
+for i = 1, 150 do
+	memoryMaps["MaisonNoir_Soiree_" .. w.key][tostring(9000 + i)] = { key = tostring(9000 + i), value = "x", sortKey = 1 }
+end
+-- Monday: the weekend is over; Gus arrives and is the top of 151.
+startTime = w.endsAt + 3600 - math.floor(now)
+loadedSignal:Fire(gus, profiles[gus].Data)
+advance(0.5)
+check("after the weekend the top 1% get the medal", profiles[gus].Data.owned["soiree:" .. w.key .. ":medal"] == true)
+check("the medal can be worn", askAs(gus, { op = "equip", kind = "nameplate", id = "soiree:" .. w.key .. ":medal" }).ok)
+loadedSignal:Fire(gus, profiles[gus].Data)
+advance(0.5)
+check("it's awarded once", #profiles[gus].Data.soiree.claimed > 0)
 
 print(string.format("%d passed, %d failed", passed, failed))
 if failed > 0 then

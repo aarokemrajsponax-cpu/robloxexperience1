@@ -652,6 +652,24 @@ do
 	check("commissions: Gilt as Appendix I1", Commissions.reward(false) == 150 and Commissions.reward(true) == 600)
 end
 
+-- 14. The Soirée.
+do
+	local Soiree = loadModule("Soiree")
+	local sat = os.time({ year = 2026, month = 10, day = 3, hour = 12 }) -- a Saturday
+	local w = Soiree.at(sat)
+	check("soirée: on all Saturday", w.active and w.key == "2026-10-03")
+	check("soirée: and all Sunday", Soiree.at(sat + 86400).active and Soiree.at(sat + 86400).key == w.key)
+	check("soirée: over by Monday", not Soiree.at(sat + 2 * 86400).active)
+	check("soirée: on Wednesday, the next one is shown", not Soiree.at(sat - 3 * 86400).active and Soiree.at(sat - 3 * 86400).key == w.key)
+	check("soirée: formats alternate weekends", Soiree.at(sat + 7 * 86400).format ~= w.format)
+	check("soirée: All Hallows re-dresses it", Soiree.at(os.time({ year = 2026, month = 10, day = 24, hour = 12 })).name == "The All Hallows Soirée")
+	check("soirée: Ballroom points as H5", Soiree.points("ballroom", { place = 1, keys = 2 }) == 116 and Soiree.points("ballroom", { place = 12, keys = 0 }) == 10)
+	check("soirée: Library points as H5", Soiree.points("library", { won = true }) == 30 and Soiree.points("library", { won = false }) == 5)
+	check("soirée: the best five Ballroom evenings count", Soiree.score("ballroom", { 10, 100, 40, 70, 0, 55, 25 }) == 290)
+	check("soirée: top 1% earn the medal", Soiree.reward(1, 150) == "medal" and Soiree.reward(2, 150) == "invitation" and Soiree.reward(20, 150) == nil)
+	check("soirée: a countdown reads naturally", Soiree.countdown(86400 + 4 * 3600 + 5) == "1 day 4 h" and Soiree.countdown(3 * 3600 + 12 * 60) == "3 h 12 min")
+end
+
 -- 10. Rivals.
 do
 	local Rival = loadModule("Rival")

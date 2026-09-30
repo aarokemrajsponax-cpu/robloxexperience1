@@ -49,6 +49,7 @@ Voice.Concierge = {
 		ballroom = "The Ballroom",
 		inviteFriend = "Invite a friend to the Library",
 		thanks = "Thank you",
+		fine = "I'm fine, thank you",
 		bye = "Good night",
 	},
 }

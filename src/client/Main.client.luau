@@ -33,6 +33,7 @@ local LedgerPanel = require(script.Parent.UI.LedgerPanel)
 local GiftPanel = require(script.Parent.UI.GiftPanel)
 local RegisterPanel = require(script.Parent.UI.RegisterPanel)
 local VaultView = require(script.Parent.World.VaultView)
+local StaffLife = require(script.Parent.World.StaffLife)
 local Counter = require(script.Parent.Table.Counter)
 local TableClient = require(script.Parent.Table.TableClient)
 local Ambient = require(script.Parent.World.Ambient)
@@ -85,6 +86,7 @@ TableClient.start()
 Ambient.start()
 BallroomView.start()
 VaultView.start()
+StaffLife.start()
 
 -- Controls stay off until Play.
 local controls: any = nil
@@ -186,6 +188,9 @@ local function onPlay()
 	if launch == "nightly" then
 		-- Arrived from a friend's Nightly invite: straight to tonight's table.
 		task.delay(0.6, quickSit, "nightly")
+	elseif launch == "salon" then
+		-- A friend shared a Flawless round: straight to a Salon table.
+		task.delay(0.6, quickSit, "room")
 	elseif launch == "ballroom" then
 		-- Arrived to watch a friend's evening: straight up to the Gallery.
 		task.delay(0.6, quickSit, "ballroom")
@@ -217,6 +222,8 @@ end)
 Remotes.event("Guest").OnClientEvent:Connect(function(message: any)
 	if type(message) == "table" and message.op == "howto" then
 		HowToPlay.open()
+	elseif type(message) == "table" and message.op == "clubHowTo" then
+		task.delay(1, HowToPlay.open, true)
 	elseif type(message) == "table" and message.op == "inviteLibrary" then
 		Invite.library()
 	end

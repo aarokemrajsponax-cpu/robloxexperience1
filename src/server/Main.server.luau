@@ -39,6 +39,12 @@ Boards.start()
 
 local LedgerService = require(script.Parent.LedgerService)
 local Collection = require(script.Parent.Collection)
+local SoireeService = require(script.Parent.SoireeService)
+SoireeService.notice = function(player, title, line)
+	Remotes.event("Shop"):FireClient(player, { op = "notice", title = title, line = line })
+end
+SoireeService.board = Boards.setSoiree
+SoireeService.start()
 
 local TableService = require(script.Parent.TableService)
 TableService.say = function(player, line)
@@ -84,6 +90,9 @@ end
 -- guests count), and the weekly board of points.
 BallroomService.onFinished = function(player, place, keys, counted)
 	LedgerService.add(player, "ballroom", place)
+	if counted then
+		SoireeService.record(player, "ballroom", { place = place, keys = keys })
+	end
 	Collection.ballroom(player, place)
 	local data = require(script.Parent.Profiles).get(player)
 	if not data or not counted then
@@ -164,6 +173,14 @@ TableService.onNightlyFinished = function(player)
 	Collection.nightly(player)
 end
 DuelService.onFinished = function(a, b, winner, _ranked, standIn)
+	if not standIn then
+		if a then
+			SoireeService.record(a, "library", { won = winner == "a" })
+		end
+		if b then
+			SoireeService.record(b, "library", { won = winner == "b" })
+		end
+	end
 	rivalsAfter(a)
 	rivalsAfter(b)
 	if a then

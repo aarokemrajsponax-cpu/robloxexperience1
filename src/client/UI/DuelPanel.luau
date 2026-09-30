@@ -10,6 +10,7 @@ local Voice = require(ReplicatedStorage.Shared.Voice)
 local Root = require(script.Parent.Root)
 local RoundPanel = require(script.Parent.RoundPanel)
 local Theme = require(script.Parent.Theme)
+local Share = require(script.Parent.Share)
 
 local DuelPanel = {}
 
@@ -66,7 +67,7 @@ function DuelPanel.show(message: { [string]: any }, actions: Actions)
 
 	local size = Root.size()
 	local w = math.min(420, size.X - 24)
-	local h = 250 + #rows * 26 + (if (message.placementLeft or 0) > 0 then 24 else 0)
+	local h = 300 + #rows * 26 + (if (message.placementLeft or 0) > 0 then 24 else 0)
 	local group, content = Theme.glass(Root.panels, NAME, UDim2.fromOffset(w, h), UDim2.new(0.5, 0, 0.5, 20))
 	Theme.list(content, 8).VerticalAlignment = Enum.VerticalAlignment.Top
 	Theme.text(content, Voice.Library.title .. "  ·  " .. kind, 11, "caps", { LayoutOrder = 1 })
@@ -89,10 +90,15 @@ function DuelPanel.show(message: { [string]: any }, actions: Actions)
 		Root.close(NAME)
 		actions.again()
 	end, 260).LayoutOrder = 1
+	if message.won or (type(message.markAfter) == "string" and message.markAfter ~= message.markBefore) then
+		Theme.key(keys, "Share", false, function()
+			Share.moment("library")
+		end, 260).LayoutOrder = 2
+	end
 	Theme.key(keys, "Leave", false, function()
 		Root.close(NAME)
 		actions.leave()
-	end, 260).LayoutOrder = 2
+	end, 260).LayoutOrder = 3
 	Root.open(NAME, group, nil, false)
 	pcall(function()
 		game:GetService("GuiService").SelectedObject = keys:FindFirstChildWhichIsA("TextButton")

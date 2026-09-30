@@ -24,6 +24,13 @@ local STEPS = {
 	{ title = Voice.HowToPlay[5], line = "The Salon keeps no clock. Take your time.", piece = "objetEgg" },
 }
 
+-- The Club Floor's own three steps, the first time a guest climbs the stair (§15).
+local CLUB_STEPS = {
+	{ title = "Same pieces, both of you", line = "In the Library two guests sort the identical deal. First to clear the felt takes the hand.", piece = "pocketWatch" },
+	{ title = "Three in a row sends a parcel", line = "Three into one case sends a sealed parcel of lookalikes across. Your own parcels cancel theirs.", piece = "goldCoins" },
+	{ title = "Keep your lamp lit", line = "In the Ballroom a felt holds sixteen. Go over for three seconds and your lamp goes out. The last lamp wins.", piece = "blackDiamond" },
+}
+
 -- Set by Main: what the last step's key does (seat the guest, or return them to the table).
 HowToPlay.onFinish = function() end
 
@@ -69,10 +76,11 @@ local function viewport(parent: Instance, pieceId: string): (ViewportFrame, () -
 	end
 end
 
-function HowToPlay.open()
+function HowToPlay.open(club: boolean?)
 	if Root.isOpen(NAME) then
 		return
 	end
+	local STEPS = if club then CLUB_STEPS else STEPS
 	local size = Root.size()
 	local w = math.min(480, size.X - 24)
 	local group, content = Theme.glass(Root.panels, NAME, UDim2.fromOffset(w, 470))
@@ -116,7 +124,7 @@ function HowToPlay.open()
 		stopSpin = stop
 		back.Visible = index > 1
 		local last = index == #STEPS
-		local text = if last then (if State.seated then "Back to the table" else "Take me to a table") else "Next"
+		local text = if last then (if club then "Understood" elseif State.seated then "Back to the table" else "Take me to a table") else "Next"
 		nextKey.Text = Theme.track(string.upper(text))
 	end
 
@@ -130,7 +138,9 @@ function HowToPlay.open()
 			render()
 		else
 			Root.close(NAME)
-			HowToPlay.onFinish()
+			if not club then
+				HowToPlay.onFinish()
+			end
 		end
 	end, 220)
 	local close = Theme.key(content, "Close", false, function()

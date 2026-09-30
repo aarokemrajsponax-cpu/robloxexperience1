@@ -36,6 +36,7 @@ cache["ballroom:week"] = { entries = {}, available = false }
 cache["ballroom:all"] = { entries = {}, available = false }
 -- Lights Out results from every server, newest first (§9.8): "Table 12 kept the last lamp..."
 cache["ballroom:feed"] = { entries = {}, available = true }
+cache["soiree:current"] = { entries = {}, available = false }
 local FEED_TOPIC = "MaisonBallroomResults"
 local FEED_KEEP = 8
 
@@ -505,6 +506,12 @@ local function addFeed(text: string)
 	while #entries > FEED_KEEP do
 		table.remove(entries)
 	end
+	publish()
+end
+
+-- The Soirée's board this weekend (drawn by the Soirée service).
+function Boards.setSoiree(_key: string, entries: { Entry })
+	cache["soiree:current"] = { entries = entries, available = true }
 	publish()
 end
 

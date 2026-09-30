@@ -22,6 +22,10 @@ local dressed: { [Model]: Player } = {}
 
 -- Any item id, including the Ledger's editions.
 function Dressing.item(id: string): Wardrobe.Item?
+	local medal = string.match(id, "^soiree:([%d%-]+):medal$")
+	if medal then
+		return Wardrobe.soireeMedal(medal)
+	end
 	return Wardrobe.get(id) or Ledger.item(id)
 end
 

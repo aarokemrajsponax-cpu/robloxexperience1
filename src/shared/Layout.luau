@@ -51,6 +51,8 @@ Layout.Foyer = {
 	livreDOr = CFrame.lookAt(Vector3.new(-19, 3, 36), Vector3.new(-19, 3, 0)),
 	stair = { x = 8, fromZ = 24, toZ = 38, topY = 17 },
 	stairRopeZ = 22.5,
+	-- The Soirée's gilded countdown board, on an easel at the foot of the stair.
+	soireeBoard = CFrame.lookAt(Vector3.new(2.5, 3, 23), Vector3.new(-4, 3, 12)),
 	boutiqueDoor = CFrame.lookAt(Vector3.new(19, 3, 41.5), Vector3.new(19, 3, 0)),
 }
 

@@ -74,7 +74,8 @@ function Collection.standing(player: Player)
 	local after = table.find(Standing.order, now) or 1
 	if after > before then
 		d.standing = now
-		Collection.say(player, string.format("You're a %s of the house now.", now))
+		Collection.say(player, "The house has noticed.")
+		Collection.notice(player, "House Standing", string.format("You're a %s of the house now.", now))
 		Analytics.custom(player, "Standing", after, { standing = now })
 	end
 end

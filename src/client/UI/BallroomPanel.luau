@@ -10,6 +10,7 @@ local Voice = require(ReplicatedStorage.Shared.Voice)
 local Root = require(script.Parent.Root)
 local RoundPanel = require(script.Parent.RoundPanel)
 local Theme = require(script.Parent.Theme)
+local Share = require(script.Parent.Share)
 
 local BallroomPanel = {}
 
@@ -52,7 +53,7 @@ local function card(caps: string, heading: string, sub: string?, rows: { { strin
 	BallroomPanel.close()
 	local size = Root.size()
 	local w = math.min(420, size.X - 24)
-	local h = 250 + #rows * 26 + (if sub then 24 else 0) + (if note then 24 else 0)
+	local h = 300 + #rows * 26 + (if sub then 24 else 0) + (if note then 24 else 0)
 	local group, content = Theme.glass(Root.panels, NAME, UDim2.fromOffset(w, h), UDim2.new(0.5, 0, 0.5, 20))
 	Theme.list(content, 8).VerticalAlignment = Enum.VerticalAlignment.Top
 	Theme.text(content, caps, 11, "caps", { LayoutOrder = 1 })
@@ -83,10 +84,15 @@ local function card(caps: string, heading: string, sub: string?, rows: { { strin
 			fn()
 		end, 260).LayoutOrder = i
 	end
+	if heading == Voice.Ballroom.lastLamp then
+		Theme.key(keys, "Share", false, function()
+			Share.moment("ballroom")
+		end, 260).LayoutOrder = 3
+	end
 	Theme.key(keys, "Leave", false, function()
 		BallroomPanel.close()
 		actions.leave()
-	end, 260).LayoutOrder = 3
+	end, 260).LayoutOrder = 4
 	Root.open(NAME, group, nil, false)
 	pcall(function()
 		game:GetService("GuiService").SelectedObject = keys:FindFirstChildWhichIsA("TextButton")

@@ -138,6 +138,25 @@ function Wardrobe.get(id: string): Item?
 	return byId[id]
 end
 
+-- The Soirée Medal for a weekend: a dated nameplate frame, earned only, never sold.
+function Wardrobe.soireeMedal(key: string): Item
+	local id = "soiree:" .. key .. ":medal"
+	local existing = byId[id]
+	if existing then
+		return existing
+	end
+	local item: Item = {
+		id = id,
+		name = "The Soirée Medal · " .. key,
+		kind = "nameplate",
+		line = "Top 1% at the Soirée of " .. key .. ". Never sold.",
+		source = "ledger",
+		style = { frame = Color3.fromRGB(236, 196, 98), fill = Color3.fromRGB(40, 12, 20), line = Color3.fromRGB(236, 216, 166) },
+	}
+	byId[id] = item
+	return item
+end
+
 -- Whether the house can actually deliver an item: looks need clothing, chimes a sound and
 -- gestures an animation uploaded and named in Config.
 function Wardrobe.deliverable(item: Item): boolean
