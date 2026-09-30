@@ -1548,6 +1548,30 @@ check("lines are chosen, never typed", askAs(pia, { op = "sign", line = 99 }).ok
 check("everyone reads the signatures", askAs(pia, { op = "guestBook" }).entries[1].name == "Quin")
 end
 
+---------------------------------------------------------------------------------------------------
+-- Giving the Gold Key
+---------------------------------------------------------------------------------------------------
+do
+	local giver = guest("Rae", 30)
+	local taker = guest("Sol", 31)
+	check("the Gold Key can't be given before its product exists", askAs(giver, { op = "goldKeyGift", userId = taker.UserId }).ok == false)
+	Config.data.Products.goldKeyGift = 8001
+	check("give the Gold Key to a guest", askAs(giver, { op = "goldKeyGift", userId = taker.UserId }).ok and prompts[#prompts].id == 8001)
+	receipt(giver, 8001, "GK-1")
+	advance(0.5)
+	check("they hold the Gold Key", profiles[taker].Data.goldKey == true and profiles[giver].Data.goldKey == false)
+	check("and hear who gave it", lastOp(taker, "notice") and string.find(lastOp(taker, "notice").line, "Rae gave you the Gold Key", 1, true) ~= nil)
+	check("nobody is given it twice", askAs(giver, { op = "goldKeyGift", userId = taker.UserId }).ok == false)
+	-- If the guest leaves before Roblox confirms, the buyer keeps the Gold Key.
+	local third = guest("Tam", 32)
+	askAs(giver, { op = "goldKeyGift", userId = third.UserId })
+	third.Parent = nil
+	receipt(giver, 8001, "GK-2")
+	advance(0.5)
+	check("a gift that can't be handed over becomes the buyer's", profiles[giver].Data.goldKey == true)
+	Config.data.Products.goldKeyGift = 0
+end
+
 print(string.format("%d passed, %d failed", passed, failed))
 if failed > 0 then
 	process.exit(1)

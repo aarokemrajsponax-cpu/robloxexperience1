@@ -57,7 +57,7 @@ local function productId(key: string): number
 	return if type(id) == "number" then id else 0
 end
 
-local PRODUCT_KEYS = { "introduction", "ledger", "season" }
+local PRODUCT_KEYS = { "introduction", "ledger", "season", "goldKeyGift" }
 for _, salute in Salutes.List do
 	table.insert(PRODUCT_KEYS, "salute_" .. salute.id)
 end
@@ -216,7 +216,7 @@ local function shelves(player: Player, data: Profiles.Data): { [string]: any }
 		featured = cards(Boutique.featured()),
 		season = { id = season.id, name = season.name, price = livePrice(productId("season"), Enum.InfoType.Product), pieces = cards(seasonPieces) },
 		gilt = cards(Wardrobe.giltPool()),
-		goldKey = { owned = data.goldKey, price = livePrice(productId("goldKey"), Enum.InfoType.GamePass) },
+		goldKey = { owned = data.goldKey, price = livePrice(productId("goldKey"), Enum.InfoType.GamePass), giftPrice = livePrice(productId("goldKeyGift"), Enum.InfoType.Product), giftable = productId("goldKeyGift") ~= 0 },
 		ledger = {
 			view = ledger,
 			price = if ledger.leather then nil else livePrice(productId("ledger"), Enum.InfoType.Product),
@@ -295,6 +295,28 @@ local function grant(player: Player, data: Profiles.Data, key: string)
 		else
 			-- No choice on file (it expired, or the purchase came from elsewhere): keep it as credit.
 			credit(data, key)
+		end
+	elseif key == "goldKeyGift" then
+		-- The Gold Key for another guest; if they've gone (or have it), it's the buyer's (or credit).
+		local p = data.pending
+		local recipient = if p.product == key and p.giftTo ~= 0 then Players:GetPlayerByUserId(p.giftTo) else nil
+		local rdata = recipient and Profiles.get(recipient)
+		data.pending = { product = "", item = "", giftTo = 0, at = 0 }
+		if recipient and rdata and not rdata.goldKey then
+			rdata.goldKey = true
+			table.insert(rdata.gifts, { from = player.DisplayName, item = "goldKey", at = os.time() })
+			shopEvent:FireClient(recipient, { op = "notice", title = "The Gold Key", line = player.DisplayName .. " gave you the Gold Key." })
+			Shop.handOver(recipient, player.DisplayName, "the Gold Key")
+			Dressing.nameplate(recipient)
+			Shop.push(recipient)
+			Analytics.custom(player, "Gold Key gifted", nil, nil)
+		elseif not data.goldKey then
+			data.goldKey = true
+			shopEvent:FireClient(player, { op = "notice", title = "The Gold Key", line = "Your gift couldn't be handed over, so the Gold Key is yours." })
+			Dressing.nameplate(player)
+		else
+			credit(data, "tier499")
+			shopEvent:FireClient(player, { op = "notice", title = "The Gold Key", line = "Your gift couldn't be handed over, so it's kept as Boutique credit." })
 		end
 	elseif key == "introduction" then
 		data.introduction = true
@@ -484,6 +506,18 @@ local function onAsk(player: Player, request: unknown): any
 			MarketplaceService:PromptGamePassPurchase(player, id)
 		end)
 		return { ok = true, prompted = true }
+	elseif op == "goldKeyGift" and type(r.userId) == "number" then
+		local recipient = Players:GetPlayerByUserId(r.userId :: number)
+		local rdata = recipient and Profiles.get(recipient)
+		if productId("goldKeyGift") == 0 then
+			return { ok = false, why = "Giving the Gold Key isn't offered yet." }
+		elseif not recipient or recipient == player or not rdata then
+			return { ok = false, why = "That guest isn't in the house just now." }
+		elseif rdata.goldKey then
+			return { ok = false, why = recipient.DisplayName .. " already holds the Gold Key." }
+		end
+		data.pending = { product = "goldKeyGift", item = "", giftTo = recipient.UserId, at = os.time() }
+		return { ok = prompt(player, "goldKeyGift"), prompted = true }
 	elseif op == "ledgerLeather" then
 		local view = LedgerService.view(data)
 		if view.card then

@@ -206,6 +206,19 @@ local function doors()
 	end
 end
 
+-- The Gold Key opens the Terrace all year: on a holder's screen its doors let them through.
+local function terrace()
+	local open = Workspace:GetAttribute("TerraceOpen") == true
+	for _, door in CollectionService:GetTagged("TerraceDoor") do
+		if door:IsA("BasePart") and not open then
+			local mine = Closet.goldKey
+			door.CanCollide = not mine
+			door.LocalTransparencyModifier = if mine then 0.8 else 0
+		end
+	end
+end
+SuiteView.terrace = terrace
+
 -- Other guests in the Suite aren't drawn here: each guest's Suite is their own.
 local function setHidden(other: Player, hide: boolean)
 	local character = other.Character
@@ -241,8 +254,11 @@ end
 
 function SuiteView.start()
 	doors()
+	terrace()
+	Workspace:GetAttributeChangedSignal("TerraceOpen"):Connect(terrace)
 	Closet.Changed:Connect(function()
 		doors()
+		terrace()
 		if inside then
 			draw()
 		end

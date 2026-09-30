@@ -119,6 +119,9 @@ AdmireCard.openBoutique = function(tab, forGuest)
 end
 AdmireCard.isSeated = TableClient.isSeated
 AdmireCard.start()
+require(script.Parent.UI.BallroomPanel).openSalutes = function()
+	BoutiquePanel.open("salutes")
+end
 RegularPlates.start()
 StaffLife.start()
 

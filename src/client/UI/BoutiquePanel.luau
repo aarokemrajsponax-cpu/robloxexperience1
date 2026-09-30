@@ -248,6 +248,7 @@ local function render()
 			"Three Gold Key house looks",
 			"The Gold Key chair and table trim",
 			"Two extra rooms in your Suite",
+			"The Terrace, all year round",
 			"+20% on all Gilt",
 		} do
 			note(frame, line, add())
@@ -260,6 +261,16 @@ local function render()
 				after(Closet.ask({ op = "goldKey" }))
 			end, 320)
 			k.LayoutOrder = add()
+		end
+		-- The Gold Key makes a fine gift.
+		if s.goldKey.giftable and #s.guests > 0 then
+			note(frame, "Give the Gold Key to a guest in the house:", add())
+			for _, g in s.guests do
+				local gk = Theme.key(frame, g.name .. " · " .. robux(s.goldKey.giftPrice), false, function()
+					after(Closet.ask({ op = "goldKeyGift", userId = g.userId }))
+				end, 320)
+				gk.LayoutOrder = add()
+			end
 		end
 	elseif currentTab == "ledger" then
 		local v = s.ledger.view

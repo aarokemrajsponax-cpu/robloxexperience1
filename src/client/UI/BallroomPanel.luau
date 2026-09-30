@@ -14,6 +14,9 @@ local Share = require(script.Parent.Share)
 
 local BallroomPanel = {}
 
+-- Opens the Boutique's Salutes (set by Main).
+BallroomPanel.openSalutes = function() end
+
 local NAME = "Ballroom"
 
 export type Actions = { gallery: () -> (), stay: () -> (), leave: () -> () }
@@ -87,6 +90,11 @@ local function card(caps: string, heading: string, sub: string?, rows: { { strin
 	if heading == Voice.Ballroom.lastLamp then
 		Theme.key(keys, "Share", false, function()
 			Share.moment("ballroom")
+		end, 260).LayoutOrder = 3
+		-- The moment to celebrate with the whole house (a Salute: spectacle only).
+		Theme.key(keys, "Salute the house", false, function()
+			BallroomPanel.close()
+			BallroomPanel.openSalutes()
 		end, 260).LayoutOrder = 3
 	end
 	Theme.key(keys, "Leave", false, function()

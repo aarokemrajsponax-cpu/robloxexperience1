@@ -1760,6 +1760,15 @@ Root2.close()
 advance(0.5)
 check("no errors among guests", #errors == 0, errors[1])
 
+-- The Gold Key opens the Terrace all year (on the holder's own screen).
+local terraceDoor = CollectionService:GetTagged("TerraceDoor")[1]
+serverSays("Shop", { op = "state", owned = {}, equipped = {}, gilt = 0, goldKey = false, credits = {}, suite = {}, ledger = { page = 2, pages = 50, progress = 0.1, leather = false, term = "2026-autumn" } })
+advance(0.5)
+check("out of season the Terrace doors are shut", terraceDoor ~= nil and terraceDoor.CanCollide == true)
+serverSays("Shop", { op = "state", owned = {}, equipped = {}, gilt = 0, goldKey = true, credits = {}, suite = {}, ledger = { page = 2, pages = 50, progress = 0.1, leather = false, term = "2026-autumn" } })
+advance(0.5)
+check("for a Gold Key holder they open", terraceDoor.CanCollide == false)
+
 ---------------------------------------------------------------------------------------------------
 -- 8. A respawn hands straight back to the follow camera
 ---------------------------------------------------------------------------------------------------

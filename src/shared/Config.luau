@@ -191,6 +191,7 @@ local defaults = {
 		ledger = 0, -- the Leather-Bound Ledger, per Term
 		season = 0, -- a season collection
 		goldKey = 0, -- a game pass
+		goldKeyGift = 0, -- a developer product at the Gold Key's price: the Gold Key, for another guest
 		blackCard = "", -- the Black Card subscription's id ("EXP-..."); "" means it isn't offered
 		-- Salutes: one developer product each (suggested prices in Salutes.luau).
 		salute_goldLeaf = 0,
