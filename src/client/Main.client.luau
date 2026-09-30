@@ -34,6 +34,8 @@ local SuitePanel = require(script.Parent.UI.SuitePanel)
 local CirclePanel = require(script.Parent.UI.CirclePanel)
 local SuiteView = require(script.Parent.World.SuiteView)
 local SaluteView = require(script.Parent.World.SaluteView)
+local EventBanner = require(script.Parent.UI.EventBanner)
+local AdminPanel = require(script.Parent.UI.AdminPanel)
 local WardrobePanel = require(script.Parent.UI.WardrobePanel)
 local LedgerPanel = require(script.Parent.UI.LedgerPanel)
 local GiftPanel = require(script.Parent.UI.GiftPanel)
@@ -106,6 +108,7 @@ BallroomView.start()
 VaultView.start()
 SuiteView.start()
 SaluteView.start()
+EventBanner.start()
 StaffLife.start()
 
 -- Controls stay off until Play.
@@ -140,9 +143,15 @@ local function applySpeed()
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	if humanoid then
-		humanoid.WalkSpeed = if running then Config.data.Movement.runSpeed else Config.data.Movement.walkSpeed
+		-- The house's Quickstep event speeds everyone up.
+		local boost = Workspace:GetAttribute("SpeedBoost")
+		local factor = if type(boost) == "number" then boost else 1
+		humanoid.WalkSpeed = (if running then Config.data.Movement.runSpeed else Config.data.Movement.walkSpeed) * factor
 	end
 end
+Workspace:GetAttributeChangedSignal("SpeedBoost"):Connect(function()
+	applySpeed()
+end)
 ContextActionService:BindAction("MaisonRun", function(_, state, input)
 	if input.KeyCode == Enum.KeyCode.ButtonL3 then
 		if state == Enum.UserInputState.Begin then
@@ -170,12 +179,28 @@ local function quickSit(mode: string?)
 end
 
 local hudStarted = false
+local ownerKeyShown = false
 local function startHud()
 	if hudStarted then
 		return
 	end
 	hudStarted = true
 	Hud.start(SettingsPanel.open, TableClient.leave)
+	-- The owner's House controls: a key only they see (the server checks every request).
+	local function ownerKey()
+		if player:GetAttribute("MaisonAdmin") == true and not ownerKeyShown then
+			ownerKeyShown = true
+			Hud.setOwnerKey(AdminPanel.open)
+			ContextActionService:BindAction("MaisonHouseControls", function(_, state)
+				if state == Enum.UserInputState.Begin then
+					AdminPanel.open()
+				end
+				return Enum.ContextActionResult.Sink
+			end, false, Enum.KeyCode.Semicolon)
+		end
+	end
+	ownerKey()
+	player:GetAttributeChangedSignal("MaisonAdmin"):Connect(ownerKey)
 end
 
 local function waitForCharacter(): Model

@@ -331,9 +331,13 @@ local customEvents = {}
 local stubs = {
 	["ReplicatedStorage.Shared.Remotes"] = function()
 		local funcs = {}
+		local events = {}
 		return {
 			event = function(name)
-				return {
+				if events[name] then
+					return events[name]
+				end
+				events[name] = {
 					FireClient = function(_, player, message)
 						table.insert(player.inbox, message)
 					end,
@@ -342,6 +346,7 @@ local stubs = {
 					end,
 					OnServerEvent = signal(),
 				}
+				return events[name]
 			end,
 			func = function(name)
 				funcs[name] = funcs[name] or {}
@@ -393,6 +398,7 @@ local mythicCounts = {}
 local memoryMaps = {}
 local awarded = {}
 local dataStores, orderedStores, guidCount = {}, {}, 0
+local published, subscriptions, teleports = {}, {}, {}
 local services = {
 	Players = PlayersService,
 	MarketplaceService = MarketplaceService,
@@ -485,7 +491,32 @@ local services = {
 			}
 		end,
 	},
-	Workspace = { SetAttribute = function() end },
+	Workspace = (function()
+		local dm = roblox.Instance.new("DataModel")
+		return dm:GetService("Workspace")
+	end)(),
+	MessagingService = {
+		PublishAsync = function(_, topic, message)
+			table.insert(published, { topic = topic, message = message })
+		end,
+		SubscribeAsync = function(_, topic, fn)
+			subscriptions[topic] = fn
+		end,
+	},
+	TeleportService = {
+		TeleportAsync = function(_, placeId, players, options)
+			table.insert(teleports, { placeId = placeId, players = players, jobId = options and options.ServerInstanceId })
+		end,
+	},
+	TextService = {
+		FilterStringAsync = function(_, text)
+			return {
+				GetNonChatStringForBroadcastAsync = function()
+					return (string.gsub(text, "rude", "####"))
+				end,
+			}
+		end,
+	},
 	BadgeService = {
 		AwardBadge = function(_, userId, id)
 			table.insert(awarded, { userId = userId, id = id })
@@ -1315,6 +1346,138 @@ advance(200)
 check("and it empties as they play", SaluteService.waiting() == 0)
 Config.data.Products.salute_goldLeaf = 0
 Config.data.Products.salute_grand = 0
+
+---------------------------------------------------------------------------------------------------
+-- House controls: the owner's panel
+---------------------------------------------------------------------------------------------------
+local AdminService = module("ServerScriptService", "Server", "AdminService")
+local GiltService = module("ServerScriptService", "Server", "Gilt")
+Config.data.Admin.studioEveryone = false
+Config.data.Admin.userIds = { 100 }
+local owner = guest("AJ", 100)
+local ned = guest("Ned", 101)
+local adminNotes = {}
+AdminService.note = function(text, everywhere)
+	table.insert(adminNotes, { text = text, everywhere = everywhere })
+end
+local salutesGiven = {}
+AdminService.salute = function(_p, id, by)
+	table.insert(salutesGiven, { id = id, by = by })
+end
+run(AdminService.start)
+local function adminAs(player, request)
+	advance(0.5)
+	local r
+	run(function()
+		r = AdminService.handle(player, request)
+	end)
+	return r
+end
+local function lastBroadcast(op)
+	for i = #broadcasts, 1, -1 do
+		if broadcasts[i].message.op == op then
+			return broadcasts[i].message
+		end
+	end
+	return nil
+end
+check("only the owner may use House controls", adminAs(ned, { op = "state" }).ok == false and adminAs(owner, { op = "state" }).ok == true)
+check("the owner is marked, so only they see the House key", owner:GetAttribute("MaisonAdmin") == true and ned:GetAttribute("MaisonAdmin") ~= true)
+local st = adminAs(owner, { op = "state" })
+check("the panel lists the events, the seasons, the salutes and the guests", #st.events == 8 and #st.seasons == 10 and #st.salutes == 5 and #st.guests >= 2)
+local nd = profiles[ned].Data
+nd.gilt, nd.giltDay = 0, { day = -1, earned = 0 }
+-- Ned walks the house in a real character (a head for a crown, a root for picking things up).
+local nedModel = roblox.Instance.new("Model")
+local nedRoot = roblox.Instance.new("Part")
+nedRoot.Name = "HumanoidRootPart"
+nedRoot.Position = Vector3.new(0, 5, 0)
+nedRoot.Parent = nedModel
+local nedHead = roblox.Instance.new("Part")
+nedHead.Name = "Head"
+nedHead.CFrame = CFrame.new(0, 6.5, 0)
+nedHead.Position = Vector3.new(0, 6.5, 0)
+nedHead.Parent = nedModel
+ned.Character = nedModel
+adminAs(owner, { op = "event", id = "goldenHour", minutes = 15 })
+local paidGolden
+run(function()
+	paidGolden = GiltService.pay(ned, nd, 100, "test")
+end)
+check("Golden Hour: Gilt counts double", paidGolden == 200, paidGolden)
+check("every guest's screen shows it", services.Workspace:GetAttribute("Event_goldenHour") ~= nil and lastBroadcast("salute").title == "Golden Hour")
+adminAs(owner, { op = "event", id = "luckyHour", minutes = 5 })
+adminAs(owner, { op = "event", id = "pageTurner", minutes = 5 })
+check("Lucky Hour: Mythics ten times as likely", AdminService.mythicLuck() == 10)
+check("the Page-Turner: pages twice as fast", AdminService.ledgerBoost() == 2)
+adminAs(owner, { op = "stop", id = "goldenHour" })
+check("an event can be stopped", AdminService.giltBoost() == 1 and services.Workspace:GetAttribute("Event_goldenHour") == nil)
+advance(5 * 60 + 2)
+check("events end by themselves", AdminService.mythicLuck() == 1 and AdminService.ledgerBoost() == 1)
+adminAs(owner, { op = "event", id = "featherlight", minutes = 1 })
+check("Featherlight lowers the house's gravity", services.Workspace.Gravity < 100)
+advance(62)
+check("and puts it back", math.abs(services.Workspace.Gravity - 196.2) < 0.01)
+-- A treasure hunt: keys around the house; walking over one pays.
+adminAs(owner, { op = "event", id = "treasure", minutes = 15 })
+local keysFolder = services.Workspace:FindFirstChild("HouseEvents")
+local keyParts = {}
+for _, p in (keysFolder and keysFolder:GetChildren() or {}) do
+	if p:GetAttribute("Pickup") == "key" then
+		table.insert(keyParts, p)
+	end
+end
+check("the Treasure Hunt hides five golden keys", #keyParts == 5, #keyParts)
+local giltBeforeKey = nd.gilt
+nedRoot.Position = keyParts[1].CFrame.Position
+run(AdminService.collect)
+check("the finder of a key wins Gilt", nd.gilt == giltBeforeKey + 250, nd.gilt - giltBeforeKey)
+check("and the house hears who found it", string.find(lastBroadcast("salute").line or "", "Ned found a golden key", 1, true) ~= nil)
+for i = 2, 5 do
+	nedRoot.Position = keyParts[i].CFrame.Position
+	run(AdminService.collect)
+end
+check("when every key is found, the hunt ends with fireworks", not AdminService.active("treasure") and lastBroadcast("salute").effects[1] == "fireworks")
+adminAs(owner, { op = "event", id = "goldRain", minutes = 5 })
+local coins = 0
+for _, p in services.Workspace:FindFirstChild("HouseEvents"):GetChildren() do
+	if p:GetAttribute("Pickup") == "coin" then
+		coins += 1
+	end
+end
+check("Gold Rain scatters thirty coins", coins == 30, coins)
+-- Guests. (Ned steps away from the coins first, so only the gifts count.)
+nedRoot.Position = Vector3.new(0, -500, 0)
+advance(0.5)
+local giltBeforeGift = nd.gilt
+check("a gift of Gilt to a guest", adminAs(owner, { op = "gift", userId = ned.UserId, amount = 500 }).ok ~= false and nd.gilt == giltBeforeGift + 500)
+check("only the offered amounts", adminAs(owner, { op = "gift", userId = ned.UserId, amount = 333 }).ok == false)
+check("a gift to everyone", adminAs(owner, { op = "giftAll", amount = 100 }).ok and nd.gilt == giltBeforeGift + 600)
+check("crowning a guest makes them the Guest of Honour", adminAs(owner, { op = "crown", userId = ned.UserId }).ok ~= false and ned:GetAttribute("GuestOfHonour") == true and string.find(lastBroadcast("salute").line, "Guest of Honour", 1, true) ~= nil)
+check("the owner can't remove themselves", adminAs(owner, { op = "kick", userId = owner.UserId }).ok == false)
+check("free salutes from the house", adminAs(owner, { op = "salute", id = "fireworks" }).ok and salutesGiven[#salutesGiven].id == "fireworks" and salutesGiven[#salutesGiven].by == "AJ")
+-- Announcements.
+check("a ready line is announced", adminAs(owner, { op = "announce", preset = 1 }).ok and lastBroadcast("announce").text == st.announcements[1])
+local typed = adminAs(owner, { op = "announce", text = "a rude line", everywhere = true })
+check("a typed line is filtered by Roblox first", typed.ok and lastBroadcast("announce").text == "a #### line")
+check("and can go to every house", #published >= 1 and published[#published].message.op == "announce")
+check("lines are kept short", adminAs(owner, { op = "announce", text = string.rep("x", 200) }).ok == false)
+-- The summons: guests in another house may join this one.
+check("the owner can summon every house", adminAs(owner, { op = "summon" }).ok and published[#published].message.op == "summon")
+local onAdmin = subscriptions.MaisonAdmin
+run(function()
+	onAdmin({ Data = { op = "summon", jobId = "other-house", by = "AJ", text = "" } })
+end)
+check("a summons from another house is offered to every guest here", lastBroadcast("summon") ~= nil and lastBroadcast("summon").jobId == "other-house")
+local joinSignal = Remotes.event("Salute").OnServerEvent
+run(function()
+	joinSignal:Fire(ned, { op = "join", jobId = "other-house" })
+end)
+check("Go there takes the guest to the owner's house", #teleports == 1 and teleports[1].jobId == "other-house" and teleports[1].players[1] == ned)
+run(function()
+	joinSignal:Fire(ned, { op = "join", jobId = "made-up-house" })
+end)
+check("only a house that was really summoned", #teleports == 1)
 
 print(string.format("%d passed, %d failed", passed, failed))
 if failed > 0 then

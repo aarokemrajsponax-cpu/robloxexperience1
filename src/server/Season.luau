@@ -120,6 +120,20 @@ function Season.current(): Seasons.Season
 	return current or Seasons.now()
 end
 
+-- The owner's panel can dress the house in another season for a while; it turns back by itself.
+local forcedUntil = 0
+function Season.force(id: string, seconds: number): boolean
+	local s = Seasons.byId[id]
+	if not s then
+		return false
+	end
+	forcedUntil = os.time() + seconds
+	current = s
+	publish(s)
+	apply(s, 4)
+	return true
+end
+
 function Season.start()
 	setupLighting()
 	local s = Seasons.now()
@@ -130,7 +144,7 @@ function Season.start()
 		while true do
 			task.wait(60)
 			local now = Seasons.now()
-			if current == nil or now.id ~= current.id then
+			if os.time() >= forcedUntil and (current == nil or now.id ~= current.id) then
 				current = now
 				publish(now)
 				apply(now, 8)

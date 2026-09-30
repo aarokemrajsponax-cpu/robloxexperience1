@@ -13,9 +13,16 @@ local Gilt = {}
 -- Called after every payment (the Ledger and the Shop tell the guest's screen).
 Gilt.changed = function(_player: Player) end
 
+-- The house's events (Golden Hour) multiply what's earned, and the day's soft cap with it.
+Gilt.boost = function(): number
+	return 1
+end
+
 -- Pays `earned` Gilt to a profile and returns what was actually paid (after the soft cap).
 function Gilt.pay(player: Player, data: Profiles.Data, earned: number, source: string): number
 	local g = Config.data.Gilt
+	local boost = math.max(1, Gilt.boost())
+	earned = math.floor(earned * boost + 0.5)
 	if data.goldKey then
 		earned = math.floor(earned * (1 + g.goldKeyBonus) + 0.5)
 	end
@@ -23,7 +30,7 @@ function Gilt.pay(player: Player, data: Profiles.Data, earned: number, source: s
 	if data.giltDay.day ~= today then
 		data.giltDay = { day = today, earned = 0 }
 	end
-	local full = math.max(0, math.min(earned, g.dailySoftCap - data.giltDay.earned))
+	local full = math.max(0, math.min(earned, g.dailySoftCap * boost - data.giltDay.earned))
 	local reduced = math.floor((earned - full) * g.softCapRate)
 	local paid = full + reduced
 	data.giltDay.earned += paid

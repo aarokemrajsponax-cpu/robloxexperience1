@@ -88,6 +88,10 @@ TableService.onRound = function(_player: Player, _roomId: string, _grade: string
 TableService.onFiling = function(_player: Player, _correct: boolean) end
 -- Called after a scored Nightly is on the board (for Rivals).
 TableService.onNightlyFinished = function(_player: Player, _percentile: number?) end
+-- The house's Lucky Hour (set by the owner's panel).
+TableService.mythicLuck = function(): number
+	return 1
+end
 -- Set by the server: is the guest busy elsewhere (a Library duel)?
 TableService.isBusy = function(_player: Player): boolean
 	return false
@@ -189,7 +193,7 @@ local function dealRound(s: Session)
 		end
 	else
 		s.seed = Seed.fresh()
-		result = Deal.generate(s.seed, s.room, s.round, Season.current().id, { allowMythic = true })
+		result = Deal.generate(s.seed, s.room, s.round, Season.current().id, { allowMythic = true, mythicLuck = TableService.mythicLuck() })
 		if s.room.id == "obsidian" and s.round >= 4 then
 			unlockMidnight(s)
 		end

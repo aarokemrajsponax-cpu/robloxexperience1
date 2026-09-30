@@ -64,6 +64,13 @@ function Hud.start(openSettings: () -> (), leave: () -> ())
 	settingsButton.LayoutOrder = 2
 end
 
+-- The owner's "House" key (their controls), after Settings.
+function Hud.setOwnerKey(onPress: () -> ())
+	local key = Theme.key(bar, "House", false, onPress, 100)
+	key.Name = "OwnerKey"
+	key.LayoutOrder = 3
+end
+
 -- One optional key beside Leave (in the Library, "Invite a friend" while you wait).
 function Hud.setExtraKey(text: string?, onPress: (() -> ())?)
 	if extraKey then

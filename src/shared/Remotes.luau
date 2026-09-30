@@ -24,6 +24,7 @@ Remotes.Functions = {
 	"GetBoard",
 	"QuickSit",
 	"ShopAsk", -- client -> server: the Boutique's shelves, choosing, equipping, the Ledger
+	"AdminAsk", -- client -> server: the owner's House controls (checked on the server every time)
 }
 
 local folder: Folder? = nil

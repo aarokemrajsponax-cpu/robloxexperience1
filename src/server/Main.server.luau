@@ -142,6 +142,18 @@ CircleService.board = Boards.setCircles
 local SaluteService = require(script.Parent.SaluteService)
 SaluteService.note = Boards.note
 SaluteService.benefactor = Dressing.nameplate
+
+-- House controls: the owner's panel (events, spectacle, gifts, announcements).
+local AdminService = require(script.Parent.AdminService)
+AdminService.salute = SaluteService.play
+AdminService.season = Season.force
+AdminService.note = Boards.note
+AdminService.isSeated = function(player)
+	return TableService.isSeated(player) or DuelService.isSeated(player) or BallroomService.isSeated(player)
+end
+LedgerService.boost = AdminService.ledgerBoost
+TableService.mythicLuck = AdminService.mythicLuck
+AdminService.start()
 CircleService.changed = function(player)
 	Dressing.nameplate(player)
 	Shop.push(player)

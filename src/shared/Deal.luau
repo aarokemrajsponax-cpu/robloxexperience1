@@ -29,6 +29,7 @@ export type Result = {
 
 export type Options = {
 	allowMythic: boolean?,
+	mythicLuck: number?, -- the house's Lucky Hour divides the odds by this
 }
 
 function Deal.casesOpen(room: Rooms.Room, round: number): { string }
@@ -191,8 +192,9 @@ function Deal.generate(seed: number, room: Rooms.Room, round: number, seasonId: 
 
 	-- Mythic: the four rooms only.
 	if options and options.allowMythic and tuning.mythicChance > 0 then
+		local odds = math.max(1, math.floor(tuning.mythicChance / math.max(1, options.mythicLuck or 1)))
 		for _, pc in pieces do
-			if rng:NextInteger(1, tuning.mythicChance) == 1 then
+			if rng:NextInteger(1, odds) == 1 then
 				local m = Catalogue.mythicForCase(pc.case)
 				if m then
 					pc.id = m.id

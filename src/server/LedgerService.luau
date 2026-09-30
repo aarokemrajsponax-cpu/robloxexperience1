@@ -14,6 +14,11 @@ local Profiles = require(script.Parent.Profiles)
 
 local LedgerService = {}
 
+-- The house's events (the Page-Turner) multiply the points (set by the owner's panel).
+LedgerService.boost = function(): number
+	return 1
+end
+
 -- Tells a guest's screen (set by the Shop).
 LedgerService.changed = function(_player: Player, _pages: { number }?) end
 
@@ -72,7 +77,7 @@ function LedgerService.add(player: Player, source: string, detail: number?)
 		return
 	end
 	book(data)
-	local points = Ledger.points(source, detail)
+	local points = math.floor(Ledger.points(source, detail) * math.max(1, LedgerService.boost()) + 0.5)
 	if points <= 0 then
 		return
 	end

@@ -375,6 +375,27 @@ local defaults = {
 		straightToTableOfferSeconds = 12,
 	},
 
+	-- The owner's panel (House controls). The experience's owner (or the group's owner) is always
+	-- allowed; add other trusted user ids to `userIds`. In Studio every tester is allowed.
+	Admin = {
+		userIds = {} :: { number },
+		studioEveryone = true,
+		minutes = { 5, 15, 30 }, -- the event lengths offered
+		goldenHourGilt = 2,
+		luckyHourMythic = 10,
+		pageTurnerLedger = 2,
+		giantsScale = 1.6,
+		quickstepSpeed = 1.5,
+		featherGravity = 70,
+		coins = 30, -- gold coins per Gold Rain
+		coinGilt = 25,
+		coinSeconds = 90, -- how long the coins lie there
+		keys = 5, -- golden keys per Treasure Hunt
+		keyGilt = 250,
+		giftGilt = { 100, 500, 1000 }, -- what the owner can give
+		summonMinutes = 5, -- how long a summons to the owner's house stays open
+	},
+
 	-- Testing in Studio (never affects the live game).
 	Studio = {
 		skipTitle = true, -- Play in Studio drops you straight into your own character

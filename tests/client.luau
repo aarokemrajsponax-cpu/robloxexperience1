@@ -234,6 +234,10 @@ for _, m in { "Play", "Stop", "Pause", "Resume" } do
 	roblox.implementMethod("Sound", m, function() end)
 end
 roblox.implementMethod("ParticleEmitter", "Emit", function() end)
+-- The server's clock, running with the fake one.
+roblox.implementMethod("Workspace", "GetServerTimeNow", function()
+	return 1790000000 + now
+end)
 roblox.implementMethod("ParticleEmitter", "Clear", function() end)
 
 local function corners(cf, size)
@@ -1659,6 +1663,63 @@ check("the piano's card opens the Salutes", textOnScreen("A Shower of Gold Leaf"
 Root2.close()
 advance(0.5)
 check("no errors in a salute", #errors == 0, errors[1])
+
+-- House controls: only the owner has the key; the events show on everyone's screen.
+check("guests don't see the House key", textOnScreen("House") == nil)
+LocalPlayer:SetAttribute("MaisonAdmin", true)
+advance(0.5)
+invokeResults.AdminAsk = {
+	ok = true, minutes = { 5, 15, 30 }, giftGilt = { 100, 500, 1000 }, now = 0,
+	events = { { id = "goldenHour", name = "Golden Hour", line = "Gilt counts double." } },
+	salutes = { { id = "goldLeaf", name = "A Shower of Gold Leaf" } },
+	seasons = { { id = "yule", name = "Yuletide" } },
+	guests = { { userId = 2, name = "Ben", crowned = false } },
+	announcements = { "The owner is in the house tonight." },
+}
+check("the owner sees the House key", press("House"))
+advance(1)
+check("the owner's panel opens", textOnScreen("House controls") ~= nil and textOnScreen("Golden Hour") ~= nil)
+check("Start begins an event", press("Start") and (function()
+	advance(0.5)
+	for i = #sent, 1, -1 do
+		local sm = sent[i]
+		if sm.remote == "AdminAsk" and sm.message[1] and sm.message[1].op == "event" then
+			return sm.message[1].id == "goldenHour" and sm.message[1].minutes == 15
+		end
+	end
+	return false
+end)())
+check("the Guests page has crowns and gifts", press("Guests") and (function()
+	advance(0.3)
+	return textOnScreen("Crown") ~= nil and textOnScreen("Ben") ~= nil
+end)())
+Root2.close()
+advance(0.5)
+workspace:SetAttribute("Event_goldenHour", workspace:GetServerTimeNow() + 600)
+signalOf(workspace, "attr:Event_goldenHour"):Fire()
+advance(1.2)
+check("every guest sees what's on, and for how long", textOnScreen("GOLDEN HOUR") ~= nil and textOnScreen("9:5") ~= nil)
+workspace:SetAttribute("Event_goldenHour", nil)
+signalOf(workspace, "attr:Event_goldenHour"):Fire()
+advance(1.2)
+check("and it goes when it's over", textOnScreen("GOLDEN HOUR") == nil)
+serverSays("Salute", { op = "announce", text = "Everyone to the Ballroom.", by = "AJ" })
+advance(0.5)
+check("the owner's announcement lands", textOnScreen("Everyone to the Ballroom") ~= nil)
+serverSays("Salute", { op = "summon", jobId = "abc", by = "AJ", text = "Golden Hour here!" })
+advance(0.5)
+check("a summons offers to go there", press("Go there"))
+advance(0.3)
+check("and asks the server to go", (function()
+	for i = #sent, 1, -1 do
+		local sm = sent[i]
+		if sm.remote == "Salute" and type(sm.message) == "table" and sm.message.op == "join" then
+			return sm.message.jobId == "abc"
+		end
+	end
+	return false
+end)())
+check("no errors in House controls", #errors == 0, errors[1])
 
 ---------------------------------------------------------------------------------------------------
 -- 8. A respawn hands straight back to the follow camera
