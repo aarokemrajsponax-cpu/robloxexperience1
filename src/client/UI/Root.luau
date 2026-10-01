@@ -4,6 +4,7 @@
 -- it falls softly out of focus and the music dips.
 
 local ContextActionService = game:GetService("ContextActionService")
+local GuiService = game:GetService("GuiService")
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -74,9 +75,14 @@ Workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
 end)
 
 -- Usable size of a layer in unscaled pixels.
+-- Usable size of a layer in unscaled pixels: below Roblox's top bar, which panels sit under.
 function Root.size(): Vector2
 	local v = Root.viewport()
-	return v / Root.scale
+	local ok, top = pcall(function()
+		return GuiService:GetGuiInset()
+	end)
+	local inset = if ok and typeof(top) == "Vector2" then top.Y else 0
+	return Vector2.new(v.X, math.max(200, v.Y - inset)) / Root.scale
 end
 
 -- Soft focus behind panels (local only).
@@ -136,6 +142,8 @@ local function updateFocus()
 	if dip then
 		dip(anyBlur)
 	end
+	-- The world's prompts step back while a panel is open.
+	Root.prompts.Enabled = #stack == 0
 end
 
 function Root.setFocus(goal: Focus?)

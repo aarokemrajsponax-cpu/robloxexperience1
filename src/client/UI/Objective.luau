@@ -135,7 +135,7 @@ function Objective.refresh()
 	if not started then
 		return
 	end
-	local goal = if seated or State.phase ~= "play" then nil else Objective.current()
+	local goal = if seated or State.phase ~= "play" or Root.isOpen() then nil else Objective.current()
 	if goal then
 		show(goal)
 	else
@@ -153,6 +153,7 @@ function Objective.start(go: (mode: string) -> ())
 	State.Welcomed:Connect(Objective.refresh)
 	State.Unlocked:Connect(Objective.refresh)
 	State.PhaseChanged:Connect(Objective.refresh)
+	Root.PanelsChanged:Connect(Objective.refresh)
 	Remotes.event("Table").OnClientEvent:Connect(function(message: any)
 		if type(message) ~= "table" then
 			return

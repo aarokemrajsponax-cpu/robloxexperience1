@@ -83,12 +83,21 @@ function WardrobePanel.open()
 						Toast.show("The Wardrobe", if type(r) == "table" and r.ok then p.name .. ", worn." else "That can't be worn just now.", 2)
 					end, 160)
 					k.LayoutOrder = i
+					-- A swatch of its colour, in its own space at the left of the key.
 					local dot = Instance.new("Frame")
 					dot.BackgroundColor3 = BoutiquePanel.swatch(p.style)
 					dot.AnchorPoint = Vector2.new(0, 0.5)
-					dot.Position = UDim2.new(0, 6, 0.5, 0)
-					dot.Size = UDim2.fromOffset(8, 8)
+					dot.Position = UDim2.new(0, -2, 0.5, 0)
+					dot.Size = UDim2.fromOffset(10, 10)
+					dot.BorderSizePixel = 0
+					local round = Instance.new("UICorner")
+					round.CornerRadius = UDim.new(0.5, 0)
+					round.Parent = dot
 					dot.Parent = k
+					local padding = k:FindFirstChildOfClass("UIPadding")
+					if padding then
+						padding.PaddingLeft = UDim.new(0, 16)
+					end
 				end
 			end
 		end

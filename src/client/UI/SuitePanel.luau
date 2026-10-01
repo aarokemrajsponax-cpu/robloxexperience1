@@ -52,7 +52,7 @@ function SuitePanel.open()
 	scroll.ScrollBarThickness = 3
 	scroll.ScrollBarImageColor3 = Brand.Colours.gold
 	scroll.Parent = content
-	Theme.list(scroll, 6).VerticalAlignment = Enum.VerticalAlignment.Top
+	Theme.list(scroll, 8).VerticalAlignment = Enum.VerticalAlignment.Top
 	local pad = Instance.new("UIPadding")
 	pad.PaddingRight = UDim.new(0, 8)
 	pad.Parent = scroll
@@ -105,21 +105,50 @@ function SuitePanel.open()
 					table.insert(notYet, o.name .. " — " .. whereFrom(o.id))
 				end
 			end
-			local row = Instance.new("Frame")
-			row.BackgroundTransparency = 1
-			row.Size = UDim2.new(1, 0, 0, 40)
-			row.LayoutOrder = add()
-			row.Parent = scroll
-			Theme.text(row, spot.name, 14, "body", {
+			-- One card per spot: what stands there now, ‹ › to change it, and what else could.
+			local card = Instance.new("Frame")
+			card.Name = "Spot"
+			card.BackgroundColor3 = Color3.fromRGB(22, 20, 22)
+			card.BackgroundTransparency = 0.15
+			card.BorderSizePixel = 0
+			card.AutomaticSize = Enum.AutomaticSize.Y
+			card.Size = UDim2.new(1, 0, 0, 0)
+			card.LayoutOrder = add()
+			card.Parent = scroll
+			local cardCorner = Instance.new("UICorner")
+			cardCorner.CornerRadius = UDim.new(0, 4)
+			cardCorner.Parent = card
+			local cardStroke = Instance.new("UIStroke")
+			cardStroke.Color = Brand.Colours.gold
+			cardStroke.Transparency = 0.82
+			cardStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+			cardStroke.Parent = card
+			local cardPad = Instance.new("UIPadding")
+			cardPad.PaddingTop = UDim.new(0, 10)
+			cardPad.PaddingBottom = UDim.new(0, 10)
+			cardPad.PaddingLeft = UDim.new(0, 14)
+			cardPad.PaddingRight = UDim.new(0, 10)
+			cardPad.Parent = card
+			local cardList = Theme.list(card, 6)
+			cardList.HorizontalAlignment = Enum.HorizontalAlignment.Left
+			cardList.VerticalAlignment = Enum.VerticalAlignment.Top
+			local top = Instance.new("Frame")
+			top.BackgroundTransparency = 1
+			top.Size = UDim2.new(1, 0, 0, 40)
+			top.LayoutOrder = 1
+			top.Parent = card
+			Theme.text(top, spot.name, 11, "caps", {
 				AutomaticSize = Enum.AutomaticSize.None,
-				Size = UDim2.new(0.42, 0, 1, 0),
+				Size = UDim2.new(1, -100, 0, 14),
+				Position = UDim2.fromOffset(0, 1),
 				TextXAlignment = Enum.TextXAlignment.Left,
-				TextColor3 = Brand.Colours.smoke,
 			})
-			local label = Theme.text(row, choices[current].name, 15, "bodyMedium", {
+			local label = Theme.text(top, choices[current].name, 16, "bodyMedium", {
 				AutomaticSize = Enum.AutomaticSize.None,
-				Position = UDim2.new(0.42, 44, 0, 0),
-				Size = UDim2.new(0.58, -88, 1, 0),
+				Size = UDim2.new(1, -100, 0, 22),
+				Position = UDim2.fromOffset(0, 18),
+				TextXAlignment = Enum.TextXAlignment.Left,
+				TextTruncate = Enum.TextTruncate.AtEnd,
 				TextColor3 = Brand.Colours.bone,
 			})
 			local function choose(step: number)
@@ -135,17 +164,25 @@ function SuitePanel.open()
 					reload()
 				end
 			end
-			local prev = Theme.key(row, "‹", false, function()
+			local prev = Theme.key(top, "‹", false, function()
 				choose(-1)
 			end, 40)
-			prev.Position = UDim2.new(0.42, 0, 0, 0)
-			local nextKey = Theme.key(row, "›", false, function()
+			prev.Size = UDim2.fromOffset(40, 36)
+			prev.AnchorPoint = Vector2.new(1, 0.5)
+			prev.Position = UDim2.new(1, -46, 0.5, 0)
+			local nextKey = Theme.key(top, "›", false, function()
 				choose(1)
 			end, 40)
-			nextKey.AnchorPoint = Vector2.new(1, 0)
-			nextKey.Position = UDim2.new(1, 0, 0, 0)
+			nextKey.Size = UDim2.fromOffset(40, 36)
+			nextKey.AnchorPoint = Vector2.new(1, 0.5)
+			nextKey.Position = UDim2.new(1, 0, 0.5, 0)
 			if #notYet > 0 then
-				Theme.text(scroll, table.concat(notYet, "  ·  "), 11, "body", { LayoutOrder = add(), TextColor3 = Brand.Colours.dim, TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true })
+				Theme.text(card, "Also for this spot:  " .. table.concat(notYet, "  ·  "), 12, "body", {
+					LayoutOrder = 2,
+					TextColor3 = Brand.Colours.dim,
+					TextXAlignment = Enum.TextXAlignment.Left,
+					TextWrapped = true,
+				})
 			end
 		end
 	end

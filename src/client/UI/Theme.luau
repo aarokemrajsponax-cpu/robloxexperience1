@@ -58,7 +58,13 @@ end
 local function applyText(r: Registered)
 	local label = r.label :: any
 	label.FontFace = fontFor(r.kind)
-	label.TextSize = math.floor(r.size * textScale + 0.5)
+	local size = math.floor(r.size * textScale + 0.5)
+	label.TextSize = size
+	-- Keys shrink their words to fit rather than spill over their edges.
+	local fit = label:FindFirstChild("Fit")
+	if fit and fit:IsA("UITextSizeConstraint") then
+		fit.MaxTextSize = size
+	end
 end
 
 function Theme.refresh()
@@ -148,7 +154,8 @@ function Theme.glass(parent: Instance, name: string, size: UDim2, position: UDim
 	fill.Name = "Fill"
 	fill.Size = UDim2.fromScale(1, 1)
 	fill.BackgroundColor3 = Theme.colours.glass
-	fill.BackgroundTransparency = 0.16
+	-- Nearly solid: name tags and prompts in the world never show through a panel.
+	fill.BackgroundTransparency = 0.04
 	fill.BorderSizePixel = 0
 	fill.Parent = group
 	local corner = Instance.new("UICorner")
@@ -191,6 +198,14 @@ function Theme.glass(parent: Instance, name: string, size: UDim2, position: UDim
 	pad.PaddingRight = UDim.new(0, 24)
 	pad.Parent = content
 	return group, content
+end
+
+-- A glass panel that grows to fit what's on it (so nothing is ever cut off at the bottom).
+function Theme.fitHeight(group: CanvasGroup, content: Frame)
+	group.Size = UDim2.new(group.Size.X, UDim.new(0, 0))
+	group.AutomaticSize = Enum.AutomaticSize.Y
+	content.AutomaticSize = Enum.AutomaticSize.Y
+	content.Size = UDim2.new(1, 0, 0, 0)
 end
 
 function Theme.list(parent: Instance, padding: number?, horizontal: boolean?): UIListLayout
@@ -260,6 +275,18 @@ function Theme.key(parent: Instance, text: string, primary: boolean?, onPress: (
 	button.TextColor3 = if primary then Color3.fromRGB(24, 18, 8) else C.lightGold
 	button.Selectable = true
 	button.SelectionImageObject = selectionRing()
+	button.TextScaled = true
+	local fit = Instance.new("UITextSizeConstraint")
+	fit.Name = "Fit"
+	fit.MinTextSize = 9
+	fit.MaxTextSize = 15
+	fit.Parent = button
+	local inner = Instance.new("UIPadding")
+	inner.PaddingLeft = UDim.new(0, 10)
+	inner.PaddingRight = UDim.new(0, 10)
+	inner.PaddingTop = UDim.new(0, 6)
+	inner.PaddingBottom = UDim.new(0, 6)
+	inner.Parent = button
 	local r = { label = button, size = 15, kind = "caps" :: TextKind }
 	applyText(r)
 	table.insert(registry, r)

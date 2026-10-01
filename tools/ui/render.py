@@ -58,6 +58,20 @@ def is_gui(n):
     return n["class"] in GUI_CLASSES
 
 
+def fitted_size(n, width, height):
+    """TextScaled: the largest size (up to UITextSizeConstraint's max) whose text fits."""
+    cons = first(n, "UITextSizeConstraint")
+    hi = cons["maxText"] if cons else 100
+    lo = cons["minText"] if cons else 1
+    size = hi
+    while size > lo:
+        f = font(n.get("weight", "Regular"), size, n.get("family", ""))
+        if f.getlength(n.get("text", "")) <= width and size * 1.2 <= height + 1:
+            break
+        size -= 0.5
+    return size
+
+
 def text_block(n, width):
     """Lines and height of a label's text when wrapped to `width`."""
     f = font(n.get("weight", "Regular"), n.get("textSize", 14), n.get("family", ""))
@@ -141,14 +155,39 @@ def layout_children(node):
     # Children are laid out in the unscaled space, then scaled with the parent.
     inner = Box(content.x, content.y, content.w / s if s else content.w, content.h / s if s else content.h)
     lst = first(node, "UIListLayout")
+    grid = first(node, "UIGridLayout")
     guis = [k for k in node["kids"] if is_gui(k)]
-    if lst:
+    if grid:
+        cw = inner.w * grid["cell"][0] + grid["cell"][1]
+        ch = inner.h * grid["cell"][2] + grid["cell"][3]
+        px = inner.w * grid["cellPad"][0] + grid["cellPad"][1]
+        py = inner.h * grid["cellPad"][2] + grid["cellPad"][3]
+        per_row = max(1, int((inner.w + px) // (cw + px)))
+        vis = sorted([k for k in guis if k.get("visible", True)], key=lambda k: k.get("order", 0))
+        rows = math.ceil(len(vis) / per_row) if vis else 0
+        for i, k in enumerate(vis):
+            col, row = i % per_row, i // per_row
+            in_row = min(per_row, len(vis) - row * per_row)
+            used = in_row * cw + (in_row - 1) * px
+            x0 = inner.x + ((inner.w - used) / 2 if grid["hAlign"] == "Center" else 0)
+            k["size"] = [0, cw, 0, ch]
+            place(k, inner, (x0 + col * (cw + px), inner.y + row * (ch + py)))
+        node["_content_h"] = rows * ch + max(0, rows - 1) * py
+        for k in guis:
+            if "_rect" not in k:
+                place(k, inner)
+    elif lst:
         guis_v = [k for k in guis if k.get("visible", True)]
         guis_v.sort(key=lambda k: k.get("order", 0))
         padding = lst["padding"][1] + lst["padding"][0] * (inner.h if lst["dir"] == "Vertical" else inner.w)
         sizes = [measure(k, inner) for k in guis_v]
         if lst["dir"] == "Vertical":
-            total = sum(sz[1] for sz in sizes) + padding * max(0, len(sizes) - 1)
+            # First pass: lay each child out where it stands, to learn its real (automatic) height.
+            heights = []
+            for k, (kw, kh) in zip(guis_v, sizes):
+                place(k, inner, (inner.x, inner.y))
+                heights.append(k["_rect"].h)
+            total = sum(heights) + padding * max(0, len(heights) - 1)
             node["_content_h"] = total
             y = inner.y
             if lst["vAlign"] == "Center":
@@ -156,6 +195,7 @@ def layout_children(node):
             elif lst["vAlign"] == "Bottom":
                 y = inner.y + inner.h - total
             for k, (kw, kh) in zip(guis_v, sizes):
+                kw = k["_rect"].w
                 if lst["hAlign"] == "Center":
                     x = inner.x + (inner.w - kw) / 2
                 elif lst["hAlign"] == "Right":
@@ -271,10 +311,19 @@ def draw_node(canvas, node, alpha_mul, k, clip=None):
         a[..., 3] = (a[..., 3].astype(np.float32) * ring / 255 * amul).astype(np.uint8)
         layer.alpha_composite(Image.fromarray(a, "RGBA"), (int(round(X - pad)), int(round(Y - pad))))
     if "text" in node and node.get("text") and node.get("textT", 1) < 1:
-        lines, th, f0 = text_block(node, r.w / (node["_s"] * node.get("_S", 1)))
         ts = node["_s"] * node.get("_S", 1)
+        padn = first(node, "UIPadding")
+        pt, pb, pl, pr = padn["pad"] if padn else (0, 0, 0, 0)
+        avail_w = r.w / ts - pl - pr
+        avail_h = r.h / ts - pt - pb
+        if node.get("scaled"):
+            node = dict(node)
+            node["textSize"] = fitted_size(node, avail_w, avail_h)
+        lines, th, f0 = text_block(node, avail_w)
         f = font(node.get("weight", "Regular"), node.get("textSize", 14) * ts * k, node.get("family", ""))
         line_h = node.get("textSize", 14) * 1.2 * ts * k
+        X, W = X + pl * ts * k, W - (pl + pr) * ts * k
+        Y, H = Y + pt * ts * k, H - (pt + pb) * ts * k
         total = line_h * len(lines)
         ya = node.get("yAlign", "Center")
         y = Y + (H - total) / 2 if ya == "Center" else (Y if ya == "Top" else Y + H - total)
@@ -290,7 +339,7 @@ def draw_node(canvas, node, alpha_mul, k, clip=None):
     kids = [kk for kk in node["kids"] if is_gui(kk)]
     kids.sort(key=lambda kk: kk.get("z", 1))
     child_clip = clip
-    clips = node.get("clip") or node["class"] == "CanvasGroup"
+    clips = node.get("clip") or node["class"] in ("CanvasGroup", "ScrollingFrame")
     if clips and not rot:
         child_clip = (X, Y, X + W, Y + H)
     for kk in kids:

@@ -6,10 +6,10 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
-local PieceModels = require(ReplicatedStorage.Shared.PieceModels)
 local Voice = require(ReplicatedStorage.Shared.Voice)
 local Root = require(script.Parent.Root)
 local Theme = require(script.Parent.Theme)
+local PieceIcon = require(script.Parent.PieceIcon)
 local State = require(script.Parent.Parent.State)
 
 local HowToPlay = {}
@@ -34,44 +34,44 @@ local CLUB_STEPS = {
 -- Set by Main: what the last step's key does (seat the guest, or return them to the table).
 HowToPlay.onFinish = function() end
 
-local function viewport(parent: Instance, pieceId: string): (ViewportFrame, () -> ())
-	local vp = Instance.new("ViewportFrame")
-	vp.Name = "Piece"
-	vp.BackgroundTransparency = 1
-	vp.Size = UDim2.new(1, 0, 0, 170)
-	vp.LayoutOrder = 2
-	vp.Ambient = Color3.fromRGB(70, 60, 50)
-	vp.LightColor = Color3.fromRGB(255, 226, 170)
-	vp.LightDirection = Vector3.new(-0.4, -1, -0.6)
-	vp.Parent = parent
-	local world = Instance.new("WorldModel")
-	world.Parent = vp
-	local camera = Instance.new("Camera")
-	camera.FieldOfView = 30
-	camera.Parent = vp
-	vp.CurrentCamera = camera
-	local model: Model? = nil
-	local angle = 0
-	local function setPiece(id: string)
-		if model then
-			model:Destroy()
-		end
-		local m = PieceModels.build(id, Color3.fromRGB(16, 17, 20))
-		m.Parent = world
-		model = m
-		local _, size = m:GetBoundingBox()
-		local radius = math.max(size.X, size.Y, size.Z)
-		camera.CFrame = CFrame.lookAt(Vector3.new(0, radius * 1.3, -radius * 3.2), Vector3.new(0, size.Y * 0.35, 0))
+-- The piece, drawn as it is on the sorting screen, in a pool of gold light, floating gently.
+local function viewport(parent: Instance, pieceId: string): (Frame, () -> ())
+	local holder = Instance.new("Frame")
+	holder.Name = "Piece"
+	holder.BackgroundTransparency = 1
+	holder.Size = UDim2.new(1, 0, 0, 170)
+	holder.LayoutOrder = 2
+	holder:SetAttribute("Piece", pieceId)
+	holder.Parent = parent
+	for k, size in { 1.0, 0.78, 0.58 } do
+		local glow = Instance.new("Frame")
+		glow.Name = "Glow"
+		glow.AnchorPoint = Vector2.new(0.5, 0.5)
+		glow.Position = UDim2.fromScale(0.5, 0.5)
+		glow.Size = UDim2.fromOffset(170 * size, 170 * size)
+		glow.BorderSizePixel = 0
+		glow.BackgroundColor3 = Color3.fromRGB(226, 176, 86)
+		glow.BackgroundTransparency = 0.95 - k * 0.012
+		local c = Instance.new("UICorner")
+		c.CornerRadius = UDim.new(0.5, 0)
+		c.Parent = glow
+		glow.Parent = holder
 	end
-	setPiece(pieceId)
+	local art = Instance.new("Frame")
+	art.Name = "Art"
+	art.BackgroundTransparency = 1
+	art.AnchorPoint = Vector2.new(0.5, 0.5)
+	art.Position = UDim2.fromScale(0.5, 0.5)
+	art.Size = UDim2.fromOffset(130, 130)
+	art.Parent = holder
+	PieceIcon.piece(art, pieceId, 130)
+	local t = 0
 	local conn = RunService.RenderStepped:Connect(function(dt: number)
-		if model and model.PrimaryPart then
-			angle += dt * 0.5
-			model:PivotTo(CFrame.Angles(0, angle, 0))
-		end
+		t += dt
+		art.Position = UDim2.new(0.5, 0, 0.5, math.sin(t * 1.4) * 4)
+		art.Rotation = math.sin(t * 0.9) * 3
 	end)
-	vp:SetAttribute("Piece", pieceId)
-	return vp, function()
+	return holder, function()
 		conn:Disconnect()
 	end
 end
@@ -84,6 +84,7 @@ function HowToPlay.open(club: boolean?)
 	local size = Root.size()
 	local w = math.min(480, size.X - 24)
 	local group, content = Theme.glass(Root.panels, NAME, UDim2.fromOffset(w, 470))
+	Theme.fitHeight(group, content)
 	Theme.list(content, 10).VerticalAlignment = Enum.VerticalAlignment.Top
 
 	local stepLabel = Theme.text(content, "", 11, "caps", { LayoutOrder = 1 })

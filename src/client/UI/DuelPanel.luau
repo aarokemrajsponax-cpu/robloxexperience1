@@ -69,6 +69,7 @@ function DuelPanel.show(message: { [string]: any }, actions: Actions)
 	local w = math.min(420, size.X - 24)
 	local h = 300 + #rows * 26 + (if (message.placementLeft or 0) > 0 then 24 else 0)
 	local group, content = Theme.glass(Root.panels, NAME, UDim2.fromOffset(w, h), UDim2.new(0.5, 0, 0.5, 20))
+	Theme.fitHeight(group, content)
 	Theme.list(content, 8).VerticalAlignment = Enum.VerticalAlignment.Top
 	Theme.text(content, Voice.Library.title .. "  ·  " .. kind, 11, "caps", { LayoutOrder = 1 })
 	Theme.text(content, heading, 24, "display", { LayoutOrder = 2, TextColor3 = if message.won then Brand.Colours.lightGold else Brand.Colours.bone })

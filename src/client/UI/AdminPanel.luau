@@ -28,17 +28,22 @@ local function ask(request: { [string]: any }): any
 	return if ok then result else nil
 end
 
-local function row(parent: Instance, order: number, label: string, detail: string?): Frame
+-- One line of the panel: words on the left, keys on the right; `stacked` puts the keys on a
+-- line of their own beneath the words (for rows with several choices).
+local function row(parent: Instance, order: number, label: string, detail: string?, stacked: boolean?): Frame
 	local r = Instance.new("Frame")
 	r.BackgroundColor3 = Color3.fromRGB(16, 16, 20)
 	r.BackgroundTransparency = 0.35
-	r.Size = UDim2.new(1, 0, 0, 64)
+	r.Size = UDim2.new(1, 0, 0, if stacked then 96 else 64)
 	r.LayoutOrder = order
 	r.Parent = parent
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 4)
+	corner.Parent = r
 	local texts = Instance.new("Frame")
 	texts.BackgroundTransparency = 1
 	texts.Position = UDim2.fromOffset(12, 6)
-	texts.Size = UDim2.new(0.55, -12, 1, -12)
+	texts.Size = if stacked then UDim2.new(1, -24, 0, 44) else UDim2.new(0.55, -12, 1, -12)
 	texts.Parent = r
 	Theme.list(texts, 2).HorizontalAlignment = Enum.HorizontalAlignment.Left
 	Theme.text(texts, label, 16, "display", { LayoutOrder = 1, TextXAlignment = Enum.TextXAlignment.Left })
@@ -48,11 +53,17 @@ local function row(parent: Instance, order: number, label: string, detail: strin
 	local keys = Instance.new("Frame")
 	keys.Name = "Keys"
 	keys.BackgroundTransparency = 1
-	keys.AnchorPoint = Vector2.new(1, 0.5)
-	keys.Position = UDim2.new(1, -8, 0.5, 0)
-	keys.Size = UDim2.new(0.45, 0, 1, -12)
+	if stacked then
+		keys.AnchorPoint = Vector2.new(0, 1)
+		keys.Position = UDim2.new(0, 12, 1, -8)
+		keys.Size = UDim2.new(1, -24, 0, 34)
+	else
+		keys.AnchorPoint = Vector2.new(1, 0.5)
+		keys.Position = UDim2.new(1, -8, 0.5, 0)
+		keys.Size = UDim2.new(0.45, 0, 1, -12)
+	end
 	keys.Parent = r
-	Theme.list(keys, 6, true).HorizontalAlignment = Enum.HorizontalAlignment.Right
+	Theme.list(keys, 6, true).HorizontalAlignment = if stacked then Enum.HorizontalAlignment.Left else Enum.HorizontalAlignment.Right
 	return keys
 end
 
@@ -136,7 +147,7 @@ function AdminPanel.open()
 			return order
 		end
 		-- How long, and where: shared by events, seasons and announcements.
-		local opts = row(scroll, add(), "For " .. tostring(minutes) .. " minutes" .. (if everywhere then ", in every house" else ", in this house"), "Events and seasons last this long.")
+		local opts = row(scroll, add(), "For " .. tostring(minutes) .. " minutes" .. (if everywhere then ", in every house" else ", in this house"), "Events and seasons last this long.", true)
 		for _, m in v.minutes do
 			small(opts, tostring(m) .. " min", m == minutes, function()
 				minutes = m

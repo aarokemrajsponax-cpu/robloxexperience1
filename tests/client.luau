@@ -1015,6 +1015,7 @@ local function snapshot(name: string)
 				n.xAlign = inst.TextXAlignment.Name
 				n.yAlign = inst.TextYAlignment.Name
 				n.wrap = inst.TextWrapped
+				n.scaled = inst.TextScaled
 				local ff = get(inst, "FontFace")
 				n.weight = if ff then ff.Weight.Name else "Regular"
 				n.family = if ff then ff.Family else ""
@@ -1053,6 +1054,13 @@ local function snapshot(name: string)
 			n.vAlign = inst.VerticalAlignment.Name
 		elseif inst:IsA("UIPadding") then
 			n.pad = { inst.PaddingTop.Offset, inst.PaddingBottom.Offset, inst.PaddingLeft.Offset, inst.PaddingRight.Offset }
+		elseif inst:IsA("UITextSizeConstraint") then
+			n.maxText = inst.MaxTextSize
+			n.minText = inst.MinTextSize
+		elseif inst:IsA("UIGridLayout") then
+			n.cell = udim2(inst.CellSize)
+			n.cellPad = udim2(inst.CellPadding)
+			n.hAlign = inst.HorizontalAlignment.Name
 		elseif inst:IsA("UISizeConstraint") then
 			n.max = { inst.MaxSize.X, inst.MaxSize.Y }
 		end

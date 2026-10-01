@@ -77,6 +77,7 @@ function NightlyCard.show(card: { [string]: any }, actions: Actions)
 	local size = Root.size()
 	local w = math.min(400, size.X - 24)
 	local group, content = Theme.glass(Root.panels, NAME, UDim2.fromOffset(w, 540))
+	Theme.fitHeight(group, content)
 	Theme.list(content, 8).VerticalAlignment = Enum.VerticalAlignment.Top
 	local room = Rooms.get(card.room)
 

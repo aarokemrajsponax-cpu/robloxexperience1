@@ -55,6 +55,7 @@ local parcels: { [number]: Flying } = {}
 local tabsFrame: Frame? = nil
 local tabKeys: { [string]: TextButton } = {}
 local statusLabel: TextLabel? = nil
+local inRoom = false -- the status line shows only in the Ballroom itself
 local watching = false
 local zoneKeysShown = false
 local flickering: { [Model]: boolean } = {}
@@ -134,7 +135,7 @@ local function status()
 	end
 	label.Text = Theme.track(table.concat(parts, "  ·  "))
 	label.TextColor3 = if mySeat and playing and felt > capacity() - 3 then Color3.fromRGB(220, 120, 80) else Brand.Colours.lightGold
-	label.Visible = #parts > 0
+	label.Visible = #parts > 0 and (inRoom or mySeat ~= nil)
 end
 
 local function highlightTabs()
@@ -378,6 +379,10 @@ local function zoneKeys()
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
 	local inBallroom = root ~= nil and root:IsA("BasePart") and Layout.zoneAt(root.Position) == "ballroom"
+	if inBallroom ~= inRoom then
+		inRoom = inBallroom
+		status()
+	end
 	local want = inBallroom and mySeat == nil and not State.seated
 	if want then
 		Hud.setExtraKeys({

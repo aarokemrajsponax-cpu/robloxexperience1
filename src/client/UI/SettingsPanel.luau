@@ -113,7 +113,7 @@ function SettingsPanel.open()
 	scroll.BackgroundTransparency = 1
 	scroll.BorderSizePixel = 0
 	scroll.LayoutOrder = 3
-	scroll.Size = UDim2.new(1, 0, 1, -(26 + 12 + 44 + 40))
+	scroll.Size = UDim2.new(1, 0, 1, -(26 + 12 + 96 + 40))
 	scroll.CanvasSize = UDim2.new()
 	scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
 	scroll.ScrollBarThickness = 3
@@ -141,10 +141,15 @@ function SettingsPanel.open()
 
 	local keys = Instance.new("Frame")
 	keys.BackgroundTransparency = 1
-	keys.Size = UDim2.new(1, 0, 0, 44)
+	keys.Size = UDim2.new(1, 0, 0, 96)
 	keys.LayoutOrder = 4
 	keys.Parent = content
-	Theme.list(keys, 8, true)
+	local grid = Instance.new("UIGridLayout")
+	grid.CellSize = UDim2.new(0.5, -4, 0, 44)
+	grid.CellPadding = UDim2.fromOffset(8, 8)
+	grid.SortOrder = Enum.SortOrder.LayoutOrder
+	grid.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	grid.Parent = keys
 	Theme.key(keys, "The Wardrobe", false, function()
 		Root.close(NAME)
 		require(script.Parent.WardrobePanel).open()
