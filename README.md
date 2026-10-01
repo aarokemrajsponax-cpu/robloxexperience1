@@ -316,11 +316,17 @@ The game's music and table sounds are original: composed and synthesised from sc
 | `maison-table.ogg` | brushed jazz quartet, 96 bpm, 160 s loop (the four sorting rooms and the Library) | `Assets.Tracks.table` |
 | `maison-ballroom.ogg` | swing band, 132 bpm, 116 s loop (the Ballroom) | `Assets.Tracks.ballroom` |
 
-**How:** Studio → **View → Asset Manager** → **Bulk Import** (the icon with the up arrow) → pick
-the four `.ogg` files from `assets/audio` on your computer → wait for them to finish. Right-click
-each in the Asset Manager's **Audio** folder → **Copy Asset ID** → paste into
-`src/shared/Config.luau` as `"rbxassetid://<the number>"` (or live in Creator Hub → Configs as
-`Assets_SoundSheet`, `Assets_Tracks_lounge`, `Assets_Tracks_table`, `Assets_Tracks_ballroom`).
+**How (about two minutes, once):**
+1. In Studio: **View → Asset Manager**. Click **Bulk Import** (the arrow-up icon).
+2. Pick the four `.ogg` files from the `assets/audio` folder of this repo on your computer. Wait
+   for all four to finish uploading (Roblox checks audio; it can take a minute).
+3. In the Asset Manager, open the **Audio** folder. Drag each of the four onto **SoundService**
+   in the Explorer. Each becomes a Sound named after its file (`maison-lounge` and so on).
+4. **File → Publish to Roblox**, so they're saved in the place.
+
+That's all: the game finds them by name, so no ids need copying. (An id pasted into
+`Assets.SoundSheet` / `Assets.Tracks.*` still wins, if you'd rather.) In Studio, a notice in the
+first seconds of play says "No music yet" until this is done.
 
 Until the sheet is set, the table plays Roblox's built-in sounds, softened. Once it's set, the
 Boutique's four chimes (99 Robux each) go on sale on their own. Never cut the sheet up or edit

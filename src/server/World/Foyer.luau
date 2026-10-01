@@ -373,13 +373,17 @@ local function roomDoor(m: Model, roomId: string)
 	Kit.part(model, "JambL", Vector3.new(0.6, h + 0.6, 2.4), base * CFrame.new(-w / 2 - 0.3, h / 2 + 0.3, 0), L.brass)
 	Kit.part(model, "JambR", Vector3.new(0.6, h + 0.6, 2.4), base * CFrame.new(w / 2 + 0.3, h / 2 + 0.3, 0), L.brass)
 	Kit.part(model, "Head", Vector3.new(w + 1.8, 0.8, 2.4), base * CFrame.new(0, h + 0.4, 0), L.brass)
-	-- Door leaves (visual; clients swing open the ones that open)
+	-- Door leaves (visual; clients swing open the ones that open): walnut, two raised panels each,
+	-- a long brass pull at the meeting edge. The panels and pulls ride with their leaf.
 	for side = -1, 1, 2 do
 		local hinge = base * CFrame.new(side * w / 2, 0, 0)
-		local leaf = Kit.part(model, if side < 0 then "LeafL" else "LeafR", Vector3.new(w / 2 - 0.1, h - 0.1, 0.3), hinge * CFrame.new(-side * (w / 4), h / 2, 0), L.blackLacquer)
+		local leaf = Kit.part(model, if side < 0 then "LeafL" else "LeafR", Vector3.new(w / 2 - 0.1, h - 0.1, 0.3), hinge * CFrame.new(-side * (w / 4), h / 2, 0), L.walnut)
 		leaf:SetAttribute("Side", side)
 		leaf:SetAttribute("Hinge", hinge)
-		Kit.part(model, "Panel", Vector3.new(w / 2 - 1.2, h - 2, 0.05), leaf.CFrame * CFrame.new(0, 0, -0.18), L.panel, { collide = false, query = false }).Name = "Inset"
+		local panelW = w / 2 - 1.2
+		Kit.part(model, "Inset", Vector3.new(panelW, h * 0.44, 0.06), leaf.CFrame * CFrame.new(0, h * 0.18, -0.18), L.darkWood, { collide = false, query = false })
+		Kit.part(model, "Inset", Vector3.new(panelW, h * 0.28, 0.06), leaf.CFrame * CFrame.new(0, -h * 0.27, -0.18), L.darkWood, { collide = false, query = false })
+		Kit.part(model, "Knob", Vector3.new(0.18, 2.4, 0.18), leaf.CFrame * CFrame.new(-side * (w / 4 - 0.55), 0, -0.32), L.brass, { collide = false, query = false, shadow = false })
 		if spec.open then
 			leaf.CanCollide = false
 		end
@@ -404,6 +408,10 @@ local function roomDoor(m: Model, roomId: string)
 		local a = (base * CFrame.new(p[1], 3, -2.2)).Position
 		local b = (base * CFrame.new(p[2], 3, -2.2)).Position
 		Kit.part(model, "Rope", Vector3.new(0.25, 0.25, (b - a).Magnitude), CFrame.lookAt((a + b) / 2, b), L.rope)
+	end
+	-- Open rooms: warm light spills under the doors onto the marble.
+	if spec.open or spec.gated then
+		Kit.part(model, "Spill", Vector3.new(w - 0.6, 0.05, 1.4), base * CFrame.new(0, 0.03, -0.75), { color = Color3.fromRGB(255, 186, 112), material = Enum.Material.Neon, transparency = 0.72 }, { collide = false, query = false, shadow = false })
 	end
 	-- Closed rooms: a wall behind the leaves so the doorway never shows the void.
 	if not spec.open and not spec.gated then

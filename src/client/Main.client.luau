@@ -436,6 +436,12 @@ if RunService:IsStudio() then
 		stamp.TextTransparency = 0.3
 		stamp.Text = Build.label
 		stamp.Parent = Root.hud
+		-- For the owner, in Studio: say so plainly when the music hasn't been brought in yet.
+		task.delay(6, function()
+			if not Sound.hasMusic() then
+				Toast.show("No music yet", "Import the four files in assets/audio (Asset Manager → Bulk Import), then drag them into SoundService. README: four uploads.", 12)
+			end
+		end)
 		-- Out of the way while sorting.
 		TableClient.Seated.Event:Connect(function()
 			stamp.Visible = false

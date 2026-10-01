@@ -112,9 +112,40 @@ local function idFor(name: string): string
 	return if type(id) == "string" then id else ""
 end
 
+-- The house's own audio, found by name: import the four files in Studio's Asset Manager and
+-- drop them into SoundService, and they're used without copying a single id. An id set in
+-- Config always wins.
+local found: { [string]: string } = {}
+local foundAt = -math.huge
+local function findUploaded(name: string): string
+	if os.clock() - foundAt > 5 then
+		found = {}
+		foundAt = os.clock()
+	end
+	local hit = found[name]
+	if hit then
+		return hit
+	end
+	local id = ""
+	for _, where in { SoundService, Workspace } do
+		local ok, s = pcall(function()
+			return where:FindFirstChild(name, true)
+		end)
+		if ok and s and s:IsA("Sound") and s.SoundId ~= "" then
+			id = s.SoundId
+			break
+		end
+	end
+	found[name] = id
+	return id
+end
+
 local function sheetId(): string
 	local id = (Config.data.Assets :: any).SoundSheet
-	return if type(id) == "string" then id else ""
+	if type(id) == "string" and id ~= "" then
+		return id
+	end
+	return findUploaded("maison-sounds")
 end
 
 -- The sheet's cue for a name ("chime:harp" is the cue "chime_harp").
@@ -360,7 +391,26 @@ local function musicFor(zone: string): string
 		return own
 	end
 	local track = TRACK_FOR[zone]
-	return if track then asset("Tracks", track) else ""
+	if not track then
+		return ""
+	end
+	local set = asset("Tracks", track)
+	return if set ~= "" then set else findUploaded("maison-" .. track)
+end
+
+-- Whether the house has any music to play (for telling the owner, in Studio, when it hasn't).
+function Sound.hasMusic(): boolean
+	for _, track in { "lounge", "table", "ballroom" } do
+		if asset("Tracks", track) ~= "" or findUploaded("maison-" .. track) ~= "" then
+			return true
+		end
+	end
+	for _, id in (Config.data.Assets :: any).Music do
+		if type(id) == "string" and id ~= "" then
+			return true
+		end
+	end
+	return false
 end
 
 -- The piano's sound source: the Foyer's grand piano, once it has streamed in.

@@ -58,12 +58,14 @@ local function setupLighting()
 	sky.CelestialBodiesShown = false
 	sky.StarCount = 1600
 	local air = effect("Atmosphere", "MaisonAir") :: Atmosphere
-	air.Density = 0.36
-	air.Offset = 0.1
-	air.Color = Color3.fromRGB(58, 62, 78)
-	air.Decay = Color3.fromRGB(26, 28, 40)
+	-- A light night air: deep enough to give the street distance, thin enough that rooms stay
+	-- crisp (a heavy haze washes the interiors out grey).
+	air.Density = 0.26
+	air.Offset = 0.05
+	air.Color = Color3.fromRGB(46, 50, 64)
+	air.Decay = Color3.fromRGB(20, 22, 32)
 	air.Glare = 0
-	air.Haze = 1.6
+	air.Haze = 0.6
 	local bloom = effect("BloomEffect", "MaisonBloom") :: BloomEffect
 	bloom.Intensity = 0.4
 	bloom.Size = 30

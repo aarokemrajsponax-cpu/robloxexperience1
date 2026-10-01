@@ -1591,6 +1591,21 @@ do
 	advance(3)
 	check("music: and a room's own track still wins", salonTrack.SoundId == "rbxassetid://101" and salonTrack.Volume > 0 and velvet.Volume == 0)
 	assets.Tracks.table = ""
+	-- Or found by name: the uploaded track dropped into SoundService, no id copied anywhere.
+	local uploaded = Instance.new("Sound")
+	uploaded.Name = "maison-table"
+	uploaded.SoundId = "rbxassetid://888"
+	uploaded.Parent = game:GetService("SoundService")
+	advance(6)
+	SoundModule.enterZone("velvet")
+	advance(3)
+	local found = loopNamed("Music_velvet")
+	check("music: a track dropped into SoundService by name plays, no id needed", found ~= nil and found.SoundId == "rbxassetid://888" and found.Volume > 0, found and found.SoundId)
+	check("and the house knows it has music", SoundModule.hasMusic())
+	uploaded:Destroy()
+	advance(6)
+	SoundModule.enterZone("salon")
+	advance(3)
 	assets.SoundSheet = ""
 	check("no errors in the sound bank", #errors == 0, errors[1])
 end

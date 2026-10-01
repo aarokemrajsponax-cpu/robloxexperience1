@@ -7,6 +7,16 @@
         "CharacterAutoLoads": false
       }
     },
+    "Lighting": {
+      "$properties": {
+        "Technology": "Future"
+      }
+    },
+    "MaterialService": {
+      "$properties": {
+        "Use2022Materials": true
+      }
+    },
     "ReplicatedStorage": {
       "Shared": {
         "$path": "src/shared"
