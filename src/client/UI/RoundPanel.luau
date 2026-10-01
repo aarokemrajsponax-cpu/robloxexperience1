@@ -92,8 +92,11 @@ local function panel(heading: string, sub: string?, grade: string, rows: { { str
 	end
 	local size = Root.size()
 	local w = math.min(420, size.X - 24)
-	local h = 250 + #rows * 26 + (if actions.secondary then 54 else 0) + (if grade == "Flawless" then 52 else 0)
-	local group, content = Theme.glass(Root.panels, NAME, UDim2.fromOffset(w, h), UDim2.new(0.5, 0, 0.5, 20))
+	-- The card grows to fit what's on it, so nothing is ever cut off at the bottom.
+	local group, content = Theme.glass(Root.panels, NAME, UDim2.fromOffset(w, 0), UDim2.new(0.5, 0, 0.5, 20))
+	group.AutomaticSize = Enum.AutomaticSize.Y
+	content.AutomaticSize = Enum.AutomaticSize.Y
+	content.Size = UDim2.new(1, 0, 0, 0)
 	Theme.list(content, 8).VerticalAlignment = Enum.VerticalAlignment.Top
 	if sub then
 		Theme.text(content, sub, 11, "caps", { LayoutOrder = 1 })

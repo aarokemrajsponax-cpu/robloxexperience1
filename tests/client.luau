@@ -567,7 +567,16 @@ local ContextActionService = {
 	end,
 }
 
-local GuiService = { SelectedObject = nil, MenuIsOpen = false, MenuOpened = signal(), MenuClosed = signal() }
+local GuiService = {
+	SelectedObject = nil,
+	MenuIsOpen = false,
+	MenuOpened = signal(),
+	MenuClosed = signal(),
+	-- Roblox's top bar: input positions start below it.
+	GetGuiInset = function()
+		return Vector2.new(0, 58), Vector2.zero
+	end,
+}
 local shared = { invites = 0 }
 shared.SocialService = {
 		PromptGameInvite = function()
@@ -962,6 +971,105 @@ local function press(text)
 	signalOf(button, "Activated"):Fire()
 	return true
 end
+-- Snapshots: `lune run tests/client.luau full <folder>` also writes the screen's UI at a few
+-- moments as JSON, for tools/ui/render.py to draw (a way to look at the UI without Studio).
+local SNAPSHOT = process.args[2]
+local function snapshot(name: string)
+	if not SNAPSHOT then
+		return
+	end
+	local function udim2(u)
+		return { u.X.Scale, u.X.Offset, u.Y.Scale, u.Y.Offset }
+	end
+	local function colour(c)
+		return { c.R, c.G, c.B }
+	end
+	local function get(inst, prop)
+		local ok, v = pcall(function()
+			return inst[prop]
+		end)
+		return if ok then v else nil
+	end
+	local function dump(inst)
+		local n = { class = inst.ClassName, name = inst.Name, kids = {} }
+		if inst:IsA("GuiObject") then
+			n.pos = udim2(inst.Position)
+			n.size = udim2(inst.Size)
+			n.anchor = { inst.AnchorPoint.X, inst.AnchorPoint.Y }
+			n.rot = inst.Rotation
+			n.bg = colour(inst.BackgroundColor3)
+			n.bgT = inst.BackgroundTransparency
+			n.visible = inst.Visible
+			n.z = inst.ZIndex
+			n.order = inst.LayoutOrder
+			n.clip = inst.ClipsDescendants
+			n.auto = inst.AutomaticSize.Name
+			if inst:IsA("CanvasGroup") then
+				n.groupT = inst.GroupTransparency
+			end
+			if inst:IsA("TextLabel") or inst:IsA("TextButton") or inst:IsA("TextBox") then
+				n.text = inst.Text
+				n.textSize = inst.TextSize
+				n.textColor = colour(inst.TextColor3)
+				n.textT = inst.TextTransparency
+				n.xAlign = inst.TextXAlignment.Name
+				n.yAlign = inst.TextYAlignment.Name
+				n.wrap = inst.TextWrapped
+				local ff = get(inst, "FontFace")
+				n.weight = if ff then ff.Weight.Name else "Regular"
+				n.family = if ff then ff.Family else ""
+			end
+		elseif inst:IsA("ScreenGui") then
+			n.order = inst.DisplayOrder
+			n.enabled = inst.Enabled
+			n.ignoreInset = inst.IgnoreGuiInset
+		elseif inst:IsA("UICorner") then
+			n.radius = { inst.CornerRadius.Scale, inst.CornerRadius.Offset }
+		elseif inst:IsA("UIGradient") then
+			local cs = {}
+			for _, k in inst.Color.Keypoints do
+				table.insert(cs, { k.Time, k.Value.R, k.Value.G, k.Value.B })
+			end
+			local ts = {}
+			for _, k in inst.Transparency.Keypoints do
+				table.insert(ts, { k.Time, k.Value })
+			end
+			n.colors = cs
+			n.trans = ts
+			n.rot = inst.Rotation
+			n.offset = { inst.Offset.X, inst.Offset.Y }
+			n.enabled = inst.Enabled
+		elseif inst:IsA("UIStroke") then
+			n.color = colour(inst.Color)
+			n.thickness = inst.Thickness
+			n.trans = inst.Transparency
+			n.enabled = inst.Enabled
+		elseif inst:IsA("UIScale") then
+			n.scale = inst.Scale
+		elseif inst:IsA("UIListLayout") then
+			n.dir = inst.FillDirection.Name
+			n.padding = { inst.Padding.Scale, inst.Padding.Offset }
+			n.hAlign = inst.HorizontalAlignment.Name
+			n.vAlign = inst.VerticalAlignment.Name
+		elseif inst:IsA("UIPadding") then
+			n.pad = { inst.PaddingTop.Offset, inst.PaddingBottom.Offset, inst.PaddingLeft.Offset, inst.PaddingRight.Offset }
+		elseif inst:IsA("UISizeConstraint") then
+			n.max = { inst.MaxSize.X, inst.MaxSize.Y }
+		end
+		for _, c in inst:GetChildren() do
+			table.insert(n.kids, dump(c))
+		end
+		return n
+	end
+	local out = { viewport = { camera.ViewportSize.X, camera.ViewportSize.Y }, guis = {} }
+	for _, g in playerGui:GetChildren() do
+		if g:IsA("ScreenGui") then
+			table.insert(out.guis, dump(g))
+		end
+	end
+	fs.writeFile(SNAPSHOT .. "/" .. name .. ".json", serde.encode("json", out))
+end
+
 local function pad(key)
 	local input = { KeyCode = key, UserInputType = roblox.Enum.UserInputType.Gamepad1, UserInputState = roblox.Enum.UserInputState.Begin, Position = Vector3.zero }
 	for name, action in actions do
@@ -1112,6 +1220,7 @@ advance(0.2)
 serverSays("Dialogue", { op = "say", speaker = "THE CONCIERGE", line = "Good evening. The tables are set.", choices = { { id = "room", text = "Take me to a room" }, { id = "bye", text = "Good night" } } })
 advance(1)
 check("the Concierge's line is on screen", textOnScreen("The tables are set") ~= nil)
+snapshot("dialogue")
 advance(4)
 check("no errors in the dialogue", #errors == 0, errors[1])
 
@@ -1134,46 +1243,69 @@ check("seated: the camera frames the table", camera.CameraType == roblox.Enum.Ca
 check("seated: Leave is on screen", textOnScreen("Leave") ~= nil)
 check("seated: the what's-next card steps aside", textOnScreen("Take a seat at any table in the Salon") == nil)
 
--- The sorting camera: in without a snap, then the whole table in view, from above the chair.
+-- The sorting screen: sit down and the house falls away; only the sorting screen is left.
+local sortGui = playerGui:FindFirstChild("MaisonSort")
 do
-	local Sorting = Config.data.Sorting
-	local LayoutM = module("ReplicatedStorage", "Shared", "Layout")
-	local T = LayoutM.Table
-	local frame = salonTable:GetAttribute("Frame")
-	check("sorting: the field of view eases in (nothing snaps as you sit)", fovAtSeat == 70, fovAtSeat)
-	check("sorting: the sorting camera's own field of view", math.abs(camera.FieldOfView - Sorting.cameraFov) < 1e-3, camera.FieldOfView)
-	local must = {
-		Vector3.new(-T.width / 2 + 0.35, T.topY, -T.depth / 2 + 0.35),
-		Vector3.new(T.width / 2 - 0.35, T.topY, -T.depth / 2 + 0.35),
-		Vector3.new(-T.width / 2 + 0.35, T.topY, T.depth / 2 - 0.35),
-		Vector3.new(T.width / 2 - 0.35, T.topY, T.depth / 2 - 0.35),
-	}
-	for i = 1, 6 do
-		table.insert(must, LayoutM.caseLocal(i) + Vector3.new(0, 0.55, T.caseDepth / 2))
-	end
-	table.insert(must, Vector3.new(-1.7, T.topY + 0.5, T.counterZ))
-	table.insert(must, Vector3.new(2.55, T.topY + 0.5, T.counterZ))
-	for _, size in { Vector2.new(1280, 720), Vector2.new(1024, 768), Vector2.new(2340, 1080) } do
-		camera.ViewportSize = size
-		signalOf(camera, "prop:ViewportSize"):Fire()
-		local outside
-		for _, p in must do
-			local at = toScreen(camera, frame:PointToWorldSpace(p))
-			if at.X < 0 or at.X > size.X or at.Y < 0 or at.Y > size.Y then
-				outside = at
+	check("sorting: the sorting screen opens", sortGui ~= nil and sortGui.Enabled == true)
+	local size = sortGui and sortGui.Root.Size
+	check("sorting: it covers the whole screen, nothing of the room shows", sortGui ~= nil and sortGui.IgnoreGuiInset == true and sortGui.Root.Visible == true and sortGui.Root.BackgroundTransparency == 0 and size.X.Scale == 1 and size.Y.Scale == 1)
+	check("sorting: in through a dip to black, not a cut", sortGui.Curtain.BackgroundTransparency == 1)
+	check("sorting: the six cases, named as in the brief", textOnScreen("WATCHES") ~= nil and textOnScreen("JEWELRY") ~= nil and textOnScreen("COLLECTIBLES") ~= nil and textOnScreen("Bars, notes, coins") ~= nil)
+	check("sorting: each case has its own drawn mark", (function()
+		for _, bin in sortGui.Root.Cases:GetChildren() do
+			local mark = bin:FindFirstChild("Mark", true)
+			if not mark or #mark:GetDescendants() < 2 then
+				return false
 			end
 		end
-		check(string.format("sorting: the felt, all six cases and the counter fit a %dx%d screen", size.X, size.Y), outside == nil, outside)
+		return #sortGui.Root.Cases:GetChildren() == 6
+	end)())
+	check("sorting: the room's name in the header", textOnScreen("THE SALON") ~= nil)
+	check("sorting: the HUD's keys stay on top of it", playerGui.MaisonHud.DisplayOrder > sortGui.DisplayOrder)
+end
+
+-- Finding things on the sorting screen (every position is set in screen pixels).
+local Sort = {}
+function Sort.centre(f)
+	return Vector2.new(f.Position.X.Offset, f.Position.Y.Offset)
+end
+function Sort.card(uid)
+	for _, c in sortGui.Root.Pieces:GetChildren() do
+		if c:GetAttribute("Uid") == uid then
+			return c
+		end
 	end
-	camera.ViewportSize = Vector2.new(1280, 720)
-	signalOf(camera, "prop:ViewportSize"):Fire()
-	local eye = frame:PointToObjectSpace(camera.CFrame.Position)
-	local look = frame:VectorToObjectSpace(camera.CFrame.LookVector)
-	check("sorting: the camera sits above the chair, looking down the table at the cases", eye.Z < 0 and eye.Y > T.topY + 4 and look.Z > 0.3 and look.Y < -0.5, tostring(eye) .. " " .. tostring(look))
-	local focusFx = game:GetService("Lighting"):FindFirstChild("MaisonFocus")
-	check("sorting: the room behind the table falls softly out of focus", focusFx ~= nil and focusFx.Enabled and math.abs(focusFx.FarIntensity - Sorting.focusBlur) < 1e-6 and focusFx.FocusDistance > 5, focusFx and focusFx.FarIntensity)
-	local frameGui = playerGui:FindFirstChild("MaisonSortFrame")
-	check("sorting: the edges of the screen darken", frameGui ~= nil and frameGui.Top.BackgroundTransparency < 1 and frameGui.Bottom.BackgroundTransparency < 1)
+	return nil
+end
+function Sort.bin(caseId)
+	for _, b in sortGui.Root.Cases:GetChildren() do
+		if b:GetAttribute("CaseId") == caseId then
+			return b
+		end
+	end
+	return nil
+end
+function Sort.pointer(kind, at)
+	-- Screen positions to input positions, which start below the top bar.
+	return { UserInputType = kind, Position = Vector3.new(at.X, at.Y - 58, 0), KeyCode = roblox.Enum.KeyCode.Unknown, UserInputState = roblox.Enum.UserInputState.Begin }
+end
+-- Drags a piece to a case with the mouse and lets go. Returns where the piece was just after the
+-- pointer moved, where it was a moment later, whether the case lit up, and where the pointer was.
+function Sort.drag(uid, caseId)
+	UserInputService.PreferredInput = EnumShim.PreferredInput.KeyboardAndMouse
+	local card = Sort.card(uid)
+	local from = Sort.centre(card)
+	local to = Sort.centre(Sort.bin(caseId))
+	signalOf(card, "InputBegan"):Fire(Sort.pointer(roblox.Enum.UserInputType.MouseButton1, from))
+	UserInputService.InputChanged:Fire(Sort.pointer(roblox.Enum.UserInputType.MouseMovement, from + Vector2.new(24, 0)), false)
+	advance(0.05)
+	UserInputService.InputChanged:Fire(Sort.pointer(roblox.Enum.UserInputType.MouseMovement, to), false)
+	local justMoved = Sort.centre(card)
+	advance(0.4)
+	local settled = Sort.centre(card)
+	local lit = Sort.bin(caseId):FindFirstChildOfClass("UIStroke").Thickness == 2
+	UserInputService.InputEnded:Fire(Sort.pointer(roblox.Enum.UserInputType.MouseButton1, to), false)
+	return justMoved, settled, lit, to
 end
 
 local function pieceList(n, cases)
@@ -1194,11 +1326,54 @@ local cases = { Catalogue.Cases[1].id, Catalogue.Cases[2].id, Catalogue.Cases[3]
 local deal = pieceList(8, cases)
 serverSays("Table", { op = "deal", round = 1, room = "salon", mode = "room", cases = cases, pieces = deal, score = 0 })
 advance(2)
-local piecesFolder = workspace:FindFirstChild("MaisonLocal") and workspace.MaisonLocal:FindFirstChild("Pieces")
-check("the deal lands on the felt", piecesFolder ~= nil and #piecesFolder:GetChildren() == 8, piecesFolder and #piecesFolder:GetChildren())
+local piecesFolder = sortGui.Root.Pieces
+check("the deal lands on the tray", #piecesFolder:GetChildren() == 8, #piecesFolder:GetChildren())
+check("every piece is drawn, not a placeholder", (function()
+	for _, card in piecesFolder:GetChildren() do
+		local art = card:FindFirstChild("Art", true)
+		if not art or #art:GetDescendants() < 6 then
+			return false
+		end
+	end
+	return true
+end)())
+check("and named", textOnScreen(deal[1].name) ~= nil and textOnScreen(deal[8].name) ~= nil)
+check("a gilded piece has a glow about it", Sort.card(2):FindFirstChild("Glow") ~= nil and Sort.card(1):FindFirstChild("Glow") == nil)
+check("the cases closed this round say so", (function()
+	local closed = 0
+	for _, bin in sortGui.Root.Cases:GetChildren() do
+		if bin.Sub.Text == "Closed this round" then
+			closed += 1
+		end
+	end
+	return closed == 2
+end)())
+do
+	local tray = sortGui.Root.Tray
+	local x0, y0 = tray.Position.X.Offset, tray.Position.Y.Offset
+	local x1, y1 = x0 + tray.Size.X.Offset, y0 + tray.Size.Y.Offset
+	local inside, apart = true, true
+	local cards = piecesFolder:GetChildren()
+	local icon = cards[1].Icon.Size.X.Offset
+	for i, a in cards do
+		local c = Sort.centre(a)
+		if c.X < x0 or c.X > x1 or c.Y < y0 or c.Y > y1 then
+			inside = false
+		end
+		for j = i + 1, #cards do
+			if (Sort.centre(cards[j]) - c).Magnitude < icon * 0.8 then
+				apart = false
+			end
+		end
+	end
+	check("every piece sits on the tray", inside)
+	check("no two pieces sit on top of each other", apart)
+	check("the pieces are a good size to pick up", icon >= 50, icon)
+end
 check("no errors rendering the deal", #errors == 0, errors[1])
 check("the first deal says what to do", textOnScreen("Put every piece in the case where it belongs") ~= nil)
 check("and how, for the controls in your hands", textOnScreen("A picks up") ~= nil)
+snapshot("sort-deal")
 
 -- Lift the first piece and file it with the gamepad (A lifts, the D-pad picks a case, A files).
 local liftedBefore = sentOps("Table", "lift")
@@ -1237,97 +1412,60 @@ check("round II is dealt", #piecesFolder:GetChildren() == 10, #piecesFolder:GetC
 -- What a filing says back, with a mouse: drag a piece to a case and let go.
 do
 	local Sorting = Config.data.Sorting
-	local LayoutM = module("ReplicatedStorage", "Shared", "Layout")
-	local frame = salonTable:GetAttribute("Frame")
 	local round2 = pieceList(10, cases)
-	local function modelOf(uid)
-		for _, m in piecesFolder:GetChildren() do
-			if m:GetAttribute("Uid") == uid then
-				return m
-			end
-		end
-		return nil
-	end
-	local function pointer(kind, at)
-		return { UserInputType = kind, Position = Vector3.new(at.X, at.Y, 0), KeyCode = roblox.Enum.KeyCode.Unknown, UserInputState = roblox.Enum.UserInputState.Begin }
-	end
-	local function verdictWords()
-		local out = {}
-		for _, d in workspace:GetDescendants() do
-			if d:IsA("TextLabel") and d:FindFirstAncestorWhichIsA("BillboardGui") and d:FindFirstAncestorWhichIsA("BillboardGui").Name == "Verdict" then
-				table.insert(out, norm(d.Text))
-			end
-		end
-		return table.concat(out, "|")
-	end
 	local function clearVerdicts()
 		advance(Sorting.verdictSeconds + 0.6)
-	end
-	local rest = camera.CFrame
-	local function drag(uid, caseIndex, answer)
-		UserInputService.PreferredInput = EnumShim.PreferredInput.KeyboardAndMouse
-		local m = modelOf(uid)
-		local from = toScreen(camera, m:GetPivot().Position)
-		local to = toScreen(camera, LayoutM.caseCentre(frame, caseIndex) + Vector3.new(0, 0.3, 0))
-		UserInputService.InputBegan:Fire(pointer(roblox.Enum.UserInputType.MouseButton1, from), false)
-		UserInputService.InputChanged:Fire(pointer(roblox.Enum.UserInputType.MouseMovement, from + Vector2.new(24, 0)), false)
-		advance(0.05)
-		UserInputService.InputChanged:Fire(pointer(roblox.Enum.UserInputType.MouseMovement, to), false)
-		local justMoved = m:GetPivot().Position
-		advance(0.4)
-		local settled = m:GetPivot().Position
-		UserInputService.InputEnded:Fire(pointer(roblox.Enum.UserInputType.MouseButton1, to), false)
-		local hover = workspace.MaisonLocal:FindFirstChild("CaseHover")
-		return justMoved, settled, hover, to
 	end
 
 	-- A wrong case: piece 5 offered to a case that isn't its own.
 	local wrongPiece = round2[5]
-	local wrongIndex = if Catalogue.caseIndex[wrongPiece.case] == 1 then 2 else 1
-	local target = LayoutM.caseCentre(frame, wrongIndex)
-	local justMoved, settled, hover, pointerAt = drag(5, wrongIndex)
-	check("drag: the piece doesn't jump to the pointer, it travels there", (toScreen(camera, justMoved) - pointerAt).Magnitude > 40, (toScreen(camera, justMoved) - pointerAt).Magnitude)
-	check("drag: and is under the pointer a moment later", (toScreen(camera, settled) - pointerAt).Magnitude < 12, (toScreen(camera, settled) - pointerAt).Magnitude)
-	check("drag: the case under a held piece lights up", hover ~= nil and hover.Adornee ~= nil and hover.Adornee.Name == "Case" .. wrongIndex, hover and hover.Adornee and hover.Adornee.Name)
-	check("drag: and goes dark when you let go", hover.Enabled == false)
+	local wrongCase = if wrongPiece.case == cases[1] then cases[2] else cases[1]
+	local home = Sort.centre(Sort.card(5))
+	local justMoved, settled, lit, pointerAt = Sort.drag(5, wrongCase)
+	check("drag: the piece doesn't jump to the pointer, it travels there", (justMoved - pointerAt).Magnitude > 40, (justMoved - pointerAt).Magnitude)
+	check("drag: and is under the pointer a moment later", (settled - pointerAt).Magnitude < 12, (settled - pointerAt).Magnitude)
+	check("drag: the case under a held piece lights up", lit)
 	advance(0.05)
-	local words = verdictWords()
-	check("a wrong case says so: WRONG CASE", string.find(words, "wrongcase", 1, true) ~= nil, words)
-	check("and says try again", string.find(words, "tryagain", 1, true) ~= nil, words)
-	check("and names the streak it cost", string.find(words, "streakof8lost", 1, true) ~= nil, words)
-	check("the wrong case flashes red", workspace.MaisonLocal:FindFirstChild("WrongCase") ~= nil)
-	serverSays("Table", { op = "filed", uid = 5, case = cases[wrongIndex], correct = false, points = 0, setBonus = 0, penalty = 0, score = 360, streak = 0, multiplier = 1, runLength = 0 })
+	check("a wrong case says so: WRONG CASE", textOnScreen("WRONG CASE") ~= nil)
+	snapshot("sort-wrong")
+	check("and says try again", textOnScreen("Try again") ~= nil)
+	check("and names the streak it cost", textOnScreen("Streak of 8 lost") ~= nil)
+	local flash = Sort.bin(wrongCase).Flash.BackgroundColor3
+	check("the wrong case flashes red", flash.R > flash.G * 1.5, flash)
+	serverSays("Table", { op = "filed", uid = 5, case = wrongCase, correct = false, points = 0, setBonus = 0, penalty = 0, score = 360, streak = 0, multiplier = 1, runLength = 0 })
 	advance(1)
-	local slot5 = modelOf(5):GetPivot().Position
-	check("the piece goes back to its place on the felt", (slot5 - target).Magnitude > 1, slot5)
-	check("the camera's small shake settles exactly back", (camera.CFrame.Position - rest.Position).Magnitude < 1e-3)
+	check("the piece goes back to its place on the tray", (Sort.centre(Sort.card(5)) - home).Magnitude < 3, (Sort.centre(Sort.card(5)) - home).Magnitude)
+	check("the case goes dark again when you let go", Sort.bin(wrongCase):FindFirstChildOfClass("UIStroke").Thickness == 1)
 	clearVerdicts()
-	check("the message goes again", verdictWords() == "")
+	check("the message goes again", textOnScreen("WRONG CASE") == nil)
 
 	-- Three right in a row: pieces 6, 7 and 8 into their own cases.
 	local score = 360
 	for n, uid in { 6, 7, 8 } do
 		local p = round2[uid]
-		local before = modelOf(uid):GetScale()
-		drag(uid, Catalogue.caseIndex[p.case])
+		local count = tonumber(Sort.bin(p.case).Count.Text)
+		Sort.drag(uid, p.case)
 		advance(0.05)
-		local said = verdictWords()
-		check(string.format("a right case says so (%d): CORRECT", n), string.find(said, "correct", 1, true) ~= nil and string.find(said, "wrong", 1, true) == nil, said)
-		check(string.format("with the points it earned (%d)", n), string.find(said, "+", 1, true) ~= nil, said)
+		check(string.format("a right case says so (%d): CORRECT", n), textOnScreen("CORRECT") ~= nil and textOnScreen("WRONG CASE") == nil)
+		check(string.format("with the points it earned (%d)", n), find(playerGui, function(d)
+			return d:IsA("TextLabel") and string.sub(d.Text, 1, 1) == "+"
+		end) ~= nil)
 		advance(0.6)
-		local m = modelOf(uid)
-		local inCase = (m:GetPivot().Position - LayoutM.caseCentre(frame, Catalogue.caseIndex[p.case])).Magnitude < 1
-		check(string.format("the piece arcs into its case and shrinks to fit (%d)", n), inCase and m:GetScale() < before * 0.8, m:GetScale())
+		check(string.format("the piece goes into its case and off the tray (%d)", n), Sort.card(uid) ~= nil and Sort.card(uid).Visible == false)
+		check(string.format("the case counts it (%d)", n), tonumber(Sort.bin(p.case).Count.Text) == count + 1, Sort.bin(p.case).Count.Text)
 		score += 20
 		serverSays("Table", { op = "filed", uid = uid, case = p.case, correct = true, points = 20, setBonus = 0, penalty = 0, score = score, streak = n, multiplier = 1 + n // 2, runLength = 1 })
 		if n == 3 then
 			advance(0.3)
 			check("three in a row is called out", textOnScreen("Now ×2") ~= nil)
-			check("the first-seating hint has gone after three right", textOnScreen("Put every piece in the case where it belongs") == nil)
+			snapshot("sort-streak")
+			check("the first-seating hint has gone after three right", find(playerGui, function(d)
+				return d:IsA("TextLabel") and d.Name == "Hint" and d.TextTransparency < 1
+			end) == nil)
 		end
 		clearVerdicts()
 	end
-	check("the camera's lean-in eases back to the sorting field of view", math.abs(camera.FieldOfView - Sorting.cameraFov) < 1e-3, camera.FieldOfView)
+	check("the header shows the score", textOnScreen(tostring(score)) ~= nil)
 	advance(2)
 	check("the streak call-out goes again", textOnScreen("Now ×2") == nil)
 	check("no errors while sorting by hand", #errors == 0, errors[1])
@@ -1450,44 +1588,27 @@ do
 end
 
 -- With a mouse: press on a piece, drag it over its case, let go.
-UserInputService.PreferredInput = EnumShim.PreferredInput.KeyboardAndMouse
-local Layout = module("ReplicatedStorage", "Shared", "Layout")
-local target
-for _, m in piecesFolder:GetChildren() do
-	if m:GetAttribute("Uid") == 1 then
-		target = m
+do
+	local first = pieceList(10, cases)[1]
+	local filesBefore = sentOps("Table", "file")
+	local liftsBeforeDrag = sentOps("Table", "lift")
+	Sort.drag(1, first.case)
+	advance(0.5)
+	local dropped
+	for _, sent_ in sent do
+		if sent_.remote == "Table" and sent_.message.op == "file" then
+			dropped = sent_.message
+		end
 	end
+	check("a mouse drag lifts the piece", sentOps("Table", "lift") > liftsBeforeDrag)
+	check("letting go over its case files it", sentOps("Table", "file") == filesBefore + 1 and dropped.uid == 1 and dropped.case == first.case, dropped and string.format("uid %s case %s want %s", tostring(dropped.uid), dropped.case, first.case))
 end
-local function mouse(kind, at)
-	return { UserInputType = kind, Position = Vector3.new(at.X, at.Y, 0), KeyCode = roblox.Enum.KeyCode.Unknown, UserInputState = roblox.Enum.UserInputState.Begin }
-end
-local frame = salonTable:GetAttribute("Frame")
-local wantCase = Catalogue.byId[target:GetAttribute("Uid") and pieceList(10, cases)[1].id].case
-local from = toScreen(camera, target:GetPivot().Position)
-local to = toScreen(camera, Layout.caseCentre(frame, Catalogue.caseIndex[wantCase]) + Vector3.new(0, 0.3, 0))
-local filesBefore = sentOps("Table", "file")
-local liftsBeforeDrag = sentOps("Table", "lift")
-UserInputService.InputBegan:Fire(mouse(roblox.Enum.UserInputType.MouseButton1, from), false)
-UserInputService.InputChanged:Fire(mouse(roblox.Enum.UserInputType.MouseMovement, from + Vector2.new(24, 0)), false)
-advance(0.1)
-local dragging = sentOps("Table", "lift") - liftsBeforeDrag
-UserInputService.InputChanged:Fire(mouse(roblox.Enum.UserInputType.MouseMovement, (from + to) / 2), false)
-UserInputService.InputChanged:Fire(mouse(roblox.Enum.UserInputType.MouseMovement, to), false)
-UserInputService.InputEnded:Fire(mouse(roblox.Enum.UserInputType.MouseButton1, to), false)
-advance(0.5)
-local dropped
-for _, s in sent do
-	if s.remote == "Table" and s.message.op == "file" then
-		dropped = s.message
-	end
-end
-check("a mouse drag lifts the piece", dragging > 0)
-check("letting go over its case files it", sentOps("Table", "file") == filesBefore + 1 and dropped.uid == 1 and dropped.case == wantCase, dropped and string.format("uid %s case %s want %s files %d->%d", tostring(dropped.uid), dropped.case, wantCase, filesBefore, sentOps("Table", "file")))
 UserInputService.PreferredInput = EnumShim.PreferredInput.Gamepad
 serverSays("Table", { op = "banked", score = 360, grade = "Polished", rounds = 1, accuracy = 0.9, gilt = 12, best = 360, newBest = true })
 advance(2)
 check("the banked card offers another run", textOnScreen("Another run") ~= nil)
 advance(1.5)
+snapshot("banked")
 check("the tally lands row by row and counts up to what you earned", textOnScreen("90%") ~= nil and textOnScreen("A new best") ~= nil and find(playerGui, function(d)
 	return d:IsA("TextLabel") and d.Text == "+12" and d.TextTransparency == 0
 end) ~= nil)
@@ -1509,10 +1630,9 @@ local fovAtLeave = camera.FieldOfView
 advance(2)
 check("leaving hands the camera back", camera.CameraType == roblox.Enum.CameraType.Custom)
 check("leaving: the field of view eases back out (no snap)", fovAtLeave == Config.data.Sorting.cameraFov and camera.FieldOfView == 70, string.format("%s -> %s", tostring(fovAtLeave), tostring(camera.FieldOfView)))
-check("leaving: the room comes back into focus", not game:GetService("Lighting").MaisonFocus.Enabled)
-check("leaving: the screen's edges clear", playerGui.MaisonSortFrame.Top.BackgroundTransparency == 1)
+check("leaving: the sorting screen closes, through black, back to the room", sortGui.Enabled == false and sortGui.Curtain.BackgroundTransparency == 1)
 check("leaving gives the controls back", controls.enabled == true)
-check("the felt is cleared", #piecesFolder:GetChildren() == 0)
+check("the tray is cleared", #piecesFolder:GetChildren() == 0)
 check("standing up: what's next is tonight's table", textOnScreen("Tonight's table is laid") ~= nil)
 check("with a key that takes you there", textOnScreen("Take me there") ~= nil)
 check("the rival's plate goes with the table", find(workspace, function(d)
@@ -1526,12 +1646,11 @@ serverSays("Table", { op = "seated", table = salonTable:GetAttribute("TableId"),
 advance(1.5)
 serverSays("Table", { op = "deal", round = 1, room = "velvet", mode = "nightly", cases = cases, pieces = pieceList(10, cases), score = 0, clock = { left = 30, running = true, budget = 30 } })
 advance(3)
-check("a timed deal shows the clock rail", find(salonTable, function(d)
-	return d.Name == "RailGui"
-end) ~= nil)
+check("a timed deal shows the clock: a draining gold rail and the seconds", sortGui.Root.Clock.Visible == true and sortGui.Root.Clock.Fill.Size.X.Scale > 0 and textOnScreen("0:") ~= nil)
 serverSays("Table", { op = "nightlyCard", key = "2026-09-29", room = "velvet", score = 4210, grade = "Immaculate", rounds = { "Flawless", "Immaculate", "", "", "" }, scored = true, gilt = 120, rank = 12, total = 300, percentile = 4, connections = { place = 2, of = 5 } })
 advance(2)
 check("the Nightly card shows the score", textOnScreen("4,210") ~= nil)
+snapshot("nightly")
 check("with Share and Invite", textOnScreen("Share") ~= nil and textOnScreen("Invite") ~= nil)
 press("Invite")
 check("Invite opens Roblox's invite prompt", shared.invites == 1)
@@ -1644,6 +1763,7 @@ end) ~= nil)
 serverSays("Table", { op = "duelEnd", won = true, wins = { a = 3, b = 1 }, reason = "won", ranked = true, standIn = false, rival = "Ben", before = 1500, after = 1523, placementLeft = 4, gilt = 60 })
 advance(2)
 check("the result card: the table is yours", textOnScreen("The table is yours") ~= nil)
+snapshot("duel-result")
 check("the result card shows the hands and the rating", textOnScreen("3 – 1") ~= nil and textOnScreen("1523") ~= nil)
 check("placement is explained", textOnScreen("4 more before your Mark is shown") ~= nil)
 press("Another")
@@ -1734,9 +1854,7 @@ check("Ballroom: a parcel's pieces spill onto the felt", #piecesFolder:GetChildr
 -- Over sixteen: the rail counts three seconds.
 serverSays("Table", { op = "flicker", on = true, seconds = 3 })
 advance(0.5)
-check("Ballroom: over sixteen shows the rail", find(ballroomTable, function(d)
-	return d.Name == "RailGui" and d.Enabled
-end) ~= nil)
+check("Ballroom: over sixteen shows the clock", sortGui.Root.Clock.Visible == true)
 serverSays("Table", { op = "flicker", on = false })
 ballroomTable:SetAttribute("Flicker", true)
 advance(0.5)
@@ -1766,6 +1884,7 @@ check("Ballroom: Closing Time is announced", textOnScreen("Closing Time") ~= nil
 serverSays("Table", { op = "out", place = 4, keys = 1, by = "Ben", reason = "over", of = 20 })
 advance(1.5)
 check("Ballroom: the out card lands", textOnScreen("Your lamp is out") ~= nil and textOnScreen("4th of 20") ~= nil)
+snapshot("ballroom-out")
 check("Ballroom: the felt clears", #piecesFolder:GetChildren() == 0)
 press("Stay for the next evening")
 press("Next evening")
@@ -1805,6 +1924,7 @@ check("no errors in the Ballroom", #errors == 0, errors[1])
 UserInputService.PreferredInput = EnumShim.PreferredInput.KeyboardAndMouse
 check("Settings opens", press("Settings"))
 advance(1)
+snapshot("settings")
 check("no errors in Settings", #errors == 0, errors[1])
 local Root = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "Root")
 Root.close()
@@ -1817,6 +1937,7 @@ local BoardPanel = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI
 BoardPanel.open()
 advance(1)
 check("the leaderboard shows tonight's names", textOnScreen("Ben") ~= nil)
+snapshot("board")
 check("the Library tab is there", press("Library"))
 advance(0.5)
 check("the Library board shows ratings", textOnScreen("1540") ~= nil)
@@ -1826,6 +1947,7 @@ local HowToPlay = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI"
 HowToPlay.open()
 advance(1)
 check("how to play opens", textOnScreen("Pick one up") ~= nil)
+snapshot("howto")
 Root.close()
 advance(1)
 serverSays("Guest", { op = "inviteLibrary" })
@@ -1847,6 +1969,7 @@ serverSays("Shop", { op = "state", owned = {}, equipped = {}, gilt = 1200, goldK
 serverSays("Shop", { op = "open", panel = "boutique" })
 advance(1)
 check("the Boutique opens from the counter", textOnScreen("The Boutique") ~= nil)
+snapshot("boutique")
 check("today's piece is on the shelf with its live price", textOnScreen("Oxblood Felt") ~= nil and textOnScreen("249") ~= nil)
 check("the Gilt balance shows", textOnScreen("1,200 Gilt") ~= nil)
 check("Buy asks the server", press("Buy · " .. utf8.char(0xE002) .. " 249") and (function()
@@ -1869,12 +1992,14 @@ invokeResults.ShopAsk = { kinds = { table = { oxblood } }, equipped = { table = 
 serverSays("Shop", { op = "open", panel = "wardrobe" })
 advance(1)
 check("the Wardrobe lists what you own", textOnScreen("The Wardrobe") ~= nil and textOnScreen("Oxblood Felt") ~= nil)
+snapshot("wardrobe")
 Root2.close()
 advance(1)
 invokeResults.ShopAsk = ledgerView
 serverSays("Shop", { op = "open", panel = "ledger" })
 advance(1)
 check("the Ledger opens as a book", textOnScreen("Page 2") ~= nil and textOnScreen("100 Gilt") ~= nil)
+snapshot("ledger")
 Root2.close()
 advance(1)
 serverSays("Shop", { op = "gift", from = "Ben", item = oxblood })
@@ -1902,6 +2027,7 @@ invokeResults.ShopAsk = {
 serverSays("Shop", { op = "open", panel = "register" })
 advance(1)
 check("the Register opens with your standing", textOnScreen("Member") ~= nil and textOnScreen("File twelve pieces") ~= nil)
+snapshot("register")
 check("a case page shows the found piece in 3D", press(catalogueForTest.Cases[1].name) and textOnScreen(firstCore.name) ~= nil and find(playerGui, function(d)
 	return d:IsA("ViewportFrame")
 end) ~= nil)
@@ -1923,7 +2049,7 @@ check("no errors in the Register and the Vault", #errors == 0, errors[1])
 -- The Suite: your own furniture, drawn only for you; the Gold Key rooms; nobody else in it.
 serverSays("Shop", { op = "state", owned = { "suite_rug_black" }, equipped = {}, gilt = 800, goldKey = false, credits = {}, suite = { rug = "suite_rug_black" }, ledger = { page = 2, pages = 50, progress = 0.1, leather = false, term = "2026-autumn" } })
 advance(0.5)
-local SuiteLayout = Layout.Suite
+local SuiteLayout = module("ReplicatedStorage", "Shared", "Layout").Suite
 root.Position = SuiteLayout.arrival + Vector3.new(0, 3, 0)
 root.CFrame = CFrame.new(SuiteLayout.arrival + Vector3.new(0, 3, 0))
 advance(1)
@@ -1947,6 +2073,7 @@ invokeResults.ShopAsk = {
 serverSays("Shop", { op = "open", panel = "suite" })
 advance(1)
 check("the bell opens the Suite's furnishing", textOnScreen("Your Suite") ~= nil and textOnScreen("Black Fringed Rug") ~= nil)
+snapshot("suite")
 check("pieces not yet yours say where they come from", textOnScreen("800 Gilt, in the Boutique") ~= nil)
 check("closed rooms say so", textOnScreen("Opens with the Gold Key") ~= nil)
 invokeResults.ShopAsk = { ok = true }
@@ -2011,6 +2138,7 @@ invokeResults.AdminAsk = {
 check("the owner sees the House key", press("House"))
 advance(1)
 check("the owner's panel opens", textOnScreen("House controls") ~= nil and textOnScreen("Golden Hour") ~= nil)
+snapshot("admin")
 check("Start begins an event", press("Start") and (function()
 	advance(0.5)
 	for i = #sent, 1, -1 do

@@ -223,7 +223,7 @@ local function standInRig(model: Model): Model?
 		local label = Instance.new("TextLabel")
 		label.BackgroundTransparency = 1
 		label.Size = UDim2.fromScale(1, 1)
-		label.Font = Enum.Font.Bodoni
+		label.Font = Enum.Font.GothamMedium
 		label.TextScaled = true
 		label.TextColor3 = Color3.fromRGB(198, 160, 82)
 		label.TextTransparency = 0.55

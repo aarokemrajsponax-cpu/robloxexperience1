@@ -77,8 +77,7 @@ State.watch("textSize", function(value)
 	Theme.refresh()
 end)
 State.watch("lettering", function(value)
-	local enum = Brand.Lettering[value] or Enum.Font.Bodoni
-	displayFont = Font.fromEnum(enum)
+	displayFont = Brand.Lettering[value] or Brand.Fonts.display
 	Theme.refresh()
 end)
 State.watch("houseStyle", function(value)

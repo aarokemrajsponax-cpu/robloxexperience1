@@ -10,7 +10,6 @@ local Ease = require(ReplicatedStorage.Shared.Ease)
 local Voice = require(ReplicatedStorage.Shared.Voice)
 local Root = require(script.Parent.Root)
 local Theme = require(script.Parent.Theme)
-local State = require(script.Parent.Parent.State)
 
 local Hud = {}
 
@@ -106,7 +105,8 @@ function Hud.setSeated(seated: boolean)
 	if leaveKey then
 		leaveKey.Visible = seated
 	end
-	line.Visible = seated and State.inputKind() == "touch"
+	-- At a table the sorting screen carries the score and the clock itself.
+	line.Visible = false
 end
 
 function Hud.setLine(score: string, multiplier: number, clock: number?)

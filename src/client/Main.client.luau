@@ -436,6 +436,13 @@ if RunService:IsStudio() then
 		stamp.TextTransparency = 0.3
 		stamp.Text = Build.label
 		stamp.Parent = Root.hud
+		-- Out of the way while sorting.
+		TableClient.Seated.Event:Connect(function()
+			stamp.Visible = false
+		end)
+		TableClient.Left.Event:Connect(function()
+			stamp.Visible = true
+		end)
 	end)
 end
 if RunService:IsStudio() and Config.data.Studio.skipTitle then

@@ -23,20 +23,26 @@ Brand.Colours = {
 	glass = Color3.fromRGB(24, 28, 34),
 }
 
--- Display serif and body sans. The Lettering setting swaps the display face.
+-- The house face is Gotham: clean, wide and quiet, set in letter-spaced capitals for labels and
+-- light weights for large numbers. The Lettering setting can swap the display face.
+local GOTHAM = Font.fromEnum(Enum.Font.Gotham).Family
+
 Brand.Fonts = {
-	display = Font.fromEnum(Enum.Font.Bodoni),
-	body = Font.fromEnum(Enum.Font.BuilderSans),
-	bodyMedium = Font.fromEnum(Enum.Font.BuilderSansMedium),
-	bodyBold = Font.fromEnum(Enum.Font.BuilderSansBold),
+	display = Font.new(GOTHAM, Enum.FontWeight.Regular),
+	body = Font.new(GOTHAM, Enum.FontWeight.Regular),
+	bodyMedium = Font.new(GOTHAM, Enum.FontWeight.Medium),
+	bodyBold = Font.new(GOTHAM, Enum.FontWeight.Bold),
+	light = Font.new(GOTHAM, Enum.FontWeight.Light),
+	-- An engraved serif, for the few things that are engraved (a signet, a coin).
+	serif = Font.fromEnum(Enum.Font.Merriweather),
 }
 
 Brand.Lettering = {
-	Editorial = Enum.Font.Bodoni,
-	Book = Enum.Font.Garamond,
-	Modern = Enum.Font.GothamMedium,
-	Ledger = Enum.Font.Merriweather,
-}
+	Editorial = Brand.Fonts.display,
+	Book = Font.fromEnum(Enum.Font.Garamond),
+	Modern = Font.new(GOTHAM, Enum.FontWeight.Light),
+	Ledger = Font.fromEnum(Enum.Font.Merriweather),
+} :: { [string]: Font }
 
 -- House style swatches (Appendix F): accent on base.
 Brand.HouseStyles = {
