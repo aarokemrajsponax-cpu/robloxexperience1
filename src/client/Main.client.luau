@@ -23,6 +23,7 @@ local Title = require(script.Parent.UI.Title)
 local Dialogue = require(script.Parent.UI.Dialogue)
 local Prompts = require(script.Parent.UI.Prompts)
 local Hud = require(script.Parent.UI.Hud)
+local Objective = require(script.Parent.UI.Objective)
 local Toast = require(script.Parent.UI.Toast)
 local SettingsPanel = require(script.Parent.UI.SettingsPanel)
 local BoardPanel = require(script.Parent.UI.BoardPanel)
@@ -243,6 +244,12 @@ local function startHud()
 	end
 	ownerKey()
 	player:GetAttributeChangedSignal("MaisonAdmin"):Connect(ownerKey)
+	-- What to do next, under the keys while you walk.
+	start("Objective", function()
+		Objective.start(function(mode: string)
+			quickSit(mode)
+		end)
+	end)
 end
 
 local function waitForCharacter(): Model

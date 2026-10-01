@@ -5,5 +5,5 @@
 
 return {
 	number = 21,
-	label = "Build 21 · 1 Oct · sorting rebuilt: its own camera, clear right and wrong, the house's own music",
+	label = "Build 21 · 1 Oct · sorting rebuilt: its own camera, clear right and wrong, original music",
 }

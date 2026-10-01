@@ -1088,6 +1088,8 @@ check("Shift runs", (function()
 	return running and humanoid.WalkSpeed == Config.data.Movement.walkSpeed
 end)())
 check("a first visit offers Straight to the table", textOnScreen("Straight to the table") ~= nil)
+check("what's next, while walking: take a seat", textOnScreen("Take a seat at any table in the Salon") ~= nil)
+check("and how, with the keys in your hands", textOnScreen("Walk up to a chair and press E") ~= nil)
 check("no errors after Play", #errors == 0, errors[1])
 
 -- The Black Card on the lectern: not there until it's offered, and never in a guest's first minutes.
@@ -1130,6 +1132,7 @@ advance(2)
 check("seated: controls are off", controls.enabled == false)
 check("seated: the camera frames the table", camera.CameraType == roblox.Enum.CameraType.Scriptable)
 check("seated: Leave is on screen", textOnScreen("Leave") ~= nil)
+check("seated: the what's-next card steps aside", textOnScreen("Take a seat at any table in the Salon") == nil)
 
 -- The sorting camera: in without a snap, then the whole table in view, from above the chair.
 do
@@ -1484,6 +1487,10 @@ UserInputService.PreferredInput = EnumShim.PreferredInput.Gamepad
 serverSays("Table", { op = "banked", score = 360, grade = "Polished", rounds = 1, accuracy = 0.9, gilt = 12, best = 360, newBest = true })
 advance(2)
 check("the banked card offers another run", textOnScreen("Another run") ~= nil)
+advance(1.5)
+check("the tally lands row by row and counts up to what you earned", textOnScreen("90%") ~= nil and textOnScreen("A new best") ~= nil and find(playerGui, function(d)
+	return d:IsA("TextLabel") and d.Text == "+12" and d.TextTransparency == 0
+end) ~= nil)
 check("no errors through a whole run", #errors == 0, errors[1])
 
 -- The rival's plate appears at the table when the house has picked one.
@@ -1506,6 +1513,8 @@ check("leaving: the room comes back into focus", not game:GetService("Lighting")
 check("leaving: the screen's edges clear", playerGui.MaisonSortFrame.Top.BackgroundTransparency == 1)
 check("leaving gives the controls back", controls.enabled == true)
 check("the felt is cleared", #piecesFolder:GetChildren() == 0)
+check("standing up: what's next is tonight's table", textOnScreen("Tonight's table is laid") ~= nil)
+check("with a key that takes you there", textOnScreen("Take me there") ~= nil)
 check("the rival's plate goes with the table", find(workspace, function(d)
 	return d.Name == "RivalPlate"
 end) == nil)
@@ -1531,6 +1540,7 @@ advance(0.5)
 serverSays("Table", { op = "left" })
 advance(2)
 check("no errors through the Nightly", #errors == 0, errors[1])
+check("after tonight's table, what's next is the Midnight Room", textOnScreen("Reach round IV in the Obsidian Room") ~= nil and textOnScreen("Tonight's table is laid") == nil)
 
 ---------------------------------------------------------------------------------------------------
 -- 6. The Library: a whole Tête-à-Tête on screen

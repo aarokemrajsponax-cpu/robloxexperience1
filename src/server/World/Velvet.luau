@@ -74,7 +74,7 @@ function Velvet.build(parent: Instance): Model
 		doorZ = Layout.RoomDoors.velvet.centre.Z,
 		wall = GREEN,
 		floor = { color = Color3.fromRGB(36, 26, 20), material = Enum.Material.WoodPlanks },
-		ceiling = { color = Color3.fromRGB(12, 22, 18), material = Enum.Material.SmoothPlastic },
+		ceiling = { color = Color3.fromRGB(12, 22, 18), material = Enum.Material.Plaster },
 		wainscot = L.darkWood,
 		rail = L.brass,
 		sharedSouth = true, -- the Salon's north wall

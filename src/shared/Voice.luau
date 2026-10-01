@@ -103,6 +103,29 @@ Voice.Table = {
 	clockRanOut = "The clock ran out in round {round}.",
 }
 
+-- The one line under the keys while you walk: what to do next.
+Voice.Objective = {
+	next = "Next",
+	tonight = "Tonight",
+	sit = "Take a seat at any table in the Salon",
+	sitHow = {
+		mouse = "Walk up to a chair and press E",
+		touch = "Walk up to a chair and tap Sit",
+		gamepad = "Walk up to a chair and press X",
+	},
+	nightly = "Tonight's table is laid: one deal, everyone on Roblox",
+	nightlyHow = {
+		mouse = "Press F at any table",
+		touch = "Tap Tonight's table at any chair",
+		gamepad = "Press Y at any table",
+	},
+	midnight = "Reach round IV in the Obsidian Room to open the Midnight Room",
+	midnightHow = "The Concierge in the Foyer will walk you there",
+	best = "Beat your best run in {room}: {points} points",
+	bestHow = "Any room. The Midnight Room pays the most.",
+	takeMe = "Take me there",
+}
+
 -- What a filing says back: plain enough that nobody wonders whether it went in.
 Voice.Sorting = {
 	correct = "Correct",

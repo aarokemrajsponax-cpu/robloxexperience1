@@ -40,7 +40,7 @@ function Obsidian.build(parent: Instance): Model
 		doorZ = Layout.RoomDoors.obsidian.centre.Z,
 		wall = STONE,
 		floor = GLOSS,
-		ceiling = { color = Color3.fromRGB(6, 6, 8), material = Enum.Material.SmoothPlastic },
+		ceiling = { color = Color3.fromRGB(6, 6, 8), material = Enum.Material.Plaster },
 		wainscot = nil,
 		rail = L.darkBrass,
 		sharedSouth = true, -- the Midnight Room's north wall

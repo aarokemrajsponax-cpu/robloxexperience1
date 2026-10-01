@@ -20,7 +20,7 @@ local C = Brand.Colours
 Kit.Looks = ({
 	blackMarble = { color = Color3.fromRGB(18, 18, 21), material = Enum.Material.Marble, reflectance = 0.08 },
 	boneMarble = { color = Color3.fromRGB(226, 219, 204), material = Enum.Material.Marble, reflectance = 0.05 },
-	wall = { color = Color3.fromRGB(20, 21, 25), material = Enum.Material.SmoothPlastic },
+	wall = { color = Color3.fromRGB(22, 22, 26), material = Enum.Material.Plaster },
 	panel = { color = Color3.fromRGB(28, 28, 32), material = Enum.Material.Wood },
 	facade = { color = Color3.fromRGB(14, 14, 17), material = Enum.Material.Brick },
 	facadeTrim = { color = Color3.fromRGB(26, 26, 30), material = Enum.Material.Concrete },

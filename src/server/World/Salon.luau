@@ -104,7 +104,7 @@ function Salon.build(parent: Instance): Model
 		doorZ = Layout.RoomDoors.salon.centre.Z,
 		wall = L.deepVelvet,
 		floor = { color = Color3.fromRGB(44, 28, 20), material = Enum.Material.WoodPlanks },
-		ceiling = { color = Color3.fromRGB(30, 14, 16), material = Enum.Material.SmoothPlastic },
+		ceiling = { color = Color3.fromRGB(30, 14, 16), material = Enum.Material.Plaster },
 		wainscot = L.walnut,
 		rail = L.brass,
 	})

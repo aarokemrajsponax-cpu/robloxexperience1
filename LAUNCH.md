@@ -141,7 +141,8 @@ All in `src/shared/Config.luau` (or live, in Creator Hub → Configs, as `Sectio
 | Badges | `Badges.*` | from Creator Hub → Badges |
 | Circles | `Circles.enabled` | `true` at launch, or `false` for later (§19 #10) |
 | Notification templates | `Notifications.messages.*` | from Creator Hub → Engagement → Notifications |
-| Music, sounds, looks, animations | `Assets.*` | see the README's tables |
+| The house's music and sounds | `Assets.SoundSheet`, `Assets.Tracks.*` | upload the four files in `assets/audio` (README, "four uploads") |
+| Looks, animations | `Assets.*` | see the README's tables |
 
 **The notifications' Open Cloud key** (never in code):
 1. Creator Hub → **Open Cloud** → **API Keys** → **Create API Key**.

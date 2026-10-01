@@ -303,26 +303,39 @@ Every number is in `src/shared/Config.luau`. To change one live, without republi
 in the Creator Dashboard under **Configs**, writing the path with underscores:
 `Rooms_salon_firstDeal = 9`, `Movement_walkSpeed = 14`, `Assets_Music_foyer = rbxassetid://…`.
 
-## Sounds and looks still to choose
+## The house's own music and sounds (four uploads)
 
-The sounds are placeholders taken from Roblox's built-in click and landing sounds; the music
-slots are empty. Put ids in `Config.Assets` (or in Configs as above):
+The game's music and table sounds are original: composed and synthesised from scratch by
+`tools/audio/compose.py`, so they belong to the game and need no licence. They're in
+`assets/audio/`, ready to upload once each:
+
+| File | What it is | Paste its id into |
+| --- | --- | --- |
+| `maison-sounds.ogg` | every table sound (25 sounds, 68 takes: pickup, place, deal, slide, hover, correct chime, wrong, streak lost, combo, round, run banked, sit, stand, clicks, the four Boutique chimes…) | `Assets.SoundSheet` |
+| `maison-lounge.ogg` | solo piano ballad, 107 s loop (the Foyer's piano, the Suite, the Vault, the Terrace) | `Assets.Tracks.lounge` |
+| `maison-table.ogg` | brushed jazz quartet, 96 bpm, 160 s loop (the four sorting rooms and the Library) | `Assets.Tracks.table` |
+| `maison-ballroom.ogg` | swing band, 132 bpm, 116 s loop (the Ballroom) | `Assets.Tracks.ballroom` |
+
+**How:** Studio → **View → Asset Manager** → **Bulk Import** (the icon with the up arrow) → pick
+the four `.ogg` files from `assets/audio` on your computer → wait for them to finish. Right-click
+each in the Asset Manager's **Audio** folder → **Copy Asset ID** → paste into
+`src/shared/Config.luau` as `"rbxassetid://<the number>"` (or live in Creator Hub → Configs as
+`Assets_SoundSheet`, `Assets_Tracks_lounge`, `Assets_Tracks_table`, `Assets_Tracks_ballroom`).
+
+Until the sheet is set, the table plays Roblox's built-in sounds, softened. Once it's set, the
+Boutique's four chimes (99 Robux each) go on sale on their own. Never cut the sheet up or edit
+it by hand: `src/shared/SoundSheet.luau` says where each take sits in it, and both are rewritten
+together by `python3 tools/audio/compose.py`.
+
+Any slot can still take a Creator Store sound or track instead: a sound set by name in
+`Assets.Sounds` wins over the sheet, and a room's own `Assets.Music.<room>` wins over the house
+tracks. Optional extras:
 
 | Slot | What it should sound like |
 | --- | --- |
-| `Sounds.chime` | one clean bell or glass note; the code pitches it up the streak |
-| `Sounds.pickup` / `drop` | soft cloth lift, a felt tap |
-| `Sounds.wrong` | a muted wooden knock, never a buzzer |
-| `Sounds.round` / `complete` | a short warm two-note cadence; a longer one |
-| `Sounds.door`, `chair` | a heavy door easing open; a chair on carpet |
-| `Music.street` / `foyer` / `salon` | muffled city · jazz piano · soft deep house around 92 BPM |
-| `Music.velvet` / `obsidian` / `midnight` | slower and brushed · minimal and taut · sparse piano and room tone |
-| `Music.library` / `club` / `ballroom` | a hushed bed of piano and low strings · the hall between · a full late-night band |
-| `Music.boutique` / `vault` / `suite` / `terrace` | quiet, warm, expensive; the Terrace a little brighter |
 | `MusicLayers.<room>` | an optional fuller layer of the same track that rises as the run builds |
 | `Band.full` / `bass` / `piano` / `clock` | the Ballroom's band in stems: all of it; bass and brushes; one piano; a ticking clock |
 | `Ambience.<space>`, `SeasonAmbience.<season>` | rain on glass, the distant city; a fire (frost), crickets (summer) |
-| `Sounds.low` | the clock's last ten seconds: one soft low tick, played once |
 
 **Staff looks** (`Config.Assets.Concierge` / `Doorman` / `Pianist`): a black tailcoat shirt and trousers
 (classic clothing ids), white gloves, and optionally a hair accessory. Until then they're

@@ -3,6 +3,7 @@
 -- stamped hallmark: a small bordered cartouche, not a font glyph.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local Voice = require(ReplicatedStorage.Shared.Voice)
@@ -12,31 +13,12 @@ local Hallmark = require(script.Parent.Hallmark)
 local Rooms = require(ReplicatedStorage.Shared.Rooms)
 local State = require(script.Parent.Parent.State)
 local Share = require(script.Parent.Share)
+local Ease = require(ReplicatedStorage.Shared.Ease)
+local Sound = require(script.Parent.Parent.Sound)
 
 local RoundPanel = {}
 
 local NAME = "Round"
-
-local function line(parent: Instance, left: string, right: string, order: number)
-	local row = Instance.new("Frame")
-	row.BackgroundTransparency = 1
-	row.Size = UDim2.new(1, 0, 0, 24)
-	row.LayoutOrder = order
-	row.Parent = parent
-	Theme.text(row, left, 15, "body", {
-		AutomaticSize = Enum.AutomaticSize.None,
-		Size = UDim2.new(0.6, 0, 1, 0),
-		TextXAlignment = Enum.TextXAlignment.Left,
-		TextColor3 = Brand.Colours.smoke,
-	})
-	Theme.text(row, right, 15, "bodyMedium", {
-		AutomaticSize = Enum.AutomaticSize.None,
-		Position = UDim2.fromScale(0.6, 0),
-		Size = UDim2.new(0.4, 0, 1, 0),
-		TextXAlignment = Enum.TextXAlignment.Right,
-		TextColor3 = Brand.Colours.bone,
-	})
-end
 
 local function number(n: number): string
 	local s = tostring(math.floor(n))
@@ -44,6 +26,63 @@ local function number(n: number): string
 	return (out:gsub("^,", ""))
 end
 RoundPanel.number = number
+
+-- One row of the tally. Rows arrive one after another, and a number counts up to its value
+-- with a soft tick, so what you earned lands one thing at a time.
+local function line(parent: Instance, left: string, right: string, order: number, delay: number)
+	local row = Instance.new("Frame")
+	row.BackgroundTransparency = 1
+	row.Size = UDim2.new(1, 0, 0, 24)
+	row.LayoutOrder = order
+	row.Parent = parent
+	local l = Theme.text(row, left, 15, "body", {
+		AutomaticSize = Enum.AutomaticSize.None,
+		Size = UDim2.new(0.6, 0, 1, 0),
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextColor3 = Brand.Colours.smoke,
+	})
+	local r = Theme.text(row, right, 15, "bodyMedium", {
+		AutomaticSize = Enum.AutomaticSize.None,
+		Position = UDim2.fromScale(0.6, 0),
+		Size = UDim2.new(0.4, 0, 1, 0),
+		TextXAlignment = Enum.TextXAlignment.Right,
+		TextColor3 = Brand.Colours.bone,
+	})
+	if Ease.motionScale < 0.5 then
+		return
+	end
+	l.TextTransparency = 1
+	r.TextTransparency = 1
+	local sign, digits, percent = string.match(right, "^([+]?)([%d,]+)(%%?)$")
+	local target = if digits then tonumber((string.gsub(digits, ",", ""))) else nil
+	local before, after = sign or "", percent or ""
+	if target then
+		r.Text = before .. "0" .. after
+	end
+	task.delay(delay, function()
+		if not row.Parent then
+			return
+		end
+		Ease.play(l, Ease.info(0.25, Enum.EasingStyle.Quad), { TextTransparency = 0 })
+		Ease.play(r, Ease.info(0.25, Enum.EasingStyle.Quad), { TextTransparency = 0 })
+		Sound.play(if left == "Gilt" then "reward" else "tick", if left == "Gilt" then 0.3 else 0.12)
+		if target then
+			local value = Instance.new("NumberValue")
+			value.Value = 0
+			value.Changed:Connect(function(v: number)
+				if r.Parent then
+					r.Text = before .. number(if v >= target - 0.5 then target else v) .. after
+				end
+			end)
+			local t = TweenService:Create(value, TweenInfo.new(math.clamp(0.25 + target / 4000, 0.25, 0.7), Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Value = target })
+			t.Completed:Once(function()
+				r.Text = right
+				value:Destroy()
+			end)
+			t:Play()
+		end
+	end)
+end
 
 export type Actions = { primary: string, onPrimary: () -> (), secondary: string?, onSecondary: (() -> ())?, onLeave: () -> () }
 
@@ -62,7 +101,7 @@ local function panel(heading: string, sub: string?, grade: string, rows: { { str
 	Theme.text(content, heading, 24, "display", { LayoutOrder = 2 })
 	Hallmark.big(content, grade, 3)
 	for i, r in rows do
-		line(content, r[1], r[2], 3 + i)
+		line(content, r[1], r[2], 3 + i, 0.35 + 0.14 * i)
 	end
 	local keys = Instance.new("Frame")
 	keys.BackgroundTransparency = 1

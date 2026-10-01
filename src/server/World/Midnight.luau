@@ -62,7 +62,7 @@ function Midnight.build(parent: Instance): Model
 		doorZ = Layout.RoomDoors.midnight.centre.Z,
 		wall = INK,
 		floor = { color = Color3.fromRGB(14, 14, 20), material = Enum.Material.WoodPlanks },
-		ceiling = { color = Color3.fromRGB(6, 8, 16), material = Enum.Material.SmoothPlastic },
+		ceiling = { color = Color3.fromRGB(6, 8, 16), material = Enum.Material.Plaster },
 		wainscot = { color = Color3.fromRGB(10, 12, 22), material = Enum.Material.Wood },
 		rail = L.darkBrass,
 	})
