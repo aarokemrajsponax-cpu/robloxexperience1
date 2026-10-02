@@ -49,7 +49,7 @@ local function setupLighting()
 	Lighting.OutdoorAmbient = BASE_OUTDOOR
 	Lighting.EnvironmentDiffuseScale = 0.25
 	Lighting.EnvironmentSpecularScale = 0.7
-	Lighting.ExposureCompensation = 0.25
+	Lighting.ExposureCompensation = 0.1
 	Lighting.GlobalShadows = true
 	Lighting.ShadowSoftness = 0.3
 	Lighting.FogEnd = 100000
@@ -71,8 +71,8 @@ local function setupLighting()
 	bloom.Size = 30
 	bloom.Threshold = 1.1
 	local cc = effect("ColorCorrectionEffect", "MaisonGrade") :: ColorCorrectionEffect
-	cc.Contrast = 0.12
-	cc.Saturation = -0.08
+	cc.Contrast = 0.16
+	cc.Saturation = -0.12
 	cc.Brightness = 0.01
 	cc.TintColor = Color3.new(1, 1, 1)
 	grade = cc

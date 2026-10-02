@@ -26,8 +26,10 @@ Kit.Looks = ({
 	facadeTrim = { color = Color3.fromRGB(26, 26, 30), material = Enum.Material.Concrete },
 	neighbour = { color = Color3.fromRGB(34, 32, 34), material = Enum.Material.Brick },
 	neighbourStone = { color = Color3.fromRGB(58, 56, 54), material = Enum.Material.Limestone },
-	brass = { color = C.gold, material = Enum.Material.Metal, reflectance = 0.25 },
-	darkBrass = { color = C.deepGold, material = Enum.Material.Metal, reflectance = 0.2 },
+	-- Antique brass, a shade deeper than the gold of the type: under warm lamps it reads as metal,
+	-- not as a glowing yellow.
+	brass = { color = Color3.fromRGB(160, 122, 58), material = Enum.Material.Metal, reflectance = 0.15 },
+	darkBrass = { color = Color3.fromRGB(98, 74, 34), material = Enum.Material.Metal, reflectance = 0.12 },
 	blackLacquer = { color = Color3.fromRGB(10, 10, 12), material = Enum.Material.SmoothPlastic, reflectance = 0.18 },
 	wetStone = { color = Color3.fromRGB(38, 40, 44), material = Enum.Material.Slate, reflectance = 0.06 },
 	asphalt = { color = Color3.fromRGB(22, 23, 26), material = Enum.Material.Asphalt, reflectance = 0.04 },
