@@ -350,3 +350,34 @@ if #failed == 0 then
 else
 	warn("[Maison] The house is open, but these parts didn't start: " .. table.concat(failed, ", "))
 end
+
+-- The owner sees anything that breaks on the server, on their own screen (ErrorNotice): a
+-- screenshot is then enough to say what went wrong.
+do
+	local LogService = game:GetService("LogService")
+	local RunService = game:GetService("RunService")
+	local errors = Remotes.event("Errors")
+	local sent = 0
+	local window = os.clock()
+	LogService.MessageOut:Connect(function(message: string, kind: Enum.MessageType)
+		local important = kind == Enum.MessageType.MessageError or (kind == Enum.MessageType.MessageWarning and string.find(message, "[Maison]", 1, true) ~= nil)
+		if not important then
+			return
+		end
+		if os.clock() - window > 10 then
+			window = os.clock()
+			sent = 0
+		end
+		sent += 1
+		if sent > 6 then
+			return
+		end
+		for _, p in Players:GetPlayers() do
+			if RunService:IsStudio() or p:GetAttribute("MaisonAdmin") == true then
+				pcall(function()
+					errors:FireClient(p, "Server: " .. message)
+				end)
+			end
+		end
+	end)
+end

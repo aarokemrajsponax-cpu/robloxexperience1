@@ -54,6 +54,11 @@ local BallroomView = require(script.Parent.Table.BallroomView)
 
 local player = Players.LocalPlayer
 
+-- First of all: for the owner, anything that breaks shows on screen.
+pcall(function()
+	require(script.Parent.UI.ErrorNotice).start()
+end)
+
 -- Roblox's own chat stays. The house has no tools and no health bar.
 for _, kind in { Enum.CoreGuiType.Backpack, Enum.CoreGuiType.Health } do
 	pcall(function()

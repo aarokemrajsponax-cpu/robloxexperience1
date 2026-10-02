@@ -142,7 +142,7 @@ function Intro.play(onShown: (() -> ())?)
 		return not skipped
 	end
 
-	task.spawn(function()
+	local function sequence()
 		if not wait(0.3) then
 			return
 		end
@@ -163,10 +163,16 @@ function Intro.play(onShown: (() -> ())?)
 		if not wait(2.4) then
 			return
 		end
+	end
+	-- Whatever happens in the sequence, the intro ends: a failed step finishes it at once.
+	task.spawn(function()
+		pcall(sequence)
 		finished = true
 	end)
 
-	while not finished and not skipped do
+	-- And never longer than this, so the house can't be left behind a black screen.
+	local deadline = os.clock() + 9
+	while not finished and not skipped and os.clock() < deadline do
 		task.wait()
 	end
 	skipConn:Disconnect()

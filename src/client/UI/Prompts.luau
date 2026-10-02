@@ -87,7 +87,7 @@ local function build(prompt: ProximityPrompt): BillboardGui
 	object.BackgroundTransparency = 1
 	object.Position = UDim2.new(0, 54, 0.55, 0)
 	object.Size = UDim2.new(1, -60, 0.4, -4)
-	object.FontFace = Brand.Fonts.display
+	object.FontFace = Brand.Fonts.bodyMedium
 	object.TextSize = 13
 	object.TextXAlignment = Enum.TextXAlignment.Left
 	object.TextColor3 = Brand.Colours.smoke

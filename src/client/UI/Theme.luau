@@ -62,7 +62,9 @@ end
 
 local function applyText(r: Registered)
 	local label = r.label :: any
-	label.FontFace = fontFor(r.kind)
+	-- The serif is for headings: below heading size it reads as wiry, so small "display" text
+	-- (a line of dialogue, a caption) is set in the clean sans instead.
+	label.FontFace = if r.kind == "display" and r.size < 22 then Brand.Fonts.body else fontFor(r.kind)
 	local size = math.floor(r.size * textScale + 0.5)
 	label.TextSize = size
 	-- Keys shrink their words to fit rather than spill over their edges.

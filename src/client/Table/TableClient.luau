@@ -104,6 +104,26 @@ end
 
 localFolder()
 
+-- Runs one step of the table's setup or a message's handling; if it fails, it says so in the
+-- Output (and on screen in Studio) and the rest carries on. Sorting must never be blocked by
+-- something decorative failing.
+local function safely(what: string, fn: (...any) -> (), ...: any): boolean
+	local args = table.pack(...)
+	local message = ""
+	local ok = xpcall(function()
+		fn(table.unpack(args, 1, args.n))
+	end, function(e: any)
+		message = debug.traceback(tostring(e))
+	end)
+	if not ok then
+		warn(string.format("[Maison] Table: %s failed: %s", what, message))
+	end
+	return ok
+end
+
+-- Whether you're at a table (the 2D sorting screen doesn't need the 3D table to be streamed in).
+local seatedNow = false
+
 local function getControls(): any
 	if controls then
 		return controls
@@ -309,6 +329,12 @@ end
 
 -- A new deal: the tray is laid with it.
 local function renderDeal(message: { [string]: any })
+	if not SortScreen.isOpen() then
+		-- The deal is the proof you're at a table: never sort on a hidden screen.
+		seatedNow = true
+		State.seated = true
+		SortScreen.open(roomTitle(), roundTitle())
+	end
 	pieces = {}
 	round = message.round
 	roomId = message.room or roomId
@@ -338,7 +364,7 @@ local function renderDeal(message: { [string]: any })
 	if hintPending then
 		hintPending = false
 		task.delay(0.6, function()
-			if playing and seatedModel ~= nil then
+			if playing and seatedNow then
 				SortScreen.hint(true)
 			end
 		end)
@@ -465,7 +491,7 @@ local function onRoundEnd(message: { [string]: any })
 		return -- the Nightly card follows
 	end
 	task.delay(0.8, function()
-		if seatedModel == nil then
+		if not seatedNow then
 			return
 		end
 		local inRoom = tableMode == "room"
@@ -487,7 +513,7 @@ local function onBanked(message: { [string]: any })
 	server = table.clone(local_)
 	updateHeader()
 	task.delay(0.6, function()
-		if seatedModel == nil then
+		if not seatedNow then
 			return
 		end
 		RoundPanel.banked(message, {
@@ -510,7 +536,7 @@ local function onNightlyCard(message: { [string]: any })
 	server = table.clone(local_)
 	updateHeader()
 	task.delay(0.6, function()
-		if seatedModel == nil then
+		if not seatedNow then
 			return
 		end
 		NightlyCard.show(message, {
@@ -530,7 +556,7 @@ local function onHandEnd(message: { [string]: any })
 	Sound.play(if won then "round" else "low", 0.4)
 	Toast.show(Voice.Library.title, if won then Voice.Library.handWon else (string.gsub(Voice.Library.handLost, "{name}", "your rival")), 2.2)
 	task.delay(0.9, function()
-		if seatedModel ~= nil and not playing then
+		if seatedNow and not playing then
 			clearTray()
 		end
 	end)
@@ -547,7 +573,7 @@ local function onDuelEnd(message: { [string]: any })
 		Flourish.play(tableFrame:PointToWorldSpace(Vector3.new(0, T.topY + 1, 0)))
 	end
 	task.delay(1.2, function()
-		if seatedModel == nil then
+		if not seatedNow then
 			return
 		end
 		DuelPanel.show(message, {
@@ -560,22 +586,61 @@ local function onDuelEnd(message: { [string]: any })
 	end)
 end
 
-local function onSeated(message: { [string]: any })
-	local model: Model? = nil
+local function findTable(id: any): Model?
 	for _, m in CollectionService:GetTagged("MaisonTable") do
-		if m:IsA("Model") and m:GetAttribute("TableId") == message.table then
-			model = m
+		if m:IsA("Model") and m:GetAttribute("TableId") == id then
+			return m
 		end
 	end
-	if not model then
-		return
-	end
-	local wasSeated = seatedModel ~= nil or CameraRig.isAtTable()
-	seatedModel = model
-	local c = model:GetAttribute("Centre")
-	centre = if typeof(c) == "Vector3" then c else model:GetPivot().Position
-	local f = model:GetAttribute("Frame")
+	return nil
+end
+
+-- The 3D side of sitting down: the counter, the plates, the camera. Every step is optional;
+-- the sorting screen is already up by the time this runs.
+local function seatIn3D(model: Model?, message: { [string]: any })
+	local c = if model then model:GetAttribute("Centre") else message.centre
+	centre = if typeof(c) == "Vector3" then c elseif model then model:GetPivot().Position else Vector3.zero
+	local f = if model then model:GetAttribute("Frame") else nil
 	tableFrame = if typeof(f) == "CFrame" then f else CFrame.new(centre)
+	safely("the table's view", function()
+		if tableMode == "duel" and model then
+			DuelView.seated(model, tableFrame)
+		elseif tableMode == "ballroom" and model then
+			BallroomView.seated(model, tableFrame, message.seat)
+		else
+			RivalPlate.show(tableFrame)
+		end
+	end)
+	if model then
+		safely("the counter", function()
+			Counter.own(model, true)
+			Counter.set(model, 0, true)
+			Counter.setMultiplier(model, 1)
+		end)
+	end
+	safely("the controls", function()
+		local ctl = getControls()
+		if ctl then
+			ctl:Disable()
+		end
+	end)
+	safely("the camera", function()
+		local ignore: { Instance } = { localFolder() }
+		if model then
+			table.insert(ignore, model)
+		end
+		if player.Character then
+			table.insert(ignore, player.Character)
+		end
+		CameraRig.toTable(tableFrame, tableMode == "duel", ignore)
+	end)
+end
+
+local function onSeated(message: { [string]: any })
+	local wasSeated = seatedNow or CameraRig.isAtTable()
+	local model = findTable(message.table)
+	seatedModel = model
+	seatedNow = true
 	roomId = message.room or "salon"
 	tableMode = message.mode or "room"
 	round = 1
@@ -585,35 +650,37 @@ local function onSeated(message: { [string]: any })
 	duelRemaining = 0
 	fumbleUntil = 0
 	ballroomKeys = 0
-	if tableMode == "duel" then
-		DuelView.seated(model, tableFrame)
-	elseif tableMode == "ballroom" then
-		BallroomView.seated(model, tableFrame, message.seat)
-	else
-		RivalPlate.show(tableFrame)
+	-- The sorting screen first: it's the game, and it needs nothing from the 3D table.
+	safely("the sorting screen", function()
+		Dialogue.close()
+		SortScreen.open(roomTitle(), if tableMode == "duel" or tableMode == "ballroom" then roundTitle() else "")
+		-- Until the deal says otherwise, every case is open.
+		local all = {}
+		for _, case in Catalogue.Cases do
+			table.insert(all, case.id)
+		end
+		SortScreen.setCases(all)
+	end)
+	safely("the keys", Hud.setSeated, true)
+	safely("the header", updateHeader)
+	seatIn3D(model, message)
+	if not model then
+		-- The table hasn't streamed in yet: pick it up as soon as it does.
+		task.spawn(function()
+			for _ = 1, 40 do
+				task.wait(0.25)
+				if not seatedNow then
+					return
+				end
+				local found = findTable(message.table)
+				if found then
+					seatedModel = found
+					seatIn3D(found, message)
+					return
+				end
+			end
+		end)
 	end
-	Counter.own(model, true)
-	Counter.set(model, 0, true)
-	Counter.setMultiplier(model, 1)
-	local ctl = getControls()
-	if ctl then
-		ctl:Disable()
-	end
-	local ignore: { Instance } = { model, localFolder() }
-	if player.Character then
-		table.insert(ignore, player.Character)
-	end
-	CameraRig.toTable(tableFrame, tableMode == "duel", ignore)
-	Dialogue.close()
-	SortScreen.open(roomTitle(), if tableMode == "duel" or tableMode == "ballroom" then roundTitle() else "")
-	-- Until the deal says otherwise, every case is open.
-	local all = {}
-	for _, case in Catalogue.Cases do
-		table.insert(all, case.id)
-	end
-	SortScreen.setCases(all)
-	Hud.setSeated(true)
-	updateHeader()
 	if not wasSeated then
 		seatings += 1
 		hintPending = seatings <= 2
@@ -632,22 +699,25 @@ local function onLeft(message: { [string]: any })
 	end
 	local model = seatedModel
 	seatedModel = nil
+	seatedNow = false
 	stopPlay()
 	State.seated = false
-	clearTray()
-	RoundPanel.close()
-	DuelPanel.close()
-	DuelView.clear()
-	BallroomPanel.close()
-	BallroomView.clear()
-	RivalPlate.hide()
+	safely("clearing the table", function()
+		clearTray()
+		RoundPanel.close()
+		DuelPanel.close()
+		DuelView.clear()
+		BallroomPanel.close()
+		BallroomView.clear()
+		RivalPlate.hide()
+	end)
 	Sound.setIntensity(nil)
 	tableMode = "room"
 	paused = false
 	clockLeft = nil
 	clockBudget = nil
 	if model then
-		Counter.own(model, false)
+		safely("the counter", Counter.own, model, false)
 	end
 	Hud.setSeated(false)
 	Hud.setExtraKey(nil, nil)
@@ -655,14 +725,14 @@ local function onLeft(message: { [string]: any })
 		-- Being shown across to another table: the next "seated" follows at once.
 		return
 	end
-	SortScreen.close()
+	safely("closing the sorting screen", SortScreen.close)
 	local ctl = getControls()
 	if ctl then
 		ctl:Enable()
 	end
 	hintPending = false
 	Sound.play("leave", 0.3)
-	CameraRig.leaveTable()
+	safely("the camera", CameraRig.leaveTable)
 	local summary = message.summary
 	if type(summary) == "table" and (summary.score or 0) > 0 then
 		Toast.show("The run is banked", string.format("%s points · %s", RoundPanel.number(summary.score), summary.grade), 4.5)
@@ -708,7 +778,7 @@ local ballroomActions = {
 
 local function onBallroom(message: { [string]: any })
 	local op = message.op
-	if seatedModel == nil or tableMode ~= "ballroom" then
+	if not seatedNow or tableMode ~= "ballroom" then
 		-- Watching from the Gallery or the floor: only the room's moments.
 		BallroomView.handle(message)
 		return
@@ -789,7 +859,7 @@ function TableClient.onSeated(cb: () -> ())
 end
 
 function TableClient.isSeated(): boolean
-	return seatedModel ~= nil
+	return seatedNow
 end
 
 function TableClient.start()
@@ -798,11 +868,15 @@ function TableClient.start()
 	SortScreen.onFile = file
 	SortScreen.onCancel = TableClient.leave
 	SortScreen.keysWidth = Hud.width
-	SortScreen.start()
+	safely("starting the sorting screen", SortScreen.start)
+	local handle: (message: any) -> ()
 	tableEvent.OnClientEvent:Connect(function(message: any)
 		if type(message) ~= "table" then
 			return
 		end
+		safely("handling '" .. tostring(message.op) .. "'", handle, message)
+	end)
+	handle = function(message: any)
 		local op = message.op
 		if (tableMode == "ballroom" or tableMode ~= "duel") and isBallroom(message) then
 			onBallroom(message)
@@ -878,10 +952,10 @@ function TableClient.start()
 			DuelView.handle(message)
 			updateHeader()
 		end
-	end)
+	end
 	-- The clock freezes while a panel is open in the four rooms (never in the Nightly).
 	Root.PanelsChanged:Connect(function()
-		if seatedModel == nil then
+		if not seatedNow then
 			return
 		end
 		local open = Root.isOpen() and Root.top() ~= "Round"
@@ -905,7 +979,7 @@ function TableClient.start()
 	end)
 	-- Settings that change the table apply at once.
 	State.SettingChanged:Connect(function(key)
-		if (key == "pieceNames" or key == "pieceSize" or key == "textSize") and seatedModel ~= nil then
+		if (key == "pieceNames" or key == "pieceSize" or key == "textSize") and seatedNow then
 			SortScreen.refresh(namesAllowed())
 		end
 	end)

@@ -58,7 +58,7 @@ local function face(part: Part, normal: Enum.NormalId, title: string, fact: stri
 	local line = Instance.new("TextLabel")
 	line.BackgroundTransparency = 1
 	line.Size = UDim2.new(0.92, 0, 0.4, 0)
-	line.FontFace = Brand.Fonts.display
+	line.FontFace = Brand.Fonts.bodyMedium
 	line.TextScaled = true
 	line.TextColor3 = if gold then Brand.Colours.nearBlack else ENGRAVED
 	line.Text = fact

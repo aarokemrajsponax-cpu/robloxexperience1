@@ -100,7 +100,7 @@ function Parcels.build(count: number): Built
 	label.BackgroundColor3 = Color3.fromRGB(12, 13, 16)
 	label.BackgroundTransparency = 0.2
 	label.Size = UDim2.fromScale(1, 1)
-	label.FontFace = Brand.Fonts.display
+	label.FontFace = Brand.Fonts.bodyMedium
 	label.TextScaled = true
 	label.TextColor3 = Brand.Colours.lightGold
 	label.Text = "×" .. tostring(count)

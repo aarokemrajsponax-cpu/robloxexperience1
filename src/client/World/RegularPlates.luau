@@ -34,7 +34,7 @@ local function plate(m: Instance)
 		label.BackgroundColor3 = Color3.fromRGB(40, 30, 14)
 		label.BackgroundTransparency = 0.25
 		label.Size = UDim2.fromScale(1, 1)
-		label.FontFace = Brand.Fonts.display
+		label.FontFace = Brand.Fonts.bodyMedium
 		label.TextScaled = true
 		label.TextColor3 = Brand.Colours.lightGold
 		label.Text = name .. "'s usual table"

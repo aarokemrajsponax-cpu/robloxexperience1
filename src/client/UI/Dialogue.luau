@@ -46,7 +46,7 @@ function Dialogue.show(speaker: string, line: string, choices: { Choice }?, onCh
 	local list = Theme.list(content, 8)
 	list.HorizontalAlignment = Enum.HorizontalAlignment.Left
 	Theme.text(content, speaker, 11, "caps", { LayoutOrder = 1, TextXAlignment = Enum.TextXAlignment.Left })
-	Theme.text(content, line, 19, "display", { LayoutOrder = 2, TextXAlignment = Enum.TextXAlignment.Left })
+	Theme.text(content, line, 18, "body", { LayoutOrder = 2, TextXAlignment = Enum.TextXAlignment.Left })
 	if hasChoices then
 		local row = Instance.new("Frame")
 		row.BackgroundTransparency = 1

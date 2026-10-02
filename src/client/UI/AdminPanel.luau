@@ -20,6 +20,8 @@ local NAME = "HouseControls"
 local page = "events"
 local minutes = 15
 local everywhere = false
+-- What the Schedule page is setting up.
+local plan = { what = "abuse", day = 0, hour = 18, minute = 0, minutes = 30 }
 
 local function ask(request: { [string]: any }): any
 	local ok, result = pcall(function()
@@ -159,6 +161,13 @@ function AdminPanel.open()
 			render()
 		end)
 		if page == "events" then
+			-- The big one: everything at once.
+			local abuse = row(scroll, add(), "Admin Abuse Night", "Every event at once with fireworks: double Gilt, Mythic luck, the Ledger at double speed, gold rain, a treasure hunt, giants, quickstep. Turn on Every house to run it in every server.", true)
+			for _, m in v.abuseMinutes or { 15, 30, 60 } do
+				small(abuse, tostring(m) .. " min", true, function()
+					send({ op = "abuse", minutes = m, everywhere = everywhere }, "Admin Abuse Night has begun" .. (if everywhere then " in every house." else "."))
+				end)
+			end
 			for _, e in v.events do
 				local left = if type(e.endsAt) == "number" then e.endsAt - Workspace:GetServerTimeNow() else 0
 				local keys = row(scroll, add(), e.name .. (if left > 0 then string.format("  ·  %d:%02d left", left // 60, left % 60) else ""), e.line)
@@ -169,6 +178,77 @@ function AdminPanel.open()
 				end
 				small(keys, "Start", true, function()
 					send({ op = "event", id = e.id, minutes = minutes, everywhere = everywhere }, e.name .. " has begun.")
+				end)
+			end
+		elseif page == "schedule" then
+			-- Pick what, the day and the time (your own clock), and how long; every server starts it
+			-- on time, whether you're in the game or not, and every screen counts down to it.
+			local choices = { "abuse" }
+			for _, e in v.events do
+				table.insert(choices, e.id)
+			end
+			local function nameOf(id: string): string
+				if id == "abuse" then
+					return "Admin Abuse Night"
+				end
+				for _, e in v.events do
+					if e.id == id then
+						return e.name
+					end
+				end
+				return id
+			end
+			local today = DateTime.now():ToLocalTime() :: any
+			local when = DateTime.fromLocalTime(today.Year, today.Month, today.Day, plan.hour, plan.minute, 0, 0).UnixTimestamp + plan.day * 86400
+			local whenText = DateTime.fromUnixTimestamp(when):FormatLocalTime("dddd D MMMM, h:mm A", "en-us")
+			local whatRow = row(scroll, add(), "What: " .. nameOf(plan.what), "Click to change.", true)
+			small(whatRow, "Change", false, function()
+				local i = table.find(choices, plan.what) or 1
+				plan.what = choices[i % #choices + 1]
+				render()
+			end)
+			local dayRow = row(scroll, add(), "When: " .. whenText, "Your own time. The day, then the hour and minutes.", true)
+			small(dayRow, "Day −", false, function()
+				plan.day = math.max(0, plan.day - 1)
+				render()
+			end)
+			small(dayRow, "Day +", false, function()
+				plan.day = math.min(30, plan.day + 1)
+				render()
+			end)
+			small(dayRow, "Hour −", false, function()
+				plan.hour = (plan.hour + 23) % 24
+				render()
+			end)
+			small(dayRow, "Hour +", false, function()
+				plan.hour = (plan.hour + 1) % 24
+				render()
+			end)
+			small(dayRow, ":" .. string.format("%02d", (plan.minute + 15) % 60), false, function()
+				plan.minute = (plan.minute + 15) % 60
+				render()
+			end)
+			local lenRow = row(scroll, add(), "For " .. tostring(plan.minutes) .. " minutes", nil, true)
+			for _, m in { 15, 30, 60, 120 } do
+				small(lenRow, tostring(m) .. " min", m == plan.minutes, function()
+					plan.minutes = m
+					render()
+				end)
+			end
+			local go = row(scroll, add(), "Put it on the schedule", "Runs in every server at that time. Players see a countdown for the hour before.")
+			small(go, "Schedule", true, function()
+				send({ op = "schedule", what = plan.what, at = when, minutes = plan.minutes }, nameOf(plan.what) .. " is on the schedule.")
+			end)
+			Theme.text(scroll, "Coming up", 11, "caps", { LayoutOrder = add(), TextXAlignment = Enum.TextXAlignment.Left })
+			local list = v.schedule or {}
+			if #list == 0 then
+				Theme.text(scroll, "Nothing scheduled yet.", 13, "body", { LayoutOrder = add(), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Brand.Colours.smoke })
+			end
+			for _, p in list do
+				local text = DateTime.fromUnixTimestamp(p.at):FormatLocalTime("ddd D MMM, h:mm A", "en-us")
+				local keys = row(scroll, add(), p.name, text .. "  ·  " .. tostring(p.minutes) .. " minutes")
+				small(keys, "Cancel", false, function()
+					send({ op = "unschedule", id = p.id }, "Taken off the schedule.")
 				end)
 			end
 		elseif page == "spectacle" then
@@ -246,11 +326,11 @@ function AdminPanel.open()
 		end
 	end
 
-	for i, spec in { { "events", "Events" }, { "spectacle", "Spectacle" }, { "guests", "Guests" }, { "announce", "Announce" } } do
+	for i, spec in { { "events", "Events" }, { "schedule", "Schedule" }, { "spectacle", "Spectacle" }, { "guests", "Guests" }, { "announce", "Announce" } } do
 		local k = Theme.key(tabs, spec[2], page == spec[1], function()
 			page = spec[1]
 			render()
-		end, 130)
+		end, 112)
 		k.LayoutOrder = i
 	end
 	local footer = Instance.new("Frame")

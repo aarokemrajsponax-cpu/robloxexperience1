@@ -88,7 +88,7 @@ function Dressing.nameplate(player: Player)
 	name.BackgroundTransparency = 1
 	name.Size = UDim2.new(1, -12, 1, 0)
 	name.Position = UDim2.fromOffset(6, 0)
-	name.FontFace = Brand.Fonts.display
+	name.FontFace = Brand.Fonts.bodyMedium
 	name.TextScaled = true
 	name.TextColor3 = Brand.Colours.bone
 	name.Text = player.DisplayName

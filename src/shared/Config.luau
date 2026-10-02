@@ -396,6 +396,13 @@ local defaults = {
 		keyGilt = 250,
 		giftGilt = { 100, 500, 1000 }, -- what the owner can give
 		summonMinutes = 5, -- how long a summons to the owner's house stays open
+		-- Admin Abuse Night: every one of these at once, with fireworks, in one tap.
+		abuseEvents = { "goldenHour", "luckyHour", "pageTurner", "goldRain", "treasure", "giants", "quickstep" },
+		abuseMinutes = { 15, 30, 60 },
+		-- Scheduled events (set in the panel, kept in a DataStore, run by every server on time).
+		scheduleCheck = 30, -- seconds between each server's look at the schedule
+		scheduleNotice = 60, -- minutes before a scheduled event that every screen counts down to it
+		scheduleMax = 20, -- events kept on the schedule at once
 	},
 
 	-- Testing in Studio (never affects the live game).

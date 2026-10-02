@@ -1452,6 +1452,51 @@ for _, p in services.Workspace:FindFirstChild("HouseEvents"):GetChildren() do
 	end
 end
 check("Gold Rain scatters thirty coins", coins == 30, coins)
+-- Admin Abuse Night: every event at once, and in every house when asked.
+local publishedBefore = #published
+adminAs(owner, { op = "abuse", minutes = 15, everywhere = true })
+local allOn = true
+for _, id in Config.data.Admin.abuseEvents do
+	if not AdminService.active(id) then
+		allOn = false
+	end
+end
+check("Admin Abuse Night starts every one of its events", allOn)
+check("with fireworks for the whole house", string.find(lastBroadcast("salute").title or "", "Admin Abuse", 1, true) ~= nil)
+check("and goes to every house", #published > publishedBefore and published[#published].message.op == "abuse")
+for _, id in Config.data.Admin.abuseEvents do
+	AdminService.stopEvent(id)
+end
+-- The schedule: set once, every server starts it on time and counts down to it.
+local inTwenty = fakeOs.time() + 20 * 60
+local sched = adminAs(owner, { op = "schedule", what = "abuse", at = inTwenty, minutes = 30 })
+check("an event can be put on the schedule", sched.ok ~= false and #sched.schedule == 1 and sched.schedule[1].name == "Admin Abuse Night", sched.why)
+check("nothing on the schedule in the past", adminAs(owner, { op = "schedule", what = "goldenHour", at = fakeOs.time() - 7200, minutes = 30 }).ok == false)
+run(AdminService.runSchedule)
+check("every screen counts down to it", services.Workspace:GetAttribute("NextEventName") == "Admin Abuse Night" and type(services.Workspace:GetAttribute("NextEventAt")) == "number")
+check("and it hasn't started early", not AdminService.active("goldenHour"))
+advance(21 * 60)
+run(AdminService.runSchedule)
+check("on time, it starts by itself", AdminService.active("goldenHour") and AdminService.active("goldRain"))
+check("and the countdown goes", services.Workspace:GetAttribute("NextEventAt") == nil)
+local cancel = adminAs(owner, { op = "schedule", what = "giants", at = fakeOs.time() + 3600, minutes = 15 })
+local giantsId
+for _, p in cancel.schedule do
+	if p.name == "A Night of Giants" then
+		giantsId = p.id
+	end
+end
+local after = adminAs(owner, { op = "unschedule", id = giantsId })
+local stillThere = false
+for _, p in after.schedule do
+	if p.id == giantsId then
+		stillThere = true
+	end
+end
+check("a scheduled event can be taken off", giantsId ~= nil and not stillThere)
+for _, id in Config.data.Admin.abuseEvents do
+	AdminService.stopEvent(id)
+end
 -- Guests. (Ned steps away from the coins first, so only the gifts count.)
 nedRoot.Position = Vector3.new(0, -500, 0)
 advance(0.5)

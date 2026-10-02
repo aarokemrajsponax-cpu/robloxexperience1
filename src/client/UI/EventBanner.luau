@@ -71,6 +71,37 @@ local function refresh()
 			rows[e.id] = nil
 		end
 	end
+	-- A scheduled event coming up: every screen counts down to it for the hour before.
+	local at = Workspace:GetAttribute("NextEventAt")
+	local name = Workspace:GetAttribute("NextEventName")
+	local soon = rows.__next
+	if type(at) == "number" and type(name) == "string" and at > now() then
+		if not soon then
+			local l = Theme.text(strip, "", 15, "bodyBold", {
+				LayoutOrder = 0,
+				BackgroundTransparency = 0.15,
+				BackgroundColor3 = Color3.fromRGB(40, 28, 8),
+				TextColor3 = Brand.Colours.lightGold,
+			})
+			local pad = Instance.new("UIPadding")
+			pad.PaddingLeft = UDim.new(0, 14)
+			pad.PaddingRight = UDim.new(0, 14)
+			pad.PaddingTop = UDim.new(0, 6)
+			pad.PaddingBottom = UDim.new(0, 6)
+			pad.Parent = l
+			local stroke = Instance.new("UIStroke")
+			stroke.Color = Brand.Colours.gold
+			stroke.Thickness = 1.5
+			stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+			stroke.Parent = l
+			rows.__next = l
+			soon = l
+		end
+		(soon :: TextLabel).Text = string.format("%s STARTS IN %s  ·  stay in the house", string.upper(name), clock(at - now()))
+	elseif soon then
+		soon:Destroy()
+		rows["__next"] = nil
+	end
 end
 
 -- A summons from the owner's house in another server: a card with a key to go there.

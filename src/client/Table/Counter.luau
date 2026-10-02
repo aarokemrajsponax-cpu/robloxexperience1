@@ -75,7 +75,7 @@ local function build(model: Model): Display?
 			l.BackgroundTransparency = 1
 			l.Size = UDim2.fromScale(1, 0.1)
 			l.Position = UDim2.fromScale(0, d * 0.1)
-			l.FontFace = Brand.Fonts.display
+			l.FontFace = Brand.Fonts.figures
 			l.TextScaled = true
 			l.TextColor3 = Brand.Colours.lightGold
 			l.Text = tostring(d)
@@ -100,7 +100,7 @@ local function build(model: Model): Display?
 		l.AnchorPoint = Vector2.new(0.5, 0.5)
 		l.Position = UDim2.fromScale(0.5, 0.5)
 		l.Size = UDim2.fromScale(0.62, 0.5)
-		l.FontFace = Brand.Fonts.display
+		l.FontFace = Brand.Fonts.figures
 		l.TextScaled = true
 		l.TextColor3 = ENGRAVED
 		l.Text = "×1"

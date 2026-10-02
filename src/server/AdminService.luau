@@ -10,6 +10,8 @@
 -- or spotlighting a guest, gifts of Gilt, announcements (typed ones are filtered by Roblox), a
 -- summons that lets guests in every other house join this one, and removing a guest.
 
+local DataStoreService = game:GetService("DataStoreService")
+local HttpService = game:GetService("HttpService")
 local MessagingService = game:GetService("MessagingService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -389,6 +391,8 @@ local function onMessage(message: any)
 		announce(m.text, tostring(m.by))
 	elseif m.op == "event" and type(m.id) == "string" and type(m.seconds) == "number" then
 		AdminService.startEvent(m.id, math.clamp(m.seconds, 60, 3600), tostring(m.by))
+	elseif m.op == "abuse" and type(m.seconds) == "number" then
+		AdminService.abuse(math.clamp(m.seconds, 60, 3600), tostring(m.by))
 	elseif m.op == "summon" and type(m.jobId) == "string" then
 		summons[m.jobId] = os.time() + cfg().summonMinutes * 60
 		broadcast({ op = "summon", jobId = m.jobId, by = tostring(m.by), text = tostring(m.text or "") })
@@ -405,6 +409,134 @@ local function join(player: Player, jobId: unknown)
 		options.ServerInstanceId = jobId
 		TeleportService:TeleportAsync(game.PlaceId, { player }, options)
 	end)
+end
+
+---------------------------------------------------------------------------------------------------
+-- Admin Abuse Night, and the schedule
+---------------------------------------------------------------------------------------------------
+-- Every event at once, a burst of fireworks and a line for the whole house.
+function AdminService.abuse(seconds: number, byName: string)
+	for _, id in cfg().abuseEvents do
+		if HouseEvents.byId[id] then
+			AdminService.startEvent(id, seconds, byName)
+		end
+	end
+	broadcast({ op = "salute", id = "abuse", by = byName, effects = { "fireworks", "goldLeaf", "chandelier" }, seconds = 12, title = "Admin Abuse Night", line = "Admin Abuse Night: double Gilt, Mythic luck, gold rain, a treasure hunt, giants. Go!" })
+	AdminService.note("Admin Abuse Night has begun in the house.", false)
+end
+
+export type Planned = { id: string, at: number, what: string, minutes: number, by: string }
+
+local scheduleStore: DataStore? = nil
+pcall(function()
+	scheduleStore = DataStoreService:GetDataStore("MaisonSchedule")
+end)
+local planned: { Planned } = {}
+local begun: { [string]: boolean } = {}
+
+local function whatName(what: string): string
+	if what == "abuse" then
+		return "Admin Abuse Night"
+	end
+	local e = HouseEvents.byId[what]
+	return if e then e.name else what
+end
+
+local function readSchedule(): { Planned }
+	local store = scheduleStore
+	if not store then
+		return planned
+	end
+	local ok, value = pcall(function()
+		return store:GetAsync("schedule")
+	end)
+	if ok and type(value) == "table" then
+		local out: { Planned } = {}
+		for _, p in value do
+			if type(p) == "table" and type(p.id) == "string" and type(p.at) == "number" and type(p.what) == "string" and type(p.minutes) == "number" then
+				table.insert(out, { id = p.id, at = p.at, what = p.what, minutes = p.minutes, by = tostring(p.by or "") })
+			end
+		end
+		table.sort(out, function(a, b)
+			return a.at < b.at
+		end)
+		planned = out
+	end
+	return planned
+end
+
+-- Changes the schedule (in the DataStore when there is one, so every server sees it).
+local function changeSchedule(change: ({ Planned }) -> { Planned }): boolean
+	local store = scheduleStore
+	if not store then
+		planned = change(planned)
+		return true
+	end
+	local ok = pcall(function()
+		store:UpdateAsync("schedule", function(old: any)
+			local list: { Planned } = if type(old) == "table" then old else {}
+			return change(list)
+		end)
+	end)
+	readSchedule()
+	return ok
+end
+
+-- Every server looks at the schedule now and then: an event whose time has come starts here (for
+-- what's left of it), and the next one coming up is counted down to on every screen.
+local function runSchedule()
+	local now = os.time()
+	local soonest: Planned? = nil
+	for _, p in readSchedule() do
+		local ends = p.at + p.minutes * 60
+		if p.at <= now and now < ends and not begun[p.id] then
+			begun[p.id] = true
+			local left = ends - now
+			if p.what == "abuse" then
+				AdminService.abuse(left, p.by)
+			elseif HouseEvents.byId[p.what] then
+				AdminService.startEvent(p.what, left, p.by)
+			end
+		elseif p.at > now and (soonest == nil or p.at < (soonest :: Planned).at) then
+			soonest = p
+		end
+	end
+	local next_ = soonest
+	if next_ and next_.at - now <= cfg().scheduleNotice * 60 then
+		Workspace:SetAttribute("NextEventAt", next_.at)
+		Workspace:SetAttribute("NextEventName", whatName(next_.what))
+	else
+		Workspace:SetAttribute("NextEventAt", nil)
+		Workspace:SetAttribute("NextEventName", nil)
+	end
+	-- Past ones are tidied away now and then.
+	local stale = false
+	for _, p in planned do
+		if p.at + p.minutes * 60 < now - 3600 then
+			stale = true
+		end
+	end
+	if stale then
+		changeSchedule(function(list)
+			local keep = {}
+			for _, p in list do
+				if p.at + p.minutes * 60 >= now - 3600 then
+					table.insert(keep, p)
+				end
+			end
+			return keep
+		end)
+	end
+end
+
+local function scheduleView(): { { [string]: any } }
+	local out = {}
+	for _, p in planned do
+		if p.at + p.minutes * 60 > os.time() then
+			table.insert(out, { id = p.id, at = p.at, name = whatName(p.what), minutes = p.minutes })
+		end
+	end
+	return out
 end
 
 ---------------------------------------------------------------------------------------------------
@@ -438,6 +570,8 @@ local function state(): { [string]: any }
 		minutes = cfg().minutes,
 		giftGilt = cfg().giftGilt,
 		announcements = HouseEvents.Announcements,
+		abuseMinutes = cfg().abuseMinutes,
+		schedule = scheduleView(),
 		now = os.time(),
 	}
 end
@@ -466,6 +600,44 @@ local function handle(player: Player, request: unknown): any
 		if r.everywhere == true then
 			publish({ op = "event", id = r.id, seconds = minutes * 60, by = byName, jobId = game.JobId })
 		end
+		return state()
+	elseif op == "abuse" then
+		local minutes = if type(r.minutes) == "number" then math.clamp(r.minutes, 5, 60) else 30
+		AdminService.abuse(minutes * 60, byName)
+		if r.everywhere == true then
+			publish({ op = "abuse", seconds = minutes * 60, by = byName, jobId = game.JobId })
+		end
+		return state()
+	elseif op == "schedule" then
+		local what = if type(r.what) == "string" and (r.what == "abuse" or HouseEvents.byId[r.what]) then r.what else nil
+		local at = if type(r.at) == "number" then math.floor(r.at) else nil
+		local minutes = if type(r.minutes) == "number" then math.clamp(math.floor(r.minutes), 5, 180) else 30
+		if not what or not at or at < os.time() - 60 or at > os.time() + 60 * 86400 then
+			return { ok = false, why = "Choose what, and a time in the next two months." }
+		end
+		local ok = changeSchedule(function(list)
+			if #list >= cfg().scheduleMax then
+				return list
+			end
+			table.insert(list, { id = HttpService:GenerateGUID(false), at = at, what = what, minutes = minutes, by = byName })
+			return list
+		end)
+		if not ok then
+			return { ok = false, why = "The schedule couldn't be saved just now (in Studio: turn on API access)." }
+		end
+		task.spawn(runSchedule)
+		return state()
+	elseif op == "unschedule" and type(r.id) == "string" then
+		changeSchedule(function(list)
+			local keep = {}
+			for _, p in list do
+				if p.id ~= r.id then
+					table.insert(keep, p)
+				end
+			end
+			return keep
+		end)
+		task.spawn(runSchedule)
 		return state()
 	elseif op == "stop" and type(r.id) == "string" and HouseEvents.byId[r.id] then
 		AdminService.stopEvent(r.id)
@@ -581,10 +753,17 @@ function AdminService.start()
 			collect()
 		end
 	end)
+	task.spawn(function()
+		while true do
+			pcall(runSchedule)
+			task.wait(cfg().scheduleCheck)
+		end
+	end)
 end
 
--- For tests: the panel's handler.
+-- For tests: the panel's handler and the schedule's tick.
 AdminService.handle = handle
+AdminService.runSchedule = runSchedule
 AdminService.collect = collect
 
 return AdminService

@@ -135,7 +135,7 @@ local function setWaiting(on: boolean)
 	local l = Instance.new("TextLabel")
 	l.BackgroundTransparency = 1
 	l.Size = UDim2.fromScale(1, 1)
-	l.FontFace = Brand.Fonts.display
+	l.FontFace = Brand.Fonts.bodyMedium
 	l.TextScaled = true
 	l.TextColor3 = Brand.Colours.lightGold
 	l.TextTransparency = 0.2
