@@ -62,8 +62,83 @@ Voice.Concierge = {
 		fine = "I'm fine, thank you",
 		bye = "Good night",
 		setEvening = "Set the evening",
+		tour = "Show me the house",
+	},
+	tourOffer = "Good evening, and welcome to Maison Noir. Shall I show you the house? It takes a minute.",
+	tourYes = "Show me the house",
+	tourSkip = "Straight to a table",
+	tourLater = "I'll look around",
+	tourLaterLine = "Of course. Speak to me any time and I'll show you round.",
+	tourEnd = "Enjoy the house. I'm here if you need me.",
+}
+
+-- The Concierge's tour: one card for each part of the house, in plain words, with a gold pin
+-- and a line of light to the place it describes. `place` names where it points (see Concierge).
+Voice.Tour = {
+	{
+		title = "The idea",
+		line = "Every table holds a spread of expensive things. Put each one in its case: watches, jewelry, money, keys, accessories, collectibles. Right cases build a streak, the streak builds your score, and every run you bank pays you Gilt.",
+	},
+	{
+		title = "Sorting",
+		place = "salonDoor",
+		line = "Sit at any table and the table fills your screen. Drag a piece onto its case, or click the piece and then the case, or press 1 to 6. A wrong case costs your streak. Bank the run whenever you like; your best goes on the boards.",
+	},
+	{
+		title = "The four rooms",
+		place = "salonDoor",
+		line = "The Salon has no clock: learn here. The Velvet Room's clock waits for your first piece. The Obsidian Room opens every case with the clock running. The Midnight Room opens once you reach round IV in Obsidian.",
+	},
+	{
+		title = "Tonight's table",
+		place = "tonightBoard",
+		line = "Once a day every guest sorts the same table. One scored try each; your place goes up on the board by the door. After that you can rehearse it as often as you like.",
+	},
+	{
+		title = "Gilt",
+		line = "Gilt is the house's money. Banked runs pay it, Golden Hours double it, and the Boutique takes it for the house's own pieces. Your purse is shown in the Boutique.",
+	},
+	{
+		title = "The Boutique",
+		place = "boutique",
+		line = "Through the door at the back on the right. Six new pieces every day, two for the week, the season's collection, and Salutes for the whole house. Press the gold Shop key any time for the offers.",
+	},
+	{
+		title = "The Wardrobe",
+		place = "boutique",
+		line = "In the Boutique, the Tailor and the mirror. Everything you own is worn from the Wardrobe: your look, your nameplate, your table's felt, your chime. Nothing you wear changes a score.",
+	},
+	{
+		title = "The Vault",
+		place = "vault",
+		line = "Through the door at the back on the left. Every piece you've ever filed sits in its cabinet, Mythics in the middle. The Archivist keeps your Register: badges, commissions and your standing in the house.",
+	},
+	{
+		title = "The Library",
+		place = "library",
+		line = "Up the Grand Stair, first door on the left: Tête-à-Tête. Two guests, the same pieces, first to three hands. Ranked or friendly, or with a Stand-in if nobody's free.",
+	},
+	{
+		title = "The Ballroom: Lights Out",
+		place = "ballroom",
+		line = "Up the stair, the tall doors on the right. Twenty tables, one evening. Sorting well sends parcels of extra pieces to your rivals; a table that falls behind loses its lamp. The last lamp lit wins the night. Watch from the Gallery between evenings.",
+	},
+	{
+		title = "Your Suite",
+		place = "suite",
+		line = "Up the stair, through the door on the left of the hall: your own rooms. Ring the bell to furnish them with pieces from the Boutique and the Ledger. The Gold Key opens the Dressing Room and the Study.",
+	},
+	{
+		title = "The Ledger",
+		place = "ledger",
+		line = "Every round you play turns pages in the Ledger, the season's book of rewards: a free piece every few pages, more with the Leather-Bound edition. A new Term begins each season.",
+	},
+	{
+		title = "That's the house",
+		line = "Settings is top right for sound and controls. Speak to me any time to be shown a room or to hear this again. Shall I walk you to a table?",
 	},
 }
+Voice.TourKeys = { next = "Next", back = "Back", done = "End the tour", table = "Take me to a table", explore = "I'll explore" }
 
 -- A Private Evening (a private server).
 Voice.Private = {

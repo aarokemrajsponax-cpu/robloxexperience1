@@ -137,9 +137,62 @@ local function setEvening(player: Player)
 	end)
 end
 
+-- The tour: each card in turn, pointing at the place it describes.
+local function tourPoint(place: string?): (Vector3?, string?)
+	if place == "salonDoor" then
+		return Layout.RoomDoors.salon.centre, "The Salon"
+	elseif place == "tonightBoard" then
+		return Layout.Foyer.tonightBoard.Position, "Tonight's table"
+	elseif place == "boutique" then
+		return Layout.Foyer.boutiqueDoor.Position, "The Boutique"
+	elseif place == "vault" then
+		return Layout.Vault.door, "The Vault"
+	elseif place == "library" then
+		return Layout.Club.libraryDoor, "The Library"
+	elseif place == "ballroom" then
+		return Layout.Club.ballroomDoor, "The Ballroom"
+	elseif place == "suite" then
+		return Layout.Suite.door, "Your Suite"
+	elseif place == "ledger" then
+		return Layout.Boutique.ledger.Position, "The Ledger"
+	end
+	return nil, nil
+end
+
+function Concierge.tour(player: Player, index: number?)
+	local cards = Voice.Tour
+	local i = math.clamp(index or 1, 1, #cards)
+	local card = cards[i]
+	local K = Voice.TourKeys
+	local point, pointName = tourPoint(card.place)
+	local choices: { Dialogue.Choice }
+	if i == #cards then
+		choices = { { id = "table", text = K.table }, { id = "explore", text = K.explore } }
+	else
+		choices = { { id = "next", text = K.next } }
+		if i > 1 then
+			table.insert(choices, { id = "back", text = K.back })
+		end
+		table.insert(choices, { id = "done", text = K.done })
+	end
+	Dialogue.say(player, V.speaker, card.line, choices, function(choice)
+		if choice == "next" then
+			Concierge.tour(player, i + 1)
+		elseif choice == "back" then
+			Concierge.tour(player, i - 1)
+		elseif choice == "table" then
+			Concierge.lead(player, "salon")
+		else
+			Dialogue.close(player)
+			Dialogue.say(player, V.speaker, V.tourEnd, nil, nil, 2.5)
+		end
+	end, nil, { title = card.title, step = string.format("%d of %d", i, #cards), point = point, pointName = pointName })
+end
+
 local function menu(player: Player)
 	local choices = {
 		{ id = "room", text = V.choices.takeMe },
+		{ id = "tour", text = V.choices.tour },
 		{ id = "library", text = V.choices.library },
 		{ id = "ballroom", text = V.choices.ballroom },
 		{ id = "how", text = V.choices.how },
@@ -156,6 +209,8 @@ local function menu(player: Player)
 	Dialogue.say(player, V.speaker, V.returning:gsub("{name}", player.DisplayName), choices, function(choice)
 		if choice == "usual" and usual then
 			Concierge.lead(player, usual)
+		elseif choice == "tour" then
+			Concierge.tour(player, 1)
 		elseif choice == "evening" then
 			setEvening(player)
 		elseif choice == "room" then
@@ -195,10 +250,21 @@ end
 -- thing that matters tonight.
 function Concierge.greet(player: Player, firstVisit: boolean, nightlyPending: boolean?, remembered: string?)
 	if firstVisit then
-		Dialogue.say(player, V.speaker, V.firstVisit, nil, nil, 3.5)
-		task.delay(1.2, function()
-			if player.Parent == Players and not Concierge.isSeated(player) then
+		-- A first evening: the tour, straight to a table, or left to look around.
+		Dialogue.say(player, V.speaker, V.tourOffer, {
+			{ id = "tour", text = V.tourYes },
+			{ id = "table", text = V.tourSkip },
+			{ id = "later", text = V.tourLater },
+		}, function(choice)
+			if player.Parent ~= Players or Concierge.isSeated(player) then
+				return
+			end
+			if choice == "tour" then
+				Concierge.tour(player, 1)
+			elseif choice == "table" then
 				Concierge.lead(player, "salon")
+			else
+				Dialogue.say(player, V.speaker, V.tourLaterLine, nil, nil, 3)
 			end
 		end)
 	else

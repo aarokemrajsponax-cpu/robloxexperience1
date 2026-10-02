@@ -1232,6 +1232,37 @@ check("the Concierge's line is on screen", textOnScreen("The tables are set") ~=
 snapshot("dialogue")
 advance(4)
 check("no errors in the dialogue", #errors == 0, errors[1])
+-- The Concierge's tour: a card with its heading and step, pointing at the place it describes.
+do
+	local Voice = module("ReplicatedStorage", "Shared", "Voice")
+	local card = Voice.Tour[6]
+	serverSays("Dialogue", { token = "tour6", speaker = "THE CONCIERGE", line = card.line, title = card.title, step = "6 of " .. #Voice.Tour, point = Vector3.new(19, 3, 41.5), pointName = "The Boutique", choices = { { id = "next", text = "Next" }, { id = "back", text = "Back" }, { id = "done", text = "End the tour" } } })
+	advance(1)
+	check("the tour: a card with its heading", textOnScreen(card.title) ~= nil and textOnScreen("6 of") ~= nil)
+	local pin = workspace:FindFirstChild("MaisonWaypoint")
+	check("the tour points at the place: a gold pin over it with its name", pin ~= nil and pin:FindFirstChild("Pin") ~= nil and pin.Pin.Label.Text == "The Boutique")
+	snapshot("tour")
+	press("Next")
+	advance(0.5)
+	check("Next is sent back to the Concierge", (function()
+		for i = #sent, 1, -1 do
+			if sent[i].remote == "DialogueChoice" then
+				return sent[i].message == "tour6" and sent[i].extra[1] == "next"
+			end
+		end
+		return false
+	end)())
+	serverSays("Dialogue", { close = true })
+	advance(0.5)
+	check("and the pin goes when the tour does", workspace:FindFirstChild("MaisonWaypoint") == nil)
+	local everyCard = true
+	for _, c in Voice.Tour do
+		if type(c.title) ~= "string" or type(c.line) ~= "string" or #c.line < 40 then
+			everyCard = false
+		end
+	end
+	check("the tour covers the house: sorting, the rooms, the Boutique, the Suite, Lights Out...", everyCard and #Voice.Tour >= 12 and string.find(Voice.Tour[10].title, "Lights Out", 1, true) ~= nil)
+end
 
 ---------------------------------------------------------------------------------------------------
 -- 4. A Salon table: seated, a deal, lift and file with a gamepad, the round, the bank

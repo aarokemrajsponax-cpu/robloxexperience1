@@ -26,8 +26,14 @@ Leave that window open. Every change pushed to the branch reaches Studio within 
   Concierge's lectern, the Tonight board, the Wall of Names and the Livre d'Or, four room
   doors (only the Salon opens; the Midnight Room is roped), and the Grand Stair and the
   Boutique, both roped off.
-- **The Concierge**: greets you, walks a first-time guest to the Salon (pausing if you fall
-  behind), turns to look at you, answers when spoken to in a glass dialogue panel. **The
+- **The Concierge**: greets you, offers a first-time guest **the tour** (below), turns to look at
+  you, answers when spoken to in a glass dialogue panel.
+- **The tour** (the house's tutorial): a first-time guest is offered it on arrival, and anyone can
+  ask for it later (press **E** at the Concierge → **Show me the house**). Thirteen short cards
+  with **Next / Back / End**: the idea, sorting, the four rooms, tonight's table, Gilt, the
+  Boutique, the Wardrobe, the Vault, the Library, the Ballroom and Lights Out, your Suite, the
+  Ledger. Each card that names a place puts a gold pin over it and a guiding line from you to it.
+  The last card offers to take you to a table. **The
   Doorman** says "Evening." as you reach the door.
 - **The Salon**: burgundy velvet, bookshelves, a fire, and **six working tables**. It has the
   composed table camera, the dealt 3D pieces, drag *or* tap to sort, the gold guide light,
@@ -253,12 +259,14 @@ a Nightly attempt or a Mythic's odds.
 
 - **Playing, in Studio and live.** Press **Play** and you're your own character at once: Roblox's
   own camera (zoom right in or out) and controls, walking from the first second. Studio shows the
-  build in the bottom-left corner and prints it in Output (`[Maison] Build 20 ...`), so you can see
+  build in the bottom-left corner and prints it in Output (`[Maison] Build 28 ...`), so you can see
   Studio has the latest code. The live game plays the intro over the house (any key skips it);
   the old title screen is off (`Config.Title.show`). Roblox never spawns anyone by itself
   (`Players.CharacterAutoLoads` is off in the Rojo project and at the very top of the server), so
   nobody lands inside the Foyer's floor behind the front doors; every guest is placed in the
-  street (first visit) or the Foyer. Every part of the house starts on its own, so one that fails
+  Foyer, in the light (`Config.Movement.firstArrival = "street"` brings back the walk in from the
+  street on a first visit). Guests and staff stand at 80% of Roblox's size
+  (`Config.Movement.guestScale`), so every room feels a size bigger. Every part of the house starts on its own, so one that fails
   is reported in Output and never stops anyone from walking in, and a separate safety script
   hands back Roblox's own camera, controls and prompts if the house's client ever doesn't start.
 - **Ways to spend Robux**, all style, spectacle or gifts, never score:
@@ -289,7 +297,10 @@ a Nightly attempt or a Mythic's odds.
     top of the screen. Cancel any from the same page. (Saved in a DataStore: in Studio, turn on
     Game Settings → Security → Enable Studio Access to API Services to try it there.)
   - Anything that breaks shows in a small red panel in the corner of your screen (only yours),
-    so a screenshot is enough to say what went wrong.
+    so a screenshot is enough to say what went wrong. Studio's "can't save" errors
+    (StudioAccessToApisNotAllowed) are folded into one line that says how to switch saving on:
+    **Home → Game Settings → Security → Enable Studio Access to API Services → Save**. The live
+    game always saves; this only matters in Studio.
 - **Feeling at home**: the Concierge remembers your last highlight, your milestones and who
   admired you; the table you use most carries your name while you're here and is offered as
   "your usual"; walk up to any guest and **Admire** them (R, or L1); sign the **Livre d'Or** once

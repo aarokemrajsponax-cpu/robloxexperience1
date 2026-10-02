@@ -9,6 +9,7 @@ local Ease = require(ReplicatedStorage.Shared.Ease)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Root = require(script.Parent.Root)
 local Theme = require(script.Parent.Theme)
+local Waypoint = require(script.Parent.Parent.World.Waypoint)
 
 local Dialogue = {}
 
@@ -27,34 +28,48 @@ end
 
 export type Choice = { id: string, text: string }
 
-function Dialogue.show(speaker: string, line: string, choices: { Choice }?, onChoice: ((id: string) -> ())?, hold: number?)
+export type Extra = { title: string?, step: string?, point: Vector3?, pointName: string? }
+
+function Dialogue.show(speaker: string, line: string, choices: { Choice }?, onChoice: ((id: string) -> ())?, hold: number?, extra: Extra?)
 	serial += 1
+	-- The tour points at the place it's describing; anything else clears the pin.
+	local x: Extra = extra or ({} :: Extra)
+	if typeof(x.point) == "Vector3" then
+		Waypoint.show(x.point :: Vector3, x.pointName or "")
+	else
+		Waypoint.clear()
+	end
 	local mine = serial
 	if current then
 		dismiss(current)
 	end
 	local hasChoices = choices ~= nil and #choices > 0
-	local group, content = Theme.glass(Root.dialogue, "Dialogue", UDim2.fromOffset(460, 0), UDim2.new(0.5, 0, 1, -34), Vector2.new(0.5, 1))
+	local wide = x.title ~= nil
+	local panelWidth = if wide then 540 else 460
+	local group, content = Theme.glass(Root.dialogue, "Dialogue", UDim2.fromOffset(panelWidth, 0), UDim2.new(0.5, 0, 1, -34), Vector2.new(0.5, 1))
 	group.AutomaticSize = Enum.AutomaticSize.Y
 	content.AutomaticSize = Enum.AutomaticSize.Y
 	content.Size = UDim2.new(1, 0, 0, 0)
 	local fill = group:FindFirstChild("Fill") :: Frame
 	fill.Size = UDim2.fromScale(1, 1)
 	local limit = Instance.new("UISizeConstraint")
-	limit.MaxSize = Vector2.new(math.min(460, Root.size().X - 24), math.huge)
+	limit.MaxSize = Vector2.new(math.min(panelWidth, Root.size().X - 24), math.huge)
 	limit.Parent = group
 	local list = Theme.list(content, 8)
 	list.HorizontalAlignment = Enum.HorizontalAlignment.Left
-	Theme.text(content, speaker, 11, "caps", { LayoutOrder = 1, TextXAlignment = Enum.TextXAlignment.Left })
-	Theme.text(content, line, 18, "body", { LayoutOrder = 2, TextXAlignment = Enum.TextXAlignment.Left })
+	Theme.text(content, speaker .. (if x.step then "   ·   " .. x.step else ""), 11, "caps", { LayoutOrder = 1, TextXAlignment = Enum.TextXAlignment.Left })
+	if x.title then
+		Theme.text(content, x.title, 26, "display", { LayoutOrder = 2, TextXAlignment = Enum.TextXAlignment.Left })
+	end
+	Theme.text(content, line, 17, "body", { LayoutOrder = 3, TextXAlignment = Enum.TextXAlignment.Left })
 	if hasChoices then
 		local row = Instance.new("Frame")
 		row.BackgroundTransparency = 1
 		row.AutomaticSize = Enum.AutomaticSize.Y
 		row.Size = UDim2.new(1, 0, 0, 0)
-		row.LayoutOrder = 3
+		row.LayoutOrder = 4
 		row.Parent = content
-		local rowList = Theme.list(row, 6)
+		local rowList = Theme.list(row, 6, wide)
 		rowList.HorizontalAlignment = Enum.HorizontalAlignment.Left
 		local first: TextButton? = nil
 		for i, c in choices :: { Choice } do
@@ -65,9 +80,9 @@ function Dialogue.show(speaker: string, line: string, choices: { Choice }?, onCh
 				if onChoice then
 					onChoice(c.id)
 				end
-			end, 300)
+			end, if wide then 160 else 300)
 			key.LayoutOrder = i
-			key.TextXAlignment = Enum.TextXAlignment.Left
+			key.TextXAlignment = if wide then Enum.TextXAlignment.Center else Enum.TextXAlignment.Left
 			local pad = Instance.new("UIPadding")
 			pad.PaddingLeft = UDim.new(0, 14)
 			pad.Parent = key
@@ -92,15 +107,17 @@ function Dialogue.show(speaker: string, line: string, choices: { Choice }?, onCh
 			end
 		end)
 	else
-		task.delay(20, function()
+		task.delay(if wide then 90 else 20, function()
 			if serial == mine and current == group then
 				dismiss(group)
+				Waypoint.clear()
 			end
 		end)
 	end
 end
 
 function Dialogue.close()
+	Waypoint.clear()
 	if current then
 		dismiss(current)
 	end
@@ -119,7 +136,12 @@ function Dialogue.start()
 		local token = message.token
 		Dialogue.show(tostring(message.speaker or ""), tostring(message.line or ""), message.choices, function(id)
 			choiceEvent:FireServer(token, id)
-		end, message.hold)
+		end, message.hold, {
+			title = if type(message.title) == "string" then message.title else nil,
+			step = if type(message.step) == "string" then message.step else nil,
+			point = if typeof(message.point) == "Vector3" then message.point else nil,
+			pointName = if type(message.pointName) == "string" then message.pointName else nil,
+		})
 	end)
 end
 

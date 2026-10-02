@@ -16,8 +16,11 @@ local pending: { [Player]: Pending } = {}
 local dialogueEvent = Remotes.event("Dialogue")
 local choiceEvent = Remotes.event("DialogueChoice")
 
--- Shows a line. With choices, `handler` runs with the chosen id (once).
-function Dialogue.say(player: Player, speaker: string, line: string, choices: { Choice }?, handler: ((choiceId: string) -> ())?, hold: number?)
+export type Extra = { title: string?, step: string?, point: Vector3?, pointName: string? }
+
+-- Shows a line. With choices, `handler` runs with the chosen id (once). `extra` adds a heading,
+-- a step ("3 of 12") and a place to point at (a gold pin and a line of light), for the tour.
+function Dialogue.say(player: Player, speaker: string, line: string, choices: { Choice }?, handler: ((choiceId: string) -> ())?, hold: number?, extra: Extra?)
 	local token = HttpService:GenerateGUID(false)
 	if choices and handler then
 		local allowed = {}
@@ -32,6 +35,10 @@ function Dialogue.say(player: Player, speaker: string, line: string, choices: { 
 		line = line,
 		choices = choices,
 		hold = hold,
+		title = extra and extra.title,
+		step = extra and extra.step,
+		point = extra and extra.point,
+		pointName = extra and extra.pointName,
 	})
 end
 
