@@ -56,10 +56,11 @@ function Title.show(choices: Choices)
 	Theme.list(column, 10)
 
 	local size = Root.size()
-	local nameSize = math.floor(math.min(58, size.X * 0.09))
-	Theme.text(column, Brand.Name, nameSize, "display", { LayoutOrder = 1, TextColor3 = Brand.Colours.bone })
-	Theme.hairline(column, UDim.new(0, 160), 2)
-	Theme.text(column, Brand.Tagline, 16, "body", { LayoutOrder = 3, TextColor3 = Brand.Colours.smoke })
+	local nameSize = math.floor(math.min(76, size.X * 0.11))
+	-- As the web edition sets it: the name in the house serif, the tagline in its italic.
+	Theme.hairline(column, UDim.new(0, 160), 0)
+	Theme.text(column, "Maison Noir", nameSize, "display", { LayoutOrder = 1, TextColor3 = Brand.Colours.bone })
+	Theme.text(column, Brand.Tagline, 19, "italic", { LayoutOrder = 3, TextColor3 = Brand.Colours.bone })
 
 	local spacer = Instance.new("Frame")
 	spacer.BackgroundTransparency = 1

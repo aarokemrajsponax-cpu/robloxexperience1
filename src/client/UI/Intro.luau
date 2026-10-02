@@ -1,6 +1,6 @@
 --!strict
--- The intro (about six seconds): a gold hairline draws across the centre, MAISON NOIR tracks in
--- from wide letter-spacing to true, the credit fades up beneath, the copyright sits in the corner.
+-- The intro (about six seconds): a gold hairline draws across the centre, "Maison Noir" settles
+-- in beneath it in the house serif, the credit fades up beneath, the copyright sits in the corner.
 -- Fonts load first (with a time limit, so it can never hang or blink), it fits the smallest
 -- phone at its widest frame, any tap or key skips it, and it leaves nothing behind.
 
@@ -14,7 +14,7 @@ local Root = require(script.Parent.Root)
 
 local Intro = {}
 
-local NAME = "MAISON NOIR"
+local NAME = "Maison Noir"
 
 local function tween(obj: Instance, seconds: number, goal: { [string]: any }, style: Enum.EasingStyle?, delay: number?): Tween
 	local t = TweenService:Create(obj, TweenInfo.new(seconds, style or Enum.EasingStyle.Quint, Enum.EasingDirection.Out, 0, false, delay or 0), goal)
@@ -40,67 +40,55 @@ function Intro.play(onShown: (() -> ())?)
 	group.ZIndex = 2
 	group.Parent = Root.intro
 
-	-- Letter geometry chosen so the widest frame still fits.
-	local count = utf8.len(NAME) or #NAME
-	local cellRatio = 0.78
-	local textSize = math.floor(math.min(64, (size.X * 0.8) / (count * cellRatio + (count - 1) * 0.08)))
-	local cell = textSize * cellRatio
-	local tight = textSize * 0.08
-	local wide = math.max(tight, math.min(textSize * 1.1, (size.X * 0.94 - count * cell) / (count - 1)))
+	-- The name as the web edition sets it: "Maison Noir" in the house serif, a gold hairline above
+	-- it, the credit in spaced capitals beneath. Sized so the widest frame still fits a phone.
+	local textSize = math.floor(math.clamp(size.X * 0.105, 34, 96))
 
-	local row = Instance.new("Frame")
-	row.Name = "Letters"
-	row.BackgroundTransparency = 1
-	row.AnchorPoint = Vector2.new(0.5, 0.5)
-	row.Position = UDim2.new(0.5, 0, 0.5, -textSize * 0.55)
-	row.Size = UDim2.fromOffset(size.X, textSize * 1.3)
-	row.Parent = group
-	local list = Instance.new("UIListLayout")
-	list.FillDirection = Enum.FillDirection.Horizontal
-	list.HorizontalAlignment = Enum.HorizontalAlignment.Center
-	list.VerticalAlignment = Enum.VerticalAlignment.Center
-	list.SortOrder = Enum.SortOrder.LayoutOrder
-	list.Padding = UDim.new(0, wide)
-	list.Parent = row
-
-	local letters: { TextLabel } = {}
-	local i = 0
-	for _, cp in utf8.codes(NAME) do
-		i += 1
-		local ch = utf8.char(cp)
-		local l = Instance.new("TextLabel")
-		l.LayoutOrder = i
-		l.BackgroundTransparency = 1
-		l.Size = UDim2.fromOffset(if ch == " " then cell * 0.45 else cell, textSize * 1.2)
-		l.FontFace = Brand.Fonts.display
-		l.TextSize = textSize
-		l.TextColor3 = Brand.Colours.bone
-		l.TextTransparency = 1
-		l.Text = ch
-		l.Parent = row
-		table.insert(letters, l)
-	end
+	local word = Instance.new("TextLabel")
+	word.Name = "Name"
+	word.AnchorPoint = Vector2.new(0.5, 0.5)
+	word.Position = UDim2.new(0.5, 0, 0.5, -textSize * 0.1)
+	word.Size = UDim2.fromOffset(size.X, textSize * 1.3)
+	word.BackgroundTransparency = 1
+	word.FontFace = Brand.Fonts.display
+	word.TextSize = textSize
+	word.TextColor3 = Brand.Colours.bone
+	word.TextTransparency = 1
+	word.Text = NAME
+	word.Parent = group
+	local grow = Instance.new("UIScale")
+	grow.Scale = 1.06
+	grow.Parent = word
+	local letters = { word }
 
 	local line = Instance.new("Frame")
 	line.Name = "Hairline"
 	line.AnchorPoint = Vector2.new(0.5, 0.5)
-	line.Position = UDim2.new(0.5, 0, 0.5, textSize * 0.35)
+	line.Position = UDim2.new(0.5, 0, 0.5, -textSize * 0.82)
 	line.Size = UDim2.fromOffset(0, 1)
 	line.BackgroundColor3 = Brand.Colours.gold
 	line.BorderSizePixel = 0
 	line.Parent = group
+	local lineFade = Instance.new("UIGradient")
+	lineFade.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0), NumberSequenceKeypoint.new(1, 1) })
+	lineFade.Parent = line
 
 	local credit = Instance.new("TextLabel")
 	credit.Name = "Credit"
 	credit.AnchorPoint = Vector2.new(0.5, 0)
-	credit.Position = UDim2.new(0.5, 0, 0.5, textSize * 0.6)
+	credit.Position = UDim2.new(0.5, 0, 0.5, textSize * 0.62)
 	credit.Size = UDim2.fromOffset(size.X * 0.9, 24)
 	credit.BackgroundTransparency = 1
 	credit.FontFace = Brand.Fonts.body
-	credit.TextSize = math.max(14, math.floor(textSize * 0.26))
+	credit.TextSize = math.max(12, math.floor(textSize * 0.16))
 	credit.TextColor3 = Brand.Colours.smoke
 	credit.TextTransparency = 1
-	credit.Text = Brand.Credit
+	local spaced = {}
+	for _, cp in utf8.codes(string.upper(Brand.Credit)) do
+		local ch = utf8.char(cp)
+		table.insert(spaced, if ch == " " then "  " else ch)
+	end
+	credit.Text = table.concat(spaced, " ")
 	credit.Parent = group
 
 	local copyright = Instance.new("TextLabel")
@@ -158,14 +146,12 @@ function Intro.play(onShown: (() -> ())?)
 		if not wait(0.3) then
 			return
 		end
-		tween(line, 1.1, { Size = UDim2.fromOffset(math.min(size.X * 0.36, 420), 1) }, Enum.EasingStyle.Quint)
+		tween(line, 1.1, { Size = UDim2.fromOffset(math.min(size.X * 0.3, 360), 1) }, Enum.EasingStyle.Quint)
 		if not wait(0.6) then
 			return
 		end
-		tween(list, 2.4, { Padding = UDim.new(0, tight) }, Enum.EasingStyle.Quint)
-		for n, l in letters do
-			tween(l, 1.4, { TextTransparency = 0 }, Enum.EasingStyle.Sine, (n - 1) * 0.03)
-		end
+		tween(grow, 2.6, { Scale = 1 }, Enum.EasingStyle.Quint)
+		tween(word, 1.6, { TextTransparency = 0 }, Enum.EasingStyle.Sine)
 		if not wait(1.8) then
 			return
 		end
