@@ -120,6 +120,9 @@ function Parcels.burn(b: Built, seconds: number)
 	local value = Instance.new("NumberValue")
 	value.Value = 1
 	value.Changed:Connect(function(v)
+		if not model.Parent then
+			return -- opened (or swept away) before the fuse burnt down
+		end
 		local box = model.PrimaryPart
 		if fuse.Parent and box then
 			local length = math.max(0.02, 0.6 * v)

@@ -235,7 +235,7 @@ local function trackZones()
 				-- A new guest lingering in the Foyer for a while is offered the walk.
 				if zone == "foyer" and visit.firstVisit and not visit.offered and not TableService.isSeated(player) then
 					visit.foyerSince = visit.foyerSince or os.clock()
-					if os.clock() - (visit.foyerSince :: number) > Config.data.Staff.lostAfter and not Concierge.isLeading(player) then
+					if os.clock() - (visit.foyerSince :: number) > Config.data.Staff.lostAfter and not Concierge.isLeading(player) and not Concierge.isTouring(player) then
 						visit.offered = true
 						Concierge.offerHelp(player)
 					end
@@ -358,7 +358,7 @@ function Guests.start()
 		local character = player.Character
 		local root = character and character:FindFirstChild("HumanoidRootPart")
 		local near = if root and root:IsA("BasePart") then root.Position else nil
-		local model = TableService.freeTable(if mode == "nightly" then "any" else "salon", near)
+		local model = if mode == "nightly" then TableService.nightlyTable(near) else TableService.freeTable("salon", near)
 		if not model then
 			return false
 		end

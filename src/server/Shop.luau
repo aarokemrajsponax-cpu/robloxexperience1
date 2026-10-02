@@ -336,6 +336,12 @@ end
 ---------------------------------------------------------------------------------------------------
 local function own(player: Player, data: Profiles.Data, item: Wardrobe.Item)
 	data.owned[item.id] = true
+	-- A Suite piece goes straight into its spot when the spot is empty: bought, and there it is.
+	local spotId = Suite.spotOf(item)
+	local spot = if spotId then Suite.byId[spotId] else nil
+	if spotId and spot and (data.suite :: { [string]: string? })[spotId] == nil and Suite.roomOpen(spot.room, data.goldKey) then
+		(data.suite :: { [string]: string? })[spotId] = item.id
+	end
 	Analytics.custom(player, "Boutique item granted", nil, { item = item.id, kind = item.kind, source = item.source })
 end
 
@@ -754,7 +760,18 @@ function Shop.suite(data: Profiles.Data): { [string]: any }
 		local options = {}
 		for _, item in Suite.piecesFor(spot.id) do
 			local mine = Dressing.canWear(data, item)
-			table.insert(options, { id = item.id, name = item.name, line = item.line, owned = mine })
+			table.insert(options, {
+				id = item.id,
+				name = item.name,
+				line = item.line,
+				owned = mine,
+				source = item.source,
+				gilt = item.gilt,
+				robux = item.robux,
+				standing = item.standing,
+				-- Robux pieces are sold from the Boutique's shelves on the days they're out.
+				onSale = item.robux ~= nil and Boutique.onSale(item.id, Season.current().id) and Wardrobe.deliverable(item),
+			})
 		end
 		table.insert(spots, {
 			id = spot.id,
@@ -766,7 +783,7 @@ function Shop.suite(data: Profiles.Data): { [string]: any }
 			options = options,
 		})
 	end
-	return { spots = spots, rooms = Suite.RoomNames }
+	return { spots = spots, rooms = Suite.RoomNames, gilt = data.gilt, goldKey = data.goldKey }
 end
 
 -- Puts a piece in a spot of the guest's Suite ("" takes it away).

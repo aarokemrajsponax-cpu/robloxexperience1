@@ -205,7 +205,10 @@ function SortingTable.build(parent: Instance, roomId: string, index: number | st
 		Kit.part(model, "ChairLeg", Vector3.new(0.25, T.seatY - 0.3, 0.25), at(frame, o[1], (T.seatY - 0.3) / 2, T.chairZ + o[2]), style.legs, { collide = false })
 	end
 	prompt(seat, "SitPrompt", "Sit", style.roomName, Enum.KeyCode.E, Enum.KeyCode.ButtonX, 2.2)
-	prompt(seat, "NightlyPrompt", "Tonight's table", "The Nightly", Enum.KeyCode.F, Enum.KeyCode.ButtonY, 3.5)
+	-- Tonight's table is played under its room's clock, so the Salon (no clock) doesn't offer it.
+	if roomId ~= "salon" then
+		prompt(seat, "NightlyPrompt", "Tonight's table", "The Nightly", Enum.KeyCode.F, Enum.KeyCode.ButtonY, 3.5)
+	end
 
 	lamp(model, frame, style)
 	return model

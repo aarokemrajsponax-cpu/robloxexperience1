@@ -19,6 +19,7 @@ Remotes.Events = {
 	"Shop", -- server -> client: what you own and wear, Gilt, the Ledger, gifts
 	"Salute", -- server -> client: a salute for the whole house; the owner's events
 	"Errors", -- server -> the owner's screen: anything that broke on the server
+	"Tour", -- server -> client: the Concierge's tour starts; client -> server: it started, it ended
 }
 
 Remotes.Functions = {

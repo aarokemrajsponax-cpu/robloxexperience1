@@ -35,7 +35,7 @@ Settings.Definitions = {
 	choice("movement", "The room", "Movement", { "Full", "Calm", "Still" }, true),
 	choice("glow", "The room", "Glow and sparks", { "Full", "Subtle", "Off" }, true),
 	-- The table
-	choice("caseStyle", "The table", "Case style", { "Trays", "Boxes", "Plates" }, false),
+	choice("caseStyle", "The table", "Case style", { "Trays", "Boxes", "Plates" }, true),
 	choice("pieceSize", "The table", "Piece size", { "Normal", "Large", "Largest", "Small" }, true),
 	choice("wrongCase", "The table", "A wrong case", { "Costs the streak", "Costs points too" }, true, "four rooms only"),
 	choice("pieceNames", "The table", "Piece names", { "On pick-up", "Always on", "Never" }, true),
@@ -48,7 +48,7 @@ Settings.Definitions = {
 	choice("trailPace", "The guide", "Trail pace", { "Normal", "Lively", "Calm" }, true),
 	-- The Club
 	choice("showMark", "The Club", "Show my Mark on my nameplate", { "On", "Off" }, true),
-	choice("showCrest", "The Club", "Show my Circle's crest", { "On", "Off" }, false),
+	choice("showCrest", "The Club", "Show my Circle's crest", { "On", "Off" }, true),
 	choice("parcelsTo", "The Club", "Ballroom parcels go to", { "Random", "Rivals", "Leader", "Nearly out" }, true),
 	choice("rivalUpdates", "The Club", "Rival updates in the house", { "On", "Off" }, true),
 	choice("offerStandIn", "The Club", "Offer a Stand-in while I wait", { "Yes", "No" }, true),

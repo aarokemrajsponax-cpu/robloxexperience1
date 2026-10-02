@@ -1232,36 +1232,125 @@ check("the Concierge's line is on screen", textOnScreen("The tables are set") ~=
 snapshot("dialogue")
 advance(4)
 check("no errors in the dialogue", #errors == 0, errors[1])
--- The Concierge's tour: a card with its heading and step, pointing at the place it describes.
+-- The Concierge's tour: the Concierge walks you round the whole house, a card at every stop.
 do
 	local Voice = module("ReplicatedStorage", "Shared", "Voice")
-	local card = Voice.Tour[6]
-	serverSays("Dialogue", { token = "tour6", speaker = "THE CONCIERGE", line = card.line, title = card.title, step = "6 of " .. #Voice.Tour, point = Vector3.new(19, 3, 41.5), pointName = "The Boutique", choices = { { id = "next", text = "Next" }, { id = "back", text = "Back" }, { id = "done", text = "End the tour" } } })
+	local Tour = module("StarterPlayer", "StarterPlayerScripts", "Client", "World", "Tour")
+	-- The house's Concierge at the lectern, as the server's rig arrives on this screen.
+	local concierge = Instance.new("Model")
+	concierge.Name = "Concierge"
+	concierge:SetAttribute("Staff", "Concierge")
+	local croot = Instance.new("Part")
+	croot.Name = "HumanoidRootPart"
+	croot.Size = Vector3.new(2, 2, 1)
+	croot.CFrame = CFrame.new(9, 6, 4.2)
+	croot.Parent = concierge
+	local chead = Instance.new("Part")
+	chead.Name = "Head"
+	chead.Size = Vector3.new(1, 1, 1)
+	chead.CFrame = CFrame.new(9, 7.5, 4.2)
+	chead.Parent = concierge
+	local speak = Instance.new("ProximityPrompt")
+	speak.Name = "SpeakPrompt"
+	speak.Parent = chead
+	local chum = Instance.new("Humanoid")
+	chum.HipHeight = 2
+	chum.Parent = concierge
+	concierge.PrimaryPart = croot
+	concierge.Parent = workspace
+	local was = root.Position
+	local function moveGuest(p: Vector3)
+		root.CFrame = CFrame.new(p)
+		root.Position = p
+	end
+	moveGuest(Vector3.new(9, 5, 12))
+	serverSays("Tour", { op = "start" })
 	advance(1)
-	check("the tour: a card with its heading", textOnScreen(card.title) ~= nil and textOnScreen("6 of") ~= nil)
-	local pin = workspace:FindFirstChild("MaisonWaypoint")
-	check("the tour points at the place: a gold pin over it with its name", pin ~= nil and pin:FindFirstChild("Pin") ~= nil and pin.Pin.Label.Text == "The Boutique")
-	snapshot("tour")
+	local guide = workspace:FindFirstChild("MaisonTourGuide")
+	check("the tour: the Concierge sets off with you (your own guide, on your screen)", guide ~= nil and guide:FindFirstChildOfClass("ProximityPrompt", true) == nil)
+	check("the house's Concierge is hidden from you meanwhile", chead.LocalTransparencyModifier == 1 and speak.Enabled == false)
+	check("the server knows you're on the tour", sentOps("Tour", "start") == 1)
+	check("the first card: the idea", textOnScreen(Voice.Tour[1].title) ~= nil and textOnScreen("1 of " .. #Voice.Tour) ~= nil)
+	-- Next, and stay put: the Concierge waits a little way ahead rather than leaving you behind.
 	press("Next")
-	advance(0.5)
-	check("Next is sent back to the Concierge", (function()
-		for i = #sent, 1, -1 do
-			if sent[i].remote == "DialogueChoice" then
-				return sent[i].message == "tour6" and sent[i].extra[1] == "next"
+	advance(6)
+	local _, _, waitState, waitAt = Tour.where()
+	check("the Concierge waits when you fall behind", waitState == "walking" and (waitAt - Vector3.new(9, 3, 12)).Magnitude < 20, waitAt)
+	check("on the way: where to, a pin there, and a key to end the tour", textOnScreen("This way, to the Salon") ~= nil and textOnScreen("End the tour") ~= nil and workspace:FindFirstChild("MaisonWaypoint") ~= nil and workspace.MaisonWaypoint.Pin.Label.Text == "The Salon")
+	-- Follow the Concierge to every stop and read every card.
+	local visited = {}
+	local climbed = false
+	local guideTop = 0
+	local cardsSeen = 1
+	local pinned, placed = 0, 0
+	local i = 2
+	while i <= #Voice.Tour do
+		for _ = 1, 600 do
+			local _, _, state, at = Tour.where()
+			if state == "card" then
+				break
+			end
+			moveGuest(at + Vector3.new(0, 2, 0))
+			advance(0.1)
+			if at.Y > 8 and at.Y < 18 then
+				climbed = true
+			end
+			local gr = guide and guide:FindFirstChild("HumanoidRootPart")
+			if gr then
+				guideTop = math.max(guideTop, gr.CFrame.Position.Y)
 			end
 		end
-		return false
-	end)())
-	serverSays("Dialogue", { close = true })
-	advance(0.5)
-	check("and the pin goes when the tour does", workspace:FindFirstChild("MaisonWaypoint") == nil)
-	local everyCard = true
-	for _, c in Voice.Tour do
-		if type(c.title) ~= "string" or type(c.line) ~= "string" or #c.line < 40 then
-			everyCard = false
+		local stopId, cardAt, state = Tour.where()
+		visited[stopId] = true
+		if state == "card" and cardAt == i and textOnScreen(Voice.Tour[i].title) ~= nil and textOnScreen(i .. " of " .. #Voice.Tour) ~= nil then
+			cardsSeen += 1
 		end
+		local place = Voice.Tour[i].place
+		if place then
+			local pin = workspace:FindFirstChild("MaisonWaypoint")
+			if pin and pin.Pin.Label.Text == Voice.TourPlaces[place] then
+				pinned += 1
+			end
+			placed += 1
+		end
+		if i == 8 then
+			-- Back shows the card before, where you stand.
+			press("Back")
+			advance(0.3)
+			check("Back shows the card before", textOnScreen(Voice.Tour[7].title) ~= nil)
+			press("Next")
+			advance(0.3)
+		end
+		if i < #Voice.Tour then
+			press("Next")
+			advance(0.2)
+		end
+		i += 1
 	end
-	check("the tour covers the house: sorting, the rooms, the Boutique, the Suite, Lights Out...", everyCard and #Voice.Tour >= 12 and string.find(Voice.Tour[10].title, "Lights Out", 1, true) ~= nil)
+	check("every card is shown, in order", cardsSeen == #Voice.Tour, cardsSeen)
+	check("the tour walks the whole house: the Salon, Tonight's board, the Vault, the Boutique", visited.salon and visited.tonight and visited.vault and visited.boutique)
+	check("and upstairs: the Library, the Ballroom, the Terrace, your Suite", visited.library and visited.ballroom and visited.terrace and visited.suite)
+	check("the Concierge climbs the Grand Stair to the Club Floor", climbed and guideTop > 20, guideTop)
+	check("each card points at its place: a gold pin with its name", placed >= 10 and pinned == placed, pinned .. " of " .. placed)
+	advance(1)
+	snapshot("tour")
+	check("the last card offers a table", textOnScreen("Take me to a table") ~= nil and textOnScreen("I'll explore") ~= nil)
+	press("I'll explore")
+	advance(1)
+	check("ending it: your guide goes and the Concierge is back at the lectern", workspace:FindFirstChild("MaisonTourGuide") == nil and chead.LocalTransparencyModifier == 0 and speak.Enabled == true)
+	check("the pin goes with it", workspace:FindFirstChild("MaisonWaypoint") == nil)
+	check("and the server hears it's over", sentOps("Tour", "end") == 1)
+	-- Wandering off ends it too, kindly.
+	moveGuest(Vector3.new(9, 5, 12))
+	serverSays("Tour", { op = "start" })
+	advance(1)
+	moveGuest(Vector3.new(0, 5, -200))
+	advance(45)
+	check("a guest who wanders off has left the tour", Tour.active() == false and workspace:FindFirstChild("MaisonTourGuide") == nil)
+	check("no errors on the tour", #errors == 0, errors[1])
+	concierge:Destroy()
+	moveGuest(was)
+	advance(0.5)
 end
 
 ---------------------------------------------------------------------------------------------------
@@ -1470,15 +1559,102 @@ local liftedBefore = sentOps("Table", "lift")
 check("A lifts a piece", pad(roblox.Enum.KeyCode.ButtonA))
 advance(0.5)
 check("the lift is sent", sentOps("Table", "lift") == liftedBefore + 1)
-check("in the Salon, a line of light runs from the held piece to its case", (function()
+local function trailCount(name: string): number
 	local lit = 0
 	for _, dot in sortGui.Root.Trail:GetChildren() do
-		if dot.Visible and dot.BackgroundTransparency < 1 then
+		if dot.Name == name and dot.Visible and (name == "Sparkle" or dot.BackgroundTransparency < 1) then
 			lit += 1
 		end
 	end
-	return lit >= 8
-end)())
+	return lit
+end
+local heldPiece = (function()
+	-- The piece in hand is the one lifted off the cloth (drawn a little larger).
+	for _, card in sortGui.Root.Pieces:GetChildren() do
+		local scale = card:FindFirstChildOfClass("UIScale")
+		if scale and scale.Scale > 1.1 then
+			for _, p in deal do
+				if p.uid == card:GetAttribute("Uid") then
+					return p
+				end
+			end
+		end
+	end
+	return nil
+end)()
+check("in the Salon, a thread of light runs from the held piece to its case", trailCount("Light") >= 12, trailCount("Light"))
+check("and sparkles twinkling along the way", trailCount("Sparkle") >= 2, trailCount("Sparkle"))
+local guideCase = (function()
+	for _, f in sortGui.Root.Cases:GetChildren() do
+		if f:FindFirstChild("Guide") then
+			return f
+		end
+	end
+	return nil
+end)()
+check("the right case lights up", heldPiece ~= nil and guideCase ~= nil and guideCase:GetAttribute("CaseId") == heldPiece.case, heldPiece and heldPiece.case)
+local arrow = sortGui.Root.Trail:FindFirstChild("Arrow")
+check("and a gold arrow bobs over it", arrow ~= nil and arrow.Visible and guideCase ~= nil and math.abs(arrow.Position.X.Offset - guideCase.Position.X.Offset) < 2 and arrow.Position.Y.Offset < guideCase.Position.Y.Offset)
+snapshot("sort-guide")
+do
+	-- The guide follows Settings → The guide, and the trail the guest wears.
+	local SortScreen = module("StarterPlayer", "StarterPlayerScripts", "Client", "Table", "SortScreen")
+	local GuideTrail = module("StarterPlayer", "StarterPlayerScripts", "Client", "Table", "GuideTrail")
+	local State = module("StarterPlayer", "StarterPlayerScripts", "Client", "State")
+	local Brand = module("ReplicatedStorage", "Shared", "Brand")
+	local Wardrobe = module("ReplicatedStorage", "Shared", "Wardrobe")
+	local look = SortScreen.guideLook()
+	check("the guide: sparkles in the house's gold by default", look.kind == "Sparkles" and look.colour == Brand.TrailColours.House)
+	check("the guide in the Salon shows at once", SortScreen.guideDelay() == 0)
+	State.set("showTheWay", "After a moment")
+	check("\"Show the way: After a moment\" waits a moment", SortScreen.guideDelay() == 1.2)
+	State.set("showTheWay", "Never")
+	check("\"Show the way: Never\" turns it off", SortScreen.guideDelay() == nil)
+	State.set("showTheWay", "Always")
+	State.set("trailColour", "Ice")
+	check("the trail colour setting is used", SortScreen.guideLook().colour == Brand.TrailColours.Ice)
+	serverSays("Shop", { op = "state", owned = { "trail_ruby" }, equipped = { trail = "trail_ruby" }, gilt = 0, goldKey = false, credits = {} })
+	advance(0.1)
+	check("a trail bought in the Boutique colours the guide", SortScreen.guideLook().colour == (Wardrobe.get("trail_ruby") :: any).style.colour)
+	State.set("trail", "Case only")
+	check("\"Trail: Case only\" draws no thread", (function()
+		local layer = roblox.Instance.new("Frame")
+		GuideTrail.attach(layer)
+		GuideTrail.setLook(SortScreen.guideLook())
+		GuideTrail.draw(0.1, Vector2.new(100, 100), Vector2.new(400, 500), 1, 1)
+		local shown = 0
+		for _, d in layer:GetChildren() do
+			if d.Name == "Light" and d.Visible then
+				shown += 1
+			end
+		end
+		local arrowShown = layer.Arrow.Visible
+		GuideTrail.attach(sortGui.Root.Trail)
+		return shown == 0 and arrowShown
+	end)())
+	for _, kind in { "Ribbon", "Comet", "Runway" } do
+		State.set("trail", kind)
+		local layer = roblox.Instance.new("Frame")
+		GuideTrail.attach(layer)
+		GuideTrail.setLook(SortScreen.guideLook())
+		local shown = 0
+		for _ = 1, 10 do
+			GuideTrail.tick(0.05, nil, nil, 1)
+			GuideTrail.draw(0.05, Vector2.new(100, 100), Vector2.new(400, 500), 1, 1)
+		end
+		for _, d in layer:GetChildren() do
+			if d.Name == "Light" and d.Visible then
+				shown += 1
+			end
+		end
+		check("\"Trail: " .. kind .. "\" draws its thread", shown >= 5, shown)
+	end
+	GuideTrail.attach(sortGui.Root.Trail)
+	State.set("trail", "Sparkles")
+	State.set("trailColour", "House")
+	serverSays("Shop", { op = "state", owned = {}, equipped = {}, gilt = 0, goldKey = false, credits = {} })
+	advance(0.1)
+end
 local filedBefore = sentOps("Table", "file")
 check("A files it into the chosen case", pad(roblox.Enum.KeyCode.ButtonA))
 advance(0.5)
@@ -1497,6 +1673,32 @@ for _, p in deal do
 	advance(0.2)
 end
 check("no errors while filing", #errors == 0, errors[1])
+do
+	-- Settings → Case style changes the cases at once, and they keep their counts.
+	local State = module("StarterPlayer", "StarterPlayerScripts", "Client", "State")
+	local function counts(): (number, string?, boolean)
+		local total, style, seam = 0, nil, false
+		for _, b in sortGui.Root.Cases:GetChildren() do
+			total += tonumber(b.Count.Text) or 0
+			style = b:GetAttribute("Style")
+			seam = seam or b:FindFirstChild("Seam") ~= nil
+		end
+		return total, style, seam
+	end
+	advance(1)
+	local before = counts()
+	State.set("caseStyle", "Boxes")
+	advance(0.2)
+	local after, style, seam = counts()
+	check("case style: boxes, with lids", style == "Boxes" and seam and #sortGui.Root.Cases:GetChildren() == 6, style)
+	check("and the cases keep their counts", after == before and before > 0, after .. " vs " .. before)
+	State.set("caseStyle", "Plates")
+	advance(0.2)
+	local _, plates = counts()
+	check("case style: plates", plates == "Plates")
+	State.set("caseStyle", "Trays")
+	advance(0.2)
+end
 serverSays("Table", { op = "roundEnd", round = 1, room = "salon", mode = "room", score = 360, grade = "Polished", bestStreak = 8, bonus = { perfect = 0, streak = 40, time = 0 }, last = false })
 advance(3)
 check("the round panel offers the next round", textOnScreen("Next round") ~= nil)
@@ -1817,10 +2019,22 @@ end) == nil)
 ---------------------------------------------------------------------------------------------------
 -- 5. The Nightly card
 ---------------------------------------------------------------------------------------------------
+-- Wearing a table style and a lamp from the Boutique: the sorting screen takes them on.
+serverSays("Shop", { op = "state", owned = { "table_oxblood", "lamp_moon" }, equipped = { table = "table_oxblood", lamp = "lamp_moon" }, gilt = 0, goldKey = false, credits = {} })
+advance(0.1)
 serverSays("Table", { op = "seated", table = salonTable:GetAttribute("TableId"), room = "velvet", mode = "nightly" })
 advance(1.5)
 serverSays("Table", { op = "deal", round = 1, room = "velvet", mode = "nightly", cases = cases, pieces = pieceList(10, cases), score = 0, clock = { left = 30, running = true, budget = 30 } })
 advance(3)
+do
+	local Wardrobe = module("ReplicatedStorage", "Shared", "Wardrobe")
+	local cloth = sortGui.Root.Tray:FindFirstChildOfClass("UIGradient").Color.Keypoints[2].Value
+	check("a bought felt colours the cloth on the sorting screen", cloth.R > cloth.G * 2 and cloth.R > cloth.B * 1.5, cloth)
+	check("a bought lamp colours its lamplight", sortGui.Root.Lamp.BackgroundColor3 == (Wardrobe.get("lamp_moon") :: any).style.colour)
+	check("and the felt's rims edge the cases", sortGui.Root.Cases:GetChildren()[1]:FindFirstChildOfClass("UIStroke").Color == (Wardrobe.get("table_oxblood") :: any).style.rim)
+end
+check("tonight's table says which room's rules it plays by", textOnScreen("Tonight's table · The Velvet Room") ~= nil)
+serverSays("Shop", { op = "state", owned = {}, equipped = {}, gilt = 0, goldKey = false, credits = {} })
 check("a timed deal shows the clock: a draining gold rail and the seconds", sortGui.Root.Clock.Visible == true and sortGui.Root.Clock.Fill.Size.X.Scale > 0 and textOnScreen("0:") ~= nil)
 serverSays("Table", { op = "nightlyCard", key = "2026-09-29", room = "velvet", score = 4210, grade = "Immaculate", rounds = { "Flawless", "Immaculate", "", "", "" }, scored = true, gilt = 120, rank = 12, total = 300, percentile = 4, connections = { place = 2, of = 5 } })
 advance(2)
@@ -2241,16 +2455,34 @@ check("and the Dressing Room's glass stands", suiteFolder ~= nil and suiteFolder
 invokeResults.ShopAsk = {
 	rooms = { main = "The Suite", dressing = "The Dressing Room", study = "The Study" },
 	spots = {
-		{ id = "rug", name = "The rug", room = "main", open = true, house = true, placed = "suite_rug_black", options = { { id = "suite_rug_black", name = "Black Fringed Rug", owned = true }, { id = "suite_rug_persian", name = "Night Garden Rug", owned = false } } },
+		{
+			id = "rug",
+			name = "The rug",
+			room = "main",
+			open = true,
+			house = true,
+			placed = "suite_rug_black",
+			options = {
+				{ id = "suite_rug_black", name = "Black Fringed Rug", owned = true, source = "gilt", gilt = 400 },
+				{ id = "suite_rug_persian", name = "Night Garden Rug", owned = false, source = "gilt", gilt = 800 },
+				{ id = "suite_rug_moon", name = "Moonlit Rug", owned = false, source = "boutique", robux = 149, onSale = true },
+			},
+		},
 		{ id = "desk", name = "The Study: the desk", room = "study", open = false, house = false, placed = "", options = {} },
 	},
+	gilt = 1200,
+	goldKey = false,
 }
 serverSays("Shop", { op = "open", panel = "suite" })
 advance(1)
 check("the bell opens the Suite's furnishing", textOnScreen("Your Suite") ~= nil and textOnScreen("Black Fringed Rug") ~= nil)
 snapshot("suite")
-check("pieces not yet yours say where they come from", textOnScreen("800 Gilt, in the Boutique") ~= nil)
-check("closed rooms say so", textOnScreen("Opens with the Gold Key") ~= nil)
+check("the Suite says what it is", textOnScreen("Your own rooms upstairs") ~= nil and textOnScreen("nothing here changes a score") ~= nil)
+check("and how it works, in three steps", textOnScreen("How it works") ~= nil and textOnScreen("Get a piece") ~= nil and textOnScreen("The Gold Key adds two rooms") ~= nil)
+check("how far along you are", textOnScreen("Your pieces in 1 of 1 spots") ~= nil and textOnScreen("1,200 Gilt") ~= nil)
+check("a piece for Gilt can be bought right there", textOnScreen("Night Garden Rug") ~= nil and textOnScreen("800 Gilt") ~= nil)
+check("a Robux piece on the shelves today, too", textOnScreen("Moonlit Rug") ~= nil and textOnScreen("149 Robux") ~= nil)
+check("a Gold Key room says what it holds and how to get it", textOnScreen("Comes with the Gold Key") ~= nil and textOnScreen("A partners' desk and a globe") ~= nil and textOnScreen("See the Gold Key") ~= nil)
 invokeResults.ShopAsk = { ok = true }
 local placeBefore = 0
 for _, sm in sent do
@@ -2267,6 +2499,18 @@ for _, sm in sent do
 	end
 end
 check("and places it", lastPlace ~= nil and lastPlace.spot == "rug" and lastPlace.id == "", lastPlace and lastPlace.id)
+check("buying a piece for Gilt", press("800 Gilt"))
+advance(0.5)
+local bought, placedAfter
+for _, sm in sent do
+	if sm.remote == "ShopAsk" and sm.message[1] and sm.message[1].op == "buyGilt" then
+		bought = sm.message[1]
+	elseif sm.remote == "ShopAsk" and sm.message[1] and sm.message[1].op == "place" then
+		placedAfter = sm.message[1]
+	end
+end
+check("buys it and puts it straight in its spot", bought ~= nil and bought.item == "suite_rug_persian" and placedAfter ~= nil and placedAfter.id == "suite_rug_persian" and placedAfter.spot == "rug")
+check("and says so", textOnScreen("Night Garden Rug is in your Suite") ~= nil)
 Root2.close()
 advance(0.5)
 root.Position = Vector3.new(0, 5, -40)

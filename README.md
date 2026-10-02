@@ -29,14 +29,20 @@ Leave that window open. Every change pushed to the branch reaches Studio within 
 - **The Concierge**: greets you, offers a first-time guest **the tour** (below), turns to look at
   you, answers when spoken to in a glass dialogue panel.
 - **The tour** (the house's tutorial): a first-time guest is offered it on arrival, and anyone can
-  ask for it later (press **E** at the Concierge → **Show me the house**). Thirteen short cards
-  with **Next / Back / End**: the idea, sorting, the four rooms, tonight's table, Gilt, the
-  Boutique, the Wardrobe, the Vault, the Library, the Ballroom and Lights Out, your Suite, the
-  Ledger. Each card that names a place puts a gold pin over it and a guiding line from you to it.
-  The last card offers to take you to a table. **The
-  Doorman** says "Evening." as you reach the door.
+  ask for it later (press **E** at the Concierge → **Show me the house**). The Concierge walks you
+  round the whole house: the Salon and the four rooms, Tonight's board, the Livre d'Or and
+  Circles, the Vault, the Boutique
+  (Gilt, the Wardrobe, the Ledger), then up the Grand Stair to the Library, the Ballroom and
+  Lights Out, the Terrace and your Suite. At each stop the Concierge turns and explains it on a
+  card (**Next / Back / End the tour**, sixteen in all) with a gold pin over the thing it means;
+  between stops a gold line from you shows the way, and the Concierge waits if you fall behind.
+  The last card offers to take you to a table. The guide is your own, drawn only on your screen
+  (the house's Concierge is hidden from you meanwhile and stays at the lectern for everyone
+  else), so any number of guests can take the tour at once. It walks a fixed route
+  (`Layout.Tour`) at `Config.Tour.speed` and passes through nothing solid, so it can't get stuck.
+  **The Doorman** says "Evening." as you reach the door.
 - **The Salon**: burgundy velvet, bookshelves, a fire, and **six working tables**. It has the
-  composed table camera, the dealt 3D pieces, drag *or* tap to sort, the gold guide light,
+  composed table camera, the dealt 3D pieces, drag *or* tap to sort, the gold guide trail,
   the climbing chime, the brass odometer counter and multiplier dial, the gilded round card,
   the round summary with a stamped hallmark, and banking to the board.
 - **The engine underneath**: seeded deals decided by the server, every filing checked by the
@@ -59,7 +65,9 @@ Leave that window open. Every change pushed to the branch reaches Studio within 
   ten seconds, and freezes while a panel is open (never in the Nightly).
 - **The Nightly**: one table for everyone on Roblox, every night at 00:00 UTC. The same five rounds
   and the same pieces for everyone, rules by weekday (Midnight Fridays). **Tonight's table** is a
-  second prompt on every chair. One scored attempt a night, unlimited rehearsals after, and leaving
+  second prompt (F) on every chair in the Velvet, Obsidian and Midnight Rooms, never the Salon (the
+  Salon has no clock, ever); the Tonight key seats you at one of those tables. The header says
+  whose rules it plays by ("Tonight's table · The Velvet Room"). One scored attempt a night, unlimited rehearsals after, and leaving
   early still counts. The **Nightly card** shows the date, the rules, your score, your grade, five
   round hallmarks, your place among your connections and your percentile, with **Share** (Roblox
   capture sharing with launch data) and **Invite** (a friend lands straight at tonight's table).
@@ -244,6 +252,13 @@ a Nightly attempt or a Mythic's odds.
   pieces (Gilt, the Boutique, Standing, the Introduction's painting, the Gold Key chair), the
   bell to furnish it, the wardrobe where your looks hang. The Gold Key opens the Dressing Room
   and the Study. Each guest sees only their own Suite, and nobody else in it.
+  - **The bell's page says plainly how it works**: what the Suite is, three numbered steps (get a
+    piece, change a spot with ‹ ›, the Gold Key adds two rooms), how many spots hold your own
+    pieces and your Gilt. Each spot shows what stands there and up to two pieces you could put
+    there with a key to buy one (Gilt pieces any day; Robux pieces when they're on the Boutique's
+    shelves). A piece you buy goes straight into its spot if the spot is empty. The Gold Key's
+    rooms say what they hold, with a key to see the Gold Key. The first time you walk in, a note
+    says to ring the bell.
 - **Circles** at the Livre d'Or: names chosen from word lists, a crest from 12 emblems × 8
   colours (each crest one Circle's), 2,000 Gilt to found. Join by invitation or by asking the
   host. The week is the five best members' points; the top Circles hang on the Tonight board and
@@ -259,7 +274,7 @@ a Nightly attempt or a Mythic's odds.
 
 - **Playing, in Studio and live.** Press **Play** and you're your own character at once: Roblox's
   own camera (zoom right in or out) and controls, walking from the first second. Studio shows the
-  build in the bottom-left corner and prints it in Output (`[Maison] Build 28 ...`), so you can see
+  build in the bottom-left corner and prints it in Output (`[Maison] Build 29 ...`), so you can see
   Studio has the latest code. The live game plays the intro over the house (any key skips it);
   the old title screen is off (`Config.Title.show`). Roblox never spawns anyone by itself
   (`Players.CharacterAutoLoads` is off in the Rojo project and at the very top of the server), so
@@ -269,6 +284,14 @@ a Nightly attempt or a Mythic's odds.
   (`Config.Movement.guestScale`), so every room feels a size bigger. Every part of the house starts on its own, so one that fails
   is reported in Output and never stops anyone from walking in, and a separate safety script
   hands back Roblox's own camera, controls and prompts if the house's client ever doesn't start.
+- **The guide on the sorting screen.** Pick a piece up and, in the rooms that help you (the Salon
+  and the Velvet Room at once, Obsidian after a moment, never in Midnight), a thread of gold light
+  runs from it to its case with sparkles twinkling along it and a brighter pulse running toward
+  the case, the case lights up, and a gold arrow bobs over it. A carried piece sheds a few
+  sparkles in every room. It follows Settings → The guide (Show the way: Always / After a moment
+  / Never; Trail: Sparkles / Ribbon / Comet / Runway / Case only; colour; pace) and Glow and
+  sparks. A trail bought in the Boutique or won in the Ledger colours it, and a table style and a
+  lamp you wear colour the sorting screen's cloth, its edges and its lamplight.
 - **Ways to spend Robux**, all style, spectacle or gifts, never score:
   - **Salutes** (a brass card on the piano, and a Salutes tab in the Boutique): a moment bought
     for the whole house. Gold leaf over every guest (49), an encore with a spotlight on you (79),

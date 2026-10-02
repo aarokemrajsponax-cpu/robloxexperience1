@@ -422,6 +422,8 @@ for _, t in tables do
 	check(id .. " sits inside its room", centre ~= nil and Layout.zoneAt(centre + Vector3.new(0, 3, 0)) == t:GetAttribute("Room"), centre)
 	if t:GetAttribute("Ballroom") then
 		check(id .. " (the Ballroom) has no Nightly prompt", chair ~= nil and chair:FindFirstChild("NightlyPrompt") == nil)
+	elseif t:GetAttribute("Room") == "salon" then
+		check(id .. " (the Salon, no clock) has no Nightly prompt", chair ~= nil and chair:FindFirstChild("NightlyPrompt") == nil and chair:FindFirstChild("SitPrompt") ~= nil)
 	elseif t:GetAttribute("Duel") == nil then
 		check(id .. " has the Nightly prompt", chair ~= nil and chair:FindFirstChild("NightlyPrompt") ~= nil)
 	else

@@ -1183,13 +1183,28 @@ for _, sp in view.spots do
 	end
 end
 check("each spot lists the pieces that go there", rugSpot ~= nil and #rugSpot.options >= 2 and rugSpot.house == true)
+check("each piece says its price and where it's sold", (function()
+	for _, o in rugSpot.options do
+		if o.id == "suite_rug_black" and o.gilt ~= 400 then
+			return false
+		elseif o.id == "suite_rug_moon" and (o.robux ~= 149 or type(o.onSale) ~= "boolean") then
+			return false
+		end
+	end
+	return view.gilt == 5000 and view.goldKey == false
+end)())
 check("Suite furniture is sold for Gilt", askAs(ivy, { op = "buyGilt", item = "suite_rug_black" }).ok and id.owned.suite_rug_black and id.gilt == 4600)
+check("a piece bought goes straight into its empty spot", id.suite.rug == "suite_rug_black")
+askAs(ivy, { op = "buyGilt", item = "suite_lamp_brass" })
+askAs(ivy, { op = "buyGilt", item = "suite_lamp_green" })
+check("but never takes the place of a piece already there", id.owned.suite_lamp_green and id.suite.lamp == "suite_lamp_brass")
 check("placing it", askAs(ivy, { op = "place", spot = "rug", id = "suite_rug_black" }).ok and id.suite.rug == "suite_rug_black")
 check("the state tells the guest's screen", lastOp(ivy, "state").suite.rug == "suite_rug_black")
 check("a piece only goes in its own spot", not askAs(ivy, { op = "place", spot = "sofa", id = "suite_rug_black" }).ok)
 check("a piece not yet owned can't be placed", not askAs(ivy, { op = "place", spot = "rug", id = "suite_rug_persian" }).ok)
 check("nonsense spots are refused", not askAs(ivy, { op = "place", spot = "roof", id = "" }).ok)
 askAs(ivy, { op = "buyGilt", item = "suite_mirror_gilt" })
+check("a piece for a room still shut waits until it opens", id.owned.suite_mirror_gilt and id.suite.mirror == nil)
 local shut = askAs(ivy, { op = "place", spot = "mirror", id = "suite_mirror_gilt" })
 check("the Dressing Room opens with the Gold Key", not shut.ok and string.find(shut.why, "Gold Key", 1, true) ~= nil)
 check("the Gold Key chair needs the Gold Key", not askAs(ivy, { op = "place", spot = "chair", id = "suite_chair_goldkey" }).ok)

@@ -331,7 +331,7 @@ boot("Rivals", Rivals.start)
 
 Guests.joinLibrary = DuelService.joinFriend
 Guests.onSettingChanged = function(player, key)
-	if key == "showMark" then
+	if key == "showMark" or key == "showCrest" then
 		Dressing.nameplate(player)
 	end
 end

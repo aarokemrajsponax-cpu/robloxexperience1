@@ -288,7 +288,7 @@ local function render()
 			"A gold-edged nameplate",
 			"Three Gold Key house looks",
 			"The Gold Key chair and table trim",
-			"Two extra rooms in your Suite",
+			"Two more rooms in your Suite: a Dressing Room and a Study",
 			"The Terrace, all year round",
 			"+20% on all Gilt",
 		} do

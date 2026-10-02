@@ -12,6 +12,7 @@ local Layout = require(ReplicatedStorage.Shared.Layout)
 local Suite = require(ReplicatedStorage.Shared.Suite)
 local Wardrobe = require(ReplicatedStorage.Shared.Wardrobe)
 local Closet = require(script.Parent.Parent.Closet)
+local Toast = require(script.Parent.Parent.UI.Toast)
 
 local SuiteView = {}
 
@@ -252,6 +253,8 @@ local function privacy()
 	end
 end
 
+local welcomed = false
+
 function SuiteView.start()
 	doors()
 	terrace()
@@ -271,6 +274,11 @@ function SuiteView.start()
 			if now and not inside then
 				inside = true
 				draw()
+				-- The first time in, say how to furnish it.
+				if not welcomed then
+					welcomed = true
+					Toast.show("Your Suite", "Ring the bell by the door to furnish it with pieces you own or can buy.", 6)
+				end
 			elseif not now and inside then
 				inside = false
 				clear()

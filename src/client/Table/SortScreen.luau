@@ -27,6 +27,8 @@ local Settings = require(ReplicatedStorage.Shared.Settings)
 local Voice = require(ReplicatedStorage.Shared.Voice)
 local PieceIcon = require(script.Parent.Parent.UI.PieceIcon)
 local Theme = require(script.Parent.Parent.UI.Theme)
+local Closet = require(script.Parent.Parent.Closet)
+local GuideTrail = require(script.Parent.GuideTrail)
 local State = require(script.Parent.Parent.State)
 
 local SortScreen = {}
@@ -96,6 +98,15 @@ local SMOKE = C.smoke
 local DIM = C.dim
 local CORAL = Color3.fromRGB(230, 118, 96)
 local F = Brand.Fonts
+-- The house's cloth and lamp, unless the guest wears a table style or a lamp of their own.
+local CLOTH = ColorSequence.new({
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(26, 28, 33)),
+	ColorSequenceKeypoint.new(0.5, Color3.fromRGB(17, 19, 24)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(11, 12, 16)),
+})
+local LAMP = Color3.fromRGB(214, 150, 72)
+local POOL = Color3.fromRGB(255, 214, 150)
+local rim = LIGHT -- the cases' and the cloth's edges
 
 local player = Players.LocalPlayer
 
@@ -128,7 +139,6 @@ local header = {} :: { [string]: any }
 local stats: { [string]: Stat } = {}
 local motes: { Mote } = {}
 local moteKind = ""
-local trailDots: { Frame } = {}
 local trail: { uid: number, bin: Bin, since: number }? = nil
 
 local cards: { [number]: Card } = {}
@@ -392,7 +402,8 @@ local function build()
 	shade(root, 90, colours({ { 0, Color3.fromRGB(44, 31, 17) }, { 0.3, Color3.fromRGB(18, 16, 14) }, { 1, Color3.fromRGB(7, 8, 10) } }))
 	root.Parent = g
 
-	local lamp = sheet(root, "Lamp", Color3.fromRGB(214, 150, 72), 1)
+	local lamp = sheet(root, "Lamp", LAMP, 1)
+	header.lamp = lamp
 	lamp.AnchorPoint = Vector2.new(0.5, 0.5)
 	lamp.Position = UDim2.fromScale(0.5, 0)
 	lamp.Size = UDim2.fromScale(1.15, 0.8)
@@ -420,7 +431,7 @@ local function build()
 	-- The cloth: deep slate under a warm wash of lamplight, a hairline border and a second one
 	-- just inside it.
 	tray = sheet(root, "Tray", Color3.new(1, 1, 1), 2)
-	shade(tray, 90, colours({ { 0, Color3.fromRGB(26, 28, 33) }, { 0.5, Color3.fromRGB(17, 19, 24) }, { 1, Color3.fromRGB(11, 12, 16) } }))
+	header.trayShade = shade(tray, 90, CLOTH)
 	header.trayCorner = corner(tray, 3)
 	header.trayStroke = stroke(tray, LIGHT, 0.86, 1)
 	local sheen = sheet(tray, "Sheen", GOLD, 1)
@@ -428,8 +439,10 @@ local function build()
 	shade(sheen, 90, nil, alphas({ { 0, 0.88 }, { 0.6, 0.97 }, { 1, 1 } }))
 	header.sheenCorner = corner(sheen, 3)
 	-- A pool of lamplight in the middle of the cloth: faint ovals, each a little smaller.
+	header.pools = {}
 	for k = 1, 16 do
-		local pool = sheet(tray, "Pool", Color3.fromRGB(255, 214, 150), 1)
+		local pool = sheet(tray, "Pool", POOL, 1)
+		table.insert(header.pools, pool)
 		pool.AnchorPoint = Vector2.new(0.5, 0.5)
 		pool.Position = UDim2.fromScale(0.5, 0.4)
 		local f = 1 - (k - 1) * 0.055
@@ -511,6 +524,7 @@ local function build()
 	trailLayer.Size = UDim2.fromScale(1, 1)
 	trailLayer.ZIndex = 5
 	trailLayer.Parent = root
+	GuideTrail.attach(trailLayer)
 	piecesLayer = Instance.new("Frame")
 	piecesLayer.Name = "Pieces"
 	piecesLayer.BackgroundTransparency = 1
@@ -685,10 +699,25 @@ local function binFrame(case: Catalogue.Case, index: number): Bin
 	f.BorderSizePixel = 0
 	f.BackgroundColor3 = Color3.new(1, 1, 1)
 	f.Active = true
-	shade(f, 90, colours({ { 0, Color3.fromRGB(24, 27, 33) }, { 0.58, Color3.fromRGB(14, 16, 20) }, { 1, Color3.fromRGB(10, 11, 14) } }))
+	-- Settings → Case style: open trays, lidded boxes, or round plates.
+	local style = State.get("caseStyle")
 	local radius = math.max(2, math.floor(3 * s))
+	if style == "Boxes" then
+		radius = 0
+		shade(f, 90, colours({ { 0, Color3.fromRGB(44, 46, 52) }, { 0.2, Color3.fromRGB(34, 36, 42) }, { 0.21, Color3.fromRGB(16, 18, 22) }, { 1, Color3.fromRGB(10, 11, 14) } }))
+		local seam = sheet(f, "Seam", LIGHT, 2)
+		seam.Size = UDim2.new(1, 0, 0, 1)
+		seam.Position = UDim2.fromScale(0, 0.21)
+		seam.BackgroundTransparency = 0.78
+	elseif style == "Plates" then
+		radius = math.floor(math.min(L.binH, L.binW) * 0.34)
+		shade(f, 90, colours({ { 0, Color3.fromRGB(40, 37, 33) }, { 0.6, Color3.fromRGB(24, 22, 20) }, { 1, Color3.fromRGB(15, 14, 13) } }))
+	else
+		shade(f, 90, colours({ { 0, Color3.fromRGB(24, 27, 33) }, { 0.58, Color3.fromRGB(14, 16, 20) }, { 1, Color3.fromRGB(10, 11, 14) } }))
+	end
+	f:SetAttribute("Style", style)
 	corner(f, radius)
-	local st = stroke(f, LIGHT, 0.9, 1)
+	local st = stroke(f, rim, 0.9, 1)
 	local scale = Instance.new("UIScale")
 	scale.Parent = f
 	local flash = sheet(f, "Flash", GOLD, 1)
@@ -697,8 +726,8 @@ local function binFrame(case: Catalogue.Case, index: number): Bin
 	corner(flash, radius)
 	-- A line of light along the top edge when the case is the one under your piece.
 	local lip = sheet(f, "Lip", LIGHT, 2)
-	lip.Size = UDim2.new(1, -2 * radius, 0, 1)
-	lip.Position = UDim2.fromOffset(radius, 0)
+	lip.Size = UDim2.new(1, -2 * math.max(radius, 3), 0, 1)
+	lip.Position = UDim2.fromOffset(math.max(radius, 3), 0)
 	lip.BackgroundTransparency = 1
 	shade(lip, 0, nil, alphas({ { 0, 1 }, { 0.5, 0 }, { 1, 1 } }))
 	local markPx = math.floor(L.binH * 0.28)
@@ -793,7 +822,7 @@ local function paintBin(bin: Bin)
 	local lit = (over or selected) and bin.open
 	local quick = Ease.info(0.14, Enum.EasingStyle.Quad)
 	Ease.play(bin.stroke, quick, { Transparency = if lit then 0.3 elseif bin.open then 0.9 else 0.95, Thickness = if lit then 2 else 1 })
-	bin.stroke.Color = if lit then GOLD else LIGHT
+	bin.stroke.Color = if lit then GOLD else rim
 	Ease.play(bin.flash, quick, { BackgroundTransparency = if lit then 0.9 else 1 })
 	Ease.play(bin.lip, quick, { BackgroundTransparency = if lit then 0 else 1 })
 	Ease.play(bin.scale, Ease.info(0.18, Enum.EasingStyle.Quad), { Scale = if lit then 1.03 else 1 })
@@ -1059,7 +1088,9 @@ local function placeCard(c: Card)
 end
 
 local function showTag(c: Card)
-	local on = names and (c.hover or c.state == "held" or c.ring.Visible) and c.state ~= "flying" and c.state ~= "filed"
+	-- Names show on a piece you point at, hold or pick out, or on every piece with "Always on".
+	local always = State.get("pieceNames") == "Always on"
+	local on = names and (always or c.hover or c.state == "held" or c.ring.Visible) and c.state ~= "flying" and c.state ~= "filed"
 	if c.tag then
 		c.tag.Visible = on
 	end
@@ -1121,44 +1152,58 @@ local function lifted(c: Card, on: boolean)
 	showTag(c)
 end
 
--- The line of light from a held piece to its case, in the rooms that point the way.
-local function ensureTrail()
-	if #trailDots > 0 then
-		return
-	end
-	for i = 1, 16 do
-		local d = sheet(trailLayer, "Light", LIGHT, 5)
-		d.AnchorPoint = Vector2.new(0.5, 0.5)
-		d.BackgroundTransparency = 1
-		d.Visible = false
-		d:SetAttribute("Index", i)
-		corner(d, 9999)
-		table.insert(trailDots, d)
-	end
-end
-
 local function hideTrail()
-	trail = nil
-	for _, d in trailDots do
-		d.Visible = false
+	if trail then
+		trail = nil
+		GuideTrail.hide()
 	end
 end
 
--- The guide: in the rooms that have one, the right case glows softly while a piece is held, and
--- a line of light runs to it.
+-- How the guide looks for this guest: the trail they wear (from the Boutique or the Ledger) or
+-- the colour they chose, the style and pace from Settings → The guide, sparkles from Settings →
+-- Glow and sparks, and Movement.
+function SortScreen.guideLook(): GuideTrail.Look
+	local worn = Closet.style("trail")
+	local colour = if worn and typeof(worn.colour) == "Color3" then worn.colour else (Brand.TrailColours[State.get("trailColour")] or Brand.TrailColours.House)
+	local pace = State.get("trailPace")
+	local glow = State.get("glow")
+	return {
+		kind = tostring(State.get("trail") or "Sparkles"),
+		colour = colour,
+		pace = if pace == "Lively" then 1.6 elseif pace == "Calm" then 0.55 else 1,
+		glow = if glow == "Off" then 0 elseif glow == "Subtle" then 0.5 else 1,
+		motion = Ease.motionScale,
+	}
+end
+
+-- Seconds before the guide shows for a held piece, or nil for none: the room decides (full,
+-- delayed, none) and the guest's "Show the way" can only make it later or turn it off.
+function SortScreen.guideDelay(): number?
+	local setting = State.get("showTheWay")
+	if guide == "none" or setting == "Never" then
+		return nil
+	end
+	local roomDelay = if guide == "delayed" then guideDelay else 0
+	local settingDelay = if setting == "After a moment" then 1.2 else 0
+	return math.max(roomDelay, settingDelay)
+end
+
+-- The guide: in the rooms that have one, the right case lights up while a piece is held, a
+-- thread of light with sparkles runs to it, and an arrow bobs over it.
 local function showGuide(uid: number?)
 	if guideThread then
 		pcall(task.cancel, guideThread)
 		guideThread = nil
 	end
 	hideTrail()
-	for _, bin in binOrder do
-		local g = bin.frame:FindFirstChild("Guide")
-		if g then
-			g:Destroy()
-		end
+	GuideTrail.target(nil)
+	if uid == nil then
+		return
 	end
-	if uid == nil or guide == "none" then
+	-- (Read on every pick-up: the sparkles a carried piece sheds follow it too, in every room.)
+	GuideTrail.setLook(SortScreen.guideLook())
+	local delay = SortScreen.guideDelay()
+	if delay == nil then
 		return
 	end
 	local c = cards[uid]
@@ -1167,18 +1212,12 @@ local function showGuide(uid: number?)
 		return
 	end
 	local b = bin
-	guideThread = task.delay(if guide == "delayed" then guideDelay else 0, function()
+	guideThread = task.delay(delay, function()
 		guideThread = nil
-		if held ~= uid then
+		if held ~= uid or not b.frame.Parent then
 			return
 		end
-		local glow = sheet(b.frame, "Guide", LIGHT, 1)
-		glow.Size = UDim2.fromScale(1, 1)
-		glow.BackgroundTransparency = 1
-		corner(glow, math.max(2, math.floor(3 * L.s)))
-		shade(glow, 90, nil, alphas({ { 0, 0.2 }, { 1, 0.85 } }))
-		Ease.play(glow, Ease.info(0.5, Enum.EasingStyle.Sine), { BackgroundTransparency = 0.88 })
-		ensureTrail()
+		GuideTrail.target(b.frame)
 		trail = { uid = uid, bin = b, since = clock }
 	end)
 end
@@ -1375,7 +1414,7 @@ local function flashBin(bin: Bin, colour: Color3)
 	bin.stroke.Transparency = 0
 	local t = Ease.play(bin.stroke, Ease.info(0.6, Enum.EasingStyle.Sine), { Transparency = if bin.open then 0.9 else 0.95 })
 	t.Completed:Once(function()
-		bin.stroke.Color = LIGHT
+		bin.stroke.Color = rim
 	end)
 end
 
@@ -1405,14 +1444,16 @@ local function flyIn(c: Card, bin: Bin, quiet: boolean)
 		shrink:Play()
 		c.state = "filed"
 		c.inCase = bin.id
-		bin.filed += 1
-		bin.count.Text = tostring(bin.filed)
+		-- (The case as it is now: the cases are made afresh if the case style changes mid-flight.)
+		local into = bins[bin.id] or bin
+		into.filed += 1
+		into.count.Text = tostring(into.filed)
 		if not quiet then
-			bin.scale.Scale = 1.08
-			Ease.play(bin.scale, Ease.info(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = if hoverBin == bin.id then 1.03 else 1 })
-			bin.count.TextColor3 = LIGHT
-			Ease.play(bin.count, Ease.info(0.8, Enum.EasingStyle.Sine), { TextColor3 = SMOKE })
-			flashBin(bin, LIGHT)
+			into.scale.Scale = 1.08
+			Ease.play(into.scale, Ease.info(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = if hoverBin == into.id then 1.03 else 1 })
+			into.count.TextColor3 = LIGHT
+			Ease.play(into.count, Ease.info(0.8, Enum.EasingStyle.Sine), { TextColor3 = SMOKE })
+			flashBin(into, LIGHT)
 			burst(goal, if c.info.rare or c.info.mythic then 14 else 8, LIGHT)
 		end
 	end)
@@ -1470,8 +1511,46 @@ local function setRoundText(roomName: string, roundText: string)
 	layoutStats()
 end
 
+-- The guest's own table style and lamp, if they wear them: the cloth takes the felt's colour
+-- (kept dark enough for the pieces to read), the edges take the rims', the lamplight the lamp's.
+local function paintCloth()
+	local tableStyle = Closet.style("table")
+	local lampStyle = Closet.style("lamp")
+	local felt = if tableStyle and typeof(tableStyle.felt) == "Color3" then tableStyle.felt :: Color3 else nil
+	local rimColour = if tableStyle and typeof(tableStyle.rim) == "Color3" then tableStyle.rim :: Color3 else nil
+	local lampColour = if lampStyle and typeof(lampStyle.colour) == "Color3" then lampStyle.colour :: Color3 else nil
+	if felt then
+		local h, sat, v = felt:ToHSV()
+		local base = Color3.fromHSV(h, sat, math.clamp(v, 0.06, 0.4))
+		header.trayShade.Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, base:Lerp(Color3.new(1, 1, 1), 0.06)),
+			ColorSequenceKeypoint.new(0.5, base),
+			ColorSequenceKeypoint.new(1, base:Lerp(Color3.new(0, 0, 0), 0.45)),
+		})
+	else
+		header.trayShade.Color = CLOTH
+	end
+	rim = rimColour or LIGHT
+	header.trayStroke.Color = rim
+	header.innerStroke.Color = rim
+	for i = 1, 4 do
+		local d = header["ornament" .. i] :: Frame?
+		if d then
+			d.BackgroundColor3 = if rimColour then rimColour else GOLD
+		end
+	end
+	header.lamp.BackgroundColor3 = lampColour or LAMP
+	for _, pool in header.pools do
+		pool.BackgroundColor3 = if lampColour then lampColour:Lerp(Color3.new(1, 1, 1), 0.3) else POOL
+	end
+	for _, bin in binOrder do
+		paintBin(bin)
+	end
+end
+
 function SortScreen.open(roomName: string, roundText: string)
 	build()
+	paintCloth()
 	measure()
 	layoutChrome()
 	buildBins()
@@ -1629,6 +1708,7 @@ function SortScreen.clear()
 	press = nil
 	hoverBin = nil
 	showGuide(nil)
+	GuideTrail.clear()
 	if fxLayer then
 		fxLayer:ClearAllChildren()
 	end
@@ -1885,6 +1965,25 @@ function SortScreen.refresh(showNames: boolean)
 	if not gui or not isOpen then
 		return
 	end
+	-- A new case style: the cases are made afresh, keeping their counts and which are open.
+	local first = binOrder[1]
+	if first and first.frame:GetAttribute("Style") ~= State.get("caseStyle") then
+		local kept = {}
+		for _, bin in binOrder do
+			kept[bin.id] = { filed = bin.filed, open = bin.open }
+		end
+		showGuide(nil)
+		buildBins()
+		for _, bin in binOrder do
+			local k = kept[bin.id]
+			if k then
+				bin.filed = k.filed
+				bin.open = k.open
+				bin.count.Text = tostring(k.filed)
+			end
+			paintBin(bin)
+		end
+	end
 	arrange(true)
 	for _, c in cards do
 		if c.state ~= "flying" then
@@ -2082,47 +2181,22 @@ end
 -- Every frame
 ---------------------------------------------------------------------------------------------------
 
--- The light running from a held piece to its case: a soft arc of beads flowing toward the case,
--- brightest midway, fading in as it appears.
-local function stepTrail()
+-- The guide's thread from the held piece to its case, fading in as it appears; sparkles shed by
+-- a carried piece in every room.
+local function stepTrail(dt: number)
+	local heldCard = if held then cards[held :: number] else nil
+	local carried = heldCard and heldCard.state == "held" and heldMode == "drag"
+	GuideTrail.tick(dt, if carried then (heldCard :: Card).pos else nil, if carried then (heldCard :: Card).vel else nil, L.s)
 	local tr = trail
 	local c = if tr then cards[tr.uid] else nil
 	if not tr or not c or c.state ~= "held" then
-		if tr then
-			hideTrail()
-		end
+		hideTrail()
 		return
 	end
 	local s = L.s
-	local from = c.pos
 	local to = tr.bin.centre - Vector2.new(0, tr.bin.size.Y * 0.5 - 4 * s)
-	local d = to - from
-	local len = d.Magnitude
-	if len < 30 * s then
-		for _, dot in trailDots do
-			dot.Visible = false
-		end
-		return
-	end
-	local normal = Vector2.new(-d.Y, d.X) / len
-	local bend = if d.X >= 0 then 1 else -1
-	local control = from + d * 0.5 + normal * math.min(len * 0.18, 110 * s) * bend
-	local appear = math.clamp((clock - tr.since) / 0.4, 0, 1)
-	local n = #trailDots
-	for i, dot in trailDots do
-		local t = ((i - 1) / n + clock * 0.32) % 1
-		-- Start a little way off the piece so the line doesn't sit under it.
-		local u = 0.12 + t * 0.88
-		local a = from:Lerp(control, u)
-		local b = control:Lerp(to, u)
-		local p = a:Lerp(b, u)
-		local edge = math.abs(t - 0.5) * 2
-		local size = (2.5 + 2.5 * (1 - edge)) * s
-		dot.Visible = true
-		dot.Position = UDim2.fromOffset(p.X, p.Y)
-		dot.Size = UDim2.fromOffset(size, size)
-		dot.BackgroundTransparency = 1 - appear * (0.85 - 0.75 * edge * edge)
-	end
+	local appear = math.clamp((clock - tr.since) / 0.35, 0, 1)
+	GuideTrail.draw(dt, c.pos, to, appear, s)
 end
 
 local function step(dt: number)
@@ -2167,7 +2241,7 @@ local function step(dt: number)
 			tw.Rotation = clock * 40 % 360
 		end
 	end
-	stepTrail()
+	stepTrail(dt)
 	local vp = L.vp
 	for _, m in motes do
 		m.y += m.fall * dt

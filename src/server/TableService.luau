@@ -674,6 +674,10 @@ function TableService.seat(player: Player, model: Model, teleport: boolean?, wan
 	end
 	local data = Profiles.get(player)
 	local mode: Mode = wanted or "room"
+	if mode ~= "room" and model:GetAttribute("Room") == "salon" then
+		-- The Salon never runs a clock, so tonight's (timed) table is never played there.
+		mode = "room"
+	end
 	if mode == "nightly" then
 		-- One scored attempt per UTC day; after that, unlimited unscored rehearsals.
 		local night = Nightly.at()
@@ -754,6 +758,23 @@ function TableService.freeTable(roomId: string, near: Vector3?): Model?
 		end
 	end
 	return best
+end
+
+-- A free table for tonight's table. Never in the Salon (the Salon has no clock): a table in
+-- tonight's room when it's open to everyone, else the Obsidian or the Velvet Room.
+function TableService.nightlyTable(near: Vector3?): Model?
+	local night = Nightly.at()
+	local order = { "obsidian", "velvet" }
+	if night.room ~= "salon" and night.room ~= "midnight" then
+		table.insert(order, 1, night.room)
+	end
+	for _, roomId in order do
+		local m = TableService.freeTable(roomId, near)
+		if m then
+			return m
+		end
+	end
+	return nil
 end
 
 local function onMessage(player: Player, message: unknown)

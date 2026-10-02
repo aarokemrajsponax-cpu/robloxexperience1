@@ -1,11 +1,12 @@
 --!strict
--- The Concierge: stands at the lectern, greets guests, walks new guests to the Salon,
--- and answers when spoken to. Dry, warm, unhurried. Never runs.
+-- The Concierge: stands at the lectern, greets guests, shows new guests round the house (the
+-- tour), walks guests to a room, and answers when spoken to. Dry, warm, unhurried. Never runs.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Layout = require(ReplicatedStorage.Shared.Layout)
+local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Voice = require(ReplicatedStorage.Shared.Voice)
 local Dialogue = require(script.Parent.Parent.Dialogue)
 local Private = require(script.Parent.Parent.Private)
@@ -137,56 +138,21 @@ local function setEvening(player: Player)
 	end)
 end
 
--- The tour: each card in turn, pointing at the place it describes.
-local function tourPoint(place: string?): (Vector3?, string?)
-	if place == "salonDoor" then
-		return Layout.RoomDoors.salon.centre, "The Salon"
-	elseif place == "tonightBoard" then
-		return Layout.Foyer.tonightBoard.Position, "Tonight's table"
-	elseif place == "boutique" then
-		return Layout.Foyer.boutiqueDoor.Position, "The Boutique"
-	elseif place == "vault" then
-		return Layout.Vault.door, "The Vault"
-	elseif place == "library" then
-		return Layout.Club.libraryDoor, "The Library"
-	elseif place == "ballroom" then
-		return Layout.Club.ballroomDoor, "The Ballroom"
-	elseif place == "suite" then
-		return Layout.Suite.door, "Your Suite"
-	elseif place == "ledger" then
-		return Layout.Boutique.ledger.Position, "The Ledger"
-	end
-	return nil, nil
+-- The tour: the Concierge walks the guest round the whole house. It runs on the guest's own
+-- screen (client World/Tour, a guide only they see), so any number of guests can take it at once
+-- and the Concierge stays at the lectern for everyone else. The server only starts it and knows
+-- who's on it (nobody on the tour is offered the walk to the Salon).
+local tourEvent = Remotes.event("Tour")
+local touring: { [Player]: number } = {}
+
+function Concierge.tour(player: Player)
+	touring[player] = os.clock()
+	tourEvent:FireClient(player, { op = "start" })
 end
 
-function Concierge.tour(player: Player, index: number?)
-	local cards = Voice.Tour
-	local i = math.clamp(index or 1, 1, #cards)
-	local card = cards[i]
-	local K = Voice.TourKeys
-	local point, pointName = tourPoint(card.place)
-	local choices: { Dialogue.Choice }
-	if i == #cards then
-		choices = { { id = "table", text = K.table }, { id = "explore", text = K.explore } }
-	else
-		choices = { { id = "next", text = K.next } }
-		if i > 1 then
-			table.insert(choices, { id = "back", text = K.back })
-		end
-		table.insert(choices, { id = "done", text = K.done })
-	end
-	Dialogue.say(player, V.speaker, card.line, choices, function(choice)
-		if choice == "next" then
-			Concierge.tour(player, i + 1)
-		elseif choice == "back" then
-			Concierge.tour(player, i - 1)
-		elseif choice == "table" then
-			Concierge.lead(player, "salon")
-		else
-			Dialogue.close(player)
-			Dialogue.say(player, V.speaker, V.tourEnd, nil, nil, 2.5)
-		end
-	end, nil, { title = card.title, step = string.format("%d of %d", i, #cards), point = point, pointName = pointName })
+function Concierge.isTouring(player: Player): boolean
+	local since = touring[player]
+	return since ~= nil and os.clock() - since < 900
 end
 
 local function menu(player: Player)
@@ -210,7 +176,7 @@ local function menu(player: Player)
 		if choice == "usual" and usual then
 			Concierge.lead(player, usual)
 		elseif choice == "tour" then
-			Concierge.tour(player, 1)
+			Concierge.tour(player)
 		elseif choice == "evening" then
 			setEvening(player)
 		elseif choice == "room" then
@@ -260,7 +226,7 @@ function Concierge.greet(player: Player, firstVisit: boolean, nightlyPending: bo
 				return
 			end
 			if choice == "tour" then
-				Concierge.tour(player, 1)
+				Concierge.tour(player)
 			elseif choice == "table" then
 				Concierge.lead(player, "salon")
 			else
@@ -338,6 +304,20 @@ function Concierge.isLeading(player: Player): boolean
 end
 
 function Concierge.spawn(parent: Instance)
+	tourEvent.OnServerEvent:Connect(function(player: Player, message: unknown)
+		if type(message) ~= "table" then
+			return
+		end
+		local op = (message :: any).op
+		if op == "start" then
+			touring[player] = os.clock()
+		elseif op == "end" then
+			touring[player] = nil
+		end
+	end)
+	Players.PlayerRemoving:Connect(function(player)
+		touring[player] = nil
+	end)
 	local s = Rig.build("Concierge", Rig.look("Concierge"), Layout.Foyer.conciergeHome, parent)
 	staff = s
 	s.model:SetAttribute("Staff", "Concierge")

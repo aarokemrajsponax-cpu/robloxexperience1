@@ -166,7 +166,8 @@ local function roomTitle(): string
 	elseif tableMode == "ballroom" then
 		return Voice.Ballroom.title
 	elseif tableMode == "nightly" or tableMode == "rehearsal" then
-		return "Tonight's table"
+		-- Tonight's table is played under its room's rules (and clock); say which.
+		return "Tonight's table · " .. room().name
 	end
 	return room().name
 end
@@ -988,7 +989,7 @@ function TableClient.start()
 	end)
 	-- Settings that change the table apply at once.
 	State.SettingChanged:Connect(function(key)
-		if (key == "pieceNames" or key == "pieceSize" or key == "textSize") and seatedNow then
+		if (key == "pieceNames" or key == "pieceSize" or key == "textSize" or key == "caseStyle") and seatedNow then
 			SortScreen.refresh(namesAllowed())
 		end
 	end)

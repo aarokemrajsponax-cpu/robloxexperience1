@@ -285,6 +285,60 @@ Layout.Table = {
 	cameraPitch = 56,
 }
 
+-- The Concierge's tour: where the Concierge stops (on the floor), what they turn to, and the way
+-- there from the stop before. Every leg keeps to open floor: around the piano and the foot of
+-- the Grand Stair, up the stair's middle, through the arch onto the Club Floor.
+export type TourStop = { id: string, name: string, stand: Vector3, face: Vector3, via: { Vector3 } }
+Layout.Tour = {
+	stops = {
+		{ id = "lectern", name = "The Concierge", stand = Vector3.new(9, 3, 6.5), face = Vector3.new(9, 3, 16), via = {} },
+		{ id = "salon", name = "The Salon", stand = Vector3.new(-21, 3, 5), face = Vector3.new(-30, 3, 4), via = { Vector3.new(-2, 3, 8) } },
+		{ id = "tonight", name = "Tonight's table", stand = Vector3.new(-22, 3, 15), face = Vector3.new(-29.4, 3, 17), via = {} },
+		{ id = "vault", name = "The Vault", stand = Vector3.new(-3, 3, 47), face = Vector3.new(-8, 3, 53), via = { Vector3.new(-6, 3, 26), Vector3.new(-3, 3, 38) } },
+		{
+			id = "boutique",
+			name = "The Boutique",
+			stand = Vector3.new(19, 3, 48.5),
+			face = Vector3.new(21, 3, 56),
+			via = { Vector3.new(-3, 3, 38), Vector3.new(-3, 3, 13), Vector3.new(25, 3, 13), Vector3.new(25, 3, 38), Vector3.new(19, 3, 40.5) },
+		},
+		{
+			id = "library",
+			name = "The Library",
+			stand = Vector3.new(-14, 20, 61),
+			face = Vector3.new(-14, 20, 66),
+			via = {
+				Vector3.new(19, 3, 40.5),
+				Vector3.new(25, 3, 38),
+				Vector3.new(25, 3, 13),
+				Vector3.new(8, 3, 13),
+				Vector3.new(8, 3, 23.2), -- the foot of the Grand Stair
+				Vector3.new(8, 20, 38.2), -- the top
+				Vector3.new(8, 20, 47), -- through the arch
+				Vector3.new(-6, 20, 57),
+			},
+		},
+		{ id = "ballroom", name = "The Ballroom", stand = Vector3.new(12, 20, 61), face = Vector3.new(12, 20, 66), via = { Vector3.new(0, 20, 61) } },
+		{ id = "terrace", name = "The Terrace", stand = Vector3.new(19, 20, 54), face = Vector3.new(25, 20, 54), via = {} },
+		{ id = "suite", name = "Your Suite", stand = Vector3.new(-15, 20, 54), face = Vector3.new(-21, 20, 54), via = { Vector3.new(2, 20, 54) } },
+	} :: { TourStop },
+	-- The things the cards point at (a gold pin floats over each).
+	points = {
+		salonDoor = Vector3.new(-30, 3, 4),
+		velvetDoor = Vector3.new(-30, 3, 35),
+		tonightBoard = Vector3.new(-29.4, 9, 17),
+		livreDOr = Vector3.new(-19, 3, 36),
+		vault = Vector3.new(-8, 3, 53),
+		counter = Vector3.new(21, 3, 56),
+		mirror = Vector3.new(13.2, 3, 51),
+		ledger = Vector3.new(15.5, 3, 46.8),
+		libraryDoor = Vector3.new(-14, 20, 66),
+		ballroomDoor = Vector3.new(12, 20, 66),
+		terraceDoor = Vector3.new(25, 20, 54),
+		suiteDoor = Vector3.new(-21, 20, 54),
+	} :: { [string]: Vector3 },
+}
+
 -- The direction from the felt toward the sorting camera, in the table's own frame (+Z toward
 -- the cases).
 function Layout.towardCamera(): Vector3

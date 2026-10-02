@@ -9,9 +9,16 @@ local Ease = require(ReplicatedStorage.Shared.Ease)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Root = require(script.Parent.Root)
 local Theme = require(script.Parent.Theme)
+local Toast = require(script.Parent.Toast)
 local Waypoint = require(script.Parent.Parent.World.Waypoint)
 
 local Dialogue = {}
+
+-- Set while the Concierge's tour runs: other staff lines arrive as small notices instead, so
+-- nothing knocks a tour card off the screen.
+Dialogue.isBusy = function(): boolean
+	return false
+end
 
 local current: CanvasGroup? = nil
 local serial = 0
@@ -28,7 +35,7 @@ end
 
 export type Choice = { id: string, text: string }
 
-export type Extra = { title: string?, step: string?, point: Vector3?, pointName: string? }
+export type Extra = { title: string?, step: string?, point: Vector3?, pointName: string?, sticky: boolean? }
 
 function Dialogue.show(speaker: string, line: string, choices: { Choice }?, onChoice: ((id: string) -> ())?, hold: number?, extra: Extra?)
 	serial += 1
@@ -80,7 +87,7 @@ function Dialogue.show(speaker: string, line: string, choices: { Choice }?, onCh
 				if onChoice then
 					onChoice(c.id)
 				end
-			end, if wide then 160 else 300)
+			end, if wide then math.clamp(#c.text * 13 + 48, 150, 280) else 300)
 			key.LayoutOrder = i
 			key.TextXAlignment = if wide then Enum.TextXAlignment.Center else Enum.TextXAlignment.Left
 			local pad = Instance.new("UIPadding")
@@ -106,7 +113,7 @@ function Dialogue.show(speaker: string, line: string, choices: { Choice }?, onCh
 				dismiss(group)
 			end
 		end)
-	else
+	elseif not x.sticky then
 		task.delay(if wide then 90 else 20, function()
 			if serial == mine and current == group then
 				dismiss(group)
@@ -127,6 +134,14 @@ function Dialogue.start()
 	local choiceEvent = Remotes.event("DialogueChoice")
 	Remotes.event("Dialogue").OnClientEvent:Connect(function(message: any)
 		if type(message) ~= "table" then
+			return
+		end
+		if Dialogue.isBusy() then
+			-- On the tour: a staff line becomes a notice; a question is let go (the guest is
+			-- already being shown round, and can ask again after).
+			if not message.close and type(message.line) == "string" and message.line ~= "" and not message.choices then
+				Toast.show(tostring(message.speaker or ""), message.line, 4)
+			end
 			return
 		end
 		if message.close then

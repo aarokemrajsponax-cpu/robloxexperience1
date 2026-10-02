@@ -51,6 +51,7 @@ local Counter = require(script.Parent.Table.Counter)
 local TableClient = require(script.Parent.Table.TableClient)
 local Ambient = require(script.Parent.World.Ambient)
 local BallroomView = require(script.Parent.Table.BallroomView)
+local Tour = require(script.Parent.World.Tour)
 
 local player = Players.LocalPlayer
 
@@ -319,6 +320,15 @@ local function onPlay(fromTitle: boolean?)
 	end
 end
 
+-- The Concierge's tour: the last card's "Take me to a table", and it steps aside at a table.
+Tour.toTable = function()
+	quickSit("room")
+end
+Tour.isSeated = function(): boolean
+	return TableClient.isSeated()
+end
+start("Tour", Tour.listen)
+
 HowToPlay.onFinish = function()
 	if TableClient.isSeated() then
 		return
@@ -343,7 +353,10 @@ Remotes.event("Guest").OnClientEvent:Connect(function(message: any)
 	if type(message) == "table" and message.op == "howto" then
 		HowToPlay.open()
 	elseif type(message) == "table" and message.op == "clubHowTo" then
-		task.delay(1, HowToPlay.open, true)
+		-- (On the Concierge's tour, the Club Floor is being explained already.)
+		if not Tour.active() then
+			task.delay(1, HowToPlay.open, true)
+		end
 	elseif type(message) == "table" and message.op == "inviteLibrary" then
 		Invite.library()
 	end

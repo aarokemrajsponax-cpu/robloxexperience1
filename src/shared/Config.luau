@@ -270,6 +270,16 @@ local defaults = {
 		lostAfter = 25, -- seconds a new guest lingers in the Foyer before the Concierge offers the walk
 	},
 
+	-- The Concierge's walking tour (each guest's own guide, drawn on their screen).
+	Tour = {
+		speed = 10, -- studs a second the Concierge walks
+		waitBeyond = 16, -- a guest further behind than this: the Concierge stops and waits
+		resumeWithin = 11, -- and walks on once they're this close
+		arriveWithin = 15, -- at a stop, the card shows once the guest is this close
+		lostBeyond = 90, -- a guest this far away for lostAfter seconds has left the tour
+		lostAfter = 40,
+	},
+
 	-- Circles (§9.7, Appendix H7): clubs of up to twenty. One switch turns them off.
 	Circles = {
 		enabled = true,
