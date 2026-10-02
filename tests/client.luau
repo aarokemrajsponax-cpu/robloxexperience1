@@ -1250,6 +1250,13 @@ advance(2)
 check("seated: controls are off", controls.enabled == false)
 check("seated: the camera frames the table", camera.CameraType == roblox.Enum.CameraType.Scriptable)
 check("seated: Leave is on screen", textOnScreen("Leave") ~= nil)
+do
+	local shopKey = find(playerGui, function(d)
+		return d.Name == "ShopKey"
+	end)
+	check("there's a gold Shop key on screen", shopKey ~= nil)
+	check("seated: the Shop key steps aside for the sorting screen", shopKey ~= nil and shopKey.Visible == false)
+end
 check("seated: the what's-next card steps aside", textOnScreen("Take a seat at any table in the Salon") == nil)
 
 -- The sorting screen: sit down and the house falls away; only the sorting screen is left.

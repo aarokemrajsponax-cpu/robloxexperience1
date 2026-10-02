@@ -1,6 +1,6 @@
 --!strict
--- Gilt, the house's earned currency (Appendix I1). Earned only by playing, never bought,
--- with a gentle daily soft cap. The Gold Key adds 20%.
+-- Gilt, the house's currency (Appendix I1). Earned by playing (with a gentle daily soft cap),
+-- or bought in purses. The Gold Key adds 20%; Double Gilt doubles everything earned.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -18,10 +18,17 @@ Gilt.boost = function(): number
 	return 1
 end
 
+-- 12500 -> "12,500".
+function Gilt.format(n: number): string
+	local text = tostring(math.floor(n))
+	local out = text:reverse():gsub("(%d%d%d)", "%1,"):reverse()
+	return if out:sub(1, 1) == "," then out:sub(2) else out
+end
+
 -- Pays `earned` Gilt to a profile and returns what was actually paid (after the soft cap).
 function Gilt.pay(player: Player, data: Profiles.Data, earned: number, source: string): number
 	local g = Config.data.Gilt
-	local boost = math.max(1, Gilt.boost())
+	local boost = math.max(1, Gilt.boost()) * (if data.doubleGilt then Config.data.Offers.doubleGilt else 1)
 	earned = math.floor(earned * boost + 0.5)
 	if data.goldKey then
 		earned = math.floor(earned * (1 + g.goldKeyBonus) + 0.5)

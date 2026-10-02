@@ -211,6 +211,11 @@ boot("Circles", CircleService.start)
 Shop.handOver = function(player, from, itemName)
 	Concierge.line(player, string.format("A gift for you, from %s: %s.", from, itemName), 4)
 end
+-- A guest bought a Golden Hour for everyone: the house's own event, with their name on it.
+Shop.goldenHour = function(buyer, seconds)
+	AdminService.startEvent("goldenHour", seconds, buyer.DisplayName)
+	Remotes.event("Salute"):FireAllClients({ op = "salute", id = "goldenHourGift", by = buyer.DisplayName, effects = { "goldLeaf", "fireworks" }, seconds = 10, title = "Golden Hour", line = buyer.DisplayName .. " bought a Golden Hour for everyone: double Gilt for every guest!" })
+end
 boot("The Boutique", Shop.start)
 Archivist.onSpeak = function(player)
 	local V = require(ReplicatedStorage.Shared.Voice)

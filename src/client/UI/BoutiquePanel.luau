@@ -1,5 +1,6 @@
 --!strict
--- The Boutique's counter (§12): today's six, the week's two, the season's collection, the house's
+-- The Boutique's counter (§12): the Offers (Double Gilt, Gilt purses, a Golden Hour for the
+-- whole house, the Gold Key), today's six, the week's two, the season's collection, the house's
 -- own pieces for Gilt, the Gold Key, the Ledger and (in a guest's first week) the Introduction.
 -- Every Robux price is Roblox's own, read live. Nothing here changes a score. Anything can be
 -- bought for another guest in the house as a gift.
@@ -184,7 +185,47 @@ local function render()
 		order += 1
 		return order
 	end
-	if currentTab == "always" then
+	if currentTab == "offers" then
+		local offers = s.offers or {}
+		if #offers == 0 then
+			note(frame, "Nothing on offer just now.", add())
+		end
+		for _, o in offers do
+			local r = Instance.new("Frame")
+			r.Name = "Offer_" .. tostring(o.key)
+			r.BackgroundColor3 = if o.best then Color3.fromRGB(34, 26, 12) else Color3.fromRGB(16, 16, 20)
+			r.BackgroundTransparency = 0.15
+			r.Size = UDim2.new(1, 0, 0, 86)
+			r.LayoutOrder = add()
+			r.Parent = frame
+			local corner = Instance.new("UICorner")
+			corner.CornerRadius = UDim.new(0, 3)
+			corner.Parent = r
+			local edge = Instance.new("UIStroke")
+			edge.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+			edge.Color = Brand.Colours.gold
+			edge.Transparency = if o.best then 0.1 else 0.7
+			edge.Parent = r
+			local texts = Instance.new("Frame")
+			texts.BackgroundTransparency = 1
+			texts.Position = UDim2.fromOffset(14, 10)
+			texts.Size = UDim2.new(1, -14 - 170, 1, -20)
+			texts.Parent = r
+			Theme.list(texts, 3).HorizontalAlignment = Enum.HorizontalAlignment.Left
+			if o.best then
+				Theme.text(texts, "Best value", 10, "caps", { LayoutOrder = 0, TextXAlignment = Enum.TextXAlignment.Left })
+			end
+			Theme.text(texts, o.name, 22, "display", { LayoutOrder = 1, TextXAlignment = Enum.TextXAlignment.Left })
+			Theme.text(texts, o.line or "", 12, "body", { LayoutOrder = 2, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Brand.Colours.smoke, TextWrapped = true })
+			local k = Theme.key(r, robux(o.price), true, function()
+				after(Closet.ask({ op = "offer", key = o.key }))
+			end, 150)
+			k.Name = "Buy"
+			k.AnchorPoint = Vector2.new(1, 0.5)
+			k.Position = UDim2.new(1, -12, 0.5, 0)
+			k.Size = UDim2.fromOffset(150, 40)
+		end
+	elseif currentTab == "always" then
 		note(frame, "Always in the house: the staples, never out of stock.", add())
 		for _, c in s.always or {} do
 			row(frame, c, add(), "robux")
@@ -237,7 +278,7 @@ local function render()
 		end, 320)
 		k.LayoutOrder = add()
 	elseif currentTab == "gilt" then
-		note(frame, "The house's own pieces. Gilt is earned by playing; it's never sold.", add())
+		note(frame, "The house's own pieces, for Gilt. Earn it at the tables, or find purses on the Offers page.", add())
 		for _, c in s.gilt do
 			row(frame, c, add(), "gilt")
 		end
@@ -319,7 +360,7 @@ function BoutiquePanel.open(tab: string?, forGuest: { userId: number, name: stri
 	if Root.isOpen(NAME) then
 		return
 	end
-	currentTab = tab or "today"
+	currentTab = tab or (if forGuest then "today" else "offers")
 	giftFor = forGuest
 	local size = Root.size()
 	local w = math.min(620, size.X - 24)
@@ -342,6 +383,7 @@ function BoutiquePanel.open(tab: string?, forGuest: { userId: number, name: stri
 	Theme.list(tabs, 6, true).HorizontalAlignment = Enum.HorizontalAlignment.Left
 	tabKeys = {}
 	local specs = {
+		{ "offers", "Offers" },
 		{ "always", "Always here" },
 		{ "today", "Today" },
 		{ "week", "This week" },
@@ -410,6 +452,12 @@ function BoutiquePanel.open(tab: string?, forGuest: { userId: number, name: stri
 			shelves = s
 			if tabKeys.introduction then
 				tabKeys.introduction.Visible = s.introduction ~= nil
+			end
+			if tabKeys.offers then
+				tabKeys.offers.Visible = #(s.offers or {}) > 0
+				if currentTab == "offers" and #(s.offers or {}) == 0 then
+					currentTab = "today"
+				end
 			end
 			render()
 		end

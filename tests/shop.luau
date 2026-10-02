@@ -215,6 +215,18 @@ local MarketplaceService = {
 	PromptSubscriptionPurchase = function(_, player, id)
 		table.insert(prompts, { player = player, id = id, kind = "subscription" })
 	end,
+	-- The experience's developer products, as Roblox lists them (filled in by the tests below).
+	devProducts = {},
+	GetDeveloperProductsAsync = function(self)
+		local list = self.devProducts
+		return {
+			IsFinished = true,
+			GetCurrentPage = function()
+				return list
+			end,
+			AdvanceToNextPageAsync = function() end,
+		}
+	end,
 }
 
 local guests = {}
@@ -1615,6 +1627,77 @@ do
 	advance(0.5)
 	check("a gift that can't be handed over becomes the buyer's", profiles[giver].Data.goldKey == true)
 	Config.data.Products.goldKeyGift = 0
+end
+
+---------------------------------------------------------------------------------------------------
+-- The offers, with products found by name (no ids pasted anywhere)
+---------------------------------------------------------------------------------------------------
+do
+	local buyer = guest("Lou", 40)
+	check("nothing new is offered before the products exist", (function()
+		for _, o in askAs(buyer, { op = "offers" }).offers do
+			if o.key ~= "goldKey" then
+				return false
+			end
+		end
+		return true
+	end)())
+	MarketplaceService.devProducts = {
+		{ Name = "Double Gilt", ProductId = 9101, PriceInRobux = 399 },
+		{ Name = "gilt purse", ProductId = 9102, PriceInRobux = 49 },
+		{ Name = "Gilt Chest", ProductId = 9103, PriceInRobux = 199 },
+		{ Name = "Golden Hour for Everyone", ProductId = 9104, PriceInRobux = 99 },
+		{ Name = "The Gold Key", ProductId = 9105, PriceInRobux = 499 },
+		{ Name = "Boutique 99", ProductId = 9106, PriceInRobux = 99 },
+		{ Name = "Something else", ProductId = 9199, PriceInRobux = 5 },
+	}
+	run(Shop.discover)
+	local view = askAs(buyer, { op = "offers" })
+	local keys = {}
+	for _, o in view.offers do
+		keys[o.key] = o
+	end
+	check("products are found by their names in Creator Hub", keys.doubleGilt ~= nil and keys.giltPurse1 ~= nil and keys.giltPurse2 ~= nil and keys.goldenHour ~= nil and keys.goldKey ~= nil)
+	check("with Roblox's own prices", keys.doubleGilt.price == 399 and keys.giltPurse1.price == 49)
+	check("names match whatever the capitals", keys.giltPurse1 ~= nil)
+	check("Double Gilt leads, marked best value", view.offers[1].key == "doubleGilt" and view.offers[1].best == true)
+	check("a Boutique tier is found by name too", askAs(buyer, { op = "shelves" }).today ~= nil)
+	-- Buying.
+	check("buying an offer opens Roblox's purchase prompt", askAs(buyer, { op = "offer", key = "giltPurse1" }).ok and prompts[#prompts].id == 9102)
+	local before = profiles[buyer].Data.gilt
+	receipt(buyer, 9102, "GP-1")
+	check("a Gilt Purse adds its Gilt", profiles[buyer].Data.gilt == before + Config.data.Offers.giltPurses.giltPurse1, profiles[buyer].Data.gilt - before)
+	receipt(buyer, 9102, "GP-1")
+	check("and only once per purchase", profiles[buyer].Data.gilt == before + Config.data.Offers.giltPurses.giltPurse1)
+	receipt(buyer, 9101, "DG-1")
+	check("Double Gilt is kept for good", profiles[buyer].Data.doubleGilt == true)
+	local GiltModule = module("ServerScriptService", "Server", "Gilt")
+	local fresh = guest("Kit", 41)
+	local a, b
+	run(function()
+		a = GiltModule.pay(fresh, profiles[fresh].Data, 100, "test")
+		b = GiltModule.pay(buyer, profiles[buyer].Data, 100, "test")
+	end)
+	check("and doubles what's earned", b == a * 2, tostring(a) .. " / " .. tostring(b))
+	check("it isn't offered again once owned", (function()
+		for _, o in askAs(buyer, { op = "offers" }).offers do
+			if o.key == "doubleGilt" then
+				return false
+			end
+		end
+		return true
+	end)())
+	receipt(buyer, 9105, "GK-P")
+	check("the Gold Key can be a developer product", profiles[buyer].Data.goldKey == true)
+	local hours = {}
+	Shop.goldenHour = function(p, seconds)
+		table.insert(hours, { p = p, seconds = seconds })
+	end
+	receipt(buyer, 9104, "GH-1")
+	check("a Golden Hour bought for everyone starts for the house, with the buyer's name", #hours == 1 and hours[1].p == buyer and hours[1].seconds == Config.data.Offers.goldenHourMinutes * 60)
+	check("only the offered things can be bought this way", askAs(buyer, { op = "offer", key = "tier99" }).ok == false)
+	MarketplaceService.devProducts = {}
+	run(Shop.discover)
 end
 
 print(string.format("%d passed, %d failed", passed, failed))

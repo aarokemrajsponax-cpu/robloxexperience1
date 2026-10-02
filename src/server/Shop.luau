@@ -4,7 +4,9 @@
 -- the guest chooses a piece, the server keeps that choice in their saved profile, and the receipt
 -- grants it. Receipts are idempotent: the purchase is written into the profile, the profile is
 -- saved, and only then is Roblox told it was granted. Gifts go to another guest in the house and
--- the Concierge hands them over. Gilt buys the house's own pieces and is never sold.
+-- the Concierge hands them over. Gilt buys the house's own pieces; it is earned by playing or
+-- bought in purses. Developer products are found by name (Config.ProductNames), so the owner
+-- only has to create them in Creator Hub.
 
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
@@ -39,6 +41,9 @@ end
 -- The Concierge's handover of a gift (set by Main).
 Shop.handOver = function(_recipient: Player, _from: string, _itemName: string) end
 
+-- A Golden Hour a guest bought for everyone in the house (set by Main: the owner's event).
+Shop.goldenHour = function(_buyer: Player, _seconds: number) end
+
 local shopEvent = Remotes.event("Shop")
 local RECEIPTS_KEPT = 100
 local PENDING_SECONDS = 3600
@@ -51,13 +56,69 @@ local function products()
 	return Config.data.Products :: any
 end
 
+-- Developer products found by name in the experience (see Config.ProductNames): key -> id.
+local discovered: { [string]: number } = {}
+local discoveredPrice: { [number]: number } = {}
+
 -- The product a key names ("tier249", "introduction", "ledger", "season"), or 0.
 local function productId(key: string): number
 	local id = products()[key]
-	return if type(id) == "number" then id else 0
+	if type(id) == "number" and id ~= 0 then
+		return id
+	end
+	return discovered[key] or 0
 end
 
-local PRODUCT_KEYS = { "introduction", "ledger", "season", "goldKeyGift" }
+local function normal(name: string): string
+	return string.lower((string.gsub(name, "%s+", " ")):match("^%s*(.-)%s*$") or name)
+end
+
+-- Reads the experience's developer products and matches them to the house's by name.
+local function discover()
+	local byName: { [string]: string } = {}
+	for key, name in (Config.data :: any).ProductNames or {} do
+		if type(name) == "string" then
+			byName[normal(name)] = key
+		end
+	end
+	local ok, pages = pcall(function()
+		return MarketplaceService:GetDeveloperProductsAsync()
+	end)
+	if not ok or not pages then
+		return
+	end
+	local found: { [string]: number } = {}
+	for _ = 1, 20 do
+		local page = (pages :: any):GetCurrentPage()
+		for _, product in page do
+			local name = product.Name or product.name
+			local id = product.ProductId or product.productId or product.DeveloperProductId
+			if type(name) == "string" and type(id) == "number" then
+				local key = byName[normal(name)]
+				if key then
+					found[key] = id
+					local price = product.PriceInRobux or product.priceInRobux
+					if type(price) == "number" then
+						discoveredPrice[id] = price
+					end
+				end
+			end
+		end
+		if (pages :: any).IsFinished then
+			break
+		end
+		local more = pcall(function()
+			(pages :: any):AdvanceToNextPageAsync()
+		end)
+		if not more then
+			break
+		end
+	end
+	discovered = found
+end
+Shop.discover = discover
+
+local PRODUCT_KEYS = { "introduction", "ledger", "season", "goldKeyGift", "goldKeyProduct", "giltPurse1", "giltPurse2", "giltPurse3", "doubleGilt", "goldenHour" }
 for _, salute in Salutes.List do
 	table.insert(PRODUCT_KEYS, "salute_" .. salute.id)
 end
@@ -85,6 +146,9 @@ local function livePrice(id: number, info: Enum.InfoType): number?
 	local cached = prices[id]
 	if cached and os.clock() - cached.at < PRICE_SECONDS then
 		return cached.price
+	end
+	if discoveredPrice[id] then
+		return discoveredPrice[id]
 	end
 	local ok, result = pcall(function()
 		return MarketplaceService:GetProductInfo(id, info)
@@ -141,6 +205,7 @@ local function mine(data: Profiles.Data): { [string]: any }
 		equipped = data.equipped,
 		gilt = data.gilt,
 		goldKey = data.goldKey,
+		doubleGilt = data.doubleGilt,
 		blackCard = { held = data.blackCard.active, offered = BlackCard.offered() },
 		suite = data.suite,
 		credits = data.credits,
@@ -173,6 +238,42 @@ local function card(item: Wardrobe.Item, data: Profiles.Data): { [string]: any }
 		owned = Dressing.canWear(data, item),
 		style = item.style,
 	}
+end
+
+-- The offers, as the Boutique's first page and the Shop key show them. Only what's on sale.
+function Shop.offers(data: Profiles.Data): { { [string]: any } }
+	local out = {}
+	local function add(key: string, name: string, line: string, extra: { [string]: any }?)
+		local id = productId(key)
+		if id == 0 then
+			return
+		end
+		local o = { key = key, name = name, line = line, price = livePrice(id, Enum.InfoType.Product) }
+		if extra then
+			for k, v in extra do
+				o[k] = v
+			end
+		end
+		table.insert(out, o)
+	end
+	if not data.doubleGilt then
+		add("doubleGilt", "Double Gilt", "Every Gilt you earn, doubled, for good. Your purse fills twice as fast.", { best = true })
+	end
+	add("goldenHour", "Golden Hour for Everyone", string.format("Double Gilt for every guest in the house for %d minutes, with your name announced.", Config.data.Offers.goldenHourMinutes))
+	local purses = Config.data.Offers.giltPurses
+	add("giltPurse1", "Gilt Purse", string.format("%s Gilt, at once.", Gilt.format(purses.giltPurse1)))
+	add("giltPurse2", "Gilt Chest", string.format("%s Gilt, at once. More Gilt for each Robux.", Gilt.format(purses.giltPurse2)), { best = data.doubleGilt })
+	add("giltPurse3", "Gilt Vault", string.format("%s Gilt, at once. The most Gilt for each Robux.", Gilt.format(purses.giltPurse3)))
+	if not data.goldKey and (productId("goldKey") ~= 0 or productId("goldKeyProduct") ~= 0) then
+		local id = if productId("goldKey") ~= 0 then productId("goldKey") else productId("goldKeyProduct")
+		table.insert(out, {
+			key = "goldKey",
+			name = "The Gold Key",
+			line = "+20% Gilt for good, the Study in your Suite, a gold nameplate, and Gold Key looks.",
+			price = livePrice(id, if productId("goldKey") ~= 0 then Enum.InfoType.GamePass else Enum.InfoType.Product),
+		})
+	end
+	return out
 end
 
 local function shelves(player: Player, data: Profiles.Data): { [string]: any }
@@ -222,6 +323,7 @@ local function shelves(player: Player, data: Profiles.Data): { [string]: any }
 			price = if ledger.leather then nil else livePrice(productId("ledger"), Enum.InfoType.Product),
 		},
 		introduction = intro,
+		offers = Shop.offers(data),
 		guests = guests,
 		standing = standingOf(data),
 		balance = data.gilt,
@@ -317,6 +419,25 @@ local function grant(player: Player, data: Profiles.Data, key: string)
 		else
 			credit(data, "tier499")
 			shopEvent:FireClient(player, { op = "notice", title = "The Gold Key", line = "Your gift couldn't be handed over, so it's kept as Boutique credit." })
+		end
+	elseif string.sub(key, 1, 9) == "giltPurse" then
+		local amount = (Config.data.Offers.giltPurses :: any)[key] or 0
+		data.gilt += amount
+		Analytics.source(player, "Gilt", amount, data.gilt, "Purchase")
+		shopEvent:FireClient(player, { op = "notice", title = "Gilt", line = string.format("+%s Gilt. Thank you.", Gilt.format(amount)) })
+		Gilt.changed(player)
+	elseif key == "doubleGilt" then
+		data.doubleGilt = true
+		shopEvent:FireClient(player, { op = "notice", title = "Double Gilt", line = "Every Gilt you earn is doubled, for good." })
+	elseif key == "goldenHour" then
+		Shop.goldenHour(player, Config.data.Offers.goldenHourMinutes * 60)
+	elseif key == "goldKeyProduct" then
+		if data.goldKey then
+			credit(data, "tier499")
+		else
+			data.goldKey = true
+			shopEvent:FireClient(player, { op = "notice", title = "The Gold Key", line = "The Gold Key is yours." })
+			Dressing.nameplate(player)
 		end
 	elseif key == "introduction" then
 		data.introduction = true
@@ -463,7 +584,8 @@ local function buyWithGilt(player: Player, data: Profiles.Data, itemId: string):
 	return { ok = true }
 end
 
-local function onAsk(player: Player, request: unknown): any
+local onAsk: (player: Player, request: unknown) -> any
+onAsk = function(player: Player, request: unknown): any
 	if type(request) ~= "table" then
 		return nil
 	end
@@ -499,13 +621,33 @@ local function onAsk(player: Player, request: unknown): any
 		return { ok = ok }
 	elseif op == "goldKey" then
 		local id = productId("goldKey")
-		if id == 0 or data.goldKey then
-			return { ok = false, why = if data.goldKey then "The Gold Key is yours." else "The Gold Key isn't on sale yet." }
+		if data.goldKey then
+			return { ok = false, why = "The Gold Key is yours." }
+		elseif id == 0 then
+			-- No game pass: the Gold Key as a developer product, if there is one.
+			if productId("goldKeyProduct") ~= 0 then
+				return { ok = prompt(player, "goldKeyProduct"), prompted = true }
+			end
+			return { ok = false, why = "The Gold Key isn't on sale yet." }
 		end
 		pcall(function()
 			MarketplaceService:PromptGamePassPurchase(player, id)
 		end)
 		return { ok = true, prompted = true }
+	elseif op == "offer" and type(r.key) == "string" then
+		local key = r.key :: string
+		if key == "goldKey" then
+			return onAsk(player, { op = "goldKey" })
+		elseif key ~= "doubleGilt" and key ~= "goldenHour" and string.sub(key, 1, 9) ~= "giltPurse" then
+			return { ok = false, why = "That isn't offered." }
+		elseif key == "doubleGilt" and data.doubleGilt then
+			return { ok = false, why = "Double Gilt is yours." }
+		elseif productId(key) == 0 then
+			return { ok = false, why = "That isn't on sale yet." }
+		end
+		return { ok = prompt(player, key), prompted = true }
+	elseif op == "offers" then
+		return { offers = Shop.offers(data), doubleGilt = data.doubleGilt, gilt = data.gilt }
 	elseif op == "goldKeyGift" and type(r.userId) == "number" then
 		local recipient = Players:GetPlayerByUserId(r.userId :: number)
 		local rdata = recipient and Profiles.get(recipient)
@@ -702,6 +844,13 @@ end
 
 function Shop.start()
 	MarketplaceService.ProcessReceipt = processReceipt
+	-- Find the products by name now and every few minutes (new ones go on sale without a restart).
+	task.spawn(function()
+		while true do
+			pcall(discover)
+			task.wait(300)
+		end
+	end)
 	local CollectionService = game:GetService("CollectionService")
 	local panels: { [string]: string } = { BoutiqueCounter = "boutique", WardrobeMirror = "wardrobe", LedgerBook = "ledger", RegisterBook = "register", BlackCardLectern = "blackCard", SuiteFurnish = "suite", CircleBook = "circles", SaluteDesk = "salutes", GuestBook = "guestBook" }
 	for tag, panel in panels do

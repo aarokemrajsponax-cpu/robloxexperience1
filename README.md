@@ -281,6 +281,15 @@ a Nightly attempt or a Mythic's odds.
   Roblox) here or everywhere; and a summons that invites guests in every house to join yours.
   Events change Gilt, Ledger pages and Mythic luck, never a score. Other trusted people:
   `Config.Admin.userIds`.
+  - **Admin Abuse Night** (Events, at the top): every event at once with fireworks, for 15, 30
+    or 60 minutes; switch on **Every house** first to run it in every server.
+  - **Schedule**: pick an event (or Admin Abuse Night), a day and a time in your own clock and a
+    length, then **Schedule**. Every server starts it on time, whether you're in the game or
+    not, and for the hour before, every player sees "ADMIN ABUSE NIGHT STARTS IN 12:34" at the
+    top of the screen. Cancel any from the same page. (Saved in a DataStore: in Studio, turn on
+    Game Settings → Security → Enable Studio Access to API Services to try it there.)
+  - Anything that breaks shows in a small red panel in the corner of your screen (only yours),
+    so a screenshot is enough to say what went wrong.
 - **Feeling at home**: the Concierge remembers your last highlight, your milestones and who
   admired you; the table you use most carries your name while you're here and is offered as
   "your usual"; walk up to any guest and **Admire** them (R, or L1); sign the **Livre d'Or** once

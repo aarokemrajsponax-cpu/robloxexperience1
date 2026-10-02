@@ -42,6 +42,7 @@ export type Data = {
 	receipts: { string }, -- the last purchase ids granted (idempotent receipts)
 	pending: { product: string, item: string, giftTo: number, at: number },
 	goldKey: boolean,
+	doubleGilt: boolean,
 	introduction: boolean,
 	ledger: { term: string, points: number, freeClaimed: number, leatherClaimed: number, leather: { [string]: boolean } },
 	gifts: { { from: string, item: string, at: number } },
@@ -85,6 +86,7 @@ local TEMPLATE: Data = {
 	receipts = {},
 	pending = { product = "", item = "", giftTo = 0, at = 0 },
 	goldKey = false,
+	doubleGilt = false,
 	introduction = false,
 	ledger = { term = "", points = 0, freeClaimed = 0, leatherClaimed = 0, leather = {} },
 	gifts = {},

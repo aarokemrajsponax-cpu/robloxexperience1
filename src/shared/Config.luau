@@ -199,10 +199,56 @@ local defaults = {
 		salute_chandelier = 0,
 		salute_fireworks = 0,
 		salute_grand = 0,
+		-- More of what guests buy (all developer products, found by name: see ProductNames).
+		giltPurse1 = 0,
+		giltPurse2 = 0,
+		giltPurse3 = 0,
+		doubleGilt = 0,
+		goldenHour = 0,
+		goldKeyProduct = 0, -- the Gold Key as a developer product, if you'd rather not make a game pass
 		saluteQueue = 4, -- salutes waiting their turn in one house, at most
 		benefactorMinutes = 30, -- the giver's nameplate carries a gold star this long
 		introductionDays = 7,
 		giftTimeout = 120, -- seconds a chosen gift waits for its purchase
+	},
+
+	-- The game finds its developer products by name, so no ids need copying: in Creator Hub make
+	-- a developer product with exactly one of these names (and the price you like) and it's on
+	-- sale at once. An id set in Products above still wins.
+	ProductNames = {
+		tier49 = "Boutique 49",
+		tier79 = "Boutique 79",
+		tier99 = "Boutique 99",
+		tier149 = "Boutique 149",
+		tier199 = "Boutique 199",
+		tier249 = "Boutique 249",
+		tier299 = "Boutique 299",
+		tier399 = "Boutique 399",
+		tier499 = "Boutique 499",
+		tier599 = "Boutique 599",
+		introduction = "The Introduction",
+		ledger = "Leather-Bound Ledger",
+		season = "Season Collection",
+		goldKeyProduct = "The Gold Key",
+		goldKeyGift = "Gold Key Gift",
+		salute_goldLeaf = "Salute: Gold Leaf",
+		salute_encore = "Salute: Encore",
+		salute_chandelier = "Salute: Chandelier",
+		salute_fireworks = "Salute: Fireworks",
+		salute_grand = "Salute: Grand Salute",
+		giltPurse1 = "Gilt Purse",
+		giltPurse2 = "Gilt Chest",
+		giltPurse3 = "Gilt Vault",
+		doubleGilt = "Double Gilt",
+		goldenHour = "Golden Hour for Everyone",
+	},
+
+	-- The offers (Boutique → Offers, the Shop key, and the card after a run).
+	Offers = {
+		giltPurses = { giltPurse1 = 1000, giltPurse2 = 5500, giltPurse3 = 18000 }, -- Gilt in each
+		doubleGilt = 2, -- Double Gilt multiplies every Gilt earned (and the daily soft cap) by this
+		goldenHourMinutes = 15, -- a Golden Hour bought for everyone in the server lasts this long
+		upsellAfterRuns = 2, -- the "Double Gilt would have paid..." card, after this many banked runs
 	},
 
 	-- The Founding Term's id (for example "2026-autumn"): set it at launch; guests who play in it

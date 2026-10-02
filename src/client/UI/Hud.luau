@@ -82,6 +82,18 @@ function Hud.width(): number
 	return (w + (n - 1) * 8 + 12) * Root.scale
 end
 
+-- The Shop key: gold, first in the row, while walking (the sorting screen stays clean).
+local shopKey: TextButton? = nil
+function Hud.setShopKey(onPress: () -> ())
+	if shopKey then
+		return
+	end
+	local key = Theme.key(bar, "Shop", true, onPress, 100)
+	key.Name = "ShopKey"
+	key.LayoutOrder = -20
+	shopKey = key
+end
+
 -- The owner's "House" key (their controls), after Settings.
 function Hud.setOwnerKey(onPress: () -> ())
 	local key = Theme.key(bar, "House", false, onPress, 100)
@@ -123,6 +135,9 @@ end
 function Hud.setSeated(seated: boolean)
 	if leaveKey then
 		leaveKey.Visible = seated
+	end
+	if shopKey then
+		shopKey.Visible = not seated
 	end
 	-- At a table the sorting screen carries the score and the clock itself.
 	line.Visible = false

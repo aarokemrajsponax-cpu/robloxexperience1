@@ -235,6 +235,9 @@ local function startHud()
 	end
 	hudStarted = true
 	Hud.start(SettingsPanel.open, TableClient.leave)
+	Hud.setShopKey(function()
+		BoutiquePanel.open()
+	end)
 	-- The owner's House controls: a key only they see (the server checks every request).
 	local function ownerKey()
 		if player:GetAttribute("MaisonAdmin") == true and not ownerKeyShown then
@@ -328,6 +331,11 @@ end
 
 TableClient.Seated.Event:Connect(function()
 	Hud.hideStraight()
+end)
+TableClient.Banked.Event:Connect(function(gilt: number)
+	pcall(function()
+		require(script.Parent.UI.OfferCard).afterRun(gilt)
+	end)
 end)
 
 Remotes.event("Guest").OnClientEvent:Connect(function(message: any)

@@ -133,9 +133,7 @@ All in `src/shared/Config.luau` (or live, in Creator Hub → Configs, as `Sectio
 | What | Where | Value |
 | --- | --- | --- |
 | The Founding Term | `FoundingTerm` | the Term you launch in, e.g. `2026-autumn` |
-| Every product id | `Products.*` | from Creator Hub → Monetization |
-| Salutes | `Products.salute_goldLeaf` / `encore` / `chandelier` / `fireworks` / `grand` | five developer products; suggested 49 / 79 / 99 / 149 / 399 |
-| Giving the Gold Key | `Products.goldKeyGift` | a developer product at the Gold Key's price (499) |
+| Every product | nothing to paste | make each developer product in Creator Hub with its name from the table below; the game finds it by name |
 | Trusted helpers for House controls | `Admin.userIds` | their Roblox user ids (you, as owner, are always allowed) |
 | The Black Card | `Products.blackCard` | the subscription's id (`EXP-…`), or leave `""` to launch without it |
 | Badges | `Badges.*` | from Creator Hub → Badges |
@@ -162,13 +160,35 @@ Create a notification string), then paste each id into `Notifications.messages`:
 | `soiree` | `{name} has started at {experienceName}. Your best evenings this weekend count.` | `name` |
 | `termEnding` | `{term} ends in three days at {experienceName}. The Ledger's last pages are waiting.` | `term` |
 
-**Making the developer products** (once each, for the tiers, the Introduction, the Ledger, the
-season collection, the five Salutes and the Gold Key gift):
+**Making the developer products: name them, no ids to copy.** The game finds every developer
+product by its exact name (capitals don't matter), so making one in Creator Hub is all it takes
+to put it on sale; it appears within five minutes, no republish needed. Start with the first
+block (that's where most of the money is):
+
 1. Creator Hub → **Creations** → your experience → **Monetization** → **Developer Products**.
-2. **Create a Developer Product**. Name it (e.g. *A Shower of Gold Leaf*), set the price, add a
+2. **Create a Developer Product**. Type the **name** exactly as below, set the **price**, add a
    small image if you like, **Save**.
-3. Click the product, copy its **Product ID**, and paste it into `src/shared/Config.luau` beside
-   its name (or live, in Creator Hub → **Configs**, as `Products_salute_goldLeaf`).
+3. Repeat for each line. That's it.
+
+| Name (exactly) | Price | What it does |
+| --- | --- | --- |
+| `Double Gilt` | 399 | every Gilt the buyer earns, doubled, for good (the best seller in games like this) |
+| `Gilt Purse` | 49 | 1,000 Gilt |
+| `Gilt Chest` | 199 | 5,500 Gilt |
+| `Gilt Vault` | 499 | 18,000 Gilt |
+| `Golden Hour for Everyone` | 99 | double Gilt for everyone in the server for 15 minutes, buyer announced |
+| `The Gold Key` | 499 | +20% Gilt, the Study, gold nameplate and Gold Key looks (or make a game pass and paste its id in `Products.goldKey`) |
+| `The Introduction` | 99 | the first-week starter pack |
+| `Salute: Gold Leaf` / `Salute: Encore` / `Salute: Chandelier` / `Salute: Fireworks` / `Salute: Grand Salute` | 49 / 79 / 99 / 149 / 399 | a moment for the whole house |
+| `Boutique 49` … `Boutique 599` (ten: 49, 79, 99, 149, 199, 249, 299, 399, 499, 599) | the number in the name | the Boutique's pieces at that price |
+| `Leather-Bound Ledger` | 299 | the Term's premium Ledger row |
+| `Season Collection` | 399 | the season's pieces |
+| `Gold Key Gift` | 499 | the Gold Key, for another guest |
+
+Where guests meet them: a gold **Shop** key at the top right while they walk, the **Offers**
+page that opens first in the Boutique, and (once a session, after a couple of runs) a small card
+saying what Double Gilt would have paid for the run just played. Scores and leaderboards are
+never for sale, so the boards stay fair and players keep coming back.
 
 **Private servers** (A Private Evening): Creator Hub → your experience → **Monetization** →
 **Private Servers** → Enable, price **199** Robux a month (Appendix I).

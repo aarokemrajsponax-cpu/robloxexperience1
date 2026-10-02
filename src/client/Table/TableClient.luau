@@ -90,6 +90,8 @@ local ballroomKeys = 0
 
 TableClient.Seated = Instance.new("BindableEvent")
 TableClient.Left = Instance.new("BindableEvent")
+-- A run was banked (with the Gilt it paid): for the offer after a run.
+TableClient.Banked = Instance.new("BindableEvent")
 
 local function localFolder(): Folder
 	local f = Workspace:FindFirstChild("MaisonLocal")
@@ -506,6 +508,7 @@ local function onRoundEnd(message: { [string]: any })
 end
 
 local function onBanked(message: { [string]: any })
+	TableClient.Banked:Fire(tonumber(message.gilt) or 0)
 	stopPlay()
 	clearTray()
 	Sound.play("complete", 0.4)
