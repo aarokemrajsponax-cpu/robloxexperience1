@@ -142,14 +142,15 @@ function Kit.pointLight(parent: BasePart, brightness: number, range: number, col
 	return light
 end
 
-function Kit.spotLight(parent: BasePart, face: Enum.NormalId, brightness: number, range: number, angle: number, color: Color3?): SpotLight
+function Kit.spotLight(parent: BasePart, face: Enum.NormalId, brightness: number, range: number, angle: number, color: Color3?, shadows: boolean?): SpotLight
 	local light = Instance.new("SpotLight")
 	light.Face = face
 	light.Brightness = brightness
 	light.Range = range
 	light.Angle = angle
 	light.Color = color or Color3.fromRGB(255, 200, 140)
-	light.Shadows = true
+	-- Shadows only where asked: dozens of shadow-casting lamps make the house stutter.
+	light.Shadows = shadows ~= false
 	light.Parent = parent
 	CollectionService:AddTag(light, "HouseLamp")
 	light:SetAttribute("BaseColor", light.Color)

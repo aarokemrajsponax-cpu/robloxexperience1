@@ -226,6 +226,7 @@ local function dealRound(s: Session)
 	setLids(s.model, s.cases)
 	send(s.player, {
 		op = "deal",
+		table = s.model:GetAttribute("TableId"),
 		mode = s.mode,
 		night = if night then night.key else nil,
 		round = s.round,

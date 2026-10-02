@@ -117,7 +117,7 @@ local function lamp(model: Model, frame: CFrame, style: Style)
 		Kit.part(model, "Lamp", Vector3.new(0.9, 1.2, 0.9), CFrame.new(high), L.blackLacquer, { collide = false, query = false })
 		Kit.part(model, "LampRim", Vector3.new(0.95, 0.08, 0.95), CFrame.new(high - Vector3.new(0, 0.6, 0)), L.brass, { collide = false, query = false, shadow = false })
 		bulb = Kit.part(model, "Bulb", Vector3.new(0.5, 0.1, 0.5), CFrame.new(high - Vector3.new(0, 0.66, 0)), { color = Color3.fromRGB(255, 240, 220), material = Enum.Material.Neon }, { collide = false, shadow = false, query = false })
-		local down = Kit.spotLight(bulb, Enum.NormalId.Bottom, style.lampBrightness, (high.Y - centre.Y) + 6, 32, style.lampColor)
+		local down = Kit.spotLight(bulb, Enum.NormalId.Bottom, style.lampBrightness, (high.Y - centre.Y) + 6, 32, style.lampColor, false)
 		down.Name = "TableLight"
 		return
 	end
@@ -128,10 +128,10 @@ local function lamp(model: Model, frame: CFrame, style: Style)
 		Kit.post(model, "LampStem", 1.8, 0.1, base, L.brass, { collide = false })
 		Kit.part(model, "Lamp", Vector3.new(1.2, 0.7, 1.2), CFrame.new(base + Vector3.new(0, 2.1, 0)), { color = Color3.fromRGB(28, 40, 34), material = Enum.Material.Glass, reflectance = 0.2, transparency = 0.15 }, { collide = false, query = false })
 		bulb = Kit.part(model, "Bulb", Vector3.new(0.3, 0.2, 0.3), CFrame.new(base + Vector3.new(0, 1.85, 0)), { color = Color3.fromRGB(255, 214, 150), material = Enum.Material.Neon }, { collide = false, shadow = false, query = false })
-		local down = Kit.spotLight(bulb, Enum.NormalId.Bottom, style.lampBrightness, 10, 120, style.lampColor)
+		local down = Kit.spotLight(bulb, Enum.NormalId.Bottom, style.lampBrightness, 10, 120, style.lampColor, false)
 		down.Name = "TableLight"
 		down.Shadows = false
-		local glow = Kit.pointLight(bulb, 0.35, 7, style.lampColor)
+		local glow = Kit.pointLight(bulb, 0.35, 7, style.lampColor, false)
 		glow.Name = "LampGlow"
 		return
 	end
@@ -146,7 +146,7 @@ local function lamp(model: Model, frame: CFrame, style: Style)
 		Kit.part(model, "LampRim", Vector3.new(0.1, 2.3, 2.3), CFrame.new(lampPos - Vector3.new(0, 0.6, 0)) * CFrame.Angles(0, 0, math.rad(90)), L.brass, { collide = false, shape = Enum.PartType.Cylinder, query = false, shadow = false })
 	end
 	bulb = Kit.part(model, "Bulb", Vector3.new(0.6, 0.3, 0.6), CFrame.new(lampPos - Vector3.new(0, 0.5, 0)), { color = Color3.fromRGB(255, 220, 160), material = Enum.Material.Neon }, { collide = false, shadow = false, query = false })
-	local down = Kit.spotLight(bulb, Enum.NormalId.Bottom, style.lampBrightness, 16, 72, style.lampColor)
+	local down = Kit.spotLight(bulb, Enum.NormalId.Bottom, style.lampBrightness, 16, 72, style.lampColor, false)
 	down.Name = "TableLight"
 end
 

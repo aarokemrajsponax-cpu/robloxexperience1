@@ -475,7 +475,7 @@ profiles[cy] = profile(true)
 loaded:Fire(cy, profiles[cy])
 advance(1)
 check("the profile and the fallback at the same moment: one character", cy.loads == 1, cy.loads)
-check("a first-ever visit arrives in the street, facing the doors", cy.Character ~= nil and Layout.zoneAt(cy.Character:GetPivot().Position) == "street")
+check("a first-ever visit arrives in the lit Foyer", cy.Character ~= nil and Layout.zoneAt(cy.Character:GetPivot().Position) == "foyer")
 
 ---------------------------------------------------------------------------------------------------
 -- 3. A fall or a reset: the character comes back once

@@ -212,6 +212,13 @@ function Rig.build(name: string, spec: LookSpec, home: CFrame, parent: Instance)
 	humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
 	local root = model:FindFirstChild("HumanoidRootPart") :: BasePart
 	model.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
+	-- The staff are drawn at the guests' size (Movement.guestScale), so nobody towers.
+	local scale = Config.data.Movement.guestScale
+	if scale ~= 1 then
+		pcall(function()
+			model:ScaleTo(scale)
+		end)
+	end
 	model:PivotTo(home + Vector3.new(0, humanoid.HipHeight + root.Size.Y / 2, 0))
 	model.Parent = parent
 	pcall(function()

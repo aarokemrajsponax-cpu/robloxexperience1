@@ -88,8 +88,9 @@ end
 local spawnCharacter: (player: Player, respawn: boolean?) -> ()
 
 local function place(player: Player, character: Model, visit: Visit)
-	-- First-ever visit, first spawn: the Street. Everyone else arrives in the Foyer.
-	local toStreet = visit.firstVisit and not visit.spawnedOnce
+	-- Everyone arrives in the lit Foyer (or, with Movement.firstArrival = "street", a first-ever
+	-- visit starts outside the doors).
+	local toStreet = Config.data.Movement.firstArrival == "street" and visit.firstVisit and not visit.spawnedOnce
 	visit.spawnedOnce = true
 	for _, d in character:GetDescendants() do
 		if d:IsA("BasePart") then
@@ -116,6 +117,29 @@ local function place(player: Player, character: Model, visit: Visit)
 	local target = if toStreet then Layout.Street.spawn else Layout.Foyer.spawn
 	character:PivotTo(target + Vector3.new(0, 1, 0))
 	player:SetAttribute("Arrived", if toStreet then "street" else "foyer")
+	-- Drawn a little smaller than Roblox's default, so the house is roomier around everyone
+	-- (once their look has loaded, so hats and hair scale with them).
+	local scale = Config.data.Movement.guestScale
+	if scale ~= 1 then
+		task.spawn(function()
+			local waited = 0
+			while waited < 6 do
+				local ok, loaded = pcall(function()
+					return player:HasAppearanceLoaded()
+				end)
+				if not ok or loaded then
+					break
+				end
+				task.wait(0.1)
+				waited += 0.1
+			end
+			if player.Character == character then
+				pcall(function()
+					character:ScaleTo(scale)
+				end)
+			end
+		end)
+	end
 end
 
 -- Every guest gets a visit record (and a character) the moment they arrive, whether or not

@@ -466,6 +466,12 @@ local defaults = {
 		walkSpeed = 12,
 		runSpeed = 19,
 		npcWalkSpeed = 9,
+		-- Guests and staff are drawn at this size, so the house feels this much bigger around
+		-- them (0.8: every room a quarter bigger, half as much floor again for each guest).
+		guestScale = 0.8,
+		-- Where guests appear: "foyer" (lit, in the middle of everything) or "street" (a first
+		-- visit starts outside the doors at night).
+		firstArrival = "foyer",
 	},
 
 	-- How sorting feels at the table: the camera, the hand, and what a filing says back.

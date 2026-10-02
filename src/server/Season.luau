@@ -16,8 +16,8 @@ local Season = {}
 local current: Seasons.Season? = nil
 local grade: ColorCorrectionEffect? = nil
 
-local BASE_AMBIENT = Color3.fromRGB(14, 14, 18)
-local BASE_OUTDOOR = Color3.fromRGB(24, 26, 34)
+local BASE_AMBIENT = Color3.fromRGB(34, 32, 36)
+local BASE_OUTDOOR = Color3.fromRGB(70, 72, 92)
 
 local function effect<T>(className: string, name: string): T
 	local existing = Lighting:FindFirstChild(name)
@@ -44,12 +44,12 @@ local function setupLighting()
 	end
 	Lighting.ClockTime = 0.2
 	Lighting.GeographicLatitude = 41.7
-	Lighting.Brightness = 0.6
+	Lighting.Brightness = 1.4
 	Lighting.Ambient = BASE_AMBIENT
 	Lighting.OutdoorAmbient = BASE_OUTDOOR
-	Lighting.EnvironmentDiffuseScale = 0.25
+	Lighting.EnvironmentDiffuseScale = 0.45
 	Lighting.EnvironmentSpecularScale = 0.7
-	Lighting.ExposureCompensation = 0.1
+	Lighting.ExposureCompensation = 0.35
 	Lighting.GlobalShadows = true
 	Lighting.ShadowSoftness = 0.3
 	Lighting.FogEnd = 100000

@@ -59,8 +59,9 @@ pcall(function()
 	require(script.Parent.UI.ErrorNotice).start()
 end)
 
--- Roblox's own chat stays. The house has no tools and no health bar.
-for _, kind in { Enum.CoreGuiType.Backpack, Enum.CoreGuiType.Health } do
+-- Roblox's own chat stays. The house has no tools and no health bar, and no player list in
+-- the top-right corner (it sat over the house's own keys; the boards show who's here).
+for _, kind in { Enum.CoreGuiType.Backpack, Enum.CoreGuiType.Health, Enum.CoreGuiType.PlayerList } do
 	pcall(function()
 		StarterGui:SetCoreGuiEnabled(kind, false)
 	end)

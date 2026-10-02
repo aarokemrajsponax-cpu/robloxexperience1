@@ -330,12 +330,18 @@ local function infoFor(data: { [string]: any }): Piece
 end
 
 -- A new deal: the tray is laid with it.
+-- (defined below: the whole of sitting down)
+local onSeated: (message: { [string]: any }) -> ()
+
 local function renderDeal(message: { [string]: any })
-	if not SortScreen.isOpen() then
-		-- The deal is the proof you're at a table: never sort on a hidden screen.
-		seatedNow = true
-		State.seated = true
-		SortScreen.open(roomTitle(), roundTitle())
+	if not seatedNow or not SortScreen.isOpen() then
+		-- The deal is the proof you're at a table: if the "seated" message never landed, sit down
+		-- properly now (keys, camera, controls), so nobody ever sorts on a half-set table.
+		warn("[Maison] Table: a deal arrived before the seat was set up; setting it up now.")
+		safely("sitting down from the deal", onSeated, { table = message.table, room = message.room, mode = message.mode })
+		if not SortScreen.isOpen() then
+			SortScreen.open(roomTitle(), roundTitle())
+		end
 	end
 	pieces = {}
 	round = message.round
@@ -639,7 +645,7 @@ local function seatIn3D(model: Model?, message: { [string]: any })
 	end)
 end
 
-local function onSeated(message: { [string]: any })
+onSeated = function(message: { [string]: any })
 	local wasSeated = seatedNow or CameraRig.isAtTable()
 	local model = findTable(message.table)
 	seatedModel = model

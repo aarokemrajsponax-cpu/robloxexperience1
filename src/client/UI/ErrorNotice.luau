@@ -51,7 +51,7 @@ local function draw()
 		close.TextSize = 13
 		close.TextXAlignment = Enum.TextXAlignment.Left
 		close.TextColor3 = Color3.fromRGB(255, 190, 170)
-		close.Text = "Something went wrong (owner only) · click to hide"
+		close.Text = "For the owner only · click to hide"
 		close.ZIndex = 51
 		close.Activated:Connect(function()
 			nf.Visible = false
@@ -86,9 +86,28 @@ local function draw()
 	frame.Visible = true
 end
 
+-- Studio blocks saving until "Studio Access to API Services" is on: that isn't a fault in the
+-- game, so instead of a stream of red lines it gets one plain line saying how to turn it on.
+local STUDIO_SAVE = "Studio isn't allowed to save yet (normal; the live game saves). To save in Studio too: Home tab → Game Settings → Security → turn on Enable Studio Access to API Services → Save."
+local studioHintShown = false
+
+local function isStudioSaveNoise(message: string): boolean
+	return string.find(message, "StudioAccessToApisNotAllowed", 1, true) ~= nil
+		or string.find(message, "Studio access to APIs is not allowed", 1, true) ~= nil
+		or string.find(message, "API access is not enabled", 1, true) ~= nil
+		or (string.find(message, "DataStore", 1, true) ~= nil and string.find(message, "Studio", 1, true) ~= nil)
+end
+
 function ErrorNotice.add(message: string)
 	if not allowed() then
 		return
+	end
+	if isStudioSaveNoise(message) then
+		if studioHintShown then
+			return
+		end
+		studioHintShown = true
+		message = STUDIO_SAVE
 	end
 	local first = string.sub((string.split(message, "\n"))[1] or message, 1, 220)
 	if lines[#lines] == first then

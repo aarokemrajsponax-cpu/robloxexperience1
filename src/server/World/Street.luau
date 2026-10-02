@@ -21,7 +21,7 @@ local function streetLamp(parent: Instance, x: number, z: number)
 	local cage = Kit.part(m, "Lantern", Vector3.new(1.3, 1.9, 1.3), CFrame.new(base + Vector3.new(0, 13.2, 2)), L.glassWarm)
 	Kit.part(m, "Cap", Vector3.new(1.6, 0.35, 1.6), CFrame.new(base + Vector3.new(0, 14.3, 2)), L.blackLacquer)
 	local glow = Kit.part(m, "Glow", Vector3.new(0.6, 1.1, 0.6), CFrame.new(base + Vector3.new(0, 13.2, 2)), { color = Color3.fromRGB(255, 200, 130), material = Enum.Material.Neon }, { collide = false, shadow = false })
-	Kit.pointLight(glow, 2.2, 26, Color3.fromRGB(255, 190, 120), true)
+	Kit.pointLight(glow, 3, 40, Color3.fromRGB(255, 190, 120), true)
 	cage.CanCollide = false
 end
 

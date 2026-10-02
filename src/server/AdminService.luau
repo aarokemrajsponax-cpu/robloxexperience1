@@ -107,7 +107,8 @@ local function applyGiants(on: boolean)
 	for _, player in Players:GetPlayers() do
 		local character = player.Character
 		if character and not AdminService.isSeated(player) then
-			scale(character, if on then cfg().giantsScale else 1)
+			local base = Config.data.Movement.guestScale
+			scale(character, if on then base * cfg().giantsScale else base)
 		end
 	end
 end
@@ -726,7 +727,7 @@ function AdminService.start()
 		player.CharacterAdded:Connect(function(character)
 			if AdminService.active("giants") then
 				task.wait(1)
-				scale(character, cfg().giantsScale)
+				scale(character, Config.data.Movement.guestScale * cfg().giantsScale)
 			end
 		end)
 	end
