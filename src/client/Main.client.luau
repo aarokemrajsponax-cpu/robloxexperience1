@@ -68,6 +68,7 @@ Theme.onClick(Sound.ui)
 Theme.onHover(Sound.hover)
 Root.onDip(Sound.dip)
 Sound.preload()
+Theme.preloadFonts()
 
 Closet.start()
 pcall(function()
@@ -439,7 +440,7 @@ if RunService:IsStudio() then
 		-- For the owner, in Studio: say so plainly when the music hasn't been brought in yet.
 		task.delay(6, function()
 			if not Sound.hasMusic() then
-				Toast.show("No music yet", "Import the four files in assets/audio (Asset Manager → Bulk Import), then drag them into SoundService. README: four uploads.", 12)
+				Toast.show("No music", "The playlists in Config.Assets.Playlists are empty and no track is set.", 12)
 			end
 		end)
 		-- Out of the way while sorting.

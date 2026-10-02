@@ -9,6 +9,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
+local Brand = require(ReplicatedStorage.Shared.Brand)
 local Catalogue = require(ReplicatedStorage.Shared.Catalogue)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Deal = require(ReplicatedStorage.Shared.Deal)
@@ -223,7 +224,7 @@ local function standInRig(model: Model): Model?
 		local label = Instance.new("TextLabel")
 		label.BackgroundTransparency = 1
 		label.Size = UDim2.fromScale(1, 1)
-		label.Font = Enum.Font.GothamMedium
+		label.FontFace = Brand.Fonts.bodyMedium
 		label.TextScaled = true
 		label.TextColor3 = Color3.fromRGB(198, 160, 82)
 		label.TextTransparency = 0.55

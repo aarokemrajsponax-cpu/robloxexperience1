@@ -12,6 +12,7 @@ Usage: python3 tools/ui/render.py <snapshot.json> [out.png] [--scale 1]
 
 import json
 import math
+import os
 import sys
 
 import numpy as np
@@ -29,15 +30,54 @@ SERIF = "/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf"
 _fonts = {}
 TOPBAR = 58  # Roblox's top bar inset, for ScreenGuis that don't ignore it
 
+# The house's own faces (tools/ui/get_fonts.sh fetches them from Google Fonts), by the Creator
+# Store id the game loads them from. Without them the previews fall back to DejaVu.
+FONT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fonts")
+WEIGHTS = {"Thin": 100, "ExtraLight": 200, "Light": 300, "Regular": 400, "Medium": 500, "SemiBold": 600, "Bold": 700, "ExtraBold": 800, "Heavy": 900}
+POPPINS = {300: "Poppins-Light.ttf", 400: "Poppins-Regular.ttf", 500: "Poppins-Medium.ttf", 600: "Poppins-SemiBold.ttf", 700: "Poppins-SemiBold.ttf"}
 
-def font(weight, size, family=""):
-    path = SERIF if ("Merriweather" in family or "Garamond" in family) else FONT_FILES.get(weight, FONT_FILES["Regular"])
-    # DejaVu runs wide next to Gotham: shrink a touch so widths match better.
-    px = max(4, int(round(size * 0.88)))
-    key = (path, px)
-    if key not in _fonts:
-        _fonts[key] = ImageFont.truetype(path, px)
-    return _fonts[key]
+
+def house_font(family, weight, style, px):
+    w = WEIGHTS.get(weight, 400)
+    if "12187374765" in family:  # Playfair Display
+        name = "PlayfairDisplay-Italic[wght].ttf" if style == "Italic" else "PlayfairDisplay[wght].ttf"
+        path = os.path.join(FONT_DIR, name)
+        if os.path.exists(path):
+            f = ImageFont.truetype(path, px)
+            try:
+                f.set_variation_by_axes([max(400, min(900, w))])
+            except Exception:
+                pass
+            return f
+    if "12187366657" in family:  # Lora
+        path = os.path.join(FONT_DIR, "Lora[wght].ttf")
+        if os.path.exists(path):
+            f = ImageFont.truetype(path, px)
+            try:
+                f.set_variation_by_axes([max(400, min(700, w))])
+            except Exception:
+                pass
+            return f
+    if "11702779409" in family:  # Poppins
+        nearest = min(POPPINS, key=lambda k: abs(k - w))
+        path = os.path.join(FONT_DIR, POPPINS[nearest])
+        if os.path.exists(path):
+            return ImageFont.truetype(path, px)
+    return None
+
+
+def font(weight, size, family="", style="Normal"):
+    px = max(4, int(round(size)))
+    key = (family, weight, style, px)
+    if key in _fonts:
+        return _fonts[key]
+    f = house_font(family, weight, style, px)
+    if f is None:
+        path = SERIF if ("Merriweather" in family or "Garamond" in family or "12187365769" in family) else FONT_FILES.get(weight, FONT_FILES["Regular"])
+        # DejaVu runs wide next to the house faces: shrink a touch so widths match better.
+        f = ImageFont.truetype(path, max(4, int(round(size * 0.88))))
+    _fonts[key] = f
+    return f
 
 
 def kids_of(node, cls):
@@ -65,7 +105,7 @@ def fitted_size(n, width, height):
     lo = cons["minText"] if cons else 1
     size = hi
     while size > lo:
-        f = font(n.get("weight", "Regular"), size, n.get("family", ""))
+        f = font(n.get("weight", "Regular"), size, n.get("family", ""), n.get("style", "Normal"))
         if f.getlength(n.get("text", "")) <= width and size * 1.2 <= height + 1:
             break
         size -= 0.5
@@ -74,7 +114,7 @@ def fitted_size(n, width, height):
 
 def text_block(n, width):
     """Lines and height of a label's text when wrapped to `width`."""
-    f = font(n.get("weight", "Regular"), n.get("textSize", 14), n.get("family", ""))
+    f = font(n.get("weight", "Regular"), n.get("textSize", 14), n.get("family", ""), n.get("style", "Normal"))
     text = n.get("text", "")
     lines = []
     for para in text.split("\n"):
@@ -320,7 +360,7 @@ def draw_node(canvas, node, alpha_mul, k, clip=None):
             node = dict(node)
             node["textSize"] = fitted_size(node, avail_w, avail_h)
         lines, th, f0 = text_block(node, avail_w)
-        f = font(node.get("weight", "Regular"), node.get("textSize", 14) * ts * k, node.get("family", ""))
+        f = font(node.get("weight", "Regular"), node.get("textSize", 14) * ts * k, node.get("family", ""), node.get("style", "Normal"))
         line_h = node.get("textSize", 14) * 1.2 * ts * k
         X, W = X + pl * ts * k, W - (pl + pr) * ts * k
         Y, H = Y + pt * ts * k, H - (pt + pb) * ts * k

@@ -1018,6 +1018,7 @@ local function snapshot(name: string)
 				n.scaled = inst.TextScaled
 				local ff = get(inst, "FontFace")
 				n.weight = if ff then ff.Weight.Name else "Regular"
+				n.style = if ff then ff.Style.Name else "Normal"
 				n.family = if ff then ff.Family else ""
 			end
 		elseif inst:IsA("ScreenGui") then
@@ -1345,7 +1346,31 @@ check("every piece is drawn, not a placeholder", (function()
 	end
 	return true
 end)())
-check("and named", textOnScreen(deal[1].name) ~= nil and textOnScreen(deal[8].name) ~= nil)
+do
+	-- Names show on a small tag when you point at a piece (or hold it, or choose it on a pad).
+	local quiet
+	for _, p in deal do
+		local card = Sort.card(p.uid)
+		if not card.Selected.Visible then
+			quiet = p
+			break
+		end
+	end
+	check("a piece's name stays out of the way until you point at it", textOnScreen(quiet.name) == nil)
+	signalOf(Sort.card(quiet.uid), "MouseEnter"):Fire()
+	check("point at a piece and its name shows", textOnScreen(quiet.name) ~= nil)
+	signalOf(Sort.card(quiet.uid), "MouseLeave"):Fire()
+	check("and goes again when you look away", textOnScreen(quiet.name) == nil)
+	local chosen
+	for _, p in deal do
+		if Sort.card(p.uid).Selected.Visible then
+			chosen = p
+		end
+	end
+	check("with a gamepad, the chosen piece shows its name", chosen ~= nil and textOnScreen(chosen.name) ~= nil)
+end
+check("the header counts what's left on the cloth", textOnScreen("8 pieces left") ~= nil)
+check("and shows the score and the combo as figures", sortGui.Root.Header.Stat_SCORE.Visible and sortGui.Root.Header.Stat_COMBO.Visible and sortGui.Root.Header.Stat_ROUND.Value.Text == "I", sortGui.Root.Header.Stat_ROUND.Value.Text)
 check("a gilded piece has a glow about it", Sort.card(2):FindFirstChild("Glow") ~= nil and Sort.card(1):FindFirstChild("Glow") == nil)
 check("the cases closed this round say so", (function()
 	local closed = 0
@@ -1382,12 +1407,40 @@ check("no errors rendering the deal", #errors == 0, errors[1])
 check("the first deal says what to do", textOnScreen("Put every piece in the case where it belongs") ~= nil)
 check("and how, for the controls in your hands", textOnScreen("A picks up") ~= nil)
 snapshot("sort-deal")
+if MODE == "full" then
+	-- On a phone held upright: the cases in two rows, the figures clear of the keys.
+	camera.ViewportSize = Vector2.new(390, 844)
+	signalOf(camera, "prop:ViewportSize"):Fire()
+	advance(0.1)
+	local inside = true
+	local tray = sortGui.Root.Tray
+	for _, card in sortGui.Root.Pieces:GetChildren() do
+		local c = Sort.centre(card)
+		if c.X < tray.Position.X.Offset or c.X > tray.Position.X.Offset + tray.Size.X.Offset or c.Y < tray.Position.Y.Offset or c.Y > tray.Position.Y.Offset + tray.Size.Y.Offset then
+			inside = false
+		end
+	end
+	check("on a phone, every piece still sits on the cloth", inside)
+	snapshot("sort-phone")
+	camera.ViewportSize = Vector2.new(1280, 720)
+	signalOf(camera, "prop:ViewportSize"):Fire()
+	advance(0.1)
+end
 
 -- Lift the first piece and file it with the gamepad (A lifts, the D-pad picks a case, A files).
 local liftedBefore = sentOps("Table", "lift")
 check("A lifts a piece", pad(roblox.Enum.KeyCode.ButtonA))
 advance(0.5)
 check("the lift is sent", sentOps("Table", "lift") == liftedBefore + 1)
+check("in the Salon, a line of light runs from the held piece to its case", (function()
+	local lit = 0
+	for _, dot in sortGui.Root.Trail:GetChildren() do
+		if dot.Visible and dot.BackgroundTransparency < 1 then
+			lit += 1
+		end
+	end
+	return lit >= 8
+end)())
 local filedBefore = sentOps("Table", "file")
 check("A files it into the chosen case", pad(roblox.Enum.KeyCode.ButtonA))
 advance(0.5)
@@ -1544,7 +1597,28 @@ do
 	check("without the sheet, the Boutique's chimes aren't sold", not Wardrobe.deliverable(Wardrobe.get("chime_harp")))
 	SoundModule.play("chime", 0.5)
 	local chime = soundNamed("chime")
-	check("without the sheet, a softened built-in stand-in plays", chime ~= nil and chime.SoundId == "rbxasset://sounds/electronicpingshort.wav" and chime:FindFirstChild("Soften") ~= nil)
+	local fromLibrary = false
+	for _, t in assets.LibrarySounds.chime do
+		if chime and chime.SoundId == t.id then
+			fromLibrary = true
+		end
+	end
+	check("without the sheet, a real recording from Roblox's licensed library plays", fromLibrary and (chime:FindFirstChild("Soften") == nil or chime.Soften.Enabled == false), chime and chime.SoundId)
+	local library = assets.LibrarySounds
+	assets.LibrarySounds = {}
+	SoundModule.play("chime", 0.5)
+	check("and without that, a softened built-in stand-in", chime.SoundId == "rbxasset://sounds/electronicpingshort.wav" and chime:FindFirstChild("Soften") ~= nil and chime.Soften.Enabled == true)
+	assets.LibrarySounds = library
+	local everyCue = true
+	for _, name in { "chime", "pickup", "place", "drop", "deal", "slide", "hover", "wrong", "streakLost", "combo", "shimmer", "round", "complete", "low", "enter", "leave", "chair", "click", "tick", "reward" } do
+		local takes = library[name]
+		if not takes or #takes == 0 then
+			everyCue = false
+		end
+	end
+	check("the library covers every sound the table makes", everyCue)
+	assets.LibrarySounds = {}
+	SoundModule.play("chime", 0.5)
 
 	assets.SoundSheet = "rbxassetid://4242"
 	SoundModule.play("pickup", 0.4)
@@ -1591,7 +1665,45 @@ do
 	advance(3)
 	check("music: and a room's own track still wins", salonTrack.SoundId == "rbxassetid://101" and salonTrack.Volume > 0 and velvet.Volume == 0)
 	assets.Tracks.table = ""
-	-- Or found by name: the uploaded track dropped into SoundService, no id copied anywhere.
+	-- With nothing set, the house's playlist: real recordings from Roblox's licensed library.
+	local tableList = assets.Playlists.table
+	local function songIndex(id)
+		for i, song in tableList do
+			if song.id == id then
+				return i
+			end
+		end
+		return nil
+	end
+	SoundModule.enterZone("velvet")
+	advance(3)
+	velvet = loopNamed("Music_velvet")
+	local at = velvet and songIndex(velvet.SoundId)
+	check("music: with nothing to upload, a room plays the house's playlist", at ~= nil and velvet.Looped == false and velvet.Volume > 0, velvet and velvet.SoundId)
+	-- The room's level, before each song's own gain.
+	local roomLevel = velvet.Volume / tableList[at].gain
+	signalOf(velvet, "Ended"):Fire()
+	advance(Config.data.Music.gap + 0.2)
+	local nextAt = songIndex(velvet.SoundId)
+	check("music: when a song ends, the next in the list follows at its own level", nextAt == at % #tableList + 1 and math.abs(velvet.Volume - roomLevel * tableList[nextAt].gain) < 1e-6, velvet.SoundId)
+	local wellFormed = true
+	for _, track in { "lounge", "table", "ballroom" } do
+		local list = assets.Playlists[track]
+		if #list < 5 then
+			wellFormed = false
+		end
+		for _, song in list do
+			if not string.match(song.id, "^rbxassetid://%d+$") or song.gain < 0.5 or song.gain > 2 then
+				wellFormed = false
+			end
+		end
+	end
+	check("music: three playlists of at least five songs, each with its level", wellFormed)
+	check("and the house knows it has music without a single upload", SoundModule.hasMusic())
+	-- Or found by name, if a playlist is emptied: a track dropped into SoundService, no id copied.
+	assets.Playlists.table = {}
+	SoundModule.enterZone("salon")
+	advance(3)
 	local uploaded = Instance.new("Sound")
 	uploaded.Name = "maison-table"
 	uploaded.SoundId = "rbxassetid://888"
@@ -1603,10 +1715,12 @@ do
 	check("music: a track dropped into SoundService by name plays, no id needed", found ~= nil and found.SoundId == "rbxassetid://888" and found.Volume > 0, found and found.SoundId)
 	check("and the house knows it has music", SoundModule.hasMusic())
 	uploaded:Destroy()
+	assets.Playlists.table = tableList
 	advance(6)
 	SoundModule.enterZone("salon")
 	advance(3)
 	assets.SoundSheet = ""
+	assets.LibrarySounds = library
 	check("no errors in the sound bank", #errors == 0, errors[1])
 end
 

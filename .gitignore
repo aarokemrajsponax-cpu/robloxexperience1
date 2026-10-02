@@ -9,3 +9,6 @@ sourcemap.json
 
 # Editor / OS
 .DS_Store
+
+# Preview fonts (tools/ui/get_fonts.sh)
+tools/ui/fonts/

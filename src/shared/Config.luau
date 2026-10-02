@@ -266,8 +266,9 @@ local defaults = {
 
 	-- Music (§14). Every space has its own track (Assets.Music), crossfading as you move.
 	Music = {
-		level = 0.5, -- a track's volume before the guest's own Music level
+		level = 0.6, -- a track's volume before the guest's own Music level
 		crossfade = 2.5, -- seconds
+		gap = 1.5, -- seconds of quiet between one song in a playlist and the next
 		intensityBase = 0.25, -- the run builds: intensity = min(1, base + round × perRound)
 		intensityPerRound = 0.12,
 		bandBassAt = 10, -- the Ballroom band: the whole band above this many lamps, bass and brushes down to it
@@ -482,11 +483,74 @@ local defaults = {
 			-- Chimes sold in the Boutique. A chime is sold once its sound is set here or the sheet is.
 			chimes = { harp = "", musicBox = "", celesta = "", glass = "" },
 		},
-		-- The house's three tracks (assets/audio). A space with no track of its own below plays one.
+		-- Until the sheet is set, the table plays real recordings from Roblox's licensed sound library
+		-- (Pro Sound Effects, and Roblox's own UI set; free in any experience), each take with the
+		-- pitch and level that suit it (levels measured to an even peak). Roblox's built-in sounds
+		-- are the last resort.
+		LibrarySounds = {
+			chime = { { id = "rbxassetid://9119802003", pitch = 1, volume = 4.00 }, { id = "rbxassetid://9119802009", pitch = 1, volume = 4.00 } }, -- the correct chime, climbing a step with each one in a streak
+			combo = { { id = "rbxassetid://9116394876", pitch = 1, volume = 4.00 } }, -- a streak called out
+			shimmer = { { id = "rbxassetid://9116394876", pitch = 1.1, volume = 4.00 }, { id = "rbxassetid://9116395089", pitch = 1, volume = 4.00 } }, -- a gilded piece filed
+			round = { { id = "rbxassetid://9116394756", pitch = 1, volume = 4.00 } }, -- a round begins
+			complete = { { id = "rbxassetid://9116395089", pitch = 0.9, volume = 4.00 } }, -- a run banked
+			reward = { { id = "rbxassetid://127645268874265", pitch = 1, volume = 0.56 } },
+			pickup = { { id = "rbxassetid://9114072437", pitch = 1.3, volume = 3.24 }, { id = "rbxassetid://9114072359", pitch = 1.4, volume = 0.75 } }, -- a piece lifted off the felt
+			place = { { id = "rbxassetid://9114072359", pitch = 1, volume = 0.75 }, { id = "rbxassetid://9114072437", pitch = 0.95, volume = 3.24 } }, -- a piece settling into its case
+			drop = { { id = "rbxassetid://9114072359", pitch = 0.9, volume = 0.75 } }, -- a piece set back down
+			deal = { { id = "rbxassetid://9114072437", pitch = 1.5, volume = 3.24 }, { id = "rbxassetid://9114072359", pitch = 1.6, volume = 0.75 } }, -- the pieces being set down
+			slide = { { id = "rbxassetid://15675012262", pitch = 1.2, volume = 0.99 } },
+			hover = { { id = "rbxassetid://15675059323", pitch = 1.4, volume = 0.99 } }, -- a held piece over a case
+			wrong = { { id = "rbxassetid://9125654847", pitch = 1, volume = 1.00 }, { id = "rbxassetid://9125654847", pitch = 0.92, volume = 1.00 } }, -- a dull knock on the case
+			streakLost = { { id = "rbxassetid://9126267420", pitch = 1, volume = 0.76 } },
+			low = { { id = "rbxassetid://9119982044", pitch = 1, volume = 1.57 } }, -- the clock's last ten seconds
+			enter = { { id = "rbxassetid://9116248762", pitch = 1, volume = 3.67 } }, -- sitting down on leather
+			chair = { { id = "rbxassetid://9116248762", pitch = 1.05, volume = 3.67 } },
+			leave = { { id = "rbxassetid://9120806410", pitch = 1, volume = 4.00 } },
+			click = { { id = "rbxassetid://15675032796", pitch = 1, volume = 1.00 } },
+			tick = { { id = "rbxassetid://15675032796", pitch = 1.35, volume = 1.00 } },
+		},
+		-- The house's music: three playlists of real recordings from Roblox's licensed library (APM
+		-- Music, uploaded by APMOfficial, free in any experience), so the house has music the moment
+		-- it opens, with nothing to upload. Each list plays through in a shuffled order, a breath
+		-- between songs; `gain` evens out their loudness (measured, to about -19 dBFS).
+		--   lounge: the Foyer's grand piano (solo piano), the Suite, the Vault, the Terrace
+		--   table: the four sorting rooms and the Library (a cool-jazz trio)
+		--   ballroom: the band (waltzes)
+		Playlists = {
+			lounge = {
+				{ id = "rbxassetid://106960476637326", gain = 1.22 }, -- Late Night Classics · Alan Hawkshaw (Cocktail Time (BRS4)), 3:18
+				{ id = "rbxassetid://72188165880204", gain = 1.41 }, -- After Hours · Alan Hawkshaw (Cocktail Time (BRS4)), 2:10
+				{ id = "rbxassetid://88841226226927", gain = 1.38 }, -- Rhapsody · Alan Hawkshaw (Cocktail Time (BRS4)), 2:07
+				{ id = "rbxassetid://100737560354437", gain = 1.50 }, -- Piano Music · Alan Hawkshaw (Cocktail Time (BRS4)), 4:42
+				{ id = "rbxassetid://102141489095839", gain = 2.00 }, -- Quiet Impromptu · Alan Hawkshaw (Cocktail Time (BRS4)), 2:22
+				{ id = "rbxassetid://76320727965632", gain = 1.40 }, -- Blues Impromptu · Alan Hawkshaw (Cocktail Time (BRS4)), 3:35
+				{ id = "rbxassetid://1842182242", gain = 1.55 }, -- Piano Bar Rendezvous · KPM - FTV Media (Piano Solos), 1:46
+			},
+			table = {
+				{ id = "rbxassetid://121473037535720", gain = 0.90 }, -- After Hours · Paul Reeves (Intimate Jazz Trio), 2:34
+				{ id = "rbxassetid://134449348223060", gain = 0.89 }, -- Dawn Light · Paul Reeves (Intimate Jazz Trio), 2:49
+				{ id = "rbxassetid://127701743196315", gain = 1.06 }, -- Lonely Streets · Paul Reeves (Intimate Jazz Trio), 2:45
+				{ id = "rbxassetid://113393753471077", gain = 0.92 }, -- Afternoon Stroll · Paul Reeves (Intimate Jazz Trio), 2:16
+				{ id = "rbxassetid://138206443676469", gain = 0.84 }, -- Breezing On By · Paul Reeves (Intimate Jazz Trio), 2:00
+				{ id = "rbxassetid://97047565303583", gain = 0.84 }, -- Metropolitan Motion · Paul Reeves (Intimate Jazz Trio), 2:23
+				{ id = "rbxassetid://127688638898929", gain = 0.74 }, -- Golden Hour · Paul Reeves (Intimate Jazz Trio), 3:06
+			},
+			ballroom = {
+				{ id = "rbxassetid://1839551469", gain = 0.87 }, -- Vienna Waltz · Johann Strauss I (1800'S SALON PIANO), 2:04
+				{ id = "rbxassetid://1845480542", gain = 0.72 }, -- Ballroom Waltz · Isy Geiger (ALPINE HOLIDAY), 3:02
+				{ id = "rbxassetid://9047452775", gain = 1.05 }, -- Ballroom Waltz · Marvin McMahon (Wonderland), 2:07
+				{ id = "rbxassetid://1839551405", gain = 0.94 }, -- Beauty Waltz · Peter Tchaikovsky (1800'S SALON PIANO), 1:35
+				{ id = "rbxassetid://1838535855", gain = 0.98 }, -- Waltz Of The Flowers · Peter Tchaikovsky (POPULAR CLASSICS), 4:11
+				{ id = "rbxassetid://1842365951", gain = 1.00 }, -- Skater's Waltz · KPM 1000 LP Series (FUN TIME), 4:29
+			},
+		},
+		-- One track of your own in place of a playlist ("rbxassetid://<id>"), e.g. the house's own
+		-- composed loops in assets/audio. "" plays the playlist. (A track named maison-lounge,
+		-- maison-table or maison-ballroom in SoundService is used if a playlist is emptied.)
 		Tracks = {
-			lounge = "", -- maison-lounge.ogg: the Foyer's piano, the Suite, the Vault, the Terrace
-			table = "", -- maison-table.ogg: the four sorting rooms and the Library
-			ballroom = "", -- maison-ballroom.ogg: the band
+			lounge = "",
+			table = "",
+			ballroom = "",
 		},
 		Music = { street = "", foyer = "", salon = "", velvet = "", obsidian = "", midnight = "", club = "", library = "", ballroom = "", boutique = "", vault = "", suite = "", terrace = "" },
 		-- A fuller layer for each room that rises as the run builds (optional).

@@ -23,24 +23,36 @@ Brand.Colours = {
 	glass = Color3.fromRGB(24, 28, 34),
 }
 
--- The house face is Gotham: clean, wide and quiet, set in letter-spaced capitals for labels and
--- light weights for large numbers. The Lettering setting can swap the display face.
-local GOTHAM = Font.fromEnum(Enum.Font.Gotham).Family
+-- The house type, as on the web edition: a high-contrast Didone serif for names, headings and
+-- numbers (Playfair Display), and a clean geometric sans for everything else (Poppins), set in
+-- letter-spaced capitals for labels. Both are Roblox's own fonts from the Creator Store, free in
+-- any experience; they load as the guest arrives (Theme.preloadFonts). The Lettering setting can
+-- swap the display face.
+local PLAYFAIR = "rbxassetid://12187374765"
+local POPPINS = "rbxassetid://11702779409"
+local BASKERVILLE = "rbxassetid://12187365769"
+-- Playfair's figures are old-style (its 0 reads as an o); scores and clocks are set in Lora,
+-- whose figures stand at full height like the web edition's.
+local LORA = "rbxassetid://12187366657"
+
+Brand.FontAssets = { display = PLAYFAIR, ui = POPPINS, book = BASKERVILLE, figures = LORA }
 
 Brand.Fonts = {
-	display = Font.new(GOTHAM, Enum.FontWeight.Regular),
-	body = Font.new(GOTHAM, Enum.FontWeight.Regular),
-	bodyMedium = Font.new(GOTHAM, Enum.FontWeight.Medium),
-	bodyBold = Font.new(GOTHAM, Enum.FontWeight.Bold),
-	light = Font.new(GOTHAM, Enum.FontWeight.Light),
-	-- An engraved serif, for the few things that are engraved (a signet, a coin).
-	serif = Font.fromEnum(Enum.Font.Merriweather),
+	display = Font.new(PLAYFAIR, Enum.FontWeight.Regular),
+	displayItalic = Font.new(PLAYFAIR, Enum.FontWeight.Regular, Enum.FontStyle.Italic),
+	figures = Font.new(LORA, Enum.FontWeight.Regular),
+	body = Font.new(POPPINS, Enum.FontWeight.Regular),
+	bodyMedium = Font.new(POPPINS, Enum.FontWeight.Medium),
+	bodyBold = Font.new(POPPINS, Enum.FontWeight.SemiBold),
+	light = Font.new(POPPINS, Enum.FontWeight.Light),
+	-- For the few things that are engraved (a signet, a coin).
+	serif = Font.new(PLAYFAIR, Enum.FontWeight.Bold),
 }
 
 Brand.Lettering = {
 	Editorial = Brand.Fonts.display,
-	Book = Font.fromEnum(Enum.Font.Garamond),
-	Modern = Font.new(GOTHAM, Enum.FontWeight.Light),
+	Book = Font.new(BASKERVILLE, Enum.FontWeight.Regular),
+	Modern = Font.new(POPPINS, Enum.FontWeight.Light),
 	Ledger = Font.fromEnum(Enum.Font.Merriweather),
 } :: { [string]: Font }
 

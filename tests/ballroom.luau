@@ -446,6 +446,14 @@ local globals = {
 	Enum = Enum,
 	UDim = roblox.UDim,
 	UDim2 = roblox.UDim2,
+	Font = {
+		new = roblox.Font.new,
+		fromName = roblox.Font.fromName,
+		fromEnum = function(e)
+			local ok, f = pcall(roblox.Font.fromEnum, e)
+			return if ok then f else roblox.Font.new("rbxasset://fonts/families/BuilderSans.json")
+		end,
+	},
 	Random = Random,
 	TweenInfo = {
 		new = function(t)

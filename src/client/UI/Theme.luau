@@ -3,6 +3,7 @@
 -- a clean sans for everything else, brass keys that press in. Text follows the Text size
 -- and Lettering settings live.
 
+local ContentProvider = game:GetService("ContentProvider")
 local HapticService = game:GetService("HapticService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -27,7 +28,7 @@ Theme.colours = {
 	base = C.room,
 }
 
-type TextKind = "display" | "body" | "bodyMedium" | "bodyBold" | "caps"
+type TextKind = "display" | "italic" | "body" | "light" | "bodyMedium" | "bodyBold" | "caps"
 type Registered = { label: TextLabel | TextButton, size: number, kind: TextKind }
 
 local registry: { Registered } = {}
@@ -47,6 +48,10 @@ end
 local function fontFor(kind: TextKind): Font
 	if kind == "display" then
 		return displayFont
+	elseif kind == "italic" then
+		return Brand.Fonts.displayItalic
+	elseif kind == "light" then
+		return Brand.Fonts.light
 	elseif kind == "bodyMedium" or kind == "caps" then
 		return Brand.Fonts.bodyMedium
 	elseif kind == "bodyBold" then
@@ -93,6 +98,26 @@ State.watch("houseStyle", function(value)
 		Theme.colours.base = style.base
 	end
 end)
+
+-- The house fonts come from the Creator Store: fetch them as the guest arrives so the first
+-- panel is already set in them.
+function Theme.preloadFonts()
+	local labels = {}
+	for _, font in Brand.Fonts do
+		local l = Instance.new("TextLabel")
+		l.FontFace = font :: Font
+		l.Text = "Maison Noir 0123456789"
+		table.insert(labels, l)
+	end
+	task.spawn(function()
+		pcall(function()
+			ContentProvider:PreloadAsync(labels)
+		end)
+		for _, l in labels do
+			l:Destroy()
+		end
+	end)
+end
 
 -- Spaces capitals for small labels.
 function Theme.track(text: string): string

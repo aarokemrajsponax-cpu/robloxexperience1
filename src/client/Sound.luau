@@ -66,7 +66,9 @@ end
 --   1. a sound set for that name in Config.Assets.Sounds (yours wins);
 --   2. the house's sound sheet: one uploaded file holding every table sound, each in several
 --      takes (Config.Assets.SoundSheet; where each take sits is in Shared.SoundSheet);
---   3. Roblox's own built-in sounds, softened, until the sheet is set.
+--   3. real recordings from Roblox's licensed sound library (Config.Assets.LibrarySounds), free
+--      in any experience, so the table sounds right with nothing uploaded;
+--   4. Roblox's own built-in sounds, softened, last of all.
 -- Every play picks a different take from last time and drifts a little in pitch and volume, so
 -- the same action never sounds exactly the same twice.
 local PING = "rbxasset://sounds/electronicpingshort.wav"
@@ -171,6 +173,20 @@ local function source(name: string): Source?
 		lastTake[name] = pick
 		return { id = sheet, region = takes[pick], soften = false, pitch = 1, volume = 1 }
 	end
+	local library = (Config.data.Assets :: any).LibrarySounds
+	local lib = if type(library) == "table" then library[name] else nil
+	if type(lib) == "table" and #lib > 0 then
+		local n = #lib
+		local pick = math.random(1, n)
+		if n > 1 and pick == lastTake[name] then
+			pick = pick % n + 1
+		end
+		lastTake[name] = pick
+		local t = lib[pick]
+		if type(t) == "table" and type(t.id) == "string" and t.id ~= "" then
+			return { id = t.id, region = nil, soften = false, pitch = tonumber(t.pitch) or 1, volume = tonumber(t.volume) or 1 }
+		end
+	end
 	local fallback = BUILT_IN[name]
 	if fallback then
 		return { id = fallback.id, region = nil, soften = true, pitch = fallback.pitch, volume = fallback.volume }
@@ -254,16 +270,35 @@ function Sound.play(name: string, volume: number?, pitch: number?)
 	s:Play()
 end
 
--- Loads the sheet as the guest arrives, so the first pickup plays at once.
+-- Loads the sheet (or, until it's set, the library's recordings) as the guest arrives, so the
+-- first pickup plays at once.
 function Sound.preload()
 	local id = sheetId()
-	if id == "" then
+	local ids: { string } = {}
+	if id ~= "" then
+		table.insert(ids, id)
+	else
+		local library = (Config.data.Assets :: any).LibrarySounds
+		if type(library) == "table" then
+			for _, takes in library do
+				for _, t in takes do
+					if type(t) == "table" and type(t.id) == "string" and t.id ~= "" and not table.find(ids, t.id) then
+						table.insert(ids, t.id)
+					end
+				end
+			end
+		end
+	end
+	if #ids == 0 then
 		return
 	end
-	local s = take("preload", id)
+	local sounds = {}
+	for i, sid in ids do
+		table.insert(sounds, take("preload" .. i, sid))
+	end
 	task.spawn(function()
 		pcall(function()
-			ContentProvider:PreloadAsync({ s })
+			ContentProvider:PreloadAsync(sounds)
 		end)
 	end)
 end
@@ -333,32 +368,79 @@ local REVERB: { [string]: Enum.ReverbType } = {
 	none = Enum.ReverbType.Room,
 }
 
--- Music per space, crossfading as you move (ids in Config.Assets.Music). The Foyer's music comes
--- from the piano itself, so it carries, muffled, into the street and up the stair. A room's
--- music fills out as the run builds; the Ballroom band thins as lamps go out.
+-- Music per space, crossfading as you move. The Foyer's music comes from the piano itself, so it
+-- carries, muffled, into the street and up the stair. A room's music fills out as the run builds;
+-- the Ballroom band thins as lamps go out. Each space plays a playlist (Config.Assets.Playlists)
+-- or a single track set for it.
+type Song = { id: string, gain: number }
+type Deck = { songs: { Song }, at: number, name: string }
+
 local mix = { zone = "", intensity = nil :: number?, lit = nil :: number?, soiree = false }
 local loops: { [string]: Sound? } = {}
+local decks: { [string]: Deck } = {}
 local targets: { [string]: number } = {}
 
-local function loop(key: string, id: string, into: SoundGroup, parent: Instance?): Sound?
-	if id == "" then
+local function one(id: string): { Song }
+	return if id == "" then {} else { { id = id, gain = 1 } }
+end
+
+local function deckName(songs: { Song }): string
+	local ids = {}
+	for _, song in songs do
+		table.insert(ids, song.id)
+	end
+	return table.concat(ids, ",")
+end
+
+local function gainOf(key: string): number
+	local d = decks[key]
+	return if d then d.songs[d.at].gain else 1
+end
+
+-- The next song in a playlist, after a breath of quiet.
+local function advance(key: string)
+	local s, d = loops[key], decks[key]
+	if not s or not d or #d.songs < 2 then
+		return
+	end
+	d.at = d.at % #d.songs + 1
+	s.SoundId = d.songs[d.at].id
+	s.TimePosition = 0
+	s.Volume = (targets[key] or 0) * gainOf(key)
+	task.delay(Config.data.Music.gap, function()
+		if loops[key] == s and (targets[key] or 0) > 0 and not s.IsPlaying then
+			s:Play()
+		end
+	end)
+end
+
+local function loop(key: string, songs: { Song }, into: SoundGroup, parent: Instance?): Sound?
+	if #songs == 0 then
 		return nil
 	end
+	local name = deckName(songs)
 	local s = loops[key]
-	if s and s.SoundId ~= id then
+	if s and (decks[key] == nil or decks[key].name ~= name) then
 		s:Destroy()
 		loops[key] = nil
+		decks[key] = nil
 		s = nil
 	end
 	if not s then
+		-- Every guest starts somewhere different in the list.
+		local deck = { songs = songs, at = math.random(1, #songs), name = name }
 		local ns = Instance.new("Sound")
 		ns.Name = key
-		ns.SoundId = id
-		ns.Looped = true
+		ns.SoundId = songs[deck.at].id
+		ns.Looped = #songs == 1
 		ns.Volume = 0
 		ns.SoundGroup = into
 		ns.Parent = parent or SoundService
+		ns.Ended:Connect(function()
+			advance(key)
+		end)
 		loops[key] = ns
+		decks[key] = deck
 		s = ns
 	end
 	return s
@@ -385,23 +467,46 @@ local TRACK_FOR: { [string]: string } = {
 	ballroom = "ballroom",
 }
 
-local function musicFor(zone: string): string
+local function playlist(track: string): { Song }
+	local list = (Config.data.Assets :: any).Playlists
+	local songs = if type(list) == "table" then list[track] else nil
+	local out: { Song } = {}
+	if type(songs) == "table" then
+		for _, song in songs do
+			if type(song) == "table" and type(song.id) == "string" and song.id ~= "" then
+				table.insert(out, { id = song.id, gain = tonumber(song.gain) or 1 })
+			end
+		end
+	end
+	return out
+end
+
+-- In order: the space's own track, a track set for its kind, the playlist, and last a track
+-- dropped into SoundService by name.
+local function musicFor(zone: string): { Song }
 	local own = asset("Music", zone)
 	if own ~= "" then
-		return own
+		return one(own)
 	end
 	local track = TRACK_FOR[zone]
 	if not track then
-		return ""
+		return {}
 	end
 	local set = asset("Tracks", track)
-	return if set ~= "" then set else findUploaded("maison-" .. track)
+	if set ~= "" then
+		return one(set)
+	end
+	local songs = playlist(track)
+	if #songs > 0 then
+		return songs
+	end
+	return one(findUploaded("maison-" .. track))
 end
 
 -- Whether the house has any music to play (for telling the owner, in Studio, when it hasn't).
 function Sound.hasMusic(): boolean
 	for _, track in { "lounge", "table", "ballroom" } do
-		if asset("Tracks", track) ~= "" or findUploaded("maison-" .. track) ~= "" then
+		if asset("Tracks", track) ~= "" or #playlist(track) > 0 or findUploaded("maison-" .. track) ~= "" then
 			return true
 		end
 	end
@@ -435,7 +540,8 @@ local function fadeTo(s: Sound, volume: number)
 			s:Play()
 		end
 	end
-	local t = TweenService:Create(s, TweenInfo.new(Config.data.Music.crossfade), { Volume = volume })
+	-- Each song in a playlist carries its own gain, so they all sit at one level.
+	local t = TweenService:Create(s, TweenInfo.new(Config.data.Music.crossfade), { Volume = volume * gainOf(key) })
 	t:Play()
 	if volume == 0 then
 		t.Completed:Once(function()
@@ -451,8 +557,8 @@ local function remix()
 	local zone = mix.zone
 	local level = c.level
 	local wanted: { [string]: number } = {}
-	local function want(key: string, id: string, volume: number, into: SoundGroup, parent: Instance?)
-		local s = loop(key, id, into, parent)
+	local function want(key: string, songs: { Song }, volume: number, into: SoundGroup, parent: Instance?)
+		local s = loop(key, songs, into, parent)
 		if s then
 			wanted[key] = volume
 		end
@@ -460,9 +566,9 @@ local function remix()
 
 	-- The Foyer: the piano, heard in the room and, muffled, from the spaces around it.
 	local part = pianoPart()
-	local foyerId = musicFor("foyer")
-	if part and foyerId ~= "" then
-		local s = loop("Piano", foyerId, music, part)
+	local foyerSongs = musicFor("foyer")
+	if part and #foyerSongs > 0 then
+		local s = loop("Piano", foyerSongs, music, part)
 		if s then
 			s.RollOffMode = Enum.RollOffMode.InverseTapered
 			s.RollOffMinDistance = 12
@@ -478,7 +584,7 @@ local function remix()
 			wanted.Piano = if PIANO_HEARD[zone] then level * 1.6 else 0
 		end
 	elseif zone == "foyer" then
-		want("Music_foyer", foyerId, level, music)
+		want("Music_foyer", foyerSongs, level, music)
 	end
 
 	-- Every other space: its own track, filling out as the run builds.
@@ -488,7 +594,7 @@ local function remix()
 		local base = if intensity and layer == "" then 0.7 + 0.3 * intensity else 1
 		want("Music_" .. zone, musicFor(zone), level * base, music)
 		if intensity and layer ~= "" then
-			want("Layer_" .. zone, layer, level * intensity, music)
+			want("Layer_" .. zone, one(layer), level * intensity, music)
 		end
 	end
 
@@ -504,7 +610,7 @@ local function remix()
 		end
 		if any then
 			for stem, share in stems do
-				want("Band_" .. stem, asset("Band", stem), level * share, music)
+				want("Band_" .. stem, one(asset("Band", stem)), level * share, music)
 			end
 		else
 			local lit = mix.lit or Config.data.Ballroom.tables
@@ -513,9 +619,9 @@ local function remix()
 	end
 
 	-- Ambience: the space's own, and the season's layer beneath it.
-	want("Ambience_" .. zone, asset("Ambience", zone), 0.5, ambience)
+	want("Ambience_" .. zone, one(asset("Ambience", zone)), 0.5, ambience)
 	local season = tostring(Workspace:GetAttribute("Season") or "")
-	want("Season_" .. season, asset("SeasonAmbience", season), 0.3, ambience)
+	want("Season_" .. season, one(asset("SeasonAmbience", season)), 0.3, ambience)
 
 	for key, s in loops do
 		if s then
@@ -569,6 +675,7 @@ local function watchWorld()
 				if old then
 					old:Destroy()
 					loops.Music_foyer = nil
+					decks["Music_foyer"] = nil
 				end
 				remix()
 				return

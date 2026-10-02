@@ -797,6 +797,7 @@ function TableClient.start()
 	SortScreen.onLift = onLift
 	SortScreen.onFile = file
 	SortScreen.onCancel = TableClient.leave
+	SortScreen.keysWidth = Hud.width
 	SortScreen.start()
 	tableEvent.OnClientEvent:Connect(function(message: any)
 		if type(message) ~= "table" then

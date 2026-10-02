@@ -141,7 +141,7 @@ All in `src/shared/Config.luau` (or live, in Creator Hub → Configs, as `Sectio
 | Badges | `Badges.*` | from Creator Hub → Badges |
 | Circles | `Circles.enabled` | `true` at launch, or `false` for later (§19 #10) |
 | Notification templates | `Notifications.messages.*` | from Creator Hub → Engagement → Notifications |
-| The house's music and sounds | `Assets.SoundSheet`, `Assets.Tracks.*` | upload the four files in `assets/audio` (README, "four uploads") |
+| The house's music and sounds | `Assets.Playlists`, `Assets.LibrarySounds` | nothing: licensed recordings play from the start (README, "Music and sounds"). Optional: upload `assets/audio/maison-sounds.ogg` for the house's own table sounds and the Boutique's chimes |
 | Looks, animations | `Assets.*` | see the README's tables |
 
 **The notifications' Open Cloud key** (never in code):

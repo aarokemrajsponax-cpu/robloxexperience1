@@ -87,6 +87,11 @@ local function box(parent: GuiObject, p: Prim, px: number, area: Area)
 	f.Name = "Shape"
 	f.BorderSizePixel = 0
 	place(f, p, a)
+	-- A line drawn small (a case's mark) stays at least a pixel wide, or it would vanish.
+	local wpx, hpx = p.w * px / 100, p.h * px / 100
+	if wpx < 1 or hpx < 1 then
+		f.Size = UDim2.new(if wpx < 1 then 0 else f.Size.X.Scale, if wpx < 1 then 1 else 0, if hpx < 1 then 0 else f.Size.Y.Scale, if hpx < 1 then 1 else 0)
+	end
 	f.Rotation = p.r or 0
 	if p.fill then
 		fills(f, p.fill, p.g or 90, p.ga)
@@ -104,7 +109,7 @@ local function box(parent: GuiObject, p: Prim, px: number, area: Area)
 		local stroke = Instance.new("UIStroke")
 		stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 		stroke.LineJoinMode = Enum.LineJoinMode.Round
-		stroke.Thickness = math.max(0.6, s.th * px / 100)
+		stroke.Thickness = math.max(1, s.th * px / 100)
 		stroke.Transparency = s.a or 0
 		fills(stroke, s.fill, s.g or 90, nil)
 		stroke.Parent = f

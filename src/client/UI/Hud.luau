@@ -63,6 +63,25 @@ function Hud.start(openSettings: () -> (), leave: () -> ())
 	settingsButton.LayoutOrder = 2
 end
 
+-- How much of the top-right corner the keys take, in screen pixels (the sorting screen keeps its
+-- figures clear of them).
+function Hud.width(): number
+	if not bar.Visible then
+		return 0
+	end
+	local w, n = 0, 0
+	for _, key in bar:GetChildren() do
+		if key:IsA("GuiObject") and key.Visible then
+			w += key.Size.X.Offset
+			n += 1
+		end
+	end
+	if n == 0 then
+		return 0
+	end
+	return (w + (n - 1) * 8 + 12) * Root.scale
+end
+
 -- The owner's "House" key (their controls), after Settings.
 function Hud.setOwnerKey(onPress: () -> ())
 	local key = Theme.key(bar, "House", false, onPress, 100)

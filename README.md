@@ -303,35 +303,54 @@ Every number is in `src/shared/Config.luau`. To change one live, without republi
 in the Creator Dashboard under **Configs**, writing the path with underscores:
 `Rooms_salon_firstDeal = 9`, `Movement_walkSpeed = 14`, `Assets_Music_foyer = rbxassetid://…`.
 
-## The house's own music and sounds (four uploads)
+## Music and sounds (nothing to upload)
 
-The game's music and table sounds are original: composed and synthesised from scratch by
-`tools/audio/compose.py`, so they belong to the game and need no licence. They're in
-`assets/audio/`, ready to upload once each:
+The house has music and table sounds the moment it opens, with nothing to upload: real
+recordings from Roblox's own licensed libraries, free to use in any experience.
 
-| File | What it is | Paste its id into |
+- **Music** (`Assets.Playlists`): three playlists from Roblox's licensed APM Music library.
+  Each plays through in a shuffled order, every guest starting somewhere different, with a
+  breath between songs and each song levelled to the others.
+  - `lounge`: solo piano (Alan Hawkshaw's *Cocktail Time* and more), played from the Foyer's
+    grand piano and heard in the Suite, the Vault and on the Terrace.
+  - `table`: a cool-jazz trio (Paul Reeves' *Intimate Jazz Trio*) in the four sorting rooms and
+    the Library.
+  - `ballroom`: waltzes (Strauss, Tchaikovsky, *Skater's Waltz*).
+
+  Every song is listed in Config with its title and artist. Swap any for another Creator Store
+  track by pasting its id.
+- **Table sounds** (`Assets.LibrarySounds`): recordings from Roblox's licensed Pro Sound Effects
+  library and Roblox's own UI sounds:
+  - a dice-on-felt knock as a piece settles into its case;
+  - a dull wooden knock for a wrong case;
+  - leather as you sit down;
+  - a clean chime that climbs a step with each piece in a streak.
+
+  Each has the pitch and level that suit it.
+
+### Optional: the house's own composed audio (`assets/audio`)
+
+The repo also holds original audio composed for the game by `tools/audio/compose.py`, so it
+belongs to the game and needs no licence:
+
+| File | What it is | Used for |
 | --- | --- | --- |
-| `maison-sounds.ogg` | every table sound (25 sounds, 68 takes: pickup, place, deal, slide, hover, correct chime, wrong, streak lost, combo, round, run banked, sit, stand, clicks, the four Boutique chimes…) | `Assets.SoundSheet` |
-| `maison-lounge.ogg` | solo piano ballad, 107 s loop (the Foyer's piano, the Suite, the Vault, the Terrace) | `Assets.Tracks.lounge` |
-| `maison-table.ogg` | brushed jazz quartet, 96 bpm, 160 s loop (the four sorting rooms and the Library) | `Assets.Tracks.table` |
-| `maison-ballroom.ogg` | swing band, 132 bpm, 116 s loop (the Ballroom) | `Assets.Tracks.ballroom` |
+| `maison-sounds.ogg` | every table sound in one sheet: 25 sounds, 68 takes, so the same action never sounds the same twice | `Assets.SoundSheet`: once set, it replaces the library's table sounds, and the Boutique's four chimes go on sale |
+| `maison-lounge.ogg` | a 107 s solo piano ballad, looped | `Assets.Tracks.lounge` (optional) |
+| `maison-table.ogg` | a brushed jazz quartet at 96 bpm, 160 s loop | `Assets.Tracks.table` (optional) |
+| `maison-ballroom.ogg` | a swing band at 132 bpm, 116 s loop | `Assets.Tracks.ballroom` (optional) |
 
-**How (about two minutes, once):**
-1. In Studio: **View → Asset Manager**. Click **Bulk Import** (the arrow-up icon).
-2. Pick the four `.ogg` files from the `assets/audio` folder of this repo on your computer. Wait
-   for all four to finish uploading (Roblox checks audio; it can take a minute).
-3. In the Asset Manager, open the **Audio** folder. Drag each of the four onto **SoundService**
-   in the Explorer. Each becomes a Sound named after its file (`maison-lounge` and so on).
-4. **File → Publish to Roblox**, so they're saved in the place.
+To use the sheet (about two minutes, once):
+1. In Studio: **View → Asset Manager → Bulk Import**.
+2. Pick `maison-sounds.ogg` from `assets/audio` and wait for it to upload.
+3. Drag it from the Asset Manager's **Audio** folder onto **SoundService** in the Explorer.
+4. **File → Publish to Roblox**.
 
-That's all: the game finds them by name, so no ids need copying. (An id pasted into
-`Assets.SoundSheet` / `Assets.Tracks.*` still wins, if you'd rather.) In Studio, a notice in the
-first seconds of play says "No music yet" until this is done.
+The game finds it by name, so there's no id to copy.
 
-Until the sheet is set, the table plays Roblox's built-in sounds, softened. Once it's set, the
-Boutique's four chimes (99 Robux each) go on sale on their own. Never cut the sheet up or edit
-it by hand: `src/shared/SoundSheet.luau` says where each take sits in it, and both are rewritten
-together by `python3 tools/audio/compose.py`.
+To use one of the composed loops in place of a playlist, paste its id into `Assets.Tracks.<name>`.
+Never cut the sheet up or edit it by hand: `src/shared/SoundSheet.luau` says where each take
+sits in it, and `python3 tools/audio/compose.py` rewrites both together.
 
 Any slot can still take a Creator Store sound or track instead: a sound set by name in
 `Assets.Sounds` wins over the sheet, and a room's own `Assets.Music.<room>` wins over the house
