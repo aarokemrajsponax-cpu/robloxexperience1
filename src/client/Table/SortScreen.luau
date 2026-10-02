@@ -350,13 +350,13 @@ local function makeStat(parent: Instance, name: string, key: string, width: numb
 	f.Parent = parent
 	local scale = Instance.new("UIScale")
 	scale.Parent = f
-	local k = label(f, Theme.track(key), 10, F.bodyMedium, SMOKE, {
+	local k = label(f, Theme.track(key), 11, F.bodyMedium, SMOKE, {
 		Name = "Key",
 		AnchorPoint = Vector2.new(0.5, 0),
 		Position = UDim2.fromScale(0.5, 0.02),
 		Size = UDim2.fromScale(1.4, 0.28),
 	})
-	local v = label(f, "", 30, F.figures, BONE, {
+	local v = label(f, "", 34, F.figures, BONE, {
 		Name = "Value",
 		AnchorPoint = Vector2.new(0.5, 1),
 		Position = UDim2.fromScale(0.5, 1),
@@ -427,6 +427,26 @@ local function build()
 	sheen.Size = UDim2.fromScale(1, 0.7)
 	shade(sheen, 90, nil, alphas({ { 0, 0.88 }, { 0.6, 0.97 }, { 1, 1 } }))
 	header.sheenCorner = corner(sheen, 3)
+	-- A pool of lamplight in the middle of the cloth: faint ovals, each a little smaller.
+	for k = 1, 16 do
+		local pool = sheet(tray, "Pool", Color3.fromRGB(255, 214, 150), 1)
+		pool.AnchorPoint = Vector2.new(0.5, 0.5)
+		pool.Position = UDim2.fromScale(0.5, 0.4)
+		local f = 1 - (k - 1) * 0.055
+		pool.Size = UDim2.fromScale(0.9 * f, 1.0 * f)
+		pool.BackgroundTransparency = 0.994
+		corner(pool, 9999)
+	end
+	-- Small gold diamonds at the corners of the inner border.
+	for i, at in { Vector2.new(0, 0), Vector2.new(1, 0), Vector2.new(0, 1), Vector2.new(1, 1) } do
+		local d = sheet(tray, "Ornament", GOLD, 3)
+		d.Name = "Ornament" .. i
+		d.AnchorPoint = Vector2.new(0.5, 0.5)
+		d.Rotation = 45
+		d.BackgroundTransparency = 0.25
+		d:SetAttribute("Corner", at)
+		header["ornament" .. i] = d
+	end
 	local inner = Instance.new("Frame")
 	inner.Name = "Inner"
 	inner.BackgroundTransparency = 1
@@ -445,13 +465,13 @@ local function build()
 	head.ZIndex = 3
 	head.Parent = root
 	header.frame = head
-	header.mark = label(head, Theme.track(string.upper(Brand.Name)), 16, F.bodyMedium, BONE, {
+	header.mark = label(head, Theme.track(string.upper(Brand.Name)), 18, F.bodyMedium, BONE, {
 		Name = "Mark",
 		AnchorPoint = Vector2.new(0, 0.5),
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextTruncate = Enum.TextTruncate.AtEnd,
 	})
-	header.room = label(head, "", 12, F.body, SMOKE, {
+	header.room = label(head, "", 13, F.body, SMOKE, {
 		Name = "Room",
 		AnchorPoint = Vector2.new(0, 0.5),
 		TextXAlignment = Enum.TextXAlignment.Left,
@@ -625,6 +645,14 @@ local function layoutChrome()
 	header.sheenCorner.CornerRadius = radius
 	local insetPx = math.floor(8 * s)
 	header.trayInner.Size = UDim2.new(1, -2 * insetPx, 1, -2 * insetPx)
+	for i = 1, 4 do
+		local d = header["ornament" .. i] :: Frame?
+		if d then
+			local at = d:GetAttribute("Corner") :: Vector2
+			d.Position = UDim2.new(at.X, if at.X == 0 then insetPx else -insetPx, at.Y, if at.Y == 0 then insetPx else -insetPx)
+			d.Size = UDim2.fromOffset(math.max(4, math.floor(7 * s)), math.max(4, math.floor(7 * s)))
+		end
+	end
 	local head = header.frame :: Frame
 	head.Position = UDim2.fromOffset(L.left, L.headerTop)
 	head.Size = UDim2.fromOffset(L.width, L.headerH)
@@ -854,7 +882,7 @@ local function arrange(all: boolean): boolean
 	local t = L.tray
 	local s = L.s
 	local cell = math.sqrt((t.w * t.h) / math.max(n, 6))
-	local icon = math.floor(math.clamp(math.min(86 * s, cell * 0.42), 46 * s, 104 * s) * Settings.pieceScale(State.get("pieceSize")))
+	local icon = math.floor(math.clamp(math.min(104 * s, cell * 0.48), 54 * s, 124 * s) * Settings.pieceScale(State.get("pieceSize")))
 	local resized = math.abs(icon - L.icon) > 1
 	L.icon = icon
 	local redo = all or resized
@@ -934,17 +962,22 @@ local function cardFrame(info: PieceInfo, icon: number): (Frame, UIScale, Frame,
 	shadow.AnchorPoint = Vector2.new(0.5, 0.5)
 	shadow.Position = UDim2.new(0.5, 0, 1, -math.floor(icon * 0.03))
 	shadow.Size = UDim2.fromOffset(icon * 0.66, icon * 0.15)
-	shadow.BackgroundTransparency = 0.35
+	shadow.BackgroundTransparency = 0.3
 	corner(shadow, 9999)
-	shade(shadow, 0, nil, alphas({ { 0, 1 }, { 0.22, 0.55 }, { 0.5, 0.1 }, { 0.78, 0.55 }, { 1, 1 } }))
+	shade(shadow, 0, nil, alphas({ { 0, 1 }, { 0.18, 0.6 }, { 0.5, 0.05 }, { 0.82, 0.6 }, { 1, 1 } }))
 	-- A gilded or Mythic piece has a warm halo of light about it.
 	if info.rare or info.mythic then
-		for k, size in { 1.6, 1.28, 1.0 } do
-			local glow = sheet(f, "Glow", if info.mythic then Color3.fromRGB(255, 214, 130) else Color3.fromRGB(232, 178, 88), 1)
+		-- Many faint rings, each a little smaller: together a soft halo that fades to nothing at
+		-- its edge, with no visible bands.
+		local tint = if info.mythic then Color3.fromRGB(255, 222, 150) else Color3.fromRGB(246, 196, 104)
+		local layers = 9
+		for k = 1, layers do
+			local size = 1.45 - (k - 1) * (0.7 / (layers - 1))
+			local glow = sheet(f, "Glow", tint, 1)
 			glow.AnchorPoint = Vector2.new(0.5, 0.5)
 			glow.Position = UDim2.fromScale(0.5, 0.5)
 			glow.Size = UDim2.fromOffset(icon * size, icon * size)
-			glow.BackgroundTransparency = 0.95 - k * 0.025
+			glow.BackgroundTransparency = if info.mythic then 0.965 else 0.975
 			corner(glow, 9999)
 		end
 	end
@@ -1724,7 +1757,7 @@ function SortScreen.setScore(score: number, multiplier: number)
 	local layout = not sc.shown or not combo.shown or sc.width ~= 112
 	sc.key.Text = Theme.track("SCORE")
 	sc.value.Text = number(score)
-	sc.value.TextSize = textSize(30 * L.s)
+	sc.value.TextSize = textSize(34 * L.s)
 	sc.width = 112
 	sc.shown = true
 	local before = combo.value.Text
