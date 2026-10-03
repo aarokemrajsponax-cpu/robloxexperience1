@@ -56,6 +56,7 @@ ProductConfig.Settings = {
 	LuckWriteSeconds = 5, -- God-Mode Luck's time left is written into the profile this often
 	AutoUseRetrySeconds = 15, -- credits that start by themselves (a Golden Hour...) are retried this often
 	OutboxFlushSeconds = 120, -- ledger records still to be marked Granted are retried this often
+	LedgerTries = 3, -- a ledger write is tried this many times (0.75 s, 1.5 s apart) before it waits
 	PassConfirmTries = 5, -- a pass bought here is confirmed with Roblox this many times (2, 4, 6... s apart)
 }
 

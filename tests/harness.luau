@@ -776,6 +776,12 @@ local function receipt(player, productId, purchaseId, spent)
 		result = MarketplaceService.ProcessReceipt({ PlayerId = player.UserId, ProductId = productId, PurchaseId = purchaseId, CurrencySpent = spent or 99 })
 	end)
 	advance(1)
+	-- (A receipt waiting on retries takes a few seconds more.)
+	local waited = 0
+	while result == nil and waited < 5 do
+		advance(0.25)
+		waited += 0.25
+	end
 	return result
 end
 local function askAs(player, request)

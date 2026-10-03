@@ -70,6 +70,15 @@ local function tierKey(item: Wardrobe.Item): string?
 	return "tier" .. tostring(Wardrobe.tierFor(item.robux))
 end
 
+-- A Boutique piece's price in Gilt (every piece on the shelves can be bought with Gilt too), or
+-- nil for pieces that aren't sold that way.
+local function giltAlt(item: Wardrobe.Item): number?
+	if item.source == "boutique" and item.robux then
+		return math.floor(item.robux * Config.data.Gilt.perRobux)
+	end
+	return nil
+end
+
 local function standingOf(data: Profiles.Data): string
 	return (Standing.of(data.nights.count, data.stats.rounds))
 end
@@ -138,6 +147,7 @@ local function card(item: Wardrobe.Item, data: Profiles.Data): { [string]: any }
 		line = item.line,
 		robux = robux,
 		gilt = item.gilt,
+		giltAlt = giltAlt(item),
 		standing = item.standing,
 		locked = locked,
 		owned = Dressing.canWear(data, item),
@@ -663,9 +673,22 @@ end
 
 local function buyWithGilt(player: Player, data: Profiles.Data, itemId: string): { [string]: any }
 	local item = Wardrobe.get(itemId)
-	if not item or not item.gilt or (item.source ~= "gilt" and item.source ~= "standing") then
+	if not item then
 		return { ok = false, why = "That isn't sold for Gilt." }
 	end
+	-- The house's own pieces have a Gilt price; a Boutique piece can be had for Gilt on the days
+	-- it's on the shelves.
+	local cost: number? = if item.source == "gilt" or item.source == "standing" then item.gilt else nil
+	if item.source == "boutique" then
+		if not Boutique.onSale(item.id, Season.current().id) then
+			return { ok = false, why = "That piece isn't on the shelves today." }
+		end
+		cost = giltAlt(item)
+	end
+	if not cost then
+		return { ok = false, why = "That isn't sold for Gilt." }
+	end
+	local price = cost :: number
 	if data.owned[item.id] then
 		return { ok = false, why = "It's already yours." }
 	end
@@ -675,12 +698,12 @@ local function buyWithGilt(player: Player, data: Profiles.Data, itemId: string):
 	if item.standing and not Standing.atLeast(data.nights.count, data.stats.rounds, item.standing) then
 		return { ok = false, why = "That piece is for " .. item.standing .. "s of the house." }
 	end
-	if data.gilt < item.gilt then
-		return { ok = false, why = "Not enough Gilt yet." }
+	if data.gilt < price then
+		return { ok = false, why = string.format("Not enough Gilt yet: %s more.", Gilt.format(price - data.gilt)) }
 	end
-	data.gilt -= item.gilt
+	data.gilt -= price
 	own(player, data, item)
-	Analytics.sink(player, "Gilt", item.gilt, data.gilt, item.id)
+	Analytics.sink(player, "Gilt", price, data.gilt, item.id)
 	Shop.push(player)
 	return { ok = true }
 end
@@ -843,8 +866,11 @@ function Shop.suite(data: Profiles.Data): { [string]: any }
 				gilt = item.gilt,
 				robux = item.robux,
 				standing = item.standing,
-				-- Robux pieces are sold from the Boutique's shelves on the days they're out.
+				-- Robux pieces are sold from the Boutique's shelves on the days they're out (for
+				-- Robux once its price tier's product exists, and always for Gilt).
 				onSale = item.robux ~= nil and Boutique.onSale(item.id, Season.current().id) and Wardrobe.deliverable(item),
+				robuxOnSale = item.robux ~= nil and Catalog.enabled("tier" .. tostring(Wardrobe.tierFor(item.robux))),
+				giltAlt = giltAlt(item),
 			})
 		end
 		table.insert(spots, {

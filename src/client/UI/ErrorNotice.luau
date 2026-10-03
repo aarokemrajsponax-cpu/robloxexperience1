@@ -98,6 +98,22 @@ local function isStudioSaveNoise(message: string): boolean
 		or (string.find(message, "DataStore", 1, true) ~= nil and string.find(message, "Studio", 1, true) ~= nil)
 end
 
+-- Roblox's own saving service failing for a moment (a 502 "internal server error", "API
+-- Services rejected request"): not a fault in the game, and everything is retried, so it's one
+-- plain line once, not a stream of red ones.
+local SERVICE_HICCUP = "Roblox's saving service had a hiccup (it happens, most often in Studio). Nothing is lost: progress and purchases are kept and saved again automatically."
+local hiccupShown = false
+
+local function isServiceHiccup(message: string): boolean
+	return string.find(message, "InternalServerError", 1, true) ~= nil
+		or string.find(message, "internal server error", 1, true) ~= nil
+		or string.find(message, "API Services rejected request", 1, true) ~= nil
+		or string.find(message, "502", 1, true) ~= nil and string.find(message, "DataStore", 1, true) ~= nil
+		or string.find(message, "Purchase ledger", 1, true) ~= nil
+		or string.find(message, "Ledger write failed", 1, true) ~= nil
+		or string.find(message, "Request was throttled", 1, true) ~= nil
+end
+
 function ErrorNotice.add(message: string)
 	if not allowed() then
 		return
@@ -108,6 +124,12 @@ function ErrorNotice.add(message: string)
 		end
 		studioHintShown = true
 		message = STUDIO_SAVE
+	elseif isServiceHiccup(message) then
+		if hiccupShown then
+			return
+		end
+		hiccupShown = true
+		message = SERVICE_HICCUP
 	end
 	local first = string.sub((string.split(message, "\n"))[1] or message, 1, 220)
 	if lines[#lines] == first then

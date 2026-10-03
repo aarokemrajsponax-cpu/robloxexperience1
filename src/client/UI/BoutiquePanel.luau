@@ -136,22 +136,41 @@ local function row(parent: Instance, card: Card, order: number, mode: "robux" | 
 		end
 	elseif mode == "robux" and giftFor then
 		local recipient = giftFor
-		local give = Theme.key(actions, "Gift · " .. robux(card.robux), true, function()
-			after(Closet.ask({ op = "buy", item = card.id, giftTo = recipient.userId }))
-		end, 150)
-		give.Size = UDim2.fromOffset(150, 34)
-		give.LayoutOrder = 1
+		if type(card.robux) == "number" then
+			local give = Theme.key(actions, "Gift · " .. robux(card.robux), true, function()
+				after(Closet.ask({ op = "buy", item = card.id, giftTo = recipient.userId }))
+			end, 150)
+			give.Size = UDim2.fromOffset(150, 34)
+			give.LayoutOrder = 1
+		else
+			Theme.text(actions, "Gifts open with Robux sales", 12, "body", { LayoutOrder = 1, TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = Brand.Colours.dim })
+		end
 	elseif mode == "robux" then
-		local buy = Theme.key(actions, "Buy · " .. robux(card.robux), true, function()
-			after(Closet.ask({ op = "buy", item = card.id }))
-		end, 150)
-		buy.Size = UDim2.fromOffset(150, 34)
-		buy.LayoutOrder = 1
-		local gift = Theme.key(actions, "Gift", false, function()
-			giftPicker(card)
-		end, 150)
-		gift.Size = UDim2.fromOffset(150, 30)
-		gift.LayoutOrder = 2
+		-- Robux when the piece's price tier is on sale; Gilt always (Config.Gilt.perRobux).
+		local both = type(card.robux) == "number" and type(card.giltAlt) == "number"
+		local h = if both then 24 else 34
+		if type(card.robux) == "number" then
+			local buy = Theme.key(actions, "Buy · " .. robux(card.robux), true, function()
+				after(Closet.ask({ op = "buy", item = card.id }))
+			end, 150)
+			buy.Size = UDim2.fromOffset(150, h)
+			buy.LayoutOrder = 1
+		end
+		if type(card.giltAlt) == "number" then
+			local enough = Closet.gilt >= card.giltAlt
+			local g = Theme.key(actions, RoundPanel.number(card.giltAlt) .. " Gilt", not both and enough, function()
+				after(Closet.ask({ op = "buyGilt", item = card.id }), "It's yours.")
+			end, 150)
+			g.Size = UDim2.fromOffset(150, h)
+			g.LayoutOrder = 2
+		end
+		if type(card.robux) == "number" then
+			local gift = Theme.key(actions, "Gift", false, function()
+				giftPicker(card)
+			end, 150)
+			gift.Size = UDim2.fromOffset(150, if both then 22 else 30)
+			gift.LayoutOrder = 3
+		end
 	elseif mode == "gilt" then
 		if card.locked then
 			Theme.text(actions, "For " .. tostring(card.standing) .. "s", 12, "body", { LayoutOrder = 1, TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = Brand.Colours.dim })

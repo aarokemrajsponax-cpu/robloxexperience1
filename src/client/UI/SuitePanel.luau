@@ -281,11 +281,18 @@ function SuitePanel.open()
 					offerRow(box, 1 + shown, text, RoundPanel.number(o.gilt) .. " Gilt", gilt >= o.gilt, function()
 						buyGilt(spot.id, o)
 					end)
-				elseif o.onSale and type(o.robux) == "number" then
+				elseif o.onSale and type(o.giltAlt) == "number" then
+					-- On the Boutique's shelves today: for Gilt right here (or Robux, when that
+					-- price tier is on sale).
 					shown += 1
-					offerRow(box, 1 + shown, tostring(o.name) .. "  (in the Boutique today)", tostring(o.robux) .. " Robux", false, function()
-						buyRobux(o)
+					offerRow(box, 1 + shown, tostring(o.name) .. "  (in the Boutique today)", RoundPanel.number(o.giltAlt) .. " Gilt", gilt >= o.giltAlt, function()
+						buyGilt(spot.id, o)
 					end)
+					if o.robuxOnSale and type(o.robux) == "number" then
+						offerRow(box, 1 + shown, "", tostring(o.robux) .. " Robux", false, function()
+							buyRobux(o)
+						end)
+					end
 				elseif o.source == "goldKey" then
 					table.insert(elsewhere, tostring(o.name) .. " (with the Gold Key)")
 				elseif o.source == "introduction" then

@@ -424,6 +424,9 @@ local defaults = {
 		dailySoftCap = 2500,
 		softCapRate = 0.25,
 		goldKeyBonus = 0.2, -- the Gold Key: +20% on all Gilt
+		-- Every Boutique piece on the shelves can also be bought with Gilt: this many Gilt for
+		-- each Robux of its price (a 249 piece is 9,960 Gilt).
+		perRobux = 40,
 	},
 
 	FirstMinute = {

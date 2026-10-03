@@ -98,20 +98,33 @@ local function update(id: string, playerId: number, fn: (old: Record?) -> Record
 		end
 		return true
 	end
-	local ok, err = pcall(function()
-		if store == nil then
-			store = DataStoreService:GetDataStore(ProductConfig.Settings.LedgerStore)
-		end
-		store:UpdateAsync(keyOf(id), function(old: any): (any, any)
-			local new = fn(if type(old) == "table" then old :: Record else nil)
-			if new == nil then
-				return nil -- leave the record as it is
+	-- Roblox's DataStores fail now and then (a 502 "internal server error"): a write is tried a
+	-- few times, a moment apart, before it counts as failed (and is retried later from the
+	-- buyer's outbox, or by Roblox's next delivery).
+	local ok, err = false, nil
+	for attempt = 1, ProductConfig.Settings.LedgerTries do
+		ok, err = pcall(function()
+			if store == nil then
+				store = DataStoreService:GetDataStore(ProductConfig.Settings.LedgerStore)
 			end
-			return new, { playerId }
+			store:UpdateAsync(keyOf(id), function(old: any): (any, any)
+				local new = fn(if type(old) == "table" then old :: Record else nil)
+				if new == nil then
+					return nil -- leave the record as it is
+				end
+				return new, { playerId }
+			end)
 		end)
-	end)
+		if ok then
+			break
+		end
+		if attempt < ProductConfig.Settings.LedgerTries then
+			task.wait(attempt * 0.75)
+		end
+	end
 	if not ok then
-		warn("[Maison] Purchase ledger unavailable: " .. tostring(err))
+		-- (Not a fault in the game: the purchase is safe and the write is retried.)
+		print("[Maison] The purchase ledger couldn't be written just now; it will be retried: " .. tostring(err))
 	end
 	return ok
 end

@@ -197,6 +197,28 @@ profiles[ada].Data.stats.rounds = 400
 local patron = askAs(ada, { op = "buyGilt", item = "look_patron" })
 check("with it, the look is hers", patron.ok and profiles[ada].Data.owned.look_patron)
 
+-- Every Boutique piece on today's shelves can also be bought with Gilt (Config.Gilt.perRobux).
+do
+	local shelf = askAs(ben, { op = "shelves" })
+	local target
+	for _, c in shelf.today do
+		if not profiles[ben].Data.owned[c.id] then
+			target = c
+			break
+		end
+	end
+	local cost = Wardrobe.get(target.id).robux * Config.data.Gilt.perRobux
+	check("a Boutique piece shows its Gilt price", target.giltAlt == cost, target.giltAlt)
+	profiles[ben].Data.gilt = cost - 1
+	local short = askAs(ben, { op = "buyGilt", item = target.id })
+	check("not enough Gilt says how much more", short.ok == false and string.find(short.why or "", "1 more", 1, true) ~= nil, short.why)
+	profiles[ben].Data.gilt = cost + 5
+	local bought = askAs(ben, { op = "buyGilt", item = target.id })
+	check("with enough Gilt the piece is bought at once, no Robux product needed", bought.ok and profiles[ben].Data.owned[target.id] == true and profiles[ben].Data.gilt == 5)
+	check("a piece not on today's shelves isn't sold for Gilt", askAs(ben, { op = "buyGilt", item = notToday.id }).ok == false)
+	profiles[ben].Data.gilt = 0
+end
+
 ---------------------------------------------------------------------------------------------------
 -- 7. Wearing things
 ---------------------------------------------------------------------------------------------------

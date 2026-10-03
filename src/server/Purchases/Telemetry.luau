@@ -35,7 +35,6 @@ Telemetry.Events = {
 local LOUD: { [string]: boolean } = {
 	[Telemetry.Events.GrantFailed] = true,
 	[Telemetry.Events.Invalid] = true,
-	[Telemetry.Events.LedgerFailed] = true,
 }
 
 export type Entry = { event: string, product: string, detail: string, segment: string, value: number?, userId: number, at: number }
