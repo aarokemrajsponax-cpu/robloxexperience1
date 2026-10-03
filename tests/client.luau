@@ -1980,6 +1980,39 @@ do
 	check("a mouse drag lifts the piece", sentOps("Table", "lift") > liftsBeforeDrag)
 	check("letting go over its case files it", sentOps("Table", "file") == filesBefore + 1 and dropped.uid == 1 and dropped.case == first.case, dropped and string.format("uid %s case %s want %s", tostring(dropped.uid), dropped.case, first.case))
 end
+-- Chronos Defiance: the clock ran out (the server only says this in a timed room; the screen
+-- shows what it's told). The card counts down the server's own window.
+do
+	local robux = utf8.char(0xE002)
+	local offer = { op = "reviveOffer", left = 10, prompting = false, held = 0, price = 49, onSale = true, add = 15, boardsCount = false, score = 1240, boardScore = 1240, used = 0, usesLeft = 3 }
+	serverSays("Table", offer)
+	advance(1)
+	check("the revive card opens with the real countdown", textOnScreen("Chronos Defiance") ~= nil and (textOnScreen("0:09") ~= nil or textOnScreen("0:10") ~= nil))
+	check("it says what it gives, what it costs and what the boards keep", textOnScreen("+15 seconds on the clock") ~= nil and textOnScreen("Revive " .. robux .. " 49") ~= nil and textOnScreen("The boards keep your score from before the revive (1,240)") ~= nil)
+	check("banking stays one press away", textOnScreen("Bank the run") ~= nil)
+	snapshot("revive")
+	local asked = sentOps("Table", "revive")
+	press("Revive  " .. robux .. " 49")
+	check("Revive asks the server (never decides by itself)", sentOps("Table", "revive") == asked + 1)
+	local waiting = table.clone(offer)
+	waiting.op, waiting.left, waiting.prompting = "reviveUpdate", 60, true
+	serverSays("Table", waiting)
+	advance(0.5)
+	check("while Roblox's window is open the card says the clock waits", textOnScreen("The clock waits") ~= nil)
+	serverSays("Table", { op = "revived", clock = { budget = 30, left = 15, running = true }, held = 0, used = 1, boardScore = 1240 })
+	advance(0.5)
+	check("revived: the card closes and the clock is back", textOnScreen("Bank the run") == nil and textOnScreen("The clock is yours again") ~= nil)
+	-- A revive already held is offered as one, and banking says so to the server.
+	local held = table.clone(offer)
+	held.held = 2
+	serverSays("Table", held)
+	advance(0.5)
+	check("a revive held is offered without a price", textOnScreen("Use a revive (2 held)") ~= nil)
+	local banks = sentOps("Table", "noRevive")
+	press("Bank the run")
+	check("Bank the run tells the server", sentOps("Table", "noRevive") == banks + 1)
+	check("no errors on the revive card", #errors == 0, errors[1])
+end
 UserInputService.PreferredInput = EnumShim.PreferredInput.Gamepad
 serverSays("Table", { op = "banked", score = 360, grade = "Polished", rounds = 1, accuracy = 0.9, gilt = 12, best = 360, newBest = true })
 advance(2)
@@ -2402,6 +2435,110 @@ serverSays("Shop", { op = "pages", pages = { 3 } })
 advance(0.5)
 check("a page turning is announced", textOnScreen("Page 3 turned") ~= nil)
 check("no errors in the Boutique", #errors == 0, errors[1])
+
+---------------------------------------------------------------------------------------------------
+-- 7c. The five new products: the Offers, a decree written and proclaimed, the banners, the rain,
+-- the perk chips
+---------------------------------------------------------------------------------------------------
+do
+	local robux = utf8.char(0xE002)
+	local Root3 = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "Root")
+	Root3.close()
+	advance(1)
+	invokeResults.ShopAsk = {
+		today = {}, featured = {}, season = { id = "harvest", name = "Harvest Nights", price = 599, pieces = {} },
+		gilt = {}, goldKey = { owned = false, price = 499 }, ledger = { view = ledgerView, price = 399 },
+		guests = {}, standing = "Guest", balance = 0, credits = {},
+		offers = {
+			{ key = "doubleGilt", name = "Double Gilt", line = "Every Gilt you earn, doubled, for good. Your purse fills twice as fast.", price = 399, best = true, action = "prompt", category = "Boost" },
+			{ key = "godModeLuck", name = "God-Mode Luck", line = "2.5× Gilt and 2.5× Ledger pages for 30 minutes of play. Time only runs while you're in the house. Scores are never boosted.", price = 199, action = "prompt", category = "Boost", status = "Active: 23 minutes of play left" },
+			{ key = "velocityElite", name = "VIP Velocity Elite", line = "Walk and run 1.5× faster through the house, for good, with a gold trail at your heels. Both can be switched off in Settings.", price = 499, action = "prompt", category = "Status" },
+			{ key = "emperorsDecree", name = "Emperor's Decree", line = "Your words, in gold, across every screen in the house for eight seconds.", price = 149, action = "compose", category = "Social" },
+			{ key = "megalodonRainmaker", name = "Megalodon Rainmaker", line = "Gold rains on the whole house: every guest gets 150 Gilt, you get 500 more, and everyone sees who made it rain.", price = 699, action = "prompt", category = "Spectacle", disabled = true, why = "Rains are already waiting their turn in this house. Try again in a few minutes." },
+		},
+		ok = true, prompted = true,
+	}
+	serverSays("Shop", { op = "open", panel = "boutique" })
+	advance(1)
+	check("the Offers show the new products with Roblox's prices", textOnScreen("God-Mode Luck") ~= nil and textOnScreen(robux .. " 199") ~= nil and textOnScreen("VIP Velocity Elite") ~= nil)
+	check("Luck's time left shows under it", textOnScreen("Active: 23 minutes of play left") ~= nil)
+	snapshot("offers")
+	check("an offer that can't be bought now says why", textOnScreen("Rains are already waiting their turn") ~= nil)
+	press(robux .. " 199")
+	local luckAsked = false
+	for _, sm in sent do
+		if sm.remote == "ShopAsk" and sm.message[1] and sm.message[1].op == "offer" and sm.message[1].key == "godModeLuck" then
+			luckAsked = true
+		end
+	end
+	check("buying an offer sends only its key", luckAsked)
+	-- The decree: words first, then the purchase.
+	invokeResults.PerkAsk = {
+		ok = true,
+		presets = { "Good evening, everyone.", "The next round is on me.", "Long live the house!", "To the last lamp lit.", "Sort well, my friends.", "Tonight belongs to all of us." },
+		maxLength = 80, seconds = 8, price = 149, onSale = true, held = 0, cooldown = 0, queue = 0, queueMax = 3,
+	}
+	check("Write it opens the decree", press("Write it"))
+	advance(1)
+	check("the decree panel: a line to write, the house's own lines", textOnScreen("Emperor's Decree") ~= nil and textOnScreen("Check my words") ~= nil and textOnScreen("Long live the house!") ~= nil)
+	check("nothing can be proclaimed before the words are checked", textOnScreen("Proclaim") == nil)
+	snapshot("decree")
+	local box = find(playerGui, function(d)
+		return d:IsA("TextBox") and d.Name == "DecreeText"
+	end)
+	check("the decree has a text box", box ~= nil)
+	if box then
+		box.Text = "Long live the house"
+	end
+	invokeResults.PerkAsk = { ok = true, text = "Long live the house", held = 0, price = 149, cooldown = 0, queue = 0 }
+	press("Check my words")
+	advance(0.5)
+	check("checked: the words as the house will show them, then Proclaim with the price", textOnScreen("“Long live the house”") ~= nil and textOnScreen("Proclaim " .. robux .. " 149") ~= nil)
+	snapshot("decree-checked")
+	invokeResults.PerkAsk = { ok = true, prompted = true }
+	press("Proclaim  " .. robux .. " 149")
+	local proclaimed = false
+	for _, sm in sent do
+		if sm.remote == "PerkAsk" and sm.message[1] and sm.message[1].op == "decreeProclaim" then
+			proclaimed = true
+		end
+	end
+	check("Proclaim asks the server", proclaimed)
+	advance(1)
+	-- What every screen sees.
+	serverSays("Purchase", { op = "decree", id = "d1", name = "Ada", user = "ada_k", text = "Long live the house", seconds = 8 })
+	advance(1)
+	check("a decree appears with who proclaimed it", textOnScreen("Decree of Ada (@ada_k)") ~= nil and textOnScreen("Long live the house") ~= nil)
+	snapshot("decree-banner")
+	advance(9)
+	check("and goes after its seconds", textOnScreen("Decree of Ada (@ada_k)") == nil)
+	serverSays("Purchase", { op = "rain", id = "r1", by = "Ray", user = "ray", userId = 9, share = 150, seconds = 20, line = "Ray triggered MEGALODON RAIN!" })
+	advance(1)
+	check("the rain names who made it rain", textOnScreen("Ray triggered MEGALODON RAIN!") ~= nil)
+	check("gold falls around the guest", find(game:GetService("Workspace"), function(d)
+		return d.Name == "MegalodonRain"
+	end) ~= nil)
+	snapshot("rain")
+	serverSays("Purchase", { op = "rainShare", id = "r1", gilt = 150, by = "Ray" })
+	advance(0.5)
+	check("their own share is told", textOnScreen("+150 Gilt from Ray's rain.") ~= nil)
+	advance(25)
+	-- The perk chips: what's bought and waiting, and Luck's time.
+	serverSays("Purchase", { op = "perks", credits = { decree = 1, revive = 2 }, luck = { remaining = 1500, multiplier = 2.5, systems = { "gilt", "ledger" } }, rain = { held = 1, position = 1, nextIn = 30 } })
+	advance(1.5)
+	check("Luck's time left counts down in a chip", textOnScreen("GOD-MODE LUCK 2.5×") ~= nil and (textOnScreen("24:58") ~= nil or textOnScreen("24:59") ~= nil or textOnScreen("24:57") ~= nil))
+	check("what's held is listed", textOnScreen("A DECREE TO WRITE (1)") ~= nil and textOnScreen("REVIVES KEPT 2") ~= nil and textOnScreen("YOUR RAIN IS NEXT IN LINE") ~= nil)
+	snapshot("perk-chips")
+	serverSays("Purchase", { op = "notice", title = "God-Mode Luck", line = "Your Luck has run its course." })
+	advance(0.5)
+	check("purchase notices show", textOnScreen("Your Luck has run its course.") ~= nil)
+	serverSays("Purchase", { op = "perks", credits = {}, luck = { remaining = 0, multiplier = 2.5, systems = { "gilt", "ledger" } } })
+	advance(1.5)
+	check("and the chips go when there's nothing to show", textOnScreen("GOD-MODE LUCK") == nil and textOnScreen("A DECREE TO WRITE") == nil)
+	Root3.close()
+	advance(1)
+	check("no errors in the new products' screens", #errors == 0, errors[1])
+end
 
 -- The Register and the Vault.
 local catalogueForTest = module("ReplicatedStorage", "Shared", "Catalogue")
