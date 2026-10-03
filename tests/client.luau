@@ -1988,7 +1988,7 @@ do
 	serverSays("Table", offer)
 	advance(1)
 	check("the revive card opens with the real countdown", textOnScreen("Chronos Defiance") ~= nil and (textOnScreen("0:09") ~= nil or textOnScreen("0:10") ~= nil))
-	check("it says what it gives, what it costs and what the boards keep", textOnScreen("+15 seconds on the clock") ~= nil and textOnScreen("Revive " .. robux .. " 49") ~= nil and textOnScreen("The boards keep your score from before the revive (1,240)") ~= nil)
+	check("it says what it gives, what it costs and what the boards keep", textOnScreen("+15 seconds, and your run goes on") ~= nil and textOnScreen("Revive " .. robux .. " 49") ~= nil and textOnScreen("The boards keep your score from before the revive (1,240)") ~= nil)
 	check("banking stays one press away", textOnScreen("Bank the run") ~= nil)
 	snapshot("revive")
 	local asked = sentOps("Table", "revive")
@@ -2534,7 +2534,16 @@ do
 	check("purchase notices show", textOnScreen("Your Luck has run its course.") ~= nil)
 	serverSays("Purchase", { op = "perks", credits = {}, luck = { remaining = 0, multiplier = 2.5, systems = { "gilt", "ledger" } } })
 	advance(1.5)
-	check("and the chips go when there's nothing to show", textOnScreen("GOD-MODE LUCK") == nil and textOnScreen("A DECREE TO WRITE") == nil)
+	local chips = find(playerGui, function(d)
+		return d.Name == "PerkChips"
+	end)
+	local left = 0
+	for _, c in (if chips then chips:GetChildren() else {}) do
+		if c:IsA("TextButton") then
+			left += 1
+		end
+	end
+	check("and the chips go when there's nothing to show", chips ~= nil and left == 0, left)
 	Root3.close()
 	advance(1)
 	check("no errors in the new products' screens", #errors == 0, errors[1])

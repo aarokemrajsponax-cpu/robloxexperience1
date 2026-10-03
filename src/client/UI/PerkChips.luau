@@ -1,8 +1,9 @@
 --!strict
--- A guest's perks at a glance, under the top-right keys while they walk the house: God-Mode
--- Luck's time left (it only runs while they're here), and anything bought and waiting (a decree
--- to write, revives kept for the next run, a rain waiting its turn). Nothing is shown when there's
--- nothing to show, and it's hidden at the table.
+-- A guest's perks at a glance, at the left edge while they walk the house (clear of the keys
+-- and the objective card at the top right, the chat at the top left and the thumbstick below):
+-- God-Mode Luck's time left (it only runs while they're here), and anything bought and waiting
+-- (a decree to write, revives kept for the next run, a rain waiting its turn). Nothing is shown
+-- when there's nothing to show, and it's hidden at the table.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -17,15 +18,16 @@ local PerkChips = {}
 -- Set by Main: open the decree panel.
 PerkChips.openDecree = function() end
 
+local CHIP_WIDTH = 260
 local stack = Instance.new("Frame")
 stack.Name = "PerkChips"
 stack.BackgroundTransparency = 1
-stack.AnchorPoint = Vector2.new(1, 0)
-stack.Position = UDim2.new(1, -12, 0, 58)
-stack.Size = UDim2.fromOffset(260, 0)
+stack.AnchorPoint = Vector2.new(0, 0.5)
+stack.Position = UDim2.new(0, 12, 0.42, 0)
+stack.Size = UDim2.fromOffset(CHIP_WIDTH, 0)
 stack.AutomaticSize = Enum.AutomaticSize.Y
 stack.Parent = Root.hud
-Theme.list(stack, 4).HorizontalAlignment = Enum.HorizontalAlignment.Right
+Theme.list(stack, 4).HorizontalAlignment = Enum.HorizontalAlignment.Left
 
 local chips: { [string]: TextButton } = {}
 local hidden = false
@@ -53,11 +55,12 @@ local function chip(id: string, order: number, text: string?, onPress: (() -> ()
 		b.AutoButtonColor = false
 		b.BackgroundColor3 = Color3.fromRGB(14, 12, 8)
 		b.BackgroundTransparency = 0.2
-		b.AutomaticSize = Enum.AutomaticSize.XY
-		b.Size = UDim2.fromOffset(0, 26)
+		b.Size = UDim2.fromOffset(CHIP_WIDTH, 28)
 		b.LayoutOrder = order
 		b.FontFace = Brand.Fonts.body
 		b.TextSize = 13
+		b.TextXAlignment = Enum.TextXAlignment.Left
+		b.TextTruncate = Enum.TextTruncate.AtEnd
 		b.TextColor3 = Brand.Colours.lightGold
 		b.Active = onPress ~= nil
 		local pad = Instance.new("UIPadding")

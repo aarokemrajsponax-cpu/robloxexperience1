@@ -82,7 +82,7 @@ function RevivePanel.open(m: { [string]: any }, actions: Actions)
 	Theme.text(content, "The clock ran out", 11, "caps", { LayoutOrder = 1 })
 	Theme.text(content, "Chronos Defiance", 24, "display", { LayoutOrder = 2 })
 	countdown = Theme.text(content, "", 40, "display", { LayoutOrder = 3, TextColor3 = Brand.Colours.lightGold })
-	Theme.text(content, string.format("+%d seconds on the clock, and your run goes on.", tonumber(m.add) or 0), 15, "body", {
+	Theme.text(content, string.format("+%d seconds, and your run goes on.", tonumber(m.add) or 0), 15, "body", {
 		LayoutOrder = 4,
 		TextWrapped = true,
 		TextColor3 = Brand.Colours.bone,
