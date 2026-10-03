@@ -196,6 +196,10 @@ block (that's where most of the money is):
 | `Leather-Bound Ledger` | 299 | the Term's premium Ledger row |
 | `Season Collection` | 399 | the season's pieces |
 | `Gold Key Gift` | 499 | the Gold Key, for another guest |
+| `Piano Session 1 Minute` | 99 | a minute at the Foyer's grand piano (everyone in the Foyer hears it; time only runs at the keys) |
+| `Piano Session 3 Minutes` | 349 | three minutes at the piano |
+| `Piano Session 5 Minutes` | 599 | five minutes at the piano |
+| `Piano Session 10 Minutes` | 899 | ten minutes at the piano |
 
 Until a `Boutique NN` product exists, the pieces at that price are sold for Gilt only (40 Gilt
 for each Robux of the price, `Config.Gilt.perRobux`): a 249 piece is 9,960 Gilt. Make the
