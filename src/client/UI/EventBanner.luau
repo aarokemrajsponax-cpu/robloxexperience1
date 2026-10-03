@@ -9,6 +9,7 @@ local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
+local Caps = require(ReplicatedStorage.Shared.Caps)
 local HouseEvents = require(ReplicatedStorage.Shared.HouseEvents)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Root = require(script.Parent.Root)
@@ -72,7 +73,7 @@ local function refresh()
 				rows[e.id] = l
 				label = l
 			end
-			(label :: TextLabel).Text = string.format("%s  ·  %s  ·  %s", string.upper(e.name), e.line, clock(ends - now()))
+			(label :: TextLabel).Text = string.format("%s  ·  %s  ·  %s", Caps(e.name), e.line, clock(ends - now()))
 		elseif label then
 			label:Destroy()
 			rows[e.id] = nil
@@ -104,7 +105,7 @@ local function refresh()
 			rows.__next = l
 			soon = l
 		end
-		(soon :: TextLabel).Text = string.format("%s STARTS IN %s  ·  stay in the house", string.upper(name), clock(at - now()))
+		(soon :: TextLabel).Text = string.format("%s STARTS IN %s  ·  stay in the house", Caps(name), clock(at - now()))
 	elseif soon then
 		soon:Destroy()
 		rows["__next"] = nil

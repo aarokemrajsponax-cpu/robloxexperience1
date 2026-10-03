@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
 local Layout = require(ReplicatedStorage.Shared.Layout)
+local Flush = require(script.Parent.Flush)
 local Kit = require(script.Parent.Kit)
 
 local Street = require(script.Parent.Street)
@@ -68,6 +69,8 @@ function Build.run(): Folder
 			sill(sills, d)
 		end
 	end
+	-- Surfaces laid flush in one plane flicker as the camera moves: lift each clear.
+	Flush.settle(root)
 	root.Parent = Workspace
 	return root
 end

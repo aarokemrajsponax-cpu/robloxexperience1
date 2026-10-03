@@ -12,12 +12,40 @@ local Rig = require(script.Parent.Rig)
 
 local Pianist = {}
 
+local seated: Rig.Staff? = nil -- the Pianist, once spawned
+local sittingC0: { [Motor6D]: CFrame } = {} -- the joints' seated pose
+local standingC0: { [Motor6D]: CFrame } = {} -- and their standing one
+
 local function bend(model: Model, part: string, joint: string, angle: number)
 	local p = model:FindFirstChild(part)
 	local m = p and p:FindFirstChild(joint)
 	if m and m:IsA("Motor6D") then
+		standingC0[m] = m.C0
 		m.C0 = m.C0 * CFrame.Angles(math.rad(angle), 0, 0)
+		sittingC0[m] = m.C0
 	end
+end
+
+-- While a guest plays the piano the Pianist gets up and stands by it, turned to listen; when they
+-- finish, back to the bench.
+function Pianist.stepAside(aside: boolean)
+	local s = seated
+	if not s or not s.model.Parent then
+		return
+	end
+	local pose: { [Motor6D]: CFrame } = if aside then standingC0 else sittingC0
+	for joint, c0 in pose do
+		joint.C0 = c0
+	end
+	local home = Layout.Foyer.pianist
+	if aside then
+		local spot = Layout.Foyer.piano * CFrame.new(-3.6, 0, -4.2)
+		local stand = CFrame.lookAt(spot.Position, Layout.Foyer.pianoSeat.Position * Vector3.new(1, 0, 1) + Vector3.new(0, spot.Position.Y, 0))
+		s.root.CFrame = stand + Vector3.new(0, s.humanoid.HipHeight + s.root.Size.Y / 2, 0)
+	else
+		s.root.CFrame = home + Vector3.new(0, Layout.Foyer.pianoBenchTop + 0.45 + s.root.Size.Y / 2, 0)
+	end
+	s.model:SetAttribute("Aside", aside)
 end
 
 function Pianist.spawn(parent: Instance)
@@ -40,6 +68,7 @@ function Pianist.spawn(parent: Instance)
 	s.root.Anchored = true
 	s.root.CFrame = home + Vector3.new(0, Layout.Foyer.pianoBenchTop + 0.45 + s.root.Size.Y / 2, 0)
 	s.busy = true
+	seated = s
 
 	local id = Config.data.Assets.Animations.pianist
 	if id ~= "" then

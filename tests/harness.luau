@@ -15,6 +15,7 @@ local Instance, Vector3, Enum, CFrame = roblox.Instance, roblox.Vector3, roblox.
 
 local H = {}
 H.groups = {} :: { [number]: { any } }
+H.tagged = {} :: { [string]: { any } } -- CollectionService's tags (the world's pieces a test needs)
 H.savesWork = true -- false: profile saves never land (a DataStore outage)
 H.saveDelay = 0.3 -- seconds a profile save takes to land
 
@@ -366,8 +367,9 @@ local stubs = {
 					return events[name]
 				end
 				events[name] = {
-					FireClient = function(_, player, message)
-						table.insert(player.inbox, message)
+					FireClient = function(_, player, message, ...)
+						-- A message that isn't a table (a piano note) is kept as { op = "@Remote", args }.
+						table.insert(player.inbox, if type(message) == "table" then message else { op = "@" .. name, args = table.pack(message, ...) })
 					end,
 					FireAllClients = function(_, message)
 						table.insert(broadcasts, { remote = name, message = message })
@@ -581,8 +583,8 @@ local services = {
 		end,
 	},
 	CollectionService = {
-		GetTagged = function()
-			return {}
+		GetTagged = function(_, tag)
+			return H.tagged[tag] or {}
 		end,
 	},
 	RunService = {
@@ -626,6 +628,9 @@ local fakeOs = setmetatable({
 		return startTime + math.floor(now)
 	end,
 }, { __index = os })
+roblox.implementMethod("Workspace", "GetServerTimeNow", function()
+	return startTime + now
+end)
 
 local Random = {}
 Random.__index = Random
@@ -751,6 +756,34 @@ end
 Shop.start()
 -- Every Robux purchase goes through the purchase system (receipts, the ledger, the products).
 local Purchases = module("ServerScriptService", "Server", "Purchases")
+-- The Foyer piano's bench seat (a guest sits on it to play) and the prompt on it.
+do
+	local prompt = { Triggered = signal() }
+	local seat = { Name = "PianoSeat", Disabled = true, Occupant = nil, prompt = prompt }
+	function seat.IsA(_, class)
+		return class == "Seat" or class == "BasePart"
+	end
+	function seat.Sit(self, h)
+		self.Occupant = h
+		h.SeatPart = self
+	end
+	function seat.FindFirstChild(self, name)
+		if name == "SeatWeld" and self.Occupant then
+			return {
+				Destroy = function()
+					self.Occupant.SeatPart = nil
+					self.Occupant = nil
+				end,
+			}
+		end
+		return nil
+	end
+	function seat.FindFirstChildOfClass(_, class)
+		return if class == "ProximityPrompt" then prompt else nil
+	end
+	H.tagged.PianoSeat = { seat }
+	H.pianoSeat = seat
+end
 Purchases.start()
 module("ServerScriptService", "Server", "RemoteGuard").start()
 local ask = Remotes.funcs.ShopAsk.OnServerInvoke
@@ -845,6 +878,7 @@ H.subscriptions = subscriptions
 H.teleports = teleports
 H.services = services
 H.game = gameShim
+H.signal = signal
 H.stubs = stubs -- a test may stub a module (by its path) before anything requires it
 H.fakeOs = fakeOs
 H.Config = Config

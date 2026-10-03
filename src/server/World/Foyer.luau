@@ -110,19 +110,51 @@ local function shell(m: Model)
 			Kit.part(m, "CofferEdge", Vector3.new(10.2, 0.12, 10.2), CFrame.new(x, TOP - 0.55, z), L.darkBrass, { collide = false, query = false, shadow = false })
 		end
 	end
-	-- Wainscot and a brass hairline around the room
+	-- Wainscot and a brass hairline around the room, stopping at every doorway (the door frames
+	-- finish the ends), so nothing runs across an opening.
 	local wain = FLOOR + 4.5
-	for _, spec in {
-		{ Vector3.new(F.minX, FLOOR, F.minZ), Vector3.new(F.minX + 0.3, wain, F.maxZ) },
-		{ Vector3.new(F.maxX - 0.3, FLOOR, F.minZ), Vector3.new(F.maxX, wain, F.maxZ) },
-		{ Vector3.new(F.minX, FLOOR, F.maxZ - 0.3), Vector3.new(F.maxX, wain, F.maxZ) },
-	} do
-		Kit.span(m, "Wainscot", spec[1], spec[2], L.panel, { collide = false, query = false })
+	local frame = 0.7 -- the door frames' width beside each opening
+	local westDoors = { { D.salon.centre.Z - dw - frame, D.salon.centre.Z + dw + frame }, { D.velvet.centre.Z - dw - frame, D.velvet.centre.Z + dw + frame } }
+	local eastDoors = { { D.midnight.centre.Z - dw - frame, D.midnight.centre.Z + dw + frame }, { D.obsidian.centre.Z - dw - frame, D.obsidian.centre.Z + dw + frame } }
+	local vault = Layout.Vault
+	local northDoors = {
+		{ b.X - 4 - 0.5, b.X + 4 + 0.5 },
+		{ vault.door.X - vault.doorWidth / 2 - frame, vault.door.X + vault.doorWidth / 2 + frame },
+		-- The Grand Stair rises against the back wall: the panelling stops either side of it.
+		{ st.x - 5, st.x + 5 },
+	}
+	-- Runs from a to b along one axis, leaving out the gaps (each { from, to }).
+	local function runs(a: number, b: number, gaps: { { number } }): { { number } }
+		table.sort(gaps, function(x, y)
+			return x[1] < y[1]
+		end)
+		local out, cursor = {}, a
+		for _, g in gaps do
+			if g[1] > cursor then
+				table.insert(out, { cursor, g[1] })
+			end
+			cursor = math.max(cursor, g[2])
+		end
+		if cursor < b then
+			table.insert(out, { cursor, b })
+		end
+		return out
 	end
+	local function trim(name: string, look: Kit.Look, y0: number, y1: number, depth: number, opts: { [string]: any })
+		for _, r in runs(F.minZ, F.maxZ, table.clone(westDoors)) do
+			Kit.span(m, name, Vector3.new(F.minX, y0, r[1]), Vector3.new(F.minX + depth, y1, r[2]), look, opts)
+		end
+		for _, r in runs(F.minZ, F.maxZ, table.clone(eastDoors)) do
+			Kit.span(m, name, Vector3.new(F.maxX - depth, y0, r[1]), Vector3.new(F.maxX, y1, r[2]), look, opts)
+		end
+		for _, r in runs(F.minX, F.maxX, table.clone(northDoors)) do
+			Kit.span(m, name, Vector3.new(r[1], y0, F.maxZ - depth), Vector3.new(r[2], y1, F.maxZ), look, opts)
+		end
+	end
+	trim("Wainscot", L.panel, FLOOR, wain, 0.3, { collide = false, query = false })
+	trim("Hairline", L.brass, wain, wain + 0.15, 0.35, { collide = false, query = false, shadow = false })
+	-- And a hairline high on the side walls, above the doors.
 	for _, spec in {
-		{ Vector3.new(F.minX, wain, F.minZ), Vector3.new(F.minX + 0.35, wain + 0.15, F.maxZ) },
-		{ Vector3.new(F.maxX - 0.35, wain, F.minZ), Vector3.new(F.maxX, wain + 0.15, F.maxZ) },
-		{ Vector3.new(F.minX, wain, F.maxZ - 0.35), Vector3.new(F.maxX, wain + 0.15, F.maxZ) },
 		{ Vector3.new(F.minX, TOP - 3, F.minZ), Vector3.new(F.minX + 0.35, TOP - 2.85, F.maxZ) },
 		{ Vector3.new(F.maxX - 0.35, TOP - 3, F.minZ), Vector3.new(F.maxX, TOP - 2.85, F.maxZ) },
 	} do
@@ -201,8 +233,30 @@ local function piano(m: Model)
 		end
 	end
 	Kit.part(model, "MusicDesk", Vector3.new(3, 0.9, 0.1), at(0, 4.2, -2.4) * CFrame.Angles(math.rad(-15), 0, 0), L.blackLacquer, { collide = false })
-	-- Bench
+	-- Bench, and the seat a guest takes to play (shut until they've piano time: Purchases/Piano)
 	Kit.part(model, "Bench", Vector3.new(3, 0.5, 1.3), at(0, 2, -5), L.leather)
+	local seat = Instance.new("Seat")
+	seat.Name = "PianoSeat"
+	seat.Size = Vector3.new(2, 0.2, 1.2)
+	seat.CFrame = F.pianoSeat
+	seat.Transparency = 1
+	seat.Anchored = true
+	seat.CanCollide = false
+	seat.CanTouch = false
+	seat.Disabled = true
+	seat.Parent = model
+	CollectionService:AddTag(seat, "PianoSeat")
+	local play = Instance.new("ProximityPrompt")
+	play.Name = "PlayPrompt"
+	play.ActionText = "Play the piano"
+	play.ObjectText = "The grand piano"
+	play.KeyboardKeyCode = Enum.KeyCode.E
+	play.GamepadKeyCode = Enum.KeyCode.ButtonX
+	play.HoldDuration = 0
+	play.MaxActivationDistance = 9
+	play.RequiresLineOfSight = false
+	play.Style = Enum.ProximityPromptStyle.Custom
+	play.Parent = seat
 	for _, x in { -1.3, 1.3 } do
 		Kit.part(model, "BenchLeg", Vector3.new(0.25, 1.8, 0.25), at(x, 0.9, -5), L.blackLacquer)
 	end
@@ -347,14 +401,12 @@ local function stair(m: Model)
 	Kit.part(model, "ArchHead", Vector3.new(9.2, 0.8, 2.4), CFrame.new(archPos + Vector3.new(0, 5.4, 0)), L.brass)
 	local nameplate = Kit.part(model, "ArchName", Vector3.new(8, 1.2, 0.1), CFrame.new(archPos + Vector3.new(0, 6.6, -1.25)), { color = Color3.new(), material = Enum.Material.SmoothPlastic, transparency = 1 }, { collide = false, query = false, shadow = false })
 	Kit.engrave(nameplate, Enum.NormalId.Front, { { text = Voice.Foyer.stair, size = 0.7, font = Brand.Fonts.display, color = Brand.Colours.lightGold } }, { ppu = 60, lit = false })
-	-- A brass sign at the foot of the stair
-	local signPos = Vector3.new(st.x - 6.4, FLOOR, st.fromZ - 1.5)
-	Kit.post(model, "SignPost", 3, 0.2, signPos, L.brass, { collide = false })
-	local sign = Kit.part(model, "StairSign", Vector3.new(2.6, 1.3, 0.1), CFrame.new(signPos + Vector3.new(0, 3.4, 0)), L.brass, { collide = false })
-	Kit.engrave(sign, Enum.NormalId.Front, {
-		{ text = Voice.Foyer.stair, size = 0.34, font = Brand.Fonts.display, color = Color3.fromRGB(40, 30, 12) },
-		{ text = "The Library", size = 0.26, font = Brand.Fonts.body, color = Color3.fromRGB(50, 38, 14) },
-	}, { ppu = 80, brightness = 1 })
+	-- A sign at the foot of the stair, facing the front door, saying where it goes.
+	local signAt = Vector3.new(st.x - 6.6, FLOOR, st.fromZ - 1.2)
+	Kit.sign(model, "StairSign", CFrame.lookAt(signAt, signAt + Vector3.new(0, 0, -1)), 3, 1.5, {
+		{ text = "The Club Floor", size = 0.42, font = Brand.Fonts.display, color = Brand.Colours.lightGold },
+		{ text = "The Library  ·  The Ballroom", size = 0.22, font = Brand.Fonts.body, color = Brand.Colours.bone },
+	}, 3.3)
 end
 
 local function roomDoor(m: Model, roomId: string)
@@ -420,20 +472,15 @@ local function roomDoor(m: Model, roomId: string)
 	end
 end
 
--- The Soirée's countdown: the only clock ever allowed in the Foyer.
+-- The Soirée's countdown: the only clock ever allowed in the Foyer, on a stand of its own clear of
+-- the stair. Three lines: its name, the weekend's room, and the time (SoireeService writes them).
 local function soireeBoard(m: Model)
-	local model = Kit.model(m, "SoireeBoard")
-	local cf = F.soireeBoard
-	Kit.part(model, "EaselLegL", Vector3.new(0.2, 6.2, 0.2), cf * CFrame.new(-1.3, 3.1, 0.4) * CFrame.Angles(math.rad(-8), 0, 0), L.brass)
-	Kit.part(model, "EaselLegR", Vector3.new(0.2, 6.2, 0.2), cf * CFrame.new(1.3, 3.1, 0.4) * CFrame.Angles(math.rad(-8), 0, 0), L.brass)
-	Kit.part(model, "EaselBack", Vector3.new(0.2, 5.8, 0.2), cf * CFrame.new(0, 2.9, 1.3) * CFrame.Angles(math.rad(18), 0, 0), L.brass, { collide = false })
-	local face = Kit.part(model, "Board", Vector3.new(3.4, 2.2, 0.1), cf * CFrame.new(0, 4.6, 0.2) * CFrame.Angles(math.rad(-8), 0, 0), L.blackLacquer, { collide = false })
-	Kit.part(model, "BoardFrame", Vector3.new(3.6, 2.4, 0.08), cf * CFrame.new(0, 4.6, 0.26) * CFrame.Angles(math.rad(-8), 0, 0), L.brass, { collide = false })
-	Kit.engrave(face, Enum.NormalId.Front, {
-		{ text = "THE SOIRÉE", size = 0.3, font = Brand.Fonts.display, color = Brand.Colours.lightGold },
-		{ text = "Every weekend", size = 0.18, font = Brand.Fonts.body, color = Brand.Colours.bone },
-	}, { ppu = 90, lit = false })
-	CollectionService:AddTag(face, "SoireeBoard")
+	local board = Kit.sign(m, "SoireeBoard", F.soireeBoard, 3.8, 2.4, {
+		{ text = "The Soirée", size = 0.34, font = Brand.Fonts.display, color = Brand.Colours.lightGold },
+		{ text = "Every weekend", size = 0.17, font = Brand.Fonts.body, color = Brand.Colours.bone },
+		{ text = "", size = 0.17, font = Brand.Fonts.bodyBold, color = Brand.Colours.gold },
+	}, 3.9)
+	CollectionService:AddTag(board, "SoireeBoard")
 end
 
 local function boutiqueDoor(m: Model)

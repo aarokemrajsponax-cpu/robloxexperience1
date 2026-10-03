@@ -163,7 +163,8 @@ function Kit.engrave(part: BasePart, face: Enum.NormalId, lines: { { text: strin
 	local gui = Instance.new("SurfaceGui")
 	gui.Face = face
 	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
-	gui.PixelsPerStud = if opts and opts.ppu then opts.ppu else 60
+	-- Sharp at any distance a guest reads it from (fewer pixels a stud blur the letters).
+	gui.PixelsPerStud = math.max(90, if opts and opts.ppu then opts.ppu else 100)
 	gui.LightInfluence = if opts and opts.lit == false then 0 else 0.6
 	gui.Brightness = if opts and opts.brightness then opts.brightness else 1.4
 	gui.MaxDistance = if opts and opts.maxDistance then opts.maxDistance else 120
@@ -174,6 +175,10 @@ function Kit.engrave(part: BasePart, face: Enum.NormalId, lines: { { text: strin
 	holder.BackgroundTransparency = 1
 	holder.Size = UDim2.fromScale(1, 1)
 	holder.Parent = gui
+	local inset = Instance.new("UIPadding")
+	inset.PaddingTop = UDim.new(0.06, 0)
+	inset.PaddingBottom = UDim.new(0.06, 0)
+	inset.Parent = holder
 
 	local list = Instance.new("UIListLayout")
 	list.FillDirection = Enum.FillDirection.Vertical
@@ -196,6 +201,21 @@ function Kit.engrave(part: BasePart, face: Enum.NormalId, lines: { { text: strin
 		label.Parent = holder
 	end
 	return gui
+end
+
+-- A sign on a brass stand: a lacquered board in a brass frame on a slim pedestal, its words in
+-- gold. `cf` is the foot of the stand, facing the way the words face; the board's centre stands
+-- `raise` studs up. Returns the board (its SurfaceGui has a TextLabel per line, in order).
+function Kit.sign(parent: Instance, name: string, cf: CFrame, width: number, height: number, lines: { { text: string, size: number, font: Font?, color: Color3? } }, raise: number?): BasePart
+	local model = Kit.model(parent, name)
+	local L = Kit.Looks
+	local y = raise or 3.6
+	Kit.part(model, "Base", Vector3.new(1.4, 0.12, 0.9), cf * CFrame.new(0, 0.06, 0), L.brass)
+	Kit.post(model, "Post", y - height / 2 + 0.1, 0.18, (cf * CFrame.new(0, 0.12, 0)).Position, L.brass)
+	Kit.part(model, "Frame", Vector3.new(width + 0.24, height + 0.24, 0.1), cf * CFrame.new(0, y, 0.04), L.brass)
+	local board = Kit.part(model, "Board", Vector3.new(width, height, 0.12), cf * CFrame.new(0, y, 0), L.blackLacquer)
+	Kit.engrave(board, Enum.NormalId.Front, lines, { ppu = 100, lit = false, brightness = 1.2 })
+	return board
 end
 
 -- Everything in a model stays in memory on every client (streaming never drops it).

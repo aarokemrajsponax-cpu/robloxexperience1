@@ -8,6 +8,7 @@ local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
+local Caps = require(ReplicatedStorage.Shared.Caps)
 local Catalogue = require(ReplicatedStorage.Shared.Catalogue)
 local Layout = require(ReplicatedStorage.Shared.Layout)
 local Kit = require(script.Parent.Kit)
@@ -39,7 +40,7 @@ local function cabinet(m: Model, name: string, cf: CFrame, caseId: string?, labe
 		Kit.pointLight(light, 0.9, 7, Color3.fromRGB(255, 236, 206))
 	end
 	local plate = Kit.part(model, "Plate", Vector3.new(2.4, 0.4, 0.05), cf * CFrame.new(0, 0.55, 0.93), L.brass, { collide = false, shadow = false })
-	Kit.engrave(plate, Enum.NormalId.Front, { { text = string.upper(label), size = 0.24, font = Brand.Fonts.bodyBold, color = Color3.fromRGB(40, 30, 12) } }, { ppu = 100, lit = false })
+	Kit.engrave(plate, Enum.NormalId.Front, { { text = Caps(label), size = 0.24, font = Brand.Fonts.bodyBold, color = Color3.fromRGB(40, 30, 12) } }, { ppu = 100, lit = false })
 	model:SetAttribute("Frame", cf)
 	if caseId then
 		model:SetAttribute("Case", caseId)

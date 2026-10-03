@@ -7,6 +7,7 @@ local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
+local Caps = require(ReplicatedStorage.Shared.Caps)
 local Ease = require(ReplicatedStorage.Shared.Ease)
 local Layout = require(ReplicatedStorage.Shared.Layout)
 
@@ -52,7 +53,7 @@ local function face(part: Part, normal: Enum.NormalId, title: string, fact: stri
 	head.FontFace = Brand.Fonts.bodyBold
 	head.TextScaled = true
 	head.TextColor3 = if gold then Brand.Colours.nearBlack else ENGRAVED
-	head.Text = string.upper(title)
+	head.Text = Caps(title)
 	head.LayoutOrder = 1
 	head.Parent = leaf
 	local line = Instance.new("TextLabel")

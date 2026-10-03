@@ -8,6 +8,7 @@ local HapticService = game:GetService("HapticService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
+local Caps = require(ReplicatedStorage.Shared.Caps)
 local Ease = require(ReplicatedStorage.Shared.Ease)
 local Settings = require(ReplicatedStorage.Shared.Settings)
 local Root = require(script.Parent.Root)
@@ -142,7 +143,7 @@ function Theme.text(parent: Instance, text: string, size: number, kind: TextKind
 	local k: TextKind = kind or "body"
 	local label = Instance.new("TextLabel")
 	label.BackgroundTransparency = 1
-	label.Text = if k == "caps" then string.upper(text) else text
+	label.Text = if k == "caps" then Caps(text) else text
 	label.TextColor3 = if k == "display" then C.bone elseif k == "caps" then C.gold else C.bone
 	label.TextWrapped = true
 	label.AutomaticSize = Enum.AutomaticSize.Y
@@ -306,7 +307,7 @@ function Theme.key(parent: Instance, text: string, primary: boolean?, onPress: (
 	button.BackgroundTransparency = baseFill
 	button.BorderSizePixel = 0
 	button.Size = UDim2.new(0, width or 200, 0, 44)
-	button.Text = string.upper(text)
+	button.Text = Caps(text)
 	button.TextColor3 = if primary then Color3.fromRGB(24, 18, 8) else C.lightGold
 	button.Selectable = true
 	button.SelectionImageObject = selectionRing()

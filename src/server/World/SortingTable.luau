@@ -7,6 +7,7 @@ local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
+local Caps = require(ReplicatedStorage.Shared.Caps)
 local Catalogue = require(ReplicatedStorage.Shared.Catalogue)
 local Layout = require(ReplicatedStorage.Shared.Layout)
 local Kit = require(script.Parent.Kit)
@@ -51,7 +52,7 @@ local function casePlate(parent: Model, index: number, caseId: string, frame: CF
 	local c = Layout.caseLocal(index)
 	local plate = Kit.part(parent, "CasePlate" .. index, Vector3.new(T.caseWidth - 0.16, 0.42, 0.05), facingCamera(frame, c + Vector3.new(0, 0.12, -T.caseDepth / 2 - 0.28)), L.brass, { collide = false, shadow = false })
 	Kit.engrave(plate, Enum.NormalId.Front, {
-		{ text = string.upper(case.name), size = 0.52, font = Brand.Fonts.display, color = Color3.fromRGB(34, 26, 10) },
+		{ text = Caps(case.name), size = 0.52, font = Brand.Fonts.display, color = Color3.fromRGB(34, 26, 10) },
 		{ text = case.subtitle, size = 0.3, font = Brand.Fonts.body, color = Color3.fromRGB(56, 42, 16) },
 	}, { ppu = 120, brightness = 1, maxDistance = 40 })
 end

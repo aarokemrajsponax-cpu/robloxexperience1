@@ -7,6 +7,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
+local Caps = require(ReplicatedStorage.Shared.Caps)
 local Root = require(script.Parent.Root)
 local Theme = require(script.Parent.Theme)
 local Toast = require(script.Parent.Toast)
@@ -159,7 +160,7 @@ function DecreePanel.open()
 		status.Text = "This is exactly how the house will show it."
 		info.held = result.held
 		info.price = result.price
-		proclaim.Text = string.upper(proclaimText(info))
+		proclaim.Text = Caps(proclaimText(info))
 		proclaim.Visible = true
 		shown()
 	end

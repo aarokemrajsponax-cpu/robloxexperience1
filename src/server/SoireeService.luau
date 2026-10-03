@@ -144,9 +144,12 @@ end
 local function drawCountdown()
 	local weekend = Soiree.at()
 	local now = os.time()
-	local lines = if weekend.active
-		then { weekend.name, string.format("A %s weekend · ends in %s", if weekend.format == "ballroom" then "Ballroom" else "Library", Soiree.countdown(weekend.endsAt - now)) }
-		else { weekend.name, string.format("Begins in %s · a %s weekend", Soiree.countdown(weekend.startsAt - now), if weekend.format == "ballroom" then "Ballroom" else "Library") }
+	-- Its name as written (an accented letter has no capital in string.upper), the weekend's
+	-- room, and the time on a line of its own so nothing runs off the board.
+	local room = string.format("A %s weekend", if weekend.format == "ballroom" then "Ballroom" else "Library")
+	local lines: { string } = if weekend.active
+		then { weekend.name, room, "Ends in " .. Soiree.countdown(weekend.endsAt - now) }
+		else { weekend.name, room, "Begins in " .. Soiree.countdown(weekend.startsAt - now) }
 	for _, part in CollectionService:GetTagged("SoireeBoard") do
 		local gui = part:FindFirstChildOfClass("SurfaceGui")
 		if gui then
@@ -159,11 +162,10 @@ local function drawCountdown()
 			table.sort(labels, function(a, b)
 				return a.LayoutOrder < b.LayoutOrder
 			end)
-			if labels[2] then
-				labels[2].Text = lines[2]
-			end
-			if labels[1] then
-				labels[1].Text = string.upper(lines[1])
+			for i, line in lines do
+				if labels[i] then
+					labels[i].Text = line
+				end
 			end
 		end
 	end

@@ -5,6 +5,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
+local Caps = require(ReplicatedStorage.Shared.Caps)
 local Root = require(script.Parent.Root)
 local Theme = require(script.Parent.Theme)
 local Toast = require(script.Parent.Toast)
@@ -61,7 +62,7 @@ function LedgerPanel.open()
 	local function show(v: { [string]: any })
 		title.Text = "The Ledger · " .. tostring(v.term or "")
 		pageText.Text = string.format("Page %d", v.page or 0)
-		of.Text = string.upper(string.format("of %d", v.pages or 50))
+		of.Text = Caps(string.format("of %d", v.pages or 50))
 		fill.Size = UDim2.fromScale(math.clamp(v.progress or 0, 0, 1), 1)
 		nextFree.Text = "Page " .. tostring(v.nextPage) .. ": " .. table.concat(v.nextFree or {}, ", ")
 		if v.leather then

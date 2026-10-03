@@ -11,6 +11,7 @@
 --   Risk                   Normal / Review / Restricted, from server-side signals
 --   Telemetry              one analytics schema for every purchase event
 --   Velocity, Revive, Decree, Luck, Rain   the five products
+--   Piano                  time at the Foyer's grand piano, and the notes played on it
 --
 -- The Boutique's own products (pieces, purses, the Gold Key...) register their handlers in Shop,
 -- which starts first. MONETIZATION.md explains the whole design.
@@ -30,6 +31,7 @@ local Grants = require(script.Grants)
 local Ledger = require(script.Ledger)
 local Luck = require(script.Luck)
 local Perks = require(script.Perks)
+local Piano = require(script.Piano)
 local PriceLevels = require(script.PriceLevels)
 local Rain = require(script.Rain)
 local Receipts = require(script.Receipts)
@@ -45,6 +47,7 @@ Purchases.Revive = Revive
 Purchases.Velocity = Velocity
 Purchases.Rain = Rain
 Purchases.Store = Store
+Purchases.Piano = Piano
 
 -- How the purchase system started (for the owner's tools and tests).
 Purchases.binding = ""
@@ -110,6 +113,7 @@ function Purchases.start()
 	Decree.start()
 	Luck.start()
 	Rain.start()
+	Piano.start()
 	Gilt.personal = function(player: Player): number
 		return Luck.multiplier(player, "gilt")
 	end

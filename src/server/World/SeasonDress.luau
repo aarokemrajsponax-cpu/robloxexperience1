@@ -11,6 +11,7 @@ local Workspace = game:GetService("Workspace")
 
 local Layout = require(ReplicatedStorage.Shared.Layout)
 local Seasons = require(ReplicatedStorage.Shared.Seasons)
+local Flush = require(script.Parent.Flush)
 local Kit = require(script.Parent.Kit)
 local Terrace = require(script.Parent.Terrace)
 
@@ -137,6 +138,8 @@ function SeasonDress.apply(id: string)
 	candlelight(id == "hallows")
 	Terrace.setOpen(id == "summer")
 	Workspace:SetAttribute("TerraceOpen", id == "summer")
+	-- The dressing is laid on floors and walls: anything flush with them is lifted clear.
+	Flush.settle(maison)
 end
 
 return SeasonDress

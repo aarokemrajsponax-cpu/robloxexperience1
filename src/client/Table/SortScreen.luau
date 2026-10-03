@@ -19,6 +19,7 @@ local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
+local Caps = require(ReplicatedStorage.Shared.Caps)
 local Catalogue = require(ReplicatedStorage.Shared.Catalogue)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Ease = require(ReplicatedStorage.Shared.Ease)
@@ -508,7 +509,7 @@ local function build()
 	head.ZIndex = 3
 	head.Parent = root
 	header.frame = head
-	header.mark = label(head, string.upper(Brand.Name), 18, F.bodyMedium, BONE, {
+	header.mark = label(head, Caps(Brand.Name), 18, F.bodyMedium, BONE, {
 		Name = "Mark",
 		AnchorPoint = Vector2.new(0, 0.5),
 		TextXAlignment = Enum.TextXAlignment.Left,
@@ -1639,7 +1640,7 @@ local function setRoundText(roomName: string, roundText: string)
 	local word, rest = string.match(roundText, "^(%S+)%s+(.+)$")
 	local round = stats.ROUND
 	if word == "Round" or word == "Hand" then
-		round.key.Text = string.upper(word :: string)
+		round.key.Text = Caps(word :: string)
 		round.value.Text = rest :: string
 		round.shown = true
 		roundExtra = ""
@@ -1872,7 +1873,7 @@ function SortScreen.correct(uid: number, caseId: string, points: number?, multip
 	showGuide(nil)
 	setHover(nil)
 	flyIn(c, bin, false)
-	local lines = { { text = string.upper(Voice.Sorting.correct), size = 19, font = F.bodyBold, colour = LIGHT } }
+	local lines = { { text = Caps(Voice.Sorting.correct), size = 19, font = F.bodyBold, colour = LIGHT } }
 	if points and points > 0 then
 		local sub = "+" .. number(points)
 		if multiplier and multiplier > 1 then
@@ -1918,7 +1919,7 @@ function SortScreen.wrong(uid: number, caseId: string, lostStreak: number, penal
 			again ..= "   −" .. number(penalty)
 		end
 		local lines = {
-			{ text = string.upper(Voice.Sorting.wrong), size = 19, font = F.bodyBold, colour = CORAL },
+			{ text = Caps(Voice.Sorting.wrong), size = 19, font = F.bodyBold, colour = CORAL },
 			{ text = again, size = 24, font = F.displayItalic, colour = BONE },
 		}
 		if lostStreak >= 2 then
@@ -1999,7 +2000,7 @@ function SortScreen.setLine(text: string, caption: string)
 		return
 	end
 	local sc = stats.SCORE
-	sc.key.Text = string.upper(caption)
+	sc.key.Text = Caps(caption)
 	sc.value.Text = text
 	sc.value.TextSize = textSize(24 * L.s)
 	sc.width = 176
@@ -2064,7 +2065,7 @@ function SortScreen.streak(n: number, multiplier: number)
 	scale.Parent = holder
 	local title = string.gsub(Voice.Sorting.inARow, "{n}", tostring(n))
 	local line = Voice.Sorting.moments[n] or string.gsub(Voice.Sorting.multiplier, "{n}", tostring(multiplier))
-	local t1 = label(holder, string.upper(title), 11 * s, F.bodyMedium, GOLD, { Position = UDim2.fromScale(0.5, 0.3), Size = UDim2.fromScale(1, 0.3), ZIndex = 9 })
+	local t1 = label(holder, Caps(title), 11 * s, F.bodyMedium, GOLD, { Position = UDim2.fromScale(0.5, 0.3), Size = UDim2.fromScale(1, 0.3), ZIndex = 9 })
 	local t2 = label(holder, line, 24 * s, F.displayItalic, BONE, { Position = UDim2.fromScale(0.5, 0.66), Size = UDim2.fromScale(1, 0.46), ZIndex = 9 })
 	Ease.play(scale, Ease.info(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 })
 	task.delay(1.4, function()

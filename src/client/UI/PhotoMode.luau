@@ -14,6 +14,7 @@ local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
+local Caps = require(ReplicatedStorage.Shared.Caps)
 local Root = require(script.Parent.Root)
 local Theme = require(script.Parent.Theme)
 local Toast = require(script.Parent.Toast)
@@ -71,7 +72,7 @@ local function applyGrade()
 	end
 	local label = gradeLabel
 	if label then
-		label.Text = string.upper(g.name)
+		label.Text = Caps(g.name)
 	end
 end
 

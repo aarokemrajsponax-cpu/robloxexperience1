@@ -177,6 +177,35 @@ add({
 	UX = { DisplayName = "Megalodon Rainmaker", Category = "Spectacle", Line = "Gold rains on the whole house: every guest gets 150 Gilt, you get 500 more, and everyone sees who made it rain.", Offer = true, Order = 50, Action = "prompt" },
 })
 
+-- Time at the Foyer's grand piano: everyone in the Foyer hears you, and the house's music rests
+-- while you play. Time is kept in the profile and only runs while you sit at the keys.
+for _, session in {
+	{ key = "pianoSession1", name = "Piano Session 1 Minute", minutes = 1, price = 99, tier = "Entry" :: Tier },
+	{ key = "pianoSession3", name = "Piano Session 3 Minutes", minutes = 3, price = 349, tier = "Medium" :: Tier },
+	{ key = "pianoSession5", name = "Piano Session 5 Minutes", minutes = 5, price = 599, tier = "Premium" :: Tier },
+	{ key = "pianoSession10", name = "Piano Session 10 Minutes", minutes = 10, price = 899, tier = "Prestige" :: Tier },
+} do
+	add({
+		Key = session.key,
+		Name = session.name,
+		ProductType = "DeveloperProduct",
+		Id = 0,
+		Handler = "piano",
+		Pricing = { ReferencePrice = session.price, Tier = session.tier, Rationale = "The house's centrepiece, played for the whole Foyer: AJKR's prices, longer sessions cheaper by the minute." },
+		Reward = { Type = "Piano", Seconds = session.minutes * 60 },
+		Rules = { Stackable = true, CooldownSeconds = 0 },
+		UX = {
+			DisplayName = if session.minutes == 1 then "1 minute at the piano" else string.format("%d minutes at the piano", session.minutes),
+			Category = "Piano",
+			Line = "Play the Foyer's grand piano for everyone in the room. Your time only runs while you sit at the keys.",
+			-- Offered at the piano itself, not in the Boutique's list.
+			Offer = false,
+			Order = 60 + session.minutes,
+			Action = "piano",
+		},
+	})
+end
+
 -- What the house already sold (unchanged prices and rewards, now in the catalog).
 add({
 	Key = "doubleGilt",
@@ -412,6 +441,10 @@ function ProductConfig.validate(handlers: { [string]: boolean }?): { [string]: s
 		elseif r.Type == "Rain" then
 			if not nonNegative(r.ShareGilt) or not nonNegative(r.PurchaserBonusGilt) or not positive(r.DurationSeconds) or not positive(r.MaxRecipients) then
 				bad("a rain needs ShareGilt, PurchaserBonusGilt, DurationSeconds and MaxRecipients")
+			end
+		elseif r.Type == "Piano" then
+			if not positive(r.Seconds) or r.Seconds ~= math.floor(r.Seconds) then
+				bad("a piano session needs whole Seconds above 0")
 			end
 		elseif r.Type == "Velocity" then
 			if not positive(r.SpeedMultiplier) or r.SpeedMultiplier < 1 or r.SpeedMultiplier > 2 then

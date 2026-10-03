@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
+local Caps = require(ReplicatedStorage.Shared.Caps)
 local Voice = require(ReplicatedStorage.Shared.Voice)
 local Root = require(script.Parent.Root)
 local Theme = require(script.Parent.Theme)
@@ -111,7 +112,7 @@ function HowToPlay.open(club: boolean?)
 
 	local function render()
 		local step = STEPS[index]
-		stepLabel.Text = string.upper(Voice.roman(index) .. "  of  " .. Voice.roman(#STEPS))
+		stepLabel.Text = Caps(Voice.roman(index) .. "  of  " .. Voice.roman(#STEPS))
 		title.Text = step.title
 		line.Text = step.line
 		if stopSpin then
@@ -126,7 +127,7 @@ function HowToPlay.open(club: boolean?)
 		back.Visible = index > 1
 		local last = index == #STEPS
 		local text = if last then (if club then "Understood" elseif State.seated then "Back to the table" else "Take me to a table") else "Next"
-		nextKey.Text = string.upper(text)
+		nextKey.Text = Caps(text)
 	end
 
 	back = Theme.key(keys, "Back", false, function()

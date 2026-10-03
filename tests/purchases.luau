@@ -16,6 +16,8 @@
 --   H. God-Mode Luck: the multiplier, stacking, time only in the house, expiry, the cap
 --   I. Megalodon Rainmaker: shares, joiners, rejoins, the line, a buyer who leaves
 --   J. the analytics schema
+--   K. the Foyer's grand piano: buying time, sitting down, notes for the room, the clock only at
+--      the keys, getting up, running out, the cap, leaving
 --
 -- Usage (from the repo root):  rojo sourcemap default.project.json -o sourcemap.json
 --                              lune run tests/purchases.luau
@@ -954,6 +956,184 @@ do
 		H.askAs(kit, { op = "offers" })
 		return Telemetry.count(E.Impression, "godModeLuck") == n and n >= 1
 	end)())
+end
+
+---------------------------------------------------------------------------------------------------
+-- K. The Foyer's grand piano
+---------------------------------------------------------------------------------------------------
+do
+	local Piano = purchases("Piano")
+	local Layout = module("ReplicatedStorage", "Shared", "Layout")
+	local Workspace = H.services.Workspace
+	local seat = H.pianoSeat
+	local pianoAsk = Remotes.funcs.PianoAsk.OnServerInvoke
+	local noteEvent = Remotes.event("PianoNote")
+	local function piano(player, request)
+		advance(0.4)
+		local r
+		run(function()
+			r = pianoAsk(player, request)
+		end)
+		return r
+	end
+	-- A guest standing `away` studs from the bench, with a humanoid the seat can hold.
+	local function pianist(name, id, away)
+		local g = guest(name, id)
+		local h = { Health = 100, Sit = false, SeatPart = nil }
+		local root = { Position = Layout.Foyer.pianoSeat.Position + H.Vector3.new(0, 0, away or 3) }
+		function root.IsA(_, class)
+			return class == "BasePart"
+		end
+		g.Character = {
+			FindFirstChildOfClass = function(_, class)
+				return if class == "Humanoid" then h else nil
+			end,
+			FindFirstChild = function(_, n)
+				return if n == "HumanoidRootPart" then root else nil
+			end,
+		}
+		return g, h
+	end
+	local function notesTo(player)
+		local n = 0
+		for _, m in player.inbox do
+			if m.op == "@PianoNote" then
+				n += 1
+			end
+		end
+		return n
+	end
+
+	-- The four sessions, as created in Creator Hub by their names.
+	for _, p in {
+		{ Name = "Piano Session 1 Minute", ProductId = 5101, PriceInRobux = 99 },
+		{ Name = "Piano Session 3 Minutes", ProductId = 5103, PriceInRobux = 349 },
+		{ Name = "Piano Session 5 Minutes", ProductId = 5105, PriceInRobux = 599 },
+		{ Name = "Piano Session 10 Minutes", ProductId = 5110, PriceInRobux = 899 },
+	} do
+		table.insert(MarketplaceService.devProducts, p)
+	end
+	run(Catalog.discover)
+	local problems = ProductConfig.validate(Grants.names())
+	check("the four piano sessions are valid products", problems.pianoSession1 == nil and problems.pianoSession3 == nil and problems.pianoSession5 == nil and problems.pianoSession10 == nil)
+	check("each is found by its name in Creator Hub", Catalog.idOf("pianoSession1") == 5101 and Catalog.idOf("pianoSession10") == 5110)
+	check("one, three, five and ten minutes", ProductConfig.byKey.pianoSession1.Reward.Seconds == 60 and ProductConfig.byKey.pianoSession3.Reward.Seconds == 180 and ProductConfig.byKey.pianoSession5.Reward.Seconds == 300 and ProductConfig.byKey.pianoSession10.Reward.Seconds == 600)
+	check("at AJKR's prices (99, 349, 599, 899)", ProductConfig.byKey.pianoSession1.Pricing.ReferencePrice == 99 and ProductConfig.byKey.pianoSession3.Pricing.ReferencePrice == 349 and ProductConfig.byKey.pianoSession5.Pricing.ReferencePrice == 599 and ProductConfig.byKey.pianoSession10.Pricing.ReferencePrice == 899)
+	check("offered at the piano, not in the Boutique's list", ProductConfig.byKey.pianoSession1.UX.Offer == false)
+
+	local ada, adaHum = pianist("Ada", 9300)
+	local adaData = profiles[ada].Data
+	local ben = pianist("Ben", 9301)
+	local r = piano(ada, { op = "sit" })
+	check("with no time, sitting down shows the sessions instead", r.ok == false and r.needTime == true and #r.offers == 4)
+	check("with Roblox's prices", r.offers[1].price == 99 and r.offers[2].price == 349 and r.offers[3].price == 599 and r.offers[4].price == 899 and r.offers[4].ready == true)
+	check("and the piano stays free", Workspace:GetAttribute("PianoPlayer") == nil and seat.Occupant == nil)
+	local before = #prompts
+	r = piano(ada, { op = "buy", key = "pianoSession3" })
+	check("choosing three minutes opens Roblox's purchase window", r.ok == true and #prompts == before + 1 and prompts[#prompts].id == 5103)
+	r = piano(ada, { op = "buy", key = "godModeLuck" })
+	check("only piano time is sold at the piano", r.ok == false)
+	check("a receipt for three minutes is granted", receipt(ada, 5103, "PIANO-1", 349) == GRANTED)
+	check("bought at the bench, they sit straight down to play", Workspace:GetAttribute("PianoPlayer") == 9300 and Workspace:GetAttribute("PianoName") == "Ada" and seat.Occupant == adaHum and seat.Disabled == false)
+	check("the house knows to rest its music", Piano.player() == ada)
+	check("with three minutes on the clock", math.abs(Piano.remaining(ada, adaData) - 180) < 3, Piano.remaining(ada, adaData))
+
+	-- Notes: from the guest at the piano to everyone else in the house.
+	local benBefore, adaBefore = notesTo(ben), notesTo(ada)
+	run(function()
+		noteEvent.OnServerEvent:Fire(ada, 13)
+	end)
+	local last = ben.inbox[#ben.inbox]
+	check("a note played goes to every other guest", notesTo(ben) == benBefore + 1 and last.args[1] == 13 and last.args[2] == 9300)
+	check("but not back to the one who played it (they heard it already)", notesTo(ada) == adaBefore)
+	run(function()
+		noteEvent.OnServerEvent:Fire(ben, 13)
+	end)
+	check("a guest not at the piano can't play it", notesTo(ada) == adaBefore)
+	advance(2)
+	local n = notesTo(ben)
+	for _, bad in { 0, 38, 1.5, "13", -4 } do
+		run(function()
+			noteEvent.OnServerEvent:Fire(ada, bad)
+		end)
+	end
+	check("a key that isn't on the piano is refused", notesTo(ben) == n)
+	advance(3)
+	n = notesTo(ben)
+	for _ = 1, 80 do
+		run(function()
+			noteEvent.OnServerEvent:Fire(ada, 20)
+		end)
+	end
+	local passed = notesTo(ben) - n
+	check("a flood of notes is held to the rate", passed <= Config.data.RemoteLimits.pianoNote.burst and passed >= 10, passed)
+
+	-- The clock runs only at the keys.
+	local left = Piano.remaining(ada, adaData)
+	advance(60)
+	check("time runs while they play", math.abs(Piano.remaining(ada, adaData) - (left - 60)) < 2)
+	check("and is written into the profile as it goes", math.abs(adaData.perks.piano.seconds - Piano.remaining(ada, adaData)) < 2)
+	r = piano(ben, { op = "sit" })
+	check("one guest at a time: the next is told who's playing and for how long", r.ok == false and string.find(r.why or "", "Ada is at the piano", 1, true) ~= nil and string.find(r.why or "", "left", 1, true) ~= nil, r.why)
+	r = piano(ada, { op = "stand" })
+	local kept = adaData.perks.piano.seconds
+	check("getting up keeps the rest", r.ok and Workspace:GetAttribute("PianoPlayer") == nil and seat.Occupant == nil and seat.Disabled == true and math.abs(kept - (left - 60)) < 3, kept)
+	check("and the guest's screen is told", lastOp(ada, "pianoEnd") ~= nil and lastOp(ada, "pianoEnd").reason == "up")
+	advance(120)
+	check("time away from the keys isn't spent", adaData.perks.piano.seconds == kept and Piano.remaining(ada, adaData) == kept)
+
+	-- Sitting down with time held; buying more while playing.
+	r = piano(ada, { op = "sit" })
+	check("with time held, they sit straight down", r.ok == true and Workspace:GetAttribute("PianoPlayer") == 9300)
+	local now = Piano.remaining(ada, adaData)
+	check("a minute bought while playing goes on the clock at once", receipt(ada, 5101, "PIANO-2", 99) == GRANTED and math.abs(Piano.remaining(ada, adaData) - (now + 60 - 1)) < 3, Piano.remaining(ada, adaData))
+	-- Getting off the bench (a jump) ends it too.
+	seat.Occupant = nil
+	advance(1)
+	check("leaving the bench ends playing, and keeps the time", Workspace:GetAttribute("PianoPlayer") == nil and adaData.perks.piano.seconds > 100)
+
+	-- Too far from the bench.
+	local far = pianist("Far", 9302, 40)
+	profiles[far].Data.perks.piano.seconds = 60
+	r = piano(far, { op = "sit" })
+	check("a guest across the room can't play it from there", r.ok == false and string.find(r.why or "", "Come to the grand piano", 1, true) ~= nil)
+
+	-- Running out.
+	adaData.perks.piano.seconds = 5
+	piano(ada, { op = "sit" })
+	advance(7)
+	check("when the time runs out, they get up", Workspace:GetAttribute("PianoPlayer") == nil and adaData.perks.piano.seconds == 0 and seat.Occupant == nil)
+	check("and are thanked", lastOp(ada, "pianoEnd").reason == "time")
+	check("logged as expired", Telemetry.count(E.Expired, "piano") >= 1)
+
+	-- The cap on what the house offers, never on what's paid.
+	adaData.perks.piano.seconds = Config.data.Piano.maxSeconds - 30
+	local ok, why = Store.eligibility.pianoSession1(ada, adaData)
+	check("the house doesn't offer more than an hour held", ok == false and string.find(why or "", "60 minutes", 1, true) ~= nil, why)
+	receipt(ada, 5101, "PIANO-3", 99)
+	check("but a purchase made anyway is granted in full", adaData.perks.piano.seconds == Config.data.Piano.maxSeconds + 30, adaData.perks.piano.seconds)
+
+	-- Leaving the house while playing.
+	piano(ada, { op = "sit" })
+	advance(10)
+	local playing = Piano.remaining(ada, adaData)
+	H.PlayersService.PlayerRemoving:Fire(ada)
+	check("leaving the house frees the piano and keeps the time", Workspace:GetAttribute("PianoPlayer") == nil and math.abs(adaData.perks.piano.seconds - playing) < 2)
+
+	-- The prompt on the bench.
+	local cy = pianist("Cy", 9303)
+	run(function()
+		seat.prompt.Triggered:Fire(cy)
+	end)
+	advance(0.5)
+	check("the bench's prompt, with no time held, shows the sessions", lastOp(cy, "pianoOffer") ~= nil)
+	profiles[cy].Data.perks.piano.seconds = 30
+	run(function()
+		seat.prompt.Triggered:Fire(cy)
+	end)
+	advance(0.5)
+	check("and with time held, sits them down", Workspace:GetAttribute("PianoPlayer") == 9303)
+	piano(cy, { op = "stand" })
 end
 
 H.finish()

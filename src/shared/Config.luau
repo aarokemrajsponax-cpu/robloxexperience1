@@ -216,6 +216,11 @@ local defaults = {
 		emperorsDecree = 3716216786, -- Emperor's Decree
 		godModeLuck = 3716216448, -- Luck Booster
 		megalodonRainmaker = 3716216867, -- Megalodon Rainmaker
+		-- Time at the Foyer's grand piano (found by name until their ids are pasted here).
+		pianoSession1 = 0, -- Piano Session 1 Minute
+		pianoSession3 = 0, -- Piano Session 3 Minutes
+		pianoSession5 = 0, -- Piano Session 5 Minutes
+		pianoSession10 = 0, -- Piano Session 10 Minutes
 		saluteQueue = 4, -- salutes waiting their turn in one house, at most
 		benefactorMinutes = 30, -- the giver's nameplate carries a gold star this long
 		choiceSeconds = 3600, -- a Boutique piece chosen (or a gift) waits this long for its purchase
@@ -266,6 +271,8 @@ local defaults = {
 		tour = { rate = 1, burst = 4 },
 		salute = { rate = 1, burst = 3 },
 		adminAsk = { rate = 6, burst = 12 },
+		pianoAsk = { rate = 3, burst = 6 },
+		pianoNote = { rate = 16, burst = 24 }, -- a pianist's notes: quick runs and chords, never a flood
 	},
 
 	-- The Concierge's walking tour (each guest's own guide, drawn on their screen).
@@ -330,6 +337,17 @@ local defaults = {
 		pianoReach = 95, -- studs the Foyer piano carries (it leaks through the street door)
 		muffled = -18, -- dB taken off the piano's highs when heard from another space
 		soireeBrighter = 3, -- dB added to the piano's highs on a Soirée weekend
+	},
+
+	-- The Foyer's grand piano, played by a guest (time is bought in ProductConfig's piano sessions,
+	-- and only runs while they sit at the keys).
+	Piano = {
+		lowest = 48, -- the lowest key, as a MIDI note (C3)
+		keys = 37, -- C3 to C6: three octaves and the top C
+		reach = 14, -- studs from the bench a guest may sit down from
+		volume = 1.2, -- each note's volume
+		heard = 80, -- studs a note carries from the piano (the Foyer, and faintly the street and stair)
+		maxSeconds = 3600, -- the most piano time the house offers to hold at once (a purchase is never cut)
 	},
 
 	-- Commissions (Appendix I1): Gilt for the Evening's and the Week's.
@@ -579,6 +597,18 @@ local defaults = {
 			leave = { { id = "rbxassetid://9120806410", pitch = 1, volume = 4.00 } },
 			click = { { id = "rbxassetid://15675032796", pitch = 1, volume = 1.00 } },
 			tick = { { id = "rbxassetid://15675032796", pitch = 1.35, volume = 1.00 } },
+		},
+		-- The Foyer's grand piano when a guest plays it: one recording per key, C3 to C6 (Config.Piano).
+		-- These are a sampled grand piano free on the Creator Store (I_AmKota's "piano note" set,
+		-- public domain). Replace any with your own ("" for a key plays its nearest note, retuned).
+		PianoNotes = {
+			"rbxassetid://123112876875374", "rbxassetid://120923365636009", "rbxassetid://106306658545729", "rbxassetid://124841365961522", "rbxassetid://82335077730546", "rbxassetid://139732365240441", -- C3 to F3
+			"rbxassetid://83552558259422", "rbxassetid://137224813797993", "rbxassetid://131726792016780", "rbxassetid://95091023271668", "rbxassetid://112380265050214", "rbxassetid://105256060658131", -- F#3 to B3
+			"rbxassetid://78413131279275", "rbxassetid://72998150378307", "rbxassetid://105581334194673", "rbxassetid://86516725681894", "rbxassetid://132881598286319", "rbxassetid://133575380950758", -- C4 to F4
+			"rbxassetid://126196495975202", "rbxassetid://114434657963330", "rbxassetid://133080223235416", "rbxassetid://136348068040461", "rbxassetid://128661535499577", "rbxassetid://128462707908914", -- F#4 to B4
+			"rbxassetid://121997668450827", "rbxassetid://121413839180669", "rbxassetid://90740749235134", "rbxassetid://113030261877109", "rbxassetid://140406182404884", "rbxassetid://119631153742000", -- C5 to F5
+			"rbxassetid://70828942309686", "rbxassetid://131269431485825", "rbxassetid://118262323318899", "rbxassetid://125853393278154", "rbxassetid://99745152176175", "rbxassetid://138660648674060", -- F#5 to B5
+			"rbxassetid://110812706317973", -- C6 to C6
 		},
 		-- The house's music: three playlists of real recordings from Roblox's licensed library (APM
 		-- Music, uploaded by APMOfficial, free in any experience), so the house has music the moment

@@ -528,6 +528,98 @@ end
 
 local PIANO_HEARD = { foyer = true, street = true, club = true, boutique = true }
 
+-- Whether a guest is playing the Foyer's piano (Purchases/Piano on the server says who).
+local function guestAtPiano(): boolean
+	return Workspace:GetAttribute("PianoPlayer") ~= nil
+end
+
+-- The piano played by a guest: each note sounds from the piano itself, so the whole Foyer hears it
+-- (and, fainter, the street and the stair), in the guest's Music level. One recording per key
+-- (Config.Assets.PianoNotes); a key without one, or whose recording won't load, plays its
+-- nearest neighbour retuned.
+local noteSounds: { Sound } = {}
+local nextNote = 1
+local failedNotes: { [string]: boolean } = {}
+local notesLoaded = false
+
+local function noteSource(index: number): (string, number)
+	local ids = (Config.data.Assets :: any).PianoNotes
+	if type(ids) ~= "table" then
+		return "", 1
+	end
+	local function usable(i: number): boolean
+		local id = ids[i]
+		return type(id) == "string" and id ~= "" and not failedNotes[id]
+	end
+	-- The key itself, then its neighbours a semitone further each time.
+	local span = #ids
+	for distance = 0, span do
+		for _, i in { index - distance, index + distance } do
+			if i >= 1 and i <= #ids and usable(i) then
+				return ids[i], 2 ^ ((index - i) / 12)
+			end
+		end
+	end
+	return "", 1
+end
+
+-- Loads every key's recording (once), so the first notes play at once.
+function Sound.preloadPiano()
+	if notesLoaded then
+		return
+	end
+	notesLoaded = true
+	local ids = (Config.data.Assets :: any).PianoNotes
+	if type(ids) ~= "table" then
+		return
+	end
+	local list: { string } = {}
+	for _, id in ids do
+		if type(id) == "string" and id ~= "" then
+			table.insert(list, id)
+		end
+	end
+	task.spawn(function()
+		pcall(function()
+			ContentProvider:PreloadAsync(list, function(id: string, status: Enum.AssetFetchStatus)
+				if status == Enum.AssetFetchStatus.Failure then
+					failedNotes[id] = true
+				end
+			end)
+		end)
+	end)
+end
+
+function Sound.pianoNote(index: number)
+	local part = pianoPart()
+	local id, speed = noteSource(index)
+	if not part or id == "" then
+		return
+	end
+	local c = Config.data.Piano
+	local s = noteSounds[nextNote]
+	if not s then
+		local ns = Instance.new("Sound")
+		ns.Name = "PianoNote"
+		ns.SoundGroup = music
+		ns.RollOffMode = Enum.RollOffMode.InverseTapered
+		ns.RollOffMinDistance = 10
+		noteSounds[nextNote] = ns
+		s = ns
+	end
+	-- Twenty-four voices: a long-held chord rings on while the next notes play.
+	nextNote = nextNote % 24 + 1
+	local sound = s :: Sound
+	sound.Parent = part
+	sound.RollOffMaxDistance = c.heard
+	sound:Stop()
+	sound.SoundId = id
+	sound.PlaybackSpeed = speed
+	sound.Volume = c.volume
+	sound.TimePosition = 0
+	sound:Play()
+end
+
 local function fadeTo(s: Sound, volume: number)
 	local key = s.Name
 	if targets[key] == volume and (volume == 0 or s.IsPlaying) then
@@ -581,9 +673,10 @@ local function remix()
 			end
 			local high = if zone == "foyer" then (if mix.soiree then c.soireeBrighter else 0) else c.muffled
 			TweenService:Create(eq :: EqualizerSoundEffect, TweenInfo.new(c.crossfade), { HighGain = high, MidGain = if zone == "foyer" then 0 else high / 3 }):Play()
-			wanted.Piano = if PIANO_HEARD[zone] then level * 1.6 else 0
+			-- A guest at the keys: the house's own piano music rests while they play.
+			wanted.Piano = if PIANO_HEARD[zone] and not guestAtPiano() then level * 1.6 else 0
 		end
-	elseif zone == "foyer" then
+	elseif zone == "foyer" and not guestAtPiano() then
 		want("Music_foyer", foyerSongs, level, music)
 	end
 
@@ -667,6 +760,17 @@ local function watchWorld()
 		remix()
 	end)
 	Workspace:GetAttributeChangedSignal("Season"):Connect(remix)
+	-- A guest sits down at the piano (or gets up): the house's music rests (or comes back), and
+	-- every screen loads the notes it's about to hear.
+	Workspace:GetAttributeChangedSignal("PianoPlayer"):Connect(function()
+		if guestAtPiano() then
+			Sound.preloadPiano()
+		end
+		remix()
+	end)
+	if guestAtPiano() then
+		Sound.preloadPiano()
+	end
 	-- The piano streams in after the guest arrives: hand the Foyer's music to it once it does.
 	task.spawn(function()
 		for _ = 1, 60 do

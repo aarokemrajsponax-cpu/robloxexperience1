@@ -8,6 +8,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
+local Caps = require(ReplicatedStorage.Shared.Caps)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Ledger = require(ReplicatedStorage.Shared.Ledger)
 local Rating = require(ReplicatedStorage.Shared.Rating)
@@ -124,7 +125,7 @@ function Dressing.nameplate(player: Player)
 			mark.FontFace = Brand.Fonts.bodyMedium
 			mark.TextScaled = true
 			mark.TextColor3 = Brand.Colours.gold
-			mark.Text = string.upper(Rating.mark(data.duel.r).label)
+			mark.Text = Caps(Rating.mark(data.duel.r).label)
 			mark.Parent = plate
 		end
 		-- A gold star while the guest is the evening's benefactor (they gave the house a Salute).

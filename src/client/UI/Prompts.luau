@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
+local Caps = require(ReplicatedStorage.Shared.Caps)
 local Ease = require(ReplicatedStorage.Shared.Ease)
 local Root = require(script.Parent.Root)
 local State = require(script.Parent.Parent.State)
@@ -79,7 +80,7 @@ local function build(prompt: ProximityPrompt): BillboardGui
 	action.TextSize = 15
 	action.TextXAlignment = Enum.TextXAlignment.Left
 	action.TextColor3 = Brand.Colours.lightGold
-	action.Text = string.upper(prompt.ActionText)
+	action.Text = Caps(prompt.ActionText)
 	action.Parent = button
 
 	local object = Instance.new("TextLabel")
@@ -103,6 +104,30 @@ local function build(prompt: ProximityPrompt): BillboardGui
 	return gui
 end
 
+-- Anything else that puts the world's prompts aside for a while (the piano's keyboard), by name.
+local holds: { [string]: true } = {}
+
+local function hidden(): boolean
+	return Root.isOpen() or next(holds) ~= nil
+end
+
+local function refresh()
+	local hide = hidden()
+	ProximityPromptService.Enabled = not hide
+	for _, gui in shown do
+		gui.Enabled = not hide
+	end
+end
+
+function Prompts.hold(name: string, on: boolean)
+	if on then
+		holds[name] = true
+	else
+		holds[name] = nil
+	end
+	refresh()
+end
+
 function Prompts.start()
 	ProximityPromptService.PromptShown:Connect(function(prompt: ProximityPrompt, _inputType)
 		if prompt.Style ~= Enum.ProximityPromptStyle.Custom then
@@ -116,7 +141,7 @@ function Prompts.start()
 			gui:Destroy()
 		end
 		gui = build(prompt)
-		gui.Enabled = not Root.isOpen()
+		gui.Enabled = not hidden()
 		shown[prompt] = gui
 		local pill = gui:FindFirstChild("Pill") :: TextButton
 		pill.BackgroundTransparency = 1
@@ -131,13 +156,7 @@ function Prompts.start()
 	end)
 	-- While a panel is open the guest is in a menu: the prompts in the world step aside, and
 	-- can't be set off behind it.
-	Root.PanelsChanged:Connect(function()
-		local open = Root.isOpen()
-		ProximityPromptService.Enabled = not open
-		for _, gui in shown do
-			gui.Enabled = not open
-		end
-	end)
+	Root.PanelsChanged:Connect(refresh)
 	UserInputService.LastInputTypeChanged:Connect(function()
 		for prompt, gui in shown do
 			local pill = gui:FindFirstChild("Pill")

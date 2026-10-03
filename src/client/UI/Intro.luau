@@ -10,6 +10,7 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
+local Caps = require(ReplicatedStorage.Shared.Caps)
 local Root = require(script.Parent.Root)
 
 local Intro = {}
@@ -84,7 +85,7 @@ function Intro.play(onShown: (() -> ())?)
 	credit.TextColor3 = Brand.Colours.smoke
 	credit.TextTransparency = 1
 	local spaced = {}
-	for _, cp in utf8.codes(string.upper(Brand.Credit)) do
+	for _, cp in utf8.codes(Caps(Brand.Credit)) do
 		local ch = utf8.char(cp)
 		table.insert(spaced, if ch == " " then "  " else ch)
 	end

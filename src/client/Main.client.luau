@@ -57,6 +57,7 @@ local Tour = require(script.Parent.World.Tour)
 local Perks = require(script.Parent.Perks)
 local PerkChips = require(script.Parent.UI.PerkChips)
 local DecreePanel = require(script.Parent.UI.DecreePanel)
+local PianoPanel = require(script.Parent.UI.PianoPanel)
 local DecreeBanner = require(script.Parent.UI.DecreeBanner)
 local RainView = require(script.Parent.World.RainView)
 
@@ -169,10 +170,19 @@ start("Perks", function()
 			RainView.rain(m)
 		elseif op == "rainShare" then
 			RainView.share(m)
+		elseif op == "pianoOffer" then
+			PianoPanel.offer()
+		elseif op == "pianoEnd" then
+			PianoPanel.ended(m)
 		end
 	end)
 	Perks.start()
 	PerkChips.openDecree = DecreePanel.open
+	PerkChips.openPiano = PianoPanel.offer
+	PianoPanel.zone = function(): string
+		return Ambient.zone
+	end
+	PianoPanel.start()
 	PerkChips.start()
 	EventBanner.onSeatedLine = SortScreen.setEvent
 	TableClient.Seated.Event:Connect(function()

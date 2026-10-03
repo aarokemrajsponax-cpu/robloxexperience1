@@ -15,8 +15,9 @@ local Perks = require(script.Parent.Parent.Perks)
 
 local PerkChips = {}
 
--- Set by Main: open the decree panel.
+-- Set by Main: open the decree panel; open the piano's offer.
 PerkChips.openDecree = function() end
+PerkChips.openPiano = function() end
 
 local CHIP_WIDTH = 260
 local stack = Instance.new("Frame")
@@ -101,6 +102,12 @@ local function refresh()
 	local rain = Perks.state.rain
 	local waiting = if type(rain) == "table" then tonumber(rain.held) or 0 else 0
 	chip("Rain", 4, if waiting > 0 then "YOUR RAIN IS NEXT IN LINE" else nil)
+	-- Piano time held (it only runs at the keys, so it doesn't count down here).
+	local piano = Perks.state.piano
+	local held = if type(piano) == "table" and piano.playing ~= true then tonumber(piano.seconds) or 0 else 0
+	chip("Piano", 5, if held > 0 then string.format("PIANO TIME %s · THE FOYER  ›", clock(held)) else nil, function()
+		PerkChips.openPiano()
+	end)
 end
 
 -- Hidden at the table (the sorting screen keeps its header clear).

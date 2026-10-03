@@ -10,6 +10,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
+local Caps = require(ReplicatedStorage.Shared.Caps)
 local Root = require(script.Parent.Root)
 local Theme = require(script.Parent.Theme)
 local Sound = require(script.Parent.Parent.Sound)
@@ -65,7 +66,7 @@ function RevivePanel.update(m: { [string]: any })
 		status.Text = statusText(m)
 	end
 	if reviveKey then
-		reviveKey.Text = string.upper(reviveText(m))
+		reviveKey.Text = Caps(reviveText(m))
 		reviveKey.Visible = not waiting and ((tonumber(m.held) or 0) > 0 or m.onSale == true)
 	end
 end

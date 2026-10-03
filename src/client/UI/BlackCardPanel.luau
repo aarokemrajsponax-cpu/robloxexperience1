@@ -9,6 +9,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
+local Caps = require(ReplicatedStorage.Shared.Caps)
 local Root = require(script.Parent.Root)
 local Theme = require(script.Parent.Theme)
 local Toast = require(script.Parent.Toast)
@@ -59,7 +60,7 @@ function BlackCardPanel.open()
 	end, 300).LayoutOrder = 2
 	local function show(v: { [string]: any })
 		month.Text = if type(v.look) == "string" then "This month's look: " .. v.look .. "." else ""
-		price.Text = if type(v.price) == "string" then string.upper(v.price .. " a month") else ""
+		price.Text = if type(v.price) == "string" then Caps(v.price .. " a month") else ""
 		hold.Visible = v.held ~= true and v.offered == true
 		if v.held then
 			price.Text = "YOU HOLD THE CARD"

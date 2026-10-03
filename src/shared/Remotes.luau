@@ -21,6 +21,7 @@ Remotes.Events = {
 	"Errors", -- server -> the owner's screen: anything that broke on the server
 	"Tour", -- server -> client: the Concierge's tour starts; client -> server: it started, it ended
 	"Purchase", -- server -> client: perks and credits, decrees, rains, revive results
+	"PianoNote", -- client -> server: a note played at the Foyer's piano; server -> clients: play it
 }
 
 Remotes.Functions = {
@@ -29,6 +30,7 @@ Remotes.Functions = {
 	"ShopAsk", -- client -> server: the Boutique's shelves, choosing, equipping, the Ledger
 	"AdminAsk", -- client -> server: the owner's House controls (checked on the server every time)
 	"PerkAsk", -- client -> server: perks (prompt by product key, write a decree, start a rain)
+	"PianoAsk", -- client -> server: the Foyer's piano (sit, get up, buy time)
 }
 
 local folder: Folder? = nil

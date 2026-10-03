@@ -726,6 +726,14 @@ do
 	check("circle: a crest is its own key", Circle.crestKey({ adjective = 1, noun = 1, emblem = 3, colour = 2 }) ~= Circle.crestKey({ adjective = 1, noun = 1, emblem = 2, colour = 3 }))
 end
 
+-- Capitals for display: accented letters are raised too.
+do
+	local Caps = loadModule("Caps")
+	check("capitals keep accents: The Soirée", Caps("The Soirée") == "THE SOIRÉE", Caps("The Soirée"))
+	check("and Tête-à-Tête", Caps("Tête-à-Tête") == "TÊTE-À-TÊTE", Caps("Tête-à-Tête"))
+	check("plain words as string.upper has them", Caps("Livre d'Or 12") == "LIVRE D'OR 12")
+end
+
 print(("\n%d passed, %d failed"):format(passed, failed))
 if failed > 0 then
 	os.exit(1)

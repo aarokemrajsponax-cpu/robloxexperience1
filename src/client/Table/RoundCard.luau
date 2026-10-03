@@ -8,6 +8,7 @@ local Workspace = game:GetService("Workspace")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local Closet = require(script.Parent.Parent.Closet)
+local Caps = require(ReplicatedStorage.Shared.Caps)
 local Ease = require(ReplicatedStorage.Shared.Ease)
 local Layout = require(ReplicatedStorage.Shared.Layout)
 
@@ -149,7 +150,7 @@ function RoundCard.land(frame: CFrame, top: string, middle: string, bottom: stri
 	local p = card or make()
 	card = p
 	dressBack(p)
-	labels[1].Text = string.upper(top)
+	labels[1].Text = Caps(top)
 	labels[2].Text = middle
 	labels[3].Text = bottom
 	local goal = resting(frame)

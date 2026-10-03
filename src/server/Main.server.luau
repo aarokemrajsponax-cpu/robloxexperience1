@@ -224,6 +224,10 @@ boot("The Boutique", Shop.start)
 -- Boutique (whose handlers it validates), before Profiles (it listens for arrivals).
 local Purchases = require(script.Parent.Purchases)
 boot("Purchases", Purchases.start)
+-- A guest at the Foyer's piano: the Pianist gets up for them, and sits back down after.
+Purchases.Piano.onSession = function(playing: boolean)
+	Pianist.stepAside(playing)
+end
 boot("Remote limits", require(script.Parent.RemoteGuard).start)
 Archivist.onSpeak = function(player)
 	local V = require(ReplicatedStorage.Shared.Voice)

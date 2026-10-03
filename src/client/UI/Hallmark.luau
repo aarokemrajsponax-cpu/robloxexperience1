@@ -5,6 +5,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
+local Caps = require(ReplicatedStorage.Shared.Caps)
 local Theme = require(script.Parent.Theme)
 
 local Hallmark = {}
@@ -48,7 +49,7 @@ end
 -- The grade of a round or run.
 function Hallmark.big(parent: Instance, grade: string, order: number): Frame
 	local mark, inner = cartouche(parent, Vector2.new(190, 46), order)
-	Theme.text(inner, string.upper(grade), 15, "caps", {
+	Theme.text(inner, Caps(grade), 15, "caps", {
 		AutomaticSize = Enum.AutomaticSize.None,
 		Size = UDim2.fromScale(1, 1),
 		TextColor3 = Brand.Colours.lightGold,

@@ -569,6 +569,133 @@ do
 	end
 end
 
+-- Nothing standing in a doorway: no panelling, rail or trim run across the opening (door leaves
+-- the client swings open, and a door that is shut on purpose, are left out).
+local function swung(part: BasePart): boolean
+	local model = part:FindFirstAncestorWhichIsA("Model")
+	local inDoor = model ~= nil and (string.sub(model.Name, 1, 5) == "Door_")
+	if inDoor and (string.sub(part.Name, 1, 4) == "Leaf" or part.Name == "Inset" or part.Name == "Knob") then
+		return true
+	end
+	if inDoor and model.Name == "Door_midnight" and (part.Name == "Rope" or part.Name == "Stanchion" or part.Name == "StanchionTop") then
+		return true
+	end
+	if model ~= nil and model.Name == "FrontDoors" then
+		return true -- the front doors, swung open by the Doorman
+	end
+	-- The Terrace doors (open in High Summer) and the Gold Key rooms' doors (open with the key).
+	for _, name in { "TerraceDoor", "AlcoveDoor" } do
+		if part.Name == name or (part.Parent ~= nil and part.Parent.Name == name) then
+			return true
+		end
+	end
+	return false
+end
+for _, dw in Layout.Doorways do
+	local c = dw.centre
+	local a0, a1
+	if dw.wall then
+		a0, a1 = dw.wall[1] - 0.3, dw.wall[2] + 0.3
+	else
+		local along = if dw.axis == "x" then c.X else c.Z
+		a0, a1 = along - 1.2, along + 1.2
+	end
+	local half = dw.width / 2 - 0.4
+	local base = dw.floorY + (dw.rise or 0) + 0.4
+	local lo = if dw.axis == "x" then Vector3.new(a0, base, c.Z - half) else Vector3.new(c.X - half, base, a0)
+	local hi = if dw.axis == "x" then Vector3.new(a1, dw.floorY + dw.height - 0.6, c.Z + half) else Vector3.new(c.X + half, dw.floorY + dw.height - 0.6, a1)
+	local blocking = {}
+	for _, d in maison:GetDescendants() do
+		if d:IsA("BasePart") and d.Transparency < 0.9 and not swung(d) then
+			local plo, phi
+			for _, k in corners(d.CFrame, d.Size) do
+				plo = if plo then plo:Min(k) else k
+				phi = if phi then phi:Max(k) else k
+			end
+			if plo.X < hi.X and phi.X > lo.X and plo.Y < hi.Y and phi.Y > lo.Y and plo.Z < hi.Z and phi.Z > lo.Z then
+				table.insert(blocking, d:GetFullName())
+			end
+		end
+	end
+	check("nothing stands in " .. dw.name, #blocking == 0, table.concat(blocking, ", "))
+end
+
+-- Surfaces that flicker (z-fighting): two visible faces of different-looking parts lying in the
+-- same plane (within 0.012 studs), facing the same way and overlapping, swap places as the
+-- camera moves. Returns one line for each such pair.
+local function axisAligned(cf): boolean
+	for _, v in { cf.RightVector, cf.UpVector, cf.LookVector } do
+		if math.max(math.abs(v.X), math.abs(v.Y), math.abs(v.Z)) < 0.9995 then
+			return false
+		end
+	end
+	return true
+end
+local function comp(v, axis: number): number
+	return if axis == 1 then v.X elseif axis == 2 then v.Y else v.Z
+end
+local function flickers(root: Instance): { string }
+	local buckets: { [string]: { any } } = {}
+	for _, d in root:GetDescendants() do
+		if d:IsA("Part") and d.Shape == Enum.PartType.Block and d.Transparency < 0.9 and axisAligned(d.CFrame) then
+			local lo, hi
+			for _, k in corners(d.CFrame, d.Size) do
+				lo = if lo then lo:Min(k) else k
+				hi = if hi then hi:Max(k) else k
+			end
+			for axis = 1, 3 do
+				for _, side in { -1, 1 } do
+					local plane = if side > 0 then comp(hi, axis) else comp(lo, axis)
+					local key = string.format("%d%d:%d", axis, side, math.floor(plane * 40))
+					buckets[key] = buckets[key] or {}
+					table.insert(buckets[key], { part = d, lo = lo, hi = hi, plane = plane, axis = axis, side = side })
+				end
+			end
+		end
+	end
+	local out, seen = {}, {}
+	for key, list in buckets do
+		local axis, side, b = string.match(key, "^(%d)(%-?%d):(%-?%d+)$")
+		local nextList = buckets[string.format("%s%s:%d", axis, side, tonumber(b) + 1)] or {}
+		for i, f in list do
+			for _, other in { list, nextList } do
+				for j, g in other do
+					if (other ~= list or j > i) and f.part ~= g.part and math.abs(f.plane - g.plane) < 0.012 then
+						local looksSame = f.part.Color == g.part.Color and f.part.Material == g.part.Material and f.part.Transparency == g.part.Transparency
+						if not looksSame then
+							local overlap = 1
+							for ax = 1, 3 do
+								if ax ~= f.axis then
+									local o = math.min(comp(f.hi, ax), comp(g.hi, ax)) - math.max(comp(f.lo, ax), comp(g.lo, ax))
+									overlap *= math.max(0, o)
+								end
+							end
+							if overlap > 0.02 then
+								local a, bName = f.part:GetFullName(), g.part:GetFullName()
+								local pair = if a < bName then a .. " | " .. bName else bName .. " | " .. a
+								if not seen[pair] then
+									seen[pair] = true
+									table.insert(out, string.format("%s (%.2f sq studs)", pair, overlap) .. if process.env.FLICKERS then string.format(" [axis %d side %d: %.4f vs %.4f; %s %s / %s %s]", f.axis, f.side, f.plane, g.plane, tostring(f.part.Size), tostring(f.part.Color), tostring(g.part.Size), tostring(g.part.Color)) else "")
+								end
+							end
+						end
+					end
+				end
+			end
+		end
+	end
+	table.sort(out)
+	return out
+end
+do
+	local found = flickers(maison)
+	-- FLICKERS=<file> writes the whole list there (the failure line shows the first 60).
+	if process.env.FLICKERS then
+		fs.writeFile(process.env.FLICKERS, table.concat(found, "\n"))
+	end
+	check("no surfaces flicker (z-fighting) anywhere in the house", #found == 0, #found .. ": " .. table.concat(found, "\n   ", 1, math.min(#found, 60)))
+end
+
 -- The Midnight Room's doors and rope are solid until a guest earns it; the client opens them.
 local function earned(part: BasePart): boolean
 	return part:GetAttribute("Gated") == true or (part.Parent ~= nil and part.Parent.Name == "Door_midnight" and (part.Name == "Rope" or part.Name == "Stanchion" or part.Name == "StanchionTop"))
@@ -869,6 +996,10 @@ do
 			end
 		end
 		worst, worstLights = math.max(worst, n), math.max(worstLights, l)
+		local dressing = maison:FindFirstChild("SeasonDress")
+		local flicker = flickers(maison)
+		check(season.name .. ": no surfaces flicker", #flicker == 0, #flicker .. ": " .. table.concat(flicker, "\n   ", 1, math.min(#flicker, 30)))
+		local _ = dressing
 		refreshSolids()
 		local why = walkOut()
 		if season.id == "summer" then
