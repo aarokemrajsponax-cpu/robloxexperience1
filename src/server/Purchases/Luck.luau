@@ -89,7 +89,7 @@ local function grant(ctx: Grants.Context)
 			arm(player, data)
 		end
 		Perks.push(player)
-		Perks.tell(player, { op = "notice", title = "God-Mode Luck", line = string.format("2.5× Gilt and Ledger pages: %d minutes of play left.", math.floor(Luck.remaining(player, data) / 60 + 0.5)) })
+		Perks.tell(player, { op = "notice", title = "Luck Booster", line = string.format("2.5× Gilt and Ledger pages: %d minutes of play left.", math.floor(Luck.remaining(player, data) / 60 + 0.5)) })
 	end)
 end
 
@@ -101,7 +101,7 @@ local function expire(player: Player)
 	end
 	Telemetry.log(player, Telemetry.Events.Expired, KEY, "time_up")
 	Perks.push(player)
-	Perks.tell(player, { op = "notice", title = "God-Mode Luck", line = "Your Luck has run its course." })
+	Perks.tell(player, { op = "notice", title = "Luck Booster", line = "Your Luck has run its course." })
 end
 
 function Luck.start()

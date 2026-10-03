@@ -118,7 +118,7 @@ add({
 	ProductType = "DeveloperProduct",
 	Id = 0,
 	Handler = "revive",
-	Pricing = { ReferencePrice = 49, Tier = "Entry", Rationale = "Offered in a ten-second moment: cheap enough to decide at once, repeatable without regret." },
+	Pricing = { ReferencePrice = 89, Tier = "Entry", Rationale = "Offered in a ten-second moment: cheap enough to decide at once, repeatable without regret." },
 	Reward = { Type = "Revive", Seconds = 15 },
 	Rules = {
 		WindowSeconds = 10, -- how long the offer stands when the clock runs out
@@ -131,7 +131,7 @@ add({
 		Stackable = true,
 		CooldownSeconds = 0,
 	},
-	UX = { DisplayName = "Chronos Defiance", Category = "Survival", Line = "When the clock runs out in a timed room: +15 seconds and your run goes on.", Offer = false, Order = 60, Action = "none" },
+	UX = { DisplayName = "Chronos Defiance", Category = "Survival", Line = "When the clock runs out in a timed room: +15 seconds and your run goes on.", Offer = true, Order = 60, Action = "prompt" },
 })
 add({
 	Key = "emperorsDecree",
@@ -139,7 +139,7 @@ add({
 	ProductType = "DeveloperProduct",
 	Id = 0,
 	Handler = "decree",
-	Pricing = { ReferencePrice = 149, Tier = "Medium", Rationale = "A moment of fame with your own words: above a Gold Leaf salute, below the Grand Salute." },
+	Pricing = { ReferencePrice = 249, Tier = "Premium", Rationale = "A moment of fame with your own words: above a Gold Leaf salute, below the Grand Salute." },
 	Reward = { Type = "Decree", DisplaySeconds = 8 },
 	Rules = {
 		MaxLength = 80,
@@ -155,14 +155,14 @@ add({
 })
 add({
 	Key = "godModeLuck",
-	Name = "God-Mode Luck",
+	Name = "Luck Booster", -- as created in Creator Hub
 	ProductType = "DeveloperProduct",
 	Id = 0,
 	Handler = "luck",
-	Pricing = { ReferencePrice = 199, Tier = "Medium", Rationale = "Personal and bigger than a Golden Hour (99, 2× for everyone): 2.5× for you, twice as long." },
+	Pricing = { ReferencePrice = 399, Tier = "Premium", Rationale = "Personal and stronger than a Golden Hour (250, 2× for everyone): 2.5× for you, twice as long." },
 	Reward = { Type = "Luck", Multiplier = 2.5, DurationSeconds = 1800, Systems = { "gilt", "ledger" } },
 	Rules = { Stack = "extend", MaxSeconds = 6 * 3600, Stackable = true, CooldownSeconds = 0 },
-	UX = { DisplayName = "God-Mode Luck", Category = "Boost", Line = "2.5× Gilt and 2.5× Ledger pages for 30 minutes of play. Time only runs while you're in the house. Scores are never boosted.", Offer = true, Order = 20, Action = "prompt" },
+	UX = { DisplayName = "Luck Booster", Category = "Boost", Line = "2.5× Gilt and 2.5× Ledger pages for 30 minutes of play. Time only runs while you're in the house. Scores are never boosted.", Offer = true, Order = 20, Action = "prompt" },
 })
 add({
 	Key = "megalodonRainmaker",
@@ -183,9 +183,9 @@ add({
 	ProductType = "DeveloperProduct",
 	Id = 0,
 	Handler = "doubleGilt",
-	Pricing = { ReferencePrice = 399, Tier = "Premium", Rationale = "The best-value permanent boost; anchors the ladder." },
+	Pricing = { ReferencePrice = 998, Tier = "Prestige", Rationale = "The best-value permanent boost; anchors the ladder." },
 	Reward = { Type = "DoubleGilt", Multiplier = 2 },
-	Rules = { OneTime = true, Stackable = false, CooldownSeconds = 0, DuplicateCredit = "tier399" },
+	Rules = { OneTime = true, Stackable = false, CooldownSeconds = 0, DuplicateCredit = "tier599" },
 	UX = { DisplayName = "Double Gilt", Category = "Boost", Line = "Every Gilt you earn, doubled, for good. Your purse fills twice as fast.", Offer = true, Order = 10, Action = "prompt" },
 })
 add({
@@ -194,14 +194,14 @@ add({
 	ProductType = "DeveloperProduct",
 	Id = 0,
 	Handler = "goldenHour",
-	Pricing = { ReferencePrice = 99, Tier = "Entry", Rationale = "A generous gesture at an entry price; the buyer is announced." },
+	Pricing = { ReferencePrice = 250, Tier = "Medium", Rationale = "A generous gesture at an entry price; the buyer is announced." },
 	Reward = { Type = "GoldenHour", Minutes = 15 },
 	Rules = { Stackable = true, CooldownSeconds = 0, MaxHeld = 5 },
 	UX = { DisplayName = "Golden Hour for Everyone", Category = "Social", Line = "Double Gilt for every guest in the house for 15 minutes, with your name announced.", Offer = true, Order = 15, Action = "prompt" },
 })
 for i, amount in { 1000, 5500, 18000 } do
 	local names = { "Gilt Purse", "Gilt Chest", "Gilt Vault" }
-	local prices = { 49, 199, 499 }
+	local prices = { 97, 299, 799 }
 	local lines = { "%s Gilt, at once.", "%s Gilt, at once. More Gilt for each Robux.", "%s Gilt, at once. The most Gilt for each Robux." }
 	local formatted = tostring(amount):reverse():gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", "")
 	add({
@@ -223,7 +223,7 @@ add({
 	Id = 0, -- paste the game pass id here (or Config.Products.goldKey)
 	Handler = "goldKey",
 	Fallback = "goldKeyProduct",
-	Pricing = { ReferencePrice = 499, Tier = "Premium", Rationale = "The house's membership: rooms, looks and +20% Gilt." },
+	Pricing = { ReferencePrice = 1999, Tier = "Prestige", Rationale = "The house's membership: rooms, looks and +20% Gilt." },
 	Reward = { Type = "GoldKey" },
 	Rules = { OneTime = true, Stackable = false, CooldownSeconds = 0 },
 	UX = { DisplayName = "The Gold Key", Category = "Status", Line = "+20% Gilt for good, the Study in your Suite, a gold nameplate, and Gold Key looks.", Offer = true, Order = 25, Action = "prompt" },
@@ -234,9 +234,9 @@ add({
 	ProductType = "DeveloperProduct",
 	Id = 0,
 	Handler = "goldKey",
-	Pricing = { ReferencePrice = 499, Tier = "Premium", Rationale = "The Gold Key for experiences without the pass; a second purchase becomes credit." },
+	Pricing = { ReferencePrice = 1999, Tier = "Prestige", Rationale = "The Gold Key for experiences without the pass; a second purchase becomes credit." },
 	Reward = { Type = "GoldKey" },
-	Rules = { OneTime = true, Stackable = false, CooldownSeconds = 0, DuplicateCredit = "tier499" },
+	Rules = { OneTime = true, Stackable = false, CooldownSeconds = 0, DuplicateCredit = "tier599" },
 	UX = { DisplayName = "The Gold Key", Category = "Status", Line = "+20% Gilt for good, the Study in your Suite, a gold nameplate, and Gold Key looks.", Offer = false, Order = 26, Action = "prompt" },
 })
 add({
@@ -245,7 +245,7 @@ add({
 	ProductType = "DeveloperProduct",
 	Id = 0,
 	Handler = "goldKeyGift",
-	Pricing = { ReferencePrice = 499, Tier = "Premium", Rationale = "The Gold Key's price, given to another guest." },
+	Pricing = { ReferencePrice = 1999, Tier = "Prestige", Rationale = "The Gold Key's price, given to another guest." },
 	Reward = { Type = "GoldKeyGift" },
 	Rules = { Stackable = true, CooldownSeconds = 0 },
 	UX = { DisplayName = "The Gold Key, as a gift", Category = "Gifts", Line = "Give another guest in the house the Gold Key.", Offer = false, Order = 27, Action = "none" },

@@ -2451,7 +2451,7 @@ do
 		guests = {}, standing = "Guest", balance = 0, credits = {},
 		offers = {
 			{ key = "doubleGilt", name = "Double Gilt", line = "Every Gilt you earn, doubled, for good. Your purse fills twice as fast.", price = 399, best = true, action = "prompt", category = "Boost" },
-			{ key = "godModeLuck", name = "God-Mode Luck", line = "2.5× Gilt and 2.5× Ledger pages for 30 minutes of play. Time only runs while you're in the house. Scores are never boosted.", price = 199, action = "prompt", category = "Boost", status = "Active: 23 minutes of play left" },
+			{ key = "godModeLuck", name = "Luck Booster", line = "2.5× Gilt and 2.5× Ledger pages for 30 minutes of play. Time only runs while you're in the house. Scores are never boosted.", price = 199, action = "prompt", category = "Boost", status = "Active: 23 minutes of play left" },
 			{ key = "velocityElite", name = "VIP Velocity Elite", line = "Walk and run 1.5× faster through the house, for good, with a gold trail at your heels. Both can be switched off in Settings.", price = 499, action = "prompt", category = "Status" },
 			{ key = "emperorsDecree", name = "Emperor's Decree", line = "Your words, in gold, across every screen in the house for eight seconds.", price = 149, action = "compose", category = "Social" },
 			{ key = "megalodonRainmaker", name = "Megalodon Rainmaker", line = "Gold rains on the whole house: every guest gets 150 Gilt, you get 500 more, and everyone sees who made it rain.", price = 699, action = "prompt", category = "Spectacle", disabled = true, why = "Rains are already waiting their turn in this house. Try again in a few minutes." },
@@ -2460,7 +2460,7 @@ do
 	}
 	serverSays("Shop", { op = "open", panel = "boutique" })
 	advance(1)
-	check("the Offers show the new products with Roblox's prices", textOnScreen("God-Mode Luck") ~= nil and textOnScreen(robux .. " 199") ~= nil and textOnScreen("VIP Velocity Elite") ~= nil)
+	check("the Offers show the new products with Roblox's prices", textOnScreen("Luck Booster") ~= nil and textOnScreen(robux .. " 199") ~= nil and textOnScreen("VIP Velocity Elite") ~= nil)
 	check("Luck's time left shows under it", textOnScreen("Active: 23 minutes of play left") ~= nil)
 	snapshot("offers")
 	check("an offer that can't be bought now says why", textOnScreen("Rains are already waiting their turn") ~= nil)
@@ -2526,10 +2526,10 @@ do
 	-- The perk chips: what's bought and waiting, and Luck's time.
 	serverSays("Purchase", { op = "perks", credits = { decree = 1, revive = 2 }, luck = { remaining = 1500, multiplier = 2.5, systems = { "gilt", "ledger" } }, rain = { held = 1, position = 1, nextIn = 30 } })
 	advance(1.5)
-	check("Luck's time left counts down in a chip", textOnScreen("GOD-MODE LUCK 2.5×") ~= nil and (textOnScreen("24:58") ~= nil or textOnScreen("24:59") ~= nil or textOnScreen("24:57") ~= nil))
+	check("Luck's time left counts down in a chip", textOnScreen("LUCK BOOSTER 2.5×") ~= nil and (textOnScreen("24:58") ~= nil or textOnScreen("24:59") ~= nil or textOnScreen("24:57") ~= nil))
 	check("what's held is listed", textOnScreen("A DECREE TO WRITE (1)") ~= nil and textOnScreen("REVIVES KEPT 2") ~= nil and textOnScreen("YOUR RAIN IS NEXT IN LINE") ~= nil)
 	snapshot("perk-chips")
-	serverSays("Purchase", { op = "notice", title = "God-Mode Luck", line = "Your Luck has run its course." })
+	serverSays("Purchase", { op = "notice", title = "Luck Booster", line = "Your Luck has run its course." })
 	advance(0.5)
 	check("purchase notices show", textOnScreen("Your Luck has run its course.") ~= nil)
 	serverSays("Purchase", { op = "perks", credits = {}, luck = { remaining = 0, multiplier = 2.5, systems = { "gilt", "ledger" } } })

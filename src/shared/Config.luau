@@ -201,20 +201,21 @@ local defaults = {
 		salute_fireworks = 0,
 		salute_grand = 0,
 		-- More of what guests buy (developer products, found by their names in ProductConfig).
-		giltPurse1 = 0,
-		giltPurse2 = 0,
-		giltPurse3 = 0,
-		doubleGilt = 0,
-		goldenHour = 0,
-		goldKeyProduct = 0, -- the Gold Key as a developer product, if you'd rather not make a game pass
-		-- The five new products (ProductConfig). Developer products are found by name; only the
-		-- VIP Velocity Elite game pass needs its id pasted here (or in ProductConfig).
+		-- AJKR's developer products (Creator Hub ids, pasted so nothing depends on names).
+		giltPurse1 = 3716215371, -- Gilt Purse
+		giltPurse2 = 3716215587, -- Gilt Chest
+		giltPurse3 = 3716215695, -- Gilt Vault
+		doubleGilt = 3716211503, -- Double Gilt (named "Double Glit" in Creator Hub)
+		goldenHour = 3716216027, -- Golden Hour for Everyone
+		goldKeyProduct = 3716216232, -- The Gold Key, as a developer product
+		-- The five new products (ProductConfig). A developer product with no id here is found by
+		-- its name; the VIP Velocity Elite game pass needs its id pasted here.
 		velocityElite = 0, -- a game pass
 		velocityEliteProduct = 0, -- the same perk as a developer product, if there's no game pass
-		chronosDefiance = 0,
-		emperorsDecree = 0,
-		godModeLuck = 0,
-		megalodonRainmaker = 0,
+		chronosDefiance = 3716216641, -- Chronos Defiance
+		emperorsDecree = 3716216786, -- Emperor's Decree
+		godModeLuck = 3716216448, -- Luck Booster
+		megalodonRainmaker = 3716216867, -- Megalodon Rainmaker
 		saluteQueue = 4, -- salutes waiting their turn in one house, at most
 		benefactorMinutes = 30, -- the giver's nameplate carries a gold star this long
 		choiceSeconds = 3600, -- a Boutique piece chosen (or a gift) waits this long for its purchase

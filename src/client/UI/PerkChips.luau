@@ -91,7 +91,7 @@ local function refresh()
 	stack.Visible = not hidden
 	local luck = Perks.luckLeft()
 	local mult = if type(Perks.state.luck) == "table" then tonumber(Perks.state.luck.multiplier) else nil
-	chip("Luck", 1, if luck > 0 then string.format("GOD-MODE LUCK  %s×  ·  %s", tostring(mult or 2.5), clock(luck)) else nil)
+	chip("Luck", 1, if luck > 0 then string.format("LUCK BOOSTER  %s×  ·  %s", tostring(mult or 2.5), clock(luck)) else nil)
 	local decrees = Perks.held("decree")
 	chip("Decree", 2, if decrees > 0 then string.format("A DECREE TO WRITE (%d)  ›", decrees) else nil, function()
 		PerkChips.openDecree()

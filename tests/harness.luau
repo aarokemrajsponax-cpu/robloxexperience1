@@ -724,6 +724,15 @@ local Boutique = module("ReplicatedStorage", "Shared", "Boutique")
 local Remotes = module("ReplicatedStorage", "Shared", "Remotes")
 local Gilt = module("ServerScriptService", "Server", "Gilt")
 local LedgerService = module("ServerScriptService", "Server", "LedgerService")
+-- The tests set up their own products: start from a house with no ids pasted (the ids that ship
+-- are kept in H.shippedIds, for the tests that check them).
+H.shippedIds = {}
+for key in module("ReplicatedStorage", "Shared", "ProductConfig").byKey do
+	if type(Config.data.Products[key]) == "number" then
+		H.shippedIds[key] = Config.data.Products[key]
+		Config.data.Products[key] = 0
+	end
+end
 local Shop = module("ServerScriptService", "Server", "Shop")
 local handovers = {}
 Shop.handOver = function(player, from, itemName)

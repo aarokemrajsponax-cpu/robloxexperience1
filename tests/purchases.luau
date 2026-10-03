@@ -85,7 +85,7 @@ end
 MarketplaceService.devProducts = {
 	{ Name = "Chronos Defiance", ProductId = 5001, PriceInRobux = 49 },
 	{ Name = "Emperor's Decree", ProductId = 5002, PriceInRobux = 149 },
-	{ Name = "God-Mode Luck", ProductId = 5003, PriceInRobux = 199 },
+	{ Name = "Luck Booster", ProductId = 5003, PriceInRobux = 199 },
 	{ Name = "Megalodon Rainmaker", ProductId = 5004, PriceInRobux = 699 },
 	{ Name = "VIP Velocity Elite", ProductId = 5005, PriceInRobux = 499 },
 	{ Name = "Gilt Purse", ProductId = 5006, PriceInRobux = 49 },
@@ -116,6 +116,24 @@ do
 	check("an absurd multiplier is refused", problems.badLuck ~= nil, problems.badLuck)
 	table.remove(ProductConfig.List)
 	ProductConfig.byKey.badLuck = nil
+	-- The ids AJKR created in Creator Hub, pasted into Config.Products.
+	local shipped = H.shippedIds
+	local want = {
+		megalodonRainmaker = 3716216867, emperorsDecree = 3716216786, chronosDefiance = 3716216641,
+		godModeLuck = 3716216448, goldKeyProduct = 3716216232, goldenHour = 3716216027,
+		giltPurse3 = 3716215695, giltPurse2 = 3716215587, giltPurse1 = 3716215371, doubleGilt = 3716211503,
+	}
+	local allThere, seen, distinct = true, {}, true
+	for key, id in want do
+		allThere = allThere and shipped[key] == id
+	end
+	for _, id in shipped do
+		if id ~= 0 then
+			distinct = distinct and not seen[id]
+			seen[id] = true
+		end
+	end
+	check("the game ships with AJKR's ten developer product ids, each on its own product", allThere and distinct)
 	check("each of the five is found by its name", Catalog.idOf("chronosDefiance") == 5001 and Catalog.idOf("emperorsDecree") == 5002 and Catalog.idOf("godModeLuck") == 5003 and Catalog.idOf("megalodonRainmaker") == 5004 and Catalog.idOf("velocityEliteProduct") == 5005)
 	check("a game pass isn't on sale until its id is pasted", Catalog.idOf("velocityElite") == 0 and not Catalog.enabled("velocityElite"))
 	check("without the pass, VIP Velocity Elite is sold as its developer product", Store.sellable("velocityElite") == "velocityEliteProduct")
@@ -861,6 +879,51 @@ do
 	end
 	check("at most MaxRecipients guests share one rain (the buyer first)", lastBroadcast("rain").by == "Wyn" and shared == 2 and table.find(profiles[wyn].Data.perks.rains, id) ~= nil, shared)
 	reward.MaxRecipients = max
+end
+
+---------------------------------------------------------------------------------------------------
+-- K. AJKR's products, with the ids that ship: all of them on the Offers page, and they work
+---------------------------------------------------------------------------------------------------
+do
+	MarketplaceService.devProducts = {}
+	run(Catalog.discover) -- nothing found by name: only the pasted ids
+	local livePrices = {
+		megalodonRainmaker = 699, emperorsDecree = 249, chronosDefiance = 89, godModeLuck = 399,
+		goldKeyProduct = 1999, goldenHour = 250, giltPurse3 = 799, giltPurse2 = 299, giltPurse1 = 97, doubleGilt = 998,
+	}
+	for key, id in H.shippedIds do
+		Config.data.Products[key] = id
+		if livePrices[key] then
+			H.productPrices[id] = livePrices[key]
+		end
+	end
+	advance(400) -- prices re-read from Roblox
+	local zoe = guest("Zoe", 300)
+	local view = H.askAs(zoe, { op = "offers" })
+	local byKey = {}
+	for _, o in view.offers do
+		byKey[o.key] = o
+	end
+	local names = { "doubleGilt", "goldenHour", "godModeLuck", "goldKey", "emperorsDecree", "megalodonRainmaker", "giltPurse1", "giltPurse2", "giltPurse3", "chronosDefiance" }
+	local missing = {}
+	for _, k in names do
+		if not byKey[k] then
+			table.insert(missing, k)
+		end
+	end
+	check("every product AJKR made is on the Offers page", #missing == 0, table.concat(missing, ", "))
+	check("with Roblox's own prices", byKey.godModeLuck and byKey.godModeLuck.price == 399 and byKey.goldKey and byKey.goldKey.price == 1999 and byKey.doubleGilt and byKey.doubleGilt.price == 998)
+	check("named as in Creator Hub (Luck Booster)", byKey.godModeLuck and byKey.godModeLuck.name == "Luck Booster")
+	check("Chronos Defiance is listed, saying when it can be bought", byKey.chronosDefiance and byKey.chronosDefiance.disabled == true and string.find(byKey.chronosDefiance.why or "", "clock runs out", 1, true) ~= nil)
+	local r = H.askAs(zoe, { op = "offer", key = "godModeLuck" })
+	check("buying Luck Booster opens Roblox's window for its id", r.ok and prompts[#prompts].id == 3716216448)
+	check("its receipt grants it", receipt(zoe, 3716216448, "LIVE-1", 399) == GRANTED and Luck.remaining(zoe, profiles[zoe].Data) > 1790)
+	H.askAs(zoe, { op = "offer", key = "goldKey" })
+	check("the Gold Key is sold as the developer product", prompts[#prompts].id == 3716216232)
+	check("Double Gilt by its id, whatever its name", receipt(zoe, 3716211503, "LIVE-2", 998) == GRANTED and profiles[zoe].Data.doubleGilt == true)
+	for key in H.shippedIds do
+		Config.data.Products[key] = 0
+	end
 end
 
 ---------------------------------------------------------------------------------------------------

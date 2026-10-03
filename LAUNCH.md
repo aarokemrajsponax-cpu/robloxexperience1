@@ -161,6 +161,12 @@ Create a notification string), then paste each id into `Notifications.messages`:
 | `soiree` | `{name} has started at {experienceName}. Your best evenings this weekend count.` | `name` |
 | `termEnding` | `{term} ends in three days at {experienceName}. The Ledger's last pages are waiting.` | `term` |
 
+**Already done (Build 31):** the ten developer products made in Creator Hub (Megalodon
+Rainmaker, Emperor's Decree, Chronos Defiance, Luck Booster, The Gold Key, Golden Hour for
+Everyone, Gilt Vault, Gilt Chest, Gilt Purse, Double Gilt) have their ids pasted into
+`Products` in `src/shared/Config.luau`, so they're on sale whatever their names. Prices are
+always Roblox's own. For any product still to make:
+
 **Making the developer products: name them, no ids to copy.** The game finds every developer
 product by its exact name (capitals don't matter), so making one in Creator Hub is all it takes
 to put it on sale; it appears within five minutes, no republish needed. Start with the first
