@@ -182,8 +182,9 @@ local defaults = {
 		},
 	},
 
-	-- Developer products and passes (Appendix I3). Create them in the Creator Dashboard and put
-	-- their ids here (or in Roblox Configs); 0 means not on sale yet. Prices are always read live.
+	-- Developer products and passes (Appendix I3). Developer products are found by their names
+	-- (ProductConfig), so 0 is fine for them; an id here (or in Roblox Configs) overrides that.
+	-- Game passes can't be found by name: paste their ids. Prices are always read live.
 	Products = {
 		tier49 = 0, tier79 = 0, tier99 = 0, tier149 = 0, tier199 = 0,
 		tier249 = 0, tier299 = 0, tier399 = 0, tier499 = 0, tier599 = 0,
@@ -199,55 +200,32 @@ local defaults = {
 		salute_chandelier = 0,
 		salute_fireworks = 0,
 		salute_grand = 0,
-		-- More of what guests buy (all developer products, found by name: see ProductNames).
+		-- More of what guests buy (developer products, found by their names in ProductConfig).
 		giltPurse1 = 0,
 		giltPurse2 = 0,
 		giltPurse3 = 0,
 		doubleGilt = 0,
 		goldenHour = 0,
 		goldKeyProduct = 0, -- the Gold Key as a developer product, if you'd rather not make a game pass
+		-- The five new products (ProductConfig). Developer products are found by name; only the
+		-- VIP Velocity Elite game pass needs its id pasted here (or in ProductConfig).
+		velocityElite = 0, -- a game pass
+		velocityEliteProduct = 0, -- the same perk as a developer product, if there's no game pass
+		chronosDefiance = 0,
+		emperorsDecree = 0,
+		godModeLuck = 0,
+		megalodonRainmaker = 0,
 		saluteQueue = 4, -- salutes waiting their turn in one house, at most
 		benefactorMinutes = 30, -- the giver's nameplate carries a gold star this long
-		introductionDays = 7,
-		giftTimeout = 120, -- seconds a chosen gift waits for its purchase
+		choiceSeconds = 3600, -- a Boutique piece chosen (or a gift) waits this long for its purchase
 	},
 
-	-- The game finds its developer products by name, so no ids need copying: in Creator Hub make
-	-- a developer product with exactly one of these names (and the price you like) and it's on
-	-- sale at once. An id set in Products above still wins.
-	ProductNames = {
-		tier49 = "Boutique 49",
-		tier79 = "Boutique 79",
-		tier99 = "Boutique 99",
-		tier149 = "Boutique 149",
-		tier199 = "Boutique 199",
-		tier249 = "Boutique 249",
-		tier299 = "Boutique 299",
-		tier399 = "Boutique 399",
-		tier499 = "Boutique 499",
-		tier599 = "Boutique 599",
-		introduction = "The Introduction",
-		ledger = "Leather-Bound Ledger",
-		season = "Season Collection",
-		goldKeyProduct = "The Gold Key",
-		goldKeyGift = "Gold Key Gift",
-		salute_goldLeaf = "Salute: Gold Leaf",
-		salute_encore = "Salute: Encore",
-		salute_chandelier = "Salute: Chandelier",
-		salute_fireworks = "Salute: Fireworks",
-		salute_grand = "Salute: Grand Salute",
-		giltPurse1 = "Gilt Purse",
-		giltPurse2 = "Gilt Chest",
-		giltPurse3 = "Gilt Vault",
-		doubleGilt = "Double Gilt",
-		goldenHour = "Golden Hour for Everyone",
-	},
+	-- Products' names, prices, rewards and rules: Shared/ProductConfig (the game finds each
+	-- developer product by its Name there, so no ids need copying).
 
 	-- The offers (Boutique → Offers, the Shop key, and the card after a run).
+	-- (What each offer gives is in ProductConfig.)
 	Offers = {
-		giltPurses = { giltPurse1 = 1000, giltPurse2 = 5500, giltPurse3 = 18000 }, -- Gilt in each
-		doubleGilt = 2, -- Double Gilt multiplies every Gilt earned (and the daily soft cap) by this
-		goldenHourMinutes = 15, -- a Golden Hour bought for everyone in the server lasts this long
 		upsellAfterRuns = 2, -- the "Double Gilt would have paid..." card, after this many banked runs
 	},
 
@@ -268,6 +246,25 @@ local defaults = {
 
 	Staff = {
 		lostAfter = 25, -- seconds a new guest lingers in the Foyer before the Concierge offers the walk
+	},
+
+	-- Every message a guest's screen sends is rate-limited (server RemoteGuard): a bucket per guest
+	-- per remote that refills `rate` times a second and holds at most `burst`.
+	RemoteLimits = {
+		default = { rate = 4, burst = 8 },
+		shopAsk = { rate = 8, burst = 16 },
+		perkAsk = { rate = 3, burst = 6 },
+		table = { rate = 30, burst = 45 }, -- sorting is fast: a filing and a lift per piece
+		duel = { rate = 30, burst = 45 },
+		ballroom = { rate = 30, burst = 45 },
+		dialogueChoice = { rate = 3, burst = 6 },
+		setting = { rate = 8, burst = 20 },
+		funnel = { rate = 2, burst = 6 },
+		quickSit = { rate = 0.5, burst = 3 },
+		getBoard = { rate = 1, burst = 4 },
+		tour = { rate = 1, burst = 4 },
+		salute = { rate = 1, burst = 3 },
+		adminAsk = { rate = 6, burst = 12 },
 	},
 
 	-- The Concierge's walking tour (each guest's own guide, drawn on their screen).
@@ -475,6 +472,7 @@ local defaults = {
 	Movement = {
 		walkSpeed = 12,
 		runSpeed = 19,
+		maxSpeed = 34, -- no combination of events and perks moves a guest faster than this
 		npcWalkSpeed = 9,
 		-- Guests and staff are drawn at this size, so the house feels this much bigger around
 		-- them (0.8: every room a quarter bigger, half as much floor again for each guest).

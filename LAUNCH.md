@@ -134,6 +134,7 @@ All in `src/shared/Config.luau` (or live, in Creator Hub → Configs, as `Sectio
 | --- | --- | --- |
 | The Founding Term | `FoundingTerm` | the Term you launch in, e.g. `2026-autumn` |
 | Every product | nothing to paste | make each developer product in Creator Hub with its name from the table below; the game finds it by name |
+| VIP Velocity Elite (game pass) | `Products.velocityElite` | the pass's id (Creator Hub → Monetization → Passes); without it the perk is sold as a developer product of the same name |
 | Trusted helpers for House controls | `Admin.userIds` | their Roblox user ids (you, as owner, are always allowed) |
 | The Black Card | `Products.blackCard` | the subscription's id (`EXP-…`), or leave `""` to launch without it |
 | Badges | `Badges.*` | from Creator Hub → Badges |
@@ -172,6 +173,11 @@ block (that's where most of the money is):
 
 | Name (exactly) | Price | What it does |
 | --- | --- | --- |
+| `God-Mode Luck` | 199 | 2.5× Gilt and Ledger pages for 30 minutes of play (time only runs while they're in the house) |
+| `Chronos Defiance` | 49 | when the clock runs out in a timed room: +15 seconds and the run goes on (offered only in that moment) |
+| `Emperor's Decree` | 149 | the buyer's own words (filtered by Roblox first) in gold on every screen in the server for 8 seconds |
+| `Megalodon Rainmaker` | 699 | gold rains on the server: every guest gets 150 Gilt, the buyer 500 more, and everyone sees who made it rain |
+| `VIP Velocity Elite` | 499 | 1.5× walking and running speed and a gold trail, for good (better as a game pass: see below) |
 | `Double Gilt` | 399 | every Gilt the buyer earns, doubled, for good (the best seller in games like this) |
 | `Gilt Purse` | 49 | 1,000 Gilt |
 | `Gilt Chest` | 199 | 5,500 Gilt |
@@ -185,10 +191,20 @@ block (that's where most of the money is):
 | `Season Collection` | 399 | the season's pieces |
 | `Gold Key Gift` | 499 | the Gold Key, for another guest |
 
+**The VIP Velocity Elite game pass** (a pass shows on the game page, which sells it better):
+Creator Hub → your experience → **Monetization** → **Passes** → **Create a Pass**: name
+*VIP Velocity Elite*, an image, **Save**; open it → **Sales** → on sale, price **499**. Copy the
+pass's id (the number in its page address) into Creator Hub → your experience → **Configs** as
+`Products_velocityElite` (live, no republish), or into `Products.velocityElite` in
+`src/shared/Config.luau`. Guests who bought the developer
+product keep it; nobody can pay twice (a second purchase becomes Boutique credit).
+
 Where guests meet them: a gold **Shop** key at the top right while they walk, the **Offers**
-page that opens first in the Boutique, and (once a session, after a couple of runs) a small card
-saying what Double Gilt would have paid for the run just played. Scores and leaderboards are
-never for sale, so the boards stay fair and players keep coming back.
+page that opens first in the Boutique (Emperor's Decree has *Write it*: words first, then the
+purchase), the revive card when a timed room's clock runs out, and (once a session, after a
+couple of runs) a small card saying what Double Gilt would have paid for the run just played.
+Scores and leaderboards are never for sale, so the boards stay fair and players keep coming back.
+How every purchase is processed, logged and protected: **MONETIZATION.md**.
 
 **Private servers** (A Private Evening): Creator Hub → your experience → **Monetization** →
 **Private Servers** → Enable, price **199** Robux a month (Appendix I).

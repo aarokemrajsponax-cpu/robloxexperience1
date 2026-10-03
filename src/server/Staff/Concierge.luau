@@ -10,6 +10,7 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Voice = require(ReplicatedStorage.Shared.Voice)
 local Dialogue = require(script.Parent.Parent.Dialogue)
 local Private = require(script.Parent.Parent.Private)
+local RemoteGuard = require(script.Parent.Parent.RemoteGuard)
 local Rig = require(script.Parent.Rig)
 
 local Concierge = {}
@@ -304,7 +305,7 @@ function Concierge.isLeading(player: Player): boolean
 end
 
 function Concierge.spawn(parent: Instance)
-	tourEvent.OnServerEvent:Connect(function(player: Player, message: unknown)
+	RemoteGuard.event(tourEvent, "tour", function(player: Player, message: unknown)
 		if type(message) ~= "table" then
 			return
 		end

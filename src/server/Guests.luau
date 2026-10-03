@@ -12,11 +12,13 @@ local Layout = require(ReplicatedStorage.Shared.Layout)
 local Nightly = require(ReplicatedStorage.Shared.Nightly)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Settings = require(ReplicatedStorage.Shared.Settings)
+local Speed = require(ReplicatedStorage.Shared.Speed)
 
 local Analytics = require(script.Parent.Analytics)
 local LiveConfig = require(script.Parent.LiveConfig)
 local Memory = require(script.Parent.Memory)
 local Profiles = require(script.Parent.Profiles)
+local RemoteGuard = require(script.Parent.RemoteGuard)
 local TableService = require(script.Parent.TableService)
 local Concierge = require(script.Parent.Staff.Concierge)
 local Voice = require(ReplicatedStorage.Shared.Voice)
@@ -104,7 +106,7 @@ local function place(player: Player, character: Model, visit: Visit)
 	end)
 	local humanoid = character:WaitForChild("Humanoid", 10) :: Humanoid?
 	if humanoid then
-		humanoid.WalkSpeed = Config.data.Movement.walkSpeed
+		humanoid.WalkSpeed = Speed.resolve(false, Workspace:GetAttribute("SpeedBoost"), player:GetAttribute("SpeedPerk"))
 		humanoid.JumpPower = 35
 		humanoid.Died:Connect(function()
 			task.delay(3, function()
@@ -323,9 +325,9 @@ function Guests.start()
 	end
 	Players.PlayerAdded:Connect(arrive)
 	Profiles.Loaded:Connect(welcome)
-	Remotes.event("Setting").OnServerEvent:Connect(onSetting)
-	Remotes.event("Funnel").OnServerEvent:Connect(onFunnel)
-	Remotes.func("QuickSit").OnServerInvoke = function(player: Player, wanted: unknown)
+	RemoteGuard.event(Remotes.event("Setting"), "setting", onSetting)
+	RemoteGuard.event(Remotes.event("Funnel"), "funnel", onFunnel)
+	RemoteGuard.invoke(Remotes.func("QuickSit"), "quickSit", function(player: Player, wanted: unknown): any
 		if TableService.isSeated(player) then
 			return true
 		end
@@ -364,7 +366,9 @@ function Guests.start()
 		end
 		local ok = TableService.seat(player, model, true, mode)
 		return ok
-	end
+	end, function(_player: Player): any
+		return false
+	end)
 	TableService.onUnlock = function(player: Player, room: string)
 		guestEvent:FireClient(player, { op = "unlock", room = room })
 	end

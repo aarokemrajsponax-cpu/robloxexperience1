@@ -2,6 +2,7 @@
 -- Settings (Appendix F), saved to the guest's profile so they follow them between devices.
 -- Each change applies at once and only to what it affects.
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
@@ -126,16 +127,27 @@ function SettingsPanel.open()
 	pad.PaddingRight = UDim.new(0, 10)
 	pad.Parent = scroll
 
+	-- A perk's settings show only for a guest who holds it (the server sets the attribute).
+	local function shown(def: Settings.Definition): boolean
+		return def.requires == nil or (def.requires == "velocity" and Players.LocalPlayer:GetAttribute("VelocityElite") == true)
+	end
 	local order = 0
 	for _, groupName in Settings.Groups do
+		local defs = {}
+		for _, def in Settings.Definitions do
+			if def.group == groupName and shown(def) then
+				table.insert(defs, def)
+			end
+		end
+		if #defs == 0 then
+			continue
+		end
 		order += 1
 		local heading = Theme.text(scroll, groupName, 11, "caps", { LayoutOrder = order, TextXAlignment = Enum.TextXAlignment.Left })
 		heading.Size = UDim2.new(1, 0, 0, 26)
-		for _, def in Settings.Definitions do
-			if def.group == groupName then
-				order += 1
-				row(scroll, def, order)
-			end
+		for _, def in defs do
+			order += 1
+			row(scroll, def, order)
 		end
 	end
 

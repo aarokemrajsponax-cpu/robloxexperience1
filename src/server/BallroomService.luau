@@ -25,6 +25,7 @@ local Analytics = require(script.Parent.Analytics)
 local Private = require(script.Parent.Private)
 local Gilt = require(script.Parent.Gilt)
 local Profiles = require(script.Parent.Profiles)
+local RemoteGuard = require(script.Parent.RemoteGuard)
 local Season = require(script.Parent.Season)
 local Rig = require(script.Parent.Staff.Rig)
 
@@ -1069,7 +1070,7 @@ function BallroomService.start(isSeatedElsewhere: (Player) -> boolean)
 			end
 		end
 	end
-	tableEvent.OnServerEvent:Connect(onMessage)
+	RemoteGuard.event(tableEvent, "ballroom", onMessage)
 	RunService.Heartbeat:Connect(function()
 		tick(os.clock())
 	end)

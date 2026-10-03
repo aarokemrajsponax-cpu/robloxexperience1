@@ -60,6 +60,14 @@ export type Data = {
 	-- What the house remembers about you: the last visit, the last thing worth mentioning, the
 	-- tables you sit at most, admiration, and the day you last signed the Livre d'Or.
 	memory: { lastSeen: number, highlight: string, highlightAt: number, tables: { [string]: number }, admired: number, admiredSince: number, signedDay: number },
+	-- Purchases (server/Purchases): what's bought and waiting to be used (credits: revives,
+	-- decrees, rains, salutes...), God-Mode Luck's time left (it only runs while you're here), VIP
+	-- Velocity Elite (velocityPass: verified as a game pass), and the rains already received.
+	perks: { credits: { [string]: number }, luck: { remaining: number }, velocity: boolean, velocityPass: boolean, rains: { string } },
+	-- The purchase risk check: countries seen, recent receipts and failures, and the state.
+	risk: { regions: { { code: string, at: number } }, purchases: { number }, failures: { number }, state: string, restrictedUntil: number },
+	-- Granted receipts whose ledger record is still to be marked Granted (retried until it is).
+	ledgerOutbox: { { id: string, productId: number, key: string, spent: number, at: number } },
 }
 
 local TEMPLATE: Data = {
@@ -98,6 +106,9 @@ local TEMPLATE: Data = {
 	suite = {},
 	circle = { id = "", week = -1, points = 0 },
 	memory = { lastSeen = 0, highlight = "", highlightAt = 0, tables = {}, admired = 0, admiredSince = 0, signedDay = -1 },
+	perks = { credits = {}, luck = { remaining = 0 }, velocity = false, velocityPass = false, rains = {} },
+	risk = { regions = {}, purchases = {}, failures = {}, state = "Normal", restrictedUntil = 0 },
+	ledgerOutbox = {},
 }
 
 -- Each migration moves data from schema n to n + 1. Add new ones at the end.

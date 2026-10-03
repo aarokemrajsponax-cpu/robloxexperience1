@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Ledger = require(ReplicatedStorage.Shared.Ledger)
+local ProductConfig = require(ReplicatedStorage.Shared.ProductConfig)
 local Rating = require(ReplicatedStorage.Shared.Rating)
 
 local Analytics = require(script.Parent.Analytics)
@@ -16,6 +17,12 @@ local LedgerService = {}
 
 -- The house's events (the Page-Turner) multiply the points (set by the owner's panel).
 LedgerService.boost = function(): number
+	return 1
+end
+
+-- A guest's own boost (God-Mode Luck; set by the purchase system). Together with the house's,
+-- never more than ProductConfig.Settings.MaxLedgerMultiplier.
+LedgerService.personal = function(_player: Player): number
 	return 1
 end
 
@@ -77,7 +84,8 @@ function LedgerService.add(player: Player, source: string, detail: number?)
 		return
 	end
 	book(data)
-	local points = math.floor(Ledger.points(source, detail) * math.max(1, LedgerService.boost()) + 0.5)
+	local boost = math.min(ProductConfig.Settings.MaxLedgerMultiplier, math.max(1, LedgerService.boost()) * math.max(1, LedgerService.personal(player)))
+	local points = math.floor(Ledger.points(source, detail) * boost + 0.5)
 	if points <= 0 then
 		return
 	end
@@ -87,12 +95,15 @@ function LedgerService.add(player: Player, source: string, detail: number?)
 	LedgerService.changed(player, if #turned > 0 then turned else nil)
 end
 
--- The Leather-Bound edition for this Term (bought, or held with the Black Card).
-function LedgerService.bindLeather(player: Player, data: Profiles.Data)
+-- The Leather-Bound edition for this Term (bought, or held with the Black Card). `quiet`: inside
+-- a receipt, where the guest's screen is told only once the purchase is saved.
+function LedgerService.bindLeather(player: Player, data: Profiles.Data, quiet: boolean?)
 	book(data)
 	data.ledger.leather[data.ledger.term] = true
 	LedgerService.claim(player, data)
-	LedgerService.changed(player, nil)
+	if not quiet then
+		LedgerService.changed(player, nil)
+	end
 end
 
 -- What the guest's screen shows of their book.

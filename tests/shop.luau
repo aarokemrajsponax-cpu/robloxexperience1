@@ -3,742 +3,25 @@
 -- the Boutique's shelves and live prices, choosing a piece, idempotent receipts (a retried
 -- receipt, a save that never lands), credits, gifts and their handover, Gilt purchases and
 -- Standing, equipping, the Ledger's pages and the Leather-Bound row, the Gold Key and its +20%,
--- the Introduction and the season collections.
+-- the Introduction and the season collections. (The test house itself: tests/harness.luau.)
 --
 -- Usage (from the repo root):  rojo sourcemap default.project.json -o sourcemap.json
 --                              lune run tests/shop.luau
 
-local fs = require("@lune/fs")
-local luau = require("@lune/luau")
-local roblox = require("@lune/roblox")
-local serde = require("@lune/serde")
-local process = require("@lune/process")
-
-local Instance, Vector3, Enum, CFrame = roblox.Instance, roblox.Vector3, roblox.Enum, roblox.CFrame
-
-local passed, failed = 0, 0
-local function check(name: string, ok: boolean, detail: any?)
-	if ok then
-		passed += 1
-	else
-		failed += 1
-		print("FAIL  " .. name .. (if detail ~= nil then "  -> " .. tostring(detail) else ""))
-	end
-end
-
----------------------------------------------------------------------------------------------------
--- A fake clock, a scheduler and signals
----------------------------------------------------------------------------------------------------
-local now = 1000
-local timers = {}
-local function schedule(at, fn, ...)
-	table.insert(timers, { at = at, fn = fn, args = table.pack(...) })
-end
-
-local function run(fn, ...)
-	local co = coroutine.create(fn)
-	local ok, err = coroutine.resume(co, ...)
-	if not ok then
-		error(debug.traceback(co, tostring(err)))
-	end
-end
-
-local function signal()
-	local s = { handlers = {} }
-	function s:Connect(fn)
-		local entry = { fn = fn, live = true }
-		table.insert(self.handlers, entry)
-		return {
-			Disconnect = function()
-				entry.live = false
-			end,
-		}
-	end
-	function s:Once(fn)
-		local c
-		c = self:Connect(function(...)
-			c.Disconnect()
-			fn(...)
-		end)
-		return c
-	end
-	function s:Fire(...)
-		for _, h in table.clone(self.handlers) do
-			if h.live then
-				run(h.fn, ...)
-			end
-		end
-	end
-	return s
-end
-
-local heartbeat = signal()
-
-local function step(dt: number)
-	local target = now + dt
-	while true do
-		table.sort(timers, function(a, b)
-			return a.at < b.at
-		end)
-		local t = timers[1]
-		if not t or t.at > target then
-			break
-		end
-		table.remove(timers, 1)
-		now = math.max(now, t.at)
-		run(t.fn, table.unpack(t.args, 1, t.args.n))
-	end
-	now = target
-	heartbeat:Fire(dt)
-end
-
-local function advance(seconds: number)
-	local left = seconds
-	while left > 1e-9 do
-		local dt = math.min(1 / 30, left)
-		step(dt)
-		left -= dt
-	end
-end
-
-local taskShim = {
-	spawn = function(fn, ...)
-		run(fn, ...)
-	end,
-	delay = function(t, fn, ...)
-		schedule(now + (t or 0), fn, ...)
-	end,
-	defer = function(fn, ...)
-		schedule(now, fn, ...)
-	end,
-	wait = function(t)
-		local co = coroutine.running()
-		schedule(now + (t or 1 / 30), function()
-			local ok, err = coroutine.resume(co)
-			if not ok then
-				error(debug.traceback(co, tostring(err)))
-			end
-		end)
-		coroutine.yield()
-		return t
-	end,
-}
-
----------------------------------------------------------------------------------------------------
--- Guests, their characters and what they receive
----------------------------------------------------------------------------------------------------
-local PlayersService = { PlayerRemoving = signal(), PlayerAdded = signal() }
-local workspace = {}
-
-local function humanoid()
-	return {
-		Health = 100,
-		Sit = false,
-		SeatPart = nil,
-		Seated = signal(),
-		Died = signal(),
-	}
-end
-
-local function newGuest(name: string, userId: number)
-	local h = humanoid()
-	local root = {
-		Position = Vector3.new(0, 0, 0),
-		IsA = function(_, class)
-			return class == "BasePart" or class == "Part"
-		end,
-	}
-	local character = {
-		FindFirstChildOfClass = function(_, class)
-			return if class == "Humanoid" then h else nil
-		end,
-		FindFirstChild = function(_, n)
-			return if n == "HumanoidRootPart" then root elseif n == "Humanoid" then h else nil
-		end,
-		PivotTo = function(_, cf)
-			root.Position = cf.Position
-		end,
-		Parent = workspace,
-	}
-	return {
-		Name = name,
-		DisplayName = name,
-		UserId = userId,
-		AccountAge = 400,
-		Parent = PlayersService,
-		Character = character,
-		humanoid = h,
-		root = root,
-		inbox = {},
-		CharacterAdded = signal(),
-		attrs = {},
-		SetAttribute = function(self, k, v)
-			self.attrs[k] = v
-		end,
-		GetAttribute = function(self, k)
-			return self.attrs[k]
-		end,
-	}
-end
-
-roblox.implementMethod("Seat", "Sit", function(self, h)
-	h.SeatPart = self
-end)
-
----------------------------------------------------------------------------------------------------
--- Roblox's marketplace, and saved profiles that save on a delay (like ProfileStore)
----------------------------------------------------------------------------------------------------
-local prompts = {}
-local productPrices = {}
-local passOwners = {}
-local subscribers = {}
-local MarketplaceService = {
-	PromptGamePassPurchaseFinished = signal(),
-	PromptProductPurchase = function(_, player, id)
-		table.insert(prompts, { player = player, id = id, kind = "product" })
-	end,
-	PromptGamePassPurchase = function(_, player, id)
-		table.insert(prompts, { player = player, id = id, kind = "pass" })
-	end,
-	GetProductInfo = function(_, id)
-		return { PriceInRobux = productPrices[id] }
-	end,
-	UserOwnsGamePassAsync = function(_, userId, id)
-		return passOwners[userId .. ":" .. id] == true
-	end,
-	GetUserSubscriptionStatusAsync = function(_, player, id)
-		return { IsSubscribed = subscribers[player.UserId .. ":" .. id] == true, IsRenewing = true }
-	end,
-	GetSubscriptionProductInfoAsync = function(_, _id)
-		return { DisplayPrice = "$4.99" }
-	end,
-	PromptSubscriptionPurchase = function(_, player, id)
-		table.insert(prompts, { player = player, id = id, kind = "subscription" })
-	end,
-	-- The experience's developer products, as Roblox lists them (filled in by the tests below).
-	devProducts = {},
-	GetDeveloperProductsAsync = function(self)
-		local list = self.devProducts
-		return {
-			IsFinished = true,
-			GetCurrentPage = function()
-				return list
-			end,
-			AdvanceToNextPageAsync = function() end,
-		}
-	end,
-}
-
-local guests = {}
-PlayersService.GetPlayers = function()
-	local out = {}
-	for _, g in guests do
-		if g.Parent == PlayersService then
-			table.insert(out, g)
-		end
-	end
-	return out
-end
-PlayersService.GetPlayerByUserId = function(_, id)
-	for _, g in guests do
-		if g.UserId == id and g.Parent == PlayersService then
-			return g
-		end
-	end
-	return nil
-end
-
-local function deepCopy(t)
-	if type(t) ~= "table" then
-		return t
-	end
-	local out = {}
-	for k, v in t do
-		out[k] = deepCopy(v)
-	end
-	return out
-end
-
-local profiles = {}
-local savesWork = true
-local loadedSignal = signal()
-local function newProfile(player, template)
-	local data = deepCopy(template)
-	data.firstVisit = os.time() - 86400
-	local p = {
-		Data = data,
-		LastSavedData = deepCopy(data),
-		OnAfterSave = signal(),
-		active = true,
-	}
-	function p:IsActive()
-		return self.active
-	end
-	function p:Save()
-		if not savesWork then
-			return
-		end
-		taskShimDelay(0.3, function()
-			self.LastSavedData = deepCopy(self.Data)
-			self.OnAfterSave:Fire(self.LastSavedData)
-		end)
-	end
-	profiles[player] = p
-	return p
-end
-
----------------------------------------------------------------------------------------------------
--- Module loading
----------------------------------------------------------------------------------------------------
-local sourcemap = serde.decode("json", fs.readFile("sourcemap.json"))
-local proxies, cache = {}, {}
-local requireModule
-
-local function pathOf(node, parentPath)
-	return if parentPath then parentPath .. "." .. node.name else node.name
-end
-
-local function proxyFor(node, parent, path)
-	if proxies[node] then
-		return proxies[node]
-	end
-	local p = {}
-	proxies[node] = p
-	setmetatable(p, {
-		__index = function(_, key)
-			if key == "Parent" then
-				return parent
-			elseif key == "Name" then
-				return node.name
-			end
-			for _, child in node.children or {} do
-				if child.name == key then
-					return proxyFor(child, p, pathOf(child, path))
-				end
-			end
-			error(`{key} is not a valid member of {node.name}`)
-		end,
-	})
-	rawset(p, "__node", node)
-	rawset(p, "__path", path)
-	return p
-end
-local root = proxyFor(sourcemap, nil, nil)
-
-local function module(...)
-	local p = root
-	for _, name in { ... } do
-		p = p[name]
-	end
-	return requireModule(p)
-end
-
-function taskShimDelay(t, fn)
-	taskShim.delay(t, fn)
-end
-
-local shopEvents = {}
-local broadcasts = {}
-local customEvents = {}
-local stubs = {
-	["ReplicatedStorage.Shared.Remotes"] = function()
-		local funcs = {}
-		local events = {}
-		return {
-			event = function(name)
-				if events[name] then
-					return events[name]
-				end
-				events[name] = {
-					FireClient = function(_, player, message)
-						table.insert(player.inbox, message)
-					end,
-					FireAllClients = function(_, message)
-						table.insert(broadcasts, { remote = name, message = message })
-					end,
-					OnServerEvent = signal(),
-				}
-				return events[name]
-			end,
-			func = function(name)
-				funcs[name] = funcs[name] or {}
-				return funcs[name]
-			end,
-			funcs = funcs,
-		}
-	end,
-	["ServerScriptService.Server.Analytics"] = function()
-		return {
-			custom = function(player, name, value, fields)
-				table.insert(customEvents, { player = player, name = name, value = value, fields = fields })
-			end,
-			step = function() end,
-			source = function() end,
-			sink = function() end,
-		}
-	end,
-	["ServerScriptService.Server.Profiles"] = function()
-		return {
-			get = function(player)
-				local p = profiles[player]
-				return if p and p.active then p.Data else nil
-			end,
-			profile = function(player)
-				local p = profiles[player]
-				return if p and p.active then p else nil
-			end,
-			wait = function(player)
-				local p = profiles[player]
-				return if p then p.Data else nil
-			end,
-			isMock = function()
-				return false
-			end,
-			Loaded = loadedSignal,
-		}
-	end,
-	["ServerScriptService.Server.Season"] = function()
-		return {
-			current = function()
-				return module("ReplicatedStorage", "Shared", "Seasons").byId.harvest
-			end,
-		}
-	end,
-}
-
-local mythicCounts = {}
-local memoryMaps = {}
-local awarded = {}
-local dataStores, orderedStores, guidCount = {}, {}, 0
-local published, subscriptions, teleports = {}, {}, {}
-local services = {
-	Players = PlayersService,
-	MarketplaceService = MarketplaceService,
-	DataStoreService = {
-		GetDataStore = function(_, name)
-			local data = if name == "MaisonNoir_Mythics" then mythicCounts else (dataStores[name] or {})
-			dataStores[name] = data
-			return {
-				-- As on Roblox: returning nil cancels the write, and UpdateAsync returns nil.
-				UpdateAsync = function(_, key, fn)
-					local new = fn(data[key])
-					if new == nil then
-						return nil
-					end
-					data[key] = new
-					return new
-				end,
-				GetAsync = function(_, key)
-					return data[key]
-				end,
-				SetAsync = function(_, key, value)
-					data[key] = value
-				end,
-				RemoveAsync = function(_, key)
-					data[key] = nil
-				end,
-			}
-		end,
-		GetOrderedDataStore = function(_, name)
-			local data = orderedStores[name] or {}
-			orderedStores[name] = data
-			return {
-				SetAsync = function(_, key, value)
-					data[key] = value
-				end,
-				GetSortedAsync = function(_, _ascending, size)
-					local rows = {}
-					for k, v in data do
-						table.insert(rows, { key = k, value = v })
-					end
-					table.sort(rows, function(x, y)
-						return x.value > y.value
-					end)
-					while #rows > size do
-						table.remove(rows)
-					end
-					return { GetCurrentPage = function()
-						return rows
-					end }
-				end,
-			}
-		end,
-	},
-	HttpService = {
-		GenerateGUID = function()
-			guidCount += 1
-			return string.format("%08x-0000-0000-0000-000000000000", guidCount)
-		end,
-	},
-	MemoryStoreService = {
-		GetSortedMap = function(_, name)
-			memoryMaps[name] = memoryMaps[name] or {}
-			local m = memoryMaps[name]
-			return {
-				UpdateAsync = function(_, key, fn)
-					local value, sortKey = fn(m[key] and m[key].value, m[key] and m[key].sortKey)
-					m[key] = { key = key, value = value, sortKey = sortKey }
-				end,
-				GetSizeAsync = function()
-					local n = 0
-					for _ in m do
-						n += 1
-					end
-					return n
-				end,
-				GetRangeAsync = function(_, _dir, count)
-					local list = {}
-					for _, v in m do
-						table.insert(list, v)
-					end
-					table.sort(list, function(a, b)
-						return a.sortKey > b.sortKey
-					end)
-					local out = {}
-					for i = 1, math.min(count, #list) do
-						out[i] = list[i]
-					end
-					return out
-				end,
-			}
-		end,
-	},
-	Workspace = (function()
-		local dm = roblox.Instance.new("DataModel")
-		return dm:GetService("Workspace")
-	end)(),
-	MessagingService = {
-		PublishAsync = function(_, topic, message)
-			table.insert(published, { topic = topic, message = message })
-		end,
-		SubscribeAsync = function(_, topic, fn)
-			subscriptions[topic] = fn
-		end,
-	},
-	TeleportService = {
-		TeleportAsync = function(_, placeId, players, options)
-			table.insert(teleports, { placeId = placeId, players = players, jobId = options and options.ServerInstanceId })
-		end,
-	},
-	TextService = {
-		FilterStringAsync = function(_, text)
-			return {
-				GetNonChatStringForBroadcastAsync = function()
-					return (string.gsub(text, "rude", "####"))
-				end,
-			}
-		end,
-	},
-	BadgeService = {
-		AwardBadge = function(_, userId, id)
-			table.insert(awarded, { userId = userId, id = id })
-		end,
-	},
-	CollectionService = {
-		GetTagged = function()
-			return {}
-		end,
-	},
-	RunService = {
-		Heartbeat = heartbeat,
-		IsServer = function()
-			return true
-		end,
-		IsStudio = function()
-			return true
-		end,
-	},
-}
-
-local gameShim = setmetatable({
-	GetService = function(_, name)
-		if services[name] then
-			return services[name]
-		end
-		for _, child in sourcemap.children do
-			if child.name == name then
-				return proxyFor(child, root, child.name)
-			end
-		end
-		error("no service " .. name)
-	end,
-}, {})
-
--- Wall-clock time runs with the fake clock (the Ledger's Term and the Boutique's day read it).
-local startTime = os.time({ year = 2026, month = 10, day = 7, hour = 12 })
-local fakeOs = setmetatable({
-	clock = function()
-		return now
-	end,
-	time = function(t)
-		if t then
-			return os.time(t)
-		end
-		return startTime + math.floor(now)
-	end,
-}, { __index = os })
-
-local Random = {}
-Random.__index = Random
-function Random.new(seed)
-	local state = (math.floor(seed or 1) * 2654435761 + 12345) % 4294967296
-	if state == 0 then
-		state = 1
-	end
-	return setmetatable({ state = state }, Random)
-end
-function Random:next()
-	local s = self.state
-	s = bit32.bxor(s, bit32.lshift(s, 13) % 4294967296)
-	s = bit32.bxor(s, bit32.rshift(s, 17))
-	s = bit32.bxor(s, bit32.lshift(s, 5) % 4294967296)
-	self.state = s
-	return s / 4294967296
-end
-function Random:NextNumber(a, b)
-	local r = self:next()
-	return if a then a + r * (b - a) else r
-end
-function Random:NextInteger(a, b)
-	return a + math.floor(self:next() * (b - a + 1))
-end
-
-local globals = {
-	Instance = Instance,
-	Vector3 = Vector3,
-	Vector2 = roblox.Vector2,
-	CFrame = CFrame,
-	Color3 = roblox.Color3,
-	Enum = Enum,
-	UDim = roblox.UDim,
-	UDim2 = roblox.UDim2,
-	Font = {
-		new = roblox.Font.new,
-		fromName = roblox.Font.fromName,
-		fromEnum = function(e)
-			local ok, f = pcall(roblox.Font.fromEnum, e)
-			return if ok then f else roblox.Font.new("rbxasset://fonts/families/BuilderSans.json")
-		end,
-	},
-	Random = Random,
-	TweenInfo = {
-		new = function(t)
-			return { Time = t }
-		end,
-	},
-	task = taskShim,
-	game = gameShim,
-	workspace = { FindFirstChild = function() return nil end },
-	os = fakeOs,
-	warn = function(...)
-		print("warn:", ...)
-	end,
-}
-
-local sources = {}
-local function preload(node)
-	for _, f in node.filePaths or {} do
-		if string.find(f, "%.luau$") then
-			sources[f] = fs.readFile(f)
-		end
-	end
-	for _, c in node.children or {} do
-		preload(c)
-	end
-end
-preload(sourcemap)
-
-function requireModule(proxy)
-	local node = rawget(proxy, "__node")
-	if cache[node] ~= nil then
-		return cache[node]
-	end
-	local stub = stubs[rawget(proxy, "__path")]
-	if stub then
-		cache[node] = stub()
-		return cache[node]
-	end
-	local path
-	for _, f in node.filePaths or {} do
-		if string.find(f, "%.luau$") then
-			path = f
-		end
-	end
-	assert(path, "no source for " .. node.name)
-	local env = { script = proxy, require = requireModule }
-	for k, v in globals do
-		env[k] = v
-	end
-	local fn = luau.load(sources[path] or fs.readFile(path), { debugName = path, environment = env, injectGlobals = true })
-	local result = fn()
-	cache[node] = result
-	return result
-end
-
----------------------------------------------------------------------------------------------------
--- The house's money
----------------------------------------------------------------------------------------------------
-module("ReplicatedStorage", "Shared", "Seasons")
-local Config = module("ReplicatedStorage", "Shared", "Config")
-local Wardrobe = module("ReplicatedStorage", "Shared", "Wardrobe")
-local Boutique = module("ReplicatedStorage", "Shared", "Boutique")
-local Remotes = module("ReplicatedStorage", "Shared", "Remotes")
-local Gilt = module("ServerScriptService", "Server", "Gilt")
-local LedgerService = module("ServerScriptService", "Server", "LedgerService")
-local Shop = module("ServerScriptService", "Server", "Shop")
-local handovers = {}
-Shop.handOver = function(player, from, itemName)
-	table.insert(handovers, { player = player, from = from, item = itemName })
-end
-Shop.start()
-local ask = Remotes.funcs.ShopAsk.OnServerInvoke
-
-local TEMPLATE = {
-	visits = 1, firstVisit = 0, nights = { count = 1, lastDay = -1 }, settings = {}, flags = {}, register = {},
-	stats = { runs = 0, rounds = 0, filings = 0, correct = 0, flawless = 0, nightlies = 0 },
-	duel = { r = 1500, rd = 350, vol = 0.06, matches = 0, wins = 0, losses = 0, termMatches = 0, term = "", best = 0, recent = {} },
-	gilt = 0, giltDay = { day = -1, earned = 0 }, purchases = {},
-	owned = {}, equipped = { look = "", table = "", lamp = "", chime = "", trail = "", nameplate = "", card = "", flourish = "", gesture = "" },
-	credits = {}, receipts = {}, pending = { product = "", item = "", giftTo = 0, at = 0 },
-	goldKey = false, introduction = false, blackCard = { active = false, months = {} }, suite = {}, circle = { id = "", week = -1, points = 0 },
-	memory = { lastSeen = 0, highlight = "", highlightAt = 0, tables = {}, admired = 0, admiredSince = 0, signedDay = -1 },
-	ledger = { term = "", points = 0, freeClaimed = 0, leatherClaimed = 0, leather = {} },
-	gifts = {},
-}
-
-local function guest(name, id)
-	local g = newGuest(name, id)
-	g.Character = nil
-	table.insert(guests, g)
-	newProfile(g, TEMPLATE)
-	profiles[g].Data.firstVisit = fakeOs.time() - 86400 -- yesterday, on the house's clock
-	loadedSignal:Fire(g, profiles[g].Data)
-	return g
-end
-local function receipt(player, productId, purchaseId)
-	local result
-	run(function()
-		result = MarketplaceService.ProcessReceipt({ PlayerId = player.UserId, ProductId = productId, PurchaseId = purchaseId, CurrencySpent = 99 })
-	end)
-	advance(1)
-	return result
-end
-local function askAs(player, request)
-	advance(0.15) -- a guest's taps, not a script's
-	local r
-	run(function()
-		r = ask(player, request)
-	end)
-	return r
-end
-local function lastOp(player, op)
-	for i = #player.inbox, 1, -1 do
-		if player.inbox[i].op == op then
-			return player.inbox[i]
-		end
-	end
-	return nil
-end
+local H = require("./harness")
+local check, run, advance, signal = H.check, H.run, H.advance, H.signal
+local prompts, productPrices, passOwners, subscribers = H.prompts, H.productPrices, H.passOwners, H.subscribers
+local MarketplaceService, guests, profiles, loadedSignal = H.MarketplaceService, H.guests, H.profiles, H.loadedSignal
+local module, broadcasts, customEvents = H.module, H.broadcasts, H.customEvents
+local mythicCounts, memoryMaps, awarded = H.mythicCounts, H.memoryMaps, H.awarded
+local dataStores, orderedStores, published, subscriptions, teleports = H.dataStores, H.orderedStores, H.published, H.subscriptions, H.teleports
+local services, fakeOs = H.services, H.fakeOs
+local Config, Wardrobe, Boutique, Remotes = H.Config, H.Wardrobe, H.Boutique, H.Remotes
+local Gilt, LedgerService, Shop, handovers, ask = H.Gilt, H.LedgerService, H.Shop, H.handovers, H.ask
+local TEMPLATE, guest, receipt, askAs, lastOp = H.TEMPLATE, H.guest, H.receipt, H.askAs, H.lastOp
+local Instance, Vector3, Enum, CFrame, roblox = H.Instance, H.Vector3, H.Enum, H.CFrame, H.roblox
+local PlayersService, newGuest, newProfile, heartbeat, deepCopy = H.PlayersService, H.newGuest, H.newProfile, H.heartbeat, H.deepCopy
+local ProductConfig = module("ReplicatedStorage", "Shared", "ProductConfig")
 
 ---------------------------------------------------------------------------------------------------
 -- 1. The shelves, before any product is set up
@@ -818,20 +101,20 @@ for _, n in profiles[ada].Data.credits do
 	creditCount += n
 end
 check("a retried receipt grants nothing twice", creditCount == 0 and #profiles[ada].Data.receipts == 1)
-check("the item is logged in analytics", (function()
+check("the purchase is logged in analytics (product, outcome, segment)", (function()
 	for _, e in customEvents do
-		if e.name == "Boutique purchase" and e.player == ada then
+		if e.name == "Shop: Receipt granted" and e.player == ada and e.fields[1] == "tier" .. tier then
 			return true
 		end
 	end
 	return false
 end)())
 -- A save that never lands: not acknowledged, so Roblox will try again later.
-savesWork = false
+H.savesWork = false
 local stuck = receipt(ada, productId, "P-2")
 advance(31)
 check("a purchase whose save hasn't landed isn't acknowledged", stuck == nil or stuck == Enum.ProductPurchaseDecision.NotProcessedYet, tostring(stuck))
-savesWork = true
+H.savesWork = true
 local retried = receipt(ada, productId, "P-2")
 check("once the save lands the retry is acknowledged", retried == Enum.ProductPurchaseDecision.PurchaseGranted, tostring(retried))
 -- P-2 had no choice on file: it became credit.
@@ -931,7 +214,11 @@ check("the screen is told what she owns and wears", lastOp(ada, "state") ~= nil 
 ---------------------------------------------------------------------------------------------------
 check("the Gold Key prompts its pass", askAs(ben, { op = "goldKey" }).prompted and prompts[#prompts].kind == "pass" and prompts[#prompts].id == 3001)
 MarketplaceService.PromptGamePassPurchaseFinished:Fire(ben, 3001, true)
-check("buying it gives Ben the Gold Key", profiles[ben].Data.goldKey == true)
+check("a purchase Roblox doesn't confirm gives nothing", profiles[ben].Data.goldKey == false)
+advance(40)
+passOwners["2:3001"] = true -- Roblox now reports the pass as Ben's
+MarketplaceService.PromptGamePassPurchaseFinished:Fire(ben, 3001, true)
+check("buying it gives Ben the Gold Key (once Roblox confirms it)", profiles[ben].Data.goldKey == true)
 local paid = Gilt.pay(ben, profiles[ben].Data, 100, "test")
 check("the Gold Key pays 20% more Gilt", paid == 120, paid)
 check("Gold Key pieces can be worn", askAs(ben, { op = "equip", kind = "nameplate", id = "plate_goldkey" }).ok)
@@ -1009,10 +296,10 @@ profiles[ben].Data.firstVisit = fakeOs.time() - 30 * 86400
 check("never after the first week", askAs(ben, { op = "introduction" }).ok == false)
 
 ---------------------------------------------------------------------------------------------------
--- 11. A light limit on asking
+-- 11. A limit on asking (RemoteGuard: a bucket per guest per remote)
 ---------------------------------------------------------------------------------------------------
 local limited = false
-for _ = 1, 15 do
+for _ = 1, Config.data.RemoteLimits.shopAsk.burst + 4 do
 	local r
 	run(function()
 		r = ask(ada, { op = "ledger" })
@@ -1021,7 +308,7 @@ for _ = 1, 15 do
 		limited = true
 	end
 end
-check("more than ten asks a second wait a moment", limited)
+check("a flood of asks waits a moment", limited)
 
 ---------------------------------------------------------------------------------------------------
 -- 12. The Register's side: Commissions, Mythic serials, badges, Standing
@@ -1092,7 +379,7 @@ SoireeService.notice = function(player, title, line)
 end
 -- Move the house clock to a Saturday of this weekend's format.
 local weekend = SoireeShared.at(fakeOs.time())
-startTime = weekend.startsAt + 3600 - math.floor(now)
+H.setWallClock(weekend.startsAt + 3600)
 local w = SoireeShared.at(fakeOs.time())
 check("the house clock is in a Soirée", w.active)
 local gus = guest("Gus", 7)
@@ -1110,7 +397,7 @@ for i = 1, 150 do
 	memoryMaps["MaisonNoir_Soiree_" .. w.key][tostring(9000 + i)] = { key = tostring(9000 + i), value = "x", sortKey = 1 }
 end
 -- Monday: the weekend is over; Gus arrives and is the top of 151.
-startTime = w.endsAt + 3600 - math.floor(now)
+H.setWallClock(w.endsAt + 3600)
 loadedSignal:Fire(gus, profiles[gus].Data)
 advance(0.5)
 check("after the weekend the top 1% get the medal", profiles[gus].Data.owned["soiree:" .. w.key .. ":medal"] == true)
@@ -1681,9 +968,10 @@ do
 	check("buying an offer opens Roblox's purchase prompt", askAs(buyer, { op = "offer", key = "giltPurse1" }).ok and prompts[#prompts].id == 9102)
 	local before = profiles[buyer].Data.gilt
 	receipt(buyer, 9102, "GP-1")
-	check("a Gilt Purse adds its Gilt", profiles[buyer].Data.gilt == before + Config.data.Offers.giltPurses.giltPurse1, profiles[buyer].Data.gilt - before)
+	local purse = ProductConfig.byKey.giltPurse1.Reward.Amount
+	check("a Gilt Purse adds its Gilt", profiles[buyer].Data.gilt == before + purse, profiles[buyer].Data.gilt - before)
 	receipt(buyer, 9102, "GP-1")
-	check("and only once per purchase", profiles[buyer].Data.gilt == before + Config.data.Offers.giltPurses.giltPurse1)
+	check("and only once per purchase", profiles[buyer].Data.gilt == before + purse)
 	receipt(buyer, 9101, "DG-1")
 	check("Double Gilt is kept for good", profiles[buyer].Data.doubleGilt == true)
 	local GiltModule = module("ServerScriptService", "Server", "Gilt")
@@ -1709,13 +997,10 @@ do
 		table.insert(hours, { p = p, seconds = seconds })
 	end
 	receipt(buyer, 9104, "GH-1")
-	check("a Golden Hour bought for everyone starts for the house, with the buyer's name", #hours == 1 and hours[1].p == buyer and hours[1].seconds == Config.data.Offers.goldenHourMinutes * 60)
+	check("a Golden Hour bought for everyone starts for the house, with the buyer's name", #hours == 1 and hours[1].p == buyer and hours[1].seconds == ProductConfig.byKey.goldenHour.Reward.Minutes * 60)
 	check("only the offered things can be bought this way", askAs(buyer, { op = "offer", key = "tier99" }).ok == false)
 	MarketplaceService.devProducts = {}
 	run(Shop.discover)
 end
 
-print(string.format("%d passed, %d failed", passed, failed))
-if failed > 0 then
-	process.exit(1)
-end
+H.finish()

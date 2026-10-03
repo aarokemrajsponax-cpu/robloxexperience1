@@ -27,6 +27,7 @@ local State = require(script.Parent.Parent.State)
 local Root = require(script.Parent.Parent.UI.Root)
 local Hud = require(script.Parent.Parent.UI.Hud)
 local RoundPanel = require(script.Parent.Parent.UI.RoundPanel)
+local RevivePanel = require(script.Parent.Parent.UI.RevivePanel)
 local NightlyCard = require(script.Parent.Parent.UI.NightlyCard)
 local DuelPanel = require(script.Parent.Parent.UI.DuelPanel)
 local Dialogue = require(script.Parent.Parent.UI.Dialogue)
@@ -515,6 +516,7 @@ local function onRoundEnd(message: { [string]: any })
 end
 
 local function onBanked(message: { [string]: any })
+	RevivePanel.close()
 	TableClient.Banked:Fire(tonumber(message.gilt) or 0)
 	stopPlay()
 	clearTray()
@@ -715,6 +717,7 @@ local function onLeft(message: { [string]: any })
 	safely("clearing the table", function()
 		clearTray()
 		RoundPanel.close()
+		RevivePanel.close()
 		DuelPanel.close()
 		DuelView.clear()
 		BallroomPanel.close()
@@ -912,6 +915,36 @@ function TableClient.start()
 			onRoundEnd(message)
 		elseif op == "banked" then
 			onBanked(message)
+		elseif op == "reviveOffer" then
+			-- Chronos Defiance: the clock ran out in a timed room; the server holds the run open
+			-- for its window. Nothing can be filed until it's revived or banked.
+			stopPlay()
+			clockRunning = false
+			clockLeft = 0
+			updateClock()
+			RevivePanel.open(message, {
+				onRevive = function()
+					tableEvent:FireServer({ op = "revive" })
+				end,
+				onBank = function()
+					tableEvent:FireServer({ op = "noRevive" })
+				end,
+			})
+		elseif op == "reviveUpdate" then
+			RevivePanel.update(message)
+		elseif op == "revived" then
+			RevivePanel.close()
+			if message.clock then
+				clockLeft = message.clock.left
+				clockRunning = message.clock.running
+				clockBudget = message.clock.budget
+			end
+			lowPlayed = false
+			playing = true
+			SortScreen.setPlaying(true)
+			updateClock()
+			Sound.play("complete", 0.4)
+			Toast.show("Chronos Defiance", "The clock is yours again. Go on.", 2.5)
 		elseif op == "nightlyCard" then
 			onNightlyCard(message)
 		elseif op == "clock" then
@@ -968,7 +1001,7 @@ function TableClient.start()
 		if not seatedNow then
 			return
 		end
-		local open = Root.isOpen() and Root.top() ~= "Round"
+		local open = Root.isOpen() and Root.top() ~= "Round" and Root.top() ~= "Revive"
 		if tableMode == "room" and open ~= paused then
 			paused = open
 			tableEvent:FireServer({ op = "pause", on = open })

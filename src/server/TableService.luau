@@ -23,7 +23,12 @@ local Private = require(script.Parent.Private)
 local Boards = require(script.Parent.Boards)
 local Gilt = require(script.Parent.Gilt)
 local Profiles = require(script.Parent.Profiles)
+local RemoteGuard = require(script.Parent.RemoteGuard)
 local Season = require(script.Parent.Season)
+local Catalog = require(script.Parent.Purchases.Catalog)
+local Perks = require(script.Parent.Purchases.Perks)
+local Revive = require(script.Parent.Purchases.Revive)
+local Store = require(script.Parent.Purchases.Store)
 
 local TableService = {}
 
@@ -42,7 +47,7 @@ type Session = {
 	paused: boolean,
 	finished: boolean,
 	startedAt: number,
-	state: "playing" | "roundEnd" | "banked" | "ended",
+	state: "playing" | "roundEnd" | "reviveOffer" | "banked" | "ended",
 	round: number,
 	seed: number,
 	cases: { string },
@@ -69,6 +74,12 @@ type Session = {
 	lifted: boolean,
 	log: { { any } },
 	connections: { RBXScriptConnection },
+	-- Chronos Defiance (Purchases/Revive): the open offer when the clock ran out, the revives
+	-- used this run and this round, and the score the boards keep (the one before a revive).
+	revive: { deadline: number, prompting: boolean, left: number }?,
+	revivesUsed: number,
+	roundRevives: number,
+	boardCap: number?,
 }
 
 local sessions: { [Player]: Session } = {}
@@ -206,6 +217,7 @@ local function dealRound(s: Session)
 	s.roundBestStreak = 0
 	s.roundFilings = 0
 	s.roundCorrect = 0
+	s.roundRevives = 0
 	local list = {}
 	for _, p in result.pieces do
 		s.nextUid += 1
@@ -298,6 +310,10 @@ local function newSession(player: Player, model: Model, seat: Seat, mode: Mode):
 		lifted = false,
 		log = {},
 		connections = {},
+		revive = nil,
+		revivesUsed = 0,
+		roundRevives = 0,
+		boardCap = nil,
 	}
 end
 
@@ -318,6 +334,10 @@ local function resetRun(s: Session)
 	s.roundGrades = {}
 	s.finished = false
 	s.startedAt = os.time()
+	s.revive = nil
+	s.revivesUsed = 0
+	s.roundRevives = 0
+	s.boardCap = nil
 	s.model:SetAttribute("Score", 0)
 	s.model:SetAttribute("Multiplier", 1)
 end
@@ -340,17 +360,22 @@ local function bank(s: Session, reason: string?): { [string]: any }
 		gilt = 0,
 		best = 0,
 		newBest = false,
+		-- After a Chronos Defiance revive the boards keep the score from before it (Gilt is paid
+		-- on the whole run).
+		boardScore = s.boardCap,
+		revives = s.revivesUsed,
 	}
 	if s.score <= 0 and s.runCorrect == 0 then
 		return summary
 	end
+	local boardScore = math.min(s.score, s.boardCap or s.score)
 	local data = Profiles.get(player)
 	if data then
 		data.stats.runs += 1
 		local roomId = s.room.id
 		local previous = data.best[roomId] or 0
-		if s.score > previous then
-			data.best[roomId] = s.score
+		if boardScore > previous then
+			data.best[roomId] = boardScore
 			summary.newBest = previous > 0
 		end
 		summary.best = data.best[roomId]
@@ -359,7 +384,7 @@ local function bank(s: Session, reason: string?): { [string]: any }
 		summary.giltTotal = data.gilt
 	end
 	if not s.flagged then
-		Boards.submit(player, s.room.id, s.score)
+		Boards.submit(player, s.room.id, boardScore)
 	end
 	Analytics.step(player, 10)
 	Analytics.custom(player, "Run banked", s.score, { room = s.room.id, rounds = s.roundsCleared, grade = grade })
@@ -651,13 +676,10 @@ local function file(s: Session, uid: number, caseId: string)
 	end
 end
 
-local function clockRanOut(s: Session)
-	if s.mode ~= "room" then
-		-- In the Nightly the run ends where the clock stops, and still counts.
-		finishNightly(s, Voice.fill(Voice.Table.clockRanOut, { round = Voice.roman(s.round) }), true)
-		return
-	end
+-- The run ends where the clock stopped: banked.
+local function endOnClock(s: Session)
 	s.state = "banked"
+	s.revive = nil
 	if s.clock then
 		s.clock.running = false
 		s.clock.left = 0
@@ -665,6 +687,118 @@ local function clockRanOut(s: Session)
 	local summary = bank(s, Voice.fill(Voice.Table.clockRanOut, { round = Voice.roman(s.round) }))
 	send(s.player, summary)
 	resetRun(s)
+end
+
+local function reviveRules(): { [string]: any }
+	return Revive.entry().Rules
+end
+
+-- What the guest's screen needs for the revive offer (sent when it opens and when it changes).
+local function reviveMessage(s: Session, op: string): { [string]: any }
+	local data = Profiles.get(s.player)
+	local r = s.revive
+	local e = Revive.entry()
+	return {
+		op = op,
+		left = if r then math.max(0, r.deadline - os.clock()) else 0,
+		prompting = if r then r.prompting else false,
+		held = if data then Revive.credits(data) else 0,
+		price = Catalog.price(Revive.KEY),
+		onSale = Catalog.enabled(Revive.KEY),
+		add = e.Reward.Seconds,
+		boardsCount = e.Rules.BoardsCountRevivedPoints == true,
+		score = s.score,
+		boardScore = s.boardCap or s.score,
+		used = s.revivesUsed,
+		usesLeft = e.Rules.MaxUsesPerRun - s.revivesUsed,
+	}
+end
+
+-- May this run be offered a revive now? Only in a timed room, within the per-run and per-round
+-- limits, and only if a revive can actually be had (one held, or the product on sale).
+local function canOfferRevive(s: Session): boolean
+	local rules = reviveRules()
+	if s.mode ~= "room" or not s.clock or s.revivesUsed >= rules.MaxUsesPerRun or s.roundRevives >= rules.MaxUsesPerRound then
+		return false
+	end
+	local data = Profiles.get(s.player)
+	if not data then
+		return false
+	end
+	return Revive.credits(data) > 0 or Catalog.enabled(Revive.KEY)
+end
+
+local function clockRanOut(s: Session)
+	if s.mode ~= "room" then
+		-- In the Nightly the run ends where the clock stops, and still counts.
+		finishNightly(s, Voice.fill(Voice.Table.clockRanOut, { round = Voice.roman(s.round) }), true)
+		return
+	end
+	if not canOfferRevive(s) then
+		endOnClock(s)
+		return
+	end
+	-- The moment for Chronos Defiance: the clock is stopped, nothing can be filed, and the offer
+	-- stands for its window (the screen shows exactly this countdown).
+	s.state = "reviveOffer"
+	if s.clock then
+		s.clock.running = false
+		s.clock.left = 0
+	end
+	s.revive = { deadline = os.clock() + reviveRules().WindowSeconds, prompting = false, left = reviveRules().WindowSeconds }
+	send(s.player, reviveMessage(s, "reviveOffer"))
+end
+
+-- Spends a revive on the open offer: the clock gets its seconds back and the round goes on.
+local function applyRevive(s: Session): boolean
+	if s.state ~= "reviveOffer" or not s.clock then
+		return false
+	end
+	local data = Profiles.get(s.player)
+	if not data or not Perks.use(s.player, data, Revive.CREDIT, Revive.KEY) then
+		return false
+	end
+	if not reviveRules().BoardsCountRevivedPoints and s.boardCap == nil then
+		s.boardCap = s.score
+	end
+	s.revivesUsed += 1
+	s.roundRevives += 1
+	s.revive = nil
+	s.state = "playing"
+	s.clock.left = Revive.entry().Reward.Seconds
+	s.clock.running = true
+	table.insert(s.log, { "revive", s.round, s.score, os.clock() } :: { any })
+	send(s.player, { op = "revived", clock = clockState(s), held = Revive.credits(data), used = s.revivesUsed, boardScore = s.boardCap })
+	Perks.push(s.player)
+	return true
+end
+
+-- The guest asked to revive: with one they hold, at once; otherwise Roblox's purchase window.
+local function askRevive(s: Session)
+	local r = s.revive
+	if s.state ~= "reviveOffer" or not r or r.prompting then
+		return
+	end
+	local data = Profiles.get(s.player)
+	if data and Revive.credits(data) > 0 then
+		applyRevive(s)
+		return
+	end
+	local ok, why = Store.prompt(s.player, Revive.KEY, "revive")
+	if s.revive ~= r or s.state ~= "reviveOffer" then
+		return -- the moment passed while asking (a revive bought now is kept for the next run)
+	end
+	if ok then
+		-- The countdown waits while Roblox's window is open (up to PromptWaitSeconds).
+		r.left = math.max(3, r.deadline - os.clock())
+		r.prompting = true
+		r.deadline = os.clock() + reviveRules().PromptWaitSeconds
+		send(s.player, reviveMessage(s, "reviveUpdate"))
+	else
+		local m = reviveMessage(s, "reviveUpdate")
+		m.why = why
+		send(s.player, m)
+	end
 end
 
 -- Seats a guest at a table. `teleport` walks them there instantly (Straight to the table).
@@ -822,11 +956,19 @@ local function onMessage(player: Player, message: unknown)
 			s.paused = m.on == true
 		end
 	elseif op == "bank" then
-		if s.mode == "room" and (s.state == "roundEnd" or s.state == "playing") then
+		if s.mode == "room" and s.state == "reviveOffer" then
+			endOnClock(s)
+		elseif s.mode == "room" and (s.state == "roundEnd" or s.state == "playing") then
 			s.state = "banked"
 			local summary = bank(s, nil)
 			send(player, summary)
 			resetRun(s)
+		end
+	elseif op == "revive" then
+		askRevive(s)
+	elseif op == "noRevive" then
+		if s.state == "reviveOffer" then
+			endOnClock(s)
 		end
 	elseif op == "again" then
 		if s.state == "banked" then
@@ -851,7 +993,7 @@ local function onMessage(player: Player, message: unknown)
 end
 
 function TableService.start()
-	tableEvent.OnServerEvent:Connect(onMessage)
+	RemoteGuard.event(tableEvent, "table", onMessage)
 	for _, m in tables() do
 		if m:GetAttribute("Duel") ~= nil or m:GetAttribute("Ballroom") then
 			continue -- the Library's and the Ballroom's tables have their own services
@@ -887,9 +1029,34 @@ function TableService.start()
 				if c.left <= 0 then
 					clockRanOut(s)
 				end
+			elseif s.state == "reviveOffer" and s.revive and os.clock() >= s.revive.deadline then
+				endOnClock(s)
 			end
 		end
 	end)
+	-- Chronos Defiance asks the table about the moment (Purchases/Revive never decides it).
+	Revive.offerOpen = function(player: Player): boolean
+		local s = sessions[player]
+		return s ~= nil and s.state == "reviveOffer"
+	end
+	Revive.applyNow = function(player: Player): boolean
+		local s = sessions[player]
+		return s ~= nil and applyRevive(s)
+	end
+	Revive.promptClosed = function(player: Player, purchased: boolean)
+		local s = sessions[player]
+		local r = s and s.revive
+		if not s or not r or s.state ~= "reviveOffer" or not r.prompting then
+			return
+		end
+		r.prompting = false
+		-- Bought: wait for Roblox's receipt (it revives the moment it's granted). Not bought: the
+		-- countdown resumes where it stood.
+		r.deadline = os.clock() + (if purchased then reviveRules().ReceiptWaitSeconds else r.left)
+		local m = reviveMessage(s, "reviveUpdate")
+		m.waitingReceipt = purchased
+		send(player, m)
+	end
 	-- Hide the Sit prompt on occupied tables for everyone.
 	task.spawn(function()
 		while true do

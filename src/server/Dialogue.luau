@@ -6,6 +6,7 @@ local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local RemoteGuard = require(script.Parent.RemoteGuard)
 
 local Dialogue = {}
 
@@ -48,7 +49,7 @@ function Dialogue.close(player: Player)
 end
 
 function Dialogue.start()
-	choiceEvent.OnServerEvent:Connect(function(player: Player, token: unknown, choiceId: unknown)
+	RemoteGuard.event(choiceEvent, "dialogueChoice", function(player: Player, token: unknown, choiceId: unknown)
 		if type(token) ~= "string" or type(choiceId) ~= "string" then
 			return
 		end

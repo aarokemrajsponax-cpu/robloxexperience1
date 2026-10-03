@@ -165,6 +165,10 @@ function RoundPanel.banked(message: { [string]: any }, actions: Actions)
 	if (message.gilt or 0) > 0 then
 		table.insert(rows, { "Gilt", "+" .. number(message.gilt) })
 	end
+	if type(message.boardScore) == "number" and message.boardScore < (message.score or 0) then
+		-- After a Chronos Defiance revive the boards keep the score from before it.
+		table.insert(rows, { "On the boards (before the revive)", number(message.boardScore) })
+	end
 	if (message.best or 0) > 0 then
 		table.insert(rows, { if message.newBest then "A new best" else "Your best here", number(message.best) })
 	end

@@ -19,6 +19,7 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Rooms = require(ReplicatedStorage.Shared.Rooms)
 local Voice = require(ReplicatedStorage.Shared.Voice)
 local Private = require(script.Parent.Private)
+local RemoteGuard = require(script.Parent.RemoteGuard)
 
 local Boards = {}
 
@@ -583,18 +584,11 @@ function Boards.start()
 	local night = Nightly.at()
 	Workspace:SetAttribute("NightlyKey", night.key)
 	Workspace:SetAttribute("NightlyRoom", night.room)
-	local lastAsk: { [Player]: number } = {}
-	Remotes.func("GetBoard").OnServerInvoke = function(player: Player)
-		local now = os.clock()
-		if lastAsk[player] and now - lastAsk[player] < 1 then
-			return cache
-		end
-		lastAsk[player] = now
+	-- (The boards are read from a cache: asking never reaches a DataStore.)
+	local function current(_player: Player): any
 		return cache
 	end
-	Players.PlayerRemoving:Connect(function(player)
-		lastAsk[player] = nil
-	end)
+	RemoteGuard.invoke(Remotes.func("GetBoard"), "getBoard", current, current)
 	drawTonight()
 	task.spawn(function()
 		pcall(function()

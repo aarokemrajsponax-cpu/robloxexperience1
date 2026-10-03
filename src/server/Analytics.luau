@@ -62,12 +62,52 @@ function Analytics.stamp(player: Player, name: string): number?
 	return if s then s[name] else nil
 end
 
-function Analytics.custom(player: Player, name: string, value: number?, fields: { [string]: any }?)
+-- Roblox only reads three breakdown fields per custom event, keyed by
+-- Enum.AnalyticsCustomFieldKeys.CustomField01..03 (any other key is silently dropped). Fields come
+-- either in order ({ "product", "reason", "segment" }) or by name (sorted, sent as "name=value").
+local FIELD_KEYS = { "CustomField01", "CustomField02", "CustomField03" }
+local function fieldKey(i: number): string
+	local ok, name = pcall(function()
+		return ((Enum :: any).AnalyticsCustomFieldKeys :: any)[FIELD_KEYS[i]].Name
+	end)
+	return if ok and type(name) == "string" then name else FIELD_KEYS[i]
+end
+
+function Analytics.fields(fields: { [any]: any }?): { [string]: string }?
+	if fields == nil then
+		return nil
+	end
+	local values: { string } = {}
+	if fields[1] ~= nil then
+		for i = 1, 3 do
+			local v = fields[i]
+			if v ~= nil and v ~= "" then
+				values[i] = tostring(v)
+			end
+		end
+	else
+		local names = {}
+		for k in fields do
+			table.insert(names, tostring(k))
+		end
+		table.sort(names)
+		for i = 1, math.min(3, #names) do
+			values[i] = names[i] .. "=" .. tostring(fields[names[i]])
+		end
+	end
+	local out: { [string]: string } = {}
+	for i, v in values do
+		out[fieldKey(i)] = string.sub(v, 1, 50)
+	end
+	return out
+end
+
+function Analytics.custom(player: Player, name: string, value: number?, fields: { [any]: any }?)
 	if not enabled() then
 		return
 	end
 	pcall(function()
-		AnalyticsService:LogCustomEvent(player, name, value, fields)
+		AnalyticsService:LogCustomEvent(player, name, value, Analytics.fields(fields))
 	end)
 end
 

@@ -12,6 +12,7 @@ local Build = require(ReplicatedStorage.Shared.Build)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Ease = require(ReplicatedStorage.Shared.Ease)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Speed = require(ReplicatedStorage.Shared.Speed)
 
 local State = require(script.Parent.State)
 local Root = require(script.Parent.UI.Root)
@@ -52,6 +53,11 @@ local TableClient = require(script.Parent.Table.TableClient)
 local Ambient = require(script.Parent.World.Ambient)
 local BallroomView = require(script.Parent.Table.BallroomView)
 local Tour = require(script.Parent.World.Tour)
+local Perks = require(script.Parent.Perks)
+local PerkChips = require(script.Parent.UI.PerkChips)
+local DecreePanel = require(script.Parent.UI.DecreePanel)
+local DecreeBanner = require(script.Parent.UI.DecreeBanner)
+local RainView = require(script.Parent.World.RainView)
 
 local player = Players.LocalPlayer
 
@@ -151,6 +157,29 @@ start("The Vault", VaultView.start)
 start("The Suite", SuiteView.start)
 start("Salutes", SaluteView.start)
 start("Events", EventBanner.start)
+-- Purchases: the perks this guest holds, and what the whole house sees (decrees, rains).
+start("Perks", function()
+	Perks.Message:Connect(function(op: string, m: any)
+		if op == "notice" then
+			Toast.show(tostring(m.title), tostring(m.line), 4)
+		elseif op == "decree" then
+			DecreeBanner.decree(m)
+		elseif op == "rain" then
+			RainView.rain(m)
+		elseif op == "rainShare" then
+			RainView.share(m)
+		end
+	end)
+	Perks.start()
+	PerkChips.openDecree = DecreePanel.open
+	PerkChips.start()
+	TableClient.Seated.Event:Connect(function()
+		PerkChips.setHidden(true)
+	end)
+	TableClient.Left.Event:Connect(function()
+		PerkChips.setHidden(false)
+	end)
+end)
 AdmireCard.openBoutique = function(tab, forGuest)
 	BoutiquePanel.open(tab, forGuest)
 end
@@ -194,13 +223,15 @@ local function applySpeed()
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	if humanoid then
-		-- The house's Quickstep event speeds everyone up.
-		local boost = Workspace:GetAttribute("SpeedBoost")
-		local factor = if type(boost) == "number" then boost else 1
-		humanoid.WalkSpeed = (if running then Config.data.Movement.runSpeed else Config.data.Movement.walkSpeed) * factor
+		-- One speed from every effect (Shared/Speed): the house's Quickstep event and VIP Velocity
+		-- Elite (the server sets "SpeedPerk" only for a guest who owns it and hasn't switched it off).
+		humanoid.WalkSpeed = Speed.resolve(running, Workspace:GetAttribute("SpeedBoost"), player:GetAttribute("SpeedPerk"))
 	end
 end
 Workspace:GetAttributeChangedSignal("SpeedBoost"):Connect(function()
+	applySpeed()
+end)
+player:GetAttributeChangedSignal("SpeedPerk"):Connect(function()
 	applySpeed()
 end)
 ContextActionService:BindAction("MaisonRun", function(_, state, input)

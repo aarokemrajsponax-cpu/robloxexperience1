@@ -13,17 +13,23 @@ export type Definition = {
 	default: any,
 	note: string?,
 	wired: boolean, -- true when Delivery 1 actually applies it
+	requires: string?, -- shown only to guests with this perk ("velocity": VIP Velocity Elite)
 }
 
 local function choice(key: string, group: string, label: string, options: { string }, wired: boolean, note: string?): Definition
 	return { key = key, group = group, label = label, options = options, default = options[1], wired = wired, note = note }
 end
 
+local function perk(d: Definition, requires: string): Definition
+	d.requires = requires
+	return d
+end
+
 local function level(key: string, group: string, label: string, default: number, wired: boolean): Definition
 	return { key = key, group = group, label = label, range = { 0, 100 }, default = default, wired = wired }
 end
 
-Settings.Groups = { "The room", "The table", "The guide", "The Club", "Sound" }
+Settings.Groups = { "The room", "The table", "The guide", "The Club", "Your perks", "Sound" }
 
 Settings.Definitions = {
 	-- The room
@@ -52,6 +58,9 @@ Settings.Definitions = {
 	choice("parcelsTo", "The Club", "Ballroom parcels go to", { "Random", "Rivals", "Leader", "Nearly out" }, true),
 	choice("rivalUpdates", "The Club", "Rival updates in the house", { "On", "Off" }, true),
 	choice("offerStandIn", "The Club", "Offer a Stand-in while I wait", { "Yes", "No" }, true),
+	-- Your perks (only shown to guests who hold them)
+	perk(choice("velocitySpeed", "Your perks", "VIP Velocity Elite speed", { "On", "Off" }, true, "1.5× walking and running"), "velocity"),
+	perk(choice("velocityAura", "Your perks", "VIP Velocity Elite trail", { "On", "Off" }, true, "the gold trail at your heels"), "velocity"),
 	-- Sound
 	choice("music", "Sound", "Music", { "On", "Off" }, true),
 	level("musicLevel", "Sound", "Music volume", 65, true),

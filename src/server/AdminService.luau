@@ -29,6 +29,7 @@ local Seasons = require(ReplicatedStorage.Shared.Seasons)
 local Analytics = require(script.Parent.Analytics)
 local Gilt = require(script.Parent.Gilt)
 local Profiles = require(script.Parent.Profiles)
+local RemoteGuard = require(script.Parent.RemoteGuard)
 
 local AdminService = {}
 
@@ -739,8 +740,8 @@ function AdminService.start()
 		ownerCache[player] = nil
 		lastAsk[player] = nil
 	end)
-	Remotes.func("AdminAsk").OnServerInvoke = handle
-	Remotes.event("Salute").OnServerEvent:Connect(function(player: Player, m: any)
+	RemoteGuard.invoke(Remotes.func("AdminAsk"), "adminAsk", handle)
+	RemoteGuard.event(Remotes.event("Salute"), "salute", function(player: Player, m: any)
 		if type(m) == "table" and m.op == "join" then
 			join(player, m.jobId)
 		end

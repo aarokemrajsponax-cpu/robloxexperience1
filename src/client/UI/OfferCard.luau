@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local Config = require(ReplicatedStorage.Shared.Config)
+local ProductConfig = require(ReplicatedStorage.Shared.ProductConfig)
 local Root = require(script.Parent.Root)
 local Theme = require(script.Parent.Theme)
 local Toast = require(script.Parent.Toast)
@@ -44,7 +45,7 @@ function OfferCard.afterRun(gilt: number)
 		local group, content = Theme.glass(Root.panels, NAME, UDim2.fromOffset(math.min(420, size.X - 24), 210), UDim2.new(0.5, 0, 1, -24), Vector2.new(0.5, 1))
 		Theme.list(content, 6).VerticalAlignment = Enum.VerticalAlignment.Top
 		Theme.text(content, "Double Gilt", 24, "display", { LayoutOrder = 1 })
-		local more = math.floor(gilt * (Config.data.Offers.doubleGilt - 1))
+		local more = math.floor(gilt * (ProductConfig.byKey.doubleGilt.Reward.Multiplier - 1))
 		Theme.text(content, string.format("That run paid %d Gilt. With Double Gilt it would have paid %d, and every run from now on pays double, for good.", gilt, gilt + more), 14, "body", { LayoutOrder = 2, TextWrapped = true, TextColor3 = Brand.Colours.bone })
 		local keys = Instance.new("Frame")
 		keys.BackgroundTransparency = 1

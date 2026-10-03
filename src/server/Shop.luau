@@ -2,11 +2,13 @@
 -- The Boutique and the money (§12, Appendix I). Robux buys style, never score. Every price is
 -- read live from Roblox. The rotating shelves sell through one developer product per price tier:
 -- the guest chooses a piece, the server keeps that choice in their saved profile, and the receipt
--- grants it. Receipts are idempotent: the purchase is written into the profile, the profile is
--- saved, and only then is Roblox told it was granted. Gifts go to another guest in the house and
--- the Concierge hands them over. Gilt buys the house's own pieces; it is earned by playing or
--- bought in purses. Developer products are found by name (Config.ProductNames), so the owner
--- only has to create them in Creator Hub.
+-- grants it. Gifts go to another guest in the house and the Concierge hands them over. Gilt buys
+-- the house's own pieces; it is earned by playing or bought in purses.
+--
+-- What each product is, costs and gives lives in Shared/ProductConfig; receipts, the purchase
+-- ledger and prompts are server/Purchases. This module registers the grant handlers for the
+-- Boutique's products (each one a transaction: see Purchases/Grants) and answers the Boutique's
+-- requests (through RemoteGuard, like every remote).
 
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
@@ -14,6 +16,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Boutique = require(ReplicatedStorage.Shared.Boutique)
 local Config = require(ReplicatedStorage.Shared.Config)
+local ProductConfig = require(ReplicatedStorage.Shared.ProductConfig)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Standing = require(ReplicatedStorage.Shared.Standing)
 local Salutes = require(ReplicatedStorage.Shared.Salutes)
@@ -29,7 +32,12 @@ local Dressing = require(script.Parent.Dressing)
 local Gilt = require(script.Parent.Gilt)
 local LedgerService = require(script.Parent.LedgerService)
 local Profiles = require(script.Parent.Profiles)
+local RemoteGuard = require(script.Parent.RemoteGuard)
 local Season = require(script.Parent.Season)
+local Catalog = require(script.Parent.Purchases.Catalog)
+local Grants = require(script.Parent.Purchases.Grants)
+local Perks = require(script.Parent.Purchases.Perks)
+local Store = require(script.Parent.Purchases.Store)
 
 local Shop = {}
 
@@ -45,117 +53,13 @@ Shop.handOver = function(_recipient: Player, _from: string, _itemName: string) e
 Shop.goldenHour = function(_buyer: Player, _seconds: number) end
 
 local shopEvent = Remotes.event("Shop")
-local RECEIPTS_KEPT = 100
-local PENDING_SECONDS = 3600
-local PRICE_SECONDS = 300
 
-local prices: { [number]: { price: number?, at: number } } = {}
-local asks: { [Player]: { number } } = {}
+-- Developer products are found by their names in Creator Hub (Purchases/Catalog).
+Shop.discover = Catalog.discover
 
-local function products()
-	return Config.data.Products :: any
-end
-
--- Developer products found by name in the experience (see Config.ProductNames): key -> id.
-local discovered: { [string]: number } = {}
-local discoveredPrice: { [number]: number } = {}
-
--- The product a key names ("tier249", "introduction", "ledger", "season"), or 0.
-local function productId(key: string): number
-	local id = products()[key]
-	if type(id) == "number" and id ~= 0 then
-		return id
-	end
-	return discovered[key] or 0
-end
-
-local function normal(name: string): string
-	return string.lower((string.gsub(name, "%s+", " ")):match("^%s*(.-)%s*$") or name)
-end
-
--- Reads the experience's developer products and matches them to the house's by name.
-local function discover()
-	local byName: { [string]: string } = {}
-	for key, name in (Config.data :: any).ProductNames or {} do
-		if type(name) == "string" then
-			byName[normal(name)] = key
-		end
-	end
-	local ok, pages = pcall(function()
-		return MarketplaceService:GetDeveloperProductsAsync()
-	end)
-	if not ok or not pages then
-		return
-	end
-	local found: { [string]: number } = {}
-	for _ = 1, 20 do
-		local page = (pages :: any):GetCurrentPage()
-		for _, product in page do
-			local name = product.Name or product.name
-			local id = product.ProductId or product.productId or product.DeveloperProductId
-			if type(name) == "string" and type(id) == "number" then
-				local key = byName[normal(name)]
-				if key then
-					found[key] = id
-					local price = product.PriceInRobux or product.priceInRobux
-					if type(price) == "number" then
-						discoveredPrice[id] = price
-					end
-				end
-			end
-		end
-		if (pages :: any).IsFinished then
-			break
-		end
-		local more = pcall(function()
-			(pages :: any):AdvanceToNextPageAsync()
-		end)
-		if not more then
-			break
-		end
-	end
-	discovered = found
-end
-Shop.discover = discover
-
-local PRODUCT_KEYS = { "introduction", "ledger", "season", "goldKeyGift", "goldKeyProduct", "giltPurse1", "giltPurse2", "giltPurse3", "doubleGilt", "goldenHour" }
-for _, salute in Salutes.List do
-	table.insert(PRODUCT_KEYS, "salute_" .. salute.id)
-end
-for _, tier in Wardrobe.Tiers do
-	table.insert(PRODUCT_KEYS, "tier" .. tostring(tier))
-end
-
-local function keyForProduct(id: number): string?
-	if id == 0 then
-		return nil
-	end
-	for _, key in PRODUCT_KEYS do
-		if productId(key) == id then
-			return key
-		end
-	end
-	return nil
-end
-
--- A price read live from Roblox (cached for a few minutes). nil when not on sale.
-local function livePrice(id: number, info: Enum.InfoType): number?
-	if id == 0 then
-		return nil
-	end
-	local cached = prices[id]
-	if cached and os.clock() - cached.at < PRICE_SECONDS then
-		return cached.price
-	end
-	if discoveredPrice[id] then
-		return discoveredPrice[id]
-	end
-	local ok, result = pcall(function()
-		return MarketplaceService:GetProductInfo(id, info)
-	end)
-	local price = if ok and type(result) == "table" and type(result.PriceInRobux) == "number" then result.PriceInRobux else nil
-	prices[id] = { price = price, at = os.clock() }
-	return price
+-- Roblox's price for a catalog key, or nil when it isn't on sale.
+local function price(key: string): number?
+	return Catalog.price(key)
 end
 
 local function tierKey(item: Wardrobe.Item): string?
@@ -170,7 +74,7 @@ local function standingOf(data: Profiles.Data): string
 end
 
 local function inFirstWeek(data: Profiles.Data): boolean
-	return data.firstVisit > 0 and os.time() - data.firstVisit <= products().introductionDays * 86400
+	return data.firstVisit > 0 and os.time() - data.firstVisit <= ProductConfig.byKey.introduction.Rules.FirstDays * 86400
 end
 
 local function introductionItems(): { Wardrobe.Item }
@@ -223,7 +127,7 @@ end
 -- A piece as the guest's screen shows it.
 local function card(item: Wardrobe.Item, data: Profiles.Data): { [string]: any }
 	local key = tierKey(item)
-	local price = if key and item.source ~= "gilt" and item.source ~= "standing" then livePrice(productId(key), Enum.InfoType.Product) else nil
+	local robux = if key and item.source ~= "gilt" and item.source ~= "standing" then price(key) else nil
 	local locked = item.standing ~= nil and not Standing.atLeast(data.nights.count, data.stats.rounds, item.standing)
 	return {
 		id = item.id,
@@ -231,7 +135,7 @@ local function card(item: Wardrobe.Item, data: Profiles.Data): { [string]: any }
 		kind = item.kind,
 		kindName = Wardrobe.KindNames[item.kind],
 		line = item.line,
-		robux = price,
+		robux = robux,
 		gilt = item.gilt,
 		standing = item.standing,
 		locked = locked,
@@ -240,44 +144,87 @@ local function card(item: Wardrobe.Item, data: Profiles.Data): { [string]: any }
 	}
 end
 
--- The offers, as the Boutique's first page and the Shop key show them. Only what's on sale.
-function Shop.offers(data: Profiles.Data): { { [string]: any } }
+-- One-time products a guest already holds aren't offered again.
+local function holds(data: Profiles.Data, entry: ProductConfig.Entry): boolean
+	if entry.Handler == "doubleGilt" then
+		return data.doubleGilt
+	elseif entry.Handler == "goldKey" then
+		return data.goldKey
+	elseif entry.Handler == "velocity" then
+		return data.perks.velocity
+	end
+	return false
+end
+
+-- What the guest's screen shows under an offer, beyond its line (time left, a place in line).
+local function status(state: { [string]: any }, entry: ProductConfig.Entry): string?
+	if entry.Handler == "luck" and state.luck and state.luck.remaining > 0 then
+		return string.format("Active: %d minutes of play left", math.ceil(state.luck.remaining / 60))
+	elseif entry.Handler == "rain" and state.rain and state.rain.held > 0 then
+		return "Your rain is waiting its turn"
+	elseif entry.Handler == "decree" and state.decree and state.decree.held > 0 then
+		return string.format("You hold %d decree%s", state.decree.held, if state.decree.held == 1 then "" else "s")
+	end
+	return nil
+end
+
+-- The offers, as the Boutique's first page and the Shop key show them: the catalog's offers
+-- (ProductConfig UX.Offer) in its order, only what's on sale, never what's already held. A
+-- product that can't be bought just now says why instead of hiding.
+function Shop.offers(player: Player, data: Profiles.Data): { { [string]: any } }
 	local out = {}
-	local function add(key: string, name: string, line: string, extra: { [string]: any }?)
-		local id = productId(key)
-		if id == 0 then
-			return
+	local entries = {}
+	for _, e in ProductConfig.List do
+		if e.UX.Offer then
+			table.insert(entries, e)
 		end
-		local o = { key = key, name = name, line = line, price = livePrice(id, Enum.InfoType.Product) }
-		if extra then
-			for k, v in extra do
-				o[k] = v
+	end
+	table.sort(entries, function(a, b)
+		return a.UX.Order < b.UX.Order
+	end)
+	local state = Perks.state(player, data)
+	for _, e in entries do
+		local sell = Store.sellable(e.Key)
+		if not sell or holds(data, e) then
+			continue
+		end
+		local o: { [string]: any } = {
+			key = e.Key,
+			name = e.UX.DisplayName,
+			line = e.UX.Line,
+			price = price(sell),
+			category = e.UX.Category,
+			action = e.UX.Action,
+			status = status(state, e),
+		}
+		if e.Key == "doubleGilt" then
+			o.best = true
+		elseif e.Key == "giltPurse2" then
+			o.best = data.doubleGilt
+		end
+		if e.UX.Action == "prompt" then
+			local check = Store.eligibility[sell]
+			if check then
+				local ok, why = check(player, data)
+				if not ok then
+					o.disabled = true
+					o.why = why
+				end
 			end
 		end
 		table.insert(out, o)
-	end
-	if not data.doubleGilt then
-		add("doubleGilt", "Double Gilt", "Every Gilt you earn, doubled, for good. Your purse fills twice as fast.", { best = true })
-	end
-	add("goldenHour", "Golden Hour for Everyone", string.format("Double Gilt for every guest in the house for %d minutes, with your name announced.", Config.data.Offers.goldenHourMinutes))
-	local purses = Config.data.Offers.giltPurses
-	add("giltPurse1", "Gilt Purse", string.format("%s Gilt, at once.", Gilt.format(purses.giltPurse1)))
-	add("giltPurse2", "Gilt Chest", string.format("%s Gilt, at once. More Gilt for each Robux.", Gilt.format(purses.giltPurse2)), { best = data.doubleGilt })
-	add("giltPurse3", "Gilt Vault", string.format("%s Gilt, at once. The most Gilt for each Robux.", Gilt.format(purses.giltPurse3)))
-	if not data.goldKey and (productId("goldKey") ~= 0 or productId("goldKeyProduct") ~= 0) then
-		local id = if productId("goldKey") ~= 0 then productId("goldKey") else productId("goldKeyProduct")
-		table.insert(out, {
-			key = "goldKey",
-			name = "The Gold Key",
-			line = "+20% Gilt for good, the Study in your Suite, a gold nameplate, and Gold Key looks.",
-			price = livePrice(id, if productId("goldKey") ~= 0 then Enum.InfoType.GamePass else Enum.InfoType.Product),
-		})
 	end
 	return out
 end
 
 local function shelves(player: Player, data: Profiles.Data): { [string]: any }
 	local season = Season.current()
+	local offers = Shop.offers(player, data)
+	local shown = {}
+	for _, o in offers do
+		table.insert(shown, o.key)
+	end
+	Store.impressions(player, shown)
 	local function cards(list: { Wardrobe.Item }): { { [string]: any } }
 		local out = {}
 		for _, item in list do
@@ -299,31 +246,34 @@ local function shelves(player: Player, data: Profiles.Data): { [string]: any }
 	end
 	local ledger = LedgerService.view(data)
 	local intro = nil
-	if not data.introduction and inFirstWeek(data) and introductionReady() and productId("introduction") ~= 0 then
-		intro = { price = livePrice(productId("introduction"), Enum.InfoType.Product), items = cards(introductionItems()) }
+	if not data.introduction and inFirstWeek(data) and introductionReady() and Catalog.enabled("introduction") then
+		intro = { price = price("introduction"), items = cards(introductionItems()) }
 	end
 	return {
 		always = cards(Boutique.always()),
 		salutes = (function()
 			local out = {}
 			for _, s in Salutes.List do
-				local id = productId("salute_" .. s.id)
-				table.insert(out, { id = s.id, name = s.name, line = s.line, price = livePrice(id, Enum.InfoType.Product), ready = id ~= 0 })
+				local key = "salute_" .. s.id
+				table.insert(out, { id = s.id, name = s.name, line = s.line, price = price(key), ready = Catalog.enabled(key) })
 			end
 			return out
 		end)(),
 		saluteWaiting = SaluteService.waiting(),
 		today = cards(Boutique.today()),
 		featured = cards(Boutique.featured()),
-		season = { id = season.id, name = season.name, price = livePrice(productId("season"), Enum.InfoType.Product), pieces = cards(seasonPieces) },
+		season = { id = season.id, name = season.name, price = price("season"), pieces = cards(seasonPieces) },
 		gilt = cards(Wardrobe.giltPool()),
-		goldKey = { owned = data.goldKey, price = livePrice(productId("goldKey"), Enum.InfoType.GamePass), giftPrice = livePrice(productId("goldKeyGift"), Enum.InfoType.Product), giftable = productId("goldKeyGift") ~= 0 },
+		goldKey = { owned = data.goldKey, price = (function(): number?
+			local sell = Store.sellable("goldKey")
+			return if sell then price(sell) else nil
+		end)(), giftPrice = price("goldKeyGift"), giftable = Catalog.enabled("goldKeyGift") },
 		ledger = {
 			view = ledger,
-			price = if ledger.leather then nil else livePrice(productId("ledger"), Enum.InfoType.Product),
+			price = if ledger.leather then nil else price("ledger"),
 		},
 		introduction = intro,
-		offers = Shop.offers(data),
+		offers = offers,
 		guests = guests,
 		standing = standingOf(data),
 		balance = data.gilt,
@@ -332,7 +282,7 @@ local function shelves(player: Player, data: Profiles.Data): { [string]: any }
 end
 
 ---------------------------------------------------------------------------------------------------
--- Granting
+-- Granting (each handler runs inside a receipt, as one transaction: see Purchases/Grants)
 ---------------------------------------------------------------------------------------------------
 local function own(player: Player, data: Profiles.Data, item: Wardrobe.Item)
 	data.owned[item.id] = true
@@ -342,7 +292,7 @@ local function own(player: Player, data: Profiles.Data, item: Wardrobe.Item)
 	if spotId and spot and (data.suite :: { [string]: string? })[spotId] == nil and Suite.roomOpen(spot.room, data.goldKey) then
 		(data.suite :: { [string]: string? })[spotId] = item.id
 	end
-	Analytics.custom(player, "Boutique item granted", nil, { item = item.id, kind = item.kind, source = item.source })
+	Analytics.custom(player, "Boutique item granted", nil, { item.id, item.kind, item.source })
 end
 
 -- A credit good for any piece at its tier or below.
@@ -365,168 +315,307 @@ local function useCredit(data: Profiles.Data, item: Wardrobe.Item): boolean
 	return false
 end
 
-local function giftTo(player: Player, data: Profiles.Data, recipientId: number, item: Wardrobe.Item, key: string): boolean
+local function notice(player: Player, title: string, line: string)
+	shopEvent:FireClient(player, { op = "notice", title = title, line = line })
+end
+
+-- Outside a receipt (a piece paid for with credit), the same steps as a grant, applied at once.
+local function direct(player: Player, data: Profiles.Data): any
+	return {
+		player = player,
+		data = data,
+		touch = function(_self: any, other: Player): Profiles.Data?
+			return Profiles.get(other)
+		end,
+		after = function(_self: any, fn: () -> ())
+			fn()
+		end,
+	}
+end
+
+-- Gives a piece to another guest in the house (`ctx`: a grant's context, or `direct`). If they've
+-- gone (or already have it), the buyer keeps a credit instead.
+local function giftTo(ctx: any, recipientId: number, item: Wardrobe.Item, key: string): boolean
+	local player, data = ctx.player :: Player, ctx.data :: Profiles.Data
 	local recipient = Players:GetPlayerByUserId(recipientId)
-	local rdata = recipient and Profiles.get(recipient)
-	if not recipient or not rdata or rdata.owned[item.id] then
-		-- They've gone (or already have it): the buyer keeps a credit instead.
+	local present = if recipient then Profiles.get(recipient) else nil
+	if not recipient or not present or present.owned[item.id] then
 		credit(data, key)
-		shopEvent:FireClient(player, { op = "notice", title = "The Boutique", line = "Your gift couldn't be handed over, so it's kept as credit." })
+		ctx:after(function()
+			notice(player, "The Boutique", "Your gift couldn't be handed over, so it's kept as credit.")
+		end)
 		return false
 	end
+	local rdata = ctx:touch(recipient) :: Profiles.Data
 	own(recipient, rdata, item)
 	table.insert(rdata.gifts, { from = player.DisplayName, item = item.id, at = os.time() })
 	while #rdata.gifts > 20 do
 		table.remove(rdata.gifts, 1)
 	end
-	shopEvent:FireClient(recipient, { op = "gift", from = player.DisplayName, item = card(item, rdata) })
-	Shop.handOver(recipient, player.DisplayName, item.name)
-	Shop.push(recipient)
-	Analytics.custom(player, "Boutique gift sent", nil, { item = item.id })
+	ctx:after(function()
+		shopEvent:FireClient(recipient, { op = "gift", from = player.DisplayName, item = card(item, rdata) })
+		Shop.handOver(recipient, player.DisplayName, item.name)
+		Shop.push(recipient)
+		Analytics.custom(player, "Boutique gift sent", nil, { item.id })
+	end)
 	return true
 end
 
--- Grants whatever a receipt's product buys. Runs inside the receipt, before the save.
-local function grant(player: Player, data: Profiles.Data, key: string)
-	if string.sub(key, 1, 4) == "tier" then
+-- Something a guest bought already belongs to them: it becomes Boutique credit, never lost.
+local function duplicate(ctx: Grants.Context, title: string, line: string)
+	credit(ctx.data, ctx.product.Rules.DuplicateCredit or "tier99")
+	local player = ctx.player
+	ctx:after(function()
+		notice(player, title, line)
+	end)
+end
+
+local function registerHandlers()
+	-- A Boutique price tier: the piece the guest chose (for them, or as a gift), or credit.
+	Grants.register("boutiqueTier", function(ctx: Grants.Context)
+		local player, data, key = ctx.player, ctx.data, ctx.key
 		local p = data.pending
 		local item = if p.item ~= "" then Wardrobe.get(p.item) else nil
-		if p.product == key and item and os.time() - p.at <= PENDING_SECONDS then
+		if p.product == key and item and os.time() - p.at <= Config.data.Products.choiceSeconds then
 			data.pending = { product = "", item = "", giftTo = 0, at = 0 }
 			if p.giftTo ~= 0 then
-				giftTo(player, data, p.giftTo, item, key)
+				giftTo(ctx, p.giftTo, item, key)
 			elseif data.owned[item.id] then
 				credit(data, key)
 			else
 				own(player, data, item)
 			end
 		else
-			-- No choice on file (it expired, or the purchase came from elsewhere): keep it as credit.
+			-- No choice on file (it expired, or the purchase came from elsewhere): credit.
 			credit(data, key)
 		end
-	elseif key == "goldKeyGift" then
-		-- The Gold Key for another guest; if they've gone (or have it), it's the buyer's (or credit).
+		ctx:after(function()
+			Shop.push(player)
+		end)
+	end)
+
+	-- The Gold Key for another guest; if they've gone (or hold it), it's the buyer's (or credit).
+	Grants.register("goldKeyGift", function(ctx: Grants.Context)
+		local player, data = ctx.player, ctx.data
 		local p = data.pending
-		local recipient = if p.product == key and p.giftTo ~= 0 then Players:GetPlayerByUserId(p.giftTo) else nil
-		local rdata = recipient and Profiles.get(recipient)
+		local recipient = if p.product == ctx.key and p.giftTo ~= 0 then Players:GetPlayerByUserId(p.giftTo) else nil
+		local present = if recipient then Profiles.get(recipient) else nil
 		data.pending = { product = "", item = "", giftTo = 0, at = 0 }
-		if recipient and rdata and not rdata.goldKey then
+		if recipient and present and not present.goldKey then
+			local rdata = ctx:touch(recipient) :: Profiles.Data
 			rdata.goldKey = true
 			table.insert(rdata.gifts, { from = player.DisplayName, item = "goldKey", at = os.time() })
-			shopEvent:FireClient(recipient, { op = "notice", title = "The Gold Key", line = player.DisplayName .. " gave you the Gold Key." })
-			Shop.handOver(recipient, player.DisplayName, "the Gold Key")
-			Dressing.nameplate(recipient)
-			Shop.push(recipient)
-			Analytics.custom(player, "Gold Key gifted", nil, nil)
+			while #rdata.gifts > 20 do
+				table.remove(rdata.gifts, 1)
+			end
+			ctx:after(function()
+				notice(recipient, "The Gold Key", player.DisplayName .. " gave you the Gold Key.")
+				Shop.handOver(recipient, player.DisplayName, "the Gold Key")
+				Dressing.nameplate(recipient)
+				Shop.push(recipient)
+				Analytics.custom(player, "Gold Key gifted", nil, nil)
+			end)
 		elseif not data.goldKey then
 			data.goldKey = true
-			shopEvent:FireClient(player, { op = "notice", title = "The Gold Key", line = "Your gift couldn't be handed over, so the Gold Key is yours." })
-			Dressing.nameplate(player)
+			ctx:after(function()
+				notice(player, "The Gold Key", "Your gift couldn't be handed over, so the Gold Key is yours.")
+				Dressing.nameplate(player)
+			end)
 		else
 			credit(data, "tier499")
-			shopEvent:FireClient(player, { op = "notice", title = "The Gold Key", line = "Your gift couldn't be handed over, so it's kept as Boutique credit." })
+			ctx:after(function()
+				notice(player, "The Gold Key", "Your gift couldn't be handed over, so it's kept as Boutique credit.")
+			end)
 		end
-	elseif string.sub(key, 1, 9) == "giltPurse" then
-		local amount = (Config.data.Offers.giltPurses :: any)[key] or 0
+		ctx:after(function()
+			Shop.push(player)
+		end)
+	end)
+
+	-- A Gilt purse: its Gilt, at once.
+	Grants.register("gilt", function(ctx: Grants.Context)
+		local amount = ctx.product.Reward.Amount :: number
+		local player, data = ctx.player, ctx.data
 		data.gilt += amount
-		Analytics.source(player, "Gilt", amount, data.gilt, "Purchase")
-		shopEvent:FireClient(player, { op = "notice", title = "Gilt", line = string.format("+%s Gilt. Thank you.", Gilt.format(amount)) })
-		Gilt.changed(player)
-	elseif key == "doubleGilt" then
-		data.doubleGilt = true
-		shopEvent:FireClient(player, { op = "notice", title = "Double Gilt", line = "Every Gilt you earn is doubled, for good." })
-	elseif key == "goldenHour" then
-		Shop.goldenHour(player, Config.data.Offers.goldenHourMinutes * 60)
-	elseif key == "goldKeyProduct" then
-		if data.goldKey then
-			credit(data, "tier499")
-		else
-			data.goldKey = true
-			shopEvent:FireClient(player, { op = "notice", title = "The Gold Key", line = "The Gold Key is yours." })
+		ctx:after(function()
+			Analytics.source(player, "Gilt", amount, data.gilt, "Purchase")
+			notice(player, "Gilt", string.format("+%s Gilt. Thank you.", Gilt.format(amount)))
+			Gilt.changed(player)
+		end)
+	end)
+
+	Grants.register("doubleGilt", function(ctx: Grants.Context)
+		if ctx.data.doubleGilt then
+			duplicate(ctx, "Double Gilt", "Double Gilt was already yours, so this one is kept as Boutique credit.")
+			return
+		end
+		ctx.data.doubleGilt = true
+		local player = ctx.player
+		ctx:after(function()
+			notice(player, "Double Gilt", "Every Gilt you earn is doubled, for good.")
+			Shop.push(player)
+		end)
+	end)
+
+	-- A Golden Hour for the whole house: kept as a credit, started as soon as the receipt is
+	-- acknowledged (and on the buyer's next arrival if this server stopped first).
+	Grants.register("goldenHour", function(ctx: Grants.Context)
+		Perks.add(ctx.data, "goldenHour", 1)
+		local player = ctx.player
+		ctx:after(function()
+			Perks.tryAuto(player, "goldenHour")
+		end)
+	end)
+	Perks.autoUse.goldenHour = function(player: Player, data: Profiles.Data): boolean
+		if not Perks.use(player, data, "goldenHour", "goldenHour") then
+			return false
+		end
+		Shop.goldenHour(player, ProductConfig.byKey.goldenHour.Reward.Minutes * 60)
+		return true
+	end
+
+	-- The Gold Key as a developer product (the game pass is granted by Roblox's ownership check).
+	Grants.register("goldKey", function(ctx: Grants.Context)
+		if ctx.data.goldKey then
+			duplicate(ctx, "The Gold Key", "The Gold Key was already yours, so this one is kept as Boutique credit.")
+			return
+		end
+		ctx.data.goldKey = true
+		local player = ctx.player
+		ctx:after(function()
+			notice(player, "The Gold Key", "The Gold Key is yours.")
 			Dressing.nameplate(player)
+			Shop.push(player)
+		end)
+	end)
+
+	Grants.register("introduction", function(ctx: Grants.Context)
+		if ctx.data.introduction then
+			duplicate(ctx, "The Introduction", "The Introduction was already yours, so this one is kept as Boutique credit.")
+			return
 		end
-	elseif key == "introduction" then
-		data.introduction = true
+		ctx.data.introduction = true
 		for _, item in introductionItems() do
-			own(player, data, item)
+			own(ctx.player, ctx.data, item)
 		end
-	elseif string.sub(key, 1, 7) == "salute_" then
-		SaluteService.play(player, string.sub(key, 8))
-	elseif key == "ledger" then
-		LedgerService.bindLeather(player, data)
-	elseif key == "season" then
+		local player = ctx.player
+		ctx:after(function()
+			Shop.push(player)
+		end)
+	end)
+
+	-- A salute: kept as a credit and played as soon as the receipt is acknowledged.
+	Grants.register("salute", function(ctx: Grants.Context)
+		local key = "salute_" .. tostring(ctx.product.Reward.Salute)
+		Perks.add(ctx.data, key, 1)
+		local player = ctx.player
+		ctx:after(function()
+			Perks.tryAuto(player, key)
+		end)
+	end)
+	for _, salute in Salutes.List do
+		local key = "salute_" .. salute.id
+		Perks.autoUse[key] = function(player: Player, data: Profiles.Data): boolean
+			if not Perks.use(player, data, key, key) then
+				return false
+			end
+			SaluteService.play(player, salute.id)
+			return true
+		end
+	end
+
+	Grants.register("ledger", function(ctx: Grants.Context)
+		if LedgerService.view(ctx.data).leather then
+			duplicate(ctx, "The Ledger", "This Term's Leather-Bound Ledger was already yours, so this one is kept as Boutique credit.")
+			return
+		end
+		LedgerService.bindLeather(ctx.player, ctx.data, true)
+		local player = ctx.player
+		ctx:after(function()
+			LedgerService.changed(player, nil)
+		end)
+	end)
+
+	Grants.register("season", function(ctx: Grants.Context)
+		local granted = 0
 		for _, item in Wardrobe.seasonPieces(Season.current().id) do
-			if Wardrobe.deliverable(item) then
-				own(player, data, item)
+			if Wardrobe.deliverable(item) and not ctx.data.owned[item.id] then
+				own(ctx.player, ctx.data, item)
+				granted += 1
 			end
 		end
-	end
+		if granted == 0 then
+			duplicate(ctx, "The Season Collection", "The season's pieces were already yours, so this one is kept as Boutique credit.")
+		end
+		local player = ctx.player
+		ctx:after(function()
+			Shop.push(player)
+		end)
+	end)
 end
 
-local function processReceipt(info: { [string]: any }): Enum.ProductPurchaseDecision
-	local player = Players:GetPlayerByUserId(info.PlayerId)
-	if not player then
-		return Enum.ProductPurchaseDecision.NotProcessedYet
+-- Who may be shown each Boutique product's purchase window (checked on the server whenever one
+-- is asked for, whatever asked).
+local function registerEligibility()
+	Store.eligibility.doubleGilt = function(_player: Player, data: Profiles.Data): (boolean, string?)
+		return not data.doubleGilt, "Double Gilt is yours."
 	end
-	local profile = Profiles.profile(player)
-	if not profile then
-		Profiles.wait(player, 15)
-		profile = Profiles.profile(player)
-		if not profile then
-			return Enum.ProductPurchaseDecision.NotProcessedYet
+	local function goldKey(_player: Player, data: Profiles.Data): (boolean, string?)
+		return not data.goldKey, "The Gold Key is yours."
+	end
+	Store.eligibility.goldKey = goldKey
+	Store.eligibility.goldKeyProduct = goldKey
+	Store.eligibility.goldKeyGift = function(player: Player, data: Profiles.Data): (boolean, string?)
+		local p = data.pending
+		local recipient = if p.product == "goldKeyGift" and p.giftTo ~= 0 then Players:GetPlayerByUserId(p.giftTo) else nil
+		local rdata = if recipient then Profiles.get(recipient) else nil
+		if not recipient or recipient == player or not rdata then
+			return false, "That guest isn't in the house just now."
+		elseif rdata.goldKey then
+			return false, recipient.DisplayName .. " already holds the Gold Key."
+		end
+		return true, nil
+	end
+	Store.eligibility.introduction = function(_player: Player, data: Profiles.Data): (boolean, string?)
+		if data.introduction or not inFirstWeek(data) or not introductionReady() then
+			return false, "The Introduction is only offered in a guest's first week."
+		end
+		return true, nil
+	end
+	Store.eligibility.ledger = function(_player: Player, data: Profiles.Data): (boolean, string?)
+		local view = LedgerService.view(data)
+		if view.card then
+			return false, "The Leather-Bound Ledger comes with your Black Card."
+		elseif view.leather then
+			return false, "This Term's Leather-Bound Ledger is yours."
+		end
+		return true, nil
+	end
+	Store.eligibility.season = function(_player: Player, data: Profiles.Data): (boolean, string?)
+		for _, item in Wardrobe.seasonPieces(Season.current().id) do
+			if Wardrobe.deliverable(item) and not data.owned[item.id] then
+				return true, nil
+			end
+		end
+		return false, "The season's pieces are already yours."
+	end
+	for _, salute in Salutes.List do
+		Store.eligibility["salute_" .. salute.id] = function(_player: Player, _data: Profiles.Data): (boolean, string?)
+			if SaluteService.full() then
+				return false, "A few salutes are already waiting their turn. Try again in a minute."
+			end
+			return true, nil
 		end
 	end
-	local data = profile.Data :: Profiles.Data
-	local id = tostring(info.PurchaseId)
-	local key = keyForProduct(info.ProductId)
-	if not table.find(data.receipts, id) then
-		-- Written into the profile first...
-		table.insert(data.receipts, id)
-		while #data.receipts > RECEIPTS_KEPT do
-			table.remove(data.receipts, 1)
-		end
-		if key then
-			grant(player, data, key)
-		end
-		Analytics.custom(player, "Boutique purchase", info.CurrencySpent, { product = key or tostring(info.ProductId), item = data.pending.item })
-	end
-	Shop.push(player)
-	if Profiles.isMock() then
-		return Enum.ProductPurchaseDecision.PurchaseGranted
-	end
-	-- ...and acknowledged only once a save holding it has gone through.
-	local saved = false
-	local function check(last: any)
-		if type(last) == "table" and type(last.receipts) == "table" and table.find(last.receipts, id) then
-			saved = true
-		end
-	end
-	check(profile.LastSavedData)
-	if not saved then
-		local conn = profile.OnAfterSave:Connect(check)
-		profile:Save()
-		local waited = 0
-		while not saved and profile:IsActive() and waited < 30 do
-			task.wait(0.1)
-			waited += 0.1
-		end
-		conn:Disconnect()
-	end
-	return if saved then Enum.ProductPurchaseDecision.PurchaseGranted else Enum.ProductPurchaseDecision.NotProcessedYet
 end
 
 ---------------------------------------------------------------------------------------------------
 -- Requests from the Boutique
 ---------------------------------------------------------------------------------------------------
-local function prompt(player: Player, key: string): boolean
-	local id = productId(key)
-	if id == 0 then
-		return false
-	end
-	local ok = pcall(function()
-		MarketplaceService:PromptProductPurchase(player, id)
-	end)
-	return ok
+-- Asks the server's Store to show a purchase window, and says how it went.
+local function prompt(player: Player, key: string, context: string): { [string]: any }
+	local ok, why = Store.prompt(player, key, context)
+	return { ok = ok, why = why, prompted = ok }
 end
 
 local function buy(player: Player, data: Profiles.Data, itemId: string, recipientId: number?): { [string]: any }
@@ -552,18 +641,18 @@ local function buy(player: Player, data: Profiles.Data, itemId: string, recipien
 	-- Credit from an earlier purchase pays for it at once.
 	if useCredit(data, item) then
 		if recipientId then
-			giftTo(player, data, recipientId, item, key)
+			giftTo(direct(player, data), recipientId, item, key)
 		else
 			own(player, data, item)
 		end
 		Shop.push(player)
 		return { ok = true, credited = true }
 	end
-	if productId(key) == 0 then
+	if not Catalog.enabled(key) then
 		return { ok = false, why = "The Boutique isn't open for purchases yet." }
 	end
 	data.pending = { product = key, item = item.id, giftTo = recipientId or 0, at = os.time() }
-	return { ok = prompt(player, key), prompted = true }
+	return prompt(player, key, if recipientId then "gift" else "shelf")
 end
 
 local function buyWithGilt(player: Player, data: Profiles.Data, itemId: string): { [string]: any }
@@ -592,19 +681,10 @@ end
 
 local onAsk: (player: Player, request: unknown) -> any
 onAsk = function(player: Player, request: unknown): any
-	if type(request) ~= "table" then
+	-- (Rate-limited and type-checked by RemoteGuard before it gets here; every field is still
+	-- checked below before it's used.)
+	if RemoteGuard.message(request, 12, 1) == nil then
 		return nil
-	end
-	-- A light limit: ten asks a second.
-	local now = os.clock()
-	local list = asks[player] or {}
-	asks[player] = list
-	table.insert(list, now)
-	while #list > 0 and now - list[1] > 1 do
-		table.remove(list, 1)
-	end
-	if #list > 10 then
-		return { ok = false, why = "One moment." }
 	end
 	local data = Profiles.get(player)
 	if not data then
@@ -626,38 +706,29 @@ onAsk = function(player: Player, request: unknown): any
 		Shop.push(player)
 		return { ok = ok }
 	elseif op == "goldKey" then
-		local id = productId("goldKey")
 		if data.goldKey then
 			return { ok = false, why = "The Gold Key is yours." }
-		elseif id == 0 then
-			-- No game pass: the Gold Key as a developer product, if there is one.
-			if productId("goldKeyProduct") ~= 0 then
-				return { ok = prompt(player, "goldKeyProduct"), prompted = true }
-			end
+		end
+		local sell = Store.sellable("goldKey")
+		if not sell then
 			return { ok = false, why = "The Gold Key isn't on sale yet." }
 		end
-		pcall(function()
-			MarketplaceService:PromptGamePassPurchase(player, id)
-		end)
-		return { ok = true, prompted = true }
+		return prompt(player, sell, "goldKey")
 	elseif op == "offer" and type(r.key) == "string" then
-		local key = r.key :: string
-		if key == "goldKey" then
-			return onAsk(player, { op = "goldKey" })
-		elseif key ~= "doubleGilt" and key ~= "goldenHour" and string.sub(key, 1, 9) ~= "giltPurse" then
-			return { ok = false, why = "That isn't offered." }
-		elseif key == "doubleGilt" and data.doubleGilt then
-			return { ok = false, why = "Double Gilt is yours." }
-		elseif productId(key) == 0 then
-			return { ok = false, why = "That isn't on sale yet." }
-		end
-		return { ok = prompt(player, key), prompted = true }
+		local ok, why = Store.promptOffer(player, r.key :: string, "offers")
+		return { ok = ok, why = why, prompted = ok }
 	elseif op == "offers" then
-		return { offers = Shop.offers(data), doubleGilt = data.doubleGilt, gilt = data.gilt }
+		local offers = Shop.offers(player, data)
+		local keys = {}
+		for _, o in offers do
+			table.insert(keys, o.key)
+		end
+		Store.impressions(player, keys)
+		return { offers = offers, doubleGilt = data.doubleGilt, gilt = data.gilt }
 	elseif op == "goldKeyGift" and type(r.userId) == "number" then
 		local recipient = Players:GetPlayerByUserId(r.userId :: number)
 		local rdata = recipient and Profiles.get(recipient)
-		if productId("goldKeyGift") == 0 then
+		if not Catalog.enabled("goldKeyGift") then
 			return { ok = false, why = "Giving the Gold Key isn't offered yet." }
 		elseif not recipient or recipient == player or not rdata then
 			return { ok = false, why = "That guest isn't in the house just now." }
@@ -665,33 +736,26 @@ onAsk = function(player: Player, request: unknown): any
 			return { ok = false, why = recipient.DisplayName .. " already holds the Gold Key." }
 		end
 		data.pending = { product = "goldKeyGift", item = "", giftTo = recipient.UserId, at = os.time() }
-		return { ok = prompt(player, "goldKeyGift"), prompted = true }
+		return prompt(player, "goldKeyGift", "gift")
 	elseif op == "ledgerLeather" then
-		local view = LedgerService.view(data)
-		if view.card then
-			return { ok = false, why = "The Leather-Bound Ledger comes with your Black Card." }
-		elseif view.leather then
-			return { ok = false, why = "This Term's Leather-Bound Ledger is yours." }
-		end
-		return { ok = prompt(player, "ledger"), prompted = true }
+		return prompt(player, "ledger", "ledger")
 	elseif op == "introduction" then
-		if data.introduction or not inFirstWeek(data) or not introductionReady() then
-			return { ok = false, why = "The Introduction is only offered in a guest's first week." }
+		local ok, why = Store.eligibility.introduction(player, data)
+		if not ok then
+			return { ok = false, why = why }
 		end
-		return { ok = prompt(player, "introduction"), prompted = true }
+		return prompt(player, "introduction", "introduction")
 	elseif op == "season" then
-		return { ok = prompt(player, "season"), prompted = true }
+		return prompt(player, "season", "season")
 	elseif op == "ledger" then
 		return LedgerService.view(data)
 	elseif op == "register" then
 		return Shop.register(data)
 	elseif op == "salute" and type(r.id) == "string" then
-		if not Salutes.byId[r.id :: string] or productId("salute_" .. (r.id :: string)) == 0 then
+		if not Salutes.byId[r.id :: string] or not Catalog.enabled("salute_" .. (r.id :: string)) then
 			return { ok = false, why = "That salute isn't offered yet." }
-		elseif SaluteService.full() then
-			return { ok = false, why = "A few salutes are already waiting their turn. Try again in a minute." }
 		end
-		return { ok = prompt(player, "salute_" .. (r.id :: string)), prompted = true }
+		return prompt(player, "salute_" .. (r.id :: string), "salute")
 	elseif op == "notify" and (r.answer == "granted" or r.answer == "declined") then
 		Analytics.custom(player, if r.answer == "granted" then "Notification opt-in granted" else "Notification opt-in declined", nil, nil)
 		return { ok = true }
@@ -803,7 +867,7 @@ function Shop.place(player: Player, data: Profiles.Data, spotId: string, id: str
 end
 
 local function syncGoldKey(player: Player)
-	local id = productId("goldKey")
+	local id = Catalog.idOf("goldKey")
 	local data = Profiles.get(player)
 	if id == 0 or not data then
 		return
@@ -860,14 +924,8 @@ local function dressTheForm()
 end
 
 function Shop.start()
-	MarketplaceService.ProcessReceipt = processReceipt
-	-- Find the products by name now and every few minutes (new ones go on sale without a restart).
-	task.spawn(function()
-		while true do
-			pcall(discover)
-			task.wait(300)
-		end
-	end)
+	registerHandlers()
+	registerEligibility()
 	local CollectionService = game:GetService("CollectionService")
 	local panels: { [string]: string } = { BoutiqueCounter = "boutique", WardrobeMirror = "wardrobe", LedgerBook = "ledger", RegisterBook = "register", BlackCardLectern = "blackCard", SuiteFurnish = "suite", CircleBook = "circles", SaluteDesk = "salutes", GuestBook = "guestBook" }
 	for tag, panel in panels do
@@ -886,17 +944,32 @@ function Shop.start()
 			task.wait(600)
 		end
 	end)
-	Remotes.func("ShopAsk").OnServerInvoke = onAsk
+	RemoteGuard.invoke(Remotes.func("ShopAsk"), "shopAsk", onAsk)
+	-- The Gold Key pass bought here: confirmed with Roblox (UserOwnsGamePassAsync) before it's
+	-- given, since the "purchase finished" event only says a window closed.
 	MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player: Player, passId: number, purchased: boolean)
-		if purchased and passId == productId("goldKey") then
-			local data = Profiles.get(player)
-			if data then
-				data.goldKey = true
-				Analytics.custom(player, "Gold Key bought", nil, nil)
-				Dressing.nameplate(player)
-				Shop.push(player)
-			end
+		if not purchased or passId ~= Catalog.idOf("goldKey") then
+			return
 		end
+		task.spawn(function()
+			for attempt = 1, ProductConfig.Settings.PassConfirmTries do
+				local data = Profiles.get(player)
+				if not data or player.Parent ~= Players or data.goldKey then
+					return
+				end
+				local ok, owns = pcall(function()
+					return MarketplaceService:UserOwnsGamePassAsync(player.UserId, passId)
+				end)
+				if ok and owns then
+					data.goldKey = true
+					Analytics.custom(player, "Gold Key bought", nil, nil)
+					Dressing.nameplate(player)
+					Shop.push(player)
+					return
+				end
+				task.wait(attempt * 2)
+			end
+		end)
 	end)
 	BlackCard.changed = function(player: Player, notice: string?)
 		local data = Profiles.get(player)
@@ -924,9 +997,6 @@ function Shop.start()
 	Gilt.changed = function(player: Player)
 		Shop.push(player)
 	end
-	Players.PlayerRemoving:Connect(function(player: Player)
-		asks[player] = nil
-	end)
 end
 
 return Shop

@@ -274,7 +274,7 @@ a Nightly attempt or a Mythic's odds.
 
 - **Playing, in Studio and live.** Press **Play** and you're your own character at once: Roblox's
   own camera (zoom right in or out) and controls, walking from the first second. Studio shows the
-  build in the bottom-left corner and prints it in Output (`[Maison] Build 29 ...`), so you can see
+  build in the bottom-left corner and prints it in Output (`[Maison] Build 30 ...`), so you can see
   Studio has the latest code. The live game plays the intro over the house (any key skips it);
   the old title screen is off (`Config.Title.show`). Roblox never spawns anyone by itself
   (`Players.CharacterAutoLoads` is off in the Rojo project and at the very top of the server), so
@@ -304,6 +304,27 @@ a Nightly attempt or a Mythic's odds.
   - **Gifts**: any piece for another guest; **give the Gold Key** to someone; admire a guest and
     choose them a gift from what they'd like.
   - The Gold Key now also opens **the Terrace all year**.
+  - **Five more** (Build 30), on one receipt processor and purchase ledger with everything else
+    (how it all works, and Roblox's limits it's built around: [`MONETIZATION.md`](MONETIZATION.md)):
+    - **God-Mode Luck** (199): 2.5× Gilt and Ledger pages for 30 minutes of play; buying again
+      adds 30 more; the time only runs while you're in the house (a chip counts it down). Never a
+      score or a Mythic's odds.
+    - **Chronos Defiance** (49): when the clock runs out in the Velvet Room, Obsidian or
+      Midnight, a card offers +15 seconds for ten real seconds (the countdown waits while
+      Roblox's purchase window is open). One per round, three per run; the boards keep your score
+      from before the revive, and Gilt counts the whole run. A revive bought too late is kept for
+      the next run.
+    - **Emperor's Decree** (149): write a line (or choose one of the house's), see it exactly as
+      Roblox's filter returns it, then proclaim it: gold on every screen in the server for 8
+      seconds under your display name and @username. One every 20 seconds per server, one every
+      2 minutes per guest, logged for moderation.
+    - **Megalodon Rainmaker** (699): gold rains on the server: every guest gets 150 Gilt (once
+      per rain, guests arriving during it too), the buyer 500 more, and everyone sees *"NAME
+      triggered MEGALODON RAIN!"*. Rains take turns, two minutes apart.
+    - **VIP Velocity Elite** (499, a game pass, or the same as a developer product): 1.5×
+      walking and running and a gold trail, for good; both switch off in Settings → Your perks.
+  - Every remote a guest's screen can call is rate-limited and checked on the server
+    (`Config.RemoteLimits`); a screen can only ever name a product, never a price or an amount.
 - **House controls** (the owner's panel): only you see the **House** key (or press **;**).
   Events (Golden Hour, Lucky Hour, the Page-Turner, a Night of Giants, the Quickstep,
   Featherlight, Gold Rain, a Treasure Hunt), in this house or every house, for 5/15/30 minutes;
@@ -335,10 +356,10 @@ a Nightly attempt or a Mythic's odds.
 
 | Folder | What |
 | --- | --- |
-| `src/shared` | Rules used by server and client: `Config` (every tunable number), `Catalogue`, `Seasons`, `Rooms`, `Deal`, `Scoring`, `Clock`, `Nightly`, `Settings`, `Voice` (every line), `Layout` (where everything sits), `PieceModels` (the 3D pieces) |
-| `src/server` | `Main` boots it; `World/` builds the house; `Staff/` the Concierge and Doorman; `TableService`, `Profiles`, `Boards`, `Season`, `LiveConfig`, `Analytics`, `Guests`, `Dialogue` |
+| `src/shared` | Rules used by server and client: `Config` (every tunable number), `ProductConfig` (every product: price tier, reward, rules, how it's shown), `Catalogue`, `Seasons`, `Rooms`, `Deal`, `Scoring`, `Clock`, `Nightly`, `Settings`, `Speed`, `Voice` (every line), `Layout` (where everything sits), `PieceModels` (the 3D pieces) |
+| `src/server` | `Main` boots it; `World/` builds the house; `Staff/` the Concierge and Doorman; `Purchases/` every Robux purchase (receipts, the ledger, the five products); `RemoteGuard` (rate limits); `TableService`, `Profiles`, `Boards`, `Season`, `LiveConfig`, `Analytics`, `Guests`, `Dialogue`, `Shop` |
 | `src/client` | `Main` boots it; `UI/` every panel; `Table/` the table on your screen; `World/Ambient` (doors, weather, acoustics); `Camera`, `Sound`, `State` |
-| `tests` | `run.luau` (the rules), `smoke.luau` (builds the house, dresses it for every season and walks it), `duel`, `ballroom`, `shop`, `client` |
+| `tests` | `run.luau` (the rules), `smoke.luau` (builds the house, dresses it for every season and walks it), `duel`, `ballroom`, `shop`, `purchases`, `client` (`harness.luau`: the fake Roblox the money tests share) |
 
 ## Changing a number without touching code
 
@@ -427,7 +448,9 @@ dressed from body colours with a shirt front, a tie, coat tails and the gold lap
 
 `tools/check.sh` type-checks every script against Roblox's API, runs the rule tests, builds
 the house under [Lune](https://github.com/lune-org/lune) and walks its routes, and plays whole
-Tête-à-Tête evenings (`tests/duel.luau`) and Lights Out evenings (`tests/ballroom.luau`) and the money (`tests/shop.luau`) against
+Tête-à-Tête evenings (`tests/duel.luau`) and Lights Out evenings (`tests/ballroom.luau`) and the money (`tests/shop.luau`,
+and the purchase system in `tests/purchases.luau`: replays, two servers, saves that don't land,
+rollbacks, the risk check, the remotes and each of the five products) against
 the real server code on a fake clock, and boots
 the whole client against the built house: title, Play, walking, a table by gamepad and by mouse,
 the Nightly card, a Tête-à-Tête and a Lights Out evening on screen, and the panels

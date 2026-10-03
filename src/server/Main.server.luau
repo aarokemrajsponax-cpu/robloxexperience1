@@ -211,12 +211,20 @@ boot("Circles", CircleService.start)
 Shop.handOver = function(player, from, itemName)
 	Concierge.line(player, string.format("A gift for you, from %s: %s.", from, itemName), 4)
 end
--- A guest bought a Golden Hour for everyone: the house's own event, with their name on it.
+-- A guest bought a Golden Hour for everyone: the house's own event, with their name on it. A
+-- second one bought while the first runs adds its time (nobody's purchase cuts another's short).
 Shop.goldenHour = function(buyer, seconds)
-	AdminService.startEvent("goldenHour", seconds, buyer.DisplayName)
+	local ends = Workspace:GetAttribute(require(ReplicatedStorage.Shared.HouseEvents).attribute("goldenHour"))
+	local left = if type(ends) == "number" then math.max(0, ends - os.time()) else 0
+	AdminService.startEvent("goldenHour", left + seconds, buyer.DisplayName)
 	Remotes.event("Salute"):FireAllClients({ op = "salute", id = "goldenHourGift", by = buyer.DisplayName, effects = { "goldLeaf", "fireworks" }, seconds = 10, title = "Golden Hour", line = buyer.DisplayName .. " bought a Golden Hour for everyone: double Gilt for every guest!" })
 end
 boot("The Boutique", Shop.start)
+-- Every Robux purchase: receipts, the purchase ledger, prompts, and the five products. After the
+-- Boutique (whose handlers it validates), before Profiles (it listens for arrivals).
+local Purchases = require(script.Parent.Purchases)
+boot("Purchases", Purchases.start)
+boot("Remote limits", require(script.Parent.RemoteGuard).start)
 Archivist.onSpeak = function(player)
 	local V = require(ReplicatedStorage.Shared.Voice)
 	Dialogue.say(player, V.Archivist.speaker, V.Archivist.kept, nil, nil, 2.5)
@@ -333,6 +341,8 @@ Guests.joinLibrary = DuelService.joinFriend
 Guests.onSettingChanged = function(player, key)
 	if key == "showMark" or key == "showCrest" then
 		Dressing.nameplate(player)
+	elseif key == "velocitySpeed" or key == "velocityAura" then
+		Purchases.Velocity.apply(player)
 	end
 end
 local guestsUnlock = TableService.onUnlock

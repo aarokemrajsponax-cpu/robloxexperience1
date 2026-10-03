@@ -26,6 +26,7 @@ local Boards = require(script.Parent.Boards)
 local Dialogue = require(script.Parent.Dialogue)
 local Gilt = require(script.Parent.Gilt)
 local Profiles = require(script.Parent.Profiles)
+local RemoteGuard = require(script.Parent.RemoteGuard)
 local Season = require(script.Parent.Season)
 local Rig = require(script.Parent.Staff.Rig)
 
@@ -1113,7 +1114,7 @@ function DuelService.start(isSeatedElsewhere: (Player) -> boolean)
 			end
 		end
 	end
-	tableEvent.OnServerEvent:Connect(onMessage)
+	RemoteGuard.event(tableEvent, "duel", onMessage)
 	local nextPairs = 0
 	RunService.Heartbeat:Connect(function()
 		local now = os.clock()

@@ -1,8 +1,9 @@
 --!strict
--- The Boutique's counter (§12): the Offers (Double Gilt, Gilt purses, a Golden Hour for the
--- whole house, the Gold Key), today's six, the week's two, the season's collection, the house's
--- own pieces for Gilt, the Gold Key, the Ledger and (in a guest's first week) the Introduction.
--- Every Robux price is Roblox's own, read live. Nothing here changes a score. Anything can be
+-- The Boutique's counter (§12): the Offers (the catalog's: Double Gilt, God-Mode Luck, the Gold
+-- Key, VIP Velocity Elite, Emperor's Decree, Megalodon Rainmaker, Gilt purses, a Golden Hour for
+-- the whole house), today's six, the week's two, the season's collection, the house's own pieces
+-- for Gilt, the Gold Key, the Ledger and (in a guest's first week) the Introduction. Every Robux
+-- price is Roblox's own, read live by the server. Nothing here changes a score. Anything can be
 -- bought for another guest in the house as a gift.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -12,6 +13,7 @@ local Root = require(script.Parent.Root)
 local Theme = require(script.Parent.Theme)
 local Toast = require(script.Parent.Toast)
 local RoundPanel = require(script.Parent.RoundPanel)
+local DecreePanel = require(script.Parent.DecreePanel)
 local Closet = require(script.Parent.Parent.Closet)
 
 local BoutiquePanel = {}
@@ -217,8 +219,23 @@ local function render()
 			end
 			Theme.text(texts, o.name, 22, "display", { LayoutOrder = 1, TextXAlignment = Enum.TextXAlignment.Left })
 			Theme.text(texts, o.line or "", 12, "body", { LayoutOrder = 2, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Brand.Colours.smoke, TextWrapped = true })
-			local k = Theme.key(r, robux(o.price), true, function()
-				after(Closet.ask({ op = "offer", key = o.key }))
+			-- What the server says about it now (Luck's time left, a rain waiting), or why it
+			-- can't be bought just now.
+			local aside = if o.disabled and type(o.why) == "string" then o.why elseif type(o.status) == "string" then o.status else nil
+			if aside then
+				r.Size = UDim2.new(1, 0, 0, 104)
+				Theme.text(texts, aside, 11, "bodyMedium", { LayoutOrder = 3, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Brand.Colours.lightGold, TextWrapped = true })
+			end
+			local compose = o.action == "compose"
+			local k = Theme.key(r, if compose then "Write it" else robux(o.price), not o.disabled, function()
+				if compose then
+					Root.close(NAME)
+					DecreePanel.open()
+				elseif o.disabled then
+					Toast.show("The Boutique", tostring(o.why or "Not just now."), 3)
+				else
+					after(Closet.ask({ op = "offer", key = o.key }))
+				end
 			end, 150)
 			k.Name = "Buy"
 			k.AnchorPoint = Vector2.new(1, 0.5)
