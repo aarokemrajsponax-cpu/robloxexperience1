@@ -20,7 +20,7 @@ Roblox as it is, and the closest production-safe design used instead.
 | 2 | **`ProcessReceipt` is one callback per server, and a receipt can be delivered again, to any server, at any time.** `NotProcessedYet` is retried when the buyer next joins or buys, not on a timer. | Every step must be safe to repeat, on another server, mid-way through. | Idempotent at every step (§5, §13). A receipt left unresolved waits for Roblox's next delivery; nothing is lost, but a buyer who never returns is never granted (Roblox's policy, not ours). |
 | 3 | **`BindReceiptHandler` is newer, and how it coexists with `ProcessReceipt` isn't documented.** | Binding both could process a receipt twice or not at all. | `ProcessReceipt` by default (long-standing, documented). `ProductConfig.Settings.ReceiptBinding = "BindReceiptHandler"` switches to the newer API (it returns `Enum.ReceiptDecision.Processed / NotProcessedYet`) and falls back to `ProcessReceipt` if it isn't available. Never both. |
 | 4 | **There's no API for developer-product refunds or chargebacks.** | "Revoke on refund" can't be implemented for consumables. | Consumables are delivered once and recorded in the ledger (support can see them). Game passes are the exception: `UserOwnsGamePassAsync` stops reporting a refunded pass, so VIP Velocity Elite (as a pass) is taken away on the next visit and an `Entitlement revoked` event is logged. |
-| 5 | **"Purchase finished" events are not proof of purchase.** `PromptProductPurchaseFinished` / `PromptGamePassPurchaseFinished` only say a window closed. | Granting from them can be spoofed or can double-grant. | Developer products are granted **only** from receipts. A game pass bought in the server is granted only after `UserOwnsGamePassAsync` confirms it (retried, since Roblox can take a moment), and confirmed again on every arrival. The events are used for UX only (the revive window waits while Roblox's window is open). |
+| 5 | **"Purchase finished" events are not proof of purchase.** `PromptProductPurchaseFinished` / `PromptGamePassPurchaseFinished` only say a window closed. | Granting from them can be spoofed or can double-grant. | Developer products are granted **only** from receipts. A game pass bought in a live server is granted only after `UserOwnsGamePassAsync` confirms it (retried, since Roblox can take a moment), and confirmed again on every arrival. (In Studio a pass "bought" is a free test purchase that Roblox never records as owned: there the event is trusted for that play session, and the next arrival's check takes it away.) The events are used for UX only (the revive window waits while Roblox's window is open). |
 | 6 | **A screen can open Roblox's purchase window by itself.** `PromptProductPurchase` works from a LocalScript. | Server-side eligibility rules ("only during the revive window", "at most six hours of Luck") can't stop a purchase; they only decide when *the house* offers one. | **Every receipt is safe whatever the state.** A revive bought outside its moment is kept as a credit; a decree with nothing written waits; Luck beyond six hours is granted in full; a duplicate one-time product becomes Boutique credit; a rain with others waiting joins the line. Paid value is never refused, cut or lost. |
 | 7 | **Game passes can't be listed from inside a game.** Developer products can (`GetDeveloperProductsAsync`). | Passes can't be found by name. | Developer products are matched by their exact Creator Hub **name**. The VIP Velocity Elite pass id must be pasted once (`Config.Products.velocityElite`, which can be set live in Creator Hub → Configs). Until then, the same perk is sold as a developer product with the same name. |
 | 8 | **`CurrencySpent` can legitimately differ from the list price** (Roblox's price tests and regional pricing), and Studio test purchases spend 0. | Refusing on price would refuse real, paid purchases. | Price is never a reason to refuse. An amount far from **both** Roblox's live price and the catalog's reference price is one weak risk signal (+1), and only when more than 0 was spent. |
@@ -104,7 +104,7 @@ src/client/
   World/RainView.luau     the gold shower
 tests/
   harness.luau            the fake Roblox the money tests run in
-  purchases.luau          this system, 157 checks (§14)
+  purchases.luau          this system, 159 checks (§14)
   shop.luau               the Boutique on top of it, 244 checks
 ```
 
@@ -508,7 +508,7 @@ retried until the recipient confirms; noted as a future improvement.)
 
 **Automated** (`tools/check.sh` runs all of it; every run must end `0 failed`):
 
-* `tests/purchases.luau` — 157 checks against the real modules on a fake clock:
+* `tests/purchases.luau` — 159 checks against the real modules on a fake clock:
   A catalog (validation; luck can't touch scores; ids by name; passes need an id; ambiguous ids
   refused) · B receipts (malformed; unknown then fixed; replay; absent buyer; profile not open;
   another server's live lease; a lapsed lease taken over; ledger-granted but missing; a save that
@@ -517,7 +517,8 @@ retried until the recipient confirms; noted as a future improvement.)
   many regions → Review, velocity + odd amount → Restricted, receipts still granted, lifts after
   its hours) · D remotes (flood, nested tables, too many fields, price/amount/id ignored, only
   offers by key) · E Velocity (product, duplicate → credit, Settings, pass confirmed by Roblox
-  only, refund revoked, found on arrival, speed formula and cap) · F Chronos Defiance at a real
+  in live servers, a Studio test purchase for its session only, refund revoked, found on
+  arrival, speed formula and cap) · F Chronos Defiance at a real
   timed table (offer, prompt, the wait, receipt → +15 s, one per round, the boards keep the
   pre-revive score, window lapses, late receipt kept, held revive used, declining) · G Decree
   (cleaning, filtering, limits, presets, can't-chat accounts, purchase → banner, the moderation
@@ -534,7 +535,9 @@ Studio purchases are free test purchases):
 1. Boutique → Offers lists the five (once created in Creator Hub) with Roblox's prices.
 2. God-Mode Luck: buy → the chip counts down; a run's Gilt is 2.5×; leave and rejoin → the time is
    still there.
-3. Velocity: buy → faster at once, trail on; Settings → Your perks → switch each off and on.
+3. Velocity: buy → faster at once, trail on; Settings → Your perks → switch each off and on. (A
+   pass test-bought in Studio lasts for that play session only: Roblox doesn't record Studio
+   purchases as owned.)
 4. Obsidian table: let the clock run out → the card counts 10 → *Revive* → buy → +15 s. Next
    clock-out in the same round → banked; the run card shows the board score.
 5. Decree: *Write it* → type → *Check my words* → *Proclaim* → buy → banner for everyone (use a

@@ -213,12 +213,17 @@ check("the screen is told what she owns and wears", lastOp(ada, "state") ~= nil 
 -- 8. The Gold Key: +20% Gilt, the gold-edged pieces
 ---------------------------------------------------------------------------------------------------
 check("the Gold Key prompts its pass", askAs(ben, { op = "goldKey" }).prompted and prompts[#prompts].kind == "pass" and prompts[#prompts].id == 3001)
+local studio = services.RunService.IsStudio
+services.RunService.IsStudio = function()
+	return false -- a live server
+end
 MarketplaceService.PromptGamePassPurchaseFinished:Fire(ben, 3001, true)
 check("a purchase Roblox doesn't confirm gives nothing", profiles[ben].Data.goldKey == false)
 advance(40)
 passOwners["2:3001"] = true -- Roblox now reports the pass as Ben's
 MarketplaceService.PromptGamePassPurchaseFinished:Fire(ben, 3001, true)
 check("buying it gives Ben the Gold Key (once Roblox confirms it)", profiles[ben].Data.goldKey == true)
+services.RunService.IsStudio = studio
 local paid = Gilt.pay(ben, profiles[ben].Data, 100, "test")
 check("the Gold Key pays 20% more Gilt", paid == 120, paid)
 check("Gold Key pieces can be worn", askAs(ben, { op = "equip", kind = "nameplate", id = "plate_goldkey" }).ok)

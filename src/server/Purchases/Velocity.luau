@@ -15,6 +15,7 @@
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local ProductConfig = require(ReplicatedStorage.Shared.ProductConfig)
 local Profiles = require(script.Parent.Parent.Profiles)
@@ -196,7 +197,9 @@ function Velocity.start()
 	end
 	-- A pass bought in this server: the "purchase finished" event only says a window closed, so
 	-- ownership is confirmed with Roblox (UserOwnsGamePassAsync, retried while Roblox catches up)
-	-- before it's granted. If Roblox can't confirm it yet, the next arrival will.
+	-- before it's granted. If Roblox can't confirm it yet, the next arrival will. (In Studio a
+	-- pass "bought" is a free test purchase that Roblox never records as owned: it counts for that
+	-- play session, and the next arrival's check takes it away again.)
 	pcall(function()
 		MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player: Player, passId: number, purchased: boolean)
 			if not purchased or passId ~= Catalog.idOf(PASS) then
@@ -208,7 +211,7 @@ function Velocity.start()
 					if not data or player.Parent ~= Players or data.perks.velocityPass then
 						return
 					end
-					if ownsPass(player) == true then
+					if RunService:IsStudio() or ownsPass(player) == true then
 						data.perks.velocity = true
 						data.perks.velocityPass = true
 						Telemetry.log(player, Telemetry.Events.Granted, PASS, "pass", Catalog.price(PASS), Telemetry.segment(data.purchases))

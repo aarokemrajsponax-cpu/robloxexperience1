@@ -946,7 +946,8 @@ function Shop.start()
 	end)
 	RemoteGuard.invoke(Remotes.func("ShopAsk"), "shopAsk", onAsk)
 	-- The Gold Key pass bought here: confirmed with Roblox (UserOwnsGamePassAsync) before it's
-	-- given, since the "purchase finished" event only says a window closed.
+	-- given, since the "purchase finished" event only says a window closed. (In Studio, where a
+	-- pass "bought" is a free test purchase Roblox never records as owned, the event is enough.)
 	MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player: Player, passId: number, purchased: boolean)
 		if not purchased or passId ~= Catalog.idOf("goldKey") then
 			return
@@ -958,7 +959,7 @@ function Shop.start()
 					return
 				end
 				local ok, owns = pcall(function()
-					return MarketplaceService:UserOwnsGamePassAsync(player.UserId, passId)
+					return game:GetService("RunService"):IsStudio() or MarketplaceService:UserOwnsGamePassAsync(player.UserId, passId)
 				end)
 				if ok and owns then
 					data.goldKey = true

@@ -418,6 +418,10 @@ do
 
 	Config.data.Products.velocityElite = 6001
 	H.productPrices[6001] = 499
+	local studio = H.services.RunService.IsStudio
+	H.services.RunService.IsStudio = function()
+		return false -- a live server: Roblox's word on ownership
+	end
 	local wes = guest("Wes", 151)
 	advance(0.5)
 	r = perk(wes, { op = "buy", key = "velocityElite" })
@@ -439,6 +443,17 @@ do
 	local xan = guest("Xan", 152)
 	advance(0.5)
 	check("owning the pass is found on arrival", profiles[xan].Data.perks.velocity == true and xan:GetAttribute("SpeedPerk") == 1.5)
+	H.services.RunService.IsStudio = studio
+	-- In Studio a pass "bought" is a free test purchase Roblox never records as owned: it counts
+	-- for that play session, and the next arrival's check takes it away.
+	local yul = guest("Yul", 153)
+	advance(0.5)
+	MarketplaceService.PromptGamePassPurchaseFinished:Fire(yul, 6001, true)
+	advance(1)
+	check("in Studio, a test purchase of the pass works for that session", profiles[yul].Data.perks.velocity == true)
+	H.loadedSignal:Fire(yul, profiles[yul].Data)
+	advance(0.5)
+	check("and doesn't outlive it (Roblox never recorded it as owned)", profiles[yul].Data.perks.velocity == false)
 	local m = Config.data.Movement
 	check("speed: 1.5× walking", Speed.resolve(false, nil, 1.5) == m.walkSpeed * 1.5)
 	check("speed: the house's event and the perk multiply", Speed.resolve(false, 1.2, 1.5) == math.min(m.maxSpeed, m.walkSpeed * 1.2 * 1.5))
