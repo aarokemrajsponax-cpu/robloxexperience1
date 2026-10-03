@@ -262,8 +262,10 @@ end
 -- wall's thickness (`wall`: where the wall stands along `axis`, the way you walk through) and the
 -- floor runs on through. The others have their own floor through the wall (a landing, a step, a
 -- corridor).
-export type Doorway = { name: string, centre: Vector3, axis: "x" | "z", width: number, floorY: number, wall: { number }?, sill: boolean }
+export type Doorway = { name: string, centre: Vector3, axis: "x" | "z", width: number, floorY: number, wall: { number }?, sill: boolean, reach: number? }
 Layout.Doorways = {
+	-- (The front steps fall away outside, so only the threshold itself is looked at.)
+	{ name = "the front door", centre = Layout.Door.centre, axis = "z", width = Layout.Door.width, floorY = Layout.FLOOR, sill = false, reach = 1.5 },
 	{ name = "the Salon door", centre = Layout.RoomDoors.salon.centre, axis = "x", width = Layout.RoomDoorWidth, floorY = Layout.FLOOR, wall = { -32, -30 }, sill = true },
 	{ name = "the Velvet Room door", centre = Layout.RoomDoors.velvet.centre, axis = "x", width = Layout.RoomDoorWidth, floorY = Layout.FLOOR, wall = { -32, -30 }, sill = true },
 	{ name = "the Midnight Room door", centre = Layout.RoomDoors.midnight.centre, axis = "x", width = Layout.RoomDoorWidth, floorY = Layout.FLOOR, wall = { 30, 32 }, sill = true },

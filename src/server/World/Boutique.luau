@@ -110,7 +110,7 @@ local function dressForm(m: Model)
 	-- A small plate naming what it wears (written by the Shop each week).
 	local plate = Kit.part(m, "FormPlate", Vector3.new(2.2, 0.6, 0.05), cf * CFrame.new(0, 1.2, -0.9), L.brass, { collide = false, shadow = false })
 	Kit.engrave(plate, Enum.NormalId.Front, {
-		{ text = Kit.track("THIS WEEK"), size = 0.18, font = Brand.Fonts.bodyBold, color = Color3.fromRGB(40, 30, 12) },
+		{ text = "THIS WEEK", size = 0.18, font = Brand.Fonts.bodyBold, color = Color3.fromRGB(40, 30, 12) },
 		{ text = "The Boutique", size = 0.22, font = Brand.Fonts.display, color = Color3.fromRGB(40, 30, 12) },
 	}, { ppu = 100, lit = false })
 	plate:SetAttribute("FeaturedPlate", true)

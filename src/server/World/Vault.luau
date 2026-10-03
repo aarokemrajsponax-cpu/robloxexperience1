@@ -39,7 +39,7 @@ local function cabinet(m: Model, name: string, cf: CFrame, caseId: string?, labe
 		Kit.pointLight(light, 0.9, 7, Color3.fromRGB(255, 236, 206))
 	end
 	local plate = Kit.part(model, "Plate", Vector3.new(2.4, 0.4, 0.05), cf * CFrame.new(0, 0.55, 0.93), L.brass, { collide = false, shadow = false })
-	Kit.engrave(plate, Enum.NormalId.Front, { { text = Kit.track(string.upper(label)), size = 0.24, font = Brand.Fonts.bodyBold, color = Color3.fromRGB(40, 30, 12) } }, { ppu = 100, lit = false })
+	Kit.engrave(plate, Enum.NormalId.Front, { { text = string.upper(label), size = 0.24, font = Brand.Fonts.bodyBold, color = Color3.fromRGB(40, 30, 12) } }, { ppu = 100, lit = false })
 	model:SetAttribute("Frame", cf)
 	if caseId then
 		model:SetAttribute("Case", caseId)
@@ -65,7 +65,7 @@ function VaultRoom.build(parent: Instance): Model
 	Kit.part(m, "DoorJambR", Vector3.new(0.5, 10.4, 2.4), CFrame.new(d.X + hw + 0.25, FLOOR + 5.2, 43), L.brass)
 	Kit.part(m, "DoorHead", Vector3.new(V.doorWidth + 1.4, 0.5, 2.4), CFrame.new(d.X, FLOOR + 10.2, 43), L.brass)
 	local sign = Kit.part(m, "DoorName", Vector3.new(6, 1, 0.1), CFrame.lookAt(Vector3.new(d.X, FLOOR + 11.3, 41.7), Vector3.new(d.X, FLOOR + 11.3, 0)), INVISIBLE, { collide = false, query = false, shadow = false })
-	Kit.engrave(sign, Enum.NormalId.Front, { { text = Kit.track("THE VAULT"), size = 0.6, font = Brand.Fonts.display, color = Brand.Colours.lightGold } }, { ppu = 60, lit = false })
+	Kit.engrave(sign, Enum.NormalId.Front, { { text = "THE VAULT", size = 0.6, font = Brand.Fonts.display, color = Brand.Colours.lightGold } }, { ppu = 60, lit = false })
 	-- Six cabinets: three on the west wall, three on the north wall.
 	local slots = {
 		CFrame.lookAt(Vector3.new(V.minX + 1, FLOOR, 48), Vector3.new(0, FLOOR, 48)),

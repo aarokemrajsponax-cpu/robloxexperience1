@@ -555,7 +555,8 @@ do
 	for _, dw in Layout.Doorways do
 		local name, centre, axis, width, y = dw.name, dw.centre, dw.axis, dw.width, dw.floorY
 		local hole: string? = nil
-		for across = -3, 3, 0.25 do
+		local reach = dw.reach or 3
+		for across = -reach, reach, 0.25 do
 			for side = -width / 2 + 0.4, width / 2 - 0.4, 0.5 do
 				local x = centre.X + (if axis == "x" then across else side)
 				local z = centre.Z + (if axis == "x" then side else across)

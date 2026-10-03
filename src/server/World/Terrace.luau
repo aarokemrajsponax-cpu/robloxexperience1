@@ -132,7 +132,7 @@ function Terrace.build(parent: Instance): Model
 	-- A small brass plate in the Club hall beside the doors.
 	local plate = Kit.part(m, "TerracePlate", Vector3.new(2.4, 0.9, 0.1), CFrame.lookAt(Vector3.new(23.9, CLUB + 5.5, z0 - 2), Vector3.new(0, CLUB + 5.5, z0 - 2)), L.brass, { collide = false })
 	Kit.engrave(plate, Enum.NormalId.Front, {
-		{ text = Kit.track("THE TERRACE"), size = 0.5, color = Color3.fromRGB(20, 16, 10) },
+		{ text = "THE TERRACE", size = 0.5, color = Color3.fromRGB(20, 16, 10) },
 		{ text = "Opens in High Summer", size = 0.35, color = Color3.fromRGB(40, 32, 20) },
 	})
 	return m

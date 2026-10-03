@@ -117,7 +117,7 @@ local function hall(root: Model)
 	for _, spec in doors do
 		local pos = spec.at + Vector3.new(0, C.doorHeight + 1.4, -0.3)
 		local plate = Kit.part(m, "DoorName", Vector3.new(C.doorWidth, 1.2, 0.1), CFrame.new(pos), INVISIBLE, { collide = false, query = false, shadow = false })
-		Kit.engrave(plate, Enum.NormalId.Front, { { text = Kit.track(spec.name), size = 0.7, font = Brand.Fonts.display, color = Brand.Colours.lightGold } }, { ppu = 60, lit = false })
+		Kit.engrave(plate, Enum.NormalId.Front, { { text = spec.name, size = 0.7, font = Brand.Fonts.display, color = Brand.Colours.lightGold } }, { ppu = 60, lit = false })
 		-- Brass door frame
 		local d = spec.at
 		Kit.part(m, "JambL", Vector3.new(0.6, C.doorHeight, 2.4), CFrame.new(d + Vector3.new(-C.doorWidth / 2 - 0.3, C.doorHeight / 2, 1)), L.brass)

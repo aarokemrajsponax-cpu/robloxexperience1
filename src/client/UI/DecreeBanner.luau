@@ -22,8 +22,13 @@ function DecreeBanner.show(heading: string, line: string, seconds: number?)
 		current:Destroy()
 		current = nil
 	end
-	local w = math.min(620, Root.size().X - 24)
-	local group, content = Theme.glass(Root.hud, "Decree", UDim2.fromOffset(w, 0), UDim2.new(0.5, 0, 0, 96), Vector2.new(0.5, 0))
+	-- Clear of the what's-next card at the top right (300 wide, 12 in): narrower between them,
+	-- or below it on a narrow screen.
+	local screenW = Root.size().X
+	local between = screenW - 2 * (300 + 12 + 12)
+	local w = if between >= 360 then math.min(620, between) else math.min(620, screenW - 24)
+	local top = if between >= 360 then 96 else 220
+	local group, content = Theme.glass(Root.hud, "Decree", UDim2.fromOffset(w, 0), UDim2.new(0.5, 0, 0, top), Vector2.new(0.5, 0))
 	group.AutomaticSize = Enum.AutomaticSize.Y
 	content.AutomaticSize = Enum.AutomaticSize.Y
 	content.Size = UDim2.new(1, 0, 0, 0)

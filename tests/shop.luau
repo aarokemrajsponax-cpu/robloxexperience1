@@ -730,6 +730,18 @@ local function lastBroadcast(op)
 end
 check("only the owner may use House controls", adminAs(ned, { op = "state" }).ok == false and adminAs(owner, { op = "state" }).ok == true)
 check("the owner is marked, so only they see the House key", owner:GetAttribute("MaisonAdmin") == true and ned:GetAttribute("MaisonAdmin") ~= true)
+do
+	-- A group's experience: the group's owner (rank 255 in it) has House controls, a member doesn't.
+	H.game.CreatorType = H.Enum.CreatorType.Group
+	H.game.CreatorId = 777
+	local gia, max = guest("Gia", 102), guest("Max", 103)
+	H.groups[102] = { { Id = 777, Rank = 255 } }
+	H.groups[103] = { { Id = 777, Rank = 10 }, { Id = 5, Rank = 255 } }
+	check("in a group's experience, the group's owner has House controls", adminAs(gia, { op = "state" }).ok == true)
+	check("and a member of the group doesn't", adminAs(max, { op = "state" }).ok == false)
+	H.game.CreatorType = H.Enum.CreatorType.User
+	H.game.CreatorId = 1
+end
 local st = adminAs(owner, { op = "state" })
 check("the panel lists the events, the seasons, the salutes and the guests", #st.events == 8 and #st.seasons == 10 and #st.salutes == 5 and #st.guests >= 2)
 local nd = profiles[ned].Data

@@ -198,16 +198,6 @@ function Kit.engrave(part: BasePart, face: Enum.NormalId, lines: { { text: strin
 	return gui
 end
 
--- Spaces out capitals for small engraved labels ("MAISON NOIR" -> "M A I S O N   N O I R").
-function Kit.track(text: string): string
-	local out = {}
-	for _, codepoint in utf8.codes(text) do
-		local ch = utf8.char(codepoint)
-		table.insert(out, if ch == " " then "  " else ch)
-	end
-	return table.concat(out, " ")
-end
-
 -- Everything in a model stays in memory on every client (streaming never drops it).
 function Kit.persist(model: Model)
 	model.ModelStreamingMode = Enum.ModelStreamingMode.Persistent

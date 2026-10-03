@@ -273,7 +273,7 @@ end
 local function wallOfNames(m: Model)
 	local face = board(m, "WallOfNames", F.wallOfNames, 12, 12)
 	local lines: { { text: string, size: number, font: Font?, color: Color3? } } = {
-		{ text = Kit.track(Voice.Foyer.wall), size = 0.07, font = Brand.Fonts.display },
+		{ text = Voice.Foyer.wall, size = 0.07, font = Brand.Fonts.display },
 		{ text = Voice.Foyer.foundingTerm, size = 0.05, font = Brand.Fonts.display, color = Brand.Colours.smoke },
 	}
 	for i = 1, 10 do
@@ -346,13 +346,13 @@ local function stair(m: Model)
 	Kit.part(model, "ArchR", Vector3.new(0.6, 10.6, 2.4), CFrame.new(archPos + Vector3.new(4.3, 0.3, 0)), L.brass)
 	Kit.part(model, "ArchHead", Vector3.new(9.2, 0.8, 2.4), CFrame.new(archPos + Vector3.new(0, 5.4, 0)), L.brass)
 	local nameplate = Kit.part(model, "ArchName", Vector3.new(8, 1.2, 0.1), CFrame.new(archPos + Vector3.new(0, 6.6, -1.25)), { color = Color3.new(), material = Enum.Material.SmoothPlastic, transparency = 1 }, { collide = false, query = false, shadow = false })
-	Kit.engrave(nameplate, Enum.NormalId.Front, { { text = Kit.track(Voice.Foyer.stair), size = 0.7, font = Brand.Fonts.display, color = Brand.Colours.lightGold } }, { ppu = 60, lit = false })
+	Kit.engrave(nameplate, Enum.NormalId.Front, { { text = Voice.Foyer.stair, size = 0.7, font = Brand.Fonts.display, color = Brand.Colours.lightGold } }, { ppu = 60, lit = false })
 	-- A brass sign at the foot of the stair
 	local signPos = Vector3.new(st.x - 6.4, FLOOR, st.fromZ - 1.5)
 	Kit.post(model, "SignPost", 3, 0.2, signPos, L.brass, { collide = false })
 	local sign = Kit.part(model, "StairSign", Vector3.new(2.6, 1.3, 0.1), CFrame.new(signPos + Vector3.new(0, 3.4, 0)), L.brass, { collide = false })
 	Kit.engrave(sign, Enum.NormalId.Front, {
-		{ text = Kit.track(Voice.Foyer.stair), size = 0.34, font = Brand.Fonts.display, color = Color3.fromRGB(40, 30, 12) },
+		{ text = Voice.Foyer.stair, size = 0.34, font = Brand.Fonts.display, color = Color3.fromRGB(40, 30, 12) },
 		{ text = "The Library", size = 0.26, font = Brand.Fonts.body, color = Color3.fromRGB(50, 38, 14) },
 	}, { ppu = 80, brightness = 1 })
 end
@@ -411,7 +411,8 @@ local function roomDoor(m: Model, roomId: string)
 	end
 	-- Open rooms: warm light spills under the doors onto the marble.
 	if spec.open or spec.gated then
-		Kit.part(model, "Spill", Vector3.new(w - 0.6, 0.05, 1.4), base * CFrame.new(0, 0.03, -0.75), { color = Color3.fromRGB(255, 186, 112), material = Enum.Material.Neon, transparency = 0.72 }, { collide = false, query = false, shadow = false })
+		-- (Lifted clear of the marble sill under the doorway, so the two never flicker.)
+		Kit.part(model, "Spill", Vector3.new(w - 0.6, 0.05, 1.4), base * CFrame.new(0, 0.11, -0.75), { color = Color3.fromRGB(255, 186, 112), material = Enum.Material.Neon, transparency = 0.72 }, { collide = false, query = false, shadow = false })
 	end
 	-- Closed rooms: a wall behind the leaves so the doorway never shows the void.
 	if not spec.open and not spec.gated then
@@ -449,7 +450,7 @@ local function boutiqueDoor(m: Model)
 		Kit.part(model, "LeafFrame", Vector3.new(0.2, 9.8, 0.2), hinge * CFrame.new(-side * 0.2, 4.9, 3.8), L.brass, { collide = false })
 	end
 	local sign = Kit.part(model, "Sign", Vector3.new(6, 1.2, 0.1), cf * CFrame.new(0, 11.6, -0.3), { color = Color3.new(), material = Enum.Material.SmoothPlastic, transparency = 1 }, { collide = false, query = false, shadow = false })
-	Kit.engrave(sign, Enum.NormalId.Front, { { text = Kit.track(Voice.Foyer.boutique), size = 0.7, font = Brand.Fonts.display, color = Brand.Colours.lightGold } }, { ppu = 60, lit = false })
+	Kit.engrave(sign, Enum.NormalId.Front, { { text = Voice.Foyer.boutique, size = 0.7, font = Brand.Fonts.display, color = Brand.Colours.lightGold } }, { ppu = 60, lit = false })
 end
 
 local function entranceDoors(m: Model)

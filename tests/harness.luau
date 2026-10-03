@@ -14,6 +14,7 @@ local process = require("@lune/process")
 local Instance, Vector3, Enum, CFrame = roblox.Instance, roblox.Vector3, roblox.Enum, roblox.CFrame
 
 local H = {}
+H.groups = {} :: { [number]: { any } }
 H.savesWork = true -- false: profile saves never land (a DataStore outage)
 H.saveDelay = 0.3 -- seconds a profile save takes to land
 
@@ -489,6 +490,12 @@ local services = {
 			}
 		end,
 	},
+	-- The groups each guest is in (H.groups[userId] = { { Id, Rank } }), for the owner check.
+	GroupService = {
+		GetGroupsAsync = function(_, userId)
+			return H.groups[userId] or {}
+		end,
+	},
 	HttpService = {
 		GenerateGUID = function()
 			guidCount += 1
@@ -590,6 +597,9 @@ local services = {
 }
 
 local gameShim = setmetatable({
+	-- Who owns the experience: a user unless a test makes it a group.
+	CreatorType = Enum.CreatorType.User,
+	CreatorId = 1,
 	GetService = function(_, name)
 		if services[name] then
 			return services[name]
@@ -834,6 +844,7 @@ H.published = published
 H.subscriptions = subscriptions
 H.teleports = teleports
 H.services = services
+H.game = gameShim
 H.stubs = stubs -- a test may stub a module (by its path) before anything requires it
 H.fakeOs = fakeOs
 H.Config = Config

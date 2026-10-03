@@ -116,7 +116,7 @@ local function board(m: Model)
 	local part = Kit.part(m, "EveningBoard", Vector3.new(16, 3.6, 0.2), B.board, L.blackLacquer, { collide = false, query = false })
 	Kit.part(m, "EveningBoardFrame", Vector3.new(16.6, 4.2, 0.1), B.board * CFrame.new(0, 0, 0.12), L.brass, { collide = false, query = false })
 	Kit.engrave(part, Enum.NormalId.Front, {
-		{ text = Kit.track("LIGHTS OUT"), size = 0.9, font = Brand.Fonts.display, color = Brand.Colours.lightGold },
+		{ text = "LIGHTS OUT", size = 0.9, font = Brand.Fonts.display, color = Brand.Colours.lightGold },
 		{ text = "Take any chair. The evening begins when a guest sits.", size = 0.55, font = Brand.Fonts.body, color = Brand.Colours.bone },
 	}, { ppu = 50, lit = false })
 	part:SetAttribute("EveningBoard", true)

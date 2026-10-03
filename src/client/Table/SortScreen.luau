@@ -1476,7 +1476,7 @@ local function popText(at: Vector2, lines: { { text: string, size: number, font:
 	holder.BackgroundTransparency = 1
 	holder.AnchorPoint = Vector2.new(0.5, 1)
 	holder.Position = UDim2.fromOffset(at.X, at.Y)
-	holder.Size = UDim2.fromOffset(340 * s, 96 * s)
+	holder.Size = UDim2.fromOffset(380 * s, 120 * s)
 	holder.ZIndex = 8
 	holder.Parent = fxLayer
 	local list = Instance.new("UIListLayout")
@@ -1872,13 +1872,13 @@ function SortScreen.correct(uid: number, caseId: string, points: number?, multip
 	showGuide(nil)
 	setHover(nil)
 	flyIn(c, bin, false)
-	local lines = { { text = string.upper(Voice.Sorting.correct), size = 15, font = F.bodyBold, colour = LIGHT } }
+	local lines = { { text = string.upper(Voice.Sorting.correct), size = 19, font = F.bodyBold, colour = LIGHT } }
 	if points and points > 0 then
 		local sub = "+" .. number(points)
 		if multiplier and multiplier > 1 then
 			sub ..= "  ×" .. tostring(multiplier)
 		end
-		table.insert(lines, { text = sub, size = 24, font = F.figures, colour = BONE })
+		table.insert(lines, { text = sub, size = 30, font = F.figures, colour = BONE })
 	end
 	popText(bin.centre - Vector2.new(0, bin.size.Y * 0.55), lines, false)
 	select(padIndex)
@@ -1918,11 +1918,11 @@ function SortScreen.wrong(uid: number, caseId: string, lostStreak: number, penal
 			again ..= "   −" .. number(penalty)
 		end
 		local lines = {
-			{ text = string.upper(Voice.Sorting.wrong), size = 15, font = F.bodyBold, colour = CORAL },
-			{ text = again, size = 20, font = F.displayItalic, colour = BONE },
+			{ text = string.upper(Voice.Sorting.wrong), size = 19, font = F.bodyBold, colour = CORAL },
+			{ text = again, size = 24, font = F.displayItalic, colour = BONE },
 		}
 		if lostStreak >= 2 then
-			table.insert(lines, { text = (string.gsub(Voice.Sorting.streakLost, "{n}", tostring(lostStreak))), size = 12, font = F.body, colour = SMOKE })
+			table.insert(lines, { text = (string.gsub(Voice.Sorting.streakLost, "{n}", tostring(lostStreak))), size = 14, font = F.body, colour = SMOKE })
 		end
 		popText(bin.centre - Vector2.new(0, bin.size.Y * 0.55), lines, true)
 	end
