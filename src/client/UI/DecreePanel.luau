@@ -64,9 +64,12 @@ function DecreePanel.open()
 	body.ScrollingDirection = Enum.ScrollingDirection.Y
 	body.Parent = content
 	Theme.list(body, 8).VerticalAlignment = Enum.VerticalAlignment.Top
+	-- (A little room on every side, so the edges of the box and the keys aren't clipped.)
 	local bodyPad = Instance.new("UIPadding")
+	bodyPad.PaddingLeft = UDim.new(0, 2)
 	bodyPad.PaddingRight = UDim.new(0, 8)
 	bodyPad.PaddingTop = UDim.new(0, 2)
+	bodyPad.PaddingBottom = UDim.new(0, 2)
 	bodyPad.Parent = body
 	Theme.text(body, string.format("Your words, in gold, on every screen in the house for %d seconds, with your name. Roblox's filter reads them first.", tonumber(info.seconds) or 8), 13, "body", {
 		LayoutOrder = 3,
