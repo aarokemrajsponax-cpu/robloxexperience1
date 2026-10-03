@@ -2711,6 +2711,64 @@ advance(1)
 check("leaving the Suite puts it away", workspace.MaisonLocal:FindFirstChild("Suite") == nil)
 check("no errors in the Suite", #errors == 0, errors[1])
 
+-- The Foyer's grand piano: the sessions at the bench, then the keyboard while playing.
+do
+	invokeResults.PianoAsk = {
+		ok = false, needTime = true, seconds = 0, playing = false,
+		offers = {
+			{ key = "pianoSession1", name = "1 minute at the piano", seconds = 60, price = 99, ready = true },
+			{ key = "pianoSession3", name = "3 minutes at the piano", seconds = 180, price = 349, ready = true },
+			{ key = "pianoSession5", name = "5 minutes at the piano", seconds = 300, price = 599, ready = true },
+			{ key = "pianoSession10", name = "10 minutes at the piano", seconds = 600, price = 899, ready = false },
+		},
+	}
+	serverSays("Purchase", { op = "pianoOffer" })
+	advance(1)
+	check("the piano: the bench offers its sessions", textOnScreen("The Grand Piano") ~= nil and textOnScreen("everyone in the Foyer") ~= nil)
+	local buy = find(playerGui, function(d)
+		return d:IsA("TextButton") and d.Name == "Buy_pianoSession3"
+	end)
+	check("each at Roblox's price", buy ~= nil and string.find(buy.Text, "349", 1, true) ~= nil and textOnScreen("10 minutes at the piano · not on sale yet") ~= nil)
+	snapshot("piano-offer")
+	if buy then
+		signalOf(buy, "Activated"):Fire()
+	end
+	advance(0.5)
+	local asked
+	for _, m in sent do
+		if m.remote == "PianoAsk" and type(m.message[1]) == "table" and m.message[1].op == "buy" then
+			asked = m.message[1].key
+		end
+	end
+	check("choosing one asks the server for it by name", asked == "pianoSession3", asked)
+	-- The server seats this guest: the keyboard comes up.
+	workspace:SetAttribute("PianoPlayer", LocalPlayer.UserId)
+	workspace:SetAttribute("PianoEnds", workspace:GetServerTimeNow() + 180)
+	signalOf(workspace, "attr:PianoPlayer"):Fire()
+	advance(1)
+	local keys = playerGui:FindFirstChild("PianoKeys", true)
+	check("seated: the keyboard comes up, three octaves", keys ~= nil and keys.Visible and #keys:FindFirstChild("Keybed", true):GetChildren() == 37)
+	check("and the offer goes", textOnScreen("everyone in the Foyer") == nil)
+	check("and the prompts in the world step aside", services.ProximityPromptService.Enabled == false)
+	snapshot("piano-keys")
+	local action = actions.MaisonPiano
+	if action then
+		action.fn("MaisonPiano", roblox.Enum.UserInputState.Begin, { KeyCode = roblox.Enum.KeyCode.Z })
+	end
+	local last
+	for _, m in sent do
+		if m.remote == "PianoNote" then
+			last = m.message
+		end
+	end
+	check("Z plays the lowest C, sent to the server for the room", action ~= nil and last == 1, last)
+	workspace:SetAttribute("PianoPlayer", nil)
+	signalOf(workspace, "attr:PianoPlayer"):Fire()
+	advance(1)
+	check("getting up puts the keyboard away", actions.MaisonPiano == nil and services.ProximityPromptService.Enabled == true)
+	check("no errors at the piano", #errors == 0, errors[1])
+end
+
 -- A Salute: everyone sees it, and who gave it.
 serverSays("Salute", { op = "salute", id = "grand", by = "Ben", userId = 1, seconds = 6, effects = { "goldLeaf", "encore", "chandelier", "fireworks" }, line = "Ben gave the house the Grand Salute." })
 advance(2)
