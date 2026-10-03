@@ -311,6 +311,31 @@ do
 	r = receipt(gia, 8101, "GIFT-1", 499)
 	check("a gift is saved in both profiles before it's acknowledged", r == GRANTED and table.find(profiles[gia].LastSavedData.receipts, "GIFT-1") ~= nil and table.find(profiles[tom].LastSavedData.receipts, "gift:GIFT-1") ~= nil and profiles[tom].LastSavedData.goldKey == true)
 	Config.data.Products.goldKeyGift = 0
+
+	-- Regional pricing (Roblox: "Protect your trades and gifts"): a guest who pays a lower price
+	-- level can't gift to one who pays a higher one, and nothing is gifted while Roblox hasn't
+	-- said what a guest's level is.
+	Config.data.Products.goldKeyGift = 8101
+	MarketplaceService.priceLevels[122] = 300 -- pays 30% of the price
+	local cheap, full = guest("Cai", 122), guest("Fen", 123)
+	advance(0.5)
+	local refused = H.askAs(cheap, { op = "goldKeyGift", userId = full.UserId })
+	check("a cheaper-region guest can't gift to a full-price guest", refused.ok == false and string.find(refused.why or "", "region", 1, true) ~= nil, refused.why)
+	local back = H.askAs(full, { op = "goldKeyGift", userId = cheap.UserId })
+	check("the other way round is allowed", back.ok == true and back.prompted == true, back.why)
+	-- Bought anyway (a screen can open the window itself): the gift isn't handed over.
+	profiles[cheap].Data.pending = { product = "goldKeyGift", item = "", giftTo = full.UserId, at = fakeOs.time() }
+	r = receipt(cheap, 8101, "GIFT-R", 150)
+	check("a gift paid at a lower level isn't handed over: the buyer keeps it", r == GRANTED and profiles[full].Data.goldKey == false and profiles[cheap].Data.goldKey == true)
+	MarketplaceService.priceLevelsDown = true
+	local x, y = guest("Gus", 124), guest("Hal", 125)
+	advance(0.5)
+	local unknown = H.askAs(x, { op = "goldKeyGift", userId = y.UserId })
+	check("without Roblox's answer, gifts wait (they fail safe)", unknown.ok == false, unknown.why)
+	MarketplaceService.priceLevelsDown = false
+	H.advance(1)
+	check("and once Roblox answers, they're offered again", H.askAs(x, { op = "goldKeyGift", userId = y.UserId }).ok == true)
+	Config.data.Products.goldKeyGift = 0
 end
 
 ---------------------------------------------------------------------------------------------------

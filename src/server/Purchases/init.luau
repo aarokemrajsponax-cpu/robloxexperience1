@@ -30,6 +30,7 @@ local Grants = require(script.Grants)
 local Ledger = require(script.Ledger)
 local Luck = require(script.Luck)
 local Perks = require(script.Perks)
+local PriceLevels = require(script.PriceLevels)
 local Rain = require(script.Rain)
 local Receipts = require(script.Receipts)
 local Revive = require(script.Revive)
@@ -103,6 +104,7 @@ function Purchases.start()
 	end
 
 	-- The five products register their handlers, rules and parts of the perk state.
+	PriceLevels.start() -- regional pricing: who may gift to whom
 	Velocity.start()
 	Revive.start()
 	Decree.start()

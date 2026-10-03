@@ -24,6 +24,7 @@ Roblox as it is, and the closest production-safe design used instead.
 | 6 | **A screen can open Roblox's purchase window by itself.** `PromptProductPurchase` works from a LocalScript. | Server-side eligibility rules ("only during the revive window", "at most six hours of Luck") can't stop a purchase; they only decide when *the house* offers one. | **Every receipt is safe whatever the state.** A revive bought outside its moment is kept as a credit; a decree with nothing written waits; Luck beyond six hours is granted in full; a duplicate one-time product becomes Boutique credit; a rain with others waiting joins the line. Paid value is never refused, cut or lost. |
 | 7 | **Game passes can't be listed from inside a game.** Developer products can (`GetDeveloperProductsAsync`). | Passes can't be found by name. | Developer products are matched by their exact Creator Hub **name**. The VIP Velocity Elite pass id must be pasted once (`Config.Products.velocityElite`, which can be set live in Creator Hub → Configs). Until then, the same perk is sold as a developer product with the same name. |
 | 8 | **`CurrencySpent` can legitimately differ from the list price** (Roblox's price tests and regional pricing), and Studio test purchases spend 0. | Refusing on price would refuse real, paid purchases. | Price is never a reason to refuse. An amount far from **both** Roblox's live price and the catalog's reference price is one weak risk signal (+1), and only when more than 0 was spent. |
+| 8b | **Regional (managed) pricing**: Roblox can charge a guest as little as 30% of the global price, by region (on by default for passes, opt-in for developer products). | A gift moves something bought in a cheaper region to a guest who'd pay more: price arbitrage (Roblox: *Protect your trades and gifts*). | `Purchases/PriceLevels`: each guest's level is read with `MarketplaceService:GetUsersPriceLevelsAsync` when they join (never kept between sessions). A gift (a Boutique piece, a credit-paid piece, the Gold Key) goes ahead only if the **giver's level is at least the recipient's**; if Roblox hasn't answered for either, gifts wait (fail safe). Checked when the gift is offered and again when the receipt is granted; a gift that fails there stays the buyer's (credit or the Gold Key), never lost. There is no trading in the house. |
 | 9 | **`GetCountryRegionForPlayerAsync` is IP geolocation**: travel, VPNs and mobile networks move it; it can fail. VPN detection is not reliable. | A regional rule built on it would punish legitimate players. | Country is a low-weight signal (a different country within two hours: +1; three countries in a day: +2) and can't reach Restricted alone. It never touches receipts. Failures are ignored. The house makes no claim to detect VPNs. |
 | 10 | **Text from players must be filtered for its audience**, and accounts with chat restrictions mustn't post free text. Filtering yields and can fail. | An unfiltered or unattributed broadcast breaks Roblox's rules. | `TextService:FilterStringAsync(..., PublicChat):GetNonChatStringForBroadcastAsync()` for the whole server; `TextChatService:CanUserChatAsync` first (no → the house's six preset lines only). A failure **refuses** (never shows unfiltered text). The filtered text is shown to the buyer **before** they pay. |
 | 11 | **Character movement is client-authoritative.** | The server can't enforce a walk speed; an exploiter can already change theirs. | The server only sets a `SpeedPerk` attribute for owners; the guest's screen resolves one speed from every effect through `Shared/Speed` (capped at `Movement.maxSpeed`). The perk gives no advantage in anything scored. Server-side movement anti-cheat is out of scope. |
@@ -104,7 +105,7 @@ src/client/
   World/RainView.luau     the gold shower
 tests/
   harness.luau            the fake Roblox the money tests run in
-  purchases.luau          this system, 159 checks (§14)
+  purchases.luau          this system, 164 checks (§14)
   shop.luau               the Boutique on top of it, 244 checks
 ```
 
@@ -508,7 +509,7 @@ retried until the recipient confirms; noted as a future improvement.)
 
 **Automated** (`tools/check.sh` runs all of it; every run must end `0 failed`):
 
-* `tests/purchases.luau` — 159 checks against the real modules on a fake clock:
+* `tests/purchases.luau` — 164 checks against the real modules on a fake clock:
   A catalog (validation; luck can't touch scores; ids by name; passes need an id; ambiguous ids
   refused) · B receipts (malformed; unknown then fixed; replay; absent buyer; profile not open;
   another server's live lease; a lapsed lease taken over; ledger-granted but missing; a save that
@@ -561,6 +562,7 @@ Studio purchases are free test purchases):
 | Decree abuse: offensive text | Roblox broadcast filter; mostly-filtered text refused; can't-chat accounts get presets; preview before paying |
 | Decree abuse: impersonation | heading set by the server (display name and @username); fixed styling; the buyer can't change size, colour or duration |
 | Moderation | every decree in `MaisonNoir_DecreeLog` by day: user id, names, text, time, server |
+| Regional price arbitrage through gifts | gifts only from a price level at or above the recipient's (`GetUsersPriceLevelsAsync`), fail safe when unknown |
 | Alt accounts farming rains | 150 Gilt once per account per rain; ≤ 60 recipients; minor currency only |
 | Economy inflation from boosts | Luck only on Gilt/Ledger; every Gilt boost together ≤ 10×, Ledger ≤ 6× |
 | Pay-to-win | nothing sold changes a score on a board: a revive's points after the revive don't reach the boards |

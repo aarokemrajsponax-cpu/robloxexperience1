@@ -37,6 +37,7 @@ local Season = require(script.Parent.Season)
 local Catalog = require(script.Parent.Purchases.Catalog)
 local Grants = require(script.Parent.Purchases.Grants)
 local Perks = require(script.Parent.Purchases.Perks)
+local PriceLevels = require(script.Parent.Purchases.PriceLevels)
 local Store = require(script.Parent.Purchases.Store)
 
 local Shop = {}
@@ -339,7 +340,8 @@ local function giftTo(ctx: any, recipientId: number, item: Wardrobe.Item, key: s
 	local player, data = ctx.player :: Player, ctx.data :: Profiles.Data
 	local recipient = Players:GetPlayerByUserId(recipientId)
 	local present = if recipient then Profiles.get(recipient) else nil
-	if not recipient or not present or present.owned[item.id] then
+	-- (Regional pricing: a gift only goes to a guest whose price level isn't above the giver's.)
+	if not recipient or not present or present.owned[item.id] or not PriceLevels.canGift(player, recipient) then
 		credit(data, key)
 		ctx:after(function()
 			notice(player, "The Boutique", "Your gift couldn't be handed over, so it's kept as credit.")
@@ -401,7 +403,7 @@ local function registerHandlers()
 		local recipient = if p.product == ctx.key and p.giftTo ~= 0 then Players:GetPlayerByUserId(p.giftTo) else nil
 		local present = if recipient then Profiles.get(recipient) else nil
 		data.pending = { product = "", item = "", giftTo = 0, at = 0 }
-		if recipient and present and not present.goldKey then
+		if recipient and present and not present.goldKey and PriceLevels.canGift(player, recipient) then
 			local rdata = ctx:touch(recipient) :: Profiles.Data
 			rdata.goldKey = true
 			table.insert(rdata.gifts, { from = player.DisplayName, item = "goldKey", at = os.time() })
@@ -574,7 +576,7 @@ local function registerEligibility()
 		elseif rdata.goldKey then
 			return false, recipient.DisplayName .. " already holds the Gold Key."
 		end
-		return true, nil
+		return PriceLevels.canGift(player, recipient, true)
 	end
 	Store.eligibility.introduction = function(_player: Player, data: Profiles.Data): (boolean, string?)
 		if data.introduction or not inFirstWeek(data) or not introductionReady() then
@@ -634,6 +636,10 @@ local function buy(player: Player, data: Profiles.Data, itemId: string, recipien
 			return { ok = false, why = "That guest isn't in the house just now." }
 		elseif rdata.owned[item.id] then
 			return { ok = false, why = "They already have it." }
+		end
+		local allowed, why = PriceLevels.canGift(player, recipient, true)
+		if not allowed then
+			return { ok = false, why = why }
 		end
 	elseif data.owned[item.id] then
 		return { ok = false, why = "It's already yours." }
@@ -734,6 +740,10 @@ onAsk = function(player: Player, request: unknown): any
 			return { ok = false, why = "That guest isn't in the house just now." }
 		elseif rdata.goldKey then
 			return { ok = false, why = recipient.DisplayName .. " already holds the Gold Key." }
+		end
+		local allowed, why = PriceLevels.canGift(player, recipient, true)
+		if not allowed then
+			return { ok = false, why = why }
 		end
 		data.pending = { product = "goldKeyGift", item = "", giftTo = recipient.UserId, at = os.time() }
 		return prompt(player, "goldKeyGift", "gift")

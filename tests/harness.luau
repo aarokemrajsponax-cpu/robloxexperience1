@@ -222,6 +222,20 @@ local MarketplaceService = {
 	end,
 	-- The experience's developer products, as Roblox lists them (filled in by the tests below).
 	devProducts = {},
+	-- Regional pricing: each guest's price level (1000 = full price unless a test says otherwise);
+	-- `priceLevelsDown` makes Roblox fail to answer.
+	priceLevels = {},
+	priceLevelsDown = false,
+	GetUsersPriceLevelsAsync = function(self, ids)
+		if self.priceLevelsDown then
+			error("price levels unavailable (test)")
+		end
+		local out = {}
+		for _, id in ids do
+			table.insert(out, { UserId = id, PriceLevel = self.priceLevels[id] or 1000 })
+		end
+		return out
+	end,
 	GetDeveloperProductsAsync = function(self)
 		local list = self.devProducts
 		return {
