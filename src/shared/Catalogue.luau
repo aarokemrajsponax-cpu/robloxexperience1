@@ -4,7 +4,8 @@
 
 local Catalogue = {}
 
-export type Case = { id: string, name: string, subtitle: string }
+-- `face`: the piece drawn on the case on the sorting screen, so it's plain what goes in it.
+export type Case = { id: string, name: string, subtitle: string, face: string }
 export type Piece = {
 	id: string,
 	name: string,
@@ -16,12 +17,12 @@ export type Piece = {
 }
 
 Catalogue.Cases = {
-	{ id = "watches", name = "Watches", subtitle = "Wrist & pocket" },
-	{ id = "jewelry", name = "Jewelry", subtitle = "Rings, pearls, links" },
-	{ id = "money", name = "Money", subtitle = "Bars, notes, coins" },
-	{ id = "keys", name = "Keys", subtitle = "Fobs, cards, tags" },
-	{ id = "accessories", name = "Accessories", subtitle = "Glasses, pens, bags" },
-	{ id = "collectibles", name = "Collectibles", subtitle = "Gems, cards, curios" },
+	{ id = "watches", name = "Watches", subtitle = "Wrist & pocket", face = "dressWatch" },
+	{ id = "jewelry", name = "Jewelry", subtitle = "Rings, pearls, links", face = "diamondRing" },
+	{ id = "money", name = "Money", subtitle = "Bars, notes, coins", face = "goldBar" },
+	{ id = "keys", name = "Keys", subtitle = "Fobs, cards, tags", face = "vaultKey" },
+	{ id = "accessories", name = "Accessories", subtitle = "Glasses, pens, bags", face = "perfume" },
+	{ id = "collectibles", name = "Collectibles", subtitle = "Gems, cards, curios", face = "emeraldGem" },
 } :: { Case }
 
 local function piece(id: string, name: string, case: string, value: number, review: string?): Piece

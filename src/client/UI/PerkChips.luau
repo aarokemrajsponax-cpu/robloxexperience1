@@ -58,7 +58,7 @@ local function chip(id: string, order: number, text: string?, onPress: (() -> ()
 		b.Size = UDim2.fromOffset(CHIP_WIDTH, 28)
 		b.LayoutOrder = order
 		b.FontFace = Brand.Fonts.body
-		b.TextSize = 13
+		b.TextSize = 14
 		b.TextXAlignment = Enum.TextXAlignment.Left
 		b.TextTruncate = Enum.TextTruncate.AtEnd
 		b.TextColor3 = Brand.Colours.lightGold

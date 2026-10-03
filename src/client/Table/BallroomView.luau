@@ -133,7 +133,7 @@ local function status()
 	if closing then
 		table.insert(parts, "Closing Time")
 	end
-	label.Text = Theme.track(table.concat(parts, "  ·  "))
+	label.Text = table.concat(parts, "  ·  ")
 	label.TextColor3 = if mySeat and playing and felt > capacity() - 3 then Color3.fromRGB(220, 120, 80) else Brand.Colours.lightGold
 	label.Visible = #parts > 0 and (inRoom or mySeat ~= nil)
 end

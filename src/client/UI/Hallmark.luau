@@ -56,25 +56,32 @@ function Hallmark.big(parent: Instance, grade: string, order: number): Frame
 	return mark
 end
 
--- One round of five on the Nightly card: the round's numeral over its grade. An empty grade
--- draws an empty mark (a round the clock ended).
+-- One round of five on the Nightly card: the round's numeral over its grade, the grade's whole
+-- name (shrunk a touch to fit the stamp rather than cut short). An empty grade draws an empty
+-- mark (a round the clock ended).
 function Hallmark.small(parent: Instance, numeral: string, grade: string, order: number): Frame
 	local empty = grade == ""
-	local mark, inner = cartouche(parent, Vector2.new(62, 40), order, empty)
+	local mark, inner = cartouche(parent, Vector2.new(78, 50), order, empty)
 	local list = Theme.list(inner, 0)
 	list.VerticalAlignment = Enum.VerticalAlignment.Center
-	Theme.text(inner, numeral, 13, "display", {
+	Theme.text(inner, numeral, 14, "display", {
 		AutomaticSize = Enum.AutomaticSize.None,
-		Size = UDim2.new(1, 0, 0.5, 0),
+		Size = UDim2.new(1, 0, 0.48, 0),
 		LayoutOrder = 1,
 		TextColor3 = if empty then Brand.Colours.dim else Brand.Colours.lightGold,
 	})
-	Theme.text(inner, if empty then "—" else string.upper(string.sub(grade, 1, 4)), 9, "bodyMedium", {
+	local word = Theme.text(inner, if empty then "—" else grade, 13, "bodyMedium", {
 		AutomaticSize = Enum.AutomaticSize.None,
-		Size = UDim2.new(1, 0, 0.4, 0),
+		Size = UDim2.new(1, -4, 0.4, 0),
 		LayoutOrder = 2,
+		TextScaled = true,
 		TextColor3 = if empty then Brand.Colours.dim else Brand.Colours.gold,
 	})
+	local fit = Instance.new("UITextSizeConstraint")
+	fit.Name = "Fit"
+	fit.MinTextSize = 9
+	fit.MaxTextSize = word.TextSize
+	fit.Parent = word
 	return mark
 end
 

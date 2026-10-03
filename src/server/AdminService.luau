@@ -11,6 +11,7 @@
 -- summons that lets guests in every other house join this one, and removing a guest.
 
 local DataStoreService = game:GetService("DataStoreService")
+local GroupService = game:GetService("GroupService")
 local HttpService = game:GetService("HttpService")
 local MessagingService = game:GetService("MessagingService")
 local Players = game:GetService("Players")
@@ -70,7 +71,13 @@ function AdminService.isAdmin(player: Player): boolean
 			if game.CreatorType == Enum.CreatorType.User then
 				return game.CreatorId == player.UserId
 			end
-			return player:GetRankInGroupAsync(game.CreatorId) >= 255
+			-- The group's owner holds rank 255 in it.
+			for _, group in GroupService:GetGroupsAsync(player.UserId) do
+				if type(group) == "table" and group.Id == game.CreatorId then
+					return (tonumber(group.Rank) or 0) >= 255
+				end
+			end
+			return false
 		end)
 		yes = ok and result == true
 	end

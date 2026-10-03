@@ -29,6 +29,11 @@ Theme.list(strip, 4).HorizontalAlignment = Enum.HorizontalAlignment.Center
 
 local rows: { [string]: TextLabel } = {}
 
+-- At a table the strip steps aside (it would lie across the top of the cloth) and what's on goes
+-- to the sorting screen's header line instead, through this (set by Main).
+EventBanner.onSeatedLine = function(_line: string?) end
+local seated = false
+
 local function clock(seconds: number): string
 	seconds = math.max(0, math.floor(seconds))
 	return string.format("%d:%02d", seconds // 60, seconds % 60)
@@ -40,10 +45,12 @@ local function now(): number
 end
 
 local function refresh()
+	local short = {}
 	for i, e in HouseEvents.List do
 		local ends = Workspace:GetAttribute(HouseEvents.attribute(e.id))
 		local label = rows[e.id]
 		if type(ends) == "number" and ends > now() then
+			table.insert(short, e.name .. " " .. clock(ends - now()))
 			if not label then
 				local l = Theme.text(strip, "", 14, "bodyMedium", {
 					LayoutOrder = i,
@@ -102,6 +109,18 @@ local function refresh()
 		soon:Destroy()
 		rows["__next"] = nil
 	end
+	if seated then
+		EventBanner.onSeatedLine(if #short > 0 then table.concat(short, "  ·  ") else nil)
+	end
+end
+
+function EventBanner.setSeated(on: boolean)
+	seated = on
+	strip.Visible = not on
+	if not on then
+		EventBanner.onSeatedLine(nil)
+	end
+	refresh()
 end
 
 -- A summons from the owner's house in another server: a card with a key to go there.

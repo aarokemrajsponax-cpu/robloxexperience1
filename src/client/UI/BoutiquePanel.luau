@@ -188,6 +188,17 @@ local function note(parent: Instance, text: string, order: number)
 	Theme.text(parent, text, 13, "body", { LayoutOrder = order, TextColor3 = Brand.Colours.smoke })
 end
 
+-- A key to buy something for Robux, or, while it isn't on sale (its product isn't made yet, or
+-- Roblox hasn't said its price), a quiet line saying so instead of a key that does nothing.
+local function buyKey(parent: Instance, label: string, price: number?, order: number, onPress: () -> (), primary: boolean?)
+	if type(price) ~= "number" then
+		Theme.text(parent, label .. " · not on sale yet", 13, "body", { LayoutOrder = order, TextColor3 = Brand.Colours.dim })
+		return
+	end
+	local k = Theme.key(parent, label .. " · " .. robux(price), if primary == nil then true else primary, onPress, 320)
+	k.LayoutOrder = order
+end
+
 local function render()
 	local frame = list
 	local s = shelves
@@ -309,10 +320,9 @@ local function render()
 		for _, c in s.season.pieces do
 			row(frame, c, add(), "show")
 		end
-		local k = Theme.key(frame, "The collection · " .. robux(s.season.price), true, function()
+		buyKey(frame, "The collection", s.season.price, add(), function()
 			after(Closet.ask({ op = "season" }))
-		end, 320)
-		k.LayoutOrder = add()
+		end)
 	elseif currentTab == "gilt" then
 		note(frame, "The house's own pieces, for Gilt. Earn it at the tables, or find purses on the Offers page.", add())
 		for _, c in s.gilt do
@@ -334,19 +344,17 @@ local function render()
 		if s.goldKey.owned then
 			Theme.text(frame, "It's yours.", 14, "caps", { LayoutOrder = add() })
 		else
-			local k = Theme.key(frame, "The Gold Key · " .. robux(s.goldKey.price), true, function()
+			buyKey(frame, "The Gold Key", s.goldKey.price, add(), function()
 				after(Closet.ask({ op = "goldKey" }))
-			end, 320)
-			k.LayoutOrder = add()
+			end)
 		end
 		-- The Gold Key makes a fine gift.
 		if s.goldKey.giftable and #s.guests > 0 then
 			note(frame, "Give the Gold Key to a guest in the house:", add())
 			for _, g in s.guests do
-				local gk = Theme.key(frame, g.name .. " · " .. robux(s.goldKey.giftPrice), false, function()
+				buyKey(frame, g.name, s.goldKey.giftPrice, add(), function()
 					after(Closet.ask({ op = "goldKeyGift", userId = g.userId }))
-				end, 320)
-				gk.LayoutOrder = add()
+				end, false)
 			end
 		end
 	elseif currentTab == "ledger" then
@@ -358,20 +366,18 @@ local function render()
 			Theme.text(frame, "Bound in leather this Term", 14, "caps", { LayoutOrder = add() })
 		else
 			note(frame, "The Leather-Bound edition adds a second row: two cosmetics a page, and the Term's signature look on the last. Buying it late unlocks every page you've reached.", add())
-			local k = Theme.key(frame, "Bind it in leather · " .. robux(s.ledger.price), true, function()
+			buyKey(frame, "Bind it in leather", s.ledger.price, add(), function()
 				after(Closet.ask({ op = "ledgerLeather" }))
-			end, 320)
-			k.LayoutOrder = add()
+			end)
 		end
 	elseif currentTab == "introduction" and s.introduction then
 		note(frame, "A small welcome set, offered once, only in your first week.", add())
 		for _, c in s.introduction.items do
 			row(frame, c, add(), "show")
 		end
-		local k = Theme.key(frame, "The Introduction · " .. robux(s.introduction.price), true, function()
+		buyKey(frame, "The Introduction", s.introduction.price, add(), function()
 			after(Closet.ask({ op = "introduction" }))
-		end, 320)
-		k.LayoutOrder = add()
+		end)
 	end
 	local credits = 0
 	for _, n in s.credits or {} do

@@ -53,12 +53,20 @@ function Root.viewport(): Vector2
 end
 
 Root.scale = 1
+-- Called after the scale changes (Theme sets small text larger when everything is scaled down).
+Root.rescaled = {} :: { (scale: number) -> () }
 local function rescale()
 	local v = Root.viewport()
 	local short = math.min(v.X, v.Y)
+	local before = Root.scale
 	Root.scale = math.clamp(short / 640, 0.62, 1.25)
 	for _, s in scales do
 		s.Scale = Root.scale
+	end
+	if Root.scale ~= before then
+		for _, fn in Root.rescaled do
+			fn(Root.scale)
+		end
 	end
 end
 rescale()

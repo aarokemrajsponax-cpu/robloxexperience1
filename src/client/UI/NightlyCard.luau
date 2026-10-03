@@ -75,7 +75,7 @@ function NightlyCard.show(card: { [string]: any }, actions: Actions)
 		Root.close(NAME)
 	end
 	local size = Root.size()
-	local w = math.min(400, size.X - 24)
+	local w = math.min(460, size.X - 24)
 	local group, content = Theme.glass(Root.panels, NAME, UDim2.fromOffset(w, 540))
 	Theme.fitHeight(group, content)
 	Theme.list(content, 8).VerticalAlignment = Enum.VerticalAlignment.Top
@@ -90,10 +90,10 @@ function NightlyCard.show(card: { [string]: any }, actions: Actions)
 
 	local marks = Instance.new("Frame")
 	marks.BackgroundTransparency = 1
-	marks.Size = UDim2.new(1, 0, 0, 44)
+	marks.Size = UDim2.new(1, 0, 0, 54)
 	marks.LayoutOrder = 7
 	marks.Parent = content
-	Theme.list(marks, 6, true)
+	Theme.list(marks, 4, true)
 	for i, grade in card.rounds do
 		Hallmark.small(marks, Voice.roman(i), grade, i)
 	end

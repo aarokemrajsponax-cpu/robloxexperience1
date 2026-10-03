@@ -159,7 +159,7 @@ function DecreePanel.open()
 		status.Text = "This is exactly how the house will show it."
 		info.held = result.held
 		info.price = result.price
-		proclaim.Text = Theme.track(string.upper(proclaimText(info)))
+		proclaim.Text = string.upper(proclaimText(info))
 		proclaim.Visible = true
 		shown()
 	end

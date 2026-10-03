@@ -116,6 +116,7 @@ function Prompts.start()
 			gui:Destroy()
 		end
 		gui = build(prompt)
+		gui.Enabled = not Root.isOpen()
 		shown[prompt] = gui
 		local pill = gui:FindFirstChild("Pill") :: TextButton
 		pill.BackgroundTransparency = 1
@@ -126,6 +127,15 @@ function Prompts.start()
 		if gui then
 			shown[prompt] = nil
 			gui:Destroy()
+		end
+	end)
+	-- While a panel is open the guest is in a menu: the prompts in the world step aside, and
+	-- can't be set off behind it.
+	Root.PanelsChanged:Connect(function()
+		local open = Root.isOpen()
+		ProximityPromptService.Enabled = not open
+		for _, gui in shown do
+			gui.Enabled = not open
 		end
 	end)
 	UserInputService.LastInputTypeChanged:Connect(function()

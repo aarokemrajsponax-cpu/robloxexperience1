@@ -61,7 +61,7 @@ function LedgerPanel.open()
 	local function show(v: { [string]: any })
 		title.Text = "The Ledger · " .. tostring(v.term or "")
 		pageText.Text = string.format("Page %d", v.page or 0)
-		of.Text = Theme.track(string.upper(string.format("of %d", v.pages or 50)))
+		of.Text = string.upper(string.format("of %d", v.pages or 50))
 		fill.Size = UDim2.fromScale(math.clamp(v.progress or 0, 0, 1), 1)
 		nextFree.Text = "Page " .. tostring(v.nextPage) .. ": " .. table.concat(v.nextFree or {}, ", ")
 		if v.leather then

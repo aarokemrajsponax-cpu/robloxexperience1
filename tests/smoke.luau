@@ -528,6 +528,46 @@ local function walk(route: { { any } }, radius: number, ignore: ((BasePart) -> b
 	return nil
 end
 
+-- Floor under every doorway: walls are two studs thick and each room's floor stops at its own
+-- wall, so a doorway needs a sill across the wall's thickness or the void shows through it.
+do
+	local slabs = {}
+	for _, d in maison:GetDescendants() do
+		if d:IsA("BasePart") and d.Transparency < 0.5 then
+			local lo, hi
+			for _, c in corners(d.CFrame, d.Size) do
+				lo = if lo then lo:Min(c) else c
+				hi = if hi then hi:Max(c) else c
+			end
+			table.insert(slabs, { lo = lo, hi = hi, part = d })
+		end
+	end
+	-- Is there something opaque to stand on at (x, z), its top near floor height y (a step up or
+	-- down counts)?
+	local function floorAt(x: number, z: number, y: number): boolean
+		for _, b in slabs do
+			if x >= b.lo.X - 0.05 and x <= b.hi.X + 0.05 and z >= b.lo.Z - 0.05 and z <= b.hi.Z + 0.05 and b.hi.Y >= y - 0.6 and b.hi.Y <= y + 2.6 then
+				return true
+			end
+		end
+		return false
+	end
+	for _, dw in Layout.Doorways do
+		local name, centre, axis, width, y = dw.name, dw.centre, dw.axis, dw.width, dw.floorY
+		local hole: string? = nil
+		for across = -3, 3, 0.25 do
+			for side = -width / 2 + 0.4, width / 2 - 0.4, 0.5 do
+				local x = centre.X + (if axis == "x" then across else side)
+				local z = centre.Z + (if axis == "x" then side else across)
+				if not hole and not floorAt(x, z, y) then
+					hole = string.format("no floor at (%.2f, %.2f)", x, z)
+				end
+			end
+		end
+		check("there's floor all the way through " .. name, hole == nil, hole)
+	end
+end
+
 -- The Midnight Room's doors and rope are solid until a guest earns it; the client opens them.
 local function earned(part: BasePart): boolean
 	return part:GetAttribute("Gated") == true or (part.Parent ~= nil and part.Parent.Name == "Door_midnight" and (part.Name == "Rope" or part.Name == "Stanchion" or part.Name == "StanchionTop"))

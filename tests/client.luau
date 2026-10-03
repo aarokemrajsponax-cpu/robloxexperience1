@@ -1387,9 +1387,10 @@ do
 	check("sorting: it covers the whole screen, nothing of the room shows", sortGui ~= nil and sortGui.IgnoreGuiInset == true and sortGui.Root.Visible == true and sortGui.Root.BackgroundTransparency == 0 and size.X.Scale == 1 and size.Y.Scale == 1)
 	check("sorting: in through a dip to black, not a cut", sortGui.Curtain.BackgroundTransparency == 1)
 	check("sorting: the six cases, named as in the brief", textOnScreen("WATCHES") ~= nil and textOnScreen("JEWELRY") ~= nil and textOnScreen("COLLECTIBLES") ~= nil and textOnScreen("Bars, notes, coins") ~= nil)
-	check("sorting: each case has its own drawn mark", (function()
+	check("sorting: each case shows a piece that goes in it", (function()
 		for _, bin in sortGui.Root.Cases:GetChildren() do
-			local mark = bin:FindFirstChild("Mark", true)
+			local holder = bin:FindFirstChild("MarkHolder")
+			local mark = holder and holder:FindFirstChild("Art")
 			if not mark or #mark:GetDescendants() < 2 then
 				return false
 			end
@@ -1497,6 +1498,14 @@ do
 	check("with a gamepad, the chosen piece shows its name", chosen ~= nil and textOnScreen(chosen.name) ~= nil)
 end
 check("the header counts what's left on the cloth", textOnScreen("8 pieces left") ~= nil)
+workspace:SetAttribute("Event_goldenHour", workspace:GetServerTimeNow() + 600)
+signalOf(workspace, "attr:Event_goldenHour"):Fire()
+advance(1.1)
+check("at a table, what's on shows on the room's line, not across the cloth", string.find(sortGui.Root.Header.Room.Text, "Golden Hour 9:", 1, true) ~= nil and playerGui.MaisonHud:FindFirstChild("HouseEvents", true).Visible == false, sortGui.Root.Header.Room.Text)
+workspace:SetAttribute("Event_goldenHour", nil)
+signalOf(workspace, "attr:Event_goldenHour"):Fire()
+advance(1.1)
+check("and goes from it when it's over", string.find(sortGui.Root.Header.Room.Text, "Golden Hour", 1, true) == nil)
 check("and shows the score and the combo as figures", sortGui.Root.Header.Stat_SCORE.Visible and sortGui.Root.Header.Stat_COMBO.Visible and sortGui.Root.Header.Stat_ROUND.Value.Text == "I", sortGui.Root.Header.Stat_ROUND.Value.Text)
 check("a gilded piece has a glow about it", Sort.card(2):FindFirstChild("Glow") ~= nil and Sort.card(1):FindFirstChild("Glow") == nil)
 check("the cases closed this round say so", (function()
@@ -1548,7 +1557,32 @@ if MODE == "full" then
 		end
 	end
 	check("on a phone, every piece still sits on the cloth", inside)
+	check("and a case closed this round says so on a phone, too", (function()
+		local closed = 0
+		for _, bin in sortGui.Root.Cases:GetChildren() do
+			if bin.Title.Text == "Closed" then
+				closed += 1
+			end
+		end
+		return closed == 2
+	end)())
 	snapshot("sort-phone")
+	-- In a laptop's Studio window (short and wide, with Studio's panels around it).
+	camera.ViewportSize = Vector2.new(1450, 580)
+	signalOf(camera, "prop:ViewportSize"):Fire()
+	advance(0.1)
+	local laptopIcon = sortGui.Root.Pieces:GetChildren()[1].Icon.Size.X.Offset
+	check("in a small Studio window the pieces are still a good size", laptopIcon >= 90, laptopIcon)
+	local smallest = math.huge
+	for _, d in sortGui:GetDescendants() do
+		-- (Letters engraved on a drawn piece, like "999.9" on a gold bar, are part of its picture.)
+		local engraved = d:FindFirstAncestor("Art") ~= nil
+		if (d:IsA("TextLabel") or d:IsA("TextButton")) and d.Visible and d.Text ~= "" and not d.TextScaled and not engraved then
+			smallest = math.min(smallest, d.TextSize)
+		end
+	end
+	check("and no words on it are smaller than 12 pixels", smallest >= 12, smallest)
+	snapshot("sort-laptop")
 	camera.ViewportSize = Vector2.new(1280, 720)
 	signalOf(camera, "prop:ViewportSize"):Fire()
 	advance(0.1)
@@ -2611,7 +2645,7 @@ invokeResults.ShopAsk = {
 			options = {
 				{ id = "suite_rug_black", name = "Black Fringed Rug", owned = true, source = "gilt", gilt = 400 },
 				{ id = "suite_rug_persian", name = "Night Garden Rug", owned = false, source = "gilt", gilt = 800 },
-				{ id = "suite_rug_moon", name = "Moonlit Rug", owned = false, source = "boutique", robux = 149, onSale = true },
+				{ id = "suite_rug_moon", name = "Moonlit Rug", owned = false, source = "boutique", robux = 149, onSale = true, robuxOnSale = true, giltAlt = 5960 },
 			},
 		},
 		{ id = "desk", name = "The Study: the desk", room = "study", open = false, house = false, placed = "", options = {} },
@@ -2622,12 +2656,23 @@ invokeResults.ShopAsk = {
 serverSays("Shop", { op = "open", panel = "suite" })
 advance(1)
 check("the bell opens the Suite's furnishing", textOnScreen("Your Suite") ~= nil and textOnScreen("Black Fringed Rug") ~= nil)
+check("with a panel open, the prompts in the world step aside", services.ProximityPromptService.Enabled == false)
 snapshot("suite")
+if MODE == "full" then
+	camera.ViewportSize = Vector2.new(1450, 580)
+	signalOf(camera, "prop:ViewportSize"):Fire()
+	advance(0.1)
+	snapshot("suite-laptop")
+	camera.ViewportSize = Vector2.new(1280, 720)
+	signalOf(camera, "prop:ViewportSize"):Fire()
+	advance(0.1)
+end
 check("the Suite says what it is", textOnScreen("Your own rooms upstairs") ~= nil and textOnScreen("nothing here changes a score") ~= nil)
 check("and how it works, in three steps", textOnScreen("How it works") ~= nil and textOnScreen("Get a piece") ~= nil and textOnScreen("The Gold Key adds two rooms") ~= nil)
 check("how far along you are", textOnScreen("Your pieces in 1 of 1 spots") ~= nil and textOnScreen("1,200 Gilt") ~= nil)
 check("a piece for Gilt can be bought right there", textOnScreen("Night Garden Rug") ~= nil and textOnScreen("800 Gilt") ~= nil)
 check("a Robux piece on the shelves today, too", textOnScreen("Moonlit Rug") ~= nil and textOnScreen("149 Robux") ~= nil)
+check("and it can be had for Gilt instead", textOnScreen("5,960 Gilt") ~= nil)
 check("a Gold Key room says what it holds and how to get it", textOnScreen("Comes with the Gold Key") ~= nil and textOnScreen("A partners' desk and a globe") ~= nil and textOnScreen("See the Gold Key") ~= nil)
 invokeResults.ShopAsk = { ok = true }
 local placeBefore = 0
@@ -2659,6 +2704,7 @@ check("buys it and puts it straight in its spot", bought ~= nil and bought.item 
 check("and says so", textOnScreen("Night Garden Rug is in your Suite") ~= nil)
 Root2.close()
 advance(0.5)
+check("and with it closed, they're back", services.ProximityPromptService.Enabled == true)
 root.Position = Vector3.new(0, 5, -40)
 root.CFrame = CFrame.new(0, 5, -40)
 advance(1)

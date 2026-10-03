@@ -197,6 +197,11 @@ block (that's where most of the money is):
 | `Season Collection` | 399 | the season's pieces |
 | `Gold Key Gift` | 499 | the Gold Key, for another guest |
 
+Until a `Boutique NN` product exists, the pieces at that price are sold for Gilt only (40 Gilt
+for each Robux of the price, `Config.Gilt.perRobux`): a 249 piece is 9,960 Gilt. Make the
+product and its pieces' Robux key appears by itself, beside the Gilt price. Anything else in the
+Boutique whose product isn't made yet says "not on sale yet" instead of showing a key.
+
 **The VIP Velocity Elite game pass** (a pass shows on the game page, which sells it better):
 Creator Hub → your experience → **Monetization** → **Passes** → **Create a Pass**: name
 *VIP Velocity Elite*, an image, **Save**; open it → **Sales** → on sale, price **499**. Copy the

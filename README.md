@@ -274,7 +274,7 @@ a Nightly attempt or a Mythic's odds.
 
 - **Playing, in Studio and live.** Press **Play** and you're your own character at once: Roblox's
   own camera (zoom right in or out) and controls, walking from the first second. Studio shows the
-  build in the bottom-left corner and prints it in Output (`[Maison] Build 31 ...`), so you can see
+  build in the bottom-left corner and prints it in Output (`[Maison] Build 32 ...`), so you can see
   Studio has the latest code. The live game plays the intro over the house (any key skips it);
   the old title screen is off (`Config.Title.show`). Roblox never spawns anyone by itself
   (`Players.CharacterAutoLoads` is off in the Rojo project and at the very top of the server), so

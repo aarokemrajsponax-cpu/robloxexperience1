@@ -65,7 +65,7 @@ function RevivePanel.update(m: { [string]: any })
 		status.Text = statusText(m)
 	end
 	if reviveKey then
-		reviveKey.Text = Theme.track(string.upper(reviveText(m)))
+		reviveKey.Text = string.upper(reviveText(m))
 		reviveKey.Visible = not waiting and ((tonumber(m.held) or 0) > 0 or m.onSale == true)
 	end
 end

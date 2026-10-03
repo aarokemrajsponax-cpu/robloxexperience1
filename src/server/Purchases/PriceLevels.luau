@@ -30,7 +30,8 @@ function PriceLevels.fetch(players: { Player })
 		return MarketplaceService:GetUsersPriceLevelsAsync(ids)
 	end)
 	if not ok or type(result) ~= "table" then
-		warn("[Maison] Couldn't read price levels (gifts wait until Roblox answers): " .. tostring(result))
+		-- Nothing for the owner to fix (gifts simply wait, failing safe), so it isn't a warning.
+		print("[Maison] Couldn't read price levels (gifts wait until Roblox answers): " .. tostring(result))
 		return
 	end
 	for _, info in result :: { any } do

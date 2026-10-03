@@ -75,7 +75,7 @@ local function draw()
 		l.AutomaticSize = Enum.AutomaticSize.Y
 		l.BackgroundTransparency = 1
 		l.FontFace = Brand.Fonts.body
-		l.TextSize = 12
+		l.TextSize = 14
 		l.TextWrapped = true
 		l.TextXAlignment = Enum.TextXAlignment.Left
 		l.TextColor3 = Color3.fromRGB(245, 230, 225)

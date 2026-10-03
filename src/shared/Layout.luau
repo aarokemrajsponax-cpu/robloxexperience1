@@ -257,6 +257,28 @@ function Layout.duelFrames(centre: Vector3): (CFrame, CFrame)
 		Layout.tableFrame(centre + Vector3.new(0, 0, half), Vector3.new(0, 0, -1))
 end
 
+-- Every doorway through a wall, for the world's checks. Walls are two studs thick and each room's
+-- floor stops at its own wall, so where `sill` is set the builder lays a marble sill across the
+-- wall's thickness (`wall`: where the wall stands along `axis`, the way you walk through) and the
+-- floor runs on through. The others have their own floor through the wall (a landing, a step, a
+-- corridor).
+export type Doorway = { name: string, centre: Vector3, axis: "x" | "z", width: number, floorY: number, wall: { number }?, sill: boolean }
+Layout.Doorways = {
+	{ name = "the Salon door", centre = Layout.RoomDoors.salon.centre, axis = "x", width = Layout.RoomDoorWidth, floorY = Layout.FLOOR, wall = { -32, -30 }, sill = true },
+	{ name = "the Velvet Room door", centre = Layout.RoomDoors.velvet.centre, axis = "x", width = Layout.RoomDoorWidth, floorY = Layout.FLOOR, wall = { -32, -30 }, sill = true },
+	{ name = "the Midnight Room door", centre = Layout.RoomDoors.midnight.centre, axis = "x", width = Layout.RoomDoorWidth, floorY = Layout.FLOOR, wall = { 30, 32 }, sill = true },
+	{ name = "the Obsidian Room door", centre = Layout.RoomDoors.obsidian.centre, axis = "x", width = Layout.RoomDoorWidth, floorY = Layout.FLOOR, wall = { 30, 32 }, sill = true },
+	{ name = "the Vault door", centre = Layout.Vault.door, axis = "z", width = Layout.Vault.doorWidth, floorY = Layout.FLOOR, wall = { 42, 44 }, sill = true },
+	{ name = "the Boutique door", centre = Vector3.new(Layout.Foyer.boutiqueDoor.Position.X, Layout.FLOOR, 43), axis = "z", width = 8, floorY = Layout.FLOOR, wall = { 42, 44 }, sill = true },
+	{ name = "the Library door", centre = Layout.Club.libraryDoor, axis = "z", width = Layout.Club.doorWidth, floorY = Layout.CLUB, wall = { 66, 68 }, sill = true },
+	{ name = "the Ballroom door", centre = Layout.Club.ballroomDoor, axis = "z", width = Layout.Club.doorWidth, floorY = Layout.CLUB, wall = { 66, 68 }, sill = true },
+	{ name = "the landing door at the top of the stair", centre = Vector3.new(Layout.Foyer.stair.x, Layout.CLUB, 43), axis = "z", width = 8, floorY = Layout.CLUB, sill = false },
+	{ name = "the Suite door", centre = Layout.Suite.door, axis = "x", width = Layout.Suite.doorWidth, floorY = Layout.CLUB, sill = false },
+	{ name = "the Terrace doors", centre = Layout.Terrace.door, axis = "x", width = Layout.Terrace.doorWidth, floorY = Layout.CLUB, sill = false },
+	{ name = "the Dressing Room door", centre = Layout.Suite.dressing.door, axis = "x", width = 4, floorY = Layout.Suite.floorY, sill = false },
+	{ name = "the Study door", centre = Layout.Suite.study.door, axis = "x", width = 4, floorY = Layout.Suite.floorY, sill = false },
+} :: { Doorway }
+
 -- The four rooms in order, for code that treats them alike.
 Layout.Rooms = {
 	salon = Layout.Salon,

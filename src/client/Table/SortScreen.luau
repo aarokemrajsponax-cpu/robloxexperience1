@@ -26,7 +26,6 @@ local Seasons = require(ReplicatedStorage.Shared.Seasons)
 local Settings = require(ReplicatedStorage.Shared.Settings)
 local Voice = require(ReplicatedStorage.Shared.Voice)
 local PieceIcon = require(script.Parent.Parent.UI.PieceIcon)
-local Theme = require(script.Parent.Parent.UI.Theme)
 local Closet = require(script.Parent.Parent.Closet)
 local GuideTrail = require(script.Parent.GuideTrail)
 local State = require(script.Parent.Parent.State)
@@ -58,12 +57,15 @@ type Card = {
 
 type Bin = {
 	id: string,
+	face: string,
 	index: number,
 	frame: Frame,
 	scale: UIScale,
 	stroke: UIStroke,
 	flash: Frame,
 	lip: Frame,
+	mark: Frame,
+	markPx: number,
 	count: TextLabel,
 	name: TextLabel,
 	sub: TextLabel,
@@ -95,7 +97,6 @@ local GOLD = C.gold
 local LIGHT = C.lightGold
 local BONE = C.bone
 local SMOKE = C.smoke
-local DIM = C.dim
 local CORAL = Color3.fromRGB(230, 118, 96)
 local F = Brand.Fonts
 -- The house's cloth and lamp, unless the guest wears a table style or a lamp of their own.
@@ -104,6 +105,8 @@ local CLOTH = ColorSequence.new({
 	ColorSequenceKeypoint.new(0.5, Color3.fromRGB(17, 19, 24)),
 	ColorSequenceKeypoint.new(1, Color3.fromRGB(11, 12, 16)),
 })
+local VELVET = { Color3.fromRGB(84, 26, 38), Color3.fromRGB(56, 15, 26), Color3.fromRGB(32, 8, 15) }
+local WALNUT = { Color3.fromRGB(92, 62, 40), Color3.fromRGB(64, 42, 27), Color3.fromRGB(44, 28, 18), Color3.fromRGB(24, 15, 10) }
 local LAMP = Color3.fromRGB(214, 150, 72)
 local POOL = Color3.fromRGB(255, 214, 150)
 local rim = LIGHT -- the cases' and the cloth's edges
@@ -159,6 +162,7 @@ local guideThread: thread? = nil
 local dealCount = 0
 local roomText = ""
 local roundExtra = ""
+local eventLine: string? = nil
 local clock = 0
 
 type Layout = {
@@ -175,6 +179,8 @@ type Layout = {
 	headerTop: number,
 	headerH: number,
 	binsTop: number,
+	rim: number,
+	frame: { x: number, y: number, w: number, h: number },
 	tray: { x: number, y: number, w: number, h: number },
 	icon: number,
 	keys: number,
@@ -194,6 +200,8 @@ local L: Layout = {
 	headerTop = 4,
 	headerH = 60,
 	binsTop = 600,
+	rim = 10,
+	frame = { x = 0, y = 0, w = 0, h = 0 },
 	tray = { x = 0, y = 0, w = 0, h = 0 },
 	icon = 80,
 	keys = 0,
@@ -221,8 +229,10 @@ local function toScreen(input: InputObject): Vector2
 	return Vector2.new(input.Position.X, input.Position.Y) + inset()
 end
 
+-- Text on this screen is never set below MIN_TEXT pixels, however small the screen.
+local MIN_TEXT = 12
 local function textSize(size: number): number
-	return math.max(10, math.floor(size * Settings.textScale(State.get("textSize")) + 0.5))
+	return math.floor(math.max(MIN_TEXT, size) * Settings.textScale(State.get("textSize")) + 0.5)
 end
 
 local function label(parent: Instance, text: string, size: number, font: Font, colour: Color3, props: { [string]: any }?): TextLabel
@@ -327,6 +337,7 @@ local function measure()
 	local bottom = vp.Y - math.floor(14 * s)
 	local trayTop = headerTop + headerH + math.floor(14 * s)
 	local trayBottom = bottom - binsH - math.floor(12 * s)
+	local rimPx = math.max(5, math.floor(10 * s))
 	L = {
 		s = s,
 		vp = vp,
@@ -341,7 +352,9 @@ local function measure()
 		headerTop = headerTop,
 		headerH = headerH,
 		binsTop = bottom - binsH,
-		tray = { x = left, y = trayTop, w = width, h = math.max(120, trayBottom - trayTop) },
+		rim = rimPx,
+		frame = { x = left, y = trayTop, w = width, h = math.max(120, trayBottom - trayTop) },
+		tray = { x = left + rimPx, y = trayTop + rimPx, w = width - 2 * rimPx, h = math.max(120, trayBottom - trayTop) - 2 * rimPx },
 		icon = L.icon,
 		keys = SortScreen.keysWidth(),
 		stacked = stacked,
@@ -360,7 +373,7 @@ local function makeStat(parent: Instance, name: string, key: string, width: numb
 	f.Parent = parent
 	local scale = Instance.new("UIScale")
 	scale.Parent = f
-	local k = label(f, Theme.track(key), 11, F.bodyMedium, SMOKE, {
+	local k = label(f, key, 11, F.bodyMedium, SMOKE, {
 		Name = "Key",
 		AnchorPoint = Vector2.new(0.5, 0),
 		Position = UDim2.fromScale(0.5, 0.02),
@@ -428,16 +441,33 @@ local function build()
 	moteLayer.ZIndex = 1
 	moteLayer.Parent = root
 
-	-- The cloth: deep slate under a warm wash of lamplight, a hairline border and a second one
-	-- just inside it.
+	-- The tray: a polished walnut frame with a gold bead where it meets the cloth, and the
+	-- cloth set into it (a shadow along its edges, where the frame stands over it), deep slate
+	-- under a warm wash of lamplight.
+	local frame = sheet(root, "TrayFrame", Color3.new(1, 1, 1), 2)
+	header.trayFrame = frame
+	shade(frame, 90, colours({ { 0, WALNUT[1] }, { 0.08, WALNUT[2] }, { 0.5, WALNUT[3] }, { 1, WALNUT[4] } }))
+	header.frameCorner = corner(frame, 6)
+	stroke(frame, Color3.new(0, 0, 0), 0.35, 1)
+	local shine = sheet(frame, "Shine", LIGHT, 2)
+	shine.Size = UDim2.new(1, -16, 0, 1)
+	shine.Position = UDim2.fromOffset(8, 1)
+	shade(shine, 0, nil, alphas({ { 0, 1 }, { 0.25, 0.72 }, { 0.75, 0.72 }, { 1, 1 } }))
 	tray = sheet(root, "Tray", Color3.new(1, 1, 1), 2)
 	header.trayShade = shade(tray, 90, CLOTH)
 	header.trayCorner = corner(tray, 3)
-	header.trayStroke = stroke(tray, LIGHT, 0.86, 1)
+	header.trayStroke = stroke(tray, GOLD, 0.3, 1.5)
 	local sheen = sheet(tray, "Sheen", GOLD, 1)
 	sheen.Size = UDim2.fromScale(1, 0.7)
 	shade(sheen, 90, nil, alphas({ { 0, 0.88 }, { 0.6, 0.97 }, { 1, 1 } }))
 	header.sheenCorner = corner(sheen, 3)
+	header.edges = {}
+	for _, side in { 90, 270, 0, 180 } do
+		local e = sheet(tray, "Edge", Color3.new(0, 0, 0), 1)
+		e:SetAttribute("Side", side)
+		shade(e, side, nil, alphas({ { 0, 0.3 }, { 0.35, 0.7 }, { 1, 1 } }))
+		table.insert(header.edges, e)
+	end
 	-- A pool of lamplight in the middle of the cloth: faint ovals, each a little smaller.
 	header.pools = {}
 	for k = 1, 16 do
@@ -450,9 +480,9 @@ local function build()
 		pool.BackgroundTransparency = 0.994
 		corner(pool, 9999)
 	end
-	-- Small gold diamonds at the corners of the inner border.
+	-- Small gold diamonds set into the frame's corners.
 	for i, at in { Vector2.new(0, 0), Vector2.new(1, 0), Vector2.new(0, 1), Vector2.new(1, 1) } do
-		local d = sheet(tray, "Ornament", GOLD, 3)
+		local d = sheet(frame, "Ornament", GOLD, 3)
 		d.Name = "Ornament" .. i
 		d.AnchorPoint = Vector2.new(0.5, 0.5)
 		d.Rotation = 45
@@ -478,7 +508,7 @@ local function build()
 	head.ZIndex = 3
 	head.Parent = root
 	header.frame = head
-	header.mark = label(head, Theme.track(string.upper(Brand.Name)), 18, F.bodyMedium, BONE, {
+	header.mark = label(head, string.upper(Brand.Name), 18, F.bodyMedium, BONE, {
 		Name = "Mark",
 		AnchorPoint = Vector2.new(0, 0.5),
 		TextXAlignment = Enum.TextXAlignment.Left,
@@ -652,19 +682,36 @@ end
 local function layoutChrome()
 	local s = L.s
 	local t = L.tray
+	local fr = L.frame
+	header.trayFrame.Position = UDim2.fromOffset(fr.x, fr.y)
+	header.trayFrame.Size = UDim2.fromOffset(fr.w, fr.h)
+	header.frameCorner.CornerRadius = UDim.new(0, math.max(3, math.floor(7 * s)))
 	tray.Position = UDim2.fromOffset(t.x, t.y)
 	tray.Size = UDim2.fromOffset(t.w, t.h)
 	local radius = UDim.new(0, math.max(2, math.floor(3 * s)))
 	header.trayCorner.CornerRadius = radius
 	header.sheenCorner.CornerRadius = radius
+	header.trayStroke.Thickness = math.max(1, 1.5 * s)
+	local depth = math.floor(26 * s)
+	for _, e in header.edges do
+		local side = e:GetAttribute("Side")
+		if side == 90 or side == 270 then
+			e.Size = UDim2.new(1, 0, 0, depth)
+			e.Position = if side == 90 then UDim2.fromScale(0, 0) else UDim2.new(0, 0, 1, -depth)
+		else
+			e.Size = UDim2.new(0, depth, 1, 0)
+			e.Position = if side == 0 then UDim2.fromScale(0, 0) else UDim2.new(1, -depth, 0, 0)
+		end
+	end
 	local insetPx = math.floor(8 * s)
 	header.trayInner.Size = UDim2.new(1, -2 * insetPx, 1, -2 * insetPx)
 	for i = 1, 4 do
 		local d = header["ornament" .. i] :: Frame?
 		if d then
 			local at = d:GetAttribute("Corner") :: Vector2
-			d.Position = UDim2.new(at.X, if at.X == 0 then insetPx else -insetPx, at.Y, if at.Y == 0 then insetPx else -insetPx)
-			d.Size = UDim2.fromOffset(math.max(4, math.floor(7 * s)), math.max(4, math.floor(7 * s)))
+			local half = math.floor(L.rim / 2)
+			d.Position = UDim2.new(at.X, if at.X == 0 then half else -half, at.Y, if at.Y == 0 then half else -half)
+			d.Size = UDim2.fromOffset(math.max(4, math.floor(6 * s)), math.max(4, math.floor(6 * s)))
 		end
 	end
 	local head = header.frame :: Frame
@@ -699,9 +746,9 @@ local function binFrame(case: Catalogue.Case, index: number): Bin
 	f.BorderSizePixel = 0
 	f.BackgroundColor3 = Color3.new(1, 1, 1)
 	f.Active = true
-	-- Settings → Case style: open trays, lidded boxes, or round plates.
+	-- Settings → Case style: walnut cases lined with velvet, lidded boxes, or round plates.
 	local style = State.get("caseStyle")
-	local radius = math.max(2, math.floor(3 * s))
+	local radius = math.max(3, math.floor(5 * s))
 	if style == "Boxes" then
 		radius = 0
 		shade(f, 90, colours({ { 0, Color3.fromRGB(44, 46, 52) }, { 0.2, Color3.fromRGB(34, 36, 42) }, { 0.21, Color3.fromRGB(16, 18, 22) }, { 1, Color3.fromRGB(10, 11, 14) } }))
@@ -713,65 +760,66 @@ local function binFrame(case: Catalogue.Case, index: number): Bin
 		radius = math.floor(math.min(L.binH, L.binW) * 0.34)
 		shade(f, 90, colours({ { 0, Color3.fromRGB(40, 37, 33) }, { 0.6, Color3.fromRGB(24, 22, 20) }, { 1, Color3.fromRGB(15, 14, 13) } }))
 	else
-		shade(f, 90, colours({ { 0, Color3.fromRGB(24, 27, 33) }, { 0.58, Color3.fromRGB(14, 16, 20) }, { 1, Color3.fromRGB(10, 11, 14) } }))
+		shade(f, 90, colours({ { 0, WALNUT[1] }, { 0.1, WALNUT[2] }, { 0.6, WALNUT[3] }, { 1, WALNUT[4] } }))
+		local velvet = sheet(f, "Velvet", Color3.new(1, 1, 1), 1)
+		shade(velvet, 90, colours({ { 0, VELVET[1] }, { 0.55, VELVET[2] }, { 1, VELVET[3] } }))
+		corner(velvet, math.max(2, radius - 2))
+		stroke(velvet, GOLD, 0.5, 1)
+		-- The case's front edge throws a shadow onto the velvet.
+		local edge = sheet(velvet, "Edge", Color3.new(0, 0, 0), 1)
+		edge.Size = UDim2.fromScale(1, 0.4)
+		shade(edge, 90, nil, alphas({ { 0, 0.4 }, { 1, 1 } }))
 	end
 	f:SetAttribute("Style", style)
 	corner(f, radius)
-	local st = stroke(f, rim, 0.9, 1)
+	local st = stroke(f, rim, 0.75, 1)
 	local scale = Instance.new("UIScale")
 	scale.Parent = f
-	local flash = sheet(f, "Flash", GOLD, 1)
+	local flash = sheet(f, "Flash", GOLD, 2)
 	flash.Size = UDim2.fromScale(1, 1)
 	flash.BackgroundTransparency = 1
 	corner(flash, radius)
 	-- A line of light along the top edge when the case is the one under your piece.
-	local lip = sheet(f, "Lip", LIGHT, 2)
+	local lip = sheet(f, "Lip", LIGHT, 3)
 	lip.Size = UDim2.new(1, -2 * math.max(radius, 3), 0, 1)
 	lip.Position = UDim2.fromOffset(math.max(radius, 3), 0)
 	lip.BackgroundTransparency = 1
 	shade(lip, 0, nil, alphas({ { 0, 1 }, { 0.5, 0 }, { 1, 1 } }))
-	local markPx = math.floor(L.binH * 0.28)
+	-- The piece that stands for the case, resting on the velvet.
 	local mark = Instance.new("Frame")
 	mark.Name = "MarkHolder"
 	mark.BackgroundTransparency = 1
 	mark.AnchorPoint = Vector2.new(0.5, 0.5)
-	mark.Position = UDim2.fromScale(0.5, 0.25)
-	mark.Size = UDim2.fromOffset(markPx, markPx)
+	mark.ZIndex = 3
 	mark.Parent = f
-	PieceIcon.case(mark, case.id, markPx)
-	local count = label(f, "0", 15, F.figures, SMOKE, {
+	local count = label(f, "0", 17, F.figures, LIGHT, {
 		Name = "Count",
 		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, -math.floor(10 * s), 0, math.floor(7 * s)),
-		Size = UDim2.fromOffset(44 * s, 16 * s),
 		TextXAlignment = Enum.TextXAlignment.Right,
+		ZIndex = 3,
 	})
-	local key = label(f, tostring(index), 11, F.body, DIM, {
+	local key = label(f, tostring(index), 12, F.bodyMedium, SMOKE, {
 		Name = "KeyNum",
-		AnchorPoint = Vector2.new(0, 0),
-		Position = UDim2.fromOffset(math.floor(10 * s), math.floor(7 * s)),
-		Size = UDim2.fromOffset(20 * s, 16 * s),
-		TextXAlignment = Enum.TextXAlignment.Left,
-		TextTransparency = 0.35,
+		AnchorPoint = Vector2.new(1, 1),
+		TextXAlignment = Enum.TextXAlignment.Right,
+		TextTransparency = 0.4,
+		ZIndex = 3,
 	})
-	local name = label(f, Theme.track(string.upper(case.name)), 13, F.bodyBold, BONE, { Position = UDim2.fromScale(0.5, 0.57), Size = UDim2.new(1, -math.floor(12 * s), 0.2, 0), Name = "Title", TextScaled = true })
-	local sub = label(f, case.subtitle, 11.5, F.body, SMOKE, { Position = UDim2.fromScale(0.5, 0.79), Size = UDim2.new(1, -math.floor(12 * s), 0.16, 0), Name = "Sub", TextScaled = true })
-	-- Long names on a narrow case shrink to fit rather than spill over its edges.
-	for _, l in { name, sub } do
-		local fit = Instance.new("UITextSizeConstraint")
-		fit.MaxTextSize = l.TextSize
-		fit.MinTextSize = 6
-		fit.Parent = l
-	end
+	-- (Sized and placed by layoutBinInside, for the case's size.)
+	local name = label(f, case.name, 16, F.bodyBold, BONE, { Name = "Title", ZIndex = 3 })
+	local sub = label(f, case.subtitle, 13, F.body, SMOKE, { Name = "Sub", ZIndex = 3 })
 	f.Parent = casesLayer
 	return {
 		id = case.id,
+		face = case.face,
 		index = index,
 		frame = f,
 		scale = scale,
 		stroke = st,
 		flash = flash,
 		lip = lip,
+		mark = mark,
+		markPx = 0,
 		count = count,
 		name = name,
 		sub = sub,
@@ -781,6 +829,81 @@ local function binFrame(case: Catalogue.Case, index: number): Bin
 		open = true,
 		filed = 0,
 	}
+end
+
+-- What's on a case, laid out for its size: on a wide case the piece sits on the left with the
+-- name and what goes in it beside it; on a narrow one (a phone) the piece sits above the name.
+local function layoutBinInside(bin: Bin)
+	local s = L.s
+	local w, h = L.binW, L.binH
+	local f = bin.frame
+	local inset = math.max(3, math.floor(4 * s))
+	local velvet = f:FindFirstChild("Velvet")
+	if velvet and velvet:IsA("Frame") then
+		velvet.Position = UDim2.fromOffset(inset, inset)
+		velvet.Size = UDim2.new(1, -2 * inset, 1, -2 * inset)
+	end
+	local pad = math.floor(10 * s) + inset
+	local wide = w - h * 0.8 >= 112
+	local markPx: number
+	bin.count.Position = UDim2.new(1, -pad, 0, math.floor(5 * s) + inset)
+	bin.count.Size = UDim2.fromOffset(math.floor(48 * s), textSize(17 * s) + 2)
+	bin.count.TextSize = textSize(17 * s)
+	bin.key.Position = UDim2.new(1, -pad, 1, -math.floor(4 * s) - inset)
+	bin.key.Size = UDim2.fromOffset(math.floor(24 * s), textSize(12 * s) + 2)
+	bin.key.TextSize = textSize(12 * s)
+	-- Every case's name is set at one size, the largest at which the longest name fits, so the
+	-- six read as a set; the line under it may take two lines rather than shrink.
+	local longestName, longestSub = 0, 0
+	for _, c in Catalogue.Cases do
+		longestName = math.max(longestName, utf8.len(c.name) or #c.name)
+		longestSub = math.max(longestSub, utf8.len(c.subtitle) or #c.subtitle)
+	end
+	local subSize = textSize(math.clamp(h * 0.14, 12, 15))
+	local nameSize: number
+	if wide then
+		markPx = math.floor(h * 0.66)
+		bin.mark.Position = UDim2.new(0, pad + markPx / 2 - math.floor(2 * s), 0.5, 0)
+		local textLeft = pad + markPx + math.floor(6 * s)
+		local textW = w - textLeft - pad
+		nameSize = textSize(math.min(math.clamp(h * 0.19, 13, 19), textW / (longestName * 0.62)))
+		local lines = if longestSub * subSize * 0.5 > textW then 2 else 1
+		local block = nameSize + math.floor(3 * s) + lines * math.ceil(subSize * 1.15)
+		local top = (h - block) / 2
+		bin.name.AnchorPoint = Vector2.new(0, 0)
+		bin.name.TextXAlignment = Enum.TextXAlignment.Left
+		bin.name.Position = UDim2.fromOffset(textLeft, top)
+		bin.name.Size = UDim2.fromOffset(textW, nameSize + 2)
+		bin.sub.AnchorPoint = Vector2.new(0, 0)
+		bin.sub.TextXAlignment = Enum.TextXAlignment.Left
+		bin.sub.TextYAlignment = Enum.TextYAlignment.Top
+		bin.sub.TextWrapped = true
+		bin.sub.Position = UDim2.fromOffset(textLeft, top + nameSize + math.floor(3 * s))
+		bin.sub.Size = UDim2.fromOffset(textW, lines * math.ceil(subSize * 1.15) + 2)
+		bin.sub.Visible = true
+	else
+		markPx = math.floor(h * 0.52)
+		bin.mark.Position = UDim2.new(0.5, 0, 0, inset + math.floor(2 * s) + markPx / 2)
+		local textW = w - 2 * inset - math.floor(8 * s)
+		nameSize = textSize(math.min(math.clamp(h * 0.19, 13, 19), textW / (longestName * 0.62)))
+		bin.name.AnchorPoint = Vector2.new(0.5, 1)
+		bin.name.TextXAlignment = Enum.TextXAlignment.Center
+		bin.name.Position = UDim2.new(0.5, 0, 1, -inset - math.floor(4 * s))
+		bin.name.Size = UDim2.fromOffset(textW, nameSize + 4)
+		-- No room for the line under the name: "Closed" shows in the name's place.
+		bin.sub.Visible = false
+	end
+	for _, l in { bin.name, bin.sub } do
+		l.TextScaled = false
+	end
+	bin.name.TextSize = nameSize
+	bin.sub.TextSize = subSize
+	bin.mark.Size = UDim2.fromOffset(markPx, markPx)
+	if math.abs(markPx - bin.markPx) > 1 then
+		bin.markPx = markPx
+		bin.mark:ClearAllChildren()
+		PieceIcon.piece(bin.mark, bin.face, markPx, bin.id)
+	end
 end
 
 local function layoutBins()
@@ -793,6 +916,7 @@ local function layoutBins()
 		bin.size = Vector2.new(L.binW, L.binH)
 		bin.frame.Position = UDim2.fromOffset(x, y)
 		bin.frame.Size = UDim2.fromOffset(L.binW, L.binH)
+		layoutBinInside(bin)
 	end
 end
 
@@ -821,23 +945,27 @@ local function paintBin(bin: Bin)
 	local selected = heldMode == "pad" and held ~= nil and binOrder[padCase] == bin
 	local lit = (over or selected) and bin.open
 	local quick = Ease.info(0.14, Enum.EasingStyle.Quad)
-	Ease.play(bin.stroke, quick, { Transparency = if lit then 0.3 elseif bin.open then 0.9 else 0.95, Thickness = if lit then 2 else 1 })
+	Ease.play(bin.stroke, quick, { Transparency = if lit then 0.2 elseif bin.open then 0.75 else 0.92, Thickness = if lit then 2 else 1 })
 	bin.stroke.Color = if lit then GOLD else rim
 	Ease.play(bin.flash, quick, { BackgroundTransparency = if lit then 0.9 else 1 })
 	Ease.play(bin.lip, quick, { BackgroundTransparency = if lit then 0 else 1 })
 	Ease.play(bin.scale, Ease.info(0.18, Enum.EasingStyle.Quad), { Scale = if lit then 1.03 else 1 })
-	local dim = if bin.open then 0 else 0.62
+	local dim = if bin.open then 0 else 0.55
+	local case = Catalogue.caseById[bin.id] :: Catalogue.Case
 	bin.frame.BackgroundTransparency = if bin.open then 0 else 0.45
+	local velvet = bin.frame:FindFirstChild("Velvet")
+	if velvet and velvet:IsA("Frame") then
+		velvet.BackgroundTransparency = if bin.open then 0 else 0.55
+	end
 	bin.name.TextTransparency = dim
 	bin.name.TextColor3 = if lit then LIGHT else BONE
+	-- A narrow case has no line under its name, so a closed one says so in its name's place.
+	bin.name.Text = if not bin.open and not bin.sub.Visible then "Closed" else case.name
 	bin.count.TextTransparency = dim
 	bin.sub.TextTransparency = dim
-	bin.sub.Text = if bin.open then (Catalogue.caseById[bin.id] :: Catalogue.Case).subtitle else "Closed this round"
+	bin.sub.Text = if bin.open then case.subtitle else "Closed this round"
 	bin.key.Visible = bin.open and State.inputKind() == "mouse"
-	local mark = bin.frame:FindFirstChild("MarkHolder")
-	if mark and mark:IsA("GuiObject") then
-		mark.Visible = bin.open
-	end
+	bin.mark.Visible = bin.open
 end
 
 local function setHover(caseId: string?)
@@ -895,7 +1023,19 @@ local function updateRoom()
 	if next(cards) ~= nil then
 		table.insert(parts, if n == 1 then "1 piece left" else tostring(n) .. " pieces left")
 	end
+	if eventLine then
+		table.insert(parts, eventLine)
+	end
 	header.room.Text = table.concat(parts, "  ·  ")
+end
+
+-- What's on in the house (Golden Hour 11:28), on the room's line while you sit here.
+function SortScreen.setEvent(line: string?)
+	if line == eventLine then
+		return
+	end
+	eventLine = line
+	updateRoom()
 end
 
 -- Where each piece rests: set down here and there on the cloth as if by hand, never on top of
@@ -911,7 +1051,7 @@ local function arrange(all: boolean): boolean
 	local t = L.tray
 	local s = L.s
 	local cell = math.sqrt((t.w * t.h) / math.max(n, 6))
-	local icon = math.floor(math.clamp(math.min(104 * s, cell * 0.48), 54 * s, 124 * s) * Settings.pieceScale(State.get("pieceSize")))
+	local icon = math.floor(math.clamp(math.min(136 * s, cell * 0.56), 60 * s, 150 * s) * Settings.pieceScale(State.get("pieceSize")))
 	local resized = math.abs(icon - L.icon) > 1
 	L.icon = icon
 	local redo = all or resized
@@ -940,7 +1080,7 @@ local function arrange(all: boolean): boolean
 		end
 		local rng = Random.new(dealCount * 7919 + c.info.uid * 104729)
 		local best, bestScore = Vector2.new((x0 + x1) / 2, (y0 + y1) / 2), -math.huge
-		for _ = 1, 32 do
+		for _ = 1, 48 do
 			local p = Vector2.new(rng:NextNumber(x0, x1), rng:NextNumber(y0, y1))
 			local d = 4 * t.w
 			for _, q in placed do
@@ -989,11 +1129,11 @@ local function cardFrame(info: PieceInfo, icon: number): (Frame, UIScale, Frame,
 	-- Its shadow on the cloth: soft at the ends, darkest beneath.
 	local shadow = sheet(f, "Shadow", Color3.new(0, 0, 0), 1)
 	shadow.AnchorPoint = Vector2.new(0.5, 0.5)
-	shadow.Position = UDim2.new(0.5, 0, 1, -math.floor(icon * 0.03))
-	shadow.Size = UDim2.fromOffset(icon * 0.66, icon * 0.15)
-	shadow.BackgroundTransparency = 0.3
+	shadow.Position = UDim2.new(0.5, 0, 1, -math.floor(icon * 0.05))
+	shadow.Size = UDim2.fromOffset(icon * 0.7, icon * 0.16)
+	shadow.BackgroundTransparency = 0.15
 	corner(shadow, 9999)
-	shade(shadow, 0, nil, alphas({ { 0, 1 }, { 0.18, 0.6 }, { 0.5, 0.05 }, { 0.82, 0.6 }, { 1, 1 } }))
+	shade(shadow, 0, nil, alphas({ { 0, 1 }, { 0.18, 0.55 }, { 0.5, 0 }, { 0.82, 0.55 }, { 1, 1 } }))
 	-- A gilded or Mythic piece has a warm halo of light about it.
 	if info.rare or info.mythic then
 		-- Many faint rings, each a little smaller: together a soft halo that fades to nothing at
@@ -1499,7 +1639,7 @@ local function setRoundText(roomName: string, roundText: string)
 	local word, rest = string.match(roundText, "^(%S+)%s+(.+)$")
 	local round = stats.ROUND
 	if word == "Round" or word == "Hand" then
-		round.key.Text = Theme.track(string.upper(word :: string))
+		round.key.Text = string.upper(word :: string)
 		round.value.Text = rest :: string
 		round.shown = true
 		roundExtra = ""
@@ -1732,7 +1872,7 @@ function SortScreen.correct(uid: number, caseId: string, points: number?, multip
 	showGuide(nil)
 	setHover(nil)
 	flyIn(c, bin, false)
-	local lines = { { text = Theme.track(string.upper(Voice.Sorting.correct)), size = 15, font = F.bodyBold, colour = LIGHT } }
+	local lines = { { text = string.upper(Voice.Sorting.correct), size = 15, font = F.bodyBold, colour = LIGHT } }
 	if points and points > 0 then
 		local sub = "+" .. number(points)
 		if multiplier and multiplier > 1 then
@@ -1778,7 +1918,7 @@ function SortScreen.wrong(uid: number, caseId: string, lostStreak: number, penal
 			again ..= "   −" .. number(penalty)
 		end
 		local lines = {
-			{ text = Theme.track(string.upper(Voice.Sorting.wrong)), size = 15, font = F.bodyBold, colour = CORAL },
+			{ text = string.upper(Voice.Sorting.wrong), size = 15, font = F.bodyBold, colour = CORAL },
 			{ text = again, size = 20, font = F.displayItalic, colour = BONE },
 		}
 		if lostStreak >= 2 then
@@ -1835,7 +1975,7 @@ function SortScreen.setScore(score: number, multiplier: number)
 	end
 	local sc, combo = stats.SCORE, stats.COMBO
 	local layout = not sc.shown or not combo.shown or sc.width ~= 112
-	sc.key.Text = Theme.track("SCORE")
+	sc.key.Text = "SCORE"
 	sc.value.Text = number(score)
 	sc.value.TextSize = textSize(34 * L.s)
 	sc.width = 112
@@ -1859,7 +1999,7 @@ function SortScreen.setLine(text: string, caption: string)
 		return
 	end
 	local sc = stats.SCORE
-	sc.key.Text = Theme.track(string.upper(caption))
+	sc.key.Text = string.upper(caption)
 	sc.value.Text = text
 	sc.value.TextSize = textSize(24 * L.s)
 	sc.width = 176
@@ -1924,7 +2064,7 @@ function SortScreen.streak(n: number, multiplier: number)
 	scale.Parent = holder
 	local title = string.gsub(Voice.Sorting.inARow, "{n}", tostring(n))
 	local line = Voice.Sorting.moments[n] or string.gsub(Voice.Sorting.multiplier, "{n}", tostring(multiplier))
-	local t1 = label(holder, Theme.track(string.upper(title)), 11 * s, F.bodyMedium, GOLD, { Position = UDim2.fromScale(0.5, 0.3), Size = UDim2.fromScale(1, 0.3), ZIndex = 9 })
+	local t1 = label(holder, string.upper(title), 11 * s, F.bodyMedium, GOLD, { Position = UDim2.fromScale(0.5, 0.3), Size = UDim2.fromScale(1, 0.3), ZIndex = 9 })
 	local t2 = label(holder, line, 24 * s, F.displayItalic, BONE, { Position = UDim2.fromScale(0.5, 0.66), Size = UDim2.fromScale(1, 0.46), ZIndex = 9 })
 	Ease.play(scale, Ease.info(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 })
 	task.delay(1.4, function()
@@ -2278,6 +2418,9 @@ function SortScreen.start()
 			measure()
 			layoutChrome()
 			layoutBins()
+			for _, bin in binOrder do
+				paintBin(bin)
+			end
 			arrange(true)
 			for _, c in cards do
 				if c.state ~= "flying" and c.state ~= "filed" then

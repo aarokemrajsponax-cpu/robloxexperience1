@@ -10,6 +10,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local Ease = require(ReplicatedStorage.Shared.Ease)
 local Settings = require(ReplicatedStorage.Shared.Settings)
+local Root = require(script.Parent.Root)
 local State = require(script.Parent.Parent.State)
 
 local Theme = {}
@@ -60,12 +61,24 @@ local function fontFor(kind: TextKind): Font
 	return Brand.Fonts.body
 end
 
+-- The smallest a kind of text is ever set (before the guest's text size setting), so no label
+-- is too small to read at a glance: small capitals are a touch smaller than running text. When
+-- the whole screen is scaled down (a phone, a small Studio window), small text is set larger so
+-- it still comes out at least MIN_PX pixels tall, up to FLOOR_MAX.
+local FLOOR: { [string]: number } = { caps = 13 }
+local FLOOR_TEXT = 14
+local MIN_PX: { [string]: number } = { caps = 12 }
+local MIN_PX_TEXT = 13
+local FLOOR_MAX = 18
+local uiScale = Root.scale
+
 local function applyText(r: Registered)
 	local label = r.label :: any
 	-- The serif is for headings: below heading size it reads as wiry, so small "display" text
 	-- (a line of dialogue, a caption) is set in the clean sans instead.
 	label.FontFace = if r.kind == "display" and r.size < 22 then Brand.Fonts.body else fontFor(r.kind)
-	local size = math.floor(r.size * textScale + 0.5)
+	local floor = math.max(FLOOR[r.kind] or FLOOR_TEXT, math.min(FLOOR_MAX, (MIN_PX[r.kind] or MIN_PX_TEXT) / uiScale))
+	local size = math.floor(math.max(r.size, floor) * textScale + 0.5)
 	label.TextSize = size
 	-- Keys shrink their words to fit rather than spill over their edges.
 	local fit = label:FindFirstChild("Fit")
@@ -85,6 +98,10 @@ function Theme.refresh()
 	end
 end
 
+table.insert(Root.rescaled, function(scale: number)
+	uiScale = scale
+	Theme.refresh()
+end)
 State.watch("textSize", function(value)
 	textScale = Settings.textScale(value)
 	Theme.refresh()
@@ -121,21 +138,11 @@ function Theme.preloadFonts()
 	end)
 end
 
--- Spaces capitals for small labels.
-function Theme.track(text: string): string
-	local out = {}
-	for _, cp in utf8.codes(text) do
-		local ch = utf8.char(cp)
-		table.insert(out, if ch == " " then "  " else ch)
-	end
-	return table.concat(out, " ")
-end
-
 function Theme.text(parent: Instance, text: string, size: number, kind: TextKind?, props: { [string]: any }?): TextLabel
 	local k: TextKind = kind or "body"
 	local label = Instance.new("TextLabel")
 	label.BackgroundTransparency = 1
-	label.Text = if k == "caps" then Theme.track(string.upper(text)) else text
+	label.Text = if k == "caps" then string.upper(text) else text
 	label.TextColor3 = if k == "display" then C.bone elseif k == "caps" then C.gold else C.bone
 	label.TextWrapped = true
 	label.AutomaticSize = Enum.AutomaticSize.Y
@@ -194,13 +201,14 @@ function Theme.glass(parent: Instance, name: string, size: UDim2, position: UDim
 	stroke.Thickness = 1
 	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 	stroke.Parent = fill
+	-- A lighter edge at the top shading down into the glass (solid all the way: what's behind a
+	-- panel never shows through its words).
 	local sheen = Instance.new("UIGradient")
 	sheen.Rotation = 90
-	sheen.Color = ColorSequence.new(Color3.fromRGB(46, 46, 52), Theme.colours.glass)
-	sheen.Transparency = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 0),
-		NumberSequenceKeypoint.new(0.18, 0.1),
-		NumberSequenceKeypoint.new(1, 0.2),
+	sheen.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(46, 46, 52)),
+		ColorSequenceKeypoint.new(0.18, Theme.colours.glass:Lerp(Color3.fromRGB(46, 46, 52), 0.35)),
+		ColorSequenceKeypoint.new(1, Theme.colours.glass),
 	})
 	sheen.Parent = fill
 	-- A soft highlight along the top edge
@@ -298,15 +306,15 @@ function Theme.key(parent: Instance, text: string, primary: boolean?, onPress: (
 	button.BackgroundTransparency = baseFill
 	button.BorderSizePixel = 0
 	button.Size = UDim2.new(0, width or 200, 0, 44)
-	button.Text = Theme.track(string.upper(text))
+	button.Text = string.upper(text)
 	button.TextColor3 = if primary then Color3.fromRGB(24, 18, 8) else C.lightGold
 	button.Selectable = true
 	button.SelectionImageObject = selectionRing()
 	button.TextScaled = true
 	local fit = Instance.new("UITextSizeConstraint")
 	fit.Name = "Fit"
-	fit.MinTextSize = 9
-	fit.MaxTextSize = 15
+	fit.MinTextSize = 12
+	fit.MaxTextSize = 16
 	fit.Parent = button
 	local inner = Instance.new("UIPadding")
 	inner.PaddingLeft = UDim.new(0, 10)
@@ -314,7 +322,7 @@ function Theme.key(parent: Instance, text: string, primary: boolean?, onPress: (
 	inner.PaddingTop = UDim.new(0, 6)
 	inner.PaddingBottom = UDim.new(0, 6)
 	inner.Parent = button
-	local r = { label = button, size = 15, kind = "caps" :: TextKind }
+	local r = { label = button, size = 16, kind = "caps" :: TextKind }
 	applyText(r)
 	table.insert(registry, r)
 	local corner = Instance.new("UICorner")
