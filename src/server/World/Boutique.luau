@@ -9,6 +9,7 @@ local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
+local Furniture = require(ReplicatedStorage.Shared.Furniture)
 local Layout = require(ReplicatedStorage.Shared.Layout)
 local Kit = require(script.Parent.Kit)
 
@@ -137,9 +138,36 @@ local function ledger(m: Model)
 	CollectionService:AddTag(book, "LedgerBook")
 end
 
+-- The room's dressing: a crystal chandelier, two display plinths under glass domes, a tufted
+-- velvet bench to sit on, a gold-bordered runner, panelled ceiling trim and potted palms.
+local function dress(m: Model)
+	local top = FLOOR + B.height
+	Furniture.build("chandelier", m, CFrame.new(21, top, 51.5), { model = "crystal", accent = Color3.fromRGB(200, 160, 82), drop = 1.6 }, false)
+	-- Display plinths with glass domes, each with a piece of jewellery on velvet.
+	for i, at in { Vector3.new(17, FLOOR, 50.5), Vector3.new(25, FLOOR, 51.5) } do
+		Kit.cylinder(m, "Plinth", 3.2, 1.6, CFrame.new(at + Vector3.new(0, 1.6, 0)) * CFrame.Angles(0, 0, math.rad(90)), L.blackLacquer)
+		Kit.cylinder(m, "PlinthCap", 0.15, 1.8, CFrame.new(at + Vector3.new(0, 3.27, 0)) * CFrame.Angles(0, 0, math.rad(90)), L.brass, { collide = false, shadow = false })
+		Kit.cylinder(m, "PlinthVelvet", 0.1, 1.3, CFrame.new(at + Vector3.new(0, 3.38, 0)) * CFrame.Angles(0, 0, math.rad(90)), SATIN, { collide = false, shadow = false, query = false })
+		Kit.ball(m, "Dome", 1.5, at + Vector3.new(0, 3.9, 0), VITRINE, { collide = false, shadow = false, query = false })
+		local jewel = if i == 1 then Color3.fromRGB(80, 160, 255) else Color3.fromRGB(230, 60, 90)
+		Kit.ball(m, "Jewel", 0.35, at + Vector3.new(0, 3.65, 0), { color = jewel, material = Enum.Material.Glass, reflectance = 0.3, transparency = 0.1 }, { collide = false, shadow = false, query = false })
+		Kit.cylinder(m, "JewelRing", 0.08, 0.6, CFrame.new(at + Vector3.new(0, 3.5, 0)) * CFrame.Angles(0, 0, math.rad(90)), L.brass, { collide = false, shadow = false, query = false })
+	end
+	-- A tufted velvet bench by the mirror, to sit and look.
+	Furniture.build("bench", m, CFrame.lookAt(Vector3.new(14.6, FLOOR, 56.2), Vector3.new(30, FLOOR, 56.2)), { colour = Color3.fromRGB(110, 24, 40), material = "Fabric" })
+	-- A gold border down both edges of the runner.
+	for _, x in { 17, 24.8 } do
+		Kit.span(m, "RunnerBorder", Vector3.new(x, FLOOR + 0.05, B.minZ), Vector3.new(x + 0.2, FLOOR + 0.07, B.maxZ - 5), L.brass, { collide = false, query = false, shadow = false })
+	end
+	-- Palms in the far corners.
+	Furniture.build("plant", m, CFrame.new(13.6, FLOOR, 60.4), { model = "palm" })
+	Furniture.build("plant", m, CFrame.new(28.4, FLOOR, 60.4), { model = "palm" })
+end
+
 function BoutiqueRoom.build(parent: Instance): Model
 	local m = Kit.model(parent, "Boutique")
 	shell(m)
+	dress(m)
 	counters(m)
 	dressForm(m)
 	mirror(m)

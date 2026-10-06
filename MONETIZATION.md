@@ -592,6 +592,13 @@ Studio purchases are free test purchases):
 | Analytics poisoning | impressions built by the server; fixed vocabularies |
 | Data privacy | ledger records tagged with the buyer's user id (erasure requests); decree log keyed by day (remove a user's entries on request) |
 | Obfuscated remote names | not used and not relied on |
+| Bar: a screen sends a price, a free flag or an item it may not have | the menu and prices are the server's; Gilt is checked and spent on the server; a special comes only from a receipt (a credit); the Gold Key pour is checked against the profile and the day |
+| Curios: a screen claims a find, a count, a rarity or a Gem price | finds are rolled on the server after a banked run; the Cabinet sells only `source = "gems"` curios at their listed price; Gems come only from receipts |
+| Trading: offers changed after a confirmation, items not held, duplication | every change bumps the trade's version and unlocks both sides; lock-in and confirm name the version; holdings are re-checked at the swap, which runs in one step with no yield; one trade per guest; untradeable curios refused; a cooldown after each trade; both profiles saved straight away |
+| Trading: harassment | invitations rate-limited per pair, block (no invitations this visit), report (logged for the owner) |
+| Seats: sitting in someone else's Suite or across the room | Suite seats are worked out from the guest's own Suite on the server; public seats by the server's id; distance checked; the cabana checks the Gold Key |
+| Events: farming event curios | each event curio once per guest per event (marked in the profile) |
+| Spectacles: playing outside the Suite, playing without paying | a show is a credit from a receipt, spent on the server only while the guest is in their Suite |
 
 ---
 

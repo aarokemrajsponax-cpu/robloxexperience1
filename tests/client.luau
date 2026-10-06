@@ -1785,7 +1785,7 @@ do
 		local count = tonumber(Sort.bin(p.case).Count.Text)
 		Sort.drag(uid, p.case)
 		advance(0.05)
-		check(string.format("a right case says so (%d): CORRECT", n), textOnScreen("CORRECT") ~= nil and textOnScreen("WRONG CASE") == nil)
+		check(string.format("a right case says so (%d): CORRECT, or GREAT and up on a run", n), (textOnScreen("CORRECT") ~= nil or textOnScreen("GREAT") ~= nil or textOnScreen("EXCELLENT") ~= nil) and textOnScreen("WRONG CASE") == nil)
 		check(string.format("with the points it earned (%d)", n), find(playerGui, function(d)
 			return d:IsA("TextLabel") and string.sub(d.Text, 1, 1) == "+"
 		end) ~= nil)

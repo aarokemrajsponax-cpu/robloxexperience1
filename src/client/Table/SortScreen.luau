@@ -165,6 +165,8 @@ local roomText = ""
 local roundExtra = ""
 local eventLine: string? = nil
 local clock = 0
+-- Feedback by the run of correct pieces in a row (reset by a mistake or a new sitting).
+local runOfCorrect = 0
 
 type Layout = {
 	s: number,
@@ -1764,6 +1766,7 @@ local function paintCloth()
 end
 
 function SortScreen.open(roomName: string, roundText: string)
+	runOfCorrect = 0
 	build()
 	paintCloth()
 	measure()
@@ -1938,6 +1941,13 @@ function SortScreen.heldUid(): number?
 end
 
 -- A right case.
+local FEEDBACK = {
+	{ from = 3, word = "Great", colour = Color3.fromRGB(150, 220, 160), size = 21 },
+	{ from = 6, word = "Excellent", colour = Color3.fromRGB(130, 190, 255), size = 23 },
+	{ from = 10, word = "Perfect", colour = Color3.fromRGB(210, 150, 255), size = 25 },
+	{ from = 15, word = "Legendary", colour = Color3.fromRGB(255, 205, 90), size = 28 },
+}
+
 function SortScreen.correct(uid: number, caseId: string, points: number?, multiplier: number?)
 	local c = cards[uid]
 	local bin = bins[caseId]
@@ -1947,7 +1957,15 @@ function SortScreen.correct(uid: number, caseId: string, points: number?, multip
 	showGuide(nil)
 	setHover(nil)
 	flyIn(c, bin, false)
-	local lines = { { text = Caps(Voice.Sorting.correct), size = 19, font = F.bodyBold, colour = LIGHT } }
+	-- The word grows with the run of correct pieces: Correct, Great, Excellent, Perfect, Legendary.
+	runOfCorrect += 1
+	local word, colour, size = Voice.Sorting.correct, LIGHT, 19
+	for _, tier in FEEDBACK do
+		if runOfCorrect >= tier.from then
+			word, colour, size = tier.word, tier.colour, tier.size
+		end
+	end
+	local lines = { { text = Caps(word), size = size, font = F.bodyBold, colour = colour } }
 	if points and points > 0 then
 		local sub = "+" .. number(points)
 		if multiplier and multiplier > 1 then
@@ -1970,6 +1988,7 @@ end
 
 -- A wrong case.
 function SortScreen.wrong(uid: number, caseId: string, lostStreak: number, penalty: number?)
+	runOfCorrect = 0
 	local c = cards[uid]
 	local bin = bins[caseId]
 	showGuide(nil)

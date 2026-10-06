@@ -33,6 +33,20 @@ local function shell(m: Model)
 	Kit.cylinder(m, "Inlay", 0.06, 56, CFrame.new(B.centre + Vector3.new(0, 0.03, 0)) * CFrame.Angles(0, 0, math.rad(90)), L.boneMarble, { collide = false, query = false, shadow = false })
 	Kit.cylinder(m, "InlayRing", 0.05, 57.4, CFrame.new(B.centre + Vector3.new(0, 0.02, 0)) * CFrame.Angles(0, 0, math.rad(90)), L.brass, { collide = false, query = false, shadow = false })
 	Kit.cylinder(m, "InlayStar", 0.07, 10, CFrame.new(B.centre + Vector3.new(0, 0.04, 0)) * CFrame.Angles(0, 0, math.rad(90)), L.blackMarble, { collide = false, query = false, shadow = false })
+	-- A compass rose in brass across the marble: eight long rays and eight short, a diamond at
+	-- each long ray's tip.
+	for i = 0, 15 do
+		local long = i % 2 == 0
+		local len = if long then 21 else 11
+		local a = math.rad(i * 22.5)
+		local dir = Vector3.new(math.cos(a), 0, math.sin(a))
+		local mid = B.centre + dir * (5 + len / 2) + Vector3.new(0, 0.08, 0)
+		Kit.part(m, "CompassRay", Vector3.new(if long then 0.5 else 0.3, 0.02, len), CFrame.lookAt(mid, mid + dir), L.brass, { collide = false, query = false, shadow = false })
+		if long then
+			local tip = B.centre + dir * 27 + Vector3.new(0, 0.08, 0)
+			Kit.part(m, "CompassDiamond", Vector3.new(1.2, 0.02, 1.2), CFrame.new(tip) * CFrame.Angles(0, a + math.rad(45), 0), L.brass, { collide = false, query = false, shadow = false })
+		end
+	end
 	Kit.span(m, "Ceiling", Vector3.new(B.minX - 2, top, B.minZ - 2), Vector3.new(B.maxX + 2, top + 1, B.maxZ + 2), L.blackLacquer)
 	-- Walls. The west wall is shared with the Library below the Library's ceiling.
 	local libraryTop = Y + Layout.Library.height
@@ -74,6 +88,15 @@ local function shell(m: Model)
 	Kit.span(m, "CorniceN", Vector3.new(B.minX, top - 1.2, B.maxZ - 0.8), Vector3.new(B.maxX, top - 0.6, B.maxZ), L.brass, { collide = false, query = false, shadow = false })
 	Kit.span(m, "CorniceE", Vector3.new(B.maxX - 0.8, top - 1.2, B.minZ), Vector3.new(B.maxX, top - 0.6, B.maxZ), L.brass, { collide = false, query = false, shadow = false })
 	Kit.span(m, "CorniceW", Vector3.new(B.minX, top - 1.2, B.minZ), Vector3.new(B.minX + 0.8, top - 0.6, B.maxZ), L.brass, { collide = false, query = false, shadow = false })
+end
+
+-- Marble statues on plinths and tall palms in the far corners.
+local function corners(m: Model)
+	for _, at in { Vector3.new(B.minX + 6, Y, B.maxZ - 6), Vector3.new(B.maxX - 6, Y, B.maxZ - 6), Vector3.new(B.maxX - 6, Y, B.minZ + 14) } do
+		Furniture.build("statue", m, CFrame.lookAt(at, B.centre * Vector3.new(1, 0, 1) + Vector3.new(0, Y, 0)), { colour = Color3.fromRGB(236, 230, 218) })
+		local side = (B.centre - at).Unit
+		Furniture.build("plant", m, CFrame.new(at + Vector3.new(side.Z, 0, -side.X) * 4.5), { model = "palm" })
+	end
 end
 
 local function gallery(m: Model)
@@ -201,6 +224,7 @@ function Ballroom.build(parent: Instance): Model
 	local m = Kit.model(parent, "Ballroom")
 	shell(m)
 	gallery(m)
+	corners(m)
 	board(m)
 	chandelier(m)
 	tables(m)

@@ -76,7 +76,7 @@ local function offerRow(parent: Instance, offer: { [string]: number }, onTap: ((
 		t.TextWrapped = true
 		t.Text = string.format("%s ×%d", c.name, offer[id])
 		t.FontFace = Brand.Fonts.body
-		t.TextSize = 11
+		t.TextSize = 12
 		t.TextColor3 = C.bone
 		t.Parent = b
 		if onTap then

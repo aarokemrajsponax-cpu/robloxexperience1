@@ -50,6 +50,76 @@ local function cabinet(m: Model, name: string, cf: CFrame, caseId: string?, labe
 	CollectionService:AddTag(model, "VaultCabinet")
 end
 
+local STEEL = { color = Color3.fromRGB(150, 154, 160), material = Enum.Material.DiamondPlate, reflectance = 0.1 }
+local POLISHED = { color = Color3.fromRGB(176, 180, 186), material = Enum.Material.Metal, reflectance = 0.3 }
+local GOLDBAR = { color = Color3.fromRGB(232, 184, 72), material = Enum.Material.Metal, reflectance = 0.35 }
+
+-- The room's dressing: the great round vault door on the east wall (shut, for show), a coffered
+-- brass ceiling, panelled walls with a brass dado, a gold border round the rug, stacks of gold
+-- bars by the door, and sconces between the cabinets.
+function VaultRoom.dress(m: Model, top: number)
+	-- The vault door: a steel disc in a brass ring, a wheel of spokes, a ring of bolts.
+	local x = V.maxX - 0.2
+	local c = Vector3.new(x - 0.6, FLOOR + 6, 55.5)
+	local face = CFrame.new(c) * CFrame.Angles(0, 0, 0)
+	Kit.cylinder(m, "VaultDoorRing", 0.5, 10.4, face, L.brass, { collide = false, query = false })
+	Kit.cylinder(m, "VaultDoor", 0.9, 9.4, face * CFrame.new(-0.3, 0, 0), STEEL, { collide = false, query = false })
+	Kit.cylinder(m, "VaultHub", 1.4, 2.2, face * CFrame.new(-0.9, 0, 0), POLISHED, { collide = false, query = false })
+	for i = 0, 5 do
+		local a = math.rad(i * 60)
+		Kit.part(m, "VaultSpoke", Vector3.new(0.35, 5.2, 0.35), CFrame.new(c + Vector3.new(-1.3, 0, 0)) * CFrame.Angles(a, 0, 0) * CFrame.new(0, 1.6, 0), POLISHED, { collide = false, query = false, shadow = false })
+		Kit.ball(m, "VaultKnob", 0.55, c + Vector3.new(-1.35, math.cos(a) * 4.1, math.sin(a) * 4.1) - Vector3.new(0, 0, 0), L.brass, { collide = false, query = false, shadow = false })
+	end
+	for i = 0, 15 do
+		local a = math.rad(i * 22.5)
+		Kit.cylinder(m, "VaultBolt", 0.3, 0.45, CFrame.new(c + Vector3.new(-0.85, math.cos(a) * 4.3, math.sin(a) * 4.3)), POLISHED, { collide = false, query = false, shadow = false })
+	end
+	local vplate = Kit.part(m, "VaultPlate", Vector3.new(0.05, 0.6, 3), CFrame.lookAt(c + Vector3.new(-1, -5.6, 0), c + Vector3.new(-10, -5.6, 0)), L.brass, { collide = false, query = false, shadow = false })
+	Kit.engrave(vplate, Enum.NormalId.Front, { { text = "MAISON NOIR · 1889", size = 0.3, font = Brand.Fonts.display, color = Color3.fromRGB(40, 30, 12) } }, { ppu = 80, lit = false })
+	-- Gold bars, stacked in a pyramid on a low black plinth, either side of the vault door.
+	for _, z in { 51.2, 60.5 } do
+		Kit.part(m, "BarPlinth", Vector3.new(2.6, 0.6, 2.2), CFrame.new(x - 1.6, FLOOR + 0.3, z), L.blackLacquer)
+		for row = 0, 2 do
+			for i = 0, 2 - row do
+				Kit.part(m, "GoldBar", Vector3.new(0.7, 0.35, 1.6), CFrame.new(x - 2.4 + row * 0.38 + i * 0.78, FLOOR + 0.78 + row * 0.36, z), GOLDBAR, { collide = false, query = false, shadow = false })
+			end
+		end
+	end
+	-- Panelled walls: a brass dado rail, and raised panels below it.
+	for _, w in {
+		{ a = Vector3.new(V.minX, FLOOR + 3.2, V.minZ), b = Vector3.new(V.minX + 0.12, FLOOR + 3.4, V.maxZ) },
+		{ a = Vector3.new(V.minX, FLOOR + 3.2, V.maxZ - 0.12), b = Vector3.new(V.maxX, FLOOR + 3.4, V.maxZ) },
+		{ a = Vector3.new(V.maxX - 0.12, FLOOR + 3.2, V.minZ), b = Vector3.new(V.maxX, FLOOR + 3.4, 49.9) },
+		{ a = Vector3.new(V.maxX - 0.12, FLOOR + 3.2, 61.1), b = Vector3.new(V.maxX, FLOOR + 3.4, V.maxZ) },
+	} do
+		Kit.span(m, "Dado", w.a, w.b, L.brass, { collide = false, query = false, shadow = false })
+	end
+	-- A coffered ceiling: brass beams in a grid.
+	for xx = V.minX + 4, V.maxX - 1, 4 do
+		Kit.span(m, "Coffer", Vector3.new(xx - 0.2, top - 0.5, V.minZ), Vector3.new(xx + 0.2, top, V.maxZ), L.darkBrass, { collide = false, query = false, shadow = false })
+	end
+	for zz = V.minZ + 4, V.maxZ - 1, 4.5 do
+		Kit.span(m, "Coffer", Vector3.new(V.minX, top - 0.45, zz - 0.2), Vector3.new(V.maxX, top - 0.05, zz + 0.2), L.darkBrass, { collide = false, query = false, shadow = false })
+	end
+	-- A gold border round the rug.
+	for _, e in {
+		{ Vector3.new(-16, FLOOR + 0.05, 47), Vector3.new(0, FLOOR + 0.08, 47.4) },
+		{ Vector3.new(-16, FLOOR + 0.05, 58.6), Vector3.new(0, FLOOR + 0.08, 59) },
+		{ Vector3.new(-16, FLOOR + 0.05, 47.4), Vector3.new(-15.6, FLOOR + 0.08, 58.6) },
+		{ Vector3.new(-0.4, FLOOR + 0.05, 47.4), Vector3.new(0, FLOOR + 0.08, 58.6) },
+	} do
+		Kit.span(m, "RugBorder", e[1], e[2], L.brass, { collide = false, query = false, shadow = false })
+	end
+	-- Sconces between the cabinets on the west wall (glow only; the room's lights do the work).
+	for _, z in { 50.5, 55.5 } do
+		Kit.part(m, "Sconce", Vector3.new(0.4, 0.9, 0.5), CFrame.new(V.minX + 0.3, FLOOR + 6.5, z), L.brass, { collide = false, query = false, shadow = false })
+		Kit.ball(m, "SconceGlow", 0.5, Vector3.new(V.minX + 0.55, FLOOR + 7.1, z), { color = Color3.fromRGB(255, 214, 160), material = Enum.Material.Neon }, { collide = false, query = false, shadow = false })
+	end
+	-- A pool of light on the vault door.
+	local spot = Kit.part(m, "VaultSpot", Vector3.new(0.3, 0.3, 0.3), CFrame.new(x - 6, top - 1, 55.5), INVISIBLE, { collide = false, query = false, shadow = false })
+	Kit.spotLight(spot, Enum.NormalId.Bottom, 1.4, 16, 60)
+end
+
 function VaultRoom.build(parent: Instance): Model
 	local m = Kit.model(parent, "Vault")
 	local top = FLOOR + V.height
@@ -102,6 +172,7 @@ function VaultRoom.build(parent: Instance): Model
 	CollectionService:AddTag(book, "RegisterBook")
 	local lamp = Kit.part(m, "DeskLamp", Vector3.new(0.6, 0.5, 0.6), desk * CFrame.new(0, 4, 1.5), L.brass, { collide = false })
 	Kit.pointLight(lamp, 0.7, 10, Color3.fromRGB(255, 214, 160))
+	VaultRoom.dress(m, top)
 	local fill = Kit.part(m, "Fill", Vector3.new(1, 1, 1), CFrame.new(-8, top - 2, 53), INVISIBLE, { collide = false, query = false, shadow = false })
 	Kit.pointLight(fill, 0.6, 34, Color3.fromRGB(230, 214, 200))
 	return m

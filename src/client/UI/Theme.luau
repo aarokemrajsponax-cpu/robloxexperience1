@@ -155,7 +155,9 @@ function Theme.text(parent: Instance, text: string, size: number, kind: TextKind
 			(label :: any)[key] = value
 		end
 	end
-	local r = { label = label, size = size, kind = k }
+	-- The house's smallest type is 12 (anything asked for smaller reads as 12, so nothing on any
+	-- screen is too small to read on a phone).
+	local r = { label = label, size = math.max(size, 12), kind = k }
 	applyText(r)
 	table.insert(registry, r)
 	label.Parent = parent

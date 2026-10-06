@@ -33,7 +33,7 @@ function Toast.show(title: string, line: string?, seconds: number?)
 	limit.MaxSize = Vector2.new(math.min(if low then 250 else 420, Root.size().X - 24), math.huge)
 	limit.Parent = group
 	Theme.list(content, 4)
-	Theme.text(content, title, 11, "caps", { LayoutOrder = 1 })
+	Theme.text(content, title, 12, "caps", { LayoutOrder = 1 })
 	if line then
 		Theme.text(content, line, 16, "display", { LayoutOrder = 2 })
 	end
