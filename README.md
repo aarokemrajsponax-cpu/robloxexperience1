@@ -304,6 +304,15 @@ a Nightly attempt or a Mythic's odds.
   (`Config.Movement.guestScale`), so every room feels a size bigger. Every part of the house starts on its own, so one that fails
   is reported in Output and never stops anyone from walking in, and a separate safety script
   hands back Roblox's own camera, controls and prompts if the house's client ever doesn't start.
+- **The sorting screen: the Jeweller's Desk.** A mahogany desk with brass corner guards, a
+  green leather top tooled with a double gold border, the house's crest and the figures on
+  brass-edged plaques; the six cases are jewellery drawers, each in its own colour of velvet,
+  with an engraved brass name plate and the count on its plinth. A brass ribbon for a run of
+  correct pieces; a sweep of light across a drawer's glass as a piece goes in; the word grows
+  with the run (Correct, Great, Excellent, Perfect, Legendary).
+- **Type.** One type scale across every panel, set crisp: panels are plain frames (no
+  CanvasGroups, which blur text), keys never squeeze their letters, and panels sit below the
+  keys at the top of the screen.
 - **The guide on the sorting screen.** Pick a piece up and, in the rooms that help you (the Salon
   and the Velvet Room at once, Obsidian after a moment, never in Midnight), a thread of gold light
   runs from it to its case with sparkles twinkling along it and a brighter pulse running toward

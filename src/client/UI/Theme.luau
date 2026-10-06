@@ -213,6 +213,14 @@ function Theme.glass(parent: Instance, name: string, size: UDim2, position: UDim
 	group.Size = size
 	group.Position = position or UDim2.fromScale(0.5, 0.5)
 	group.AnchorPoint = anchor or Vector2.new(0.5, 0.5)
+	-- A centred panel sits below the keys at the top of the screen (Shop, Menu, Settings), never
+	-- over them: it's centred in the space beneath, and no taller than that space.
+	if position == nil and size.Y.Scale == 0 and size.Y.Offset > 0 then
+		local top = 66
+		local avail = math.max(160, Root.size().Y - top - 12)
+		group.Size = UDim2.new(size.X, UDim.new(0, math.min(size.Y.Offset, avail)))
+		group.Position = UDim2.new(0.5, 0, 0, top + avail / 2)
+	end
 	group.Parent = parent
 
 	local fill = Instance.new("Frame")
@@ -306,6 +314,14 @@ function Theme.haptic()
 	end)
 end
 
+-- A layout-computed size or position (zero until Roblox has laid the frame out).
+local function measured(inst: Instance, prop: string): Vector2
+	local ok, v = pcall(function()
+		return (inst :: any)[prop]
+	end)
+	return if ok and typeof(v) == "Vector2" then v else Vector2.zero
+end
+
 -- The gold outline a gamepad's selection draws around a key (instead of Roblox's default).
 local function selectionRing(): Frame
 	local ring = Instance.new("Frame")
@@ -354,7 +370,12 @@ function Theme.key(parent: Instance, text: string, primary: boolean?, onPress: (
 	inner.Parent = button
 	local r = { label = button, size = 16, kind = "caps" :: TextKind }
 	local function fitWords()
+		-- The key's width: its offset, or (sized by scale) its laid-out width once known.
 		local width = button.Size.X.Offset - 20
+		if button.Size.X.Scale > 0 then
+			local laid = measured(button, "AbsoluteSize").X / math.max(0.1, uiScale)
+			width = if laid > 0 then laid - 20 else math.huge
+		end
 		local chars = utf8.len(button.Text) or #button.Text
 		local size = 16
 		-- Poppins Medium capitals run about 0.68 of their size wide.
@@ -365,8 +386,16 @@ function Theme.key(parent: Instance, text: string, primary: boolean?, onPress: (
 		applyText(r)
 	end
 	fitWords()
+	task.defer(function() -- (again once the caller has set the key's final size)
+		if button.Parent then
+			fitWords()
+		end
+	end)
 	table.insert(registry, r)
 	button:GetPropertyChangedSignal("Size"):Connect(fitWords)
+	pcall(function()
+		button:GetPropertyChangedSignal("AbsoluteSize"):Connect(fitWords)
+	end)
 	button:GetPropertyChangedSignal("Text"):Connect(fitWords)
 	local corner = Instance.new("UICorner")
 	corner.CornerRadius = UDim.new(0, 2)
@@ -449,13 +478,6 @@ export type Tabs = {
 	show: (id: string, on: boolean) -> (),
 }
 
--- A layout-computed size or position (zero until Roblox has laid the frame out).
-local function measured(inst: Instance, prop: string): Vector2
-	local ok, v = pcall(function()
-		return (inst :: any)[prop]
-	end)
-	return if ok and typeof(v) == "Vector2" then v else Vector2.zero
-end
 
 function Theme.tabs(parent: Instance, specs: { { string } }, current: string, onSelect: (id: string) -> (), order: number?): Tabs
 	local holder = Instance.new("Frame")
