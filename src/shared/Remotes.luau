@@ -17,6 +17,7 @@ Remotes.Events = {
 	"Funnel", -- client -> server first-evening funnel steps that only the client can see
 	"Board", -- server -> client leaderboard refresh
 	"Shop", -- server -> client: what you own and wear, Gilt, the Ledger, gifts
+	"Curio", -- server -> client: a curio found or given, your Gems, a trade's state
 	"Salute", -- server -> client: a salute for the whole house; the owner's events
 	"Errors", -- server -> the owner's screen: anything that broke on the server
 	"Tour", -- server -> client: the Concierge's tour starts; client -> server: it started, it ended
@@ -33,6 +34,8 @@ Remotes.Functions = {
 	"PianoAsk", -- client -> server: the Foyer's piano (sit, get up, buy time)
 	"SitAsk", -- client -> server: sit on a seat in the house or your Suite, or get up
 	"BarAsk", -- client -> server: the Terrace bar (the menu, order a treat, put it down)
+	"CurioAsk", -- client -> server: your curios, stars, the Cabinet (curios for Gems), Gem packs
+	"TradeAsk", -- client -> server: trading curios with another guest
 }
 
 local folder: Folder? = nil

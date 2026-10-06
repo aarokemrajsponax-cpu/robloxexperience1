@@ -481,6 +481,29 @@ local function build()
 		pool.BackgroundTransparency = 0.994
 		corner(pool, 9999)
 	end
+	-- Tufted like a Chesterfield: a lattice of small gold buttons across the cloth, very faint,
+	-- every other row set half a step over.
+	local tufts = Instance.new("Frame")
+	tufts.Name = "Tufts"
+	tufts.BackgroundTransparency = 1
+	tufts.Size = UDim2.fromScale(1, 1)
+	tufts.ZIndex = 1
+	tufts.Parent = tray
+	local COLS, ROWS = 16, 6
+	for r = 0, ROWS do
+		for c = 0, COLS do
+			local x = (c + (if r % 2 == 1 then 0.5 else 0)) / COLS
+			if x > 1 then
+				continue
+			end
+			local b = sheet(tufts, "Tuft", GOLD, 1)
+			b.AnchorPoint = Vector2.new(0.5, 0.5)
+			b.Position = UDim2.fromScale(x, r / ROWS)
+			b.Size = UDim2.fromOffset(4, 4)
+			b.Rotation = 45
+			b.BackgroundTransparency = 0.86
+		end
+	end
 	-- Small gold diamonds set into the frame's corners.
 	for i, at in { Vector2.new(0, 0), Vector2.new(1, 0), Vector2.new(0, 1), Vector2.new(1, 1) } do
 		local d = sheet(frame, "Ornament", GOLD, 3)
@@ -786,6 +809,27 @@ local function binFrame(case: Catalogue.Case, index: number): Bin
 	lip.Position = UDim2.fromOffset(math.max(radius, 3), 0)
 	lip.BackgroundTransparency = 1
 	shade(lip, 0, nil, alphas({ { 0, 1 }, { 0.5, 0 }, { 1, 1 } }))
+	-- A round velvet plinth under the case's piece, ringed in gold (placed by layoutBinInside).
+	local plinth = sheet(f, "Plinth", Color3.new(1, 1, 1), 2)
+	plinth.AnchorPoint = Vector2.new(0.5, 0.5)
+	shade(plinth, 90, colours({ { 0, Color3.fromRGB(92, 34, 46) }, { 0.55, Color3.fromRGB(46, 14, 22) }, { 1, Color3.fromRGB(22, 6, 10) } }))
+	corner(plinth, 999)
+	stroke(plinth, GOLD, 0.55, 1)
+	plinth.BackgroundTransparency = if style == "Boxes" or style == "Plates" then 1 else 0
+	-- Glass over the case: a soft sheen across its top, and one bright glint.
+	local glass = sheet(f, "Glass", Color3.new(1, 1, 1), 4)
+	glass.Size = UDim2.fromScale(1, 0.5)
+	glass.BackgroundTransparency = 0
+	shade(glass, 90, nil, alphas({ { 0, 0.9 }, { 0.6, 0.97 }, { 1, 1 } }))
+	corner(glass, radius)
+	glass.Active = false
+	local glint = sheet(f, "Glint", Color3.new(1, 1, 1), 4)
+	glint.AnchorPoint = Vector2.new(0.5, 0.5)
+	glint.Position = UDim2.fromScale(0.72, 0.18)
+	glint.Size = UDim2.new(0.5, 0, 0, 2)
+	glint.Rotation = -8
+	glint.BackgroundTransparency = 0
+	shade(glint, 0, nil, alphas({ { 0, 1 }, { 0.5, 0.82 }, { 1, 1 } }))
 	-- The piece that stands for the case, resting on the velvet.
 	local mark = Instance.new("Frame")
 	mark.Name = "MarkHolder"
@@ -793,11 +837,17 @@ local function binFrame(case: Catalogue.Case, index: number): Bin
 	mark.AnchorPoint = Vector2.new(0.5, 0.5)
 	mark.ZIndex = 3
 	mark.Parent = f
+	-- How many are in it, on a small gold-rimmed badge.
+	local pill = sheet(f, "CountPill", Color3.fromRGB(14, 10, 10), 3)
+	pill.AnchorPoint = Vector2.new(1, 0)
+	pill.BackgroundTransparency = 0.25
+	corner(pill, 999)
+	stroke(pill, GOLD, 0.45, 1)
 	local count = label(f, "0", 17, F.figures, LIGHT, {
 		Name = "Count",
 		AnchorPoint = Vector2.new(1, 0),
-		TextXAlignment = Enum.TextXAlignment.Right,
-		ZIndex = 3,
+		TextXAlignment = Enum.TextXAlignment.Center,
+		ZIndex = 4,
 	})
 	local key = label(f, tostring(index), 12, F.bodyMedium, SMOKE, {
 		Name = "KeyNum",
@@ -847,9 +897,15 @@ local function layoutBinInside(bin: Bin)
 	local pad = math.floor(10 * s) + inset
 	local wide = w - h * 0.8 >= 112
 	local markPx: number
-	bin.count.Position = UDim2.new(1, -pad, 0, math.floor(5 * s) + inset)
-	bin.count.Size = UDim2.fromOffset(math.floor(48 * s), textSize(17 * s) + 2)
+	local pillW, pillH = math.floor(34 * s), textSize(17 * s) + math.floor(6 * s)
+	bin.count.Position = UDim2.new(1, -(inset + math.floor(6 * s)), 0, inset + math.floor(5 * s))
+	bin.count.Size = UDim2.fromOffset(pillW, pillH)
 	bin.count.TextSize = textSize(17 * s)
+	local pill = f:FindFirstChild("CountPill")
+	if pill and pill:IsA("Frame") then
+		pill.Position = bin.count.Position
+		pill.Size = bin.count.Size
+	end
 	bin.key.Position = UDim2.new(1, -pad, 1, -math.floor(4 * s) - inset)
 	bin.key.Size = UDim2.fromOffset(math.floor(24 * s), textSize(12 * s) + 2)
 	bin.key.TextSize = textSize(12 * s)
@@ -900,6 +956,12 @@ local function layoutBinInside(bin: Bin)
 	bin.name.TextSize = nameSize
 	bin.sub.TextSize = subSize
 	bin.mark.Size = UDim2.fromOffset(markPx, markPx)
+	local plinth = f:FindFirstChild("Plinth")
+	if plinth and plinth:IsA("Frame") then
+		local d = math.floor(markPx * 1.08)
+		plinth.Position = bin.mark.Position
+		plinth.Size = UDim2.fromOffset(d, d)
+	end
 	if math.abs(markPx - bin.markPx) > 1 then
 		bin.markPx = markPx
 		bin.mark:ClearAllChildren()
@@ -967,6 +1029,18 @@ local function paintBin(bin: Bin)
 	bin.sub.Text = if bin.open then case.subtitle else "Closed this round"
 	bin.key.Visible = bin.open and State.inputKind() == "mouse"
 	bin.mark.Visible = bin.open
+	local plinth = bin.frame:FindFirstChild("Plinth")
+	if plinth and plinth:IsA("Frame") and bin.frame:GetAttribute("Style") ~= "Boxes" and bin.frame:GetAttribute("Style") ~= "Plates" then
+		plinth.BackgroundTransparency = if bin.open then 0 else 0.7
+		local ring = plinth:FindFirstChildOfClass("UIStroke")
+		if ring then
+			ring.Transparency = if lit then 0.1 elseif bin.open then 0.55 else 0.9
+		end
+	end
+	local pill = bin.frame:FindFirstChild("CountPill")
+	if pill and pill:IsA("Frame") then
+		pill.BackgroundTransparency = if bin.open then 0.25 else 0.75
+	end
 end
 
 local function setHover(caseId: string?)

@@ -275,6 +275,8 @@ local defaults = {
 		pianoNote = { rate = 16, burst = 24 }, -- a pianist's notes: quick runs and chords, never a flood
 		sitAsk = { rate = 2, burst = 5 },
 		barAsk = { rate = 2, burst = 5 },
+		curioAsk = { rate = 3, burst = 8 },
+		tradeAsk = { rate = 3, burst = 8 },
 	},
 
 	-- The Concierge's walking tour (each guest's own guide, drawn on their screen).

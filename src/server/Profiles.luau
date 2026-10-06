@@ -68,6 +68,12 @@ export type Data = {
 	risk: { regions: { { code: string, at: number } }, purchases: { number }, failures: { number }, state: string, restrictedUntil: number },
 	-- Granted receipts whose ledger record is still to be marked Granted (retried until it is).
 	ledgerOutbox: { { id: string, productId: number, key: string, spent: number, at: number } },
+	-- Gems (bought with Robux, or earned by achievements) and the curios a guest holds: how many
+	-- of each, the ones they starred, the latest found, and the achievements already given.
+	gems: number,
+	curios: { items: { [string]: number }, favs: { [string]: boolean }, recent: { string }, found: number, given: { [string]: boolean } },
+	-- Trades: the last few, for the history on the trading screen.
+	trades: { { with: string, gave: { string }, got: { string }, at: number } },
 }
 
 local TEMPLATE: Data = {
@@ -109,6 +115,9 @@ local TEMPLATE: Data = {
 	perks = { credits = {}, luck = { remaining = 0 }, velocity = false, velocityPass = false, rains = {}, piano = { seconds = 0 }, bar = { pourDay = -1, served = 0 } },
 	risk = { regions = {}, purchases = {}, failures = {}, state = "Normal", restrictedUntil = 0 },
 	ledgerOutbox = {},
+	gems = 0,
+	curios = { items = {}, favs = {}, recent = {}, found = 0, given = {} },
+	trades = {},
 }
 
 -- Each migration moves data from schema n to n + 1. Add new ones at the end.

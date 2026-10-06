@@ -94,6 +94,18 @@ function Hud.setShopKey(onPress: () -> ())
 	shopKey = key
 end
 
+-- The Menu key: everything else in the house (Main fills it), just after Shop.
+local menuKey: TextButton? = nil
+function Hud.setMenuKey(onPress: () -> ())
+	if menuKey then
+		return
+	end
+	local key = Theme.key(bar, "Menu", false, onPress, 100)
+	key.Name = "MenuKey"
+	key.LayoutOrder = -10
+	menuKey = key
+end
+
 -- The owner's "House" key (their controls), after Settings.
 function Hud.setOwnerKey(onPress: () -> ())
 	local key = Theme.key(bar, "House", false, onPress, 100)

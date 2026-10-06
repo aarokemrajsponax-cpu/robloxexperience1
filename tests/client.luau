@@ -2745,6 +2745,167 @@ advance(1)
 check("leaving the Suite puts it away", workspace.MaisonLocal:FindFirstChild("Suite") == nil)
 check("no errors in the Suite", #errors == 0, errors[1])
 
+-- The Terrace Bar: the menu, its prices plain, an order, a special.
+do
+	invokeResults.BarAsk = {
+		ok = true,
+		gilt = 60,
+		pour = false,
+		items = {
+			{ id = "lemonade", name = "Sparkling Lemonade", kind = "drink", line = "Pressed lemons, cane sugar and soda, over ice.", gilt = 25, servings = 6 },
+			{ id = "fries", name = "Truffle Fries", kind = "snack", line = "Thin fries, parmesan and truffle salt, in a paper cup.", gilt = 40, servings = 6 },
+			{ id = "strawberries", name = "Chocolate Strawberries", kind = "snack", line = "Five strawberries.", gilt = 80, servings = 5 },
+			{ id = "goldSpritz", key = "barGoldSpritz", name = "The Gold-Leaf Spritz", kind = "drink", line = "Sparkling white grape and elderflower.", robux = 25, ready = true, waiting = 0, servings = 8, glow = true },
+			{ id = "platter", key = "barGrandPlatter", name = "The Grand Platter", kind = "snack", line = "A silver platter of sweets.", robux = 99, ready = false, waiting = 0, servings = 10, glow = true, share = true },
+		},
+	}
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.Name = "BarPrompt"
+	services.ProximityPromptService.PromptTriggered:Fire(prompt)
+	advance(1)
+	check("the bar's prompt opens its menu", textOnScreen("The Terrace Bar") ~= nil and textOnScreen("Sparkling Lemonade") ~= nil)
+	snapshot("bar")
+	check("every price is plain: Gilt for the menu", textOnScreen("25 Gilt") ~= nil and textOnScreen("40 Gilt") ~= nil)
+	check("Robux for the specials", textOnScreen(utf8.char(0xE002) .. " 25") ~= nil)
+	check("a special not on sale yet says so", textOnScreen("not on sale yet") ~= nil)
+	check("and the menu says what it isn't", textOnScreen("no alcohol, nothing random") ~= nil)
+	invokeResults.BarAsk = { ok = true, gilt = 35 }
+	check("ordering for Gilt", press("25 Gilt"))
+	advance(0.5)
+	local order
+	for _, sm in sent do
+		if sm.remote == "BarAsk" and sm.message[1] and sm.message[1].op == "order" then
+			order = sm.message[1]
+		end
+	end
+	check("asks for the item by name, never with a price", order ~= nil and order.id == "lemonade" and order.gilt == nil and order.price == nil)
+	check("and closes with a word", Root2.isOpen("Bar") == false and textOnScreen("Sparkling Lemonade. Enjoy it.") ~= nil)
+	check("no errors at the bar", #errors == 0, errors[1])
+end
+
+-- The Menu, your Collection (curios, the Cabinet, Gems), a find, and a trade.
+do
+	check("the Menu key is on the screen", press("Menu"))
+	advance(0.6)
+	check("the Menu lists the house's places", textOnScreen("Your Collection") ~= nil and textOnScreen("Trading") ~= nil and textOnScreen("The Register") ~= nil and textOnScreen("How to play") ~= nil)
+	snapshot("menu")
+	invokeResults.CurioAsk = {
+		ok = true,
+		op = "curios",
+		items = { croissantino = 3, frogKing = 1, truffle = 1 },
+		favs = { frogKing = true },
+		recent = { "truffle", "croissantino" },
+		gems = 90,
+		found = 4,
+		cabinet = {
+			items = { { id = "truffle", gems = 60 }, { id = "caviarTin", gems = 150 } },
+			packs = { { key = "gems1", name = "Gem Pouch", gems = 120, robux = 99, ready = true }, { key = "gems2", name = "Gem Case", gems = 650, robux = 449, ready = false } },
+		},
+	}
+	local tile
+	for _, d in playerGui:GetDescendants() do
+		if d:IsA("TextButton") and d.Name == "Tile_collection" then
+			tile = d
+		end
+	end
+	check("the Collection tile opens the Collection", tile ~= nil)
+	if tile then
+		signalOf(tile, "Activated"):Fire()
+	end
+	advance(1)
+	check("your curios, with how many you hold", textOnScreen("Croissantino Furioso") ~= nil and textOnScreen("×3") ~= nil and textOnScreen("5 curios, 3 of") ~= nil)
+	snapshot("collection")
+	local frog
+	for _, d in playerGui:GetDescendants() do
+		if d:IsA("TextButton") and d.Name == "Curio_frogKing" then
+			frog = d
+		end
+	end
+	check("a curio opens its card", frog ~= nil)
+	if frog then
+		signalOf(frog, "Activated"):Fire()
+		advance(0.3)
+	end
+	check("the card says what it is, its rarity and how it's had", textOnScreen("Crowned at a lily pond") ~= nil and textOnScreen("LEGENDARY") ~= nil and textOnScreen("Found at the tables (Legendary)") ~= nil and textOnScreen("can be traded") ~= nil)
+	check("the search finds by name", (function()
+		local box
+		for _, d in playerGui:GetDescendants() do
+			if d:IsA("TextBox") and d.Name == "Search" then
+				box = d
+			end
+		end
+		if not box then
+			return false
+		end
+		box.Text = "frog"
+		signalOf(box, "prop:Text"):Fire()
+		advance(0.2)
+		local ok = textOnScreen("Le Roi Grenouille") ~= nil and textOnScreen("Croissantino Furioso") == nil
+		box.Text = ""
+		signalOf(box, "prop:Text"):Fire()
+		advance(0.2)
+		return ok
+	end)())
+	check("the whole book shows the ones still to find", press("Every curio"))
+	advance(0.4)
+	check("dark, as 'Not found yet'", textOnScreen("Not found yet") ~= nil)
+	check("the Gems tab", press("Gems"))
+	advance(0.4)
+	check("packs at Roblox's price, and one not on sale says so", textOnScreen(utf8.char(0xE002) .. " 99") ~= nil and textOnScreen("not on sale yet") ~= nil)
+	snapshot("gems")
+	Root2.close()
+	advance(0.5)
+	-- A find: the reveal.
+	serverSays("Curio", { op = "found", id = "goldenGoose", line = "Among the pieces, a curio.", gilt = 400 })
+	advance(0.8)
+	check("a curio found is revealed, with its rarity and its Gilt", textOnScreen("L'Oie d'Or") ~= nil and textOnScreen("LEGENDARY") ~= nil and textOnScreen("+400 Gilt") ~= nil)
+	snapshot("curio-found")
+	advance(6)
+	check("and goes by itself", textOnScreen("L'Oie d'Or") == nil)
+	-- A trade.
+	serverSays("Curio", { op = "tradeInvite", from = "Nia", userId = 77 })
+	advance(0.5)
+	check("an invitation to trade, with accept, no thanks and block", textOnScreen("Nia would like to trade") ~= nil and textOnScreen("No thanks") ~= nil and textOnScreen("Block") ~= nil)
+	invokeResults.TradeAsk = { ok = true }
+	press("Trade")
+	advance(0.5)
+	serverSays("Curio", { op = "trade", id = 1, with = "Nia", withId = 77, mine = {}, theirs = { frogKing = 1 }, ready = false, theyReady = true, confirmed = false, theyConfirmed = false, version = 2, state = "open", countdown = 0 })
+	advance(0.5)
+	check("the trade shows both sides, exactly as the house holds them", textOnScreen("A trade with Nia") ~= nil and textOnScreen("Le Roi Grenouille ×1") ~= nil and textOnScreen("Nia offers  ·  locked in") ~= nil)
+	snapshot("trade")
+	local offered
+	for _, d in playerGui:GetDescendants() do
+		if d:IsA("TextButton") and d.Name == "Offered_croissantino" then
+			offered = d
+		end
+	end
+	check("your own curios to offer", offered ~= nil)
+	if offered then
+		signalOf(offered, "Activated"):Fire()
+		advance(0.4)
+	end
+	local lastOffer
+	for _, sm in sent do
+		if sm.remote == "TradeAsk" and sm.message[1] and sm.message[1].op == "offer" then
+			lastOffer = sm.message[1]
+		end
+	end
+	check("tapping one offers it (the screen sends ids and counts only)", lastOffer ~= nil and lastOffer.items.croissantino == 1)
+	check("lock in", press("Lock in"))
+	advance(0.4)
+	local readied
+	for _, sm in sent do
+		if sm.remote == "TradeAsk" and sm.message[1] and sm.message[1].op == "ready" then
+			readied = sm.message[1]
+		end
+	end
+	check("locking in names the version seen", readied ~= nil and readied.version == 2)
+	serverSays("Curio", { op = "tradeEnd", id = 1, state = "done", why = "The trade is done." })
+	advance(0.5)
+	check("a finished trade closes the screen and says so", Root2.isOpen("Trade") == false and textOnScreen("The trade is done.") ~= nil)
+	check("no errors in the Collection or a trade", #errors == 0, errors[1])
+end
+
 -- The Foyer's grand piano: the sessions at the bench, then the keyboard while playing.
 do
 	invokeResults.PianoAsk = {
@@ -2852,7 +3013,12 @@ advance(0.5)
 check("no errors in a salute", #errors == 0, errors[1])
 
 -- House controls: only the owner has the key; the events show on everyone's screen.
-check("guests don't see the House key", textOnScreen("House") == nil)
+do
+	local hit = find(playerGui, function(d)
+		return d:IsA("TextButton") and d.Visible ~= false and norm(d.Text) == norm("House")
+	end)
+	check("guests don't see the House key", hit == nil, hit and hit:GetFullName())
+end
 LocalPlayer:SetAttribute("MaisonAdmin", true)
 advance(0.5)
 invokeResults.AdminAsk = {
@@ -2948,14 +3114,18 @@ Root2.close()
 advance(0.5)
 check("no errors among guests", #errors == 0, errors[1])
 
--- The Gold Key opens the Terrace all year (on the holder's own screen).
+-- The Terrace is open to everyone, every season.
 local terraceDoor = CollectionService:GetTagged("TerraceDoor")[1]
 serverSays("Shop", { op = "state", owned = {}, equipped = {}, gilt = 0, goldKey = false, credits = {}, suite = {}, ledger = { page = 2, pages = 50, progress = 0.1, leather = false, term = "2026-autumn" } })
 advance(0.5)
-check("out of season the Terrace doors are shut", terraceDoor ~= nil and terraceDoor.CanCollide == true)
-serverSays("Shop", { op = "state", owned = {}, equipped = {}, gilt = 0, goldKey = true, credits = {}, suite = {}, ledger = { page = 2, pages = 50, progress = 0.1, leather = false, term = "2026-autumn" } })
-advance(0.5)
-check("for a Gold Key holder they open", terraceDoor.CanCollide == false)
+check("the Terrace doors stand open for every guest", terraceDoor ~= nil and terraceDoor.CanCollide == false, terraceDoor and tostring(terraceDoor:GetAttribute("Open")) .. " " .. terraceDoor:GetFullName())
+local barPrompt = nil
+for _, d in workspace:GetDescendants() do
+	if d:IsA("ProximityPrompt") and d.Name == "BarPrompt" then
+		barPrompt = d
+	end
+end
+check("and the bar has its prompt", barPrompt ~= nil)
 
 -- Photo mode, from Settings.
 check("Settings opens", press("Settings"))

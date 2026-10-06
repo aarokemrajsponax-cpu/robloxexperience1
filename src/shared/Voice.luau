@@ -150,7 +150,7 @@ Voice.Tour = {
 		stop = "terrace",
 		place = "terraceDoor",
 		title = "The Terrace",
-		line = "These doors open onto the Terrace, the roof under the night sky. Everyone may come out in High Summer; the Gold Key opens it all year.",
+		line = "These doors open onto the Terrace, the roof under the night sky. There is a bar out there, a fire pit and loungers; sit anywhere you like.",
 	},
 	{
 		stop = "suite",

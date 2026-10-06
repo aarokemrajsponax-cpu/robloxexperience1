@@ -12,6 +12,7 @@
 --   Telemetry              one analytics schema for every purchase event
 --   Velocity, Revive, Decree, Luck, Rain   the five products
 --   Piano                  time at the Foyer's grand piano, and the notes played on it
+--   Bar                    the Terrace bar: treats for Gilt, and the house specials for Robux
 --
 -- The Boutique's own products (pieces, purses, the Gold Key...) register their handlers in Shop,
 -- which starts first. MONETIZATION.md explains the whole design.
@@ -31,6 +32,7 @@ local Grants = require(script.Grants)
 local Ledger = require(script.Ledger)
 local Luck = require(script.Luck)
 local Perks = require(script.Perks)
+local Bar = require(script.Bar)
 local Piano = require(script.Piano)
 local PriceLevels = require(script.PriceLevels)
 local Rain = require(script.Rain)
@@ -48,6 +50,7 @@ Purchases.Velocity = Velocity
 Purchases.Rain = Rain
 Purchases.Store = Store
 Purchases.Piano = Piano
+Purchases.Bar = Bar
 
 -- How the purchase system started (for the owner's tools and tests).
 Purchases.binding = ""
@@ -114,6 +117,8 @@ function Purchases.start()
 	Luck.start()
 	Rain.start()
 	Piano.start()
+	Bar.start()
+	require(script.Parent.Curios).start() -- Gem packs (and the Cabinet)
 	Gilt.personal = function(player: Player): number
 		return Luck.multiplier(player, "gilt")
 	end

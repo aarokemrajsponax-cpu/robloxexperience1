@@ -177,6 +177,7 @@ local function newGuest(name: string, userId: number)
 		root = root,
 		inbox = {},
 		CharacterAdded = signal(),
+		CharacterRemoving = signal(),
 		attrs = {},
 		SetAttribute = function(self, k, v)
 			self.attrs[k] = v

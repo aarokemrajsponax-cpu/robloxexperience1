@@ -613,7 +613,7 @@ local function swung(part: BasePart): boolean
 	if model ~= nil and model.Name == "FrontDoors" then
 		return true -- the front doors, swung open by the Doorman
 	end
-	-- The Terrace doors (open in High Summer) and the Gold Key rooms' doors (open with the key).
+	-- The Terrace doors (open all year) and the Gold Key rooms' doors (open with the key).
 	for _, name in { "TerraceDoor", "AlcoveDoor" } do
 		if part.Name == name or (part.Parent ~= nil and part.Parent.Name == name) then
 			return true
@@ -1011,7 +1011,7 @@ do
 	local CLUB = Layout.CLUB
 	local function walkOut()
 		return walk({ { Vector3.new(18, 0, T.door.Z), CLUB }, { Vector3.new(25.6, 0, T.door.Z), CLUB } }, 0.9)
-			or walk({ { Vector3.new(27, 0, T.door.Z), T.floorY }, { T.arrival, T.floorY }, { Vector3.new(34, 0, 40), T.floorY }, { Vector3.new(55, 0, 40), T.floorY } }, 0.9)
+			or walk({ { Vector3.new(27, 0, T.door.Z), T.floorY }, { T.arrival, T.floorY }, { Vector3.new(34, 0, 40), T.floorY }, { Vector3.new(50, 0, 40), T.floorY } }, 0.9)
 	end
 	local worst, worstLights = 0, 0
 	for _, season in SeasonsRules.List do
@@ -1032,11 +1032,7 @@ do
 		local _ = dressing
 		refreshSolids()
 		local why = walkOut()
-		if season.id == "summer" then
-			check("High Summer: the Terrace doors open and a guest can walk out", why == nil, why)
-		else
-			check(season.name .. ": the Terrace doors are shut", why ~= nil and string.find(why, "TerraceDoor", 1, true) ~= nil, why)
-		end
+		check(season.name .. ": the Terrace doors are open and a guest can walk out", why == nil, why)
 	end
 	print(("dressed: at most %d parts, %d lights"):format(worst, worstLights))
 	check("every season's dressing stays inside the part budget", worst < 9000, worst)

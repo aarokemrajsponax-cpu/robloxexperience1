@@ -154,6 +154,13 @@ local function onAsk(player: Player, request: unknown): any
 		if not part or not part:IsDescendantOf(Workspace) then
 			return { ok = false, why = "That seat isn't there any more." }
 		end
+		-- The Terrace cabana is the Gold Key's.
+		if part:GetAttribute("GoldKey") == true then
+			local data = Profiles.get(player)
+			if not data or not data.goldKey then
+				return { ok = false, why = "The cabana is for Gold Key holders." }
+			end
+		end
 		local holder = taken[part]
 		if holder and holder ~= player and holder.Parent then
 			return { ok = false, why = "Someone is sitting there." }

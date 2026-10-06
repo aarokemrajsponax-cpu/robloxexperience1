@@ -21,6 +21,7 @@ local Voice = require(ReplicatedStorage.Shared.Voice)
 local Analytics = require(script.Parent.Analytics)
 local Private = require(script.Parent.Private)
 local Boards = require(script.Parent.Boards)
+local Curios = require(script.Parent.Curios)
 local Gilt = require(script.Parent.Gilt)
 local Profiles = require(script.Parent.Profiles)
 local RemoteGuard = require(script.Parent.RemoteGuard)
@@ -381,6 +382,14 @@ local function bank(s: Session, reason: string?): { [string]: any }
 		summary.best = data.best[roomId]
 		local paid = Gilt.pay(player, data, Scoring.giltForRun(s.score), "Banked run: " .. roomId)
 		summary.gilt = paid
+		-- Maybe a curio among the pieces (it pays a little Gilt too), and the season's own.
+		local ok, found = pcall(Curios.afterRun, player, data, s.roundsCleared, accuracy, roomId, s.runFilings > 0 and s.runCorrect == s.runFilings)
+		if ok and found then
+			summary.curio = found
+			summary.gilt += found.gilt or 0
+		elseif not ok then
+			warn("[Maison] A curio find failed: " .. tostring(found))
+		end
 		summary.giltTotal = data.gilt
 	end
 	if not s.flagged then

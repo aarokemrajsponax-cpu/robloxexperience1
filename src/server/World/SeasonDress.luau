@@ -1,8 +1,8 @@
 --!strict
 -- The house dresses for the season (§10): lanterns and embers for All Hallows (and Lights Out by
--- candlelight), garlands and a wreath for Yuletide, copper and candles for The Long Table, the
--- Terrace doors open in High Summer, and flowers in the season's colour on the lectern and the
--- piano all year. Rebuilt whenever the season turns; nothing here is lit by a light of its own
+-- candlelight), garlands and a wreath for Yuletide, copper and candles for The Long Table, and
+-- flowers in the season's colour on the lectern and the
+-- piano all year (the Terrace doors stand open in every season). Rebuilt whenever the season turns; nothing here is lit by a light of its own
 -- (the glow is Neon), so the house's light budget holds.
 
 local CollectionService = game:GetService("CollectionService")
@@ -136,8 +136,9 @@ function SeasonDress.apply(id: string)
 		end
 	end
 	candlelight(id == "hallows")
-	Terrace.setOpen(id == "summer")
-	Workspace:SetAttribute("TerraceOpen", id == "summer")
+	-- The Terrace is open every evening of the year.
+	Terrace.setOpen(true)
+	Workspace:SetAttribute("TerraceOpen", true)
 	-- The dressing is laid on floors and walls: anything flush with them is lifted clear.
 	pcall(Flush.settle, maison)
 end

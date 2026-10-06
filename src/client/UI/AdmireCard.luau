@@ -1,7 +1,7 @@
 --!strict
 -- Admiring another guest: walk up to them and press R (L1 on a gamepad). They hear who admired
 -- them; you see what they're wearing and where each piece is from, with a key straight to that
--- shelf of the Boutique, and a key to send them a gift.
+-- shelf of the Boutique, a key to send them a gift, and one to ask them to trade curios.
 
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
@@ -19,6 +19,8 @@ local NAME = "Admire"
 
 -- Set by Main: opens the Boutique on a shelf, optionally to buy a gift for someone.
 AdmireCard.openBoutique = function(_tab: string, _giftFor: { userId: number, name: string }?) end
+-- Set by Main: asks a guest to trade curios.
+AdmireCard.trade = function(_userId: number, _name: string) end
 -- Set by Main: whether the guest is seated (no prompts at a table).
 AdmireCard.isSeated = function(): boolean
 	return false
@@ -80,6 +82,12 @@ function AdmireCard.show(card: { [string]: any })
 		Root.close(NAME)
 		AdmireCard.openBoutique("always", { userId = card.userId, name = card.name })
 	end, 220)
+	if type(card.userId) == "number" then
+		Theme.key(keys, "Trade", false, function()
+			Root.close(NAME)
+			AdmireCard.trade(card.userId, tostring(card.name))
+		end, 120)
+	end
 	Theme.key(keys, "Close", false, function()
 		Root.close(NAME)
 	end, 140)

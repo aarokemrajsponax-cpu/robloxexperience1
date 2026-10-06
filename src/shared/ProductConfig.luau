@@ -14,6 +14,7 @@
 -- Validated at server start (ProductConfig.validate): a broken entry is switched off and reported
 -- on the owner's screen, never sold.
 
+local BarMenu = require(script.Parent.BarMenu)
 local Salutes = require(script.Parent.Salutes)
 local Wardrobe = require(script.Parent.Wardrobe)
 
@@ -203,6 +204,46 @@ for _, session in {
 			Order = 60 + session.minutes,
 			Action = "piano",
 		},
+	})
+end
+
+-- The Terrace bar's house specials: a treat you hold and enjoy, at the price on the menu. Saved
+-- as a credit first (so a receipt is never lost), and served at once. Cosmetic: no score, no Gilt.
+for _, special in {
+	{ key = "barGoldSpritz", name = "Gold-Leaf Spritz", item = "goldSpritz", price = 25, tier = "Entry" :: Tier, line = "A glowing sparkling spritz with gold leaf, to hold and sip on the Terrace. No alcohol. Cosmetic only." },
+	{ key = "barMacaronTower", name = "Macaron Tower", item = "tower", price = 49, tier = "Entry" :: Tier, line = "Twelve macarons in a gold tower, with sparkles while you hold it. Cosmetic only." },
+	{ key = "barGrandPlatter", name = "Grand Platter", item = "platter", price = 99, tier = "Medium" :: Tier, line = "A silver platter of sweets: every guest near you is handed a macaron, free. Cosmetic only." },
+} do
+	add({
+		Key = special.key,
+		Name = special.name,
+		ProductType = "DeveloperProduct",
+		Id = 0,
+		Handler = "barTreat",
+		Pricing = { ReferencePrice = special.price, Tier = special.tier, Rationale = "A small, fun, plainly priced treat; the platter is shared with everyone near." },
+		Reward = { Type = "Treat", Item = special.item },
+		Rules = { Stackable = true, CooldownSeconds = 0, MaxHeld = 5 },
+		UX = { DisplayName = special.name, Category = "Terrace", Line = special.line, Offer = false, Order = 80, Action = "bar" },
+	})
+end
+
+-- Gems: the house's rare currency, for the Cabinet's curios (each sold at a fixed Gem price, the
+-- exact one you choose). Never random. More Gems per Robux in the bigger packs, said plainly.
+for _, pack in {
+	{ key = "gems1", name = "Gem Pouch", gems = 120, price = 99, tier = "Entry" :: Tier },
+	{ key = "gems2", name = "Gem Case", gems = 650, price = 449, tier = "Medium" :: Tier },
+	{ key = "gems3", name = "Gem Trunk", gems = 1500, price = 899, tier = "Premium" :: Tier },
+} do
+	add({
+		Key = pack.key,
+		Name = pack.name,
+		ProductType = "DeveloperProduct",
+		Id = 0,
+		Handler = "gems",
+		Pricing = { ReferencePrice = pack.price, Tier = pack.tier, Rationale = "Gems buy the Cabinet's curios at fixed prices; bigger packs give more per Robux." },
+		Reward = { Type = "Gems", Amount = pack.gems },
+		Rules = { Stackable = true, CooldownSeconds = 0 },
+		UX = { DisplayName = string.format("%s · %d Gems", pack.name, pack.gems), Category = "Gems", Line = string.format("%d Gems, at once. Spend them in the Cabinet on the exact curio you choose.", pack.gems), Offer = false, Order = 90, Action = "gems" },
 	})
 end
 
@@ -445,6 +486,14 @@ function ProductConfig.validate(handlers: { [string]: boolean }?): { [string]: s
 		elseif r.Type == "Piano" then
 			if not positive(r.Seconds) or r.Seconds ~= math.floor(r.Seconds) then
 				bad("a piano session needs whole Seconds above 0")
+			end
+		elseif r.Type == "Gems" then
+			if not positive(r.Amount) or r.Amount ~= math.floor(r.Amount) then
+				bad("a Gem pack needs a whole Amount above 0")
+			end
+		elseif r.Type == "Treat" then
+			if type(r.Item) ~= "string" or BarMenu.byId[r.Item] == nil or BarMenu.byId[r.Item].product ~= e.Key then
+				bad("a treat needs the menu Item it serves")
 			end
 		elseif r.Type == "Velocity" then
 			if not positive(r.SpeedMultiplier) or r.SpeedMultiplier < 1 or r.SpeedMultiplier > 2 then

@@ -171,8 +171,8 @@ Layout.Club = {
 	doorHeight = 11,
 }
 
--- The Terrace (§3, High Summer): the Obsidian Room's roof, through French doors in the Club
--- hall's east wall and two steps up. The doors open only in High Summer.
+-- The Terrace (§3): the Obsidian Room's roof, through French doors in the Club hall's east wall
+-- and two steps up. Open every evening of the year, with its bar.
 Layout.Terrace = {
 	zone = box(26, 21.5, 30, 82, 44, 64), -- above the Obsidian Room's ceiling
 	minX = 30, maxX = 80, minZ = 30, maxZ = 62,

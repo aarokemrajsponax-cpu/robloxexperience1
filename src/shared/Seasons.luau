@@ -82,7 +82,7 @@ Seasons.List = {
 	},
 	{
 		id = "summer", name = "High Summer", from = { 6, 1 }, to = { 9, 14 }, weather = "fireflies",
-		line = "Warm nights, and the doors to the terrace open.",
+		line = "Warm nights, and the bulbs lit late on the terrace.",
 		key = Color3.fromRGB(255, 210, 120), fill = Color3.fromRGB(48, 138, 184), grade = Color3.fromRGB(224, 180, 104),
 		weatherColours = hexes("ffe9a8", "ffd166", "fff3c4", "bfe4f2"),
 	},

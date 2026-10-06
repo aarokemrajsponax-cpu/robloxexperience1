@@ -57,6 +57,11 @@ local Tour = require(script.Parent.World.Tour)
 local Perks = require(script.Parent.Perks)
 local PerkChips = require(script.Parent.UI.PerkChips)
 local DecreePanel = require(script.Parent.UI.DecreePanel)
+local CurioState = require(script.Parent.CurioState)
+local CurioReveal = require(script.Parent.UI.CurioReveal)
+local CuriosPanel = require(script.Parent.UI.CuriosPanel)
+local MenuPanel = require(script.Parent.UI.MenuPanel)
+local TradePanel = require(script.Parent.UI.TradePanel)
 local PianoPanel = require(script.Parent.UI.PianoPanel)
 local DecreeBanner = require(script.Parent.UI.DecreeBanner)
 local RainView = require(script.Parent.World.RainView)
@@ -161,6 +166,48 @@ start("The Suite", function()
 	SuiteView.start()
 end)
 start("Seats", require(script.Parent.World.Seating).start)
+-- Curios, Gems, trading, and the Menu's tiles.
+start("Curios", function()
+	CurioState.start()
+	TradePanel.start()
+	CurioState.Message:Connect(function(op: string, m: any)
+		if op == "found" and type(m.id) == "string" then
+			CurioReveal.show(m.id, tostring(m.line or ""), if type(m.gilt) == "number" then m.gilt else 0)
+		elseif op == "gems" and type(m.amount) == "number" then
+			Toast.show("Gems", string.format("+%d Gems. You hold %d.", m.amount, CurioState.gems), 4)
+		end
+	end)
+	AdmireCard.trade = TradePanel.invite
+	for _, tile in {
+		{ id = "collection", title = "Your Collection", line = "Your curios, every one to find, and the Cabinet.", glyph = "🏺", open = function()
+			CuriosPanel.open("yours")
+		end },
+		{ id = "trading", title = "Trading", line = "Trade curios with another guest, and your past trades.", glyph = "🤝", open = function()
+			CuriosPanel.open("trades")
+		end },
+		{ id = "gems", title = "Gems", line = "Gem packs, and what Gems buy in the Cabinet.", glyph = "💎", open = function()
+			CuriosPanel.open("gems")
+		end },
+		{ id = "boutique", title = "The Boutique", line = "Looks, table styles, lamps and more. Style, never score.", glyph = "🛍️", open = function()
+			BoutiquePanel.open()
+		end },
+		{ id = "wardrobe", title = "Your Wardrobe", line = "Wear what you own.", glyph = "👔", open = WardrobePanel.open },
+		{ id = "ledger", title = "The Ledger", line = "This term's rewards, page by page.", glyph = "📖", open = LedgerPanel.open },
+		{ id = "register", title = "The Register", line = "Achievements: the house's badges and your records.", glyph = "🏅", open = RegisterPanel.open },
+		{ id = "guestbook", title = "The Livre d'Or", line = "Sign the guest book, and read who came.", glyph = "✒️", open = GuestBookPanel.open },
+		{ id = "circle", title = "Your Circle", line = "Your club of friends in the house.", glyph = "⭕", open = CirclePanel.open },
+		{ id = "help", title = "How to play", line = "The tables, the cases, and the house.", glyph = "❔", open = function()
+			HowToPlay.open()
+		end },
+		{ id = "settings", title = "Settings", line = "Sound, camera, motion, and your perks.", glyph = "⚙️", open = SettingsPanel.open },
+	} do
+		MenuPanel.add(tile :: any)
+	end
+end)
+start("The Terrace Bar", function()
+	require(script.Parent.UI.BarPanel).start()
+	require(script.Parent.World.Treats).start()
+end)
 start("Salutes", SaluteView.start)
 start("Events", EventBanner.start)
 -- Purchases: the perks this guest holds, and what the whole house sees (decrees, rains).
@@ -289,6 +336,13 @@ local function startHud()
 	Hud.setShopKey(function()
 		BoutiquePanel.open()
 	end)
+	Hud.setMenuKey(MenuPanel.open)
+	ContextActionService:BindAction("MaisonMenu", function(_, state)
+		if state == Enum.UserInputState.Begin and not TableClient.isSeated() then
+			MenuPanel.open()
+		end
+		return Enum.ContextActionResult.Pass
+	end, false, Enum.KeyCode.M)
 	-- The owner's House controls: a key only they see (the server checks every request).
 	local function ownerKey()
 		if player:GetAttribute("MaisonAdmin") == true and not ownerKeyShown then

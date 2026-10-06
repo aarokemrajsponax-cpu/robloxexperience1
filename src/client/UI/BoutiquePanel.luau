@@ -335,7 +335,7 @@ local function render()
 			"Three Gold Key house looks",
 			"The Gold Key chair and table trim",
 			"Two more rooms in your Suite: a Dressing Room and a Study",
-			"The Terrace, all year round",
+			"The Terrace cabana, and a drink on the house there each day",
 			"+20% on all Gilt",
 		} do
 			note(frame, line, add())

@@ -243,8 +243,21 @@ a Nightly attempt or a Mythic's odds.
   Leather-Bound Ledger while held, one cardholder look each month to keep, a black-lacquer
   nameplate. Hidden in a guest's first ten minutes and until its id is set
   (`Config.Products.blackCard`).
+- **Curios and your Collection** (the Menu, or M): 26 silly treasures in eight rarities, Common
+  to Secret and Limited, including an original meme set (Croissantino Furioso, Le Roi
+  Grenouille, Fromage de la Lune...). Found among the pieces after a banked run (with a little
+  Gilt), from events and achievements, or bought in the Cabinet for Gems at a fixed price.
+  Search, sort, rarity filter, stars, a card for each. A big reveal for each find, bigger for
+  rarer ones. Gems come in three packs for Robux.
+- **Trading curios**: admire a guest (R) → Trade. Both choose, lock in, a five-second countdown,
+  then both confirm; any change unlocks both, so nothing changes after a confirmation. The
+  server checks every step and swaps in one go. Cancel any time; block and report.
+- **The Menu** (top of the screen): the Collection, Trading, Gems, the Boutique, Wardrobe,
+  Ledger, Register, guest book, Circle, How to play, Settings.
 - **The Terrace**, on the Obsidian Room's roof, through French doors in the Club hall's east
-  wall. The doors open only in High Summer; weather falls on it for real.
+  wall, open every evening: café tables, sun loungers, a fire pit, the Gold Key's cabana, and
+  the Terrace Bar (snacks and drinks for Gilt, none with alcohol; three house specials for
+  Robux at the price shown). Weather falls on it for real.
 - **The house dresses for every season**: lanterns for All Hallows (and Lights Out by
   candlelight), garlands and a wreath for Yuletide (and wrapped parcels with ribbon fuses),
   copper candelabra for The Long Table, flowers in the season's colour all year.

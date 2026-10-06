@@ -1174,4 +1174,343 @@ do
 	end
 end
 
+---------------------------------------------------------------------------------------------------
+-- L. The Terrace bar: treats for Gilt, the house specials for Robux, the Gold Key's pour
+---------------------------------------------------------------------------------------------------
+do
+	local Bar = purchases("Bar")
+	local BarMenu = module("ReplicatedStorage", "Shared", "BarMenu")
+	local Layout = module("ReplicatedStorage", "Shared", "Layout")
+	local Instance, Vector3, CFrame = H.Instance, H.Vector3, H.CFrame
+	local barAsk = Remotes.funcs.BarAsk.OnServerInvoke
+	local function bar(player, request)
+		advance(0.6)
+		local r
+		run(function()
+			r = barAsk(player, request)
+		end)
+		return r
+	end
+	-- A guest with a real body (a hand to hold a treat), `away` studs from the bar.
+	local function patron(name, id, away)
+		local g = guest(name, id)
+		local body = Instance.new("Model")
+		body.Name = name
+		local root = Instance.new("Part")
+		root.Name = "HumanoidRootPart"
+		root.CFrame = CFrame.new(Layout.Terrace.bar + Vector3.new(0, 3, -(away or 4)))
+		root.Position = root.CFrame.Position -- (Lune keeps the two apart)
+		root.Parent = body
+		local hand = Instance.new("Part")
+		hand.Name = "RightHand"
+		hand.Size = Vector3.new(0.3, 0.3, 0.3)
+		hand.CFrame = root.CFrame * CFrame.new(1.5, -1, 0)
+		hand.Parent = body
+		g.Character = body
+		g.body = body
+		return g
+	end
+	local function treatOf(g)
+		return g.body:FindFirstChild("Treat")
+	end
+
+	for _, p in {
+		{ Name = "Gold-Leaf Spritz", ProductId = 5201, PriceInRobux = 25 },
+		{ Name = "Macaron Tower", ProductId = 5202, PriceInRobux = 49 },
+		{ Name = "Grand Platter", ProductId = 5203, PriceInRobux = 99 },
+	} do
+		table.insert(MarketplaceService.devProducts, p)
+	end
+	run(Catalog.discover)
+	local problems = ProductConfig.validate(Grants.names())
+	check("the three house specials are valid products", problems.barGoldSpritz == nil and problems.barMacaronTower == nil and problems.barGrandPlatter == nil, problems.barGoldSpritz)
+	check("each names the menu item it serves", BarMenu.byProduct.barGoldSpritz.id == "goldSpritz" and BarMenu.byProduct.barGrandPlatter.share == true)
+	check("nothing on the menu is random, alcoholic or paid in two currencies", (function()
+		for _, item in BarMenu.Items do
+			if (item.gilt ~= nil) == (item.product ~= nil) then
+				return false
+			end
+			local text = string.lower(item.name .. " " .. item.line)
+			for _, word in { "wine", "beer", "champagne", "cocktail", "whisky", "vodka", "rum", "gin ", "random", "mystery", "chance" } do
+				if string.find(text, word, 1, true) then
+					return false
+				end
+			end
+		end
+		return true
+	end)())
+
+	local ivy = patron("Ivy", 9400)
+	local ivyData = profiles[ivy].Data
+	local r = bar(ivy, { op = "menu" })
+	check("the menu lists every item with its price", r.ok == true and #r.items == #BarMenu.Items)
+	local spritz
+	for _, i in r.items do
+		if i.id == "goldSpritz" then
+			spritz = i
+		end
+	end
+	check("a special shows Roblox's live price and its key", spritz ~= nil and spritz.robux == 25 and spritz.ready == true and spritz.key == "barGoldSpritz")
+
+	ivyData.gilt = 10
+	r = bar(ivy, { op = "order", id = "lemonade" })
+	check("not enough Gilt: refused, and says how much more", r.ok == false and string.find(r.why or "", "15 more", 1, true) ~= nil and treatOf(ivy) == nil, r.why)
+	ivyData.gilt = 100
+	r = bar(ivy, { op = "order", id = "lemonade" })
+	check("an order for Gilt is served", r.ok == true and ivyData.gilt == 75 and treatOf(ivy) ~= nil)
+	check("into their right hand, welded", treatOf(ivy) ~= nil and treatOf(ivy):GetAttribute("TreatId") == "lemonade" and treatOf(ivy).PrimaryPart:FindFirstChild("TreatGrip") ~= nil)
+	r = bar(ivy, { op = "order", id = "goldSpritz" })
+	check("a special can't be had for Gilt", r.ok == false and ivyData.gilt == 75)
+	r = bar(ivy, { op = "order", id = "champagne" })
+	check("something not on the menu is refused", r.ok == false and ivyData.gilt == 75)
+	r = bar(ivy, { op = "order", id = "lemonade", price = 1 })
+	check("a price sent by the screen is refused outright", r.ok == false and ivyData.gilt == 75)
+	local far = patron("Far", 9401, 40)
+	profiles[far].Data.gilt = 100
+	r = bar(far, { op = "order", id = "lemonade" })
+	check("orders only at the bar", r.ok == false and profiles[far].Data.gilt == 100 and treatOf(far) == nil)
+
+	-- Sips: one every few seconds, then it's finished.
+	local treat = treatOf(ivy)
+	advance(Config.data.Bar.sipSeconds + 0.5)
+	check("a sip every few seconds, seen by every screen", treat:GetAttribute("Sips") == 1 and treat:GetAttribute("Servings") == BarMenu.byId.lemonade.servings - 1)
+	advance(Config.data.Bar.sipSeconds * BarMenu.byId.lemonade.servings + 3)
+	check("and when it's finished, it's gone", treatOf(ivy) == nil and Bar.holding(ivy) == nil)
+	bar(ivy, { op = "order", id = "fries" })
+	r = bar(ivy, { op = "putDown" })
+	check("put down at any time", r.ok == true and treatOf(ivy) == nil)
+
+	-- A house special: only from a receipt, kept as a credit, served at once.
+	local before = #prompts
+	r = bar(ivy, { op = "special", key = "barGoldSpritz" })
+	check("asking for a special opens Roblox's purchase window", r.ok == true and r.prompted == true and #prompts == before + 1)
+	check("and nothing is served before Roblox says it's bought", treatOf(ivy) == nil)
+	r = bar(ivy, { op = "special", key = "notAProduct" })
+	check("only the bar's own specials are sold at the bar", r.ok == false)
+	local result = receipt(ivy, 5201, "bar-1", 25)
+	check("the receipt is granted", result == GRANTED)
+	check("and the spritz is served straight away", treatOf(ivy) ~= nil and treatOf(ivy):GetAttribute("TreatId") == "goldSpritz" and Perks.credits(ivyData, "treat:barGoldSpritz") == 0)
+	check("glowing", treatOf(ivy).PrimaryPart:FindFirstChild("Glow") ~= nil)
+	result = receipt(ivy, 5201, "bar-1", 25)
+	check("the same receipt again grants nothing more", result == GRANTED and Perks.credits(ivyData, "treat:barGoldSpritz") == 0)
+
+	-- Bought while away from their body: kept, and served when they ask (or come back).
+	local body = ivy.Character
+	ivy.Character = nil
+	result = receipt(ivy, 5201, "bar-2", 25)
+	check("bought with no body to hold it: kept as a credit", result == GRANTED and Perks.credits(ivyData, "treat:barGoldSpritz") == 1)
+	ivy.Character = body
+	bar(ivy, { op = "putDown" })
+	r = bar(ivy, { op = "menu" })
+	local waiting = 0
+	for _, i in r.items do
+		if i.id == "goldSpritz" then
+			waiting = i.waiting
+		end
+	end
+	check("the menu says one is waiting", waiting == 1)
+	before = #prompts
+	r = bar(ivy, { op = "special", key = "barGoldSpritz" })
+	check("and serves it without asking for Robux again", r.ok == true and #prompts == before and treatOf(ivy) ~= nil and Perks.credits(ivyData, "treat:barGoldSpritz") == 0)
+
+	-- The Grand Platter: a macaron for each guest close by.
+	local jo = patron("Jo", 9402, 6)
+	local kit = patron("Kit", 9403, 60)
+	result = receipt(ivy, 5203, "bar-3", 99)
+	check("the platter is served", result == GRANTED and treatOf(ivy) ~= nil and treatOf(ivy):GetAttribute("TreatId") == "platter")
+	check("guests close by are each handed a macaron", treatOf(jo) ~= nil and treatOf(jo):GetAttribute("TreatId") == "sharedMacaron" and lastOp(jo, "notice") ~= nil)
+	check("guests far away aren't", treatOf(kit) == nil)
+	check("and it never touches anyone's Gilt", profiles[jo].Data.gilt == 0)
+
+	-- The Gold Key's drink on the house, once a day.
+	local lu = patron("Lu", 9404)
+	local luData = profiles[lu].Data
+	luData.goldKey = true
+	r = bar(lu, { op = "menu" })
+	check("a Gold Key holder sees a drink on the house", r.pour == true)
+	r = bar(lu, { op = "order", id = "fries", pour = true })
+	check("a drink, not a snack", r.ok == false)
+	r = bar(lu, { op = "order", id = "hibiscus", pour = true })
+	check("poured free", r.ok == true and r.free == true and luData.gilt == 0 and treatOf(lu) ~= nil)
+	r = bar(lu, { op = "order", id = "hibiscus", pour = true })
+	check("once a day", r.ok == false)
+	r = bar(ivy, { op = "order", id = "hibiscus", pour = true })
+	check("only for Gold Key holders", r.ok == false)
+end
+
+---------------------------------------------------------------------------------------------------
+-- M. Curios, Gems and the Cabinet; trading curios between guests
+---------------------------------------------------------------------------------------------------
+do
+	local CuriosS = module("ServerScriptService", "Server", "Curios")
+	local CurioList = module("ReplicatedStorage", "Shared", "Curios")
+	local TradeService = module("ServerScriptService", "Server", "TradeService")
+	TradeService.start()
+	local curioAsk = Remotes.funcs.CurioAsk.OnServerInvoke
+	local tradeAsk = Remotes.funcs.TradeAsk.OnServerInvoke
+	local function curio(player, request)
+		advance(0.5)
+		local r
+		run(function()
+			r = curioAsk(player, request)
+		end)
+		return r
+	end
+	local function trade(player, request)
+		advance(0.5)
+		local r
+		run(function()
+			r = tradeAsk(player, request)
+		end)
+		return r
+	end
+
+	-- The list itself.
+	check("every curio has a rarity, a family and says how it's had", (function()
+		for _, c in CurioList.List do
+			if not CurioList.RarityRank[c.rarity] or c.how == "" or c.name == "" then
+				return false
+			end
+			if c.source == "gems" and not c.gems then
+				return false
+			end
+		end
+		return true
+	end)())
+	check("finds at the tables follow the weights (common often, mythic rarely)", CurioList.pick(0, 0).rarity == "Common" and CurioList.pick(0.99999, 0).rarity == "Mythic")
+	check("nothing found at the tables is sold for Gems or Robux", (function()
+		for _, c in CurioList.List do
+			if c.source == "tables" and c.gems then
+				return false
+			end
+		end
+		return true
+	end)())
+
+	-- Gem packs: receipts, never anything else.
+	for _, p in {
+		{ Name = "Gem Pouch", ProductId = 5301, PriceInRobux = 99 },
+		{ Name = "Gem Case", ProductId = 5302, PriceInRobux = 449 },
+		{ Name = "Gem Trunk", ProductId = 5303, PriceInRobux = 899 },
+	} do
+		table.insert(MarketplaceService.devProducts, p)
+	end
+	run(Catalog.discover)
+	local problems = ProductConfig.validate(Grants.names())
+	check("the three Gem packs are valid products", problems.gems1 == nil and problems.gems2 == nil and problems.gems3 == nil)
+	check("bigger packs give more Gems per Robux", ProductConfig.byKey.gems2.Reward.Amount / 449 > ProductConfig.byKey.gems1.Reward.Amount / 99 and ProductConfig.byKey.gems3.Reward.Amount / 899 > ProductConfig.byKey.gems2.Reward.Amount / 449)
+	local mo = guest("Mo", 9500)
+	local moData = profiles[mo].Data
+	local r = curio(mo, { op = "state" })
+	check("the Cabinet lists curios for Gems and the packs, with Roblox's prices", r.ok == true and #r.cabinet.items >= 3 and r.cabinet.packs[1].robux == 99 and r.cabinet.packs[1].ready == true)
+	r = curio(mo, { op = "buy", id = "truffle" })
+	check("no Gems: the Cabinet says how many more", r.ok == false and string.find(r.why or "", "60 more", 1, true) ~= nil)
+	local before = #prompts
+	r = curio(mo, { op = "gems", key = "gems1" })
+	check("a Gem pack opens Roblox's purchase window", r.ok == true and #prompts == before + 1 and moData.gems == 0)
+	r = curio(mo, { op = "gems", key = "giltPurse1" })
+	check("only Gem packs are sold there", r.ok == false)
+	local result = receipt(mo, 5301, "gems-1", 99)
+	check("the receipt adds the Gems", result == GRANTED and moData.gems == 120)
+	result = receipt(mo, 5301, "gems-1", 99)
+	check("the same receipt twice adds nothing", moData.gems == 120)
+	r = curio(mo, { op = "buy", id = "truffle" })
+	check("the Cabinet sells the exact curio chosen, at its price", r.ok == true and moData.gems == 60 and CuriosS.count(moData, "truffle") == 1)
+	r = curio(mo, { op = "buy", id = "croissantino" })
+	check("a curio found at the tables can't be bought", r.ok == false and moData.gems == 60)
+	r = curio(mo, { op = "buy", id = "truffle", gems = 0 })
+	check("a price from the screen is refused outright", r.ok == false and moData.gems == 60)
+	r = curio(mo, { op = "fav", id = "truffle", on = true })
+	check("a curio can be starred", r.ok == true and moData.curios.favs.truffle == true)
+	r = curio(mo, { op = "fav", id = "moonCheese", on = true })
+	check("but not one you don't hold", r.ok == false)
+
+	-- Finds after a run.
+	CuriosS.random = { NextNumber = function()
+		return 0.01
+	end }
+	local gilt0 = moData.gilt
+	local found = CuriosS.afterRun(mo, moData, 3, 0.9, "salon", false)
+	check("a banked run can find a curio", found ~= nil and found.rarity == "Common" and CuriosS.count(moData, found.id) == 1)
+	check("and it pays a little Gilt", moData.gilt > gilt0 and found.gilt > 0)
+	check("the new find is on the Recent shelf", table.find(moData.curios.recent, found.id) ~= nil)
+	local inSeason = module("ReplicatedStorage", "Shared", "Rating").term().id == CurioList.LimitedSeason.autumnLeaf
+	check("this season's own curio comes with the first run of its season (and never outside it)", CuriosS.count(moData, "autumnLeaf") == (if inSeason then 1 else 0))
+	CuriosS.random = { NextNumber = function()
+		return 0.99
+	end }
+	check("not every run finds one", CuriosS.afterRun(mo, moData, 1, 0.5, "salon", false) == nil)
+	check("a run with no rounds finds nothing", CurioList.findChance(0, 1) == 0)
+	found = CuriosS.afterRun(mo, moData, 3, 1, "midnight", true)
+	check("a flawless Midnight run finds the Secret", found ~= nil and found.id == "midnightOwl")
+	found = CuriosS.afterRun(mo, moData, 3, 1, "midnight", true)
+	check("only once", found == nil or found.id ~= "midnightOwl")
+	CuriosS.random = { NextNumber = function()
+		return 0.5
+	end }
+
+	-- Trading.
+	local nia = guest("Nia", 9501)
+	local niaData = profiles[nia].Data
+	CuriosS.give(nia, niaData, "frogKing", 1)
+	CuriosS.give(nia, niaData, "firstKey", 1)
+	r = trade(mo, { op = "invite", userId = 9501 })
+	check("a guest invites another to trade", r.ok == true and lastOp(nia, "tradeInvite") ~= nil)
+	r = trade(mo, { op = "invite", userId = 9501 })
+	check("not again straight away", r.ok == false)
+	r = trade(nia, { op = "accept", userId = 9500 })
+	check("the invitation is accepted and the trade opens on both screens", r.ok == true and lastOp(mo, "trade") ~= nil and lastOp(nia, "trade") ~= nil)
+	r = trade(nia, { op = "offer", items = { firstKey = 1 } })
+	check("a curio that can't be traded can't be offered", r.ok == false)
+	r = trade(nia, { op = "offer", items = { frogKing = 2 } })
+	check("nor more than you hold", r.ok == false)
+	r = trade(nia, { op = "offer", items = { frogKing = 1 } })
+	check("an offer from what you hold", r.ok == true)
+	local v = r.version
+	r = trade(mo, { op = "offer", items = { truffle = 1 } })
+	local v2 = r.version
+	check("each change makes a new version of the trade", v2 > v)
+	r = trade(nia, { op = "ready", version = v })
+	check("locking in to an old version is refused", r.ok == false)
+	trade(nia, { op = "ready", version = v2 })
+	trade(mo, { op = "ready", version = v2 })
+	check("both locked in: a countdown", lastOp(mo, "trade").state == "countdown" and lastOp(mo, "trade").countdown > 0)
+	r = trade(mo, { op = "confirm", version = v2 })
+	check("confirming waits for the countdown", r.ok == false)
+	-- A change during the countdown unlocks both.
+	r = trade(mo, { op = "offer", items = { truffle = 1, croissantino = 1 } })
+	local v3 = r.version
+	check("a change during the countdown unlocks both sides", lastOp(nia, "trade").state == "open" and lastOp(nia, "trade").theyReady == false and lastOp(nia, "trade").ready == false)
+	check("and the other side sees exactly what changed", lastOp(nia, "trade").theirs.croissantino == 1)
+	trade(nia, { op = "ready", version = v3 })
+	trade(mo, { op = "ready", version = v3 })
+	advance(TradeService.Settings.countdown + 1)
+	check("after the countdown, confirming opens", lastOp(mo, "trade").state == "confirm")
+	r = trade(mo, { op = "confirm", version = v2 })
+	check("a confirmation of an earlier version is refused", r.ok == false)
+	trade(mo, { op = "confirm", version = v3 })
+	check("one confirmation alone swaps nothing", CuriosS.count(moData, "frogKing") == 0 and CuriosS.count(moData, "truffle") == 1)
+	r = trade(nia, { op = "confirm", version = v3 })
+	check("both confirm: the trade is done", r.ok == true and lastOp(mo, "tradeEnd").state == "done")
+	check("each side has exactly what the other offered", CuriosS.count(moData, "frogKing") == 1 and CuriosS.count(moData, "truffle") == 0 and CuriosS.count(niaData, "truffle") == 1 and CuriosS.count(niaData, "croissantino") == 1 and CuriosS.count(niaData, "frogKing") == 0)
+	check("and both keep it in their history", moData.trades[1].with == "Nia" and niaData.trades[1].with == "Mo")
+	r = trade(mo, { op = "invite", userId = 9501 })
+	check("a short rest before trading again", r.ok == false)
+
+	-- Cancelling, leaving, blocking.
+	local oz = guest("Oz", 9502)
+	trade(nia, { op = "block", userId = 9502 })
+	r = trade(oz, { op = "invite", userId = 9501 })
+	check("a blocked guest can't send invitations", r.ok == false)
+	advance(TradeService.Settings.cooldown + 1)
+	trade(oz, { op = "invite", userId = 9500 })
+	trade(mo, { op = "accept", userId = 9502 })
+	CuriosS.give(oz, profiles[oz].Data, "gelato", 1)
+	trade(oz, { op = "offer", items = { gelato = 1 } })
+	r = trade(mo, { op = "cancel" })
+	check("either side may cancel, and nothing moves", r.ok == true and lastOp(oz, "tradeEnd").state == "cancelled" and CuriosS.count(profiles[oz].Data, "gelato") == 1)
+	r = trade(mo, { op = "report", userId = 9502 })
+	check("a guest can be reported (logged for the owner)", r.ok == true and #TradeService.reports == 1)
+end
+
 H.finish()

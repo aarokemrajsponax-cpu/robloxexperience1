@@ -33,8 +33,8 @@ hangouts, so it shouldn't be described as one.)
 > hallmark beside your name. Nothing here can be bought that wins a game: everything sold is
 > style.
 >
-> The house follows the calendar: snow at Yuletide, lanterns at All Hallows, the terrace open
-> in High Summer.
+> The house follows the calendar: snow at Yuletide, lanterns at All Hallows, warm nights on
+> the terrace in High Summer. And the terrace bar is open every evening.
 >
 > development of AJKR
 
@@ -200,6 +200,12 @@ block (that's where most of the money is):
 | `Piano Session 3 Minutes` | 349 | three minutes at the piano |
 | `Piano Session 5 Minutes` | 599 | five minutes at the piano |
 | `Piano Session 10 Minutes` | 899 | ten minutes at the piano |
+| `Gold-Leaf Spritz` | 25 | the Terrace Bar: a glowing spritz with gold leaf to hold and sip (no alcohol; cosmetic) |
+| `Macaron Tower` | 49 | the Terrace Bar: a tower of twelve macarons with sparkles (cosmetic) |
+| `Gem Pouch` | 99 | 120 Gems, for the Cabinet's curios (each at a fixed Gem price) |
+| `Gem Case` | 449 | 650 Gems |
+| `Gem Trunk` | 899 | 1,500 Gems |
+| `Grand Platter` | 99 | the Terrace Bar: a platter of sweets; every guest near you is handed a macaron (cosmetic) |
 
 Until a `Boutique NN` product exists, the pieces at that price are sold for Gilt only (40 Gilt
 for each Robux of the price, `Config.Gilt.perRobux`): a 249 piece is 9,960 Gilt. Make the

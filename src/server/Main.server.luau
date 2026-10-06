@@ -235,6 +235,8 @@ end
 Purchases.Piano.isOwner = function(player: Player): boolean
 	return game:GetService("RunService"):IsStudio() or AdminService.isAdmin(player)
 end
+-- Trading curios between guests (the curios and Gems themselves start with Purchases).
+boot("Trading", require(script.Parent.TradeService).start)
 boot("Remote limits", require(script.Parent.RemoteGuard).start)
 Archivist.onSpeak = function(player)
 	local V = require(ReplicatedStorage.Shared.Voice)

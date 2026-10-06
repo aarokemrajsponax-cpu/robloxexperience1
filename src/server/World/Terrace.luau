@@ -1,7 +1,9 @@
 --!strict
--- The Terrace (§3): the Obsidian Room's roof, open to the night. Paving, a stone balustrade,
--- planters, low chairs round two tables, a parasol, and strings of warm bulbs overhead. French
--- doors in the Club hall's east wall lead out; they open only in High Summer (SeasonDress).
+-- The Terrace (§3): the Obsidian Room's roof, open to the night, every evening of the year. A
+-- stone balustrade, planters, café tables under parasols, sun loungers facing the view, a fire
+-- pit ringed with sofas, the Gold Key's cabana, strings of warm bulbs overhead, and the bar
+-- (Purchases/Bar: snacks and drinks, none with alcohol). French doors in the Club hall's east
+-- wall lead out.
 
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -50,11 +52,9 @@ local function lounge(m: Model, centre: Vector3)
 	Kit.post(m, "LowTableStem", 1.3, 0.4, centre, L.darkBrass, { collide = false })
 	for i = 0, 2 do
 		local a = i / 3 * math.pi * 2 + 0.4
-		local p = centre + Vector3.new(math.cos(a) * 3.4, 0, math.sin(a) * 3.4)
-		local cf = CFrame.lookAt(p, Vector3.new(centre.X, p.Y, centre.Z))
-		Kit.part(m, "Chair", Vector3.new(2.2, 1, 2.2), cf * CFrame.new(0, 0.9, 0), L.leather)
-		Kit.part(m, "ChairBack", Vector3.new(2.2, 1.8, 0.4), cf * CFrame.new(0, 1.9, 1.0), L.leather, { collide = false })
-		Furniture.seatsOn(m, "ChairSeat", { cf * CFrame.new(0, 1.4, 0) }, "The chair", 2)
+		local p = centre + Vector3.new(math.cos(a) * 3.9, 0, math.sin(a) * 3.9)
+		-- A low club chair, turned to the table (its own seat and Sit prompt).
+		Furniture.build("chair", m, CFrame.lookAt(p, Vector3.new(centre.X, p.Y, centre.Z)), { model = "club", colour = Color3.fromRGB(236, 228, 210), material = "Fabric", accent = Color3.fromRGB(170, 132, 64) })
 	end
 end
 
@@ -72,7 +72,31 @@ local function bulbs(m: Model, a: Vector3, b: Vector3, count: number)
 	end
 end
 
--- The French doors: two glazed leaves, hinged at the jambs. Closed they are solid.
+-- Swings one leaf of the French doors open (out onto the steps) or shut.
+local function swing(leaf: Instance, open: boolean)
+	if not leaf:IsA("BasePart") then
+		return
+	end
+	local hinge = leaf:GetAttribute("Hinge")
+	local dir = leaf:GetAttribute("Swing")
+	if typeof(hinge) ~= "Vector3" or type(dir) ~= "number" then
+		return
+	end
+	local w = leaf.Size.Z
+	local closed = CFrame.new(hinge.X, hinge.Y + leaf.Size.Y / 2, hinge.Z + dir * w / 2)
+	local pivot = CFrame.new(hinge.X, hinge.Y + leaf.Size.Y / 2, hinge.Z)
+	local target = if open then pivot * CFrame.Angles(0, dir * math.rad(90), 0) * pivot:Inverse() * closed else closed
+	local frame = leaf:FindFirstChild("Frame")
+	local offset = if frame and frame:IsA("BasePart") then leaf.CFrame:ToObjectSpace(frame.CFrame) else nil
+	leaf.CFrame = target
+	if frame and frame:IsA("BasePart") and offset then
+		frame.CFrame = target * offset
+	end
+	leaf.CanCollide = not open
+	leaf:SetAttribute("Open", open)
+end
+
+-- The French doors: two glazed leaves, hinged at the jambs, standing open (every evening now).
 local function doors(m: Model)
 	local z0, z1 = T.door.Z - T.doorWidth / 2, T.door.Z + T.doorWidth / 2
 	local leafW = T.doorWidth / 2
@@ -84,6 +108,7 @@ local function doors(m: Model)
 		leaf:SetAttribute("Hinge", Vector3.new(T.door.X, CLUB, hinge))
 		leaf:SetAttribute("Swing", dir)
 		CollectionService:AddTag(leaf, "TerraceDoor")
+		swing(leaf, true)
 	end
 end
 
@@ -103,30 +128,74 @@ function Terrace.build(parent: Instance): Model
 	balustrade(m, Vector3.new(T.maxX - 0.5, 0, T.maxZ - 0.5), Vector3.new(T.minX + 0.5, 0, T.maxZ - 0.5))
 	balustrade(m, Vector3.new(T.minX + 0.5, 0, T.maxZ - 0.5), Vector3.new(T.minX + 0.5, 0, z1 + 0.5))
 	balustrade(m, Vector3.new(T.minX + 0.5, 0, z0 - 0.5), Vector3.new(T.minX + 0.5, 0, 44.5))
-	for _, p in { Vector3.new(36, Y, 34), Vector3.new(76, Y, 34), Vector3.new(76, Y, 58), Vector3.new(36, Y, 60), Vector3.new(56, Y, 34), Vector3.new(56, Y, 59) } do
+	for _, p in { Vector3.new(33, Y, 33), Vector3.new(77.5, Y, 32.5), Vector3.new(33, Y, 60), Vector3.new(77.5, Y, 47.5), Vector3.new(64, Y, 60) } do
 		planter(m, p)
 	end
-	lounge(m, Vector3.new(48, Y, 46))
-	lounge(m, Vector3.new(66, Y, 50))
-	parasol(m, Vector3.new(57, Y, 47))
-	-- A drinks cart in the corner past the doors, clear of the way in.
-	local cart = Vector3.new(32.6, Y, 60.4)
-	Kit.part(m, "Cart", Vector3.new(3, 0.3, 1.6), CFrame.new(cart + Vector3.new(0, 2.4, 0)), L.brass)
-	Kit.part(m, "CartShelf", Vector3.new(3, 0.2, 1.6), CFrame.new(cart + Vector3.new(0, 0.9, 0)), L.darkBrass, { collide = false })
-	for i = -1, 1 do
-		Kit.post(m, "Bottle", 0.9, 0.3, cart + Vector3.new(i * 0.8, 2.55, 0), { color = Color3.fromRGB(40, 70, 44), material = Enum.Material.Glass, transparency = 0.2 }, { collide = false, shadow = false })
+	-- Two café tables under parasols, in the middle of the terrace.
+	for _, c in { Vector3.new(44, Y, 48), Vector3.new(57, Y, 45) } do
+		lounge(m, c)
+		parasol(m, c)
 	end
-	-- Strings of bulbs across the terrace, on poles.
-	local poles = { Vector3.new(38, Y, 36), Vector3.new(74, Y, 36), Vector3.new(74, Y, 56), Vector3.new(38, Y, 56) }
+	-- The bar under its pergola on the north side, its stools facing it (BarMenu, Purchases/Bar).
+	local bar = Layout.Terrace.bar
+	local barModel = Furniture.build("outdoorbar", m, CFrame.lookAt(bar, Vector3.new(bar.X, bar.Y, 20)), { model = "teak", accent = Color3.fromRGB(214, 176, 92) })
+	if barModel then
+		barModel.Name = "TerraceBar"
+		local counter = Kit.part(barModel, "OrderAnchor", Vector3.new(0.4, 0.4, 0.4), CFrame.new(bar + Vector3.new(0, 4.6, -0.6)), INVISIBLE, { collide = false, query = false, shadow = false })
+		local prompt = Instance.new("ProximityPrompt")
+		prompt.Name = "BarPrompt"
+		prompt.ActionText = "See the menu"
+		prompt.ObjectText = "The Terrace Bar"
+		prompt.KeyboardKeyCode = Enum.KeyCode.F
+		prompt.GamepadKeyCode = Enum.KeyCode.ButtonY
+		prompt.HoldDuration = 0
+		prompt.MaxActivationDistance = 12
+		prompt.RequiresLineOfSight = false
+		prompt.Style = Enum.ProximityPromptStyle.Custom
+		prompt.Parent = counter
+		-- The menu, chalked on a board beside the bar.
+		local board = Kit.part(barModel, "MenuBoard", Vector3.new(3.2, 4.2, 0.2), CFrame.lookAt(bar + Vector3.new(-6.4, 3.6, 0.6), bar + Vector3.new(-6.4, 3.6, -10)), { color = Color3.fromRGB(26, 28, 26), material = Enum.Material.Slate }, { collide = false })
+		Kit.post(barModel, "BoardLeg", 1.5, 0.2, bar + Vector3.new(-6.4, 0, 0.7), L.darkWood, { collide = false })
+		Kit.engrave(board, Enum.NormalId.Front, {
+			{ text = "THE TERRACE BAR", size = 0.42, color = Color3.fromRGB(236, 214, 160) },
+			{ text = "Lemonade · Hibiscus tea · Mint & lime", size = 0.26, color = Color3.fromRGB(230, 226, 214) },
+			{ text = "Espresso tonic · Hot chocolate", size = 0.26, color = Color3.fromRGB(230, 226, 214) },
+			{ text = "Truffle fries · Macarons · Strawberries", size = 0.26, color = Color3.fromRGB(230, 226, 214) },
+			{ text = "Nothing here has alcohol in it", size = 0.22, color = Color3.fromRGB(190, 180, 160) },
+		})
+	end
+	-- A fire pit ringed with low sofas, open toward the doors.
+	Furniture.build("firepit", m, CFrame.lookAt(Vector3.new(68, Y, 40), Vector3.new(50, Y, 40)), { colour = Color3.fromRGB(196, 170, 120) })
+	-- Sun loungers along the south rail, facing the view.
+	for _, x in { 38, 49 } do
+		Furniture.build("loungers", m, CFrame.lookAt(Vector3.new(x, Y, 35), Vector3.new(x, Y, 10)), { colour = Color3.fromRGB(240, 234, 220), accent = Color3.fromRGB(150, 40, 46) })
+	end
+	-- The cabana: a curtained daybed in the north-east corner, for Gold Key holders.
+	local cabana = Furniture.build("cabana", m, CFrame.lookAt(Vector3.new(74, Y, 55), Vector3.new(50, Y, 55)), { colour = Color3.fromRGB(240, 234, 220), accent = Color3.fromRGB(150, 40, 46) })
+	if cabana then
+		cabana.Name = "GoldKeyCabana"
+		for _, d in cabana:GetChildren() do
+			if d:IsA("BasePart") and d.Name == "SitSpot" then
+				d:SetAttribute("GoldKey", true)
+			end
+		end
+		local sign = Kit.part(cabana, "CabanaPlate", Vector3.new(2.2, 0.7, 0.1), CFrame.lookAt(Vector3.new(69.8, Y + 1.2, 59), Vector3.new(60, Y + 1.2, 59)), L.brass, { collide = false })
+		Kit.engrave(sign, Enum.NormalId.Front, {
+			{ text = "THE CABANA", size = 0.36, color = Color3.fromRGB(20, 16, 10) },
+			{ text = "Gold Key holders", size = 0.24, color = Color3.fromRGB(40, 32, 20) },
+		})
+	end
+	-- Strings of bulbs across the terrace, on poles at its corners.
+	local poles = { Vector3.new(31.5, Y, 31.5), Vector3.new(78.5, Y, 31.5), Vector3.new(78.5, Y, 60.5), Vector3.new(31.5, Y, 60.5) }
 	for _, p in poles do
 		Kit.post(m, "LightPole", 10, 0.3, p, L.darkBrass, { collide = false })
 	end
 	for i = 1, #poles do
 		local a, b = poles[i] + Vector3.new(0, 10, 0), poles[i % #poles + 1] + Vector3.new(0, 10, 0)
-		bulbs(m, a, b, 9)
+		bulbs(m, a, b, 11)
 	end
-	bulbs(m, poles[1] + Vector3.new(0, 10, 0), poles[3] + Vector3.new(0, 10, 0), 11)
-	for _, p in { Vector3.new(48, Y + 8.5, 46), Vector3.new(66, Y + 8.5, 50) } do
+	bulbs(m, poles[1] + Vector3.new(0, 10, 0), poles[3] + Vector3.new(0, 10, 0), 13)
+	for _, p in { Vector3.new(44, Y + 6.5, 48), Vector3.new(57, Y + 6.5, 45) } do
 		local glow = Kit.part(m, "BulbGlow", Vector3.new(0.4, 0.4, 0.4), CFrame.new(p), INVISIBLE, { collide = false, query = false, shadow = false })
 		Kit.pointLight(glow, 1.1, 22, Color3.fromRGB(255, 200, 140))
 	end
@@ -135,33 +204,15 @@ function Terrace.build(parent: Instance): Model
 	local plate = Kit.part(m, "TerracePlate", Vector3.new(2.4, 0.9, 0.1), CFrame.lookAt(Vector3.new(23.9, CLUB + 5.5, z0 - 2), Vector3.new(0, CLUB + 5.5, z0 - 2)), L.brass, { collide = false })
 	Kit.engrave(plate, Enum.NormalId.Front, {
 		{ text = "THE TERRACE", size = 0.5, color = Color3.fromRGB(20, 16, 10) },
-		{ text = "Opens in High Summer", size = 0.35, color = Color3.fromRGB(40, 32, 20) },
+		{ text = "The bar is open", size = 0.35, color = Color3.fromRGB(40, 32, 20) },
 	})
 	return m
 end
 
--- Opens (High Summer) or closes the French doors, swinging each leaf out onto the steps.
+-- Opens (every evening now) or closes the French doors, swinging each leaf out onto the steps.
 function Terrace.setOpen(open: boolean)
 	for _, leaf in CollectionService:GetTagged("TerraceDoor") do
-		if leaf:IsA("BasePart") then
-			local hinge = leaf:GetAttribute("Hinge")
-			local dir = leaf:GetAttribute("Swing")
-			if typeof(hinge) ~= "Vector3" or type(dir) ~= "number" then
-				continue
-			end
-			local w = leaf.Size.Z
-			local closed = CFrame.new(hinge.X, hinge.Y + leaf.Size.Y / 2, hinge.Z + dir * w / 2)
-			local pivot = CFrame.new(hinge.X, hinge.Y + leaf.Size.Y / 2, hinge.Z)
-			local target = if open then pivot * CFrame.Angles(0, dir * math.rad(90), 0) * pivot:Inverse() * closed else closed
-			local frame = leaf:FindFirstChild("Frame")
-			local offset = if frame and frame:IsA("BasePart") then leaf.CFrame:ToObjectSpace(frame.CFrame) else nil
-			leaf.CFrame = target
-			if frame and frame:IsA("BasePart") and offset then
-				frame.CFrame = target * offset
-			end
-			leaf.CanCollide = not open
-			leaf:SetAttribute("Open", open)
-		end
+		swing(leaf, open)
 	end
 end
 
