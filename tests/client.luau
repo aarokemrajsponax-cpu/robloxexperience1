@@ -1055,6 +1055,7 @@ local function snapshot(name: string)
 			n.vAlign = inst.VerticalAlignment.Name
 		elseif inst:IsA("UIPadding") then
 			n.pad = { inst.PaddingTop.Offset, inst.PaddingBottom.Offset, inst.PaddingLeft.Offset, inst.PaddingRight.Offset }
+			n.padS = { inst.PaddingTop.Scale, inst.PaddingBottom.Scale, inst.PaddingLeft.Scale, inst.PaddingRight.Scale }
 		elseif inst:IsA("UITextSizeConstraint") then
 			n.maxText = inst.MaxTextSize
 			n.minText = inst.MinTextSize

@@ -12,3 +12,4 @@ sourcemap.json
 
 # Preview fonts (tools/ui/get_fonts.sh)
 tools/ui/fonts/
+__pycache__/

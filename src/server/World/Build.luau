@@ -51,26 +51,36 @@ function Build.run(): Folder
 	end
 	local root = Instance.new("Folder")
 	root.Name = "Maison"
-	Street.build(root)
-	Foyer.build(root)
-	Salon.build(root)
-	Velvet.build(root)
-	Obsidian.build(root)
-	Midnight.build(root)
-	Library.build(root)
-	Ballroom.build(root)
-	BoutiqueRoom.build(root)
-	VaultRoom.build(root)
-	Terrace.build(root)
-	SuiteRoom.build(root)
-	local sills = Kit.folder(root, "Sills")
-	for _, d in Layout.Doorways do
-		if d.sill then
-			sill(sills, d)
+	-- Each part of the house is built on its own: one that fails is reported in Output and the
+	-- rest of the house still stands.
+	local function step(name: string, fn: () -> ())
+		local ok, err = pcall(fn)
+		if not ok then
+			warn(string.format("[Maison] Building %s failed: %s", name, tostring(err)))
 		end
 	end
+	step("the Street", function() Street.build(root) end)
+	step("the Foyer", function() Foyer.build(root) end)
+	step("the Salon", function() Salon.build(root) end)
+	step("the Velvet Room", function() Velvet.build(root) end)
+	step("the Obsidian Room", function() Obsidian.build(root) end)
+	step("the Midnight Room", function() Midnight.build(root) end)
+	step("the Library", function() Library.build(root) end)
+	step("the Ballroom", function() Ballroom.build(root) end)
+	step("the Boutique", function() BoutiqueRoom.build(root) end)
+	step("the Vault", function() VaultRoom.build(root) end)
+	step("the Terrace", function() Terrace.build(root) end)
+	step("the Suite", function() SuiteRoom.build(root) end)
+	step("the doorway sills", function()
+		local sills = Kit.folder(root, "Sills")
+		for _, d in Layout.Doorways do
+			if d.sill then
+				sill(sills, d)
+			end
+		end
+	end)
 	-- Surfaces laid flush in one plane flicker as the camera moves: lift each clear.
-	Flush.settle(root)
+	step("the flicker fix", function() Flush.settle(root) end)
 	root.Parent = Workspace
 	return root
 end

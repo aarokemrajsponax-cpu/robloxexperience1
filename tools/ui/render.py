@@ -91,6 +91,19 @@ def first(node, cls):
     return None
 
 
+def pads(node, w, h):
+    """A node's UIPadding (top, bottom, left, right) in its own unscaled pixels: offset plus
+    scale of its own size, as Roblox does."""
+    padn = first(node, "UIPadding")
+    if not padn:
+        return 0, 0, 0, 0
+    pt, pb, pl, pr = padn["pad"]
+    ps = padn.get("padS")
+    if ps:
+        pt, pb, pl, pr = pt + ps[0] * h, pb + ps[1] * h, pl + ps[2] * w, pr + ps[3] * w
+    return pt, pb, pl, pr
+
+
 GUI_CLASSES = {"Frame", "TextLabel", "TextButton", "TextBox", "CanvasGroup", "ImageLabel", "ImageButton", "ScrollingFrame", "ViewportFrame"}
 
 
@@ -173,8 +186,7 @@ def place(node, parent, at=None):
     if node.get("auto") in ("Y", "XY") and "text" not in node:
         lst = first(node, "UIListLayout")
         content_h = node.get("_content_h", 0)
-        padn = first(node, "UIPadding")
-        pt, pb = (padn["pad"][0], padn["pad"][1]) if padn else (0, 0)
+        pt, pb, _, _ = pads(node, w, h)
         if lst or any(is_gui(k) for k in node["kids"]):
             new_h = max(h, (content_h + pt + pb) * node["_s"])
             if abs(new_h - h) > 0.5:
@@ -189,8 +201,7 @@ def place(node, parent, at=None):
 def layout_children(node):
     r = node["_rect"]
     s = node["_s"]
-    padn = first(node, "UIPadding")
-    pt, pb, pl, pr = padn["pad"] if padn else (0, 0, 0, 0)
+    pt, pb, pl, pr = pads(node, r.w / s if s else r.w, r.h / s if s else r.h)
     content = Box(r.x + pl * s, r.y + pt * s, r.w - (pl + pr) * s, r.h - (pt + pb) * s)
     # Children are laid out in the unscaled space, then scaled with the parent.
     inner = Box(content.x, content.y, content.w / s if s else content.w, content.h / s if s else content.h)
@@ -352,8 +363,7 @@ def draw_node(canvas, node, alpha_mul, k, clip=None):
         layer.alpha_composite(Image.fromarray(a, "RGBA"), (int(round(X - pad)), int(round(Y - pad))))
     if "text" in node and node.get("text") and node.get("textT", 1) < 1:
         ts = node["_s"] * node.get("_S", 1)
-        padn = first(node, "UIPadding")
-        pt, pb, pl, pr = padn["pad"] if padn else (0, 0, 0, 0)
+        pt, pb, pl, pr = pads(node, r.w / ts, r.h / ts)
         avail_w = r.w / ts - pl - pr
         avail_h = r.h / ts - pt - pb
         if node.get("scaled"):

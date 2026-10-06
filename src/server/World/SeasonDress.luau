@@ -139,7 +139,7 @@ function SeasonDress.apply(id: string)
 	Terrace.setOpen(id == "summer")
 	Workspace:SetAttribute("TerraceOpen", id == "summer")
 	-- The dressing is laid on floors and walls: anything flush with them is lifted clear.
-	Flush.settle(maison)
+	pcall(Flush.settle, maison)
 end
 
 return SeasonDress
