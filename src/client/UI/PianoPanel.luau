@@ -22,6 +22,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Ease = require(ReplicatedStorage.Shared.Ease)
 local PianoKeys = require(ReplicatedStorage.Shared.PianoKeys)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Fade = require(script.Parent.Fade)
 local Prompts = require(script.Parent.Prompts)
 local Root = require(script.Parent.Root)
 local Theme = require(script.Parent.Theme)
@@ -234,7 +235,7 @@ end
 
 type KeyView = { button: TextButton, base: Color3, black: boolean }
 
-local board: CanvasGroup? = nil
+local board: Frame? = nil
 local views: { [number]: KeyView } = {}
 local timeLabel: TextLabel? = nil
 local playing = false
@@ -259,7 +260,7 @@ local function press(index: number)
 	end
 end
 
-local function build(): CanvasGroup
+local function build(): Frame
 	local size = Root.size()
 	local w = math.min(1040, size.X - 24)
 	local keysH = math.clamp(math.floor(w * 0.16), 120, 170)
@@ -431,10 +432,10 @@ local function setPlaying(on: boolean)
 			g = build()
 			board = g
 		end
-		local group = g :: CanvasGroup
+		local group = g :: Frame
 		group.Visible = true
-		group.GroupTransparency = 1
-		Ease.play(group, Ease.panel, { GroupTransparency = 0 })
+		Fade.set(group, 1)
+		Fade.to(group, Ease.panel, 0)
 		bindKeys(true)
 		-- The world's prompts and a phone's thumbstick step aside for the keys.
 		Prompts.hold("piano", true)
@@ -467,7 +468,7 @@ local function setPlaying(on: boolean)
 		end
 		local g = board
 		if g then
-			local t = Ease.play(g, Ease.quick, { GroupTransparency = 1 })
+			local t = Fade.to(g, Ease.quick, 1)
 			t.Completed:Once(function()
 				if not playing then
 					g.Visible = false

@@ -1,7 +1,10 @@
 --!strict
--- The sorting screen. Sit down at a table and the house falls away: this is all there is. A dark
--- cloth under lamplight with the pieces set down on it, each one drawn and resting on its own
--- shadow, and the six cases beneath with their counts. Point at a piece and its name shows; pick
+-- The sorting screen. Sit down at a table and the house falls away: this is all there is. The
+-- Jeweller's Desk: a mahogany desk with brass corner guards, its green leather top tooled in
+-- gold, under lamplight, with the pieces set down on it, each one drawn and resting on its own
+-- shadow; beneath, six jewellery drawers, each lined in its own velvet with an engraved brass
+-- plate and a count on the shoulder of its plinth; above, the house's crest and the figures on
+-- small brass-edged plaques. Point at a piece and its name shows; pick
 -- it up and, in the rooms that help you, a line of light runs to the case it belongs in. Drag it
 -- onto its case, or tap it and then the case, or keys 1 to 6, or a gamepad's D-pad and A. A right
 -- case takes it in with a glint and its points; a wrong one flashes and shakes, and the piece
@@ -69,6 +72,7 @@ type Bin = {
 	markPx: number,
 	count: TextLabel,
 	name: TextLabel,
+	plate: Frame,
 	sub: TextLabel,
 	key: TextLabel,
 	centre: Vector2,
@@ -101,13 +105,27 @@ local SMOKE = C.smoke
 local CORAL = Color3.fromRGB(230, 118, 96)
 local F = Brand.Fonts
 -- The house's cloth and lamp, unless the guest wears a table style or a lamp of their own.
+-- The Jeweller's Desk: a mahogany desk with brass corner guards, its top a deep green leather
+-- tooled with a double gold border; the six cases are jewellery drawers, each lined in its own
+-- velvet, with an engraved brass plate for its name.
 local CLOTH = ColorSequence.new({
-	ColorSequenceKeypoint.new(0, Color3.fromRGB(26, 28, 33)),
-	ColorSequenceKeypoint.new(0.5, Color3.fromRGB(17, 19, 24)),
-	ColorSequenceKeypoint.new(1, Color3.fromRGB(11, 12, 16)),
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 62, 47)),
+	ColorSequenceKeypoint.new(0.55, Color3.fromRGB(19, 42, 32)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(10, 24, 18)),
 })
 local VELVET = { Color3.fromRGB(84, 26, 38), Color3.fromRGB(56, 15, 26), Color3.fromRGB(32, 8, 15) }
-local WALNUT = { Color3.fromRGB(92, 62, 40), Color3.fromRGB(64, 42, 27), Color3.fromRGB(44, 28, 18), Color3.fromRGB(24, 15, 10) }
+local WALNUT = { Color3.fromRGB(104, 46, 32), Color3.fromRGB(74, 30, 21), Color3.fromRGB(48, 18, 13), Color3.fromRGB(22, 8, 6) }
+-- Each drawer's velvet (top, middle, bottom), so a case is known by its colour at a glance.
+local CASE_VELVET: { [string]: { Color3 } } = {
+	watches = { Color3.fromRGB(36, 52, 96), Color3.fromRGB(22, 32, 64), Color3.fromRGB(12, 17, 36) },
+	jewelry = { Color3.fromRGB(104, 28, 44), Color3.fromRGB(70, 16, 30), Color3.fromRGB(38, 8, 16) },
+	money = { Color3.fromRGB(30, 78, 54), Color3.fromRGB(18, 52, 36), Color3.fromRGB(9, 28, 19) },
+	keys = { Color3.fromRGB(24, 74, 80), Color3.fromRGB(14, 48, 54), Color3.fromRGB(7, 26, 30) },
+	accessories = { Color3.fromRGB(78, 36, 92), Color3.fromRGB(52, 22, 64), Color3.fromRGB(28, 11, 36) },
+	collectibles = { Color3.fromRGB(110, 70, 24), Color3.fromRGB(76, 46, 14), Color3.fromRGB(42, 24, 7) },
+}
+local BRASS = { Color3.fromRGB(240, 210, 140), Color3.fromRGB(206, 164, 84), Color3.fromRGB(150, 110, 48) }
+local ENGRAVED = Color3.fromRGB(42, 28, 10)
 local LAMP = Color3.fromRGB(214, 150, 72)
 local POOL = Color3.fromRGB(255, 214, 150)
 local rim = LIGHT -- the cases' and the cloth's edges
@@ -376,17 +394,31 @@ local function makeStat(parent: Instance, name: string, key: string, width: numb
 	f.Parent = parent
 	local scale = Instance.new("UIScale")
 	scale.Parent = f
-	local k = label(f, key, 11, F.bodyMedium, SMOKE, {
+	-- Each figure sits on its own small plaque: dark glass, a gold hairline, a brass top edge.
+	local plaque = sheet(f, "Plaque", Color3.new(1, 1, 1), 1)
+	plaque.Size = UDim2.fromScale(1, 1)
+	shade(plaque, 90, colours({ { 0, Color3.fromRGB(34, 26, 22) }, { 1, Color3.fromRGB(14, 11, 11) } }))
+	plaque.BackgroundTransparency = 0.12
+	corner(plaque, 6)
+	stroke(plaque, GOLD, 0.62, 1)
+	local edge = sheet(plaque, "Edge", BRASS[1], 2)
+	edge.Size = UDim2.new(1, -12, 0, 1)
+	edge.Position = UDim2.fromOffset(6, 0)
+	edge.BackgroundTransparency = 0.45
+	local k = label(f, key, 11, F.bodyBold, LIGHT, {
 		Name = "Key",
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.fromScale(0.5, 0.02),
-		Size = UDim2.fromScale(1.4, 0.28),
+		Position = UDim2.fromScale(0.5, 0.08),
+		Size = UDim2.fromScale(1, 0.26),
+		TextTransparency = 0.15,
+		ZIndex = 2,
 	})
-	local v = label(f, "", 34, F.figures, BONE, {
+	local v = label(f, "", 30, F.figures, BONE, {
 		Name = "Value",
 		AnchorPoint = Vector2.new(0.5, 1),
-		Position = UDim2.fromScale(0.5, 1),
-		Size = UDim2.fromScale(1.4, 0.7),
+		Position = UDim2.fromScale(0.5, 0.97),
+		Size = UDim2.fromScale(1, 0.66),
+		ZIndex = 2,
 	})
 	local st: Stat = { frame = f, key = k, value = v, scale = scale, width = width, shown = false }
 	stats[name] = st
@@ -444,78 +476,73 @@ local function build()
 	moteLayer.ZIndex = 1
 	moteLayer.Parent = root
 
-	-- The tray: a polished walnut frame with a gold bead where it meets the cloth, and the
-	-- cloth set into it (a shadow along its edges, where the frame stands over it), deep slate
-	-- under a warm wash of lamplight.
+	-- The desk: polished mahogany with a gold bead round its edge and brass guards on its four
+	-- corners; set into it, the leather top (a shadow along its edges where the wood stands over
+	-- it), tooled with a double gold border and a fleuron in each corner, under a warm wash of
+	-- lamplight.
 	local frame = sheet(root, "TrayFrame", Color3.new(1, 1, 1), 2)
 	header.trayFrame = frame
-	shade(frame, 90, colours({ { 0, WALNUT[1] }, { 0.08, WALNUT[2] }, { 0.5, WALNUT[3] }, { 1, WALNUT[4] } }))
-	header.frameCorner = corner(frame, 6)
-	stroke(frame, Color3.new(0, 0, 0), 0.35, 1)
+	shade(frame, 90, colours({ { 0, WALNUT[1] }, { 0.08, WALNUT[2] }, { 0.55, WALNUT[3] }, { 1, WALNUT[4] } }))
+	header.frameCorner = corner(frame, 10)
+	header.frameStroke = stroke(frame, GOLD, 0.45, 1)
 	local shine = sheet(frame, "Shine", LIGHT, 2)
-	shine.Size = UDim2.new(1, -16, 0, 1)
-	shine.Position = UDim2.fromOffset(8, 1)
-	shade(shine, 0, nil, alphas({ { 0, 1 }, { 0.25, 0.72 }, { 0.75, 0.72 }, { 1, 1 } }))
+	shine.Size = UDim2.new(1, -24, 0, 1)
+	shine.Position = UDim2.fromOffset(12, 1)
+	shade(shine, 0, nil, alphas({ { 0, 1 }, { 0.25, 0.6 }, { 0.75, 0.6 }, { 1, 1 } }))
 	tray = sheet(root, "Tray", Color3.new(1, 1, 1), 2)
 	header.trayShade = shade(tray, 90, CLOTH)
-	header.trayCorner = corner(tray, 3)
-	header.trayStroke = stroke(tray, GOLD, 0.3, 1.5)
-	local sheen = sheet(tray, "Sheen", GOLD, 1)
-	sheen.Size = UDim2.fromScale(1, 0.7)
-	shade(sheen, 90, nil, alphas({ { 0, 0.88 }, { 0.6, 0.97 }, { 1, 1 } }))
-	header.sheenCorner = corner(sheen, 3)
+	header.trayCorner = corner(tray, 4)
+	header.trayStroke = stroke(tray, Color3.new(0, 0, 0), 0.35, 2)
+	-- The leather's grain catching the lamp: a soft diagonal sheen.
+	local sheen = sheet(tray, "Sheen", Color3.fromRGB(255, 240, 210), 1)
+	sheen.Size = UDim2.fromScale(1, 1)
+	shade(sheen, 35, nil, alphas({ { 0, 0.93 }, { 0.45, 0.985 }, { 1, 1 } }))
+	header.sheenCorner = corner(sheen, 4)
 	header.edges = {}
 	for _, side in { 90, 270, 0, 180 } do
 		local e = sheet(tray, "Edge", Color3.new(0, 0, 0), 1)
 		e:SetAttribute("Side", side)
-		shade(e, side, nil, alphas({ { 0, 0.3 }, { 0.35, 0.7 }, { 1, 1 } }))
+		shade(e, side, nil, alphas({ { 0, 0.25 }, { 0.35, 0.68 }, { 1, 1 } }))
 		table.insert(header.edges, e)
 	end
-	-- A pool of lamplight in the middle of the cloth: faint ovals, each a little smaller.
+	-- A pool of lamplight in the middle of the leather: faint ovals, each a little smaller.
 	header.pools = {}
 	for k = 1, 16 do
 		local pool = sheet(tray, "Pool", POOL, 1)
 		table.insert(header.pools, pool)
 		pool.AnchorPoint = Vector2.new(0.5, 0.5)
-		pool.Position = UDim2.fromScale(0.5, 0.4)
+		pool.Position = UDim2.fromScale(0.5, 0.42)
 		local f = 1 - (k - 1) * 0.055
-		pool.Size = UDim2.fromScale(0.9 * f, 1.0 * f)
-		pool.BackgroundTransparency = 0.994
+		pool.Size = UDim2.fromScale(0.95 * f, 1.05 * f)
+		pool.BackgroundTransparency = 0.993
 		corner(pool, 9999)
 	end
-	-- Tufted like a Chesterfield: a lattice of small gold buttons across the cloth, very faint,
-	-- every other row set half a step over.
-	local tufts = Instance.new("Frame")
-	tufts.Name = "Tufts"
-	tufts.BackgroundTransparency = 1
-	tufts.Size = UDim2.fromScale(1, 1)
-	tufts.ZIndex = 1
-	tufts.Parent = tray
-	local COLS, ROWS = 16, 6
-	for r = 0, ROWS do
-		for c = 0, COLS do
-			local x = (c + (if r % 2 == 1 then 0.5 else 0)) / COLS
-			if x > 1 then
-				continue
-			end
-			local b = sheet(tufts, "Tuft", GOLD, 1)
-			b.AnchorPoint = Vector2.new(0.5, 0.5)
-			b.Position = UDim2.fromScale(x, r / ROWS)
-			b.Size = UDim2.fromOffset(4, 4)
-			b.Rotation = 45
-			b.BackgroundTransparency = 0.86
-		end
-	end
-	-- Small gold diamonds set into the frame's corners.
+	-- Brass guards on the desk's corners: an L of brass at each, a rivet where the legs meet.
 	for i, at in { Vector2.new(0, 0), Vector2.new(1, 0), Vector2.new(0, 1), Vector2.new(1, 1) } do
-		local d = sheet(frame, "Ornament", GOLD, 3)
-		d.Name = "Ornament" .. i
-		d.AnchorPoint = Vector2.new(0.5, 0.5)
-		d.Rotation = 45
-		d.BackgroundTransparency = 0.25
-		d:SetAttribute("Corner", at)
-		header["ornament" .. i] = d
+		local guard = Instance.new("Frame")
+		guard.Name = "Ornament" .. i
+		guard.BackgroundTransparency = 1
+		guard.AnchorPoint = at
+		guard.ZIndex = 3
+		guard:SetAttribute("Corner", at)
+		guard.Parent = frame
+		for _, leg in { "LegX", "LegY" } do
+			local l = sheet(guard, leg, Color3.new(1, 1, 1), 3)
+			shade(l, if leg == "LegX" then 90 else 0, colours({ { 0, BRASS[1] }, { 0.5, BRASS[2] }, { 1, BRASS[3] } }))
+			l.AnchorPoint = at
+			l.Position = UDim2.fromScale(at.X, at.Y)
+			l:SetAttribute("Leg", leg)
+			corner(l, 2)
+		end
+		local rivet = sheet(guard, "Rivet", BRASS[1], 4)
+		rivet.AnchorPoint = Vector2.new(0.5, 0.5)
+		rivet:SetAttribute("Rivet", true)
+		corner(rivet, 9999)
+		stroke(rivet, BRASS[3], 0.2, 1)
+		header["ornament" .. i] = guard
 	end
+	-- The tooling: two gold lines round the leather, a fleuron (a gold lozenge with a dot either
+	-- side) in each inner corner.
 	local inner = Instance.new("Frame")
 	inner.Name = "Inner"
 	inner.BackgroundTransparency = 1
@@ -523,8 +550,34 @@ local function build()
 	inner.Position = UDim2.fromScale(0.5, 0.5)
 	inner.Parent = tray
 	header.trayInner = inner
-	header.innerStroke = stroke(inner, LIGHT, 0.93, 1)
+	header.innerStroke = stroke(inner, GOLD, 0.45, 1)
 	header.innerCorner = corner(inner, 2)
+	local inner2 = Instance.new("Frame")
+	inner2.Name = "Inner2"
+	inner2.BackgroundTransparency = 1
+	inner2.AnchorPoint = Vector2.new(0.5, 0.5)
+	inner2.Position = UDim2.fromScale(0.5, 0.5)
+	inner2.Parent = tray
+	header.trayInner2 = inner2
+	stroke(inner2, GOLD, 0.72, 1)
+	header.fleurons = {}
+	for _, at in { Vector2.new(0, 0), Vector2.new(1, 0), Vector2.new(0, 1), Vector2.new(1, 1) } do
+		local f = sheet(inner, "Fleuron", GOLD, 2)
+		f.AnchorPoint = Vector2.new(0.5, 0.5)
+		f.Position = UDim2.fromScale(at.X, at.Y)
+		f.Rotation = 45
+		f.BackgroundTransparency = 0.25
+		table.insert(header.fleurons, f)
+		for _, d in { -1, 1 } do
+			local dot = sheet(f, "Dot", GOLD, 2)
+			dot.AnchorPoint = Vector2.new(0.5, 0.5)
+			dot.Position = UDim2.new(0.5, d * 9, 0.5, -d * 9)
+			dot.Size = UDim2.fromOffset(3, 3)
+			dot.Rotation = -45
+			dot.BackgroundTransparency = 0.35
+			corner(dot, 9999)
+		end
+	end
 
 	-- Header: the house's mark and the room on the left; score, combo, time and round on the
 	-- right, each a small label over a large figure; a gold rule beneath.
@@ -534,23 +587,36 @@ local function build()
 	head.ZIndex = 3
 	head.Parent = root
 	header.frame = head
-	header.mark = label(head, Caps(Brand.Name), 18, F.bodyMedium, BONE, {
+	-- The house's crest: a gold-rimmed medallion with its monogram.
+	local crest = sheet(head, "Crest", Color3.new(1, 1, 1), 3)
+	crest.AnchorPoint = Vector2.new(0, 0.5)
+	shade(crest, 135, colours({ { 0, Color3.fromRGB(44, 30, 22) }, { 1, Color3.fromRGB(14, 10, 9) } }))
+	corner(crest, 9999)
+	stroke(crest, GOLD, 0.2, 1.5)
+	header.crest = crest
+	header.crestText = label(crest, "MN", 18, F.display, LIGHT, {
+		Name = "Monogram",
+		Position = UDim2.fromScale(0.5, 0.52),
+		Size = UDim2.fromScale(1, 1),
+		ZIndex = 4,
+	})
+	header.mark = label(head, Brand.Name, 24, F.display, BONE, {
 		Name = "Mark",
 		AnchorPoint = Vector2.new(0, 0.5),
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextTruncate = Enum.TextTruncate.AtEnd,
 	})
-	header.room = label(head, "", 13, F.body, SMOKE, {
+	header.room = label(head, "", 13, F.bodyMedium, LIGHT, {
 		Name = "Room",
 		AnchorPoint = Vector2.new(0, 0.5),
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextTruncate = Enum.TextTruncate.AtEnd,
 	})
 	stats = {}
-	makeStat(head, "SCORE", "SCORE", 112)
-	makeStat(head, "COMBO", "COMBO", 64)
-	makeStat(head, "TIME", "TIME", 86)
-	makeStat(head, "ROUND", "ROUND", 64)
+	makeStat(head, "SCORE", "SCORE", 132)
+	makeStat(head, "COMBO", "COMBO", 86)
+	makeStat(head, "TIME", "TIME", 100)
+	makeStat(head, "ROUND", "ROUND", 86)
 
 	local rule = sheet(root, "Rule", GOLD, 3)
 	shade(rule, 0, nil, alphas({ { 0, 0.15 }, { 0.65, 0.7 }, { 1, 1 } }))
@@ -677,32 +743,42 @@ local function layoutStats()
 		local each = L.width / math.max(1, #shown)
 		for i, st in shown do
 			st.frame.Position = UDim2.fromOffset(math.floor(i * each), math.floor(46 * s))
-			st.frame.Size = UDim2.fromOffset(math.floor(each), L.headerH - math.floor(50 * s))
+			st.frame.Size = UDim2.fromOffset(math.floor(each - 6 * s), L.headerH - math.floor(50 * s))
 		end
 		mark.Visible = false
-		line.Size = UDim2.fromOffset(math.max(60 * s, L.vp.X - L.keys - L.left - 14 * s), 18 * s)
+		header.crest.Visible = false
+		line.Size = UDim2.fromOffset(math.max(60 * s, L.vp.X - L.keys - L.left - 44 * s), 18 * s)
 		line.Position = UDim2.fromOffset(0, math.floor(26 * s))
 		return
 	end
 	local right = math.min(L.width, L.vp.X - L.keys - L.left - 18 * s)
-	local gap = 24 * s
+	local gap = 10 * s
 	local x = right
 	for i = #shown, 1, -1 do
 		local st = shown[i]
 		local w = st.width * s
-		st.frame.Position = UDim2.fromOffset(x, math.floor(6 * s))
-		st.frame.Size = UDim2.fromOffset(w, L.headerH - math.floor(10 * s))
+		st.frame.Position = UDim2.fromOffset(x, math.floor(2 * s))
+		st.frame.Size = UDim2.fromOffset(w, L.headerH - math.floor(4 * s))
 		x -= w + gap
 	end
 	-- The house's mark and the room take what's left.
-	local room = math.max(60 * s, x)
-	local showMark = x > 170 * s
 	local mid = L.headerH / 2
+	-- The crest first, when there's room for it beside the words.
+	local crest = header.crest :: Frame
+	local crestPx = math.floor(46 * s)
+	local showCrest = x > 260 * s
+	crest.Visible = showCrest
+	crest.Size = UDim2.fromOffset(crestPx, crestPx)
+	crest.Position = UDim2.fromOffset(0, mid)
+	header.crestText.TextSize = textSize(17 * s)
+	local textX = if showCrest then crestPx + math.floor(12 * s) else 0
+	local room = math.max(60 * s, x - textX)
+	local showMark = room > 170 * s
 	mark.Visible = showMark
-	mark.Size = UDim2.fromOffset(room, 22 * s)
-	mark.Position = UDim2.fromOffset(0, mid - 9 * s)
+	mark.Size = UDim2.fromOffset(room, 26 * s)
+	mark.Position = UDim2.fromOffset(textX, mid - 9 * s)
 	line.Size = UDim2.fromOffset(room, 16 * s)
-	line.Position = UDim2.fromOffset(0, if showMark then mid + 12 * s else mid)
+	line.Position = UDim2.fromOffset(textX, if showMark then mid + 13 * s else mid)
 end
 
 local function layoutChrome()
@@ -711,13 +787,13 @@ local function layoutChrome()
 	local fr = L.frame
 	header.trayFrame.Position = UDim2.fromOffset(fr.x, fr.y)
 	header.trayFrame.Size = UDim2.fromOffset(fr.w, fr.h)
-	header.frameCorner.CornerRadius = UDim.new(0, math.max(3, math.floor(7 * s)))
+	header.frameCorner.CornerRadius = UDim.new(0, math.max(4, math.floor(12 * s)))
 	tray.Position = UDim2.fromOffset(t.x, t.y)
 	tray.Size = UDim2.fromOffset(t.w, t.h)
 	local radius = UDim.new(0, math.max(2, math.floor(3 * s)))
 	header.trayCorner.CornerRadius = radius
 	header.sheenCorner.CornerRadius = radius
-	header.trayStroke.Thickness = math.max(1, 1.5 * s)
+	header.trayStroke.Thickness = math.max(1, 2 * s)
 	local depth = math.floor(26 * s)
 	for _, e in header.edges do
 		local side = e:GetAttribute("Side")
@@ -729,15 +805,38 @@ local function layoutChrome()
 			e.Position = if side == 0 then UDim2.fromScale(0, 0) else UDim2.new(1, -depth, 0, 0)
 		end
 	end
-	local insetPx = math.floor(8 * s)
+	-- The tooling, set in from the leather's edge; the fleurons in its corners.
+	local insetPx = math.floor(12 * s)
 	header.trayInner.Size = UDim2.new(1, -2 * insetPx, 1, -2 * insetPx)
+	local inset2 = math.floor(17 * s)
+	header.trayInner2.Size = UDim2.new(1, -2 * inset2, 1, -2 * inset2)
+	local fl = math.max(4, math.floor(7 * s))
+	for _, f in header.fleurons do
+		f.Size = UDim2.fromOffset(fl, fl)
+	end
+	-- The brass corner guards: legs a little longer on a big screen, a rivet at the corner.
+	local leg = math.max(12, math.floor(34 * s))
+	local thick = math.max(3, math.floor(5 * s))
 	for i = 1, 4 do
-		local d = header["ornament" .. i] :: Frame?
-		if d then
-			local at = d:GetAttribute("Corner") :: Vector2
-			local half = math.floor(L.rim / 2)
-			d.Position = UDim2.new(at.X, if at.X == 0 then half else -half, at.Y, if at.Y == 0 then half else -half)
-			d.Size = UDim2.fromOffset(math.max(4, math.floor(6 * s)), math.max(4, math.floor(6 * s)))
+		local g = header["ornament" .. i] :: Frame?
+		if g then
+			local at = g:GetAttribute("Corner") :: Vector2
+			local off = math.floor(3 * s)
+			g.Position = UDim2.new(at.X, if at.X == 0 then off else -off, at.Y, if at.Y == 0 then off else -off)
+			g.Size = UDim2.fromOffset(leg, leg)
+			for _, c in g:GetChildren() do
+				if c:IsA("Frame") then
+					if c:GetAttribute("Leg") == "LegX" then
+						c.Size = UDim2.new(1, 0, 0, thick)
+					elseif c:GetAttribute("Leg") == "LegY" then
+						c.Size = UDim2.new(0, thick, 1, 0)
+					elseif c:GetAttribute("Rivet") then
+						local r = math.max(3, math.floor(thick * 1.1))
+						c.Size = UDim2.fromOffset(r, r)
+						c.Position = UDim2.new(at.X, if at.X == 0 then thick / 2 else -thick / 2, at.Y, if at.Y == 0 then thick / 2 else -thick / 2)
+					end
+				end
+			end
 		end
 	end
 	local head = header.frame :: Frame
@@ -786,9 +885,12 @@ local function binFrame(case: Catalogue.Case, index: number): Bin
 		radius = math.floor(math.min(L.binH, L.binW) * 0.34)
 		shade(f, 90, colours({ { 0, Color3.fromRGB(40, 37, 33) }, { 0.6, Color3.fromRGB(24, 22, 20) }, { 1, Color3.fromRGB(15, 14, 13) } }))
 	else
+		-- A jewellery drawer: mahogany, lined in this case's own velvet.
+		radius = math.max(4, math.floor(8 * s))
 		shade(f, 90, colours({ { 0, WALNUT[1] }, { 0.1, WALNUT[2] }, { 0.6, WALNUT[3] }, { 1, WALNUT[4] } }))
 		local velvet = sheet(f, "Velvet", Color3.new(1, 1, 1), 1)
-		shade(velvet, 90, colours({ { 0, VELVET[1] }, { 0.55, VELVET[2] }, { 1, VELVET[3] } }))
+		local v = CASE_VELVET[case.id] or VELVET
+		shade(velvet, 90, colours({ { 0, v[1] }, { 0.55, v[2] }, { 1, v[3] } }))
 		corner(velvet, math.max(2, radius - 2))
 		stroke(velvet, GOLD, 0.5, 1)
 		-- The case's front edge throws a shadow onto the velvet.
@@ -814,24 +916,18 @@ local function binFrame(case: Catalogue.Case, index: number): Bin
 	-- A round velvet plinth under the case's piece, ringed in gold (placed by layoutBinInside).
 	local plinth = sheet(f, "Plinth", Color3.new(1, 1, 1), 2)
 	plinth.AnchorPoint = Vector2.new(0.5, 0.5)
-	shade(plinth, 90, colours({ { 0, Color3.fromRGB(92, 34, 46) }, { 0.55, Color3.fromRGB(46, 14, 22) }, { 1, Color3.fromRGB(22, 6, 10) } }))
+	local pv = CASE_VELVET[case.id] or VELVET
+	shade(plinth, 90, colours({ { 0, pv[1]:Lerp(Color3.new(1, 1, 1), 0.12) }, { 0.55, pv[2] }, { 1, pv[3]:Lerp(Color3.new(0, 0, 0), 0.4) } }))
 	corner(plinth, 999)
 	stroke(plinth, GOLD, 0.55, 1)
 	plinth.BackgroundTransparency = if style == "Boxes" or style == "Plates" then 1 else 0
-	-- Glass over the case: a soft sheen across its top, and one bright glint.
+	-- Glass over the drawer: a soft sheen across its top.
 	local glass = sheet(f, "Glass", Color3.new(1, 1, 1), 4)
 	glass.Size = UDim2.fromScale(1, 0.5)
 	glass.BackgroundTransparency = 0
 	shade(glass, 90, nil, alphas({ { 0, 0.9 }, { 0.6, 0.97 }, { 1, 1 } }))
 	corner(glass, radius)
 	glass.Active = false
-	local glint = sheet(f, "Glint", Color3.new(1, 1, 1), 4)
-	glint.AnchorPoint = Vector2.new(0.5, 0.5)
-	glint.Position = UDim2.fromScale(0.72, 0.18)
-	glint.Size = UDim2.new(0.5, 0, 0, 2)
-	glint.Rotation = -8
-	glint.BackgroundTransparency = 0
-	shade(glint, 0, nil, alphas({ { 0, 1 }, { 0.5, 0.82 }, { 1, 1 } }))
 	-- The piece that stands for the case, resting on the velvet.
 	local mark = Instance.new("Frame")
 	mark.Name = "MarkHolder"
@@ -858,8 +954,13 @@ local function binFrame(case: Catalogue.Case, index: number): Bin
 		TextTransparency = 0.4,
 		ZIndex = 3,
 	})
+	-- An engraved brass plate for the case's name (sized by layoutBinInside).
+	local plate = sheet(f, "Plate", Color3.new(1, 1, 1), 3)
+	shade(plate, 90, colours({ { 0, BRASS[1] }, { 0.5, BRASS[2] }, { 1, BRASS[3] } }))
+	corner(plate, 3)
+	stroke(plate, Color3.fromRGB(90, 62, 24), 0.25, 1)
 	-- (Sized and placed by layoutBinInside, for the case's size.)
-	local name = label(f, case.name, 16, F.bodyBold, BONE, { Name = "Title", ZIndex = 3 })
+	local name = label(f, case.name, 16, F.bodyBold, ENGRAVED, { Name = "Title", ZIndex = 4 })
 	local sub = label(f, case.subtitle, 13, F.body, SMOKE, { Name = "Sub", ZIndex = 3 })
 	f.Parent = casesLayer
 	return {
@@ -875,6 +976,7 @@ local function binFrame(case: Catalogue.Case, index: number): Bin
 		markPx = 0,
 		count = count,
 		name = name,
+		plate = plate,
 		sub = sub,
 		key = key,
 		centre = Vector2.zero,
@@ -929,10 +1031,19 @@ local function layoutBinInside(bin: Bin)
 		local lines = if longestSub * subSize * 0.5 > textW then 2 else 1
 		local block = nameSize + math.floor(3 * s) + lines * math.ceil(subSize * 1.15)
 		local top = (h - block) / 2
+		-- The name engraved on its brass plate, just wide enough for the longest name.
+		local platePad = math.floor(7 * s)
+		local plateW = math.min(textW, math.floor(longestName * nameSize * 0.6) + 2 * platePad)
+		local plateH = nameSize + math.floor(6 * s)
+		top -= math.floor(3 * s)
+		bin.plate.AnchorPoint = Vector2.new(0, 0)
+		bin.plate.Position = UDim2.fromOffset(textLeft, top)
+		bin.plate.Size = UDim2.fromOffset(plateW, plateH)
 		bin.name.AnchorPoint = Vector2.new(0, 0)
-		bin.name.TextXAlignment = Enum.TextXAlignment.Left
-		bin.name.Position = UDim2.fromOffset(textLeft, top)
-		bin.name.Size = UDim2.fromOffset(textW, nameSize + 2)
+		bin.name.TextXAlignment = Enum.TextXAlignment.Center
+		bin.name.Position = UDim2.fromOffset(textLeft, top + math.floor(3 * s) - 1)
+		bin.name.Size = UDim2.fromOffset(plateW, nameSize + 2)
+		top += math.floor(6 * s)
 		bin.sub.AnchorPoint = Vector2.new(0, 0)
 		bin.sub.TextXAlignment = Enum.TextXAlignment.Left
 		bin.sub.TextYAlignment = Enum.TextYAlignment.Top
@@ -947,8 +1058,12 @@ local function layoutBinInside(bin: Bin)
 		nameSize = textSize(math.min(math.clamp(h * 0.19, 13, 19), textW / (longestName * 0.62)))
 		bin.name.AnchorPoint = Vector2.new(0.5, 1)
 		bin.name.TextXAlignment = Enum.TextXAlignment.Center
-		bin.name.Position = UDim2.new(0.5, 0, 1, -inset - math.floor(4 * s))
+		bin.name.Position = UDim2.new(0.5, 0, 1, -inset - math.floor(5 * s))
 		bin.name.Size = UDim2.fromOffset(textW, nameSize + 4)
+		local plateW = math.min(textW, math.floor(longestName * nameSize * 0.6) + math.floor(12 * s))
+		bin.plate.AnchorPoint = Vector2.new(0.5, 1)
+		bin.plate.Position = UDim2.new(0.5, 0, 1, -inset - math.floor(3 * s))
+		bin.plate.Size = UDim2.fromOffset(plateW, nameSize + math.floor(8 * s))
 		-- No room for the line under the name: "Closed" shows in the name's place.
 		bin.sub.Visible = false
 	end
@@ -958,6 +1073,26 @@ local function layoutBinInside(bin: Bin)
 	bin.name.TextSize = nameSize
 	bin.sub.TextSize = subSize
 	bin.mark.Size = UDim2.fromOffset(markPx, markPx)
+	-- On a wide drawer the count rides on the plinth's shoulder, leaving the plate room.
+	if wide then
+		local badgeW, badgeH = math.floor(30 * s), textSize(15 * s) + math.floor(4 * s)
+		local cx = bin.mark.Position.X.Offset + math.floor(markPx * 0.42)
+		local cy = math.floor(h / 2 - markPx * 0.42)
+		bin.count.AnchorPoint = Vector2.new(0.5, 0.5)
+		bin.count.Position = UDim2.fromOffset(cx, cy)
+		bin.count.Size = UDim2.fromOffset(badgeW, badgeH)
+		bin.count.TextSize = textSize(15 * s)
+		if pill and pill:IsA("Frame") then
+			pill.AnchorPoint = Vector2.new(0.5, 0.5)
+			pill.Position = bin.count.Position
+			pill.Size = bin.count.Size
+		end
+	else
+		bin.count.AnchorPoint = Vector2.new(1, 0)
+		if pill and pill:IsA("Frame") then
+			pill.AnchorPoint = Vector2.new(1, 0)
+		end
+	end
 	local plinth = f:FindFirstChild("Plinth")
 	if plinth and plinth:IsA("Frame") then
 		local d = math.floor(markPx * 1.08)
@@ -1023,7 +1158,13 @@ local function paintBin(bin: Bin)
 		velvet.BackgroundTransparency = if bin.open then 0 else 0.55
 	end
 	bin.name.TextTransparency = dim
-	bin.name.TextColor3 = if lit then LIGHT else BONE
+	bin.name.TextColor3 = ENGRAVED
+	bin.plate.BackgroundTransparency = if bin.open then 0 else 0.6
+	local plateStroke = bin.plate:FindFirstChildOfClass("UIStroke")
+	if plateStroke then
+		plateStroke.Color = if lit then LIGHT else Color3.fromRGB(90, 62, 24)
+		plateStroke.Transparency = if lit then 0 else 0.25
+	end
 	-- A narrow case has no line under its name, so a closed one says so in its name's place.
 	bin.name.Text = if not bin.open and not bin.sub.Visible then "Closed" else case.name
 	bin.count.TextTransparency = dim
@@ -1207,8 +1348,8 @@ local function cardFrame(info: PieceInfo, icon: number): (Frame, UIScale, Frame,
 	local shadow = sheet(f, "Shadow", Color3.new(0, 0, 0), 1)
 	shadow.AnchorPoint = Vector2.new(0.5, 0.5)
 	shadow.Position = UDim2.new(0.5, 0, 1, -math.floor(icon * 0.05))
-	shadow.Size = UDim2.fromOffset(icon * 0.7, icon * 0.16)
-	shadow.BackgroundTransparency = 0.15
+	shadow.Size = UDim2.fromOffset(icon * 0.64, icon * 0.13)
+	shadow.BackgroundTransparency = 0.35
 	corner(shadow, 9999)
 	shade(shadow, 0, nil, alphas({ { 0, 1 }, { 0.18, 0.55 }, { 0.5, 0 }, { 0.82, 0.55 }, { 1, 1 } }))
 	-- A gilded or Mythic piece has a warm halo of light about it.
@@ -1633,6 +1774,27 @@ local function flashBin(bin: Bin, colour: Color3)
 	t.Completed:Once(function()
 		bin.stroke.Color = rim
 	end)
+	-- A band of light sweeps across the drawer's glass, as if its lid had just been closed.
+	if Ease.motionScale >= 0.5 then
+		-- (in a clipping frame of its own, so the light stays on the glass)
+		local clip = Instance.new("Frame")
+		clip.Name = "Sweep"
+		clip.BackgroundTransparency = 1
+		clip.Size = UDim2.fromScale(1, 1)
+		clip.ClipsDescendants = true
+		clip.ZIndex = 5
+		clip.Parent = bin.frame
+		local band = sheet(clip, "Band", Color3.new(1, 1, 1), 5)
+		band.AnchorPoint = Vector2.new(0.5, 0.5)
+		band.Position = UDim2.fromScale(-0.2, 0.5)
+		band.Size = UDim2.fromScale(0.22, 1)
+		band.BackgroundTransparency = 0.55
+		shade(band, 0, nil, alphas({ { 0, 1 }, { 0.5, 0.3 }, { 1, 1 } }))
+		local sweep = Ease.play(band, Ease.info(0.5, Enum.EasingStyle.Quad), { Position = UDim2.fromScale(1.2, 0.5) })
+		sweep.Completed:Once(function()
+			clip:Destroy()
+		end)
+	end
 end
 
 -- Into its case: the piece flies down, shrinks into the case, and the case counts it.
@@ -1748,14 +1910,9 @@ local function paintCloth()
 		header.trayShade.Color = CLOTH
 	end
 	rim = rimColour or LIGHT
-	header.trayStroke.Color = rim
-	header.innerStroke.Color = rim
-	for i = 1, 4 do
-		local d = header["ornament" .. i] :: Frame?
-		if d then
-			d.BackgroundColor3 = if rimColour then rimColour else GOLD
-		end
-	end
+	header.frameStroke.Color = rim
+	-- (A table style with its own rim colour tints the tooling to match.)
+	header.innerStroke.Color = rimColour or GOLD
 	header.lamp.BackgroundColor3 = lampColour or LAMP
 	for _, pool in header.pools do
 		pool.BackgroundColor3 = if lampColour then lampColour:Lerp(Color3.new(1, 1, 1), 0.3) else POOL
@@ -1942,10 +2099,10 @@ end
 
 -- A right case.
 local FEEDBACK = {
-	{ from = 3, word = "Great", colour = Color3.fromRGB(150, 220, 160), size = 21 },
-	{ from = 6, word = "Excellent", colour = Color3.fromRGB(130, 190, 255), size = 23 },
-	{ from = 10, word = "Perfect", colour = Color3.fromRGB(210, 150, 255), size = 25 },
-	{ from = 15, word = "Legendary", colour = Color3.fromRGB(255, 205, 90), size = 28 },
+	{ from = 3, word = "Great", colour = Color3.fromRGB(240, 222, 176), size = 21 },
+	{ from = 6, word = "Excellent", colour = Color3.fromRGB(250, 214, 130), size = 23 },
+	{ from = 10, word = "Perfect", colour = Color3.fromRGB(255, 240, 200), size = 25 },
+	{ from = 15, word = "Legendary", colour = Color3.fromRGB(255, 196, 70), size = 28 },
 }
 
 function SortScreen.correct(uid: number, caseId: string, points: number?, multiplier: number?)
@@ -2138,36 +2295,39 @@ function SortScreen.streak(n: number, multiplier: number)
 	end
 	local s = L.s
 	local at = Vector2.new(L.vp.X / 2, L.tray.y + 34 * s)
-	local holder = sheet(fxLayer, "Streak", Color3.fromRGB(8, 8, 10), 9)
+	-- A brass ribbon across the top of the leather, its ends notched, the words engraved.
+	local holder = sheet(fxLayer, "Streak", Color3.new(1, 1, 1), 9)
 	holder.AnchorPoint = Vector2.new(0.5, 0.5)
 	holder.Position = UDim2.fromOffset(at.X, at.Y)
-	holder.Size = UDim2.fromOffset(math.min(520 * s, L.tray.w - 40 * s), 64 * s)
-	holder.BackgroundTransparency = 0.25
-	shade(holder, 0, nil, alphas({ { 0, 1 }, { 0.2, 0.3 }, { 0.8, 0.3 }, { 1, 1 } }))
-	local rules: { Frame } = {}
-	for _, y in { 0, 1 } do
-		local r = sheet(holder, "Rule", GOLD, 9)
-		r.AnchorPoint = Vector2.new(0.5, y)
-		r.Position = UDim2.fromScale(0.5, y)
-		r.Size = UDim2.new(0.8, 0, 0, 1)
-		shade(r, 0, nil, alphas({ { 0, 1 }, { 0.5, 0.2 }, { 1, 1 } }))
-		table.insert(rules, r)
+	holder.Size = UDim2.fromOffset(math.min(420 * s, L.tray.w - 80 * s), 60 * s)
+	holder.BackgroundTransparency = 0
+	shade(holder, 90, colours({ { 0, BRASS[1] }, { 0.5, BRASS[2] }, { 1, BRASS[3] } }))
+	corner(holder, 3)
+	local ribbonEdge = stroke(holder, Color3.fromRGB(90, 62, 24), 0.2, 1)
+	local rules: { Frame } = { holder }
+	for _, side in { 0, 1 } do
+		local tail = sheet(holder, "Tail", Color3.fromRGB(150, 108, 46), 8)
+		tail.AnchorPoint = Vector2.new(0.5, 0.5)
+		tail.Position = UDim2.new(side, if side == 0 then -20 * s else 20 * s, 0.55, 0)
+		tail.Size = UDim2.fromOffset(34 * s, 34 * s)
+		tail.Rotation = 45
+		table.insert(rules, tail)
 	end
 	local scale = Instance.new("UIScale")
 	scale.Scale = 0.85
 	scale.Parent = holder
 	local title = string.gsub(Voice.Sorting.inARow, "{n}", tostring(n))
 	local line = Voice.Sorting.moments[n] or string.gsub(Voice.Sorting.multiplier, "{n}", tostring(multiplier))
-	local t1 = label(holder, Caps(title), 11 * s, F.bodyMedium, GOLD, { Position = UDim2.fromScale(0.5, 0.3), Size = UDim2.fromScale(1, 0.3), ZIndex = 9 })
-	local t2 = label(holder, line, 24 * s, F.displayItalic, BONE, { Position = UDim2.fromScale(0.5, 0.66), Size = UDim2.fromScale(1, 0.46), ZIndex = 9 })
+	local t1 = label(holder, Caps(title), 12 * s, F.bodyBold, ENGRAVED, { Position = UDim2.fromScale(0.5, 0.28), Size = UDim2.fromScale(1, 0.3), ZIndex = 10 })
+	local t2 = label(holder, line, 24 * s, F.displayItalic, ENGRAVED, { Position = UDim2.fromScale(0.5, 0.66), Size = UDim2.fromScale(1, 0.46), ZIndex = 10 })
 	Ease.play(scale, Ease.info(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 })
 	task.delay(1.4, function()
 		if not holder.Parent then
 			return
 		end
 		local fade = Ease.info(0.4, Enum.EasingStyle.Sine)
-		Ease.play(holder, fade, { BackgroundTransparency = 1 })
 		Ease.play(t1, fade, { TextTransparency = 1 })
+		Ease.play(ribbonEdge, fade, { Transparency = 1 })
 		Ease.play(t2, fade, { TextTransparency = 1 })
 		for _, r in rules do
 			Ease.play(r, fade, { BackgroundTransparency = 1 })

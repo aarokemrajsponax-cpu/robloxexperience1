@@ -2,6 +2,11 @@
 -- The look of every panel: smoked liquid glass with a gold hairline, serif display type,
 -- a clean sans for everything else, brass keys that press in. Text follows the Text size
 -- and Lettering settings live.
+--
+-- Typography: every size is set on one scale (Theme.Scale), with line spacing by kind; keys set
+-- their words at a fixed size (never TextScaled, which squeezes letters), a step smaller only if
+-- they'd not fit; and panels are plain Frames faded by Fade, never CanvasGroups (which draw text
+-- into a texture and soften it).
 
 local ContentProvider = game:GetService("ContentProvider")
 local HapticService = game:GetService("HapticService")
@@ -31,6 +36,26 @@ Theme.colours = {
 }
 
 type TextKind = "display" | "italic" | "body" | "light" | "bodyMedium" | "bodyBold" | "caps"
+
+-- The house's type scale. Every piece of text on every panel is set at one of these sizes (a size
+-- asked for in between is moved to the nearest), so headings, lines and captions read as one
+-- family on every screen instead of a scatter of near-misses:
+--   13 captions and small capitals · 14 secondary lines · 16 running text and keys ·
+--   18 emphasis · 20 small headings · 24 panel titles · 28, 34, 40 display.
+Theme.Scale = { 13, 14, 16, 18, 20, 24, 28, 34, 40 }
+
+function Theme.snap(size: number): number
+	local best = Theme.Scale[1]
+	for _, step in Theme.Scale do
+		if math.abs(step - size) <= math.abs(best - size) then
+			best = step
+		end
+	end
+	return if size > Theme.Scale[#Theme.Scale] then size else best
+end
+
+-- Line spacing by kind: running text opens up a little, display type sits tight.
+local LINE_HEIGHT: { [string]: number } = { display = 1.04, italic = 1.04, caps = 1.1 }
 type Registered = { label: TextLabel | TextButton, size: number, kind: TextKind }
 
 local registry: { Registered } = {}
@@ -79,8 +104,11 @@ local function applyText(r: Registered)
 	-- (a line of dialogue, a caption) is set in the clean sans instead.
 	label.FontFace = if r.kind == "display" and r.size < 22 then Brand.Fonts.body else fontFor(r.kind)
 	local floor = math.max(FLOOR[r.kind] or FLOOR_TEXT, math.min(FLOOR_MAX, (MIN_PX[r.kind] or MIN_PX_TEXT) / uiScale))
-	local size = math.floor(math.max(r.size, floor) * textScale + 0.5)
+	local size = math.floor(math.max(Theme.snap(r.size), floor) * textScale + 0.5)
 	label.TextSize = size
+	pcall(function()
+		label.LineHeight = LINE_HEIGHT[r.kind] or 1.18
+	end)
 	-- Keys shrink their words to fit rather than spill over their edges.
 	local fit = label:FindFirstChild("Fit")
 	if fit and fit:IsA("UITextSizeConstraint") then
@@ -155,9 +183,8 @@ function Theme.text(parent: Instance, text: string, size: number, kind: TextKind
 			(label :: any)[key] = value
 		end
 	end
-	-- The house's smallest type is 12 (anything asked for smaller reads as 12, so nothing on any
-	-- screen is too small to read on a phone).
-	local r = { label = label, size = math.max(size, 12), kind = k }
+	-- (Set on the house's type scale; never smaller than its captions.)
+	local r = { label = label, size = size, kind = k }
 	applyText(r)
 	table.insert(registry, r)
 	label.Parent = parent
@@ -176,15 +203,16 @@ function Theme.hairline(parent: Instance, width: UDim?, order: number?): Frame
 	return line
 end
 
--- A smoked-glass panel. Returns the CanvasGroup (for fades) and the content frame.
-function Theme.glass(parent: Instance, name: string, size: UDim2, position: UDim2?, anchor: Vector2?): (CanvasGroup, Frame)
-	local group = Instance.new("CanvasGroup")
+-- A smoked-glass panel. Returns the panel (a plain Frame, so its text is drawn crisp; fade it
+-- with Fade) and the content frame.
+function Theme.glass(parent: Instance, name: string, size: UDim2, position: UDim2?, anchor: Vector2?): (Frame, Frame)
+	local group = Instance.new("Frame")
 	group.Name = name
 	group.BackgroundTransparency = 1
+	group.ClipsDescendants = true -- (as a CanvasGroup did: nothing spills past the glass)
 	group.Size = size
 	group.Position = position or UDim2.fromScale(0.5, 0.5)
 	group.AnchorPoint = anchor or Vector2.new(0.5, 0.5)
-	group.GroupTransparency = 0
 	group.Parent = parent
 
 	local fill = Instance.new("Frame")
@@ -239,7 +267,7 @@ function Theme.glass(parent: Instance, name: string, size: UDim2, position: UDim
 end
 
 -- A glass panel that grows to fit what's on it (so nothing is ever cut off at the bottom).
-function Theme.fitHeight(group: CanvasGroup, content: Frame)
+function Theme.fitHeight(group: Frame, content: Frame)
 	group.Size = UDim2.new(group.Size.X, UDim.new(0, 0))
 	group.AutomaticSize = Enum.AutomaticSize.Y
 	content.AutomaticSize = Enum.AutomaticSize.Y
@@ -313,12 +341,11 @@ function Theme.key(parent: Instance, text: string, primary: boolean?, onPress: (
 	button.TextColor3 = if primary then Color3.fromRGB(24, 18, 8) else C.lightGold
 	button.Selectable = true
 	button.SelectionImageObject = selectionRing()
-	button.TextScaled = true
-	local fit = Instance.new("UITextSizeConstraint")
-	fit.Name = "Fit"
-	fit.MinTextSize = 12
-	fit.MaxTextSize = 16
-	fit.Parent = button
+	-- Never TextScaled (it squeezes letters to odd sizes, a different size on every key): the
+	-- words are set at the scale's 16, a step smaller (14, then 13) only when they'd not fit the
+	-- key's width, and on two lines past that.
+	button.TextScaled = false
+	button.TextWrapped = true
 	local inner = Instance.new("UIPadding")
 	inner.PaddingLeft = UDim.new(0, 10)
 	inner.PaddingRight = UDim.new(0, 10)
@@ -326,8 +353,21 @@ function Theme.key(parent: Instance, text: string, primary: boolean?, onPress: (
 	inner.PaddingBottom = UDim.new(0, 6)
 	inner.Parent = button
 	local r = { label = button, size = 16, kind = "caps" :: TextKind }
-	applyText(r)
+	local function fitWords()
+		local width = button.Size.X.Offset - 20
+		local chars = utf8.len(button.Text) or #button.Text
+		local size = 16
+		-- Poppins Medium capitals run about 0.68 of their size wide.
+		while size > 13 and chars * size * 0.68 > width do
+			size = if size == 16 then 14 else 13
+		end
+		r.size = size
+		applyText(r)
+	end
+	fitWords()
 	table.insert(registry, r)
+	button:GetPropertyChangedSignal("Size"):Connect(fitWords)
+	button:GetPropertyChangedSignal("Text"):Connect(fitWords)
 	local corner = Instance.new("UICorner")
 	corner.CornerRadius = UDim.new(0, 2)
 	corner.Parent = button

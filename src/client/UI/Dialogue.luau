@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Ease = require(ReplicatedStorage.Shared.Ease)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Fade = require(script.Parent.Fade)
 local Root = require(script.Parent.Root)
 local Theme = require(script.Parent.Theme)
 local Toast = require(script.Parent.Toast)
@@ -20,14 +21,14 @@ Dialogue.isBusy = function(): boolean
 	return false
 end
 
-local current: CanvasGroup? = nil
+local current: Frame? = nil
 local serial = 0
 
-local function dismiss(group: CanvasGroup)
+local function dismiss(group: Frame)
 	if current == group then
 		current = nil
 	end
-	local t = Ease.play(group, Ease.quick, { GroupTransparency = 1 })
+	local t = Fade.to(group, Ease.quick, 1)
 	t.Completed:Once(function()
 		group:Destroy()
 	end)
@@ -104,9 +105,9 @@ function Dialogue.show(speaker: string, line: string, choices: { Choice }?, onCh
 		end)
 	end
 	current = group
-	group.GroupTransparency = 1
+	Fade.set(group, 1)
 	group.Position = UDim2.new(0.5, 0, 1, -26)
-	Ease.play(group, Ease.scaled(Ease.panel), { GroupTransparency = 0, Position = UDim2.new(0.5, 0, 1, -34) })
+	Fade.to(group, Ease.scaled(Ease.panel), 0, { Position = UDim2.new(0.5, 0, 1, -34) })
 	if not hasChoices then
 		task.delay(hold or 3.2, function()
 			if serial == mine and current == group then

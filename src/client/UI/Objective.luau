@@ -11,6 +11,7 @@ local Ease = require(ReplicatedStorage.Shared.Ease)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Rooms = require(ReplicatedStorage.Shared.Rooms)
 local Voice = require(ReplicatedStorage.Shared.Voice)
+local Fade = require(script.Parent.Fade)
 local Root = require(script.Parent.Root)
 local Theme = require(script.Parent.Theme)
 local State = require(script.Parent.Parent.State)
@@ -23,7 +24,7 @@ local V = Voice.Objective
 local seatedOnce = false
 local seated = false
 local lastRoom: string? = nil
-local card: CanvasGroup? = nil
+local card: Frame? = nil
 local shownKey: string? = nil
 local takeMe: ((mode: string) -> ())? = nil
 local started = false
@@ -79,7 +80,7 @@ local function hide()
 	end
 	card = nil
 	shownKey = nil
-	local t = Ease.play(group, Ease.info(0.35, Enum.EasingStyle.Sine), { GroupTransparency = 1 })
+	local t = Fade.to(group, Ease.info(0.35, Enum.EasingStyle.Sine), 1)
 	t.Completed:Once(function()
 		group:Destroy()
 	end)
@@ -119,14 +120,14 @@ local function show(goal: Goal)
 	end
 	card = group
 	shownKey = goal.key
-	group.GroupTransparency = 1
+	Fade.set(group, 1)
 	local startPos = group.Position
 	group.Position = startPos + UDim2.fromOffset(12, 0)
-	Ease.play(group, Ease.scaled(Ease.settle), { GroupTransparency = 0, Position = startPos })
+	Fade.to(group, Ease.scaled(Ease.settle), 0, { Position = startPos })
 	-- Settles back after a while, still readable.
 	task.delay(9, function()
 		if card == group then
-			Ease.play(group, Ease.info(1.2, Enum.EasingStyle.Sine), { GroupTransparency = 0.35 })
+			Fade.to(group, Ease.info(1.2, Enum.EasingStyle.Sine), 0.35)
 		end
 	end)
 end

@@ -11,6 +11,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local Caps = require(ReplicatedStorage.Shared.Caps)
+local Fade = require(script.Parent.Fade)
 local Root = require(script.Parent.Root)
 
 local Intro = {}
@@ -34,7 +35,7 @@ cover.Parent = Root.intro
 
 function Intro.play(onShown: (() -> ())?)
 	local size = Root.size()
-	local group = Instance.new("CanvasGroup")
+	local group = Instance.new("Frame")
 	group.Name = "Intro"
 	group.BackgroundTransparency = 1
 	group.Size = UDim2.fromScale(1, 1)
@@ -177,7 +178,7 @@ function Intro.play(onShown: (() -> ())?)
 		task.wait()
 	end
 	skipConn:Disconnect()
-	local fade = tween(group, if skipped then 0.35 else 0.7, { GroupTransparency = 1 }, Enum.EasingStyle.Sine)
+	local fade = Fade.to(group, TweenInfo.new(if skipped then 0.35 else 0.7, Enum.EasingStyle.Sine), 1)
 	tween(cover, if skipped then 0.5 else 0.9, { BackgroundTransparency = 1 }, Enum.EasingStyle.Sine)
 	fade.Completed:Wait()
 	group:Destroy()

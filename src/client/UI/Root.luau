@@ -11,6 +11,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
 local Ease = require(ReplicatedStorage.Shared.Ease)
+local Fade = require(script.Parent.Fade)
 
 local Root = {}
 
@@ -114,7 +115,7 @@ local baseFocus: Focus? = nil
 
 export type Panel = {
 	name: string,
-	group: CanvasGroup,
+	group: Frame,
 	onClose: (() -> ())?,
 	blur: boolean,
 }
@@ -165,7 +166,7 @@ local panelChanged = Instance.new("BindableEvent")
 Root.PanelsChanged = panelChanged.Event
 
 -- Each panel eases in from a touch smaller and lower, and eases away the same way.
-local function openScale(group: CanvasGroup): UIScale
+local function openScale(group: Frame): UIScale
 	local existing = group:FindFirstChild("OpenScale")
 	if existing and existing:IsA("UIScale") then
 		return existing
@@ -176,21 +177,21 @@ local function openScale(group: CanvasGroup): UIScale
 	return s
 end
 
-local function show(group: CanvasGroup)
+local function show(group: Frame)
 	group.Visible = true
-	group.GroupTransparency = 1
+	Fade.set(group, 1)
 	local startPos = group.Position
 	group.Position = startPos + UDim2.fromOffset(0, 10)
 	local s = openScale(group)
 	s.Scale = 0.965
-	Ease.play(group, Ease.scaled(Ease.panel), { GroupTransparency = 0, Position = startPos })
+	Fade.to(group, Ease.scaled(Ease.panel), 0, { Position = startPos })
 	Ease.play(s, Ease.scaled(Ease.info(0.42, Enum.EasingStyle.Quint)), { Scale = 1 })
 end
 
-local function hide(group: CanvasGroup, destroy: boolean)
+local function hide(group: Frame, destroy: boolean)
 	local startPos = group.Position
 	Ease.play(openScale(group), Ease.scaled(Ease.quick), { Scale = 0.98 })
-	local t = Ease.play(group, Ease.scaled(Ease.quick), { GroupTransparency = 1, Position = startPos + UDim2.fromOffset(0, 6) })
+	local t = Fade.to(group, Ease.scaled(Ease.quick), 1, { Position = startPos + UDim2.fromOffset(0, 6) })
 	t.Completed:Once(function()
 		group.Position = startPos
 		if destroy then
@@ -202,7 +203,7 @@ local function hide(group: CanvasGroup, destroy: boolean)
 end
 
 -- Opens a panel on top of whatever is showing. The one beneath fades back while this is up.
-function Root.open(name: string, group: CanvasGroup, onClose: (() -> ())?, blur: boolean?)
+function Root.open(name: string, group: Frame, onClose: (() -> ())?, blur: boolean?)
 	for i = #stack, 1, -1 do
 		if stack[i].name == name then
 			table.remove(stack, i)
@@ -210,7 +211,7 @@ function Root.open(name: string, group: CanvasGroup, onClose: (() -> ())?, blur:
 	end
 	local below = stack[#stack]
 	if below then
-		Ease.play(below.group, Ease.quick, { GroupTransparency = 1 })
+		Fade.to(below.group, Ease.quick, 1)
 		below.group.Interactable = false
 	end
 	local panel: Panel = { name = name, group = group, onClose = onClose, blur = blur ~= false }
@@ -239,7 +240,7 @@ function Root.close(name: string?)
 	local top = stack[#stack]
 	if top then
 		top.group.Interactable = true
-		Ease.play(top.group, Ease.panel, { GroupTransparency = 0 })
+		Fade.to(top.group, Ease.panel, 0)
 	end
 	updateFocus()
 	panelChanged:Fire()

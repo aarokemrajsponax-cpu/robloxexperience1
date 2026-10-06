@@ -1081,6 +1081,11 @@ local function snapshot(name: string)
 		end
 	end
 	fs.writeFile(SNAPSHOT .. "/" .. name .. ".json", serde.encode("json", out))
+	-- STOP_AFTER=<name>: end the run once that snapshot is written (for looking at one screen).
+	if process.env.STOP_AFTER == name then
+		print("stopped after " .. name)
+		process.exit(0)
+	end
 end
 
 local function pad(key)
