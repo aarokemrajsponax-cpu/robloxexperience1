@@ -4,6 +4,7 @@
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Furniture = require(ReplicatedStorage.Shared.Furniture)
 local Layout = require(ReplicatedStorage.Shared.Layout)
 local Kit = require(script.Parent.Kit)
 local RoomShell = require(script.Parent.RoomShell)
@@ -85,6 +86,8 @@ local function fireplace(m: Model)
 		Kit.part(model, "ArmchairBack", Vector3.new(3, 3.2, 0.8), base * CFrame.new(0, 2.6, -1.2), L.leather)
 		Kit.part(model, "ArmchairArmL", Vector3.new(0.6, 1.4, 3), base * CFrame.new(-1.5, 2, 0), L.leather)
 		Kit.part(model, "ArmchairArmR", Vector3.new(0.6, 1.4, 3), base * CFrame.new(1.5, 2, 0), L.leather)
+		-- (its back is to -Z, so a guest sits facing +Z, toward the fire)
+		Furniture.seatsOn(model, "ArmchairSeats", { base * CFrame.new(0, 1.8, 0.2) * CFrame.Angles(0, math.pi, 0) }, "The armchair", 2.4)
 	end
 end
 

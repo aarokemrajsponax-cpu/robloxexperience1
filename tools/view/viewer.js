@@ -115,6 +115,8 @@ const GUI_AXES = {
 
 async function build() {
 	const world = await (await fetch("/world.json")).json();
+	// An empty list comes over as {} from Lune's JSON.
+	for (const key of ["parts", "lights", "guis"]) if (!Array.isArray(world[key])) world[key] = [];
 	const L = world.lighting;
 	for (const p of world.parts) {
 		const [name, shape, size, cf, color, mat, t, refl, castShadow] = p;

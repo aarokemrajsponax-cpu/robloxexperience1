@@ -54,6 +54,9 @@ Workspace:SetAttribute("MaisonReady", true)
 local Guests = require(script.Parent.Guests)
 boot("Guests", Guests.start)
 
+-- Seats everywhere (the sofas, the loungers, your Suite's furniture).
+boot("Seating", require(script.Parent.Seating).start)
+
 local Season = require(script.Parent.Season)
 Season.dress = require(script.Parent.World.SeasonDress).apply
 boot("Seasons", Season.start)

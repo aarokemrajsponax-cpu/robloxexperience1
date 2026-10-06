@@ -77,8 +77,11 @@ local function piano(): Model?
 	return if m and m:IsA("Model") then m else nil
 end
 
-local function strike(index: number)
-	local p = piano()
+-- This guest's own piano (the baby grand in their Suite), while they play it; nil otherwise.
+local privatePiano: Model? = nil
+
+local function strike(index: number, on: Model?)
+	local p = on or privatePiano or piano()
 	local keyboard = p and p:FindFirstChild("Keyboard")
 	local key = keyboard and keyboard:FindFirstChild("Key" .. index)
 	if key and key:IsA("BasePart") then
@@ -242,8 +245,13 @@ local function press(index: number)
 		return
 	end
 	Sound.pianoNote(index, true)
-	Remotes.event("PianoNote"):FireServer(index)
-	strike(index)
+	if privatePiano then
+		-- Their own piano: heard here, and nowhere else.
+		strike(index, privatePiano)
+	else
+		Remotes.event("PianoNote"):FireServer(index)
+		strike(index)
+	end
 	local v = views[index]
 	if v then
 		v.button.BackgroundColor3 = if v.black then C.gold else C.lightGold
@@ -282,7 +290,11 @@ local function build(): CanvasGroup
 		TextColor3 = C.lightGold,
 	})
 	local up = Theme.key(head, "Stand up", false, function()
-		task.spawn(ask, { op = "stand" })
+		if privatePiano then
+			PianoPanel.stopPrivate()
+		else
+			task.spawn(ask, { op = "stand" })
+		end
 	end, 140)
 	up.AnchorPoint = Vector2.new(1, 0)
 	up.Position = UDim2.fromScale(1, 0)
@@ -429,6 +441,17 @@ local function setPlaying(on: boolean)
 		setTouchControls(false)
 		beat = RunService.Heartbeat:Connect(function()
 			local label = timeLabel
+			if label and privatePiano then
+				label.Text = "Yours"
+				-- Walked away from it: the keys put themselves away.
+				local character = player.Character
+				local root = character and character:FindFirstChild("HumanoidRootPart")
+				local p = privatePiano
+				if p and (not p.Parent or not root or not root:IsA("BasePart") or (root.Position - p:GetPivot().Position).Magnitude > 16) then
+					task.defer(PianoPanel.stopPrivate)
+				end
+				return
+			end
 			local ends = Workspace:GetAttribute("PianoEnds")
 			if label and type(ends) == "number" then
 				label.Text = clock(ends - Workspace:GetServerTimeNow())
@@ -458,6 +481,26 @@ function PianoPanel.isPlaying(): boolean
 	return playing
 end
 
+-- Plays this guest's own piano (a baby grand in their Suite): the same keys, free, heard only
+-- here. Nothing goes to the server.
+function PianoPanel.private(model: Model)
+	if playing and not privatePiano then
+		return -- at the Foyer's piano already
+	end
+	Sound.preloadPiano()
+	privatePiano = model
+	if not playing then
+		setPlaying(true)
+	end
+end
+
+function PianoPanel.stopPrivate()
+	if privatePiano then
+		privatePiano = nil
+		setPlaying(false)
+	end
+end
+
 -- The server's word when a guest's playing ends.
 function PianoPanel.ended(m: { [string]: any })
 	local left = tonumber(m.left) or 0
@@ -470,6 +513,9 @@ end
 
 function PianoPanel.start()
 	local function changed()
+		if privatePiano then
+			return
+		end
 		setPlaying(mine())
 		-- Someone else sits down to play: a word for whoever is in the Foyer to hear it.
 		local who = Workspace:GetAttribute("PianoName")

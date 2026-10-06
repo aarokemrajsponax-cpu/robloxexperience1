@@ -8,6 +8,7 @@ local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
+local Furniture = require(ReplicatedStorage.Shared.Furniture)
 local Layout = require(ReplicatedStorage.Shared.Layout)
 local Kit = require(script.Parent.Kit)
 local SortingTable = require(script.Parent.SortingTable)
@@ -94,6 +95,11 @@ local function gallery(m: Model)
 	while x < G.maxX - 6 do
 		Kit.part(m, "GalleryBench", Vector3.new(5, 0.6, 1.4), CFrame.new(x, floorY + 1.2, G.minZ + 1.6), L.leather)
 		Kit.part(m, "GalleryBenchBase", Vector3.new(4.6, 0.9, 1.1), CFrame.new(x, floorY + 0.45, G.minZ + 1.6), L.blackLacquer)
+		local top = Vector3.new(x, floorY + 1.5, G.minZ + 1.6)
+		Furniture.seatsOn(m, "GallerySeats", {
+			CFrame.lookAt(top + Vector3.new(-1.2, 0, 0), top + Vector3.new(-1.2, 0, 1)),
+			CFrame.lookAt(top + Vector3.new(1.2, 0, 0), top + Vector3.new(1.2, 0, 1)),
+		}, "The gallery bench", 1.6)
 		x += 12
 	end
 	-- The stair along the west wall, climbing south to the landing.

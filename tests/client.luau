@@ -626,6 +626,9 @@ local services = {
 		IsStudio = function()
 			return MODE ~= "live"
 		end,
+		IsRunning = function()
+			return false -- draw in one go here
+		end,
 		BindToRenderStep = function(_, _name, _priority, fn)
 			renderStepped:Connect(fn)
 		end,
@@ -2625,38 +2628,58 @@ root.CFrame = CFrame.new(SuiteLayout.arrival + Vector3.new(0, 3, 0))
 advance(1)
 local suiteFolder = workspace.MaisonLocal:FindFirstChild("Suite")
 check("walking into the Suite draws your furniture", suiteFolder ~= nil and suiteFolder:FindFirstChild("rug") ~= nil and suiteFolder:FindFirstChild("sofa") ~= nil)
-check("the house's own pieces fill the spots you haven't", suiteFolder ~= nil and #suiteFolder:GetChildren() == 4, suiteFolder and #suiteFolder:GetChildren())
+local SuiteShared = module("ReplicatedStorage", "Shared", "Suite")
+local function countPieces(placed, key)
+	local n = 0
+	for _ in SuiteShared.pieces(placed, key) do
+		n += 1
+	end
+	return n
+end
+local expected = countPieces({ rug = "suite_rug_black" }, false)
+check("the house's own pieces fill the spots you haven't", suiteFolder ~= nil and #suiteFolder:GetChildren() == expected, suiteFolder and #suiteFolder:GetChildren(), expected)
 local alcove = CollectionService:GetTagged("SuiteAlcove")[1]
 check("without the Gold Key its rooms stay shut", alcove ~= nil and alcove.CanCollide == true)
+local sitPrompts = 0
+if suiteFolder then
+	for _, d in suiteFolder:GetDescendants() do
+		if d:IsA("ProximityPrompt") and d.Name == "SeatPrompt" then
+			sitPrompts += 1
+		end
+	end
+end
+check("the Suite's sofas and chairs can be sat on", sitPrompts >= 4, sitPrompts)
 serverSays("Shop", { op = "state", owned = { "suite_rug_black", "suite_mirror_gilt" }, equipped = {}, gilt = 800, goldKey = true, credits = {}, suite = { rug = "suite_rug_black", mirror = "suite_mirror_gilt" }, ledger = { page = 2, pages = 50, progress = 0.1, leather = false, term = "2026-autumn" } })
 advance(0.5)
 suiteFolder = workspace.MaisonLocal:FindFirstChild("Suite")
 check("with the Gold Key its rooms open", alcove.CanCollide == false and alcove.LocalTransparencyModifier == 1)
 check("and the Dressing Room's glass stands", suiteFolder ~= nil and suiteFolder:FindFirstChild("mirror") ~= nil)
+check("the rest of the Suite stays as it was", suiteFolder ~= nil and suiteFolder:FindFirstChild("sofa") ~= nil and suiteFolder:FindFirstChild("bed") ~= nil)
 invokeResults.ShopAsk = {
-	rooms = { main = "The Suite", dressing = "The Dressing Room", study = "The Study" },
+	rooms = SuiteShared.RoomNames,
 	spots = {
 		{
 			id = "rug",
 			name = "The rug",
 			room = "main",
 			open = true,
-			house = true,
+			house = { model = "deco" },
 			placed = "suite_rug_black",
 			options = {
-				{ id = "suite_rug_black", name = "Black Fringed Rug", owned = true, source = "gilt", gilt = 400 },
-				{ id = "suite_rug_persian", name = "Night Garden Rug", owned = false, source = "gilt", gilt = 800 },
-				{ id = "suite_rug_moon", name = "Moonlit Rug", owned = false, source = "boutique", robux = 149, onSale = true, robuxOnSale = true, giltAlt = 5960 },
+				{ id = "suite_rug_black", name = "Black Deco Rug", line = "Black wool, a gold fan in the middle.", owned = true, source = "gilt", gilt = 400 },
+				{ id = "suite_rug_persian", name = "Night Garden Rug", line = "Deep reds, knotted by hand.", owned = false, source = "gilt", gilt = 800 },
+				{ id = "suite_rug_moon", name = "Moonlit Rug", line = "Ink blue, a silver ring.", owned = false, source = "boutique", robux = 149, onSale = true, robuxOnSale = true, giltAlt = 5960 },
 			},
 		},
-		{ id = "desk", name = "The Study: the desk", room = "study", open = false, house = false, placed = "", options = {} },
+		{ id = "sofa", name = "The sofa", room = "main", open = true, house = { model = "chesterfield" }, placed = "", options = {} },
+		{ id = "desk", name = "The Study: the desk", room = "study", open = false, placed = "", options = {} },
 	},
 	gilt = 1200,
 	goldKey = false,
 }
 serverSays("Shop", { op = "open", panel = "suite" })
 advance(1)
-check("the bell opens the Suite's furnishing", textOnScreen("Your Suite") ~= nil and textOnScreen("Black Fringed Rug") ~= nil)
+check("the bell opens the Suite's furnishing", textOnScreen("Your Suite") ~= nil and textOnScreen("Black Deco Rug") ~= nil)
 check("with a panel open, the prompts in the world step aside", services.ProximityPromptService.Enabled == false)
 snapshot("suite")
 if MODE == "full" then
@@ -2668,21 +2691,22 @@ if MODE == "full" then
 	signalOf(camera, "prop:ViewportSize"):Fire()
 	advance(0.1)
 end
-check("the Suite says what it is", textOnScreen("Your own rooms upstairs") ~= nil and textOnScreen("nothing here changes a score") ~= nil)
-check("and how it works, in three steps", textOnScreen("How it works") ~= nil and textOnScreen("Get a piece") ~= nil and textOnScreen("The Gold Key adds two rooms") ~= nil)
-check("how far along you are", textOnScreen("Your pieces in 1 of 1 spots") ~= nil and textOnScreen("1,200 Gilt") ~= nil)
+check("the Suite says what it is", textOnScreen("nothing here changes a score") ~= nil or textOnScreen("only you see your Suite") ~= nil)
+check("a tab for every room", textOnScreen("The Drawing Room") ~= nil and textOnScreen("The Screening Room") ~= nil and textOnScreen("The Gym") ~= nil)
+check("how far along you are", textOnScreen("Your pieces in 1 of 2 places") ~= nil and textOnScreen("1,200 Gilt") ~= nil)
 check("a piece for Gilt can be bought right there", textOnScreen("Night Garden Rug") ~= nil and textOnScreen("800 Gilt") ~= nil)
-check("a Robux piece on the shelves today, too", textOnScreen("Moonlit Rug") ~= nil and textOnScreen("149 Robux") ~= nil)
+check("a Robux piece, its price plain", textOnScreen("Moonlit Rug") ~= nil and textOnScreen(utf8.char(0xE002) .. " 149") ~= nil)
 check("and it can be had for Gilt instead", textOnScreen("5,960 Gilt") ~= nil)
-check("a Gold Key room says what it holds and how to get it", textOnScreen("Comes with the Gold Key") ~= nil and textOnScreen("A partners' desk and a globe") ~= nil and textOnScreen("See the Gold Key") ~= nil)
-invokeResults.ShopAsk = { ok = true }
-local placeBefore = 0
-for _, sm in sent do
-	if sm.remote == "ShopAsk" and sm.message[1] and sm.message[1].op == "place" then
-		placeBefore += 1
+check("each spot shows a picture of what stands there", (function()
+	for _, d in playerGui:GetDescendants() do
+		if d:IsA("ViewportFrame") and d.Name == "Picture" and d:FindFirstChildWhichIsA("Model") then
+			return true
+		end
 	end
-end
-check("› chooses the next piece", press("›"))
+	return false
+end)())
+invokeResults.ShopAsk = { ok = true }
+check("choosing the house's own piece", press("The house's own"))
 advance(0.5)
 local lastPlace
 for _, sm in sent do
@@ -2690,7 +2714,7 @@ for _, sm in sent do
 		lastPlace = sm.message[1]
 	end
 end
-check("and places it", lastPlace ~= nil and lastPlace.spot == "rug" and lastPlace.id == "", lastPlace and lastPlace.id)
+check("puts it back", lastPlace ~= nil and lastPlace.spot == "rug" and lastPlace.id == "", lastPlace and lastPlace.id)
 check("buying a piece for Gilt", press("800 Gilt"))
 advance(0.5)
 local bought, placedAfter
@@ -2702,7 +2726,16 @@ for _, sm in sent do
 	end
 end
 check("buys it and puts it straight in its spot", bought ~= nil and bought.item == "suite_rug_persian" and placedAfter ~= nil and placedAfter.id == "suite_rug_persian" and placedAfter.spot == "rug")
-check("and says so", textOnScreen("Night Garden Rug is in your Suite") ~= nil)
+check("and says so", textOnScreen("Night Garden Rug is in your Suite.") ~= nil)
+invokeResults.ShopAsk = {
+	rooms = SuiteShared.RoomNames,
+	spots = { { id = "desk", name = "The Study: the desk", room = "study", open = false, placed = "", options = {} } },
+	gilt = 1200,
+	goldKey = false,
+}
+check("the Study's tab", press("The Study"))
+advance(0.5)
+check("a Gold Key room says what it holds and how to get it", textOnScreen("Comes with the Gold Key") ~= nil and textOnScreen("A partners' desk and a globe.") ~= nil and textOnScreen("See the Gold Key") ~= nil)
 Root2.close()
 advance(0.5)
 check("and with it closed, they're back", services.ProximityPromptService.Enabled == true)

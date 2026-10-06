@@ -31,6 +31,8 @@ Remotes.Functions = {
 	"AdminAsk", -- client -> server: the owner's House controls (checked on the server every time)
 	"PerkAsk", -- client -> server: perks (prompt by product key, write a decree, start a rain)
 	"PianoAsk", -- client -> server: the Foyer's piano (sit, get up, buy time)
+	"SitAsk", -- client -> server: sit on a seat in the house or your Suite, or get up
+	"BarAsk", -- client -> server: the Terrace bar (the menu, order a treat, put it down)
 }
 
 local folder: Folder? = nil

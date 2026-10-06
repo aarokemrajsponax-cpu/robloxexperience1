@@ -866,6 +866,7 @@ function Shop.suite(data: Profiles.Data): { [string]: any }
 				gilt = item.gilt,
 				robux = item.robux,
 				standing = item.standing,
+				standingOk = item.standing == nil or Standing.atLeast(data.nights.count, data.stats.rounds, item.standing),
 				-- Robux pieces are sold from the Boutique's shelves on the days they're out (for
 				-- Robux once its price tier's product exists, and always for Gilt).
 				onSale = item.robux ~= nil and Boutique.onSale(item.id, Season.current().id) and Wardrobe.deliverable(item),

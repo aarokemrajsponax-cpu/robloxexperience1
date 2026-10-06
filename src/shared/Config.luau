@@ -273,6 +273,8 @@ local defaults = {
 		adminAsk = { rate = 6, burst = 12 },
 		pianoAsk = { rate = 3, burst = 6 },
 		pianoNote = { rate = 16, burst = 24 }, -- a pianist's notes: quick runs and chords, never a flood
+		sitAsk = { rate = 2, burst = 5 },
+		barAsk = { rate = 2, burst = 5 },
 	},
 
 	-- The Concierge's walking tour (each guest's own guide, drawn on their screen).
@@ -337,6 +339,15 @@ local defaults = {
 		pianoReach = 95, -- studs the Foyer piano carries (it leaks through the street door)
 		muffled = -18, -- dB taken off the piano's highs when heard from another space
 		soireeBrighter = 3, -- dB added to the piano's highs on a Soirée weekend
+	},
+
+	-- The Terrace bar (BarMenu has the menu and its prices).
+	Bar = {
+		reach = 16, -- studs from the bar a guest may order from
+		sipSeconds = 4, -- a sip or a bite, this often
+		shareRadius = 24, -- the Grand Platter hands a sweet to guests this close
+		shareMax = 12, -- to at most this many
+		goldKeyPour = true, -- Gold Key holders have one everyday drink on the house each day (UTC)
 	},
 
 	-- The Foyer's grand piano, played by a guest (time is bought in ProductConfig's piano sessions,

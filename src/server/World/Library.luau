@@ -6,6 +6,7 @@ local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
+local Furniture = require(ReplicatedStorage.Shared.Furniture)
 local Layout = require(ReplicatedStorage.Shared.Layout)
 local Kit = require(script.Parent.Kit)
 local SortingTable = require(script.Parent.SortingTable)
@@ -96,6 +97,13 @@ local function hall(root: Model)
 	for _, x in { C.minX + 1.4, C.maxX - 1.4 } do
 		local bz = 61.5 -- clear of the Suite door and the Terrace doors
 		Kit.part(m, "Bench", Vector3.new(1.6, 0.6, 4), CFrame.new(x, Y + 1.3, bz), L.leather)
+		local facing = if x < (C.minX + C.maxX) / 2 then 1 else -1
+		local seats = {}
+		for _, dz in { -1, 1 } do
+			local at = Vector3.new(x, Y + 1.6, bz + dz)
+			table.insert(seats, CFrame.lookAt(at, at + Vector3.new(facing, 0, 0)))
+		end
+		Furniture.seatsOn(m, "BenchSeats", seats, "The bench", 1.6)
 		for _, dz in { -1.7, 1.7 } do
 			Kit.part(m, "BenchLeg", Vector3.new(1.2, 1, 0.25), CFrame.new(x, Y + 0.5, bz + dz), L.darkWood)
 		end

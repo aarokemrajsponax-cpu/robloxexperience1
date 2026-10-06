@@ -156,7 +156,11 @@ start("Tables", TableClient.start)
 start("The house around you", Ambient.start)
 start("The Ballroom", BallroomView.start)
 start("The Vault", VaultView.start)
-start("The Suite", SuiteView.start)
+start("The Suite", function()
+	SuiteView.playPiano = PianoPanel.private
+	SuiteView.start()
+end)
+start("Seats", require(script.Parent.World.Seating).start)
 start("Salutes", SaluteView.start)
 start("Events", EventBanner.start)
 -- Purchases: the perks this guest holds, and what the whole house sees (decrees, rains).

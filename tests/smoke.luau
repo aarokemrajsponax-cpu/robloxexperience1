@@ -347,10 +347,27 @@ for _, d in maison:GetDescendants() do
 	end
 end
 print(("built: %d parts, %d lights, %d surface guis"):format(parts, lights, guis))
--- The Ballroom's twenty tables brought the house past 6,500; the world streams by distance, so
--- a phone holds the room it's in, not the whole house.
-check("part budget (under 7,500)", parts < 7500, parts)
-check("light budget (under 140 lit)", lights < 140, lights)
+-- The Ballroom's twenty tables brought the house past 6,500 and the Suite's penthouse (eight
+-- rooms and a terrace) past 7,500; the world streams by distance, so a phone holds the room it's
+-- in, not the whole house. Its lamps cast no shadows but a few.
+check("part budget (under 9,000)", parts < 9000, parts)
+do
+	-- Places to sit in the public rooms: each with a Sit prompt, and each spot facing level.
+	local spots, prompts, tilted = 0, 0, 0
+	for _, d in maison:GetDescendants() do
+		if d:IsA("BasePart") and d.Name == "SitSpot" then
+			spots += 1
+			if math.abs(d.CFrame.UpVector.Y - 1) > 1e-3 then
+				tilted += 1
+			end
+		elseif d:IsA("ProximityPrompt") and d.Name == "SeatPrompt" then
+			prompts += 1
+		end
+	end
+	check("guests can sit all over the house (benches, armchairs, the Terrace)", spots >= 20 and prompts >= 12, spots, prompts)
+	check("and every seat sits level", tilted == 0, tilted)
+end
+check("light budget (under 165 lit)", lights < 165, lights)
 
 -- Season lighting setup (server)
 local okSeason, errSeason = pcall(function()
@@ -364,127 +381,9 @@ check("season published to the Workspace", workspace:GetAttribute("Season") ~= n
 -- every lit lamp, every SurfaceGui (in the UI snapshots' format) and the Lighting.
 -- EXPORT_ONLY=1 stops after writing it.
 ---------------------------------------------------------------------------------------------------
-local function exportWorld(path)
-	local function rgb(c)
-		return { math.floor(c.R * 255 + 0.5), math.floor(c.G * 255 + 0.5), math.floor(c.B * 255 + 0.5) }
-	end
-	local function v3(v)
-		return { v.X, v.Y, v.Z }
-	end
-	local function udim2(u)
-		return { u.X.Scale, u.X.Offset, u.Y.Scale, u.Y.Offset }
-	end
-	local function colour(c)
-		return { c.R, c.G, c.B }
-	end
-	local function dump(inst)
-		local n = { class = inst.ClassName, name = inst.Name, kids = {} }
-		if inst:IsA("GuiObject") then
-			n.pos = udim2(inst.Position)
-			n.size = udim2(inst.Size)
-			n.anchor = { inst.AnchorPoint.X, inst.AnchorPoint.Y }
-			n.rot = inst.Rotation
-			n.bg = colour(inst.BackgroundColor3)
-			n.bgT = inst.BackgroundTransparency
-			n.visible = inst.Visible
-			n.z = inst.ZIndex
-			n.order = inst.LayoutOrder
-			n.clip = inst.ClipsDescendants
-			n.auto = inst.AutomaticSize.Name
-			if inst:IsA("TextLabel") or inst:IsA("TextButton") or inst:IsA("TextBox") then
-				n.text = inst.Text
-				n.textSize = inst.TextSize
-				n.textColor = colour(inst.TextColor3)
-				n.textT = inst.TextTransparency
-				n.xAlign = inst.TextXAlignment.Name
-				n.yAlign = inst.TextYAlignment.Name
-				n.wrap = inst.TextWrapped
-				n.scaled = inst.TextScaled
-				local ff = inst.FontFace
-				n.weight = ff.Weight.Name
-				n.style = ff.Style.Name
-				n.family = ff.Family
-			end
-		elseif inst:IsA("UICorner") then
-			n.radius = { inst.CornerRadius.Scale, inst.CornerRadius.Offset }
-		elseif inst:IsA("UIGradient") then
-			local cs, ts = {}, {}
-			for _, k in inst.Color.Keypoints do
-				table.insert(cs, { k.Time, k.Value.R, k.Value.G, k.Value.B })
-			end
-			for _, k in inst.Transparency.Keypoints do
-				table.insert(ts, { k.Time, k.Value })
-			end
-			n.colors, n.trans, n.rot, n.offset, n.enabled = cs, ts, inst.Rotation, { inst.Offset.X, inst.Offset.Y }, inst.Enabled
-		elseif inst:IsA("UIStroke") then
-			n.color, n.thickness, n.trans, n.enabled = colour(inst.Color), inst.Thickness, inst.Transparency, inst.Enabled
-		elseif inst:IsA("UIScale") then
-			n.scale = inst.Scale
-		elseif inst:IsA("UIListLayout") then
-			n.dir = inst.FillDirection.Name
-			n.padding = { inst.Padding.Scale, inst.Padding.Offset }
-			n.hAlign = inst.HorizontalAlignment.Name
-			n.vAlign = inst.VerticalAlignment.Name
-		elseif inst:IsA("UIPadding") then
-			n.pad = { inst.PaddingTop.Offset, inst.PaddingBottom.Offset, inst.PaddingLeft.Offset, inst.PaddingRight.Offset }
-			n.padS = { inst.PaddingTop.Scale, inst.PaddingBottom.Scale, inst.PaddingLeft.Scale, inst.PaddingRight.Scale }
-		elseif inst:IsA("UITextSizeConstraint") then
-			n.maxText, n.minText = inst.MaxTextSize, inst.MinTextSize
-		elseif inst:IsA("UIGridLayout") then
-			n.cell, n.cellPad, n.hAlign = udim2(inst.CellSize), udim2(inst.CellPadding), inst.HorizontalAlignment.Name
-		elseif inst:IsA("UISizeConstraint") then
-			n.max = { inst.MaxSize.X, inst.MaxSize.Y }
-		end
-		for _, c in inst:GetChildren() do
-			table.insert(n.kids, dump(c))
-		end
-		return n
-	end
-	local out = { parts = {}, lights = {}, guis = {}, lighting = {} }
-	for _, d in workspace:GetDescendants() do
-		if d:IsA("BasePart") then
-			if d.Transparency < 0.99 then
-				local shape = if d:IsA("WedgePart") then "Wedge" elseif d:IsA("CornerWedgePart") then "CornerWedge" elseif d:IsA("Part") then d.Shape.Name else "Block"
-				table.insert(out.parts, { d.Name, shape, v3(d.Size), { d.CFrame:GetComponents() }, rgb(d.Color), d.Material.Name, d.Transparency, d.Reflectance, d.CastShadow })
-			end
-		elseif d:IsA("Light") then
-			local p = d.Parent
-			if d.Enabled and p and p:IsA("BasePart") then
-				local entry = { kind = d.ClassName, cf = { p.CFrame:GetComponents() }, size = v3(p.Size), color = rgb(d.Color), brightness = d.Brightness, range = d.Range, shadows = d.Shadows }
-				if d:IsA("SpotLight") or d:IsA("SurfaceLight") then
-					entry.face = d.Face.Name
-					entry.angle = d.Angle
-				end
-				table.insert(out.lights, entry)
-			end
-		elseif d:IsA("SurfaceGui") then
-			local p = d.Adornee or d.Parent
-			if d.Enabled and p and p:IsA("BasePart") then
-				local face = d.Face.Name
-				local s = p.Size
-				local w = if face == "Left" or face == "Right" then s.Z else s.X
-				local h = if face == "Top" or face == "Bottom" then s.Z else s.Y
-				local px = if d.SizingMode == Enum.SurfaceGuiSizingMode.PixelsPerStud then { w * d.PixelsPerStud, h * d.PixelsPerStud } else { d.CanvasSize.X, d.CanvasSize.Y }
-				local kids = {}
-				for _, c in d:GetChildren() do
-					table.insert(kids, dump(c))
-				end
-				table.insert(out.guis, { part = { p.CFrame:GetComponents() }, size = v3(p.Size), face = face, canvas = px, lit = d.LightInfluence, brightness = d.Brightness, kids = kids, name = p:GetFullName() })
-			end
-		end
-	end
-	out.lighting = {
-		clock = lighting.ClockTime,
-		brightness = lighting.Brightness,
-		ambient = rgb(lighting.Ambient),
-		outdoor = rgb(lighting.OutdoorAmbient),
-		exposure = lighting.ExposureCompensation,
-	}
-	fs.writeFile(path, serde.encode("json", out))
-	print(("exported %d parts, %d lights, %d surface guis to %s"):format(#out.parts, #out.lights, #out.guis, path))
-end
+local exportWorld = require("../tools/view/export")
 if process.env.EXPORT then
-	exportWorld(process.env.EXPORT)
+	exportWorld(workspace, lighting, process.env.EXPORT)
 	if process.env.EXPORT_ONLY then
 		process.exit(0)
 	end
@@ -1140,8 +1039,8 @@ do
 		end
 	end
 	print(("dressed: at most %d parts, %d lights"):format(worst, worstLights))
-	check("every season's dressing stays inside the part budget", worst < 7500, worst)
-	check("and the light budget", worstLights < 140, worstLights)
+	check("every season's dressing stays inside the part budget", worst < 9000, worst)
+	check("and the light budget", worstLights < 165, worstLights)
 	SeasonDress.apply("yule")
 	local dress = maison:FindFirstChild("SeasonDress")
 	check("Yuletide hangs garlands and a wreath", dress ~= nil and dress:FindFirstChild("Garland") ~= nil and dress:FindFirstChild("Wreath") ~= nil)
@@ -1182,9 +1081,26 @@ do
 	check("and your looks hang in its wardrobe", found.SuiteWardrobePrompt == true)
 	for spot, cf in S.spots do
 		local p = cf.Position
-		local inRoom = (p.X >= S.dressing.minX and p.X <= S.main.maxX and p.Z >= S.main.minZ and p.Z <= S.main.maxZ)
-		check("the Suite's " .. spot .. " stands inside the Suite", inRoom, p)
+		check("the Suite's " .. spot .. " stands inside the Suite", Layout.zoneAt(Vector3.new(p.X, S.floorY + 3, p.Z)) == "suite", p)
 	end
+	-- Through every room of the penthouse: the bedroom, the bath, the terrace and its pavilions,
+	-- the kitchen (only the shell is the server's: the furniture is each guest's own).
+	local Y = S.floorY
+	local bd, td, kd = S.bedroom.door, S.bedroom.terraceDoor, S.kitchen.terraceDoor
+	local routes = {
+		{ "into the bedroom", { { Vector3.new(-47, 0, 46), Y }, { Vector3.new(bd.X, 0, 41), Y }, { Vector3.new(bd.X, 0, 36), Y } } },
+		{ "into the bath and spa", { { Vector3.new(-56, 0, S.spa.door.Z), Y }, { Vector3.new(-66, 0, S.spa.door.Z), Y } } },
+		{ "out onto the terrace", { { Vector3.new(td.X, 0, 30), Y }, { Vector3.new(td.X, 0, 18), Y }, { Vector3.new(-45, 0, 8), Y } } },
+		{ "into the kitchen from the terrace", { { Vector3.new(kd.X, 0, 18), Y }, { Vector3.new(kd.X, 0, 30), Y } } },
+		{ "into the screening room", { { Vector3.new(-50, 0, S.screening.door.Z), Y }, { Vector3.new(-62, 0, S.screening.door.Z), Y } } },
+		{ "into the gym", { { Vector3.new(-56, 0, S.gym.door.Z), Y }, { Vector3.new(-68, 0, S.gym.door.Z), Y } } },
+	}
+	for _, route in routes do
+		local blocked = walk(route[2], 0.9)
+		check("a guest can walk " .. route[1], blocked == nil, blocked)
+	end
+	check("the terrace and its pavilions are the Suite", Layout.zoneAt(Vector3.new(-45, Y + 3, 8)) == "suite" and Layout.zoneAt(Vector3.new(-70, Y + 3, 15)) == "suite")
+	check("the Salon below is still the Salon", Layout.zoneAt(Layout.Salon.arrival + Vector3.new(0, 3, 0)) == "salon")
 end
 
 print(("\n%d passed, %d failed"):format(passed, failed))

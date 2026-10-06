@@ -120,8 +120,10 @@ local function neighbours(parent: Instance)
 	local m = Kit.model(parent, "Neighbours")
 	local z = S.facadeZ
 	local specs: { { any } } = {
-		{ -44, -20, 52, L.neighbourStone },
-		{ -70, -44, 44, L.neighbour },
+		-- The two west of the house are low (three storeys), so the Suite's terrace on the roof
+		-- behind them looks out over the street and its pool's glow is seen from the pavement.
+		{ -44, -20, 21, L.neighbourStone },
+		{ -70, -44, 21, L.neighbour },
 		{ 20, 46, 48, L.neighbour },
 		{ 46, 74, 56, L.neighbourStone },
 	}

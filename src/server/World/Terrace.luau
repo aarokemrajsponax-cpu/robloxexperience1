@@ -6,6 +6,7 @@
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Furniture = require(ReplicatedStorage.Shared.Furniture)
 local Layout = require(ReplicatedStorage.Shared.Layout)
 local Kit = require(script.Parent.Kit)
 
@@ -53,6 +54,7 @@ local function lounge(m: Model, centre: Vector3)
 		local cf = CFrame.lookAt(p, Vector3.new(centre.X, p.Y, centre.Z))
 		Kit.part(m, "Chair", Vector3.new(2.2, 1, 2.2), cf * CFrame.new(0, 0.9, 0), L.leather)
 		Kit.part(m, "ChairBack", Vector3.new(2.2, 1.8, 0.4), cf * CFrame.new(0, 1.9, 1.0), L.leather, { collide = false })
+		Furniture.seatsOn(m, "ChairSeat", { cf * CFrame.new(0, 1.4, 0) }, "The chair", 2)
 	end
 end
 

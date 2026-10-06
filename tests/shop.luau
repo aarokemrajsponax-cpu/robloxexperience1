@@ -489,14 +489,14 @@ local ivy = guest("Ivy", 9)
 local id = profiles[ivy].Data
 id.gilt = 5000
 local view = askAs(ivy, { op = "suite" })
-check("the Suite lists its spots", view and #view.spots == 11, view and #view.spots)
+check("the Suite lists its spots", view and #view.spots == #module("ReplicatedStorage", "Shared", "Suite").Spots, view and #view.spots)
 local rugSpot
 for _, sp in view.spots do
 	if sp.id == "rug" then
 		rugSpot = sp
 	end
 end
-check("each spot lists the pieces that go there", rugSpot ~= nil and #rugSpot.options >= 2 and rugSpot.house == true)
+check("each spot lists the pieces that go there", rugSpot ~= nil and #rugSpot.options >= 2 and type(rugSpot.house) == "table")
 check("each piece says its price and where it's sold", (function()
 	for _, o in rugSpot.options do
 		if o.id == "suite_rug_black" and o.gilt ~= 400 then
@@ -631,7 +631,7 @@ SaluteService.note = function(text, everywhere)
 end
 local mo = guest("Mo", 13)
 local sh = askAs(mo, { op = "shelves" })
-check("the Boutique always has its staples", sh.always and #sh.always == 7, sh.always and #sh.always)
+check("the Boutique always has its staples (the Suite's pieces are at its bell)", sh.always and #sh.always == 6, sh.always and #sh.always)
 check("the staples aren't also in the rotation", (function()
 	for _, c in sh.today do
 		for _, a in sh.always do

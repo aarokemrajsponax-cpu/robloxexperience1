@@ -4,6 +4,6 @@
 -- see whether Studio has the latest code from GitHub.
 
 return {
-	number = 34,
-	label = "Build 34 · 6 Oct · the piano sounds (free taste, owner plays free), keys move",
+	number = 35,
+	label = "Build 35 · 6 Oct · the penthouse Suite: 10 rooms, 200+ pieces; sit anywhere",
 }

@@ -181,37 +181,97 @@ Layout.Terrace = {
 	doorWidth = 6,
 	doorHeight = 10,
 	arrival = Vector3.new(34, 22, 54),
+	bar = Vector3.new(55, 22, 57), -- the bar, under its pergola on the north side, facing south
 }
 
--- Your Suite (§3): on the Velvet Room's roof, through a door in the Club hall's west wall and
--- down a short corridor. The main room, and two more (the Dressing Room and the Study) that open
--- with the Gold Key. Every spot's frame faces the way the piece faces.
+-- Your Suite (§3): a penthouse on the roofs of the Velvet Room and the Salon, through a door in
+-- the Club hall's west wall and down a gallery. The drawing room; the bedroom, the bath and
+-- spa, and the kitchen beyond it; out on the roof, the terrace with its pool, the screening
+-- room and the gym; and two more rooms (the Dressing Room and the Study) that open with the Gold
+-- Key. Every spot's frame faces the way its piece faces (CFrame.lookAt(spot, whatItFaces)).
+local function facing(x: number, y: number, z: number, tx: number, tz: number): CFrame
+	return CFrame.lookAt(Vector3.new(x, y, z), Vector3.new(tx, y, tz))
+end
 Layout.Suite = {
-	zone = box(-78, 21.5, 38, -22, 40, 62), -- above the Velvet Room's ceiling
+	zone = box(-79, 21.5, -8, -32, 46, 63), -- above the Velvet Room's and the Salon's ceilings
+	galleryZone = box(-36, 21.5, 51, -22, 34, 57), -- the gallery from the Club hall
 	floorY = 22,
 	height = 12,
 	main = { minX = -62, maxX = -36, minZ = 40, maxZ = 60 },
 	dressing = { minX = -76, maxX = -62, minZ = 50, maxZ = 60, door = Vector3.new(-62, 22, 55) },
 	study = { minX = -76, maxX = -62, minZ = 40, maxZ = 50, door = Vector3.new(-62, 22, 45) },
+	bedroom = { minX = -61.5, maxX = -44.5, minZ = 24, maxZ = 39, door = Vector3.new(-47, 22, 39.5), terraceDoor = Vector3.new(-47, 22, 23.5) },
+	spa = { minX = -77, maxX = -62.5, minZ = 24, maxZ = 39, door = Vector3.new(-62, 22, 27.5) },
+	kitchen = { minX = -43.5, maxX = -33, minZ = 24, maxZ = 39, terraceDoor = Vector3.new(-38, 22, 23.5) },
+	screening = { minX = -77, maxX = -56.5, minZ = 7.5, maxZ = 23, door = Vector3.new(-56, 22, 19.5) },
+	gym = { minX = -77, maxX = -62.5, minZ = -6, maxZ = 7, door = Vector3.new(-62, 22, 2.5) },
+	terrace = { minX = -61.5, maxX = -33, minZ = -6, maxZ = 23 },
+	innerDoorWidth = 4,
+	innerDoorHeight = 9,
 	door = Vector3.new(-21, 20, 54), -- in the Club hall's west wall (x -22..-20)
 	doorWidth = 5,
 	doorHeight = 10,
 	arrival = Vector3.new(-39, 22, 54),
 	spots = {
-		sofa = CFrame.lookAt(Vector3.new(-49, 22, 45), Vector3.new(-49, 22, 60)),
-		chair = CFrame.lookAt(Vector3.new(-42.5, 22, 51), Vector3.new(-60, 22, 51)),
-		rug = CFrame.new(-49, 22, 51),
-		lamp = CFrame.new(-43, 22, 44.5),
-		painting = CFrame.lookAt(Vector3.new(-49, 30.5, 59.6), Vector3.new(-49, 30.5, 40)),
-		bar = CFrame.lookAt(Vector3.new(-57, 22, 41.2), Vector3.new(-57, 22, 60)),
-		shelf = CFrame.lookAt(Vector3.new(-58, 22, 59.2), Vector3.new(-58, 22, 40)),
-		mirror = CFrame.lookAt(Vector3.new(-75.4, 22, 55), Vector3.new(-60, 22, 55)),
-		chaise = CFrame.lookAt(Vector3.new(-69, 22, 58.2), Vector3.new(-69, 22, 40)),
-		desk = CFrame.lookAt(Vector3.new(-71, 22, 45), Vector3.new(-60, 22, 45)),
-		globe = CFrame.new(-66, 22, 41.8),
+		-- The drawing room: the fire on the north wall, the sofa facing it.
+		sofa = facing(-55, 22, 45.6, -55, 60),
+		chair = facing(-46.4, 22, 50.6, -70, 50.6),
+		rug = facing(-55, 22, 50.4, -55, 60),
+		coffeeTable = facing(-55, 22, 50.6, -55, 60),
+		lamp = facing(-50.4, 22, 47.4, -50.4, 30),
+		painting = facing(-55, 30.5, 59.6, -55, 40),
+		bar = facing(-57.4, 22, 41.2, -57.4, 60),
+		shelf = facing(-46.6, 22, 59.2, -46.6, 40),
+		chandelier = CFrame.new(-51.2, 34, 47.5), -- in a coffer of the ceiling
+		plant = facing(-60.2, 22, 58.6, -50, 50),
+		display = facing(-39.6, 22, 41.0, -39.6, 60),
+		piano = facing(-41, 22, 45.4, -70, 45.4),
+		-- The gallery to it.
+		galleryArtS = facing(-29, 27.2, 51.62, -29, 60),
+		galleryArtN = facing(-29, 27.2, 56.38, -29, 40),
+		-- The bedroom: the bed's head on the north wall, the television facing it.
+		bed = facing(-55.6, 22, 34.1, -55.6, 0),
+		nightstands = facing(-55.6, 22, 37.6, -55.6, 0),
+		bedRug = facing(-55.6, 22, 31.4, -55.6, 0),
+		bedBench = facing(-55.6, 22, 28.5, -55.6, 0),
+		bedTv = facing(-55.6, 22, 24.9, -55.6, 40),
+		dresser = facing(-45.3, 22, 31.5, -70, 31.5),
+		-- The bath and spa.
+		bathtub = facing(-66.8, 22, 33.4, -66.8, 0),
+		shower = facing(-74.4, 22, 36.6, -74.4, 0),
+		vanity = facing(-66.4, 22, 38.0, -66.4, 0),
+		sauna = facing(-73.6, 22, 28.0, -50, 28.0),
+		spaPlant = facing(-63.4, 22, 33.0, -80, 33.0),
+		-- The kitchen: the run on the east wall, the island before it.
+		kitchen = facing(-37.6, 22, 33.0, -60, 33.0),
+		-- The screening room: the screen on the west wall.
+		screen = facing(-75.2, 22, 15.2, -50, 15.2),
+		recliners = facing(-66.2, 22, 15.2, -90, 15.2),
+		gaming = facing(-62.2, 22, 21.7, -62.2, 0),
+		arcade = facing(-58.1, 22, 9.4, -58.1, 30),
+		arcade2 = facing(-61.1, 22, 9.4, -61.1, 30),
+		popcorn = facing(-57.6, 22, 14.6, -80, 14.6),
+		-- The gym, glass on two sides.
+		treadmill = facing(-75, 22, 0.6, -75, -20),
+		bike = facing(-71.4, 22, 0.4, -71.4, -20),
+		weights = facing(-72, 22, 6.2, -72, -20),
+		massage = facing(-66.6, 22, 0.8, -66.6, -20),
+		punchbag = facing(-66, 22, -3.6, -90, -3.6),
+		-- The terrace: the pool along the south edge, its glass toward the house.
+		pool = facing(-45, 22, -0.7, -45, 40),
+		hottub = facing(-37.6, 22, 9.6, -60, 9.6),
+		loungers = facing(-50.6, 22, 9.8, -50.6, -20),
+		firepit = facing(-44.4, 22, 18.4, -44.4, 40),
+		garden = facing(-34.4, 22, 18.6, -60, 18.6),
+		statue = facing(-58.6, 22, -2.6, -40, -2.6),
+		-- The Gold Key rooms.
+		mirror = facing(-75.4, 22, 55, -60, 55),
+		chaise = facing(-69, 22, 58.2, -69, 40),
+		desk = facing(-71, 22, 45, -60, 45),
+		globe = facing(-66, 22, 41.8, -66, 60),
 	} :: { [string]: CFrame },
-	furnish = CFrame.lookAt(Vector3.new(-38, 22, 58.8), Vector3.new(-38, 22, 40)), -- the bell to furnish
-	wardrobe = CFrame.lookAt(Vector3.new(-40, 22, 40.8), Vector3.new(-40, 22, 60)), -- your looks hang here
+	furnish = facing(-34.6, 22, 52.6, -34.6, 60), -- the bell to furnish, in the gallery by the door
+	wardrobe = facing(-60.4, 22, 36.4, -40, 36.4), -- your looks hang here (the bedroom)
 }
 
 Layout.Library = {
@@ -283,6 +343,12 @@ Layout.Doorways = {
 	{ name = "the Terrace doors", centre = Layout.Terrace.door, axis = "x", width = Layout.Terrace.doorWidth, height = Layout.Terrace.doorHeight, floorY = Layout.CLUB, sill = false, rise = 2 },
 	{ name = "the Dressing Room door", centre = Layout.Suite.dressing.door, axis = "x", width = 4, height = 9, floorY = Layout.Suite.floorY, sill = false },
 	{ name = "the Study door", centre = Layout.Suite.study.door, axis = "x", width = 4, height = 9, floorY = Layout.Suite.floorY, sill = false },
+	{ name = "the Suite's bedroom door", centre = Layout.Suite.bedroom.door, axis = "z", width = 4, height = 9, floorY = Layout.Suite.floorY, sill = false },
+	{ name = "the bedroom's doors to the terrace", centre = Layout.Suite.bedroom.terraceDoor, axis = "z", width = 4, height = 9, floorY = Layout.Suite.floorY, sill = false },
+	{ name = "the bath's door", centre = Layout.Suite.spa.door, axis = "x", width = 4, height = 9, floorY = Layout.Suite.floorY, sill = false },
+	{ name = "the kitchen's door to the terrace", centre = Layout.Suite.kitchen.terraceDoor, axis = "z", width = 4, height = 9, floorY = Layout.Suite.floorY, sill = false },
+	{ name = "the screening room door", centre = Layout.Suite.screening.door, axis = "x", width = 4, height = 9, floorY = Layout.Suite.floorY, sill = false },
+	{ name = "the gym door", centre = Layout.Suite.gym.door, axis = "x", width = 4, height = 9, floorY = Layout.Suite.floorY, sill = false },
 } :: { Doorway }
 
 -- The four rooms in order, for code that treats them alike.
@@ -383,7 +449,7 @@ export type ZoneName = "street" | "foyer" | "salon" | "velvet" | "obsidian" | "m
 function Layout.zoneAt(p: Vector3): ZoneName
 	if Layout.inBox(Layout.Terrace.zone, p) then
 		return "terrace"
-	elseif Layout.inBox(Layout.Suite.zone, p) then
+	elseif Layout.inBox(Layout.Suite.zone, p) or Layout.inBox(Layout.Suite.galleryZone, p) then
 		return "suite"
 	elseif Layout.inBox(Layout.Salon.zone, p) then
 		return "salon"

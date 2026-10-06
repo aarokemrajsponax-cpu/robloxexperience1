@@ -57,6 +57,11 @@ end
 
 -- Whether an item is on the shelves right now (always, today, featured, or its season's).
 function Boutique.onSale(itemId: string, seasonId: string, time: number?): boolean
+	-- The Suite's pieces are always to be had, at the Suite's bell.
+	local piece = Wardrobe.get(itemId)
+	if piece and piece.kind == "suite" then
+		return Wardrobe.deliverable(piece)
+	end
 	for _, item in Boutique.always() do
 		if item.id == itemId then
 			return true
