@@ -5,6 +5,7 @@ local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
+local Breathe = require(ReplicatedStorage.Shared.Breathe)
 
 local Kit = {}
 
@@ -57,6 +58,7 @@ Kit.Looks = ({
 } :: any) :: { [string]: Look }
 
 function Kit.part(parent: Instance, name: string, size: Vector3, cframe: CFrame, look: Look, opts: { [string]: any }?): Part
+	Breathe.now() -- (the house is thousands of parts: built in breaths, never one long stretch)
 	local p = Instance.new("Part")
 	p.Name = name
 	p.Anchored = true

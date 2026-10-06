@@ -5,6 +5,9 @@
 -- parts flush on purpose (it keeps their numbers simple), so this lifts the smaller of each such
 -- pair of faces GAP studs clear of the other: too little to see, enough never to flicker.
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Breathe = require(ReplicatedStorage.Shared.Breathe)
+
 local Flush = {}
 
 Flush.GAP = 0.03 -- studs between two faces that were flush
@@ -63,6 +66,7 @@ end
 local function find(root: Instance): { { Face } }
 	local buckets: { [string]: { Face } } = {}
 	for _, d in root:GetDescendants() do
+		Breathe.now()
 		if d:IsA("Part") then
 			local box = boxOf(d)
 			if box then
@@ -93,6 +97,7 @@ local function find(root: Instance): { { Face } }
 		local axis, side, b = string.match(key, "^(%d)(%-?%d):(%-?%d+)$")
 		local nextList = buckets[string.format("%s%s:%d", axis :: string, side :: string, (tonumber(b) :: number) + 1)] or {}
 		for i, f in list do
+			Breathe.now()
 			for _, other in { list, nextList } do
 				for j, g in other do
 					if (other ~= list or j > i) and f.box ~= g.box and math.abs(f.plane - g.plane) < NEAR and not looksSame(f.box.part, g.box.part) and overlap(f.box, g.box, f.axis) > MIN_OVERLAP then

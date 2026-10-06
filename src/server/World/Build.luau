@@ -4,6 +4,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
+local Breathe = require(ReplicatedStorage.Shared.Breathe)
 local Layout = require(ReplicatedStorage.Shared.Layout)
 local Flush = require(script.Parent.Flush)
 local Kit = require(script.Parent.Kit)
@@ -58,6 +59,7 @@ function Build.run(): Folder
 		if not ok then
 			warn(string.format("[Maison] Building %s failed: %s", name, tostring(err)))
 		end
+		Breathe.now(0) -- a breath between rooms (see Breathe: the script timeout)
 	end
 	step("the Street", function() Street.build(root) end)
 	step("the Foyer", function() Foyer.build(root) end)
