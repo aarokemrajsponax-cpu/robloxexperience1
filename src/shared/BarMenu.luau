@@ -43,9 +43,9 @@ BarMenu.Items = {
 	{ id = "macarons", name = "Three Macarons", kind = "snack", line = "Raspberry, pistachio and vanilla.", gilt = 45, look = "plate", colour = rgb(236, 120, 150), accent = rgb(170, 210, 140), servings = 3 },
 	{ id = "strawberries", name = "Chocolate Strawberries", kind = "snack", line = "Five strawberries, half dipped in dark chocolate.", gilt = 50, look = "bowl", colour = rgb(200, 30, 40), accent = rgb(60, 34, 24), servings = 5 },
 	-- The house specials (Robux)
-	{ id = "goldSpritz", name = "The Gold-Leaf Spritz", kind = "drink", line = "Sparkling white grape and elderflower with flakes of gold leaf, in a glass that glows. No alcohol.", product = "barGoldSpritz", robux = 25, look = "glass", colour = rgb(250, 226, 150), accent = rgb(255, 200, 80), servings = 8, glow = true },
-	{ id = "tower", name = "The Macaron Tower", kind = "snack", line = "Twelve macarons stacked in a gold tower, with sparkles while you hold it.", product = "barMacaronTower", robux = 49, look = "tower", colour = rgb(236, 120, 150), accent = rgb(255, 214, 120), servings = 12, glow = true },
-	{ id = "platter", name = "The Grand Platter", kind = "snack", line = "A silver platter of sweets you carry for everyone: each guest near you is handed a macaron, free.", product = "barGrandPlatter", robux = 99, look = "platter", colour = rgb(236, 120, 150), accent = rgb(200, 200, 210), servings = 10, glow = true, share = true },
+	{ id = "goldSpritz", name = "The Gold-Leaf Spritz", kind = "drink", line = "Sparkling white grape and elderflower with flakes of gold leaf, in a glass that glows. No alcohol.", product = "barGoldSpritz", robux = 75, look = "glass", colour = rgb(250, 226, 150), accent = rgb(255, 200, 80), servings = 8, glow = true },
+	{ id = "tower", name = "The Macaron Tower", kind = "snack", line = "Twelve macarons stacked in a gold tower, with sparkles while you hold it.", product = "barMacaronTower", robux = 149, look = "tower", colour = rgb(236, 120, 150), accent = rgb(255, 214, 120), servings = 12, glow = true },
+	{ id = "platter", name = "The Grand Platter", kind = "snack", line = "A silver platter of sweets you carry for everyone: each guest near you is handed a macaron, free.", product = "barGrandPlatter", robux = 299, look = "platter", colour = rgb(236, 120, 150), accent = rgb(200, 200, 210), servings = 10, glow = true, share = true },
 } :: { Item }
 
 BarMenu.byId = {} :: { [string]: Item }

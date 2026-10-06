@@ -200,15 +200,15 @@ block (that's where most of the money is):
 | `Piano Session 3 Minutes` | 349 | three minutes at the piano |
 | `Piano Session 5 Minutes` | 599 | five minutes at the piano |
 | `Piano Session 10 Minutes` | 899 | ten minutes at the piano |
-| `Gold-Leaf Spritz` | 25 | the Terrace Bar: a glowing spritz with gold leaf to hold and sip (no alcohol; cosmetic) |
-| `Macaron Tower` | 49 | the Terrace Bar: a tower of twelve macarons with sparkles (cosmetic) |
-| `Suite Fireworks` | 49 | a fireworks show over your Suite's terrace, played when you choose |
-| `Meme Takeover` | 79 | the meme curios bounce round your Suite for twenty seconds |
-| `Golden Transformation` | 149 | your Suite's lights turn gold and gold leaf falls |
-| `Gem Pouch` | 99 | 120 Gems, for the Cabinet's curios (each at a fixed Gem price) |
-| `Gem Case` | 449 | 650 Gems |
-| `Gem Trunk` | 899 | 1,500 Gems |
-| `Grand Platter` | 99 | the Terrace Bar: a platter of sweets; every guest near you is handed a macaron (cosmetic) |
+| `Gold-Leaf Spritz` | 75 | the Terrace Bar: a glowing spritz with gold leaf to hold and sip (no alcohol; cosmetic) |
+| `Macaron Tower` | 149 | the Terrace Bar: a tower of twelve macarons with sparkles (cosmetic) |
+| `Suite Fireworks` | 199 | a fireworks show over your Suite's terrace, played when you choose |
+| `Meme Takeover` | 299 | the meme curios bounce round your Suite for twenty seconds |
+| `Golden Transformation` | 499 | your Suite's lights turn gold and gold leaf falls |
+| `Gem Pouch` | 199 | 250 Gems, for the Cabinet's curios (each at a fixed Gem price) |
+| `Gem Case` | 799 | 1,100 Gems |
+| `Gem Trunk` | 1999 | 3,000 Gems |
+| `Grand Platter` | 299 | the Terrace Bar: a platter of sweets; every guest near you is handed a macaron (cosmetic) |
 
 Until a `Boutique NN` product exists, the pieces at that price are sold for Gilt only (40 Gilt
 for each Robux of the price, `Config.Gilt.perRobux`): a 249 piece is 9,960 Gilt. Make the

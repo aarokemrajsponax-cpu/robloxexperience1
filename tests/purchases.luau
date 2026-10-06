@@ -1215,9 +1215,9 @@ do
 	end
 
 	for _, p in {
-		{ Name = "Gold-Leaf Spritz", ProductId = 5201, PriceInRobux = 25 },
-		{ Name = "Macaron Tower", ProductId = 5202, PriceInRobux = 49 },
-		{ Name = "Grand Platter", ProductId = 5203, PriceInRobux = 99 },
+		{ Name = "Gold-Leaf Spritz", ProductId = 5201, PriceInRobux = 75 },
+		{ Name = "Macaron Tower", ProductId = 5202, PriceInRobux = 149 },
+		{ Name = "Grand Platter", ProductId = 5203, PriceInRobux = 299 },
 	} do
 		table.insert(MarketplaceService.devProducts, p)
 	end
@@ -1250,7 +1250,7 @@ do
 			spritz = i
 		end
 	end
-	check("a special shows Roblox's live price and its key", spritz ~= nil and spritz.robux == 25 and spritz.ready == true and spritz.key == "barGoldSpritz")
+	check("a special shows Roblox's live price and its key", spritz ~= nil and spritz.robux == 75 and spritz.ready == true and spritz.key == "barGoldSpritz")
 
 	ivyData.gilt = 10
 	r = bar(ivy, { op = "order", id = "lemonade" })
@@ -1287,17 +1287,17 @@ do
 	check("and nothing is served before Roblox says it's bought", treatOf(ivy) == nil)
 	r = bar(ivy, { op = "special", key = "notAProduct" })
 	check("only the bar's own specials are sold at the bar", r.ok == false)
-	local result = receipt(ivy, 5201, "bar-1", 25)
+	local result = receipt(ivy, 5201, "bar-1", 75)
 	check("the receipt is granted", result == GRANTED)
 	check("and the spritz is served straight away", treatOf(ivy) ~= nil and treatOf(ivy):GetAttribute("TreatId") == "goldSpritz" and Perks.credits(ivyData, "treat:barGoldSpritz") == 0)
 	check("glowing", treatOf(ivy).PrimaryPart:FindFirstChild("Glow") ~= nil)
-	result = receipt(ivy, 5201, "bar-1", 25)
+	result = receipt(ivy, 5201, "bar-1", 75)
 	check("the same receipt again grants nothing more", result == GRANTED and Perks.credits(ivyData, "treat:barGoldSpritz") == 0)
 
 	-- Bought while away from their body: kept, and served when they ask (or come back).
 	local body = ivy.Character
 	ivy.Character = nil
-	result = receipt(ivy, 5201, "bar-2", 25)
+	result = receipt(ivy, 5201, "bar-2", 75)
 	check("bought with no body to hold it: kept as a credit", result == GRANTED and Perks.credits(ivyData, "treat:barGoldSpritz") == 1)
 	ivy.Character = body
 	bar(ivy, { op = "putDown" })
@@ -1316,7 +1316,7 @@ do
 	-- The Grand Platter: a macaron for each guest close by.
 	local jo = patron("Jo", 9402, 6)
 	local kit = patron("Kit", 9403, 60)
-	result = receipt(ivy, 5203, "bar-3", 99)
+	result = receipt(ivy, 5203, "bar-3", 299)
 	check("the platter is served", result == GRANTED and treatOf(ivy) ~= nil and treatOf(ivy):GetAttribute("TreatId") == "platter")
 	check("guests close by are each handed a macaron", treatOf(jo) ~= nil and treatOf(jo):GetAttribute("TreatId") == "sharedMacaron" and lastOp(jo, "notice") ~= nil)
 	check("guests far away aren't", treatOf(kit) == nil)
@@ -1389,20 +1389,20 @@ do
 
 	-- Gem packs: receipts, never anything else.
 	for _, p in {
-		{ Name = "Gem Pouch", ProductId = 5301, PriceInRobux = 99 },
-		{ Name = "Gem Case", ProductId = 5302, PriceInRobux = 449 },
-		{ Name = "Gem Trunk", ProductId = 5303, PriceInRobux = 899 },
+		{ Name = "Gem Pouch", ProductId = 5301, PriceInRobux = 199 },
+		{ Name = "Gem Case", ProductId = 5302, PriceInRobux = 799 },
+		{ Name = "Gem Trunk", ProductId = 5303, PriceInRobux = 1999 },
 	} do
 		table.insert(MarketplaceService.devProducts, p)
 	end
 	run(Catalog.discover)
 	local problems = ProductConfig.validate(Grants.names())
 	check("the three Gem packs are valid products", problems.gems1 == nil and problems.gems2 == nil and problems.gems3 == nil)
-	check("bigger packs give more Gems per Robux", ProductConfig.byKey.gems2.Reward.Amount / 449 > ProductConfig.byKey.gems1.Reward.Amount / 99 and ProductConfig.byKey.gems3.Reward.Amount / 899 > ProductConfig.byKey.gems2.Reward.Amount / 449)
+	check("bigger packs give more Gems per Robux", ProductConfig.byKey.gems2.Reward.Amount / 799 > ProductConfig.byKey.gems1.Reward.Amount / 199 and ProductConfig.byKey.gems3.Reward.Amount / 1999 > ProductConfig.byKey.gems2.Reward.Amount / 799)
 	local mo = guest("Mo", 9500)
 	local moData = profiles[mo].Data
 	local r = curio(mo, { op = "state" })
-	check("the Cabinet lists curios for Gems and the packs, with Roblox's prices", r.ok == true and #r.cabinet.items >= 3 and r.cabinet.packs[1].robux == 99 and r.cabinet.packs[1].ready == true)
+	check("the Cabinet lists curios for Gems and the packs, with Roblox's prices", r.ok == true and #r.cabinet.items >= 3 and r.cabinet.packs[1].robux == 199 and r.cabinet.packs[1].ready == true)
 	r = curio(mo, { op = "buy", id = "truffle" })
 	check("no Gems: the Cabinet says how many more", r.ok == false and string.find(r.why or "", "60 more", 1, true) ~= nil)
 	local before = #prompts
@@ -1410,16 +1410,16 @@ do
 	check("a Gem pack opens Roblox's purchase window", r.ok == true and #prompts == before + 1 and moData.gems == 0)
 	r = curio(mo, { op = "gems", key = "giltPurse1" })
 	check("only Gem packs are sold there", r.ok == false)
-	local result = receipt(mo, 5301, "gems-1", 99)
-	check("the receipt adds the Gems", result == GRANTED and moData.gems == 120)
-	result = receipt(mo, 5301, "gems-1", 99)
-	check("the same receipt twice adds nothing", moData.gems == 120)
+	local result = receipt(mo, 5301, "gems-1", 199)
+	check("the receipt adds the Gems", result == GRANTED and moData.gems == 250)
+	result = receipt(mo, 5301, "gems-1", 199)
+	check("the same receipt twice adds nothing", moData.gems == 250)
 	r = curio(mo, { op = "buy", id = "truffle" })
-	check("the Cabinet sells the exact curio chosen, at its price", r.ok == true and moData.gems == 60 and CuriosS.count(moData, "truffle") == 1)
+	check("the Cabinet sells the exact curio chosen, at its price", r.ok == true and moData.gems == 190 and CuriosS.count(moData, "truffle") == 1)
 	r = curio(mo, { op = "buy", id = "croissantino" })
-	check("a curio found at the tables can't be bought", r.ok == false and moData.gems == 60)
+	check("a curio found at the tables can't be bought", r.ok == false and moData.gems == 190)
 	r = curio(mo, { op = "buy", id = "truffle", gems = 0 })
-	check("a price from the screen is refused outright", r.ok == false and moData.gems == 60)
+	check("a price from the screen is refused outright", r.ok == false and moData.gems == 190)
 	r = curio(mo, { op = "fav", id = "truffle", on = true })
 	check("a curio can be starred", r.ok == true and moData.curios.favs.truffle == true)
 	r = curio(mo, { op = "fav", id = "moonCheese", on = true })
@@ -1528,9 +1528,9 @@ do
 		return r
 	end
 	for _, p in {
-		{ Name = "Suite Fireworks", ProductId = 5401, PriceInRobux = 49 },
-		{ Name = "Meme Takeover", ProductId = 5402, PriceInRobux = 79 },
-		{ Name = "Golden Transformation", ProductId = 5403, PriceInRobux = 149 },
+		{ Name = "Suite Fireworks", ProductId = 5401, PriceInRobux = 199 },
+		{ Name = "Meme Takeover", ProductId = 5402, PriceInRobux = 299 },
+		{ Name = "Golden Transformation", ProductId = 5403, PriceInRobux = 499 },
 	} do
 		table.insert(MarketplaceService.devProducts, p)
 	end
@@ -1540,13 +1540,13 @@ do
 	local pia = guest("Pia", 9600)
 	local piaData = profiles[pia].Data
 	local r = show(pia, { op = "list" })
-	check("the list shows each with Roblox's price and none held", r.ok == true and #r.shows == 3 and r.shows[1].robux == 49 and r.shows[1].held == 0)
+	check("the list shows each with Roblox's price and none held", r.ok == true and #r.shows == 3 and r.shows[1].robux == 199 and r.shows[1].held == 0)
 	r = show(pia, { op = "play", key = "spectacleFireworks" })
 	check("nothing to play before buying", r.ok == false)
 	local before = #prompts
 	r = show(pia, { op = "buy", key = "spectacleFireworks" })
 	check("buying opens Roblox's purchase window", r.ok == true and #prompts == before + 1)
-	check("the receipt keeps one show", receipt(pia, 5401, "show-1", 49) == GRANTED and Perks.credits(piaData, "show:spectacleFireworks") == 1)
+	check("the receipt keeps one show", receipt(pia, 5401, "show-1", 199) == GRANTED and Perks.credits(piaData, "show:spectacleFireworks") == 1)
 	pia.Character = {
 		FindFirstChild = function(_, n)
 			return if n == "HumanoidRootPart" then pia.root else nil

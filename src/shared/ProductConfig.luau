@@ -210,9 +210,9 @@ end
 -- The Terrace bar's house specials: a treat you hold and enjoy, at the price on the menu. Saved
 -- as a credit first (so a receipt is never lost), and served at once. Cosmetic: no score, no Gilt.
 for _, special in {
-	{ key = "barGoldSpritz", name = "Gold-Leaf Spritz", item = "goldSpritz", price = 25, tier = "Entry" :: Tier, line = "A glowing sparkling spritz with gold leaf, to hold and sip on the Terrace. No alcohol. Cosmetic only." },
-	{ key = "barMacaronTower", name = "Macaron Tower", item = "tower", price = 49, tier = "Entry" :: Tier, line = "Twelve macarons in a gold tower, with sparkles while you hold it. Cosmetic only." },
-	{ key = "barGrandPlatter", name = "Grand Platter", item = "platter", price = 99, tier = "Medium" :: Tier, line = "A silver platter of sweets: every guest near you is handed a macaron, free. Cosmetic only." },
+	{ key = "barGoldSpritz", name = "Gold-Leaf Spritz", item = "goldSpritz", price = 75, tier = "Entry" :: Tier, line = "A glowing sparkling spritz with gold leaf, to hold and sip on the Terrace. No alcohol. Cosmetic only." },
+	{ key = "barMacaronTower", name = "Macaron Tower", item = "tower", price = 149, tier = "Entry" :: Tier, line = "Twelve macarons in a gold tower, with sparkles while you hold it. Cosmetic only." },
+	{ key = "barGrandPlatter", name = "Grand Platter", item = "platter", price = 299, tier = "Premium" :: Tier, line = "A silver platter of sweets: every guest near you is handed a macaron, free. Cosmetic only." },
 } do
 	add({
 		Key = special.key,
@@ -230,9 +230,9 @@ end
 -- Gems: the house's rare currency, for the Cabinet's curios (each sold at a fixed Gem price, the
 -- exact one you choose). Never random. More Gems per Robux in the bigger packs, said plainly.
 for _, pack in {
-	{ key = "gems1", name = "Gem Pouch", gems = 120, price = 99, tier = "Entry" :: Tier },
-	{ key = "gems2", name = "Gem Case", gems = 650, price = 449, tier = "Medium" :: Tier },
-	{ key = "gems3", name = "Gem Trunk", gems = 1500, price = 899, tier = "Premium" :: Tier },
+	{ key = "gems1", name = "Gem Pouch", gems = 250, price = 199, tier = "Entry" :: Tier },
+	{ key = "gems2", name = "Gem Case", gems = 1100, price = 799, tier = "Premium" :: Tier },
+	{ key = "gems3", name = "Gem Trunk", gems = 3000, price = 1999, tier = "Prestige" :: Tier },
 } do
 	add({
 		Key = pack.key,
@@ -250,9 +250,9 @@ end
 -- Suite spectacles: a show played in your own Suite whenever you choose (each purchase is one
 -- show, kept until you play it). Cosmetic only; nothing random.
 for _, show in {
-	{ key = "spectacleFireworks", name = "Suite Fireworks", price = 49, tier = "Entry" :: Tier, line = "Fireworks over your Suite's terrace for twenty seconds, whenever you choose." },
-	{ key = "spectacleMemes", name = "Meme Takeover", price = 79, tier = "Entry" :: Tier, line = "Every meme curio bursts out and bounces round your Suite for twenty seconds." },
-	{ key = "spectacleGolden", name = "Golden Transformation", price = 149, tier = "Medium" :: Tier, line = "Your Suite's lights turn gold and gold leaf falls for thirty seconds." },
+	{ key = "spectacleFireworks", name = "Suite Fireworks", price = 199, tier = "Medium" :: Tier, line = "Fireworks over your Suite's terrace for twenty seconds, whenever you choose." },
+	{ key = "spectacleMemes", name = "Meme Takeover", price = 299, tier = "Medium" :: Tier, line = "Every meme curio bursts out and bounces round your Suite for twenty seconds." },
+	{ key = "spectacleGolden", name = "Golden Transformation", price = 499, tier = "Premium" :: Tier, line = "Your Suite's lights turn gold and gold leaf falls for thirty seconds." },
 } do
 	add({
 		Key = show.key,

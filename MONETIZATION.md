@@ -221,7 +221,7 @@ in line" (a chip and a notice); the purchase isn't offered when two rains are al
 guests (≤ 9,000 Gilt per 699 Robux). *Metrics:* rains per day, recipients per rain, Gilt
 injected, repeat buyers.
 
-**The Terrace Bar's house specials** (Gold-Leaf Spritz 25, Macaron Tower 49, Grand Platter 99).
+**The Terrace Bar's house specials** (Gold-Leaf Spritz 75, Macaron Tower 149, Grand Platter 299).
 *Segment:* social players relaxing on the Terrace. *Value:* a fun, visible treat (a glow,
 sparkles; the platter hands every guest close by a free macaron). *Context:* the bar's menu only,
 beside the everyday menu sold for Gilt. *Hierarchy:* name, exactly what it is, sips or bites,
@@ -231,14 +231,14 @@ random, no alcohol anywhere on the menu. *Safety:* the receipt saves a credit fi
 (`treat:<key>`), served from it, so a guest who leaves first gets it when they're back (the menu
 shows "Yours: serve it"). Server handler `barTreat` (`Purchases/Bar.luau`).
 
-**Gem packs** (Gem Pouch 120 Gems 99, Gem Case 650 Gems 449, Gem Trunk 1,500 Gems 899). Gems
+**Gem packs** (Gem Pouch 250 Gems 199, Gem Case 1,100 Gems 799, Gem Trunk 3,000 Gems 1,999). Gems
 buy curios in the Cabinet, each at a fixed Gem price, the exact one the guest picks: never a
 random draw. Curios change no score. The pack's line says how many Gems; bigger packs give more
 per Robux, plainly. Handler `gems` (`server/Curios.luau`) adds the Gems in the receipt's commit.
 Curios found at the tables are earned by playing only (never sold); trading is between guests,
 server-checked, curios only (Gems, Gilt and Robux items are never traded).
 
-**Suite spectacles** (Suite Fireworks 49, Meme Takeover 79, Golden Transformation 149). A show
+**Suite spectacles** (Suite Fireworks 199, Meme Takeover 299, Golden Transformation 499). A show
 in the buyer's own Suite. Each receipt saves one show as a credit (`show:<key>`); the guest plays
 it from the Suite's bell → Spectacles, only while in their Suite. Cosmetic only. Handler
 `spectacle` (`Purchases/Spectacles.luau`).
@@ -609,8 +609,8 @@ Studio purchases are free test purchases):
 2. **Create the developer products** (Creator Hub → your experience → Monetization → Developer
    Products), names exactly as below; the game finds them within five minutes:
    `Chronos Defiance` 49 · `Emperor's Decree` 149 · `God-Mode Luck` 199 · `Megalodon Rainmaker`
-   699 · `Gold-Leaf Spritz` 25 · `Macaron Tower` 49 · `Grand Platter` 99 (the Terrace Bar's
-   specials) · `Suite Fireworks` 49 · `Meme Takeover` 79 · `Golden Transformation` 149 · `Gem Pouch` 99 · `Gem Case` 449 · `Gem Trunk` 899 · and, if you won't make the pass, `VIP Velocity Elite` 499. (The Boutique's
+   699 · `Gold-Leaf Spritz` 75 · `Macaron Tower` 149 · `Grand Platter` 299 (the Terrace Bar's
+   specials) · `Suite Fireworks` 199 · `Meme Takeover` 299 · `Golden Transformation` 499 · `Gem Pouch` 199 · `Gem Case` 799 · `Gem Trunk` 1999 · and, if you won't make the pass, `VIP Velocity Elite` 499. (The Boutique's
    products: see LAUNCH.md.)
 3. **The VIP Velocity Elite game pass** (recommended): Monetization → Passes → Create a Pass,
    name *VIP Velocity Elite*, price 499, put it on sale; copy its id into Creator Hub → Configs
