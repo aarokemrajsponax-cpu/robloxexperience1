@@ -9,7 +9,9 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
 
+local Config = require(ReplicatedStorage.Shared.Config)
 local CurioList = require(ReplicatedStorage.Shared.Curios)
 local ProductConfig = require(ReplicatedStorage.Shared.ProductConfig)
 local Rating = require(ReplicatedStorage.Shared.Rating)
@@ -120,6 +122,15 @@ function Curios.announce(player: Player, id: string, line: string, gilt: number?
 	end
 end
 
+-- The chance of a find after a run (twice as likely in A Night of Curios, the owner's event).
+function Curios.chance(rounds: number, accuracy: number): number
+	local base = CurioList.findChance(rounds, accuracy)
+	if base > 0 and Workspace:GetAttribute("Event_curioHour") ~= nil then
+		return math.min(0.95, base * (Config.data.Admin.curioHourFind or 2))
+	end
+	return base
+end
+
 -- After a banked run: maybe a curio among the pieces, the season's Limited, the achievements.
 -- Returns what was found ({ id, name, rarity, gilt }) for the run's card, or nil.
 function Curios.afterRun(player: Player, data: Profiles.Data, rounds: number, accuracy: number, roomId: string, flawless: boolean): { [string]: any }?
@@ -129,7 +140,7 @@ function Curios.afterRun(player: Player, data: Profiles.Data, rounds: number, ac
 	if flawless and roomId == "midnight" and rounds >= 3 and (b.items.midnightOwl or 0) == 0 then
 		Curios.give(player, data, "midnightOwl", 1, "secret")
 		found = { id = "midnightOwl" }
-	elseif Curios.random:NextNumber() < CurioList.findChance(rounds, accuracy) then
+	elseif Curios.random:NextNumber() < Curios.chance(rounds, accuracy) then
 		local c = CurioList.pick(Curios.random:NextNumber(), Curios.random:NextNumber())
 		Curios.give(player, data, c.id, 1, "tables")
 		found = { id = c.id }

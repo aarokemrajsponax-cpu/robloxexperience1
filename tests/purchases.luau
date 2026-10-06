@@ -1513,4 +1513,53 @@ do
 	check("a guest can be reported (logged for the owner)", r.ok == true and #TradeService.reports == 1)
 end
 
+---------------------------------------------------------------------------------------------------
+-- N. Suite spectacles: kept as shows, played only in your own Suite
+---------------------------------------------------------------------------------------------------
+do
+	local Layout = module("ReplicatedStorage", "Shared", "Layout")
+	local ask = Remotes.funcs.SpectacleAsk.OnServerInvoke
+	local function show(player, request)
+		advance(0.6)
+		local r
+		run(function()
+			r = ask(player, request)
+		end)
+		return r
+	end
+	for _, p in {
+		{ Name = "Suite Fireworks", ProductId = 5401, PriceInRobux = 49 },
+		{ Name = "Meme Takeover", ProductId = 5402, PriceInRobux = 79 },
+		{ Name = "Golden Transformation", ProductId = 5403, PriceInRobux = 149 },
+	} do
+		table.insert(MarketplaceService.devProducts, p)
+	end
+	run(Catalog.discover)
+	local problems = ProductConfig.validate(Grants.names())
+	check("the three spectacles are valid products", problems.spectacleFireworks == nil and problems.spectacleMemes == nil and problems.spectacleGolden == nil)
+	local pia = guest("Pia", 9600)
+	local piaData = profiles[pia].Data
+	local r = show(pia, { op = "list" })
+	check("the list shows each with Roblox's price and none held", r.ok == true and #r.shows == 3 and r.shows[1].robux == 49 and r.shows[1].held == 0)
+	r = show(pia, { op = "play", key = "spectacleFireworks" })
+	check("nothing to play before buying", r.ok == false)
+	local before = #prompts
+	r = show(pia, { op = "buy", key = "spectacleFireworks" })
+	check("buying opens Roblox's purchase window", r.ok == true and #prompts == before + 1)
+	check("the receipt keeps one show", receipt(pia, 5401, "show-1", 49) == GRANTED and Perks.credits(piaData, "show:spectacleFireworks") == 1)
+	pia.Character = {
+		FindFirstChild = function(_, n)
+			return if n == "HumanoidRootPart" then pia.root else nil
+		end,
+	}
+	pia.root.Position = H.Vector3.new(0, 5, -40)
+	r = show(pia, { op = "play", key = "spectacleFireworks" })
+	check("a show plays only in your Suite", r.ok == false and Perks.credits(piaData, "show:spectacleFireworks") == 1)
+	pia.root.Position = Layout.Suite.arrival + H.Vector3.new(0, 3, 0)
+	r = show(pia, { op = "play", key = "spectacleFireworks" })
+	check("in the Suite it plays, and the show is spent", type(r) == "table" and r.ok == true and Perks.credits(piaData, "show:spectacleFireworks") == 0 and lastOp(pia, "spectacle") ~= nil, r and r.why)
+	r = show(pia, { op = "play", key = "notAShow" })
+	check("only the three shows", r.ok == false)
+end
+
 H.finish()

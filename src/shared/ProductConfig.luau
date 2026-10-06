@@ -247,6 +247,26 @@ for _, pack in {
 	})
 end
 
+-- Suite spectacles: a show played in your own Suite whenever you choose (each purchase is one
+-- show, kept until you play it). Cosmetic only; nothing random.
+for _, show in {
+	{ key = "spectacleFireworks", name = "Suite Fireworks", price = 49, tier = "Entry" :: Tier, line = "Fireworks over your Suite's terrace for twenty seconds, whenever you choose." },
+	{ key = "spectacleMemes", name = "Meme Takeover", price = 79, tier = "Entry" :: Tier, line = "Every meme curio bursts out and bounces round your Suite for twenty seconds." },
+	{ key = "spectacleGolden", name = "Golden Transformation", price = 149, tier = "Medium" :: Tier, line = "Your Suite's lights turn gold and gold leaf falls for thirty seconds." },
+} do
+	add({
+		Key = show.key,
+		Name = show.name,
+		ProductType = "DeveloperProduct",
+		Id = 0,
+		Handler = "spectacle",
+		Pricing = { ReferencePrice = show.price, Tier = show.tier, Rationale = "A show in your own Suite: priced plainly, kept until played." },
+		Reward = { Type = "Spectacle", Show = show.key },
+		Rules = { Stackable = true, CooldownSeconds = 0, MaxHeld = 10 },
+		UX = { DisplayName = show.name, Category = "Suite", Line = show.line, Offer = false, Order = 85, Action = "spectacle" },
+	})
+end
+
 -- What the house already sold (unchanged prices and rewards, now in the catalog).
 add({
 	Key = "doubleGilt",
@@ -486,6 +506,10 @@ function ProductConfig.validate(handlers: { [string]: boolean }?): { [string]: s
 		elseif r.Type == "Piano" then
 			if not positive(r.Seconds) or r.Seconds ~= math.floor(r.Seconds) then
 				bad("a piano session needs whole Seconds above 0")
+			end
+		elseif r.Type == "Spectacle" then
+			if r.Show ~= e.Key then
+				bad("a spectacle's Show must be its own key")
 			end
 		elseif r.Type == "Gems" then
 			if not positive(r.Amount) or r.Amount ~= math.floor(r.Amount) then

@@ -449,6 +449,11 @@ function SuitePanel.open(start: string?)
 		Root.close(NAME)
 	end, 200)
 	close.LayoutOrder = 2
+	-- The shows for your Suite (fireworks, memes, gold), each plainly priced.
+	Theme.key(keys, "Spectacles", false, function()
+		Root.close(NAME)
+		require(script.Parent.Parent.World.SuiteSpectacle).open()
+	end, 170).LayoutOrder = 1
 	-- The pictures turn slowly.
 	local spin = RunService.RenderStepped:Connect(function(dt: number)
 		for _, p in previews do

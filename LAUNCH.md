@@ -202,6 +202,9 @@ block (that's where most of the money is):
 | `Piano Session 10 Minutes` | 899 | ten minutes at the piano |
 | `Gold-Leaf Spritz` | 25 | the Terrace Bar: a glowing spritz with gold leaf to hold and sip (no alcohol; cosmetic) |
 | `Macaron Tower` | 49 | the Terrace Bar: a tower of twelve macarons with sparkles (cosmetic) |
+| `Suite Fireworks` | 49 | a fireworks show over your Suite's terrace, played when you choose |
+| `Meme Takeover` | 79 | the meme curios bounce round your Suite for twenty seconds |
+| `Golden Transformation` | 149 | your Suite's lights turn gold and gold leaf falls |
 | `Gem Pouch` | 99 | 120 Gems, for the Cabinet's curios (each at a fixed Gem price) |
 | `Gem Case` | 449 | 650 Gems |
 | `Gem Trunk` | 899 | 1,500 Gems |

@@ -13,6 +13,7 @@
 --   Velocity, Revive, Decree, Luck, Rain   the five products
 --   Piano                  time at the Foyer's grand piano, and the notes played on it
 --   Bar                    the Terrace bar: treats for Gilt, and the house specials for Robux
+--   Spectacles             shows in a guest's own Suite (fireworks, memes, gold)
 --
 -- The Boutique's own products (pieces, purses, the Gold Key...) register their handlers in Shop,
 -- which starts first. MONETIZATION.md explains the whole design.
@@ -119,6 +120,7 @@ function Purchases.start()
 	Piano.start()
 	Bar.start()
 	require(script.Parent.Curios).start() -- Gem packs (and the Cabinet)
+	require(script.Spectacles).start() -- Suite spectacles
 	Gilt.personal = function(player: Player): number
 		return Luck.multiplier(player, "gilt")
 	end

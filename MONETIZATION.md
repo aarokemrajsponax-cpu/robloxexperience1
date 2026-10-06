@@ -238,6 +238,11 @@ per Robux, plainly. Handler `gems` (`server/Curios.luau`) adds the Gems in the r
 Curios found at the tables are earned by playing only (never sold); trading is between guests,
 server-checked, curios only (Gems, Gilt and Robux items are never traded).
 
+**Suite spectacles** (Suite Fireworks 49, Meme Takeover 79, Golden Transformation 149). A show
+in the buyer's own Suite. Each receipt saves one show as a credit (`show:<key>`); the guest plays
+it from the Suite's bell → Spectacles, only while in their Suite. Cosmetic only. Handler
+`spectacle` (`Purchases/Spectacles.luau`).
+
 **Honesty rules (all products).** Every price on screen is Roblox's, read by the server; Roblox's
 own confirmation window always follows. No invented scarcity, countdowns or social proof: the
 only countdowns are real server windows (the revive, Luck's time, events), the only "waiting"
@@ -598,7 +603,7 @@ Studio purchases are free test purchases):
    Products), names exactly as below; the game finds them within five minutes:
    `Chronos Defiance` 49 · `Emperor's Decree` 149 · `God-Mode Luck` 199 · `Megalodon Rainmaker`
    699 · `Gold-Leaf Spritz` 25 · `Macaron Tower` 49 · `Grand Platter` 99 (the Terrace Bar's
-   specials) · `Gem Pouch` 99 · `Gem Case` 449 · `Gem Trunk` 899 · and, if you won't make the pass, `VIP Velocity Elite` 499. (The Boutique's
+   specials) · `Suite Fireworks` 49 · `Meme Takeover` 79 · `Golden Transformation` 149 · `Gem Pouch` 99 · `Gem Case` 449 · `Gem Trunk` 899 · and, if you won't make the pass, `VIP Velocity Elite` 499. (The Boutique's
    products: see LAUNCH.md.)
 3. **The VIP Velocity Elite game pass** (recommended): Monetization → Passes → Create a Pass,
    name *VIP Velocity Elite*, price 499, put it on sale; copy its id into Creator Hub → Configs

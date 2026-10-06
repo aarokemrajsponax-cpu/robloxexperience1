@@ -16,6 +16,9 @@ HouseEvents.List = {
 	{ id = "featherlight", name = "Featherlight", line = "The house's gravity is gentle. Jump." },
 	{ id = "goldRain", name = "Gold Rain", line = "Gold coins are scattered through the house. Walk over them for Gilt." },
 	{ id = "treasure", name = "The Treasure Hunt", line = "Golden keys are hidden around the house. The finder of each wins Gilt." },
+	{ id = "parade", name = "The Brainrot Parade", line = "The meme curios are loose in the house. Catch them for Gilt, and a Parade Balloon to keep." },
+	{ id = "disco", name = "Disco Night", line = "The Ballroom turns disco. Everyone in it gets the Disco Ball curio." },
+	{ id = "curioHour", name = "A Night of Curios", line = "Curios turn up among the pieces twice as often." },
 } :: { Event }
 
 HouseEvents.byId = {} :: { [string]: Event }

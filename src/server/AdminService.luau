@@ -28,6 +28,8 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Salutes = require(ReplicatedStorage.Shared.Salutes)
 local Seasons = require(ReplicatedStorage.Shared.Seasons)
 local Analytics = require(script.Parent.Analytics)
+local Curios = require(script.Parent.Curios)
+local CurioList = require(ReplicatedStorage.Shared.Curios)
 local Gilt = require(script.Parent.Gilt)
 local Profiles = require(script.Parent.Profiles)
 local RemoteGuard = require(script.Parent.RemoteGuard)
@@ -135,10 +137,10 @@ local function eventsFolder(): Folder
 	return nf
 end
 
--- Places a pickup (a gold coin or a golden key) at a point on a floor.
-local function pickup(kind: "coin" | "key", at: Vector3, gilt: number): BasePart
+-- Places a pickup (a gold coin, a golden key, or a meme curio from the parade) on a floor.
+local function pickup(kind: "coin" | "key" | "meme", at: Vector3, gilt: number): BasePart
 	local p = Instance.new("Part")
-	p.Name = if kind == "coin" then "GoldCoin" else "GoldenKey"
+	p.Name = if kind == "coin" then "GoldCoin" elseif kind == "meme" then "ParadeMeme" else "GoldenKey"
 	p.Shape = if kind == "coin" then Enum.PartType.Cylinder else Enum.PartType.Block
 	p.Size = if kind == "coin" then Vector3.new(0.25, 1.6, 1.6) else Vector3.new(0.5, 0.5, 2)
 	p.Color = Color3.fromRGB(236, 196, 98)
@@ -155,6 +157,36 @@ local function pickup(kind: "coin" | "key", at: Vector3, gilt: number): BasePart
 	glow.Range = if kind == "key" then 12 else 6
 	glow.Color = Color3.fromRGB(255, 214, 140)
 	glow.Parent = p
+	if kind == "meme" then
+		-- A meme curio bobbing at head height: its glyph on a billboard, the part itself unseen.
+		local memes = {}
+		for _, c in CurioList.List do
+			if c.family == "meme" and c.source == "tables" then
+				table.insert(memes, c)
+			end
+		end
+		local c = memes[math.random(1, #memes)]
+		p.Transparency = 1
+		p.Size = Vector3.new(2, 2, 2)
+		p.CFrame = CFrame.new(at + Vector3.new(0, 3.2, 0))
+		p:SetAttribute("Curio", c.id)
+		glow.Color = Color3.fromRGB(255, 160, 200)
+		local bb = Instance.new("BillboardGui")
+		bb.Size = UDim2.fromScale(3.2, 3.2)
+		bb.AlwaysOnTop = false
+		bb.LightInfluence = 0
+		bb.MaxDistance = 90
+		bb.Parent = p
+		local t = Instance.new("TextLabel")
+		t.BackgroundTransparency = 1
+		t.Size = UDim2.fromScale(1, 1)
+		t.Text = c.glyph .. c.accent
+		t.TextScaled = true
+		t.Parent = bb
+		pcall(function()
+			game:GetService("CollectionService"):AddTag(p, "ParadeMeme")
+		end)
+	end
 	p.Parent = eventsFolder()
 	return p
 end
@@ -177,7 +209,7 @@ local function walkable(): { Vector3 }
 	return points
 end
 
-local function scatter(kind: "coin" | "key", count: number, gilt: number, around: Vector3?)
+local function scatter(kind: "coin" | "key" | "meme", count: number, gilt: number, around: Vector3?)
 	local rng = Random.new()
 	local points = walkable()
 	-- Keys go to different spots around the house; coins fall around the owner (or anywhere).
@@ -191,7 +223,7 @@ local function scatter(kind: "coin" | "key", count: number, gilt: number, around
 	end
 	for i = 1, count do
 		local base: Vector3
-		if kind == "key" then
+		if kind == "key" or kind == "meme" then
 			base = points[order[((i - 1) % #order) + 1]] + Vector3.new(rng:NextNumber(-3, 3), 0, rng:NextNumber(-3, 3))
 		elseif around then
 			base = Vector3.new(around.X + rng:NextNumber(-22, 22), around.Y - 2.5, around.Z + rng:NextNumber(-22, 22))
@@ -241,6 +273,22 @@ function AdminService.startEvent(id: string, seconds: number, byName: string)
 	elseif id == "treasure" then
 		clearPickups("key")
 		scatter("key", cfg().keys, cfg().keyGilt, nil)
+	elseif id == "parade" then
+		clearPickups("meme")
+		scatter("meme", cfg().memes, cfg().memeGilt, nil)
+	elseif id == "disco" then
+		task.spawn(function()
+			-- Everyone in the Ballroom while it's on gets the Disco Ball (once each).
+			while active[id] == ends do
+				for _, p in Players:GetPlayers() do
+					local root = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
+					if root and root:IsA("BasePart") and Layout.zoneAt(root.Position) == "ballroom" then
+						Curios.forEvent(p, "discoBall", "disco:" .. tostring(ends))
+					end
+				end
+				task.wait(5)
+			end
+		end)
 	end
 	local e = HouseEvents.byId[id]
 	broadcast({ op = "salute", id = id, by = byName, effects = { "goldLeaf" }, seconds = 8, title = e.name, line = e.name .. ": " .. e.line })
@@ -265,6 +313,8 @@ function AdminService.stopEvent(id: string)
 		clearPickups("coin")
 	elseif id == "treasure" then
 		clearPickups("key")
+	elseif id == "parade" then
+		clearPickups("meme")
 	end
 end
 
@@ -286,10 +336,30 @@ local function collect()
 				if item.Parent and item:IsA("BasePart") and (item.CFrame.Position - root.Position).Magnitude < 4.5 then
 					local gilt = (item:GetAttribute("Gilt") :: number?) or 0
 					local kind = item:GetAttribute("Pickup")
+					local curioId = item:GetAttribute("Curio")
 					item:Destroy()
 					local data = Profiles.get(player)
-					local paid = if data then Gilt.pay(player, data, gilt, if kind == "key" then "Treasure Hunt" else "Gold Rain") else 0
-					Remotes.event("Shop"):FireClient(player, { op = "notice", title = if kind == "key" then "A golden key" else "Gold", line = string.format("+%d Gilt", paid) })
+					local source = if kind == "key" then "Treasure Hunt" elseif kind == "meme" then "The Brainrot Parade" else "Gold Rain"
+					local paid = if data then Gilt.pay(player, data, gilt, source) else 0
+					local caught = if kind == "meme" then CurioList.byId[tostring(curioId)] else nil
+					local title = if kind == "key" then "A golden key" elseif caught then "You caught " .. caught.name else "Gold"
+					Remotes.event("Shop"):FireClient(player, { op = "notice", title = title, line = string.format("+%d Gilt", paid) })
+					-- A curio to keep from the event, once each.
+					if kind == "coin" then
+						Curios.forEvent(player, "rainCoin", "rain:" .. tostring(active.goldRain))
+					elseif kind == "meme" then
+						Curios.forEvent(player, "paradeBalloon", "parade:" .. tostring(active.parade))
+						local left = 0
+						for _, other in folder:GetChildren() do
+							if other:GetAttribute("Pickup") == "meme" then
+								left += 1
+							end
+						end
+						if left == 0 and AdminService.active("parade") then
+							AdminService.stopEvent("parade")
+							broadcast({ op = "salute", id = "paradeDone", by = "", effects = { "fireworks" }, seconds = 8, title = "The Brainrot Parade", line = "Every meme has been caught. What a night." })
+						end
+					end
 					if kind == "key" then
 						broadcast({ op = "salute", id = "key", by = player.DisplayName, effects = {}, seconds = 4, title = "The Treasure Hunt", line = player.DisplayName .. " found a golden key." })
 						local left = 0

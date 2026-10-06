@@ -204,6 +204,7 @@ start("Curios", function()
 		MenuPanel.add(tile :: any)
 	end
 end)
+start("Event effects", require(script.Parent.World.EventFX).start)
 start("The Terrace Bar", function()
 	require(script.Parent.UI.BarPanel).start()
 	require(script.Parent.World.Treats).start()
@@ -221,6 +222,8 @@ start("Perks", function()
 			RainView.rain(m)
 		elseif op == "rainShare" then
 			RainView.share(m)
+		elseif op == "spectacle" and type(m.key) == "string" then
+			require(script.Parent.World.SuiteSpectacle).play(m.key, m.seconds)
 		elseif op == "pianoOffer" then
 			PianoPanel.offer()
 		elseif op == "pianoEnd" then

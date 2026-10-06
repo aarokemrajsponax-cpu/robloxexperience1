@@ -277,6 +277,7 @@ local defaults = {
 		barAsk = { rate = 2, burst = 5 },
 		curioAsk = { rate = 3, burst = 8 },
 		tradeAsk = { rate = 3, burst = 8 },
+		spectacleAsk = { rate = 2, burst = 5 },
 	},
 
 	-- The Concierge's walking tour (each guest's own guide, drawn on their screen).
@@ -488,10 +489,13 @@ local defaults = {
 		coinSeconds = 90, -- how long the coins lie there
 		keys = 5, -- golden keys per Treasure Hunt
 		keyGilt = 250,
+		memes = 18, -- meme curios loose in the house during the Brainrot Parade
+		memeGilt = 40,
+		curioHourFind = 2, -- the Night of Curios: how much likelier a find is (never above 0.95)
 		giftGilt = { 100, 500, 1000 }, -- what the owner can give
 		summonMinutes = 5, -- how long a summons to the owner's house stays open
 		-- Admin Abuse Night: every one of these at once, with fireworks, in one tap.
-		abuseEvents = { "goldenHour", "luckyHour", "pageTurner", "goldRain", "treasure", "giants", "quickstep" },
+		abuseEvents = { "goldenHour", "luckyHour", "pageTurner", "goldRain", "treasure", "giants", "quickstep", "parade", "disco", "curioHour" },
 		abuseMinutes = { 15, 30, 60 },
 		-- Scheduled events (set in the panel, kept in a DataStore, run by every server on time).
 		scheduleCheck = 30, -- seconds between each server's look at the schedule

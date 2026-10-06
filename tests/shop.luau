@@ -743,7 +743,7 @@ do
 	H.game.CreatorId = 1
 end
 local st = adminAs(owner, { op = "state" })
-check("the panel lists the events, the seasons, the salutes and the guests", #st.events == 8 and #st.seasons == 10 and #st.salutes == 5 and #st.guests >= 2)
+check("the panel lists the events, the seasons, the salutes and the guests", #st.events == 11 and #st.seasons == 10 and #st.salutes == 5 and #st.guests >= 2)
 local nd = profiles[ned].Data
 nd.gilt, nd.giltDay = 0, { day = -1, earned = 0 }
 -- Ned walks the house in a real character (a head for a crown, a root for picking things up).
@@ -805,6 +805,37 @@ for _, p in services.Workspace:FindFirstChild("HouseEvents"):GetChildren() do
 	end
 end
 check("Gold Rain scatters thirty coins", coins == 30, coins)
+do
+	local CuriosS = module("ServerScriptService", "Server", "Curios")
+	local coin
+	for _, p in services.Workspace:FindFirstChild("HouseEvents"):GetChildren() do
+		if p:GetAttribute("Pickup") == "coin" then
+			coin = p
+		end
+	end
+	nedRoot.Position = coin.CFrame.Position
+	run(AdminService.collect)
+	check("a Gold Rain coin also brings its curio (once)", CuriosS.count(nd, "rainCoin") == 1)
+	adminAs(owner, { op = "event", id = "parade", minutes = 5 })
+	local memes = {}
+	for _, p in services.Workspace:FindFirstChild("HouseEvents"):GetChildren() do
+		if p:GetAttribute("Pickup") == "meme" then
+			table.insert(memes, p)
+		end
+	end
+	check("the Brainrot Parade lets the memes loose", #memes == Config.data.Admin.memes, #memes)
+	local before = nd.gilt
+	nedRoot.Position = memes[1].CFrame.Position
+	run(AdminService.collect)
+	check("catching a meme pays Gilt and brings a Parade Balloon", nd.gilt > before and CuriosS.count(nd, "paradeBalloon") == 1)
+	nedRoot.Position = memes[2].CFrame.Position
+	run(AdminService.collect)
+	check("one balloon per parade", CuriosS.count(nd, "paradeBalloon") == 1)
+	adminAs(owner, { op = "stop", id = "parade" })
+	adminAs(owner, { op = "event", id = "curioHour", minutes = 5 })
+	check("a Night of Curios makes finds likelier", CuriosS.chance(2, 0.8) > module("ReplicatedStorage", "Shared", "Curios").findChance(2, 0.8))
+	adminAs(owner, { op = "stop", id = "curioHour" })
+end
 -- Admin Abuse Night: every event at once, and in every house when asked.
 local publishedBefore = #published
 adminAs(owner, { op = "abuse", minutes = 15, everywhere = true })

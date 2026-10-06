@@ -252,6 +252,13 @@ a Nightly attempt or a Mythic's odds.
 - **Trading curios**: admire a guest (R) → Trade. Both choose, lock in, a five-second countdown,
   then both confirm; any change unlocks both, so nothing changes after a confirmation. The
   server checks every step and swaps in one go. Cancel any time; block and report.
+- **Live events** (the owner's House panel, or scheduled): Golden Hour, Lucky Hour, the
+  Page-Turner, Giants, Quickstep, Featherlight, Gold Rain (each coin also gives a Rain Coin
+  curio), the Treasure Hunt, the Brainrot Parade (meme curios loose in the house to catch),
+  Disco Night (a mirror ball and colour-cycling Ballroom lights; a Disco Ball curio), and a Night
+  of Curios (finds twice as likely). Admin Abuse Night runs them all at once.
+- **Suite spectacles**: fireworks, a meme takeover, or a golden transformation, played in your
+  own Suite from the bell.
 - **The Menu** (top of the screen): the Collection, Trading, Gems, the Boutique, Wardrobe,
   Ledger, Register, guest book, Circle, How to play, Settings.
 - **The Terrace**, on the Obsidian Room's roof, through French doors in the Club hall's east
