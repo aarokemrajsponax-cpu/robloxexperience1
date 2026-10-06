@@ -163,6 +163,11 @@ def measure(node, parent):
     cons = first(node, "UISizeConstraint")
     if cons:
         w = min(w, cons["max"][0])
+    # Automatic width from a single line of text (tabs and the like): the words plus padding.
+    if node.get("auto") in ("X", "XY") and "text" in node and not node.get("wrap"):
+        f = font(node.get("weight", "Regular"), node.get("textSize", 14), node.get("family", ""), node.get("style", "Normal"))
+        _, _, pl, pr = pads(node, w, h)
+        w = max(w, max((f.getlength(line) for line in node.get("text", "").split("\n")), default=0) + pl + pr)
     # Automatic height from wrapped text.
     if node.get("auto") in ("Y", "XY") and "text" in node:
         _, th, _ = text_block(node, w)

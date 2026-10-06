@@ -26,7 +26,7 @@ type Card = { [string]: any }
 local shelves: { [string]: any }? = nil
 local currentTab = "today"
 local list: ScrollingFrame? = nil
-local tabKeys: { [string]: TextButton } = {}
+local tabBar: Theme.Tabs? = nil
 local balance: TextLabel? = nil
 -- Shopping for someone else (from admiring them): every Buy becomes a gift to them.
 local giftFor: { userId: number, name: string }? = nil
@@ -206,8 +206,8 @@ local function render()
 		return
 	end
 	clear(frame)
-	for id, k in tabKeys do
-		k.BackgroundTransparency = if id == currentTab then 0.05 else 0.3
+	if tabBar then
+		tabBar.select(currentTab)
 	end
 	if balance then
 		balance.Text = string.format("%s Gilt", RoundPanel.number(Closet.gilt))
@@ -412,18 +412,6 @@ function BoutiquePanel.open(tab: string?, forGuest: { userId: number, name: stri
 	Theme.text(content, "The Boutique", 26, "display", { LayoutOrder = 1 })
 	Theme.text(content, if forGuest then "Choosing a gift for " .. forGuest.name .. ". They'll hear it's from you." else "Style, never score. Prices are Roblox's own.", 12, "body", { LayoutOrder = 2, TextColor3 = if forGuest then Brand.Colours.lightGold else Brand.Colours.dim })
 
-	local tabs = Instance.new("ScrollingFrame")
-	tabs.BackgroundTransparency = 1
-	tabs.BorderSizePixel = 0
-	tabs.Size = UDim2.new(1, 0, 0, 44)
-	tabs.CanvasSize = UDim2.new()
-	tabs.AutomaticCanvasSize = Enum.AutomaticSize.X
-	tabs.ScrollingDirection = Enum.ScrollingDirection.X
-	tabs.ScrollBarThickness = 0
-	tabs.LayoutOrder = 3
-	tabs.Parent = content
-	Theme.list(tabs, 6, true).HorizontalAlignment = Enum.HorizontalAlignment.Left
-	tabKeys = {}
 	local specs = {
 		{ "offers", "Offers" },
 		{ "always", "Always here" },
@@ -436,23 +424,19 @@ function BoutiquePanel.open(tab: string?, forGuest: { userId: number, name: stri
 		{ "salutes", "Salutes" },
 		{ "introduction", "The Introduction" },
 	}
-	for i, spec in specs do
-		local id, label = spec[1], spec[2]
-		local k = Theme.key(tabs, label, false, function()
-			currentTab = id
-			render()
-		end, if #label > 10 then 170 else 120)
-		k.LayoutOrder = i
-		k.Visible = id ~= "introduction"
-		tabKeys[id] = k
-	end
+	local bar = Theme.tabs(content, specs, currentTab, function(id: string)
+		currentTab = id
+		render()
+	end, 3)
+	bar.show("introduction", false)
+	tabBar = bar
 
 	local scroll = Instance.new("ScrollingFrame")
 	scroll.Name = "Shelves"
 	scroll.BackgroundTransparency = 1
 	scroll.BorderSizePixel = 0
 	scroll.LayoutOrder = 4
-	scroll.Size = UDim2.new(1, 0, 1, -(26 + 18 + 44 + 44 + 50))
+	scroll.Size = UDim2.new(1, 0, 1, -(26 + 18 + 46 + 44 + 50))
 	scroll.CanvasSize = UDim2.new()
 	scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
 	scroll.ScrollBarThickness = 3
@@ -487,16 +471,16 @@ function BoutiquePanel.open(tab: string?, forGuest: { userId: number, name: stri
 		list = nil
 		balance = nil
 		giftFor = nil
+		tabBar = nil
 	end)
 	task.spawn(function()
 		local s = Closet.ask({ op = "shelves" })
 		if type(s) == "table" and s.today then
 			shelves = s
-			if tabKeys.introduction then
-				tabKeys.introduction.Visible = s.introduction ~= nil
-			end
-			if tabKeys.offers then
-				tabKeys.offers.Visible = #(s.offers or {}) > 0
+			local b = tabBar
+			if b then
+				b.show("introduction", s.introduction ~= nil)
+				b.show("offers", #(s.offers or {}) > 0)
 				if currentTab == "offers" and #(s.offers or {}) == 0 then
 					currentTab = "today"
 				end

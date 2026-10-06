@@ -10,6 +10,7 @@ local Brand = require(ReplicatedStorage.Shared.Brand)
 local Caps = require(ReplicatedStorage.Shared.Caps)
 local Ease = require(ReplicatedStorage.Shared.Ease)
 local Root = require(script.Parent.Root)
+local Sound = require(script.Parent.Parent.Sound)
 local State = require(script.Parent.Parent.State)
 
 local Prompts = {}
@@ -146,6 +147,26 @@ function Prompts.start()
 		local pill = gui:FindFirstChild("Pill") :: TextButton
 		pill.BackgroundTransparency = 1
 		Ease.play(pill, Ease.panel, { BackgroundTransparency = 0.2 })
+	end)
+	-- Every interaction answers with a sound the moment it's pressed (the object's own sound,
+	-- where it has one, plays on top when the server answers).
+	ProximityPromptService.PromptTriggered:Connect(function(prompt: ProximityPrompt)
+		local own = prompt:GetAttribute("Sound")
+		if type(own) == "string" and Sound.has(own) then
+			Sound.play(own, 0.5)
+		else
+			Sound.ui()
+		end
+		local gui = shown[prompt]
+		local pill = gui and gui:FindFirstChild("Pill")
+		if pill and pill:IsA("GuiObject") then
+			-- A press: the pill dips and brightens for a beat.
+			local stroke = pill:FindFirstChildOfClass("UIStroke")
+			if stroke then
+				stroke.Transparency = 0
+				Ease.play(stroke, Ease.info(0.35, Enum.EasingStyle.Quad), { Transparency = 0.35 })
+			end
+		end
 	end)
 	ProximityPromptService.PromptHidden:Connect(function(prompt: ProximityPrompt)
 		local gui = shown[prompt]

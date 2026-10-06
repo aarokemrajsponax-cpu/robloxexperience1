@@ -120,18 +120,7 @@ function BoardPanel.open()
 	local title = Theme.text(content, "Tonight's table", 24, "display", { LayoutOrder = 1 })
 	Theme.hairline(content, UDim.new(0, 90), 2)
 
-	local boardRow = Instance.new("ScrollingFrame")
-	boardRow.BackgroundTransparency = 1
-	boardRow.BorderSizePixel = 0
-	boardRow.Size = UDim2.new(1, 0, 0, 44)
-	boardRow.CanvasSize = UDim2.new()
-	boardRow.AutomaticCanvasSize = Enum.AutomaticSize.X
-	boardRow.ScrollingDirection = Enum.ScrollingDirection.X
-	boardRow.ScrollBarThickness = 0
-	boardRow.LayoutOrder = 3
-	boardRow.Parent = content
-	local rowList = Theme.list(boardRow, 6, true)
-	rowList.HorizontalAlignment = Enum.HorizontalAlignment.Left
+	-- The boards' tabs are built below (LayoutOrder 3), once render() exists.
 
 	local periodRow = Instance.new("Frame")
 	periodRow.BackgroundTransparency = 1
@@ -142,14 +131,14 @@ function BoardPanel.open()
 
 	local list = Instance.new("Frame")
 	list.BackgroundTransparency = 1
-	list.Size = UDim2.new(1, 0, 1, -(24 + 12 + 44 + 40 + 44 + 60))
+	list.Size = UDim2.new(1, 0, 1, -(24 + 12 + 46 + 40 + 44 + 60))
 	list.LayoutOrder = 5
 	list.Parent = content
 	Theme.list(list, 2).VerticalAlignment = Enum.VerticalAlignment.Top
 
 	local board = "nightly"
 	local period = "week"
-	local boardKeys: { [string]: TextButton } = {}
+	local boardTabs: Theme.Tabs? = nil
 	local weekKey: TextButton? = nil
 	local allKey: TextButton? = nil
 
@@ -157,8 +146,8 @@ function BoardPanel.open()
 		return single(board) or board .. ":" .. period
 	end
 	local function render()
-		for id, k in boardKeys do
-			k.BackgroundTransparency = if id == board then 0.05 else 0.3
+		if boardTabs then
+			boardTabs.select(board)
 		end
 		periodRow.Visible = single(board) == nil
 		if weekKey and allKey then
@@ -169,14 +158,14 @@ function BoardPanel.open()
 		title.Text = if board == "nightly" then "Tonight's table" elseif board == "library" then "The Library · ratings" elseif board == "ballroom" then "The Ballroom · points" elseif board == "soiree" then "The Soirée · this weekend" elseif board == "circles" then "Circles · this week" else (if room then room.name else board)
 		fill(list, key())
 	end
-	for i, b in BOARDS do
-		local k = Theme.key(boardRow, b.label, false, function()
-			board = b.id
-			render()
-		end, 96)
-		k.LayoutOrder = i
-		boardKeys[b.id] = k
+	local specs: { { string } } = {}
+	for _, b in BOARDS do
+		table.insert(specs, { b.id, b.label })
 	end
+	boardTabs = Theme.tabs(content, specs, board, function(id: string)
+		board = id
+		render()
+	end, 3)
 	weekKey = Theme.key(periodRow, "This week", false, function()
 		period = "week"
 		render()

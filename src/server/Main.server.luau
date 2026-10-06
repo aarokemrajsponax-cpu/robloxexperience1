@@ -228,6 +228,10 @@ boot("Purchases", Purchases.start)
 Purchases.Piano.onSession = function(playing: boolean)
 	Pianist.stepAside(playing)
 end
+-- The owner plays free (and anyone testing in Studio).
+Purchases.Piano.isOwner = function(player: Player): boolean
+	return game:GetService("RunService"):IsStudio() or AdminService.isAdmin(player)
+end
 boot("Remote limits", require(script.Parent.RemoteGuard).start)
 Archivist.onSpeak = function(player)
 	local V = require(ReplicatedStorage.Shared.Voice)

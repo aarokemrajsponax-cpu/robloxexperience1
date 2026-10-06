@@ -964,6 +964,9 @@ end
 do
 	local Piano = purchases("Piano")
 	local Layout = module("ReplicatedStorage", "Shared", "Layout")
+	-- The daily free taste is looked at on its own, after the paid sessions.
+	local taste = Config.data.Piano.taste
+	Config.data.Piano.taste = 0
 	local Workspace = H.services.Workspace
 	local seat = H.pianoSeat
 	local pianoAsk = Remotes.funcs.PianoAsk.OnServerInvoke
@@ -1134,6 +1137,41 @@ do
 	advance(0.5)
 	check("and with time held, sits them down", Workspace:GetAttribute("PianoPlayer") == 9303)
 	piano(cy, { op = "stand" })
+
+	-- The house's daily taste: a little free time every day, so anyone can try the keys.
+	Config.data.Piano.taste = taste
+	local dee = pianist("Dee", 9304)
+	local deeData = profiles[dee].Data
+	r = piano(dee, { op = "state" })
+	check("a guest with no time is offered today's free taste", r.taste == taste and r.free == false and taste > 0, r.taste)
+	r = piano(dee, { op = "sit" })
+	check("and sits straight down to play it", r.ok == true and Workspace:GetAttribute("PianoPlayer") == 9304 and math.abs(Piano.remaining(dee, deeData) - taste) < 2, Piano.remaining(dee, deeData))
+	check("told it's the house's gift", lastOp(dee, "notice") ~= nil and string.find(lastOp(dee, "notice").line or "", "free every day", 1, true) ~= nil)
+	advance(taste + 2)
+	check("the taste runs out like any time", Workspace:GetAttribute("PianoPlayer") == nil and deeData.perks.piano.seconds == 0)
+	r = piano(dee, { op = "sit" })
+	check("once a day: after it, the sessions", r.ok == false and r.needTime == true and r.taste == nil)
+	deeData.perks.piano.tasteDay -= 1
+	r = piano(dee, { op = "state" })
+	check("a new day brings a new taste", r.taste == taste)
+
+	-- The owner plays free, without spending or keeping any time.
+	Piano.isOwner = function(p)
+		return p == dee
+	end
+	deeData.perks.piano.seconds = 45
+	r = piano(dee, { op = "state" })
+	check("the owner is told they play free", r.free == true)
+	r = piano(dee, { op = "sit" })
+	check("the owner sits down free", r.ok == true and Workspace:GetAttribute("PianoPlayer") == 9304)
+	advance(20)
+	check("their clock runs on the owner's sitting", (Workspace:GetAttribute("PianoEnds") or 0) > 0)
+	piano(dee, { op = "stand" })
+	check("and their own time isn't touched", deeData.perks.piano.seconds == 45, deeData.perks.piano.seconds)
+	check("nor today's taste", deeData.perks.piano.tasteDay ~= nil)
+	Piano.isOwner = function()
+		return false
+	end
 end
 
 H.finish()

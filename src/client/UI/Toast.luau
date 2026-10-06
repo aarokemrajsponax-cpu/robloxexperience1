@@ -16,7 +16,7 @@ function Toast.show(title: string, line: string?, seconds: number?)
 		current:Destroy()
 		current = nil
 	end
-	local group, content = Theme.glass(Root.hud, "Toast", UDim2.fromOffset(420, 0), UDim2.new(0.5, 0, 0, 58), Vector2.new(0.5, 0))
+	local group, content = Theme.glass(Root.toasts, "Toast", UDim2.fromOffset(420, 0), UDim2.new(0.5, 0, 0, 58), Vector2.new(0.5, 0))
 	group.AutomaticSize = Enum.AutomaticSize.Y
 	content.AutomaticSize = Enum.AutomaticSize.Y
 	content.Size = UDim2.new(1, 0, 0, 0)

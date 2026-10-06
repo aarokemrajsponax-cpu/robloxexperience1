@@ -5,6 +5,8 @@
 -- Time is bought in sessions and kept in the profile (perks.piano.seconds), so it survives
 -- leaving and rejoining. It only runs while the guest sits at the keys, on the server's clock;
 -- getting up keeps the rest. One guest plays at a time; anyone else's time waits for them.
+-- Every guest may also play free for a little each day (Config.Piano.taste), so anyone can try
+-- the keys before buying, and the owner plays free (Config.Piano.ownerFree).
 --
 -- The notes: the player's screen sends each note it plays (a key number, nothing else). The
 -- server checks it comes from the guest at the piano, holds them to a rate (RemoteGuard,
@@ -40,18 +42,48 @@ end
 
 -- Told when a guest sits down to play or gets up (Main moves the Pianist aside and back).
 Piano.onSession = function(_playing: boolean) end
+-- Whether a guest plays free (Main: the owner, or anyone in Studio). Never from the client.
+Piano.isOwner = function(_player: Player): boolean
+	return false
+end
 
-type Session = { player: Player, data: Profiles.Data, ends: number, humanoid: Humanoid, seat: Seat, wrote: number }
+-- `free`: an owner's sitting, which neither spends nor keeps any time.
+type Session = { player: Player, data: Profiles.Data, ends: number, humanoid: Humanoid, seat: Seat, wrote: number, free: boolean }
 local session: Session? = nil
 -- A guest who asked to play with no time left: once a purchase lands, they sit straight down.
 local waiting: { [Player]: number } = {}
 
-local function bank(data: Profiles.Data): { seconds: number }
+local function bank(data: Profiles.Data): { seconds: number, tasteDay: number? }
 	local perks = data.perks :: any
 	if type(perks.piano) ~= "table" then
 		perks.piano = { seconds = 0 }
 	end
 	return perks.piano
+end
+
+-- Today, as the server counts days (UTC).
+local function today(): number
+	return os.time() // 86400
+end
+
+local function ownerFree(player: Player): boolean
+	return Config.data.Piano.ownerFree == true and Piano.isOwner(player)
+end
+
+-- Whether today's free taste is still to be had.
+local function tasteReady(data: Profiles.Data): boolean
+	return (Config.data.Piano.taste or 0) > 0 and bank(data).tasteDay ~= today()
+end
+
+-- Gives today's taste, once a day: its seconds join the guest's time like any other.
+local function takeTaste(data: Profiles.Data): boolean
+	if not tasteReady(data) then
+		return false
+	end
+	local b = bank(data)
+	b.tasteDay = today()
+	b.seconds = math.max(0, b.seconds) + Config.data.Piano.taste
+	return true
 end
 
 local function clock(seconds: number): string
@@ -62,7 +94,7 @@ end
 -- Seconds of piano time a guest has (counting down live while they play).
 function Piano.remaining(player: Player, data: Profiles.Data?): number
 	local s = session
-	if s and s.player == player then
+	if s and s.player == player and not s.free then
 		return math.max(0, s.ends - os.clock())
 	end
 	return if data then math.max(0, bank(data).seconds) else 0
@@ -113,7 +145,11 @@ function Piano.stand(reason: string)
 	end
 	session = nil
 	local left = math.max(0, math.floor(s.ends - os.clock()))
-	bank(s.data).seconds = left
+	if s.free then
+		left = math.max(0, bank(s.data).seconds)
+	else
+		bank(s.data).seconds = left
+	end
 	s.seat.Disabled = true
 	local weld = s.seat:FindFirstChild("SeatWeld")
 	if weld then
@@ -146,8 +182,9 @@ function Piano.sit(player: Player): (boolean, string?)
 	if not data then
 		return false, "Your ledger is still being opened."
 	end
-	local left = Piano.remaining(player, data)
-	if left < 1 then
+	local free = ownerFree(player)
+	local held = Piano.remaining(player, data)
+	if not free and held < 1 and not tasteReady(data) then
 		return false, "no_time"
 	end
 	local humanoid = characterOf(player)
@@ -158,14 +195,27 @@ function Piano.sit(player: Player): (boolean, string?)
 	if not seat or seat.Occupant ~= nil then
 		return false, "The piano isn't free just now."
 	end
+	-- No time held: today's free taste.
+	local tasted = false
+	if not free and held < 1 then
+		tasted = takeTaste(data)
+	end
+	local left = if free then Config.data.Piano.ownerSeconds else Piano.remaining(player, data)
+	if left < 1 then
+		return false, "no_time"
+	end
 	waiting[player] = nil
 	seat.Disabled = false
 	seat:Sit(humanoid)
-	session = { player = player, data = data, ends = os.clock() + left, humanoid = humanoid, seat = seat, wrote = os.clock() }
+	local sitting: Session = { player = player, data = data, ends = os.clock() + left, humanoid = humanoid, seat = seat, wrote = os.clock(), free = free == true }
+	session = sitting
 	publish()
 	Piano.onSession(true)
-	Telemetry.log(player, Telemetry.Events.Used, "piano", string.format("%ds held", math.floor(left)))
+	Telemetry.log(player, Telemetry.Events.Used, "piano", if free then "owner" elseif tasted then "taste" else string.format("%ds held", math.floor(left)))
 	Perks.push(player)
+	if tasted then
+		Perks.tell(player, { op = "notice", title = "The Grand Piano", line = string.format("The house's gift: %d seconds at the keys, free every day.", Config.data.Piano.taste) })
+	end
 	return true, nil
 end
 
@@ -191,6 +241,9 @@ function Piano.info(player: Player): { [string]: any }
 		busy = if s and s.player ~= player then s.player.DisplayName else nil,
 		busyLeft = if s and s.player ~= player then math.floor(s.ends - os.clock()) else nil,
 		offers = offers,
+		-- Today's free taste, still to be had (its length), and whether this guest plays free.
+		taste = if data and tasteReady(data) then Config.data.Piano.taste else nil,
+		free = ownerFree(player),
 	}
 end
 
@@ -203,7 +256,7 @@ local function grant(ctx: Grants.Context)
 	bank(data).seconds = math.floor(total)
 	-- Playing now: the clock moves with it, in the same step (so the next write can't undo it).
 	local s = session
-	if s and s.player == player and s.data == data then
+	if s and s.player == player and s.data == data and not s.free then
 		s.ends = os.clock() + total
 	end
 	ctx:after(function()
@@ -284,7 +337,7 @@ local function tick()
 	elseif now >= s.ends then
 		s.ends = now
 		Piano.stand("time")
-	elseif now - s.wrote >= 1 then
+	elseif now - s.wrote >= 1 and not s.free then
 		-- The time left goes into the profile as it runs, so a crash or a leave keeps it.
 		s.wrote = now
 		bank(s.data).seconds = math.floor(s.ends - now)
@@ -304,7 +357,7 @@ function Piano.start()
 	end
 	Perks.contributors.piano = function(player: Player, data: Profiles.Data): any
 		local s = session
-		return { seconds = math.floor(Piano.remaining(player, data)), playing = s ~= nil and s.player == player }
+		return { seconds = math.floor(Piano.remaining(player, data)), playing = s ~= nil and s.player == player, taste = tasteReady(data), free = ownerFree(player) }
 	end
 	RemoteGuard.invoke(Remotes.func("PianoAsk"), "pianoAsk", onAsk)
 	RemoteGuard.event(Remotes.event("PianoNote"), "pianoNote", onNote)

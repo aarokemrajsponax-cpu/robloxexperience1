@@ -29,6 +29,8 @@ end
 local music = group("MaisonMusic")
 local effects = group("MaisonEffects")
 local ambience = group("MaisonAmbience")
+-- The Foyer piano when a guest plays it: at the Effects level (see Sound.pianoNote).
+local pianoGroup = group("MaisonPiano")
 
 local levels = { music = 0.65, effects = 0.85, ambience = 0.7 }
 local dipped = false
@@ -40,6 +42,7 @@ local function applyVolumes()
 	levels.music, levels.effects, levels.ambience = m, e, a
 	TweenService:Create(music, TweenInfo.new(0.4), { Volume = if dipped then m * 0.45 else m }):Play()
 	effects.Volume = e
+	pianoGroup.Volume = e
 	ambience.Volume = a
 end
 
@@ -533,50 +536,98 @@ local function guestAtPiano(): boolean
 	return Workspace:GetAttribute("PianoPlayer") ~= nil
 end
 
--- The piano played by a guest: each note sounds from the piano itself, so the whole Foyer hears it
--- (and, fainter, the street and the stair), in the guest's Music level. One recording per key
--- (Config.Assets.PianoNotes); a key without one, or whose recording won't load, plays its
--- nearest neighbour retuned.
-local noteSounds: { Sound } = {}
-local nextNote = 1
+-- The piano played by a guest. The player hears their own notes straight away and clean (not
+-- from a place in the room); everyone else hears them from the piano itself, so the whole Foyer
+-- hears it (and, fainter, the street and the stair). The notes follow the Effects level, not the
+-- Music one: the piano is something the guest plays, and it must sound even with music off.
+--
+-- Where each key's sound comes from, in order: its own recording (Config.Assets.PianoNotes);
+-- the nearest key's recording that loads, retuned; the first middle-C recording that loads
+-- (Config.Assets.PianoFallback), retuned. A recording that fails to load, or hasn't loaded
+-- within a few seconds of being asked to play, is passed over from then on.
 local failedNotes: { [string]: boolean } = {}
 local notesLoaded = false
+local LOAD_GRACE = 4 -- seconds a recording may take to load before the next one is tried
+
+local function usable(id: any): boolean
+	return type(id) == "string" and id ~= "" and not failedNotes[id]
+end
 
 local function noteSource(index: number): (string, number)
 	local ids = (Config.data.Assets :: any).PianoNotes
-	if type(ids) ~= "table" then
-		return "", 1
-	end
-	local function usable(i: number): boolean
-		local id = ids[i]
-		return type(id) == "string" and id ~= "" and not failedNotes[id]
-	end
-	-- The key itself, then its neighbours a semitone further each time.
-	local span = #ids
-	for distance = 0, span do
-		for _, i in { index - distance, index + distance } do
-			if i >= 1 and i <= #ids and usable(i) then
-				return ids[i], 2 ^ ((index - i) / 12)
+	if type(ids) == "table" then
+		-- The key itself, then its neighbours a semitone further each time (no further than a
+		-- fifth: past that a retuned note sounds like a different instrument).
+		for distance = 0, 7 do
+			for _, i in { index - distance, index + distance } do
+				if i >= 1 and i <= #ids and usable(ids[i]) then
+					return ids[i], 2 ^ ((index - i) / 12)
+				end
 			end
+		end
+	end
+	local lowest = Config.data.Piano.lowest
+	for _, id in ((Config.data.Assets :: any).PianoFallback or {}) :: { string } do
+		if usable(id) then
+			return id, 2 ^ ((lowest + index - 1 - 60) / 12)
 		end
 	end
 	return "", 1
 end
 
--- Loads every key's recording (once), so the first notes play at once.
+-- Three voices a key, each holding its key's sound, so a note plays the instant it's struck and
+-- a held chord rings on under the next notes. Built once the piano is first heard.
+type Voice = { sound: Sound, id: string }
+local voices: { [number]: { Voice } } = {}
+local nextVoice: { [number]: number } = {}
+
+local function voiceFor(index: number, here: boolean): Sound?
+	local id, speed = noteSource(index)
+	if id == "" then
+		return nil
+	end
+	local list = voices[index]
+	if not list then
+		list = {}
+		voices[index] = list
+	end
+	local n = (nextVoice[index] or 0) % 3 + 1
+	nextVoice[index] = n
+	local v = list[n]
+	if not v then
+		local s = Instance.new("Sound")
+		s.Name = "PianoNote"
+		s.SoundGroup = pianoGroup
+		s.RollOffMode = Enum.RollOffMode.InverseTapered
+		s.RollOffMinDistance = 10
+		v = { sound = s, id = "" }
+		list[n] = v
+	end
+	local voice = v :: Voice
+	if voice.id ~= id then
+		voice.sound.SoundId = id
+		voice.id = id
+	end
+	voice.sound.PlaybackSpeed = speed
+	-- Played here (the player's own notes): no place in the room. Others: from the piano.
+	local part = if here then nil else pianoPart()
+	voice.sound.Parent = if part then part else SoundService
+	voice.sound.RollOffMaxDistance = Config.data.Piano.heard
+	return voice.sound
+end
+
+-- Loads every key's recording (once), so the first notes play at once, and learns which won't.
 function Sound.preloadPiano()
 	if notesLoaded then
 		return
 	end
 	notesLoaded = true
-	local ids = (Config.data.Assets :: any).PianoNotes
-	if type(ids) ~= "table" then
-		return
-	end
 	local list: { string } = {}
-	for _, id in ids do
-		if type(id) == "string" and id ~= "" then
-			table.insert(list, id)
+	for _, key in { "PianoNotes", "PianoFallback" } do
+		for _, id in ((Config.data.Assets :: any)[key] or {}) :: { string } do
+			if type(id) == "string" and id ~= "" then
+				table.insert(list, id)
+			end
 		end
 	end
 	task.spawn(function()
@@ -590,34 +641,44 @@ function Sound.preloadPiano()
 	end)
 end
 
-function Sound.pianoNote(index: number)
-	local part = pianoPart()
-	local id, speed = noteSource(index)
-	if not part or id == "" then
-		return
+-- Plays key `index` (1 = Config.Piano.lowest). `here`: the player's own note, heard close.
+-- Returns whether it sounded.
+function Sound.pianoNote(index: number, here: boolean?, gain: number?): boolean
+	local sound = voiceFor(index, here == true)
+	if not sound then
+		return false
 	end
-	local c = Config.data.Piano
-	local s = noteSounds[nextNote]
-	if not s then
-		local ns = Instance.new("Sound")
-		ns.Name = "PianoNote"
-		ns.SoundGroup = music
-		ns.RollOffMode = Enum.RollOffMode.InverseTapered
-		ns.RollOffMinDistance = 10
-		noteSounds[nextNote] = ns
-		s = ns
+	local s = sound :: Sound
+	s.Volume = Config.data.Piano.volume * (gain or 1)
+	s.TimePosition = 0
+	s:Play()
+	-- Not loaded a few seconds on (a loaded sound knows its length): this recording is passed
+	-- over, and the next key struck finds another source.
+	local function loaded(): boolean
+		local ok, length = pcall(function()
+			return s.TimeLength
+		end)
+		return not ok or length > 0
 	end
-	-- Twenty-four voices: a long-held chord rings on while the next notes play.
-	nextNote = nextNote % 24 + 1
-	local sound = s :: Sound
-	sound.Parent = part
-	sound.RollOffMaxDistance = c.heard
-	sound:Stop()
-	sound.SoundId = id
-	sound.PlaybackSpeed = speed
-	sound.Volume = c.volume
-	sound.TimePosition = 0
-	sound:Play()
+	if not loaded() then
+		local id = s.SoundId
+		task.delay(LOAD_GRACE, function()
+			if not loaded() and s.SoundId == id then
+				failedNotes[id] = true
+			end
+		end)
+	end
+	return true
+end
+
+-- A soft rolled chord from the piano (the bench's welcome, when a guest comes to play).
+function Sound.pianoChord(keys: { number })
+	Sound.preloadPiano()
+	for i, k in keys do
+		task.delay((i - 1) * 0.08, function()
+			Sound.pianoNote(k, true, 0.55)
+		end)
+	end
 end
 
 local function fadeTo(s: Sound, volume: number)

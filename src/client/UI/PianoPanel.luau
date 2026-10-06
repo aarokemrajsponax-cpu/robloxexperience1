@@ -63,6 +63,62 @@ local function mine(): boolean
 end
 
 ---------------------------------------------------------------------------------------------------
+-- The piano itself: every note played, by anyone, presses its key on the Foyer's grand piano and
+-- lifts a few gold motes from the strings (drawn on this screen only; the server's piano never
+-- moves).
+---------------------------------------------------------------------------------------------------
+
+local restAt: { [BasePart]: CFrame } = {}
+local motes: ParticleEmitter? = nil
+
+local function piano(): Model?
+	local maison = Workspace:FindFirstChild("Maison")
+	local m = maison and maison:FindFirstChild("GrandPiano", true)
+	return if m and m:IsA("Model") then m else nil
+end
+
+local function strike(index: number)
+	local p = piano()
+	local keyboard = p and p:FindFirstChild("Keyboard")
+	local key = keyboard and keyboard:FindFirstChild("Key" .. index)
+	if key and key:IsA("BasePart") then
+		local rest = restAt[key]
+		if not rest then
+			rest = key.CFrame
+			restAt[key] = rest
+		end
+		local k = PianoKeys.list[index]
+		local down = (rest :: CFrame) * CFrame.new(0, -0.07, 0) * CFrame.Angles(math.rad(if k and k.black then -2 else -3), 0, 0)
+		key.CFrame = down
+		Ease.play(key, Ease.info(0.22, Enum.EasingStyle.Quad), { CFrame = rest })
+	end
+	local strings = p and p:FindFirstChild("Strings")
+	if strings and strings:IsA("BasePart") then
+		local e = motes
+		if not e or e.Parent ~= strings then
+			local n = Instance.new("ParticleEmitter")
+			n.Name = "NoteMotes"
+			n.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+			n.Color = ColorSequence.new(C.lightGold, C.gold)
+			n.LightEmission = 0.8
+			n.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.18), NumberSequenceKeypoint.new(1, 0) })
+			n.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(1, 1) })
+			n.Lifetime = NumberRange.new(0.9, 1.6)
+			n.Speed = NumberRange.new(1.5, 3)
+			n.SpreadAngle = Vector2.new(25, 25)
+			n.EmissionDirection = Enum.NormalId.Top
+			n.Acceleration = Vector3.new(0, 0.6, 0)
+			n.Rate = 0
+			n.Parent = strings
+			motes = n
+			e = n
+		end
+		(e :: ParticleEmitter):Emit(2)
+	end
+end
+PianoPanel.strike = strike
+
+---------------------------------------------------------------------------------------------------
 -- The offer
 ---------------------------------------------------------------------------------------------------
 
@@ -99,15 +155,25 @@ local function render(info: { [string]: any })
 		order += 1
 		return order
 	end
+	local function sitDown()
+		local r = ask({ op = "sit" })
+		if type(r) == "table" and r.ok then
+			Root.close(NAME)
+		else
+			Toast.show("The Grand Piano", if type(r) == "table" and type(r.why) == "string" then r.why else "The piano didn't answer. Try again in a moment.", 4)
+		end
+	end
+	-- The owner plays free; anyone else, today's taste first if it's still there.
+	if info.free == true then
+		Theme.key(keys, "Play now · free for the owner", type(info.busy) ~= "string", sitDown, 320).LayoutOrder = add()
+	elseif held <= 0 and type(info.taste) == "number" then
+		local taste = Theme.key(keys, string.format("Try it free · %s today", clock(info.taste)), type(info.busy) ~= "string", sitDown, 320)
+		taste.Name = "Taste"
+		taste.LayoutOrder = add()
+		line(keys, "A little free time every day. Longer sessions:", add())
+	end
 	if held > 0 then
-		local play = Theme.key(keys, "Play now · " .. clock(held) .. " held", type(info.busy) ~= "string", function()
-			local r = ask({ op = "sit" })
-			if type(r) == "table" and r.ok then
-				Root.close(NAME)
-			else
-				Toast.show("The Grand Piano", if type(r) == "table" and type(r.why) == "string" then r.why else "The piano didn't answer. Try again in a moment.", 4)
-			end
-		end, 320)
+		local play = Theme.key(keys, "Play now · " .. clock(held) .. " held", type(info.busy) ~= "string" and info.free ~= true, sitDown, 320)
 		play.LayoutOrder = add()
 		line(keys, "Or add more time:", add())
 	end
@@ -117,7 +183,7 @@ local function render(info: { [string]: any })
 		end
 		local label = tostring(o.name)
 		if o.ready == true and type(o.price) == "number" then
-			local k = Theme.key(keys, string.format("%s · %s %d", label, ROBUX, o.price), held <= 0 and type(info.busy) ~= "string", function()
+			local k = Theme.key(keys, string.format("%s · %s %d", label, ROBUX, o.price), held <= 0 and type(info.busy) ~= "string" and info.free ~= true and type(info.taste) ~= "number", function()
 				local r = ask({ op = "buy", key = o.key })
 				if type(r) ~= "table" or not r.ok then
 					Toast.show("The Grand Piano", if type(r) == "table" and type(r.why) == "string" then r.why else "The purchase window couldn't open. Try again in a moment.", 4)
@@ -152,6 +218,10 @@ function PianoPanel.offer()
 			return
 		end
 		render(info)
+		-- The piano greets them: a soft rolled chord (C major), unless someone else is playing.
+		if type(info.busy) ~= "string" then
+			Sound.pianoChord({ 13, 17, 20, 25 })
+		end
 	end)
 end
 
@@ -171,8 +241,9 @@ local function press(index: number)
 	if not playing or index < 1 or index > Config.data.Piano.keys then
 		return
 	end
-	Sound.pianoNote(index)
+	Sound.pianoNote(index, true)
 	Remotes.event("PianoNote"):FireServer(index)
+	strike(index)
 	local v = views[index]
 	if v then
 		v.button.BackgroundColor3 = if v.black then C.gold else C.lightGold
@@ -412,6 +483,7 @@ function PianoPanel.start()
 	Remotes.event("PianoNote").OnClientEvent:Connect(function(index: any, userId: any)
 		if type(index) == "number" and userId ~= player.UserId then
 			Sound.pianoNote(index)
+			strike(index)
 		end
 	end)
 end

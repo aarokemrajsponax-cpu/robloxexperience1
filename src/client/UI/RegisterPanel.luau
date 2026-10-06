@@ -116,21 +116,11 @@ function RegisterPanel.open()
 	local group, content = Theme.glass(Root.panels, NAME, UDim2.fromOffset(w, h))
 	Theme.list(content, 8).VerticalAlignment = Enum.VerticalAlignment.Top
 	Theme.text(content, "The Register", 26, "display", { LayoutOrder = 1 })
-	local tabs = Instance.new("ScrollingFrame")
-	tabs.BackgroundTransparency = 1
-	tabs.BorderSizePixel = 0
-	tabs.Size = UDim2.new(1, 0, 0, 44)
-	tabs.CanvasSize = UDim2.new()
-	tabs.AutomaticCanvasSize = Enum.AutomaticSize.X
-	tabs.ScrollingDirection = Enum.ScrollingDirection.X
-	tabs.ScrollBarThickness = 0
-	tabs.LayoutOrder = 2
-	tabs.Parent = content
-	Theme.list(tabs, 6, true).HorizontalAlignment = Enum.HorizontalAlignment.Left
+	-- The tabs: built below, once render() exists, and placed here (LayoutOrder 2).
 	local page = Instance.new("ScrollingFrame")
 	page.BackgroundTransparency = 1
 	page.BorderSizePixel = 0
-	page.Size = UDim2.new(1, 0, 1, -(26 + 44 + 44 + 30))
+	page.Size = UDim2.new(1, 0, 1, -(26 + 46 + 44 + 30))
 	page.CanvasSize = UDim2.new()
 	page.AutomaticCanvasSize = Enum.AutomaticSize.Y
 	page.ScrollBarThickness = 3
@@ -141,7 +131,7 @@ function RegisterPanel.open()
 	Theme.text(page, "One moment...", 14, "body", { LayoutOrder = 1, TextColor3 = Brand.Colours.dim })
 
 	local view: { [string]: any }? = nil
-	local tabKeys: { [string]: TextButton } = {}
+	local tabBar: Theme.Tabs? = nil
 	local current = "you"
 
 	local function render()
@@ -150,8 +140,8 @@ function RegisterPanel.open()
 			return
 		end
 		clear(page)
-		for id, k in tabKeys do
-			k.BackgroundTransparency = if id == current then 0.05 else 0.3
+		if tabBar then
+			tabBar.select(current)
 		end
 		local register = v.register or {}
 		local order = 0
@@ -217,14 +207,10 @@ function RegisterPanel.open()
 	end
 	table.insert(specs, { "seasonal", "Seasonal" })
 	table.insert(specs, { "mythics", "Mythics" })
-	for i, spec in specs do
-		local k = Theme.key(tabs, spec[2], false, function()
-			current = spec[1]
-			render()
-		end, 120)
-		k.LayoutOrder = i
-		tabKeys[spec[1]] = k
-	end
+	tabBar = Theme.tabs(content, specs, current, function(id: string)
+		current = id
+		render()
+	end, 2)
 	Theme.key(content, "Close", true, function()
 		Root.close(NAME)
 	end, 200).LayoutOrder = 4

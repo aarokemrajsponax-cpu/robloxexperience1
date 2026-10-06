@@ -396,4 +396,232 @@ function Theme.key(parent: Instance, text: string, primary: boolean?, onPress: (
 	return button
 end
 
+-- A row of section tabs that never cuts a heading short: each tab is as wide as its words (the
+-- words are never shrunk), the row scrolls sideways when there are more than fit (drag it, use the
+-- wheel, or the arrows that appear at whichever end has more), and the chosen tab glides to the
+-- middle. `specs` is { { id, label } } in order.
+export type Tabs = {
+	frame: Frame,
+	keys: { [string]: TextButton },
+	select: (id: string) -> (),
+	show: (id: string, on: boolean) -> (),
+}
+
+-- A layout-computed size or position (zero until Roblox has laid the frame out).
+local function measured(inst: Instance, prop: string): Vector2
+	local ok, v = pcall(function()
+		return (inst :: any)[prop]
+	end)
+	return if ok and typeof(v) == "Vector2" then v else Vector2.zero
+end
+
+function Theme.tabs(parent: Instance, specs: { { string } }, current: string, onSelect: (id: string) -> (), order: number?): Tabs
+	local holder = Instance.new("Frame")
+	holder.Name = "Tabs"
+	holder.BackgroundTransparency = 1
+	holder.Size = UDim2.new(1, 0, 0, 46)
+	holder.LayoutOrder = order or 0
+	holder.ClipsDescendants = true
+	holder.Parent = parent
+
+	local strip = Instance.new("ScrollingFrame")
+	strip.Name = "Strip"
+	strip.BackgroundTransparency = 1
+	strip.BorderSizePixel = 0
+	strip.Size = UDim2.fromScale(1, 1)
+	strip.CanvasSize = UDim2.new()
+	strip.AutomaticCanvasSize = Enum.AutomaticSize.X
+	strip.ScrollingDirection = Enum.ScrollingDirection.X
+	strip.ScrollBarThickness = 0
+	strip.ElasticBehavior = Enum.ElasticBehavior.WhenScrollable
+	strip.Parent = holder
+	local row = Theme.list(strip, 8, true)
+	row.HorizontalAlignment = Enum.HorizontalAlignment.Left
+	local inset = Instance.new("UIPadding")
+	inset.PaddingLeft = UDim.new(0, 4)
+	inset.PaddingRight = UDim.new(0, 4)
+	inset.Parent = strip
+
+	local keys: { [string]: TextButton } = {}
+	local chosen = current
+
+	local function paint()
+		for id, k in keys do
+			local on = id == chosen
+			k.BackgroundColor3 = if on then C.gold else Color3.fromRGB(20, 20, 24)
+			k.BackgroundTransparency = if on then 0.06 else 0.35
+			k.TextColor3 = if on then Color3.fromRGB(24, 18, 8) else C.lightGold
+			local stroke = k:FindFirstChildOfClass("UIStroke")
+			if stroke then
+				stroke.Transparency = if on then 0.15 else 0.55
+			end
+		end
+	end
+
+	-- Glides the row so tab `id` sits in the middle (as near as the ends allow).
+	local function centre(id: string, instant: boolean?)
+		local k = keys[id]
+		local view = measured(strip, "AbsoluteWindowSize").X
+		local canvas = measured(strip, "AbsoluteCanvasSize").X
+		if not k or view <= 0 or canvas <= view + 1 then
+			return
+		end
+		local x = measured(k, "AbsolutePosition").X - measured(strip, "AbsolutePosition").X + strip.CanvasPosition.X + measured(k, "AbsoluteSize").X / 2
+		local goal = Vector2.new(math.clamp(x - view / 2, 0, canvas - view), 0)
+		if instant then
+			strip.CanvasPosition = goal
+		else
+			Ease.play(strip, Ease.info(0.35, Enum.EasingStyle.Quint), { CanvasPosition = goal })
+		end
+	end
+
+	for i, spec in specs do
+		local id, label = spec[1], spec[2]
+		local k = Instance.new("TextButton")
+		k.Name = "Tab_" .. id
+		k.AutoButtonColor = false
+		k.Text = Caps(label)
+		k.TextWrapped = false
+		k.TextScaled = false
+		k.AutomaticSize = Enum.AutomaticSize.X
+		k.Size = UDim2.new(0, 0, 0, 38)
+		k.BorderSizePixel = 0
+		k.LayoutOrder = i
+		k.Selectable = true
+		k.SelectionImageObject = selectionRing()
+		local padding = Instance.new("UIPadding")
+		padding.PaddingLeft = UDim.new(0, 16)
+		padding.PaddingRight = UDim.new(0, 16)
+		padding.Parent = k
+		local corner = Instance.new("UICorner")
+		corner.CornerRadius = UDim.new(0, 19)
+		corner.Parent = k
+		local stroke = Instance.new("UIStroke")
+		stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		stroke.Color = C.gold
+		stroke.Parent = k
+		local r = { label = k, size = 14, kind = "caps" :: TextKind }
+		applyText(r)
+		table.insert(registry, r)
+		k.MouseEnter:Connect(function()
+			if hoverSound then
+				hoverSound()
+			end
+			if id ~= chosen then
+				Ease.play(stroke, Ease.quick, { Transparency = 0.1 })
+			end
+		end)
+		k.MouseLeave:Connect(function()
+			Ease.play(stroke, Ease.quick, { Transparency = if id == chosen then 0.15 else 0.55 })
+		end)
+		k.SelectionGained:Connect(function()
+			centre(id)
+		end)
+		k.Activated:Connect(function()
+			if clickSound then
+				clickSound()
+			end
+			Theme.haptic()
+			chosen = id
+			paint()
+			centre(id)
+			onSelect(id)
+		end)
+		k.Parent = strip
+		keys[id] = k
+	end
+	paint()
+
+	-- The arrows at either end: shown only where there's more to see, over a fade into the glass.
+	local function arrow(side: number): TextButton
+		local fade = Instance.new("Frame")
+		fade.Name = if side < 0 then "FadeLeft" else "FadeRight"
+		fade.BackgroundColor3 = Theme.colours.glass
+		fade.BorderSizePixel = 0
+		fade.AnchorPoint = Vector2.new(if side < 0 then 0 else 1, 0)
+		fade.Position = UDim2.fromScale(if side < 0 then 0 else 1, 0)
+		fade.Size = UDim2.new(0, 56, 1, 0)
+		fade.ZIndex = 5
+		fade.Visible = false
+		fade.Parent = holder
+		local g = Instance.new("UIGradient")
+		g.Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, if side < 0 then 0 else 1),
+			NumberSequenceKeypoint.new(0.55, if side < 0 then 0.05 else 0.95),
+			NumberSequenceKeypoint.new(1, if side < 0 then 1 else 0),
+		})
+		g.Parent = fade
+		local b = Instance.new("TextButton")
+		b.Name = if side < 0 then "Left" else "Right"
+		b.AutoButtonColor = false
+		b.AnchorPoint = Vector2.new(if side < 0 then 0 else 1, 0.5)
+		b.Position = UDim2.fromScale(if side < 0 then 0 else 1, 0.5)
+		b.Size = UDim2.fromOffset(30, 30)
+		b.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
+		b.BackgroundTransparency = 0.1
+		b.Text = if side < 0 then "‹" else "›"
+		b.FontFace = Brand.Fonts.bodyBold
+		b.TextSize = 22
+		b.TextColor3 = C.lightGold
+		b.ZIndex = 6
+		b.Parent = fade
+		local bc = Instance.new("UICorner")
+		bc.CornerRadius = UDim.new(1, 0)
+		bc.Parent = b
+		local bs = Instance.new("UIStroke")
+		bs.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		bs.Color = C.gold
+		bs.Transparency = 0.35
+		bs.Parent = b
+		b.Activated:Connect(function()
+			if clickSound then
+				clickSound()
+			end
+			local view = measured(strip, "AbsoluteWindowSize").X
+			local canvas = measured(strip, "AbsoluteCanvasSize").X
+			local goal = math.clamp(strip.CanvasPosition.X + side * view * 0.7, 0, math.max(0, canvas - view))
+			Ease.play(strip, Ease.info(0.35, Enum.EasingStyle.Quint), { CanvasPosition = Vector2.new(goal, 0) })
+		end)
+		return b
+	end
+	local left, right = arrow(-1), arrow(1)
+	local function arrows()
+		local view = measured(strip, "AbsoluteWindowSize").X
+		local canvas = measured(strip, "AbsoluteCanvasSize").X
+		local at = strip.CanvasPosition.X
+		local more = canvas > view + 1 and view > 0
+		local fl, fr = left.Parent :: Frame, right.Parent :: Frame
+		fl.Visible = more and at > 2
+		fr.Visible = more and at < canvas - view - 2
+	end
+	strip:GetPropertyChangedSignal("CanvasPosition"):Connect(arrows)
+	strip:GetPropertyChangedSignal("AbsoluteCanvasSize"):Connect(function()
+		arrows()
+		centre(chosen, true)
+	end)
+	strip:GetPropertyChangedSignal("AbsoluteWindowSize"):Connect(arrows)
+	task.defer(function()
+		arrows()
+		centre(chosen, true)
+	end)
+
+	local tabs: Tabs = {
+		frame = holder,
+		keys = keys,
+		select = function(id: string)
+			chosen = id
+			paint()
+			centre(id)
+		end,
+		show = function(id: string, on: boolean)
+			local k = keys[id]
+			if k then
+				k.Visible = on
+			end
+			task.defer(arrows)
+		end,
+	}
+	return tabs
+end
+
 return Theme

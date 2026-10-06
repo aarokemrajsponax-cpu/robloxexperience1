@@ -348,6 +348,12 @@ local defaults = {
 		volume = 1.2, -- each note's volume
 		heard = 80, -- studs a note carries from the piano (the Foyer, and faintly the street and stair)
 		maxSeconds = 3600, -- the most piano time the house offers to hold at once (a purchase is never cut)
+		-- Every guest may play free for this long each day (UTC), so anyone can try the keys
+		-- before buying time. 0 turns it off.
+		taste = 30,
+		-- The owner (and anyone, in Studio) plays free, for testing and for fun.
+		ownerFree = true,
+		ownerSeconds = 1800, -- how long one free sitting lasts before the owner gets up
 	},
 
 	-- Commissions (Appendix I1): Gilt for the Evening's and the Week's.
@@ -609,6 +615,15 @@ local defaults = {
 			"rbxassetid://121997668450827", "rbxassetid://121413839180669", "rbxassetid://90740749235134", "rbxassetid://113030261877109", "rbxassetid://140406182404884", "rbxassetid://119631153742000", -- C5 to F5
 			"rbxassetid://70828942309686", "rbxassetid://131269431485825", "rbxassetid://118262323318899", "rbxassetid://125853393278154", "rbxassetid://99745152176175", "rbxassetid://138660648674060", -- F#5 to B5
 			"rbxassetid://110812706317973", -- C6 to C6
+		},
+		-- If a key's recording above won't load, its neighbour plays it retuned; if none of them
+		-- load, the first of these middle-C recordings that does is retuned to every key (all
+		-- public on the Creator Store).
+		PianoFallback = {
+			"rbxassetid://79079707710718", -- Grand Piano C4 (kyleamida)
+			"rbxassetid://87764581272529", -- C note 4 Piano (2Mello4U)
+			"rbxassetid://96243649310055", -- Piano Note C4 (O_cuIi)
+			"rbxassetid://121927018876136", -- Piano C Key (zedeuruim)
 		},
 		-- The house's music: three playlists of real recordings from Roblox's licensed library (APM
 		-- Music, uploaded by APMOfficial, free in any experience), so the house has music the moment

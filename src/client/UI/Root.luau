@@ -34,6 +34,8 @@ local function screen(name: string, order: number, insets: Enum.ScreenInsets): S
 end
 
 Root.intro = screen("MaisonIntro", 100, Enum.ScreenInsets.None)
+-- Notices sit above every panel: one that arrives while a panel is open is read, not buried.
+Root.toasts = screen("MaisonToasts", 60, Enum.ScreenInsets.CoreUISafeInsets)
 Root.panels = screen("MaisonPanels", 50, Enum.ScreenInsets.CoreUISafeInsets)
 Root.dialogue = screen("MaisonDialogue", 40, Enum.ScreenInsets.CoreUISafeInsets)
 Root.hud = screen("MaisonHud", 20, Enum.ScreenInsets.CoreUISafeInsets)
@@ -41,7 +43,7 @@ Root.prompts = screen("MaisonPrompts", 15, Enum.ScreenInsets.CoreUISafeInsets)
 
 -- One UIScale per layer so everything fits the smallest phone.
 local scales: { UIScale } = {}
-for _, gui in { Root.intro, Root.panels, Root.dialogue, Root.hud } do
+for _, gui in { Root.intro, Root.toasts, Root.panels, Root.dialogue, Root.hud } do
 	local s = Instance.new("UIScale")
 	s.Parent = gui
 	table.insert(scales, s)

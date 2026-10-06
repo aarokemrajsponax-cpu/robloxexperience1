@@ -54,7 +54,7 @@ function Build.run(): Folder
 	-- Each part of the house is built on its own: one that fails is reported in Output and the
 	-- rest of the house still stands.
 	local function step(name: string, fn: () -> ())
-		local ok, err = pcall(fn)
+		local ok, err = pcall(fn :: any)
 		if not ok then
 			warn(string.format("[Maison] Building %s failed: %s", name, tostring(err)))
 		end

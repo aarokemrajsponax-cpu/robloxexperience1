@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local Layout = require(ReplicatedStorage.Shared.Layout)
+local PianoKeys = require(ReplicatedStorage.Shared.PianoKeys)
 local Rooms = require(ReplicatedStorage.Shared.Rooms)
 local Voice = require(ReplicatedStorage.Shared.Voice)
 local Kit = require(script.Parent.Kit)
@@ -226,11 +227,28 @@ local function piano(m: Model)
 	Kit.part(model, "Strings", Vector3.new(4.8, 0.05, 5.6), at(-0.3, 3.95, 0.9), L.darkBrass, { collide = false })
 	-- Keyboard
 	Kit.part(model, "Keybed", Vector3.new(5.2, 0.5, 1.3), at(0, 2.9, -3.2), L.blackLacquer)
-	Kit.part(model, "Keys", Vector3.new(4.8, 0.12, 0.9), at(0, 3.2, -3.35), L.bone, { collide = false })
-	for i = -11, 11 do
-		if i % 7 ~= 0 and i % 7 ~= 3 then
-			Kit.part(model, "Sharp", Vector3.new(0.08, 0.1, 0.5), at(i * 0.2, 3.3, -3.15), L.ink, { collide = false, shadow = false, query = false })
+	-- The keys, one part each (Key1, the lowest, to Key37), so every note played shows on the
+	-- piano itself: the guest's screen presses the key down as it sounds. Low notes are on the
+	-- player's left (the piano's +X), as they sit on the bench facing the keys.
+	local keyboard = Kit.model(model, "Keyboard")
+	local whites = 0
+	for _, k in PianoKeys.list do
+		if not k.black then
+			whites += 1
 		end
+	end
+	local span = 4.8
+	local whiteW = span / whites
+	local count = 0
+	for _, k in PianoKeys.list do
+		local key: Part
+		if k.black then
+			key = Kit.part(keyboard, "Key" .. k.index, Vector3.new(whiteW * 0.56, 0.11, 0.52), at(span / 2 - count * whiteW, 3.315, -3.17), L.ink, { collide = false, shadow = false, query = false })
+		else
+			key = Kit.part(keyboard, "Key" .. k.index, Vector3.new(whiteW - 0.025, 0.12, 0.9), at(span / 2 - (count + 0.5) * whiteW, 3.2, -3.35), L.bone, { collide = false, shadow = false, query = false })
+			count += 1
+		end
+		key:SetAttribute("Key", k.index)
 	end
 	Kit.part(model, "MusicDesk", Vector3.new(3, 0.9, 0.1), at(0, 4.2, -2.4) * CFrame.Angles(math.rad(-15), 0, 0), L.blackLacquer, { collide = false })
 	-- Bench, and the seat a guest takes to play (shut until they've piano time: Purchases/Piano)

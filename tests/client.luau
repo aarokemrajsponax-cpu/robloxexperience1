@@ -2742,6 +2742,31 @@ do
 		end
 	end
 	check("choosing one asks the server for it by name", asked == "pianoSession3", asked)
+	-- Today's free taste still to be had: it comes first, and the sessions wait below it.
+	Root.close("Piano")
+	advance(0.5)
+	invokeResults.PianoAsk.taste = 30
+	serverSays("Purchase", { op = "pianoOffer" })
+	advance(1)
+	local taste = find(playerGui, function(d)
+		return d:IsA("TextButton") and d.Name == "Taste"
+	end)
+	check("the piano: today's free taste is offered first", taste ~= nil and string.find(taste.Text, "0:30", 1, true) ~= nil and textOnScreen("free time every day") ~= nil, taste and taste.Text)
+	snapshot("piano-taste")
+	if taste then
+		signalOf(taste, "Activated"):Fire()
+	end
+	advance(0.5)
+	local sat = false
+	for _, m in sent do
+		if m.remote == "PianoAsk" and type(m.message[1]) == "table" and m.message[1].op == "sit" then
+			sat = true
+		end
+	end
+	check("taking it asks the server to sit them down", sat)
+	invokeResults.PianoAsk.taste = nil
+	Root.close("Piano")
+	advance(0.5)
 	-- The server seats this guest: the keyboard comes up.
 	workspace:SetAttribute("PianoPlayer", LocalPlayer.UserId)
 	workspace:SetAttribute("PianoEnds", workspace:GetServerTimeNow() + 180)
