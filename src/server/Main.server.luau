@@ -38,21 +38,62 @@ end
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 Remotes.event("Guest") -- creates every remote before any client asks for one
 
+-- The owner sees anything that breaks on the server, on their own screen (ErrorNotice): a
+-- screenshot is then enough to say what went wrong. (Listening from the very start, so a problem
+-- while the house is still being built shows too.)
+do
+	local LogService = game:GetService("LogService")
+	local RunService = game:GetService("RunService")
+	local errors = Remotes.event("Errors")
+	local sent = 0
+	local window = os.clock()
+	LogService.MessageOut:Connect(function(message: string, kind: Enum.MessageType)
+		local important = kind == Enum.MessageType.MessageError or (kind == Enum.MessageType.MessageWarning and string.find(message, "[Maison]", 1, true) ~= nil)
+		if not important then
+			return
+		end
+		if os.clock() - window > 10 then
+			window = os.clock()
+			sent = 0
+		end
+		sent += 1
+		if sent > 6 then
+			return
+		end
+		for _, p in Players:GetPlayers() do
+			if RunService:IsStudio() or p:GetAttribute("MaisonAdmin") == true then
+				pcall(function()
+					errors:FireClient(p, "Server: " .. message)
+				end)
+			end
+		end
+	end)
+end
+
+-- The dashboard's Configs load while the house builds (nobody waits for one, then the other).
 local LiveConfig = require(script.Parent.LiveConfig)
+local configsLoaded: (number) -> () = function() end
 boot("Live Configs", function()
-	LiveConfig.start(3)
+	configsLoaded = LiveConfig.begin()
 end)
 
+-- The house goes up in one piece, in about a second, and guests spawn straight after; the last
+-- polish (the flicker fix) finishes a moment later while they look around.
 local World = require(script.Parent.World.Build)
 local maison: Instance = Workspace
+local began = os.clock()
 boot("The house", function()
-	maison = World.run()
+	maison = World.run({ polishLater = true })
 end)
+print(string.format("[Maison] The house stands (%.1f s).", os.clock() - began))
 Workspace:SetAttribute("MaisonReady", true)
 
 -- Guests next, before anything else can go wrong: characters, placing, the welcome.
 local Guests = require(script.Parent.Guests)
 boot("Guests", Guests.start)
+boot("Live Configs", function()
+	configsLoaded(3)
+end)
 
 -- Seats everywhere (the sofas, the loungers, your Suite's furniture).
 boot("Seating", require(script.Parent.Seating).start)
@@ -377,35 +418,4 @@ if #failed == 0 then
 	print("[Maison] The house is open.")
 else
 	warn("[Maison] The house is open, but these parts didn't start: " .. table.concat(failed, ", "))
-end
-
--- The owner sees anything that breaks on the server, on their own screen (ErrorNotice): a
--- screenshot is then enough to say what went wrong.
-do
-	local LogService = game:GetService("LogService")
-	local RunService = game:GetService("RunService")
-	local errors = Remotes.event("Errors")
-	local sent = 0
-	local window = os.clock()
-	LogService.MessageOut:Connect(function(message: string, kind: Enum.MessageType)
-		local important = kind == Enum.MessageType.MessageError or (kind == Enum.MessageType.MessageWarning and string.find(message, "[Maison]", 1, true) ~= nil)
-		if not important then
-			return
-		end
-		if os.clock() - window > 10 then
-			window = os.clock()
-			sent = 0
-		end
-		sent += 1
-		if sent > 6 then
-			return
-		end
-		for _, p in Players:GetPlayers() do
-			if RunService:IsStudio() or p:GetAttribute("MaisonAdmin") == true then
-				pcall(function()
-					errors:FireClient(p, "Server: " .. message)
-				end)
-			end
-		end
-	end)
 end

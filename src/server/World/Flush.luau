@@ -14,17 +14,21 @@ Flush.GAP = 0.03 -- studs between two faces that were flush
 local NEAR = 0.012 -- faces nearer than this flicker
 local MIN_OVERLAP = 0.02 -- square studs; less than this is a seam, not a surface
 
-type Box = { part: Part, lo: Vector3, hi: Vector3, axisOf: { number } }
+-- A block's bounds and look, read from the part once (reading a part's properties is far slower
+-- than comparing plain numbers, and the house has thousands of parts). `axisOf` says which of its
+-- own axes (1 Size.X, 2 Size.Y, 3 Size.Z) runs along each world axis.
+type Box = { part: Part, lo: { number }, hi: { number }, axisOf: { number }, look: string }
 type Face = { box: Box, axis: number, side: number, plane: number, area: number }
 
 local AXES = { Vector3.xAxis, Vector3.yAxis, Vector3.zAxis }
+-- For a face across one axis, the two axes it lies along.
+local ALONG = { { 2, 3 }, { 1, 3 }, { 1, 2 } }
 
 local function comp(v: Vector3, axis: number): number
 	return if axis == 1 then v.X elseif axis == 2 then v.Y else v.Z
 end
 
--- A block lined up with the world's axes: its bounds, and which of its own axes (1 Size.X,
--- 2 Size.Y, 3 Size.Z) runs along each world axis. Nil for anything else.
+-- A block lined up with the world's axes. Nil for anything else.
 local function boxOf(part: Part): Box?
 	if part.Shape ~= Enum.PartType.Block or part.Transparency >= 0.9 then
 		return nil
@@ -43,70 +47,109 @@ local function boxOf(part: Part): Box?
 		return nil
 	end
 	local size = part.Size
-	local half = Vector3.new(comp(size, axisOf[1]), comp(size, axisOf[2]), comp(size, axisOf[3])) / 2
-	return { part = part, lo = cf.Position - half, hi = cf.Position + half, axisOf = axisOf }
-end
-
-local function looksSame(a: Part, b: Part): boolean
-	return a.Color == b.Color and a.Material == b.Material and a.Transparency == b.Transparency and a.Reflectance == b.Reflectance
+	local p = cf.Position
+	local lo, hi = {}, {}
+	for a = 1, 3 do
+		local half = comp(size, axisOf[a]) / 2
+		lo[a] = comp(p, a) - half
+		hi[a] = comp(p, a) + half
+	end
+	local c = part.Color
+	local look = string.format("%.5f %.5f %.5f %s %.4f %.4f", c.R, c.G, c.B, part.Material.Name, part.Transparency, part.Reflectance)
+	return { part = part, lo = lo, hi = hi, axisOf = axisOf, look = look }
 end
 
 -- Overlap (square studs) of two faces in the plane across `axis`.
 local function overlap(a: Box, b: Box, axis: number): number
 	local area = 1
-	for ax = 1, 3 do
-		if ax ~= axis then
-			area *= math.max(0, math.min(comp(a.hi, ax), comp(b.hi, ax)) - math.max(comp(a.lo, ax), comp(b.lo, ax)))
-		end
+	for _, ax in ALONG[axis] do
+		area *= math.max(0, math.min(a.hi[ax], b.hi[ax]) - math.max(a.lo[ax], b.lo[ax]))
 	end
 	return area
 end
 
--- The pairs of faces that flicker, as { mover, other } (the mover is the smaller face).
-local function find(root: Instance): { { Face } }
-	local buckets: { [string]: { Face } } = {}
+local function boxesUnder(root: Instance): { Box }
+	local out = {}
 	for _, d in root:GetDescendants() do
 		Breathe.now()
 		if d:IsA("Part") then
 			local box = boxOf(d)
 			if box then
-				for axis = 1, 3 do
-					local area = 1
-					for ax = 1, 3 do
-						if ax ~= axis then
-							area *= comp(box.hi, ax) - comp(box.lo, ax)
-						end
-					end
-					for _, side in { -1, 1 } do
-						local plane = if side > 0 then comp(box.hi, axis) else comp(box.lo, axis)
-						local face: Face = { box = box, axis = axis, side = side, plane = plane, area = area }
-						local key = string.format("%d%d:%d", axis, side, math.floor(plane * 40))
-						local list = buckets[key]
-						if not list then
-							list = {}
-							buckets[key] = list
-						end
-						table.insert(list, face)
-					end
+				table.insert(out, box)
+			end
+		end
+	end
+	return out
+end
+
+local function keyOf(axis: number, side: number, cell: number): string
+	return string.format("%d%d:%d", axis, side, cell)
+end
+
+-- The pairs of faces that flicker, as { mover, other } (the mover is the smaller face).
+local function find(boxes: { Box }): { { Face } }
+	-- Faces that could be flush sit in the same thin slice of space (or the next one up).
+	local buckets: { [string]: { Face } } = {}
+	local cells: { [string]: { axis: number, side: number, cell: number } } = {}
+	for _, box in boxes do
+		for axis = 1, 3 do
+			local along = ALONG[axis]
+			local area = (box.hi[along[1]] - box.lo[along[1]]) * (box.hi[along[2]] - box.lo[along[2]])
+			for _, side in { -1, 1 } do
+				local plane = if side > 0 then box.hi[axis] else box.lo[axis]
+				local cell = math.floor(plane * 40)
+				local key = keyOf(axis, side, cell)
+				local list = buckets[key]
+				if not list then
+					list = {}
+					buckets[key] = list
+					cells[key] = { axis = axis, side = side, cell = cell }
 				end
+				table.insert(list, { box = box, axis = axis, side = side, plane = plane, area = area })
 			end
 		end
 	end
 	local pairsFound: { { Face } } = {}
+	local function add(f: Face, g: Face)
+		if f.area < g.area or (f.area == g.area and f.box.part:GetFullName() < g.box.part:GetFullName()) then
+			table.insert(pairsFound, { f, g })
+		else
+			table.insert(pairsFound, { g, f })
+		end
+	end
 	for key, list in buckets do
-		local axis, side, b = string.match(key, "^(%d)(%-?%d):(%-?%d+)$")
-		local nextList = buckets[string.format("%s%s:%d", axis :: string, side :: string, (tonumber(b) :: number) + 1)] or {}
-		for i, f in list do
+		local at = cells[key]
+		local nextList = buckets[keyOf(at.axis, at.side, at.cell + 1)]
+		-- Sweep along one of the face's own axes: only faces whose spans meet there can overlap.
+		local u = ALONG[at.axis][1]
+		local items: { { face: Face, mine: boolean } } = {}
+		for _, f in list do
+			table.insert(items, { face = f, mine = true })
+		end
+		if nextList then
+			for _, f in nextList do
+				table.insert(items, { face = f, mine = false })
+			end
+		end
+		if #items < 2 then
+			continue
+		end
+		table.sort(items, function(a, b)
+			return a.face.box.lo[u] < b.face.box.lo[u]
+		end)
+		for i = 1, #items do
 			Breathe.now()
-			for _, other in { list, nextList } do
-				for j, g in other do
-					if (other ~= list or j > i) and f.box ~= g.box and math.abs(f.plane - g.plane) < NEAR and not looksSame(f.box.part, g.box.part) and overlap(f.box, g.box, f.axis) > MIN_OVERLAP then
-						if f.area < g.area or (f.area == g.area and f.box.part:GetFullName() < g.box.part:GetFullName()) then
-							table.insert(pairsFound, { f, g })
-						else
-							table.insert(pairsFound, { g, f })
-						end
-					end
+			local fi = items[i]
+			local f = fi.face
+			local reach = f.box.hi[u]
+			for j = i + 1, #items do
+				local gi = items[j]
+				local g = gi.face
+				if g.box.lo[u] >= reach then
+					break
+				end
+				if (fi.mine or gi.mine) and f.box ~= g.box and math.abs(f.plane - g.plane) < NEAR and f.box.look ~= g.box.look and overlap(f.box, g.box, f.axis) > MIN_OVERLAP then
+					add(f, g)
 				end
 			end
 		end
@@ -114,13 +157,13 @@ local function find(root: Instance): { { Face } }
 	return pairsFound
 end
 
--- Lifts every flickering face clear. Returns how many faces it moved.
-function Flush.settle(root: Instance): number
+local function settleNow(root: Instance): number
 	local moved = 0
+	local boxes = boxesUnder(root)
 	-- Two faces lifted off the same surface can end up flush with each other, so another round
 	-- follows, each with a wider gap than the last, until nothing is flush.
 	for round = 1, 6 do
-		local found = find(root)
+		local found = find(boxes)
 		if #found == 0 then
 			break
 		end
@@ -142,13 +185,16 @@ function Flush.settle(root: Instance): number
 			local size = part.Size
 			local shift = Vector3.zero
 			local sizes = { size.X, size.Y, size.Z }
+			local box = entry.box
 			for axis = 1, 3 do
 				local plus = entry.out[axis * 2 + 1] or 0
 				local minus = entry.out[axis * 2] or 0
 				if plus ~= 0 or minus ~= 0 then
-					local own = entry.box.axisOf[axis]
+					local own = box.axisOf[axis]
 					sizes[own] += plus + minus
 					shift += AXES[axis] * ((plus - minus) / 2)
+					box.hi[axis] += plus
+					box.lo[axis] -= minus
 					moved += (if plus ~= 0 then 1 else 0) + (if minus ~= 0 then 1 else 0)
 				end
 			end
@@ -159,10 +205,29 @@ function Flush.settle(root: Instance): number
 	return moved
 end
 
+local busy = false
+
+-- Lifts every flickering face clear. Returns how many faces it moved. (One at a time: the
+-- house's own pass runs just after guests spawn, and the season's dressing asks for another.)
+function Flush.settle(root: Instance): number
+	while busy do
+		task.wait()
+	end
+	busy = true
+	local ok, result = pcall(function()
+		return settleNow(root)
+	end)
+	busy = false
+	if not ok then
+		error(result, 0)
+	end
+	return result
+end
+
 -- The faces that still flicker under `root`, one line each (for the world's checks).
 function Flush.report(root: Instance): { string }
 	local out = {}
-	for _, pair in find(root) do
+	for _, pair in find(boxesUnder(root)) do
 		table.insert(out, string.format("%s | %s", pair[1].box.part:GetFullName(), pair[2].box.part:GetFullName()))
 	end
 	table.sort(out)

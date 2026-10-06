@@ -7,7 +7,7 @@
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 
-local WAIT = 40 -- seconds: far longer than the house ever takes to build and place a guest
+local WAIT = 20 -- seconds: far longer than the house takes to build (about a second) and place a guest
 
 local function watch(player: Player)
 	task.delay(WAIT, function()

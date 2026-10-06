@@ -45,7 +45,13 @@ local function sill(parent: Instance, d: Layout.Doorway)
 	box("SillEdge", b - 0.12, b, y + 0.05, y + 0.08, Kit.Looks.brass, trim)
 end
 
-function Build.run(): Folder
+export type Options = {
+	-- Put the house up as soon as it's built and do the flicker fix just after (guests can
+	-- spawn meanwhile: it moves a few thousand surfaces by a hair, nothing anyone sees move).
+	polishLater: boolean?,
+}
+
+function Build.run(options: Options?): Folder
 	local existing = Workspace:FindFirstChild("Maison")
 	if existing then
 		existing:Destroy()
@@ -59,7 +65,7 @@ function Build.run(): Folder
 		if not ok then
 			warn(string.format("[Maison] Building %s failed: %s", name, tostring(err)))
 		end
-		Breathe.now(0) -- a breath between rooms (see Breathe: the script timeout)
+		Breathe.now() -- (see Breathe: the script timeout)
 	end
 	step("the Street", function() Street.build(root) end)
 	step("the Foyer", function() Foyer.build(root) end)
@@ -82,8 +88,16 @@ function Build.run(): Folder
 		end
 	end)
 	-- Surfaces laid flush in one plane flicker as the camera moves: lift each clear.
-	step("the flicker fix", function() Flush.settle(root) end)
-	root.Parent = Workspace
+	local function polish()
+		step("the flicker fix", function() Flush.settle(root) end)
+	end
+	if options and options.polishLater then
+		root.Parent = Workspace
+		task.spawn(polish)
+	else
+		polish()
+		root.Parent = Workspace
+	end
 	return root
 end
 

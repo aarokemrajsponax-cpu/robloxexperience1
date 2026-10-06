@@ -48,9 +48,11 @@ local function apply(found: { [string]: any })
 	Remotes.event("Guest"):FireAllClients({ op = "config", overrides = applied })
 end
 
--- Loads once (waiting at most `timeout` seconds) and keeps listening for published changes.
-function LiveConfig.start(timeout: number)
+-- Starts loading (and keeps listening for published changes). Returns a function that waits for
+-- the load, at most `timeout` seconds after it was started (the house builds meanwhile).
+function LiveConfig.begin(): (timeout: number) -> ()
 	local done = false
+	local started = os.clock()
 	task.spawn(function()
 		local ok, snapshot = pcall(function()
 			return (game:GetService("ConfigService") :: ConfigService):GetConfigAsync()
@@ -69,10 +71,17 @@ function LiveConfig.start(timeout: number)
 			apply(read(snapshot))
 		end)
 	end)
-	local limit = os.clock() + timeout
-	while not done and os.clock() < limit do
-		task.wait(0.1)
+	return function(timeout: number)
+		local limit = started + timeout
+		while not done and os.clock() < limit do
+			task.wait(0.1)
+		end
 	end
+end
+
+-- Loads once (waiting at most `timeout` seconds) and keeps listening for published changes.
+function LiveConfig.start(timeout: number)
+	LiveConfig.begin()(timeout)
 end
 
 return LiveConfig

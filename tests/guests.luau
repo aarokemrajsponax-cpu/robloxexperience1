@@ -495,8 +495,8 @@ check("and only one", ben.loads == before + 1)
 ---------------------------------------------------------------------------------------------------
 local main = fs.readFile("src/server/Main.server.luau")
 local autoAt = string.find(main, "Players.CharacterAutoLoads = false", 1, true)
-local buildAt = string.find(main, "World.run()", 1, true)
-local liveAt = string.find(main, "LiveConfig.start", 1, true)
+local buildAt = string.find(main, "World.run(", 1, true)
+local liveAt = string.find(main, "LiveConfig.begin", 1, true)
 local guestsAt = string.find(main, 'boot("Guests", Guests.start)', 1, true)
 check("the server stops Roblox's own spawning before anything else", autoAt ~= nil and autoAt < (liveAt or 0) and autoAt < (buildAt or 0))
 check("guests start right after the house is built", guestsAt ~= nil and buildAt ~= nil and guestsAt > buildAt)
@@ -507,6 +507,9 @@ for name in string.gmatch(main, 'boot%("([^"]+)"') do
 	end
 end
 check("...and before every other part of the house", guestsAt ~= nil and guestsAt < firstOtherBoot)
+check("guests don't wait for the flicker fix (it finishes after they spawn)", string.find(main, "World.run({ polishLater = true })", 1, true) ~= nil)
+local hookAt = string.find(main, "LogService.MessageOut:Connect", 1, true)
+check("server problems reach the owner's screen from the very start (before the build)", hookAt ~= nil and buildAt ~= nil and hookAt < buildAt)
 local project = serde.decode("json", fs.readFile("default.project.json"))
 check("Rojo tells Studio not to spawn anyone by itself", project.tree.Players and project.tree.Players["$properties"] and project.tree.Players["$properties"].CharacterAutoLoads == false)
 
