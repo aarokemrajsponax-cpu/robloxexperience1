@@ -2987,6 +2987,14 @@ do
 		end
 	end
 	check("Z plays the lowest C, sent to the server for the room", action ~= nil and last == 1, last)
+	-- The note itself: a slice of a licensed APM recording (other creators' audio is refused by
+	-- Roblox in this experience), retuned from the slice's F3 down to the low C.
+	local note = find(game, function(d)
+		return d:IsA("Sound") and d.Name == "PianoNote" and d.SoundId == "rbxassetid://1847254302"
+	end)
+	check("the note plays a licensed recording every experience may use", note ~= nil, note and note.SoundId)
+	check("...only its one clean note (a slice of the recording)", note ~= nil and note.PlaybackRegionsEnabled == true and math.abs(note.PlaybackRegion.Min - 0.775) < 1e-3)
+	check("...retuned to the key (C3, from the slice's F3)", note ~= nil and math.abs(note.PlaybackSpeed - 2 ^ ((48 - 52.97) / 12)) < 1e-3, note and note.PlaybackSpeed)
 	workspace:SetAttribute("PianoPlayer", nil)
 	signalOf(workspace, "attr:PianoPlayer"):Fire()
 	advance(1)
@@ -3056,6 +3064,130 @@ snapshot("salutes")
 Root2.close()
 advance(0.5)
 check("no errors in a salute", #errors == 0, errors[1])
+
+-- Fireworks: a key to go out and watch them (and the giver is taken out at once).
+serverSays("Salute", { op = "salute", id = "fireworks", by = "Ada", userId = LocalPlayer.UserId, seconds = 10, scale = 1, effects = { "fireworks" }, line = "Ada lit fireworks over the house." })
+advance(1)
+local watchKey = find(playerGui, function(d)
+	return d:IsA("TextButton") and d.Name == "Watch"
+end)
+check("fireworks: a key to watch them from outside", watchKey ~= nil)
+check("...and the guest who lit them is taken out to watch at once", watchKey ~= nil and watchKey.Text == "Back to the house", watchKey and watchKey.Text)
+snapshot("fireworks-watch")
+if watchKey then
+	signalOf(watchKey, "Activated"):Fire()
+end
+advance(0.5)
+check("...and brought back with the same key", watchKey ~= nil and watchKey.Text == "Watch the fireworks")
+advance(20)
+check("when the show is over, the key goes", find(playerGui, function(d)
+	return d:IsA("TextButton") and d.Name == "Watch"
+end) == nil)
+
+-- The Meme Takeover: six acts in the Suite, then everything put back.
+serverSays("Purchase", { op = "spectacle", key = "spectacleMemes", seconds = 20 })
+advance(1)
+check("the Meme Takeover starts with its warning", textOnScreen("MEME TAKEOVER") ~= nil)
+advance(3)
+local takeover = workspace.MaisonLocal:FindFirstChild("MemeTakeover")
+check("...the portal spews memes into the room", takeover ~= nil and #takeover:GetChildren() > 10, takeover and #takeover:GetChildren())
+snapshot("meme-takeover")
+advance(8)
+check("...then the boss arrives", textOnScreen("THE BIG CHEESE") ~= nil or textOnScreen("MAXIMUM BRAINROT") ~= nil or textOnScreen("RAINING MEMES") ~= nil)
+advance(14)
+check("...and when it's over, the room is put back", workspace.MaisonLocal:FindFirstChild("MemeTakeover") == nil and find(playerGui, function(d)
+	return d.Name == "MemeTakeover"
+end) == nil)
+check("no errors in the spectacles", #errors == 0, errors[1])
+
+-- Eating at the Terrace: a click takes a bite; the treat gets smaller as it's eaten.
+do
+	local treat = Instance.new("Model")
+	treat.Name = "Treat"
+	local handle = Instance.new("Part")
+	handle.Name = "Handle"
+	handle.Parent = treat
+	treat.PrimaryPart = handle
+	for i = 1, 4 do
+		local b = Instance.new("Part")
+		b.Name = "Bite" .. i
+		b.Position = Vector3.new(0, 5 + i * 0.1, -40)
+		b.Parent = treat
+	end
+	treat:SetAttribute("Owner", LocalPlayer.UserId)
+	treat:SetAttribute("Kind", "snack")
+	treat:SetAttribute("Servings", 4)
+	treat:SetAttribute("Total", 4)
+	treat:SetAttribute("Sips", 0)
+	treat.Parent = character
+	signalOf(workspace, "DescendantAdded"):Fire(treat)
+	advance(0.5)
+	local eat = find(playerGui, function(d)
+		return d:IsA("TextButton") and d.Name == "Eat"
+	end)
+	check("holding a treat: a key to eat it", eat ~= nil and string.find(eat.Text, "Take a bite · 4 left", 1, true) ~= nil, eat and eat.Text)
+	snapshot("eat")
+	if eat then
+		signalOf(eat, "Activated"):Fire()
+	end
+	advance(0.3)
+	local asked = 0
+	for _, m in sent do
+		if m.remote == "BarAsk" and type(m.message) == "table" and type(m.message[1]) == "table" and m.message[1].op == "bite" then
+			asked += 1
+		end
+	end
+	check("a click asks the server for a bite", asked == 1, asked)
+	if eat then
+		signalOf(eat, "Activated"):Fire()
+	end
+	advance(0.1)
+	local again = 0
+	for _, m in sent do
+		if m.remote == "BarAsk" and type(m.message) == "table" and type(m.message[1]) == "table" and m.message[1].op == "bite" then
+			again += 1
+		end
+	end
+	check("...not faster than a person can chew", again == 1, again)
+	-- The server says two bites are gone.
+	treat:SetAttribute("Servings", 2)
+	signalOf(treat, "attr:Servings"):Fire()
+	treat:SetAttribute("Sips", 2)
+	signalOf(treat, "attr:Sips"):Fire()
+	advance(1)
+	local hidden = 0
+	for _, d in treat:GetChildren() do
+		if string.sub(d.Name, 1, 4) == "Bite" and d.Transparency == 1 then
+			hidden += 1
+		end
+	end
+	check("the treat gets smaller as it's eaten (half gone, half left)", hidden == 2, hidden)
+	check("...and the key counts down", eat ~= nil and string.find(eat.Text, "2 left", 1, true) ~= nil, eat and eat.Text)
+	treat.Parent = nil
+	signalOf(treat, "AncestryChanged"):Fire()
+	advance(0.3)
+	check("no errors eating", #errors == 0, errors[1])
+end
+
+-- The quick dock: Collection, Trade, Wardrobe and Gems, one tap away.
+do
+	local dockKeys = {}
+	for _, name in { "Collection", "Trade", "Wardrobe", "Gems" } do
+		dockKeys[name] = find(playerGui, function(d)
+			return d:IsA("TextButton") and d.Name == name and d.Parent ~= nil and d.Parent.Name == "QuickDock"
+		end)
+	end
+	check("the dock: Collection, Trade, Wardrobe and Gems on screen", dockKeys.Collection ~= nil and dockKeys.Trade ~= nil and dockKeys.Wardrobe ~= nil and dockKeys.Gems ~= nil)
+	if dockKeys.Trade then
+		signalOf(dockKeys.Trade, "Activated"):Fire()
+	end
+	advance(1)
+	check("Trade lists who to trade with, and your past trades", textOnScreen("Your trades") ~= nil and textOnScreen("nothing changes hands until you both confirm") ~= nil or textOnScreen("Nobody else is in the house") ~= nil)
+	snapshot("dock-trade")
+	Root2.close()
+	advance(0.5)
+	check("no errors at the dock", #errors == 0, errors[1])
+end
 
 -- House controls: only the owner has the key; the events show on everyone's screen.
 do

@@ -79,10 +79,10 @@ local function tile(parent: Instance, order: number, glyph: string, label: strin
 	b.AutoButtonColor = false
 	b.Size = UDim2.fromOffset(SIZE, SIZE)
 	b.BackgroundColor3 = Color3.fromRGB(14, 14, 18)
-	b.BackgroundTransparency = 0.15
+	b.BackgroundTransparency = 0.12
 	b.Text = ""
 	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(1, 0)
+	corner.CornerRadius = UDim.new(0, math.floor(SIZE * 0.24))
 	corner.Parent = b
 	local stroke = Instance.new("UIStroke")
 	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
@@ -91,32 +91,49 @@ local function tile(parent: Instance, order: number, glyph: string, label: strin
 	stroke.Transparency = 0.25
 	stroke.Parent = b
 	local icon = Instance.new("TextLabel")
+	icon.Name = "Icon"
 	icon.BackgroundTransparency = 1
-	icon.Size = UDim2.new(1, 0, 0.62, 0)
-	icon.Position = UDim2.fromScale(0, 0.06)
+	icon.AnchorPoint = Vector2.new(0.5, 0)
+	icon.Position = UDim2.new(0.5, 0, 0, math.floor(SIZE * 0.1))
+	icon.Size = UDim2.fromOffset(math.floor(SIZE * 0.5), math.floor(SIZE * 0.5))
 	icon.Text = glyph
 	icon.TextScaled = true
 	icon.Parent = b
 	local name = Instance.new("TextLabel")
+	name.Name = "Label"
 	name.BackgroundTransparency = 1
-	name.Position = UDim2.fromScale(0, 0.66)
-	name.Size = UDim2.new(1, 0, 0.26, 0)
+	name.AnchorPoint = Vector2.new(0.5, 1)
+	name.Position = UDim2.new(0.5, 0, 1, -math.floor(SIZE * 0.06))
+	name.Size = UDim2.new(1, -4, 0, math.floor(SIZE * 0.22))
 	name.FontFace = Brand.Fonts.bodyBold
-	name.TextScaled = true
+	name.TextSize = if SIZE >= 60 then 12 else 10
 	name.TextColor3 = C.lightGold
-	name.Text = if hotkey and not UserInputService.TouchEnabled then label .. " · " .. hotkey else label
+	name.Text = label
 	name.Parent = b
-	local pad = Instance.new("UIPadding")
-	pad.PaddingLeft = UDim.new(0, 5)
-	pad.PaddingRight = UDim.new(0, 5)
-	pad.Parent = b
+	-- The keyboard key, a small badge on the corner (not on phones).
+	if hotkey and not UserInputService.TouchEnabled then
+		local badge = Instance.new("TextLabel")
+		badge.Name = "Hotkey"
+		badge.AnchorPoint = Vector2.new(1, 0)
+		badge.Position = UDim2.new(1, 4, 0, -4)
+		badge.Size = UDim2.fromOffset(18, 18)
+		badge.BackgroundColor3 = C.gold
+		badge.TextColor3 = Color3.fromRGB(20, 16, 10)
+		badge.FontFace = Brand.Fonts.bodyBold
+		badge.TextSize = 11
+		badge.Text = hotkey
+		local bc = Instance.new("UICorner")
+		bc.CornerRadius = UDim.new(1, 0)
+		bc.Parent = badge
+		badge.Parent = b
+	end
 	b.MouseEnter:Connect(function()
 		stroke.Transparency = 0
 		b.BackgroundTransparency = 0
 	end)
 	b.MouseLeave:Connect(function()
 		stroke.Transparency = 0.25
-		b.BackgroundTransparency = 0.15
+		b.BackgroundTransparency = 0.12
 	end)
 	b.Activated:Connect(onPress)
 	b.Parent = parent
@@ -126,7 +143,7 @@ end
 function QuickDock.start()
 	-- On a phone (a short screen) the keys are smaller and sit high, clear of the thumbstick.
 	local short = Root.size().Y < 520
-	SIZE = if short then 46 else 62
+	SIZE = if short then 50 else 66
 	local f = Instance.new("Frame")
 	f.Name = "QuickDock"
 	f.BackgroundTransparency = 1

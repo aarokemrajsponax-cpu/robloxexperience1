@@ -17,6 +17,7 @@ local Workspace = game:GetService("Workspace")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local Config = require(ReplicatedStorage.Shared.Config)
+local Layout = require(ReplicatedStorage.Shared.Layout)
 local CameraRig = require(script.Parent.Parent.Camera)
 local Sound = require(script.Parent.Parent.Sound)
 
@@ -65,30 +66,27 @@ local function folder(): Instance
 	return f :: Instance
 end
 
--- The grounds the show covers: the house's own footprint (measured once), with a margin.
+-- The grounds the show covers: the house's own footprint (its rooms, from Layout; never the
+-- city across the street), with a margin; its height is the highest roof inside it, measured once.
 local function grounds(): { min: Vector3, max: Vector3 }
 	if bounds then
 		return bounds
 	end
-	local lo = Vector3.new(-80, 0, -40)
-	local hi = Vector3.new(120, 40, 185)
+	local lo = Vector3.new(Layout.Salon.minX, 0, Layout.Foyer.minZ - 4)
+	local hi = Vector3.new(Layout.Ballroom.maxX, 60, Layout.Ballroom.maxZ)
 	local maison = Workspace:FindFirstChild("Maison")
 	if maison then
-		local x0, z0, x1, z1, y1 = math.huge, math.huge, -math.huge, -math.huge, -math.huge
+		local top = 0
 		for _, d in maison:GetDescendants() do
 			if d:IsA("BasePart") then
 				local p = d.Position
-				-- (The street's far ends and stray props don't stretch the sky.)
-				if math.abs(p.X) < 400 and math.abs(p.Z) < 400 then
-					x0, z0 = math.min(x0, p.X), math.min(z0, p.Z)
-					x1, z1 = math.max(x1, p.X), math.max(z1, p.Z)
-					y1 = math.max(y1, p.Y)
+				if p.X >= lo.X and p.X <= hi.X and p.Z >= lo.Z and p.Z <= hi.Z then
+					top = math.max(top, p.Y + d.Size.Y / 2)
 				end
 			end
 		end
-		if x0 < x1 and z0 < z1 then
-			lo = Vector3.new(x0, 0, z0)
-			hi = Vector3.new(x1, math.max(20, y1), z1)
+		if top > 0 then
+			hi = Vector3.new(hi.X, math.min(top, 90), hi.Z)
 		end
 	end
 	local margin = cfg().margin
@@ -406,7 +404,8 @@ local function sites(): (Vector3, Vector3)
 	local g = grounds()
 	local c = cfg()
 	local x = randomIn(g.min.X, g.max.X)
-	local z = randomIn(g.min.Z, g.max.Z)
+	-- (From the house's front wall back: in front of it, a shell bursts out of the watcher's view.)
+	local z = randomIn(math.max(g.min.Z, Layout.Foyer.minZ), g.max.Z)
 	local from = Vector3.new(x, 0, z)
 	local top = Vector3.new(x + randomIn(-12, 12), g.max.Y + randomIn(c.heightMin, c.heightMax), z + randomIn(-12, 12))
 	return from, top
@@ -466,12 +465,15 @@ local watchKey: TextButton? = nil
 local function shot(i: number): CFrame
 	local g = grounds()
 	local centre = (g.min + g.max) / 2
-	local sky = Vector3.new(centre.X, g.max.Y + (cfg().heightMin + cfg().heightMax) / 2, centre.Z)
+	-- Aimed low enough that the roofline sits along the bottom of the picture, the show above it.
+	local sky = Vector3.new(centre.X, g.max.Y + cfg().heightMin + 10, centre.Z)
 	local back = cfg().watchDistance
+	-- Over the street, in front of the buildings opposite (and well short of the city's towers).
+	local front = Layout.Foyer.minZ - back
 	local spots = {
-		Vector3.new(centre.X - 90, g.max.Y + 20, g.min.Z - back),
-		Vector3.new(centre.X + 90, g.max.Y + 35, g.min.Z - back * 0.9),
-		Vector3.new(centre.X, g.max.Y + 70, g.min.Z - back * 1.15),
+		Vector3.new(centre.X - 60, g.max.Y - 15, front),
+		Vector3.new(centre.X + 60, g.max.Y - 5, front + 8),
+		Vector3.new(centre.X, g.max.Y + 10, front - 6),
 	}
 	local eye = spots[(i - 1) % #spots + 1]
 	return CFrame.lookAt(eye, sky)
@@ -530,12 +532,15 @@ local function offerWatch(on: boolean)
 	end
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "FireworksWatch"
+	gui.IgnoreGuiInset = false
 	gui.ResetOnSpawn = false
 	gui.DisplayOrder = 25
 	local k = Instance.new("TextButton")
 	k.Name = "Watch"
-	k.AnchorPoint = Vector2.new(0.5, 0)
-	k.Position = UDim2.new(0.5, 0, 0, 74)
+	-- Low in the middle of the screen: clear of the notices at the top that announce the show,
+	-- and of the Eat key below it.
+	k.AnchorPoint = Vector2.new(0.5, 1)
+	k.Position = UDim2.new(0.5, 0, 1, -190)
 	k.Size = UDim2.fromOffset(260, 44)
 	k.BackgroundColor3 = Color3.fromRGB(176, 140, 72)
 	k.TextColor3 = Color3.fromRGB(20, 16, 10)

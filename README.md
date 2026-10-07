@@ -257,14 +257,26 @@ a Nightly attempt or a Mythic's odds.
   curio), the Treasure Hunt, the Brainrot Parade (meme curios loose in the house to catch),
   Disco Night (a mirror ball and colour-cycling Ballroom lights; a Disco Ball curio), and a Night
   of Curios (finds twice as likely). Admin Abuse Night runs them all at once.
-- **Suite spectacles**: fireworks, a meme takeover, or a golden transformation, played in your
-  own Suite from the bell.
+- **Suite spectacles**, played in your own Suite from the bell: **fireworks** (a 45-second show
+  over the whole estate; your camera goes out across the street to watch it, and comes back with
+  the key or any step), the **Meme Takeover** (ninety seconds in six acts: a warning siren, a
+  portal spewing memes that bounce off the walls, a conga line dancing round you under disco
+  lights, memes raining from the ceiling with confetti, a giant boss meme with laser eyes, then
+  chaos and a confetti finale), or a golden transformation.
+- **Fireworks you can actually see**: every show (Suite Fireworks, the Fireworks salute, the Grand
+  Salute, the Midnight Finale) bursts in great shells 50 to 90 studs across, the night air
+  clears while it plays, every burst lights the screen even indoors, and a **Watch the fireworks**
+  key takes anyone's camera outside to see it (the buyer's goes at once).
+- **The quick dock** (left of the screen): **Collection** (C), **Trade** (T: everyone in the house
+  with a Trade key each, and your past trades), **Wardrobe** (V) and **Gems**, one tap away.
 - **The Menu** (top of the screen): the Collection, Trading, Gems, the Boutique, Wardrobe,
   Ledger, Register, guest book, Circle, How to play, Settings.
 - **The Terrace**, on the Obsidian Room's roof, through French doors in the Club hall's east
   wall, open every evening: café tables, sun loungers, a fire pit, the Gold Key's cabana, and
   the Terrace Bar (snacks and drinks for Gilt, none with alcohol; three house specials for
-  Robux at the price shown). Weather falls on it for real.
+  Robux at the price shown). **You eat it yourself**: click (or tap, or F, or the Take a bite
+  key) and your guest lifts it, takes a bite or a sip (crumbs or bubbles, a crunch or a gulp),
+  and it gets smaller piece by piece until it's gone. Weather falls on it for real.
 - **The house dresses for every season**: lanterns for All Hallows (and Lights Out by
   candlelight), garlands and a wreath for Yuletide (and wrapped parcels with ribbon fuses),
   copper candelabra for The Long Table, flowers in the season's colour all year.

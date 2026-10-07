@@ -24,7 +24,8 @@ local stack = Instance.new("Frame")
 stack.Name = "PerkChips"
 stack.BackgroundTransparency = 1
 stack.AnchorPoint = Vector2.new(0, 0.5)
-stack.Position = UDim2.new(0, 12, 0.42, 0)
+-- (Just right of the quick dock down the left edge.)
+stack.Position = UDim2.new(0, 86, 0.42, 0)
 stack.Size = UDim2.fromOffset(CHIP_WIDTH, 0)
 stack.AutomaticSize = Enum.AutomaticSize.Y
 stack.Parent = Root.hud

@@ -203,7 +203,7 @@ block (that's where most of the money is):
 | `Gold-Leaf Spritz` | 75 | the Terrace Bar: a glowing spritz with gold leaf to hold and sip (no alcohol; cosmetic) |
 | `Macaron Tower` | 149 | the Terrace Bar: a tower of twelve macarons with sparkles (cosmetic) |
 | `Suite Fireworks` | 199 | a 45-second fireworks show over the whole estate (for the buyer's screen), played from the Suite when you choose |
-| `Meme Takeover` | 299 | the meme curios bounce round your Suite for twenty seconds |
+| `Meme Takeover` | 299 | ninety seconds, six acts: a meme portal, a conga line round you, meme rain, a giant laser-eyed boss meme, a confetti finale |
 | `Golden Transformation` | 499 | your Suite's lights turn gold and gold leaf falls |
 | `Gem Pouch` | 199 | 250 Gems, for the Cabinet's curios (each at a fixed Gem price) |
 | `Gem Case` | 799 | 1,100 Gems |

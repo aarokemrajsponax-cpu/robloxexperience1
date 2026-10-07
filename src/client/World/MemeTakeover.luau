@@ -99,8 +99,16 @@ local function actor(parent: Instance, c: any, size: number, at: Vector3): Actor
 	return { part = p, gui = bb, glyph = g, size = size, v = Vector3.zero, at = at, spin = 0, phase = math.random() * 10, home = math.random() * math.pi * 2 }
 end
 
+local lastCaption: TextLabel? = nil
+
 local function caption(gui: ScreenGui, text: string, colour: Color3, hold: number)
+	-- (One at a time: a new line replaces the last at once.)
+	local prev = lastCaption
+	if prev then
+		prev:Destroy()
+	end
 	local label = Instance.new("TextLabel")
+	lastCaption = label
 	label.BackgroundTransparency = 1
 	label.AnchorPoint = Vector2.new(0.5, 0.5)
 	label.Position = UDim2.fromScale(0.5, 0.22)

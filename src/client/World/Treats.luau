@@ -118,14 +118,20 @@ local function shrink(model: Model)
 	local eaten = 1 - math.clamp(left / total, 0, 1)
 	local pieces = edibles(model)
 	local gone = math.floor(#pieces * eaten + 0.001)
+	-- (Changed on this screen only: every screen does the same from the same counter.)
 	for i, p in pieces do
 		if i <= gone then
-			p.LocalTransparencyModifier = 1
+			p.Transparency = 1
 		end
 	end
 	for _, d in model:GetDescendants() do
 		if d:IsA("BasePart") and d.Name == "Drink" then
-			d.LocalTransparencyModifier = math.clamp(eaten * 0.95, 0, 0.95)
+			local base = d:GetAttribute("BaseTransparency")
+			if type(base) ~= "number" then
+				base = d.Transparency
+				d:SetAttribute("BaseTransparency", base)
+			end
+			d.Transparency = (base :: number) + (0.95 - (base :: number)) * math.clamp(eaten, 0, 1)
 		end
 	end
 end
@@ -249,6 +255,7 @@ local function buildKeys()
 	end
 	local g = Instance.new("ScreenGui")
 	g.Name = "MaisonEat"
+	g.IgnoreGuiInset = false
 	g.ResetOnSpawn = false
 	g.DisplayOrder = 12
 	g.Enabled = false

@@ -379,15 +379,15 @@ local defaults = {
 		finaleRate = 9, -- shells a second in the finale barrage
 		finaleShare = 0.22, -- the last part of a show that is its finale
 		closingWillows = 7, -- great gold willows in a row to close
-		heightMin = 70, -- studs above the highest roof a shell bursts, at the least
-		heightMax = 190, -- ...and at the most
+		heightMin = 50, -- studs above the highest roof a shell bursts, at the least
+		heightMax = 150, -- ...and at the most
 		margin = 60, -- studs past the house's footprint shells may go up from
 		maxLive = 70, -- shells in the sky at once, at most (kinder to slower computers)
 		size = 2.6, -- how big every shell is (1: a town's show; 2.6: a Japanese festival's great shells)
 		brightness = 3, -- how brightly the stars glow (ParticleEmitter.Brightness)
 		screenGlow = 0.05, -- how much a big burst lights the whole screen (even from indoors)
 		clearDensity = 0.06, -- the night air thins to this while a show is on
-		watchDistance = 190, -- studs across the street the watching camera stands from the house
+		watchDistance = 100, -- studs in front of the house the watching camera stands (over the street)
 	},
 
 	-- Suite spectacles drawn on the buyer's screen (World/MemeTakeover).
