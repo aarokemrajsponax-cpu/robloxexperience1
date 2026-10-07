@@ -1138,10 +1138,26 @@ do
 	check("and with time held, sits them down", Workspace:GetAttribute("PianoPlayer") == 9303)
 	piano(cy, { op = "stand" })
 
-	-- The house's daily taste: a little free time every day, so anyone can try the keys.
-	Config.data.Piano.taste = taste
+	-- AJKR's call: the piano is pay-only. Nobody (the owner, anyone in Studio) gets free time.
+	check("the piano is pay-only as shipped: no daily taste", taste == 0)
+	check("...and no owner's free sitting", Config.data.Piano.ownerFree == false)
 	local dee = pianist("Dee", 9304)
 	local deeData = profiles[dee].Data
+	Piano.isOwner = function(p)
+		return p == dee
+	end
+	r = piano(dee, { op = "state" })
+	check("even the owner (or a Studio tester) is offered no free time", r.free == false and r.taste == nil, r.free)
+	r = piano(dee, { op = "sit" })
+	check("...and can't sit down without buying time", r.ok == false and r.needTime == true and Workspace:GetAttribute("PianoPlayer") == nil)
+	Piano.isOwner = function()
+		return false
+	end
+
+	-- The switches still work if AJKR ever turns them on.
+	taste = 30
+	Config.data.Piano.taste = taste
+	Config.data.Piano.ownerFree = true
 	r = piano(dee, { op = "state" })
 	check("a guest with no time is offered today's free taste", r.taste == taste and r.free == false and taste > 0, r.taste)
 	r = piano(dee, { op = "sit" })
@@ -1172,6 +1188,8 @@ do
 	Piano.isOwner = function()
 		return false
 	end
+	Config.data.Piano.taste = 0
+	Config.data.Piano.ownerFree = false
 end
 
 ---------------------------------------------------------------------------------------------------

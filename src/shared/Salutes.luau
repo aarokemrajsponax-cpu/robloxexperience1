@@ -6,14 +6,17 @@
 
 local Salutes = {}
 
-export type Salute = { id: string, name: string, line: string, seconds: number, announce: string, robux: number, global: boolean }
+export type Salute = { id: string, name: string, product: string, line: string, seconds: number, announce: string, robux: number, global: boolean, scale: number? }
 
+-- `product`: the developer product's name in the Creator Dashboard is "Salute: " .. product.
+-- `scale`: how big its fireworks are (World/Fireworks).
 Salutes.List = {
-	{ id = "goldLeaf", name = "A Shower of Gold Leaf", line = "Gold leaf drifts down over every guest in the house.", seconds = 18, announce = "{name} showered the house in gold leaf.", robux = 49, global = false },
-	{ id = "encore", name = "An Encore", line = "The Pianist plays an encore, and a spotlight finds you wherever you are.", seconds = 25, announce = "{name} asked the Pianist for an encore.", robux = 79, global = false },
-	{ id = "chandelier", name = "The Chandelier Blaze", line = "Every candle in the house flares bright at once.", seconds = 20, announce = "{name} set the chandeliers blazing.", robux = 99, global = false },
-	{ id = "fireworks", name = "Fireworks over the House", line = "Gold fireworks over the roofs, seen from every window and the Terrace.", seconds = 25, announce = "{name} lit fireworks over the house.", robux = 149, global = false },
-	{ id = "grand", name = "The Grand Salute", line = "All of it at once, and your name announced in every house on Roblox.", seconds = 35, announce = "{name} gave the house the Grand Salute.", robux = 399, global = true },
+	{ id = "goldLeaf", name = "A Shower of Gold Leaf", product = "Gold Leaf", line = "Gold leaf drifts down over every guest in the house.", seconds = 18, announce = "{name} showered the house in gold leaf.", robux = 75, global = false },
+	{ id = "encore", name = "An Encore", product = "Encore", line = "The Pianist plays an encore, and a spotlight finds you wherever you are.", seconds = 25, announce = "{name} asked the Pianist for an encore.", robux = 125, global = false },
+	{ id = "chandelier", name = "The Chandelier Blaze", product = "Chandelier", line = "Every candle in the house flares bright at once.", seconds = 20, announce = "{name} set the chandeliers blazing.", robux = 175, global = false },
+	{ id = "fireworks", name = "Fireworks over the House", product = "Fireworks", line = "A full fireworks show over the whole estate: rockets from every side of the grounds, a finale and gold willows, seen from every window.", seconds = 45, announce = "{name} lit fireworks over the house.", robux = 299, global = false, scale = 1 },
+	{ id = "grand", name = "The Grand Salute", product = "Grand Salute", line = "All of it at once (gold leaf, the encore, the chandeliers, a bigger show) and your name announced in every house on Roblox.", seconds = 60, announce = "{name} gave the house the Grand Salute.", robux = 599, global = true, scale = 1.3 },
+	{ id = "finale", name = "The Midnight Finale", product = "Midnight Finale", line = "A ten-second countdown on every screen, then the biggest show the house can fire: ninety seconds of it, gold leaf and blazing chandeliers, your name in every house.", seconds = 100, announce = "{name} lit the Midnight Finale.", robux = 999, global = true, scale = 1.6 },
 } :: { Salute }
 
 Salutes.byId = {} :: { [string]: Salute }
@@ -21,13 +24,18 @@ for _, s in Salutes.List do
 	Salutes.byId[s.id] = s
 end
 
--- The effects a salute plays: the Grand Salute plays all four.
+-- The effects a salute plays: the Grand Salute plays all four; the Finale counts down first.
 function Salutes.effects(id: string): { string }
 	if id == "grand" then
 		return { "goldLeaf", "encore", "chandelier", "fireworks" }
+	elseif id == "finale" then
+		return { "countdown", "goldLeaf", "chandelier", "fireworks" }
 	end
 	return { id }
 end
+
+-- Seconds of countdown before a salute's show (the Finale's ten).
+Salutes.COUNTDOWN = 10
 
 function Salutes.line(id: string, name: string): string
 	local s = Salutes.byId[id]

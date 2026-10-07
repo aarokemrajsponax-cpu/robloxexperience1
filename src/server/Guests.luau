@@ -205,7 +205,7 @@ local function arrive(player: Player)
 	player.DevEnableMouseLock = false
 	-- If the profile is slow (another server still holds it, or the data store is busy), the
 	-- guest still gets a character to walk around in.
-	task.delay(4, spawnCharacter, player)
+	task.delay(1, spawnCharacter, player)
 end
 
 local function welcome(player: Player, data: Profiles.Data)

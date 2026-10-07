@@ -21,6 +21,7 @@ local BoutiqueRoom = require(script.Parent.Boutique)
 local VaultRoom = require(script.Parent.Vault)
 local Terrace = require(script.Parent.Terrace)
 local SuiteRoom = require(script.Parent.Suite)
+local Passages = require(script.Parent.Passages)
 
 local Build = {}
 
@@ -79,6 +80,7 @@ function Build.run(options: Options?): Folder
 	step("the Vault", function() VaultRoom.build(root) end)
 	step("the Terrace", function() Terrace.build(root) end)
 	step("the Suite", function() SuiteRoom.build(root) end)
+	step("the Vault door and the lift", function() Passages.build(root) end)
 	step("the doorway sills", function()
 		local sills = Kit.folder(root, "Sills")
 		for _, d in Layout.Doorways do

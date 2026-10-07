@@ -457,10 +457,10 @@ check("a guest who already has a character isn't given another", owner.loads == 
 ---------------------------------------------------------------------------------------------------
 local ben = newPlayer("Ben", 2, nil)
 PlayersService.PlayerAdded:Fire(ben)
-advance(3.9)
+advance(0.9)
 check("no character before the profile or the fallback", ben.Character == nil)
 advance(0.5)
-check("a slow profile still gets a character after four seconds", ben.Character ~= nil and ben.loads == 1)
+check("a slow profile still gets a character after a second", ben.Character ~= nil and ben.loads == 1)
 check("placed where guests arrive", ben.Character ~= nil and near(ben.Character:GetPivot().Position, spawnAt, 0.1))
 profiles[ben] = profile(false)
 loaded:Fire(ben, profiles[ben])

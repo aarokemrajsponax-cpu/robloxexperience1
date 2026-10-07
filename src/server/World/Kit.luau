@@ -99,7 +99,8 @@ function Kit.span(parent: Instance, name: string, a: Vector3, b: Vector3, look: 
 end
 
 function Kit.cylinder(parent: Instance, name: string, length: number, diameter: number, cframe: CFrame, look: Look, opts: { [string]: any }?): Part
-	local o: { [string]: any } = opts or {}
+	-- (A copy: the caller's options are often shared by many parts, and must stay as they were.)
+	local o: { [string]: any } = if opts then table.clone(opts) else {}
 	o.shape = Enum.PartType.Cylinder
 	return Kit.part(parent, name, Vector3.new(length, diameter, diameter), cframe, look, o)
 end
@@ -111,7 +112,7 @@ function Kit.post(parent: Instance, name: string, height: number, diameter: numb
 end
 
 function Kit.ball(parent: Instance, name: string, diameter: number, position: Vector3, look: Look, opts: { [string]: any }?): Part
-	local o: { [string]: any } = opts or {}
+	local o: { [string]: any } = if opts then table.clone(opts) else {}
 	o.shape = Enum.PartType.Ball
 	return Kit.part(parent, name, Vector3.new(diameter, diameter, diameter), CFrame.new(position), look, o)
 end

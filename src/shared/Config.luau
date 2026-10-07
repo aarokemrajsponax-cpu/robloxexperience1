@@ -200,6 +200,7 @@ local defaults = {
 		salute_chandelier = 0,
 		salute_fireworks = 0,
 		salute_grand = 0,
+		salute_finale = 0,
 		-- More of what guests buy (developer products, found by their names in ProductConfig).
 		-- AJKR's developer products (Creator Hub ids, pasted so nothing depends on names).
 		giltPurse1 = 3716215371, -- Gilt Purse
@@ -362,12 +363,24 @@ local defaults = {
 		volume = 1.2, -- each note's volume
 		heard = 80, -- studs a note carries from the piano (the Foyer, and faintly the street and stair)
 		maxSeconds = 3600, -- the most piano time the house offers to hold at once (a purchase is never cut)
-		-- Every guest may play free for this long each day (UTC), so anyone can try the keys
-		-- before buying time. 0 turns it off.
-		taste = 30,
-		-- The owner (and anyone, in Studio) plays free, for testing and for fun.
-		ownerFree = true,
+		-- Seconds anyone may play free each day (UTC). 0: the piano is pay-only (AJKR's call).
+		taste = 0,
+		-- Whether the owner (and anyone, in Studio) plays free. Off: the piano is pay-only for
+		-- everyone. (In Studio, buying is a test purchase that charges nothing, so it can still be tried.)
+		ownerFree = false,
 		ownerSeconds = 1800, -- how long one free sitting lasts before the owner gets up
+	},
+
+	-- The fireworks (World/Fireworks): the Salutes' show over the house, and the Suite's.
+	Fireworks = {
+		rate = 3, -- shells a second through the body of a show (times the show's scale)
+		finaleRate = 9, -- shells a second in the finale barrage
+		finaleShare = 0.22, -- the last part of a show that is its finale
+		closingWillows = 7, -- great gold willows in a row to close
+		heightMin = 85, -- studs above the highest roof a shell bursts, at the least
+		heightMax = 170, -- ...and at the most
+		margin = 60, -- studs past the house's footprint shells may go up from
+		maxLive = 70, -- shells in the sky at once, at most (kinder to slower computers)
 	},
 
 	-- Commissions (Appendix I1): Gilt for the Evening's and the Week's.
@@ -520,8 +533,9 @@ local defaults = {
 		maxSpeed = 34, -- no combination of events and perks moves a guest faster than this
 		npcWalkSpeed = 9,
 		-- Guests and staff are drawn at this size, so the house feels this much bigger around
-		-- them (0.8: every room a quarter bigger, half as much floor again for each guest).
-		guestScale = 0.8,
+		-- them (0.72: every room about two-fifths bigger than at Roblox's own size, twice the
+		-- floor for each guest).
+		guestScale = 0.72,
 		-- Where guests appear: "foyer" (lit, in the middle of everything) or "street" (a first
 		-- visit starts outside the doors at night).
 		firstArrival = "foyer",
@@ -600,6 +614,10 @@ local defaults = {
 		-- pitch and level that suit it (levels measured to an even peak). Roblox's built-in sounds
 		-- are the last resort.
 		LibrarySounds = {
+			-- The fireworks (Pro Sound Effects, free in any experience): deep booms, crackle, a barrage.
+			fireworkBoom = { { id = "rbxassetid://9125484367", pitch = 1, volume = 2.2 }, { id = "rbxassetid://9125484511", pitch = 1, volume = 2.2 }, { id = "rbxassetid://9125484743", pitch = 1, volume = 2.2 }, { id = "rbxassetid://9125484526", pitch = 1, volume = 2.2 } },
+			fireworkCrackle = { { id = "rbxassetid://9114447505", pitch = 1, volume = 1.6 } },
+			fireworkBarrage = { { id = "rbxassetid://9114447178", pitch = 1, volume = 1.8 }, { id = "rbxassetid://9112780898", pitch = 1, volume = 1.8 } },
 			chime = { { id = "rbxassetid://9119802003", pitch = 1, volume = 4.00 }, { id = "rbxassetid://9119802009", pitch = 1, volume = 4.00 } }, -- the correct chime, climbing a step with each one in a streak
 			combo = { { id = "rbxassetid://9116394876", pitch = 1, volume = 4.00 } }, -- a streak called out
 			shimmer = { { id = "rbxassetid://9116394876", pitch = 1.1, volume = 4.00 }, { id = "rbxassetid://9116395089", pitch = 1, volume = 4.00 } }, -- a gilded piece filed

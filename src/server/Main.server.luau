@@ -22,13 +22,21 @@ local Build = require(ReplicatedStorage.Shared.Build)
 print(string.format("[Maison] %s (server)", Build.label))
 
 local failed: { string } = {}
+local bootStarted = os.clock()
 -- Runs one part of the house's start; a failure is reported (with where it happened) and the
--- rest of the house carries on.
+-- rest of the house carries on. The step under way is published (MaisonBoot), and any step that
+-- takes a while says so in Output, so a slow start can always be pinned on its cause.
 local function boot(name: string, fn: () -> ())
 	local message = ""
+	local began = os.clock()
+	Workspace:SetAttribute("MaisonBoot", name)
 	local ok = xpcall(fn, function(e: any)
 		message = debug.traceback(tostring(e))
 	end)
+	local took = os.clock() - began
+	if took > 1 then
+		print(string.format("[Maison] %s took %.1f s (%.1f s since the server started).", name, took, os.clock() - bootStarted))
+	end
 	if not ok then
 		table.insert(failed, name)
 		warn(string.format("[Maison] %s didn't start: %s", name, message))
@@ -97,6 +105,10 @@ end)
 
 -- Seats everywhere (the sofas, the loungers, your Suite's furniture).
 boot("Seating", require(script.Parent.Seating).start)
+
+-- The Vault's door (it opens as you come near) and the lift between the Suite and the Vault.
+local VaultAccess = require(script.Parent.VaultAccess)
+boot("The Vault door and the lift", VaultAccess.start)
 
 local Season = require(script.Parent.Season)
 Season.dress = require(script.Parent.World.SeasonDress).apply
@@ -189,6 +201,7 @@ end
 Concierge.isSeated = function(player)
 	return TableService.isSeated(player) or DuelService.isSeated(player) or BallroomService.isSeated(player)
 end
+VaultAccess.isSeated = Concierge.isSeated
 -- Lights Out records: Last Lamps, top-five finishes and Keys (only evenings with enough real
 -- guests count), and the weekly board of points.
 BallroomService.onFinished = function(player, place, keys, counted)
@@ -414,8 +427,9 @@ end)
 local Profiles = require(script.Parent.Profiles)
 boot("Profiles", Profiles.start)
 
+Workspace:SetAttribute("MaisonBoot", "open")
 if #failed == 0 then
-	print("[Maison] The house is open.")
+	print(string.format("[Maison] The house is open (%.1f s).", os.clock() - bootStarted))
 else
 	warn("[Maison] The house is open, but these parts didn't start: " .. table.concat(failed, ", "))
 end

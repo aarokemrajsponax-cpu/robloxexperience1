@@ -60,6 +60,8 @@ local function after(result: any, done: string?)
 		Toast.show("The Boutique", tostring(result.why or "Not just now."), 3)
 	elseif result.credited then
 		Toast.show("The Boutique", "Paid with your credit. It's yours.", 3)
+	elseif type(result.notice) == "table" then
+		Toast.show(tostring(result.notice.title or "The Boutique"), tostring(result.notice.line or ""), 5)
 	elseif done then
 		Toast.show("The Boutique", done, 3)
 	end
@@ -297,16 +299,25 @@ local function render()
 			Theme.list(texts, 2).HorizontalAlignment = Enum.HorizontalAlignment.Left
 			Theme.text(texts, sa.name, 17, "display", { LayoutOrder = 1, TextXAlignment = Enum.TextXAlignment.Left })
 			Theme.text(texts, sa.line or "", 12, "body", { LayoutOrder = 2, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Brand.Colours.smoke, TextWrapped = true })
-			if sa.ready then
-				local k = Theme.key(r, robux(sa.price), true, function()
+			-- Always priced. On sale: buy it. In Studio before its product exists: preview it free.
+			local label = if sa.ready then robux(sa.price) elseif sa.preview then "Preview" else robux(sa.price)
+			local k = Theme.key(r, label, sa.ready or sa.preview, function()
+				if sa.ready then
 					after(Closet.ask({ op = "salute", id = sa.id }))
-				end, 150)
-				k.AnchorPoint = Vector2.new(1, 0.5)
-				k.Position = UDim2.new(1, -10, 0.5, 0)
-				k.Size = UDim2.fromOffset(150, 36)
-			else
-				local t = Theme.text(r, "Soon", 12, "caps", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -14, 0.5, 0) })
-				t.TextColor3 = Brand.Colours.dim
+				elseif sa.preview then
+					after(Closet.ask({ op = "salutePreview", id = sa.id }))
+				else
+					Toast.show("The Boutique", "This salute goes on sale soon.", 3)
+				end
+			end, 150)
+			k.Name = "Buy"
+			k.AnchorPoint = Vector2.new(1, 0.5)
+			k.Position = UDim2.new(1, -10, 0.5, 0)
+			k.Size = UDim2.fromOffset(150, 36)
+			if sa.preview then
+				-- The price it will sell at, under the preview key.
+				local t = Theme.text(r, robux(sa.price) .. " when on sale", 10, "caps", { AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -10, 1, -2), Size = UDim2.fromOffset(150, 12) })
+				t.TextColor3 = Brand.Colours.lightGold
 			end
 		end
 	elseif currentTab == "today" or currentTab == "week" then
@@ -342,7 +353,17 @@ local function render()
 		end
 		note(frame, "Style and comfort only. Nothing here changes a score.", add())
 		if s.goldKey.owned then
-			Theme.text(frame, "It's yours.", 14, "caps", { LayoutOrder = add() })
+			-- Owned: said plainly, with what it costs (so it never reads as "can't be bought").
+			local priceLine = if type(s.goldKey.price) == "number" then " · " .. robux(s.goldKey.price) else ""
+			Theme.text(frame, "You hold the Gold Key" .. priceLine, 14, "caps", { LayoutOrder = add(), TextColor3 = Brand.Colours.lightGold })
+			note(frame, "Bought once, kept for good. Give one to a friend below.", add())
+			if s.goldKey.studio then
+				-- Testing in Studio: hand the test Key back to try the purchase again.
+				local k = Theme.key(frame, "Studio: hand back the test Key", false, function()
+					after(Closet.ask({ op = "studioReset" }))
+				end, 320)
+				k.LayoutOrder = add()
+			end
 		else
 			buyKey(frame, "The Gold Key", s.goldKey.price, add(), function()
 				after(Closet.ask({ op = "goldKey" }))

@@ -41,7 +41,7 @@ local function run()
 			local q = table.remove(queue, 1) :: Queued
 			local s = Salutes.byId[q.id]
 			if s then
-				Remotes.event("Salute"):FireAllClients({ op = "salute", id = q.id, by = q.name, userId = q.userId, seconds = s.seconds, effects = Salutes.effects(q.id), line = Salutes.line(q.id, q.name) })
+				Remotes.event("Salute"):FireAllClients({ op = "salute", id = q.id, by = q.name, userId = q.userId, seconds = s.seconds, scale = s.scale or 1, effects = Salutes.effects(q.id), line = Salutes.line(q.id, q.name) })
 				SaluteService.note(Salutes.line(q.id, q.name), s.global)
 				task.wait(s.seconds + 2)
 			end

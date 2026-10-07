@@ -4,6 +4,6 @@
 -- see whether Studio has the latest code from GitHub.
 
 return {
-	number = 43,
-	label = "Build 43 · 7 Oct · the house loads in about a second (flicker fix 35x faster)",
+	number = 44,
+	label = "Build 44 · 7 Oct · vault door, lift, real fireworks, salutes on sale, pay-only piano",
 }

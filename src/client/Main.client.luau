@@ -210,6 +210,7 @@ start("The Terrace Bar", function()
 	require(script.Parent.World.Treats).start()
 end)
 start("Salutes", SaluteView.start)
+start("The lift", require(script.Parent.World.LiftView).start)
 start("Events", EventBanner.start)
 -- Purchases: the perks this guest holds, and what the whole house sees (decrees, rains).
 start("Perks", function()

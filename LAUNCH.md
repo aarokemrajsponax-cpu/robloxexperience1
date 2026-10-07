@@ -191,7 +191,7 @@ block (that's where most of the money is):
 | `Golden Hour for Everyone` | 99 | double Gilt for everyone in the server for 15 minutes, buyer announced |
 | `The Gold Key` | 499 | +20% Gilt, the Study, gold nameplate and Gold Key looks (or make a game pass and paste its id in `Products.goldKey`) |
 | `The Introduction` | 99 | the first-week starter pack |
-| `Salute: Gold Leaf` / `Salute: Encore` / `Salute: Chandelier` / `Salute: Fireworks` / `Salute: Grand Salute` | 49 / 79 / 99 / 149 / 399 | a moment for the whole house |
+| `Salute: Gold Leaf` / `Salute: Encore` / `Salute: Chandelier` / `Salute: Fireworks` / `Salute: Grand Salute` / `Salute: Midnight Finale` | 75 / 125 / 175 / 299 / 599 / 999 | a moment for the whole house (Fireworks: a 45-second show over the whole estate; Grand Salute: everything, announced in every house; Midnight Finale: a ten-second countdown on every screen, then a 90-second show, announced in every house). Until each exists, Studio shows a free Preview button. |
 | `Boutique 49` … `Boutique 599` (ten: 49, 79, 99, 149, 199, 249, 299, 399, 499, 599) | the number in the name | the Boutique's pieces at that price |
 | `Leather-Bound Ledger` | 299 | the Term's premium Ledger row |
 | `Season Collection` | 399 | the season's pieces |
@@ -202,7 +202,7 @@ block (that's where most of the money is):
 | `Piano Session 10 Minutes` | 899 | ten minutes at the piano |
 | `Gold-Leaf Spritz` | 75 | the Terrace Bar: a glowing spritz with gold leaf to hold and sip (no alcohol; cosmetic) |
 | `Macaron Tower` | 149 | the Terrace Bar: a tower of twelve macarons with sparkles (cosmetic) |
-| `Suite Fireworks` | 199 | a fireworks show over your Suite's terrace, played when you choose |
+| `Suite Fireworks` | 199 | a 45-second fireworks show over the whole estate (for the buyer's screen), played from the Suite when you choose |
 | `Meme Takeover` | 299 | the meme curios bounce round your Suite for twenty seconds |
 | `Golden Transformation` | 499 | your Suite's lights turn gold and gold leaf falls |
 | `Gem Pouch` | 199 | 250 Gems, for the Cabinet's curios (each at a fixed Gem price) |

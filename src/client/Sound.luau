@@ -541,38 +541,50 @@ end
 -- hears it (and, fainter, the street and the stair). The notes follow the Effects level, not the
 -- Music one: the piano is something the guest plays, and it must sound even with music off.
 --
--- Where each key's sound comes from, in order: its own recording (Config.Assets.PianoNotes);
--- the nearest key's recording that loads, retuned; the first middle-C recording that loads
--- (Config.Assets.PianoFallback), retuned. A recording that fails to load, or hasn't loaded
--- within a few seconds of being asked to play, is passed over from then on.
+-- Where each key's sound comes from: its own recording (Config.Assets.PianoNotes); while that is
+-- still loading, the nearest key whose recording has loaded, retuned; failing those, the first
+-- middle-C recording (Config.Assets.PianoFallback) that has loaded, retuned. Only a recording
+-- Roblox says can't be fetched is passed over for good: one that is merely slow (a first play in
+-- Studio fetches forty-odd sounds) is used the moment it arrives.
 local failedNotes: { [string]: boolean } = {}
+local readyNotes: { [string]: boolean } = {}
 local notesLoaded = false
-local LOAD_GRACE = 4 -- seconds a recording may take to load before the next one is tried
 
 local function usable(id: any): boolean
 	return type(id) == "string" and id ~= "" and not failedNotes[id]
 end
 
-local function noteSource(index: number): (string, number)
+-- The best source for a key, preferring recordings that have loaded (`loadedOnly`).
+local function pick(index: number, loadedOnly: boolean): (string, number)
 	local ids = (Config.data.Assets :: any).PianoNotes
 	if type(ids) == "table" then
 		-- The key itself, then its neighbours a semitone further each time (no further than a
 		-- fifth: past that a retuned note sounds like a different instrument).
 		for distance = 0, 7 do
 			for _, i in { index - distance, index + distance } do
-				if i >= 1 and i <= #ids and usable(ids[i]) then
-					return ids[i], 2 ^ ((index - i) / 12)
+				local id = ids[i]
+				if i >= 1 and i <= #ids and usable(id) and (readyNotes[id] or not loadedOnly) then
+					return id, 2 ^ ((index - i) / 12)
 				end
 			end
 		end
 	end
 	local lowest = Config.data.Piano.lowest
 	for _, id in ((Config.data.Assets :: any).PianoFallback or {}) :: { string } do
-		if usable(id) then
+		if usable(id) and (readyNotes[id] or not loadedOnly) then
 			return id, 2 ^ ((lowest + index - 1 - 60) / 12)
 		end
 	end
 	return "", 1
+end
+
+local function noteSource(index: number): (string, number)
+	local id, speed = pick(index, true)
+	if id ~= "" then
+		return id, speed
+	end
+	-- Nothing loaded yet: the key's own recording, which plays as soon as it arrives.
+	return pick(index, false)
 end
 
 -- Three voices a key, each holding its key's sound, so a note plays the instant it's struck and
@@ -600,6 +612,9 @@ local function voiceFor(index: number, here: boolean): Sound?
 		s.SoundGroup = pianoGroup
 		s.RollOffMode = Enum.RollOffMode.InverseTapered
 		s.RollOffMinDistance = 10
+		s.Loaded:Connect(function()
+			readyNotes[s.SoundId] = true
+		end)
 		v = { sound = s, id = "" }
 		list[n] = v
 	end
@@ -633,7 +648,9 @@ function Sound.preloadPiano()
 	task.spawn(function()
 		pcall(function()
 			ContentProvider:PreloadAsync(list, function(id: string, status: Enum.AssetFetchStatus)
-				if status == Enum.AssetFetchStatus.Failure then
+				if status == Enum.AssetFetchStatus.Success then
+					readyNotes[id] = true
+				elseif status == Enum.AssetFetchStatus.Failure then
 					failedNotes[id] = true
 				end
 			end)
@@ -652,23 +669,29 @@ function Sound.pianoNote(index: number, here: boolean?, gain: number?): boolean
 	s.Volume = Config.data.Piano.volume * (gain or 1)
 	s.TimePosition = 0
 	s:Play()
-	-- Not loaded a few seconds on (a loaded sound knows its length): this recording is passed
-	-- over, and the next key struck finds another source.
-	local function loaded(): boolean
-		local ok, length = pcall(function()
-			return s.TimeLength
-		end)
-		return not ok or length > 0
-	end
-	if not loaded() then
-		local id = s.SoundId
-		task.delay(LOAD_GRACE, function()
-			if not loaded() and s.SoundId == id then
-				failedNotes[id] = true
-			end
-		end)
+	-- A recording that plays has loaded: it's preferred from now on.
+	if s.IsLoaded then
+		readyNotes[s.SoundId] = true
 	end
 	return true
+end
+
+-- How the piano's recordings are doing (for the owner's notice when nothing sounds).
+function Sound.pianoHealth(): (number, number, number)
+	local total, ready, failed = 0, 0, 0
+	for _, key in { "PianoNotes", "PianoFallback" } do
+		for _, id in ((Config.data.Assets :: any)[key] or {}) :: { string } do
+			if type(id) == "string" and id ~= "" then
+				total += 1
+				if readyNotes[id] then
+					ready += 1
+				elseif failedNotes[id] then
+					failed += 1
+				end
+			end
+		end
+	end
+	return total, ready, failed
 end
 
 -- A soft rolled chord from the piano (the bench's welcome, when a guest comes to play).

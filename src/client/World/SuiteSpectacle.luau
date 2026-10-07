@@ -16,6 +16,7 @@ local Root = require(script.Parent.Parent.UI.Root)
 local Theme = require(script.Parent.Parent.UI.Theme)
 local Toast = require(script.Parent.Parent.UI.Toast)
 local Sound = require(script.Parent.Parent.Sound)
+local Fireworks = require(script.Parent.Fireworks)
 
 local SuiteSpectacle = {}
 
@@ -58,51 +59,10 @@ local function centreOf(box: { minX: number, maxX: number, minZ: number, maxZ: n
 	return Vector3.new((box.minX + box.maxX) / 2, Layout.Suite.floorY, (box.minZ + box.maxZ) / 2)
 end
 
--- Fireworks over the Suite's terrace: shells rise and burst into rings of sparks.
+-- Fireworks: the full show over the whole estate (World/Fireworks), seen best from the Suite's
+-- terrace, for its owner.
 local function fireworks(seconds: number)
-	local f = folder()
-	local base = centreOf(Layout.Suite.terrace)
-	local colours = { Color3.fromRGB(255, 90, 120), GOLD, Color3.fromRGB(120, 200, 255), Color3.fromRGB(170, 255, 150), Color3.fromRGB(220, 140, 255) }
-	local t0 = os.clock()
-	task.spawn(function()
-		while os.clock() - t0 < seconds and f.Parent do
-			local c = colours[math.random(1, #colours)]
-			local from = base + Vector3.new(math.random(-10, 10), 0, math.random(-10, 10))
-			local top = from + Vector3.new(0, math.random(26, 38), 0)
-			local shell = part(f, Vector3.new(0.6, 0.6, 0.6), from, c, Enum.PartType.Ball)
-			local rise = 0.9
-			local s0 = os.clock()
-			while os.clock() - s0 < rise do
-				shell.CFrame = CFrame.new(from:Lerp(top, (os.clock() - s0) / rise))
-				task.wait()
-			end
-			shell:Destroy()
-			pcall(Sound.play, "shimmer", 0.35)
-			local sparks = {}
-			for i = 1, 22 do
-				local a = i / 22 * math.pi * 2
-				local dir = Vector3.new(math.cos(a), math.sin(a * 3) * 0.4, math.sin(a)).Unit
-				table.insert(sparks, { p = part(f, Vector3.new(0.4, 0.4, 0.4), top, c, Enum.PartType.Ball), d = dir })
-			end
-			local b0 = os.clock()
-			task.spawn(function()
-				while os.clock() - b0 < 1.4 do
-					local k = (os.clock() - b0) / 1.4
-					for _, sp in sparks do
-						sp.p.CFrame = CFrame.new(top + sp.d * 12 * math.sqrt(k) - Vector3.new(0, 4 * k * k, 0))
-						sp.p.Transparency = k
-					end
-					task.wait()
-				end
-				for _, sp in sparks do
-					sp.p:Destroy()
-				end
-			end)
-			task.wait(0.5 + math.random() * 0.6)
-		end
-		task.wait(1.6)
-		f:Destroy()
-	end)
+	Fireworks.show(seconds, { scale = 1.15 })
 end
 
 -- The meme curios burst out and bounce around the drawing room.

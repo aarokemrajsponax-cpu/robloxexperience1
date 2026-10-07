@@ -10,7 +10,10 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
+local Brand = require(ReplicatedStorage.Shared.Brand)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Salutes = require(ReplicatedStorage.Shared.Salutes)
+local Fireworks = require(script.Parent.Fireworks)
 local Toast = require(script.Parent.Parent.UI.Toast)
 local Sound = require(script.Parent.Parent.Sound)
 
@@ -112,38 +115,50 @@ local function chandelier(seconds: number)
 	end)
 end
 
--- Fireworks over the roofs: seen from the street, the Terrace and every window.
-local function fireworks(seconds: number)
-	local rng = Random.new()
+-- Fireworks over the whole estate (World/Fireworks), as big as the salute is.
+local function fireworks(seconds: number, scale: number)
+	Fireworks.show(seconds, { scale = scale })
+end
+
+-- The Finale's countdown: ten great numbers on every screen, then the sky goes up.
+local function countdown(seconds: number)
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "FinaleCountdown"
+	gui.IgnoreGuiInset = true
+	gui.ResetOnSpawn = false
+	gui.DisplayOrder = 40
+	gui.Parent = player:WaitForChild("PlayerGui")
+	local label = Instance.new("TextLabel")
+	label.BackgroundTransparency = 1
+	label.AnchorPoint = Vector2.new(0.5, 0.5)
+	label.Position = UDim2.fromScale(0.5, 0.38)
+	label.Size = UDim2.fromScale(0.6, 0.3)
+	label.FontFace = Brand.Fonts.display
+	label.TextScaled = true
+	label.TextColor3 = Color3.fromRGB(255, 226, 150)
+	label.TextStrokeTransparency = 0.4
+	label.Text = ""
+	label.Parent = gui
+	local scaler = Instance.new("UIScale")
+	scaler.Parent = label
 	task.spawn(function()
-		local started = os.clock()
-		while os.clock() - started < seconds do
-			local at = Vector3.new(rng:NextNumber(-60, 90), rng:NextNumber(70, 105), rng:NextNumber(-40, 90))
-			local burst = anchor("Firework", at)
-			local e = Instance.new("ParticleEmitter")
-			e.Rate = 0
-			e.Lifetime = NumberRange.new(1.4, 2.2)
-			e.Speed = NumberRange.new(18, 26)
-			e.SpreadAngle = Vector2.new(180, 180)
-			e.Acceleration = Vector3.new(0, -9, 0)
-			e.Drag = 1.5
-			e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.9), NumberSequenceKeypoint.new(1, 0.1) })
-			e.LightEmission = 1
-			e.Color = colourSequence(if rng:NextNumber() < 0.5 then GOLD else { Color3.fromRGB(255, 255, 255), Color3.fromRGB(200, 220, 255) })
-			e.Parent = burst
-			e:Emit(90)
-			local flash = Instance.new("PointLight")
-			flash.Brightness = 4
-			flash.Range = 60
-			flash.Color = Color3.fromRGB(255, 220, 160)
-			flash.Parent = burst
-			TweenService:Create(flash, TweenInfo.new(0.8), { Brightness = 0 }):Play()
-			Sound.play("round", 0.12, 0.5 + rng:NextNumber() * 0.2)
-			task.delay(3, function()
-				burst:Destroy()
-			end)
-			task.wait(rng:NextNumber(0.5, 1.1))
+		for n = seconds, 1, -1 do
+			label.Text = tostring(n)
+			label.TextTransparency = 0
+			scaler.Scale = 1.35
+			TweenService:Create(scaler, TweenInfo.new(0.9, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+			TweenService:Create(label, TweenInfo.new(0.9, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { TextTransparency = 0.6 }):Play()
+			pcall(Sound.play, "tick", 0.8, if n <= 3 then 1.3 else 1)
+			task.wait(1)
 		end
+		label.Text = "Midnight"
+		label.TextTransparency = 0
+		scaler.Scale = 0.8
+		TweenService:Create(scaler, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1.1 }):Play()
+		task.wait(2.2)
+		TweenService:Create(label, TweenInfo.new(0.8), { TextTransparency = 1, TextStrokeTransparency = 1 }):Play()
+		task.wait(0.9)
+		gui:Destroy()
 	end)
 end
 
@@ -191,7 +206,10 @@ SaluteView.effects = {
 		chandelier(m.seconds or 20)
 	end,
 	fireworks = function(m: { [string]: any })
-		fireworks(m.seconds or 25)
+		fireworks(m.seconds or 45, math.clamp(tonumber(m.scale) or 1, 0.5, 2))
+	end,
+	countdown = function(_m: { [string]: any })
+		countdown(Salutes.COUNTDOWN)
 	end,
 	encore = function(m: { [string]: any })
 		encore(m.seconds or 25, tonumber(m.userId) or 0)
@@ -202,12 +220,23 @@ function SaluteView.play(m: { [string]: any })
 	if type(m.line) == "string" and m.line ~= "" then
 		Toast.show(if type(m.title) == "string" then m.title else "A Salute", m.line, 5)
 	end
-	for _, name in (if type(m.effects) == "table" then m.effects else {}) :: { any } do
-		local fx = SaluteView.effects[name]
-		if fx then
-			pcall(fx, m)
-		end
+	local effects = (if type(m.effects) == "table" then m.effects else {}) :: { any }
+	-- A countdown first: the rest of the salute starts when it reaches midnight.
+	local wait = 0
+	if table.find(effects, "countdown") then
+		pcall(SaluteView.effects.countdown, m)
+		wait = Salutes.COUNTDOWN
 	end
+	local rest = table.clone(m)
+	rest.seconds = math.max(5, (tonumber(m.seconds) or 25) - wait)
+	task.delay(wait, function()
+		for _, name in effects do
+			local fx = SaluteView.effects[name]
+			if fx and name ~= "countdown" then
+				pcall(fx, rest)
+			end
+		end
+	end)
 end
 
 function SaluteView.start()

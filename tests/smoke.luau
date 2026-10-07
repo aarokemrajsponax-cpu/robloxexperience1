@@ -613,6 +613,9 @@ local function swung(part: BasePart): boolean
 	if model ~= nil and model.Name == "FrontDoors" then
 		return true -- the front doors, swung open by the Doorman
 	end
+	if part.Parent ~= nil and part.Parent.Name == "VaultDoor" then
+		return true -- the Vault's door, swung open as a guest comes near (VaultAccess)
+	end
 	-- The Terrace doors (open all year) and the Gold Key rooms' doors (open with the key).
 	for _, name in { "TerraceDoor", "AlcoveDoor" } do
 		if part.Name == name or (part.Parent ~= nil and part.Parent.Name == name) then
@@ -966,6 +969,40 @@ do
 	end)())
 	check("the Vault is its own zone", Layout.zoneAt(Vector3.new(-8, 5, 50)) == "vault")
 	check("the way round the centre cabinet is clear", walk({ { Vector3.new(-3, 0, 47), FLOOR }, { Vector3.new(-3, 0, 57), FLOOR }, { Vector3.new(-14, 0, 57), FLOOR } }, 0.9) == nil)
+end
+
+-- The Vault's own door, and the lift from the Suite.
+do
+	local doorParts = CollectionService.GetTagged(CollectionService, "VaultDoorPart")
+	check("the Vault has its own door", #doorParts >= 20, #doorParts)
+	check("...which never blocks anyone (it swings open as they come)", (function()
+		for _, p in doorParts do
+			if p.CanCollide or p.CanQuery then
+				return false
+			end
+		end
+		return true
+	end)())
+	local hinge = Layout.VaultDoor.hinge
+	check("...hung in the doorway of the Foyer's back wall", hinge.Z > 42 and hinge.Z < 44.1 and math.abs(hinge.X + Layout.VaultDoor.width / 2 - Layout.Vault.door.X) < 0.01)
+	local calls = CollectionService.GetTagged(CollectionService, "LiftCall")
+	check("the lift has a bell-push on each floor", #calls == 2, #calls)
+	check("...each with its prompt and where it goes", (function()
+		for _, c in calls do
+			if not c:FindFirstChildWhichIsA("ProximityPrompt") or (c:GetAttribute("To") ~= "vault" and c:GetAttribute("To") ~= "suite") then
+				return false
+			end
+		end
+		return #calls == 2
+	end)())
+	local VaultAccess = module("ServerScriptService", "Server", "VaultAccess")
+	local down = VaultAccess.arrival("vault").Position
+	local up = VaultAccess.arrival("suite").Position
+	check("riding down, a guest steps out inside the Vault", Layout.zoneAt(down) == "vault", Layout.zoneAt(down))
+	check("riding up, a guest steps out in the Suite's gallery", Layout.zoneAt(up) == "suite" or Layout.zoneAt(up) == "gallery" or Layout.zoneAt(up) == "club", Layout.zoneAt(up))
+	check("the Vault landing is clear to stand on", blocked(down, 1, FLOOR + 1.2, FLOOR + 5) == nil, blocked(down, 1, FLOOR + 1.2, FLOOR + 5))
+	check("the Suite landing is clear to stand on", blocked(up, 1, Layout.Suite.floorY + 1.2, Layout.Suite.floorY + 5) == nil, blocked(up, 1, Layout.Suite.floorY + 1.2, Layout.Suite.floorY + 5))
+	check("the lift's doors close into the wall (two leaves at each landing)", #CollectionService.GetTagged(CollectionService, "LiftLeaf") == 8)
 end
 
 check("the street spawn is clear", blocked(Layout.Street.spawn.Position, 1, 1.2, 5) == nil)

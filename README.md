@@ -323,9 +323,11 @@ a Nightly attempt or a Mythic's odds.
   lamp you wear colour the sorting screen's cloth, its edges and its lamplight.
 - **Ways to spend Robux**, all style, spectacle or gifts, never score:
   - **Salutes** (a brass card on the piano, and a Salutes tab in the Boutique): a moment bought
-    for the whole house. Gold leaf over every guest (49), an encore with a spotlight on you (79),
-    every lamp flaring (99), fireworks over the roofs (149), or the Grand Salute: all four,
-    announced in every house (399). The giver's name goes on the Tonight board, with a gold star on
+    for the whole house. Gold leaf over every guest (75), an encore with a spotlight on you (125),
+    every lamp flaring (175), a full fireworks show over the whole estate (299: rockets from every
+    side of the grounds, peonies, willows, rings, palms, crackle, a finale), the Grand Salute: all
+    of it, announced in every house (599), or the Midnight Finale: a countdown on every screen,
+    then the biggest show the house fires (999). The giver's name goes on the Tonight board, with a gold star on
     their nameplate for half an hour. Also offered after you keep the last lamp.
   - **Always here**: seven staples always on the Boutique's shelves, beside the daily six and the
     week's two; seventeen more pieces (felts up to the Gilded Baize at 599, lamps, threads,

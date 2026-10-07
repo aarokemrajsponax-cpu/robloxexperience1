@@ -12,7 +12,7 @@ local Breathe = {}
 local last = os.clock()
 local live: boolean? = nil
 
--- Pauses for a frame if the work has gone on for more than `budget` seconds (default 0.25).
+-- Pauses for a frame if the work has gone on for more than `budget` seconds (default 1: far under the limit, and few pauses, which matter when the frame rate is low while loading).
 function Breathe.now(budget: number?)
 	if live == nil then
 		local ok, running = pcall(function()
@@ -23,7 +23,7 @@ function Breathe.now(budget: number?)
 	if not live then
 		return
 	end
-	if os.clock() - last > (budget or 0.25) then
+	if os.clock() - last > (budget or 1) then
 		task.wait()
 		last = os.clock()
 	end

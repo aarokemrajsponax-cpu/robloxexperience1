@@ -63,6 +63,11 @@ local function price(key: string): number?
 	return Catalog.price(key)
 end
 
+-- Testing in Studio (a live server never is).
+local function studio(): boolean
+	return game:GetService("RunService"):IsStudio()
+end
+
 local function tierKey(item: Wardrobe.Item): string?
 	if not item.robux then
 		return nil
@@ -266,7 +271,10 @@ local function shelves(player: Player, data: Profiles.Data): { [string]: any }
 			local out = {}
 			for _, s in Salutes.List do
 				local key = "salute_" .. s.id
-				table.insert(out, { id = s.id, name = s.name, line = s.line, price = price(key), ready = Catalog.enabled(key) })
+				local ready = Catalog.enabled(key)
+				-- The price is Roblox's own once the product exists; until then, the price to
+				-- set on it. In Studio a salute not yet on sale can be previewed (free, there only).
+				table.insert(out, { id = s.id, name = s.name, line = s.line, price = price(key) or s.robux, ready = ready, preview = not ready and studio() })
 			end
 			return out
 		end)(),
@@ -275,7 +283,7 @@ local function shelves(player: Player, data: Profiles.Data): { [string]: any }
 		featured = cards(Boutique.featured()),
 		season = { id = season.id, name = season.name, price = price("season"), pieces = cards(seasonPieces) },
 		gilt = cards(Wardrobe.giltPool()),
-		goldKey = { owned = data.goldKey, price = (function(): number?
+		goldKey = { owned = data.goldKey, studio = studio(), price = (function(): number?
 			local sell = Store.sellable("goldKey")
 			return if sell then price(sell) else nil
 		end)(), giftPrice = price("goldKeyGift"), giftable = Catalog.enabled("goldKeyGift") },
@@ -784,6 +792,27 @@ onAsk = function(player: Player, request: unknown): any
 		return LedgerService.view(data)
 	elseif op == "register" then
 		return Shop.register(data)
+	elseif op == "salutePreview" and type(r.id) == "string" then
+		-- Studio only (a live server is never Studio): the owner sees a salute before its
+		-- developer product exists. Nothing is bought or granted; it only plays.
+		local id = r.id :: string
+		if not studio() or not Salutes.byId[id] then
+			return { ok = false, why = "Previews are only in Studio." }
+		end
+		if SaluteService.full() then
+			return { ok = false, why = "A few salutes are already waiting their turn. Try again in a minute." }
+		end
+		SaluteService.play(player, id)
+		return { ok = true, notice = { title = "Preview", line = "Playing in Studio, free. Create the developer product \"Salute: " .. Salutes.byId[id].product .. "\" to sell it." } }
+	elseif op == "studioReset" then
+		-- Studio only: forget this tester's Gold Key, so its purchase can be tried again.
+		if not studio() then
+			return { ok = false, why = "Only in Studio." }
+		end
+		data.goldKey = false
+		Dressing.nameplate(player)
+		task.defer(Shop.push, player)
+		return { ok = true, notice = { title = "Studio", line = "Your test Gold Key is gone: buy it again to see the purchase." } }
 	elseif op == "salute" and type(r.id) == "string" then
 		if not Salutes.byId[r.id :: string] or not Catalog.enabled("salute_" .. (r.id :: string)) then
 			return { ok = false, why = "That salute isn't offered yet." }

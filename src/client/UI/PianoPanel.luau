@@ -426,6 +426,17 @@ local function setPlaying(on: boolean)
 			Root.close(NAME)
 		end
 		Sound.preloadPiano()
+		-- Nothing to hear: say so (and why), rather than leave a silent keyboard.
+		task.delay(10, function()
+			local total, ready, failed = Sound.pianoHealth()
+			if playing and ready == 0 then
+				if State.get("effects") ~= "On" or (State.get("effectsLevel") :: number) <= 0 then
+					Toast.show("The piano is muted", "Its notes follow the Effects volume: turn Effects on in Settings.", 8)
+				elseif failed >= total then
+					Toast.show("The piano can't be heard", "Roblox couldn't fetch its recordings. Check your internet and Studio's volume.", 8)
+				end
+			end
+		end)
 		local g = board
 		if not g or not g.Parent then
 			views = {}

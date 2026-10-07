@@ -643,8 +643,23 @@ check("the staples aren't also in the rotation", (function()
 	return true
 end)())
 check("a staple can always be bought", askAs(mo, { op = "buy", item = sh.always[1].id }).ok ~= nil)
-check("salutes are listed", sh.salutes and #sh.salutes == 5 and sh.salutes[1].ready == false)
+check("salutes are listed (with the Midnight Finale)", sh.salutes and #sh.salutes == 6 and sh.salutes[1].ready == false)
+check("a salute not yet on sale still shows its price, never just \"soon\"", sh.salutes and sh.salutes[1].price == 75 and sh.salutes[6].price == 999, sh.salutes and sh.salutes[1].price)
 check("an unset salute isn't offered", not askAs(mo, { op = "salute", id = "goldLeaf" }).ok)
+do
+	local studioWas = services.RunService.IsStudio
+	services.RunService.IsStudio = function()
+		return false -- a live server
+	end
+	check("a free preview is refused on a live server (Studio only)", askAs(mo, { op = "salutePreview", id = "fireworks" }).ok == false)
+	check("...and a live server never offers one", askAs(mo, { op = "shelves" }).salutes[4].preview == false)
+	check("handing back a test Gold Key is refused on a live server", askAs(mo, { op = "studioReset" }).ok == false)
+	services.RunService.IsStudio = studioWas
+end
+check("the Midnight Finale counts down first, then the show", (function()
+	local fx = module("ReplicatedStorage", "Shared", "Salutes").effects("finale")
+	return fx[1] == "countdown" and table.find(fx, "fireworks") ~= nil
+end)())
 Config.data.Products.salute_goldLeaf = 7001
 Config.data.Products.salute_grand = 7005
 local promptsBefore2 = #prompts
@@ -689,6 +704,8 @@ end
 check("a few salutes wait their turn, then the queue is full", SaluteService.full() and not askAs(mo, { op = "salute", id = "goldLeaf" }).ok)
 advance(200)
 check("and it empties as they play", SaluteService.waiting() == 0)
+check("in Studio, a salute not yet on sale can be previewed (it plays, nothing is bought)", sh.salutes[4].preview == true and askAs(mo, { op = "salutePreview", id = "fireworks" }).ok == true and SaluteService.waiting() >= 1 and profiles[mo].Data.gilt == 0)
+advance(60)
 Config.data.Products.salute_goldLeaf = 0
 Config.data.Products.salute_grand = 0
 end
@@ -743,7 +760,7 @@ do
 	H.game.CreatorId = 1
 end
 local st = adminAs(owner, { op = "state" })
-check("the panel lists the events, the seasons, the salutes and the guests", #st.events == 11 and #st.seasons == 10 and #st.salutes == 5 and #st.guests >= 2)
+check("the panel lists the events, the seasons, the salutes and the guests", #st.events == 11 and #st.seasons == 10 and #st.salutes == 6 and #st.guests >= 2)
 local nd = profiles[ned].Data
 nd.gilt, nd.giltDay = 0, { day = -1, earned = 0 }
 -- Ned walks the house in a real character (a head for a crown, a root for picking things up).

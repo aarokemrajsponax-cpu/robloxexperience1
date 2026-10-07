@@ -250,7 +250,7 @@ end
 -- Suite spectacles: a show played in your own Suite whenever you choose (each purchase is one
 -- show, kept until you play it). Cosmetic only; nothing random.
 for _, show in {
-	{ key = "spectacleFireworks", name = "Suite Fireworks", price = 199, tier = "Medium" :: Tier, line = "Fireworks over your Suite's terrace for twenty seconds, whenever you choose." },
+	{ key = "spectacleFireworks", name = "Suite Fireworks", price = 199, tier = "Medium" :: Tier, line = "A forty-five-second fireworks show over the whole estate, best seen from your Suite's terrace, whenever you choose." },
 	{ key = "spectacleMemes", name = "Meme Takeover", price = 299, tier = "Medium" :: Tier, line = "Every meme curio bursts out and bounces round your Suite for twenty seconds." },
 	{ key = "spectacleGolden", name = "Golden Transformation", price = 499, tier = "Premium" :: Tier, line = "Your Suite's lights turn gold and gold leaf falls for thirty seconds." },
 } do
@@ -377,11 +377,11 @@ add({
 for _, s in Salutes.List do
 	add({
 		Key = "salute_" .. s.id,
-		Name = "Salute: " .. (if s.id == "goldLeaf" then "Gold Leaf" elseif s.id == "encore" then "Encore" elseif s.id == "chandelier" then "Chandelier" elseif s.id == "fireworks" then "Fireworks" else "Grand Salute"),
+		Name = "Salute: " .. s.product,
 		ProductType = "DeveloperProduct",
 		Id = 0,
 		Handler = "salute",
-		Pricing = { ReferencePrice = s.robux, Tier = if s.robux <= 79 then "Entry" elseif s.robux <= 149 then "Medium" else "Prestige", Rationale = "A spectacle for the whole house; no Gilt, no score." },
+		Pricing = { ReferencePrice = s.robux, Tier = if s.robux <= 99 then "Entry" elseif s.robux <= 199 then "Medium" else "Prestige", Rationale = "A spectacle for the whole house; no Gilt, no score." },
 		Reward = { Type = "Salute", Salute = s.id },
 		Rules = { Stackable = true, CooldownSeconds = 0, MaxHeld = 5 },
 		UX = { DisplayName = s.name, Category = "Spectacle", Line = s.line, Offer = false, Order = 90, Action = "prompt" },

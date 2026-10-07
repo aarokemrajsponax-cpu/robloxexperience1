@@ -597,7 +597,7 @@ function Theme.tabs(parent: Instance, specs: { { string } }, current: string, on
 	paint()
 
 	-- The arrows at either end: shown only where there's more to see, over a fade into the glass.
-	local function arrow(side: number): TextButton
+	local function arrow(side: number): Frame
 		local fade = Instance.new("Frame")
 		fade.Name = if side < 0 then "FadeLeft" else "FadeRight"
 		fade.BackgroundColor3 = Theme.colours.glass
@@ -646,15 +646,18 @@ function Theme.tabs(parent: Instance, specs: { { string } }, current: string, on
 			local goal = math.clamp(strip.CanvasPosition.X + side * view * 0.7, 0, math.max(0, canvas - view))
 			Ease.play(strip, Ease.info(0.35, Enum.EasingStyle.Quint), { CanvasPosition = Vector2.new(goal, 0) })
 		end)
-		return b
+		return fade
 	end
-	local left, right = arrow(-1), arrow(1)
+	local fl, fr = arrow(-1), arrow(1)
 	local function arrows()
+		-- (A signal can still arrive just after the panel closed: nothing left to show then.)
+		if holder.Parent == nil then
+			return
+		end
 		local view = measured(strip, "AbsoluteWindowSize").X
 		local canvas = measured(strip, "AbsoluteCanvasSize").X
 		local at = strip.CanvasPosition.X
 		local more = canvas > view + 1 and view > 0
-		local fl, fr = left.Parent :: Frame, right.Parent :: Frame
 		fl.Visible = more and at > 2
 		fr.Visible = more and at < canvas - view - 2
 	end

@@ -87,6 +87,27 @@ Layout.Vault = {
 	arrival = Vector3.new(-3, 3, 47),
 }
 
+-- The Vault's own door: a steel vault door in the Foyer's back wall, hinged on its west jamb and
+-- swinging into the Vault. It opens as a guest comes near and shuts behind them.
+Layout.VaultDoor = {
+	hinge = Vector3.new(-6.5, 3, 43.6), -- the hinge line's foot (the Vault side of the west jamb)
+	width = 7,
+	height = 9.9,
+	thickness = 1.2,
+	reach = 9, -- studs from the doorway at which it opens
+	seconds = 1.6, -- how long it takes to swing
+}
+
+-- The lift between the Suite and the Vault: brass doors on the Suite gallery's north wall and on
+-- the Vault's south wall. `face`: the wall face the doors stand on; `out`: the way out of the car.
+Layout.Lift = {
+	suite = { centre = Vector3.new(-33.6, 22, 56.5), out = Vector3.new(0, 0, -1), name = "your Suite" },
+	vault = { centre = Vector3.new(-15.5, 3, 44), out = Vector3.new(0, 0, 1), name = "the Vault" },
+	width = 3.6,
+	height = 8,
+	ride = 2.2, -- seconds between the floors
+}
+
 -- The four room doors, as seen from the Foyer. `facing` points into the Foyer.
 Layout.RoomDoors = {
 	-- `approach`: clear points across the Foyer toward each door (around the piano and lectern).
@@ -194,9 +215,9 @@ local function facing(x: number, y: number, z: number, tx: number, tz: number): 
 end
 Layout.Suite = {
 	zone = box(-79, 21.5, -8, -32, 46, 63), -- above the Velvet Room's and the Salon's ceilings
-	galleryZone = box(-36, 21.5, 51, -22, 34, 57), -- the gallery from the Club hall
+	galleryZone = box(-36, 21.5, 51, -22, 37, 57), -- the gallery from the Club hall
 	floorY = 22,
-	height = 12,
+	height = 15, -- tall rooms: the Suite should feel like the finest floor in the house
 	main = { minX = -62, maxX = -36, minZ = 40, maxZ = 60 },
 	dressing = { minX = -76, maxX = -62, minZ = 50, maxZ = 60, door = Vector3.new(-62, 22, 55) },
 	study = { minX = -76, maxX = -62, minZ = 40, maxZ = 50, door = Vector3.new(-62, 22, 45) },
@@ -219,16 +240,16 @@ Layout.Suite = {
 		rug = facing(-55, 22, 50.4, -55, 60),
 		coffeeTable = facing(-55, 22, 50.6, -55, 60),
 		lamp = facing(-50.4, 22, 47.4, -50.4, 30),
-		painting = facing(-55, 30.5, 59.6, -55, 40),
+		painting = facing(-55, 31.5, 59.6, -55, 40),
 		bar = facing(-57.4, 22, 41.2, -57.4, 60),
 		shelf = facing(-46.6, 22, 59.2, -46.6, 40),
-		chandelier = CFrame.new(-51.2, 34, 47.5), -- in a coffer of the ceiling
+		chandelier = CFrame.new(-51.2, 37, 47.5), -- in a coffer of the ceiling
 		plant = facing(-60.2, 22, 58.6, -50, 50),
 		display = facing(-39.6, 22, 41.0, -39.6, 60),
 		piano = facing(-41, 22, 45.4, -70, 45.4),
 		-- The gallery to it.
 		galleryArtS = facing(-29, 27.2, 51.62, -29, 60),
-		galleryArtN = facing(-29, 27.2, 56.38, -29, 40),
+		galleryArtN = facing(-26.6, 27.2, 56.38, -26.6, 40), -- (east of the lift)
 		-- The bedroom: the bed's head on the north wall, the television facing it.
 		bed = facing(-55.6, 22, 34.1, -55.6, 0),
 		nightstands = facing(-55.6, 22, 37.6, -55.6, 0),
