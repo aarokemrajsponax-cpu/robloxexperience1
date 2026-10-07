@@ -892,8 +892,11 @@ local function module(...)
 	end
 	return requireModule(p)
 end
--- (Places named in drawn studs are opened out by the Grand Scale.)
-local Layout = module("ReplicatedStorage", "Shared", "Layout")
+
+-- Places named in drawn studs are opened out by the Grand Scale (read once the game is set up).
+local function GRAND(): number
+	return module("ReplicatedStorage", "Shared", "Layout").SCALE
+end
 
 -- Load every source file up front (Lune reads files asynchronously, which would otherwise
 -- pause a coroutine in the middle of a frame).
@@ -1274,7 +1277,7 @@ do
 		root.CFrame = CFrame.new(p)
 		root.Position = p
 	end
-	moveGuest(Vector3.new(9, 5, 12) * Layout.SCALE)
+	moveGuest(Vector3.new(9, 5, 12) * GRAND())
 	serverSays("Tour", { op = "start" })
 	advance(1)
 	local guide = workspace:FindFirstChild("MaisonTourGuide")
@@ -1286,7 +1289,7 @@ do
 	press("Next")
 	advance(6)
 	local _, _, waitState, waitAt = Tour.where()
-	check("the Concierge waits when you fall behind", waitState == "walking" and (waitAt - Vector3.new(9, 3, 12) * Layout.SCALE).Magnitude < 20, waitAt)
+	check("the Concierge waits when you fall behind", waitState == "walking" and (waitAt - Vector3.new(9, 3, 12) * GRAND()).Magnitude < 20, waitAt)
 	check("on the way: where to, a pin there, and a key to end the tour", textOnScreen("This way, to the Salon") ~= nil and textOnScreen("End the tour") ~= nil and workspace:FindFirstChild("MaisonWaypoint") ~= nil and workspace.MaisonWaypoint.Pin.Label.Text == "The Salon")
 	-- Follow the Concierge to every stop and read every card.
 	local visited = {}
@@ -1352,7 +1355,7 @@ do
 	check("the pin goes with it", workspace:FindFirstChild("MaisonWaypoint") == nil)
 	check("and the server hears it's over", sentOps("Tour", "end") == 1)
 	-- Wandering off ends it too, kindly.
-	moveGuest(Vector3.new(9, 5, 12) * Layout.SCALE)
+	moveGuest(Vector3.new(9, 5, 12) * GRAND())
 	serverSays("Tour", { op = "start" })
 	advance(1)
 	moveGuest(Vector3.new(0, 5, -200))
@@ -2358,11 +2361,11 @@ press("Next evening")
 advance(0.5)
 serverSays("Table", { op = "eveningEnd", winner = 12, winnerName = "Ben", keys = 5, seconds = 300, counted = false, results = {} })
 advance(3)
-check("Ballroom: the camera finds the last lamp from the Gallery", camera.CFrame.Position.Y > 35, camera.CFrame.Position.Y)
+check("Ballroom: the camera finds the last lamp from the Gallery", camera.CFrame.Position.Y > 35 * GRAND(), camera.CFrame.Position.Y)
 serverSays("Table", { op = "eveningResult", place = 4, of = 20, keys = 1, points = 53, gilt = 40, counted = false, won = false })
 advance(8)
 check("Ballroom: the result card", textOnScreen("4th of 20") ~= nil and textOnScreen("not counted for records") ~= nil)
-check("Ballroom: the camera is back at the table", camera.CFrame.Position.Y < 35)
+check("Ballroom: the camera is back at the table", camera.CFrame.Position.Y < 35 * GRAND(), camera.CFrame.Position.Y)
 press("Watch from the Gallery")
 check("Ballroom: to the Gallery is sent", sentOps("Table", "gallery") == 1)
 serverSays("Table", { op = "left" })
@@ -2370,7 +2373,7 @@ advance(2)
 check("Ballroom: leaving gives the controls back", controls.enabled == true)
 check("no errors through a Lights Out evening", #errors == 0, errors[1])
 -- Standing in the Ballroom without a chair: Next evening and Watch.
-root.Position = Vector3.new(61, 21, 90) * Layout.SCALE
+root.Position = Vector3.new(61, 21, 90) * GRAND()
 root.CFrame = CFrame.new(root.Position)
 advance(1)
 check("in the Ballroom without a chair: Next evening is offered", textOnScreen("Next evening") ~= nil)
@@ -2615,7 +2618,7 @@ check("the Mythics page prints the odds and the serial", press("Mythics") and te
 advance(1)
 Root2.close()
 advance(1)
-root.Position = Vector3.new(-8, 5, 50) * Layout.SCALE
+root.Position = Vector3.new(-8, 5, 50) * GRAND()
 root.CFrame = CFrame.new(root.Position)
 advance(1.5)
 local vaultFolder = workspace.MaisonLocal:FindFirstChild("Vault")
