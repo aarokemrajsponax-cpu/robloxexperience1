@@ -9,7 +9,8 @@ local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
-local Layout = require(ReplicatedStorage.Shared.Layout).raw -- (the house as drawn: see World/Grand)
+local GrandLayout = require(ReplicatedStorage.Shared.Layout)
+local Layout = GrandLayout.raw -- (the house as drawn: see World/Grand)
 local Seasons = require(ReplicatedStorage.Shared.Seasons)
 local Flush = require(script.Parent.Flush)
 local Grand = require(script.Parent.Grand)
@@ -17,7 +18,6 @@ local Kit = require(script.Parent.Kit)
 local Terrace = require(script.Parent.Terrace)
 
 local L = Kit.Looks
-local F = Layout.Foyer
 local FLOOR = Layout.FLOOR
 
 local SeasonDress = {}
@@ -111,11 +111,6 @@ function SeasonDress.apply(id: string)
 	end
 	local m = Kit.model(maison, "SeasonDress")
 	local season = Seasons.byId[id]
-	-- Flowers on the lectern and on the piano, all year.
-	if season then
-		vase(m, (F.lectern * CFrame.new(1, 4.1, -0.3)).Position, season.weatherColours[1])
-		vase(m, (F.piano * CFrame.new(-1.6, 4.05, 1.5)).Position, season.weatherColours[2] or season.weatherColours[1])
-	end
 	if id == "hallows" then
 		for _, p in { Vector3.new(-7, 0, -17), Vector3.new(7, 0, -17), Vector3.new(-10.5, 0, -18.5), Vector3.new(10.5, 0, -18.5) } do
 			lantern(m, p)
@@ -141,7 +136,14 @@ function SeasonDress.apply(id: string)
 	Terrace.setOpen(true)
 	Workspace:SetAttribute("TerraceOpen", true)
 	-- Laid out as drawn, then moved into the Grand house like everything else (World/Grand).
-	Grand.apply(m, require(ReplicatedStorage.Shared.Layout).SCALE, 0)
+	Grand.apply(m, GrandLayout.SCALE, 0)
+	-- Flowers on the lectern and on the piano, all year: both stand exactly where the Grand
+	-- house put their spots, so the flowers are laid there directly.
+	if season then
+		local G = GrandLayout.Foyer
+		vase(m, (G.lectern * CFrame.new(1, 4.1, -0.3)).Position, season.weatherColours[1])
+		vase(m, (G.piano * CFrame.new(-1.6, 4.05, 1.5)).Position, season.weatherColours[2] or season.weatherColours[1])
+	end
 	-- The dressing is laid on floors and walls: anything flush with them is lifted clear.
 	pcall(Flush.settle, maison)
 end

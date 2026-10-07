@@ -977,6 +977,65 @@ do
 	check("the way round the centre cabinet is clear", walk({ { Vector3.new(-3 * G, 0, 47 * G), FLOOR }, { Vector3.new(-3 * G, 0, 57 * G), FLOOR }, { Vector3.new(-14 * G, 0, 57 * G), FLOOR } }, 0.9) == nil)
 end
 
+-- Every place the game stands someone (a spawn, an arrival, a member of staff, each stop and way
+-- point of the Concierge's tour) has floor under it and room to stand, in the house as built.
+do
+	local function floorUnder(p: Vector3, below: number, above: number): number?
+		local best: number? = nil
+		for _, part in solids do
+			local lo, hi
+			for _, c in corners(part.CFrame, part.Size) do
+				lo = if lo then lo:Min(c) else c
+				hi = if hi then hi:Max(c) else c
+			end
+			if p.X >= lo.X - 0.05 and p.X <= hi.X + 0.05 and p.Z >= lo.Z - 0.05 and p.Z <= hi.Z + 0.05 and hi.Y >= p.Y - below and hi.Y <= p.Y + above then
+				if best == nil or hi.Y > best then
+					best = hi.Y
+				end
+			end
+		end
+		return best
+	end
+	local places: { { any } } = {
+		{ "the street spawn", Layout.Street.spawn.Position, "spawn" },
+		{ "the Foyer spawn", Layout.Foyer.spawn.Position, "spawn" },
+		{ "the Concierge's place", Layout.Foyer.conciergeHome.Position, "floor" },
+		{ "the Tailor's place", Layout.Boutique.tailorHome.Position, "floor" },
+		{ "the Archivist's place", Layout.Vault.archivistHome.Position, "floor" },
+		{ "the Doorman's step", Vector3.new(Layout.Door.width / 2 + 1.8 * G, Layout.FLOOR, Layout.Street.facadeZ - 1.1 * G), "floor" },
+		{ "the Boutique arrival", Layout.Boutique.arrival, "floor" },
+		{ "the Vault arrival", Layout.Vault.arrival, "floor" },
+		{ "the Library arrival", Layout.Library.arrival, "floor" },
+		{ "the Ballroom arrival", Layout.Ballroom.arrival, "floor" },
+		{ "the Gallery arrival", Layout.Ballroom.galleryArrival, "floor" },
+		{ "the Terrace arrival", Layout.Terrace.arrival, "floor" },
+		{ "the Suite arrival", Layout.Suite.arrival, "floor" },
+	}
+	for _, roomId in { "salon", "velvet", "obsidian", "midnight" } do
+		table.insert(places, { "the " .. roomId .. " arrival", Layout.Rooms[roomId].arrival, "floor" })
+	end
+	for _, stop in Layout.Tour.stops do
+		table.insert(places, { "the tour's " .. stop.id .. " stop", stop.stand, "floor" })
+		for i, v in stop.via do
+			table.insert(places, { "the tour's way to " .. stop.id .. " (" .. i .. ")", v, "floor" })
+		end
+	end
+	local bad = {}
+	for _, place in places do
+		local name, p, kind = place[1], place[2] :: Vector3, place[3]
+		local top = if kind == "spawn" then floorUnder(p, 6, 0.5) else floorUnder(p, 0.7, 0.7)
+		if top == nil then
+			table.insert(bad, name .. ": no floor")
+		else
+			local hit = blocked(Vector3.new(p.X, 0, p.Z), 0.8, top + 1.2 * G, top + 5)
+			if hit then
+				table.insert(bad, name .. ": " .. hit:GetFullName())
+			end
+		end
+	end
+	check("every spawn, arrival, staff place and tour stop has floor and room (" .. #places .. " places)", #bad == 0, table.concat(bad, "; "))
+end
+
 -- The Vault's own door, and the lift from the Suite.
 do
 	local doorParts = CollectionService.GetTagged(CollectionService, "VaultDoorPart")

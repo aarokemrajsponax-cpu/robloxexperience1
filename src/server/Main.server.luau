@@ -290,6 +290,7 @@ Purchases.Piano.isOwner = function(player: Player): boolean
 	return game:GetService("RunService"):IsStudio() or AdminService.isAdmin(player)
 end
 -- Trading curios between guests (the curios and Gems themselves start with Purchases).
+boot("Guest policies", require(script.Parent.Policy).start)
 boot("Trading", require(script.Parent.TradeService).start)
 boot("Remote limits", require(script.Parent.RemoteGuard).start)
 Archivist.onSpeak = function(player)
@@ -325,6 +326,12 @@ Social.season = function()
 	return Season.current().id
 end
 boot("Social", Social.start)
+-- Friends invited to the house (Roblox's friend referrals): both thanked once, in Gilt.
+local Referral = require(script.Parent.Referral)
+Referral.notice = function(player, title, line)
+	Remotes.event("Shop"):FireClient(player, { op = "notice", title = title, line = line })
+end
+boot("Friend invitations", Referral.start)
 Concierge.usualRoom = Memory.usualRoom
 TableService.onRound = function(player, roomId, grade, tableId)
 	Collection.round(player, roomId, grade)

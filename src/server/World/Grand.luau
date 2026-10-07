@@ -27,6 +27,10 @@ local LOOSE_MAX = 6
 local LOOSE_TALL = 8
 -- Touching small parts move together, unless they run longer than this.
 local SPREAD = 10
+-- A grown part at least this tall is a wall (or a column): what stood flush against it stays so,
+-- if it stood within this of it.
+local WALL_TALL = 6
+local TOUCH = 0.12
 
 -- Names that are always the building, wherever they are and however small.
 local BUILDING = {
@@ -102,7 +106,7 @@ local function partsOf(inst: Instance): { BasePart }
 	return out
 end
 
-export type Piece = { root: Instance, parts: { BasePart }, lo: Vector3, hi: Vector3, anchor: Vector3, delta: Vector3, hung: boolean? }
+export type Piece = { root: Instance, parts: { BasePart }, lo: Vector3, hi: Vector3, anchor: Vector3, delta: Vector3, hung: boolean?, pinned: boolean? }
 export type Plan = {
 	grow: { BasePart }, -- the building: positions and sizes scaled
 	pieces: { Piece }, -- furniture: each moved, as one, by its delta
@@ -210,7 +214,9 @@ function Grand.plan(root: Instance, S: number, pieceDepth: number?): Plan
 		elseif typeof(frame) == "Vector3" then
 			anchor = Vector3.new(frame.X, lo.Y, frame.Z)
 		end
-		table.insert(pieces, { root = r, parts = parts, lo = lo, hi = hi, anchor = anchor, delta = Vector3.zero })
+		-- (A piece built at a spot the game knows goes exactly where that spot went.)
+		local pinned = typeof(frame) == "CFrame" or typeof(frame) == "Vector3"
+		table.insert(pieces, { root = r, parts = parts, lo = lo, hi = hi, anchor = anchor, delta = Vector3.zero, pinned = pinned })
 	end
 	-- One walk down the tree: the outermost modest-sized Model deep enough below `root` is a
 	-- piece (and nothing inside it is looked at again); the parts of the building's own models
@@ -280,18 +286,55 @@ function Grand.plan(root: Instance, S: number, pieceDepth: number?): Plan
 	for i, pc in pieces do
 		addSurface(pc.lo, pc.hi, i)
 	end
+	-- Against a wall: a piece that stood flush with a wall (or a column) keeps standing flush with
+	-- it, on the side it stood; across that axis it moves exactly as the wall's face moved.
+	local function againstWalls(pc: Piece): (number?, number?)
+		local lo, hi = pc.lo, pc.hi
+		local seen: { [Surface]: boolean } = {}
+		local minusX: number?, plusX: number?, minusZ: number?, plusZ: number? = nil, nil, nil, nil
+		for gx = math.floor((lo.X - 0.2) / CELL), math.floor((hi.X + 0.2) / CELL) do
+			for gz = math.floor((lo.Z - 0.2) / CELL), math.floor((hi.Z + 0.2) / CELL) do
+				local cell: { Surface } = surfaces[gx .. ":" .. gz] or {}
+				for _, sfc in cell do
+					if sfc.piece == nil and not seen[sfc] then
+						seen[sfc] = true
+						if sfc.hi.Y - sfc.lo.Y >= WALL_TALL and sfc.lo.Y < hi.Y - 0.1 and sfc.hi.Y > lo.Y + 0.1 then
+							if math.min(hi.Z, sfc.hi.Z) - math.max(lo.Z, sfc.lo.Z) > 0.2 then
+								if math.abs(lo.X - sfc.hi.X) <= TOUCH then
+									minusX = sfc.hi.X
+								elseif math.abs(sfc.lo.X - hi.X) <= TOUCH then
+									plusX = sfc.lo.X
+								end
+							end
+							if math.min(hi.X, sfc.hi.X) - math.max(lo.X, sfc.lo.X) > 0.2 then
+								if math.abs(lo.Z - sfc.hi.Z) <= TOUCH then
+									minusZ = sfc.hi.Z
+								elseif math.abs(sfc.lo.Z - hi.Z) <= TOUCH then
+									plusZ = sfc.lo.Z
+								end
+							end
+						end
+					end
+				end
+			end
+		end
+		-- (Wedged between two walls, it keeps to its own spot.)
+		local dx = if minusX and not plusX then minusX * (S - 1) elseif plusX and not minusX then plusX * (S - 1) else nil
+		local dz = if minusZ and not plusZ then minusZ * (S - 1) elseif plusZ and not minusZ then plusZ * (S - 1) else nil
+		return dx, dz
+	end
 	local resolved: { [number]: boolean } = {}
 	local resolving: { [number]: boolean } = {}
-	local function resolve(i: number): number
+	local function resolve(i: number): Vector3
 		local pc = pieces[i]
 		if resolved[i] then
-			return pc.delta.Y
+			return pc.delta
 		end
+		local a = pc.anchor
 		if resolving[i] then
-			return levelUnder(pc.lo.Y) * (S - 1)
+			return Vector3.new(a.X * (S - 1), levelUnder(pc.lo.Y) * (S - 1), a.Z * (S - 1))
 		end
 		resolving[i] = true
-		local a = pc.anchor
 		local best: Surface? = nil
 		local list: { Surface } = surfaces[math.floor(a.X / CELL) .. ":" .. math.floor(a.Z / CELL)] or {}
 		for _, sfc in list do
@@ -303,28 +346,44 @@ function Grand.plan(root: Instance, S: number, pieceDepth: number?): Plan
 				end
 			end
 		end
+		local dx, dz = a.X * (S - 1), a.Z * (S - 1)
 		local dy: number
 		local b = best
-		if b then
-			local under = b.piece
-			dy = if under then resolve(under) else b.hi.Y * (S - 1)
+		local under = b and b.piece
+		if b and under then
+			-- On another piece (a vase on a sideboard): it goes with it.
+			local carried = resolve(under)
+			dy = carried.Y
+			if not pc.pinned then
+				dx, dz = carried.X, carried.Z
+			end
 		else
-			local level = levelUnder(pc.lo.Y)
-			dy = level * (S - 1)
-			-- Nothing under it, well clear of the floor: if a ceiling meets its top, it hangs there.
-			if pc.lo.Y - level > 3 then
-				for _, sfc in list do
-					if sfc.piece == nil and sfc.lo.Y >= pc.hi.Y - 0.4 and sfc.lo.Y <= pc.hi.Y + 1.5 and a.X >= sfc.lo.X and a.X <= sfc.hi.X and a.Z >= sfc.lo.Z and a.Z <= sfc.hi.Z then
-						dy = sfc.lo.Y * (S - 1)
-						break
+			if b then
+				dy = b.hi.Y * (S - 1)
+			else
+				local level = levelUnder(pc.lo.Y)
+				dy = level * (S - 1)
+				-- Nothing under it, well clear of the floor: if a ceiling meets its top, it hangs there.
+				if pc.lo.Y - level > 3 then
+					for _, sfc in list do
+						if sfc.piece == nil and sfc.lo.Y >= pc.hi.Y - 0.4 and sfc.lo.Y <= pc.hi.Y + 1.5 and a.X >= sfc.lo.X and a.X <= sfc.hi.X and a.Z >= sfc.lo.Z and a.Z <= sfc.hi.Z then
+							dy = sfc.lo.Y * (S - 1)
+							pc.hung = true
+							break
+						end
 					end
 				end
 			end
+			if not pc.pinned then
+				local wx, wz = againstWalls(pc)
+				dx = wx or dx
+				dz = wz or dz
+			end
 		end
-		pc.delta = Vector3.new(a.X * (S - 1), dy, a.Z * (S - 1))
+		pc.delta = Vector3.new(dx, dy, dz)
 		resolved[i] = true
 		resolving[i] = false
-		return dy
+		return pc.delta
 	end
 	for i in pieces do
 		resolve(i)
@@ -414,6 +473,44 @@ local function ramps(grown: { BasePart })
 	end
 end
 
+-- What a builder hung from a ceiling inside a piece of furniture (a table's lamp) is carried up
+-- to that ceiling's grown height: "ceiling" parts move up with it, a "cord" stretches up to it.
+local function hangFrom(p: BasePart, S: number, risen: number)
+	local kind = p:GetAttribute("GrandHang")
+	local ceiling = p:GetAttribute("GrandCeiling")
+	if (kind ~= "ceiling" and kind ~= "cord") or typeof(ceiling) ~= "number" then
+		return
+	end
+	local rise = ceiling * (S - 1) - risen
+	if math.abs(rise) < 1e-3 then
+		return
+	end
+	if kind == "ceiling" then
+		p.CFrame = p.CFrame + Vector3.new(0, rise, 0)
+		for _, d in p:GetChildren() do
+			if d:IsA("SpotLight") or d:IsA("PointLight") or d:IsA("SurfaceLight") then
+				local l = d :: any
+				l.Range = math.min(60, l.Range + rise)
+			end
+		end
+		return
+	end
+	-- A cord: longer along whichever of its own axes stands upright, its foot where it was.
+	local cf = p.CFrame
+	local size = p.Size
+	if math.abs(cf.RightVector.Y) > 0.9 then
+		size = Vector3.new(size.X + rise, size.Y, size.Z)
+	elseif math.abs(cf.UpVector.Y) > 0.9 then
+		size = Vector3.new(size.X, size.Y + rise, size.Z)
+	elseif math.abs(cf.LookVector.Y) > 0.9 then
+		size = Vector3.new(size.X, size.Y, size.Z + rise)
+	else
+		return
+	end
+	p.Size = size
+	p.CFrame = cf + Vector3.new(0, rise / 2, 0)
+end
+
 -- Opens the house out by S.
 function Grand.apply(root: Instance, S: number, pieceDepth: number?): Plan
 	local plan = Grand.plan(root, S, pieceDepth)
@@ -458,6 +555,7 @@ function Grand.apply(root: Instance, S: number, pieceDepth: number?): Plan
 		for _, p in piece.parts do
 			p.CFrame = p.CFrame + piece.delta
 			moveAttributes(p, piece.delta)
+			hangFrom(p, S, piece.delta.Y)
 			-- A lamp hung from a ceiling that rose is that much farther from the floor it lights.
 			if piece.hung then
 				for _, d in p:GetChildren() do

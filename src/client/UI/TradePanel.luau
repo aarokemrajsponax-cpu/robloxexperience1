@@ -185,7 +185,8 @@ function TradePanel.open()
 		for id, n in CurioState.items do
 			local cu = Curios.byId[id]
 			local left = n - (mine[id] or 0)
-			if cu and cu.tradeable and left > 0 then
+			-- (Curios bought with Gems only where Roblox allows both of you to trade them.)
+			if cu and cu.tradeable and left > 0 and (s.paid == true or not Curios.isPaid(cu)) then
 				avail[id] = left
 			end
 		end

@@ -216,7 +216,11 @@ function CuriosPanel.open(start: string?)
 		CurioArt.rarity(rr, c.rarity, 13)
 		Theme.text(detail, c.line, 13, "body", { LayoutOrder = 4, TextColor3 = C.smoke })
 		Theme.text(detail, c.how, 12, "body", { LayoutOrder = 5, TextColor3 = C.lightGold })
-		Theme.text(detail, string.format("You hold %d  ·  %s", held, if c.tradeable then "can be traded" else "can't be traded"), 12, "body", { LayoutOrder = 6, TextColor3 = C.dim })
+		-- (A curio bought with Gems trades only where Roblox allows paid item trading: server/Policy.)
+		local tradeLine = if not c.tradeable then "can't be traded"
+			elseif Curios.isPaid(c) and game:GetService("Players").LocalPlayer:GetAttribute("PaidTradingAllowed") ~= true then "can't be traded on your account"
+			else "can be traded"
+		Theme.text(detail, string.format("You hold %d  ·  %s", held, tradeLine), 12, "body", { LayoutOrder = 6, TextColor3 = C.dim })
 		if held > 0 then
 			local starred = CurioState.favs[id] == true
 			local k = Theme.key(detail, if starred then "Starred ★" else "Star it ☆", starred, function()

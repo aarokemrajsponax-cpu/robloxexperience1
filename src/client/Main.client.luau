@@ -178,7 +178,7 @@ start("Curios", function()
 		end
 	end)
 	AdmireCard.trade = TradePanel.invite
-	-- The quick dock: Collection, Trade, Wardrobe and Gems, one tap away (C, T, V).
+	-- The quick dock: Collection, Trade, Wardrobe, Gems and Invite, one tap away (C, T, V).
 	local QuickDock = require(script.Parent.UI.QuickDock)
 	QuickDock.openCollection = function()
 		CuriosPanel.open("yours")
@@ -191,6 +191,7 @@ start("Curios", function()
 		CuriosPanel.open("gems")
 	end
 	QuickDock.invite = TradePanel.invite
+	QuickDock.inviteFriend = require(script.Parent.UI.Invite).house
 	QuickDock.isSeated = function(): boolean
 		return TableClient.isSeated() or Root.isOpen()
 	end

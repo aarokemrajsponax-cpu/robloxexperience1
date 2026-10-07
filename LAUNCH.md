@@ -1,6 +1,7 @@
 # Maison Noir — the launch kit
 
-Everything the game page needs, and the few switches to flip before the doors open. The words
+Everything the game page needs, and the few switches to flip before the doors open. (How to
+get the word out once it's open, with posts, a trailer plan and an ads plan: `MARKETING.md`.) The words
 are written to be pasted as they are; the pictures are real shots of the game, taken in Studio
 with the camera positions below, so the page never promises something the game isn't.
 
@@ -47,7 +48,8 @@ competitive, leaderboard, seasonal.
 
 ## 2. The icon (512 × 512)
 
-One idea, taken in-game, no text but the tiny mark:
+**Ready to upload:** `marketing/icon-512.png` (the house's gold *MN* monogram on black lacquer,
+readable down to the size Roblox shows it in lists). Or take one in-game:
 
 - **A single gilded watch on black-green felt, in the pool of light from the table lamp**, seen
   from slightly above, with the brass edge of a case in the corner. The small *MN* hairline
@@ -60,21 +62,27 @@ by traffic source in Creator Analytics before and after any change.
 
 ## 3. Thumbnails (1920 × 1080), five real shots
 
+**Ready to upload:** `marketing/thumbnails/` holds seven, rendered from this build of the house
+(the cover, the sorting screen itself, the Ballroom, the Terrace, the Library, the Vault, the
+house at night), in that order. They show only what's in the game. Real screenshots with guests
+in them are even better: add your own as below and let Roblox's testing pick the winner.
+
 Take them in Studio, in **Run** mode (the server builds the house), with this pasted into the
 **Command Bar** (View → Command Bar) one line at a time. Each line points Studio's camera at one
 shot. Then take the screenshot with Studio's screenshot tool (the **View** tab → **Screenshot**).
+(These are the Grand house's positions: every room is 1.35× the size it was drawn.)
 
 ```lua
 -- 1. The street at night: the facade, the lanterns, the door.
-workspace.CurrentCamera.CFrame = CFrame.lookAt(Vector3.new(-26, 8, -44), Vector3.new(0, 11, -10))
+workspace.CurrentCamera.CFrame = CFrame.lookAt(Vector3.new(-35.1, 10.8, -59.4), Vector3.new(0, 14.9, -13.5))
 -- 2. The Foyer: the chandelier, the piano, the Grand Stair.
-workspace.CurrentCamera.CFrame = CFrame.lookAt(Vector3.new(-18, 9, -4), Vector3.new(6, 12, 28))
+workspace.CurrentCamera.CFrame = CFrame.lookAt(Vector3.new(-24.3, 12.2, -5.4), Vector3.new(8.1, 16.2, 37.8))
 -- 3. The Ballroom from the Gallery: twenty lamps in a ring.
-workspace.CurrentCamera.CFrame = CFrame.lookAt(Vector3.new(61, 40, 73), Vector3.new(61, 22, 125))
+workspace.CurrentCamera.CFrame = CFrame.lookAt(Vector3.new(82.4, 54, 98.6), Vector3.new(82.4, 29.7, 168.8))
 -- 4. The Library: two long tables under green lamps.
-workspace.CurrentCamera.CFrame = CFrame.lookAt(Vector3.new(-2, 27, 72), Vector3.new(-20, 21, 90))
+workspace.CurrentCamera.CFrame = CFrame.lookAt(Vector3.new(-2.7, 36.5, 97.2), Vector3.new(-27, 28.4, 121.5))
 -- 5. The Suite by the fire.
-workspace.CurrentCamera.CFrame = CFrame.lookAt(Vector3.new(-38, 28, 42), Vector3.new(-52, 24, 58))
+workspace.CurrentCamera.CFrame = CFrame.lookAt(Vector3.new(-51.3, 37.8, 56.7), Vector3.new(-70.2, 32.4, 78.3))
 ```
 
 Then two shots that need a guest at a table (use **Play**, sit at a Salon table, and take them
@@ -117,8 +125,15 @@ and alcohol pieces replaced (§19 #2):
   cart and the Suite's drinks cabinet show plain bottles; swap them for a flower cart and a
   curio cabinet if you want to be certain.
 - **Paid random items:** **no.** Nothing sold is random; Mythics can't be bought.
+- **Paid item trading:** **yes.** Gems are sold for Robux, and the curios bought with Gems in
+  the Cabinet can be traded between guests. The game already does what Roblox asks of it: it
+  checks each guest's policy (`PolicyService`, `IsPaidItemTradingAllowed`) and, where trading
+  bought things isn't allowed, keeps Gem-bought curios out of that guest's trades (curios found
+  at the tables still trade). Tick this box, or the experience can be restricted.
 - **Social:** Roblox's own chat only; no custom chat.
-- **Free-form user creation:** none (no typing anywhere; Circle names are chosen from lists).
+- **Free-form user creation:** none (no drawing, painting or building by guests; Circle names
+  are chosen from lists). The only typing is the Emperor's Decree's words, and those always pass
+  Roblox's text filter (`TextService`, filtered for broadcast) before anyone sees them.
 
 Minimal or Mild reaches the youngest catalogue (Roblox Kids); up to Moderate reaches Select.
 Reaching under-16s also needs ID and two-step verification on the owner's account and either
@@ -126,7 +141,25 @@ Roblox Plus or the refundable publishing fee.
 
 ---
 
-## 6. Switches to flip before the doors open
+## 6. Friend invitations (Creator Hub → Engagement → Referral Rewards)
+
+The game is ready for Roblox's friend referrals: the **Invite** key in the quick dock opens
+Roblox's own invite prompt, and a friend who arrives for the first time through it is welcomed
+with **100 Gilt**, while the guest who invited them is thanked with **150 Gilt** if they're in
+the house (any server) when the friend arrives: at most 5 a day and 50 in all, and only for
+Roblox accounts at least 7 days old (all in `Config.Referral`). The game must have been live for
+a day before Roblox lets you publish the banner. Then, in Creator Hub → your experience →
+Engagement → **Referral Rewards**: add an icon (`marketing/icon-512.png`), and paste:
+
+- **Name:** Bring a friend to the Maison
+- **Description:** Invite a friend from the Invite key. On their first visit they get 100 Gilt,
+  and you get 150 Gilt if you're in the house when they arrive (up to 5 friends a day).
+
+Keep the banner's words matching `Config.Referral` if you change the numbers.
+
+---
+
+## 7. Switches to flip before the doors open
 
 All in `src/shared/Config.luau` (or live, in Creator Hub → Configs, as `Section_key`):
 

@@ -301,6 +301,7 @@ end
 local function lectern(m: Model)
 	local model = Kit.model(m, "Lectern")
 	local cf = F.lectern
+	model:SetAttribute("GrandAnchor", cf.Position) -- (so the season's flowers find it: SeasonDress)
 	Kit.part(model, "Base", Vector3.new(2.6, 0.4, 1.6), cf * CFrame.new(0, 0.2, 0), L.darkWood)
 	Kit.part(model, "Column", Vector3.new(1.4, 3.4, 0.9), cf * CFrame.new(0, 2.1, 0), L.walnut)
 	Kit.part(model, "Top", Vector3.new(2.6, 0.2, 1.8), cf * CFrame.new(0, 3.95, 0) * CFrame.Angles(math.rad(14), 0, 0), L.walnut)

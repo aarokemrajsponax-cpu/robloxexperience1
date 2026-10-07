@@ -4,7 +4,9 @@
 development of AJKR
 
 This repository is the whole experience. Rojo syncs it into Roblox Studio; nothing is built
-by hand in Studio. The house is built by the server when it starts.
+by hand in Studio. The house is built by the server when it starts. The game page, the
+questionnaire and the switches to flip are in `LAUNCH.md`; getting the word out (icon,
+thumbnails, videos, posts, ads) is in `MARKETING.md`, with the pictures in `marketing/`.
 
 ## Connecting to Studio (each session)
 
@@ -251,7 +253,9 @@ a Nightly attempt or a Mythic's odds.
   rarer ones. Gems come in three packs for Robux.
 - **Trading curios**: admire a guest (R) → Trade. Both choose, lock in, a five-second countdown,
   then both confirm; any change unlocks both, so nothing changes after a confirmation. The
-  server checks every step and swaps in one go. Cancel any time; block and report.
+  server checks every step and swaps in one go. Cancel any time; block and report. Curios bought
+  with Gems (Robux) trade only where Roblox's policy allows paid item trading for both guests
+  (`server/Policy`: asked once per guest, and "no" until Roblox answers); the rest always trade.
 - **Live events** (the owner's House panel, or scheduled): Golden Hour, Lucky Hour, the
   Page-Turner, Giants, Quickstep, Featherlight, Gold Rain (each coin also gives a Rain Coin
   curio), the Treasure Hunt, the Brainrot Parade (meme curios loose in the house to catch),
@@ -268,7 +272,13 @@ a Nightly attempt or a Mythic's odds.
   clears while it plays, every burst lights the screen even indoors, and a **Watch the fireworks**
   key takes anyone's camera outside to see it (the buyer's goes at once).
 - **The quick dock** (left of the screen): **Collection** (C), **Trade** (T: everyone in the house
-  with a Trade key each, and your past trades), **Wardrobe** (V) and **Gems**, one tap away.
+  with a Trade key each, and your past trades), **Wardrobe** (V), **Gems** and **Invite**, one
+  tap away.
+- **Friend invitations** (Roblox's friend referrals, `server/Referral`): the Invite key opens
+  Roblox's own invite prompt. A friend who arrives for the first time through it gets 100 Gilt;
+  whoever invited them gets 150 Gilt if they're in the house (any server) when the friend
+  arrives, at most 5 a day and 50 in all, and only for Roblox accounts at least 7 days old
+  (`Config.Referral`). Only Gilt, decided on the server from what Roblox says.
 - **The Menu** (top of the screen): the Collection, Trading, Gems, the Boutique, Wardrobe,
   Ledger, Register, guest book, Circle, How to play, Settings.
 - **The Terrace**, on the Obsidian Room's roof, through French doors in the Club hall's east
@@ -318,7 +328,11 @@ a Nightly attempt or a Mythic's odds.
   taller than drawn) while the furniture keeps its true size and moves with its room
   (`World/Grand`), so the Foyer, the rooms, the Ballroom and the Suite have far more space
   around every table and chair. Each staircase has an unseen ramp along its nosings, so every
-  guest walks up it smoothly. Every part of the house starts on its own, so one that fails
+  guest walks up it smoothly; what stood flush against a wall still does, what stood on a piece
+  of furniture moves with it, and the table lamps' cords run up to the higher ceilings
+  (marked by the builder with `GrandHang`). The Suite's own furniture keeps its drawn distance
+  from the walls it stands against. The camera may pull back to 50 studs
+  (`Config.Movement.cameraMaxZoom`) to take the bigger rooms in. Every part of the house starts on its own, so one that fails
   is reported in Output and never stops anyone from walking in, and a separate safety script
   hands back Roblox's own camera, controls and prompts if the house's client ever doesn't start.
 - **The sorting screen: the Jeweller's Desk.** A mahogany desk with brass corner guards, a

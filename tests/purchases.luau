@@ -1476,7 +1476,11 @@ do
 		return 0.5
 	end }
 
-	-- Trading.
+	-- Trading. (Roblox's policy lets these guests trade what they bought: server/Policy.)
+	local Policy = module("ServerScriptService", "Server", "Policy")
+	Policy.lookup = function(_player)
+		return { IsPaidItemTradingAllowed = true }
+	end
 	local nia = guest("Nia", 9501)
 	local niaData = profiles[nia].Data
 	CuriosS.give(nia, niaData, "frogKing", 1)
@@ -1538,6 +1542,53 @@ do
 	check("either side may cancel, and nothing moves", r.ok == true and lastOp(oz, "tradeEnd").state == "cancelled" and CuriosS.count(profiles[oz].Data, "gelato") == 1)
 	r = trade(mo, { op = "report", userId = 9502 })
 	check("a guest can be reported (logged for the owner)", r.ok == true and #TradeService.reports == 1)
+
+	-- Paid item trading: a curio bought with Gems changes hands only where Roblox's policy allows it
+	-- for both guests. Where it doesn't (or Roblox can't be asked), the curios found at the
+	-- tables still trade.
+	local asked = 0
+	Policy.lookup = function(player)
+		asked += 1
+		if player.UserId == 9504 then
+			error("PolicyService is down")
+		end
+		return { IsPaidItemTradingAllowed = player.UserId ~= 9503 }
+	end
+	local pip = guest("Pip", 9503)
+	local quin = guest("Quin", 9504)
+	CuriosS.give(pip, profiles[pip].Data, "gelato", 1)
+	CuriosS.give(pip, profiles[pip].Data, "truffle", 1)
+	CuriosS.give(quin, profiles[quin].Data, "caviarTin", 1)
+	CuriosS.give(quin, profiles[quin].Data, "teacupo", 1)
+	advance(TradeService.Settings.cooldown + 1)
+	trade(pip, { op = "invite", userId = 9500 })
+	trade(mo, { op = "accept", userId = 9503 })
+	r = trade(pip, { op = "offer", items = { truffle = 1 } })
+	check("where Roblox doesn't allow paid item trading, a Gem-bought curio can't be offered", r.ok == false and string.find(r.why or "", "Gems", 1, true) ~= nil)
+	check("...and the guest's screen is told so (it hides those curios)", lastOp(pip, "trade").paid == false and pip:GetAttribute("PaidTradingAllowed") == false)
+	r = trade(mo, { op = "offer", items = { croissantino = 1 } })
+	check("...nor can the other guest offer one to them", (function()
+		local rr = trade(mo, { op = "offer", items = { truffle = 1 } })
+		return rr.ok == false
+	end)())
+	r = trade(pip, { op = "offer", items = { gelato = 1 } })
+	check("...but a curio found at the tables still trades", r.ok == true)
+	trade(pip, { op = "cancel" })
+	advance(TradeService.Settings.cooldown + 1)
+	local before2 = asked
+	trade(quin, { op = "invite", userId = 9500 })
+	trade(mo, { op = "accept", userId = 9504 })
+	r = trade(quin, { op = "offer", items = { caviarTin = 1 } })
+	check("if Roblox can't be asked, the answer is no (Gem-bought curios stay out)", r.ok == false and asked > before2)
+	r = trade(quin, { op = "offer", items = { teacupo = 1 } })
+	check("...and the rest trades as ever", r.ok == true)
+	trade(quin, { op = "cancel" })
+	check("the policy is asked once per guest, then remembered", (function()
+		local n = asked
+		Policy.paidTradingAllowed(pip)
+		Policy.paidTradingAllowed(pip)
+		return asked == n
+	end)())
 end
 
 ---------------------------------------------------------------------------------------------------
@@ -1587,6 +1638,110 @@ do
 	check("in the Suite it plays, and the show is spent", type(r) == "table" and r.ok == true and Perks.credits(piaData, "show:spectacleFireworks") == 0 and lastOp(pia, "spectacle") ~= nil, r and r.why)
 	r = show(pia, { op = "play", key = "notAShow" })
 	check("only the three shows", r.ok == false)
+end
+
+---------------------------------------------------------------------------------------------------
+-- O. Friend invitations (Roblox's friend referrals): both thanked once, in Gilt, capped
+---------------------------------------------------------------------------------------------------
+do
+	local Referral = module("ServerScriptService", "Server", "Referral")
+	local Config = module("ReplicatedStorage", "Shared", "Config")
+	local cfg = Config.data.Referral
+	local joins = {}
+	local published = {}
+	local heard = nil
+	local now = 1800000000
+	Referral.joinData = function(player)
+		return joins[player.UserId] or {}
+	end
+	Referral.publish = function(message)
+		table.insert(published, message)
+	end
+	Referral.subscribe = function(handler)
+		heard = handler
+	end
+	Referral.clock = function()
+		return now
+	end
+	local notices = {}
+	Referral.notice = function(player, title, line)
+		table.insert(notices, { player = player, title = title, line = line })
+	end
+	run(Referral.start)
+	check("the house listens for friends arriving in other servers", heard ~= nil)
+
+	local ria = guest("Ria", 9701)
+	local riaData = profiles[ria].Data
+	-- A friend arrives through Ria's invitation, on their first visit.
+	local function newFriend(name, id, by, age)
+		joins[id] = { ReferredByPlayerId = by }
+		local g = guest(name, id)
+		g.AccountAge = age or 400
+		local data = profiles[g].Data
+		data.visits = 0
+		data.firstVisit = 0
+		return g, data
+	end
+	local sol, solData = newFriend("Sol", 9702, 9701)
+	local gilt0, riaGilt0 = solData.gilt, riaData.gilt
+	Referral.arrived(sol, solData)
+	check("an invited friend is welcomed with Gilt on their first visit", solData.gilt == gilt0 + cfg.welcomeGilt and solData.referral.by == 9701)
+	check("and the guest who invited them, here now, is thanked", riaData.gilt == riaGilt0 + cfg.thankGilt and riaData.referral.total == 1)
+	check("both are told why", #notices >= 2 and string.find(notices[#notices].line, "Sol", 1, true) ~= nil)
+	Referral.arrived(sol, solData)
+	check("the welcome and the thanks are paid once", solData.gilt == gilt0 + cfg.welcomeGilt and riaData.gilt == riaGilt0 + cfg.thankGilt)
+
+	-- Not a first visit, or invited by themselves: nothing.
+	joins[9703] = { ReferredByPlayerId = 9701 }
+	local old = guest("Old", 9703)
+	local oldData = profiles[old].Data
+	oldData.visits = 6
+	local g3 = oldData.gilt
+	Referral.arrived(old, oldData)
+	check("a returning guest following an invitation is not paid", oldData.gilt == g3 and oldData.referral.by == 0)
+	local selfie, selfieData = newFriend("Selfie", 9704, 9704)
+	local g4 = selfieData.gilt
+	Referral.arrived(selfie, selfieData)
+	check("nobody can invite themselves", selfieData.gilt == g4)
+	local weird, weirdData = newFriend("Weird", 9705, -3)
+	Referral.arrived(weird, weirdData)
+	check("an invitation from nobody is ignored", weirdData.referral.by == 0)
+
+	-- A new Roblox account: welcomed, but the inviter isn't paid for it.
+	local riaBefore = riaData.gilt
+	local fresh, freshData = newFriend("Fresh", 9706, 9701, 2)
+	Referral.arrived(fresh, freshData)
+	check("a brand-new account is welcomed", freshData.referral.by == 9701 and freshData.gilt > 0)
+	check("but earns its inviter nothing (alt accounts can't farm thanks)", riaData.gilt == riaBefore)
+
+	-- The inviter is in another server: told through Roblox's messages, and thanked there.
+	local tam, tamData = newFriend("Tam", 9707, 9799)
+	Referral.arrived(tam, tamData)
+	check("an inviter elsewhere is told through the house's messages", #published == 1 and published[1].inviter == 9799 and published[1].friend == 9707)
+	local uma = guest("Uma", 9799)
+	local umaData = profiles[uma].Data
+	local umaGilt = umaData.gilt
+	heard({ Data = published[1] })
+	check("and thanked in the server they're in", umaData.gilt == umaGilt + cfg.thankGilt)
+	heard({ Data = published[1] })
+	check("once", umaData.gilt == umaGilt + cfg.thankGilt)
+	heard({ Data = { inviter = "9799", friend = 1, name = {} } })
+	heard("nonsense")
+	check("a malformed message changes nothing", umaData.gilt == umaGilt + cfg.thankGilt)
+
+	-- At most dailyThanks a day, then a new day.
+	local paid = 1 -- Sol
+	for i = 1, cfg.dailyThanks + 2 do
+		local f, fd = newFriend("Friend" .. i, 9710 + i, 9701)
+		Referral.arrived(f, fd)
+	end
+	check("thanks for inviting are capped each day", riaData.referral.today == cfg.dailyThanks and riaData.referral.total == cfg.dailyThanks)
+	now += 86400
+	local f2, fd2 = newFriend("Tomorrow", 9790, 9701)
+	local before2 = riaData.gilt
+	Referral.arrived(f2, fd2)
+	check("and start again the next day", riaData.gilt == before2 + cfg.thankGilt and riaData.referral.today == 1)
+	check("only Gilt is given: no Robux items, no random rewards", cfg.welcomeGilt > 0 and cfg.thankGilt > 0 and paid == 1)
 end
 
 H.finish()

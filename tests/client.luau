@@ -3174,15 +3174,21 @@ do
 	check("no errors eating", #errors == 0, errors[1])
 end
 
--- The quick dock: Collection, Trade, Wardrobe and Gems, one tap away.
+-- The quick dock: Collection, Trade, Wardrobe, Gems and Invite, one tap away.
 do
 	local dockKeys = {}
-	for _, name in { "Collection", "Trade", "Wardrobe", "Gems" } do
+	for _, name in { "Collection", "Trade", "Wardrobe", "Gems", "Invite" } do
 		dockKeys[name] = find(playerGui, function(d)
 			return d:IsA("TextButton") and d.Name == name and d.Parent ~= nil and d.Parent.Name == "QuickDock"
 		end)
 	end
-	check("the dock: Collection, Trade, Wardrobe and Gems on screen", dockKeys.Collection ~= nil and dockKeys.Trade ~= nil and dockKeys.Wardrobe ~= nil and dockKeys.Gems ~= nil)
+	check("the dock: Collection, Trade, Wardrobe, Gems and Invite on screen", dockKeys.Collection ~= nil and dockKeys.Trade ~= nil and dockKeys.Wardrobe ~= nil and dockKeys.Gems ~= nil and dockKeys.Invite ~= nil)
+	local invitesBefore = shared.invites
+	if dockKeys.Invite then
+		signalOf(dockKeys.Invite, "Activated"):Fire()
+	end
+	advance(0.5)
+	check("Invite opens Roblox's own invite prompt", shared.invites == invitesBefore + 1)
 	if dockKeys.Trade then
 		signalOf(dockKeys.Trade, "Activated"):Fire()
 	end

@@ -609,6 +609,37 @@ raw.ballroomFrame = function(i: number, count: number?): CFrame
 end
 grow(Layout :: any, Layout.SCALE, "", {})
 Layout.raw = raw :: typeof(Layout)
+-- The Suite's furniture is each guest's own, set at these spots on their screen and keeping its
+-- true size. A spot near a wall keeps its drawn distance from that wall (a painting on it, a shelf
+-- against it), so the piece still stands against it; the rest of the room opens out.
+do
+	local S = Layout.SCALE
+	local NEAR = 3
+	local rooms = {}
+	for _, name in { "main", "dressing", "study", "bedroom", "spa", "kitchen", "screening", "gym", "terrace" } do
+		table.insert(rooms, (raw.Suite :: any)[name])
+	end
+	local function keep(v: number, lo: number, hi: number): number
+		if v >= lo and v - lo <= NEAR then
+			return lo * S + (v - lo)
+		elseif v <= hi and hi - v <= NEAR then
+			return hi * S - (hi - v)
+		end
+		return v * S
+	end
+	for id, cf in raw.Suite.spots do
+		local p = cf.Position
+		for _, r in rooms do
+			if p.X >= r.minX and p.X <= r.maxX and p.Z >= r.minZ and p.Z <= r.maxZ then
+				Layout.Suite.spots[id] = cf - p + Vector3.new(keep(p.X, r.minX, r.maxX), p.Y * S, keep(p.Z, r.minZ, r.maxZ))
+				break
+			end
+		end
+	end
+end
+-- The Archivist stands behind the desk, which keeps its size: from the desk's grown spot, the
+-- drawn distance (and a little more, clear of its end).
+Layout.Vault.archivistHome = Layout.Vault.desk * CFrame.new(0, 0, 3.1)
 -- The pianist and the guest at the keys sit at the piano's bench, which keeps its size: from the
 -- piano's grown spot, the drawn distance.
 Layout.Foyer.pianist = Layout.Foyer.piano * CFrame.new(0, 0, -5) * CFrame.Angles(0, math.pi, 0)

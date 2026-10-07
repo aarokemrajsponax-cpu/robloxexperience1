@@ -803,6 +803,7 @@ local TEMPLATE = {
 	perks = { credits = {}, luck = { remaining = 0 }, velocity = false, velocityPass = false, rains = {} },
 	risk = { regions = {}, purchases = {}, failures = {}, state = "Normal", restrictedUntil = 0 },
 	ledgerOutbox = {},
+	referral = { by = 0, day = -1, today = 0, total = 0, friends = {} },
 }
 
 local function guest(name, id)

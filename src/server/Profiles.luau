@@ -74,6 +74,9 @@ export type Data = {
 	curios: { items: { [string]: number }, favs: { [string]: boolean }, recent: { string }, found: number, given: { [string]: boolean } },
 	-- Trades: the last few, for the history on the trading screen.
 	trades: { { with: string, gave: { string }, got: { string }, at: number } },
+	-- Friend invitations (server/Referral): who invited this guest (0: nobody), and the thanks
+	-- for friends they invited: today's count (on `day`), the total, and the friends already thanked.
+	referral: { by: number, day: number, today: number, total: number, friends: { number } },
 }
 
 local TEMPLATE: Data = {
@@ -118,6 +121,7 @@ local TEMPLATE: Data = {
 	gems = 0,
 	curios = { items = {}, favs = {}, recent = {}, found = 0, given = {} },
 	trades = {},
+	referral = { by = 0, day = -1, today = 0, total = 0, friends = {} },
 }
 
 -- Each migration moves data from schema n to n + 1. Add new ones at the end.

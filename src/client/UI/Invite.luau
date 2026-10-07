@@ -32,6 +32,13 @@ function Invite.library()
 	end
 end
 
+-- "Invite a friend" (the quick dock): to the house. A friend who comes for the first time is
+-- welcomed with a little Gilt, and you're thanked too if you're here when they arrive (Roblox's
+-- friend referrals: server/Referral).
+function Invite.house()
+	prompt("house", "Come to the Maison: a luxury house of sorting tables, a Ballroom, and your own Suite.")
+end
+
 -- "Come and watch": a friend lands in the Ballroom's Gallery (§9.8).
 function Invite.ballroom()
 	prompt("ballroom", "Lights Out in the Ballroom. Come and watch from the Gallery, or take a chair.")

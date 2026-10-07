@@ -495,6 +495,17 @@ local defaults = {
 		perRobux = 40,
 	},
 
+	-- Friend invitations (server/Referral, Roblox's friend referrals). Both are thanked once, in
+	-- Gilt only; the thanks for inviting are capped, and paid only for friends whose Roblox account
+	-- is at least this many days old.
+	Referral = {
+		welcomeGilt = 100, -- the invited friend, on their first visit
+		thankGilt = 150, -- the guest who invited them, if they're in the house when the friend arrives
+		dailyThanks = 5,
+		lifetimeThanks = 50,
+		minAccountAgeDays = 7,
+	},
+
 	FirstMinute = {
 		target = 60, -- seconds from Play to the first filing
 		straightToTableOfferSeconds = 12,
@@ -551,6 +562,8 @@ local defaults = {
 		-- Guests and staff are drawn at this size: a touch under Roblox's own, the size the
 		-- furniture was made for. (The rooms themselves are grand: Layout.SCALE.)
 		guestScale = 0.8,
+		-- How far the camera may pull back from a guest (the Grand rooms are worth seeing whole).
+		cameraMaxZoom = 50,
 		-- Where guests appear: "foyer" (lit, in the middle of everything) or "street" (a first
 		-- visit starts outside the doors at night).
 		firstArrival = "foyer",

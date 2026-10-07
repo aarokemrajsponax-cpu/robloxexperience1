@@ -25,6 +25,7 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 document.body.appendChild(renderer.domElement);
 
+const cuttable = [];
 const scene = new THREE.Scene();
 scene.background = new THREE.Color().setRGB(8 / 255, 10 / 255, 18 / 255, THREE.SRGBColorSpace);
 const camera = new THREE.PerspectiveCamera(70, W / H, 0.1, 2000);
@@ -137,7 +138,9 @@ async function build() {
 		mesh.castShadow = castShadow && t < 0.5 && mat !== "Neon";
 		mesh.receiveShadow = mat !== "Neon";
 		mesh.name = name;
+		mesh.userData.bottom = new THREE.Box3(new THREE.Vector3(-0.5, -0.5, -0.5), new THREE.Vector3(0.5, 0.5, 0.5)).applyMatrix4(m).min.y;
 		scene.add(mesh);
+		cuttable.push(mesh);
 	}
 	const loader = new THREE.TextureLoader();
 	const texWork = [];
@@ -168,7 +171,9 @@ async function build() {
 				mesh.matrixAutoUpdate = false;
 				mesh.matrix.copy(m);
 				mesh.renderOrder = 2;
+				mesh.userData.bottom = new THREE.Vector3().setFromMatrixPosition(m).y;
 				scene.add(mesh);
+				cuttable.push(mesh);
 			}).catch(() => {})
 		);
 	});
@@ -227,6 +232,8 @@ composer.addPass(new OutputPass());
 window.ready = build().then((w) => ({ parts: w.parts.length, lights: w.lights.length, guis: w.guis.length }));
 
 window.shoot = async (shot) => {
+	// cutY: a plan view, with everything that starts above this height taken away (the ceilings).
+	for (const mesh of cuttable) mesh.visible = shot.cutY === undefined || mesh.userData.bottom < shot.cutY;
 	camera.fov = shot.fov || 70;
 	camera.aspect = W / H;
 	camera.near = shot.near || 0.1;

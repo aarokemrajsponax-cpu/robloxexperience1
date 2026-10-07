@@ -9,8 +9,9 @@ local Rig = require(script.Parent.Rig)
 local Doorman = {}
 
 function Doorman.spawn(parent: Instance)
-	local z = Layout.Street.facadeZ - 1.1
-	local pos = Vector3.new(Layout.Door.width / 2 + 1.8, Layout.FLOOR, z)
+	-- (On the top step, beside the door's pilaster: drawn distances, opened out with the house.)
+	local z = Layout.Street.facadeZ - 1.1 * Layout.SCALE
+	local pos = Vector3.new(Layout.Door.width / 2 + 1.8 * Layout.SCALE, Layout.FLOOR, z)
 	local home = CFrame.lookAt(pos, pos + Vector3.new(-0.35, 0, -1))
 	local s = Rig.build("Doorman", Rig.look("Doorman"), home, parent)
 	s.model:SetAttribute("Staff", "Doorman")

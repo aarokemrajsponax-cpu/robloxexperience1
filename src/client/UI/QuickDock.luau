@@ -1,6 +1,7 @@
 --!strict
--- The quick dock: four round keys down the left side of the screen, always one tap away
--- (and a key each on the keyboard): your Collection (C), Trade (T), your Wardrobe (V) and Gems.
+-- The quick dock: five round keys down the left side of the screen, always one tap away
+-- (and a key each on the keyboard): your Collection (C), Trade (T), your Wardrobe (V), Gems, and
+-- Invite (Roblox's invite prompt, to bring a friend).
 -- Trade opens a short list of everyone in the house, each with a Trade key, and your past trades.
 -- It steps aside while you sort at a table.
 
@@ -22,6 +23,7 @@ QuickDock.openCollection = function() end
 QuickDock.openTrades = function() end
 QuickDock.openWardrobe = function() end
 QuickDock.openGems = function() end
+QuickDock.inviteFriend = function() end
 QuickDock.invite = function(_userId: number, _name: string) end
 QuickDock.isSeated = function(): boolean
 	return false
@@ -71,6 +73,7 @@ function QuickDock.openTrade()
 end
 
 local SIZE = 62
+local KEYS = 5
 
 local function tile(parent: Instance, order: number, glyph: string, label: string, hotkey: string?, onPress: () -> ()): TextButton
 	local b = Instance.new("TextButton")
@@ -148,8 +151,8 @@ function QuickDock.start()
 	f.Name = "QuickDock"
 	f.BackgroundTransparency = 1
 	f.AnchorPoint = Vector2.new(0, 0)
-	f.Position = if short then UDim2.new(0, 10, 0, 60) else UDim2.new(0.0, 12, 0.5, -(4 * SIZE + 30) / 2 - 20)
-	f.Size = UDim2.fromOffset(SIZE, 4 * SIZE + 3 * 10)
+	f.Position = if short then UDim2.new(0, 10, 0, 60) else UDim2.new(0.0, 12, 0.5, -(KEYS * SIZE + (KEYS - 1) * 10) / 2 - 20)
+	f.Size = UDim2.fromOffset(SIZE, KEYS * SIZE + (KEYS - 1) * 10)
 	f.Parent = Root.hud
 	local list = Instance.new("UIListLayout")
 	list.Padding = UDim.new(0, 10)
@@ -164,6 +167,9 @@ function QuickDock.start()
 	end)
 	tile(f, 4, "💎", "Gems", nil, function()
 		QuickDock.openGems()
+	end)
+	tile(f, 5, "✉️", "Invite", nil, function()
+		QuickDock.inviteFriend()
 	end)
 	dock = f
 	UserInputService.InputBegan:Connect(function(input: InputObject, processed: boolean)

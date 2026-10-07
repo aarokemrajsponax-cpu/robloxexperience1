@@ -190,7 +190,7 @@ function CameraRig.follow()
 	end
 	-- Roblox's usual freedom: zoom right in to first person, or out to see the room.
 	player.CameraMinZoomDistance = 0.5
-	player.CameraMaxZoomDistance = 40
+	player.CameraMaxZoomDistance = Config.data.Movement.cameraMaxZoom
 end
 
 -- The sorting camera. It looks down the table from above the chair at Layout's camera angle and

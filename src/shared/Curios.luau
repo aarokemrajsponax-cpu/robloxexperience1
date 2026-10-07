@@ -143,6 +143,12 @@ function Curios.findChance(rounds: number, accuracy: number): number
 end
 
 -- Sorts a list of curio ids: by rarity (rarest first), then name.
+-- Bought with Robux (through Gems, in the Cabinet): trading it is "paid item trading", which
+-- Roblox allows only for some guests (server/Policy).
+function Curios.isPaid(c: Curio): boolean
+	return c.source == "gems"
+end
+
 function Curios.compare(a: string, b: string): boolean
 	local ca, cb = Curios.byId[a], Curios.byId[b]
 	if not ca or not cb then

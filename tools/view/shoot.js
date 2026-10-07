@@ -5,7 +5,7 @@
 //   node tools/view/shoot.js <world.json> <tex-dir> <three-dir> <shots.json> <out-dir> [w h]
 //
 // <three-dir> is an installed `three` package (npm install three). <shots.json> is a list of
-// { name, pos: [x,y,z], look: [x,y,z], fov?, lights?, shadows?, exposure?, bloom? }.
+// { name, pos: [x,y,z], look: [x,y,z], fov?, lights?, shadows?, exposure?, bloom?, cutY? }.
 
 const fs = require("fs");
 const http = require("http");

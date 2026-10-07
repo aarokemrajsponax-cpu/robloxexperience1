@@ -152,11 +152,14 @@ function VaultRoom.build(parent: Instance): Model
 	end
 	-- The centre cabinet: the Mythics.
 	cabinet(m, "Cabinet_Mythics", CFrame.new(V.centre) * CFrame.Angles(0, math.pi, 0), nil, "Mythics")
-	-- The Archivist's desk by the door, and the Register on it.
+	-- The Archivist's desk by the door, and the Register on it. (It goes exactly where its spot
+	-- goes in the Grand house, so the Archivist behind it has room: World/Grand.)
 	local desk = V.desk
-	Kit.part(m, "Desk", Vector3.new(1.6, 3.1, 4), desk * CFrame.new(0, 1.55, 0), L.walnut)
-	Kit.part(m, "DeskTop", Vector3.new(1.9, 0.12, 4.3), desk * CFrame.new(0, 3.16, 0), L.darkWood, { shadow = false })
-	local book = Kit.part(m, "RegisterBook", Vector3.new(0.9, 0.2, 1.2), desk * CFrame.new(0, 3.32, 0), { color = Color3.fromRGB(62, 30, 20), material = Enum.Material.Leather }, { collide = false })
+	local deskModel = Kit.model(m, "ArchivistDesk")
+	deskModel:SetAttribute("GrandAnchor", desk.Position)
+	Kit.part(deskModel, "Desk", Vector3.new(1.6, 3.1, 4), desk * CFrame.new(0, 1.55, 0), L.walnut)
+	Kit.part(deskModel, "DeskTop", Vector3.new(1.9, 0.12, 4.3), desk * CFrame.new(0, 3.16, 0), L.darkWood, { shadow = false })
+	local book = Kit.part(deskModel, "RegisterBook", Vector3.new(0.9, 0.2, 1.2), desk * CFrame.new(0, 3.32, 0), { color = Color3.fromRGB(62, 30, 20), material = Enum.Material.Leather }, { collide = false })
 	local p = Instance.new("ProximityPrompt")
 	p.Name = "RegisterPrompt"
 	p.ActionText = "Read"
@@ -170,7 +173,7 @@ function VaultRoom.build(parent: Instance): Model
 	p:SetAttribute("Offset", 0.5)
 	p.Parent = book
 	CollectionService:AddTag(book, "RegisterBook")
-	local lamp = Kit.part(m, "DeskLamp", Vector3.new(0.6, 0.5, 0.6), desk * CFrame.new(0, 4, 1.5), L.brass, { collide = false })
+	local lamp = Kit.part(deskModel, "DeskLamp", Vector3.new(0.6, 0.5, 0.6), desk * CFrame.new(0, 4, 1.5), L.brass, { collide = false })
 	Kit.pointLight(lamp, 0.7, 10, Color3.fromRGB(255, 214, 160))
 	VaultRoom.dress(m, top)
 	local fill = Kit.part(m, "Fill", Vector3.new(1, 1, 1), CFrame.new(-8, top - 2, 53), INVISIBLE, { collide = false, query = false, shadow = false })

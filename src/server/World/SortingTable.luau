@@ -15,6 +15,14 @@ local Kit = require(script.Parent.Kit)
 local L = Kit.Looks
 local T = Layout.Table
 
+-- The house is opened out after it's built (World/Grand): the table rises with its floor and
+-- the ceiling rises further, so what hangs from the ceiling is marked for Grand to carry up to
+-- it ("ceiling": moved up with it; "cord": stretched up to it).
+local function hang(part: BasePart, kind: "ceiling" | "cord", ceiling: number)
+	part:SetAttribute("GrandHang", kind)
+	part:SetAttribute("GrandCeiling", ceiling)
+end
+
 local SortingTable = {}
 
 export type Style = {
@@ -115,9 +123,12 @@ local function lamp(model: Model, frame: CFrame, style: Style)
 	if style.lamp == "key" then
 		-- One hard key light from high above: a small black canister, almost invisible.
 		local high = frame:PointToWorldSpace(Vector3.new(0, style.ceiling - centre.Y - 1.2, 0.2))
-		Kit.part(model, "Lamp", Vector3.new(0.9, 1.2, 0.9), CFrame.new(high), L.blackLacquer, { collide = false, query = false })
-		Kit.part(model, "LampRim", Vector3.new(0.95, 0.08, 0.95), CFrame.new(high - Vector3.new(0, 0.6, 0)), L.brass, { collide = false, query = false, shadow = false })
+		local can = Kit.part(model, "Lamp", Vector3.new(0.9, 1.2, 0.9), CFrame.new(high), L.blackLacquer, { collide = false, query = false })
+		local rim = Kit.part(model, "LampRim", Vector3.new(0.95, 0.08, 0.95), CFrame.new(high - Vector3.new(0, 0.6, 0)), L.brass, { collide = false, query = false, shadow = false })
 		bulb = Kit.part(model, "Bulb", Vector3.new(0.5, 0.1, 0.5), CFrame.new(high - Vector3.new(0, 0.66, 0)), { color = Color3.fromRGB(255, 240, 220), material = Enum.Material.Neon }, { collide = false, shadow = false, query = false })
+		for _, part in { can, rim, bulb } do
+			hang(part, "ceiling", style.ceiling)
+		end
 		local down = Kit.spotLight(bulb, Enum.NormalId.Bottom, style.lampBrightness, (high.Y - centre.Y) + 6, 32, style.lampColor, false)
 		down.Name = "TableLight"
 		return
@@ -138,7 +149,8 @@ local function lamp(model: Model, frame: CFrame, style: Style)
 	end
 	-- Pendant lamps: a short brass shade (Salon) or a green glass shade on a long cord (Velvet).
 	local cordTop = style.ceiling
-	Kit.cylinder(model, "Cord", cordTop - lampPos.Y, 0.08, CFrame.new(lampPos.X, (cordTop + lampPos.Y) / 2, lampPos.Z) * CFrame.Angles(0, 0, math.rad(90)), L.ink, { collide = false, shadow = false, query = false })
+	local cord = Kit.cylinder(model, "Cord", cordTop - lampPos.Y, 0.08, CFrame.new(lampPos.X, (cordTop + lampPos.Y) / 2, lampPos.Z) * CFrame.Angles(0, 0, math.rad(90)), L.ink, { collide = false, shadow = false, query = false })
+	hang(cord, "cord", style.ceiling)
 	local shadeLook = if style.lamp == "cord" then { color = Color3.fromRGB(26, 70, 48), material = Enum.Material.Glass, reflectance = 0.25, transparency = 0.1 } else L.brass
 	local shadeSize = if style.lamp == "cord" then Vector3.new(1.2, 2.2, 2.2) else Vector3.new(0.9, 3.4, 3.4)
 	local shade = Kit.part(model, "Lamp", shadeSize, CFrame.new(lampPos) * CFrame.Angles(0, 0, math.rad(90)), shadeLook, { collide = false, shape = Enum.PartType.Cylinder, query = false })

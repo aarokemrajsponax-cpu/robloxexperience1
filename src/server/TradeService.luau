@@ -19,6 +19,7 @@ local CurioList = require(ReplicatedStorage.Shared.Curios)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Analytics = require(script.Parent.Analytics)
 local Curios = require(script.Parent.Curios)
+local Policy = require(script.Parent.Policy)
 local Profiles = require(script.Parent.Profiles)
 local RemoteGuard = require(script.Parent.RemoteGuard)
 
@@ -62,6 +63,11 @@ local function other(t: Trade, p: Player): Player
 	return if t.a == p then t.b else t.a
 end
 
+-- Curios bought with Robux may change hands only where Roblox allows it for both guests.
+local function paidOk(t: Trade): boolean
+	return Policy.paidTradingKnown(t.a) and Policy.paidTradingKnown(t.b)
+end
+
 local function view(t: Trade, p: Player): { [string]: any }
 	local o = other(t, p)
 	return {
@@ -78,6 +84,7 @@ local function view(t: Trade, p: Player): { [string]: any }
 		version = t.version,
 		state = t.state,
 		countdown = if t.state == "countdown" then math.max(0, math.ceil(t.countdownEnds - TradeService.clock())) else 0,
+		paid = paidOk(t), -- whether curios bought with Gems may be offered in this trade
 	}
 end
 
@@ -109,14 +116,17 @@ local function unlock(t: Trade)
 	t.state = "open"
 end
 
--- Whether `data` holds everything in `offer`, and all of it can be traded.
-local function holds(data: Profiles.Data, offer: Offer): (boolean, string?)
+-- Whether `data` holds everything in `offer`, and all of it can be traded (`paid`: whether this
+-- trade may carry curios bought with Robux).
+local function holds(data: Profiles.Data, offer: Offer, paid: boolean): (boolean, string?)
 	for id, n in offer do
 		local c = CurioList.byId[id]
 		if not c then
 			return false, "That curio isn't known."
 		elseif not c.tradeable then
 			return false, c.name .. " can't be traded."
+		elseif CurioList.isPaid(c) and not paid then
+			return false, "Curios bought with Gems can't be part of this trade."
 		elseif Curios.count(data, id) < n then
 			return false, "You don't hold enough of " .. c.name .. "."
 		end
@@ -130,8 +140,9 @@ local function swap(t: Trade): (boolean, string?)
 	if not da or not db or not t.a.Parent or not t.b.Parent then
 		return false, "Someone left."
 	end
-	local okA, whyA = holds(da, t.offers[t.a])
-	local okB, whyB = holds(db, t.offers[t.b])
+	local paid = paidOk(t)
+	local okA, whyA = holds(da, t.offers[t.a], paid)
+	local okB, whyB = holds(db, t.offers[t.b], paid)
 	if not okA or not okB then
 		return false, whyA or whyB
 	end
@@ -319,7 +330,12 @@ local function onAsk(player: Player, request: unknown): any
 			RemoteGuard.reject(player, "tradeAsk", "malformed")
 			return { ok = false, why = "That offer isn't right." }
 		end
-		local ok, why = holds(data, offer)
+		-- (Roblox's answer for both guests, asked now if it isn't in yet.)
+		local paid = Policy.paidTradingAllowed(player) and Policy.paidTradingAllowed(other(t, player))
+		if trades[player] ~= t or t.state == "done" or t.state == "cancelled" then
+			return { ok = false, why = "That trade has ended." }
+		end
+		local ok, why = holds(data, offer, paid)
 		if not ok then
 			return { ok = false, why = why }
 		end
