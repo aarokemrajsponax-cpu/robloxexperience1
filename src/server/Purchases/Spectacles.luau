@@ -23,7 +23,7 @@ local IS_KEY: { [string]: boolean } = {}
 for _, k in Spectacles.KEYS do
 	IS_KEY[k] = true
 end
-local SECONDS = { spectacleFireworks = 45, spectacleMemes = 20, spectacleGolden = 30 }
+local SECONDS = { spectacleFireworks = 45, spectacleMemes = 90, spectacleGolden = 30 }
 
 local function credit(key: string): string
 	return "show:" .. key

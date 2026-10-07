@@ -275,7 +275,7 @@ local defaults = {
 		pianoAsk = { rate = 3, burst = 6 },
 		pianoNote = { rate = 16, burst = 24 }, -- a pianist's notes: quick runs and chords, never a flood
 		sitAsk = { rate = 2, burst = 5 },
-		barAsk = { rate = 2, burst = 5 },
+		barAsk = { rate = 3, burst = 6 }, -- (a bite each click: never faster than biteGap anyway)
 		curioAsk = { rate = 3, burst = 8 },
 		tradeAsk = { rate = 3, burst = 8 },
 		spectacleAsk = { rate = 2, burst = 5 },
@@ -348,7 +348,9 @@ local defaults = {
 	-- The Terrace bar (BarMenu has the menu and its prices).
 	Bar = {
 		reach = 16, -- studs from the bar a guest may order from
-		sipSeconds = 4, -- a sip or a bite, this often
+		sipSeconds = 0, -- a sip or a bite on its own this often (0: only when the guest clicks to eat)
+		biteGap = 0.8, -- the quickest a guest can take another bite (seconds)
+		idleSeconds = 300, -- a treat left untouched this long is set down
 		shareRadius = 24, -- the Grand Platter hands a sweet to guests this close
 		shareMax = 12, -- to at most this many
 		goldKeyPour = true, -- Gold Key holders have one everyday drink on the house each day (UTC)
@@ -377,10 +379,23 @@ local defaults = {
 		finaleRate = 9, -- shells a second in the finale barrage
 		finaleShare = 0.22, -- the last part of a show that is its finale
 		closingWillows = 7, -- great gold willows in a row to close
-		heightMin = 85, -- studs above the highest roof a shell bursts, at the least
-		heightMax = 170, -- ...and at the most
+		heightMin = 70, -- studs above the highest roof a shell bursts, at the least
+		heightMax = 190, -- ...and at the most
 		margin = 60, -- studs past the house's footprint shells may go up from
 		maxLive = 70, -- shells in the sky at once, at most (kinder to slower computers)
+		size = 2.6, -- how big every shell is (1: a town's show; 2.6: a Japanese festival's great shells)
+		brightness = 3, -- how brightly the stars glow (ParticleEmitter.Brightness)
+		screenGlow = 0.05, -- how much a big burst lights the whole screen (even from indoors)
+		clearDensity = 0.06, -- the night air thins to this while a show is on
+		watchDistance = 190, -- studs across the street the watching camera stands from the house
+	},
+
+	-- Suite spectacles drawn on the buyer's screen (World/MemeTakeover).
+	Spectacles = {
+		memeSeconds = 90, -- the Meme Takeover's length
+		memeCast = 40, -- memes the portal spews
+		memeRain = 140, -- little memes raining from the ceiling, at most
+		bossSize = 11, -- studs across, the giant boss meme
 	},
 
 	-- Commissions (Appendix I1): Gilt for the Evening's and the Week's.
@@ -615,6 +630,9 @@ local defaults = {
 		-- are the last resort.
 		LibrarySounds = {
 			-- The fireworks (Pro Sound Effects, free in any experience): deep booms, crackle, a barrage.
+			-- Eating and drinking at the Terrace (Pro Sound Effects).
+			eatBite = { { id = "rbxassetid://9113138343", pitch = 1, volume = 1.6 }, { id = "rbxassetid://9113660664", pitch = 1.1, volume = 1.4 } },
+			drinkSip = { { id = "rbxassetid://9114172109", pitch = 1, volume = 1.4 }, { id = "rbxassetid://9114171855", pitch = 1, volume = 1.4 }, { id = "rbxassetid://9114171960", pitch = 1, volume = 1.4 } },
 			fireworkBoom = { { id = "rbxassetid://9125484367", pitch = 1, volume = 2.2 }, { id = "rbxassetid://9125484511", pitch = 1, volume = 2.2 }, { id = "rbxassetid://9125484743", pitch = 1, volume = 2.2 }, { id = "rbxassetid://9125484526", pitch = 1, volume = 2.2 } },
 			fireworkCrackle = { { id = "rbxassetid://9114447505", pitch = 1, volume = 1.6 } },
 			fireworkBarrage = { { id = "rbxassetid://9114447178", pitch = 1, volume = 1.8 }, { id = "rbxassetid://9112780898", pitch = 1, volume = 1.8 } },
@@ -639,27 +657,23 @@ local defaults = {
 			click = { { id = "rbxassetid://15675032796", pitch = 1, volume = 1.00 } },
 			tick = { { id = "rbxassetid://15675032796", pitch = 1.35, volume = 1.00 } },
 		},
-		-- The Foyer's grand piano when a guest plays it: one recording per key, C3 to C6 (Config.Piano).
-		-- These are a sampled grand piano free on the Creator Store (I_AmKota's "piano note" set,
-		-- public domain). Replace any with your own ("" for a key plays its nearest note, retuned).
-		PianoNotes = {
-			"rbxassetid://123112876875374", "rbxassetid://120923365636009", "rbxassetid://106306658545729", "rbxassetid://124841365961522", "rbxassetid://82335077730546", "rbxassetid://139732365240441", -- C3 to F3
-			"rbxassetid://83552558259422", "rbxassetid://137224813797993", "rbxassetid://131726792016780", "rbxassetid://95091023271668", "rbxassetid://112380265050214", "rbxassetid://105256060658131", -- F#3 to B3
-			"rbxassetid://78413131279275", "rbxassetid://72998150378307", "rbxassetid://105581334194673", "rbxassetid://86516725681894", "rbxassetid://132881598286319", "rbxassetid://133575380950758", -- C4 to F4
-			"rbxassetid://126196495975202", "rbxassetid://114434657963330", "rbxassetid://133080223235416", "rbxassetid://136348068040461", "rbxassetid://128661535499577", "rbxassetid://128462707908914", -- F#4 to B4
-			"rbxassetid://121997668450827", "rbxassetid://121413839180669", "rbxassetid://90740749235134", "rbxassetid://113030261877109", "rbxassetid://140406182404884", "rbxassetid://119631153742000", -- C5 to F5
-			"rbxassetid://70828942309686", "rbxassetid://131269431485825", "rbxassetid://118262323318899", "rbxassetid://125853393278154", "rbxassetid://99745152176175", "rbxassetid://138660648674060", -- F#5 to B5
-			"rbxassetid://110812706317973", -- C6 to C6
+		-- The Foyer's grand piano when a guest plays it. Roblox only lets an experience play audio
+		-- its owner uploaded, or Roblox's own licensed library (APM Music, Pro Sound Effects): piano
+		-- notes uploaded by other creators are refused (tested: every one on the Creator Store
+		-- answers "authentication required"), which is why the piano was silent. So each key plays
+		-- a slice of a licensed APM recording: one clean, sustained piano note found inside it
+		-- (measured: its pitch, where it starts, how long it rings), retuned to the key from the
+		-- nearest slice. `note` is the slice's pitch as a MIDI number, `start`/`length` seconds.
+		PianoSlices = {
+			{ id = "rbxassetid://1847254302", note = 52.97, start = 0.775, length = 2.5, gain = 1.6 }, -- F3, "Piano Short 120 B" (APM)
+			{ id = "rbxassetid://1848319257", note = 72.08, start = 0.952, length = 3.0, gain = 1.3 }, -- C5, "Upright Evolution - Mnemonic" (APM)
 		},
-		-- If a key's recording above won't load, its neighbour plays it retuned; if none of them
-		-- load, the first of these middle-C recordings that does is retuned to every key (all
-		-- public on the Creator Store).
-		PianoFallback = {
-			"rbxassetid://79079707710718", -- Grand Piano C4 (kyleamida)
-			"rbxassetid://87764581272529", -- C note 4 Piano (2Mello4U)
-			"rbxassetid://96243649310055", -- Piano Note C4 (O_cuIi)
-			"rbxassetid://121927018876136", -- Piano C Key (zedeuruim)
-		},
+		-- Your own piano recordings, one per key from C3 (Config.Piano.lowest): upload them to your
+		-- account (Creator Hub -> Development Items -> Audio) and paste their ids here; each plays
+		-- once it has loaded, in place of the slices.
+		PianoNotes = {},
+		-- A middle-C recording of your own, retuned to every key, if the slices are ever withdrawn.
+		PianoFallback = {},
 		-- The house's music: three playlists of real recordings from Roblox's licensed library (APM
 		-- Music, uploaded by APMOfficial, free in any experience), so the house has music the moment
 		-- it opens, with nothing to upload. Each list plays through in a shuffled order, a breath

@@ -48,7 +48,7 @@ local function creditOf(key: string): string
 	return "treat:" .. key
 end
 
-type Holding = { item: BarMenu.Item, model: Model, left: number, next: number, sips: number }
+type Holding = { item: BarMenu.Item, model: Model, left: number, next: number, sips: number, last: number }
 local holding: { [Player]: Holding } = {}
 
 local function settings(): { [string]: any }
@@ -133,8 +133,11 @@ function Bar.serve(player: Player, item: BarMenu.Item): boolean
 	weld.Parent = handle
 	model:SetAttribute("Sips", 0)
 	model:SetAttribute("Owner", player.UserId)
+	model:SetAttribute("Servings", item.servings)
+	model:SetAttribute("Total", item.servings)
+	model:SetAttribute("Kind", item.kind)
 	model.Parent = character
-	holding[player] = { item = item, model = model, left = item.servings, next = os.clock() + settings().sipSeconds, sips = 0 }
+	holding[player] = { item = item, model = model, left = item.servings, next = os.clock() + settings().sipSeconds, sips = 0, last = os.clock() }
 	return true
 end
 
@@ -303,31 +306,58 @@ local function onAsk(player: Player, request: unknown): any
 	elseif r.op == "putDown" then
 		Bar.putDown(player)
 		return { ok = true }
+	elseif r.op == "bite" then
+		local ok, left = Bar.bite(player)
+		return { ok = ok, left = left }
 	end
 	return { ok = false, why = "That isn't something the bar does." }
 end
 
+-- One bite (or sip): a serving gone, and every screen sees the arm come up (the "Sips" counter).
+local function bite(player: Player, h: Holding)
+	local now = os.clock()
+	h.left -= 1
+	h.last = now
+	h.next = now + settings().sipSeconds
+	h.sips += 1
+	h.model:SetAttribute("Sips", h.sips)
+	h.model:SetAttribute("Servings", h.left)
+	if h.left <= 0 then
+		holding[player] = nil
+		local model = h.model
+		task.delay(1.4, function()
+			if model.Parent then
+				model:Destroy()
+			end
+		end)
+	end
+end
+
+-- A guest eats (or drinks) when they click: the server only checks they hold something and
+-- aren't faster than a person can chew (Config.Bar.biteGap).
+function Bar.bite(player: Player): (boolean, number?)
+	local h = holding[player]
+	if not h or not h.model.Parent then
+		return false, nil
+	end
+	if os.clock() - h.last < settings().biteGap then
+		return false, h.left
+	end
+	bite(player, h)
+	return true, h.left
+end
+
 local function tick()
 	local now = os.clock()
+	local auto = settings().sipSeconds
 	for player, h in holding do
 		if not h.model.Parent or not player.Parent then
 			holding[player] = nil
-		elseif now >= h.next then
-			h.left -= 1
-			h.next = now + settings().sipSeconds
-			-- Every screen sees the sip (the arm comes up) by this counter.
-			h.sips += 1
-			h.model:SetAttribute("Sips", h.sips)
-			h.model:SetAttribute("Servings", h.left)
-			if h.left <= 0 then
-				holding[player] = nil
-				local model = h.model
-				task.delay(1.4, function()
-					if model.Parent then
-						model:Destroy()
-					end
-				end)
-			end
+		elseif auto > 0 and now >= h.next then
+			bite(player, h)
+		elseif now - h.last > settings().idleSeconds then
+			-- Set down after a long while untouched.
+			Bar.putDown(player)
 		end
 	end
 end

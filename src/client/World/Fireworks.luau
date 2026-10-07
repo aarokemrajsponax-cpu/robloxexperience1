@@ -8,11 +8,16 @@
 -- Drawn on this screen only (the server says when: Salutes, Suite spectacles); every number that
 -- shapes it lives in Config.Fireworks.
 
+local Lighting = game:GetService("Lighting")
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 
+local Brand = require(ReplicatedStorage.Shared.Brand)
 local Config = require(ReplicatedStorage.Shared.Config)
+local CameraRig = require(script.Parent.Parent.Camera)
 local Sound = require(script.Parent.Parent.Sound)
 
 local Fireworks = {}
@@ -20,6 +25,7 @@ local Fireworks = {}
 export type Options = {
 	scale: number?, -- 1: a show; more: bigger shells, more of them (the Grand Salute, the Finale)
 	finale: boolean?, -- end on the barrage and the willows (default true)
+	watch: boolean?, -- this guest bought it: the camera goes out to watch at once
 }
 
 local SPARK = "rbxasset://textures/particles/sparkles_main.dds"
@@ -131,6 +137,9 @@ local function emitter(parent: Instance, props: { [string]: any }): ParticleEmit
 	e.LightInfluence = 0
 	e.SpreadAngle = Vector2.new(180, 180)
 	e.LockedToPart = false
+	pcall(function()
+		(e :: any).Brightness = cfg().brightness -- (stars that glow through the night air)
+	end)
 	for k, v in props do
 		pcall(function()
 			(e :: any)[k] = v
@@ -173,7 +182,13 @@ local function done(p: Instance, after: number)
 	end)
 end
 
--- The shells. Each takes where it bursts, its colours, and the show's scale.
+-- How many stars a shell throws: more for a bigger show, never so many a slower computer stalls.
+-- (`scale` here is the shell's size: the show's scale times Config.Fireworks.size.)
+local function count(base: number, scale: number): number
+	return math.floor(base * math.clamp(scale / cfg().size, 0.6, 1.8))
+end
+
+-- The shells. Each takes where it bursts, its colours, and its size (`scale`).
 type Burst = (at: Vector3, colours: { Color3 }, scale: number) -> ()
 
 local function peony(at: Vector3, colours: { Color3 }, scale: number)
@@ -187,7 +202,7 @@ local function peony(at: Vector3, colours: { Color3 }, scale: number)
 		Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.75, 0.1), NumberSequenceKeypoint.new(1, 1) }),
 		Color = sequence(colours),
 	})
-	e:Emit(math.floor(260 * scale))
+	e:Emit(count(260, scale))
 	flash(p, colours[1], 7)
 	boom(at, 0.9)
 	done(p, 3.2)
@@ -207,7 +222,7 @@ local function chrysanthemum(at: Vector3, colours: { Color3 }, scale: number)
 		Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(1, 1) }),
 		Color = sequence(GOLD),
 	})
-	e:Emit(math.floor(420 * scale))
+	e:Emit(count(420, scale))
 	done(p, 2.8)
 end
 
@@ -223,7 +238,7 @@ local function willow(at: Vector3, _colours: { Color3 }, scale: number)
 		Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.7, 0.25), NumberSequenceKeypoint.new(1, 1) }),
 		Color = sequence(GOLD),
 	})
-	e:Emit(math.floor(300 * scale))
+	e:Emit(count(300, scale))
 	-- Glitter falling with it.
 	local g = emitter(p, {
 		Speed = NumberRange.new(20 * scale, 55 * scale),
@@ -234,7 +249,7 @@ local function willow(at: Vector3, _colours: { Color3 }, scale: number)
 		Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.1, 0.9), NumberSequenceKeypoint.new(0.2, 0), NumberSequenceKeypoint.new(0.3, 0.9), NumberSequenceKeypoint.new(0.4, 0), NumberSequenceKeypoint.new(1, 1) }),
 		Color = ColorSequence.new(Color3.fromRGB(255, 240, 200)),
 	})
-	g:Emit(math.floor(250 * scale))
+	g:Emit(count(250, scale))
 	flash(p, GOLD[1], 8)
 	boom(at, 1)
 	done(p, 6.5)
@@ -258,7 +273,7 @@ local function ring(at: Vector3, colours: { Color3 }, scale: number)
 		Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(1, 1) }),
 		Color = sequence(colours),
 	})
-	e:Emit(math.floor(160 * scale))
+	e:Emit(count(160, scale))
 	-- A small heart of another colour in the middle.
 	local core = emitter(p, {
 		Speed = NumberRange.new(14 * scale, 18 * scale),
@@ -267,7 +282,7 @@ local function ring(at: Vector3, colours: { Color3 }, scale: number)
 		Size = NumberSequence.new(1.6 * scale, 0),
 		Color = sequence({ colours[#colours] == colours[1] and Color3.fromRGB(245, 245, 255) or colours[#colours] }),
 	})
-	core:Emit(math.floor(60 * scale))
+	core:Emit(count(60, scale))
 	flash(p, colours[1], 6)
 	boom(at, 0.85)
 	done(p, 3)
@@ -294,7 +309,7 @@ local function palm(at: Vector3, colours: { Color3 }, scale: number)
 		Size = NumberSequence.new(0.8 * scale, 0),
 		Color = sequence(colours),
 	})
-	trail:Emit(math.floor(220 * scale))
+	trail:Emit(count(220, scale))
 	flash(p, GOLD[1], 7)
 	boom(at, 1)
 	done(p, 3.8)
@@ -310,7 +325,7 @@ local function crackle(at: Vector3, colours: { Color3 }, scale: number)
 		Size = NumberSequence.new(2 * scale, 0.8),
 		Color = sequence(colours),
 	})
-	e:Emit(math.floor(120 * scale))
+	e:Emit(count(120, scale))
 	flash(p, colours[1], 6)
 	boom(at, 0.8)
 	later(1.0, function()
@@ -324,7 +339,7 @@ local function crackle(at: Vector3, colours: { Color3 }, scale: number)
 			Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.15, 1), NumberSequenceKeypoint.new(0.3, 0), NumberSequenceKeypoint.new(0.45, 1), NumberSequenceKeypoint.new(0.6, 0), NumberSequenceKeypoint.new(0.8, 1), NumberSequenceKeypoint.new(1, 1) }),
 			Color = ColorSequence.new(Color3.fromRGB(255, 250, 235)),
 		})
-		c:Emit(math.floor(420 * scale))
+		c:Emit(count(420, scale))
 		pcall(Sound.play, "fireworkCrackle", 0.7, 0.9 + math.random() * 0.2)
 	end)
 	done(p, 3)
@@ -336,7 +351,7 @@ local function salute(at: Vector3, _colours: { Color3 }, scale: number)
 	local e = emitter(p, {
 		Speed = NumberRange.new(0, 4),
 		Lifetime = NumberRange.new(0.12, 0.18),
-		Size = NumberSequence.new(34 * scale, 10 * scale),
+		Size = NumberSequence.new(18 * scale, 6 * scale),
 		Color = ColorSequence.new(Color3.fromRGB(255, 255, 255)),
 	})
 	e:Emit(3)
@@ -348,7 +363,7 @@ local function salute(at: Vector3, _colours: { Color3 }, scale: number)
 		Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.2, 1), NumberSequenceKeypoint.new(0.35, 0), NumberSequenceKeypoint.new(0.55, 1), NumberSequenceKeypoint.new(0.7, 0), NumberSequenceKeypoint.new(1, 1) }),
 		Color = ColorSequence.new(Color3.fromRGB(255, 255, 255)),
 	})
-	strobe:Emit(math.floor(160 * scale))
+	strobe:Emit(count(160, scale))
 	flash(p, Color3.fromRGB(255, 255, 255), 14)
 	boom(at, 1.3)
 	done(p, 2)
@@ -397,6 +412,156 @@ local function sites(): (Vector3, Vector3)
 	return from, top
 end
 
+-- Every big burst lights the whole screen a moment in its colour (seen even from indoors, as
+-- light through the windows), never more than a few times a second.
+local lastGlow = 0
+local function glow(colour: Color3, scale: number)
+	local now = os.clock()
+	if now - lastGlow < 0.18 then
+		return
+	end
+	lastGlow = now
+	local cc = Lighting:FindFirstChild("FireworkGlow")
+	if not cc then
+		local e = Instance.new("ColorCorrectionEffect")
+		e.Name = "FireworkGlow"
+		e.Brightness = 0
+		e.TintColor = Color3.new(1, 1, 1)
+		e.Parent = Lighting
+		cc = e
+	end
+	local e = cc :: ColorCorrectionEffect
+	e.Brightness = math.clamp(cfg().screenGlow * scale, 0, 0.25)
+	e.TintColor = Color3.new(1, 1, 1):Lerp(colour, 0.35)
+	TweenService:Create(e, TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Brightness = 0, TintColor = Color3.new(1, 1, 1) }):Play()
+end
+
+-- While a show is on, the night air thins so the sky is clear (put back after).
+local showsOn = 0
+local savedAir: { density: number, haze: number }? = nil
+local function clearSky(on: boolean)
+	local air = Lighting:FindFirstChildOfClass("Atmosphere")
+	showsOn = math.max(0, showsOn + (if on then 1 else -1))
+	if not air then
+		return
+	end
+	if on and showsOn == 1 then
+		savedAir = { density = air.Density, haze = air.Haze }
+		TweenService:Create(air, TweenInfo.new(2), { Density = math.min(air.Density, cfg().clearDensity), Haze = 0 }):Play()
+	elseif not on and showsOn == 0 then
+		local was = savedAir
+		if was then
+			TweenService:Create(air, TweenInfo.new(4), { Density = was.density, Haze = was.haze }):Play()
+		end
+		savedAir = nil
+	end
+end
+
+-- Watching: the camera goes outside, across the street, and looks up at the show over the house
+-- (drifting between three views), until the show ends or the guest goes back.
+local watching = false
+local watchGui: ScreenGui? = nil
+local watchKey: TextButton? = nil
+
+local function shot(i: number): CFrame
+	local g = grounds()
+	local centre = (g.min + g.max) / 2
+	local sky = Vector3.new(centre.X, g.max.Y + (cfg().heightMin + cfg().heightMax) / 2, centre.Z)
+	local back = cfg().watchDistance
+	local spots = {
+		Vector3.new(centre.X - 90, g.max.Y + 20, g.min.Z - back),
+		Vector3.new(centre.X + 90, g.max.Y + 35, g.min.Z - back * 0.9),
+		Vector3.new(centre.X, g.max.Y + 70, g.min.Z - back * 1.15),
+	}
+	local eye = spots[(i - 1) % #spots + 1]
+	return CFrame.lookAt(eye, sky)
+end
+
+local function setKey(text: string)
+	local k = watchKey
+	if k then
+		k.Text = text
+	end
+end
+
+function Fireworks.watch(on: boolean)
+	if on == watching then
+		return
+	end
+	if on and CameraRig.isAtTable() then
+		return -- (at a table the sorting screen keeps the camera)
+	end
+	watching = on
+	if on then
+		local i = 0
+		CameraRig.watch(function(): CFrame?
+			i += 1
+			return shot(i)
+		end, 7)
+		setKey("Back to the house")
+	else
+		CameraRig.stopWatching()
+		setKey("Watch the fireworks")
+	end
+end
+
+function Fireworks.isWatching(): boolean
+	return watching
+end
+
+-- The key to watch (and to come back), at the top of the screen while a show is on.
+local function offerWatch(on: boolean)
+	if not on then
+		local gui = watchGui
+		watchGui = nil
+		watchKey = nil
+		if gui then
+			gui:Destroy()
+		end
+		return
+	end
+	if watchGui then
+		return
+	end
+	local player = Players.LocalPlayer
+	local parent = player and player:FindFirstChild("PlayerGui")
+	if not parent then
+		return
+	end
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "FireworksWatch"
+	gui.ResetOnSpawn = false
+	gui.DisplayOrder = 25
+	local k = Instance.new("TextButton")
+	k.Name = "Watch"
+	k.AnchorPoint = Vector2.new(0.5, 0)
+	k.Position = UDim2.new(0.5, 0, 0, 74)
+	k.Size = UDim2.fromOffset(260, 44)
+	k.BackgroundColor3 = Color3.fromRGB(176, 140, 72)
+	k.TextColor3 = Color3.fromRGB(20, 16, 10)
+	k.FontFace = Brand.Fonts.bodyBold
+	k.TextSize = 18
+	k.AutoButtonColor = true
+	k.Text = if watching then "Back to the house" else "Watch the fireworks"
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(1, 0)
+	corner.Parent = k
+	k.Activated:Connect(function()
+		Fireworks.watch(not watching)
+	end)
+	k.Parent = gui
+	gui.Parent = parent
+	watchGui = gui
+	watchKey = k
+end
+
+-- Moving (or jumping) while watching brings the camera home.
+UserInputService.InputBegan:Connect(function(input: InputObject, processed: boolean)
+	if watching and not processed and (input.KeyCode == Enum.KeyCode.W or input.KeyCode == Enum.KeyCode.A or input.KeyCode == Enum.KeyCode.S or input.KeyCode == Enum.KeyCode.D or input.KeyCode == Enum.KeyCode.Space) then
+		Fireworks.watch(false)
+	end
+end)
+
 -- One shell: up from the ground on a trail of sparks, then the burst.
 local function launch(kind: string, scale: number, colours: { Color3 }?, at: { from: Vector3, top: Vector3 }?)
 	if live >= cfg().maxLive then
@@ -419,16 +584,17 @@ local function launch(kind: string, scale: number, colours: { Color3 }?, at: { f
 		EmissionDirection = Enum.NormalId.Bottom,
 		Lifetime = NumberRange.new(0.4, 0.8),
 		Acceleration = Vector3.new(0, -12, 0),
-		Size = NumberSequence.new(1.1 * scale, 0),
+		Size = NumberSequence.new(1.1 * scale * cfg().size, 0),
 		Color = sequence(GOLD),
 	})
-	local rise = randomIn(1.1, 1.6)
+	local rise = randomIn(1.3, 2)
 	local tween = TweenService:Create(rocket, TweenInfo.new(rise, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Position = top })
 	tween:Play()
 	task.delay(rise, function()
 		rocket:Destroy()
 		local burst = KINDS[kind] or peony
-		local ok = pcall(burst, top, paint, scale)
+		local ok = pcall(burst, top, paint, scale * cfg().size)
+		glow(paint[1], scale)
 		if not ok then
 			live -= 1
 		end
@@ -441,6 +607,18 @@ function Fireworks.show(seconds: number, options: Options?)
 	local scale = o.scale or 1
 	local finale = o.finale ~= false
 	local c = cfg()
+	clearSky(true)
+	offerWatch(true)
+	if o.watch then
+		Fireworks.watch(true)
+	end
+	task.delay(seconds + 6, function()
+		clearSky(false)
+		if showsOn == 0 then
+			offerWatch(false)
+			Fireworks.watch(false)
+		end
+	end)
 	task.spawn(function()
 		local t0 = os.clock()
 		local finaleAt = if finale then seconds * (1 - c.finaleShare) else math.huge

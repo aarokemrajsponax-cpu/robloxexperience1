@@ -5,11 +5,9 @@
 -- priced, with how many you hold.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
-local Curios = require(ReplicatedStorage.Shared.Curios)
 local Layout = require(ReplicatedStorage.Shared.Layout)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Root = require(script.Parent.Parent.UI.Root)
@@ -17,6 +15,7 @@ local Theme = require(script.Parent.Parent.UI.Theme)
 local Toast = require(script.Parent.Parent.UI.Toast)
 local Sound = require(script.Parent.Parent.Sound)
 local Fireworks = require(script.Parent.Fireworks)
+local MemeTakeover = require(script.Parent.MemeTakeover)
 
 local SuiteSpectacle = {}
 
@@ -62,67 +61,12 @@ end
 -- Fireworks: the full show over the whole estate (World/Fireworks), seen best from the Suite's
 -- terrace, for its owner.
 local function fireworks(seconds: number)
-	Fireworks.show(seconds, { scale = 1.15 })
+	Fireworks.show(seconds, { scale = 1.15, watch = true })
 end
 
--- The meme curios burst out and bounce around the drawing room.
+-- The Meme Takeover: ninety seconds, six acts (World/MemeTakeover).
 local function memes(seconds: number)
-	local f = folder()
-	local base = centreOf(Layout.Suite.main) + Vector3.new(0, 4, 0)
-	local list = {}
-	for _, c in Curios.List do
-		if c.family == "meme" then
-			table.insert(list, c)
-		end
-	end
-	local bodies = {}
-	for i = 1, 24 do
-		local c = list[(i - 1) % #list + 1]
-		local p = part(f, Vector3.new(1, 1, 1), base, Color3.new(1, 1, 1))
-		p.Transparency = 1
-		local bb = Instance.new("BillboardGui")
-		bb.Size = UDim2.fromScale(3, 3)
-		bb.LightInfluence = 0
-		bb.Parent = p
-		local t = Instance.new("TextLabel")
-		t.BackgroundTransparency = 1
-		t.Size = UDim2.fromScale(1, 1)
-		t.Text = c.glyph
-		t.TextScaled = true
-		t.Parent = bb
-		local a = i / 24 * math.pi * 2
-		table.insert(bodies, { p = p, v = Vector3.new(math.cos(a) * 10, 14 + (i % 5) * 2, math.sin(a) * 10), at = base })
-	end
-	pcall(Sound.play, "combo", 0.6)
-	local box = Layout.Suite.main
-	local floorY = Layout.Suite.floorY + 1.5
-	local t0 = os.clock()
-	local conn: RBXScriptConnection? = nil
-	conn = RunService.RenderStepped:Connect(function(dt: number)
-		if os.clock() - t0 > seconds or not f.Parent then
-			if conn then
-				conn:Disconnect()
-			end
-			f:Destroy()
-			return
-		end
-		for _, b in bodies do
-			b.v -= Vector3.new(0, 30 * dt, 0)
-			local n = b.at + b.v * dt
-			if n.Y < floorY then
-				n = Vector3.new(n.X, floorY, n.Z)
-				b.v = Vector3.new(b.v.X, math.abs(b.v.Y) * 0.85 + 4, b.v.Z)
-			end
-			if n.X < box.minX + 1 or n.X > box.maxX - 1 then
-				b.v = Vector3.new(-b.v.X, b.v.Y, b.v.Z)
-			end
-			if n.Z < box.minZ + 1 or n.Z > box.maxZ - 1 then
-				b.v = Vector3.new(b.v.X, b.v.Y, -b.v.Z)
-			end
-			b.at = n
-			b.p.CFrame = CFrame.new(n)
-		end
-	end)
+	MemeTakeover.play(seconds)
 end
 
 -- The Suite turns gold: every light in the drawn Suite warms to gold, and gold leaf falls.

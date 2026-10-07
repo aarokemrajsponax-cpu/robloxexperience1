@@ -1288,11 +1288,20 @@ do
 	r = bar(far, { op = "order", id = "lemonade" })
 	check("orders only at the bar", r.ok == false and profiles[far].Data.gilt == 100 and treatOf(far) == nil)
 
-	-- Sips: one every few seconds, then it's finished.
+	-- Eating: a bite (or a sip) each time the guest clicks, and only then.
 	local treat = treatOf(ivy)
-	advance(Config.data.Bar.sipSeconds + 0.5)
-	check("a sip every few seconds, seen by every screen", treat:GetAttribute("Sips") == 1 and treat:GetAttribute("Servings") == BarMenu.byId.lemonade.servings - 1)
-	advance(Config.data.Bar.sipSeconds * BarMenu.byId.lemonade.servings + 3)
+	advance(10)
+	check("nothing is eaten until the guest clicks", treat:GetAttribute("Sips") == 0 and treat:GetAttribute("Servings") == BarMenu.byId.lemonade.servings)
+	r = bar(ivy, { op = "bite" })
+	check("a click takes a sip, seen by every screen", r.ok == true and treat:GetAttribute("Sips") == 1 and treat:GetAttribute("Servings") == BarMenu.byId.lemonade.servings - 1)
+	r = bar(ivy, { op = "bite" })
+	check("...but no faster than a person can swallow (the server keeps time)", r.ok == false and treat:GetAttribute("Sips") == 1)
+	check("a guest with nothing in hand can't take a bite", bar(far, { op = "bite" }).ok == false)
+	for _ = 1, BarMenu.byId.lemonade.servings do
+		advance(Config.data.Bar.biteGap + 0.1)
+		bar(ivy, { op = "bite" })
+	end
+	advance(2)
 	check("and when it's finished, it's gone", treatOf(ivy) == nil and Bar.holding(ivy) == nil)
 	bar(ivy, { op = "order", id = "fries" })
 	r = bar(ivy, { op = "putDown" })

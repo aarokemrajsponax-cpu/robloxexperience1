@@ -116,8 +116,9 @@ local function chandelier(seconds: number)
 end
 
 -- Fireworks over the whole estate (World/Fireworks), as big as the salute is.
-local function fireworks(seconds: number, scale: number)
-	Fireworks.show(seconds, { scale = scale })
+local function fireworks(seconds: number, scale: number, mine: boolean)
+	-- The guest who gave it is taken out to watch at once; everyone else has the key.
+	Fireworks.show(seconds, { scale = scale, watch = mine })
 end
 
 -- The Finale's countdown: ten great numbers on every screen, then the sky goes up.
@@ -206,7 +207,7 @@ SaluteView.effects = {
 		chandelier(m.seconds or 20)
 	end,
 	fireworks = function(m: { [string]: any })
-		fireworks(m.seconds or 45, math.clamp(tonumber(m.scale) or 1, 0.5, 2))
+		fireworks(m.seconds or 45, math.clamp(tonumber(m.scale) or 1, 0.5, 2), tonumber(m.userId) == player.UserId)
 	end,
 	countdown = function(_m: { [string]: any })
 		countdown(Salutes.COUNTDOWN)

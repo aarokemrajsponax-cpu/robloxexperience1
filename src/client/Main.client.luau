@@ -178,6 +178,29 @@ start("Curios", function()
 		end
 	end)
 	AdmireCard.trade = TradePanel.invite
+	-- The quick dock: Collection, Trade, Wardrobe and Gems, one tap away (C, T, V).
+	local QuickDock = require(script.Parent.UI.QuickDock)
+	QuickDock.openCollection = function()
+		CuriosPanel.open("yours")
+	end
+	QuickDock.openTrades = function()
+		CuriosPanel.open("trades")
+	end
+	QuickDock.openWardrobe = WardrobePanel.open
+	QuickDock.openGems = function()
+		CuriosPanel.open("gems")
+	end
+	QuickDock.invite = TradePanel.invite
+	QuickDock.isSeated = function(): boolean
+		return TableClient.isSeated() or Root.isOpen()
+	end
+	QuickDock.start()
+	TableClient.Seated.Event:Connect(function()
+		QuickDock.setSeated(true)
+	end)
+	TableClient.Left.Event:Connect(function()
+		QuickDock.setSeated(false)
+	end)
 	for _, tile in {
 		{ id = "collection", title = "Your Collection", line = "Your curios, every one to find, and the Cabinet.", glyph = "🏺", open = function()
 			CuriosPanel.open("yours")

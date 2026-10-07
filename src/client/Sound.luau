@@ -541,50 +541,73 @@ end
 -- hears it (and, fainter, the street and the stair). The notes follow the Effects level, not the
 -- Music one: the piano is something the guest plays, and it must sound even with music off.
 --
--- Where each key's sound comes from: its own recording (Config.Assets.PianoNotes); while that is
--- still loading, the nearest key whose recording has loaded, retuned; failing those, the first
--- middle-C recording (Config.Assets.PianoFallback) that has loaded, retuned. Only a recording
--- Roblox says can't be fetched is passed over for good: one that is merely slow (a first play in
--- Studio fetches forty-odd sounds) is used the moment it arrives.
+-- Where each key's sound comes from, in order: its own recording (Config.Assets.PianoNotes), once
+-- it has loaded; then a slice of a licensed piano recording (Config.Assets.PianoSlices: a single
+-- clean note inside one of Roblox's own APM Music tracks, which every experience may play),
+-- retuned to the key from the nearest slice; then the middle-C recordings (PianoFallback).
+-- (Audio uploaded by other creators can't be played in this experience: Roblox refuses it, which
+-- is why the slices come first. Recordings AJKR uploads himself can go in PianoNotes.)
 local failedNotes: { [string]: boolean } = {}
 local readyNotes: { [string]: boolean } = {}
 local notesLoaded = false
+
+type NoteSource = { id: string, speed: number, region: NumberRange?, gain: number }
 
 local function usable(id: any): boolean
 	return type(id) == "string" and id ~= "" and not failedNotes[id]
 end
 
--- The best source for a key, preferring recordings that have loaded (`loadedOnly`).
-local function pick(index: number, loadedOnly: boolean): (string, number)
+local function midiOf(index: number): number
+	return Config.data.Piano.lowest + index - 1
+end
+
+-- The key's own recording (or a neighbour's, retuned), if one has loaded.
+local function ownNote(index: number): NoteSource?
 	local ids = (Config.data.Assets :: any).PianoNotes
-	if type(ids) == "table" then
-		-- The key itself, then its neighbours a semitone further each time (no further than a
-		-- fifth: past that a retuned note sounds like a different instrument).
-		for distance = 0, 7 do
-			for _, i in { index - distance, index + distance } do
-				local id = ids[i]
-				if i >= 1 and i <= #ids and usable(id) and (readyNotes[id] or not loadedOnly) then
-					return id, 2 ^ ((index - i) / 12)
-				end
+	if type(ids) ~= "table" then
+		return nil
+	end
+	for distance = 0, 7 do
+		for _, i in { index - distance, index + distance } do
+			local id = ids[i]
+			if i >= 1 and i <= #ids and usable(id) and readyNotes[id] then
+				return { id = id, speed = 2 ^ ((index - i) / 12), region = nil, gain = 1 }
 			end
 		end
 	end
-	local lowest = Config.data.Piano.lowest
-	for _, id in ((Config.data.Assets :: any).PianoFallback or {}) :: { string } do
-		if usable(id) and (readyNotes[id] or not loadedOnly) then
-			return id, 2 ^ ((lowest + index - 1 - 60) / 12)
-		end
-	end
-	return "", 1
+	return nil
 end
 
-local function noteSource(index: number): (string, number)
-	local id, speed = pick(index, true)
-	if id ~= "" then
-		return id, speed
+-- The nearest licensed slice, retuned to the key.
+local function slice(index: number): NoteSource?
+	local slices = (Config.data.Assets :: any).PianoSlices
+	if type(slices) ~= "table" then
+		return nil
 	end
-	-- Nothing loaded yet: the key's own recording, which plays as soon as it arrives.
-	return pick(index, false)
+	local midi = midiOf(index)
+	local best: any = nil
+	for _, sl in slices do
+		if type(sl) == "table" and usable(sl.id) and (best == nil or math.abs(sl.note - midi) < math.abs(best.note - midi)) then
+			best = sl
+		end
+	end
+	if not best then
+		return nil
+	end
+	return { id = best.id, speed = 2 ^ ((midi - best.note) / 12), region = NumberRange.new(best.start, best.start + best.length), gain = best.gain or 1 }
+end
+
+local function fallback(index: number): NoteSource?
+	for _, id in ((Config.data.Assets :: any).PianoFallback or {}) :: { string } do
+		if usable(id) then
+			return { id = id, speed = 2 ^ ((midiOf(index) - 60) / 12), region = nil, gain = 1 }
+		end
+	end
+	return nil
+end
+
+local function noteSource(index: number): NoteSource?
+	return ownNote(index) or slice(index) or fallback(index)
 end
 
 -- Three voices a key, each holding its key's sound, so a note plays the instant it's struck and
@@ -593,11 +616,12 @@ type Voice = { sound: Sound, id: string }
 local voices: { [number]: { Voice } } = {}
 local nextVoice: { [number]: number } = {}
 
-local function voiceFor(index: number, here: boolean): Sound?
-	local id, speed = noteSource(index)
-	if id == "" then
-		return nil
+local function voiceFor(index: number, here: boolean): (Sound?, NoteSource?)
+	local src = noteSource(index)
+	if not src then
+		return nil, nil
 	end
+	local id = src.id
 	local list = voices[index]
 	if not list then
 		list = {}
@@ -625,12 +649,12 @@ local function voiceFor(index: number, here: boolean): Sound?
 		voice.sound.SoundId = id
 		voice.id = id
 	end
-	voice.sound.PlaybackSpeed = speed
+	voice.sound.PlaybackSpeed = src.speed
 	-- Played here (the player's own notes): no place in the room. Others: from the piano.
 	local part = if here then nil else pianoPart()
 	voice.sound.Parent = if part then part else SoundService
 	voice.sound.RollOffMaxDistance = Config.data.Piano.heard
-	return voice.sound
+	return voice.sound, src
 end
 
 -- Loads every key's recording (once), so the first notes play at once, and learns which won't.
@@ -645,6 +669,11 @@ function Sound.preloadPiano()
 			if type(id) == "string" and id ~= "" then
 				table.insert(list, id)
 			end
+		end
+	end
+	for _, sl in ((Config.data.Assets :: any).PianoSlices or {}) :: { any } do
+		if type(sl) == "table" and type(sl.id) == "string" then
+			table.insert(list, sl.id)
 		end
 	end
 	task.spawn(function()
@@ -663,13 +692,24 @@ end
 -- Plays key `index` (1 = Config.Piano.lowest). `here`: the player's own note, heard close.
 -- Returns whether it sounded.
 function Sound.pianoNote(index: number, here: boolean?, gain: number?): boolean
-	local sound = voiceFor(index, here == true)
-	if not sound then
+	local sound, src = voiceFor(index, here == true)
+	if not sound or not src then
 		return false
 	end
 	local s = sound :: Sound
-	s.Volume = Config.data.Piano.volume * (gain or 1)
-	s.TimePosition = 0
+	s.Volume = Config.data.Piano.volume * (gain or 1) * src.gain
+	local region = src.region
+	pcall(function()
+		if region then
+			-- Only the one note inside the recording.
+			s.PlaybackRegionsEnabled = true
+			s.PlaybackRegion = region
+			s.TimePosition = region.Min
+		else
+			s.PlaybackRegionsEnabled = false
+			s.TimePosition = 0
+		end
+	end)
 	s:Play()
 	-- A recording that plays has loaded: it's preferred from now on.
 	local okLoaded, isLoaded = pcall(function()
@@ -684,8 +724,19 @@ end
 -- How the piano's recordings are doing (for the owner's notice when nothing sounds).
 function Sound.pianoHealth(): (number, number, number)
 	local total, ready, failed = 0, 0, 0
+	local ids: { string } = {}
+	for _, sl in ((Config.data.Assets :: any).PianoSlices or {}) :: { any } do
+		if type(sl) == "table" and type(sl.id) == "string" then
+			table.insert(ids, sl.id)
+		end
+	end
 	for _, key in { "PianoNotes", "PianoFallback" } do
 		for _, id in ((Config.data.Assets :: any)[key] or {}) :: { string } do
+			table.insert(ids, id)
+		end
+	end
+	do
+		for _, id in ids do
 			if type(id) == "string" and id ~= "" then
 				total += 1
 				if readyNotes[id] then

@@ -251,7 +251,7 @@ end
 -- show, kept until you play it). Cosmetic only; nothing random.
 for _, show in {
 	{ key = "spectacleFireworks", name = "Suite Fireworks", price = 199, tier = "Medium" :: Tier, line = "A forty-five-second fireworks show over the whole estate, best seen from your Suite's terrace, whenever you choose." },
-	{ key = "spectacleMemes", name = "Meme Takeover", price = 299, tier = "Medium" :: Tier, line = "Every meme curio bursts out and bounces round your Suite for twenty seconds." },
+	{ key = "spectacleMemes", name = "Meme Takeover", price = 299, tier = "Medium" :: Tier, line = "Ninety seconds of brainrot: a portal spews memes, a conga line dances round you, memes rain from the ceiling, and a giant boss meme with laser eyes takes over your Suite." },
 	{ key = "spectacleGolden", name = "Golden Transformation", price = 499, tier = "Premium" :: Tier, line = "Your Suite's lights turn gold and gold leaf falls for thirty seconds." },
 } do
 	add({
