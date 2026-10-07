@@ -7,7 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local Furniture = require(ReplicatedStorage.Shared.Furniture)
-local Layout = require(ReplicatedStorage.Shared.Layout)
+local Layout = require(ReplicatedStorage.Shared.Layout).raw -- (the house as drawn: see World/Grand)
 local Kit = require(script.Parent.Kit)
 local SortingTable = require(script.Parent.SortingTable)
 
@@ -218,6 +218,7 @@ local function libraryRoom(root: Model)
 			local half = SortingTable.build(tables, "library", tostring(i) .. side, frame, style)
 			half:SetAttribute("Duel", duel.id)
 			half:SetAttribute("Side", side)
+			half:SetAttribute("GrandAnchor", duel.centre) -- the halves stay end to end (World/Grand)
 			CollectionService:AddTag(half, "DuelHalf")
 			local seat = half:FindFirstChild("Chair")
 			local nightly = seat and seat:FindFirstChild("NightlyPrompt")
@@ -228,6 +229,7 @@ local function libraryRoom(root: Model)
 		-- A brass plate between the halves: the duel's name, and the score between hands.
 		local plate = Kit.part(tables, "DuelPlate" .. i, Vector3.new(2.4, 0.08, 0.9), CFrame.new(duel.centre + Vector3.new(Layout.Table.width / 2 + 0.3, Layout.Table.topY + 0.05, 0)), L.brass, { collide = false })
 		plate:SetAttribute("Duel", duel.id)
+		plate:SetAttribute("GrandAnchor", duel.centre)
 	end
 end
 

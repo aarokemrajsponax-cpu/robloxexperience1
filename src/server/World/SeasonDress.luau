@@ -9,9 +9,10 @@ local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
-local Layout = require(ReplicatedStorage.Shared.Layout)
+local Layout = require(ReplicatedStorage.Shared.Layout).raw -- (the house as drawn: see World/Grand)
 local Seasons = require(ReplicatedStorage.Shared.Seasons)
 local Flush = require(script.Parent.Flush)
+local Grand = require(script.Parent.Grand)
 local Kit = require(script.Parent.Kit)
 local Terrace = require(script.Parent.Terrace)
 
@@ -139,6 +140,8 @@ function SeasonDress.apply(id: string)
 	-- The Terrace is open every evening of the year.
 	Terrace.setOpen(true)
 	Workspace:SetAttribute("TerraceOpen", true)
+	-- Laid out as drawn, then moved into the Grand house like everything else (World/Grand).
+	Grand.apply(m, require(ReplicatedStorage.Shared.Layout).SCALE, 0)
 	-- The dressing is laid on floors and walls: anything flush with them is lifted clear.
 	pcall(Flush.settle, maison)
 end

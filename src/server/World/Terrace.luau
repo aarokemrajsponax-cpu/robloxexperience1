@@ -9,7 +9,7 @@ local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Furniture = require(ReplicatedStorage.Shared.Furniture)
-local Layout = require(ReplicatedStorage.Shared.Layout)
+local Layout = require(ReplicatedStorage.Shared.Layout).raw -- (the house as drawn: see World/Grand)
 local Kit = require(script.Parent.Kit)
 
 local L = Kit.Looks

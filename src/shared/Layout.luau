@@ -539,4 +539,79 @@ function Layout.pieceSlots(frame: CFrame, count: number): { Vector3 }
 	return slots
 end
 
+---------------------------------------------------------------------------------------------------
+-- The Grand Scale. Everything above is the house as drawn; the builders build that (Layout.raw)
+-- and then open every room out by SCALE (World/Grand): walls, floors, ceilings, doorways and stairs
+-- grow, furniture keeps its true size and moves with its room. The game itself plays in the grown
+-- house, so every position and size here is scaled to match: positions, room extents, door widths
+-- and heights, stair runs. What is not a distance is left alone (directions, counts, seconds), and
+-- so is what keeps its size (the sorting table's own geometry, the piano's bench, the lift's car).
+---------------------------------------------------------------------------------------------------
+Layout.SCALE = 1.35
+
+local KEEP_KEYS: { [string]: boolean } = {
+	SCALE = true, seconds = true, ride = true, steps = true, cameraPitch = true, pianoBenchTop = true,
+	facing = true, out = true, name = true, id = true, open = true, gated = true, sill = true, axis = true,
+}
+local KEEP_TABLES: { [string]: boolean } = { Table = true }
+local KEEP_PATHS: { [string]: boolean } = { ["Lift.width"] = true, ["Lift.height"] = true }
+
+local function copy(v: any, seen: { [any]: any }): any
+	if type(v) ~= "table" then
+		return v
+	end
+	if seen[v] then
+		return seen[v]
+	end
+	local out = {}
+	seen[v] = out
+	for k, x in v do
+		out[k] = copy(x, seen)
+	end
+	return out
+end
+
+local function grow(t: { [any]: any }, S: number, path: string, seen: { [any]: boolean })
+	if seen[t] then
+		return
+	end
+	seen[t] = true
+	for k, v in t do
+		local key = tostring(k)
+		local here = if path == "" then key else path .. "." .. key
+		if KEEP_KEYS[key] or KEEP_PATHS[here] or type(v) == "function" then
+			continue
+		end
+		if type(v) == "table" then
+			if not KEEP_TABLES[key] then
+				grow(v, S, here, seen)
+			end
+		elseif type(v) == "number" then
+			t[k] = v * S
+		elseif typeof(v) == "Vector3" then
+			t[k] = v * S
+		elseif typeof(v) == "CFrame" then
+			t[k] = v - v.Position + v.Position * S
+		end
+	end
+end
+
+-- The house as drawn: the builders' numbers. (Its functions are the same, but for the one that
+-- reads the room's own numbers.)
+local raw = copy(Layout, {})
+raw.SCALE = 1
+raw.ballroomFrame = function(i: number, count: number?): CFrame
+	local n = count or 20
+	local B = raw.Ballroom
+	local angle = -math.pi / 2 + (i - 1) / n * math.pi * 2
+	local centre = B.centre + Vector3.new(math.cos(angle) * B.radius, 0, math.sin(angle) * B.radius)
+	return Layout.tableFrame(centre, (B.centre - centre).Unit)
+end
+grow(Layout :: any, Layout.SCALE, "", {})
+Layout.raw = raw :: typeof(Layout)
+-- The pianist and the guest at the keys sit at the piano's bench, which keeps its size: from the
+-- piano's grown spot, the drawn distance.
+Layout.Foyer.pianist = Layout.Foyer.piano * CFrame.new(0, 0, -5) * CFrame.Angles(0, math.pi, 0)
+Layout.Foyer.pianoSeat = Layout.Foyer.piano * CFrame.new(0, 2.35, -5) * CFrame.Angles(0, math.pi, 0)
+
 return Layout

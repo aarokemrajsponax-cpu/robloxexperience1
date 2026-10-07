@@ -193,18 +193,20 @@ end
 
 -- Points on the house's floors a guest can walk to (for coins and keys).
 local function walkable(): { Vector3 }
+	-- (Spots in the house as drawn, scaled into the Grand house.)
+	local S = Layout.SCALE
 	local F = Layout.FLOOR
 	local points = {
 		Layout.Street.spawn.Position,
-		Vector3.new(-12, F, 8), Vector3.new(12, F, 12), Vector3.new(-20, F, 30), Vector3.new(0, F, 2),
+		Vector3.new(-12 * S, F, 8 * S), Vector3.new(12 * S, F, 12 * S), Vector3.new(-20 * S, F, 30 * S), Vector3.new(0, F, 2 * S),
 		Layout.Boutique.arrival, Layout.Vault.arrival,
 		Layout.Salon.arrival, Layout.Velvet.arrival, Layout.Obsidian.arrival,
-		Vector3.new(0, Layout.CLUB, 54), Vector3.new(-12, Layout.CLUB, 50), Vector3.new(16, Layout.CLUB, 58),
+		Vector3.new(0, Layout.CLUB, 54 * S), Vector3.new(-12 * S, Layout.CLUB, 50 * S), Vector3.new(16 * S, Layout.CLUB, 58 * S),
 		Layout.Library.arrival, Layout.Ballroom.arrival, Layout.Ballroom.galleryArrival,
 	}
 	if Workspace:GetAttribute("TerraceOpen") == true then
 		table.insert(points, Layout.Terrace.arrival)
-		table.insert(points, Vector3.new(60, Layout.Terrace.floorY, 44))
+		table.insert(points, Vector3.new(60 * S, Layout.Terrace.floorY, 44 * S))
 	end
 	return points
 end

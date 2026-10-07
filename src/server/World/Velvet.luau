@@ -4,7 +4,7 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local Layout = require(ReplicatedStorage.Shared.Layout)
+local Layout = require(ReplicatedStorage.Shared.Layout).raw -- (the house as drawn: see World/Grand)
 local Kit = require(script.Parent.Kit)
 local RoomShell = require(script.Parent.RoomShell)
 local SortingTable = require(script.Parent.SortingTable)

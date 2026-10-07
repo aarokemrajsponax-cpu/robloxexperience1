@@ -181,6 +181,8 @@ end)
 ---------------------------------------------------------------------------------------------------
 -- The Ballroom: twenty tables, each with a chair and a lamp; the room's lights; the board
 ---------------------------------------------------------------------------------------------------
+-- The house is opened out by the Grand Scale (Layout.SCALE, checked against it below).
+local G = 1.35
 local tagged = { BallroomTable = {}, MaisonTable = {} }
 local seatAt = {}
 local lamps = {}
@@ -198,7 +200,7 @@ for i = 1, 20 do
 	local seat = Instance.new("Seat")
 	seat.Name = "Chair"
 	local angle = (i - 1) / 20 * math.pi * 2
-	local pos = Vector3.new(61 + math.cos(angle) * 53, 22, 125 + math.sin(angle) * 53)
+	local pos = Vector3.new(61 + math.cos(angle) * 53, 22, 125 + math.sin(angle) * 53) * G
 	seat.CFrame = CFrame.new(pos)
 	seat.Position = pos
 	seat.Parent = m
@@ -510,6 +512,7 @@ end
 
 module("ReplicatedStorage", "Shared", "Seasons")
 local Config = module("ReplicatedStorage", "Shared", "Config")
+assert(G == module("ReplicatedStorage", "Shared", "Layout").SCALE, "the test's G is Layout.SCALE")
 local C = Config.data.Ballroom
 local Catalogue = module("ReplicatedStorage", "Shared", "Catalogue")
 local BallroomService = module("ServerScriptService", "Server", "BallroomService")
@@ -793,7 +796,7 @@ check("twenty places, one each", count(placeSet) == 20)
 -- 6. The next evening: the winner stays; a guest who asked is seated
 ---------------------------------------------------------------------------------------------------
 local cleo = guest("Cleo", 4)
-cleo.root.Position = Vector3.new(61, 32, 72)
+cleo.root.Position = Vector3.new(61, 32, 72) * G
 send(cleo, { op = "nextEvening" })
 check("mid-evening, a guest is queued for the next", last(cleo, "queued") ~= nil)
 local m6 = mark(ada)

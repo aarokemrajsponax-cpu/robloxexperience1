@@ -892,6 +892,8 @@ local function module(...)
 	end
 	return requireModule(p)
 end
+-- (Places named in drawn studs are opened out by the Grand Scale.)
+local Layout = module("ReplicatedStorage", "Shared", "Layout")
 
 -- Load every source file up front (Lune reads files asynchronously, which would otherwise
 -- pause a coroutine in the middle of a frame).
@@ -1272,7 +1274,7 @@ do
 		root.CFrame = CFrame.new(p)
 		root.Position = p
 	end
-	moveGuest(Vector3.new(9, 5, 12))
+	moveGuest(Vector3.new(9, 5, 12) * Layout.SCALE)
 	serverSays("Tour", { op = "start" })
 	advance(1)
 	local guide = workspace:FindFirstChild("MaisonTourGuide")
@@ -1284,7 +1286,7 @@ do
 	press("Next")
 	advance(6)
 	local _, _, waitState, waitAt = Tour.where()
-	check("the Concierge waits when you fall behind", waitState == "walking" and (waitAt - Vector3.new(9, 3, 12)).Magnitude < 20, waitAt)
+	check("the Concierge waits when you fall behind", waitState == "walking" and (waitAt - Vector3.new(9, 3, 12) * Layout.SCALE).Magnitude < 20, waitAt)
 	check("on the way: where to, a pin there, and a key to end the tour", textOnScreen("This way, to the Salon") ~= nil and textOnScreen("End the tour") ~= nil and workspace:FindFirstChild("MaisonWaypoint") ~= nil and workspace.MaisonWaypoint.Pin.Label.Text == "The Salon")
 	-- Follow the Concierge to every stop and read every card.
 	local visited = {}
@@ -1350,7 +1352,7 @@ do
 	check("the pin goes with it", workspace:FindFirstChild("MaisonWaypoint") == nil)
 	check("and the server hears it's over", sentOps("Tour", "end") == 1)
 	-- Wandering off ends it too, kindly.
-	moveGuest(Vector3.new(9, 5, 12))
+	moveGuest(Vector3.new(9, 5, 12) * Layout.SCALE)
 	serverSays("Tour", { op = "start" })
 	advance(1)
 	moveGuest(Vector3.new(0, 5, -200))
@@ -2368,8 +2370,8 @@ advance(2)
 check("Ballroom: leaving gives the controls back", controls.enabled == true)
 check("no errors through a Lights Out evening", #errors == 0, errors[1])
 -- Standing in the Ballroom without a chair: Next evening and Watch.
-root.Position = Vector3.new(61, 21, 90)
-root.CFrame = CFrame.new(61, 21, 90)
+root.Position = Vector3.new(61, 21, 90) * Layout.SCALE
+root.CFrame = CFrame.new(root.Position)
 advance(1)
 check("in the Ballroom without a chair: Next evening is offered", textOnScreen("Next evening") ~= nil)
 check("and Watch", press("Watch"))
@@ -2613,8 +2615,8 @@ check("the Mythics page prints the odds and the serial", press("Mythics") and te
 advance(1)
 Root2.close()
 advance(1)
-root.Position = Vector3.new(-8, 5, 50)
-root.CFrame = CFrame.new(-8, 5, 50)
+root.Position = Vector3.new(-8, 5, 50) * Layout.SCALE
+root.CFrame = CFrame.new(root.Position)
 advance(1.5)
 local vaultFolder = workspace.MaisonLocal:FindFirstChild("Vault")
 check("walking into the Vault fills its cabinets with your finds", vaultFolder ~= nil and #vaultFolder:GetChildren() == 2, vaultFolder and #vaultFolder:GetChildren())

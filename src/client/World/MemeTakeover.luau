@@ -192,7 +192,7 @@ function MemeTakeover.play(seconds: number?)
 	local player = Players.LocalPlayer
 	local character = player.Character
 	local rootPart = character and character:FindFirstChild("HumanoidRootPart")
-	local centre: Vector3 = if rootPart and rootPart:IsA("BasePart") then rootPart.Position else Vector3.new(-49, Layout.Suite.floorY + 3, 50)
+	local centre: Vector3 = if rootPart and rootPart:IsA("BasePart") then rootPart.Position else Vector3.new(-49 * Layout.SCALE, Layout.Suite.floorY + 3, 50 * Layout.SCALE)
 	local room = roomOf(centre)
 	local floorY = Layout.Suite.floorY
 	local ceiling = floorY + Layout.Suite.height - 1

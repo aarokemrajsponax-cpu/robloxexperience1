@@ -6,7 +6,7 @@ local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
-local Layout = require(ReplicatedStorage.Shared.Layout)
+local Layout = require(ReplicatedStorage.Shared.Layout).raw -- (the house as drawn: see World/Grand)
 local PianoKeys = require(ReplicatedStorage.Shared.PianoKeys)
 local Rooms = require(ReplicatedStorage.Shared.Rooms)
 local Voice = require(ReplicatedStorage.Shared.Voice)
@@ -210,6 +210,8 @@ end
 local function piano(m: Model)
 	local model = Kit.model(m, "GrandPiano")
 	local cf = F.piano
+	-- Moved to where its spot moved (World/Grand), so the bench meets Layout's pianoSeat.
+	model:SetAttribute("GrandAnchor", cf.Position)
 	local function at(x: number, y: number, z: number): CFrame
 		return cf * CFrame.new(x, y, z)
 	end

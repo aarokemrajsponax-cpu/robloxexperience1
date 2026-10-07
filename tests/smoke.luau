@@ -526,17 +526,21 @@ local function blocked(p: Vector3, r: number, y0: number, y1: number)
 end
 
 local FLOOR = Layout.FLOOR
+-- The Grand Scale: the house as drawn, opened out (World/Grand). Places named here in drawn
+-- studs are scaled by G.
+local G = Layout.SCALE
 
--- The front steps: each is 1 stud high and 1.5 deep (humanoids step up 1 stud freely).
+-- The front steps: each is 1 stud high and 1.5 deep as drawn, opened out by G (and an unseen
+-- ramp runs along their nosings).
 local function stepGround(z: number): number
-	if z >= -8 then
+	if z >= -8 * G then
 		return FLOOR
-	elseif z >= -11.5 then
-		return 3
-	elseif z >= -13 then
-		return 2
-	elseif z >= -14.5 then
-		return 1
+	elseif z >= -11.5 * G then
+		return 3 * G
+	elseif z >= -13 * G then
+		return 2 * G
+	elseif z >= -14.5 * G then
+		return 1 * G
 	end
 	return 0
 end
@@ -548,8 +552,8 @@ local function walk(route: { { any } }, radius: number, ignore: ((BasePart) -> b
 		for s = 0, steps do
 			local p = a:Lerp(b, s / steps)
 			local ground = if route[i][2] == route[i + 1][2] then route[i][2] else stepGround(p.Z)
-			-- Capsule from knee height (steps are climbable) to head height.
-			local hit = blocked(Vector3.new(p.X, 0, p.Z), radius, ground + 1.2, ground + 5.2)
+			-- Capsule from knee height (steps are climbable: a drawn stud, opened out) to head height.
+			local hit = blocked(Vector3.new(p.X, 0, p.Z), radius, ground + 1.2 * G, ground + 5.2)
 			if hit and not (ignore and ignore(hit)) then
 				return string.format("%s at (%.1f, %.1f) on leg %d", hit:GetFullName(), p.X, p.Z, i)
 			end
@@ -574,9 +578,10 @@ do
 	end
 	-- Is there something opaque to stand on at (x, z), its top near floor height y (a step up or
 	-- down counts)?
-	local function floorAt(x: number, z: number, y: number): boolean
+	local function floorAt(x: number, z: number, y: number, rise: number?): boolean
+		local up = math.max(2.6, (rise or 0) + 0.6)
 		for _, b in slabs do
-			if x >= b.lo.X - 0.05 and x <= b.hi.X + 0.05 and z >= b.lo.Z - 0.05 and z <= b.hi.Z + 0.05 and b.hi.Y >= y - 0.6 and b.hi.Y <= y + 2.6 then
+			if x >= b.lo.X - 0.05 and x <= b.hi.X + 0.05 and z >= b.lo.Z - 0.05 and z <= b.hi.Z + 0.05 and b.hi.Y >= y - 0.6 and b.hi.Y <= y + up then
 				return true
 			end
 		end
@@ -590,7 +595,7 @@ do
 			for side = -width / 2 + 0.4, width / 2 - 0.4, 0.5 do
 				local x = centre.X + (if axis == "x" then across else side)
 				local z = centre.Z + (if axis == "x" then side else across)
-				if not hole and not floorAt(x, z, y) then
+				if not hole and not floorAt(x, z, y, dw.rise) then
 					hole = string.format("no floor at (%.2f, %.2f)", x, z)
 				end
 			end
@@ -743,8 +748,8 @@ for _, roomId in { "salon", "velvet", "obsidian", "midnight" } do
 	local inside = door.centre + inward * 4.5
 	local route = {
 		{ Layout.Street.spawn.Position, 0 },
-		{ Vector3.new(0, 0, -16), 0 }, -- foot of the steps
-		{ Vector3.new(0, FLOOR, -9), FLOOR }, -- through the front door
+		{ Vector3.new(0, 0, -16 * G), 0 }, -- foot of the steps
+		{ Vector3.new(0, FLOOR, -9 * G), FLOOR }, -- through the front door
 		{ Vector3.new(0, FLOOR, 0), FLOOR },
 	}
 	for _, point in door.approach do
@@ -798,27 +803,28 @@ end
 -- Up the Grand Stair to the Library: steps of one stud, then the Club Floor at y = 20.
 do
 	local st = Layout.Foyer.stair
-	local depth = (st.toZ - st.fromZ) / st.topY
+	local count = math.round(st.topY / G) -- (one step per drawn stud of rise)
+	local depth = (st.toZ - st.fromZ) / count
 	local function stairGround(z: number): number
 		if z < st.fromZ then
 			return FLOOR
 		elseif z >= st.toZ then
 			return Layout.CLUB
 		end
-		return FLOOR + math.floor((z - st.fromZ) / depth) + 1
+		return FLOOR + (math.floor((z - st.fromZ) / depth) + 1) * G
 	end
 	local duel = Layout.Library.duels[1]
 	local frameA = Layout.duelFrames(duel.centre)
 	local chairA = frameA:PointToWorldSpace(Vector3.new(0, 0, Layout.Table.chairZ - 1.6))
 	local legs = {
-		{ Vector3.new(0, 0, 0), Vector3.new(st.x, 0, 12) },
-		{ Vector3.new(st.x, 0, 12), Vector3.new(st.x, 0, st.fromZ - 1) },
+		{ Vector3.new(0, 0, 0), Vector3.new(st.x, 0, 12 * G) },
+		{ Vector3.new(st.x, 0, 12 * G), Vector3.new(st.x, 0, st.fromZ - 1) },
 		{ Vector3.new(st.x, 0, st.fromZ - 1), Vector3.new(st.x, 0, st.toZ + 1) }, -- the stair
-		{ Vector3.new(st.x, 0, st.toZ + 1), Vector3.new(st.x, 0, 50) }, -- through the arch
-		{ Vector3.new(st.x, 0, 50), Vector3.new(Layout.Club.libraryDoor.X, 0, 60) },
-		{ Vector3.new(Layout.Club.libraryDoor.X, 0, 60), Vector3.new(Layout.Club.libraryDoor.X, 0, 71) }, -- into the Library
-		{ Vector3.new(Layout.Club.libraryDoor.X, 0, 71), Vector3.new(chairA.X + 3.5, 0, 71) },
-		{ Vector3.new(chairA.X + 3.5, 0, 71), Vector3.new(chairA.X + 3.5, 0, chairA.Z) },
+		{ Vector3.new(st.x, 0, st.toZ + 1), Vector3.new(st.x, 0, 50 * G) }, -- through the arch
+		{ Vector3.new(st.x, 0, 50 * G), Vector3.new(Layout.Club.libraryDoor.X, 0, 60 * G) },
+		{ Vector3.new(Layout.Club.libraryDoor.X, 0, 60 * G), Vector3.new(Layout.Club.libraryDoor.X, 0, 71 * G) }, -- into the Library
+		{ Vector3.new(Layout.Club.libraryDoor.X, 0, 71 * G), Vector3.new(chairA.X + 3.5, 0, 71 * G) },
+		{ Vector3.new(chairA.X + 3.5, 0, 71 * G), Vector3.new(chairA.X + 3.5, 0, chairA.Z) },
 		{ Vector3.new(chairA.X + 3.5, 0, chairA.Z), Vector3.new(chairA.X, 0, chairA.Z) },
 	}
 	local why = nil
@@ -831,7 +837,7 @@ do
 			-- On the stair itself the next two steps are within a body's reach; a humanoid
 			-- climbs one-stud risers, so only check above knee height there.
 			local onStair = p.Z >= st.fromZ - 1 and p.Z < st.toZ
-			local hit = blocked(Vector3.new(p.X, 0, p.Z), 0.9, ground + (if onStair then 2.2 else 1.2), ground + 5.2)
+			local hit = blocked(Vector3.new(p.X, 0, p.Z), 0.9, ground + (if onStair then 2.2 else 1.2) * G, ground + 5.2)
 			if hit and not why then
 				why = string.format("%s at (%.1f, %.1f) on leg %d", hit:GetFullName(), p.X, p.Z, i)
 			end
@@ -875,9 +881,9 @@ do
 	local chair1 = ring[1] and ring[1].Chair.CFrame.Position
 	local door = Layout.Club.ballroomDoor
 	local why = walk({
-		{ Vector3.new(door.X, 0, 58), Layout.CLUB },
-		{ Vector3.new(door.X, 0, 72), Layout.CLUB },
-		{ Vector3.new(chair1.X - 3.5, 0, 72), Layout.CLUB },
+		{ Vector3.new(door.X, 0, 58 * G), Layout.CLUB },
+		{ Vector3.new(door.X, 0, 72 * G), Layout.CLUB },
+		{ Vector3.new(chair1.X - 3.5, 0, 72 * G), Layout.CLUB },
 		{ Vector3.new(chair1.X - 3.5, 0, chair1.Z), Layout.CLUB },
 	}, 0.9)
 	check("a guest can walk from the Club hall into the Ballroom to a chair", why == nil, why)
@@ -893,17 +899,17 @@ do
 		elseif z < S.topZ then
 			return B.gallery.floorY
 		end
-		local k = math.floor((S.bottomZ - z) / 2) + 1
-		return Layout.CLUB + math.min(k, S.steps)
+		local k = math.floor((S.bottomZ - z) / (2 * G)) + 1
+		return Layout.CLUB + math.min(k, S.steps) * G
 	end
 	local sx = (S.x0 + S.x1) / 2
 	-- Each leg: from, to, and how the ground runs ("floor", "stair" or "gallery").
 	local legs = {
-		{ Vector3.new(door.X + 1, 0, 72), Vector3.new(door.X + 1, 0, S.bottomZ + 3), "floor" },
+		{ Vector3.new(door.X + 1, 0, 72 * G), Vector3.new(door.X + 1, 0, S.bottomZ + 3), "floor" },
 		{ Vector3.new(door.X + 1, 0, S.bottomZ + 3), Vector3.new(sx, 0, S.bottomZ + 3), "floor" },
 		{ Vector3.new(sx, 0, S.bottomZ + 3), Vector3.new(sx, 0, S.topZ - 1), "stair" },
-		{ Vector3.new(sx, 0, S.topZ - 1), Vector3.new(sx, 0, 72.5), "gallery" },
-		{ Vector3.new(sx, 0, 72.5), Vector3.new(B.galleryArrival.X, 0, 72.5), "gallery" },
+		{ Vector3.new(sx, 0, S.topZ - 1), Vector3.new(sx, 0, 72.5 * G), "gallery" },
+		{ Vector3.new(sx, 0, 72.5 * G), Vector3.new(B.galleryArrival.X, 0, 72.5 * G), "gallery" },
 	}
 	local whyStair = nil
 	for i, leg in legs do
@@ -913,7 +919,7 @@ do
 			local p = a:Lerp(b, k / steps)
 			local onStair = leg[3] == "stair"
 			local g = if leg[3] == "floor" then Layout.CLUB elseif leg[3] == "gallery" then B.gallery.floorY else ground(p.Z)
-			local hit = blocked(Vector3.new(p.X, 0, p.Z), 0.9, g + (if onStair then 2.2 else 1.2), g + 5.2)
+			local hit = blocked(Vector3.new(p.X, 0, p.Z), 0.9, g + (if onStair then 2.2 else 1.2) * G, g + 5.2)
 			if hit and not whyStair then
 				whyStair = string.format("%s at (%.1f, %.1f) on leg %d", hit:GetFullName(), p.X, p.Z, i)
 			end
@@ -929,10 +935,10 @@ do
 	local Bq = Layout.Boutique
 	local door = Layout.Foyer.boutiqueDoor.Position
 	local why = walk({
-		{ Vector3.new(door.X, 0, 30), FLOOR },
-		{ Vector3.new(door.X, 0, 47), FLOOR },
-		{ Vector3.new(21, 0, 47), FLOOR },
-		{ Vector3.new(21, 0, 53.5), FLOOR },
+		{ Vector3.new(door.X, 0, 30 * G), FLOOR },
+		{ Vector3.new(door.X, 0, 47 * G), FLOOR },
+		{ Vector3.new(21 * G, 0, 47 * G), FLOOR },
+		{ Vector3.new(21 * G, 0, 53.5 * G), FLOOR },
 	}, 0.9)
 	check("a guest can walk from the Foyer into the Boutique to the counter", why == nil, why)
 	local found = {}
@@ -944,7 +950,7 @@ do
 	check("the Boutique counter has its prompt", found.BoutiquePrompt == true)
 	check("the Tailor's mirror has its prompt", found.WardrobePrompt == true)
 	check("the Ledger has its prompt", found.LedgerPrompt == true)
-	check("the Boutique is its own zone", Layout.zoneAt(Vector3.new(21, 5, 50)) == "boutique")
+	check("the Boutique is its own zone", Layout.zoneAt(Vector3.new(21 * G, 5 * G, 50 * G)) == "boutique")
 	check("the Boutique arrival is clear", blocked(Bq.arrival, 0.9, FLOOR + 1.2, FLOOR + 5) == nil)
 end
 
@@ -952,9 +958,9 @@ end
 do
 	local V = Layout.Vault
 	local why = walk({
-		{ Vector3.new(V.door.X, 0, 30), FLOOR },
-		{ Vector3.new(V.door.X, 0, 47), FLOOR },
-		{ Vector3.new(-1.5, 0, 47), FLOOR },
+		{ Vector3.new(V.door.X, 0, 30 * G), FLOOR },
+		{ Vector3.new(V.door.X, 0, 47 * G), FLOOR },
+		{ Vector3.new(-1.5 * G, 0, 47 * G), FLOOR },
 	}, 0.9)
 	check("a guest can walk from the Foyer into the Vault to the Archivist's desk", why == nil, why)
 	local cabinets = CollectionService.GetTagged(CollectionService, "VaultCabinet")
@@ -967,8 +973,8 @@ do
 		end
 		return false
 	end)())
-	check("the Vault is its own zone", Layout.zoneAt(Vector3.new(-8, 5, 50)) == "vault")
-	check("the way round the centre cabinet is clear", walk({ { Vector3.new(-3, 0, 47), FLOOR }, { Vector3.new(-3, 0, 57), FLOOR }, { Vector3.new(-14, 0, 57), FLOOR } }, 0.9) == nil)
+	check("the Vault is its own zone", Layout.zoneAt(Vector3.new(-8 * G, 5 * G, 50 * G)) == "vault")
+	check("the way round the centre cabinet is clear", walk({ { Vector3.new(-3 * G, 0, 47 * G), FLOOR }, { Vector3.new(-3 * G, 0, 57 * G), FLOOR }, { Vector3.new(-14 * G, 0, 57 * G), FLOOR } }, 0.9) == nil)
 end
 
 -- The Vault's own door, and the lift from the Suite.
@@ -984,7 +990,7 @@ do
 		return true
 	end)())
 	local hinge = Layout.VaultDoor.hinge
-	check("...hung in the doorway of the Foyer's back wall", hinge.Z > 42 and hinge.Z < 44.1 and math.abs(hinge.X + Layout.VaultDoor.width / 2 - Layout.Vault.door.X) < 0.01)
+	check("...hung in the doorway of the Foyer's back wall", hinge.Z > 42 * G and hinge.Z < 44.1 * G and math.abs(hinge.X + Layout.VaultDoor.width / 2 - Layout.Vault.door.X) < 0.01)
 	local calls = CollectionService.GetTagged(CollectionService, "LiftCall")
 	check("the lift has a bell-push on each floor", #calls == 2, #calls)
 	check("...each with its prompt and where it goes", (function()
@@ -1047,8 +1053,8 @@ do
 	end
 	local CLUB = Layout.CLUB
 	local function walkOut()
-		return walk({ { Vector3.new(18, 0, T.door.Z), CLUB }, { Vector3.new(25.6, 0, T.door.Z), CLUB } }, 0.9)
-			or walk({ { Vector3.new(27, 0, T.door.Z), T.floorY }, { T.arrival, T.floorY }, { Vector3.new(34, 0, 40), T.floorY }, { Vector3.new(50, 0, 40), T.floorY } }, 0.9)
+		return walk({ { Vector3.new(18 * G, 0, T.door.Z), CLUB }, { Vector3.new(25.6 * G, 0, T.door.Z), CLUB } }, 0.9)
+			or walk({ { Vector3.new(27 * G, 0, T.door.Z), T.floorY }, { T.arrival, T.floorY }, { Vector3.new(34 * G, 0, 40 * G), T.floorY }, { Vector3.new(50 * G, 0, 40 * G), T.floorY } }, 0.9)
 	end
 	local worst, worstLights = 0, 0
 	for _, season in SeasonsRules.List do
@@ -1097,12 +1103,12 @@ do
 		end
 	end
 	local CLUB = Layout.CLUB
-	local why = walk({ { Vector3.new(-12, 0, S.door.Z), CLUB }, { Vector3.new(-21.5, 0, S.door.Z), CLUB } }, 0.9)
-		or walk({ { Vector3.new(-25, 0, S.door.Z), S.floorY }, { S.arrival, S.floorY }, { Vector3.new(-40, 0, 48), S.floorY }, { Vector3.new(-53, 0, 49), S.floorY } }, 0.9)
+	local why = walk({ { Vector3.new(-12 * G, 0, S.door.Z), CLUB }, { Vector3.new(-21.5 * G, 0, S.door.Z), CLUB } }, 0.9)
+		or walk({ { Vector3.new(-25 * G, 0, S.door.Z), S.floorY }, { S.arrival, S.floorY }, { Vector3.new(-40 * G, 0, 48 * G), S.floorY }, { Vector3.new(-53 * G, 0, 49 * G), S.floorY } }, 0.9)
 	check("a guest can walk from the Club hall into their Suite", why == nil, why)
 	check("the Suite is its own space", Layout.zoneAt(S.arrival + Vector3.new(0, 3, 0)) == "suite")
 	check("the Velvet Room below is still the Velvet Room", Layout.zoneAt(Layout.Velvet.arrival + Vector3.new(0, 3, 0)) == "velvet")
-	local shut = walk({ { Vector3.new(-58, 0, S.dressing.door.Z), S.floorY }, { Vector3.new(-66, 0, S.dressing.door.Z), S.floorY } }, 0.9)
+	local shut = walk({ { Vector3.new(-58 * G, 0, S.dressing.door.Z), S.floorY }, { Vector3.new(-66 * G, 0, S.dressing.door.Z), S.floorY } }, 0.9)
 	check("the Dressing Room is shut to the world (each holder's screen opens it)", shut ~= nil and string.find(shut, "AlcoveDoor", 1, true) ~= nil, shut)
 	local found = {}
 	for _, d in maison:GetDescendants() do
@@ -1121,18 +1127,18 @@ do
 	local Y = S.floorY
 	local bd, td, kd = S.bedroom.door, S.bedroom.terraceDoor, S.kitchen.terraceDoor
 	local routes = {
-		{ "into the bedroom", { { Vector3.new(-47, 0, 46), Y }, { Vector3.new(bd.X, 0, 41), Y }, { Vector3.new(bd.X, 0, 36), Y } } },
-		{ "into the bath and spa", { { Vector3.new(-56, 0, S.spa.door.Z), Y }, { Vector3.new(-66, 0, S.spa.door.Z), Y } } },
-		{ "out onto the terrace", { { Vector3.new(td.X, 0, 30), Y }, { Vector3.new(td.X, 0, 18), Y }, { Vector3.new(-45, 0, 8), Y } } },
-		{ "into the kitchen from the terrace", { { Vector3.new(kd.X, 0, 18), Y }, { Vector3.new(kd.X, 0, 30), Y } } },
-		{ "into the screening room", { { Vector3.new(-50, 0, S.screening.door.Z), Y }, { Vector3.new(-62, 0, S.screening.door.Z), Y } } },
-		{ "into the gym", { { Vector3.new(-56, 0, S.gym.door.Z), Y }, { Vector3.new(-68, 0, S.gym.door.Z), Y } } },
+		{ "into the bedroom", { { Vector3.new(-47 * G, 0, 46 * G), Y }, { Vector3.new(bd.X, 0, 41 * G), Y }, { Vector3.new(bd.X, 0, 36 * G), Y } } },
+		{ "into the bath and spa", { { Vector3.new(-56 * G, 0, S.spa.door.Z), Y }, { Vector3.new(-66 * G, 0, S.spa.door.Z), Y } } },
+		{ "out onto the terrace", { { Vector3.new(td.X, 0, 30 * G), Y }, { Vector3.new(td.X, 0, 18 * G), Y }, { Vector3.new(-45 * G, 0, 8 * G), Y } } },
+		{ "into the kitchen from the terrace", { { Vector3.new(kd.X, 0, 18 * G), Y }, { Vector3.new(kd.X, 0, 30 * G), Y } } },
+		{ "into the screening room", { { Vector3.new(-50 * G, 0, S.screening.door.Z), Y }, { Vector3.new(-62 * G, 0, S.screening.door.Z), Y } } },
+		{ "into the gym", { { Vector3.new(-56 * G, 0, S.gym.door.Z), Y }, { Vector3.new(-68 * G, 0, S.gym.door.Z), Y } } },
 	}
 	for _, route in routes do
 		local blocked = walk(route[2], 0.9)
 		check("a guest can walk " .. route[1], blocked == nil, blocked)
 	end
-	check("the terrace and its pavilions are the Suite", Layout.zoneAt(Vector3.new(-45, Y + 3, 8)) == "suite" and Layout.zoneAt(Vector3.new(-70, Y + 3, 15)) == "suite")
+	check("the terrace and its pavilions are the Suite", Layout.zoneAt(Vector3.new(-45 * G, Y + 3, 8 * G)) == "suite" and Layout.zoneAt(Vector3.new(-70 * G, Y + 3, 15 * G)) == "suite")
 	check("the Salon below is still the Salon", Layout.zoneAt(Layout.Salon.arrival + Vector3.new(0, 3, 0)) == "salon")
 end
 

@@ -543,14 +543,14 @@ local defaults = {
 	},
 
 	Movement = {
-		walkSpeed = 12,
-		runSpeed = 19,
-		maxSpeed = 34, -- no combination of events and perks moves a guest faster than this
-		npcWalkSpeed = 9,
-		-- Guests and staff are drawn at this size, so the house feels this much bigger around
-		-- them (0.72: every room about two-fifths bigger than at Roblox's own size, twice the
-		-- floor for each guest).
-		guestScale = 0.72,
+		-- (The Grand house is a third bigger again than it was drawn, so guests walk a little quicker.)
+		walkSpeed = 15,
+		runSpeed = 24,
+		maxSpeed = 40, -- no combination of events and perks moves a guest faster than this
+		npcWalkSpeed = 11,
+		-- Guests and staff are drawn at this size: a touch under Roblox's own, the size the
+		-- furniture was made for. (The rooms themselves are grand: Layout.SCALE.)
+		guestScale = 0.8,
 		-- Where guests appear: "foyer" (lit, in the middle of everything) or "street" (a first
 		-- visit starts outside the doors at night).
 		firstArrival = "foyer",

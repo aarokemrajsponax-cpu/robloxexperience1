@@ -313,7 +313,12 @@ a Nightly attempt or a Mythic's odds.
   nobody lands inside the Foyer's floor behind the front doors; every guest is placed in the
   Foyer, in the light (`Config.Movement.firstArrival = "street"` brings back the walk in from the
   street on a first visit). Guests and staff stand at 80% of Roblox's size
-  (`Config.Movement.guestScale`), so every room feels a size bigger. Every part of the house starts on its own, so one that fails
+  (`Config.Movement.guestScale`), and the house itself is built **Grand**: every room, wall,
+  ceiling, doorway and stair is opened out by `Layout.SCALE` (1.35: a third wider, deeper and
+  taller than drawn) while the furniture keeps its true size and moves with its room
+  (`World/Grand`), so the Foyer, the rooms, the Ballroom and the Suite have far more space
+  around every table and chair. Each staircase has an unseen ramp along its nosings, so every
+  guest walks up it smoothly. Every part of the house starts on its own, so one that fails
   is reported in Output and never stops anyone from walking in, and a separate safety script
   hands back Roblox's own camera, controls and prompts if the house's client ever doesn't start.
 - **The sorting screen: the Jeweller's Desk.** A mahogany desk with brass corner guards, a

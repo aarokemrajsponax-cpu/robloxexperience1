@@ -5,8 +5,10 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
 local Breathe = require(ReplicatedStorage.Shared.Breathe)
-local Layout = require(ReplicatedStorage.Shared.Layout)
+local LayoutModule = require(ReplicatedStorage.Shared.Layout)
+local Layout = LayoutModule.raw -- (the house as drawn: see World/Grand)
 local Flush = require(script.Parent.Flush)
+local Grand = require(script.Parent.Grand)
 local Kit = require(script.Parent.Kit)
 
 local Street = require(script.Parent.Street)
@@ -27,7 +29,7 @@ local Build = {}
 
 -- A black marble sill across a doorway's wall, a hair above the floors either side and running
 -- just onto them (so no seam shows), edged with brass where it meets each floor.
-local function sill(parent: Instance, d: Layout.Doorway)
+local function sill(parent: Instance, d: LayoutModule.Doorway)
 	local wall = d.wall :: { number }
 	local a, b = wall[1] - 0.15, wall[2] + 0.15
 	local half = d.width / 2 + 0.6
@@ -89,6 +91,8 @@ function Build.run(options: Options?): Folder
 			end
 		end
 	end)
+	-- The Grand Scale: every room opened out, the furniture moved with it (World/Grand).
+	step("the Grand Scale", function() Grand.apply(root, require(ReplicatedStorage.Shared.Layout).SCALE) end)
 	-- Surfaces laid flush in one plane flicker as the camera moves: lift each clear.
 	local function polish()
 		step("the flicker fix", function() Flush.settle(root) end)
