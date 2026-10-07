@@ -612,8 +612,10 @@ local function voiceFor(index: number, here: boolean): Sound?
 		s.SoundGroup = pianoGroup
 		s.RollOffMode = Enum.RollOffMode.InverseTapered
 		s.RollOffMinDistance = 10
-		s.Loaded:Connect(function()
-			readyNotes[s.SoundId] = true
+		pcall(function()
+			s.Loaded:Connect(function()
+				readyNotes[s.SoundId] = true
+			end)
 		end)
 		v = { sound = s, id = "" }
 		list[n] = v
@@ -670,7 +672,10 @@ function Sound.pianoNote(index: number, here: boolean?, gain: number?): boolean
 	s.TimePosition = 0
 	s:Play()
 	-- A recording that plays has loaded: it's preferred from now on.
-	if s.IsLoaded then
+	local okLoaded, isLoaded = pcall(function()
+		return s.IsLoaded
+	end)
+	if okLoaded and isLoaded == true then
 		readyNotes[s.SoundId] = true
 	end
 	return true

@@ -2999,20 +2999,60 @@ serverSays("Salute", { op = "salute", id = "grand", by = "Ben", userId = 1, seco
 advance(2)
 check("a salute names its giver", textOnScreen("Ben gave the house the Grand Salute") ~= nil)
 check("gold leaf drifts down", workspace.MaisonLocal:FindFirstChild("GoldLeaf") ~= nil)
-check("fireworks over the house", workspace.MaisonLocal:FindFirstChild("Firework") ~= nil)
+check("fireworks over the house: shells going up and bursting over the estate", (function()
+	local f = workspace.MaisonLocal:FindFirstChild("Fireworks")
+	return f ~= nil and #f:GetChildren() > 0
+end)())
+check("the shells fly high over the roofs", (function()
+	local f = workspace.MaisonLocal:FindFirstChild("Fireworks")
+	for _, p in (f and f:GetChildren() or {}) do
+		if p.Name == "Shell" and p.Position.Y > 60 then
+			return true
+		end
+	end
+	return false
+end)())
 check("the spotlight finds the giver", workspace.MaisonLocal:FindFirstChild("Spotlight") ~= nil)
 advance(14)
 check("and it all clears away", workspace.MaisonLocal:FindFirstChild("GoldLeaf") == nil and workspace.MaisonLocal:FindFirstChild("Spotlight") == nil)
+advance(12)
+check("...the fireworks too, once the last willows have fallen", (function()
+	local f = workspace.MaisonLocal:FindFirstChild("Fireworks")
+	return f == nil or #f:GetChildren() == 0
+end)(), (function()
+	local f = workspace.MaisonLocal:FindFirstChild("Fireworks")
+	return f and #f:GetChildren()
+end)())
+-- The Midnight Finale: a countdown on every screen, then the show.
+serverSays("Salute", { op = "salute", id = "finale", by = "Ben", userId = 1, seconds = 16, scale = 1.6, effects = { "countdown", "goldLeaf", "chandelier", "fireworks" }, line = "Ben lit the Midnight Finale." })
+advance(1.5)
+check("the Midnight Finale counts down on screen", textOnScreen("9") ~= nil or textOnScreen("8") ~= nil)
+check("...and no shell goes up before midnight", (function()
+	local f = workspace.MaisonLocal:FindFirstChild("Fireworks")
+	return f == nil or #f:GetChildren() == 0
+end)())
+advance(10.5)
+check("at midnight the sky goes up", (function()
+	local f = workspace.MaisonLocal:FindFirstChild("Fireworks")
+	return f ~= nil and #f:GetChildren() > 0
+end)())
+advance(25)
 invokeResults.ShopAsk = {
 	always = {}, today = {}, featured = {}, gilt = {}, guests = {}, credits = {}, balance = 0, standing = "Guest",
 	season = { id = "autumn", name = "Autumn", pieces = {} },
 	goldKey = { owned = false }, ledger = { view = { term = "2026-autumn", page = 1, pages = 50, leather = false } },
-	salutes = { { id = "goldLeaf", name = "A Shower of Gold Leaf", line = "Gold leaf drifts down.", price = 49, ready = true } },
+	salutes = {
+		{ id = "goldLeaf", name = "A Shower of Gold Leaf", line = "Gold leaf drifts down.", price = 75, ready = true },
+		{ id = "fireworks", name = "Fireworks over the House", line = "A full fireworks show over the whole estate.", price = 299, ready = false, preview = true },
+		{ id = "finale", name = "The Midnight Finale", line = "A countdown, then the biggest show.", price = 999, ready = false, preview = false },
+	},
 	saluteWaiting = 0,
 }
 serverSays("Shop", { op = "open", panel = "salutes" })
 advance(1)
 check("the piano's card opens the Salutes", textOnScreen("A Shower of Gold Leaf") ~= nil and textOnScreen("changes no score") ~= nil)
+check("no salute says \"Soon\": each shows its price, or a Studio preview", textOnScreen("Soon") == nil and textOnScreen("Preview") ~= nil and textOnScreen("299 when on sale") ~= nil and textOnScreen("999") ~= nil)
+snapshot("salutes")
 Root2.close()
 advance(0.5)
 check("no errors in a salute", #errors == 0, errors[1])
