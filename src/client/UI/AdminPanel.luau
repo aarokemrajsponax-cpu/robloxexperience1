@@ -264,7 +264,7 @@ function AdminPanel.open()
 				send({ op = "stopAll", everywhere = everywhere }, "Everything stopped.")
 			end)
 			-- The big one: everything at once.
-			local abuse = row(scroll, add(), "Admin Abuse Night", "Every event at once with fireworks: double Gilt, Mythic luck, the Ledger at double speed, gold rain, a treasure hunt, giants, quickstep. Turn on Every house to run it in every server.", true)
+			local abuse = row(scroll, add(), "Admin Abuse Night", "Every event at once with an intro and fireworks: double Gilt, Mythic luck, gold rain, a treasure hunt, giants, low gravity, the House Party, and a surprise effect for everyone every minute. Turn on Every house to run it in every server.", true)
 			for _, m in v.abuseMinutes or { 15, 30, 60 } do
 				small(abuse, tostring(m) .. " min", true, function()
 					send({ op = "abuse", minutes = m, everywhere = everywhere }, "Admin Abuse Night has begun" .. (if everywhere then " in every house." else "."))
