@@ -175,6 +175,15 @@ start("Seats", require(script.Parent.World.Seating).start)
 -- The owner's flight (switched on only by the server, only for the owner), and the House Party.
 start("The owner's flight", require(script.Parent.World.AdminFly).start)
 start("The House Party", require(script.Parent.World.DiscoHouse).start)
+-- Effects for everyone (the owner's, and Admin Abuse Night's surprises); never moves a guest who
+-- is sorting at a table.
+start("Effects for everyone", function()
+	local AbuseFX = require(script.Parent.World.AbuseFX)
+	AbuseFX.isBusy = function(): boolean
+		return TableClient.isSeated()
+	end
+	AbuseFX.start()
+end)
 -- Curios, Gems, trading, and the Menu's tiles.
 start("Curios", function()
 	CurioState.start()

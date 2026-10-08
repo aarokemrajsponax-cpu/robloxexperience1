@@ -2,7 +2,8 @@
 -- The owner's flight (House controls → Powers → Fly). Only the server switches it on, and only
 -- for the owner (the attribute "AdminFly"); this screen does the flying: the way the camera looks,
 -- at Config.Admin.flySpeed, with Space (or E) to rise and Q (or Ctrl) to sink. On a phone, the
--- thumbstick flies where the camera points.
+-- thumbstick flies where the camera points. Ghost ("AdminGhost", also the server's to switch on)
+-- lets the owner pass through walls, flying or walking; each part's own collision comes back after.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -126,6 +127,39 @@ function AdminFly.flying(): boolean
 	return flight ~= nil
 end
 
+-- Through walls: every part of the owner's character stops colliding while Ghost is on.
+local ghosted = false
+local function ghostStep()
+	local on = player:GetAttribute("AdminGhost") == true
+	local character = player.Character
+	if not character then
+		return
+	end
+	if on then
+		ghosted = true
+		for _, d in character:GetDescendants() do
+			if d:IsA("BasePart") then
+				if d:GetAttribute("GhostWas") == nil then
+					d:SetAttribute("GhostWas", d.CanCollide)
+				end
+				d.CanCollide = false
+			end
+		end
+	elseif ghosted then
+		ghosted = false
+		for _, d in character:GetDescendants() do
+			if d:IsA("BasePart") then
+				local was = d:GetAttribute("GhostWas")
+				if type(was) == "boolean" then
+					d.CanCollide = was
+				end
+				d:SetAttribute("GhostWas", nil)
+			end
+		end
+	end
+end
+AdminFly.ghostStep = ghostStep
+
 function AdminFly.start()
 	player:GetAttributeChangedSignal("AdminFly"):Connect(refresh)
 	player.CharacterAdded:Connect(function()
@@ -135,6 +169,12 @@ function AdminFly.start()
 	RunService.RenderStepped:Connect(function()
 		if flight then
 			pcall(step)
+		end
+	end)
+	-- (Every physics step: the Humanoid turns collisions back on as it walks.)
+	RunService.Stepped:Connect(function()
+		if ghosted or player:GetAttribute("AdminGhost") == true then
+			pcall(ghostStep)
 		end
 	end)
 	refresh()

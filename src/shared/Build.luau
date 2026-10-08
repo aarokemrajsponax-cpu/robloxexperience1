@@ -4,6 +4,6 @@
 -- see whether Studio has the latest code from GitHub.
 
 return {
-	number = 49,
-	label = "Build 49 · 8 Oct · friends' Suites, the friends' Gilt boost, gold confetti, the owner's powers",
+	number = 50,
+	label = "Build 50 · 8 Oct · Admin Abuse: effects for everyone, surprises all night, stop everything, ghost",
 }

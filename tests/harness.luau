@@ -436,6 +436,7 @@ local published, subscriptions, teleports = {}, {}, {}
 local services = {
 	Players = PlayersService,
 	MarketplaceService = MarketplaceService,
+	Lighting = { ClockTime = 0.2 }, -- (the owner's time of day)
 	DataStoreService = {
 		GetDataStore = function(_, name)
 			local data = if name == "MaisonNoir_Mythics" then mythicCounts else (dataStores[name] or {})

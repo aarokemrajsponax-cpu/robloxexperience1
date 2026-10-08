@@ -186,9 +186,36 @@ function AdminPanel.open()
 			local function power(name: string, value: any?, done: string?)
 				send({ op = "power", power = name, value = value }, done)
 			end
+			-- Effects for everyone first: the fun of the night, one tap each.
+			if type(pw.effects) == "table" then
+				Theme.text(scroll, "Effects for everyone" .. (if everywhere then " (every house)" else ""), 11, "caps", { LayoutOrder = add(), TextXAlignment = Enum.TextXAlignment.Left })
+				local fx = row(scroll, add(), "Play one now", "Every guest sees it round them; nobody sorting at a table is moved.", true)
+				local fx2 = row(scroll, add(), "", nil, true)
+				for i, e in pw.effects do
+					local k = small(if i <= 4 then fx else fx2, tostring(e.name), true, function()
+						send({ op = "fx", id = e.id, everywhere = everywhere }, e.name .. "!")
+					end)
+					k.Name = "Fx_" .. tostring(e.id)
+					k.Size = UDim2.fromOffset(128, 32)
+				end
+			end
+			if type(pw.clocks) == "table" then
+				local clockRow = row(scroll, add(), "Time of day", "The house is at midnight; dawn, noon or sunset for a while.", true)
+				local NAMES: { [string]: string } = { midnight = "Midnight", dawn = "Dawn", noon = "Noon", sunset = "Sunset" }
+				for _, c in pw.clocks do
+					small(clockRow, NAMES[c] or c, pw.clock == c, function()
+						send({ op = "clock", id = c })
+					end)
+				end
+			end
+			Theme.text(scroll, "Your own powers", 11, "caps", { LayoutOrder = add(), TextXAlignment = Enum.TextXAlignment.Left })
 			local fly = row(scroll, add(), "Fly" .. (if pw.fly then "  ·  on" else ""), "Fly where the camera looks: Space or E to rise, Q or Ctrl to sink (the thumbstick on a phone).", true)
 			small(fly, if pw.fly then "Land" else "Fly", not pw.fly, function()
 				power("fly", nil, if pw.fly then "Landed." else "You're flying.")
+			end)
+			local ghost = row(scroll, add(), "Ghost" .. (if pw.ghost then "  ·  on" else ""), "Pass through walls and floors, flying or walking.", true)
+			small(ghost, if pw.ghost then "Solid" else "Ghost", not pw.ghost, function()
+				power("ghost", nil, if pw.ghost then "Solid again." else "Through walls.")
 			end)
 			local speed = row(scroll, add(), "Speed", "How fast you walk and run.", true)
 			for _, s in pw.speeds do
@@ -231,6 +258,11 @@ function AdminPanel.open()
 				send({ op = "freeze", on = not pw.frozen }, if pw.frozen then "The house moves again." else "Frozen!")
 			end)
 		elseif page == "events" then
+			-- Stop everything at once (events, Admin Abuse Night, a freeze, the time of day).
+			local halt = row(scroll, add(), "Stop everything" .. (if v.powers and v.powers.abuseOn then "  ·  Admin Abuse Night is on" else ""), "Every event, the night's surprises, a freeze and the time of day, back to normal.", true)
+			small(halt, "Stop all", false, function()
+				send({ op = "stopAll", everywhere = everywhere }, "Everything stopped.")
+			end)
 			-- The big one: everything at once.
 			local abuse = row(scroll, add(), "Admin Abuse Night", "Every event at once with fireworks: double Gilt, Mythic luck, the Ledger at double speed, gold rain, a treasure hunt, giants, quickstep. Turn on Every house to run it in every server.", true)
 			for _, m in v.abuseMinutes or { 15, 30, 60 } do
@@ -408,14 +440,25 @@ function AdminPanel.open()
 		end
 	end
 
-	for i, spec in { { "events", "Events" }, { "powers", "Powers" }, { "schedule", "Schedule" }, { "spectacle", "Spectacle" }, { "guests", "Guests" }, { "announce", "Announce" } } do
-		local k = Theme.key(tabs, spec[2], page == spec[1], function()
-			page = spec[1]
-			render()
-		end, 92)
-		k.Size = UDim2.fromOffset(92, 40)
-		k.LayoutOrder = i
+	-- The tabs, the open page's lit (drawn again when the page changes).
+	local function drawTabs()
+		for _, c in tabs:GetChildren() do
+			if c:IsA("GuiObject") then
+				c:Destroy()
+			end
+		end
+		for i, spec in { { "events", "Events" }, { "powers", "Powers" }, { "schedule", "Schedule" }, { "spectacle", "Spectacle" }, { "guests", "Guests" }, { "announce", "Announce" } } do
+			local k = Theme.key(tabs, spec[2], page == spec[1], function()
+				page = spec[1]
+				drawTabs()
+				render()
+			end, 92)
+			k.Name = "Tab_" .. spec[1]
+			k.Size = UDim2.fromOffset(92, 40)
+			k.LayoutOrder = i
+		end
 	end
+	drawTabs()
 	local footer = Instance.new("Frame")
 	footer.BackgroundTransparency = 1
 	footer.Size = UDim2.new(1, 0, 0, 44)

@@ -16,7 +16,14 @@ local EventFX = {}
 
 local COLOURS = { Color3.fromRGB(255, 80, 160), Color3.fromRGB(80, 160, 255), Color3.fromRGB(120, 255, 140), Color3.fromRGB(255, 210, 80), Color3.fromRGB(190, 110, 255) }
 
-local disco: { ball: Model, lamps: { [Light]: Color3 }, conn: RBXScriptConnection }? = nil
+local disco: { ball: Model, lamps: { Light }, conn: RBXScriptConnection }? = nil
+
+-- (Each lamp's own colour is kept on the lamp, "DiscoWas", shared with the House Party
+-- (World/DiscoHouse): whichever ends last puts it back, so a lamp is never left in a disco colour.)
+local function partyOn(): boolean
+	local ends = Workspace:GetAttribute(HouseEvents.attribute("discoHouse"))
+	return type(ends) == "number" and ends > Workspace:GetServerTimeNow()
+end
 
 local function ballroomLights(): { Light }
 	local out = {}
@@ -74,9 +81,11 @@ local function startDisco()
 	sparkle.Size = NumberSequence.new(0.5, 0)
 	sparkle.Parent = ball
 	model.Parent = Workspace:FindFirstChild("MaisonLocal") or Workspace
-	local lamps: { [Light]: Color3 } = {}
-	for _, l in ballroomLights() do
-		lamps[l] = l.Color
+	local lamps = ballroomLights()
+	for _, l in lamps do
+		if l:GetAttribute("DiscoWas") == nil then
+			l:SetAttribute("DiscoWas", l.Color)
+		end
 	end
 	local t0 = os.clock()
 	local conn = RunService.RenderStepped:Connect(function()
@@ -86,7 +95,7 @@ local function startDisco()
 		local c = COLOURS[i % #COLOURS + 1]
 		light.Color = c
 		sparkle.Color = ColorSequence.new(c)
-		for l in lamps do
+		for _, l in lamps do
 			if l.Parent then
 				l.Color = COLOURS[(i + #l.Name) % #COLOURS + 1]
 			end
@@ -103,10 +112,16 @@ local function stopDisco()
 	disco = nil
 	d.conn:Disconnect()
 	d.ball:Destroy()
-	for l, c in d.lamps do
-		if l.Parent then
-			l.Color = c
+	-- The House Party still on: it puts the lamps back when it ends.
+	if partyOn() then
+		return
+	end
+	for _, l in d.lamps do
+		local was = l:GetAttribute("DiscoWas")
+		if typeof(was) == "Color3" then
+			l.Color = was
 		end
+		l:SetAttribute("DiscoWas", nil)
 	end
 end
 

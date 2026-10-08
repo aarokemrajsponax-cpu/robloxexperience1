@@ -16,6 +16,7 @@
 local DataStoreService = game:GetService("DataStoreService")
 local GroupService = game:GetService("GroupService")
 local HttpService = game:GetService("HttpService")
+local Lighting = game:GetService("Lighting")
 local MessagingService = game:GetService("MessagingService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -263,7 +264,8 @@ local function broadcast(message: { [string]: any })
 end
 
 -- Starts an event in this house (and, from the owner's panel, optionally in every house).
-function AdminService.startEvent(id: string, seconds: number, byName: string)
+-- `quiet`: no announcement of its own (Admin Abuse Night announces itself once, for all of them).
+function AdminService.startEvent(id: string, seconds: number, byName: string, quiet: boolean?)
 	if not HouseEvents.byId[id] then
 		return
 	end
@@ -307,8 +309,10 @@ function AdminService.startEvent(id: string, seconds: number, byName: string)
 		end)
 	end
 	local e = HouseEvents.byId[id]
-	broadcast({ op = "salute", id = id, by = byName, effects = { "goldLeaf" }, seconds = 8, title = e.name, line = e.name .. ": " .. e.line })
-	AdminService.note(e.name .. " has begun: " .. e.line, false)
+	if not quiet then
+		broadcast({ op = "salute", id = id, by = byName, effects = { "goldLeaf" }, seconds = 8, title = e.name, line = e.name .. ": " .. e.line })
+		AdminService.note(e.name .. " has begun: " .. e.line, false)
+	end
 	task.delay(seconds, function()
 		if active[id] == ends then
 			AdminService.stopEvent(id)
@@ -488,6 +492,10 @@ local function onMessage(message: any)
 		AdminService.startEvent(m.id, math.clamp(m.seconds, 60, 3600), tostring(m.by))
 	elseif m.op == "abuse" and type(m.seconds) == "number" then
 		AdminService.abuse(math.clamp(m.seconds, 60, 3600), tostring(m.by))
+	elseif m.op == "fx" and type(m.id) == "string" and HouseEvents.effectById[m.id] then
+		AdminService.fx(m.id, tostring(m.by), nil)
+	elseif m.op == "stopAll" then
+		AdminService.stopAll(tostring(m.by))
 	elseif m.op == "summon" and type(m.jobId) == "string" then
 		summons[m.jobId] = os.time() + cfg().summonMinutes * 60
 		broadcast({ op = "summon", jobId = m.jobId, by = tostring(m.by), text = tostring(m.text or "") })
@@ -509,15 +517,55 @@ end
 ---------------------------------------------------------------------------------------------------
 -- Admin Abuse Night, and the schedule
 ---------------------------------------------------------------------------------------------------
--- Every event at once, a burst of fireworks and a line for the whole house.
+-- An effect for everyone (HouseEvents.Effects): every screen plays it round its own guest. From
+-- the owner's spot when there is one (a shockwave blasts out from there).
+function AdminService.fx(id: string, byName: string, origin: Vector3?)
+	if not HouseEvents.effectById[id] and id ~= "intro" and id ~= "stop" then
+		return
+	end
+	broadcast({ op = "abuseFX", id = id, by = byName, origin = origin, seconds = cfg().fxSeconds[id] or 6 })
+end
+
+local surpriseToken = 0
+
+-- Everything at once: every event (quietly, then one great announcement), the whole house's
+-- intro, fireworks, and a surprise for everyone every minute or so until it ends.
 function AdminService.abuse(seconds: number, byName: string)
 	for _, id in cfg().abuseEvents do
 		if HouseEvents.byId[id] then
-			AdminService.startEvent(id, seconds, byName)
+			AdminService.startEvent(id, seconds, byName, true)
 		end
 	end
-	broadcast({ op = "salute", id = "abuse", by = byName, effects = { "fireworks", "goldLeaf", "chandelier" }, seconds = 12, title = "Admin Abuse Night", line = "Admin Abuse Night: double Gilt, Mythic luck, gold rain, a treasure hunt, giants. Go!" })
+	local ends = os.time() + seconds
+	Workspace:SetAttribute("AbuseUntil", ends)
+	AdminService.fx("intro", byName, nil)
+	broadcast({ op = "salute", id = "abuse", by = byName, effects = { "fireworks", "goldLeaf", "chandelier" }, seconds = 12, title = "Admin Abuse Night", line = "ADMIN ABUSE NIGHT: double Gilt, Mythic luck, gold rain, a treasure hunt, giants, low gravity, a house party, and surprises all night. Go!" })
 	AdminService.note("Admin Abuse Night has begun in the house.", false)
+	surpriseToken += 1
+	local token = surpriseToken
+	task.spawn(function()
+		local last = ""
+		while surpriseToken == token and os.time() < ends do
+			task.wait(cfg().abuseSurpriseSeconds)
+			if surpriseToken ~= token or os.time() >= ends then
+				break
+			end
+			-- A different surprise each time.
+			local pool = {}
+			for _, id in cfg().abuseSurprises do
+				if id ~= last and HouseEvents.effectById[id] then
+					table.insert(pool, id)
+				end
+			end
+			if #pool > 0 then
+				last = pool[math.random(1, #pool)]
+				AdminService.fx(last, byName, nil)
+			end
+		end
+		if surpriseToken == token and Workspace:GetAttribute("AbuseUntil") == ends then
+			Workspace:SetAttribute("AbuseUntil", nil)
+		end
+	end)
 end
 
 export type Planned = { id: string, at: number, what: string, minutes: number, by: string }
@@ -708,6 +756,11 @@ local function power(player: Player, which: string, value: unknown): { [string]:
 		local on = player:GetAttribute("AdminFly") ~= true
 		player:SetAttribute("AdminFly", if on then true else nil)
 		return { ok = true, on = on }
+	elseif which == "ghost" then
+		-- Through walls (the owner's screen moves them; it only does so when the server says).
+		local on = player:GetAttribute("AdminGhost") ~= true
+		player:SetAttribute("AdminGhost", if on then true else nil)
+		return { ok = true, on = on }
 	elseif which == "speed" then
 		local v = pick(cfg().speeds)
 		if not v then
@@ -751,7 +804,7 @@ end
 local frozen: { [Player]: boolean } = {}
 local freezeToken = 0
 
-local function setFrozen(on: boolean, owner: Player)
+local function setFrozen(on: boolean, owner: Player?)
 	freezeToken += 1
 	local token = freezeToken
 	for _, p in Players:GetPlayers() do
@@ -785,12 +838,51 @@ local function setFrozen(on: boolean, owner: Player)
 	end
 end
 
+-- The time of day (the house's own is midnight).
+local CLOCK_ORDER = { "midnight", "dawn", "noon", "sunset" }
+
+local function setClock(name: string): boolean
+	local t = cfg().clocks[name]
+	if type(t) ~= "number" then
+		return false
+	end
+	Lighting.ClockTime = t
+	Workspace:SetAttribute("AdminClock", if name == "midnight" then nil else name)
+	return true
+end
+
+-- Everything stops at once: every event, Admin Abuse Night and its surprises, a freeze, the time
+-- of day, and the effects playing on every screen.
+function AdminService.stopAll(byName: string)
+	for _, e in HouseEvents.List do
+		if active[e.id] then
+			AdminService.stopEvent(e.id)
+		end
+	end
+	surpriseToken += 1
+	Workspace:SetAttribute("AbuseUntil", nil)
+	setFrozen(false, nil)
+	if Workspace:GetAttribute("AdminClock") ~= nil then
+		setClock("midnight")
+	end
+	AdminService.fx("stop", byName, nil)
+end
+
 local function powersView(player: Player): { [string]: any }
 	local anyFrozen = false
 	for _ in frozen do
 		anyFrozen = true
 	end
+	local effects = {}
+	for _, e in HouseEvents.Effects do
+		table.insert(effects, { id = e.id, name = e.name, line = e.line })
+	end
 	return {
+		ghost = player:GetAttribute("AdminGhost") == true,
+		clock = Workspace:GetAttribute("AdminClock") or "midnight",
+		clocks = CLOCK_ORDER,
+		effects = effects,
+		abuseOn = Workspace:GetAttribute("AbuseUntil") ~= nil,
 		fly = player:GetAttribute("AdminFly") == true,
 		speed = player:GetAttribute("AdminSpeed") or 1,
 		jump = player:GetAttribute("AdminJump") or 1,
@@ -851,7 +943,7 @@ local function handle(player: Player, request: unknown): any
 		return nil
 	end
 	local now = os.clock()
-	if lastAsk[player] and now - lastAsk[player] < 0.4 then
+	if lastAsk[player] and now - lastAsk[player] < 0.25 then
 		return { ok = false, why = "One moment." }
 	end
 	lastAsk[player] = now
@@ -1025,6 +1117,25 @@ local function handle(player: Player, request: unknown): any
 		end
 		broadcast({ op = "salute", id = "bringAll", by = byName, effects = { "goldLeaf" }, seconds = 6, title = "Everyone, gather round", line = byName .. " has called every guest together." })
 		return { ok = true, brought = #others }
+	elseif op == "fx" and type(r.id) == "string" and HouseEvents.effectById[r.id] then
+		local root = rootOf(player)
+		AdminService.fx(r.id, byName, if root then root.Position else nil)
+		if r.everywhere == true then
+			publish({ op = "fx", id = r.id, by = byName, jobId = game.JobId })
+		end
+		return { ok = true }
+	elseif op == "stopAll" then
+		AdminService.stopAll(byName)
+		if r.everywhere == true then
+			publish({ op = "stopAll", by = byName, jobId = game.JobId })
+		end
+		broadcast({ op = "salute", id = "halt", by = byName, effects = {}, seconds = 5, title = "That's all", line = byName .. " called a halt: the house is back to normal." })
+		return state(player)
+	elseif op == "clock" and type(r.id) == "string" then
+		if not setClock(r.id) then
+			return { ok = false, why = "Choose a time of day." }
+		end
+		return state(player)
 	elseif op == "freeze" then
 		local on = r.on == true
 		setFrozen(on, player)

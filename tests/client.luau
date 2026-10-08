@@ -3495,6 +3495,103 @@ do
 	check("...and every lamp is back as it was", lamp ~= nil and lamp:GetAttribute("DiscoWas") == nil and lamp.Color == was)
 end
 
+-- Disco Night and the House Party together: whichever ends last puts the lamps back.
+do
+	local ballroomLamp = nil
+	local ballroom = workspace.Maison:FindFirstChild("Ballroom")
+	for _, d in (ballroom and ballroom:GetDescendants() or {}) do
+		if d:IsA("PointLight") then
+			ballroomLamp = d
+			break
+		end
+	end
+	local own = ballroomLamp and ballroomLamp.Color
+	workspace:SetAttribute("Event_disco", workspace:GetServerTimeNow() + 60)
+	signalOf(workspace, "attr:Event_disco"):Fire()
+	advance(0.5)
+	workspace:SetAttribute("Event_discoHouse", workspace:GetServerTimeNow() + 60)
+	signalOf(workspace, "attr:Event_discoHouse"):Fire()
+	advance(1.5)
+	workspace:SetAttribute("Event_disco", nil)
+	signalOf(workspace, "attr:Event_disco"):Fire()
+	advance(1)
+	check("Disco Night ends while the House Party goes on: the lamps keep partying", ballroomLamp ~= nil and ballroomLamp:GetAttribute("DiscoWas") ~= nil)
+	workspace:SetAttribute("Event_discoHouse", nil)
+	advance(1.5)
+	check("...and when the party ends too, each lamp is its own colour again", ballroomLamp ~= nil and ballroomLamp.Color == own and ballroomLamp:GetAttribute("DiscoWas") == nil)
+end
+
+-- Many events at once (Admin Abuse Night): one headline and one turning line, not a wall.
+do
+	local soon = workspace:GetServerTimeNow() + 900
+	for _, id in { "goldenHour", "luckyHour", "giants", "quickstep", "goldRain", "featherlight" } do
+		workspace:SetAttribute("Event_" .. id, soon)
+		signalOf(workspace, "attr:Event_" .. id):Fire()
+	end
+	workspace:SetAttribute("AbuseUntil", soon)
+	signalOf(workspace, "attr:AbuseUntil"):Fire()
+	advance(1.2)
+	local strip = find(playerGui, function(d)
+		return d.Name == "HouseEvents" and d:IsA("Frame")
+	end)
+	local lines = 0
+	for _, c in (strip and strip:GetChildren() or {}) do
+		if c:IsA("TextLabel") then
+			lines += 1
+		end
+	end
+	check("Admin Abuse Night: one headline on every screen, and one line turning through the events", textOnScreen("ADMIN ABUSE NIGHT") ~= nil and textOnScreen("6 EVENTS ON") ~= nil and lines <= 3, lines)
+	snapshot("abuse-banner")
+	for _, id in { "goldenHour", "luckyHour", "giants", "quickstep", "goldRain", "featherlight" } do
+		workspace:SetAttribute("Event_" .. id, nil)
+		signalOf(workspace, "attr:Event_" .. id):Fire()
+	end
+	workspace:SetAttribute("AbuseUntil", nil)
+	signalOf(workspace, "attr:AbuseUntil"):Fire()
+	advance(1.2)
+	check("...and it goes when the night ends", textOnScreen("ADMIN ABUSE NIGHT") == nil)
+end
+
+-- Effects for everyone (the server says which; this screen plays it round its guest).
+serverSays("Salute", { op = "abuseFX", id = "intro", seconds = 6 })
+advance(0.5)
+check("the intro: ADMIN ABUSE slams onto the screen", textOnScreen("ADMIN ABUSE") ~= nil)
+snapshot("abuse-intro")
+serverSays("Salute", { op = "abuseFX", id = "memeRain", seconds = 5 })
+advance(1.5)
+local fxFolder = workspace.MaisonLocal:FindFirstChild("AbuseFX")
+local memes = 0
+for _, c in (fxFolder and fxFolder:GetChildren() or {}) do
+	if c.Name == "Meme" then
+		memes += 1
+	end
+end
+check("a brainrot storm: memes pour from the sky round you", memes >= 6 and textOnScreen("BRAINROT STORM") ~= nil, memes)
+serverSays("Salute", { op = "abuseFX", id = "shockwave", seconds = 4, origin = Vector3.new(0, 5, 0) })
+advance(0.3)
+check("a shockwave: a ring of gold blasts out", workspace.MaisonLocal.AbuseFX:FindFirstChild("Shockwave") ~= nil)
+serverSays("Salute", { op = "abuseFX", id = "confetti", seconds = 4 })
+advance(0.5)
+local cannons = 0
+for _, c in workspace.MaisonLocal:GetChildren() do
+	if c.Name == "Flakes" then
+		cannons += 1
+	end
+end
+check("confetti cannons on every side", cannons >= 4, cannons)
+serverSays("Salute", { op = "abuseFX", id = "launch", seconds = 4 })
+advance(0.3)
+local launchRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+check("a rocket launch: you shoot up on a trail of smoke", launchRoot ~= nil and launchRoot:FindFirstChild("LaunchTrail") ~= nil and textOnScreen("LIFT OFF") ~= nil)
+serverSays("Salute", { op = "abuseFX", id = "storm", seconds = 6 })
+serverSays("Salute", { op = "abuseFX", id = "dance", seconds = 6 })
+serverSays("Salute", { op = "abuseFX", id = "spin", seconds = 3 })
+advance(2)
+check("a storm, a dance party and a spin, all at once, without a fault", textOnScreen("DANCE PARTY") ~= nil and #errors == 0, errors[1])
+serverSays("Salute", { op = "abuseFX", id = "stop" })
+advance(6)
+check("Stop everything: whatever was playing goes", workspace.MaisonLocal:FindFirstChild("AbuseFX") == nil and (launchRoot == nil or launchRoot:FindFirstChild("LaunchTrail") == nil))
+
 -- The owner's flight: only the server switches it on (for the owner); the screen flies.
 LocalPlayer:SetAttribute("AdminFly", true)
 advance(0.5)
@@ -3650,11 +3747,12 @@ invokeResults.AdminAsk = {
 	seasons = { { id = "yule", name = "Yuletide" } },
 	guests = { { userId = 2, name = "Ben", crowned = false } },
 	announcements = { "The owner is in the house tonight." },
-	powers = { fly = false, speed = 1, jump = 1, size = 1, invisible = false, frozen = false, speeds = { 1, 2, 3, 5 }, jumps = { 1, 2, 4 }, sizes = { 0.5, 1, 2, 4 }, places = { "street", "foyer", "salon", "boutique", "vault", "library", "ballroom", "terrace", "suite" } },
+	powers = { fly = false, ghost = false, speed = 1, jump = 1, size = 1, invisible = false, frozen = false, abuseOn = true, clock = "midnight", clocks = { "midnight", "dawn", "noon", "sunset" }, effects = { { id = "launch", name = "Rocket launch" }, { id = "dance", name = "Dance party" }, { id = "storm", name = "Lightning storm" }, { id = "memeRain", name = "Brainrot storm" }, { id = "confetti", name = "Confetti cannons" }, { id = "shockwave", name = "Shockwave" }, { id = "spin", name = "Spin" } }, speeds = { 1, 2, 3, 5 }, jumps = { 1, 2, 4 }, sizes = { 0.5, 1, 2, 4 }, places = { "street", "foyer", "salon", "boutique", "vault", "library", "ballroom", "terrace", "suite" } },
 }
 check("the owner sees the House key", press("House"))
 advance(1)
 check("the owner's panel opens", textOnScreen("House controls") ~= nil and textOnScreen("Golden Hour") ~= nil)
+check("Stop everything sits at the top of the Events page", textOnScreen("Stop everything") ~= nil and textOnScreen("Admin Abuse Night is on") ~= nil)
 snapshot("admin")
 check("Start begins an event", press("Start") and (function()
 	advance(0.5)
@@ -3673,6 +3771,16 @@ end)())
 check("the owner's Powers page: fly, speed, jump, size, invisible, go anywhere, everyone", press("Powers") and (function()
 	advance(0.3)
 	return textOnScreen("Fly") ~= nil and textOnScreen("Super jump") ~= nil and textOnScreen("Colossal") ~= nil and textOnScreen("Vanish") ~= nil and textOnScreen("Ballroom") ~= nil and textOnScreen("Bring all") ~= nil and textOnScreen("Freeze") ~= nil
+end)())
+check("...and effects for everyone, the time of day and Ghost", textOnScreen("Rocket launch") ~= nil and textOnScreen("Brainrot storm") ~= nil and textOnScreen("Sunset") ~= nil and textOnScreen("Ghost") ~= nil)
+check("the page you're on is the tab that's lit", (function()
+	local tab = find(playerGui, function(d)
+		return d:IsA("TextButton") and d.Name == "Tab_powers"
+	end)
+	local other = find(playerGui, function(d)
+		return d:IsA("TextButton") and d.Name == "Tab_events"
+	end)
+	return tab ~= nil and other ~= nil and tab.BackgroundColor3 ~= other.BackgroundColor3
 end)())
 snapshot("admin-powers")
 check("Fly asks the server (which checks it's the owner)", press("Fly") and (function()

@@ -28,6 +28,23 @@ for _, e in HouseEvents.List do
 	HouseEvents.byId[e.id] = e
 end
 
+-- Effects for everyone, at the owner's tap (and as surprises through Admin Abuse Night). Each plays
+-- on every screen round that guest (World/AbuseFX); none changes Gilt, a score or anything kept.
+HouseEvents.Effects = {
+	{ id = "launch", name = "Rocket launch", line = "Every guest shoots into the sky." },
+	{ id = "dance", name = "Dance party", line = "Every guest dances, under disco light." },
+	{ id = "storm", name = "Lightning storm", line = "Thunder and lightning over the house." },
+	{ id = "memeRain", name = "Brainrot storm", line = "Memes pour from the sky round every guest." },
+	{ id = "confetti", name = "Confetti cannons", line = "Cannons of confetti round every guest." },
+	{ id = "shockwave", name = "Shockwave", line = "A golden blast from you throws every guest near you back." },
+	{ id = "spin", name = "Spin", line = "Every guest spins like a top." },
+} :: { Event }
+
+HouseEvents.effectById = {} :: { [string]: Event }
+for _, e in HouseEvents.Effects do
+	HouseEvents.effectById[e.id] = e
+end
+
 -- Lines the owner can announce with one tap (anything typed is filtered by Roblox first).
 HouseEvents.Announcements = {
 	"The owner is in the house tonight. Come and say good evening.",

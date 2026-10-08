@@ -45,38 +45,87 @@ local function now(): number
 	return Workspace:GetServerTimeNow()
 end
 
+-- One line of the strip (made once, then only its words change).
+local function line(key: string, order: number, size: number, weight: string, background: Color3, thick: number?): TextLabel
+	local existing = rows[key]
+	if existing then
+		return existing
+	end
+	local l = Theme.text(strip, "", size, weight :: any, {
+		LayoutOrder = order,
+		BackgroundTransparency = 0.2,
+		BackgroundColor3 = background,
+		TextColor3 = Brand.Colours.lightGold,
+	})
+	l.Name = key
+	local pad = Instance.new("UIPadding")
+	pad.PaddingLeft = UDim.new(0, 12)
+	pad.PaddingRight = UDim.new(0, 12)
+	pad.PaddingTop = UDim.new(0, 4)
+	pad.PaddingBottom = UDim.new(0, 4)
+	pad.Parent = l
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = Brand.Colours.gold
+	stroke.Thickness = thick or 1
+	stroke.Transparency = 0.3
+	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	stroke.Parent = l
+	rows[key] = l
+	return l
+end
+
+local function drop(key: string)
+	local l = rows[key]
+	if l then
+		l:Destroy()
+		rows[key] = nil
+	end
+end
+
 local function refresh()
 	local short = {}
+	local on: { { e: HouseEvents.Event, ends: number, i: number } } = {}
 	for i, e in HouseEvents.List do
 		local ends = Workspace:GetAttribute(HouseEvents.attribute(e.id))
-		local label = rows[e.id]
 		if type(ends) == "number" and ends > now() then
+			table.insert(on, { e = e, ends = ends, i = i })
 			table.insert(short, e.name .. " " .. clock(ends - now()))
-			if not label then
-				local l = Theme.text(strip, "", 14, "bodyMedium", {
-					LayoutOrder = i,
-					BackgroundTransparency = 0.25,
-					BackgroundColor3 = Color3.fromRGB(12, 10, 6),
-					TextColor3 = Brand.Colours.lightGold,
-				})
-				local pad = Instance.new("UIPadding")
-				pad.PaddingLeft = UDim.new(0, 12)
-				pad.PaddingRight = UDim.new(0, 12)
-				pad.PaddingTop = UDim.new(0, 4)
-				pad.PaddingBottom = UDim.new(0, 4)
-				pad.Parent = l
-				local stroke = Instance.new("UIStroke")
-				stroke.Color = Brand.Colours.gold
-				stroke.Transparency = 0.4
-				stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-				stroke.Parent = l
-				rows[e.id] = l
-				label = l
+		end
+	end
+	-- Many at once (Admin Abuse Night): one headline and one line turning through them, never a
+	-- wall of strips down the screen.
+	local abuse = Workspace:GetAttribute("AbuseUntil")
+	local abusing = type(abuse) == "number" and abuse > now()
+	local compact = abusing or #on >= 3
+	for _, e in HouseEvents.List do
+		local still = false
+		for _, a in on do
+			if a.e.id == e.id then
+				still = true
 			end
-			(label :: TextLabel).Text = string.format("%s  ·  %s  ·  %s", Caps(e.name), e.line, clock(ends - now()))
-		elseif label then
-			label:Destroy()
-			rows[e.id] = nil
+		end
+		if compact or not still then
+			drop(e.id)
+		end
+	end
+	if compact and #on > 0 then
+		local longest = 0
+		for _, a in on do
+			longest = math.max(longest, a.ends - now())
+		end
+		local head = line("__head", 1, 17, "bodyBold", Color3.fromRGB(46, 30, 6), 2)
+		head.Text = if abusing
+			then string.format("ADMIN ABUSE NIGHT  ·  %d EVENTS ON  ·  %s", #on, clock((abuse :: number) - now()))
+			else string.format("%d EVENTS ON  ·  %s", #on, clock(longest))
+		-- (The headline glows in time.)
+		head.TextColor3 = Brand.Colours.lightGold:Lerp(Color3.new(1, 1, 1), (math.sin(now() * 3) + 1) / 2 * 0.35)
+		local a = on[math.floor(now() / 3) % #on + 1]
+		line("__cycle", 2, 14, "bodyMedium", Color3.fromRGB(12, 10, 6)).Text = string.format("%s  ·  %s  ·  %s", Caps(a.e.name), a.e.line, clock(a.ends - now()))
+	else
+		drop("__head")
+		drop("__cycle")
+		for _, a in on do
+			line(a.e.id, 2 + a.i, 14, "bodyMedium", Color3.fromRGB(12, 10, 6)).Text = string.format("%s  ·  %s  ·  %s", Caps(a.e.name), a.e.line, clock(a.ends - now()))
 		end
 	end
 	-- A scheduled event coming up: every screen counts down to it for the hour before.
@@ -161,6 +210,7 @@ function EventBanner.start()
 	for _, e in HouseEvents.List do
 		Workspace:GetAttributeChangedSignal(HouseEvents.attribute(e.id)):Connect(refresh)
 	end
+	Workspace:GetAttributeChangedSignal("AbuseUntil"):Connect(refresh)
 	Remotes.event("Salute").OnClientEvent:Connect(function(m: any)
 		if type(m) ~= "table" then
 			return

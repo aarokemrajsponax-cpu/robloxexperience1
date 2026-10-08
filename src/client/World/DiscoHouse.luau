@@ -62,8 +62,15 @@ local function party()
 			grade.Saturation = 0.15
 			task.wait(0.4)
 		end
-		-- The party's over: every lamp back as it was.
+		-- The party's over: every lamp back as it was (the Ballroom's wait for Disco Night, if
+		-- that's still on: it puts them back itself).
+		local ballroomDisco = Workspace:GetAttribute(HouseEvents.attribute("disco")) ~= nil
+		local maison = Workspace:FindFirstChild("Maison")
+		local ballroom = maison and maison:FindFirstChild("Ballroom")
 		for _, l in list do
+			if ballroomDisco and ballroom and l:IsDescendantOf(ballroom) then
+				continue
+			end
 			local was = l:GetAttribute("DiscoWas")
 			if typeof(was) == "Color3" then
 				l.Color = was

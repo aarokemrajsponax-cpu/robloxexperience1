@@ -562,6 +562,15 @@ local defaults = {
 		sizes = { 0.5, 1, 2, 4 }, -- the owner's size, times a guest's
 		freezeSeconds = 30, -- a freeze thaws by itself after this long
 		tinyScale = 0.45, -- A Night of Small Things: every guest this size
+		-- Effects for everyone (HouseEvents.Effects), and how long each lasts (seconds).
+		fxSeconds = { launch = 6, dance = 20, storm = 25, memeRain = 25, confetti = 10, shockwave = 4, spin = 6, intro = 6 },
+		shockwaveRadius = 80, -- studs from the owner a shockwave reaches
+		launchSpeed = 150, -- how hard a rocket launch throws a guest up (studs a second)
+		-- During Admin Abuse Night, a surprise for the whole house this often (seconds), from these.
+		abuseSurpriseSeconds = 60,
+		abuseSurprises = { "confetti", "memeRain", "dance", "storm", "launch", "shockwave", "spin" },
+		-- The time of day the owner can set (the house's own is midnight).
+		clocks = { midnight = 0.2, dawn = 6.3, noon = 12.5, sunset = 17.9 },
 		minutes = { 5, 15, 30 }, -- the event lengths offered
 		goldenHourGilt = 2,
 		luckyHourMythic = 10,

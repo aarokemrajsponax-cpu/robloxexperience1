@@ -434,8 +434,15 @@ a Nightly attempt or a Mythic's odds.
   the powers below: nobody else, whatever their screen sends, since the server checks every
   request. (In Studio, where test players aren't the owner, the first test player stands in:
   `Config.Admin.studioFirstPlayer`; never in the live game.)
+  - **Effects for everyone** (Powers, at the top; one tap, this house or every house): **Rocket
+    launch** (every guest shoots into the sky on a trail of smoke), **Dance party** (everyone
+    dances under disco light), **Lightning storm** (forks of lightning round the house, thunder
+    after), **Brainrot storm** (the house's memes pour from the sky round every guest), **Confetti
+    cannons**, **Shockwave** (a ring of gold blasts out from you and throws guests near you back)
+    and **Spin**. Nobody sorting at a table is ever moved; they still see and hear it. Nothing
+    changes Gilt or a score. **Time of day**: midnight (the house's own), dawn, noon or sunset.
   - **Powers** (your own): **fly** where the camera looks (Space or E to rise, Q or Ctrl to sink;
-    the thumbstick on a phone), **speed** 1×/2×/3×/5×, a **super jump** 1×/2×/4×, any **size**
+    the thumbstick on a phone), **ghost** (through walls and floors, flying or walking), **speed** 1×/2×/3×/5×, a **super jump** 1×/2×/4×, any **size**
     (tiny, normal, giant, colossal), **invisible** (you and your name), **go anywhere** in one
     step (the street, the Foyer, the Salon, the Boutique, the Vault, the Library, the Ballroom,
     the Terrace, the Suite) or **to any guest** (Guests → Go to), **bring everyone** to you, and
@@ -449,10 +456,15 @@ a Nightly attempt or a Mythic's odds.
   gift Gilt to one guest or everyone, or show someone out; announcements (typed ones filtered by
   Roblox) here or everywhere; and a summons that invites guests in every house to join yours.
   Events change Gilt, Ledger pages and Mythic luck, never a score.
-  - **Admin Abuse Night** (Events, at the top): every event at once with fireworks (double Gilt,
-    Mythic luck, the Page-Turner, gold rain, a treasure hunt, giants, the Quickstep,
-    Featherlight, the Brainrot Parade, Disco Night, the House Party, a Night of Curios), for 15,
-    30 or 60 minutes; switch on **Every house** first to run it in every server.
+  - **Admin Abuse Night** (Events): every event at once (double Gilt, Mythic luck, the
+    Page-Turner, gold rain, a treasure hunt, giants, the Quickstep, Featherlight, the Brainrot
+    Parade, Disco Night, the House Party, a Night of Curios), for 15, 30 or 60 minutes. It opens
+    with ADMIN ABUSE slammed onto every screen, air horns and fireworks, announced once; every
+    screen shows one headline (ADMIN ABUSE NIGHT · 12 EVENTS ON · the time left) with a line
+    turning through the events; and every minute there's a surprise for everyone (one of the
+    effects above). Switch on **Every house** first to run it in every server.
+  - **Stop everything** (Events, at the top): every event, the night's surprises, a freeze and the
+    time of day back to normal at once (in every house too, with Every house on).
   - **Schedule**: pick an event (or Admin Abuse Night), a day and a time in your own clock and a
     length, then **Schedule**. Every server starts it on time, whether you're in the game or
     not, and for the hour before, every player sees "ADMIN ABUSE NIGHT STARTS IN 12:34" at the

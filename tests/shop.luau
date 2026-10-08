@@ -891,6 +891,55 @@ check("and goes to every house", #published > publishedBefore and published[#pub
 for _, id in Config.data.Admin.abuseEvents do
 	AdminService.stopEvent(id)
 end
+AdminService.stopAll("AJ")
+
+-- Admin Abuse Night, the second time: one great announcement (not one per event), the intro on
+-- every screen, a surprise for everyone every minute, and Stop everything ends it all.
+do
+	local before = #broadcasts
+	adminAs(owner, { op = "abuse", minutes = 15 })
+	local salutes, intros = 0, 0
+	for i = before + 1, #broadcasts do
+		local m = broadcasts[i].message
+		if m.op == "salute" then
+			salutes += 1
+		elseif m.op == "abuseFX" and m.id == "intro" then
+			intros += 1
+		end
+	end
+	check("Admin Abuse Night announces itself once (never twelve at once)", salutes == 1 and intros == 1, salutes)
+	check("...and every screen knows it's on (one headline, not a wall of strips)", type(services.Workspace:GetAttribute("AbuseUntil")) == "number")
+	local beforeSurprise = #broadcasts
+	advance(Config.data.Admin.abuseSurpriseSeconds + 1)
+	local surprise = nil
+	for i = beforeSurprise + 1, #broadcasts do
+		local m = broadcasts[i].message
+		if m.op == "abuseFX" then
+			surprise = m.id
+		end
+	end
+	check("a surprise for everyone every minute of the night", surprise ~= nil and table.find(Config.data.Admin.abuseSurprises, surprise) ~= nil, surprise)
+	adminAs(owner, { op = "freeze", on = true })
+	adminAs(owner, { op = "clock", id = "noon" })
+	check("the owner can set the time of day", services.Lighting.ClockTime == Config.data.Admin.clocks.noon and services.Workspace:GetAttribute("AdminClock") == "noon")
+	local stopped = adminAs(owner, { op = "stopAll" })
+	local anyOn = false
+	for _, e in module("ReplicatedStorage", "Shared", "HouseEvents").List do
+		if AdminService.active(e.id) then
+			anyOn = true
+		end
+	end
+	check("Stop everything: every event, the night, the freeze and the time of day", stopped.ok ~= false and not anyOn and services.Workspace:GetAttribute("AbuseUntil") == nil and nedRoot.Anchored == false and services.Lighting.ClockTime == Config.data.Admin.clocks.midnight and lastBroadcast("abuseFX").id == "stop")
+	local quiet = #broadcasts
+	advance(Config.data.Admin.abuseSurpriseSeconds + 1)
+	local after = false
+	for i = quiet + 1, #broadcasts do
+		if broadcasts[i].message.op == "abuseFX" then
+			after = true
+		end
+	end
+	check("...and no more surprises after it", not after)
+end
 -- The schedule: set once, every server starts it on time and counts down to it.
 local inTwenty = fakeOs.time() + 20 * 60
 local sched = adminAs(owner, { op = "schedule", what = "abuse", at = inTwenty, minutes = 30 })
@@ -1052,6 +1101,17 @@ do
 	adminAs(owner, { op = "stop", id = "tiny" })
 	adminAs(owner, { op = "stop", id = "discoHouse" })
 	check("...until the owner stops them", services.Workspace:GetAttribute("Event_tiny") == nil and services.Workspace:GetAttribute("Event_discoHouse") == nil)
+	-- Effects for everyone, at the owner's tap only.
+	check("a guest can't set off effects, stop the house or change the time", adminAs(ned, { op = "fx", id = "launch" }).ok == false and adminAs(ned, { op = "stopAll" }).ok == false and adminAs(ned, { op = "clock", id = "noon" }).ok == false)
+	ownerRoot.Position = Vector3.new(10, 5, 10)
+	ownerRoot.CFrame = CFrame.new(ownerRoot.Position)
+	local fired = adminAs(owner, { op = "fx", id = "shockwave" })
+	local fx = lastBroadcast("abuseFX")
+	check("the owner sets off an effect for everyone (a shockwave blasts out from where they stand)", fired.ok and fx.id == "shockwave" and typeof(fx.origin) == "Vector3" and (fx.origin - ownerRoot.Position).Magnitude < 0.01)
+	check("only the house's own effects", adminAs(owner, { op = "fx", id = "nuke" }).ok == false)
+	adminAs(owner, { op = "power", power = "ghost" })
+	check("Ghost: through walls (the owner's own power)", owner:GetAttribute("AdminGhost") == true)
+	adminAs(owner, { op = "power", power = "ghost" })
 	owner.Character = nil
 	zed.Character = nil
 end
