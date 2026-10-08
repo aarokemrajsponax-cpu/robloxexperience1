@@ -2,7 +2,9 @@
 -- Your Suite, drawn on your own screen (§3): the piece in each spot from your Suite (or the
 -- house's own where it has one), built with the Furniture library; the Gold Key rooms opened for
 -- holders; and nobody else in the rooms: other guests in the Suite are hidden here, so it's
--- always yours alone.
+-- always yours alone. A friend on Roblox may take you into theirs (the Suites key; the server
+-- checks the friendship): then their Suite is drawn here as they've furnished it, and the guests
+-- in that same Suite see each other; everyone in any other Suite stays unseen.
 --
 -- The pieces live: the fish swim, the pool shimmers, the fire pit flickers. Things to use carry a
 -- prompt (Furniture's "UsePrompt", its attribute "Use" naming what it does); using one plays here,
@@ -34,6 +36,24 @@ SuiteView.playPiano = function(_piano: Model) end
 
 local folder: Folder? = nil
 local inside = false
+
+-- The friend's Suite this guest is visiting (sent by the server), or nil: their own.
+type Visit = { userId: number, name: string, suite: { [string]: string }, goldKey: boolean }
+local visiting: Visit? = nil
+
+function SuiteView.visiting(): Visit?
+	return visiting
+end
+
+local function placed(): { [string]: string }
+	local v = visiting
+	return if v then v.suite else Closet.suite
+end
+
+local function hasGoldKey(): boolean
+	local v = visiting
+	return if v then v.goldKey else Closet.goldKey
+end
 local hidden: { [Player]: boolean? } = {}
 
 -- What stands in each spot now, so a change rebuilds only what changed.
@@ -95,7 +115,7 @@ local function draw()
 		folder = nf
 		f = nf
 	end
-	local want = Suite.pieces(Closet.suite, Closet.goldKey)
+	local want = Suite.pieces(placed(), hasGoldKey())
 	-- Take away what's no longer wanted, or no longer the same.
 	for spotId, d in drawn do
 		local style = want[spotId]
@@ -433,7 +453,7 @@ end
 local function doors()
 	for _, door in CollectionService:GetTagged("SuiteAlcove") do
 		if door:IsA("BasePart") then
-			local open = Closet.goldKey
+			local open = hasGoldKey()
 			door.CanCollide = not open
 			door.LocalTransparencyModifier = if open then 1 else 0
 			for _, d in door:GetDescendants() do
@@ -501,12 +521,20 @@ local function setHidden(other: Player, hide: boolean)
 	hidden[other] = if hide then true else nil
 end
 
+-- Whose Suite a guest is in: the friend they're visiting, or their own.
+local function suiteOf(p: Player): number
+	local host = p:GetAttribute("SuiteHost")
+	return if type(host) == "number" then host else p.UserId
+end
+
 local function privacy()
+	local mine = suiteOf(player)
 	for _, other in Players:GetPlayers() do
 		if other ~= player then
 			local character = other.Character
 			local root = character and character:FindFirstChild("HumanoidRootPart")
-			local there = root ~= nil and root:IsA("BasePart") and Layout.zoneAt(root.Position) == "suite"
+			-- (Seen only when in the very same Suite: a friend visiting, or the friend you visit.)
+			local there = root ~= nil and root:IsA("BasePart") and Layout.zoneAt(root.Position) == "suite" and suiteOf(other) ~= mine
 			if there then
 				-- (Again each time: what they've put on since, or a new character, is hidden too.)
 				setHidden(other, true)
@@ -527,6 +555,33 @@ function SuiteView.start()
 			task.spawn(draw)
 		end
 	end)
+	-- Into a friend's Suite (or home again): their pieces, their Gold Key rooms.
+	Closet.Message:Connect(function(op: string, m: any)
+		if op ~= "suiteHost" then
+			return
+		end
+		local was = visiting
+		if type(m.host) == "number" and m.host ~= player.UserId then
+			visiting = {
+				userId = m.host,
+				name = tostring(m.name or "A friend"),
+				suite = if type(m.suite) == "table" then m.suite else {},
+				goldKey = m.goldKey == true,
+			}
+		else
+			visiting = nil
+		end
+		doors()
+		if inside then
+			task.spawn(draw)
+		end
+		local v = visiting
+		if v and (not was or was.userId ~= v.userId) then
+			Toast.show(v.name .. "'s Suite", "As " .. v.name .. " has furnished it. Only friends may visit each other's Suites.", 5)
+		elseif not v and was and inside then
+			Toast.show("Your Suite", "Back in your own Suite.", 3)
+		end
+	end)
 	ProximityPromptService.PromptTriggered:Connect(onTriggered)
 	Players.PlayerRemoving:Connect(function(other: Player)
 		hidden[other] = nil
@@ -545,7 +600,7 @@ function SuiteView.start()
 				inside = true
 				task.spawn(draw)
 				-- The first time in, say how to furnish it.
-				if not welcomed then
+				if not welcomed and not visiting then
 					welcomed = true
 					Toast.show("Your Suite", "It's yours alone. Ring the bell by the door to furnish every room.", 6)
 				end

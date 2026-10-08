@@ -10,6 +10,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local Curios = require(ReplicatedStorage.Shared.Curios)
+local Rating = require(ReplicatedStorage.Shared.Rating)
 local Root = require(script.Parent.Root)
 local Theme = require(script.Parent.Theme)
 local Toast = require(script.Parent.Toast)
@@ -78,8 +79,12 @@ local function listFor(cabinet: { [string]: any }?): { string }
 			end
 		end
 	elseif tab == "book" then
+		-- (A Limited curio joins the book once its season has come.)
+		local term = Rating.term().id
 		for _, c in Curios.List do
-			table.insert(ids, c.id)
+			if Curios.shown(c.id, term) or CurioState.count(c.id) > 0 then
+				table.insert(ids, c.id)
+			end
 		end
 	elseif tab == "cabinet" and cabinet then
 		for _, it in cabinet.items do
@@ -344,7 +349,14 @@ function CuriosPanel.open(start: string?)
 				kinds += 1
 			end
 		end
-		summary.Text = string.format("%d curios, %d of %d kinds  ·  %d Gems  ·  curios change no score", total, kinds, #Curios.List, CurioState.gems)
+		local term = Rating.term().id
+		local known = 0
+		for _, c in Curios.List do
+			if Curios.shown(c.id, term) then
+				known += 1
+			end
+		end
+		summary.Text = string.format("%d curios, %d of %d kinds  ·  %d Gems  ·  curios change no score", total, kinds, known, CurioState.gems)
 		sortKey.Text = string.upper("Sort: " .. sortBy)
 		rarityKey.Text = string.upper("Rarity: " .. (rarityFilter or "All"))
 		tools.Visible = tab ~= "gems" and tab ~= "trades"

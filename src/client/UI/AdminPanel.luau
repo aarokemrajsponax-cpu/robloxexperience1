@@ -1,9 +1,11 @@
 --!strict
 -- House controls: the owner's panel (only the owner sees the "House" key, and the server checks
--- every request again). Four pages: Events (Golden Hour, Lucky Hour, giants, gold coins, a
--- treasure hunt...), Spectacle (any Salute for free, another season for a while), Guests (crown,
--- spotlight, bring, gift, remove) and Announce (a line to this house or every house, and a
--- summons for guests in every house to join this one).
+-- every request again: nobody else can use any of it). Six pages: Events (Admin Abuse Night,
+-- Golden Hour, Lucky Hour, giants, small things, gold coins, a treasure hunt, the House Party...),
+-- Powers (the owner's own: fly, speed, super jump, any size, invisible, go anywhere, bring
+-- everyone, freeze everyone), Schedule, Spectacle (any Salute or Suite show for free, another
+-- season for a while), Guests (go to, crown, spotlight, bring, gift, remove) and Announce (a line
+-- to this house or every house, and a summons for guests in every house to join this one).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
@@ -179,7 +181,56 @@ function AdminPanel.open()
 			render()
 		end)
 		where.Size = UDim2.fromOffset(136, 32) -- (its words on one line)
-		if page == "events" then
+		if page == "powers" and type(v.powers) == "table" then
+			local pw = v.powers
+			local function power(name: string, value: any?, done: string?)
+				send({ op = "power", power = name, value = value }, done)
+			end
+			local fly = row(scroll, add(), "Fly" .. (if pw.fly then "  ·  on" else ""), "Fly where the camera looks: Space or E to rise, Q or Ctrl to sink (the thumbstick on a phone).", true)
+			small(fly, if pw.fly then "Land" else "Fly", not pw.fly, function()
+				power("fly", nil, if pw.fly then "Landed." else "You're flying.")
+			end)
+			local speed = row(scroll, add(), "Speed", "How fast you walk and run.", true)
+			for _, s in pw.speeds do
+				small(speed, tostring(s) .. "×", pw.speed == s, function()
+					power("speed", s)
+				end)
+			end
+			local jump = row(scroll, add(), "Super jump", "How high you jump.", true)
+			for _, j in pw.jumps do
+				small(jump, tostring(j) .. "×", pw.jump == j, function()
+					power("jump", j)
+				end)
+			end
+			local size = row(scroll, add(), "Size", "Tiny, yourself, a giant or colossal.", true)
+			local SIZE_NAMES: { [number]: string } = { [0.5] = "Tiny", [1] = "Normal", [2] = "Giant", [4] = "Colossal" }
+			for _, z in pw.sizes do
+				small(size, SIZE_NAMES[z] or (tostring(z) .. "×"), pw.size == z, function()
+					power("size", z)
+				end)
+			end
+			local hide = row(scroll, add(), "Invisible" .. (if pw.invisible then "  ·  on" else ""), "Nobody in the house can see you (or your name).", true)
+			small(hide, if pw.invisible then "Appear" else "Vanish", not pw.invisible, function()
+				power("invisible", nil, if pw.invisible then "You can be seen again." else "Nobody can see you.")
+			end)
+			local PLACE_NAMES: { [string]: string } = { street = "Street", foyer = "Foyer", salon = "Salon", boutique = "Boutique", vault = "Vault", library = "Library", ballroom = "Ballroom", terrace = "Terrace", suite = "Suite" }
+			local places = pw.places or {}
+			local half = math.ceil(#places / 2)
+			local goA = row(scroll, add(), "Go anywhere", "In one step, wherever you are.", true)
+			local goB = row(scroll, add(), "", nil, true)
+			for i, place in places do
+				small(if i <= half then goA else goB, PLACE_NAMES[place] or place, false, function()
+					send({ op = "goto", place = place })
+				end)
+			end
+			local everyone = row(scroll, add(), "Everyone", "Bring every guest to you, or freeze the house where it stands (it thaws by itself after half a minute).", true)
+			small(everyone, "Bring all", true, function()
+				send({ op = "bringAll" }, "Every guest is with you.")
+			end)
+			small(everyone, if pw.frozen then "Thaw" else "Freeze", not pw.frozen, function()
+				send({ op = "freeze", on = not pw.frozen }, if pw.frozen then "The house moves again." else "Frozen!")
+			end)
+		elseif page == "events" then
 			-- The big one: everything at once.
 			local abuse = row(scroll, add(), "Admin Abuse Night", "Every event at once with fireworks: double Gilt, Mythic luck, the Ledger at double speed, gold rain, a treasure hunt, giants, quickstep. Turn on Every house to run it in every server.", true)
 			for _, m in v.abuseMinutes or { 15, 30, 60 } do
@@ -303,6 +354,9 @@ function AdminPanel.open()
 			end
 			for _, g in v.guests do
 				local keys = row(scroll, add(), g.name .. (if g.crowned then "  ♛" else ""), nil)
+				small(keys, "Go to", false, function()
+					send({ op = "goto", userId = g.userId })
+				end)
 				small(keys, "Crown", true, function()
 					send({ op = "crown", userId = g.userId })
 				end)
@@ -354,11 +408,12 @@ function AdminPanel.open()
 		end
 	end
 
-	for i, spec in { { "events", "Events" }, { "schedule", "Schedule" }, { "spectacle", "Spectacle" }, { "guests", "Guests" }, { "announce", "Announce" } } do
+	for i, spec in { { "events", "Events" }, { "powers", "Powers" }, { "schedule", "Schedule" }, { "spectacle", "Spectacle" }, { "guests", "Guests" }, { "announce", "Announce" } } do
 		local k = Theme.key(tabs, spec[2], page == spec[1], function()
 			page = spec[1]
 			render()
-		end, 112)
+		end, 92)
+		k.Size = UDim2.fromOffset(92, 40)
 		k.LayoutOrder = i
 	end
 	local footer = Instance.new("Frame")

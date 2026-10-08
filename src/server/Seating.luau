@@ -23,6 +23,11 @@ local RemoteGuard = require(script.Parent.RemoteGuard)
 
 local Seating = {}
 
+-- The profile of the Suite a guest stands in (set by Main: their friend's, when visiting one).
+Seating.suiteData = function(player: Player): Profiles.Data?
+	return Profiles.get(player)
+end
+
 local REACH = 14 -- studs from a guest to the seat they ask for
 
 -- The public seats, by the number each was given.
@@ -168,10 +173,11 @@ local function onAsk(player: Player, request: unknown): any
 		spot = part
 		at = part.CFrame * CFrame.new(0, part.Size.Y / 2, 0)
 	else
-		-- A seat of the guest's own Suite: worked out from what stands in their Suite.
+		-- A seat of the Suite the guest is in (their own, or a friend's they're visiting): worked
+		-- out from what stands in that Suite.
 		local spotId = RemoteGuard.string(r.suite, 40)
 		local index = RemoteGuard.number(r.index, 1, 16, true)
-		local data = Profiles.get(player)
+		local data = Seating.suiteData(player)
 		if not spotId or not index or not data then
 			RemoteGuard.reject(player, "sitAsk", "malformed")
 			return { ok = false }

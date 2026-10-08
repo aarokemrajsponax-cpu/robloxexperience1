@@ -716,8 +716,11 @@ end
 do
 local AdminService = module("ServerScriptService", "Server", "AdminService")
 local GiltService = module("ServerScriptService", "Server", "Gilt")
-Config.data.Admin.studioEveryone = false
-Config.data.Admin.userIds = { 100 }
+-- The owner is the experience's creator: nobody else, ever (in Studio the first test player
+-- stands in; off here, so the live rule is what's tested).
+Config.data.Admin.studioFirstPlayer = false
+H.game.CreatorType = H.Enum.CreatorType.User
+H.game.CreatorId = 100
 local owner = guest("AJ", 100)
 local ned = guest("Ned", 101)
 local adminNotes = {}
@@ -757,10 +760,10 @@ do
 	check("in a group's experience, the group's owner has House controls", adminAs(gia, { op = "state" }).ok == true)
 	check("and a member of the group doesn't", adminAs(max, { op = "state" }).ok == false)
 	H.game.CreatorType = H.Enum.CreatorType.User
-	H.game.CreatorId = 1
+	H.game.CreatorId = 100
 end
 local st = adminAs(owner, { op = "state" })
-check("the panel lists the events, the seasons, the salutes and the guests", #st.events == 11 and #st.seasons == 10 and #st.salutes == 6 and #st.guests >= 2)
+check("the panel lists the events, the seasons, the salutes and the guests", #st.events == 13 and #st.seasons == 10 and #st.salutes == 6 and #st.guests >= 2)
 do
 	-- The Suite shows: the owner tries one on their own screen, free. Nobody else sees it, and
 	-- nobody else may ask for one.
@@ -950,6 +953,195 @@ run(function()
 	joinSignal:Fire(ned, { op = "join", jobId = "made-up-house" })
 end)
 check("only a house that was really summoned", #teleports == 1)
+
+-- The owner's own powers. Nobody but the owner may use any of them, whatever their screen sends.
+do
+	-- (Lune's Model has no PivotTo or GetPivot: the root stands for the model here.)
+	local function rootOfModel(m)
+		return m:FindFirstChild("HumanoidRootPart")
+	end
+	pcall(function()
+		roblox.implementMethod("Model", "PivotTo", function(self, cf)
+			local r = rootOfModel(self)
+			if r then
+				r.CFrame = cf
+				r.Position = cf.Position
+			end
+		end)
+		roblox.implementMethod("Model", "GetPivot", function(self)
+			local r = rootOfModel(self)
+			return if r then CFrame.new(r.Position) else CFrame.new()
+		end)
+	end)
+	local function body(name, at)
+		local m = roblox.Instance.new("Model")
+		m.Name = name
+		local r = roblox.Instance.new("Part")
+		r.Name = "HumanoidRootPart"
+		r.Transparency = 1
+		r.Position = at
+		r.CFrame = CFrame.new(at)
+		r.Parent = m
+		local h = roblox.Instance.new("Part")
+		h.Name = "Head"
+		h.Transparency = 0
+		h.Parent = m
+		local plate = roblox.Instance.new("BillboardGui")
+		plate.Name = "Nameplate"
+		plate.Enabled = true
+		plate.Parent = h
+		local hum = roblox.Instance.new("Humanoid")
+		hum.Parent = m
+		return m, r, h, plate, hum
+	end
+	local ownerModel, ownerRoot, ownerHead, ownerPlate, ownerHum = body("AJ", Vector3.new(0, 5, 0))
+	owner.Character = ownerModel
+	local zed = guest("Zed", 104)
+	local zedModel, zedRoot = body("Zed", Vector3.new(40, 5, 40))
+	zed.Character = zedModel
+	nedRoot.Position = Vector3.new(-30, 5, 10)
+	nedRoot.CFrame = CFrame.new(nedRoot.Position)
+	-- A guest asking for any of it gets nothing, and nothing changes.
+	local refused = adminAs(ned, { op = "power", power = "fly" }).ok == false
+		and adminAs(ned, { op = "power", power = "speed", value = 5 }).ok == false
+		and adminAs(ned, { op = "bringAll" }).ok == false
+		and adminAs(ned, { op = "freeze", on = true }).ok == false
+		and adminAs(ned, { op = "goto", place = "ballroom" }).ok == false
+		and adminAs(ned, { op = "abuse", minutes = 15 }).ok == false
+	check("a guest can't use the owner's powers (none of them)", refused and ned:GetAttribute("AdminFly") == nil and ned:GetAttribute("AdminSpeed") == nil and zedRoot.Anchored == false)
+	local view = adminAs(owner, { op = "state" })
+	check("the owner's panel lists their powers", type(view.powers) == "table" and #view.powers.places >= 9 and #view.powers.speeds >= 3)
+	local flew = adminAs(owner, { op = "power", power = "fly" })
+	check("the owner can fly (the server switches it on, only for them)", flew.powers and flew.powers.fly == true and owner:GetAttribute("AdminFly") == true)
+	adminAs(owner, { op = "power", power = "fly" })
+	check("...and land again", owner:GetAttribute("AdminFly") == nil)
+	adminAs(owner, { op = "power", power = "speed", value = 5 })
+	local Speed = module("ReplicatedStorage", "Shared", "Speed")
+	local fast = Speed.resolve(true, nil, nil, owner:GetAttribute("AdminSpeed"))
+	check("the owner can run five times as fast (past a guest's cap)", owner:GetAttribute("AdminSpeed") == 5 and fast > Config.data.Movement.maxSpeed and fast <= Config.data.Admin.speedCap, fast)
+	check("a speed nobody offered isn't taken", adminAs(owner, { op = "power", power = "speed", value = 50 }).ok == false and owner:GetAttribute("AdminSpeed") == 5)
+	adminAs(owner, { op = "power", power = "speed", value = 1 })
+	adminAs(owner, { op = "power", power = "jump", value = 4 })
+	check("a super jump", ownerHum.JumpPower == 35 * 4 and owner:GetAttribute("AdminJump") == 4)
+	adminAs(owner, { op = "power", power = "size", value = 4 })
+	check("any size (colossal)", owner:GetAttribute("AdminSize") == 4)
+	adminAs(owner, { op = "power", power = "size", value = 1 })
+	adminAs(owner, { op = "power", power = "invisible" })
+	check("invisible: nobody sees the owner or their name", ownerHead.Transparency == 1 and ownerPlate.Enabled == false and owner:GetAttribute("AdminInvisible") == true)
+	adminAs(owner, { op = "power", power = "invisible" })
+	check("...and seen again, just as before", ownerHead.Transparency == 0 and ownerRoot.Transparency == 1 and ownerPlate.Enabled == true)
+	adminAs(owner, { op = "goto", place = "ballroom" })
+	local Layout = module("ReplicatedStorage", "Shared", "Layout")
+	check("the owner goes anywhere in one step", (ownerRoot.Position - (Layout.Ballroom.arrival + Vector3.new(0, 3, 0))).Magnitude < 0.01, ownerRoot.Position)
+	adminAs(owner, { op = "goto", userId = zed.UserId })
+	check("...or straight to any guest", (ownerRoot.Position - zedRoot.Position).Magnitude < 6, tostring(ownerRoot.Position) .. " / " .. tostring(zedRoot.Position))
+	local brought = adminAs(owner, { op = "bringAll" })
+	check("bring everyone: every guest gathers round the owner", brought.ok and (nedRoot.Position - ownerRoot.Position).Magnitude < 10 and (zedRoot.Position - ownerRoot.Position).Magnitude < 10, brought.brought)
+	adminAs(owner, { op = "freeze", on = true })
+	check("freeze the house: everyone else stands still", nedRoot.Anchored == true and zedRoot.Anchored == true and ownerRoot.Anchored == false and lastBroadcast("salute").title == "Freeze!")
+	adminAs(owner, { op = "freeze", on = false })
+	check("...and thaw it", nedRoot.Anchored == false and zedRoot.Anchored == false and ned:GetAttribute("Frozen") == nil)
+	adminAs(owner, { op = "freeze", on = true })
+	advance(Config.data.Admin.freezeSeconds + 1)
+	check("a freeze thaws by itself", nedRoot.Anchored == false and zedRoot.Anchored == false)
+	-- Two new events: everyone small, and the House Party.
+	adminAs(owner, { op = "event", id = "tiny", minutes = 5 })
+	check("A Night of Small Things", services.Workspace:GetAttribute("Event_tiny") ~= nil)
+	adminAs(owner, { op = "event", id = "discoHouse", minutes = 5 })
+	check("The House Party: every screen turns the lamps disco", services.Workspace:GetAttribute("Event_discoHouse") ~= nil)
+	adminAs(owner, { op = "stop", id = "tiny" })
+	adminAs(owner, { op = "stop", id = "discoHouse" })
+	check("...until the owner stops them", services.Workspace:GetAttribute("Event_tiny") == nil and services.Workspace:GetAttribute("Event_discoHouse") == nil)
+	owner.Character = nil
+	zed.Character = nil
+end
+end
+
+---------------------------------------------------------------------------------------------------
+-- Friends: each other's Suites, and more Gilt together
+---------------------------------------------------------------------------------------------------
+do
+local Friends = module("ServerScriptService", "Server", "Friends")
+local SuiteVisits = module("ServerScriptService", "Server", "SuiteVisits")
+local Layout = module("ReplicatedStorage", "Shared", "Layout")
+Config.data.Friends.studioFriends = false -- (the live rule: Roblox's own friend list)
+local friendsOf = { [201] = { [202] = true }, [202] = { [201] = true } }
+Friends.ask = function(a, b)
+	return friendsOf[a.UserId] ~= nil and friendsOf[a.UserId][b.UserId] == true
+end
+local pip, quill, rook = guest("Pip", 201), guest("Quill", 202), guest("Rook", 203)
+local function stand(g, at)
+	g.root.Position = at
+	g.Character = {
+		FindFirstChild = function(_, n)
+			return if n == "HumanoidRootPart" then g.root else nil
+		end,
+		PivotTo = function(_, cf)
+			g.root.Position = cf.Position
+		end,
+	}
+end
+local street = Vector3.new(0, 5, -40)
+local inSuite = Layout.Suite.arrival + Vector3.new(0, 3, 0)
+stand(pip, street)
+stand(quill, inSuite)
+stand(rook, street)
+run(Friends.refresh)
+check("friends in the house are counted, and nobody else", pip:GetAttribute("FriendsHere") == 1 and quill:GetAttribute("FriendsHere") == 1 and rook:GetAttribute("FriendsHere") == nil)
+Gilt.friends = Friends.giltBoost
+local pd, rd = profiles[pip].Data, profiles[rook].Data
+pd.giltDay = { day = -1, earned = 0 }
+rd.giltDay = { day = -1, earned = 0 }
+local together, alone
+run(function()
+	together = Gilt.pay(pip, pd, 100, "test")
+	alone = Gilt.pay(rook, rd, 100, "test")
+end)
+check("friends in the house together both earn more Gilt", together == math.floor(100 * Config.data.Friends.giltBoost + 0.5) and alone == 100, string.format("%s / %s", tostring(together), tostring(alone)))
+
+local function ask(g, request)
+	advance(0.1)
+	local r
+	run(function()
+		r = SuiteVisits.handle(g, request)
+	end)
+	return r
+end
+local list = ask(pip, { op = "list" })
+check("the Suites key lists your friends in the house (only them)", list.ok and #list.friends == 1 and list.friends[1].userId == 202)
+check("someone who isn't a friend can't go into your Suite", ask(rook, { op = "visit", userId = 202 }).ok == false and rook:GetAttribute("SuiteHost") == nil)
+profiles[quill].Data.suite = { rug = "suite_rug_black" }
+local went = ask(pip, { op = "visit", userId = 202 })
+local told = lastOp(pip, "suiteHost")
+check("a friend visits your Suite: they're at its door, shown it as you've furnished it", went.ok and pip:GetAttribute("SuiteHost") == 202 and told ~= nil and told.host == 202 and told.suite.rug == "suite_rug_black" and Layout.zoneAt(pip.root.Position) == "suite")
+check("...and you're told who's visiting", lastOp(quill, "notice") ~= nil and string.find(lastOp(quill, "notice").line, "Pip", 1, true) ~= nil)
+check("the seats there are the friend's Suite's", SuiteVisits.dataFor(pip) == profiles[quill].Data and SuiteVisits.dataFor(quill) == profiles[quill].Data)
+profiles[quill].Data.suite = { rug = "suite_rug_persian" }
+run(function()
+	SuiteVisits.hostChanged(quill)
+end)
+check("when the friend changes their Suite, their visitor sees it change", lastOp(pip, "suiteHost").suite.rug == "suite_rug_persian")
+advance(4)
+stand(pip, street)
+run(SuiteVisits.sweep)
+check("out of the Suite, the visitor is home again (walking in takes them to their own)", pip:GetAttribute("SuiteHost") == nil and lastOp(pip, "suiteHost").host == nil)
+ask(pip, { op = "visit", userId = 202 })
+ask(pip, { op = "home" })
+check("My Suite takes them home", pip:GetAttribute("SuiteHost") == nil)
+ask(pip, { op = "visit", userId = 202 })
+quill.Parent = nil
+run(SuiteVisits.sweep)
+check("when the friend leaves the house, their visitor is in their own Suite again", pip:GetAttribute("SuiteHost") == nil)
+quill.Parent = PlayersService
+rook:SetAttribute("SuiteHost", 202)
+check("a Suite is only ever shared between friends", SuiteVisits.hostOf(rook) == nil and SuiteVisits.dataFor(rook) == profiles[rook].Data)
+rook:SetAttribute("SuiteHost", nil)
+for _, g in { pip, quill, rook } do
+	g.Parent = nil
+end
+Gilt.friends = function()
+	return 1
+end
 end
 
 ---------------------------------------------------------------------------------------------------

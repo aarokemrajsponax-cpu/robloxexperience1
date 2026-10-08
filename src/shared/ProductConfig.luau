@@ -26,6 +26,7 @@ export type Tier = "Entry" | "Medium" | "Premium" | "Prestige"
 export type Entry = {
 	Key: string, -- stable: saved in profiles, the ledger and analytics
 	Name: string, -- exactly as created in Creator Hub (matched ignoring case and spacing)
+	Aliases: { string }?, -- older names it may still have in Creator Hub (found as well)
 	ProductType: ProductType,
 	Id: number, -- 0: found by Name (developer products) or not on sale yet (game passes)
 	Handler: string, -- the server grant handler (Purchases/Grants)
@@ -141,7 +142,7 @@ add({
 	ProductType = "DeveloperProduct",
 	Id = 0,
 	Handler = "decree",
-	Pricing = { ReferencePrice = 249, Tier = "Premium", Rationale = "A moment of fame with your own words: above a Gold Leaf salute, below the Grand Salute." },
+	Pricing = { ReferencePrice = 249, Tier = "Premium", Rationale = "A moment of fame with your own words: above a Gold Confetti salute, below the Grand Salute." },
 	Reward = { Type = "Decree", DisplaySeconds = 8 },
 	Rules = {
 		MaxLength = 80,
@@ -252,7 +253,7 @@ end
 for _, show in {
 	{ key = "spectacleFireworks", name = "Suite Fireworks", price = 199, tier = "Medium" :: Tier, line = "A forty-five-second pyromusical over the whole estate, best from your Suite's terrace: chrysanthemums to taiko drums, then a golden finale to Handel." },
 	{ key = "spectacleMemes", name = "Meme Takeover", price = 299, tier = "Medium" :: Tier, line = "Ninety seconds of brainrot to an electro swing: a meme portal, a conga line round you, meme rain, and a giant laser-eyed boss meme takes over your Suite." },
-	{ key = "spectacleGolden", name = "Golden Transformation", price = 499, tier = "Premium" :: Tier, line = "The Midas touch: a ring of gold turns your whole Suite to gold, gold leaf and coins fall, a choir sings and a crown settles on your head. Then all is as it was." },
+	{ key = "spectacleGolden", name = "Golden Transformation", price = 499, tier = "Premium" :: Tier, line = "The Midas touch: a ring of gold turns your whole Suite to gold, gold confetti and coins fall, a choir sings and a crown settles on your head. Then all is as it was." },
 } do
 	add({
 		Key = show.key,
@@ -378,6 +379,13 @@ for _, s in Salutes.List do
 	add({
 		Key = "salute_" .. s.id,
 		Name = "Salute: " .. s.product,
+		Aliases = if s.aliases then (function()
+			local out = {}
+			for _, a in s.aliases :: { string } do
+				table.insert(out, "Salute: " .. a)
+			end
+			return out
+		end)() else nil,
 		ProductType = "DeveloperProduct",
 		Id = 0,
 		Handler = "salute",

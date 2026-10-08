@@ -132,10 +132,15 @@ local function mine(data: Profiles.Data): { [string]: any }
 	}
 end
 
+-- Called after a guest's state goes to their screen (set by Main: friends visiting their Suite
+-- see it change too).
+Shop.pushed = function(_player: Player) end
+
 function Shop.push(player: Player)
 	local data = Profiles.get(player)
 	if data then
 		shopEvent:FireClient(player, mine(data))
+		Shop.pushed(player)
 	end
 end
 

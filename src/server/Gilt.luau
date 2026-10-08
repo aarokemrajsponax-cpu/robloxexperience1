@@ -1,7 +1,7 @@
 --!strict
 -- Gilt, the house's currency (Appendix I1). Earned by playing (with a gentle daily soft cap),
 -- or bought in purses. The Gold Key adds 20%; Double Gilt doubles everything earned; God-Mode
--- Luck multiplies it while it lasts. Every boost together never exceeds
+-- Luck multiplies it while it lasts; a friend in the house adds Config.Friends.giltBoost. Every boost together never exceeds
 -- ProductConfig.Settings.MaxGiltMultiplier.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -26,6 +26,11 @@ Gilt.personal = function(_player: Player): number
 	return 1
 end
 
+-- Friends in the house together: both earn more (Friends.giltBoost; set by Main).
+Gilt.friends = function(_player: Player): number
+	return 1
+end
+
 -- 12500 -> "12,500".
 function Gilt.format(n: number): string
 	local text = tostring(math.floor(n))
@@ -39,7 +44,7 @@ function Gilt.pay(player: Player, data: Profiles.Data, earned: number, source: s
 	local double = if data.doubleGilt then ProductConfig.byKey.doubleGilt.Reward.Multiplier else 1
 	local key = if data.goldKey then 1 + g.goldKeyBonus else 1
 	local cap = ProductConfig.Settings.MaxGiltMultiplier
-	local boost = math.min(cap / key, math.max(1, Gilt.boost()) * double * math.max(1, Gilt.personal(player)))
+	local boost = math.min(cap / key, math.max(1, Gilt.boost()) * double * math.max(1, Gilt.personal(player)) * math.max(1, Gilt.friends(player)))
 	earned = math.floor(earned * boost + 0.5)
 	if data.goldKey then
 		earned = math.floor(earned * key + 0.5)

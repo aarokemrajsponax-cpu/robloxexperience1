@@ -287,7 +287,7 @@ local function piano(m: Model)
 	local p = Instance.new("ProximityPrompt")
 	p.Name = "SalutePrompt"
 	p.ActionText = "Salute the house"
-	p.ObjectText = "An encore, gold leaf, fireworks"
+	p.ObjectText = "An encore, gold confetti, fireworks"
 	p.KeyboardKeyCode = Enum.KeyCode.F
 	p.GamepadKeyCode = Enum.KeyCode.ButtonY
 	p.HoldDuration = 0

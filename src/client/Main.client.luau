@@ -111,7 +111,13 @@ Closet.Message:Connect(function(op: string, m: any)
 		elseif m.panel == "blackCard" then
 			BlackCardPanel.open()
 		elseif m.panel == "suite" then
-			SuitePanel.open()
+			-- In a friend's Suite, their bell is theirs: your own is in your Suite.
+			local v = SuiteView.visiting()
+			if v then
+				Toast.show(v.name .. "'s Suite", "Only " .. v.name .. " furnishes it. Your own bell is in your Suite (the Suites key takes you there).", 5)
+			else
+				SuitePanel.open()
+			end
 		elseif m.panel == "circles" then
 			CirclePanel.open()
 		elseif m.panel == "salutes" then
@@ -166,6 +172,9 @@ start("The Suite", function()
 	SuiteView.start()
 end)
 start("Seats", require(script.Parent.World.Seating).start)
+-- The owner's flight (switched on only by the server, only for the owner), and the House Party.
+start("The owner's flight", require(script.Parent.World.AdminFly).start)
+start("The House Party", require(script.Parent.World.DiscoHouse).start)
 -- Curios, Gems, trading, and the Menu's tiles.
 start("Curios", function()
 	CurioState.start()
@@ -192,6 +201,9 @@ start("Curios", function()
 	end
 	QuickDock.invite = TradePanel.invite
 	QuickDock.inviteFriend = require(script.Parent.UI.Invite).house
+	QuickDock.say = function(title: string, line: string)
+		Toast.show(title, line, 3.5)
+	end
 	QuickDock.isSeated = function(): boolean
 		return TableClient.isSeated() or Root.isOpen()
 	end
@@ -318,13 +330,17 @@ local function applySpeed()
 	if humanoid then
 		-- One speed from every effect (Shared/Speed): the house's Quickstep event and VIP Velocity
 		-- Elite (the server sets "SpeedPerk" only for a guest who owns it and hasn't switched it off).
-		humanoid.WalkSpeed = Speed.resolve(running, Workspace:GetAttribute("SpeedBoost"), player:GetAttribute("SpeedPerk"))
+		humanoid.WalkSpeed = Speed.resolve(running, Workspace:GetAttribute("SpeedBoost"), player:GetAttribute("SpeedPerk"), player:GetAttribute("AdminSpeed"))
 	end
 end
 Workspace:GetAttributeChangedSignal("SpeedBoost"):Connect(function()
 	applySpeed()
 end)
 player:GetAttributeChangedSignal("SpeedPerk"):Connect(function()
+	applySpeed()
+end)
+-- The owner's own speed (only the server sets it, only for the owner).
+player:GetAttributeChangedSignal("AdminSpeed"):Connect(function()
 	applySpeed()
 end)
 ContextActionService:BindAction("MaisonRun", function(_, state, input)

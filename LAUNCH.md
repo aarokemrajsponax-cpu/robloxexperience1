@@ -165,10 +165,9 @@ All in `src/shared/Config.luau` (or live, in Creator Hub → Configs, as `Sectio
 
 | What | Where | Value |
 | --- | --- | --- |
-| The Founding Term | `FoundingTerm` | the Term you launch in, e.g. `2026-autumn` |
+| The Founding Term | `FoundingTerm` | the Term you launch in: set to `2026-autumn` (change it if you launch after November) |
 | Every product | nothing to paste | make each developer product in Creator Hub with its name from the table below; the game finds it by name |
 | VIP Velocity Elite (game pass) | `Products.velocityElite` | the pass's id (Creator Hub → Monetization → Passes); without it the perk is sold as a developer product of the same name |
-| Trusted helpers for House controls | `Admin.userIds` | their Roblox user ids (you, as owner, are always allowed) |
 | The Black Card | `Products.blackCard` | the subscription's id (`EXP-…`), or leave `""` to launch without it |
 | Badges | `Badges.*` | from Creator Hub → Badges |
 | Circles | `Circles.enabled` | `true` at launch, or `false` for later (§19 #10) |
@@ -224,7 +223,7 @@ block (that's where most of the money is):
 | `Golden Hour for Everyone` | 99 | double Gilt for everyone in the server for 15 minutes, buyer announced |
 | `The Gold Key` | 499 | +20% Gilt, the Study, gold nameplate and Gold Key looks (or make a game pass and paste its id in `Products.goldKey`) |
 | `The Introduction` | 99 | the first-week starter pack |
-| `Salute: Gold Leaf` / `Salute: Encore` / `Salute: Chandelier` / `Salute: Fireworks` / `Salute: Grand Salute` / `Salute: Midnight Finale` | 75 / 125 / 175 / 299 / 599 / 999 | a moment for the whole house (Fireworks: a 45-second show over the whole estate; Grand Salute: everything, announced in every house; Midnight Finale: a ten-second countdown on every screen, then a 90-second show, announced in every house). Until each exists, Studio shows a free Preview button. |
+| `Salute: Gold Confetti` (an old `Salute: Gold Leaf` still works) / `Salute: Encore` / `Salute: Chandelier` / `Salute: Fireworks` / `Salute: Grand Salute` / `Salute: Midnight Finale` | 75 / 125 / 175 / 299 / 599 / 999 | a moment for the whole house (Fireworks: a 45-second show over the whole estate; Grand Salute: everything, announced in every house; Midnight Finale: a ten-second countdown on every screen, then a 90-second show, announced in every house). Until each exists, Studio shows a free Preview button. |
 | `Boutique 49` … `Boutique 599` (ten: 49, 79, 99, 149, 199, 249, 299, 399, 499, 599) | the number in the name | the Boutique's pieces at that price |
 | `Leather-Bound Ledger` | 299 | the Term's premium Ledger row |
 | `Season Collection` | 399 | the season's pieces |
@@ -237,7 +236,7 @@ block (that's where most of the money is):
 | `Macaron Tower` | 149 | the Terrace Bar: a tower of twelve macarons with sparkles (cosmetic) |
 | `Suite Fireworks` | 199 | a 45-second pyromusical over the whole estate (for the buyer's screen), played from the Suite when you choose |
 | `Meme Takeover` | 299 | ninety seconds, six acts: a meme portal, a conga line round you, meme rain, a giant laser-eyed boss meme, a confetti finale (for the buyer's screen) |
-| `Golden Transformation` | 499 | the Midas touch, forty seconds: the Suite turns to gold, gold leaf and coins fall, a choir, a crown; then all as it was (for the buyer's screen) |
+| `Golden Transformation` | 499 | the Midas touch, forty seconds: the Suite turns to gold, gold confetti and coins fall, a choir, a crown; then all as it was (for the buyer's screen) |
 | `Gem Pouch` | 199 | 250 Gems, for the Cabinet's curios (each at a fixed Gem price) |
 | `Gem Case` | 799 | 1,100 Gems |
 | `Gem Trunk` | 1999 | 3,000 Gems |

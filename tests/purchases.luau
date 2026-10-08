@@ -177,6 +177,11 @@ do
 	r = receipt(amy, 7777, "U-1", 199)
 	check("a replayed receipt is acknowledged and grants nothing", r == GRANTED and amyData.gilt == 5500)
 	check("and the replay is logged", Telemetry.count(E.Duplicate, "giltPurse2", "replayed") == 1)
+	-- A product renamed in the game is still found under the name it was made with (the Gold Leaf
+	-- salute is the Gold Confetti salute now).
+	table.insert(MarketplaceService.devProducts, { Name = "Salute: Gold Leaf", ProductId = 7801, PriceInRobux = 75 })
+	run(Catalog.discover)
+	check("an old product name still sells the renamed salute", Catalog.idOf("salute_goldLeaf") == 7801 and Catalog.keyForProduct(7801) == "salute_goldLeaf", Catalog.idOf("salute_goldLeaf"))
 
 	r = deliver({ PlayerId = 555, ProductId = 5006, PurchaseId = "A-1", CurrencySpent = 49 })
 	check("a buyer who isn't in this server: unresolved (Roblox delivers it when they join)", r == LATER)

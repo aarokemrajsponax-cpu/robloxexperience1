@@ -12,12 +12,14 @@ HouseEvents.List = {
 	{ id = "luckyHour", name = "Lucky Hour", line = "Mythics are ten times as likely in the four rooms." },
 	{ id = "pageTurner", name = "The Page-Turner", line = "The Ledger's pages turn twice as fast." },
 	{ id = "giants", name = "A Night of Giants", line = "Every guest walking the house stands tall." },
+	{ id = "tiny", name = "A Night of Small Things", line = "Every guest walking the house shrinks to half size." },
 	{ id = "quickstep", name = "The Quickstep", line = "Everyone walks and runs faster." },
 	{ id = "featherlight", name = "Featherlight", line = "The house's gravity is gentle. Jump." },
 	{ id = "goldRain", name = "Gold Rain", line = "Gold coins are scattered through the house. Walk over them for Gilt." },
 	{ id = "treasure", name = "The Treasure Hunt", line = "Golden keys are hidden around the house. The finder of each wins Gilt." },
 	{ id = "parade", name = "The Brainrot Parade", line = "The meme curios are loose in the house. Catch them for Gilt, and a Parade Balloon to keep." },
 	{ id = "disco", name = "Disco Night", line = "The Ballroom turns disco. Everyone in it gets the Disco Ball curio." },
+	{ id = "discoHouse", name = "The House Party", line = "Every lamp in the house turns disco, colours chasing round every room." },
 	{ id = "curioHour", name = "A Night of Curios", line = "Curios turn up among the pieces twice as often." },
 } :: { Event }
 

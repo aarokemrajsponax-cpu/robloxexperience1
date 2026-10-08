@@ -270,7 +270,7 @@ a Nightly attempt or a Mythic's odds.
   chaos and a confetti finale), or the **Golden Transformation**, the Midas touch (forty seconds,
   `World/Midas`): a temple gong, the lights sink, and a ring of gold runs out across the floor
   from where you stand, turning everything it passes to gold (floors, walls, ceilings, every
-  piece of furniture, the fireplace); a heavenly choir, leaves of real gold falling through the
+  piece of furniture, the fireplace); a heavenly choir, gold confetti fluttering through the
   rooms, gold coins raining from the ceiling and ringing as they land round you, shafts of light
   from above, the fire burning gold; a regal fanfare as a jewelled crown settles on your head;
   then the gold ebbs back and everything is exactly as it was. Only you see it.
@@ -292,8 +292,17 @@ a Nightly attempt or a Mythic's odds.
   (`Config.Fireworks`). The night air clears while it plays, and a **Watch the fireworks** key
   takes anyone's camera out across the street (the buyer's goes at once).
 - **The quick dock** (left of the screen): **Collection** (C), **Trade** (T: everyone in the house
-  with a Trade key each, and your past trades), **Wardrobe** (V), **Gems** and **Invite**, one
-  tap away.
+  with a Trade key each, and your past trades), **Wardrobe** (V), **Gems**, **Suites** (your own,
+  or a friend's) and **Invite**, one tap away.
+- **Friends together earn more**: while a friend on Roblox is in the same house, both earn 25%
+  more Gilt (`Config.Friends.giltBoost`; the server checks the friendship, and the boost shows at
+  the left edge: "FRIENDS HERE · +25% GILT").
+- **The seasons, every year**: the calendar is the same every year (Harvest Nights, All Hallows,
+  The Long Table, Yuletide, Midnight Toast, Deep Winter, Rose Hour, Emerald Hour, First Bloom,
+  High Summer), and every Term has its own Limited curio with its year on it (Autumn 2026's
+  Gilded Leaf, then the Frost Star, the Spring Blossom, the Summer Sun and the Harvest Moon for
+  each season through 2031), each found only while its season is on and shown in the
+  Collection once its season has come. `Config.FoundingTerm` is `2026-autumn`.
 - **Friend invitations** (Roblox's friend referrals, `server/Referral`): the Invite key opens
   Roblox's own invite prompt. A friend who arrives for the first time through it gets 100 Gilt;
   whoever invited them gets 150 Gilt if they're in the house (any server) when the friend
@@ -313,7 +322,11 @@ a Nightly attempt or a Mythic's odds.
 - **Your Suite**, on the Velvet Room's roof through the Club hall's west door: eleven spots, nineteen
   pieces (Gilt, the Boutique, Standing, the Introduction's painting, the Gold Key chair), the
   bell to furnish it, the wardrobe where your looks hang. The Gold Key opens the Dressing Room
-  and the Study. Each guest sees only their own Suite, and nobody else in it: the furniture is
+  and the Study. **Friends' Suites**: friends on Roblox may visit each other's Suites from the
+  **Suites** key on the left (the server checks the friendship; anyone else can't go in): the
+  visitor is shown the friend's Suite as the friend has furnished it, the two see each other
+  there, the friend is told who's visiting, and out of the Suite the visitor is home again (the
+  friend's bell is theirs). Each guest otherwise sees only their own Suite, and nobody else in it: the furniture is
   drawn on your own screen from your own Suite (the server sends each guest only theirs, and
   works out a Suite seat from the sitter's own Suite), and another guest in their Suite at the
   same moment isn't drawn on yours, nor their name, a glow or a light they wear, or their
@@ -381,8 +394,8 @@ a Nightly attempt or a Mythic's odds.
   lamp you wear colour the sorting screen's cloth, its edges and its lamplight.
 - **Ways to spend Robux**, all style, spectacle or gifts, never score:
   - **Salutes** (a brass card on the piano, and a Salutes tab in the Boutique): a moment bought
-    for the whole house. Gold leaf over every guest (75: real leaves of gold that sway and turn
-    over as they fall, glinting), an encore with a followspot on you (125: its beam seen in the
+    for the whole house. Gold confetti over every guest (75: a burst, then slips of gold foil
+    turning over and over as they fall, glinting, right at any time of year), an encore with a followspot on you (125: its beam seen in the
     air, rose petals falling round you, applause), every lamp flaring in a wave from wherever you
     stand, each chandelier throwing off glints of crystal (175), the full pyromusical over the
     whole estate (299), the Grand Salute: all of it, announced in every house (599), or the
@@ -416,17 +429,30 @@ a Nightly attempt or a Mythic's odds.
       walking and running and a gold trail, for good; both switch off in Settings → Your perks.
   - Every remote a guest's screen can call is rate-limited and checked on the server
     (`Config.RemoteLimits`); a screen can only ever name a product, never a price or an amount.
-- **House controls** (the owner's panel): only you see the **House** key (or press **;**).
-  Events (Golden Hour, Lucky Hour, the Page-Turner, a Night of Giants, the Quickstep,
-  Featherlight, Gold Rain, a Treasure Hunt), in this house or every house, for 5/15/30 minutes;
+- **House controls** (the owner's panel): only you see the **House** key (or press **;**). Only
+  the experience's owner (for a group's experience, the group's owner) has House controls and
+  the powers below: nobody else, whatever their screen sends, since the server checks every
+  request. (In Studio, where test players aren't the owner, the first test player stands in:
+  `Config.Admin.studioFirstPlayer`; never in the live game.)
+  - **Powers** (your own): **fly** where the camera looks (Space or E to rise, Q or Ctrl to sink;
+    the thumbstick on a phone), **speed** 1×/2×/3×/5×, a **super jump** 1×/2×/4×, any **size**
+    (tiny, normal, giant, colossal), **invisible** (you and your name), **go anywhere** in one
+    step (the street, the Foyer, the Salon, the Boutique, the Vault, the Library, the Ballroom,
+    the Terrace, the Suite) or **to any guest** (Guests → Go to), **bring everyone** to you, and
+    **freeze the house** (it thaws by itself after half a minute). Numbers in `Config.Admin`.
+  Events (Golden Hour, Lucky Hour, the Page-Turner, a Night of Giants, a Night of Small Things,
+  the Quickstep, Featherlight, Gold Rain, a Treasure Hunt, the Brainrot Parade, Disco Night, the
+  House Party: every lamp in the house turning disco), in this house or every house, for
+  5/15/30 minutes;
   any Salute for free; any Suite show on your own screen, free, to try it (Spectacle page:
   **Suite shows**); another season for a while; crown a Guest of Honour, spotlight, bring,
   gift Gilt to one guest or everyone, or show someone out; announcements (typed ones filtered by
   Roblox) here or everywhere; and a summons that invites guests in every house to join yours.
-  Events change Gilt, Ledger pages and Mythic luck, never a score. Other trusted people:
-  `Config.Admin.userIds`.
-  - **Admin Abuse Night** (Events, at the top): every event at once with fireworks, for 15, 30
-    or 60 minutes; switch on **Every house** first to run it in every server.
+  Events change Gilt, Ledger pages and Mythic luck, never a score.
+  - **Admin Abuse Night** (Events, at the top): every event at once with fireworks (double Gilt,
+    Mythic luck, the Page-Turner, gold rain, a treasure hunt, giants, the Quickstep,
+    Featherlight, the Brainrot Parade, Disco Night, the House Party, a Night of Curios), for 15,
+    30 or 60 minutes; switch on **Every house** first to run it in every server.
   - **Schedule**: pick an event (or Admin Abuse Night), a day and a time in your own clock and a
     length, then **Schedule**. Every server starts it on time, whether you're in the game or
     not, and for the hour before, every player sees "ADMIN ABUSE NIGHT STARTS IN 12:34" at the

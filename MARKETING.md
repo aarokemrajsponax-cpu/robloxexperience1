@@ -178,13 +178,13 @@ Ready for this one:
 
 > **The Grander house.** Every room is now 1.6 times its drawn size, and you walk a little
 > quicker to match. **Your Suite** has a marble chimneypiece with a real fire, a gilded
-> overmantel, tall lacquered front doors with your name in gold over them, and furniture a size
+> overmantel, tall lacquered front doors with "Your Suite" in gold over them, and furniture a size
 > up, dressed to the last detail. **The fireworks are a pyromusical**: three acts, each to its own
 > score, from Japanese chrysanthemums to Niagara Falls pouring down the front of the house and
 > the house's monogram written in gold in the sky. **The Golden Transformation** is now the
 > Midas touch: your whole Suite turns to gold, coins rain, a choir sings and a crown settles on
 > your head (only you see your Suite and its shows; Salutes are for the whole house). Salutes
-> shine brighter too: real gold leaf, a followspot with rose petals, a wave of chandeliers, and
+> shine brighter too: gold confetti, a followspot with rose petals, a wave of chandeliers, and
 > a midnight that chimes. **The grand piano** sounds again, the first note to the last.
 
 ---

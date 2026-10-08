@@ -1,14 +1,17 @@
 --!strict
 -- House controls: the owner's panel for keeping the house lively (the "admin abuse" evenings
--- other Roblox games are known for, in the house's own manner). Only the experience's owner (or
--- the group's owner, or a user id in Config.Admin.userIds) may use it; every request is checked
--- here, never on the guest's screen.
+-- other Roblox games are known for, in the house's own manner), and the owner's own powers. Only
+-- the experience's owner (or, for a group's experience, the group's owner) may use any of it:
+-- nobody else, whatever their screen sends. Every request is checked here, never on the guest's
+-- screen; the powers the owner's screen carries out (flying) are switched on by the server.
 --
 -- What it can do: events that boost Gilt, the Ledger and Mythic luck (never a score), giants,
 -- a quickstep, featherlight gravity, gold coins scattered through the house, a treasure hunt of
 -- golden keys, any Salute for free, dressing the house in another season for a while, crowning
 -- or spotlighting a guest, gifts of Gilt, announcements (typed ones are filtered by Roblox), a
--- summons that lets guests in every other house join this one, and removing a guest.
+-- summons that lets guests in every other house join this one, and removing a guest. The owner's
+-- powers: flying, speed, a super jump, any size, invisibility, going anywhere or to any guest,
+-- bringing everyone, freezing everyone; a Night of Small Things and the House Party.
 
 local DataStoreService = game:GetService("DataStoreService")
 local GroupService = game:GetService("GroupService")
@@ -58,6 +61,7 @@ AdminService.note = function(_text: string, _everywhere: boolean) end
 -- Who may use it
 ---------------------------------------------------------------------------------------------------
 local ownerCache: { [Player]: boolean } = {}
+local studioOwner: Player? = nil -- Studio only: the first test player, standing in for the owner
 
 function AdminService.isAdmin(player: Player): boolean
 	local cached = ownerCache[player]
@@ -65,9 +69,9 @@ function AdminService.isAdmin(player: Player): boolean
 		return cached
 	end
 	local yes = false
-	if table.find(cfg().userIds, player.UserId) then
-		yes = true
-	elseif RunService:IsStudio() and cfg().studioEveryone then
+	if RunService:IsStudio() and cfg().studioFirstPlayer and (studioOwner == nil or studioOwner == player or studioOwner.Parent ~= Players) then
+		-- (Testing in Studio: one owner, the first player in. Never in the live game.)
+		studioOwner = player
 		yes = true
 	else
 		local ok, result = pcall(function()
@@ -114,12 +118,21 @@ local function scale(character: Model, factor: number)
 	end)
 end
 
-local function applyGiants(on: boolean)
+-- A guest's size while the house's events say so (giants, small things), else their own.
+local function eventScale(): number
+	if AdminService.active("tiny") then
+		return cfg().tinyScale
+	elseif AdminService.active("giants") then
+		return cfg().giantsScale
+	end
+	return 1
+end
+
+local function applyGiants(_on: boolean)
 	for _, player in Players:GetPlayers() do
 		local character = player.Character
-		if character and not AdminService.isSeated(player) then
-			local base = Config.data.Movement.guestScale
-			scale(character, if on then base * cfg().giantsScale else base)
+		if character and not AdminService.isSeated(player) and player:GetAttribute("AdminSize") == nil then
+			scale(character, Config.data.Movement.guestScale * eventScale())
 		end
 	end
 end
@@ -257,7 +270,7 @@ function AdminService.startEvent(id: string, seconds: number, byName: string)
 	local ends = os.time() + seconds
 	active[id] = ends
 	Workspace:SetAttribute(HouseEvents.attribute(id), ends)
-	if id == "giants" then
+	if id == "giants" or id == "tiny" then
 		applyGiants(true)
 	elseif id == "quickstep" then
 		Workspace:SetAttribute("SpeedBoost", cfg().quickstepSpeed)
@@ -306,7 +319,7 @@ end
 function AdminService.stopEvent(id: string)
 	active[id] = nil
 	Workspace:SetAttribute(HouseEvents.attribute(id), nil)
-	if id == "giants" then
+	if id == "giants" or id == "tiny" then
 		applyGiants(false)
 	elseif id == "quickstep" then
 		Workspace:SetAttribute("SpeedBoost", nil)
@@ -622,11 +635,181 @@ local function scheduleView(): { { [string]: any } }
 end
 
 ---------------------------------------------------------------------------------------------------
+-- The owner's own powers
+---------------------------------------------------------------------------------------------------
+-- Where the owner can go in one tap.
+local PLACES = { "street", "foyer", "salon", "boutique", "vault", "library", "ballroom", "terrace", "suite" }
+
+local function placeAt(name: string): Vector3?
+	if name == "street" then
+		return Layout.Street.spawn.Position
+	elseif name == "foyer" then
+		return Layout.Foyer.spawn.Position
+	elseif name == "salon" then
+		return Layout.Salon.arrival
+	elseif name == "boutique" then
+		return Layout.Boutique.arrival
+	elseif name == "vault" then
+		return Layout.Vault.arrival
+	elseif name == "library" then
+		return Layout.Library.arrival
+	elseif name == "ballroom" then
+		return Layout.Ballroom.arrival
+	elseif name == "terrace" then
+		return Layout.Terrace.arrival
+	elseif name == "suite" then
+		return Layout.Suite.arrival
+	end
+	return nil
+end
+
+local function rootOf(player: Player): BasePart?
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	return if root and root:IsA("BasePart") then root else nil
+end
+
+local function humanoidOf(player: Player): Humanoid?
+	local character = player.Character
+	return character and character:FindFirstChildOfClass("Humanoid")
+end
+
+local BASE_JUMP = 35 -- a guest's jump (Guests)
+
+local function setInvisible(player: Player, on: boolean)
+	local character = player.Character
+	if character then
+		for _, d in character:GetDescendants() do
+			if d:IsA("BasePart") or d:IsA("Decal") then
+				local thing = d :: any
+				local was = d:GetAttribute("AdminWas")
+				if on then
+					if was == nil then
+						d:SetAttribute("AdminWas", thing.Transparency)
+					end
+					thing.Transparency = 1
+				elseif type(was) == "number" then
+					thing.Transparency = was
+					d:SetAttribute("AdminWas", nil)
+				end
+			elseif d:IsA("BillboardGui") then
+				d.Enabled = not on
+			end
+		end
+	end
+	player:SetAttribute("AdminInvisible", if on then true else nil)
+end
+
+local function power(player: Player, which: string, value: unknown): { [string]: any }
+	local function pick(list: { number }): number?
+		return if type(value) == "number" and table.find(list, value) then value else nil
+	end
+	if which == "fly" then
+		local on = player:GetAttribute("AdminFly") ~= true
+		player:SetAttribute("AdminFly", if on then true else nil)
+		return { ok = true, on = on }
+	elseif which == "speed" then
+		local v = pick(cfg().speeds)
+		if not v then
+			return { ok = false, why = "Choose a speed." }
+		end
+		player:SetAttribute("AdminSpeed", if v == 1 then nil else v)
+		return { ok = true }
+	elseif which == "jump" then
+		local v = pick(cfg().jumps)
+		if not v then
+			return { ok = false, why = "Choose a jump." }
+		end
+		player:SetAttribute("AdminJump", if v == 1 then nil else v)
+		local humanoid = humanoidOf(player)
+		if humanoid then
+			humanoid.UseJumpPower = true
+			humanoid.JumpPower = BASE_JUMP * v
+		end
+		return { ok = true }
+	elseif which == "size" then
+		local v = pick(cfg().sizes)
+		local character = player.Character
+		if not v or not character then
+			return { ok = false, why = "Choose a size." }
+		end
+		if AdminService.isSeated(player) then
+			return { ok = false, why = "Get up from the table first." }
+		end
+		player:SetAttribute("AdminSize", if v == 1 then nil else v)
+		scale(character, Config.data.Movement.guestScale * v)
+		return { ok = true }
+	elseif which == "invisible" then
+		local on = player:GetAttribute("AdminInvisible") ~= true
+		setInvisible(player, on)
+		return { ok = true, on = on }
+	end
+	return { ok = false, why = "Unknown." }
+end
+
+-- Everyone else, frozen where they stand (and thawed again, by the owner or by itself).
+local frozen: { [Player]: boolean } = {}
+local freezeToken = 0
+
+local function setFrozen(on: boolean, owner: Player)
+	freezeToken += 1
+	local token = freezeToken
+	for _, p in Players:GetPlayers() do
+		local root = rootOf(p)
+		if p ~= owner and root then
+			if on and not AdminService.isSeated(p) and not frozen[p] then
+				root.Anchored = true
+				frozen[p] = true
+				p:SetAttribute("Frozen", true)
+			elseif not on and frozen[p] then
+				root.Anchored = false
+				frozen[p] = nil
+				p:SetAttribute("Frozen", nil)
+			end
+		end
+	end
+	if not on then
+		-- (Anyone frozen who has since left, or lost their character.)
+		for p in frozen do
+			frozen[p] = nil
+			if p.Parent == Players then
+				p:SetAttribute("Frozen", nil)
+			end
+		end
+	else
+		task.delay(cfg().freezeSeconds, function()
+			if freezeToken == token then
+				setFrozen(false, owner)
+			end
+		end)
+	end
+end
+
+local function powersView(player: Player): { [string]: any }
+	local anyFrozen = false
+	for _ in frozen do
+		anyFrozen = true
+	end
+	return {
+		fly = player:GetAttribute("AdminFly") == true,
+		speed = player:GetAttribute("AdminSpeed") or 1,
+		jump = player:GetAttribute("AdminJump") or 1,
+		size = player:GetAttribute("AdminSize") or 1,
+		invisible = player:GetAttribute("AdminInvisible") == true,
+		frozen = anyFrozen,
+		speeds = cfg().speeds,
+		jumps = cfg().jumps,
+		sizes = cfg().sizes,
+		places = PLACES,
+	}
+end
+
+---------------------------------------------------------------------------------------------------
 -- The panel's requests
 ---------------------------------------------------------------------------------------------------
 local lastAsk: { [Player]: number } = {}
 
-local function state(): { [string]: any }
+local function state(player: Player?): { [string]: any }
 	local guests = {}
 	for _, p in Players:GetPlayers() do
 		table.insert(guests, { userId = p.UserId, name = p.DisplayName, crowned = p:GetAttribute("GuestOfHonour") == true })
@@ -655,6 +838,7 @@ local function state(): { [string]: any }
 		announcements = HouseEvents.Announcements,
 		abuseMinutes = cfg().abuseMinutes,
 		schedule = scheduleView(),
+		powers = if player then powersView(player) else nil,
 		now = os.time(),
 	}
 end
@@ -676,21 +860,21 @@ local function handle(player: Player, request: unknown): any
 	local byName = player.DisplayName
 	Analytics.custom(player, "House controls", nil, { op = tostring(op) })
 	if op == "state" then
-		return state()
+		return state(player)
 	elseif op == "event" and type(r.id) == "string" and HouseEvents.byId[r.id] then
 		local minutes = if type(r.minutes) == "number" then math.clamp(r.minutes, 1, 60) else 15
 		AdminService.startEvent(r.id, minutes * 60, byName)
 		if r.everywhere == true then
 			publish({ op = "event", id = r.id, seconds = minutes * 60, by = byName, jobId = game.JobId })
 		end
-		return state()
+		return state(player)
 	elseif op == "abuse" then
 		local minutes = if type(r.minutes) == "number" then math.clamp(r.minutes, 5, 60) else 30
 		AdminService.abuse(minutes * 60, byName)
 		if r.everywhere == true then
 			publish({ op = "abuse", seconds = minutes * 60, by = byName, jobId = game.JobId })
 		end
-		return state()
+		return state(player)
 	elseif op == "schedule" then
 		local what = if type(r.what) == "string" and (r.what == "abuse" or HouseEvents.byId[r.what]) then r.what else nil
 		local at = if type(r.at) == "number" then math.floor(r.at) else nil
@@ -709,7 +893,7 @@ local function handle(player: Player, request: unknown): any
 			return { ok = false, why = "The schedule couldn't be saved just now (in Studio: turn on API access)." }
 		end
 		task.spawn(runSchedule)
-		return state()
+		return state(player)
 	elseif op == "unschedule" and type(r.id) == "string" then
 		changeSchedule(function(list)
 			local keep = {}
@@ -721,10 +905,10 @@ local function handle(player: Player, request: unknown): any
 			return keep
 		end)
 		task.spawn(runSchedule)
-		return state()
+		return state(player)
 	elseif op == "stop" and type(r.id) == "string" and HouseEvents.byId[r.id] then
 		AdminService.stopEvent(r.id)
-		return state()
+		return state(player)
 	elseif op == "salute" and type(r.id) == "string" and Salutes.byId[r.id] then
 		AdminService.salute(nil, r.id, byName)
 		return { ok = true }
@@ -763,7 +947,7 @@ local function handle(player: Player, request: unknown): any
 			end
 			target:Kick("The house has asked you to leave for tonight.")
 		end
-		return state()
+		return state(player)
 	elseif op == "giftAll" then
 		local amount = if type(r.amount) == "number" and table.find(cfg().giftGilt, r.amount) then r.amount else nil
 		if not amount then
@@ -796,6 +980,60 @@ local function handle(player: Player, request: unknown): any
 		publish({ op = "summon", jobId = game.JobId, by = byName, text = tostring(r.text or "") })
 		announce("Guests from every house have been invited here.", byName)
 		return { ok = true }
+	elseif op == "power" and type(r.power) == "string" then
+		local result = power(player, r.power, r.value)
+		if result.ok then
+			return state(player)
+		end
+		return result
+	elseif op == "goto" then
+		if AdminService.isSeated(player) then
+			return { ok = false, why = "Get up from the table first." }
+		end
+		local at: Vector3? = nil
+		if type(r.userId) == "number" then
+			local target = Players:GetPlayerByUserId(r.userId)
+			local root = if target then rootOf(target) else nil
+			if root then
+				at = root.Position + Vector3.new(4, 0, 0)
+			end
+		elseif type(r.place) == "string" and table.find(PLACES, r.place) then
+			at = placeAt(r.place)
+		end
+		local character = player.Character
+		if not at or not character then
+			return { ok = false, why = "Nowhere to go just now." }
+		end
+		character:PivotTo(CFrame.new(at + Vector3.new(0, 3, 0)))
+		return { ok = true }
+	elseif op == "bringAll" then
+		local mine = player.Character
+		if not mine then
+			return { ok = false, why = "Nowhere to bring them." }
+		end
+		local base = mine:GetPivot()
+		local others = {}
+		for _, p in Players:GetPlayers() do
+			if p ~= player and p.Character and not AdminService.isSeated(p) then
+				table.insert(others, p)
+			end
+		end
+		for i, p in others do
+			local a = i / #others * math.pi * 2
+			local character = p.Character :: Model
+			character:PivotTo(base * CFrame.new(math.cos(a) * 7, 0, math.sin(a) * 7))
+		end
+		broadcast({ op = "salute", id = "bringAll", by = byName, effects = { "goldLeaf" }, seconds = 6, title = "Everyone, gather round", line = byName .. " has called every guest together." })
+		return { ok = true, brought = #others }
+	elseif op == "freeze" then
+		local on = r.on == true
+		setFrozen(on, player)
+		if on then
+			broadcast({ op = "salute", id = "freeze", by = byName, effects = {}, seconds = 6, title = "Freeze!", line = byName .. " froze the house. Nobody move." })
+		else
+			broadcast({ op = "salute", id = "thaw", by = byName, effects = { "goldLeaf" }, seconds = 5, title = "Thawed", line = "The house moves again." })
+		end
+		return state(player)
 	end
 	return { ok = false, why = "Unknown." }
 end
@@ -808,11 +1046,25 @@ function AdminService.start()
 				player:SetAttribute("MaisonAdmin", true)
 			end
 		end)
-		-- New arrivals join a Night of Giants in progress.
+		-- New arrivals join a Night of Giants (or of Small Things) in progress; the owner keeps
+		-- the size they chose.
 		player.CharacterAdded:Connect(function(character)
-			if AdminService.active("giants") then
+			-- The owner's jump comes back with a new character; invisibility doesn't.
+			player:SetAttribute("AdminInvisible", nil)
+			local jump = player:GetAttribute("AdminJump")
+			if type(jump) == "number" then
+				task.delay(1, function()
+					local humanoid = character:FindFirstChildOfClass("Humanoid")
+					if humanoid then
+						humanoid.UseJumpPower = true
+						humanoid.JumpPower = BASE_JUMP * jump
+					end
+				end)
+			end
+			local own = player:GetAttribute("AdminSize")
+			if AdminService.active("giants") or AdminService.active("tiny") or type(own) == "number" then
 				task.wait(1)
-				scale(character, Config.data.Movement.guestScale * cfg().giantsScale)
+				scale(character, Config.data.Movement.guestScale * (if type(own) == "number" then own else eventScale()))
 			end
 		end)
 	end
@@ -823,6 +1075,9 @@ function AdminService.start()
 	Players.PlayerRemoving:Connect(function(player)
 		ownerCache[player] = nil
 		lastAsk[player] = nil
+		if studioOwner == player then
+			studioOwner = nil
+		end
 	end)
 	RemoteGuard.invoke(Remotes.func("AdminAsk"), "adminAsk", handle)
 	RemoteGuard.event(Remotes.event("Salute"), "salute", function(player: Player, m: any)

@@ -34,7 +34,7 @@ local rgb = Color3.fromRGB
 local GOLD_LIGHT = rgb(255, 224, 146)
 local GOLD_DEEP = rgb(142, 100, 36)
 local GOLD = rgb(255, 204, 110)
-local LEAF = { rgb(246, 206, 112), rgb(255, 226, 150), rgb(214, 166, 72) }
+local CONFETTI = { rgb(246, 206, 112), rgb(255, 226, 150), rgb(214, 166, 72), rgb(236, 190, 96), rgb(255, 240, 200) }
 local SPARK = "rbxasset://textures/particles/sparkles_main.dds"
 local RING = "rbxasset://textures/particles/forcefield_vortex_main.dds"
 
@@ -512,16 +512,17 @@ function Midas.play(seconds: number)
 		if bloom then
 			TweenService:Create(bloom, TweenInfo.new(3), { Intensity = bloomBase + 0.4 }):Play()
 		end
-		-- The splendour: leaves of gold, coins, shafts of light, a golden fire.
+		-- The splendour: gold confetti, coins, shafts of light, a golden fire.
 		local splendour = seconds * 0.82 - 2
 		Flakes.fall({
 			seconds = splendour,
 			centre = guestAt,
-			colours = LEAF,
+			colours = CONFETTI,
 			material = Enum.Material.Metal,
-			reflectance = 0.45,
-			size = Vector3.new(0.55, 0.03, 0.45),
-			count = c.leaves,
+			reflectance = 0.5,
+			size = Vector3.new(0.34, 0.02, 0.18),
+			flutter = 3,
+			count = c.confetti,
 			radius = 28,
 			height = Layout.Suite.height - 4,
 			fall = 2.2,

@@ -1,7 +1,7 @@
 --!strict
 -- Salutes on this guest's screen. A quiet line names who gave it; then, as the salute is:
---   gold leaf     real leaves of gold, swaying and turning over as they fall round every guest,
---                 glinting in the light, with a glitter of gold dust and a shimmer;
+--   gold confetti a burst over every guest, then slips of gold foil fluttering down, turning over
+--                 and over and glinting, with a glitter of gold dust and a shimmer;
 --   the encore    the Pianist plays on, a followspot finds the giver wherever they are (its beam of
 --                 light seen in the air), rose petals fall round them and the house applauds;
 --   chandeliers   every lamp in the house flares, in a wave out from wherever you stand, each
@@ -30,7 +30,8 @@ local SaluteView = {}
 
 local player = Players.LocalPlayer
 local rgb = Color3.fromRGB
-local LEAF = { rgb(246, 206, 112), rgb(255, 226, 150), rgb(214, 166, 72), rgb(236, 190, 96) }
+-- Gold confetti: foil in four golds, and a few slips of champagne and white gold.
+local CONFETTI = { rgb(246, 206, 112), rgb(255, 226, 150), rgb(214, 166, 72), rgb(236, 190, 96), rgb(255, 240, 200), rgb(250, 214, 140) }
 local PETALS = { rgb(190, 24, 48), rgb(220, 48, 72), rgb(150, 16, 36), rgb(236, 120, 140) }
 local SPARK = "rbxasset://textures/particles/sparkles_main.dds"
 local DUST = "rbxasset://textures/particles/fire_sparks_main.dds"
@@ -86,20 +87,24 @@ local function warm(seconds: number, tint: Color3, brightness: number)
 	end)
 end
 
--- Gold leaf: real leaves falling round this guest, and a fine glitter of gold dust with them.
+-- Gold confetti: a burst over this guest, then slips of gold foil fluttering down, turning over
+-- and over and glinting, with a fine glitter of gold dust (right at any time of year).
 local function goldLeaf(seconds: number)
 	Flakes.fall({
 		seconds = seconds,
 		centre = here,
-		colours = LEAF,
+		colours = CONFETTI,
 		material = Enum.Material.Metal,
-		reflectance = 0.45,
-		size = Vector3.new(0.55, 0.03, 0.45),
-		count = 70,
+		reflectance = 0.5,
+		size = Vector3.new(0.34, 0.02, 0.18),
+		count = 120,
 		radius = 26,
 		height = 18,
-		fall = 2.4,
+		fall = 3,
+		flutter = 3,
+		burst = true,
 	})
+	pcall(Sound.play, "fireworkReport", 0.22, 1.7)
 	local cloud = anchor("GoldLeaf", Vector3.zero, Vector3.new(40, 1, 40))
 	local e = Instance.new("ParticleEmitter")
 	e.Texture = DUST

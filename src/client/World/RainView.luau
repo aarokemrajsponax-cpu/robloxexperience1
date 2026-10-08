@@ -1,6 +1,6 @@
 --!strict
 -- Megalodon Rain on this guest's screen: the banner naming who made it rain, gold falling all
--- around them for as long as the server says it rains (with the house's gold leaf and every lamp
+-- around them for as long as the server says it rains (with the house's gold confetti and every lamp
 -- flaring), and a quiet line when their own share of Gilt lands. Effects only: the Gilt is the
 -- server's, given once per rain, whatever this screen does.
 

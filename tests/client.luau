@@ -2758,7 +2758,10 @@ do
 	gsteps.Volume = 0.5
 	gsteps.Parent = groot
 	ghost.Parent = workspace
-	local quin = { Name = "Quin", DisplayName = "Quin", UserId = 77, Character = ghost }
+	local quin = { Name = "Quin", DisplayName = "Quin", UserId = 77, Character = ghost, attrs = {} }
+	function quin:GetAttribute(k)
+		return self.attrs[k]
+	end
 	table.insert(otherPlayers, quin)
 	advance(1)
 	check("another guest in the Suite isn't drawn on your screen", groot.LocalTransparencyModifier == 1 and ghead.LocalTransparencyModifier == 1)
@@ -2768,6 +2771,13 @@ do
 	hat.Parent = ghost
 	advance(1)
 	check("...nor what they put on while there", hat.LocalTransparencyModifier == 1)
+	-- A friend visiting your Suite (the server says so) is there with you: seen.
+	quin.attrs.SuiteHost = LocalPlayer.UserId
+	advance(1)
+	check("a friend visiting your Suite is seen there with you", groot.LocalTransparencyModifier == 0 and gplate.Enabled == true and hat.LocalTransparencyModifier == 0)
+	quin.attrs.SuiteHost = nil
+	advance(1)
+	check("...and unseen again once they're back in their own", groot.LocalTransparencyModifier == 1)
 	groot.Position = Vector3.new(0, 5, -40)
 	groot.CFrame = CFrame.new(groot.Position)
 	advance(1)
@@ -2781,6 +2791,44 @@ suiteFolder = workspace.MaisonLocal:FindFirstChild("Suite")
 check("with the Gold Key its rooms open", alcove.CanCollide == false and alcove.LocalTransparencyModifier == 1)
 check("and the Dressing Room's glass stands", suiteFolder ~= nil and suiteFolder:FindFirstChild("mirror") ~= nil)
 check("the rest of the Suite stays as it was", suiteFolder ~= nil and suiteFolder:FindFirstChild("sofa") ~= nil and suiteFolder:FindFirstChild("bed") ~= nil)
+-- A friend's Suite (the server checked the friendship): drawn as they've furnished it.
+serverSays("Shop", { op = "suiteHost", host = 77, name = "Quin", suite = { rug = "suite_rug_black" }, goldKey = false })
+advance(1.5)
+local visited = workspace.MaisonLocal:FindFirstChild("Suite")
+check("in a friend's Suite it's drawn as they've furnished it (their Gold Key rooms, not yours)", alcove.CanCollide == true and visited ~= nil and visited:FindFirstChild("mirror") == nil and textOnScreen("Quin's Suite") ~= nil)
+serverSays("Shop", { op = "open", panel = "suite" })
+advance(0.5)
+check("their bell is theirs: yours is in your own Suite", textOnScreen("Only Quin furnishes it") ~= nil and textOnScreen("Black Deco Rug") == nil)
+serverSays("Shop", { op = "suiteHost" })
+advance(1.5)
+visited = workspace.MaisonLocal:FindFirstChild("Suite")
+check("home again: your own Suite and your Gold Key rooms", alcove.CanCollide == false and visited ~= nil and visited:FindFirstChild("mirror") ~= nil)
+-- The Suites key in the dock: your Suite, or a friend's.
+invokeResults.SuiteAsk = { ok = true, friends = { { userId = 77, name = "Quin" } } }
+local suitesKey = find(playerGui, function(d)
+	return d:IsA("TextButton") and d.Name == "Suites"
+end)
+check("the Suites key sits in the dock on the left", suitesKey ~= nil)
+if suitesKey then
+	signalOf(suitesKey, "Activated"):Fire()
+end
+advance(0.5)
+check("it offers your own Suite and each friend's", textOnScreen("My Suite") ~= nil and textOnScreen("Quin's Suite") ~= nil)
+local quinKey = find(playerGui, function(d)
+	return d:IsA("TextButton") and d.Name == "Visit_77"
+end)
+if quinKey then
+	signalOf(quinKey, "Activated"):Fire()
+end
+advance(0.5)
+local visitAsked = nil
+for _, m in sent do
+	if m.remote == "SuiteAsk" and type(m.message[1]) == "table" and m.message[1].op == "visit" then
+		visitAsked = m.message[1].userId
+	end
+end
+check("choosing one asks the server to take you there (it checks you're friends)", visitAsked == 77, visitAsked)
+invokeResults.SuiteAsk = nil
 invokeResults.ShopAsk = {
 	rooms = SuiteShared.RoomNames,
 	spots = {
@@ -3189,7 +3237,7 @@ end
 serverSays("Salute", { op = "salute", id = "grand", by = "Ben", userId = 1, seconds = 6, effects = { "goldLeaf", "encore", "chandelier", "fireworks" }, line = "Ben gave the house the Grand Salute." })
 advance(2)
 check("a salute names its giver", textOnScreen("Ben gave the house the Grand Salute") ~= nil)
-check("gold leaf drifts down", workspace.MaisonLocal:FindFirstChild("GoldLeaf") ~= nil)
+check("gold confetti showers down", workspace.MaisonLocal:FindFirstChild("GoldLeaf") ~= nil)
 check("fireworks over the house: shells going up and bursting over the estate", (function()
 	local f = workspace.MaisonLocal:FindFirstChild("Fireworks")
 	return f ~= nil and #f:GetChildren() > 0
@@ -3208,7 +3256,7 @@ check("...its beam seen in the air", (function()
 	local lamp = workspace.MaisonLocal:FindFirstChild("Spotlight")
 	return lamp ~= nil and lamp:FindFirstChildOfClass("Beam") ~= nil
 end)())
-check("gold leaf: real leaves of gold flutter down, turning as they fall", (function()
+check("gold confetti: slips of gold foil flutter down, turning as they fall", (function()
 	local leaves = 0
 	for _, f in workspace.MaisonLocal:GetChildren() do
 		if f.Name == "Flakes" then
@@ -3219,7 +3267,7 @@ check("gold leaf: real leaves of gold flutter down, turning as they fall", (func
 			end
 		end
 	end
-	return leaves >= 40
+	return leaves >= 80
 end)())
 advance(14)
 check("and it all clears away", workspace.MaisonLocal:FindFirstChild("GoldLeaf") == nil and workspace.MaisonLocal:FindFirstChild("Spotlight") == nil and workspace.MaisonLocal:FindFirstChild("Flakes") == nil)
@@ -3250,7 +3298,7 @@ invokeResults.ShopAsk = {
 	season = { id = "autumn", name = "Autumn", pieces = {} },
 	goldKey = { owned = false }, ledger = { view = { term = "2026-autumn", page = 1, pages = 50, leather = false } },
 	salutes = {
-		{ id = "goldLeaf", name = "A Shower of Gold Leaf", line = "Gold leaf drifts down.", price = 75, ready = true },
+		{ id = "goldLeaf", name = "A Shower of Gold Confetti", line = "Gold confetti flutters down.", price = 75, ready = true },
 		{ id = "fireworks", name = "Fireworks over the House", line = "A full fireworks show over the whole estate.", price = 299, ready = false, preview = true },
 		{ id = "finale", name = "The Midnight Finale", line = "A countdown, then the biggest show.", price = 999, ready = false, preview = false },
 	},
@@ -3258,7 +3306,7 @@ invokeResults.ShopAsk = {
 }
 serverSays("Shop", { op = "open", panel = "salutes" })
 advance(1)
-check("the piano's card opens the Salutes", textOnScreen("A Shower of Gold Leaf") ~= nil and textOnScreen("changes no score") ~= nil)
+check("the piano's card opens the Salutes", textOnScreen("A Shower of Gold Confetti") ~= nil and textOnScreen("changes no score") ~= nil)
 check("no salute says \"Soon\": each shows its price, or a Studio preview", textOnScreen("Soon") == nil and textOnScreen("Preview") ~= nil and textOnScreen("299 when on sale") ~= nil and textOnScreen("999") ~= nil)
 snapshot("salutes")
 Root2.close()
@@ -3420,6 +3468,43 @@ check("...and when it's over, the room is put back", workspace.MaisonLocal:FindF
 end) == nil)
 check("no errors in the spectacles", #errors == 0, errors[1])
 
+-- Friends in the house: a word at the left edge (the server counts them, and pays the boost).
+LocalPlayer:SetAttribute("FriendsHere", 1)
+advance(0.3)
+check("friends in the house: the boost is shown", textOnScreen("FRIENDS HERE (1)") ~= nil and textOnScreen("GILT") ~= nil)
+LocalPlayer:SetAttribute("FriendsHere", nil)
+advance(0.3)
+check("...and goes when they do", textOnScreen("FRIENDS HERE") == nil)
+
+-- The House Party: every lamp in the house turns disco, then back exactly as it was.
+do
+	local lamp = nil
+	for _, d in workspace.Maison:GetDescendants() do
+		if d:IsA("PointLight") then
+			lamp = d
+			break
+		end
+	end
+	local was = lamp and lamp.Color
+	workspace:SetAttribute("Event_discoHouse", workspace:GetServerTimeNow() + 60)
+	signalOf(workspace, "attr:Event_discoHouse"):Fire()
+	advance(1.5)
+	check("the House Party: the lamps turn disco", lamp ~= nil and lamp:GetAttribute("DiscoWas") ~= nil and lamp.Color ~= was)
+	workspace:SetAttribute("Event_discoHouse", nil)
+	advance(1.5)
+	check("...and every lamp is back as it was", lamp ~= nil and lamp:GetAttribute("DiscoWas") == nil and lamp.Color == was)
+end
+
+-- The owner's flight: only the server switches it on (for the owner); the screen flies.
+LocalPlayer:SetAttribute("AdminFly", true)
+advance(0.5)
+local flyRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+check("the owner flies when the server says so", flyRoot ~= nil and flyRoot:FindFirstChild("AdminFlyVelocity") ~= nil)
+LocalPlayer:SetAttribute("AdminFly", nil)
+advance(0.5)
+check("...and lands when it stops", flyRoot ~= nil and flyRoot:FindFirstChild("AdminFlyVelocity") == nil)
+check("no errors with friends, the party or the flight", #errors == 0, errors[1])
+
 -- The bell's Spectacles page: each show with its whole line (every row as tall as its words), its
 -- price in Robux or a Play key for one held, and plainly: only you see it.
 do
@@ -3561,10 +3646,11 @@ advance(0.5)
 invokeResults.AdminAsk = {
 	ok = true, minutes = { 5, 15, 30 }, giftGilt = { 100, 500, 1000 }, now = 0,
 	events = { { id = "goldenHour", name = "Golden Hour", line = "Gilt counts double." } },
-	salutes = { { id = "goldLeaf", name = "A Shower of Gold Leaf" } },
+	salutes = { { id = "goldLeaf", name = "A Shower of Gold Confetti" } },
 	seasons = { { id = "yule", name = "Yuletide" } },
 	guests = { { userId = 2, name = "Ben", crowned = false } },
 	announcements = { "The owner is in the house tonight." },
+	powers = { fly = false, speed = 1, jump = 1, size = 1, invisible = false, frozen = false, speeds = { 1, 2, 3, 5 }, jumps = { 1, 2, 4 }, sizes = { 0.5, 1, 2, 4 }, places = { "street", "foyer", "salon", "boutique", "vault", "library", "ballroom", "terrace", "suite" } },
 }
 check("the owner sees the House key", press("House"))
 advance(1)
@@ -3583,6 +3669,21 @@ end)())
 check("the Guests page has crowns and gifts", press("Guests") and (function()
 	advance(0.3)
 	return textOnScreen("Crown") ~= nil and textOnScreen("Ben") ~= nil
+end)())
+check("the owner's Powers page: fly, speed, jump, size, invisible, go anywhere, everyone", press("Powers") and (function()
+	advance(0.3)
+	return textOnScreen("Fly") ~= nil and textOnScreen("Super jump") ~= nil and textOnScreen("Colossal") ~= nil and textOnScreen("Vanish") ~= nil and textOnScreen("Ballroom") ~= nil and textOnScreen("Bring all") ~= nil and textOnScreen("Freeze") ~= nil
+end)())
+snapshot("admin-powers")
+check("Fly asks the server (which checks it's the owner)", press("Fly") and (function()
+	advance(0.5)
+	for i = #sent, 1, -1 do
+		local sm = sent[i]
+		if sm.remote == "AdminAsk" and sm.message[1] and sm.message[1].op == "power" then
+			return sm.message[1].power == "fly"
+		end
+	end
+	return false
 end)())
 Root2.close()
 advance(0.5)

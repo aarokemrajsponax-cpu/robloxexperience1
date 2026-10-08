@@ -37,6 +37,7 @@ Remotes.Functions = {
 	"CurioAsk", -- client -> server: your curios, stars, the Cabinet (curios for Gems), Gem packs
 	"TradeAsk", -- client -> server: trading curios with another guest
 	"SpectacleAsk", -- client -> server: Suite spectacles (the list, buy one, play one)
+	"SuiteAsk", -- client -> server: your friends' Suites (the list, visit one, go home)
 }
 
 local folder: Folder? = nil

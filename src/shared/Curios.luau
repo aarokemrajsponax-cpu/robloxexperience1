@@ -94,13 +94,69 @@ Curios.List = {
 	{ id = "autumnLeaf", name = "The Gilded Leaf", line = "Autumn 2026, at the house. Never again.", rarity = "Limited", family = "relic", glyph = "🍁", accent = "✨", colour = rgb(210, 110, 40), source = "season", tradeable = true, how = "Limited: any banked run in Autumn 2026" },
 } :: { Curio }
 
+-- The season a Limited curio belongs to (only found while that season is on).
+Curios.LimitedSeason = { autumnLeaf = "2026-autumn" } :: { [string]: string }
+
+-- Terms in order (Rating.term's ids, "2026-autumn"): spring, summer, autumn, winter in a year.
+local TERM_ORDER = { spring = 0, summer = 1, autumn = 2, winter = 3 }
+
+function Curios.termIndex(termId: string): number?
+	local y, s = string.match(termId, "^(%d+)%-(%a+)$")
+	local n = tonumber(y)
+	local o = if s then TERM_ORDER[s] else nil
+	return if n and o then n * 4 + o else nil
+end
+
+-- A Limited curio for every season ahead, one a Term, so the house's seasons never run out: each
+-- found only while its own season is on, with its year on it, and never again after.
+local SEASONAL = {
+	winter = { name = "The Frost Star", glyph = "❄️", accent = "✨", colour = rgb(170, 206, 240), line = "Winter %s at the house: snow on the glass. Never again.", season = "Winter" },
+	spring = { name = "The Spring Blossom", glyph = "🌸", accent = "✨", colour = rgb(242, 168, 200), line = "Spring %s at the house: the windows open again. Never again.", season = "Spring" },
+	summer = { name = "The Summer Sun", glyph = "☀️", accent = "✨", colour = rgb(250, 200, 90), line = "Summer %s at the house: warm nights on the terrace. Never again.", season = "Summer" },
+	autumn = { name = "The Harvest Moon", glyph = "🌕", accent = "🍂", colour = rgb(214, 130, 50), line = "Autumn %s at the house: amber evenings. Never again.", season = "Autumn" },
+}
+local first = Curios.termIndex("2026-autumn") :: number
+for year = 2026, 2031 do
+	for _, s in { "spring", "summer", "autumn", "winter" } do
+		local term = tostring(year) .. "-" .. s
+		if (Curios.termIndex(term) :: number) > first then
+			local d = SEASONAL[s]
+			local id = "season" .. tostring(year) .. s
+			-- (Winter runs from December into the next year: "Winter 2026–27".)
+			local label = if s == "winter" then string.format("%d–%02d", year, (year + 1) % 100) else tostring(year)
+			table.insert(Curios.List, {
+				id = id,
+				name = d.name .. " · " .. d.season .. " " .. label,
+				line = string.format(d.line, label),
+				rarity = "Limited",
+				family = "relic",
+				glyph = d.glyph,
+				accent = d.accent,
+				colour = d.colour,
+				source = "season",
+				tradeable = true,
+				how = "Limited: any banked run in " .. d.season .. " " .. label,
+			} :: Curio)
+			Curios.LimitedSeason[id] = term
+		end
+	end
+end
+
+-- Whether a curio is shown in the Collection's book yet: a Limited one once its season has come.
+function Curios.shown(id: string, termId: string): boolean
+	local season = Curios.LimitedSeason[id]
+	if not season then
+		return true
+	end
+	local a, b = Curios.termIndex(season), Curios.termIndex(termId)
+	return a == nil or b == nil or a <= b
+end
+
 Curios.byId = {} :: { [string]: Curio }
 for _, c in Curios.List do
 	Curios.byId[c.id] = c
 end
 
--- The season a Limited curio belongs to (only found while that season is on).
-Curios.LimitedSeason = { autumnLeaf = "2026-autumn" } :: { [string]: string }
 
 -- The curios that can turn up at the tables, by rarity.
 local byRarity: { [string]: { Curio } } = {}

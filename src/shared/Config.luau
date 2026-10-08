@@ -238,7 +238,7 @@ local defaults = {
 
 	-- The Founding Term's id (for example "2026-autumn"): set it at launch; guests who play in it
 	-- get the Founding Term badge and its dated rewards.
-	FoundingTerm = "",
+	FoundingTerm = "2026-autumn",
 
 	-- The Soirée (Appendix H5).
 	Soiree = {
@@ -279,6 +279,7 @@ local defaults = {
 		curioAsk = { rate = 3, burst = 8 },
 		tradeAsk = { rate = 3, burst = 8 },
 		spectacleAsk = { rate = 2, burst = 5 },
+		suiteAsk = { rate = 1, burst = 4 },
 	},
 
 	-- The Concierge's walking tour (each guest's own guide, drawn on their screen).
@@ -417,7 +418,7 @@ local defaults = {
 	Midas = {
 		speed = 14, -- studs a second the ring of gold runs through the Suite
 		reflectance = 0.22, -- how much gold shines
-		leaves = 80, -- leaves of gold falling at once
+		confetti = 110, -- slips of gold confetti falling at once
 		coins = 110, -- gold coins that rain down
 		coinRadius = 16, -- studs round the guest they land
 		shafts = 4, -- shafts of light from the ceiling
@@ -549,11 +550,18 @@ local defaults = {
 		straightToTableOfferSeconds = 12,
 	},
 
-	-- The owner's panel (House controls). The experience's owner (or the group's owner) is always
-	-- allowed; add other trusted user ids to `userIds`. In Studio every tester is allowed.
+	-- The owner's panel (House controls) and the owner's powers. Only the experience's owner (or,
+	-- for a group's experience, the group's owner) has them: nobody else, ever. In Studio, where
+	-- test players aren't the owner, the first player in the test stands in for the owner.
 	Admin = {
-		userIds = {} :: { number },
-		studioEveryone = true,
+		studioFirstPlayer = true, -- Studio only: the first test player counts as the owner
+		flySpeed = 70, -- studs a second the owner flies
+		speeds = { 1, 2, 3, 5 }, -- the owner's walking speed, times normal
+		speedCap = 170, -- the owner's top speed (guests' cap is Movement.maxSpeed)
+		jumps = { 1, 2, 4 }, -- the owner's jump, times normal
+		sizes = { 0.5, 1, 2, 4 }, -- the owner's size, times a guest's
+		freezeSeconds = 30, -- a freeze thaws by itself after this long
+		tinyScale = 0.45, -- A Night of Small Things: every guest this size
 		minutes = { 5, 15, 30 }, -- the event lengths offered
 		goldenHourGilt = 2,
 		luckyHourMythic = 10,
@@ -572,12 +580,19 @@ local defaults = {
 		giftGilt = { 100, 500, 1000 }, -- what the owner can give
 		summonMinutes = 5, -- how long a summons to the owner's house stays open
 		-- Admin Abuse Night: every one of these at once, with fireworks, in one tap.
-		abuseEvents = { "goldenHour", "luckyHour", "pageTurner", "goldRain", "treasure", "giants", "quickstep", "parade", "disco", "curioHour" },
+		abuseEvents = { "goldenHour", "luckyHour", "pageTurner", "goldRain", "treasure", "giants", "quickstep", "featherlight", "parade", "disco", "discoHouse", "curioHour" },
 		abuseMinutes = { 15, 30, 60 },
 		-- Scheduled events (set in the panel, kept in a DataStore, run by every server on time).
 		scheduleCheck = 30, -- seconds between each server's look at the schedule
 		scheduleNotice = 60, -- minutes before a scheduled event that every screen counts down to it
 		scheduleMax = 20, -- events kept on the schedule at once
+	},
+
+	-- Friends on Roblox in the house together (server Friends): they may visit each other's
+	-- Suites, and both earn more Gilt while together.
+	Friends = {
+		giltBoost = 1.25, -- every Gilt earned, while a friend is in the house (+25%)
+		studioFriends = true, -- in Studio only: test players count as friends, to try visits and the boost
 	},
 
 	-- Testing in Studio (never affects the live game).

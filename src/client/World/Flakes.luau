@@ -1,7 +1,7 @@
 --!strict
--- Things that flutter down, drawn on this screen only: gold leaf (the Shower of Gold Leaf, the
--- Golden Transformation) and rose petals (the Encore). Each flake is a thin leaf of metal or a petal
--- that sways, turns over and over as it falls (catching the light as gold leaf does), and drifts
+-- Things that flutter down, drawn on this screen only: gold confetti (the Shower of Gold Confetti,
+-- the Golden Transformation) and rose petals (the Encore). Each flake is a slip of gold foil or a
+-- petal that sways, turns over and over as it falls (catching the light as foil does), and drifts
 -- round a centre that can move (a guest walking on). Flakes that land, or are left behind, start
 -- again from above until the shower ends; then the last of them fall and go.
 
@@ -22,9 +22,11 @@ export type Spec = {
 	height: number, -- how high above it they start
 	fall: number, -- studs a second
 	below: number?, -- how far under the centre they go
+	flutter: number?, -- how fast each one turns over (1: a petal's lazy turn; confetti ~3)
+	burst: boolean?, -- they start together from just above the centre and fly out, then fall
 }
 
-type Flake = { part: Part, pos: Vector3, phase: number, sway: number, spin: Vector3, rate: number, speed: number }
+type Flake = { part: Part, pos: Vector3, phase: number, sway: number, spin: Vector3, rate: number, speed: number, fly: Vector3? }
 
 local function holder(): Instance
 	return Workspace:FindFirstChild("MaisonLocal") or Workspace
@@ -65,10 +67,18 @@ function Flakes.fall(spec: Spec): () -> ()
 			phase = rng:NextNumber(0, math.pi * 2),
 			sway = rng:NextNumber(0.6, 1.6),
 			spin = Vector3.new(rng:NextNumber(-1, 1), rng:NextNumber(-1, 1), rng:NextNumber(-1, 1)).Unit,
-			rate = rng:NextNumber(1.5, 4),
+			rate = rng:NextNumber(1.5, 4) * (spec.flutter or 1),
 			speed = spec.fall * rng:NextNumber(0.7, 1.3),
 		}
 		place(f, start, true)
+		if spec.burst then
+			-- Out of a burst just over the guest's head: each slip flies out, then drifts down.
+			local a = rng:NextNumber(0, math.pi * 2)
+			local up = rng:NextNumber(0.2, 1)
+			local r = rng:NextNumber(0.3, 1) * spec.radius * 0.7
+			f.pos = start + Vector3.new(math.cos(a) * r * 0.15, spec.height * 0.55, math.sin(a) * r * 0.15)
+			f.fly = Vector3.new(math.cos(a) * r, up * spec.height * 0.6, math.sin(a) * r) * 1.6
+		end
 		table.insert(flakes, f)
 	end
 	local t = 0
@@ -93,6 +103,13 @@ function Flakes.fall(spec: Spec): () -> ()
 			local p = f.part
 			if p.Parent == nil then
 				continue
+			end
+			local fly = f.fly
+			if fly then
+				-- Flung out by the burst, slowing in the air.
+				f.pos += fly * dt
+				local slowed = fly * math.max(0, 1 - 2.6 * dt)
+				f.fly = if slowed.Magnitude < 0.5 then nil else slowed
 			end
 			f.pos -= Vector3.new(0, f.speed * dt, 0)
 			local gone = centre ~= nil and (f.pos.Y < centre.Y - below or (Vector3.new(f.pos.X, 0, f.pos.Z) - Vector3.new(centre.X, 0, centre.Z)).Magnitude > spec.radius * 1.6)

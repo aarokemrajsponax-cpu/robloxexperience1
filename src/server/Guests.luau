@@ -106,7 +106,7 @@ local function place(player: Player, character: Model, visit: Visit)
 	end)
 	local humanoid = character:WaitForChild("Humanoid", 10) :: Humanoid?
 	if humanoid then
-		humanoid.WalkSpeed = Speed.resolve(false, Workspace:GetAttribute("SpeedBoost"), player:GetAttribute("SpeedPerk"))
+		humanoid.WalkSpeed = Speed.resolve(false, Workspace:GetAttribute("SpeedBoost"), player:GetAttribute("SpeedPerk"), player:GetAttribute("AdminSpeed"))
 		humanoid.JumpPower = 35
 		humanoid.Died:Connect(function()
 			task.delay(3, function()

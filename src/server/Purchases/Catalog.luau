@@ -125,6 +125,14 @@ function Catalog.discover()
 	for _, e in ProductConfig.List do
 		if e.ProductType == "DeveloperProduct" then
 			byName[ProductConfig.normalName(e.Name)] = e.Key
+			-- A product renamed in the game (the Gold Leaf salute is Gold Confetti now) is still
+			-- found under the name it was made with.
+			for _, alias in (e.Aliases or {}) :: { string } do
+				local n = ProductConfig.normalName(alias)
+				if not byName[n] then
+					byName[n] = e.Key
+				end
+			end
 		end
 	end
 	local ok, pages = pcall(function()
