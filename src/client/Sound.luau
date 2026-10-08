@@ -29,18 +29,22 @@ end
 local music = group("MaisonMusic")
 local effects = group("MaisonEffects")
 local ambience = group("MaisonAmbience")
+-- A show's own music (the fireworks' score, the Golden Transformation's choir), at the music level.
+local show = group("MaisonShow")
 -- The Foyer piano when a guest plays it: at the Effects level (see Sound.pianoNote).
 local pianoGroup = group("MaisonPiano")
 
 local levels = { music = 0.65, effects = 0.85, ambience = 0.7 }
 local dipped = false
+local scoring = 0 -- shows' scores playing now (the house's music sinks under them)
 
 local function applyVolumes()
 	local m = if State.get("music") == "On" then (State.get("musicLevel") :: number) / 100 else 0
 	local e = if State.get("effects") == "On" then (State.get("effectsLevel") :: number) / 100 else 0
 	local a = if State.get("ambience") == "On" then (State.get("ambienceLevel") :: number) / 100 else 0
 	levels.music, levels.effects, levels.ambience = m, e, a
-	TweenService:Create(music, TweenInfo.new(0.4), { Volume = if dipped then m * 0.45 else m }):Play()
+	TweenService:Create(music, TweenInfo.new(0.4), { Volume = m * (if scoring > 0 then 0.12 elseif dipped then 0.45 else 1) }):Play()
+	show.Volume = m
 	effects.Volume = e
 	pianoGroup.Volume = e
 	ambience.Volume = a
@@ -54,7 +58,43 @@ end
 
 function Sound.dip(on: boolean)
 	dipped = on
+	if scoring > 0 then
+		return -- (already well under a show's score)
+	end
 	TweenService:Create(music, TweenInfo.new(0.6, Enum.EasingStyle.Sine), { Volume = if on then levels.music * 0.45 else levels.music }):Play()
+end
+
+-- A show's score: `id` plays at the music level while the house's music sinks under it. Returns
+-- a function that fades it out (and brings the house's music back once no score is playing).
+function Sound.score(id: string, volume: number?): () -> ()
+	if id == "" then
+		return function() end
+	end
+	scoring += 1
+	TweenService:Create(music, TweenInfo.new(1.2, Enum.EasingStyle.Sine), { Volume = levels.music * 0.12 }):Play()
+	local s = Instance.new("Sound")
+	s.Name = "Score"
+	s.SoundId = id
+	s.Volume = 0
+	s.SoundGroup = show
+	s.Parent = SoundService
+	s:Play()
+	TweenService:Create(s, TweenInfo.new(1, Enum.EasingStyle.Sine), { Volume = volume or 0.8 }):Play()
+	local stopped = false
+	return function()
+		if stopped then
+			return
+		end
+		stopped = true
+		scoring = math.max(0, scoring - 1)
+		TweenService:Create(s, TweenInfo.new(1.6, Enum.EasingStyle.Sine), { Volume = 0 }):Play()
+		task.delay(1.7, function()
+			s:Destroy()
+		end)
+		if scoring == 0 then
+			TweenService:Create(music, TweenInfo.new(2.5, Enum.EasingStyle.Sine), { Volume = if dipped then levels.music * 0.45 else levels.music }):Play()
+		end
+	end
 end
 
 -- A short dip for round cards (about three seconds).
@@ -187,7 +227,9 @@ local function source(name: string): Source?
 		lastTake[name] = pick
 		local t = lib[pick]
 		if type(t) == "table" and type(t.id) == "string" and t.id ~= "" then
-			return { id = t.id, region = nil, soften = false, pitch = tonumber(t.pitch) or 1, volume = tonumber(t.volume) or 1 }
+			-- (`from` and `to`: only that part of the recording, in seconds.)
+			local region = if type(t.from) == "number" and type(t.to) == "number" then { t.from, t.to } else nil
+			return { id = t.id, region = region, soften = false, pitch = tonumber(t.pitch) or 1, volume = tonumber(t.volume) or 1 }
 		end
 	end
 	local fallback = BUILT_IN[name]
@@ -271,6 +313,28 @@ function Sound.play(name: string, volume: number?, pitch: number?)
 	end
 	soften(s, src.soften)
 	s:Play()
+end
+
+-- A sound that goes on where it is (the crackle of a fire), heard as you come near, at the guest's
+-- ambience level: Config.Assets.Loops[name].
+function Sound.loopAt(parent: Instance, name: string, volume: number, range: number): Sound?
+	local loopsSet = (Config.data.Assets :: any).Loops
+	local id = if type(loopsSet) == "table" then loopsSet[name] else nil
+	if type(id) ~= "string" or id == "" or parent:FindFirstChild("Loop_" .. name) then
+		return nil
+	end
+	local s = Instance.new("Sound")
+	s.Name = "Loop_" .. name
+	s.SoundId = id
+	s.Looped = true
+	s.Volume = volume
+	s.RollOffMode = Enum.RollOffMode.InverseTapered
+	s.RollOffMinDistance = range * 0.15
+	s.RollOffMaxDistance = range
+	s.SoundGroup = ambience
+	s.Parent = parent
+	s:Play()
+	return s
 end
 
 -- Loads the sheet (or, until it's set, the library's recordings) as the guest arrives, so the
@@ -547,14 +611,26 @@ end
 -- retuned to the key from the nearest slice; then the middle-C recordings (PianoFallback).
 -- (Audio uploaded by other creators can't be played in this experience: Roblox refuses it, which
 -- is why the slices come first. Recordings AJKR uploads himself can go in PianoNotes.)
-local failedNotes: { [string]: boolean } = {}
+--
+-- Each recording is fetched once into a hidden Sound, and held there so it stays at hand.
+-- (ContentProvider:PreloadAsync loads the assets of Instances: given a bare id, a recording
+-- reports "Failure" and, until Build 48, was struck off for good, which silenced every key.) A
+-- recording that does fail is fetched again after a while, and while it's the only one there is,
+-- the keys still try it rather than fall silent.
+local failedAt: { [string]: number } = {} -- when each recording last failed to load
 local readyNotes: { [string]: boolean } = {}
-local notesLoaded = false
+local bank: { [string]: Sound } = {}
+local voicesReady = false
 
 type NoteSource = { id: string, speed: number, region: NumberRange?, gain: number }
 
-local function usable(id: any): boolean
-	return type(id) == "string" and id ~= "" and not failedNotes[id]
+-- `anyway`: take it even if it failed to load before (better than a silent key).
+local function usable(id: any, anyway: boolean?): boolean
+	if type(id) ~= "string" or id == "" then
+		return false
+	end
+	local t = failedAt[id]
+	return anyway == true or t == nil or os.clock() - t > Config.data.Piano.retrySeconds
 end
 
 local function midiOf(index: number): number
@@ -579,7 +655,7 @@ local function ownNote(index: number): NoteSource?
 end
 
 -- The nearest licensed slice, retuned to the key.
-local function slice(index: number): NoteSource?
+local function slice(index: number, anyway: boolean?): NoteSource?
 	local slices = (Config.data.Assets :: any).PianoSlices
 	if type(slices) ~= "table" then
 		return nil
@@ -587,7 +663,7 @@ local function slice(index: number): NoteSource?
 	local midi = midiOf(index)
 	local best: any = nil
 	for _, sl in slices do
-		if type(sl) == "table" and usable(sl.id) and (best == nil or math.abs(sl.note - midi) < math.abs(best.note - midi)) then
+		if type(sl) == "table" and usable(sl.id, anyway) and (best == nil or math.abs(sl.note - midi) < math.abs(best.note - midi)) then
 			best = sl
 		end
 	end
@@ -597,9 +673,9 @@ local function slice(index: number): NoteSource?
 	return { id = best.id, speed = 2 ^ ((midi - best.note) / 12), region = NumberRange.new(best.start, best.start + best.length), gain = best.gain or 1 }
 end
 
-local function fallback(index: number): NoteSource?
+local function fallback(index: number, anyway: boolean?): NoteSource?
 	for _, id in ((Config.data.Assets :: any).PianoFallback or {}) :: { string } do
-		if usable(id) then
+		if usable(id, anyway) then
 			return { id = id, speed = 2 ^ ((midiOf(index) - 60) / 12), region = nil, gain = 1 }
 		end
 	end
@@ -607,7 +683,76 @@ local function fallback(index: number): NoteSource?
 end
 
 local function noteSource(index: number): NoteSource?
-	return ownNote(index) or slice(index) or fallback(index)
+	return ownNote(index) or slice(index) or fallback(index) or slice(index, true) or fallback(index, true)
+end
+
+-- Whether a Sound has its recording (taken as yes where the engine can't say).
+local function isLoaded(s: Sound): boolean
+	local ok, loaded = pcall(function()
+		return s.IsLoaded
+	end)
+	return not ok or loaded == true
+end
+
+-- Every piano recording the house knows.
+local function recordings(): { string }
+	local list: { string } = {}
+	for _, sl in ((Config.data.Assets :: any).PianoSlices or {}) :: { any } do
+		if type(sl) == "table" and type(sl.id) == "string" and sl.id ~= "" then
+			table.insert(list, sl.id)
+		end
+	end
+	for _, key in { "PianoNotes", "PianoFallback" } do
+		for _, id in ((Config.data.Assets :: any)[key] or {}) :: { string } do
+			if type(id) == "string" and id ~= "" then
+				table.insert(list, id)
+			end
+		end
+	end
+	return list
+end
+
+-- Fetches one recording into its hidden Sound (again, if it failed a while ago).
+local function fetch(id: string)
+	local held = bank[id]
+	if held then
+		local t = failedAt[id]
+		if not t or os.clock() - t <= Config.data.Piano.retrySeconds then
+			return
+		end
+		held:Destroy()
+	end
+	local s = Instance.new("Sound")
+	s.Name = "PianoRecording"
+	s.SoundId = id
+	s.Volume = 0
+	s.SoundGroup = pianoGroup
+	s.Parent = SoundService
+	bank[id] = s
+	pcall(function()
+		s.Loaded:Connect(function()
+			readyNotes[id] = true
+			failedAt[id] = nil
+		end)
+	end)
+	task.spawn(function()
+		pcall(function()
+			ContentProvider:PreloadAsync({ s }, function(_: string, status: Enum.AssetFetchStatus)
+				if status == Enum.AssetFetchStatus.Success then
+					readyNotes[id] = true
+					failedAt[id] = nil
+				elseif status == Enum.AssetFetchStatus.Failure and not readyNotes[id] then
+					failedAt[id] = os.clock()
+				end
+			end)
+		end)
+	end)
+end
+
+local function fetchAll()
+	for _, id in recordings() do
+		fetch(id)
+	end
 end
 
 -- Three voices a key, each holding its key's sound, so a note plays the instant it's struck and
@@ -635,7 +780,6 @@ local function voiceFor(index: number, here: boolean): (Sound?, NoteSource?)
 		s.Name = "PianoNote"
 		s.SoundGroup = pianoGroup
 		s.RollOffMode = Enum.RollOffMode.InverseTapered
-		s.RollOffMinDistance = 10
 		pcall(function()
 			s.Loaded:Connect(function()
 				readyNotes[s.SoundId] = true
@@ -653,51 +797,27 @@ local function voiceFor(index: number, here: boolean): (Sound?, NoteSource?)
 	-- Played here (the player's own notes): no place in the room. Others: from the piano.
 	local part = if here then nil else pianoPart()
 	voice.sound.Parent = if part then part else SoundService
+	voice.sound.RollOffMinDistance = Config.data.Piano.near
 	voice.sound.RollOffMaxDistance = Config.data.Piano.heard
 	return voice.sound, src
 end
 
--- Loads every key's recording (once), so the first notes play at once, and learns which won't.
+-- Fetches every recording and readies each key's voices (once), so the first notes play at once.
 function Sound.preloadPiano()
-	if notesLoaded then
+	fetchAll()
+	if voicesReady then
 		return
 	end
-	notesLoaded = true
-	local list: { string } = {}
-	for _, key in { "PianoNotes", "PianoFallback" } do
-		for _, id in ((Config.data.Assets :: any)[key] or {}) :: { string } do
-			if type(id) == "string" and id ~= "" then
-				table.insert(list, id)
-			end
+	voicesReady = true
+	for index = 1, Config.data.Piano.keys do
+		for _ = 1, 3 do
+			voiceFor(index, true)
 		end
 	end
-	for _, sl in ((Config.data.Assets :: any).PianoSlices or {}) :: { any } do
-		if type(sl) == "table" and type(sl.id) == "string" then
-			table.insert(list, sl.id)
-		end
-	end
-	task.spawn(function()
-		pcall(function()
-			ContentProvider:PreloadAsync(list, function(id: string, status: Enum.AssetFetchStatus)
-				if status == Enum.AssetFetchStatus.Success then
-					readyNotes[id] = true
-				elseif status == Enum.AssetFetchStatus.Failure then
-					failedNotes[id] = true
-				end
-			end)
-		end)
-	end)
 end
 
--- Plays key `index` (1 = Config.Piano.lowest). `here`: the player's own note, heard close.
--- Returns whether it sounded.
-function Sound.pianoNote(index: number, here: boolean?, gain: number?): boolean
-	local sound, src = voiceFor(index, here == true)
-	if not sound or not src then
-		return false
-	end
-	local s = sound :: Sound
-	s.Volume = Config.data.Piano.volume * (gain or 1) * src.gain
+local function sound(s: Sound, src: NoteSource, volume: number)
+	s.Volume = volume
 	local region = src.region
 	pcall(function()
 		if region then
@@ -711,40 +831,49 @@ function Sound.pianoNote(index: number, here: boolean?, gain: number?): boolean
 		end
 	end)
 	s:Play()
-	-- A recording that plays has loaded: it's preferred from now on.
-	local okLoaded, isLoaded = pcall(function()
-		return s.IsLoaded
-	end)
-	if okLoaded and isLoaded == true then
-		readyNotes[s.SoundId] = true
+end
+
+-- Plays key `index` (1 = Config.Piano.lowest). `here`: the player's own note, heard close.
+-- Returns whether it sounded (or will, the moment its recording arrives).
+function Sound.pianoNote(index: number, here: boolean?, gain: number?): boolean
+	local voice, src = voiceFor(index, here == true)
+	if not voice or not src then
+		return false
 	end
+	local s = voice :: Sound
+	local source = src :: NoteSource
+	local volume = Config.data.Piano.volume * (gain or 1) * source.gain
+	if isLoaded(s) then
+		-- A recording that plays has loaded: it's preferred from now on.
+		readyNotes[source.id] = true
+		sound(s, source, volume)
+		return true
+	end
+	-- Still on its way (a key's first note, before the piano had been heard): it sounds the
+	-- moment it arrives, while that's soon enough to still be this note. (The note's place in the
+	-- recording is set once it has loaded: set before, it may not take.)
+	task.spawn(function()
+		local struck = os.clock()
+		while not isLoaded(s) and os.clock() - struck < Config.data.Piano.loadWait do
+			task.wait(0.03)
+		end
+		if isLoaded(s) and s.SoundId == source.id then
+			readyNotes[source.id] = true
+			sound(s, source, volume)
+		end
+	end)
 	return true
 end
 
 -- How the piano's recordings are doing (for the owner's notice when nothing sounds).
 function Sound.pianoHealth(): (number, number, number)
 	local total, ready, failed = 0, 0, 0
-	local ids: { string } = {}
-	for _, sl in ((Config.data.Assets :: any).PianoSlices or {}) :: { any } do
-		if type(sl) == "table" and type(sl.id) == "string" then
-			table.insert(ids, sl.id)
-		end
-	end
-	for _, key in { "PianoNotes", "PianoFallback" } do
-		for _, id in ((Config.data.Assets :: any)[key] or {}) :: { string } do
-			table.insert(ids, id)
-		end
-	end
-	do
-		for _, id in ids do
-			if type(id) == "string" and id ~= "" then
-				total += 1
-				if readyNotes[id] then
-					ready += 1
-				elseif failedNotes[id] then
-					failed += 1
-				end
-			end
+	for _, id in recordings() do
+		total += 1
+		if readyNotes[id] then
+			ready += 1
+		elseif failedAt[id] then
+			failed += 1
 		end
 	end
 	return total, ready, failed
@@ -803,7 +932,7 @@ local function remix()
 		local s = loop("Piano", foyerSongs, music, part)
 		if s then
 			s.RollOffMode = Enum.RollOffMode.InverseTapered
-			s.RollOffMinDistance = 12
+			s.RollOffMinDistance = c.pianoNear
 			s.RollOffMaxDistance = c.pianoReach
 			local eq = s:FindFirstChildOfClass("EqualizerSoundEffect")
 			if not eq then
@@ -911,6 +1040,8 @@ local function watchWorld()
 	if guestAtPiano() then
 		Sound.preloadPiano()
 	end
+	-- The piano's recordings, fetched soon after arriving, so the first note anyone plays sounds.
+	task.delay(Config.data.Piano.fetchAfter, fetchAll)
 	-- The piano streams in after the guest arrives: hand the Foyer's music to it once it does.
 	task.spawn(function()
 		for _ = 1, 60 do

@@ -137,9 +137,10 @@ with the game's chime on each correct filing; end on "Maison Noir, on Roblox".
 > Free to play, nothing sold wins a game. Search "Maison Noir" on Roblox.
 
 **Update post:**
-> The house got grander. Every room is a third bigger, the Ballroom now holds its twenty
-> tables in a sweeping ring, and there's a new Invite key: bring a friend on their first
-> visit and you're both thanked in Gilt.
+> The house got grander again: every room is 1.6 times its old size, the Suite has a marble
+> fireplace and front doors worthy of it, and the fireworks are now a full pyromusical, Japanese
+> hanabi to taiko drums, red, white and blue to Sousa, and a golden finale to Handel. Bring a
+> friend with the Invite key: on their first visit you're both thanked in Gilt.
 
 **Event post:**
 > Tonight: Lights Out in the Ballroom. Twenty tables, one winner. Come and play, or watch from
@@ -175,11 +176,16 @@ behaviour does the rest.
 Post a short note with every update (the game page's description can carry the latest line).
 Ready for this one:
 
-> **The Grand house.** Every room is now a third bigger (furniture stays true size), with more
-> space around every table and a sweeping Ballroom ring. Lamps hang from the high ceilings on
-> long cords, furniture stands flush to the walls, and every staircase is smooth to walk.
-> **Invite a friend** from the new Invite key: on their first visit you're both thanked in Gilt.
-> The camera pulls back further to take it all in.
+> **The Grander house.** Every room is now 1.6 times its drawn size, and you walk a little
+> quicker to match. **Your Suite** has a marble chimneypiece with a real fire, a gilded
+> overmantel, tall lacquered front doors with your name in gold over them, and furniture a size
+> up, dressed to the last detail. **The fireworks are a pyromusical**: three acts, each to its own
+> score, from Japanese chrysanthemums to Niagara Falls pouring down the front of the house and
+> the house's monogram written in gold in the sky. **The Golden Transformation** is now the
+> Midas touch: your whole Suite turns to gold, coins rain, a choir sings and a crown settles on
+> your head (only you see your Suite and its shows; Salutes are for the whole house). Salutes
+> shine brighter too: real gold leaf, a followspot with rose petals, a wave of chandeliers, and
+> a midnight that chimes. **The grand piano** sounds again, the first note to the last.
 
 ---
 

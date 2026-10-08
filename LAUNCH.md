@@ -70,19 +70,19 @@ in them are even better: add your own as below and let Roblox's testing pick the
 Take them in Studio, in **Run** mode (the server builds the house), with this pasted into the
 **Command Bar** (View → Command Bar) one line at a time. Each line points Studio's camera at one
 shot. Then take the screenshot with Studio's screenshot tool (the **View** tab → **Screenshot**).
-(These are the Grand house's positions: every room is 1.35× the size it was drawn.)
+(These are the Grand house's positions: every room is 1.6× the size it was drawn.)
 
 ```lua
 -- 1. The street at night: the facade, the lanterns, the door.
-workspace.CurrentCamera.CFrame = CFrame.lookAt(Vector3.new(-35.1, 10.8, -59.4), Vector3.new(0, 14.9, -13.5))
+workspace.CurrentCamera.CFrame = CFrame.lookAt(Vector3.new(-41.6, 12.8, -70.4), Vector3.new(0, 17.7, -16))
 -- 2. The Foyer: the chandelier, the piano, the Grand Stair.
-workspace.CurrentCamera.CFrame = CFrame.lookAt(Vector3.new(-24.3, 12.2, -5.4), Vector3.new(8.1, 16.2, 37.8))
+workspace.CurrentCamera.CFrame = CFrame.lookAt(Vector3.new(-28.8, 14.5, -6.4), Vector3.new(9.6, 19.2, 44.8))
 -- 3. The Ballroom from the Gallery: twenty lamps in a ring.
-workspace.CurrentCamera.CFrame = CFrame.lookAt(Vector3.new(82.4, 54, 98.6), Vector3.new(82.4, 29.7, 168.8))
+workspace.CurrentCamera.CFrame = CFrame.lookAt(Vector3.new(97.7, 64, 116.9), Vector3.new(97.7, 35.2, 200.1))
 -- 4. The Library: two long tables under green lamps.
-workspace.CurrentCamera.CFrame = CFrame.lookAt(Vector3.new(-2.7, 36.5, 97.2), Vector3.new(-27, 28.4, 121.5))
+workspace.CurrentCamera.CFrame = CFrame.lookAt(Vector3.new(-3.2, 43.3, 115.2), Vector3.new(-32, 33.7, 144))
 -- 5. The Suite by the fire.
-workspace.CurrentCamera.CFrame = CFrame.lookAt(Vector3.new(-51.3, 37.8, 56.7), Vector3.new(-70.2, 32.4, 78.3))
+workspace.CurrentCamera.CFrame = CFrame.lookAt(Vector3.new(-84, 44, 68), Vector3.new(-88, 45, 96))
 ```
 
 Then two shots that need a guest at a table (use **Play**, sit at a Salon table, and take them
@@ -235,9 +235,9 @@ block (that's where most of the money is):
 | `Piano Session 10 Minutes` | 899 | ten minutes at the piano |
 | `Gold-Leaf Spritz` | 75 | the Terrace Bar: a glowing spritz with gold leaf to hold and sip (no alcohol; cosmetic) |
 | `Macaron Tower` | 149 | the Terrace Bar: a tower of twelve macarons with sparkles (cosmetic) |
-| `Suite Fireworks` | 199 | a 45-second fireworks show over the whole estate (for the buyer's screen), played from the Suite when you choose |
-| `Meme Takeover` | 299 | ninety seconds, six acts: a meme portal, a conga line round you, meme rain, a giant laser-eyed boss meme, a confetti finale |
-| `Golden Transformation` | 499 | your Suite's lights turn gold and gold leaf falls |
+| `Suite Fireworks` | 199 | a 45-second pyromusical over the whole estate (for the buyer's screen), played from the Suite when you choose |
+| `Meme Takeover` | 299 | ninety seconds, six acts: a meme portal, a conga line round you, meme rain, a giant laser-eyed boss meme, a confetti finale (for the buyer's screen) |
+| `Golden Transformation` | 499 | the Midas touch, forty seconds: the Suite turns to gold, gold leaf and coins fall, a choir, a crown; then all as it was (for the buyer's screen) |
 | `Gem Pouch` | 199 | 250 Gems, for the Cabinet's curios (each at a fixed Gem price) |
 | `Gem Case` | 799 | 1,100 Gems |
 | `Gem Trunk` | 1999 | 3,000 Gems |

@@ -162,7 +162,14 @@ def measure(node, parent):
     node["_s"] = s
     cons = first(node, "UISizeConstraint")
     if cons:
-        w = min(w, cons["max"][0])
+        # (An unbounded MaxSize, math.huge, comes through the JSON as null.)
+        hi = cons.get("max") or [None, None]
+        lo = cons.get("min") or [0, 0]
+        if hi[0] is not None:
+            w = min(w, hi[0])
+        if hi[1] is not None:
+            h = min(h, hi[1])
+        w, h = max(w, lo[0] or 0), max(h, lo[1] or 0)
     # Automatic width from a single line of text (tabs and the like): the words plus padding.
     if node.get("auto") in ("X", "XY") and "text" in node and not node.get("wrap"):
         f = font(node.get("weight", "Regular"), node.get("textSize", 14), node.get("family", ""), node.get("style", "Normal"))
@@ -194,6 +201,9 @@ def place(node, parent, at=None):
         pt, pb, _, _ = pads(node, w, h)
         if lst or any(is_gui(k) for k in node["kids"]):
             new_h = max(h, (content_h + pt + pb) * node["_s"])
+            cons = first(node, "UISizeConstraint")
+            if cons and cons.get("min"):
+                new_h = max(new_h, (cons["min"][1] or 0) * node["_s"])
             if abs(new_h - h) > 0.5:
                 ax, ay = node["anchor"]
                 if at is None:

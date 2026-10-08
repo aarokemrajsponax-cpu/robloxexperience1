@@ -17,6 +17,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Nightly = require(ReplicatedStorage.Shared.Nightly)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Rooms = require(ReplicatedStorage.Shared.Rooms)
+local Soiree = require(ReplicatedStorage.Shared.Soiree)
 local Voice = require(ReplicatedStorage.Shared.Voice)
 local Private = require(script.Parent.Private)
 local RemoteGuard = require(script.Parent.RemoteGuard)
@@ -162,6 +163,12 @@ local function row(parent: Instance, order: number, rank: number, name: string, 
 	right.Parent = r
 end
 
+-- One thing written on the Tonight board: its height (a fraction of the board's), and how to
+-- write it at a given scale.
+type Item = { height: number, draw: (order: number, scale: number) -> () }
+local GAP = 0.01 -- between lines
+local ROOM = 0.92 -- of the board's height, below its top margin
+
 local function drawTonight()
 	for _, face in CollectionService:GetTagged("MaisonBoard") do
 		if face:IsA("BasePart") and face:GetAttribute("Kind") == "tonight" then
@@ -181,72 +188,97 @@ local function drawTonight()
 			local list = Instance.new("UIListLayout")
 			list.SortOrder = Enum.SortOrder.LayoutOrder
 			list.HorizontalAlignment = Enum.HorizontalAlignment.Center
-			list.Padding = UDim.new(0.01, 0)
+			list.Padding = UDim.new(GAP, 0)
 			list.Parent = g
 			local pad = Instance.new("UIPadding")
 			pad.PaddingTop = UDim.new(0.04, 0)
 			pad.PaddingLeft = UDim.new(0.07, 0)
 			pad.PaddingRight = UDim.new(0.07, 0)
 			pad.Parent = g
-			local order = 0
-			local function next(): number
-				order += 1
-				return order
+			-- Everything to write, top to bottom; then written at a size that always fits the board.
+			local items: { Item } = {}
+			local function text(t: string, height: number, font: Font, color: Color3)
+				table.insert(items, {
+					height = height,
+					draw = function(order: number, scale: number)
+						line(g, order, t, height * scale, font, color)
+					end,
+				})
+			end
+			local function ranked(rank: number, name: string, score: number)
+				table.insert(items, {
+					height = 0.05,
+					draw = function(order: number, scale: number)
+						row(g, order, rank, name, score, 0.05 * scale)
+					end,
+				})
+			end
+			local function rule()
+				table.insert(items, {
+					height = 0,
+					draw = function(order: number)
+						local f = Instance.new("Frame")
+						f.LayoutOrder = order
+						f.Size = UDim2.new(0.5, 0, 0, 2)
+						f.BackgroundColor3 = Brand.Colours.deepGold
+						f.BorderSizePixel = 0
+						f.Parent = g
+					end,
+				})
 			end
 			local night = Nightly.at()
 			local room = Rooms.get(night.room)
-			line(g, next(), Voice.Foyer.tonight, 0.07, Brand.Fonts.display, Brand.Colours.gold)
-			line(g, next(), "Tonight's table · " .. (if room then room.name else "") .. " rules", 0.04, Brand.Fonts.body, Brand.Colours.smoke)
+			text(Voice.Foyer.tonight, 0.07, Brand.Fonts.display, Brand.Colours.gold)
+			text("Tonight's table · " .. (if room then room.name else "") .. " rules", 0.04, Brand.Fonts.body, Brand.Colours.smoke)
 			local nightly = cache["nightly:tonight"]
 			local count = nightly.count or #nightly.entries
-			line(g, next(), if count == 1 then "One guest has sat it so far" elseif count > 1 then string.format("%d guests have sat it so far", count) else "Nobody has sat it yet tonight", 0.032, Brand.Fonts.body, Brand.Colours.dim)
+			text(if count == 1 then "One guest has sat it so far" elseif count > 1 then string.format("%d guests have sat it so far", count) else "Nobody has sat it yet tonight", 0.032, Brand.Fonts.body, Brand.Colours.dim)
 			for i = 1, math.min(5, #nightly.entries) do
 				local e = nightly.entries[i]
-				row(g, next(), i, e.name, e.score, 0.05)
+				ranked(i, e.name, e.score)
 			end
-			local rule = Instance.new("Frame")
-			rule.LayoutOrder = next()
-			rule.Size = UDim2.new(0.5, 0, 0, 2)
-			rule.BackgroundColor3 = Brand.Colours.deepGold
-			rule.BorderSizePixel = 0
-			rule.Parent = g
+			rule()
 			local feed = cache["ballroom:feed"].entries
 			if #feed > 0 then
-				line(g, next(), "In the house, just now", 0.04, Brand.Fonts.body, Brand.Colours.smoke)
+				text("In the house, just now", 0.04, Brand.Fonts.body, Brand.Colours.smoke)
 				for i = 1, math.min(2, #feed) do
-					line(g, next(), feed[i].name, 0.036, Brand.Fonts.display, Brand.Colours.bone)
+					text(feed[i].name, 0.036, Brand.Fonts.display, Brand.Colours.bone)
 				end
-				local rule2 = Instance.new("Frame")
-				rule2.LayoutOrder = next()
-				rule2.Size = UDim2.new(0.5, 0, 0, 2)
-				rule2.BackgroundColor3 = Brand.Colours.deepGold
-				rule2.BorderSizePixel = 0
-				rule2.Parent = g
+				rule()
 			end
 			-- The top Circles of the week hang here too.
 			local circles = cache["circles:week"]
 			if circles and #circles.entries > 0 then
-				line(g, next(), "Circles · this week", 0.04, Brand.Fonts.body, Brand.Colours.smoke)
+				text("Circles · this week", 0.04, Brand.Fonts.body, Brand.Colours.smoke)
 				for i = 1, math.min(3, #circles.entries) do
 					local e = circles.entries[i]
-					row(g, next(), i, e.name, e.score, 0.05)
+					ranked(i, e.name, e.score)
 				end
-				local rule3 = Instance.new("Frame")
-				rule3.LayoutOrder = next()
-				rule3.Size = UDim2.new(0.5, 0, 0, 2)
-				rule3.BackgroundColor3 = Brand.Colours.deepGold
-				rule3.BorderSizePixel = 0
-				rule3.Parent = g
+				rule()
 			end
-			line(g, next(), "The Salon · this week", 0.04, Brand.Fonts.body, Brand.Colours.smoke)
+			text("The Salon · this week", 0.04, Brand.Fonts.body, Brand.Colours.smoke)
 			local week = cache["salon:week"]
 			if #week.entries == 0 then
-				line(g, next(), if week.available then "The first names of the week are still at the tables." else "Names appear here once the house is open to guests.", 0.05, Brand.Fonts.body, Brand.Colours.dim)
+				text(if week.available then "The first names of the week are still at the tables." else "Names appear here once the house is open to guests.", 0.05, Brand.Fonts.body, Brand.Colours.dim)
 			else
 				for i = 1, math.min(5, #week.entries) do
 					local e = week.entries[i]
-					row(g, next(), i, e.name, e.score, 0.05)
+					ranked(i, e.name, e.score)
 				end
+			end
+			-- The weekend's Soirée, and how long until it begins (or ends): the Foyer's one clock.
+			rule()
+			local weekend = Soiree.at()
+			local left = (if weekend.active then weekend.endsAt else weekend.startsAt) - os.time()
+			text(string.format("%s · a %s weekend", weekend.name, if weekend.format == "ballroom" then "Ballroom" else "Library"), 0.04, Brand.Fonts.display, Brand.Colours.lightGold)
+			text((if weekend.active then "On now · ends in " else "Begins in ") .. Soiree.countdown(left), 0.034, Brand.Fonts.bodyBold, Brand.Colours.gold)
+			local total = 0
+			for _, item in items do
+				total += item.height + GAP
+			end
+			local scale = math.min(1, ROOM / total)
+			for i, item in items do
+				item.draw(i, scale)
 			end
 		end
 	end

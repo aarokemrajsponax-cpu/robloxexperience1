@@ -225,8 +225,8 @@ a Nightly attempt or a Mythic's odds.
   weekends; holiday windows re-dress it (*The All Hallows Soirée*). Your best five Ballroom
   evenings or fifteen Library evenings count (Appendix H5 points). Three plays earn the Soirée's
   stamp; after the weekend the top 1% get **the Soirée Medal** (a dated nameplate frame, never
-  sold) and the top 10% a dated invitation card. A **gilded countdown board** by the Grand Stair
-  (the only clock in the Foyer) and a Soirée tab on the leaderboard.
+  sold) and the top 10% a dated invitation card. Its countdown is the last line of the Foyer's
+  **Tonight board** (the only clock in the Foyer), and there's a Soirée tab on the leaderboard.
 
 ## Deliveries 8 and 9 — the rest of the house
 
@@ -264,13 +264,33 @@ a Nightly attempt or a Mythic's odds.
 - **Suite spectacles**, played in your own Suite from the bell: **fireworks** (a 45-second show
   over the whole estate; your camera goes out across the street to watch it, and comes back with
   the key or any step), the **Meme Takeover** (ninety seconds in six acts: a warning siren, a
-  portal spewing memes that bounce off the walls, a conga line dancing round you under disco
+  portal spewing memes that bounce off the walls (to an electro swing, with air horns, record
+  scratches, party horns and a kazoo fanfare for the boss), a conga line dancing round you under disco
   lights, memes raining from the ceiling with confetti, a giant boss meme with laser eyes, then
-  chaos and a confetti finale), or a golden transformation.
-- **Fireworks you can actually see**: every show (Suite Fireworks, the Fireworks salute, the Grand
-  Salute, the Midnight Finale) bursts in great shells 50 to 90 studs across, the night air
-  clears while it plays, every burst lights the screen even indoors, and a **Watch the fireworks**
-  key takes anyone's camera outside to see it (the buyer's goes at once).
+  chaos and a confetti finale), or the **Golden Transformation**, the Midas touch (forty seconds,
+  `World/Midas`): a temple gong, the lights sink, and a ring of gold runs out across the floor
+  from where you stand, turning everything it passes to gold (floors, walls, ceilings, every
+  piece of furniture, the fireplace); a heavenly choir, leaves of real gold falling through the
+  rooms, gold coins raining from the ceiling and ringing as they land round you, shafts of light
+  from above, the fire burning gold; a regal fanfare as a jewelled crown settles on your head;
+  then the gold ebbs back and everything is exactly as it was. Only you see it.
+- **The fireworks: a pyromusical** (`World/Fireworks`), the same for every show (Suite
+  Fireworks, the Fireworks salute, the Grand Salute, the Midnight Finale), in three acts, each to
+  its own score from Roblox's licensed library: **Hanabi** to taiko drums (Japanese
+  chrysanthemums trailing gold, colour-changing peonies, double and triple petals, the thousand
+  flowers, rings, Saturn, hearts and stars drawn in the sky, kamuro crowns of gold that hang and
+  drip), **Liberty** to *Stars and Stripes Forever* (red, white and blue; thunderous white
+  salutes, palms of gold comets with real tails, crackling dragon's eggs, brocade crowns,
+  strobes, mines fired from the ground, and Niagara Falls pouring silver down the front of the
+  house) and **Majesty** to Handel's *Music for the Royal Fireworks* (searchlights sweeping the
+  sky, a canopy of gold, the barrage, the house's monogram written in gold stars, then a wall of
+  golden willows over every roof, the *1812 Overture*'s last chords and a cheering crowd). A
+  show under 55 seconds plays Hanabi and Majesty. Every star is a streak that stretches as it
+  flies, with glitter tails, a white-hot flash and a shockwave; light floods the roofs, smoke
+  drifts and catches the later bursts, and the thunder arrives a beat after the light. The
+  house's music sinks under the score; slower graphics settings get fewer stars, never a stall
+  (`Config.Fireworks`). The night air clears while it plays, and a **Watch the fireworks** key
+  takes anyone's camera out across the street (the buyer's goes at once).
 - **The quick dock** (left of the screen): **Collection** (C), **Trade** (T: everyone in the house
   with a Trade key each, and your past trades), **Wardrobe** (V), **Gems** and **Invite**, one
   tap away.
@@ -293,7 +313,12 @@ a Nightly attempt or a Mythic's odds.
 - **Your Suite**, on the Velvet Room's roof through the Club hall's west door: eleven spots, nineteen
   pieces (Gilt, the Boutique, Standing, the Introduction's painting, the Gold Key chair), the
   bell to furnish it, the wardrobe where your looks hang. The Gold Key opens the Dressing Room
-  and the Study. Each guest sees only their own Suite, and nobody else in it.
+  and the Study. Each guest sees only their own Suite, and nobody else in it: the furniture is
+  drawn on your own screen from your own Suite (the server sends each guest only theirs, and
+  works out a Suite seat from the sitter's own Suite), and another guest in their Suite at the
+  same moment isn't drawn on yours, nor their name, a glow or a light they wear, or their
+  footsteps. Suite shows (fireworks, the Meme Takeover, the Golden Transformation) play only on
+  the screen of the guest who plays them; Salutes are for the whole house.
   - **The bell's page says plainly how it works**: what the Suite is, three numbered steps (get a
     piece, change a spot with ‹ ›, the Gold Key adds two rooms), how many spots hold your own
     pieces and your Gilt. Each spot shows what stands there and up to two pieces you could put
@@ -324,15 +349,17 @@ a Nightly attempt or a Mythic's odds.
   Foyer, in the light (`Config.Movement.firstArrival = "street"` brings back the walk in from the
   street on a first visit). Guests and staff stand at 80% of Roblox's size
   (`Config.Movement.guestScale`), and the house itself is built **Grand**: every room, wall,
-  ceiling, doorway and stair is opened out by `Layout.SCALE` (1.35: a third wider, deeper and
-  taller than drawn) while the furniture keeps its true size and moves with its room
+  ceiling, doorway and stair is opened out by `Layout.SCALE` (1.6 times as wide, deep and
+  tall as drawn) while the furniture keeps its true size and moves with its room
   (`World/Grand`), so the Foyer, the rooms, the Ballroom and the Suite have far more space
   around every table and chair. Each staircase has an unseen ramp along its nosings, so every
   guest walks up it smoothly; what stood flush against a wall still does, what stood on a piece
   of furniture moves with it, and the table lamps' cords run up to the higher ceilings
-  (marked by the builder with `GrandHang`). The Suite's own furniture keeps its drawn distance
-  from the walls it stands against. The camera may pull back to 50 studs
-  (`Config.Movement.cameraMaxZoom`) to take the bigger rooms in. Every part of the house starts on its own, so one that fails
+  (marked by the builder with `GrandHang`). The Suite's own furniture is built a size up
+  (`Layout.SUITE_FURNITURE`, 1.2) and keeps its drawn distance from the walls it stands against,
+  grown with it; its fireplace and front doors are built after the house is grown, at their true
+  size (`World/SuiteFinish`). Guests walk at 17 (28 running) and the staff at 13 to cross the
+  bigger rooms, and the camera may pull back to 64 studs (`Config.Movement.cameraMaxZoom`). Every part of the house starts on its own, so one that fails
   is reported in Output and never stops anyone from walking in, and a separate safety script
   hands back Roblox's own camera, controls and prompts if the house's client ever doesn't start.
 - **The sorting screen: the Jeweller's Desk.** A mahogany desk with brass corner guards, a
@@ -354,11 +381,13 @@ a Nightly attempt or a Mythic's odds.
   lamp you wear colour the sorting screen's cloth, its edges and its lamplight.
 - **Ways to spend Robux**, all style, spectacle or gifts, never score:
   - **Salutes** (a brass card on the piano, and a Salutes tab in the Boutique): a moment bought
-    for the whole house. Gold leaf over every guest (75), an encore with a spotlight on you (125),
-    every lamp flaring (175), a full fireworks show over the whole estate (299: rockets from every
-    side of the grounds, peonies, willows, rings, palms, crackle, a finale), the Grand Salute: all
-    of it, announced in every house (599), or the Midnight Finale: a countdown on every screen,
-    then the biggest show the house fires (999). The giver's name goes on the Tonight board, with a gold star on
+    for the whole house. Gold leaf over every guest (75: real leaves of gold that sway and turn
+    over as they fall, glinting), an encore with a followspot on you (125: its beam seen in the
+    air, rose petals falling round you, applause), every lamp flaring in a wave from wherever you
+    stand, each chandelier throwing off glints of crystal (175), the full pyromusical over the
+    whole estate (299), the Grand Salute: all of it, announced in every house (599), or the
+    Midnight Finale: ten great golden numbers and a bell for each on every screen, midnight's
+    chimes in a flash of light, then the biggest show the house fires (999). The giver's name goes on the Tonight board, with a gold star on
     their nameplate for half an hour. Also offered after you keep the last lamp.
   - **Always here**: seven staples always on the Boutique's shelves, beside the daily six and the
     week's two; seventeen more pieces (felts up to the Gilded Baize at 599, lamps, threads,
@@ -390,7 +419,8 @@ a Nightly attempt or a Mythic's odds.
 - **House controls** (the owner's panel): only you see the **House** key (or press **;**).
   Events (Golden Hour, Lucky Hour, the Page-Turner, a Night of Giants, the Quickstep,
   Featherlight, Gold Rain, a Treasure Hunt), in this house or every house, for 5/15/30 minutes;
-  any Salute for free; another season for a while; crown a Guest of Honour, spotlight, bring,
+  any Salute for free; any Suite show on your own screen, free, to try it (Spectacle page:
+  **Suite shows**); another season for a while; crown a Guest of Honour, spotlight, bring,
   gift Gilt to one guest or everyone, or show someone out; announcements (typed ones filtered by
   Roblox) here or everywhere; and a summons that invites guests in every house to join yours.
   Events change Gilt, Ledger pages and Mythic luck, never a score. Other trusted people:
@@ -445,6 +475,12 @@ recordings from Roblox's own licensed libraries, free to use in any experience.
 
   Every song is listed in Config with its title and artist. Swap any for another Creator Store
   track by pasting its id.
+- **The playable grand piano** (the Foyer's, and your own baby grand in the Suite): each key is a
+  slice of a licensed APM piano recording (`Assets.PianoSlices`), retuned to it. The recordings
+  are fetched soon after you arrive and every key's voices are readied when anyone sits down, so
+  the first note sounds at once; one Roblox reports as failed is fetched again after 20 seconds
+  and the keys keep playing it meanwhile, never a silent keyboard (`Config.Piano`). The notes
+  follow the Effects volume, and the rest of the Foyer hears them from the piano itself.
 - **Table sounds** (`Assets.LibrarySounds`): recordings from Roblox's licensed Pro Sound Effects
   library and Roblox's own UI sounds:
   - a dice-on-felt knock as a piece settles into its case;

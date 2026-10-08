@@ -33,6 +33,7 @@ local CurioList = require(ReplicatedStorage.Shared.Curios)
 local Gilt = require(script.Parent.Gilt)
 local Profiles = require(script.Parent.Profiles)
 local RemoteGuard = require(script.Parent.RemoteGuard)
+local Spectacles = require(script.Parent.Purchases.Spectacles)
 
 local AdminService = {}
 
@@ -648,6 +649,7 @@ local function state(): { [string]: any }
 		events = events,
 		seasons = seasons,
 		salutes = salutes,
+		shows = Spectacles.names(),
 		minutes = cfg().minutes,
 		giftGilt = cfg().giftGilt,
 		announcements = HouseEvents.Announcements,
@@ -726,6 +728,9 @@ local function handle(player: Player, request: unknown): any
 	elseif op == "salute" and type(r.id) == "string" and Salutes.byId[r.id] then
 		AdminService.salute(nil, r.id, byName)
 		return { ok = true }
+	elseif op == "show" and type(r.key) == "string" then
+		-- A Suite show on the owner's own screen, free, to try it.
+		return { ok = Spectacles.preview(player, r.key) }
 	elseif op == "season" and type(r.id) == "string" then
 		local minutes = if type(r.minutes) == "number" then math.clamp(r.minutes, 1, 60) else 15
 		return { ok = AdminService.season(r.id, minutes * 60) }

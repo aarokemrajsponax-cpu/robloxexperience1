@@ -63,8 +63,49 @@ local function record(trace: string)
 	table.insert(errors, trace)
 	print("ERROR  " .. trace)
 end
+-- The timers are a heap, soonest first (equal times in the order they were set), so thousands of
+-- them (a fireworks show's) cost little.
+local timerCount = 0
+local function sooner(a, b): boolean
+	return a.at < b.at or (a.at == b.at and a.n < b.n)
+end
 local function schedule(at, fn, ...)
-	table.insert(timers, { at = at, fn = fn, args = table.pack(...) })
+	timerCount += 1
+	table.insert(timers, { at = at, n = timerCount, fn = fn, args = table.pack(...) })
+	local i = #timers
+	while i > 1 do
+		local up = i // 2
+		if sooner(timers[i], timers[up]) then
+			timers[i], timers[up] = timers[up], timers[i]
+			i = up
+		else
+			break
+		end
+	end
+end
+local function nextTimer()
+	local first = timers[1]
+	local last = table.remove(timers)
+	if #timers > 0 then
+		timers[1] = last
+		local i = 1
+		while true do
+			local l, r = i * 2, i * 2 + 1
+			local best = i
+			if l <= #timers and sooner(timers[l], timers[best]) then
+				best = l
+			end
+			if r <= #timers and sooner(timers[r], timers[best]) then
+				best = r
+			end
+			if best == i then
+				break
+			end
+			timers[i], timers[best] = timers[best], timers[i]
+			i = best
+		end
+	end
+	return first
 end
 
 local function run(fn, ...)
@@ -131,14 +172,11 @@ local renderStepped = signal()
 local function step(dt: number)
 	local target = now + dt
 	while true do
-		table.sort(timers, function(a, b)
-			return a.at < b.at
-		end)
 		local t = timers[1]
 		if not t or t.at > target then
 			break
 		end
-		table.remove(timers, 1)
+		nextTimer()
 		now = math.max(now, t.at)
 		if type(t.fn) == "thread" then
 			resume(t.fn, table.unpack(t.args, 1, t.args.n))
@@ -188,6 +226,8 @@ local taskShim = {
 ---------------------------------------------------------------------------------------------------
 local nextSid = 0
 local instanceSignals = {}
+local preloads = {} -- each ContentProvider:PreloadAsync the game asks for
+local otherPlayers = {} -- other guests in the server (Players:GetPlayers), when a check wants some
 local function sid(inst)
 	local id = inst:GetAttribute("TestSid")
 	if not id then
@@ -235,9 +275,13 @@ end)
 roblox.implementMethod("Instance", "WaitForChild", function(self, name)
 	return self:FindFirstChild(name)
 end)
-for _, m in { "Play", "Stop", "Pause", "Resume" } do
+for _, m in { "Stop", "Pause", "Resume" } do
 	roblox.implementMethod("Sound", m, function() end)
 end
+-- Each Sound counts its plays (the piano's checks hear whether a key sounded).
+roblox.implementMethod("Sound", "Play", function(self)
+	self:SetAttribute("TestPlays", (self:GetAttribute("TestPlays") or 0) + 1)
+end)
 roblox.implementMethod("ParticleEmitter", "Emit", function() end)
 -- The server's clock, running with the fake one.
 roblox.implementMethod("Workspace", "GetServerTimeNow", function()
@@ -350,9 +394,21 @@ local EnumShim = setmetatable({}, {
 	end,
 })
 
+-- Every tag here is added through this shim, so each tag keeps a list of what carries it (looked
+-- up without walking the whole game every frame; only what is in the game and still tagged counts).
+local tagged: { [string]: { any } } = {}
 local CollectionService = {
 	AddTag = function(_, instance, tag)
+		if instance:HasTag(tag) then
+			return
+		end
 		instance:AddTag(tag)
+		local list = tagged[tag]
+		if not list then
+			list = {}
+			tagged[tag] = list
+		end
+		table.insert(list, instance)
 	end,
 	RemoveTag = function(_, instance, tag)
 		instance:RemoveTag(tag)
@@ -362,8 +418,11 @@ local CollectionService = {
 	end,
 	GetTagged = function(_, tag)
 		local out = {}
-		for _, d in game:GetDescendants() do
-			if d:HasTag(tag) then
+		for _, d in tagged[tag] or {} do
+			local ok, here = pcall(function()
+				return d:IsDescendantOf(game) and d:HasTag(tag)
+			end)
+			if ok and here then
 				table.insert(out, d)
 			end
 		end
@@ -515,7 +574,11 @@ local Players = {
 	PlayerAdded = signal(),
 	PlayerRemoving = signal(),
 	GetPlayers = function()
-		return { LocalPlayer }
+		local all = { LocalPlayer }
+		for _, other in otherPlayers do
+			table.insert(all, other)
+		end
+		return all
 	end,
 	GetPlayerByUserId = function(_, id)
 		return if id == 1 then LocalPlayer else nil
@@ -607,7 +670,12 @@ local services = {
 			return false
 		end,
 	},
-	ContentProvider = { PreloadAsync = function() end },
+	ContentProvider = {
+		-- What the game asks Roblox to fetch, and how to answer it (see the piano's checks).
+		PreloadAsync = function(_, list, callback)
+			table.insert(preloads, { list = list, callback = callback })
+		end,
+	},
 	ProximityPromptService = { PromptShown = signal(), PromptHidden = signal(), PromptTriggered = signal() },
 	StarterGui = {
 		SetCoreGuiEnabled = function() end,
@@ -1073,6 +1141,7 @@ local function snapshot(name: string)
 			n.hAlign = inst.HorizontalAlignment.Name
 		elseif inst:IsA("UISizeConstraint") then
 			n.max = { inst.MaxSize.X, inst.MaxSize.Y }
+			n.min = { inst.MinSize.X, inst.MinSize.Y }
 		end
 		for _, c in inst:GetChildren() do
 			table.insert(n.kids, dump(c))
@@ -1257,12 +1326,14 @@ do
 	local croot = Instance.new("Part")
 	croot.Name = "HumanoidRootPart"
 	croot.Size = Vector3.new(2, 2, 1)
-	croot.CFrame = CFrame.new(9, 6, 4.2)
+	-- (At the lectern, in the grown house.)
+	local home = Vector3.new(9, 3, 4.2) * GRAND()
+	croot.CFrame = CFrame.new(home + Vector3.new(0, 3, 0))
 	croot.Parent = concierge
 	local chead = Instance.new("Part")
 	chead.Name = "Head"
 	chead.Size = Vector3.new(1, 1, 1)
-	chead.CFrame = CFrame.new(9, 7.5, 4.2)
+	chead.CFrame = CFrame.new(home + Vector3.new(0, 4.5, 0))
 	chead.Parent = concierge
 	local speak = Instance.new("ProximityPrompt")
 	speak.Name = "SpeakPrompt"
@@ -2659,6 +2730,51 @@ if suiteFolder then
 	end
 end
 check("the Suite's sofas and chairs can be sat on", sitPrompts >= 4, sitPrompts)
+do
+	-- Another guest in their own Suite at the same moment: they aren't on your screen, nor is
+	-- their name, a glow or a light they wear, or their footsteps. The Suite you walk into is yours.
+	local ghost = roblox.Instance.new("Model")
+	ghost.Name = "Quin"
+	local groot = roblox.Instance.new("Part")
+	groot.Name = "HumanoidRootPart"
+	groot.Position = SuiteLayout.arrival + Vector3.new(4, 3, 0)
+	groot.CFrame = CFrame.new(groot.Position)
+	groot.Parent = ghost
+	local ghead = roblox.Instance.new("Part")
+	ghead.Name = "Head"
+	ghead.Parent = ghost
+	local gplate = roblox.Instance.new("BillboardGui")
+	gplate.Name = "Nameplate"
+	gplate.Enabled = true
+	gplate.Parent = ghead
+	local gaura = roblox.Instance.new("ParticleEmitter")
+	gaura.Enabled = true
+	gaura.Parent = groot
+	local glight = roblox.Instance.new("PointLight")
+	glight.Enabled = true
+	glight.Parent = groot
+	local gsteps = roblox.Instance.new("Sound")
+	gsteps.Name = "Running"
+	gsteps.Volume = 0.5
+	gsteps.Parent = groot
+	ghost.Parent = workspace
+	local quin = { Name = "Quin", DisplayName = "Quin", UserId = 77, Character = ghost }
+	table.insert(otherPlayers, quin)
+	advance(1)
+	check("another guest in the Suite isn't drawn on your screen", groot.LocalTransparencyModifier == 1 and ghead.LocalTransparencyModifier == 1)
+	check("...nor their name, a glow or a light they wear, or their footsteps", gplate.Enabled == false and gaura.Enabled == false and glight.Enabled == false and gsteps.Volume == 0)
+	local hat = roblox.Instance.new("Part")
+	hat.Name = "Handle"
+	hat.Parent = ghost
+	advance(1)
+	check("...nor what they put on while there", hat.LocalTransparencyModifier == 1)
+	groot.Position = Vector3.new(0, 5, -40)
+	groot.CFrame = CFrame.new(groot.Position)
+	advance(1)
+	check("once they leave the Suite they're seen again, just as they were", groot.LocalTransparencyModifier == 0 and hat.LocalTransparencyModifier == 0 and gplate.Enabled == true and gaura.Enabled == true and glight.Enabled == true and math.abs(gsteps.Volume - 0.5) < 1e-3)
+	table.remove(otherPlayers, table.find(otherPlayers, quin))
+	ghost:Destroy()
+end
 serverSays("Shop", { op = "state", owned = { "suite_rug_black", "suite_mirror_gilt" }, equipped = {}, gilt = 800, goldKey = true, credits = {}, suite = { rug = "suite_rug_black", mirror = "suite_mirror_gilt" }, ledger = { page = 2, pages = 50, progress = 0.1, leather = false, term = "2026-autumn" } })
 advance(0.5)
 suiteFolder = workspace.MaisonLocal:FindFirstChild("Suite")
@@ -2994,12 +3110,74 @@ do
 	check("Z plays the lowest C, sent to the server for the room", action ~= nil and last == 1, last)
 	-- The note itself: a slice of a licensed APM recording (other creators' audio is refused by
 	-- Roblox in this experience), retuned from the slice's F3 down to the low C.
-	local note = find(game, function(d)
-		return d:IsA("Sound") and d.Name == "PianoNote" and d.SoundId == "rbxassetid://1847254302"
-	end)
-	check("the note plays a licensed recording every experience may use", note ~= nil, note and note.SoundId)
+	local function played()
+		local out = {}
+		for _, d in game:GetDescendants() do
+			if d:IsA("Sound") and d.Name == "PianoNote" and (d:GetAttribute("TestPlays") or 0) > 0 then
+				table.insert(out, d)
+			end
+		end
+		return out
+	end
+	local note = played()[1]
+	check("the note plays a licensed recording every experience may use", note ~= nil and note.SoundId == "rbxassetid://1847254302", note and note.SoundId)
 	check("...only its one clean note (a slice of the recording)", note ~= nil and note.PlaybackRegionsEnabled == true and math.abs(note.PlaybackRegion.Min - 0.775) < 1e-3)
 	check("...retuned to the key (C3, from the slice's F3)", note ~= nil and math.abs(note.PlaybackSpeed - 2 ^ ((48 - 52.97) / 12)) < 1e-3, note and note.PlaybackSpeed)
+	-- Roblox fetches the assets of Instances: a bare id handed to PreloadAsync reports "Failure"
+	-- for a sound (which, until Build 48, struck the piano's recordings off and silenced it).
+	local fetched, bare = {}, 0
+	for _, p in preloads do
+		for _, item in p.list do
+			if typeof(item) == "Instance" and item:IsA("Sound") then
+				fetched[item.SoundId] = p
+			elseif type(item) == "string" then
+				bare += 1
+			end
+		end
+	end
+	check("the piano's recordings are fetched as Sounds, not bare ids", fetched["rbxassetid://1847254302"] ~= nil and fetched["rbxassetid://1848319257"] ~= nil and bare == 0, bare)
+	-- Even when Roblox says every recording failed, the keys keep trying them: never a silent
+	-- keyboard. (Fresh recordings, so none has been heard yet.)
+	local Assets = Config.data.Assets
+	local real = Assets.PianoSlices
+	Assets.PianoSlices = {
+		{ id = "rbxassetid://5551", note = 52.97, start = 0.775, length = 2.5, gain = 1.6 },
+		{ id = "rbxassetid://5552", note = 72.08, start = 0.952, length = 3.0, gain = 1.3 },
+	}
+	local asked = #preloads
+	module("StarterPlayer", "StarterPlayerScripts", "Client", "Sound").preloadPiano()
+	local failed = 0
+	for i = asked + 1, #preloads do
+		local p = preloads[i]
+		for _, item in p.list do
+			if typeof(item) == "Instance" and p.callback then
+				p.callback(item.SoundId, roblox.Enum.AssetFetchStatus.Failure)
+				failed += 1
+			end
+		end
+	end
+	local _, ready, gone = module("StarterPlayer", "StarterPlayerScripts", "Client", "Sound").pianoHealth()
+	if action then
+		action.fn("MaisonPiano", roblox.Enum.UserInputState.Begin, { KeyCode = roblox.Enum.KeyCode.Z })
+	end
+	local struck = nil
+	for _, d in played() do
+		if d.SoundId == "rbxassetid://5551" then
+			struck = d
+		end
+	end
+	check("a recording Roblox called failed still sounds (the keys never go silent)", failed == 2 and gone == 2 and ready == 0 and struck ~= nil and struck.PlaybackRegionsEnabled == true, string.format("failed %d, health %d ready %d failed", failed, ready, gone))
+	Assets.PianoSlices = real
+	-- Each key has its voices ready, with the room's reach for the bigger Foyer.
+	local voices = 0
+	local reach = true
+	for _, d in game:GetDescendants() do
+		if d:IsA("Sound") and d.Name == "PianoNote" then
+			voices += 1
+			reach = reach and d.RollOffMaxDistance == Config.data.Piano.heard and d.RollOffMinDistance == Config.data.Piano.near
+		end
+	end
+	check("every key's voices are ready before the first note (3 a key)", voices == Config.data.Piano.keys * 3 and reach, voices)
 	workspace:SetAttribute("PianoPlayer", nil)
 	signalOf(workspace, "attr:PianoPlayer"):Fire()
 	advance(1)
@@ -3019,15 +3197,32 @@ end)())
 check("the shells fly high over the roofs", (function()
 	local f = workspace.MaisonLocal:FindFirstChild("Fireworks")
 	for _, p in (f and f:GetChildren() or {}) do
-		if p.Name == "Shell" and p.Position.Y > 60 then
+		if (p.Name == "Shell" or p.Name == "Rocket" or p.Name == "Shape") and p.Position.Y > 60 then
 			return true
 		end
 	end
 	return false
 end)())
 check("the spotlight finds the giver", workspace.MaisonLocal:FindFirstChild("Spotlight") ~= nil)
+check("...its beam seen in the air", (function()
+	local lamp = workspace.MaisonLocal:FindFirstChild("Spotlight")
+	return lamp ~= nil and lamp:FindFirstChildOfClass("Beam") ~= nil
+end)())
+check("gold leaf: real leaves of gold flutter down, turning as they fall", (function()
+	local leaves = 0
+	for _, f in workspace.MaisonLocal:GetChildren() do
+		if f.Name == "Flakes" then
+			for _, leaf in f:GetChildren() do
+				if leaf:IsA("BasePart") and leaf.Material == roblox.Enum.Material.Metal then
+					leaves += 1
+				end
+			end
+		end
+	end
+	return leaves >= 40
+end)())
 advance(14)
-check("and it all clears away", workspace.MaisonLocal:FindFirstChild("GoldLeaf") == nil and workspace.MaisonLocal:FindFirstChild("Spotlight") == nil)
+check("and it all clears away", workspace.MaisonLocal:FindFirstChild("GoldLeaf") == nil and workspace.MaisonLocal:FindFirstChild("Spotlight") == nil and workspace.MaisonLocal:FindFirstChild("Flakes") == nil)
 advance(12)
 check("...the fireworks too, once the last willows have fallen", (function()
 	local f = workspace.MaisonLocal:FindFirstChild("Fireworks")
@@ -3089,6 +3284,126 @@ check("when the show is over, the key goes", find(playerGui, function(d)
 	return d:IsA("TextButton") and d.Name == "Watch"
 end) == nil)
 
+-- A long show plays all three acts, each to its own score: Hanabi, Liberty (with Niagara Falls
+-- pouring down the front of the house) and Majesty (searchlights, the house's monogram in gold,
+-- comets with tails), then a cheer.
+do
+	local SoundService = game:GetService("SoundService")
+	local seen = { falls = false, searchlight = false, comet = false, monogram = false, fountain = false }
+	local scores: { [string]: boolean } = {}
+	serverSays("Salute", { op = "salute", id = "fireworks", by = "Ada", userId = 2, seconds = 70, scale = 1.3, effects = { "fireworks" }, line = "Ada lit fireworks over the house." })
+	for _ = 1, 72 do
+		advance(1)
+		local f = workspace.MaisonLocal:FindFirstChild("Fireworks")
+		for _, d in (f and f:GetChildren() or {}) do
+			if d.Name == "Falls" then
+				seen.falls = true
+			elseif d.Name == "Searchlight" then
+				seen.searchlight = true
+			elseif d.Name == "Comet" then
+				seen.comet = true
+			elseif d.Name == "Fountain" then
+				seen.fountain = true
+			elseif d.Name == "Shape" and d:GetAttribute("Shape") == "monogram" then
+				seen.monogram = true
+			end
+		end
+		for _, d in SoundService:GetChildren() do
+			if d:IsA("Sound") and d.Name == "Score" then
+				scores[d.SoundId] = true
+			end
+		end
+	end
+	local C = module("ReplicatedStorage", "Shared", "Config").data.Fireworks.score
+	check("fireworks: the opening's fountains of gold on the parapet", seen.fountain)
+	check("...comets with real tails (palms, willows, kamuro)", seen.comet)
+	check("...Niagara Falls pours down the front of the house", seen.falls)
+	check("...searchlights sweep the sky in the finale", seen.searchlight)
+	check("...the house's monogram written in gold stars", seen.monogram)
+	check("...each act to its own score: taiko, Sousa, Handel", scores[C.hanabi] == true and scores[C.liberty] == true and scores[C.majesty] == true)
+	advance(12)
+	check("...and when it's over the sky and the score clear away", (function()
+		local f = workspace.MaisonLocal:FindFirstChild("Fireworks")
+		local left = 0
+		for _, d in (f and f:GetChildren() or {}) do
+			if d.Name ~= "Smoke" then
+				left += 1
+			end
+		end
+		return left == 0
+	end)() and SoundService:FindFirstChild("Score") == nil)
+	check("no errors in the fireworks", #errors == 0, errors[1])
+end
+
+-- The Golden Transformation: the Midas touch turns the Suite to gold, crowns the guest, and puts
+-- everything back as it was.
+do
+	local maison = workspace:FindFirstChild("Maison")
+	if not maison then
+		maison = Instance.new("Folder")
+		maison.Name = "Maison"
+		maison.Parent = workspace
+	end
+	local made = maison:FindFirstChild("Suite") == nil
+	local suite = maison:FindFirstChild("Suite") or Instance.new("Model")
+	suite.Name = "Suite"
+	suite.Parent = maison
+	local wallColour = roblox.Color3.fromRGB(34, 26, 22)
+	local wall = Instance.new("Part")
+	wall.Name = "Wall"
+	wall.Size = Vector3.new(1, 10, 10)
+	wall.Color = wallColour
+	wall.Material = roblox.Enum.Material.Wood
+	wall.CFrame = root.CFrame * CFrame.new(5, 0, 0)
+	wall.Position = root.Position + Vector3.new(5, 0, 0)
+	wall.Parent = suite
+	-- (The fire the transformation finds: the Suite's own fireplace if the world has one.)
+	local madeFire = suite:FindFirstChild("Fireplace") == nil
+	local fireplace = suite:FindFirstChild("Fireplace") or Instance.new("Model")
+	fireplace.Name = "Fireplace"
+	fireplace.Parent = suite
+	local core = fireplace:FindFirstChild("FireCore") or Instance.new("Part")
+	core.Name = "FireCore"
+	core.Transparency = 1
+	core.Parent = fireplace
+	local flames = core:FindFirstChildOfClass("ParticleEmitter") or Instance.new("ParticleEmitter")
+	flames.Name = "Flames"
+	flames.Rate = 70
+	flames.Parent = core
+	serverSays("Purchase", { op = "spectacle", key = "spectacleGolden", seconds = 40 })
+	advance(3)
+	check("the Midas touch: the Suite turns to gold where the ring of gold has passed", wall.Material == roblox.Enum.Material.Metal and wall.Color ~= wallColour)
+	check("...the fire burns gold", flames.Rate > 70)
+	advance(8)
+	local touch = workspace.MaisonLocal:FindFirstChild("MidasTouch")
+	check("...gold coins rain down round the guest", touch ~= nil and touch:FindFirstChild("Coin") ~= nil)
+	check("...leaves of gold fall through the rooms", workspace.MaisonLocal:FindFirstChild("Flakes") ~= nil)
+	check("...a heavenly choir", (function()
+		local choir = module("ReplicatedStorage", "Shared", "Config").data.Midas.choir
+		for _, d in game:GetService("SoundService"):GetChildren() do
+			if d:IsA("Sound") and d.Name == "Score" and d.SoundId == choir then
+				return true
+			end
+		end
+		return false
+	end)())
+	advance(11)
+	check("...a jewelled crown settles on the guest's head", touch ~= nil and touch:FindFirstChild("MidasCrown") ~= nil)
+	snapshot("midas")
+	advance(22)
+	check("...and everything is put back as it was", wall.Color == wallColour and wall.Material == roblox.Enum.Material.Wood)
+	check("...the fire too", flames.Rate == 70)
+	check("...and the gold is gone", workspace.MaisonLocal:FindFirstChild("MidasTouch") == nil)
+	check("no errors in the Midas touch", #errors == 0, errors[1])
+	wall:Destroy()
+	if madeFire then
+		fireplace:Destroy()
+	end
+	if made then
+		suite:Destroy()
+	end
+end
+
 -- The Meme Takeover: six acts in the Suite, then everything put back.
 serverSays("Purchase", { op = "spectacle", key = "spectacleMemes", seconds = 20 })
 advance(1)
@@ -3104,6 +3419,40 @@ check("...and when it's over, the room is put back", workspace.MaisonLocal:FindF
 	return d.Name == "MemeTakeover"
 end) == nil)
 check("no errors in the spectacles", #errors == 0, errors[1])
+
+-- The bell's Spectacles page: each show with its whole line (every row as tall as its words), its
+-- price in Robux or a Play key for one held, and plainly: only you see it.
+do
+	local Products = module("ReplicatedStorage", "Shared", "ProductConfig")
+	local shows = {}
+	for i, key in { "spectacleFireworks", "spectacleMemes", "spectacleGolden" } do
+		local e = Products.byKey[key]
+		table.insert(shows, { key = key, name = e.UX.DisplayName, line = e.UX.Line, robux = e.Pricing.ReferencePrice, ready = true, held = if i == 3 then 1 else 0 })
+	end
+	invokeResults.SpectacleAsk = { ok = true, shows = shows }
+	module("StarterPlayer", "StarterPlayerScripts", "Client", "World", "SuiteSpectacle").open()
+	advance(1)
+	local page = find(playerGui, function(d)
+		return d.Name == "Shows" and d:IsA("ScrollingFrame")
+	end)
+	local rows = 0
+	local grows = true
+	if page then
+		for _, row in page:GetChildren() do
+			if row:IsA("Frame") then
+				rows += 1
+				grows = grows and row.AutomaticSize == roblox.Enum.AutomaticSize.Y and row:FindFirstChild("Words") ~= nil
+			end
+		end
+	end
+	check("the Spectacles page lists the three shows, each row as tall as its words", rows == 3 and grows, rows)
+	check("...says plainly that only you see a show", textOnScreen("Only you see it") ~= nil)
+	check("...with each price, and a Play key for one you hold", textOnScreen("Play (1 held)") ~= nil and textOnScreen("199") ~= nil)
+	snapshot("spectacles")
+	module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "Root").close("Spectacles")
+	advance(0.5)
+	invokeResults.SpectacleAsk = nil
+end
 
 -- Eating at the Terrace: a click takes a bite; the treat gets smaller as it's eaten.
 do

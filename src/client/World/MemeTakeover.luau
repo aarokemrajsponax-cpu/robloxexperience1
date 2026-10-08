@@ -263,6 +263,13 @@ function MemeTakeover.play(seconds: number?)
 		return a
 	end
 
+	local stopScore: (() -> ())? = nil
+	local function sound(name: string, volume: number, at: number?, pitch: number?)
+		task.delay(at or 0, function()
+			pcall(Sound.play, name, volume, pitch)
+		end)
+	end
+
 	local function setAct(n: number)
 		if n == act then
 			return
@@ -271,16 +278,27 @@ function MemeTakeover.play(seconds: number?)
 		if n == 1 then
 			caption(gui, "⚠️ MEME TAKEOVER ⚠️", Color3.fromRGB(255, 70, 90), 4)
 			pcall(Sound.play, "fireworkBoom", 1, 0.6)
+			for i = 0, 2 do
+				sound("airHorn", 0.9, i * 0.45, 1 + i * 0.04)
+			end
+			sound("recordScratch", 0.9, 1.7)
 		elseif n == 2 then
 			caption(gui, "THE PORTAL IS OPEN", Color3.fromRGB(120, 255, 120), 3)
+			if not stopScore then
+				stopScore = Sound.score(cfg().memeMusic or "", cfg().memeMusicVolume)
+			end
 		elseif n == 3 then
 			caption(gui, "CONGA LINE!!", Color3.fromRGB(255, 220, 60), 3)
+			sound("partyHorn", 0.8)
+			sound("partyHorn", 0.8, 0.5, 1.15)
 		elseif n == 4 then
 			caption(gui, "IT'S RAINING MEMES", Color3.fromRGB(90, 200, 255), 3)
 			rain = confetti(folder, Vector3.new(mid.X, ceiling, mid.Z), Vector3.new(room.maxX - room.minX - 2, 0.5, room.maxZ - room.minZ - 2), 220)
 		elseif n == 5 then
 			caption(gui, "THE BIG CHEESE HAS ARRIVED", Color3.fromRGB(255, 200, 80), 4)
 			pcall(Sound.play, "fireworkBoom", 1, 0.45)
+			sound("slideWhistle", 0.9, 0, 0.8)
+			sound("kazoo", 0.9, 0.9)
 			local cheese = Curios.byId and (Curios.byId :: any).moonCheese
 			local a = actor(folder, cheese or list[#list], cfg().bossSize, Vector3.new(mid.X, ceiling + 10, mid.Z))
 			boss = a
@@ -308,12 +326,23 @@ function MemeTakeover.play(seconds: number?)
 			end
 		elseif n == 6 then
 			caption(gui, "MAXIMUM BRAINROT", Color3.fromRGB(255, 80, 220), 3)
+			sound("airHorn", 0.9)
+			sound("recordScratch", 0.8, 0.6)
+			sound("airHorn", 0.9, 1.1, 1.08)
 			if rain then
 				rain.Rate = 500
 			end
 		elseif n == 7 then
 			caption(gui, "GG · MEME TAKEOVER COMPLETE", Color3.fromRGB(255, 240, 200), 3.5)
 			pcall(Sound.play, "fireworkBoom", 1, 0.8)
+			sound("airHorn", 1)
+			sound("partyHorn", 0.9, 0.3)
+			sound("partyHorn", 0.9, 0.6, 1.2)
+			local stop = stopScore
+			if stop then
+				stopScore = nil
+				task.delay(2, stop)
+			end
 			for _, a in cast do
 				burst(folder, a.at, 40)
 				a.part:Destroy()
@@ -486,6 +515,11 @@ function MemeTakeover.play(seconds: number?)
 	end)
 	task.delay(T + 3, function()
 		running = false
+		local stop = stopScore
+		if stop then
+			stopScore = nil
+			stop()
+		end
 		for light, c in saved do
 			if light.Parent then
 				light.Color = c

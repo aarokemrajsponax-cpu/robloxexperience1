@@ -19,6 +19,7 @@ Layout.Street = {
 	pavementZ = { -34, -10 },
 	kerbZ = -34,
 	facadeZ = -10,
+	facadeHeight = 62, -- the parapet along the top of the street front
 	houseHalfWidth = 20,
 	spawn = CFrame.lookAt(Vector3.new(0, 3, -28), Vector3.new(0, 3, 0)),
 	steps = 3, -- each one stud high
@@ -56,8 +57,6 @@ Layout.Foyer = {
 	livreDOr = CFrame.lookAt(Vector3.new(-19, 3, 36), Vector3.new(-19, 3, 0)),
 	stair = { x = 8, fromZ = 24, toZ = 38, topY = 17 },
 	stairRopeZ = 22.5,
-	-- The Soirée's countdown board, on a stand left of the stair, facing guests as they come in.
-	soireeBoard = CFrame.lookAt(Vector3.new(-5, 3, 23), Vector3.new(-12, 3, 12)),
 	boutiqueDoor = CFrame.lookAt(Vector3.new(19, 3, 41.5), Vector3.new(19, 3, 0)),
 }
 
@@ -324,13 +323,18 @@ Layout.Ballroom = {
 	board = CFrame.lookAt(Vector3.new(61, 28, 76.3), Vector3.new(61, 28, 125)),
 }
 
--- Table `i` of the Ballroom's ring (1 to 20): its centre, facing the middle of the room.
-function Layout.ballroomFrame(i: number, count: number?): CFrame
+-- Table `i` of a Ballroom ring (1 to 20): its centre, facing the middle of the room. The ring is
+-- turned half a table so the two nearest the entrance stand either side of the evening's board,
+-- their lamps clear of it.
+local function ringFrame(B: { centre: Vector3, radius: number }, i: number, count: number?): CFrame
 	local n = count or 20
-	local B = Layout.Ballroom
-	local angle = -math.pi / 2 + (i - 1) / n * math.pi * 2
+	local angle = -math.pi / 2 + (i - 0.5) / n * math.pi * 2
 	local centre = B.centre + Vector3.new(math.cos(angle) * B.radius, 0, math.sin(angle) * B.radius)
 	return Layout.tableFrame(centre, (B.centre - centre).Unit)
+end
+
+function Layout.ballroomFrame(i: number, count: number?): CFrame
+	return ringFrame(Layout.Ballroom, i, count)
 end
 
 -- The two halves of a duel table: side "a" faces +Z, side "b" faces -Z, cases meeting in the middle.
@@ -547,10 +551,13 @@ end
 -- and heights, stair runs. What is not a distance is left alone (directions, counts, seconds), and
 -- so is what keeps its size (the sorting table's own geometry, the piano's bench, the lift's car).
 ---------------------------------------------------------------------------------------------------
-Layout.SCALE = 1.35
+Layout.SCALE = 1.6
+-- The Suite's furniture is built a size up from the rest of the house's (Furniture.build's scale):
+-- every guest's own rooms are furnished on the grandest scale.
+Layout.SUITE_FURNITURE = 1.2
 
 local KEEP_KEYS: { [string]: boolean } = {
-	SCALE = true, seconds = true, ride = true, steps = true, cameraPitch = true, pianoBenchTop = true,
+	SCALE = true, SUITE_FURNITURE = true, seconds = true, ride = true, steps = true, cameraPitch = true, pianoBenchTop = true,
 	facing = true, out = true, name = true, id = true, open = true, gated = true, sill = true, axis = true,
 }
 local KEEP_TABLES: { [string]: boolean } = { Table = true }
@@ -601,19 +608,17 @@ end
 local raw = copy(Layout, {})
 raw.SCALE = 1
 raw.ballroomFrame = function(i: number, count: number?): CFrame
-	local n = count or 20
-	local B = raw.Ballroom
-	local angle = -math.pi / 2 + (i - 1) / n * math.pi * 2
-	local centre = B.centre + Vector3.new(math.cos(angle) * B.radius, 0, math.sin(angle) * B.radius)
-	return Layout.tableFrame(centre, (B.centre - centre).Unit)
+	return ringFrame(raw.Ballroom, i, count)
 end
 grow(Layout :: any, Layout.SCALE, "", {})
 Layout.raw = raw :: typeof(Layout)
--- The Suite's furniture is each guest's own, set at these spots on their screen and keeping its
--- true size. A spot near a wall keeps its drawn distance from that wall (a painting on it, a shelf
--- against it), so the piece still stands against it; the rest of the room opens out.
+-- The Suite's furniture is each guest's own, set at these spots on their screen and built a size
+-- up (SUITE_FURNITURE). A spot near a wall keeps its drawn distance from that wall, grown with the
+-- piece (a painting on it, a shelf against it), so the piece still stands against it; the rest of
+-- the room opens out.
 do
 	local S = Layout.SCALE
+	local K = Layout.SUITE_FURNITURE
 	local NEAR = 3
 	local rooms = {}
 	for _, name in { "main", "dressing", "study", "bedroom", "spa", "kitchen", "screening", "gym", "terrace" } do
@@ -621,9 +626,9 @@ do
 	end
 	local function keep(v: number, lo: number, hi: number): number
 		if v >= lo and v - lo <= NEAR then
-			return lo * S + (v - lo)
+			return lo * S + (v - lo) * K
 		elseif v <= hi and hi - v <= NEAR then
-			return hi * S - (hi - v)
+			return hi * S - (hi - v) * K
 		end
 		return v * S
 	end

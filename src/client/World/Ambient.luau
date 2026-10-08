@@ -112,6 +112,10 @@ local function wire(tag: string, instance: Instance)
 	wired[instance] = true
 	if tag == "FrontDoors" and instance:IsA("Model") then
 		addDoor(instance, 16)
+	elseif tag == "HouseDoor" and instance:IsA("Model") then
+		addDoor(instance, 15)
+	elseif tag == "HearthSound" and instance:IsA("BasePart") then
+		Sound.loopAt(instance, "hearth", 0.55, 46)
 	elseif tag == "RoomDoor" and instance:IsA("Model") and instance:GetAttribute("Open") == true then
 		addDoor(instance, 11)
 	elseif tag == "RoomDoor" and instance:IsA("Model") then
@@ -189,7 +193,7 @@ local function stepCaseClock(t: number)
 end
 
 local function setupDoors()
-	for _, tag in { "FrontDoors", "RoomDoor", "RoomName" } do
+	for _, tag in { "FrontDoors", "RoomDoor", "RoomName", "HouseDoor", "HearthSound" } do
 		for _, instance in CollectionService:GetTagged(tag) do
 			task.spawn(wire, tag, instance)
 		end

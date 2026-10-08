@@ -23,6 +23,7 @@ local BoutiqueRoom = require(script.Parent.Boutique)
 local VaultRoom = require(script.Parent.Vault)
 local Terrace = require(script.Parent.Terrace)
 local SuiteRoom = require(script.Parent.Suite)
+local SuiteFinish = require(script.Parent.SuiteFinish)
 local Passages = require(script.Parent.Passages)
 
 local Build = {}
@@ -93,6 +94,8 @@ function Build.run(options: Options?): Folder
 	end)
 	-- The Grand Scale: every room opened out, the furniture moved with it (World/Grand).
 	step("the Grand Scale", function() Grand.apply(root, require(ReplicatedStorage.Shared.Layout).SCALE) end)
+	-- Built at the grown size: the Suite's fireplace and its front doors.
+	step("the Suite's fireplace and doors", function() SuiteFinish.build(root) end)
 	-- Surfaces laid flush in one plane flicker as the camera moves: lift each clear.
 	local function polish()
 		step("the flicker fix", function() Flush.settle(root) end)

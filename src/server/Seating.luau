@@ -185,7 +185,7 @@ local function onAsk(player: Player, request: unknown): any
 		if not style or not kind or not frame then
 			return { ok = false, why = "Nothing stands there to sit on." }
 		end
-		local seats = Furniture.seatsOf(kind, style)
+		local seats = Furniture.seatsOf(kind, style, Layout.SUITE_FURNITURE)
 		local seatAt = seats[index]
 		if not seatAt then
 			return { ok = false, why = "Nothing stands there to sit on." }

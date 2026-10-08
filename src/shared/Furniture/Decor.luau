@@ -280,6 +280,19 @@ return function(F: any)
 			end
 			local hub = ball(b, "Hub", 0.5, Vector3.new(0, y - 0.4, 0), metal, trim)
 			F.light(b, hub, 1.2, 22, warm)
+			-- Crystal: a drop under each arm, a lower ring of drops, and a heart under the hub.
+			local glass = look(rgb(236, 244, 255), Enum.Material.Glass, 0.35, 0.25)
+			for i = 1, 8 do
+				local a = rad(i * 45 + 22.5)
+				post(b, "DropWire", 0.4, 0.02, Vector3.new(math.cos(a) * r, y - 0.8, math.sin(a) * r), metal, trim)
+				ball(b, "Drop", 0.22, Vector3.new(math.cos(a) * r, y - 0.9, math.sin(a) * r), glass, trim)
+			end
+			hoop(b, "LowerRing", r * 0.55, y - 1.1, 0.08, metal, 12)
+			for i = 1, 6 do
+				local a = rad(i * 60)
+				ball(b, "Drop", 0.2, Vector3.new(math.cos(a) * r * 0.55, y - 1.35, math.sin(a) * r * 0.55), glass, trim)
+			end
+			ball(b, "Heart", 0.5, Vector3.new(0, y - 1.25, 0), glass, trim)
 		end
 	end)
 
@@ -329,14 +342,22 @@ return function(F: any)
 			for i = 0, 2 do
 				box(b, "Leaf", Vector3.new(0.7, 0.03, 0.25), CFrame.new(0, top + 0.1, 0) * CFrame.Angles(0, rad(i * 120), 0) * CFrame.new(0.3, 0, 0), L.darkLeaf, trim)
 			end
-		else -- a palm in a tall pot
-			local top = pot(b, st, 1.6, 1.8)
-			for i, h in { 3.2, 3.8, 2.8 } do
-				local x = (i - 2) * 0.22
-				box(b, "Trunk", Vector3.new(0.12, h, 0.12), CFrame.new(x, top + h / 2, 0) * CFrame.Angles(0, 0, rad((i - 2) * 6)), L.walnut, soft)
-				for j = 0, 5 do
-					local a = rad(j * 60 + i * 20)
-					box(b, "Frond", Vector3.new(0.5, 0.04, 2.2), CFrame.new(x, top + h, 0) * CFrame.Angles(0, a, 0) * CFrame.Angles(rad(28), 0, 0) * CFrame.new(0, 0, -1.05), if j % 2 == 0 then leaf else L.darkLeaf, trim)
+		else -- a palm in a tall planter, gilded at the rim and the foot
+			local top = pot(b, st, 1.7, 1.9)
+			local gilt = look(F.colour(st, "accent", rgb(190, 150, 74)), Enum.Material.Metal, 0.3)
+			disc(b, "PlanterRim", 1.86, 0.12, Vector3.new(0, top - 0.02, 0), gilt, trim)
+			disc(b, "PlanterFoot", 1.8, 0.16, Vector3.new(0, 0.08, 0), gilt, trim)
+			disc(b, "PlanterBand", 1.74, 0.08, Vector3.new(0, top * 0.55, 0), gilt, trim)
+			for i, spec in { { h = 3.4, lean = -9, x = -0.3 }, { h = 4.2, lean = 3, x = 0 }, { h = 2.8, lean = 12, x = 0.32 }, { h = 3.7, lean = -3, x = 0.12 }, { h = 3.0, lean = 7, x = -0.14 } } do
+				local trunk = CFrame.new(spec.x, top, (i % 2) * 0.18 - 0.09) * CFrame.Angles(0, 0, rad(spec.lean))
+				box(b, "Trunk", Vector3.new(0.13, spec.h, 0.13), trunk * CFrame.new(0, spec.h / 2, 0), L.walnut, soft)
+				local crown = trunk * CFrame.new(0, spec.h, 0)
+				for j = 0, 6 do
+					local a = rad(j * 360 / 7 + i * 23)
+					-- Each frond arches out, then droops: two lengths of leaf, the outer bent down.
+					local inner = crown * CFrame.Angles(0, a, 0) * CFrame.Angles(rad(22), 0, 0)
+					box(b, "Frond", Vector3.new(0.55, 0.04, 1.4), inner * CFrame.new(0, 0, -0.7), if j % 2 == 0 then leaf else L.darkLeaf, trim)
+					box(b, "Frond", Vector3.new(0.48, 0.04, 1.3), inner * CFrame.new(0, 0, -1.35) * CFrame.Angles(rad(30), 0, 0) * CFrame.new(0, 0, -0.6), if j % 2 == 0 then L.darkLeaf else leaf, trim)
 				end
 			end
 		end

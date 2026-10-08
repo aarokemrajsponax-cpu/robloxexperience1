@@ -216,25 +216,10 @@ local function drawingRoom(m: Model)
 	casing(m, Vector3.new(bd.X, Y, main.minZ - 0.5), "z", 4, S.innerDoorHeight, 1, BRASS)
 	casing(m, Vector3.new(main.maxX + 0.5, Y, S.door.Z), "x", S.doorWidth, S.doorHeight, 1, BRASS)
 
-	-- The fire on the north wall, the painting's place above it.
-	local fx, fz = S.spots.painting.Position.X, main.maxZ
-	Kit.part(m, "Mantel", Vector3.new(7.4, 0.5, 1.5), CFrame.new(fx, Y + 4.5, fz - 0.75), MARBLE)
-	Kit.part(m, "Surround", Vector3.new(6.2, 4.3, 0.9), CFrame.new(fx, Y + 2.15, fz - 0.45), MARBLE)
-	Kit.part(m, "Hearth", Vector3.new(7.4, 0.2, 1.8), CFrame.new(fx, Y + 0.1, fz - 1.4), BLACK_MARBLE)
-	Kit.part(m, "Firebox", Vector3.new(3.4, 2.6, 0.95), CFrame.new(fx, Y + 1.3, fz - 0.5), L.ink, TRIM)
-	local fire = Kit.part(m, "Fire", Vector3.new(2.2, 0.9, 0.5), CFrame.new(fx, Y + 0.65, fz - 0.8), L.fire, TRIM)
-	local light = Kit.pointLight(fire, 1.4, 20, rgb(255, 150, 80))
-	CollectionService:AddTag(light, "Flicker")
-	light:SetAttribute("BaseBrightness", 1.4)
-	for i = -1, 1 do
-		Kit.cylinder(m, "Log", 2.4, 0.4, CFrame.new(fx, Y + 0.45 + (i == 0 and 0.3 or 0), fz - 0.6 + i * 0.15) * CFrame.Angles(0, math.rad(i * 12), 0), L.walnut, TRIM)
-	end
-	-- The room's own light: a cove of warm light round the coffers, and two lamps by the fire.
+	-- (The fire on the north wall is built at the house's true size: see SuiteRoom.finish.)
+	-- The room's own light: a cove of warm light round the coffers (the fire has its own lamps).
 	ceilingLight(m, Vector3.new(-55.5, 0, 52.5), 1.0, 26)
 	ceilingLight(m, Vector3.new(-42.5, 0, 47.5), 0.6, 18)
-	for _, x in { fx - 4.6, fx + 4.6 } do
-		Kit.part(m, "Sconce", Vector3.new(0.5, 0.9, 0.3), CFrame.new(x, Y + 6.2, fz - 0.2), SCONCE, TRIM)
-	end
 
 	-- The Gold Key rooms' doors: shut, until the guest's own screen opens them.
 	local alcoves: { { room: string, at: Vector3 } } = { { room = "dressing", at = dressing.door }, { room = "study", at = study.door } }

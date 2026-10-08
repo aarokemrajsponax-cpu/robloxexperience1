@@ -23,7 +23,26 @@ local IS_KEY: { [string]: boolean } = {}
 for _, k in Spectacles.KEYS do
 	IS_KEY[k] = true
 end
-local SECONDS = { spectacleFireworks = 45, spectacleMemes = 90, spectacleGolden = 30 }
+local SECONDS = { spectacleFireworks = 45, spectacleMemes = 90, spectacleGolden = 40 }
+
+-- The owner tries a show on their own screen, free (House controls; AdminService checks who asks).
+function Spectacles.preview(player: Player, key: string): boolean
+	if not IS_KEY[key] then
+		return false
+	end
+	Perks.tell(player, { op = "spectacle", key = key, seconds = SECONDS[key] })
+	return true
+end
+
+-- Each show's name, for House controls.
+function Spectacles.names(): { { key: string, name: string } }
+	local out = {}
+	for _, key in Spectacles.KEYS do
+		local e = ProductConfig.byKey[key]
+		table.insert(out, { key = key, name = if e then e.UX.DisplayName else key })
+	end
+	return out
+end
 
 local function credit(key: string): string
 	return "show:" .. key

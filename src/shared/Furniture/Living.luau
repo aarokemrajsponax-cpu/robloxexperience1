@@ -125,12 +125,33 @@ return function(F: any)
 			roll(b, "ArmRoll", d, 0.86, Vector3.new(sx * (w / 2 - 0.36), 2.3, 0), c)
 			cyl(b, "ArmFace", 0.06, 0.7, CFrame.new(sx * (w / 2 - 0.36), 2.3, -d / 2 - 0.02) * CFrame.Angles(0, rad(90), 0), dark, trim)
 		end
-		-- The buttons
-		for row = 0, 1 do
-			for col = 0, 6 do
-				ball(b, "Button", 0.11, Vector3.new(-3 + col * 1.0 + row * 0.5, 2.0 + row * 0.55, d / 2 - 0.74), dark, trim)
+		-- The buttons, three rows deep.
+		for row = 0, 2 do
+			for col = 0, 6 - (row % 2) do
+				ball(b, "Button", 0.11, Vector3.new(-3 + col * 1.0 + (row % 2) * 0.5, 1.85 + row * 0.42, d / 2 - 0.74), dark, trim)
 			end
 		end
+		-- Brass nailheads round each arm's face and along the front of the base.
+		local nail = look(F.colour(st, "accent", rgb(190, 150, 74)), Enum.Material.Metal, 0.35)
+		for _, sx in { -1, 1 } do
+			for k = 0, 11 do
+				local a = k / 12 * math.pi * 2
+				ball(b, "Nailhead", 0.1, Vector3.new(sx * (w / 2 - 0.36) + math.cos(a) * 0.42, 2.3 + math.sin(a) * 0.42, -d / 2 - 0.05), nail, trim)
+			end
+		end
+		for x = -w / 2 + 0.4, w / 2 - 0.39, 0.3 do
+			ball(b, "Nailhead", 0.1, Vector3.new(x, 0.42, -d / 2 - 0.03), nail, trim)
+		end
+		-- Velvet cushions in the corners, and a cashmere throw over one arm.
+		local velvet = look(F.colour(st, "accent", rgb(190, 150, 74)):Lerp(rgb(40, 20, 10), 0.25), Enum.Material.Fabric)
+		local wine = look(rgb(96, 22, 34), Enum.Material.Fabric)
+		for i, sx in { -1, 1 } do
+			box(b, "Cushion", Vector3.new(1.25, 1.25, 0.36), CFrame.new(sx * (w / 2 - 1.5), 2.2, d / 2 - 1.0) * CFrame.Angles(rad(14), rad(sx * 14), rad(sx * 4)), if i == 1 then velvet else wine, soft)
+			box(b, "Cushion", Vector3.new(1.0, 1.0, 0.32), CFrame.new(sx * (w / 2 - 2.2), 2.05, d / 2 - 1.25) * CFrame.Angles(rad(18), rad(-sx * 8), 0), if i == 1 then wine else velvet, soft)
+		end
+		local cashmere = look(rgb(214, 200, 176), Enum.Material.Fabric)
+		box(b, "Throw", Vector3.new(0.95, 0.07, 2.3), CFrame.new(-(w / 2 - 0.36), 2.76, 0.25), cashmere, trim)
+		box(b, "Throw", Vector3.new(0.07, 1.5, 2.3), CFrame.new(-w / 2 - 0.05, 2.05, 0.25) * CFrame.Angles(0, 0, rad(-4)), cashmere, trim)
 		for _, x in { -2.3, 0, 2.3 } do
 			F.sit(b, CFrame.new(x, 1.68, -0.3))
 		end
@@ -231,11 +252,33 @@ return function(F: any)
 			disc(b, "Foot", 3, 0.28, Vector3.new(0, 0.14, 0), accent)
 			topY = 1.5
 		end
-		-- Books, a bowl, a candle.
-		box(b, "Book", Vector3.new(1.3, 0.16, 1.0), CFrame.new(-0.8, topY + 0.08, 0.1) * CFrame.Angles(0, rad(8), 0), look(rgb(110, 30, 26), Enum.Material.Fabric), trim)
-		box(b, "Book", Vector3.new(1.1, 0.14, 0.85), CFrame.new(-0.8, topY + 0.23, 0.1) * CFrame.Angles(0, rad(-4), 0), look(rgb(230, 222, 204), Enum.Material.Fabric), trim)
-		disc(b, "Bowl", 0.9, 0.3, Vector3.new(0.9, topY + 0.15, -0.2), accent, trim)
-		post(b, "Candle", 0.4, 0.22, Vector3.new(0.3, topY, 0.5), L.paper, trim)
+		-- Dressed: a stack of books, a gold tray with a decanter and two glasses, an orchid, and a
+		-- candle in a hurricane glass.
+		local stack = { rgb(110, 30, 26), rgb(230, 222, 204), rgb(28, 40, 60) }
+		for i, c in stack do
+			local sz = 1.35 - i * 0.12
+			box(b, "Book", Vector3.new(sz, 0.15, sz * 0.75), CFrame.new(-0.85, topY + 0.075 + (i - 1) * 0.15, 0.2) * CFrame.Angles(0, rad((i * 37) % 16 - 8), 0), look(c, Enum.Material.Fabric), trim)
+		end
+		box(b, "BookTitle", Vector3.new(0.5, 0.02, 0.04), CFrame.new(-0.85, topY + 0.38, 0.2 - 0.33), accent, trim)
+		box(b, "Tray", Vector3.new(1.5, 0.05, 0.95), CFrame.new(0.75, topY + 0.03, -0.15), accent, trim)
+		for _, sz in { -1, 1 } do
+			box(b, "TrayRim", Vector3.new(1.5, 0.12, 0.04), CFrame.new(0.75, topY + 0.09, -0.15 + sz * 0.46), accent, trim)
+		end
+		local crystal = look(rgb(220, 232, 240), Enum.Material.Glass, 0.3, 0.35)
+		ball(b, "Decanter", 0.5, Vector3.new(1.05, topY + 0.32, -0.15), look(rgb(150, 80, 30), Enum.Material.Glass, 0.3, 0.2), trim)
+		post(b, "DecanterNeck", 0.28, 0.12, Vector3.new(1.05, topY + 0.52, -0.15), crystal, trim)
+		ball(b, "Stopper", 0.16, Vector3.new(1.05, topY + 0.86, -0.15), crystal, trim)
+		for _, x in { 0.35, 0.62 } do
+			post(b, "Glass", 0.3, 0.2, Vector3.new(x, topY + 0.05, -0.32), crystal, trim)
+		end
+		post(b, "OrchidPot", 0.42, 0.42, Vector3.new(-0.2, topY, -0.75), L.ivoryLacquer, trim)
+		post(b, "OrchidStem", 1.0, 0.04, Vector3.new(-0.2, topY + 0.4, -0.75), L.darkLeaf, trim)
+		for i = 1, 5 do
+			ball(b, "Orchid", 0.22, Vector3.new(-0.2 + i * 0.09, topY + 1.15 + math.sin(i * 0.6) * 0.12, -0.75), look(rgb(250, 244, 248), Enum.Material.SmoothPlastic), trim)
+		end
+		post(b, "Candle", 0.32, 0.2, Vector3.new(0.35, topY, 0.55), L.paper, trim)
+		post(b, "Hurricane", 0.62, 0.4, Vector3.new(0.35, topY, 0.55), look(rgb(230, 236, 240), Enum.Material.Glass, 0.2, 0.7), trim)
+		ball(b, "Flame", 0.1, Vector3.new(0.35, topY + 0.42, 0.55), L.warmGlow, trim)
 	end)
 
 	-------------------------------------------------------------------------------------------
@@ -317,7 +360,9 @@ return function(F: any)
 		local shelves = 5
 		for i = 1, shelves do
 			local y = 0.5 + (i - 1) * (h - 0.6) / shelves
+			local stopAt = if model ~= "display" and (i == 3 or i == 5) then w / 2 - 1.8 else w / 2 - 0.8
 			box(b, "Shelf", Vector3.new(w - 0.4, 0.12, d - 0.15), CFrame.new(0, y, 0.05), wood, soft)
+			box(b, "ShelfEdge", Vector3.new(w - 0.4, 0.05, 0.03), CFrame.new(0, y + 0.02, -d / 2 + 0.1), accent, trim)
 			if model == "display" then
 				-- Objets: a vase, a sphere, a short stack of books.
 				post(b, "Vase", 0.9, 0.45, Vector3.new(-2.2, y + 0.06, 0), look(SPINES[i % #SPINES + 1], Enum.Material.SmoothPlastic, 0.1), trim)
@@ -327,10 +372,10 @@ return function(F: any)
 				-- Rows of spines, in runs of a colour.
 				local x = -w / 2 + 0.35
 				local j = 0
-				while x < w / 2 - 0.8 do
+				while x < stopAt do
 					j += 1
 					local run = 0.45 + ((i * 13 + j * 7) % 5) * 0.18
-					run = math.min(run, w / 2 - 0.3 - x)
+					run = math.min(run, stopAt + 0.5 - x)
 					local bh = 1.05 + ((i * 7 + j * 3) % 4) * 0.08
 					box(b, "Books", Vector3.new(run - 0.03, bh, 0.95), CFrame.new(x + run / 2, y + 0.06 + bh / 2, 0.05), look(SPINES[(i * 3 + j) % #SPINES + 1], Enum.Material.Fabric), trim)
 					x += run
@@ -343,6 +388,40 @@ return function(F: any)
 		if model == "display" then
 			local glow = box(b, "Glow", Vector3.new(w - 0.6, 0.04, 0.08), CFrame.new(0, h - 0.15, -0.3), L.warmGlow, trim)
 			F.spotLight(b, glow, Enum.NormalId.Bottom, 0.8, 10, 100)
+			return
+		end
+		-- Objets in the gaps: a small bust, and a gilded sphere on a stand.
+		local y3 = 0.5 + 2 * (h - 0.6) / shelves
+		local y5 = 0.5 + 4 * (h - 0.6) / shelves
+		local marble = L.whiteMarble
+		box(b, "BustBase", Vector3.new(0.5, 0.2, 0.5), CFrame.new(w / 2 - 0.85, y3 + 0.16, 0), L.blackMarble, trim)
+		box(b, "BustChest", Vector3.new(0.7, 0.45, 0.35), CFrame.new(w / 2 - 0.85, y3 + 0.48, 0), marble, trim)
+		ball(b, "BustHead", 0.42, Vector3.new(w / 2 - 0.85, y3 + 0.95, 0), marble, trim)
+		post(b, "SphereStand", 0.3, 0.16, Vector3.new(w / 2 - 0.85, y5 + 0.06, 0), accent, trim)
+		ball(b, "Sphere", 0.6, Vector3.new(w / 2 - 0.85, y5 + 0.66, 0), accent, trim)
+		-- A gilded line under the cornice and down each side, a lit cornice.
+		box(b, "Gilding", Vector3.new(w + 0.42, 0.08, 0.05), CFrame.new(0, h - 0.04, -d / 2 - 0.16), accent, trim)
+		for _, sx in { -1, 1 } do
+			for _, dx in { -0.05, 0.05 } do
+				box(b, "Flute", Vector3.new(0.04, h - 1.2, 0.03), CFrame.new(sx * (w / 2 - 0.1) + dx, h / 2, -d / 2 - 0.02), accent, trim)
+			end
+		end
+		local glow = box(b, "Glow", Vector3.new(w - 0.6, 0.04, 0.08), CFrame.new(0, h - 0.12, -0.35), L.warmGlow, trim)
+		F.spotLight(b, glow, Enum.NormalId.Bottom, 0.7, 12, 110)
+		-- The library's brass rail, and its ladder leaning on it.
+		cyl(b, "LadderRail", w - 0.2, 0.08, CFrame.new(0, h - 0.7, -d / 2 - 0.35), accent, trim)
+		for _, sx in { -1, 1 } do
+			box(b, "RailBracket", Vector3.new(0.06, 0.06, 0.4), CFrame.new(sx * (w / 2 - 0.4), h - 0.7, -d / 2 - 0.17), accent, trim)
+		end
+		local top = Vector3.new(w / 2 - 1.5, h - 0.7, -d / 2 - 0.4)
+		local foot = Vector3.new(w / 2 - 1.5, 0, -d / 2 - 2.1)
+		for _, dx in { -0.45, 0.45 } do
+			local a, c = top + Vector3.new(dx, 0, 0), foot + Vector3.new(dx, 0, 0)
+			box(b, "LadderSide", Vector3.new(0.1, 0.1, (a - c).Magnitude), CFrame.lookAt((a + c) / 2, a), wood, trim)
+		end
+		for k = 1, 9 do
+			local p = foot:Lerp(top, k / 10)
+			cyl(b, "Rung", 0.9, 0.07, CFrame.new(p), accent, trim)
 		end
 	end)
 
@@ -376,7 +455,7 @@ return function(F: any)
 			local halo = Instance.new("SurfaceLight")
 			halo.Face = Enum.NormalId.Back
 			halo.Brightness = 1.2
-			halo.Range = 7
+			halo.Range = 7 * b.k
 			halo.Angle = 120
 			halo.Color = rgb(120, 140, 255)
 			halo.Parent = back

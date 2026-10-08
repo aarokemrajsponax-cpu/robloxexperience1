@@ -133,20 +133,22 @@ local function gallery(m: Model)
 	Kit.span(m, "StairRail", Vector3.new(S.x1, Y + 3, S.topZ), Vector3.new(S.x1 + 0.2, floorY + 3.2, S.bottomZ), L.brass, { collide = false, query = false })
 	Kit.span(m, "StairGuard", Vector3.new(S.x1, Y, S.topZ), Vector3.new(S.x1 + 0.2, floorY + 3.2, S.bottomZ - 4), INVISIBLE)
 	-- Sconces under the Gallery light the entrance.
-	for _, sx in { 20, 42, 64, 86, 108 } do
+	for _, sx in { 18, 38, 84, 104 } do -- (the evening's board takes the middle)
 		local sconce = Kit.part(m, "GallerySconce", Vector3.new(0.6, 0.8, 0.3), CFrame.new(sx, floorY - 3.4, G.maxZ + 0.1), L.brass, { collide = false })
 		local light = Kit.pointLight(sconce, 0.5, 14, Color3.fromRGB(255, 206, 150))
 		light:SetAttribute("BallroomAmbient", 0.5)
 	end
 end
 
--- The evening's board, on the Gallery's fascia above the entrance: what's happening now.
+-- The evening's board, on the Gallery's fascia above the entrance, between the two nearest
+-- tables' lamps: what's happening now, in three lines (BallroomService writes them).
 local function board(m: Model)
-	local part = Kit.part(m, "EveningBoard", Vector3.new(16, 3.6, 0.2), B.board, L.blackLacquer, { collide = false, query = false })
-	Kit.part(m, "EveningBoardFrame", Vector3.new(16.6, 4.2, 0.1), B.board * CFrame.new(0, 0, 0.12), L.brass, { collide = false, query = false })
+	local part = Kit.part(m, "EveningBoard", Vector3.new(12, 4.4, 0.2), B.board, L.blackLacquer, { collide = false, query = false })
+	Kit.part(m, "EveningBoardFrame", Vector3.new(12.6, 5, 0.1), B.board * CFrame.new(0, 0, 0.12), L.brass, { collide = false, query = false })
 	Kit.engrave(part, Enum.NormalId.Front, {
-		{ text = "LIGHTS OUT", size = 0.9, font = Brand.Fonts.display, color = Brand.Colours.lightGold },
-		{ text = "Take any chair. The evening begins when a guest sits.", size = 0.55, font = Brand.Fonts.body, color = Brand.Colours.bone },
+		{ text = "L I G H T S   O U T", size = 0.34, font = Brand.Fonts.display, color = Brand.Colours.lightGold },
+		{ text = "Take any chair.", size = 0.21, font = Brand.Fonts.bodyBold, color = Brand.Colours.bone },
+		{ text = "The evening begins when a guest sits.", size = 0.21, font = Brand.Fonts.body, color = Brand.Colours.bone },
 	}, { ppu = 50, lit = false })
 	part:SetAttribute("EveningBoard", true)
 end

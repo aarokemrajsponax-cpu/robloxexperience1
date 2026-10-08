@@ -154,7 +154,9 @@ end
 local Furniture = module("ReplicatedStorage", "Shared", "Furniture")
 
 -- `suite house|full <world.json> <shots.json>`: the Suite's shell with every spot furnished, either
--- with the house's own pieces only, or with the finest piece for each spot.
+-- with the house's own pieces only, or with the finest piece for each spot. The shell is grown to
+-- the Grand Scale as the house is (with the fireplace and the front doors built after), and the
+-- furniture built a size up, as each guest's screen draws it.
 if process.args[1] == "suite" then
 	local mode = process.args[2] or "full"
 	local out = process.args[3] or "suite.json"
@@ -162,12 +164,15 @@ if process.args[1] == "suite" then
 	local Layout = module("ReplicatedStorage", "Shared", "Layout")
 	local Suite = module("ReplicatedStorage", "Shared", "Suite")
 	local SuiteRoom = module("ServerScriptService", "Server", "World", "Suite")
+	local SuiteFinish = module("ServerScriptService", "Server", "World", "SuiteFinish")
+	local Grand = module("ServerScriptService", "Server", "World", "Grand")
 	local Flush = module("ServerScriptService", "Server", "World", "Flush")
 	local root = Instance.new("Folder")
 	root.Name = "Maison"
 	root.Parent = workspace
 	-- The roofs it stands on (the rooms below), so the floor reads as it does in the house.
 	local roof = Instance.new("Part")
+	roof.Name = "Roof"
 	roof.Anchored = true
 	roof.Size = Vector3.new(50, 1, 70)
 	roof.CFrame = CFrame.new(-56, 21.5, 28)
@@ -175,6 +180,8 @@ if process.args[1] == "suite" then
 	roof.Material = Enum.Material.Concrete
 	roof.Parent = root
 	SuiteRoom.build(root)
+	Grand.apply(root, Layout.SCALE)
+	SuiteFinish.build(root)
 	Flush.settle(root)
 	local placed = {}
 	local goldKey = true
@@ -196,7 +203,7 @@ if process.args[1] == "suite" then
 		local kind = Suite.kindOf(spotId, style)
 		local cf = Layout.Suite.spots[spotId]
 		local ok, err = pcall(function()
-			Furniture.build(kind, furniture, cf, style, true)
+			Furniture.build(kind, furniture, cf, style, true, Layout.SUITE_FURNITURE)
 		end)
 		if not ok then
 			print("FAIL " .. spotId .. ": " .. tostring(err))
@@ -209,6 +216,8 @@ if process.args[1] == "suite" then
 	lighting.OutdoorAmbient = rgb(70, 72, 92)
 	lighting.ExposureCompensation = 0.35
 	exportWorld(workspace, lighting, out)
+	-- (The shots are drawn in the house's drawn numbers, then grown with it.)
+	local G = Layout.SCALE
 	local Y = 22
 	local shots = {
 		{ name = "living", pos = { -38.5, Y + 7, 42 }, look = { -55, Y + 3, 55 } },
@@ -228,6 +237,8 @@ if process.args[1] == "suite" then
 	for _, sh in shots do
 		sh.fov = 70
 		sh.lights = 32
+		sh.pos = { sh.pos[1] * G, sh.pos[2] * G, sh.pos[3] * G }
+		sh.look = { sh.look[1] * G, sh.look[2] * G, sh.look[3] * G }
 	end
 	fs.writeFile(shotsOut, serde.encode("json", shots))
 	print(string.format("the Suite (%s): %d pieces", mode, count))

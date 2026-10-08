@@ -1634,8 +1634,23 @@ do
 	r = show(pia, { op = "play", key = "spectacleFireworks" })
 	check("a show plays only in your Suite", r.ok == false and Perks.credits(piaData, "show:spectacleFireworks") == 1)
 	pia.root.Position = Layout.Suite.arrival + H.Vector3.new(0, 3, 0)
+	-- Another guest in the house (in their own Suite, even): Pia's show is hers alone.
+	local quin = guest("Quin", 9601)
+	local quinBefore, castBefore = #quin.inbox, #broadcasts
 	r = show(pia, { op = "play", key = "spectacleFireworks" })
 	check("in the Suite it plays, and the show is spent", type(r) == "table" and r.ok == true and Perks.credits(piaData, "show:spectacleFireworks") == 0 and lastOp(pia, "spectacle") ~= nil, r and r.why)
+	local spread = {}
+	for i = castBefore + 1, #broadcasts do
+		if broadcasts[i].message.op == "spectacle" then
+			table.insert(spread, "broadcast")
+		end
+	end
+	for i = quinBefore + 1, #quin.inbox do
+		if quin.inbox[i].op == "spectacle" then
+			table.insert(spread, "Quin")
+		end
+	end
+	check("the show is the buyer's alone: no other guest is told, nothing is broadcast", #spread == 0, table.concat(spread, ", "))
 	r = show(pia, { op = "play", key = "notAShow" })
 	check("only the three shows", r.ok == false)
 end

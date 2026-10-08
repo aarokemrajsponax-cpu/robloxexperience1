@@ -36,7 +36,7 @@ local function row(parent: Instance, order: number, label: string, detail: strin
 	local r = Instance.new("Frame")
 	r.BackgroundColor3 = Color3.fromRGB(16, 16, 20)
 	r.BackgroundTransparency = 0.35
-	r.Size = UDim2.new(1, 0, 0, if stacked then 96 else 64)
+	r.Size = UDim2.new(1, 0, 0, 64)
 	r.LayoutOrder = order
 	r.Parent = parent
 	local corner = Instance.new("UICorner")
@@ -44,8 +44,27 @@ local function row(parent: Instance, order: number, label: string, detail: strin
 	corner.Parent = r
 	local texts = Instance.new("Frame")
 	texts.BackgroundTransparency = 1
-	texts.Position = UDim2.fromOffset(12, 6)
-	texts.Size = if stacked then UDim2.new(1, -24, 0, 44) else UDim2.new(0.55, -12, 1, -12)
+	if stacked then
+		-- The words, then the keys beneath them, the row as tall as both (a long line never runs
+		-- into the keys).
+		r.Size = UDim2.new(1, 0, 0, 0)
+		r.AutomaticSize = Enum.AutomaticSize.Y
+		local pad = Instance.new("UIPadding")
+		pad.PaddingTop = UDim.new(0, 6)
+		pad.PaddingBottom = UDim.new(0, 8)
+		pad.PaddingLeft = UDim.new(0, 12)
+		pad.PaddingRight = UDim.new(0, 12)
+		pad.Parent = r
+		local list = Theme.list(r, 6)
+		list.HorizontalAlignment = Enum.HorizontalAlignment.Left
+		list.VerticalAlignment = Enum.VerticalAlignment.Top
+		texts.Size = UDim2.new(1, 0, 0, 0)
+		texts.AutomaticSize = Enum.AutomaticSize.Y
+		texts.LayoutOrder = 1
+	else
+		texts.Position = UDim2.fromOffset(12, 6)
+		texts.Size = UDim2.new(0.55, -12, 1, -12)
+	end
 	texts.Parent = r
 	Theme.list(texts, 2).HorizontalAlignment = Enum.HorizontalAlignment.Left
 	Theme.text(texts, label, 16, "display", { LayoutOrder = 1, TextXAlignment = Enum.TextXAlignment.Left })
@@ -56,9 +75,8 @@ local function row(parent: Instance, order: number, label: string, detail: strin
 	keys.Name = "Keys"
 	keys.BackgroundTransparency = 1
 	if stacked then
-		keys.AnchorPoint = Vector2.new(0, 1)
-		keys.Position = UDim2.new(0, 12, 1, -8)
-		keys.Size = UDim2.new(1, -24, 0, 34)
+		keys.Size = UDim2.new(1, 0, 0, 34)
+		keys.LayoutOrder = 2
 	else
 		keys.AnchorPoint = Vector2.new(1, 0.5)
 		keys.Position = UDim2.new(1, -8, 0.5, 0)
@@ -156,10 +174,11 @@ function AdminPanel.open()
 				render()
 			end)
 		end
-		small(opts, if everywhere then "Every house" else "This house", everywhere, function()
+		local where = small(opts, if everywhere then "Every house" else "This house", everywhere, function()
 			everywhere = not everywhere
 			render()
 		end)
+		where.Size = UDim2.fromOffset(136, 32) -- (its words on one line)
 		if page == "events" then
 			-- The big one: everything at once.
 			local abuse = row(scroll, add(), "Admin Abuse Night", "Every event at once with fireworks: double Gilt, Mythic luck, the Ledger at double speed, gold rain, a treasure hunt, giants, quickstep. Turn on Every house to run it in every server.", true)
@@ -258,6 +277,15 @@ function AdminPanel.open()
 				small(keys, "Play", true, function()
 					send({ op = "salute", id = sa.id })
 				end)
+			end
+			if type(v.shows) == "table" then
+				Theme.text(scroll, "Suite shows: on your screen only, free (stand in your Suite first)", 11, "caps", { LayoutOrder = add(), TextXAlignment = Enum.TextXAlignment.Left })
+				for _, sh in v.shows do
+					local keys = row(scroll, add(), tostring(sh.name), nil)
+					small(keys, "Play", true, function()
+						send({ op = "show", key = sh.key })
+					end)
+				end
 			end
 			Theme.text(scroll, "Dress the house in another season (seasonal pieces come too)", 11, "caps", { LayoutOrder = add(), TextXAlignment = Enum.TextXAlignment.Left })
 			for _, se in v.seasons do

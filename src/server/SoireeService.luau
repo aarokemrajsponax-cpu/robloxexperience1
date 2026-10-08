@@ -2,10 +2,9 @@
 -- The Soirée, kept (§9.5, Appendix H5): each guest's results over the weekend (only evenings
 -- that count for records, and only real opponents in the Library), their score from the best
 -- ones, a board for every server, the Soirée's stamp at three plays, and after the weekend the
--- medal (top 1%) or the dated invitation card (top 10%). The countdown board by the Grand Stair
--- is the only clock ever allowed in the Foyer.
+-- medal (top 1%) or the dated invitation card (top 10%). Its countdown is one line on the Foyer's
+-- Tonight board, the only clock ever allowed in the Foyer.
 
-local CollectionService = game:GetService("CollectionService")
 local MemoryStoreService = game:GetService("MemoryStoreService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -141,34 +140,10 @@ local function refreshBoard()
 	end
 end
 
+-- Whether a Soirée weekend is on, and which room it's in, for every screen (the music leans into
+-- it). Its countdown is written on the Foyer's Tonight board (Boards).
 local function drawCountdown()
 	local weekend = Soiree.at()
-	local now = os.time()
-	-- Its name as written (an accented letter has no capital in string.upper), the weekend's
-	-- room, and the time on a line of its own so nothing runs off the board.
-	local room = string.format("A %s weekend", if weekend.format == "ballroom" then "Ballroom" else "Library")
-	local lines: { string } = if weekend.active
-		then { weekend.name, room, "Ends in " .. Soiree.countdown(weekend.endsAt - now) }
-		else { weekend.name, room, "Begins in " .. Soiree.countdown(weekend.startsAt - now) }
-	for _, part in CollectionService:GetTagged("SoireeBoard") do
-		local gui = part:FindFirstChildOfClass("SurfaceGui")
-		if gui then
-			local labels = {}
-			for _, d in gui:GetDescendants() do
-				if d:IsA("TextLabel") then
-					table.insert(labels, d)
-				end
-			end
-			table.sort(labels, function(a, b)
-				return a.LayoutOrder < b.LayoutOrder
-			end)
-			for i, line in lines do
-				if labels[i] then
-					labels[i].Text = line
-				end
-			end
-		end
-	end
 	Workspace:SetAttribute("SoireeActive", weekend.active)
 	Workspace:SetAttribute("SoireeFormat", weekend.format)
 end

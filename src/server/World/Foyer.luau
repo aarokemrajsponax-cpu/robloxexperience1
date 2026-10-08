@@ -493,17 +493,6 @@ local function roomDoor(m: Model, roomId: string)
 	end
 end
 
--- The Soirée's countdown: the only clock ever allowed in the Foyer, on a stand of its own clear of
--- the stair. Three lines: its name, the weekend's room, and the time (SoireeService writes them).
-local function soireeBoard(m: Model)
-	local board = Kit.sign(m, "SoireeBoard", F.soireeBoard, 3.8, 2.4, {
-		{ text = "The Soirée", size = 0.34, font = Brand.Fonts.display, color = Brand.Colours.lightGold },
-		{ text = "Every weekend", size = 0.17, font = Brand.Fonts.body, color = Brand.Colours.bone },
-		{ text = "", size = 0.17, font = Brand.Fonts.bodyBold, color = Brand.Colours.gold },
-	}, 3.9)
-	CollectionService:AddTag(board, "SoireeBoard")
-end
-
 local function boutiqueDoor(m: Model)
 	local model = Kit.model(m, "BoutiqueDoor")
 	local cf = F.boutiqueDoor
@@ -513,7 +502,7 @@ local function boutiqueDoor(m: Model)
 	Kit.part(model, "FrameTop", Vector3.new(8.8, 0.5, 1.2), cf * CFrame.new(0, 10.25, 0.6), L.brass)
 	for _, side in { -1, 1 } do
 		-- Each leaf swung back against the wall inside.
-		local hinge = cf * CFrame.new(side * 4, 0, 1.2)
+		local hinge = cf * CFrame.new(side * 4.1, 0, 1.2)
 		Kit.part(model, "Leaf", Vector3.new(0.15, 9.6, 3.8), hinge * CFrame.new(-side * 0.2, 4.8, 1.9), { color = Color3.fromRGB(60, 50, 40), material = Enum.Material.Glass, reflectance = 0.35, transparency = 0.45 }, { collide = false })
 		Kit.part(model, "LeafFrame", Vector3.new(0.2, 9.8, 0.2), hinge * CFrame.new(-side * 0.2, 4.9, 3.8), L.brass, { collide = false })
 	end
@@ -547,7 +536,10 @@ function Foyer.build(parent: Instance): Model
 		end
 	end
 	for _, z in { -2, 16, 25 } do
-		sconce(root, Vector3.new(F.minX + 0.3, FLOOR + 9, z), Vector3.new(1, 0, 0))
+		-- (The west wall at z 16 carries the Tonight board, lit by its own picture light.)
+		if z ~= 16 then
+			sconce(root, Vector3.new(F.minX + 0.3, FLOOR + 9, z), Vector3.new(1, 0, 0))
+		end
 		sconce(root, Vector3.new(F.maxX - 0.3, FLOOR + 9, z), Vector3.new(-1, 0, 0))
 	end
 	for _, x in { -26, 26 } do
@@ -564,7 +556,6 @@ function Foyer.build(parent: Instance): Model
 		roomDoor(root, id)
 	end
 	boutiqueDoor(root)
-	soireeBoard(root)
 	entranceDoors(root)
 	-- A soft fill so the marble never goes pitch black.
 	local fill = Kit.part(root, "FillLight", Vector3.new(1, 1, 1), CFrame.new(0, FLOOR + 14, 16), { color = Color3.new(), material = Enum.Material.SmoothPlastic, transparency = 1 }, { collide = false, query = false, shadow = false })

@@ -49,7 +49,7 @@ local function facade(parent: Instance)
 	local m = Kit.model(parent, "Facade")
 	local z = S.facadeZ
 	local hw = S.houseHalfWidth
-	local height = 62
+	local height = S.facadeHeight
 	-- The wall, with the doorway cut out as separate pieces.
 	local door = Layout.Door
 	local dh = door.width / 2

@@ -283,11 +283,11 @@ local defaults = {
 
 	-- The Concierge's walking tour (each guest's own guide, drawn on their screen).
 	Tour = {
-		speed = 10, -- studs a second the Concierge walks
-		waitBeyond = 16, -- a guest further behind than this: the Concierge stops and waits
-		resumeWithin = 11, -- and walks on once they're this close
-		arriveWithin = 15, -- at a stop, the card shows once the guest is this close
-		lostBeyond = 90, -- a guest this far away for lostAfter seconds has left the tour
+		speed = 12, -- studs a second the Concierge walks
+		waitBeyond = 19, -- a guest further behind than this: the Concierge stops and waits
+		resumeWithin = 13, -- and walks on once they're this close
+		arriveWithin = 18, -- at a stop, the card shows once the guest is this close
+		lostBeyond = 110, -- a guest this far away for lostAfter seconds has left the tour
 		lostAfter = 40,
 	},
 
@@ -340,7 +340,8 @@ local defaults = {
 		intensityPerRound = 0.12,
 		bandBassAt = 10, -- the Ballroom band: the whole band above this many lamps, bass and brushes down to it
 		bandPianoAt = 2, -- and a single piano and a ticking clock for the final two
-		pianoReach = 95, -- studs the Foyer piano carries (it leaks through the street door)
+		pianoReach = 150, -- studs the Foyer piano carries (it leaks through the street door)
+		pianoNear = 20, -- studs from the piano its music is heard at full strength
 		muffled = -18, -- dB taken off the piano's highs when heard from another space
 		soireeBrighter = 3, -- dB added to the piano's highs on a Soirée weekend
 	},
@@ -363,7 +364,11 @@ local defaults = {
 		keys = 37, -- C3 to C6: three octaves and the top C
 		reach = 14, -- studs from the bench a guest may sit down from
 		volume = 1.2, -- each note's volume
-		heard = 80, -- studs a note carries from the piano (the Foyer, and faintly the street and stair)
+		heard = 130, -- studs a note carries from the piano (the Foyer, and faintly the street and stair)
+		near = 16, -- studs from the piano a note is heard at full strength
+		retrySeconds = 20, -- a recording that failed to load is fetched again after this long
+		loadWait = 1.5, -- a key's first note waits this long at most for its recording (seconds)
+		fetchAfter = 6, -- seconds after arriving the piano's recordings are fetched (so the first note is ready)
 		maxSeconds = 3600, -- the most piano time the house offers to hold at once (a purchase is never cut)
 		-- Seconds anyone may play free each day (UTC). 0: the piano is pay-only (AJKR's call).
 		taste = 0,
@@ -375,19 +380,49 @@ local defaults = {
 
 	-- The fireworks (World/Fireworks): the Salutes' show over the house, and the Suite's.
 	Fireworks = {
-		rate = 3, -- shells a second through the body of a show (times the show's scale)
-		finaleRate = 9, -- shells a second in the finale barrage
-		finaleShare = 0.22, -- the last part of a show that is its finale
-		closingWillows = 7, -- great gold willows in a row to close
+		threeActsFrom = 55, -- a show this many seconds or longer plays all three acts (Hanabi, Liberty, Majesty)
+		barrage = 2.4, -- how much faster than the act's own pace the finale's barrage fires
+		closingWillows = 9, -- great gold willows in a row to close
 		heightMin = 50, -- studs above the highest roof a shell bursts, at the least
 		heightMax = 150, -- ...and at the most
+		roofCap = 110, -- (the highest roof the show looks for)
 		margin = 60, -- studs past the house's footprint shells may go up from
-		maxLive = 70, -- shells in the sky at once, at most (kinder to slower computers)
+		stageHalfWidth = 170, -- studs either side of the front doors that shells burst over
+		stageDepth = 0.5, -- how far back over the house they burst (share of its depth)
+		maxLive = 80, -- shells in the sky at once, at most (kinder to slower computers)
+		maxComets = 220, -- comets with tails (palms, willows, kamuro) at once, at most
+		density = 1, -- how many stars every shell throws (1: as designed; fewer on slower graphics settings)
 		size = 2.6, -- how big every shell is (1: a town's show; 2.6: a Japanese festival's great shells)
+		shapeRadius = 30, -- how big the shapes drawn in the sky are (hearts, stars, the monogram)
 		brightness = 3, -- how brightly the stars glow (ParticleEmitter.Brightness)
 		screenGlow = 0.05, -- how much a big burst lights the whole screen (even from indoors)
 		clearDensity = 0.06, -- the night air thins to this while a show is on
 		watchDistance = 100, -- studs in front of the house the watching camera stands (over the street)
+		hearing = 900, -- studs off at which a burst is heard at its quietest
+		whistleChance = 0.3, -- the share of rockets that whistle as they climb
+		searchlights = 6, -- beams sweeping the sky in the grand finale
+		-- The score, an act at a time (APM Music, in Roblox's licensed library): taiko drums
+		-- (Tairitsu), Sousa's Stars and Stripes Forever, Handel's Music for the Royal Fireworks (La
+		-- Rejouissance), and the 1812 Overture's last chords to close.
+		score = {
+			hanabi = "rbxassetid://9038221669",
+			liberty = "rbxassetid://1840328560",
+			majesty = "rbxassetid://1837626514",
+			close = "rbxassetid://9045751375",
+		},
+		scoreVolume = 0.8,
+	},
+
+	-- The Golden Transformation, the Midas touch (World/Midas).
+	Midas = {
+		speed = 14, -- studs a second the ring of gold runs through the Suite
+		reflectance = 0.22, -- how much gold shines
+		leaves = 80, -- leaves of gold falling at once
+		coins = 110, -- gold coins that rain down
+		coinRadius = 16, -- studs round the guest they land
+		shafts = 4, -- shafts of light from the ceiling
+		choir = "rbxassetid://9114792221", -- a heavenly choir (Pro Sound Effects)
+		choirVolume = 0.7,
 	},
 
 	-- Suite spectacles drawn on the buyer's screen (World/MemeTakeover).
@@ -396,6 +431,9 @@ local defaults = {
 		memeCast = 40, -- memes the portal spews
 		memeRain = 140, -- little memes raining from the ceiling, at most
 		bossSize = 11, -- studs across, the giant boss meme
+		-- Its score from the portal on: Swing With Me, an electro swing (APM Music).
+		memeMusic = "rbxassetid://1838645022",
+		memeMusicVolume = 0.75,
 	},
 
 	-- Commissions (Appendix I1): Gilt for the Evening's and the Week's.
@@ -554,16 +592,16 @@ local defaults = {
 	},
 
 	Movement = {
-		-- (The Grand house is a third bigger again than it was drawn, so guests walk a little quicker.)
-		walkSpeed = 15,
-		runSpeed = 24,
-		maxSpeed = 40, -- no combination of events and perks moves a guest faster than this
-		npcWalkSpeed = 11,
+		-- (The Grand house is 1.6 times the size it was drawn, so guests walk a little quicker.)
+		walkSpeed = 17,
+		runSpeed = 28,
+		maxSpeed = 42, -- no combination of events and perks moves a guest faster than this
+		npcWalkSpeed = 13,
 		-- Guests and staff are drawn at this size: a touch under Roblox's own, the size the
 		-- furniture was made for. (The rooms themselves are grand: Layout.SCALE.)
 		guestScale = 0.8,
 		-- How far the camera may pull back from a guest (the Grand rooms are worth seeing whole).
-		cameraMaxZoom = 50,
+		cameraMaxZoom = 64,
 		-- Where guests appear: "foyer" (lit, in the middle of everything) or "street" (a first
 		-- visit starts outside the doors at night).
 		firstArrival = "foyer",
@@ -646,9 +684,38 @@ local defaults = {
 			-- Eating and drinking at the Terrace (Pro Sound Effects).
 			eatBite = { { id = "rbxassetid://9113138343", pitch = 1, volume = 1.6 }, { id = "rbxassetid://9113660664", pitch = 1.1, volume = 1.4 } },
 			drinkSip = { { id = "rbxassetid://9114172109", pitch = 1, volume = 1.4 }, { id = "rbxassetid://9114171855", pitch = 1, volume = 1.4 }, { id = "rbxassetid://9114171960", pitch = 1, volume = 1.4 } },
-			fireworkBoom = { { id = "rbxassetid://9125484367", pitch = 1, volume = 2.2 }, { id = "rbxassetid://9125484511", pitch = 1, volume = 2.2 }, { id = "rbxassetid://9125484743", pitch = 1, volume = 2.2 }, { id = "rbxassetid://9125484526", pitch = 1, volume = 2.2 } },
-			fireworkCrackle = { { id = "rbxassetid://9114447505", pitch = 1, volume = 1.6 } },
+			fireworkBoom = { { id = "rbxassetid://9125484367", pitch = 1, volume = 2.6 }, { id = "rbxassetid://9125484511", pitch = 1, volume = 2.6 }, { id = "rbxassetid://9125484743", pitch = 1, volume = 2.6 }, { id = "rbxassetid://9125484526", pitch = 1, volume = 2.6 } },
+			fireworkCrackle = { { id = "rbxassetid://9114447505", pitch = 1, volume = 1.8 }, { id = "rbxassetid://9114447096", pitch = 1, volume = 1.6 }, { id = "rbxassetid://9114447104", pitch = 1, volume = 1.6 } },
 			fireworkBarrage = { { id = "rbxassetid://9114447178", pitch = 1, volume = 1.8 }, { id = "rbxassetid://9112780898", pitch = 1, volume = 1.8 } },
+			-- The lift charge's thump, a salute's sharp report and its rumble, a rocket's whistle,
+			-- glitter fizzing as it hangs, the hiss of fountains, the opening taiko and the crowd.
+			fireworkLaunch = { { id = "rbxassetid://9116973350", pitch = 1, volume = 1.2 }, { id = "rbxassetid://9116973611", pitch = 1, volume = 1.2 }, { id = "rbxassetid://9116973607", pitch = 1, volume = 1.2 } },
+			fireworkReport = { { id = "rbxassetid://9116973348", pitch = 1, volume = 2.8 }, { id = "rbxassetid://9116973593", pitch = 1, volume = 2.8 }, { id = "rbxassetid://9116973852", pitch = 1, volume = 2.8 } },
+			fireworkRumble = { { id = "rbxassetid://9120018172", pitch = 1, volume = 2.2 }, { id = "rbxassetid://9113169432", pitch = 1, volume = 2.2 } },
+			fireworkWhistle = { { id = "rbxassetid://9126009936", pitch = 1, volume = 1.4 }, { id = "rbxassetid://9126009951", pitch = 1, volume = 1.4 }, { id = "rbxassetid://9126010171", pitch = 1, volume = 1.4 } },
+			fireworkGlitter = { { id = "rbxassetid://9119380593", pitch = 1, volume = 1.2, from = 0, to = 5 }, { id = "rbxassetid://9119380767", pitch = 1, volume = 1.2, from = 2, to = 7 } },
+			fireworkHiss = { { id = "rbxassetid://9112780680", pitch = 1, volume = 1.4, from = 0, to = 9 } },
+			fireworkTaiko = { { id = "rbxassetid://9046413546", pitch = 1, volume = 2 } },
+			crowdCheer = { { id = "rbxassetid://9112766176", pitch = 1, volume = 1.6, from = 0, to = 12 } },
+			-- Salutes and the Golden Transformation: a shimmer as gold falls, crystal ringing as the
+			-- chandeliers flare, applause for an encore, the countdown's bell and midnight's chimes,
+			-- a temple gong, coins landing, a regal fanfare, a bell tree.
+			shimmerFall = { { id = "rbxassetid://9116418234", pitch = 1, volume = 1.4 }, { id = "rbxassetid://9116418291", pitch = 1, volume = 1.4 } },
+			crystal = { { id = "rbxassetid://9125741828", pitch = 1, volume = 1.6 }, { id = "rbxassetid://9125740740", pitch = 1, volume = 1.6 } },
+			applause = { { id = "rbxassetid://9112766176", pitch = 1, volume = 1.4, from = 0, to = 9 } },
+			bellStrike = { { id = "rbxassetid://9125440445", pitch = 1, volume = 1.8, from = 0.85, to = 2.75 } },
+			midnightChime = { { id = "rbxassetid://9113816347", pitch = 1, volume = 2, from = 0.25, to = 5 } },
+			gong = { { id = "rbxassetid://9125585534", pitch = 1, volume = 2, from = 0, to = 6 } },
+			coinDrop = { { id = "rbxassetid://9113704038", pitch = 1, volume = 1.4 }, { id = "rbxassetid://9113704199", pitch = 1, volume = 1.4 }, { id = "rbxassetid://9113849445", pitch = 1, volume = 1.4 } },
+			regalFanfare = { { id = "rbxassetid://1845463480", pitch = 1, volume = 1.4, from = 0, to = 14 } },
+			bellTree = { { id = "rbxassetid://9119447936", pitch = 1, volume = 1.6 }, { id = "rbxassetid://9119448154", pitch = 1, volume = 1.6 } },
+			-- The Meme Takeover: the air horn, a record scratch, a slide whistle, a kazoo fanfare and
+			-- party horns (Pro Sound Effects).
+			airHorn = { { id = "rbxassetid://9113071895", pitch = 1, volume = 1.4, from = 0, to = 2.5 }, { id = "rbxassetid://9113072263", pitch = 1, volume = 1.4, from = 0, to = 2.5 }, { id = "rbxassetid://9113071765", pitch = 1, volume = 1.4, from = 0, to = 2.5 } },
+			recordScratch = { { id = "rbxassetid://9118086936", pitch = 1, volume = 1.6 }, { id = "rbxassetid://9118087291", pitch = 1, volume = 1.6, from = 0, to = 2 } },
+			slideWhistle = { { id = "rbxassetid://9119197913", pitch = 1, volume = 1.5 }, { id = "rbxassetid://9119198132", pitch = 1, volume = 1.5 } },
+			kazoo = { { id = "rbxassetid://9114897890", pitch = 1, volume = 1.6 }, { id = "rbxassetid://9114898327", pitch = 1, volume = 1.6 } },
+			partyHorn = { { id = "rbxassetid://9117240379", pitch = 1, volume = 1.4 }, { id = "rbxassetid://9117240781", pitch = 1, volume = 1.4 } },
 			chime = { { id = "rbxassetid://9119802003", pitch = 1, volume = 4.00 }, { id = "rbxassetid://9119802009", pitch = 1, volume = 4.00 } }, -- the correct chime, climbing a step with each one in a streak
 			combo = { { id = "rbxassetid://9116394876", pitch = 1, volume = 4.00 } }, -- a streak called out
 			shimmer = { { id = "rbxassetid://9116394876", pitch = 1.1, volume = 4.00 }, { id = "rbxassetid://9116395089", pitch = 1, volume = 4.00 } }, -- a gilded piece filed
@@ -736,6 +803,9 @@ local defaults = {
 		-- The Ballroom band in stems, so it thins as lamps go out. Unset stems fall back to Music.ballroom.
 		Band = { full = "", bass = "", piano = "", clock = "" },
 		Ambience = { street = "", foyer = "", salon = "", velvet = "", obsidian = "", midnight = "", club = "", library = "", ballroom = "", terrace = "" },
+		-- Sounds that go on where they are, from Roblox's licensed library (Pro Sound Effects): the
+		-- crackle of the Suite's fire.
+		Loops = { hearth = "rbxassetid://9112780193" },
 		-- A seasonal layer under the ambience, by season id: rain on glass, a fire, crickets.
 		SeasonAmbience = { frost = "", yule = "", summer = "", harvest = "", longtable = "", bloom = "" },
 		Animations = {

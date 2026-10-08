@@ -187,7 +187,7 @@ function Kit.engrave(part: BasePart, face: Enum.NormalId, lines: { { text: strin
 	list.FillDirection = Enum.FillDirection.Vertical
 	list.HorizontalAlignment = Enum.HorizontalAlignment.Center
 	list.VerticalAlignment = Enum.VerticalAlignment.Center
-	list.Padding = UDim.new(0.02, 0)
+	list.Padding = UDim.new(if opts and opts.gap then opts.gap else 0.02, 0)
 	list.SortOrder = Enum.SortOrder.LayoutOrder
 	list.Parent = holder
 

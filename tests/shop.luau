@@ -761,6 +761,26 @@ do
 end
 local st = adminAs(owner, { op = "state" })
 check("the panel lists the events, the seasons, the salutes and the guests", #st.events == 11 and #st.seasons == 10 and #st.salutes == 6 and #st.guests >= 2)
+do
+	-- The Suite shows: the owner tries one on their own screen, free. Nobody else sees it, and
+	-- nobody else may ask for one.
+	check("the panel lists the three Suite shows", type(st.shows) == "table" and #st.shows == 3)
+	local nedBefore = #ned.inbox
+	check("a guest can't play a Suite show from House controls", adminAs(ned, { op = "show", key = "spectacleGolden" }).ok == false and #ned.inbox == nedBefore)
+	local ownerBefore, castBefore = #owner.inbox, #broadcasts
+	nedBefore = #ned.inbox
+	check("the owner can try one, free", adminAs(owner, { op = "show", key = "spectacleGolden" }).ok == true)
+	local m = owner.inbox[#owner.inbox]
+	local spread = false
+	for i = castBefore + 1, #broadcasts do
+		spread = spread or broadcasts[i].message.op == "spectacle"
+	end
+	for i = nedBefore + 1, #ned.inbox do
+		spread = spread or ned.inbox[i].op == "spectacle"
+	end
+	check("...on their own screen only", #owner.inbox > ownerBefore and m.op == "spectacle" and m.key == "spectacleGolden" and not spread)
+	check("...and only the three shows", adminAs(owner, { op = "show", key = "giltRain" }).ok == false)
+end
 local nd = profiles[ned].Data
 nd.gilt, nd.giltDay = 0, { day = -1, earned = 0 }
 -- Ned walks the house in a real character (a head for a crown, a root for picking things up).

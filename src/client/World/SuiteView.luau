@@ -117,7 +117,7 @@ local function draw()
 			continue
 		end
 		local ok, model = pcall(function()
-			local m = Furniture.build(kind, nil, cf, style, true)
+			local m = Furniture.build(kind, nil, cf, style, true, Layout.SUITE_FURNITURE)
 			return m
 		end)
 		if ok and model then
@@ -446,19 +446,56 @@ local function doors()
 end
 
 
--- Other guests in the Suite aren't drawn here: each guest's Suite is their own.
+-- Other guests in the Suite aren't drawn here: each guest's Suite is their own. Nothing of theirs
+-- shows (their name, a glow or a light they wear, a trail) or sounds (their footsteps), and what
+-- they put on while there is hidden too; once they leave, each thing is back just as it was.
+local SWITCHED = { "BillboardGui", "SurfaceGui", "ParticleEmitter", "Trail", "Beam", "Light", "Fire", "Smoke", "Sparkles", "Highlight" }
+
+local function switched(d: Instance): boolean
+	for _, class in SWITCHED do
+		if d:IsA(class) then
+			return true
+		end
+	end
+	return false
+end
+
+local function hideOne(d: Instance, hide: boolean)
+	if d:IsA("BasePart") then
+		d.LocalTransparencyModifier = if hide then 1 else 0
+	elseif d:IsA("Decal") then
+		d.LocalTransparencyModifier = if hide then 1 else 0
+	elseif d:IsA("Sound") then
+		local kept = d:GetAttribute("SuiteVolume")
+		if hide then
+			if kept == nil then
+				d:SetAttribute("SuiteVolume", d.Volume)
+			end
+			d.Volume = 0
+		elseif type(kept) == "number" then
+			d.Volume = kept
+			d:SetAttribute("SuiteVolume", nil)
+		end
+	elseif switched(d) then
+		local any = d :: any
+		local kept = d:GetAttribute("SuiteWasOn")
+		if hide then
+			if kept == nil then
+				d:SetAttribute("SuiteWasOn", any.Enabled == true)
+			end
+			any.Enabled = false
+		elseif type(kept) == "boolean" then
+			any.Enabled = kept
+			d:SetAttribute("SuiteWasOn", nil)
+		end
+	end
+end
+
 local function setHidden(other: Player, hide: boolean)
 	local character = other.Character
-	if not character then
-		return
-	end
-	for _, d in character:GetDescendants() do
-		if d:IsA("BasePart") then
-			d.LocalTransparencyModifier = if hide then 1 else 0
-		elseif d:IsA("Decal") then
-			d.LocalTransparencyModifier = if hide then 1 else 0
-		elseif d:IsA("BillboardGui") then
-			d.Enabled = not hide
+	if character then
+		for _, d in character:GetDescendants() do
+			hideOne(d, hide)
 		end
 	end
 	hidden[other] = if hide then true else nil
@@ -470,9 +507,10 @@ local function privacy()
 			local character = other.Character
 			local root = character and character:FindFirstChild("HumanoidRootPart")
 			local there = root ~= nil and root:IsA("BasePart") and Layout.zoneAt(root.Position) == "suite"
-			if there and not hidden[other] then
+			if there then
+				-- (Again each time: what they've put on since, or a new character, is hidden too.)
 				setHidden(other, true)
-			elseif not there and hidden[other] then
+			elseif hidden[other] then
 				setHidden(other, false)
 			end
 		end
@@ -490,6 +528,9 @@ function SuiteView.start()
 		end
 	end)
 	ProximityPromptService.PromptTriggered:Connect(onTriggered)
+	Players.PlayerRemoving:Connect(function(other: Player)
+		hidden[other] = nil
+	end)
 	RunService.Heartbeat:Connect(function()
 		if inside then
 			animate()

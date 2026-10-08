@@ -8,6 +8,9 @@
 -- (CFrame.lookAt(spot, whatItFaces) puts it in the room). A piece's look comes from a style table
 -- (style.model picks the design within its kind; colour, accent and the rest tint it).
 --
+-- A piece can be built a size up (Furniture.build's `scale`: the Suite's pieces are), every part
+-- and place to sit grown by it from the piece's foot.
+--
 -- Seats: a piece people can sit on carries invisible "SitSpot" parts (one per place to sit, its
 -- top surface where a guest sits, facing the way they face) and one "SeatPrompt" for the whole
 -- piece; the Seating code sits a guest in the nearest free one. Things to use (a television, a
@@ -25,6 +28,7 @@ export type Builder = {
 	lit: boolean, -- whether the piece's lamps carry real lights
 	lights: number, -- how many it has made
 	seats: { CFrame }, -- every place to sit, in the piece's own frame
+	k: number, -- the piece's size (1: as drawn)
 }
 export type Opts = { collide: boolean?, query: boolean?, shadow: boolean?, shape: Enum.PartType? }
 
@@ -102,8 +106,16 @@ end
 -- Building
 ---------------------------------------------------------------------------------------------------
 
-function Furniture.builder(model: Model, base: CFrame, lit: boolean?): Builder
-	return { model = model, base = base, lit = lit ~= false, lights = 0, seats = {} }
+function Furniture.builder(model: Model, base: CFrame, lit: boolean?, scale: number?): Builder
+	return { model = model, base = base, lit = lit ~= false, lights = 0, seats = {}, k = scale or 1 }
+end
+
+-- Where `at` (in the piece's frame, as drawn) is on a piece built at its size.
+local function sized(b: Builder, at: CFrame): CFrame
+	if b.k == 1 then
+		return at
+	end
+	return at - at.Position + at.Position * b.k
 end
 
 -- A block, `at` in the piece's own frame.
@@ -115,8 +127,8 @@ function Furniture.box(b: Builder, name: string, size: Vector3, at: CFrame, lk: 
 	if o and o.shape then
 		p.Shape = o.shape
 	end
-	p.Size = size
-	p.CFrame = b.base * at
+	p.Size = size * b.k
+	p.CFrame = b.base * sized(b, at)
 	p.Color = lk.color
 	p.Material = lk.material
 	p.Reflectance = lk.reflectance or 0
@@ -182,8 +194,8 @@ function Furniture.wedge(b: Builder, name: string, size: Vector3, at: CFrame, lk
 	p.Name = name
 	p.Anchored = true
 	p.CanTouch = false
-	p.Size = size
-	p.CFrame = b.base * at
+	p.Size = size * b.k
+	p.CFrame = b.base * sized(b, at)
 	p.Color = lk.color
 	p.Material = lk.material
 	p.Reflectance = lk.reflectance or 0
@@ -209,7 +221,7 @@ function Furniture.light(b: Builder, part: BasePart, brightness: number, range: 
 	end
 	local light = Instance.new("PointLight")
 	light.Brightness = brightness
-	light.Range = range
+	light.Range = math.min(60, range * b.k)
 	light.Color = colour or rgb(255, 204, 150)
 	light.Shadows = shadows == true
 	light.Parent = part
@@ -225,7 +237,7 @@ function Furniture.spotLight(b: Builder, part: BasePart, face: Enum.NormalId, br
 	local light = Instance.new("SpotLight")
 	light.Face = face
 	light.Brightness = brightness
-	light.Range = range
+	light.Range = math.min(60, range * b.k)
 	light.Angle = angle
 	light.Color = colour or rgb(255, 208, 160)
 	light.Shadows = false
@@ -236,7 +248,8 @@ function Furniture.spotLight(b: Builder, part: BasePart, face: Enum.NormalId, br
 end
 
 -- A place to sit: the top of `at` is where a guest sits, facing `at`'s front (-Z).
-function Furniture.sit(b: Builder, at: CFrame, width: number?, depth: number?)
+function Furniture.sit(b: Builder, drawn: CFrame, width: number?, depth: number?)
+	local at = sized(b, drawn)
 	table.insert(b.seats, at)
 	local p = Instance.new("Part")
 	p.Name = "SitSpot"
@@ -246,7 +259,7 @@ function Furniture.sit(b: Builder, at: CFrame, width: number?, depth: number?)
 	p.CanTouch = false
 	p.CastShadow = false
 	p.Transparency = 1
-	p.Size = Vector3.new(width or 2, 0.2, depth or 2)
+	p.Size = Vector3.new((width or 2) * b.k, 0.2, (depth or 2) * b.k)
 	p.CFrame = b.base * at * CFrame.new(0, -0.1, 0)
 	p:SetAttribute("SitIndex", #b.seats)
 	p.Parent = b.model
@@ -263,7 +276,7 @@ function Furniture.prompt(b: Builder, name: string, at: Vector3, action: string,
 	anchor.CastShadow = false
 	anchor.Transparency = 1
 	anchor.Size = Vector3.new(0.4, 0.4, 0.4)
-	anchor.CFrame = b.base * CFrame.new(at)
+	anchor.CFrame = b.base * CFrame.new(at * b.k)
 	anchor.Parent = b.model
 	local p = Instance.new("ProximityPrompt")
 	p.Name = name
@@ -328,15 +341,16 @@ for _, define in {
 end
 
 -- Builds a piece of `kind` in `style` at `cf` (its frame) into a new model under `parent`.
--- `lit` = false leaves out its lights (a preview). Returns the model and its builder.
-function Furniture.build(kind: string, parent: Instance?, cf: CFrame, st: Style?, lit: boolean?): (Model?, Builder?)
+-- `lit` = false leaves out its lights (a preview); `scale` builds it a size up. Returns the model
+-- and its builder.
+function Furniture.build(kind: string, parent: Instance?, cf: CFrame, st: Style?, lit: boolean?, scale: number?): (Model?, Builder?)
 	local k = Furniture.kinds[kind]
 	if not k then
 		return nil, nil
 	end
 	local model = Instance.new("Model")
 	model.Name = kind
-	local b = Furniture.builder(model, cf, lit)
+	local b = Furniture.builder(model, cf, lit, scale)
 	k.recipe(b, st or {})
 	if #b.seats > 0 then
 		local centre = Vector3.zero
@@ -344,22 +358,23 @@ function Furniture.build(kind: string, parent: Instance?, cf: CFrame, st: Style?
 			centre += s.Position
 		end
 		centre /= #b.seats
-		Furniture.prompt(b, "SeatPrompt", centre + Vector3.new(0, 1.2, 0), "Sit", k.sit or k.name)
+		Furniture.prompt(b, "SeatPrompt", centre / b.k + Vector3.new(0, 1.2, 0), "Sit", k.sit or k.name)
 	end
 	model:SetAttribute("Kind", kind)
 	model.Parent = parent
 	return model, b
 end
 
--- The places to sit on a piece of `kind` in `style`, in its own frame (cached by kind and design).
+-- The places to sit on a piece of `kind` in `style` (built at `scale`), in its own frame (cached
+-- by kind, design and size).
 local seatCache: { [string]: { CFrame } } = {}
-function Furniture.seatsOf(kind: string, st: Style?): { CFrame }
-	local key = kind .. "|" .. tostring(st and st.model or "")
+function Furniture.seatsOf(kind: string, st: Style?, scale: number?): { CFrame }
+	local key = kind .. "|" .. tostring(st and st.model or "") .. "|" .. tostring(scale or 1)
 	local cached = seatCache[key]
 	if cached then
 		return cached
 	end
-	local model, b = Furniture.build(kind, nil, CFrame.new(), st, false)
+	local model, b = Furniture.build(kind, nil, CFrame.new(), st, false, scale)
 	local seats = if b then b.seats else {}
 	if model then
 		model:Destroy()

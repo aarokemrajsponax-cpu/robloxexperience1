@@ -182,7 +182,7 @@ end)
 -- The Ballroom: twenty tables, each with a chair and a lamp; the room's lights; the board
 ---------------------------------------------------------------------------------------------------
 -- The house is opened out by the Grand Scale (Layout.SCALE, checked against it below).
-local G = 1.35
+local G = 1.6
 local tagged = { BallroomTable = {}, MaisonTable = {} }
 local seatAt = {}
 local lamps = {}

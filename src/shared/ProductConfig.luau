@@ -250,9 +250,9 @@ end
 -- Suite spectacles: a show played in your own Suite whenever you choose (each purchase is one
 -- show, kept until you play it). Cosmetic only; nothing random.
 for _, show in {
-	{ key = "spectacleFireworks", name = "Suite Fireworks", price = 199, tier = "Medium" :: Tier, line = "A forty-five-second fireworks show over the whole estate, best seen from your Suite's terrace, whenever you choose." },
-	{ key = "spectacleMemes", name = "Meme Takeover", price = 299, tier = "Medium" :: Tier, line = "Ninety seconds of brainrot: a portal spews memes, a conga line dances round you, memes rain from the ceiling, and a giant boss meme with laser eyes takes over your Suite." },
-	{ key = "spectacleGolden", name = "Golden Transformation", price = 499, tier = "Premium" :: Tier, line = "Your Suite's lights turn gold and gold leaf falls for thirty seconds." },
+	{ key = "spectacleFireworks", name = "Suite Fireworks", price = 199, tier = "Medium" :: Tier, line = "A forty-five-second pyromusical over the whole estate, best from your Suite's terrace: chrysanthemums to taiko drums, then a golden finale to Handel." },
+	{ key = "spectacleMemes", name = "Meme Takeover", price = 299, tier = "Medium" :: Tier, line = "Ninety seconds of brainrot to an electro swing: a meme portal, a conga line round you, meme rain, and a giant laser-eyed boss meme takes over your Suite." },
+	{ key = "spectacleGolden", name = "Golden Transformation", price = 499, tier = "Premium" :: Tier, line = "The Midas touch: a ring of gold turns your whole Suite to gold, gold leaf and coins fall, a choir sings and a crown settles on your head. Then all is as it was." },
 } do
 	add({
 		Key = show.key,

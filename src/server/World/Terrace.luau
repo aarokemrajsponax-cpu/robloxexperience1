@@ -154,15 +154,16 @@ function Terrace.build(parent: Instance): Model
 		prompt.Style = Enum.ProximityPromptStyle.Custom
 		prompt.Parent = counter
 		-- The menu, chalked on a board beside the bar.
-		local board = Kit.part(barModel, "MenuBoard", Vector3.new(3.2, 4.2, 0.2), CFrame.lookAt(bar + Vector3.new(-6.4, 3.6, 0.6), bar + Vector3.new(-6.4, 3.6, -10)), { color = Color3.fromRGB(26, 28, 26), material = Enum.Material.Slate }, { collide = false })
+		local board = Kit.part(barModel, "MenuBoard", Vector3.new(3.4, 5, 0.2), CFrame.lookAt(bar + Vector3.new(-6.4, 3.6, 0.6), bar + Vector3.new(-6.4, 3.6, -10)), { color = Color3.fromRGB(26, 28, 26), material = Enum.Material.Slate }, { collide = false })
 		Kit.post(barModel, "BoardLeg", 1.5, 0.2, bar + Vector3.new(-6.4, 0, 0.7), L.darkWood, { collide = false })
-		Kit.engrave(board, Enum.NormalId.Front, {
-			{ text = "THE TERRACE BAR", size = 0.42, color = Color3.fromRGB(236, 214, 160) },
-			{ text = "Lemonade · Hibiscus tea · Mint & lime", size = 0.26, color = Color3.fromRGB(230, 226, 214) },
-			{ text = "Espresso tonic · Hot chocolate", size = 0.26, color = Color3.fromRGB(230, 226, 214) },
-			{ text = "Truffle fries · Macarons · Strawberries", size = 0.26, color = Color3.fromRGB(230, 226, 214) },
-			{ text = "Nothing here has alcohol in it", size = 0.22, color = Color3.fromRGB(190, 180, 160) },
-		})
+		-- One treat a line, sized so all of them fit the board (the full menu opens at the bar).
+		local chalk = Color3.fromRGB(230, 226, 214)
+		local lines: { { text: string, size: number, font: Font?, color: Color3? } } = { { text = "THE BAR", size = 0.13, color = Color3.fromRGB(236, 214, 160) } }
+		for _, name in { "Lemonade", "Hibiscus tea", "Mint & lime", "Espresso tonic", "Hot chocolate", "Truffle fries", "Macarons", "Strawberries" } do
+			table.insert(lines, { text = name, size = 0.072, color = chalk })
+		end
+		table.insert(lines, { text = "No alcohol, ever", size = 0.06, color = Color3.fromRGB(190, 180, 160) })
+		Kit.engrave(board, Enum.NormalId.Front, lines, { gap = 0.008 })
 	end
 	-- A fire pit ringed with low sofas, open toward the doors.
 	Furniture.build("firepit", m, CFrame.lookAt(Vector3.new(68, Y, 40), Vector3.new(50, Y, 40)), { colour = Color3.fromRGB(196, 170, 120) })

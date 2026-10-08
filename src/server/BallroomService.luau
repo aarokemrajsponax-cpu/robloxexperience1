@@ -108,7 +108,9 @@ local function track(text: string): string
 	return (string.sub((string.gsub(text, "(.)", "%1 ")), 1, -2))
 end
 
-local IDLE_LINE = "Take any chair. The evening begins when a guest sits."
+-- The evening's board: a title and two lines.
+local IDLE_LINES = { "Take any chair.", "The evening begins when a guest sits." }
+local LAST_LAMP = "The last lamp still lit wins the night."
 
 local function send(player: Player?, message: { [string]: any })
 	if player and player.Parent == Players then
@@ -678,7 +680,7 @@ local function eveningStart(e: Evening, now: number)
 		end
 	end
 	broadcast({ op = "eveningBegins", alive = e.alive, real = real, counted = e.counts })
-	writeBoard({ track("LIGHTS OUT"), string.format("%d lamps lit · %d guests", e.alive, real) })
+	writeBoard({ track("LIGHTS OUT"), string.format("%d lamps lit · %d guests", e.alive, real), LAST_LAMP })
 end
 
 gather = function(now: number)
@@ -734,7 +736,7 @@ gather = function(now: number)
 		if evening == e then
 			evening = nil
 		end
-		writeBoard({ track("LIGHTS OUT"), IDLE_LINE })
+		writeBoard({ track("LIGHTS OUT"), IDLE_LINES[1], IDLE_LINES[2] })
 		return
 	end
 	for _, s in seats do
@@ -775,7 +777,7 @@ local function unseat(player: Player, reason: string)
 		end
 		if not anyone then
 			evening = nil
-			writeBoard({ track("LIGHTS OUT"), IDLE_LINE })
+			writeBoard({ track("LIGHTS OUT"), IDLE_LINES[1], IDLE_LINES[2] })
 		end
 	end
 end
@@ -1086,9 +1088,9 @@ function BallroomService.start(isSeatedElsewhere: (Player) -> boolean)
 				end
 			end
 			if e and e.state == "gathering" then
-				writeBoard({ track("LIGHTS OUT"), string.format("The evening begins in %d s. Take any chair.", math.max(0, math.ceil(e.gatherEndsAt - os.clock()))) })
+				writeBoard({ track("LIGHTS OUT"), string.format("The evening begins in %d s", math.max(0, math.ceil(e.gatherEndsAt - os.clock()))), "Take any chair." })
 			elseif e and e.state == "playing" then
-				writeBoard({ track(if e.closing then "CLOSING TIME" else "LIGHTS OUT"), string.format("%d of %d lamps lit", e.alive, cfg().tables) })
+				writeBoard({ track(if e.closing then "CLOSING TIME" else "LIGHTS OUT"), string.format("%d of %d lamps lit", e.alive, cfg().tables), LAST_LAMP })
 			end
 			task.wait(0.5)
 		end

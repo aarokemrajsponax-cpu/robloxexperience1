@@ -618,6 +618,9 @@ local function swung(part: BasePart): boolean
 	if model ~= nil and model.Name == "FrontDoors" then
 		return true -- the front doors, swung open by the Doorman
 	end
+	if model ~= nil and model.Name == "SuiteDoors" and (string.sub(part.Name, 1, 4) == "Leaf" or part.Name == "Inset" or part.Name == "Knob") then
+		return true -- the Suite's doors, swung open as a guest comes near
+	end
 	if part.Parent ~= nil and part.Parent.Name == "VaultDoor" then
 		return true -- the Vault's door, swung open as a guest comes near (VaultAccess)
 	end
