@@ -49,6 +49,7 @@ on:
           - "🎆 Fireworks finale ON"
           - "🗿 Titan meme ON"
           - "🌙 Zero gravity ON"
+          - "🕺 The owner's army ON"
           - "🧹 Every effect OFF"
           - "🎃 The All Hallows' Hunt · 15 min"
           - "🦃 The Turkey Trot · 15 min"
@@ -171,6 +172,7 @@ jobs:
             "🎆 Fireworks finale ON") CMD='{"op":"fx","id":"fireworks","on":true}' ;;
             "🗿 Titan meme ON") CMD='{"op":"fx","id":"titan","on":true}' ;;
             "🌙 Zero gravity ON") CMD='{"op":"fx","id":"zeroG","on":true}' ;;
+            "🕺 The owner's army ON") CMD='{"op":"fx","id":"ownerArmy","on":true}' ;;
             "🧹 Every effect OFF") CMD='{"op":"fxAllOff"}' ;;
             "🎃 The All Hallows' Hunt · 15 min") CMD='{"op":"event","id":"halloween","minutes":15}' ;;
             "🦃 The Turkey Trot · 15 min") CMD='{"op":"event","id":"thanksgiving","minutes":15}' ;;

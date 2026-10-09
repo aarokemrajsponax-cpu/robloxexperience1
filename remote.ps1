@@ -130,6 +130,7 @@ $Commands = @(
     @{ Label = '🎆 Fireworks finale ON'; Json = '{"op":"fx","id":"fireworks","on":true}' }
     @{ Label = '🗿 Titan meme ON'; Json = '{"op":"fx","id":"titan","on":true}' }
     @{ Label = '🌙 Zero gravity ON'; Json = '{"op":"fx","id":"zeroG","on":true}' }
+    @{ Label = '🕺 The owner''s army ON'; Json = '{"op":"fx","id":"ownerArmy","on":true}' }
     @{ Label = '🧹 Every effect OFF'; Json = '{"op":"fxAllOff"}' }
     @{ Label = '🎃 The All Hallows'' Hunt · 15 min'; Json = '{"op":"event","id":"halloween","minutes":15}' }
     @{ Label = '🦃 The Turkey Trot · 15 min'; Json = '{"op":"event","id":"thanksgiving","minutes":15}' }

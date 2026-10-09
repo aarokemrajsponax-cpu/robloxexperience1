@@ -592,7 +592,7 @@ local defaults = {
 		megaSurpriseSeconds = 25,
 		megaGiveawaySeconds = 150,
 		megaGiveawayGilt = 500,
-		megaSurprises = { "confetti", "memeRain", "dance", "storm", "launch", "spin", "meteor", "blackHole", "aurora", "galaxy", "ufo", "blizzard", "earthquake", "rainbow", "bubbles", "goldWave", "fireIce", "blackout", "tornado", "fireworks", "titan", "zeroG" },
+		megaSurprises = { "confetti", "memeRain", "dance", "storm", "launch", "spin", "meteor", "blackHole", "aurora", "galaxy", "ufo", "blizzard", "earthquake", "rainbow", "bubbles", "goldWave", "fireIce", "blackout", "tornado", "fireworks", "titan", "zeroG", "ownerArmy" },
 		doubleXP = 2, -- Double XP: how much more XP
 		-- The holidays' hunts: how many pickups, the Gilt each, the curio for finding any (once per
 		-- hunt), and the one golden prize. `moves`: they run (the Turkey Trot).
@@ -616,7 +616,7 @@ local defaults = {
 		freezeSeconds = 30, -- a freeze thaws by itself after this long
 		tinyScale = 0.45, -- A Night of Small Things: every guest this size
 		-- Effects for everyone (HouseEvents.Effects), and how long each lasts (seconds).
-		fxSeconds = { launch = 6, dance = 20, storm = 25, memeRain = 25, confetti = 10, shockwave = 4, spin = 6, intro = 6, meteor = 18, blackHole = 12, aurora = 40, galaxy = 40, ufo = 12, blizzard = 25, earthquake = 8, rainbow = 20, bubbles = 20, goldWave = 8, fireIce = 20, blackout = 10, tornado = 12, fireworks = 20, titan = 14, zeroG = 10 },
+		fxSeconds = { launch = 6, dance = 20, storm = 25, memeRain = 25, confetti = 10, shockwave = 4, spin = 6, intro = 6, meteor = 18, blackHole = 12, aurora = 40, galaxy = 40, ufo = 12, blizzard = 25, earthquake = 8, rainbow = 20, bubbles = 20, goldWave = 8, fireIce = 20, blackout = 10, tornado = 12, fireworks = 20, titan = 14, zeroG = 10, ownerArmy = 20 },
 		-- Effects switched on from the Owner Console stay on until switched off. The ones that
 		-- move guests come in waves (`on` seconds of it, then `rest` seconds to walk and sort);
 		-- every other effect simply stays.
@@ -672,7 +672,7 @@ local defaults = {
 		launchSpeed = 150, -- how hard a rocket launch throws a guest up (studs a second)
 		-- During Admin Abuse Night, a surprise for the whole house this often (seconds), from these.
 		abuseSurpriseSeconds = 45,
-		abuseSurprises = { "confetti", "memeRain", "dance", "storm", "launch", "shockwave", "spin", "meteor", "aurora", "galaxy", "rainbow", "bubbles", "goldWave", "fireworks", "titan", "ufo" },
+		abuseSurprises = { "confetti", "memeRain", "dance", "storm", "launch", "shockwave", "spin", "meteor", "aurora", "galaxy", "rainbow", "bubbles", "goldWave", "fireworks", "titan", "ufo", "ownerArmy" },
 		-- The time of day the owner can set (the house's own is midnight).
 		clocks = { midnight = 0.2, dawn = 6.3, noon = 12.5, sunset = 17.9 },
 		minutes = { 5, 15, 30 }, -- the event lengths offered
@@ -998,7 +998,7 @@ local defaults = {
 			galaxy = "cosmic", aurora = "cosmic", zeroG = "cosmic", ufo = "scifi",
 			meteor = "epic", blackHole = "epic", earthquake = "epic", tornado = "epic", storm = "epic", fireIce = "epic",
 			titan = "hero", launch = "hero", shockwave = "hero",
-			dance = "party", confetti = "party", rainbow = "party", bubbles = "party", memeRain = "party", spin = "party",
+			dance = "party", confetti = "party", rainbow = "party", bubbles = "party", memeRain = "party", spin = "party", ownerArmy = "party",
 			blizzard = "winter", goldWave = "gold", blackout = "spy", fireworks = "fireworks",
 		},
 		AbuseMusicVolume = 0.85,

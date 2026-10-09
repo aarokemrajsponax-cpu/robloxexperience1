@@ -4271,7 +4271,7 @@ end
 -- Build 54: Admin Abuse as a show: the opening, the drop, the owner's hologram, the realms, the
 -- owner's gifts and the finale
 ---------------------------------------------------------------------------------------------------
-do
+;(function() -- (its own function: the file has used up its room for top-level names)
 	local Lighting = game:GetService("Lighting")
 	local HouseEvents = module("ReplicatedStorage", "Shared", "HouseEvents")
 	local show = function()
@@ -4397,8 +4397,58 @@ do
 	snapshot("abuse-arrived")
 	abuse(false)
 	advance(12)
+	-- With the owner's avatar (a stand-in rig here): the hologram's portrait, the giant over the
+	-- house, and the owner's army.
+	local OwnerCameo = module("StarterPlayer", "StarterPlayerScripts", "Client", "World", "OwnerCameo")
+	local AbuseFX = module("StarterPlayer", "StarterPlayerScripts", "Client", "World", "AbuseFX")
+	local rig = Instance.new("Model")
+	rig.Name = "MaisonOwnerAvatar"
+	local hum = Instance.new("Humanoid")
+	hum.Parent = rig
+	for _, name in { "HumanoidRootPart", "Head", "UpperTorso" } do
+		local bit = Instance.new("Part")
+		bit.Name = name
+		bit.Size = roblox.Vector3.new(2, 2, 1)
+		bit.Parent = rig
+	end
+	rig.PrimaryPart = rig.HumanoidRootPart
+	local realTemplate = OwnerCameo.template
+	OwnerCameo.template = function()
+		return rig
+	end
+	OwnerCameo.say("cast ☄️ METEOR SHOWER!", "point", 4)
+	advance(1)
+	check("the hologram draws the owner's own avatar (in a 3D window)", find(playerGui, function(d)
+		return d:IsA("ViewportFrame") and d.Name == "Portrait"
+	end) ~= nil)
+	advance(5)
+	abuse(true, true)
+	advance(2.5)
+	local giant = workspace.MaisonLocal:FindFirstChild("OwnerColossus")
+	check("the owner stands giant over the house, with ADMIN ABUSE in the sky over them", giant ~= nil and giant:FindFirstChild("Marquee", true) ~= nil)
+	AbuseFX.play("ownerArmy", 6)
+	advance(2.5)
+	local copies = 0
+	for _, d in workspace.MaisonLocal:GetDescendants() do
+		if d.Name == "OwnerCopy" then
+			copies += 1
+		end
+	end
+	check("the owner's army: a ring of the owner round the guest", copies == 12, copies)
+	advance(6)
+	copies = 0
+	for _, d in workspace.MaisonLocal:GetDescendants() do
+		if d.Name == "OwnerCopy" then
+			copies += 1
+		end
+	end
+	check("...gone when it's over", copies == 0, copies)
+	abuse(false)
+	advance(8)
+	check("the giant goes when Admin Abuse ends", workspace.MaisonLocal:FindFirstChild("OwnerColossus") == nil)
+	OwnerCameo.template = realTemplate
 	check("no errors in Build 54's show", #errors == 0, errors[1])
-end
+end)()
 
 ---------------------------------------------------------------------------------------------------
 -- 8. A respawn hands straight back to the follow camera

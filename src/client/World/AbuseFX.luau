@@ -27,6 +27,8 @@
 --   fireworks   fireworks over the whole house
 --   titan       a colossal meme rises over the rooftops, looks round, and sinks
 --   zeroG       everyone floats, then drifts gently back down
+--   ownerArmy   a crowd of the owner (their own avatar) drops from the sky round every guest,
+--               lands in a ring and dances round them
 --   stop        whatever is still playing stops
 
 local Lighting = game:GetService("Lighting")
@@ -42,6 +44,7 @@ local HouseEvents = require(ReplicatedStorage.Shared.HouseEvents)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Fireworks = require(script.Parent.Fireworks)
 local Flakes = require(script.Parent.Flakes)
+local OwnerCameo = require(script.Parent.OwnerCameo)
 local Sound = require(script.Parent.Parent.Sound)
 
 local AbuseFX = {}
@@ -660,26 +663,93 @@ local function carry(seconds: number, hold: (t: number) -> Vector3?, given: Life
 	end)
 end
 
--- One meteor: from high in the sky, at an angle, into the ground near the guest.
-local function oneMeteor(centre: Vector3, rng: Random)
+-- Where the floor is under a point (the house's floors, the street), ignoring the effects.
+local function groundUnder(at: Vector3): Vector3
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	local ignore: { Instance } = { stage() }
+	if player.Character then
+		table.insert(ignore, player.Character)
+	end
+	params.FilterDescendantsInstances = ignore
+	local hit = Workspace:Raycast(at + Vector3.new(0, 6, 0), Vector3.new(0, -80, 0), params)
+	return if hit then hit.Position else at
+end
+
+-- Chunks of rock thrown up from an impact, arcing out and falling (drawn, never solid).
+local function debris(at: Vector3, count: number, power: number, hot: boolean)
+	local rng = Random.new()
+	local bits: { { p: Part, v: Vector3, spin: Vector3, age: number } } = {}
+	for _ = 1, count do
+		local size = rng:NextNumber(0.6, 1.8) * (power / 40)
+		local p = part("Debris", Vector3.new(size, size * rng:NextNumber(0.5, 1), size), if hot and rng:NextNumber() < 0.4 then rgb(255, 120, 40) else rgb(70, 60, 55), if hot then Enum.Material.Neon else Enum.Material.Slate)
+		p.Position = at + Vector3.new(0, 1, 0)
+		local a = rng:NextNumber(0, math.pi * 2)
+		table.insert(bits, { p = p, v = Vector3.new(math.cos(a) * rng:NextNumber(0.3, 1) * power, rng:NextNumber(0.6, 1.2) * power, math.sin(a) * rng:NextNumber(0.3, 1) * power), spin = Vector3.new(rng:NextNumber(-8, 8), rng:NextNumber(-8, 8), rng:NextNumber(-8, 8)), age = 0 })
+	end
+	local conn: RBXScriptConnection? = nil
+	conn = RunService.Heartbeat:Connect(function(dt: number)
+		local left = 0
+		for _, b in bits do
+			if b.p.Parent then
+				b.age += dt
+				b.v += Vector3.new(0, -Workspace.Gravity * 0.6 * dt, 0)
+				b.p.CFrame = (b.p.CFrame + b.v * dt) * CFrame.Angles(b.spin.X * dt, b.spin.Y * dt, b.spin.Z * dt)
+				b.p.Transparency = math.clamp((b.age - 1) / 0.6, 0, 1)
+				if b.age > 1.6 then
+					b.p:Destroy()
+				else
+					left += 1
+				end
+			end
+		end
+		if left == 0 and conn then
+			conn:Disconnect()
+		end
+	end)
+end
+
+-- One meteor: from high in the sky, at a slant, streaking fire, into the ground near the guest:
+-- a flash, a ring of fire racing out, rock thrown up, a cloud of dust. A big one (every few):
+-- three times the size, slower, and a sonic boom when it lands.
+local function oneMeteor(centre: Vector3, rng: Random, big: boolean?)
 	local a = rng:NextNumber(0, math.pi * 2)
-	local r = rng:NextNumber(14, 80)
-	local hit = Vector3.new(centre.X + math.cos(a) * r, centre.Y - 3, centre.Z + math.sin(a) * r)
-	local from = hit + Vector3.new(rng:NextNumber(-70, 70), 160, rng:NextNumber(-70, 70))
-	local rock = part("Meteor", Vector3.new(4, 4, 4), rgb(255, 150, 60))
+	local r = if big then rng:NextNumber(30, 60) else rng:NextNumber(14, 80)
+	local hit = groundUnder(Vector3.new(centre.X + math.cos(a) * r, centre.Y, centre.Z + math.sin(a) * r))
+	local from = hit + Vector3.new(rng:NextNumber(-90, 90), if big then 280 else 190, rng:NextNumber(-90, 90))
+	local size = if big then 20 else rng:NextNumber(5, 8.5)
+	local rock = part("Meteor", Vector3.one * size, rgb(255, 160, 70))
 	rock.Shape = Enum.PartType.Ball
 	rock.Position = from
-	local att = Instance.new("Attachment")
-	att.Parent = rock
-	emitter(att, FIRE, ColorSequence.new(rgb(255, 220, 120), rgb(255, 80, 30)), { Rate = 120, Lifetime = NumberRange.new(0.4, 0.8), Speed = NumberRange.new(1, 3), Size = NumberSequence.new(4, 0.5), LightEmission = 1, Transparency = NumberSequence.new(0.1, 1) })
-	emitter(att, SMOKE, ColorSequence.new(rgb(90, 70, 60)), { Rate = 40, Lifetime = NumberRange.new(1, 1.6), Speed = NumberRange.new(0.5, 1.5), Size = NumberSequence.new(3, 7), Transparency = NumberSequence.new(0.4, 1) })
+	local core = Instance.new("Attachment")
+	core.Parent = rock
+	-- The streak behind it, white-hot to deep red.
+	local top = Instance.new("Attachment")
+	top.Position = Vector3.new(0, size * 0.42, 0)
+	top.Parent = rock
+	local bottom = Instance.new("Attachment")
+	bottom.Position = Vector3.new(0, -size * 0.42, 0)
+	bottom.Parent = rock
+	local streak = Instance.new("Trail")
+	streak.Attachment0 = top
+	streak.Attachment1 = bottom
+	streak.FaceCamera = true
+	streak.Lifetime = if big then 1 else 0.55
+	streak.LightEmission = 1
+	streak.LightInfluence = 0
+	streak.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, rgb(255, 250, 220)), ColorSequenceKeypoint.new(0.25, rgb(255, 180, 70)), ColorSequenceKeypoint.new(1, rgb(190, 50, 20)) })
+	streak.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(1, 1) })
+	streak.WidthScale = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(1, 0.15) })
+	streak.Parent = rock
+	emitter(core, FIRE, ColorSequence.new(rgb(255, 230, 140), rgb(255, 80, 30)), { Rate = if big then 220 else 120, Lifetime = NumberRange.new(0.4, 0.9), Speed = NumberRange.new(1, 4), Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, size * 0.9), NumberSequenceKeypoint.new(1, size * 0.15) }), LightEmission = 1, Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.1), NumberSequenceKeypoint.new(1, 1) }) })
+	emitter(core, SMOKE, ColorSequence.new(rgb(90, 70, 60)), { Rate = 45, Lifetime = NumberRange.new(1.2, 2), Speed = NumberRange.new(0.5, 1.5), Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, size * 0.6), NumberSequenceKeypoint.new(1, size * 1.6) }), Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.4), NumberSequenceKeypoint.new(1, 1) }) })
 	local glow = Instance.new("PointLight")
 	glow.Color = rgb(255, 170, 80)
-	glow.Range = 40
-	glow.Brightness = 4
+	glow.Range = 60
+	glow.Brightness = if big then 8 else 4
 	glow.Parent = rock
-	sound("fireworkWhistle", 0.8, rng:NextNumber(0.7, 0.9))
-	local fall = rng:NextNumber(1, 1.5)
+	sound("fireworkWhistle", if big then 1.2 else 0.8, if big then 0.5 else rng:NextNumber(0.7, 0.9))
+	local fall = if big then 2.6 else rng:NextNumber(1, 1.5)
 	local t = TweenService:Create(rock, TweenInfo.new(fall, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Position = hit })
 	t:Play()
 	t.Completed:Once(function()
@@ -687,37 +757,63 @@ local function oneMeteor(centre: Vector3, rng: Random)
 			return
 		end
 		rock.Transparency = 1
-		for _, e in att:GetChildren() do
+		streak.Enabled = false
+		for _, e in core:GetChildren() do
 			if e:IsA("ParticleEmitter") then
 				e.Enabled = false
 			end
 		end
-		-- The impact: a ring of fire, sparks, a boom, the screen shaking if it was close.
-		local ring = part("Impact", Vector3.new(0.6, 4, 4), rgb(255, 140, 50), Enum.Material.Neon, 0.1)
+		glow.Brightness = if big then 14 else 7
+		glow.Range = if big then 60 else 40
+		TweenService:Create(glow, TweenInfo.new(0.9), { Brightness = 0 }):Play()
+		-- The impact: a ring of fire racing out, sparks, rock, dust, a boom; the screen shakes if near.
+		local reach = if big then 110 else 46
+		local ring = part("Impact", Vector3.new(0.6, 4, 4), rgb(255, 150, 60), Enum.Material.Neon, 0.05)
 		ring.Shape = Enum.PartType.Cylinder
-		ring.CFrame = CFrame.new(hit) * CFrame.Angles(0, 0, math.rad(90))
-		TweenService:Create(ring, TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Vector3.new(0.6, 46, 46), Transparency = 1 }):Play()
+		ring.CFrame = CFrame.new(hit + Vector3.new(0, 0.3, 0)) * CFrame.Angles(0, 0, math.rad(90))
+		TweenService:Create(ring, TweenInfo.new(if big then 1.1 else 0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Vector3.new(0.6, reach, reach), Transparency = 1 }):Play()
+		local scorch = part("Scorch", Vector3.new(0.2, size * 2.4, size * 2.4), rgb(30, 22, 18), Enum.Material.SmoothPlastic, 0.15)
+		scorch.Shape = Enum.PartType.Cylinder
+		scorch.CFrame = CFrame.new(hit + Vector3.new(0, 0.12, 0)) * CFrame.Angles(0, 0, math.rad(90))
+		TweenService:Create(scorch, TweenInfo.new(4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Transparency = 1 }):Play()
 		local burst = Instance.new("Attachment")
-		burst.WorldPosition = hit
+		burst.WorldPosition = hit + Vector3.new(0, 1, 0)
 		burst.Parent = Workspace.Terrain
-		local sp = emitter(burst, SPARKS, ColorSequence.new(rgb(255, 230, 140), rgb(255, 90, 30)), { Rate = 0, Lifetime = NumberRange.new(0.6, 1.2), Speed = NumberRange.new(20, 45), SpreadAngle = Vector2.new(70, 70), Size = NumberSequence.new(1.2, 0), LightEmission = 1, Acceleration = Vector3.new(0, -40, 0) })
-		sp:Emit(60)
+		local sp = emitter(burst, SPARKS, ColorSequence.new(rgb(255, 230, 140), rgb(255, 90, 30)), { Rate = 0, Lifetime = NumberRange.new(0.6, 1.2), Speed = NumberRange.new(if big then 40 else 20, if big then 90 else 45), SpreadAngle = Vector2.new(70, 70), Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, if big then 2.4 else 1.2), NumberSequenceKeypoint.new(1, 0) }), LightEmission = 1, Acceleration = Vector3.new(0, -40, 0) })
+		local dust = emitter(burst, SMOKE, ColorSequence.new(rgb(150, 130, 110)), { Rate = 0, Lifetime = NumberRange.new(1.6, 2.8), Speed = NumberRange.new(4, if big then 28 else 14), SpreadAngle = Vector2.new(80, 80), Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, size * 0.8), NumberSequenceKeypoint.new(1, size * 3) }), Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.35), NumberSequenceKeypoint.new(1, 1) }), Acceleration = Vector3.new(0, 3, 0) })
+		pcall(function()
+			sp:Emit(if big then 160 else 60)
+			dust:Emit(if big then 40 else 14)
+		end)
+		debris(hit, if big then 22 else 8, if big then 70 else 40, true)
 		sound("fireworkBoom", 1, rng:NextNumber(0.55, 0.75))
+		if big then
+			sound("sonicBoom", 1)
+			sound("showDrop", 0.7)
+		end
 		local me = rootOf()
 		if me then
 			local d = (me.Position - hit).Magnitude
-			if d < 45 then
-				shake(0.6, 1.4 * (1 - d / 45))
+			local near = if big then 140 else 45
+			if d < near then
+				shake(if big then 1.4 else 0.6, (if big then 3 else 1.4) * (1 - d / near))
 			end
-			if d < 14 and free() then
+			if big and d < 160 then
+				flash(rgb(255, 210, 160), 0.5 * (1 - d / 160), 0.7)
+			end
+			local throwAt = if big then 30 else 14
+			if d < throwAt and free() then
 				local away = Vector3.new(me.Position.X - hit.X, 0, me.Position.Z - hit.Z)
 				throw((if away.Magnitude > 0.1 then away.Unit else Vector3.new(1, 0, 0)) * 50 + Vector3.new(0, 45, 0))
 			end
 		end
-		task.delay(1.5, function()
+		task.delay(3, function()
 			rock:Destroy()
 			ring:Destroy()
 			burst:Destroy()
+		end)
+		task.delay(4.2, function()
+			scorch:Destroy()
 		end)
 	end)
 end
@@ -726,19 +822,37 @@ local function meteor(seconds: number)
 	banner("METEOR SHOWER!", rgb(255, 150, 60), 2.5)
 	flash(rgb(255, 170, 110), 0.25, 1)
 	local my = life()
+	-- The sky glows the colour of fire while it lasts.
+	local cc = Instance.new("ColorCorrectionEffect")
+	cc.Name = "MeteorSky"
+	cc.Parent = Lighting
+	TweenService:Create(cc, TweenInfo.new(1.5), { TintColor = rgb(255, 222, 200), Contrast = 0.08 }):Play()
 	task.spawn(function()
 		local rng = Random.new()
 		local started = os.clock()
+		local count = 0
 		while alive(my) and os.clock() - started < seconds do
 			local root = rootOf()
 			if root then
-				oneMeteor(root.Position, rng)
+				count += 1
+				-- (Every seventh, a giant.)
+				oneMeteor(root.Position, rng, count % 7 == 0)
+				if rng:NextNumber() < 0.35 then
+					oneMeteor(root.Position, rng)
+				end
 			end
-			task.wait(rng:NextNumber(0.5, 1.3))
+			task.wait(rng:NextNumber(0.45, 1.1))
 		end
+		TweenService:Create(cc, TweenInfo.new(1.5), { TintColor = Color3.new(1, 1, 1), Contrast = 0 }):Play()
+		task.delay(1.6, function()
+			cc:Destroy()
+		end)
 	end)
 end
 
+-- The black hole: a disc of fire round a hole of nothing, a ring of light at its edge (the light
+-- bent round it), everything near pulled in spirals and stretched thin; at the end it bursts in a
+-- supernova of white light.
 local function blackHole(seconds: number)
 	banner("BLACK HOLE!", rgb(190, 120, 255), 2.5)
 	local root = rootOf()
@@ -746,34 +860,68 @@ local function blackHole(seconds: number)
 		return
 	end
 	local my = life()
-	local centre = root.Position + Vector3.new(0, 48, 0)
+	local centre = root.Position + Vector3.new(0, 52, 0)
 	local hole = part("BlackHole", Vector3.new(2, 2, 2), Color3.new(0, 0, 0), Enum.Material.SmoothPlastic)
 	hole.Shape = Enum.PartType.Ball
 	hole.Position = centre
-	local disk = part("Disk", Vector3.new(0.6, 2, 2), rgb(255, 140, 60), Enum.Material.Neon, 0.25)
-	disk.Shape = Enum.PartType.Cylinder
-	local halo = part("Halo", Vector3.new(0.4, 2, 2), rgb(170, 90, 255), Enum.Material.Neon, 0.5)
-	halo.Shape = Enum.PartType.Cylinder
+	local disks: { { p: Part, size: number, spin: number, tilt: number } } = {}
+	for i, spec in { { size = 70, colour = rgb(255, 120, 40), alpha = 0.2, spin = 2.2, tilt = 12 }, { size = 96, colour = rgb(255, 190, 90), alpha = 0.55, spin = 1.5, tilt = 10 }, { size = 128, colour = rgb(170, 90, 255), alpha = 0.7, spin = -1, tilt = 14 } } do
+		local d = part("Disk" .. i, Vector3.new(0.5, 2, 2), spec.colour, Enum.Material.Neon, spec.alpha)
+		d.Shape = Enum.PartType.Cylinder
+		table.insert(disks, { p = d, size = spec.size, spin = spec.spin, tilt = spec.tilt })
+	end
+	-- The ring of light round its edge, always facing the guest.
+	local photon = part("PhotonRing", Vector3.new(0.3, 2, 2), rgb(255, 245, 220), Enum.Material.Neon, 0.1)
+	photon.Shape = Enum.PartType.Cylinder
 	local swirl = Instance.new("Attachment")
 	swirl.Parent = hole
-	emitter(swirl, RING, ColorSequence.new(rgb(200, 140, 255), rgb(255, 150, 80)), { Rate = 10, Lifetime = NumberRange.new(1.5, 2), Speed = NumberRange.new(0, 0), Size = NumberSequence.new(40, 8), LightEmission = 1, Transparency = NumberSequence.new(0.3, 1), RotSpeed = NumberRange.new(120, 200), Rotation = NumberRange.new(0, 360) })
-	emitter(swirl, SPARK, ColorSequence.new(rgb(220, 180, 255)), { Rate = 60, Lifetime = NumberRange.new(1, 2), Speed = NumberRange.new(-30, -18), SpreadAngle = Vector2.new(180, 180), Size = NumberSequence.new(0.8, 0), LightEmission = 1 })
+	emitter(swirl, RING, ColorSequence.new(rgb(200, 140, 255), rgb(255, 150, 80)), { Rate = 12, Lifetime = NumberRange.new(1.5, 2), Speed = NumberRange.new(0, 0), Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 60), NumberSequenceKeypoint.new(1, 10) }), LightEmission = 1, Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.3), NumberSequenceKeypoint.new(1, 1) }), RotSpeed = NumberRange.new(120, 200), Rotation = NumberRange.new(0, 360) })
+	emitter(swirl, SPARK, ColorSequence.new(rgb(220, 180, 255)), { Rate = 90, Lifetime = NumberRange.new(1, 2), Speed = NumberRange.new(-40, -24), SpreadAngle = Vector2.new(180, 180), Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(1, 0) }), LightEmission = 1 })
+	-- Bits of the night pulled in: stretched thin as they spiral down into it.
+	local rng = Random.new()
+	local pulled: { { p: Part, a: number, r: number, h: number, speed: number } } = {}
+	for _ = 1, 26 do
+		local p = part("Pulled", Vector3.new(0.6, 0.6, 1.6), if rng:NextNumber() < 0.5 then rgb(255, 200, 120) else rgb(190, 150, 255), Enum.Material.Neon, 0.1)
+		table.insert(pulled, { p = p, a = rng:NextNumber(0, math.pi * 2), r = rng:NextNumber(30, 90), h = rng:NextNumber(-20, 20), speed = rng:NextNumber(0.8, 1.6) })
+	end
 	local cc = Instance.new("ColorCorrectionEffect")
 	cc.Name = "BlackHoleDark"
-	cc.Brightness = -0.15
+	cc.Brightness = -0.18
+	cc.Contrast = 0.15
 	cc.TintColor = rgb(200, 180, 255)
 	cc.Parent = Lighting
 	sound("fireworkRumble", 1, 0.5)
-	local grow = 0.8
-	TweenService:Create(hole, TweenInfo.new(grow, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Size = Vector3.new(16, 16, 16) }):Play()
+	sound("warpBuild", 0.8, 0.7)
+	local grow = 0.9
+	TweenService:Create(hole, TweenInfo.new(grow, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Size = Vector3.new(20, 20, 20) }):Play()
 	local started = os.clock()
-	local conn = RunService.RenderStepped:Connect(function()
+	local conn = RunService.RenderStepped:Connect(function(dt: number)
 		local t = os.clock() - started
 		local s = math.min(1, t / grow)
-		disk.Size = Vector3.new(0.6, 46 * s, 46 * s)
-		halo.Size = Vector3.new(0.4, 62 * s, 62 * s)
-		disk.CFrame = CFrame.new(centre) * CFrame.Angles(math.rad(12), t * 2, 0) * CFrame.Angles(0, 0, math.rad(90))
-		halo.CFrame = CFrame.new(centre) * CFrame.Angles(math.rad(-8), -t * 1.3, 0) * CFrame.Angles(0, 0, math.rad(90))
+		for i, d in disks do
+			d.p.Size = Vector3.new(0.5, d.size * s, d.size * s)
+			d.p.CFrame = CFrame.new(centre) * CFrame.Angles(math.rad(d.tilt), t * d.spin + i, 0) * CFrame.Angles(0, 0, math.rad(90))
+		end
+		local camera = Workspace.CurrentCamera
+		if camera then
+			photon.Size = Vector3.new(0.3, 24 * s, 24 * s)
+			photon.CFrame = CFrame.lookAt(centre, camera.CFrame.Position) * CFrame.Angles(0, math.rad(90), 0)
+			photon.Transparency = 0.05 + 0.2 * math.abs(math.sin(t * 5))
+		end
+		for _, b in pulled do
+			b.a += dt * b.speed * (1 + 40 / math.max(4, b.r))
+			b.r -= dt * (6 + 120 / math.max(4, b.r))
+			b.h *= 1 - dt * 0.8
+			if b.r < 6 then
+				b.r = rng:NextNumber(60, 95)
+				b.h = rng:NextNumber(-20, 20)
+			end
+			local at = centre + Vector3.new(math.cos(b.a) * b.r, b.h, math.sin(b.a) * b.r)
+			local ahead = centre + Vector3.new(math.cos(b.a + 0.1) * b.r, b.h, math.sin(b.a + 0.1) * b.r)
+			-- (Stretched along its path the nearer it gets.)
+			b.p.Size = Vector3.new(0.6, 0.6, math.clamp(80 / b.r, 1.5, 9))
+			b.p.CFrame = CFrame.lookAt(at, ahead)
+		end
 	end)
 	carry(math.max(1, seconds - 2.5), function(t: number): Vector3?
 		local a = t * 2.4
@@ -786,11 +934,30 @@ local function blackHole(seconds: number)
 		end
 		conn:Disconnect()
 		cc:Destroy()
-		flash(rgb(230, 210, 255), 0.4, 0.8)
-		sound("fireworkBoom", 1, 0.5)
-		for _, x in { hole, disk, halo } do
+		for _, x in { hole, photon } do
 			x:Destroy()
 		end
+		for _, d in disks do
+			d.p:Destroy()
+		end
+		for _, b in pulled do
+			b.p:Destroy()
+		end
+		if not alive(my) then
+			return
+		end
+		-- The supernova: a sphere of white light bursting out from where it was.
+		local nova = part("Supernova", Vector3.new(4, 4, 4), rgb(255, 250, 235), Enum.Material.Neon, 0)
+		nova.Shape = Enum.PartType.Ball
+		nova.Position = centre
+		TweenService:Create(nova, TweenInfo.new(1.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Vector3.new(220, 220, 220), Transparency = 1 }):Play()
+		task.delay(1.3, function()
+			nova:Destroy()
+		end)
+		flash(rgb(240, 225, 255), 0.6, 1)
+		sound("sonicBoom", 1)
+		sound("fireworkBoom", 1, 0.5)
+		shake(0.9, 1.6)
 	end)
 end
 
@@ -959,6 +1126,12 @@ local function ufo(seconds: number)
 	glow.Range = 40
 	glow.Brightness = 3
 	glow.Parent = beam
+	-- Motes of light rising up the beam.
+	local lift = Instance.new("Attachment")
+	lift.Parent = beam
+	local motes = emitter(lift, SPARK, ColorSequence.new(rgb(180, 255, 190), Color3.new(1, 1, 1)), { Rate = 0, Lifetime = NumberRange.new(1.2, 2), Speed = NumberRange.new(10, 18), SpreadAngle = Vector2.new(8, 8), Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.9), NumberSequenceKeypoint.new(1, 0) }), LightEmission = 1, EmissionDirection = Enum.NormalId.Right })
+	motes.Shape = Enum.ParticleEmitterShape.Cylinder
+	motes.ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume
 	sound("slideWhistle", 1, 1.2)
 	local started = os.clock()
 	local from = hover + Vector3.new(0, 120, -160)
@@ -977,6 +1150,7 @@ local function ufo(seconds: number)
 			l.Position = at + Vector3.new(math.cos(a) * 12.5, -0.8, math.sin(a) * 12.5)
 		end
 		beam.Transparency = if leaving or t < 1.6 then 1 else 0.72 + math.sin(t * 8) * 0.05
+		motes.Rate = if leaving or t < 1.6 then 0 else 60
 		beam.CFrame = CFrame.new(at - Vector3.new(0, 17, 0)) * CFrame.Angles(0, 0, math.rad(90))
 	end)
 	task.delay(1.6, function()
@@ -1500,6 +1674,110 @@ local function zeroG(seconds: number)
 	end)
 end
 
+-- The owner's army: copies of the owner (their own avatar) drop from the sky in a ring round the
+-- guest, land with a burst of gold, and dance round them, turning slowly, till it's over; then each
+-- vanishes in a puff of gold. (Without the owner's avatar yet: a dance party.)
+local function ownerArmy(seconds: number)
+	banner("THE OWNER'S ARMY!", GOLD, 2.5)
+	local template = OwnerCameo.template()
+	local root = rootOf()
+	if not template or not root then
+		dance(seconds)
+		return
+	end
+	local my = life()
+	sound("airHorn", 1)
+	task.delay(0.4, sound, "partyHorn", 1)
+	-- (How far the avatar's root stands above its feet.)
+	local lift = 3
+	pcall(function()
+		local cf, size = template:GetBoundingBox()
+		lift = template:GetPivot().Position.Y - (cf.Position.Y - size.Y / 2)
+	end)
+	local count = 12
+	local centre = root.Position
+	local army: { { m: Model, a: number, land: number, ground: number } } = {}
+	for i = 1, count do
+		local m = template:Clone()
+		m.Name = "OwnerCopy"
+		local a = i / count * math.pi * 2
+		local at = Vector3.new(centre.X + math.cos(a) * 15, centre.Y, centre.Z + math.sin(a) * 15)
+		local ground = groundUnder(at).Y
+		pcall(function()
+			m:PivotTo(CFrame.new(at.X, ground + lift + 90 + i * 4, at.Z))
+		end)
+		m.Parent = stage()
+		OwnerCameo.emote(m, "cheer", true)
+		local pivot = m.PrimaryPart or m:FindFirstChild("HumanoidRootPart")
+		if pivot and pivot:IsA("BasePart") then
+			local att = Instance.new("Attachment")
+			att.Parent = pivot
+			emitter(att, SPARK, ColorSequence.new(GOLD, Color3.new(1, 1, 1)), { Rate = 25, Lifetime = NumberRange.new(0.6, 1.2), Speed = NumberRange.new(2, 5), SpreadAngle = Vector2.new(180, 180), Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.7), NumberSequenceKeypoint.new(1, 0) }), LightEmission = 1 })
+		end
+		table.insert(army, { m = m, a = a, land = 1 + i * 0.12, ground = ground })
+	end
+	local started = os.clock()
+	local landedAll = false
+	local conn = RunService.Heartbeat:Connect(function()
+		local t = os.clock() - started
+		local me = rootOf()
+		local here = if me then me.Position else centre
+		local allDown = true
+		for i, s in army do
+			if not s.m.Parent then
+				continue
+			end
+			local spin = s.a + math.max(0, t - 2.5) * 0.25
+			local x, z = here.X + math.cos(spin) * 15, here.Z + math.sin(spin) * 15
+			local k = math.clamp(t / s.land, 0, 1)
+			local drop = (1 - k * k) * (90 + i * 4)
+			if k < 1 then
+				allDown = false
+			elseif s.m:GetAttribute("Landed") == nil then
+				s.m:SetAttribute("Landed", true)
+				OwnerCameo.emote(s.m, if i % 3 == 0 then "dance2" elseif i % 3 == 1 then "dance" else "dance3", true)
+			end
+			pcall(function()
+				s.m:PivotTo(CFrame.lookAt(Vector3.new(x, s.ground + lift + drop, z), Vector3.new(here.X, s.ground + lift + drop, here.Z)))
+			end)
+		end
+		if allDown and not landedAll then
+			landedAll = true
+			sound("subHit", 0.9)
+			sound("crowdCheer", 0.8)
+			shake(0.4, 0.6)
+		end
+	end)
+	task.spawn(function()
+		while alive(my) and os.clock() - started < seconds do
+			task.wait(0.25)
+		end
+		conn:Disconnect()
+		for _, s in army do
+			local m = s.m
+			local ok, at = pcall(function(): Vector3
+				return m:GetPivot().Position
+			end)
+			if ok then
+				local puff = Instance.new("Attachment")
+				puff.WorldPosition = at
+				puff.Parent = Workspace.Terrain
+				local e = emitter(puff, SPARK, ColorSequence.new(GOLD), { Rate = 0, Lifetime = NumberRange.new(0.5, 1), Speed = NumberRange.new(6, 14), SpreadAngle = Vector2.new(180, 180), Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1.2), NumberSequenceKeypoint.new(1, 0) }), LightEmission = 1 })
+				pcall(function()
+					e:Emit(30)
+				end)
+				task.delay(1.2, function()
+					puff:Destroy()
+				end)
+			end
+			m:Destroy()
+		end
+		if alive(my) then
+			sound("sparklePass", 0.8)
+		end
+	end)
+end
+
 local PLAYERS: { [string]: (number, Vector3?) -> () } = {
 	intro = function(s)
 		intro(s)
@@ -1572,6 +1850,9 @@ local PLAYERS: { [string]: (number, Vector3?) -> () } = {
 	end,
 	zeroG = function(s)
 		zeroG(s)
+	end,
+	ownerArmy = function(s)
+		ownerArmy(s)
 	end,
 }
 

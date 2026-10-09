@@ -810,6 +810,39 @@ THEMES.zeroG = function(ctx)
 	end, NumberRange.new(-0.07, -0.04), 20, 40)
 end
 
+-- The owner's army: a line of dancers (and the owner's crowns) bouncing along the foot of the
+-- screen, under a warm glow.
+THEMES.ownerArmy = function(ctx)
+	local n = if ctx.mode == "table" then 9 else 6
+	local dancers: { TextLabel } = {}
+	for i = 1, n do
+		table.insert(dancers, glyph(ctx.back, if i % 3 == 2 then "👑" else "🕺", 46))
+	end
+	local glow = frame(ctx.back, rgb(255, 200, 90), 0)
+	glow.AnchorPoint = Vector2.new(0, 1)
+	gradient(glow, nil, fade(1, 0.55), 90)
+	return {
+		step = function(_dt, t)
+			local size = ctx.size()
+			glow.Position = UDim2.fromOffset(0, size.Y)
+			glow.Size = UDim2.fromOffset(size.X, size.Y * 0.32)
+			for i, d in dancers do
+				local hop = math.abs(math.sin(t * 4.2 + i * 0.8))
+				local px = math.min(size.X, size.Y) * (if ctx.mode == "table" then 0.09 else 0.07)
+				d.Size = UDim2.fromOffset(px, px)
+				d.Position = UDim2.fromOffset(size.X * (i - 0.5) / n, size.Y * 0.9 - hop * px * 0.55)
+				d.Rotation = math.sin(t * 6 + i) * 14
+			end
+		end,
+		stop = function()
+			for _, d in dancers do
+				d:Destroy()
+			end
+			glow:Destroy()
+		end,
+	}
+end
+
 THEMES.dance = function(ctx)
 	local ball = glyph(ctx.front, "🪩", 60)
 	local beams: { Frame } = {}

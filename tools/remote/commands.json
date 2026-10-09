@@ -340,6 +340,16 @@
   },
   {
    "group": "Effects",
+   "label": "🕺 The owner's army ON",
+   "line": "A crowd of the owner drops from the sky and dances round every guest. Stays on until it's switched off.",
+   "command": {
+    "op": "fx",
+    "id": "ownerArmy",
+    "on": true
+   }
+  },
+  {
+   "group": "Effects",
    "label": "🧹 Every effect OFF",
    "line": "Every effect switched off, in every server.",
    "command": {

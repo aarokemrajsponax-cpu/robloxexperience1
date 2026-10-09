@@ -73,6 +73,7 @@ HouseEvents.Effects = {
 	{ id = "fireworks", name = "Fireworks finale", line = "The sky fills with fireworks over every guest.", glyph = "🎆" },
 	{ id = "titan", name = "Titan meme", line = "A colossal meme rises over the rooftops, looks round, and sinks.", glyph = "🗿" },
 	{ id = "zeroG", name = "Zero gravity", line = "Everyone floats, slowly, then drifts back down.", glyph = "🌙" },
+	{ id = "ownerArmy", name = "The owner's army", line = "A crowd of the owner drops from the sky and dances round every guest.", glyph = "🕺" },
 } :: { Event }
 
 HouseEvents.effectById = {} :: { [string]: Event }

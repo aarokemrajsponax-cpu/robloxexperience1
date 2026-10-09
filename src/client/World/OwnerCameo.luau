@@ -326,7 +326,9 @@ local function measure(model: Model): (number, number)
 	return 5 * cfg().colossus.scale, 0
 end
 
-local function build(): Model?
+local marquee: TextLabel? = nil
+
+local function build(mega: boolean?): Model?
 	local template = OwnerCameo.template()
 	if not template then
 		return nil
@@ -369,6 +371,42 @@ local function build(): Model?
 		halo.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, head.Size.Y * 0.35), NumberSequenceKeypoint.new(1, 0) })
 		halo.Parent = crownAt
 		table.insert(colossusParts, halo)
+		-- ADMIN ABUSE in the sky over the giant's head, lit, seen from anywhere outside.
+		local sign = Instance.new("BillboardGui")
+		sign.Name = "Marquee"
+		sign.Size = UDim2.fromScale(head.Size.Y * 7, head.Size.Y * 1.9)
+		sign.StudsOffsetWorldSpace = Vector3.new(0, head.Size.Y * 2.4, 0)
+		sign.LightInfluence = 0
+		sign.MaxDistance = 5000
+		sign.Parent = head
+		local words = Instance.new("TextLabel")
+		words.Name = "Words"
+		words.BackgroundTransparency = 1
+		words.Size = UDim2.fromScale(1, 0.72)
+		words.FontFace = Font.fromEnum(Enum.Font.LuckiestGuy)
+		words.TextScaled = true
+		words.TextColor3 = Color3.new(1, 1, 1)
+		words.TextStrokeColor3 = rgb(40, 22, 4)
+		words.TextStrokeTransparency = 0
+		words.Text = if mega then "MEGA ABUSE" else "ADMIN ABUSE"
+		words.Parent = sign
+		local g = Instance.new("UIGradient")
+		g.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, rgb(255, 244, 200)), ColorSequenceKeypoint.new(0.5, GOLD), ColorSequenceKeypoint.new(1, rgb(200, 140, 40)) })
+		g.Rotation = 90
+		g.Parent = words
+		local who = Instance.new("TextLabel")
+		who.Name = "Who"
+		who.BackgroundTransparency = 1
+		who.Position = UDim2.fromScale(0, 0.74)
+		who.Size = UDim2.fromScale(1, 0.26)
+		who.FontFace = HEAVY
+		who.TextScaled = true
+		who.TextColor3 = rgb(255, 236, 190)
+		who.TextStrokeTransparency = 0.3
+		who.Text = "👑 " .. ownerName() .. " 👑"
+		who.Parent = sign
+		marquee = words
+		table.insert(colossusParts, sign)
 	end
 	local root = model:FindFirstChild("HumanoidRootPart")
 	if root and root:IsA("BasePart") then
@@ -430,6 +468,7 @@ function OwnerCameo.colossus(on: boolean, rise: number?, mega: boolean?)
 		colossus = nil
 		colossusParts = {}
 		highlight = nil
+		marquee = nil
 		if colossusConn then
 			colossusConn:Disconnect()
 			colossusConn = nil
@@ -463,7 +502,7 @@ function OwnerCameo.colossus(on: boolean, rise: number?, mega: boolean?)
 	if colossus and colossus.Parent then
 		return
 	end
-	local model = build()
+	local model = build(mega)
 	if not model then
 		return
 	end
@@ -511,6 +550,11 @@ function OwnerCameo.colossus(on: boolean, rise: number?, mega: boolean?)
 		local h = highlight
 		if h then
 			h.OutlineColor = if mega then Color3.fromHSV((t * 0.12) % 1, 0.55, 1) else rgb(255, 230, 160)
+		end
+		local sign = marquee
+		if sign then
+			sign.Rotation = math.sin(t * 1.3) * 3
+			sign.TextColor3 = if mega then Color3.fromHSV((t * 0.2) % 1, 0.25, 1) else Color3.new(1, 1, 1)
 		end
 	end)
 end
