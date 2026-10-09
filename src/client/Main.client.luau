@@ -207,6 +207,18 @@ start("Screen effects", function()
 	walkFX = ScreenFX.walkLayer()
 end)
 start("Abuse music", require(script.Parent.World.AbuseMusic).start)
+-- Admin Abuse as a show: the opening, the owner's hologram and the giant, the realms, the owner's
+-- gifts and the finale (the camera only moves for a guest who isn't at a table).
+start("Admin Abuse's show", function()
+	local AbuseShow = require(script.Parent.World.AbuseShow)
+	AbuseShow.isBusy = function(): boolean
+		return TableClient.isSeated()
+	end
+	AbuseShow.cameraMoment = CameraRig.moment
+	AbuseShow.cameraShake = CameraRig.shake
+	TableClient.onGolden = AbuseShow.noteGolden
+	AbuseShow.start()
+end)
 GemShopPanel.getGems = function()
 	CuriosPanel.open("gems")
 end

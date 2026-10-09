@@ -157,6 +157,16 @@ function Sound.scoreList(songs: { { id: string, gain: number? } }, volume: numbe
 	end
 end
 
+-- Silence before a drop (Admin Abuse's opening): the house's music sinks almost away for
+-- `seconds`, then comes back to where it should be (under a show's music, if one began meanwhile).
+function Sound.hush(seconds: number)
+	TweenService:Create(music, TweenInfo.new(0.5, Enum.EasingStyle.Sine), { Volume = levels.music * 0.04 }):Play()
+	task.delay(seconds, function()
+		local target = if scoring > 0 then levels.music * 0.12 elseif dipped then levels.music * 0.45 else levels.music
+		TweenService:Create(music, TweenInfo.new(0.4, Enum.EasingStyle.Sine), { Volume = target }):Play()
+	end)
+end
+
 -- A short dip for round cards (about three seconds).
 function Sound.briefDip(seconds: number?)
 	Sound.dip(true)
@@ -203,6 +213,11 @@ local DRIFT: { [string]: { pitch: number, volume: number } } = {
 	slide = { pitch = 0.08, volume = 0.25 },
 	deal = { pitch = 0.07, volume = 0.2 },
 	hover = { pitch = 0.05, volume = 0.15 },
+	-- (Admin Abuse's opening: timed to meet at the drop, so never sped up or slowed.)
+	showRiser = { pitch = 0, volume = 0 },
+	showBuild = { pitch = 0, volume = 0 },
+	showDrop = { pitch = 0, volume = 0.05 },
+	heavenly = { pitch = 0, volume = 0 },
 }
 local DEFAULT_DRIFT = { pitch = 0.045, volume = 0.12 }
 

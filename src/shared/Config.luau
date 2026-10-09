@@ -282,6 +282,7 @@ local defaults = {
 		suiteAsk = { rate = 1, burst = 4 },
 		gemAsk = { rate = 3, burst = 8 },
 		badgeAsk = { rate = 1, burst = 4 },
+		abuseGift = { rate = 1, burst = 3 },
 	},
 
 	-- Levels (Shared/Levels has the curve): XP for each thing the server sees happen.
@@ -642,11 +643,36 @@ local defaults = {
 		},
 		-- Servers that open while something is on everywhere join in: they look this often (s).
 		liveCheck = 30,
+		-- Admin Abuse as a show (server/AbuseShow, World/AbuseShow, World/OwnerCameo).
+		show = {
+			-- The opening on every screen: letterbox, the transmission, the riser; at `dropAt`
+			-- seconds the drop (a flash, the title, the impact, the music); `seconds` in all.
+			dropAt = 3.75,
+			seconds = 8,
+			-- The owner's own avatar, a giant standing over the house all night (`scale` times a
+			-- guest; where its feet are, in the house's drawn numbers: behind it, facing the street).
+			colossus = { scale = 56, x = 0, y = 0, z = 232, turn = 0 },
+			-- The owner's gifts: one on every guest's screen every so often, theirs to open while it
+			-- lasts; each pays `gilt` (before Gilt's multipliers); the `crownAfter`th opened in one
+			-- night gives the Admin's Crown (once ever), or `crownBonus` Gilt to one who has it.
+			giftEvery = { abuse = 75, mega = 45 },
+			giftWindow = 25,
+			giftGilt = 40,
+			crownAfter = 3,
+			crownBonus = 150,
+			-- The realms of Mega Abuse, in turn (World/AbuseShow draws them); Admin Abuse keeps to
+			-- the first ("gilded"). Each lasts `realmSeconds`.
+			realms = { "cosmos", "candy", "midas", "neon", "abyss", "frost" },
+			abuseRealm = "gilded",
+			realmSeconds = 90,
+			-- The finale when it ends: the owner's goodbye, fireworks and each guest's haul.
+			finaleSeconds = 9,
+		},
 		shockwaveRadius = 80, -- studs from the owner a shockwave reaches
 		launchSpeed = 150, -- how hard a rocket launch throws a guest up (studs a second)
 		-- During Admin Abuse Night, a surprise for the whole house this often (seconds), from these.
-		abuseSurpriseSeconds = 60,
-		abuseSurprises = { "confetti", "memeRain", "dance", "storm", "launch", "shockwave", "spin" },
+		abuseSurpriseSeconds = 45,
+		abuseSurprises = { "confetti", "memeRain", "dance", "storm", "launch", "shockwave", "spin", "meteor", "aurora", "galaxy", "rainbow", "bubbles", "goldWave", "fireworks", "titan", "ufo" },
 		-- The time of day the owner can set (the house's own is midnight).
 		clocks = { midnight = 0.2, dawn = 6.3, noon = 12.5, sunset = 17.9 },
 		minutes = { 5, 15, 30 }, -- the event lengths offered
@@ -838,6 +864,25 @@ local defaults = {
 			leave = { { id = "rbxassetid://9120806410", pitch = 1, volume = 4.00 } },
 			click = { { id = "rbxassetid://15675032796", pitch = 1, volume = 1.00 } },
 			tick = { { id = "rbxassetid://15675032796", pitch = 1.35, volume = 1.00 } },
+			-- Admin Abuse's show (Pro Sound Effects; measured: each levelled to about -16 dBFS, and
+			-- where its hit falls). The riser climbs to its peak 3.75 s in; the build-up's impact
+			-- lands 2.75 s in; so started 1 s apart, both meet the drop.
+			showRiser = { { id = "rbxassetid://9117297566", pitch = 1, volume = 4.5, from = 0, to = 4.4 } }, -- Phasey Synth Power Up High Pitched Rise
+			showBuild = { { id = "rbxassetid://9125934722", pitch = 1, volume = 2.6, from = 0, to = 7 } }, -- Shockwave Impact Huge Whooshing In Build Up
+			showDrop = { { id = "rbxassetid://9113435763", pitch = 1, volume = 2.2, from = 0, to = 8 } }, -- Big Low-End Impacts
+			sonicBoom = { { id = "rbxassetid://9119382258", pitch = 1, volume = 1.0 }, { id = "rbxassetid://9120769331", pitch = 1, volume = 1.2 } },
+			warpBurst = { { id = "rbxassetid://9120057087", pitch = 1, volume = 0.8 } }, -- Time Warp Build Up Boomy Explosion
+			warpBuild = { { id = "rbxassetid://9126102694", pitch = 1, volume = 1.0 } }, -- Time Warp Build Up Large Suck Rumble
+			riseWhoosh = { { id = "rbxassetid://9125805781", pitch = 1, volume = 3.2 } },
+			magicZoom = { { id = "rbxassetid://9125648149", pitch = 1, volume = 1.6 } },
+			subHit = { { id = "rbxassetid://9126009571", pitch = 1, volume = 0.9 } },
+			glitch = { { id = "rbxassetid://9126160908", pitch = 1, volume = 2.4, from = 0, to = 1.2 }, { id = "rbxassetid://9126160908", pitch = 1.1, volume = 2.4, from = 6, to = 7 } },
+			heavenly = { { id = "rbxassetid://9114791989", pitch = 1, volume = 1.6, from = 0, to = 10 } }, -- Heavenly Presence choir pad
+			sparklePass = { { id = "rbxassetid://9125635650", pitch = 1, volume = 1.3 } },
+			fairyDust = { { id = "rbxassetid://9114369623", pitch = 1, volume = 4.5 } },
+			stinger = { { id = "rbxassetid://9125641284", pitch = 1, volume = 5 } }, -- Magic Synth Stinger
+			kaching = { { id = "rbxassetid://9113728042", pitch = 1, volume = 1.7 } }, -- a cash register
+			lowHit = { { id = "rbxassetid://9116329674", pitch = 1, volume = 1.2 } },
 		},
 		-- The Foyer's grand piano when a guest plays it. Roblox only lets an experience play audio
 		-- its owner uploaded, or Roblox's own licensed library (APM Music, Pro Sound Effects): piano
@@ -985,6 +1030,18 @@ local defaults = {
 			tipHat = "",
 			term = "",
 			pianist = "", -- the Pianist playing (looped); with none set they sway at the keys
+		},
+		-- The owner's avatar in Admin Abuse's show (World/OwnerCameo): Roblox's own R15 emotes, the
+		-- same ones every avatar has.
+		OwnerEmotes = {
+			idle = "rbxassetid://507766666",
+			wave = "rbxassetid://507770239",
+			point = "rbxassetid://507770453",
+			cheer = "rbxassetid://507770677",
+			laugh = "rbxassetid://507770818",
+			dance = "rbxassetid://507771019",
+			dance2 = "rbxassetid://507776043",
+			dance3 = "rbxassetid://507777268",
 		},
 		-- House looks: clothing for each outfit (Shirt and Pants template ids, accessory ids
 		-- comma-separated). A look is only sold once its clothing is set.

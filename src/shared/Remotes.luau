@@ -40,6 +40,7 @@ Remotes.Functions = {
 	"SuiteAsk", -- client -> server: your friends' Suites (the list, visit one, go home)
 	"GemAsk", -- client -> server: the Gem Shop (auras, titles, Surges, Gilt for Gems, the Cabinet)
 	"BadgeAsk", -- client -> server: your Badge Book
+	"AbuseGiftAsk", -- client -> server: open the owner's gift during Admin Abuse
 }
 
 local folder: Folder? = nil

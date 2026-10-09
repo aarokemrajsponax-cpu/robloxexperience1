@@ -454,6 +454,7 @@ local function onFiled(message: { [string]: any })
 	local_.lastCase = server.lastCase
 	-- A golden piece in its right case: the server paid it; say how much.
 	if message.correct and type(message.golden) == "number" and message.golden > 0 then
+		TableClient.onGolden(message.golden)
 		SortScreen.golden(message.case, message.golden)
 		Sound.play("coinDrop", 0.8)
 		task.delay(0.15, Sound.shimmer)
@@ -879,6 +880,9 @@ end
 function TableClient.onSeated(cb: () -> ())
 	table.insert(toTableCallbacks, cb)
 end
+
+-- A golden piece filed (Admin Abuse's show counts them for the finale; set by Main).
+TableClient.onGolden = function(_gilt: number) end
 
 function TableClient.isSeated(): boolean
 	return seatedNow

@@ -1063,6 +1063,16 @@ export type FX = {
 
 local all: { FX } = {}
 
+-- Each of Admin Abuse's realms (World/AbuseShow) drawn as one of the effects' looks.
+local REALM_THEMES: { [string]: string } = {
+	cosmos = "galaxy",
+	candy = "bubbles",
+	midas = "goldWave",
+	neon = "rainbow",
+	abyss = "bubbles",
+	frost = "blizzard",
+}
+
 -- What's on now, newest first: switched-on effects (by when), Admin Abuse, and short surprises.
 local function wanted(fx: FX): { string }
 	local list: { { id: string, since: number } } = {}
@@ -1081,6 +1091,13 @@ local function wanted(fx: FX): { string }
 	local ends = Workspace:GetAttribute("AbuseUntil")
 	if type(ends) == "number" and ends > Workspace:GetServerTimeNow() then
 		table.insert(list, { id = if Workspace:GetAttribute("AbuseMega") == true then "__mega" else "__abuse", since = -1 })
+		-- The realm the house is in (Mega Abuse moves from one to the next): its look too.
+		local realm = Workspace:GetAttribute("AbuseRealm")
+		local theme = if type(realm) == "string" then REALM_THEMES[realm] else nil
+		local at = Workspace:GetAttribute("AbuseRealmAt")
+		if theme and THEMES[theme] then
+			table.insert(list, { id = theme, since = if type(at) == "number" then at else 0 })
+		end
 	end
 	table.sort(list, function(a, b)
 		return a.since > b.since
@@ -1099,7 +1116,10 @@ function ScreenFX.ribbonText(golden: boolean): string?
 	local cfg = require(ReplicatedStorage.Shared.Config).data.Admin
 	local gold = if golden then "  ·  GOLDEN PIECES" else ""
 	if abusing and Workspace:GetAttribute("AbuseMega") == true then
-		return "🌋 MEGA ABUSE  ·  ×" .. tostring(cfg.table.megaGilt) .. " GILT" .. gold
+		local realm = Workspace:GetAttribute("AbuseRealm")
+		local r = if type(realm) == "string" then HouseEvents.realmById[realm] else nil
+		local where = if r then "  ·  " .. r.glyph .. " " .. r.name else ""
+		return "🌋 MEGA ABUSE  ·  ×" .. tostring(cfg.table.megaGilt) .. " GILT" .. where .. gold
 	elseif abusing then
 		return "💥 ADMIN ABUSE  ·  ×" .. tostring(cfg.goldenHourGilt) .. " GILT" .. gold
 	end
@@ -1308,6 +1328,7 @@ function ScreenFX.start()
 	end
 	Workspace:GetAttributeChangedSignal("AbuseUntil"):Connect(ribbons)
 	Workspace:GetAttributeChangedSignal("AbuseMega"):Connect(ribbons)
+	Workspace:GetAttributeChangedSignal("AbuseRealm"):Connect(ribbons)
 	-- Admin Abuse's surprises show here too, for as long as they play.
 	Remotes.event("Salute").OnClientEvent:Connect(function(m: any)
 		if type(m) == "table" and m.op == "abuseFX" and type(m.id) == "string" and THEMES[m.id] then

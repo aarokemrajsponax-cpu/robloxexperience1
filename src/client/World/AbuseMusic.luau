@@ -17,6 +17,7 @@ local AbuseMusic = {}
 
 local current = ""
 local stopCurrent: (() -> ())? = nil
+local holdUntil = 0 -- (Admin Abuse's opening: its music waits for the drop)
 
 local function assets(): { [string]: any }
 	return Config.data.Assets :: any
@@ -52,6 +53,9 @@ local function apply()
 	if want == current then
 		return
 	end
+	if (want == "abuse" or want == "mega") and os.clock() < holdUntil then
+		return -- (the opening's drop starts it: AbuseMusic.holdFor)
+	end
 	current = want
 	local stop = stopCurrent
 	stopCurrent = nil
@@ -63,6 +67,12 @@ local function apply()
 	if want ~= "" and type(songs) == "table" and #songs > 0 then
 		stopCurrent = Sound.scoreList(songs, assets().AbuseMusicVolume or 0.85)
 	end
+end
+
+-- Admin Abuse's opening: its music starts at the drop, `seconds` from now, not before.
+function AbuseMusic.holdFor(seconds: number)
+	holdUntil = os.clock() + seconds
+	task.delay(seconds + 0.05, apply)
 end
 
 function AbuseMusic.start()

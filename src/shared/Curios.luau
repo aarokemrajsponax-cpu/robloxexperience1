@@ -114,6 +114,7 @@ Curios.List = {
 	{ id = "goldenEgg", name = "The Golden Egg", line = "Hidden best of all. Found by you.", rarity = "Legendary", family = "relic", glyph = "🥚", accent = "👑", colour = rgb(240, 190, 60), source = "event", tradeable = true, how = "The Egg Hunt: the golden one" },
 	-- The owner's own.
 	{ id = "ownerToken", name = "The Owner's Token", line = "Handed out by the owner, in person, to everyone in the house.", rarity = "Epic", family = "relic", glyph = "👑", accent = "🪙", colour = rgb(30, 24, 14), source = "event", tradeable = false, how = "From the owner (once a day, when they hand them out)" },
+	{ id = "adminCrown", name = "The Admin's Crown", line = "Three gifts from the owner in one Admin Abuse. You were there for all of it.", rarity = "Legendary", family = "relic", glyph = "👑", accent = "💥", colour = rgb(250, 200, 70), source = "event", tradeable = false, how = "Open three of the owner's gifts in one Admin Abuse" },
 	{ id = "abuseMedal", name = "The Mega Abuse Medal", line = "You were there for Mega Abuse. Nobody believes you.", rarity = "Epic", family = "relic", glyph = "🏅", accent = "💥", colour = rgb(120, 30, 160), source = "event", tradeable = false, how = "Be in the house when the owner starts Mega Abuse" },
 	-- Limited: this season only
 	{ id = "autumnLeaf", name = "The Gilded Leaf", line = "Autumn 2026, at the house. Never again.", rarity = "Limited", family = "relic", glyph = "🍁", accent = "✨", colour = rgb(210, 110, 40), source = "season", tradeable = true, how = "Limited: any banked run in Autumn 2026" },

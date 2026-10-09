@@ -117,6 +117,23 @@ HouseEvents.Countdowns = {
 	{ id = "surprise", label = "SURPRISE IN", name = "A surprise effect" },
 } :: { Countdown }
 
+-- Admin Abuse's realms (server/AbuseShow chooses, World/AbuseShow draws): Mega Abuse moves from
+-- one to the next; Admin Abuse keeps to the gilded night.
+export type Realm = { id: string, name: string, glyph: string, line: string }
+HouseEvents.Realms = {
+	{ id = "gilded", name = "THE GILDED NIGHT", glyph = "👑", line = "Double Gilt. Golden pieces. Gifts from the owner." },
+	{ id = "cosmos", name = "THE COSMOS", glyph = "🪐", line = "The house is floating in deep space." },
+	{ id = "candy", name = "SUGAR RUSH", glyph = "🍭", line = "Everything is sweet. Everything is pink." },
+	{ id = "midas", name = "THE MIDAS REALM", glyph = "🪙", line = "Everything you can see is made of gold." },
+	{ id = "neon", name = "NEON CITY", glyph = "🌃", line = "The lights are too bright. Good." },
+	{ id = "abyss", name = "THE ABYSS", glyph = "🐙", line = "The whole house is underwater. Hold your breath." },
+	{ id = "frost", name = "FROSTBITE", glyph = "❄️", line = "Snow in the hallways. Ice on the chandeliers." },
+} :: { Realm }
+HouseEvents.realmById = {} :: { [string]: Realm }
+for _, r in HouseEvents.Realms do
+	HouseEvents.realmById[r.id] = r
+end
+
 HouseEvents.countdownById = {} :: { [string]: Countdown }
 for _, c in HouseEvents.Countdowns do
 	HouseEvents.countdownById[c.id] = c

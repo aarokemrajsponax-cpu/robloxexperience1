@@ -282,7 +282,12 @@ end
 LedgerService.boost = AdminService.ledgerBoost
 TableService.mythicLuck = AdminService.mythicLuck
 TableService.twist = AdminService.tableTwist
+-- Admin Abuse as a show: the owner's avatar for every screen, the realms, the owner's gifts.
+local AbuseShow = require(script.Parent.AbuseShow)
+AdminService.showBegan = AbuseShow.began
+AdminService.showStopped = AbuseShow.stopped
 boot("House controls", AdminService.start)
+boot("Admin Abuse's show", AbuseShow.start)
 CircleService.changed = function(player)
 	Dressing.nameplate(player)
 	Shop.push(player)

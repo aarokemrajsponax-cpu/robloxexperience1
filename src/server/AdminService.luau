@@ -69,6 +69,9 @@ AdminService.note = function(_text: string, _everywhere: boolean) end
 -- events (Achievements.tally).
 AdminService.award = function(_player: Player, _key: string) end
 AdminService.tally = function(_player: Player, _stat: string, _n: number, _once: string?) end
+-- Admin Abuse's show (set by Main: AbuseShow): it began (the realms, the gifts), or was stopped.
+AdminService.showBegan = function(_mega: boolean) end
+AdminService.showStopped = function() end
 
 ---------------------------------------------------------------------------------------------------
 -- Who may use it
@@ -887,6 +890,7 @@ function AdminService.allFxOff(byName: string)
 end
 
 local surpriseToken = 0
+local openingCount = 0 -- (each Admin Abuse's opening: its fireworks wait for the drop)
 
 -- Everything at once: every event (quietly, then one great announcement), the whole house's
 -- intro, fireworks, and a surprise for everyone every minute or so until it ends. `mega`: Mega
@@ -904,15 +908,24 @@ function AdminService.abuse(seconds: number, byName: string, mega: boolean?)
 	Workspace:SetAttribute("AbuseMega", if mega then true else nil)
 	-- (When it began: the music follows whatever was started last, this or an effect.)
 	Workspace:SetAttribute("AbuseSince", os.time())
-	AdminService.fx("intro", byName, nil)
-	if mega then
-		broadcast({ op = "headline", text = "MEGA ADMIN ABUSE!!!", by = byName, style = "rainbow", seconds = 7 })
-		broadcast({ op = "salute", id = "abuse", by = byName, effects = { "fireworks", "goldLeaf", "chandelier" }, seconds = 12, title = "MEGA ABUSE", line = "MEGA ABUSE: every event at once, a surprise every few seconds, giveaways all night. Don't leave!" })
-		AdminService.note("Mega Abuse has begun in the house.", false)
-	else
-		broadcast({ op = "salute", id = "abuse", by = byName, effects = { "fireworks", "goldLeaf", "chandelier" }, seconds = 12, title = "Admin Abuse Night", line = "ADMIN ABUSE NIGHT: double Gilt, double XP, Mythic luck, gold rain, a treasure hunt, giants, low gravity, a house party, and surprises all night. Go!" })
-		AdminService.note("Admin Abuse Night has begun in the house.", false)
-	end
+	-- The opening on every screen (World/AbuseShow): the transmission, the riser, then the drop,
+	-- when the fireworks go up and the music starts.
+	broadcast({ op = "abuseShow", stage = "intro", mega = mega == true, by = byName })
+	openingCount += 1
+	local opening = openingCount
+	local dropAt = (cfg() :: any).show.dropAt
+	task.delay(dropAt, function()
+		if openingCount ~= opening or not abusing() then
+			return
+		end
+		if mega then
+			broadcast({ op = "salute", id = "abuse", by = byName, effects = { "fireworks", "goldLeaf", "chandelier" }, seconds = 12, title = "MEGA ABUSE", line = "MEGA ABUSE: every event at once, a new realm every minute and a half, triple Gilt, gifts from the owner, giveaways all night. Don't leave!" })
+		else
+			broadcast({ op = "salute", id = "abuse", by = byName, effects = { "fireworks", "goldLeaf", "chandelier" }, seconds = 12, title = "Admin Abuse Night", line = "ADMIN ABUSE NIGHT: double Gilt, double XP, Mythic luck, gold rain, a treasure hunt, giants, low gravity, gifts from the owner, and surprises all night. Go!" })
+		end
+	end)
+	AdminService.note(if mega then "Mega Abuse has begun in the house." else "Admin Abuse Night has begun in the house.", false)
+	AdminService.showBegan(mega == true)
 	for _, p in Players:GetPlayers() do
 		AdminService.award(p, "abuseNight")
 		AdminService.tally(p, "abuseNights", 1, "night:" .. tostring(ends))
@@ -1580,6 +1593,7 @@ function AdminService.stopAll(byName: string)
 	Workspace:SetAttribute("AbuseUntil", nil)
 	Workspace:SetAttribute("AbuseMega", nil)
 	Workspace:SetAttribute("AbuseSince", nil)
+	AdminService.showStopped()
 	AdminService.allFxOff(byName)
 	broadcast({ op = "countdown", id = "", stop = true })
 	setFrozen(false, nil)

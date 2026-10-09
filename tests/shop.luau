@@ -897,8 +897,9 @@ for _, id in Config.data.Admin.abuseEvents do
 	end
 end
 check("Admin Abuse Night starts every one of its events", allOn)
-check("with fireworks for the whole house", string.find(lastBroadcast("salute").title or "", "Admin Abuse", 1, true) ~= nil)
 check("and goes to every house", #published > publishedBefore and published[#published].message.op == "abuse")
+advance(Config.data.Admin.show.dropAt + 0.2) -- (the fireworks go up at the opening's drop)
+check("with fireworks for the whole house", string.find(lastBroadcast("salute").title or "", "Admin Abuse", 1, true) ~= nil)
 for _, id in Config.data.Admin.abuseEvents do
 	AdminService.stopEvent(id)
 end
@@ -909,12 +910,13 @@ AdminService.stopAll("AJ")
 do
 	local before = #broadcasts
 	adminAs(owner, { op = "abuse", minutes = 15 })
+	advance(Config.data.Admin.show.dropAt + 0.2)
 	local salutes, intros = 0, 0
 	for i = before + 1, #broadcasts do
 		local m = broadcasts[i].message
-		if m.op == "salute" then
+		if m.op == "salute" and m.id == "abuse" then
 			salutes += 1
-		elseif m.op == "abuseFX" and m.id == "intro" then
+		elseif m.op == "abuseShow" and m.stage == "intro" then
 			intros += 1
 		end
 	end
@@ -1618,9 +1620,11 @@ do
 	check("only the amounts offered", adminAs(owner, { op = "giveaway", amount = 777 }).ok == false)
 	local gw = adminAs(owner, { op = "giveaway", amount = 250 })
 	check("the winner gets the Gilt and the badge", gw.ok and type(gw.winner) == "string" and (function()
+		-- (By their UserId: two guests in this test house can share a name.)
+		local id = lastCast("giveaway").winnerId
 		for _, g in guests do
-			if g.DisplayName == gw.winner and profiles[g] then
-				return profiles[g].Data.badges.giveawayWinner == true
+			if g.UserId == id and profiles[g] then
+				return g.DisplayName == gw.winner and profiles[g].Data.badges.giveawayWinner == true
 			end
 		end
 		return false
@@ -2069,6 +2073,164 @@ do
 	if owner then
 		owner.Parent = ownerParent
 	end
+end
+
+---------------------------------------------------------------------------------------------------
+-- Build 54: Admin Abuse as a show, on the server: the owner's avatar for every screen, the realms,
+-- and the owner's gifts (checked here: theirs, still open, Admin Abuse still on)
+---------------------------------------------------------------------------------------------------
+do
+	local AbuseShow = module("ServerScriptService", "Server", "AbuseShow")
+	local AdminService = module("ServerScriptService", "Server", "AdminService")
+	local CuriosS = module("ServerScriptService", "Server", "Curios")
+	local Remotes = H.Remotes
+	local W = services.Workspace
+	local show = Config.data.Admin.show
+	local owner, ned, other
+	for _, g in guests do
+		if g.UserId == 100 then
+			owner = g
+		elseif g.UserId == 101 then
+			ned = g
+		elseif other == nil and g.Parent ~= nil then
+			other = g
+		end
+	end
+	run(function()
+		AdminService.stopAll("test")
+	end)
+	advance(1)
+	-- The owner's avatar, from their UserId, for every screen (whether or not they're in the server).
+	local home = Instance.new("Folder")
+	local asked = nil
+	AbuseShow.home = function()
+		return home
+	end
+	AbuseShow.makeAvatar = function(userId)
+		asked = userId
+		local m = Instance.new("Model")
+		local h = Instance.new("Humanoid")
+		h.Parent = m
+		local root = Instance.new("Part")
+		root.Name = "HumanoidRootPart"
+		root.Parent = m
+		local head = Instance.new("Part")
+		head.Name = "Head"
+		head.Parent = m
+		local animate = Instance.new("LocalScript")
+		animate.Name = "Animate"
+		animate.Parent = m
+		return m
+	end
+	run(AbuseShow.start)
+	advance(1)
+	local avatar = home:FindFirstChild(AbuseShow.AVATAR)
+	check("the owner's avatar is built from the owner's own UserId", asked == Config.data.Admin.ownerUserId)
+	check("...kept for every screen: no scripts in it, nothing to bump into, standing still", avatar ~= nil and avatar:FindFirstChild("Animate") == nil and avatar.HumanoidRootPart.Anchored == true and avatar.Head.CanCollide == false and avatar:FindFirstChildOfClass("Humanoid"):FindFirstChildOfClass("Animator") ~= nil)
+	AdminService.showBegan = AbuseShow.began
+	AdminService.showStopped = AbuseShow.stopped
+	local open = Remotes.funcs.AbuseGiftAsk.OnServerInvoke
+	local function openAs(player, request)
+		advance(1.1)
+		local r
+		run(function()
+			r = open(player, request)
+		end)
+		return r
+	end
+	-- No Admin Abuse, no gifts.
+	check("no gift to open when nothing's on", openAs(ned, { op = "open", id = 1 }).ok == false)
+	-- Admin Abuse: the opening, then the gilded night, and the owner's gifts.
+	local castBefore = #broadcasts
+	run(function()
+		AdminService.abuse(900, "XxxXxxX_77797", false)
+	end)
+	local intro, salute = nil, nil
+	for i = castBefore + 1, #broadcasts do
+		local m = broadcasts[i].message
+		if m.op == "abuseShow" then
+			intro = m
+		end
+	end
+	check("every screen is told to play the opening", intro ~= nil and intro.stage == "intro" and intro.mega == false)
+	check("Admin Abuse keeps to the gilded night", W:GetAttribute("AbuseRealm") == show.abuseRealm)
+	advance(show.dropAt + 0.2)
+	for i = castBefore + 1, #broadcasts do
+		local m = broadcasts[i].message
+		if m.op == "salute" and m.id == "abuse" then
+			salute = m
+		end
+	end
+	check("the fireworks and the house's salute wait for the drop", salute ~= nil)
+	advance(show.giftEvery.abuse * 0.4 + 2)
+	local gift = lastOp(ned, "abuseGift")
+	check("a gift from the owner on every guest's screen, saying what's in it", gift ~= nil and gift.gilt == show.giftGilt and type(gift.id) == "number" and lastOp(owner, "abuseGift") ~= nil)
+	local nedData = profiles[ned].Data
+	local before = nedData.gilt
+	local r = openAs(ned, { op = "open", id = gift.id })
+	check("opening it pays Gilt (Admin Abuse's Golden Hour doubles it)", r.ok == true and nedData.gilt > before and r.gilt == nedData.gilt - before, nedData.gilt - before)
+	check("...once", openAs(ned, { op = "open", id = gift.id }).ok == false)
+	local theirs = lastOp(owner, "abuseGift")
+	check("nobody can open another guest's gift", openAs(ned, { op = "open", id = theirs.id }).ok == false)
+	check("nor send nonsense", openAs(ned, { op = "open", id = "seven" }).ok == false and openAs(ned, { op = "steal", id = theirs.id }).ok == false and openAs(ned, "gift").ok == false)
+	check("...and the owner opens their own", openAs(owner, { op = "open", id = theirs.id }).ok == true)
+	-- A gift left too long goes.
+	advance(show.giftEvery.abuse + 1)
+	gift = lastOp(ned, "abuseGift")
+	advance(show.giftWindow + 2)
+	check("a gift not opened in time is gone", openAs(ned, { op = "open", id = gift.id }).ok == false)
+	-- The third opened in one night: the Admin's Crown (once ever).
+	advance(show.giftEvery.abuse - show.giftWindow + 2)
+	gift = lastOp(ned, "abuseGift")
+	r = openAs(ned, { op = "open", id = gift.id })
+	check("the second gift of the night opens", r.ok == true and r.count == 2)
+	advance(show.giftEvery.abuse + 1)
+	gift = lastOp(ned, "abuseGift")
+	check("the third says it holds the Admin's Crown", gift.crown == true and gift.number == 3)
+	r = openAs(ned, { op = "open", id = gift.id })
+	check("...and gives it", r.ok == true and r.crown == true and CuriosS.count(nedData, "adminCrown") == 1)
+	-- Stopped: the realm goes, no more gifts.
+	run(function()
+		AdminService.stopAll("test")
+	end)
+	advance(1)
+	check("stopping Admin Abuse ends its realm", W:GetAttribute("AbuseRealm") == nil)
+	local count = #ned.inbox
+	advance(show.giftEvery.abuse + 2)
+	local more = 0
+	for i = count + 1, #ned.inbox do
+		if ned.inbox[i].op == "abuseGift" then
+			more += 1
+		end
+	end
+	check("...and its gifts", more == 0)
+	-- Mega Abuse: realm after realm.
+	run(function()
+		AdminService.abuse(900, "XxxXxxX_77797", true)
+	end)
+	check("Mega Abuse begins in the first realm", W:GetAttribute("AbuseRealm") == show.realms[1])
+	advance(show.realmSeconds + 2)
+	check("...and moves on to the next", W:GetAttribute("AbuseRealm") == show.realms[2])
+	advance(show.realmSeconds + 1)
+	check("...and the next", W:GetAttribute("AbuseRealm") == show.realms[3])
+	-- A guest who already has the crown gets more Gilt for the third gift instead.
+	for i = 1, 3 do
+		run(function()
+			AbuseShow.offer(ned)
+		end)
+		gift = lastOp(ned, "abuseGift")
+		if i == 3 then
+			check("a guest with the crown is told their third gift brings a Gilt bonus", gift.crown == false and gift.bonus == show.crownBonus)
+		end
+		r = openAs(ned, { op = "open", id = gift.id })
+	end
+	check("...and gets it, and no second crown", r.ok == true and r.crown == false and r.count == 3 and CuriosS.count(nedData, "adminCrown") == 1)
+	run(function()
+		AdminService.stopAll("test")
+	end)
+	advance(1)
+	AdminService.showBegan = function() end
+	AdminService.showStopped = function() end
 end
 
 H.finish()

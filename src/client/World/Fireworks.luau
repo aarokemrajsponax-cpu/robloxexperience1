@@ -1309,6 +1309,8 @@ local function clearSky(on: boolean)
 		savedAir = nil
 	end
 end
+-- (Admin Abuse's show thins the air too while its giant stands over the house: one count for both.)
+Fireworks.clearSky = clearSky
 
 ---------------------------------------------------------------------------------------------------
 -- The show

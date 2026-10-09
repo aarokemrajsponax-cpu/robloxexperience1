@@ -766,6 +766,16 @@ local function proxyFor(node, parent, path)
 				return parent
 			elseif key == "Name" then
 				return node.name
+			elseif key == "FindFirstChild" then
+				-- (As on Roblox: a child by name, or nil. Only the sourcemap's children are here.)
+				return function(_self, name)
+					for _, child in node.children or {} do
+						if child.name == name then
+							return proxyFor(child, p, path .. "." .. child.name)
+						end
+					end
+					return nil
+				end
 			end
 			for _, child in node.children or {} do
 				if child.name == key then
@@ -4255,6 +4265,139 @@ do
 	serverSays("Table", { op = "left" })
 	advance(3)
 	check("no errors in Build 53's screens", #errors == 0, errors[1])
+end
+
+---------------------------------------------------------------------------------------------------
+-- Build 54: Admin Abuse as a show: the opening, the drop, the owner's hologram, the realms, the
+-- owner's gifts and the finale
+---------------------------------------------------------------------------------------------------
+do
+	local Lighting = game:GetService("Lighting")
+	local HouseEvents = module("ReplicatedStorage", "Shared", "HouseEvents")
+	local show = function()
+		return playerGui:FindFirstChild("MaisonAbuseShow")
+	end
+	local function part(name)
+		local s = show()
+		return s and s:FindFirstChild(name)
+	end
+	local function abuse(on, mega)
+		if on then
+			workspace:SetAttribute("AbuseUntil", workspace:GetServerTimeNow() + 900)
+			workspace:SetAttribute("AbuseSince", os.time())
+			workspace:SetAttribute("AbuseMega", if mega then true else nil)
+		else
+			workspace:SetAttribute("AbuseUntil", nil)
+			workspace:SetAttribute("AbuseSince", nil)
+			workspace:SetAttribute("AbuseMega", nil)
+			workspace:SetAttribute("AbuseRealm", nil)
+		end
+		signalOf(workspace, "attr:AbuseUntil"):Fire()
+	end
+	local function realm(id)
+		workspace:SetAttribute("AbuseRealm", id)
+		workspace:SetAttribute("AbuseRealmAt", os.time())
+		signalOf(workspace, "attr:AbuseRealm"):Fire()
+	end
+	LocalPlayer:SetAttribute("Gilt", 1000)
+	advance(1)
+	-- The opening.
+	serverSays("Salute", { op = "abuseShow", stage = "intro", mega = false, by = "XxxXxxX_77797" })
+	abuse(true, false)
+	realm("gilded")
+	advance(1.2)
+	check("the opening: the screen goes cinematic, bars top and bottom", part("Opening") ~= nil and part("Opening"):FindFirstChild("BarTop") ~= nil)
+	check("...a transmission from the owner: their name, and what they're doing", textOnScreen("XXXXXXX_77797") ~= nil and textOnScreen("IS ABUSING THEIR POWERS") ~= nil and textOnScreen("INCOMING TRANSMISSION") ~= nil)
+	check("...and nothing slammed onto the screen yet (that's the drop)", part("Opening"):FindFirstChild("Title") == nil)
+	snapshot("abuse-opening")
+	advance(Config.data.Admin.show.dropAt - 1.2 + 0.6)
+	local title = part("Opening") and part("Opening"):FindFirstChild("Title")
+	check("the drop: ADMIN ABUSE slammed onto the screen, and what it brings", title ~= nil and title.Text == "ADMIN ABUSE" and textOnScreen("GIFTS FROM THE OWNER") ~= nil)
+	check("...the transmission gone", textOnScreen("INCOMING TRANSMISSION") == nil)
+	advance(0.8)
+	snapshot("abuse-drop")
+	advance(Config.data.Admin.show.seconds)
+	check("after the opening the screen is the house's again", part("Opening") == nil)
+	check("and the owner says it's on", textOnScreen("ADMIN ABUSE IS ON") ~= nil)
+	check("the gilded night's colours are over the house", Lighting:FindFirstChild("AbuseRealm") ~= nil)
+	advance(6)
+	-- A surprise cast by the owner: the hologram.
+	serverSays("Salute", { op = "abuseFX", id = "meteor", by = "XxxXxxX_77797", seconds = 18 })
+	advance(1.2)
+	check("a surprise: the owner's hologram casts it (named, with its glyph)", textOnScreen("cast ☄️ METEOR SHOWER!") ~= nil and textOnScreen("THE OWNER") ~= nil)
+	snapshot("owner-cameo")
+	advance(5)
+	-- The owner's gift.
+	invokeResults.AbuseGiftAsk = { ok = true, gilt = 120, crown = true, count = 3 }
+	serverSays("Salute", { op = "abuseGift", id = 7, gilt = 40, crown = true, number = 3, seconds = 25 })
+	advance(1)
+	check("a gift from the owner: a card to open, saying what's in it", part("Gift") ~= nil and textOnScreen("A GIFT FROM XXXXXXX_77797") ~= nil and textOnScreen("+40 GILT") ~= nil and textOnScreen("THE ADMIN'S CROWN") ~= nil)
+	snapshot("abuse-gift")
+	local before = #sent
+	check("the gift opens with a press", press("OPEN IT!"))
+	advance(0.3)
+	local asked = sent[#sent]
+	check("...which asks the server (the gift's id, nothing else)", #sent > before and asked.remote == "AbuseGiftAsk" and asked.message[1].op == "open" and asked.message[1].id == 7)
+	check("...and shows what it paid", textOnScreen("+120 GILT") ~= nil and textOnScreen("THE CROWN") ~= nil)
+	snapshot("abuse-gift-open")
+	advance(3)
+	check("then the card goes", part("Gift") == nil)
+	invokeResults.AbuseGiftAsk = { ok = false, why = "That gift has gone." }
+	serverSays("Salute", { op = "abuseGift", id = 8, gilt = 40, crown = false, number = 4, seconds = 25 })
+	advance(1)
+	press("OPEN IT!")
+	advance(0.3)
+	check("a gift that's gone says so (nothing paid on this screen)", textOnScreen("That gift has gone.") ~= nil)
+	advance(3)
+	serverSays("Salute", { op = "abuseGift", id = 9, gilt = 40, crown = false, number = 5, seconds = 6 })
+	advance(8)
+	check("a gift left unopened goes when its time is up", part("Gift") == nil)
+	-- Mega Abuse: the realms.
+	abuse(false)
+	advance(12)
+	serverSays("Salute", { op = "abuseShow", stage = "intro", mega = true, by = "XxxXxxX_77797" })
+	abuse(true, true)
+	realm("cosmos")
+	advance(1.2)
+	check("Mega Abuse's opening: the owner has broken the multiverse", textOnScreen("HAS BROKEN THE MULTIVERSE") ~= nil)
+	advance(Config.data.Admin.show.dropAt)
+	title = part("Opening") and part("Opening"):FindFirstChild("Title")
+	check("...MEGA ABUSE at the drop", title ~= nil and title.Text == "MEGA ABUSE")
+	advance(Config.data.Admin.show.seconds - Config.data.Admin.show.dropAt + 1.2)
+	check("after the opening, the first realm is named", textOnScreen("THE COSMOS") ~= nil)
+	check("...and the house is in its colours", Lighting:FindFirstChild("AbuseRealm") ~= nil)
+	advance(5)
+	realm("candy")
+	advance(0.9)
+	check("a new realm: the shift, and its name", textOnScreen("SUGAR RUSH") ~= nil and textOnScreen("ENTERING") ~= nil)
+	advance(1)
+	snapshot("realm-shift")
+	advance(5)
+	for _, id in { "midas", "neon", "abyss", "frost" } do
+		realm(id)
+		advance(1)
+		check("the realm " .. id .. " is drawn", Lighting:FindFirstChild("AbuseRealm") ~= nil and textOnScreen(HouseEvents.realmById[id].name) ~= nil)
+		advance(4)
+	end
+	-- The finale, with this guest's haul.
+	LocalPlayer:SetAttribute("Gilt", 3450)
+	abuse(false)
+	advance(1.5)
+	check("the finale: it's over, thank you, and the guest's haul", (textOnScreen("ADMIN ABUSE IS OVER") ~= nil or textOnScreen("THAT'S A WRAP") ~= nil) and textOnScreen("YOUR HAUL") ~= nil)
+	advance(3)
+	check("...the Gilt they won, the gifts they opened, the realms they saw", textOnScreen("GILT") ~= nil and textOnScreen("REALMS VISITED") ~= nil)
+	snapshot("abuse-finale")
+	check("the owner waves goodbye", textOnScreen("Thank you for coming") ~= nil or textOnScreen("See you at the next Admin Abuse") ~= nil)
+	check("the realm's colours are gone", Lighting:FindFirstChild("AbuseRealm") == nil)
+	advance(12)
+	-- Arriving while it's on (no opening heard): a welcome.
+	abuse(true, false)
+	advance(2.5)
+	check("arriving during Admin Abuse: a welcome, saying what's on", textOnScreen("YOU ARRIVED DURING ADMIN ABUSE") ~= nil)
+	snapshot("abuse-arrived")
+	abuse(false)
+	advance(12)
+	check("no errors in Build 54's show", #errors == 0, errors[1])
 end
 
 ---------------------------------------------------------------------------------------------------
