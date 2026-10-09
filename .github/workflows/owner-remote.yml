@@ -3,7 +3,8 @@
 #
 # GitHub → Actions → Owner Remote → Run workflow → choose → Run. Only people who can write to
 # this repository can run it. It needs one secret, ROBLOX_OPEN_CLOUD_KEY: an Open Cloud API key
-# with the Messaging Service's Publish for Maison Noir (README: The Owner Remote).
+# with the Messaging Service's Publish for Maison Noir, and (so servers that open later join in)
+# the Data Stores' read, create and update entry for it (README: The Owner Remote).
 name: Owner Remote
 on:
   workflow_dispatch:
@@ -125,6 +126,9 @@ jobs:
           RAW: ${{ inputs.command }}
           UNIVERSE: "10768398256"
           TOPIC: "MaisonRemote"
+          STORE: "MaisonSchedule"
+          ENTRY: "live"
+          API: "https://apis.roblox.com"
         run: |
           set -euo pipefail
           if [ -z "${KEY}" ]; then
@@ -219,14 +223,49 @@ jobs:
             *) echo "::error::Unknown choice."; exit 1 ;;
           esac
           if [ "${#CMD}" -gt 900 ]; then echo "::error::That command is too long."; exit 1; fi
-          CMD=$(printf '%s' "$CMD" | jq -c --arg r "${GITHUB_RUN_ID:-0}" '. + {rid: $r}')
+          # Its own id (a re-run is a new command) and when it was sent.
+          RID="${GITHUB_RUN_ID:-0}-${GITHUB_RUN_ATTEMPT:-1}"
+          AT=$(date +%s.%3N)
+          NOW=$(date +%s)
+          CMD=$(printf '%s' "$CMD" | jq -c --arg r "$RID" --argjson at "$AT" '. + {rid: $r, at: $at}')
           BODY=$(jq -cn --arg m "$CMD" '{message:$m}')
-          CODE=$(curl -sS -o /tmp/reply -w '%{http_code}' -X POST "https://apis.roblox.com/messaging-service/v1/universes/${UNIVERSE}/topics/${TOPIC}" -H "x-api-key: ${KEY}" -H "Content-Type: application/json" --data "$BODY" || true)
-          if [ "$CODE" = "200" ]; then
-            echo "Sent to every server: ${CMD}"
-            echo "### Sent to every server" >> "$GITHUB_STEP_SUMMARY"
-            echo "${POWER}" >> "$GITHUB_STEP_SUMMARY"
-          else
+          CODE=$(curl -sS -o /tmp/reply -w '%{http_code}' -X POST "${API}/messaging-service/v1/universes/${UNIVERSE}/topics/${TOPIC}" -H "x-api-key: ${KEY}" -H "Content-Type: application/json" --data "$BODY" || true)
+          if [ "$CODE" != "200" ]; then
             echo "::error::Roblox said ${CODE}: $(cat /tmp/reply 2>/dev/null | head -c 300). 401/403: the key is wrong or lacks the Messaging Service's Publish for Maison Noir."
             exit 1
+          fi
+          echo "Sent to every open server: ${CMD}"
+          echo "### Sent to every server" >> "$GITHUB_STEP_SUMMARY"
+          echo "${POWER}" >> "$GITHUB_STEP_SUMMARY"
+          # Written down too, in the game's own record, for the servers that weren't open to hear it
+          # (they carry it out when they open). Read, add to the list, write back only if nobody wrote
+          # in between (else again).
+          URL="${API}/datastores/v1/universes/${UNIVERSE}/standard-datastores/datastore/entries/entry?datastoreName=${STORE}&entryKey=${ENTRY}"
+          ITEM=$(jq -cn --argjson c "$CMD" --argjson at "$AT" --arg r "$RID" '{cmd: $c, at: $at, rid: $r}')
+          WROTE=""
+          for TRY in 1 2 3 4 5; do
+            GOT=$(curl -sS -D /tmp/head -o /tmp/live.json -w '%{http_code}' -H "x-api-key: ${KEY}" "$URL" || echo 000)
+            case "$GOT" in
+              200) VERSION=$(tr -d '\r' < /tmp/head | awk 'tolower($1) == "roblox-entry-version:" { v = $2 } END { print v }'); MODE="matchVersion=${VERSION}"; RECORD=$(cat /tmp/live.json) ;;
+              204|404) MODE="exclusiveCreate=true"; RECORD='{}' ;;
+              401|403) WROTE="denied"; break ;;
+              *) sleep "$TRY"; continue ;;
+            esac
+            # (Only the remote's list changes: what the servers wrote stays as it was.)
+            if ! NEW=$(printf '%s' "$RECORD" | jq -c --argjson e "$ITEM" --argjson now "$NOW" '(if type == "object" then . else {} end) | .log = ([(.log // [])[] | select(type == "object" and (.at | type) == "number" and .at > ($now - 86400))] + [$e])[-40:]'); then WROTE="unreadable"; break; fi
+            MD5=$(printf '%s' "$NEW" | openssl dgst -md5 -binary | base64)
+            PUT=$(curl -sS -o /tmp/put -w '%{http_code}' -X POST "${URL}&${MODE}" -H "x-api-key: ${KEY}" -H "Content-Type: application/json" -H "content-md5: ${MD5}" --data-binary "$NEW" || echo 000)
+            case "$PUT" in
+              200) WROTE="yes"; break ;;
+              401|403) WROTE="denied"; break ;;
+              *) sleep "$TRY" ;;
+            esac
+          done
+          if [ "$WROTE" = "yes" ]; then
+            echo "Written down: servers that open later join in too."
+            echo "Written down: servers that open later join in too." >> "$GITHUB_STEP_SUMMARY"
+          elif [ "$WROTE" = "denied" ]; then
+            echo "::warning::Sent to every open server, but not written down: the key can't use Maison Noir's data stores, so a server that opens later won't join in. Creator Hub → Open Cloud → API Keys → your key → Edit → Add API System: universe-datastores → Maison Noir → Read Entry, Create Entry, Update Entry → Save (README: The Owner Remote)."
+          else
+            echo "::warning::Sent to every open server, but Roblox's data stores didn't answer, so a server that opens later may not join in. Send it again if that matters."
           fi

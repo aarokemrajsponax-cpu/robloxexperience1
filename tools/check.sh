@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Type-checks every script against Roblox's API and runs the pure-rule tests.
-# Needs: rojo, luau-lsp, luau (standalone), lune and globalTypes.d.luau in $TOOLS.
+# Needs: rojo, luau-lsp, luau (standalone), lune and globalTypes.d.luau in $TOOLS; python3 with
+# PyYAML, jq, curl and openssl for the Owner Remote's scripts (and pwsh, if at hand).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 TOOLS="${TOOLS:?set TOOLS to the folder holding rojo, luau-lsp, luau and globalTypes.d.luau}"
@@ -18,5 +19,6 @@ python3 tests/bundle.py > "$TOOLS/bundle.luau"
 "$TOOLS/lune" run tests/client.luau
 "$TOOLS/lune" run tests/client.luau studio
 "$TOOLS/lune" run tests/client.luau live
+python3 tests/remote.py "${PWSH:-$TOOLS/pwsh/pwsh}"
 "$TOOLS/rojo" build default.project.json -o "$TOOLS/MaisonNoir.rbxl" >/dev/null
 echo "check: ok"

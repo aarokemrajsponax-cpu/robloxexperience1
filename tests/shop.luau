@@ -1911,7 +1911,7 @@ do
 	run(function()
 		remote({ Data = '{"op":"mega","minutes":15,"rid":"4242"}' })
 	end)
-	advance(0.5)
+	advance(6) -- (each server writes it down within five seconds, not all at once)
 	check("a remote Mega Abuse is written down under the remote run's id", live().abuse ~= nil and live().abuse.id == "remote:4242" and live().abuse.mega == true)
 	since = W:GetAttribute("AbuseSince")
 	advance(3)
@@ -1920,10 +1920,155 @@ do
 	run(function()
 		remote({ Data = '{"op":"fx","id":"blizzard","on":true,"rid":"4243"}' })
 	end)
-	advance(0.5)
+	advance(6)
 	check("a remote effect switch is written down too", W:GetAttribute("Fx_blizzard") ~= nil and live().fx ~= nil and live().fx.blizzard ~= nil)
 	adminAs(owner, { op = "stopAll", everywhere = true })
 	advance(1)
+end
+
+---------------------------------------------------------------------------------------------------
+-- Build 54: the Owner Remote reaches every server, whether the owner is in one or not, and even
+-- the servers that weren't open when it was sent (it writes its commands down itself)
+---------------------------------------------------------------------------------------------------
+do
+	local AdminService = module("ServerScriptService", "Server", "AdminService")
+	local W = services.Workspace
+	local remote = subscriptions[Config.data.Admin.remoteTopic]
+	local function live()
+		return (dataStores.MaisonSchedule or {}).live or {}
+	end
+	local function now()
+		return W:GetServerTimeNow()
+	end
+	local function castsOf(op, from)
+		local n = 0
+		for i = from + 1, #broadcasts do
+			local m = broadcasts[i].message
+			if type(m) == "table" and m.op == op then
+				n += 1
+			end
+		end
+		return n
+	end
+	run(function()
+		AdminService.stopAll("test")
+	end)
+	advance(1)
+	-- The owner isn't in this server for any of it.
+	local owner
+	for _, g in guests do
+		if g.UserId == 100 then
+			owner = g
+		end
+	end
+	local ownerParent = owner and owner.Parent
+	if owner then
+		owner.Parent = nil
+	end
+
+	-- 1. Order: an older command arriving late never undoes a newer one.
+	local L = AdminService.cleanLive(nil)
+	local t = now()
+	check("a command is written down with when it was given", AdminService.writeLive(L, { op = "fx", id = "meteor", on = true }, t, "X") and L.fx.meteor ~= nil and L.marks["fx:meteor"] == t)
+	check("switched off a moment later: off", AdminService.writeLive(L, { op = "fx", id = "meteor", on = false }, t + 2, "X") and L.fx.meteor == nil)
+	check("the earlier 'on', arriving late, changes nothing", AdminService.writeLive(L, { op = "fx", id = "meteor", on = true }, t + 1, "X") == false and L.fx.meteor == nil)
+	check("the same command twice is written once", AdminService.writeLive(L, { op = "fx", id = "meteor", on = false }, t + 2, "X") == false)
+	AdminService.writeLive(L, { op = "fx", id = "galaxy", on = true }, t + 10, "X")
+	AdminService.writeLive(L, { op = "fx", id = "ufo", on = true }, t + 5, "X")
+	check("'every effect off' clears the effects switched on before it...", AdminService.writeLive(L, { op = "fxAllOff" }, t + 8, "X") and L.fx.ufo == nil)
+	check("...but not one switched on after it (that happened to arrive first)", L.fx.galaxy ~= nil)
+	check("an effect switched on before 'every effect off', arriving after it, stays off", AdminService.writeLive(L, { op = "fx", id = "ufo", on = true }, t + 6, "X") == false and L.fx.ufo == nil)
+	AdminService.writeLive(L, { op = "abuse", minutes = 15, rid = "r1" }, t + 12, "X")
+	AdminService.writeLive(L, { op = "event", id = "goldRain", minutes = 15 }, t + 12, "X")
+	check("'stop everything' clears Admin Abuse, events and effects given before it", AdminService.writeLive(L, { op = "stopAll" }, t + 20, "X") and L.abuse == nil and next(L.fx) == nil and next(L.events) == nil)
+	check("and nothing older comes back after it", AdminService.writeLive(L, { op = "abuse", minutes = 15, rid = "r0" }, t + 15, "X") == false and L.abuse == nil)
+	check("a newer Mega Abuse after it is written down, under the remote's id", AdminService.writeLive(L, { op = "mega", minutes = 15, rid = "r2" }, t + 25, "X") and L.abuse ~= nil and L.abuse.mega == true and L.abuse.id == "remote:r2")
+	check("it ends when it was given plus its length, however late a server hears it", math.abs(L.abuse.ends - (t + 25 + 900)) < 0.001)
+	local kept = AdminService.cleanLive(L)
+	check("what's written down survives being read back (marks and all)", kept.abuse ~= nil and kept.abuse.id == "remote:r2" and kept.marks["*"] == t + 20 and kept.marks["fx:galaxy"] == t + 10 and next(kept.fx) == nil)
+
+	-- 2. A server that wasn't open when the remote's commands were sent: it finds them written down
+	-- and carries them out once, in the order given.
+	local t0 = now()
+	dataStores.MaisonSchedule = dataStores.MaisonSchedule or {}
+	dataStores.MaisonSchedule.live = {
+		log = {
+			{ cmd = { op = "fx", id = "aurora", on = true, rid = "L1" }, at = t0 - 300, rid = "L1" },
+			{ cmd = { op = "fx", id = "meteor", on = true, rid = "L2" }, at = t0 - 200, rid = "L2" },
+			{ cmd = { op = "fx", id = "meteor", on = false, rid = "L3" }, at = t0 - 100, rid = "L3" },
+			{ cmd = { op = "abuse", minutes = 15, rid = "L4" }, at = t0 - 60, rid = "L4" },
+			{ cmd = { op = "giftAll", amount = 100, rid = "L5" }, at = t0 - 600, rid = "L5" },
+			{ cmd = { op = "headline", preset = 1, rid = "L6" }, at = t0 - 20, rid = "L6" },
+		},
+	}
+	local castBefore = #broadcasts
+	local someone = guests[1] ~= owner and guests[1] or guests[2]
+	local giltBefore = profiles[someone].Data.gilt
+	run(AdminService.syncLive)
+	check("a server that wasn't open switches on the remote's effects...", W:GetAttribute("Fx_aurora") ~= nil)
+	check("...in the order given (on, then off: off)", W:GetAttribute("Fx_meteor") == nil)
+	local untilAt = W:GetAttribute("AbuseUntil")
+	check("...joins its Admin Abuse for what's left of it (ending when it ends everywhere)", type(untilAt) == "number" and math.abs(untilAt - (t0 - 60 + 900)) <= 128, untilAt)
+	check("...shows a headline sent a moment ago", castsOf("headline", castBefore) >= 1)
+	check("...but doesn't hand out a gift sent ten minutes ago", profiles[someone].Data.gilt == giltBefore)
+	local since = W:GetAttribute("AbuseSince")
+	local heads = castsOf("headline", castBefore)
+	advance(3)
+	run(AdminService.syncLive)
+	check("and never carries out the same one twice", W:GetAttribute("AbuseSince") == since and castsOf("headline", castBefore) == heads)
+	advance(6)
+	check("what it carried out is written into the record for the next server", live().fx ~= nil and live().fx.aurora ~= nil and live().abuse ~= nil and live().abuse.id == "remote:L4")
+	check("...and the remote's own list is kept", type(live().log) == "table" and #live().log == 6)
+
+	-- 3. Heard twice (the message, then the list written down): carried out once.
+	run(function()
+		AdminService.stopAll("test")
+	end)
+	advance(1)
+	local before = #broadcasts
+	local at = now()
+	run(function()
+		remote({ Data = string.format('{"op":"token","rid":"G1","at":%.3f}', at) })
+	end)
+	local tokens = castsOf("salute", before)
+	dataStores.MaisonSchedule.live = { log = { { cmd = { op = "token", rid = "G1" }, at = at, rid = "G1" } } }
+	run(AdminService.syncLive)
+	check("a command heard as a message and then found written down is carried out once", tokens >= 1 and castsOf("salute", before) == tokens)
+
+	-- 4. A countdown to Admin Abuse: a server opening during it counts down with the rest.
+	local starts = now() + 20
+	dataStores.MaisonSchedule.live = { abuse = { id = "remote:C1", starts = starts, ends = starts + Config.data.Admin.countdownAbuseMinutes * 60, mega = false, by = "XxxXxxX_77797" } }
+	before = #broadcasts
+	run(AdminService.syncLive)
+	check("a server opening during a countdown to Admin Abuse counts down too", castsOf("countdown", before) == 1 and W:GetAttribute("AbuseUntil") == nil)
+	advance(21)
+	untilAt = W:GetAttribute("AbuseUntil")
+	check("...then Admin Abuse begins, ending with everyone else's", type(untilAt) == "number" and math.abs(untilAt - (starts + Config.data.Admin.countdownAbuseMinutes * 60)) <= 128, untilAt)
+	since = W:GetAttribute("AbuseSince")
+	advance(3)
+	run(AdminService.syncLive)
+	check("...once", W:GetAttribute("AbuseSince") == since)
+	-- The remote's countdown is written down for later servers too.
+	run(function()
+		AdminService.stopAll("test")
+	end)
+	advance(1)
+	dataStores.MaisonSchedule.live = nil
+	run(function()
+		remote({ Data = string.format('{"op":"countdown","id":"mega","seconds":30,"rid":"C2","at":%.3f}', now()) })
+	end)
+	advance(6)
+	check("a remote countdown to Mega Abuse is written down with when it starts", live().abuse ~= nil and live().abuse.mega == true and type(live().abuse.starts) == "number" and live().abuse.id == "remote:C2")
+	advance(30)
+	check("and Mega Abuse begins here when it's over", W:GetAttribute("AbuseMega") == true)
+	run(function()
+		AdminService.stopAll("test")
+	end)
+	advance(1)
+
+	if owner then
+		owner.Parent = ownerParent
+	end
 end
 
 H.finish()

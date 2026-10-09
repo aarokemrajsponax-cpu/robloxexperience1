@@ -1068,67 +1068,237 @@ end
 ---------------------------------------------------------------------------------------------------
 -- When the owner starts something in every server, the other servers hear at once
 -- (MessagingService), and it's also written down here (the schedule's DataStore, key "live"), so a
--- server that opens while it's still on joins in: Admin Abuse or Mega Abuse for what's left of it,
--- every effect switched on, every event for what's left of it. Each server looks every liveCheck
--- seconds. Stopping everything everywhere wipes it.
+-- server that opens while it's still on joins in: Admin Abuse or Mega Abuse for what's left of it
+-- (a countdown to it too), every effect switched on, every event for what's left of it. Each server
+-- looks every liveCheck seconds.
+--
+-- Every command carries when it was given (`at`: the owner's server's clock, or the Owner
+-- Remote's), and the record keeps, for each thing, when the latest command about it was given
+-- (`marks`: "abuse", "fx:galaxy", every effect "fx:*", "event:goldRain", everything "*"). So an
+-- older command arriving late (two servers writing at once, a message held up) never undoes a newer
+-- one. The Owner Remote also writes its commands down itself (`log`), so they reach the servers
+-- that weren't open to hear them, even when no server at all was open: each server carries out the
+-- ones it hasn't (in the order given, skipping any a newer command has overtaken; a giveaway or a
+-- headline only within a minute and a half), then writes what they did into the record.
+type LiveAbuse = { id: string, starts: number?, ends: number, mega: boolean, by: string }
+type LogEntry = { cmd: { [string]: any }, at: number, rid: string }
 type Live = {
-	abuse: { id: string, ends: number, mega: boolean, by: string }?,
+	abuse: LiveAbuse?,
 	fx: { [string]: { since: number, by: string } },
 	events: { [string]: { ends: number, by: string } },
+	marks: { [string]: number },
+	log: { LogEntry },
 }
 local LIVE_KEY = "live"
+local LOG_MAX = 40 -- the Owner Remote's commands kept written down
+local KEEP_SECONDS = 86400 -- a day: older marks and commands are let go
+local ONE_SHOT_SECONDS = 90 -- a giveaway or a headline a server missed: carried out this late at most
 local liveBegun: { [string]: boolean } = {} -- Admin Abuse nights (by id) this server has begun
 local fxFromLive: { [string]: boolean } = {} -- effects on here because they're on everywhere
 local eventFromLive: { [string]: boolean } = {}
 -- Each thing written down that this server has already acted on (or wrote itself): it joins
 -- only what it hasn't, so stopping something in this server alone isn't undone a minute later.
 local seenLive: { [string]: boolean } = {}
+local seenRemote: { [string]: boolean } = {} -- the Owner Remote's commands (by id) carried out here
 local function liveKey(kind: string, id: string, stamp: number): string
 	return kind .. ":" .. id .. ":" .. tostring(math.floor(stamp))
 end
 
+local function nameOf(v: any): string
+	return string.sub(tostring(v or "The owner"), 1, 40)
+end
+
 local function cleanLive(v: any): Live
 	local now = os.time()
-	local out: Live = { fx = {}, events = {} }
+	local out: Live = { fx = {}, events = {}, marks = {}, log = {} }
 	if type(v) ~= "table" then
 		return out
 	end
 	local a = v.abuse
 	if type(a) == "table" and type(a.id) == "string" and type(a.ends) == "number" and a.ends > now then
-		out.abuse = { id = a.id, ends = a.ends, mega = a.mega == true, by = string.sub(tostring(a.by or "The owner"), 1, 40) }
+		out.abuse = { id = string.sub(a.id, 1, 80), starts = if type(a.starts) == "number" then a.starts else nil, ends = a.ends, mega = a.mega == true, by = nameOf(a.by) }
 	end
 	if type(v.fx) == "table" then
 		for id, f in v.fx do
 			if type(id) == "string" and HouseEvents.effectById[id] and type(f) == "table" then
-				out.fx[id] = { since = tonumber(f.since) or now, by = string.sub(tostring(f.by or "The owner"), 1, 40) }
+				out.fx[id] = { since = tonumber(f.since) or now, by = nameOf(f.by) }
 			end
 		end
 	end
 	if type(v.events) == "table" then
 		for id, e in v.events do
 			if type(id) == "string" and HouseEvents.byId[id] and type(e) == "table" and type(e.ends) == "number" and e.ends > now then
-				out.events[id] = { ends = e.ends, by = string.sub(tostring(e.by or "The owner"), 1, 40) }
+				out.events[id] = { ends = e.ends, by = nameOf(e.by) }
 			end
+		end
+	end
+	if type(v.marks) == "table" then
+		for k, at in v.marks do
+			if type(k) == "string" and #k <= 48 and type(at) == "number" and at > now - KEEP_SECONDS then
+				out.marks[k] = at
+			end
+		end
+	end
+	if type(v.log) == "table" then
+		for _, e in v.log do
+			if type(e) == "table" and type(e.cmd) == "table" and type(e.cmd.op) == "string" and type(e.at) == "number" and e.at > now - KEEP_SECONDS and (type(e.rid) == "string" or type(e.rid) == "number") then
+				table.insert(out.log, { cmd = e.cmd, at = e.at, rid = string.sub(tostring(e.rid), 1, 64) })
+			end
+		end
+		table.sort(out.log, function(x: LogEntry, y: LogEntry): boolean
+			return x.at < y.at
+		end)
+		while #out.log > LOG_MAX do
+			table.remove(out.log, 1)
 		end
 	end
 	return out
 end
 
--- Writes what's on everywhere (never waits: the owner's tap isn't held up by the DataStore).
-local function changeLive(change: (Live) -> Live)
+-- How long a command's Admin Abuse or event runs (the same bounds whichever way it came).
+local function abuseSeconds(m: { [string]: any }): number
+	return math.clamp(if type(m.seconds) == "number" then m.seconds elseif type(m.minutes) == "number" then m.minutes * 60 else 1800, 60, 3600)
+end
+local function eventSeconds(m: { [string]: any }): number
+	return math.clamp(if type(m.seconds) == "number" then m.seconds elseif type(m.minutes) == "number" then m.minutes * 60 else 900, 60, 3600)
+end
+
+-- The one id an Admin Abuse night is known by in every server (so none begins it twice).
+local function liveIdOf(m: { [string]: any }, at: number): string
+	if type(m.liveId) == "string" then
+		return string.sub(m.liveId, 1, 80)
+	elseif type(m.rid) == "string" or type(m.rid) == "number" then
+		return "remote:" .. string.sub(tostring(m.rid), 1, 64)
+	end
+	return "at:" .. tostring(math.floor(at))
+end
+
+-- What a command changes in the record, or nil for one that changes nothing lasting (a giveaway,
+-- a headline, a countdown to a surprise).
+local function targetOf(m: { [string]: any }): string?
+	local op = m.op
+	if op == "abuse" or op == "mega" or (op == "countdown" and (m.id == "abuse" or m.id == "mega")) then
+		return "abuse"
+	elseif op == "fx" and type(m.id) == "string" and HouseEvents.effectById[m.id] then
+		return "fx:" .. m.id
+	elseif op == "fxAllOff" then
+		return "fx:*"
+	elseif (op == "event" or op == "stop") and type(m.id) == "string" and HouseEvents.byId[m.id] then
+		return "event:" .. m.id
+	elseif op == "stopAll" then
+		return "*"
+	end
+	return nil
+end
+
+-- Whether a newer command has already changed this thing (or everything).
+local function overtaken(live: Live, target: string, at: number): boolean
+	local function after(k: string): boolean
+		local mark = live.marks[k]
+		return mark ~= nil and mark > at
+	end
+	return after(target) or after("*") or (string.sub(target, 1, 3) == "fx:" and after("fx:*"))
+end
+
+-- Writes one command into the record. False when that changes nothing (it's there already, or a
+-- newer command has overtaken it).
+local function writeLive(live: Live, m: { [string]: any }, at: number, byName: string): boolean
+	local target = targetOf(m)
+	if not target or live.marks[target] == at or overtaken(live, target, at) then
+		return false
+	end
+	local function markOf(key: string, fallback: number): number
+		return live.marks[key] or fallback
+	end
+	local op = m.op
+	if op == "abuse" or op == "mega" then
+		live.abuse = { id = liveIdOf(m, at), ends = at + abuseSeconds(m), mega = op == "mega", by = byName }
+	elseif op == "countdown" then
+		local starts = at + (if type(m.seconds) == "number" then m.seconds else 10)
+		live.abuse = { id = liveIdOf(m, at), starts = starts, ends = starts + cfg().countdownAbuseMinutes * 60, mega = m.id == "mega", by = byName }
+	elseif op == "fx" then
+		if m.on ~= false then
+			live.fx[m.id] = { since = at, by = byName }
+		else
+			live.fx[m.id] = nil
+		end
+	elseif op == "fxAllOff" or op == "stopAll" then
+		-- (Only what was given before it: an effect switched on after, arriving first, stays on.)
+		for id, f in live.fx do
+			if markOf("fx:" .. id, f.since) <= at then
+				live.fx[id] = nil
+			end
+		end
+		if op == "stopAll" then
+			if live.abuse and markOf("abuse", 0) <= at then
+				live.abuse = nil
+			end
+			for id in live.events do
+				if markOf("event:" .. id, 0) <= at then
+					live.events[id] = nil
+				end
+			end
+		end
+	elseif op == "event" then
+		live.events[m.id] = { ends = at + eventSeconds(m), by = byName }
+	elseif op == "stop" then
+		live.events[m.id] = nil
+	end
+	live.marks[target] = at
+	return true
+end
+
+-- Changes what's written down (never waits: the owner's tap isn't held up by the DataStore).
+-- `change` says whether it changed anything (if not, nothing is written). `spread`: wait up to
+-- that many seconds first (every server writing the same thing doesn't all write at once).
+local function changeLive(change: (Live) -> boolean, spread: number?)
 	local store = scheduleStore
 	if not store then
 		return
 	end
 	task.spawn(function()
+		if spread and spread > 0 then
+			task.wait(math.random() * spread)
+		end
 		pcall(function()
-			store:UpdateAsync(LIVE_KEY, function(old: any)
-				return change(cleanLive(old))
+			store:UpdateAsync(LIVE_KEY, function(old: any): any
+				local live = cleanLive(old)
+				if not change(live) then
+					return nil -- (nothing new: no write)
+				end
+				return live
 			end)
 		end)
 	end)
 end
 AdminService.changeLive = changeLive
+
+-- What this server has just carried out itself, so catching up never carries it out again.
+local function markSeen(m: { [string]: any }, at: number)
+	local op = m.op
+	if op == "fx" and m.on ~= false and type(m.id) == "string" then
+		seenLive[liveKey("fx", m.id, at)] = true
+	elseif op == "event" and type(m.id) == "string" then
+		seenLive[liveKey("event", m.id, at + eventSeconds(m))] = true
+	elseif op == "abuse" or op == "mega" or (op == "countdown" and (m.id == "abuse" or m.id == "mega")) then
+		liveBegun[liveIdOf(m, at)] = true
+	end
+end
+
+-- When a command was given: the stamp it carries (if it's a sensible one), else now.
+local function stampOf(m: { [string]: any }): number
+	local now = Workspace:GetServerTimeNow()
+	local at = tonumber(m.at)
+	if at and at == at and math.abs(at - now) < 600 then
+		return at
+	end
+	return now
+end
+
+-- (Set below: carries out one command in this house.)
+local applyCommand: (m: { [string]: any }, byName: string, remote: boolean, at: number?) -> boolean = function()
+	return false
+end
 
 -- This server catches up with what's on everywhere.
 local function syncLive()
@@ -1144,10 +1314,36 @@ local function syncLive()
 	end
 	local live = cleanLive(value)
 	local now = os.time()
+	-- The Owner Remote's commands this server hasn't carried out, in the order given.
+	local ownerName = nameOf(cfg().ownerName)
+	for _, e in live.log do
+		if not seenRemote[e.rid] then
+			seenRemote[e.rid] = true
+			local target = targetOf(e.cmd)
+			if target then
+				-- (Already in the record, or overtaken by something newer: the record below has it.)
+				local mark = live.marks[target]
+				if (mark == nil or mark < e.at) and not overtaken(live, target, e.at) then
+					applyCommand(e.cmd, ownerName, true, e.at)
+					writeLive(live, e.cmd, e.at, ownerName)
+				end
+			elseif now - e.at <= ONE_SHOT_SECONDS then
+				applyCommand(e.cmd, ownerName, true, e.at)
+			end
+		end
+	end
 	local a = live.abuse
 	if a and not liveBegun[a.id] then
-		liveBegun[a.id] = true
-		AdminService.abuse(a.ends - now, a.by, a.mega)
+		if a.starts and a.starts > now then
+			-- (Opening during the countdown to it: the rest of the countdown, then it.)
+			if a.starts - now >= 3 then
+				liveBegun[a.id] = true
+				AdminService.countdown(if a.mega then "mega" else "abuse", a.starts - now, a.by)
+			end
+		else
+			liveBegun[a.id] = true
+			AdminService.abuse(a.ends - now, a.by, a.mega)
+		end
 	end
 	for id, f in live.fx do
 		local key = liveKey("fx", id, f.since)
@@ -1188,6 +1384,9 @@ local function syncLive()
 	end
 end
 AdminService.syncLive = syncLive
+-- (For tests.)
+AdminService.cleanLive = cleanLive
+AdminService.writeLive = writeLive
 
 local function scheduleView(): { { [string]: any } }
 	local out = {}
@@ -1481,9 +1680,14 @@ end
 -- Commands from the other servers of the game and from the Owner Remote
 ---------------------------------------------------------------------------------------------------
 -- One command, checked against the same lists as the console's, then carried out in this house.
--- `remote`: it came from outside the game (the Owner Remote), so typed words are filtered here.
-local function apply(m: { [string]: any }, byName: string, remote: boolean): boolean
+-- `remote`: it came from outside the game (the Owner Remote), so typed words are filtered here and
+-- what lasts is written down by this server too (the remote may not have been able to). `at`: when
+-- it was given (an Admin Abuse night or an event ends the same moment in every server, however late
+-- the message came).
+local function apply(m: { [string]: any }, byName: string, remote: boolean, given: number?): boolean
 	local op = m.op
+	local now = os.time()
+	local at: number = given or Workspace:GetServerTimeNow()
 	local function words(): string?
 		if type(m.preset) == "number" then
 			return HouseEvents.Headlines[m.preset]
@@ -1492,6 +1696,15 @@ local function apply(m: { [string]: any }, byName: string, remote: boolean): boo
 			return if remote then ownerText(m.text) else m.text
 		end
 		return nil
+	end
+	-- What lasts, written down by this server too (only for the Owner Remote's: another server's
+	-- command was written down by the owner's own server).
+	local function writeDown()
+		if remote then
+			changeLive(function(live: Live): boolean
+				return writeLive(live, m, at, byName)
+			end, 5)
+		end
 	end
 	if op == "announce" then
 		local text = words()
@@ -1507,46 +1720,30 @@ local function apply(m: { [string]: any }, byName: string, remote: boolean): boo
 		return text ~= nil
 	elseif op == "event" and type(m.id) == "string" and HouseEvents.byId[m.id] then
 		local id = m.id
-		local seconds = math.clamp(if type(m.seconds) == "number" then m.seconds elseif type(m.minutes) == "number" then m.minutes * 60 else 900, 60, 3600)
-		AdminService.startEvent(id, seconds, byName)
-		eventFromLive[id] = true
-		if remote then
-			-- (From outside the game, every server writes it down: the same thing, so no harm.)
-			local ends = os.time() + seconds
-			seenLive[liveKey("event", id, ends)] = true
-			changeLive(function(live)
-				live.events[id] = { ends = ends, by = byName }
-				return live
-			end)
+		local left = math.floor(at + eventSeconds(m) - now)
+		if left > 0 then
+			AdminService.startEvent(id, left, byName)
+			eventFromLive[id] = true
 		end
+		markSeen(m, at)
+		writeDown()
 		return true
 	elseif op == "stop" and type(m.id) == "string" and HouseEvents.byId[m.id] then
 		local id = m.id
 		AdminService.stopEvent(id)
 		eventFromLive[id] = nil
-		if remote then
-			changeLive(function(live)
-				live.events[id] = nil
-				return live
-			end)
-		end
+		writeDown()
 		return true
 	elseif op == "abuse" or op == "mega" then
-		local seconds = math.clamp(if type(m.seconds) == "number" then m.seconds elseif type(m.minutes) == "number" then m.minutes * 60 else 1800, 60, 3600)
 		-- The same night, known by one id in every server (so a server catching up later doesn't
 		-- begin it twice): the owner's server gave it one; the Owner Remote sends its run's.
-		local liveId = if type(m.liveId) == "string" then m.liveId elseif type(m.rid) == "string" or type(m.rid) == "number" then "remote:" .. tostring(m.rid) else nil
-		if liveId then
+		local liveId = liveIdOf(m, at)
+		local left = math.floor(at + abuseSeconds(m) - now)
+		if not liveBegun[liveId] and left > 0 then
 			liveBegun[liveId] = true
+			AdminService.abuse(left, byName, op == "mega")
 		end
-		AdminService.abuse(seconds, byName, op == "mega")
-		if remote and liveId then
-			local ends, mega = os.time() + seconds, op == "mega"
-			changeLive(function(live)
-				live.abuse = { id = liveId :: string, ends = ends, mega = mega, by = byName }
-				return live
-			end)
-		end
+		writeDown()
 		return true
 	elseif op == "fx" and type(m.id) == "string" and HouseEvents.effectById[m.id] then
 		-- On (it stays on) unless the message says off.
@@ -1557,43 +1754,41 @@ local function apply(m: { [string]: any }, byName: string, remote: boolean): boo
 		else
 			fxFromLive[id] = nil
 		end
-		if remote then
-			local since = os.time()
-			if on then
-				seenLive[liveKey("fx", id, since)] = true
-			end
-			changeLive(function(live)
-				if on then
-					live.fx[id] = { since = since, by = byName }
-				else
-					live.fx[id] = nil
-				end
-				return live
-			end)
-		end
+		markSeen(m, at)
+		writeDown()
 		return true
 	elseif op == "fxAllOff" then
 		AdminService.allFxOff(byName)
 		table.clear(fxFromLive)
-		if remote then
-			changeLive(function(live)
-				live.fx = {}
-				return live
-			end)
-		end
+		writeDown()
 		return true
 	elseif op == "stopAll" then
 		AdminService.stopAll(byName)
 		table.clear(fxFromLive)
 		table.clear(eventFromLive)
-		if remote then
-			changeLive(function(_live)
-				return { fx = {}, events = {} }
-			end)
-		end
+		writeDown()
 		return true
 	elseif op == "countdown" and type(m.id) == "string" and HouseEvents.countdownById[m.id] and type(m.seconds) == "number" and table.find(cfg().countdowns, m.seconds) then
-		AdminService.countdown(m.id, m.seconds, byName)
+		local id = m.id
+		local left = at + m.seconds - now
+		if id == "abuse" or id == "mega" then
+			local liveId = liveIdOf(m, at)
+			if not liveBegun[liveId] then
+				liveBegun[liveId] = true
+				if left >= 3 then
+					AdminService.countdown(id, left, byName)
+				else
+					-- (Heard after the countdown was over: Admin Abuse for what's left of it.)
+					local rest = math.floor(at + m.seconds + cfg().countdownAbuseMinutes * 60 - now)
+					if rest > 0 then
+						AdminService.abuse(rest, byName, id == "mega")
+					end
+				end
+			end
+			writeDown()
+		else
+			AdminService.countdown(id, math.max(3, left), byName)
+		end
 		return true
 	elseif op == "giftAll" and type(m.amount) == "number" and table.find(cfg().giftGilt, m.amount) then
 		for _, p in Players:GetPlayers() do
@@ -1619,6 +1814,7 @@ local function apply(m: { [string]: any }, byName: string, remote: boolean): boo
 	return false
 end
 AdminService.apply = apply
+applyCommand = apply
 
 -- Another server of the game, where the owner chose "every server".
 local function onMessage(message: any)
@@ -1626,11 +1822,12 @@ local function onMessage(message: any)
 	if type(m) ~= "table" or m.jobId == game.JobId then
 		return
 	end
-	apply(m, string.sub(tostring(m.by or "The owner"), 1, 40), false)
+	apply(m, nameOf(m.by), false, stampOf(m))
 end
 
 -- The Owner Remote, outside the game: a line of JSON on the remote topic (Open Cloud), at most a
--- few a second.
+-- few a second. (The same command is also written down by the remote when it can, for servers that
+-- weren't open: carried out once here, whichever way it arrives first.)
 local remoteTimes: { number } = {}
 local function onRemote(message: any)
 	local raw = if type(message) == "table" then message.Data else nil
@@ -1645,6 +1842,13 @@ local function onRemote(message: any)
 		warn("[Maison] The Owner Remote sent something that isn't a command.")
 		return
 	end
+	local rid = if type(m.rid) == "string" or type(m.rid) == "number" then string.sub(tostring(m.rid), 1, 64) else nil
+	if rid then
+		if seenRemote[rid] then
+			return
+		end
+		seenRemote[rid] = true
+	end
 	local now = os.clock()
 	while #remoteTimes > 0 and now - remoteTimes[1] > 10 do
 		table.remove(remoteTimes, 1)
@@ -1653,11 +1857,27 @@ local function onRemote(message: any)
 		return
 	end
 	table.insert(remoteTimes, now)
-	if not apply(m, cfg().ownerName or "The owner", true) then
+	if not apply(m, nameOf(cfg().ownerName), true, stampOf(m)) then
 		warn("[Maison] The Owner Remote's command wasn't one the house knows: " .. tostring(m.op))
 	end
 end
 AdminService.onRemote = onRemote
+
+-- The owner chose "every server" in the console: the other servers hear it at once, and what lasts
+-- is written down (by this server alone) for any server that opens while it's on.
+local function everywhere(m: { [string]: any }, byName: string)
+	local at = Workspace:GetServerTimeNow()
+	m.at = at
+	m.by = byName
+	m.jobId = game.JobId
+	markSeen(m, at)
+	publish(m)
+	if targetOf(m) then
+		changeLive(function(live: Live): boolean
+			return writeLive(live, m, at, byName)
+		end)
+	end
+end
 
 local function handle(player: Player, request: unknown): any
 	if not AdminService.isAdmin(player) then
@@ -1682,13 +1902,7 @@ local function handle(player: Player, request: unknown): any
 		local minutes = if type(r.minutes) == "number" then math.clamp(r.minutes, 1, 60) else 15
 		AdminService.startEvent(id, minutes * 60, byName)
 		if r.everywhere == true then
-			publish({ op = "event", id = id, seconds = minutes * 60, by = byName, jobId = game.JobId })
-			local ends = os.time() + minutes * 60
-			seenLive[liveKey("event", id, ends)] = true
-			changeLive(function(live)
-				live.events[id] = { ends = ends, by = byName }
-				return live
-			end)
+			everywhere({ op = "event", id = id, seconds = minutes * 60 }, byName)
 		end
 		return state(player)
 	elseif op == "abuse" or op == "mega" then
@@ -1696,15 +1910,8 @@ local function handle(player: Player, request: unknown): any
 		local mega = op == "mega"
 		AdminService.abuse(minutes * 60, byName, mega)
 		if r.everywhere == true then
-			-- Every server now, and any server that opens while it's still on.
-			local liveId = HttpService:GenerateGUID(false)
-			liveBegun[liveId] = true
-			publish({ op = op, seconds = minutes * 60, by = byName, jobId = game.JobId, liveId = liveId })
-			local ends = os.time() + minutes * 60
-			changeLive(function(live)
-				live.abuse = { id = liveId, ends = ends, mega = mega, by = byName }
-				return live
-			end)
+			-- Every server now, and any server that opens while it's still on (one id for the night).
+			everywhere({ op = op, seconds = minutes * 60, liveId = HttpService:GenerateGUID(false) }, byName)
 		end
 		return state(player)
 	elseif op == "schedule" then
@@ -1742,11 +1949,7 @@ local function handle(player: Player, request: unknown): any
 		local id = r.id
 		AdminService.stopEvent(id)
 		if r.everywhere == true then
-			publish({ op = "stop", id = id, by = byName, jobId = game.JobId })
-			changeLive(function(live)
-				live.events[id] = nil
-				return live
-			end)
+			everywhere({ op = "stop", id = id }, byName)
 		end
 		return state(player)
 	elseif op == "salute" and type(r.id) == "string" and Salutes.byId[r.id] then
@@ -1798,7 +2001,7 @@ local function handle(player: Player, request: unknown): any
 		end
 		AdminService.note(string.format("The house gave every guest %d Gilt.", amount), false)
 		if r.everywhere == true then
-			publish({ op = "giftAll", amount = amount, by = byName, jobId = game.JobId })
+			everywhere({ op = "giftAll", amount = amount }, byName)
 		end
 		return { ok = true }
 	elseif op == "announce" then
@@ -1816,7 +2019,7 @@ local function handle(player: Player, request: unknown): any
 		end
 		announce(text, byName)
 		if r.everywhere == true then
-			publish({ op = "announce", text = text, by = byName, jobId = game.JobId })
+			everywhere({ op = "announce", text = text }, byName)
 		end
 		return { ok = true, text = text }
 	elseif op == "summon" then
@@ -1874,38 +2077,19 @@ local function handle(player: Player, request: unknown): any
 		local on = if type(r.on) == "boolean" then r.on else not AdminService.isFxOn(id)
 		AdminService.setFx(id, on, byName)
 		if r.everywhere == true then
-			publish({ op = "fx", id = id, on = on, by = byName, jobId = game.JobId })
-			local since = os.time()
-			if on then
-				seenLive[liveKey("fx", id, since)] = true
-			end
-			changeLive(function(live)
-				if on then
-					live.fx[id] = { since = since, by = byName }
-				else
-					live.fx[id] = nil
-				end
-				return live
-			end)
+			everywhere({ op = "fx", id = id, on = on }, byName)
 		end
 		return state(player)
 	elseif op == "fxAllOff" then
 		AdminService.allFxOff(byName)
 		if r.everywhere == true then
-			publish({ op = "fxAllOff", by = byName, jobId = game.JobId })
-			changeLive(function(live)
-				live.fx = {}
-				return live
-			end)
+			everywhere({ op = "fxAllOff" }, byName)
 		end
 		return state(player)
 	elseif op == "stopAll" then
 		AdminService.stopAll(byName)
 		if r.everywhere == true then
-			publish({ op = "stopAll", by = byName, jobId = game.JobId })
-			changeLive(function(_live)
-				return { fx = {}, events = {} }
-			end)
+			everywhere({ op = "stopAll" }, byName)
 		end
 		broadcast({ op = "salute", id = "halt", by = byName, effects = {}, seconds = 5, title = "That's all", line = byName .. " called a halt: the house is back to normal." })
 		return state(player)
@@ -1931,7 +2115,7 @@ local function handle(player: Player, request: unknown): any
 		local seconds = if type(r.seconds) == "number" then math.clamp(r.seconds, 3, 15) else cfg().headlineSeconds
 		AdminService.headline(text, byName, style, seconds)
 		if r.everywhere == true then
-			publish({ op = "headline", text = text, style = style, seconds = seconds, by = byName, jobId = game.JobId })
+			everywhere({ op = "headline", text = text, style = style, seconds = seconds }, byName)
 		end
 		return { ok = true, text = text }
 	elseif op == "countdown" and type(r.id) == "string" and HouseEvents.countdownById[r.id] then
@@ -1941,7 +2125,9 @@ local function handle(player: Player, request: unknown): any
 		end
 		AdminService.countdown(r.id, seconds, byName)
 		if r.everywhere == true then
-			publish({ op = "countdown", id = r.id, seconds = seconds, by = byName, jobId = game.JobId })
+			-- (A countdown to Admin Abuse: written down too, so a server opening meanwhile counts down
+			-- with the rest, and one opening after joins in.)
+			everywhere({ op = "countdown", id = r.id, seconds = seconds, liveId = HttpService:GenerateGUID(false) }, byName)
 		end
 		return { ok = true }
 	elseif op == "giveaway" then
@@ -1951,7 +2137,7 @@ local function handle(player: Player, request: unknown): any
 		end
 		local winner = AdminService.giveaway(amount, byName)
 		if r.everywhere == true then
-			publish({ op = "giveaway", amount = amount, by = byName, jobId = game.JobId })
+			everywhere({ op = "giveaway", amount = amount }, byName)
 		end
 		if not winner and r.everywhere ~= true then
 			return { ok = false, why = "Nobody else is in this house to win it." }
@@ -1960,7 +2146,7 @@ local function handle(player: Player, request: unknown): any
 	elseif op == "token" then
 		local given = AdminService.token(byName)
 		if r.everywhere == true then
-			publish({ op = "token", by = byName, jobId = game.JobId })
+			everywhere({ op = "token" }, byName)
 		end
 		return { ok = true, given = given }
 	elseif op == "freeze" then

@@ -6,9 +6,15 @@
 $ErrorActionPreference = 'Stop'
 $Universe = '10768398256'
 $Topic = 'MaisonRemote'
+$Store = 'MaisonSchedule'
+$Entry = 'live'
+# (MAISON_REMOTE_TEST: tests/remote.py tries it against a pretend Roblox; never set it yourself.)
+$Testing = [bool]$env:MAISON_REMOTE_TEST
+$Api = if ($Testing -and $env:MAISON_REMOTE_API) { $env:MAISON_REMOTE_API } else { 'https://apis.roblox.com' }
 $Folder = Join-Path $env:APPDATA 'MaisonNoir'
 $KeyFile = Join-Path $Folder 'remote.key'
 function Get-Key {
+    if ($Testing -and $env:MAISON_REMOTE_KEY) { return $env:MAISON_REMOTE_KEY }
     if (Test-Path $KeyFile) {
         $secure = Get-Content $KeyFile | ConvertTo-SecureString
         return [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure))
@@ -18,17 +24,75 @@ function Get-Key {
     $secure | ConvertFrom-SecureString | Set-Content $KeyFile
     return [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure))
 }
+# One request to Roblox: its status, what came back and the entry's version (0 if no answer).
+function Invoke-Roblox([string]$Method, [string]$Uri, $Body) {
+    $params = @{ Method = $Method; Uri = $Uri; Headers = @{ 'x-api-key' = (Get-Key) }; UseBasicParsing = $true }
+    if ($null -ne $Body) {
+        $params.Body = [Text.Encoding]::UTF8.GetBytes($Body)
+        $params.ContentType = 'application/json; charset=utf-8'
+    }
+    try {
+        $r = Invoke-WebRequest @params
+        $version = $r.Headers['roblox-entry-version']
+        if ($version -is [array]) { $version = $version[0] }
+        $content = $r.Content
+        if ($content -is [byte[]]) { $content = [Text.Encoding]::UTF8.GetString($content) }
+        return @{ Code = [int]$r.StatusCode; Content = [string]$content; Version = [string]$version }
+    } catch {
+        $code = 0
+        try { $code = [int]$_.Exception.Response.StatusCode } catch { }
+        return @{ Code = $code; Content = ''; Version = '' }
+    }
+}
+# Writes the command down in the game's own record (its list), so servers that weren't open
+# carry it out when they open: read, add, write back only if nobody wrote in between.
+function Write-Down($Command, [double]$At, [string]$Rid) {
+    $uri = "$Api/datastores/v1/universes/$Universe/standard-datastores/datastore/entries/entry?datastoreName=$Store&entryKey=$Entry"
+    $now = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+    for ($try = 1; $try -le 5; $try++) {
+        $got = Invoke-Roblox 'GET' $uri $null
+        if ($got.Code -eq 401 -or $got.Code -eq 403) { return 'denied' }
+        if ($got.Code -eq 200) {
+            try { $record = $got.Content | ConvertFrom-Json } catch { return 'unreadable' }
+            if ($null -eq $record -or $record -isnot [pscustomobject]) { $record = [pscustomobject]@{} }
+            $mode = 'matchVersion=' + $got.Version
+        } elseif ($got.Code -eq 404 -or $got.Code -eq 204) {
+            $record = [pscustomobject]@{}
+            $mode = 'exclusiveCreate=true'
+        } else {
+            Start-Sleep -Seconds $try
+            continue
+        }
+        $log = @()
+        if ($record.PSObject.Properties['log']) { $log = @($record.log | Where-Object { $_ -and ($_.at -as [double]) -gt ($now - 86400) }) }
+        $log += [pscustomobject]@{ cmd = $Command; at = $At; rid = $Rid }
+        if ($log.Count -gt 40) { $log = $log[($log.Count - 40)..($log.Count - 1)] }
+        $record | Add-Member -NotePropertyName log -NotePropertyValue $log -Force
+        $put = Invoke-Roblox 'POST' ($uri + '&' + $mode) (ConvertTo-Json -InputObject $record -Depth 20 -Compress)
+        if ($put.Code -eq 200) { return 'yes' }
+        if ($put.Code -eq 401 -or $put.Code -eq 403) { return 'denied' }
+        Start-Sleep -Seconds $try
+    }
+    return 'no'
+}
 function Send-Command([string]$Json) {
     $obj = $Json | ConvertFrom-Json
-    $obj | Add-Member -NotePropertyName rid -NotePropertyValue ([guid]::NewGuid().ToString('N')) -Force
-    $Json = $obj | ConvertTo-Json -Compress
-    $body = @{ message = $Json } | ConvertTo-Json -Compress
-    try {
-        Invoke-RestMethod -Method Post -Uri "https://apis.roblox.com/messaging-service/v1/universes/$Universe/topics/$Topic" -Headers @{ 'x-api-key' = (Get-Key) } -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($body)) | Out-Null
-        Write-Host '  Sent to every server.' -ForegroundColor Green
-    } catch {
-        Write-Host ('  Roblox said no: ' + $_.Exception.Message) -ForegroundColor Red
+    $rid = [guid]::NewGuid().ToString('N')
+    $at = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() / 1000.0
+    $obj | Add-Member -NotePropertyName rid -NotePropertyValue $rid -Force
+    $obj | Add-Member -NotePropertyName at -NotePropertyValue $at -Force
+    $message = ConvertTo-Json -InputObject $obj -Depth 10 -Compress
+    $sent = Invoke-Roblox 'POST' "$Api/messaging-service/v1/universes/$Universe/topics/$Topic" (ConvertTo-Json -InputObject @{ message = $message } -Compress)
+    if ($sent.Code -ne 200) {
+        Write-Host ('  Roblox said no (' + $sent.Code + ').') -ForegroundColor Red
         Write-Host '  (401/403: the key is wrong or lacks the Messaging Service''s Publish for Maison Noir. Delete the key file to paste a new one.)' -ForegroundColor Yellow
+        return
+    }
+    Write-Host '  Sent to every open server.' -ForegroundColor Green
+    switch (Write-Down $obj $at $rid) {
+        'yes' { Write-Host '  Written down: servers that open later join in too.' -ForegroundColor Green }
+        'denied' { Write-Host '  Not written down: the key can''t use Maison Noir''s data stores, so a server that opens later won''t join in. Creator Hub > Open Cloud > API Keys > your key > Edit > Add API System: universe-datastores > Maison Noir > Read Entry, Create Entry, Update Entry > Save.' -ForegroundColor Yellow }
+        default { Write-Host '  Not written down (Roblox''s data stores didn''t answer): a server that opens later may not join in.' -ForegroundColor Yellow }
     }
 }
 $Commands = @(
@@ -110,6 +174,7 @@ $Commands = @(
     @{ Label = '☀️ Time of day: Noon'; Json = '{"op":"clock","id":"noon"}' }
     @{ Label = '🌇 Time of day: Sunset'; Json = '{"op":"clock","id":"sunset"}' }
 )
+if ($Testing) { return }
 [Console]::OutputEncoding = [Text.Encoding]::UTF8
 while ($true) {
     Write-Host ''
