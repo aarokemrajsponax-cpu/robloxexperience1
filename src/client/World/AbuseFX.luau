@@ -144,33 +144,86 @@ local function screen(): ScreenGui
 	return s
 end
 
--- Big words slammed onto the screen, then gone.
+-- Big words slammed onto the screen, then gone: lit from above (white into the effect's colour), a
+-- dark shadow under them, a gleam of light sweeping across, a tilt as they land; they lift away.
 local function banner(text: string, colour: Color3, seconds: number)
 	if repeating then
 		return
 	end
+	local gui = screen()
+	local old = gui:FindFirstChild("Banner")
+	if old then
+		old:Destroy()
+	end
+	local holder = Instance.new("Frame")
+	holder.Name = "Banner"
+	holder.BackgroundTransparency = 1
+	holder.AnchorPoint = Vector2.new(0.5, 0.5)
+	holder.Position = UDim2.fromScale(0.5, 0.3)
+	holder.Size = UDim2.fromScale(0.9, 0.16)
+	holder.Parent = gui
+	local shadow = Instance.new("TextLabel")
+	shadow.Name = "Shadow"
+	shadow.BackgroundTransparency = 1
+	shadow.AnchorPoint = Vector2.new(0.5, 0.5)
+	shadow.Position = UDim2.new(0.5, 5, 0.5, 7)
+	shadow.Size = UDim2.fromScale(1, 1)
+	shadow.FontFace = IMPACT
+	shadow.TextScaled = true
+	shadow.Text = text
+	shadow.TextColor3 = Color3.new(0, 0, 0)
+	shadow.TextTransparency = 0.45
+	shadow.Parent = holder
 	local label = Instance.new("TextLabel")
-	label.Name = "Banner"
+	label.Name = "Words"
 	label.BackgroundTransparency = 1
 	label.AnchorPoint = Vector2.new(0.5, 0.5)
-	label.Position = UDim2.fromScale(0.5, 0.32)
-	label.Size = UDim2.fromScale(0.9, 0.16)
+	label.Position = UDim2.fromScale(0.5, 0.5)
+	label.Size = UDim2.fromScale(1, 1)
 	label.FontFace = IMPACT
 	label.TextScaled = true
 	label.Text = text
-	label.TextColor3 = colour
-	label.TextStrokeColor3 = rgb(40, 24, 4)
+	label.TextColor3 = Color3.new(1, 1, 1)
+	label.TextStrokeColor3 = rgb(30, 16, 4)
 	label.TextStrokeTransparency = 0
+	label.Parent = holder
+	local lit = Instance.new("UIGradient")
+	lit.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1):Lerp(colour, 0.25)), ColorSequenceKeypoint.new(0.55, colour), ColorSequenceKeypoint.new(1, colour:Lerp(Color3.new(0, 0, 0), 0.25)) })
+	lit.Rotation = 90
+	lit.Parent = label
+	-- The gleam: a bright band crossing the words once.
+	local gleam = label:Clone()
+	gleam.Name = "Gleam"
+	gleam.TextStrokeTransparency = 1
+	gleam.ZIndex = 2
+	for _, c in gleam:GetChildren() do
+		c:Destroy()
+	end
+	gleam.Parent = holder
+	local band = Instance.new("UIGradient")
+	band.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.45, 1), NumberSequenceKeypoint.new(0.5, 0.15), NumberSequenceKeypoint.new(0.55, 1), NumberSequenceKeypoint.new(1, 1) })
+	band.Offset = Vector2.new(-1, 0)
+	band.Rotation = 20
+	band.Parent = gleam
 	local scale = Instance.new("UIScale")
 	scale.Scale = 2.6
-	scale.Parent = label
-	label.Parent = screen()
+	scale.Parent = holder
+	holder.Rotation = -6
 	TweenService:Create(scale, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+	TweenService:Create(holder, TweenInfo.new(0.5, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out), { Rotation = 0 }):Play()
+	task.delay(0.3, function()
+		TweenService:Create(band, TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Offset = Vector2.new(1, 0) }):Play()
+	end)
 	task.delay(seconds, function()
-		local t = TweenService:Create(label, TweenInfo.new(0.5), { TextTransparency = 1, TextStrokeTransparency = 1 })
-		t:Play()
+		if not holder.Parent then
+			return
+		end
+		TweenService:Create(holder, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Position = UDim2.fromScale(0.5, 0.22) }):Play()
+		for _, l in { label, shadow, gleam } do
+			TweenService:Create(l, TweenInfo.new(0.5), { TextTransparency = 1, TextStrokeTransparency = 1 }):Play()
+		end
 		task.delay(0.6, function()
-			label:Destroy()
+			holder:Destroy()
 		end)
 	end)
 end

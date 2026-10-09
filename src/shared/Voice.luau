@@ -283,8 +283,11 @@ Voice.Sorting = {
 	moments = {
 		[5] = "Five in a row. Lovely.",
 		[8] = "Eight. The house is watching.",
-		[12] = "Twelve without a slip.",
+		[12] = "Twelve without a slip. You're on fire.",
+		[16] = "Sixteen. Sharp as a pin.",
 		[20] = "Twenty. Remarkable.",
+		[30] = "Thirty. Unheard of.",
+		[50] = "Fifty. A legend of the house.",
 	},
 }
 

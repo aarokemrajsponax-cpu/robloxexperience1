@@ -201,6 +201,11 @@ local function updateHeader()
 end
 
 local function setScore(value: number, multiplier: number)
+	-- (The streak broken, or never long enough: the cloth's fire goes out.)
+	local feverAt = Config.data.Sorting.feverAt
+	if type(feverAt) == "number" and (local_.streak or 0) < feverAt and SortScreen.isOnFire() then
+		SortScreen.setFever(false)
+	end
 	local model = seatedModel
 	if model then
 		if counting() then
@@ -288,7 +293,13 @@ local function file(uid: number, caseId: string)
 				Sound.play("combo", 0.45)
 			end)
 		end
+		-- A long streak sets the cloth on fire (till it breaks).
+		local feverAt = Config.data.Sorting.feverAt
+		if not counting() and type(feverAt) == "number" and local_.streak >= feverAt then
+			SortScreen.setFever(true, local_.streak)
+		end
 	else
+		SortScreen.setFever(false)
 		SortScreen.wrong(uid, caseId, before.streak, if counting() then nil else before.score - local_.score)
 		SortScreen.filed(false)
 		Sound.wrong()
@@ -891,6 +902,11 @@ end
 function TableClient.start()
 	SortScreen.canLift = canLift
 	SortScreen.onLift = onLift
+	-- A very long streak (twenty, thirty, fifty): the house cheers.
+	SortScreen.onBigStreak = function(n: number)
+		Sound.play("crowdCheer", if n >= 50 then 0.9 else 0.6)
+		Sound.play("shimmerFall", 0.6)
+	end
 	SortScreen.onFile = file
 	SortScreen.onCancel = TableClient.leave
 	SortScreen.keysWidth = Hud.width

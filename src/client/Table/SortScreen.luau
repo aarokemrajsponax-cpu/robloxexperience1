@@ -2010,6 +2010,7 @@ function SortScreen.close()
 	if not isOpen then
 		return
 	end
+	SortScreen.setFever(false)
 	isOpen = false
 	playing = false
 	if tableFX then
@@ -2368,7 +2369,132 @@ function SortScreen.setClock(left: number?, budget: number?)
 	end
 end
 
--- A streak called out across the top of the cloth.
+-- Sparks of gold flying out from a point on the cloth (a long streak).
+local function sparks(at: Vector2, count: number, power: number, colour: Color3)
+	local bits: { { l: Frame, x: number, y: number, vx: number, vy: number, age: number } } = {}
+	for _ = 1, count do
+		-- (A little diamond of gold: drawn, not a character, so every screen shows it.)
+		local px = math.random(5, 10) * L.s
+		local l = sheet(fxLayer, "Spark", if math.random() < 0.3 then Color3.new(1, 1, 1) else colour, 11)
+		l.AnchorPoint = Vector2.new(0.5, 0.5)
+		l.Size = UDim2.fromOffset(px, px)
+		l.Rotation = 45
+		local a = math.random() * math.pi * 2
+		local speed = power * (0.4 + math.random() * 0.8) * L.s
+		table.insert(bits, { l = l, x = at.X, y = at.Y, vx = math.cos(a) * speed, vy = math.sin(a) * speed - power * 0.4 * L.s, age = 0 })
+	end
+	local conn: RBXScriptConnection? = nil
+	conn = RunService.RenderStepped:Connect(function(dt: number)
+		local alive = 0
+		for _, b in bits do
+			if b.l.Parent then
+				b.age += dt
+				b.vy += 900 * L.s * dt
+				b.x += b.vx * dt
+				b.y += b.vy * dt
+				b.l.Position = UDim2.fromOffset(b.x, b.y)
+				b.l.BackgroundTransparency = math.clamp((b.age - 0.5) / 0.5, 0, 1)
+				b.l.Rotation += 240 * dt
+				if b.age > 1.05 then
+					b.l:Destroy()
+				else
+					alive += 1
+				end
+			end
+		end
+		if alive == 0 and conn then
+			conn:Disconnect()
+		end
+	end)
+end
+
+-- On fire: a long streak (Config.Sorting.feverAt) sets the cloth's edge glowing gold, breathing,
+-- with "ON FIRE" over it, until the streak breaks.
+local fever: Frame? = nil
+function SortScreen.setFever(on: boolean, n: number?)
+	if not gui then
+		return
+	end
+	local f = fever
+	if not on then
+		fever = nil
+		if f then
+			for _, d in f:GetDescendants() do
+				if d:IsA("UIStroke") then
+					Ease.play(d, Ease.info(0.5, Enum.EasingStyle.Sine), { Transparency = 1 })
+				elseif d:IsA("TextLabel") then
+					Ease.play(d, Ease.info(0.4, Enum.EasingStyle.Sine), { TextTransparency = 1 })
+				end
+			end
+			task.delay(0.55, function()
+				f:Destroy()
+			end)
+		end
+		return
+	end
+	if f and f.Parent then
+		local chip = f:FindFirstChild("OnFire")
+		if chip and chip:IsA("TextLabel") and n then
+			chip.Text = "🔥  ON FIRE  ·  " .. tostring(n) .. " IN A ROW"
+		end
+		return
+	end
+	local frameBox = sheet(fxLayer, "Fever", Color3.new(1, 1, 1), 2)
+	frameBox.BackgroundTransparency = 1
+	frameBox.Position = UDim2.fromOffset(L.frame.x, L.frame.y)
+	frameBox.Size = UDim2.fromOffset(L.frame.w, L.frame.h)
+	corner(frameBox, 12)
+	-- (Three edges, each wider and fainter: a soft glow round the cloth.)
+	local edges: { UIStroke } = {}
+	for i, spec in { { inset = 0, thick = 3, alpha = 0.05 }, { inset = -5, thick = 7, alpha = 0.55 }, { inset = -12, thick = 10, alpha = 0.8 } } do
+		local ring = if i == 1 then frameBox else sheet(frameBox, "Glow", Color3.new(1, 1, 1), 1)
+		if ring ~= frameBox then
+			ring.BackgroundTransparency = 1
+			ring.Position = UDim2.fromOffset(spec.inset * L.s, spec.inset * L.s)
+			ring.Size = UDim2.new(1, -2 * spec.inset * L.s, 1, -2 * spec.inset * L.s)
+			corner(ring, 14 + i * 2)
+		end
+		table.insert(edges, stroke(ring, Color3.fromRGB(255, 196, 80), spec.alpha, spec.thick * L.s))
+	end
+	local chip = label(frameBox, "🔥  ON FIRE  ·  " .. tostring(n or 0) .. " IN A ROW", 13 * L.s, F.bodyBold, Color3.fromRGB(40, 22, 6), {
+		Name = "OnFire",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.new(0.5, 0, 0, 0),
+		Size = UDim2.fromOffset(260 * L.s, 24 * L.s),
+		BackgroundTransparency = 0,
+		BackgroundColor3 = Color3.fromRGB(255, 200, 90),
+		ZIndex = 12,
+	})
+	corner(chip, 12)
+	fever = frameBox
+	local started = os.clock()
+	local conn: RBXScriptConnection? = nil
+	conn = RunService.RenderStepped:Connect(function()
+		if fever ~= frameBox or not frameBox.Parent then
+			if conn then
+				conn:Disconnect()
+			end
+			return
+		end
+		local t = os.clock() - started
+		local breathe = 0.5 + 0.5 * math.sin(t * 5)
+		edges[1].Transparency = 0.05 + 0.25 * breathe
+		edges[2].Transparency = 0.45 + 0.3 * breathe
+		edges[3].Transparency = 0.7 + 0.25 * breathe
+		chip.Rotation = math.sin(t * 3) * 1.5
+	end)
+	sparks(Vector2.new(L.frame.x + L.frame.w / 2, L.frame.y), 26, 420, LIGHT)
+end
+
+function SortScreen.isOnFire(): boolean
+	return fever ~= nil
+end
+
+-- (Set by TableClient: the house cheers a very long streak.)
+SortScreen.onBigStreak = function(_n: number) end
+
+-- A streak called out across the top of the cloth (and, the longer it is, the bigger: sparks of
+-- gold from eight; at twenty, thirty and fifty, the whole screen lights up).
 function SortScreen.streak(n: number, multiplier: number)
 	if not gui then
 		return
@@ -2401,6 +2527,25 @@ function SortScreen.streak(n: number, multiplier: number)
 	local t1 = label(holder, Caps(title), 12 * s, F.bodyBold, ENGRAVED, { Position = UDim2.fromScale(0.5, 0.28), Size = UDim2.fromScale(1, 0.3), ZIndex = 10 })
 	local t2 = label(holder, line, 24 * s, F.displayItalic, ENGRAVED, { Position = UDim2.fromScale(0.5, 0.66), Size = UDim2.fromScale(1, 0.46), ZIndex = 10 })
 	Ease.play(scale, Ease.info(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 })
+	if n >= 8 then
+		local half = holder.Size.X.Offset / 2
+		sparks(Vector2.new(at.X - half, at.Y), 14, 360, LIGHT)
+		sparks(Vector2.new(at.X + half, at.Y), 14, 360, LIGHT)
+	end
+	if n >= 20 then
+		-- The whole screen: a flash of gold, a shower of sparks, the ribbon bigger.
+		scale.Scale = 1.25
+		Ease.play(scale, Ease.info(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1.15 })
+		local glow = sheet(fxLayer, "StreakFlash", Color3.fromRGB(255, 214, 120), 1)
+		glow.Size = UDim2.fromScale(1, 1)
+		glow.BackgroundTransparency = 0.45
+		Ease.play(glow, Ease.info(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { BackgroundTransparency = 1 })
+		task.delay(0.85, function()
+			glow:Destroy()
+		end)
+		sparks(Vector2.new(L.vp.X / 2, L.vp.Y * 0.45), 60, 620, LIGHT)
+		SortScreen.onBigStreak(n)
+	end
 	task.delay(1.4, function()
 		if not holder.Parent then
 			return

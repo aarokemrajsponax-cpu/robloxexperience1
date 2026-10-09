@@ -5,7 +5,7 @@
 -- happens: this screen only chooses.
 --
 --   ABUSE      Admin Abuse Night, Mega Abuse, countdowns to them, and Stop everything
---   EFFECTS    twenty-three effects for everyone (meteors, a black hole, a UFO, a titan meme...),
+--   EFFECTS    twenty-four effects for everyone (meteors, a black hole, a UFO, the owner's army...),
 --              each switched on until you switch it off
 --   HOLIDAYS   the holiday hunts and the New Year countdown
 --   EVENTS     Golden Hour, Double XP, giants, gold rain, the treasure hunt...

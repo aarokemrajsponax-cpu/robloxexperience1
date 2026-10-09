@@ -751,7 +751,8 @@ local defaults = {
 		punch = 0.9, -- degrees the camera leans in on a correct filing (0 = off)
 		shake = 0.07, -- studs the camera shakes on a wrong case (0 = off)
 		verdictSeconds = 0.95, -- how long "Correct" and "Wrong case" stay up
-		streakMoments = { 3, 5, 8, 12, 16, 20, 30 }, -- streaks the house calls out
+		streakMoments = { 3, 5, 8, 12, 16, 20, 30, 50 }, -- streaks the house calls out
+		feverAt = 12, -- a streak this long sets the cloth on fire (a gold glow) till it breaks
 		hintFilings = 3, -- the first-seating hint goes after this many correct filings
 	},
 
