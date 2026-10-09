@@ -4,6 +4,6 @@
 -- see whether Studio has the latest code from GitHub.
 
 return {
-	number = 51,
-	label = "Build 51 · 9 Oct · the Owner Console, the Owner Remote, holidays, levels, 151 badges, the Gem Shop",
+	number = 52,
+	label = "Build 52 · 9 Oct · the keys, the Gilt bar and the Owner Console always come up",
 }

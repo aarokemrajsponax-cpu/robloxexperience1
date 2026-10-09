@@ -413,17 +413,19 @@ local function startHud()
 		return
 	end
 	hudStarted = true
-	Hud.start(SettingsPanel.open, TableClient.leave)
-	Hud.setShopKey(function()
-		BoutiquePanel.open()
+	start("The keys", function()
+		Hud.start(SettingsPanel.open, TableClient.leave)
+		Hud.setShopKey(function()
+			BoutiquePanel.open()
+		end)
+		Hud.setMenuKey(MenuPanel.open)
+		ContextActionService:BindAction("MaisonMenu", function(_, state)
+			if state == Enum.UserInputState.Begin and not TableClient.isSeated() then
+				MenuPanel.open()
+			end
+			return Enum.ContextActionResult.Pass
+		end, false, Enum.KeyCode.M)
 	end)
-	Hud.setMenuKey(MenuPanel.open)
-	ContextActionService:BindAction("MaisonMenu", function(_, state)
-		if state == Enum.UserInputState.Begin and not TableClient.isSeated() then
-			MenuPanel.open()
-		end
-		return Enum.ContextActionResult.Pass
-	end, false, Enum.KeyCode.M)
 	-- The live Gilt bar (Gilt, Gems, level), out of the way at a table or under a panel.
 	start("The Gilt bar", function()
 		GiltBar.openGems = function()
@@ -483,19 +485,25 @@ local function onPlay(fromTitle: boolean?)
 		return
 	end
 	playing = true
-	Title.hide()
-	State.funnel(2)
+	-- (Each step on its own: one that fails is named in the Output and the rest still happen, so
+	-- a guest is never left without their keys, their Gilt or their camera.)
+	start("Hiding the title", Title.hide)
+	pcall(State.funnel, 2)
 	waitForCharacter()
-	if fromTitle then
-		State.setPhase("handoff")
-		CameraRig.handoff(1.6)
-	else
-		CameraRig.follow()
-	end
-	setControls(true)
-	applySpeed()
+	start("The camera", function()
+		if fromTitle then
+			State.setPhase("handoff")
+			CameraRig.handoff(1.6)
+		else
+			CameraRig.follow()
+		end
+	end)
+	start("Controls", function()
+		setControls(true)
+		applySpeed()
+	end)
 	State.setPhase("play")
-	State.funnel(3)
+	pcall(State.funnel, 3)
 	startHud()
 	local guest = State.guest
 	local launch = if guest and type(guest.launch) == "string" then guest.launch else ""
@@ -739,6 +747,17 @@ else
 		end
 	end
 end
+-- A guard for the keys and the Gilt bar: if play hasn't brought them up within a few seconds
+-- (a step that stalled), bring them up anyway, and say so in the Output.
+task.delay(8, function()
+	if not hudStarted and not Title.isShowing() then
+		warn("[Maison] The keys weren't up after 8 seconds; starting them now.")
+		if State.phase ~= "play" and State.phase ~= "title" and State.phase ~= "intro" then
+			State.setPhase("play")
+		end
+		startHud()
+	end
+end)
 -- A last guard: if a guest is somehow still without their character after a minute (a title
 -- that never drew, a panel stuck over it), give them the house anyway.
 task.delay(60, function()
