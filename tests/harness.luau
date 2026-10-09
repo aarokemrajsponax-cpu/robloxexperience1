@@ -501,6 +501,12 @@ local services = {
 		end,
 	},
 	HttpService = {
+		JSONDecode = function(_, text)
+			return require("@lune/serde").decode("json", text)
+		end,
+		JSONEncode = function(_, value)
+			return require("@lune/serde").encode("json", value)
+		end,
 		GenerateGUID = function()
 			guidCount += 1
 			return string.format("%08x-0000-0000-0000-000000000000", guidCount)

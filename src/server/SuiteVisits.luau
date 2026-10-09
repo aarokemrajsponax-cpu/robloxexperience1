@@ -18,6 +18,9 @@ local RemoteGuard = require(script.Parent.RemoteGuard)
 
 local SuiteVisits = {}
 
+-- A guest has just walked into a friend's Suite (set by Main: the Badge Book).
+SuiteVisits.visited = function(_player: Player, _host: Player) end
+
 -- Set by Main: whether a guest is seated at a table (they get up first).
 SuiteVisits.isSeated = function(_player: Player): boolean
 	return false
@@ -139,6 +142,7 @@ local function onAsk(player: Player, request: unknown): any
 		setHost(player, host)
 		moveIn(player)
 		notice(host, "A visitor", player.DisplayName .. " is visiting your Suite.")
+		SuiteVisits.visited(player, host)
 		return { ok = true }
 	end
 	return { ok = false }

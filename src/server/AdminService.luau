@@ -1,9 +1,15 @@
 --!strict
 -- House controls: the owner's panel for keeping the house lively (the "admin abuse" evenings
 -- other Roblox games are known for, in the house's own manner), and the owner's own powers. Only
--- the experience's owner (or, for a group's experience, the group's owner) may use any of it:
--- nobody else, whatever their screen sends. Every request is checked here, never on the guest's
--- screen; the powers the owner's screen carries out (flying) are switched on by the server.
+-- the owner, XxxXxxX_77797 (Config.Admin.ownerUserId), may use any of it: nobody else, whatever
+-- their screen sends. Every request is checked here, never on the guest's screen; the powers the
+-- owner's screen carries out (flying) are switched on by the server.
+--
+-- Three ways in, one set of rules: the Owner Console in the game (AdminAsk, owner only), the other
+-- servers of the game (MessagingService, when the owner chose "every server"), and the Owner Remote
+-- outside the game (Open Cloud messages on Config.Admin.remoteTopic, which only someone holding the
+-- owner's Open Cloud key can send). Whatever arrives is checked against the same lists (an effect,
+-- an event, a headline, an amount...) before anything happens.
 --
 -- What it can do: events that boost Gilt, the Ledger and Mythic luck (never a score), giants,
 -- a quickstep, featherlight gravity, gold coins scattered through the house, a treasure hunt of
@@ -11,7 +17,9 @@
 -- or spotlighting a guest, gifts of Gilt, announcements (typed ones are filtered by Roblox), a
 -- summons that lets guests in every other house join this one, and removing a guest. The owner's
 -- powers: flying, speed, a super jump, any size, invisibility, going anywhere or to any guest,
--- bringing everyone, freezing everyone; a Night of Small Things and the House Party.
+-- bringing everyone, freezing everyone; a Night of Small Things and the House Party. And: twenty-
+-- three effects for everyone, the holiday hunts, Double XP, headlines across every screen,
+-- countdowns, giveaways, the Owner's Token, and Mega Abuse.
 
 local DataStoreService = game:GetService("DataStoreService")
 local GroupService = game:GetService("GroupService")
@@ -57,6 +65,10 @@ AdminService.season = function(_id: string, _seconds: number): boolean
 	return false
 end
 AdminService.note = function(_text: string, _everywhere: boolean) end
+-- A badge for a guest (set by Main: Achievements.award), and a count of what they've picked up at
+-- events (Achievements.tally).
+AdminService.award = function(_player: Player, _key: string) end
+AdminService.tally = function(_player: Player, _stat: string, _n: number, _once: string?) end
 
 ---------------------------------------------------------------------------------------------------
 -- Who may use it
@@ -76,6 +88,11 @@ function AdminService.isAdmin(player: Player): boolean
 		yes = true
 	else
 		local ok, result = pcall(function()
+			-- The owner, by their UserId (never a name, which can change).
+			local owner = cfg().ownerUserId
+			if type(owner) == "number" and owner > 0 then
+				return player.UserId == owner
+			end
 			if game.CreatorType == Enum.CreatorType.User then
 				return game.CreatorId == player.UserId
 			end
@@ -251,13 +268,145 @@ local function scatter(kind: "coin" | "key" | "meme", count: number, gilt: numbe
 	end
 end
 
-local function clearPickups(kind: string)
+local function clearPickups(kind: string, hunt: string?)
 	for _, p in eventsFolder():GetChildren() do
-		if p:GetAttribute("Pickup") == kind then
+		if p:GetAttribute("Pickup") == kind and (hunt == nil or p:GetAttribute("Hunt") == hunt) then
 			p:Destroy()
 		end
 	end
 end
+
+-- A holiday hunt's pickup: its glyph bobbing at head height (a pumpkin, a turkey, a present...),
+-- or the one golden prize, bigger and gold. The part itself is never seen.
+local function huntPickup(huntId: string, at: Vector3, glyph: string, gilt: number, jackpot: boolean, moves: boolean): BasePart
+	local p = Instance.new("Part")
+	p.Name = if jackpot then "HuntJackpot" else "HuntPickup"
+	p.Transparency = 1
+	p.Size = Vector3.new(2, 2, 2)
+	p.Anchored = true
+	p.CanCollide = false
+	p.CanQuery = false
+	p.CanTouch = false
+	p.CFrame = CFrame.new(at + Vector3.new(0, 3.2, 0))
+	p:SetAttribute("Gilt", gilt)
+	p:SetAttribute("Pickup", "hunt")
+	p:SetAttribute("Hunt", huntId)
+	if jackpot then
+		p:SetAttribute("Jackpot", true)
+	end
+	if moves then
+		-- (Moved by the server: a guest's screen doesn't bob it.)
+		p:SetAttribute("Moves", true)
+		p:SetAttribute("Home", at)
+	end
+	local glow = Instance.new("PointLight")
+	glow.Brightness = if jackpot then 3 else 1
+	glow.Range = if jackpot then 16 else 7
+	glow.Color = if jackpot then Color3.fromRGB(255, 214, 120) else Color3.fromRGB(255, 236, 200)
+	glow.Parent = p
+	local bb = Instance.new("BillboardGui")
+	bb.Size = if jackpot then UDim2.fromScale(5, 5) else UDim2.fromScale(3.4, 3.4)
+	bb.LightInfluence = 0
+	bb.MaxDistance = if jackpot then 160 else 90
+	bb.Parent = p
+	if jackpot then
+		local halo = Instance.new("TextLabel")
+		halo.Name = "Halo"
+		halo.BackgroundTransparency = 1
+		halo.Size = UDim2.fromScale(1.5, 1.5)
+		halo.Position = UDim2.fromScale(-0.25, -0.25)
+		halo.TextScaled = true
+		halo.Text = "✨"
+		halo.TextTransparency = 0.2
+		halo.Parent = bb
+	end
+	local t = Instance.new("TextLabel")
+	t.BackgroundTransparency = 1
+	t.Size = UDim2.fromScale(1, 1)
+	t.Text = glyph
+	t.TextScaled = true
+	t.Parent = bb
+	pcall(function()
+		game:GetService("CollectionService"):AddTag(p, if jackpot then "HuntJackpot" else "HuntPickup")
+	end)
+	p.Parent = eventsFolder()
+	return p
+end
+
+-- Hides a holiday's pickups round the house, and its one golden prize somewhere harder.
+local function scatterHunt(huntId: string)
+	local h = (cfg().hunts :: any)[huntId]
+	if type(h) ~= "table" then
+		return
+	end
+	clearPickups("hunt", huntId)
+	local rng = Random.new()
+	local points = walkable()
+	for i = 1, h.count do
+		local base = points[((i - 1) % #points) + 1] + Vector3.new(rng:NextNumber(-9, 9), 0, rng:NextNumber(-9, 9))
+		huntPickup(huntId, base, h.glyph, h.gilt, false, h.moves == true)
+	end
+	local prize = CurioList.byId[h.jackpot]
+	if prize then
+		local base = points[rng:NextInteger(1, #points)] + Vector3.new(rng:NextNumber(-12, 12), 0, rng:NextNumber(-12, 12))
+		huntPickup(huntId, base, prize.glyph, h.jackpotGilt, true, h.moves == true)
+	end
+end
+
+-- The Turkey Trot: the turkeys wander, and run from a guest who comes close.
+local function trot(dt: number)
+	local folder = coinsFolder
+	if not folder or not folder.Parent then
+		return
+	end
+	local roots: { Vector3 } = {}
+	for _, player in Players:GetPlayers() do
+		local character = player.Character
+		local root = character and character:FindFirstChild("HumanoidRootPart")
+		if root and root:IsA("BasePart") then
+			table.insert(roots, root.Position)
+		end
+	end
+	for _, p in folder:GetChildren() do
+		if p:IsA("BasePart") and p:GetAttribute("Moves") == true then
+			local home = p:GetAttribute("Home")
+			if typeof(home) ~= "Vector3" then
+				continue
+			end
+			local at = p.CFrame.Position
+			local target = p:GetAttribute("Target")
+			-- Away from the nearest guest within reach, else on to a spot near home.
+			local flee: Vector3? = nil
+			for _, r in roots do
+				local away = Vector3.new(at.X - r.X, 0, at.Z - r.Z)
+				if away.Magnitude < 14 then
+					flee = if away.Magnitude > 0.1 then away.Unit else Vector3.new(1, 0, 0)
+				end
+			end
+			local dir: Vector3
+			local speed = cfg().turkeySpeed
+			if flee then
+				dir = flee
+			else
+				if typeof(target) ~= "Vector3" or Vector3.new(target.X - at.X, 0, target.Z - at.Z).Magnitude < 1.5 then
+					target = home + Vector3.new(math.random(-16, 16), 3.2, math.random(-16, 16))
+					p:SetAttribute("Target", target)
+				end
+				local to = Vector3.new((target :: Vector3).X - at.X, 0, (target :: Vector3).Z - at.Z)
+				dir = if to.Magnitude > 0.1 then to.Unit else Vector3.zero
+				speed *= 0.45
+			end
+			local nextAt = at + dir * speed * dt
+			-- Never too far from home (so a turkey stays in the house).
+			local fromHome = Vector3.new(nextAt.X - home.X, 0, nextAt.Z - home.Z)
+			if fromHome.Magnitude > 26 then
+				nextAt = Vector3.new(home.X, nextAt.Y, home.Z) + fromHome.Unit * 26
+			end
+			p.CFrame = CFrame.new(Vector3.new(nextAt.X, home.Y + 3.2, nextAt.Z))
+		end
+	end
+end
+AdminService.trot = trot
 
 local function broadcast(message: { [string]: any })
 	Remotes.event("Salute"):FireAllClients(message)
@@ -294,6 +443,10 @@ function AdminService.startEvent(id: string, seconds: number, byName: string, qu
 	elseif id == "parade" then
 		clearPickups("meme")
 		scatter("meme", cfg().memes, cfg().memeGilt, nil)
+	elseif (cfg().hunts :: any)[id] then
+		scatterHunt(id)
+	elseif id == "newYear" then
+		AdminService.newYear(ends, byName)
 	elseif id == "disco" then
 		task.spawn(function()
 			-- Everyone in the Ballroom while it's on gets the Disco Ball (once each).
@@ -302,6 +455,7 @@ function AdminService.startEvent(id: string, seconds: number, byName: string, qu
 					local root = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
 					if root and root:IsA("BasePart") and Layout.zoneAt(root.Position) == "ballroom" then
 						Curios.forEvent(p, "discoBall", "disco:" .. tostring(ends))
+						AdminService.award(p, "discoNight")
 					end
 				end
 				task.wait(5)
@@ -335,6 +489,45 @@ function AdminService.stopEvent(id: string)
 		clearPickups("key")
 	elseif id == "parade" then
 		clearPickups("meme")
+	elseif (cfg().hunts :: any)[id] then
+		clearPickups("hunt", id)
+	end
+end
+
+-- A guest found one of a holiday hunt's pickups (or its golden prize).
+local function collectHunt(player: Player, item: BasePart, gilt: number)
+	local huntId = tostring(item:GetAttribute("Hunt"))
+	local jackpot = item:GetAttribute("Jackpot") == true
+	local h = (cfg().hunts :: any)[huntId]
+	local event = HouseEvents.byId[huntId]
+	local folder = item.Parent
+	item:Destroy()
+	local data = Profiles.get(player)
+	local eventName = if event then event.name else "A holiday hunt"
+	local paid = if data then Gilt.pay(player, data, gilt, eventName) else 0
+	local curioId = if type(h) == "table" then (if jackpot then h.jackpot else h.curio) else nil
+	if type(curioId) == "string" then
+		-- The curio for finding one (once a hunt), and the golden prize's own.
+		Curios.forEvent(player, curioId, huntId .. (if jackpot then ":gold:" else ":") .. tostring(active[huntId]))
+	end
+	AdminService.award(player, "holiday_" .. huntId)
+	AdminService.tally(player, "pickups", 1)
+	local prize = if jackpot and type(h) == "table" then CurioList.byId[h.jackpot] else nil
+	Remotes.event("Shop"):FireClient(player, { op = "notice", title = if prize then "You found " .. prize.name .. "!" else eventName, line = string.format("+%d Gilt", paid) })
+	if prize then
+		broadcast({ op = "salute", id = "jackpot", by = player.DisplayName, effects = { "fireworks", "goldLeaf" }, seconds = 8, title = eventName, line = player.DisplayName .. " found " .. prize.name .. "!" })
+	end
+	local left = 0
+	if folder then
+		for _, other in folder:GetChildren() do
+			if other:GetAttribute("Pickup") == "hunt" and other:GetAttribute("Hunt") == huntId then
+				left += 1
+			end
+		end
+	end
+	if left == 0 and AdminService.active(huntId) then
+		AdminService.stopEvent(huntId)
+		broadcast({ op = "salute", id = "huntDone", by = "", effects = { "fireworks" }, seconds = 8, title = eventName, line = "Every one has been found. What a hunt." })
 	end
 end
 
@@ -356,9 +549,19 @@ local function collect()
 				if item.Parent and item:IsA("BasePart") and (item.CFrame.Position - root.Position).Magnitude < 4.5 then
 					local gilt = (item:GetAttribute("Gilt") :: number?) or 0
 					local kind = item:GetAttribute("Pickup")
+					if kind == "hunt" then
+						collectHunt(player, item, gilt)
+						continue
+					end
 					local curioId = item:GetAttribute("Curio")
 					item:Destroy()
 					local data = Profiles.get(player)
+					AdminService.tally(player, "pickups", 1)
+					if kind == "key" then
+						AdminService.award(player, "goldenKey")
+					elseif kind == "meme" then
+						AdminService.award(player, "paradeCatch")
+					end
 					local source = if kind == "key" then "Treasure Hunt" elseif kind == "meme" then "The Brainrot Parade" else "Gold Rain"
 					local paid = if data then Gilt.pay(player, data, gilt, source) else 0
 					local caught = if kind == "meme" then CurioList.byId[tostring(curioId)] else nil
@@ -481,25 +684,108 @@ local function announce(text: string, byName: string)
 	broadcast({ op = "announce", text = text, by = byName })
 end
 
-local function onMessage(message: any)
-	local m = if type(message) == "table" then message.Data else nil
-	if type(m) ~= "table" or m.jobId == game.JobId then
+-- Text the owner typed, through Roblox's filter (for everyone to read), or nil if it couldn't be
+-- checked just now (then nothing is shown).
+local function ownerText(text: string): string?
+	local ok, result = pcall(function()
+		local r = TextService:FilterStringAsync(text, cfg().ownerUserId, Enum.TextFilterContext.PublicChat)
+		return r:GetNonChatStringForBroadcastAsync()
+	end)
+	return if ok and type(result) == "string" then result else nil
+end
+
+-- A headline: big words across the top of every screen in this house, for a few seconds.
+function AdminService.headline(text: string, byName: string, style: string?, seconds: number?)
+	local look = if style and table.find(HouseEvents.HeadlineStyles, style) then style else "gold"
+	local secs = math.clamp(if type(seconds) == "number" then seconds else cfg().headlineSeconds, 3, 15)
+	broadcast({ op = "headline", text = string.sub(text, 1, 160), by = byName, style = look, seconds = secs })
+	for _, p in Players:GetPlayers() do
+		AdminService.award(p, "headline")
+	end
+end
+
+-- A giveaway: one guest in this house (never the owner) wins Gilt, drawn in front of everyone.
+function AdminService.giveaway(amount: number, byName: string): Player?
+	local pool: { Player } = {}
+	for _, p in Players:GetPlayers() do
+		if not AdminService.isAdmin(p) and Profiles.get(p) then
+			table.insert(pool, p)
+		end
+	end
+	if #pool == 0 then
+		return nil
+	end
+	local names = {}
+	for _, p in pool do
+		table.insert(names, p.DisplayName)
+	end
+	local winner = pool[math.random(1, #pool)]
+	giftGilt(winner, amount, byName)
+	AdminService.award(winner, "giveawayWinner")
+	broadcast({ op = "giveaway", names = names, winner = winner.DisplayName, winnerId = winner.UserId, amount = amount, by = byName })
+	AdminService.note(string.format("%s won %d Gilt in a giveaway.", winner.DisplayName, amount), false)
+	return winner
+end
+
+-- The Owner's Token: a curio for every guest in the house (once a day each).
+function AdminService.token(byName: string): number
+	local key = "token:" .. (if cfg().tokenDay then os.date("!%Y%m%d") else tostring(os.time()))
+	local given = 0
+	for _, p in Players:GetPlayers() do
+		if Curios.forEvent(p, "ownerToken", key) then
+			given += 1
+		end
+	end
+	broadcast({ op = "salute", id = "token", by = byName, effects = { "goldLeaf", "fireworks" }, seconds = 8, title = "The Owner's Token", line = byName .. " handed every guest the Owner's Token." })
+	return given
+end
+
+-- A countdown on every screen, then what it was counting down to.
+local countdownToken = 0
+function AdminService.countdown(id: string, seconds: number, byName: string)
+	local c = HouseEvents.countdownById[id]
+	if not c then
 		return
 	end
-	if m.op == "announce" and type(m.text) == "string" then
-		announce(m.text, tostring(m.by))
-	elseif m.op == "event" and type(m.id) == "string" and type(m.seconds) == "number" then
-		AdminService.startEvent(m.id, math.clamp(m.seconds, 60, 3600), tostring(m.by))
-	elseif m.op == "abuse" and type(m.seconds) == "number" then
-		AdminService.abuse(math.clamp(m.seconds, 60, 3600), tostring(m.by))
-	elseif m.op == "fx" and type(m.id) == "string" and HouseEvents.effectById[m.id] then
-		AdminService.fx(m.id, tostring(m.by), nil)
-	elseif m.op == "stopAll" then
-		AdminService.stopAll(tostring(m.by))
-	elseif m.op == "summon" and type(m.jobId) == "string" then
-		summons[m.jobId] = os.time() + cfg().summonMinutes * 60
-		broadcast({ op = "summon", jobId = m.jobId, by = tostring(m.by), text = tostring(m.text or "") })
-	end
+	countdownToken += 1
+	local my = countdownToken
+	broadcast({ op = "countdown", id = id, label = c.label, seconds = seconds, endsAt = Workspace:GetServerTimeNow() + seconds, by = byName })
+	task.delay(seconds, function()
+		if countdownToken ~= my then
+			return
+		end
+		if id == "abuse" then
+			AdminService.abuse(cfg().countdownAbuseMinutes * 60, byName)
+		elseif id == "mega" then
+			AdminService.mega(cfg().countdownAbuseMinutes * 60, byName)
+		elseif id == "giveaway" then
+			AdminService.giveaway(cfg().giveawayGilt[2] or 1000, byName)
+		elseif id == "surprise" then
+			local list = HouseEvents.Effects
+			AdminService.fx(list[math.random(1, #list)].id, byName, nil)
+		end
+	end)
+end
+
+-- The New Year: ten seconds counted down on every screen, then the year's biggest fireworks, a
+-- present of Gilt and the New Year Sparkler for everyone in the house.
+function AdminService.newYear(ends: number, byName: string)
+	local seconds = 10
+	broadcast({ op = "countdown", id = "newYear", label = "HAPPY NEW YEAR IN", seconds = seconds, endsAt = Workspace:GetServerTimeNow() + seconds, by = byName })
+	task.delay(seconds, function()
+		if active.newYear ~= ends then
+			return
+		end
+		AdminService.fx("fireworks", byName, nil)
+		AdminService.fx("confetti", byName, nil)
+		broadcast({ op = "headline", text = "HAPPY NEW YEAR!", by = byName, style = "rainbow", seconds = 8 })
+		broadcast({ op = "salute", id = "newYear", by = byName, effects = { "fireworks", "goldLeaf", "chandelier" }, seconds = 14, title = "Happy New Year!", line = "Happy New Year from Maison Noir! A present for everyone here." })
+		for _, p in Players:GetPlayers() do
+			giftGilt(p, cfg().newYearGilt, "The house")
+			Curios.forEvent(p, "newYearSparkler", "newYear:" .. tostring(ends))
+			AdminService.award(p, "holiday_newYear")
+		end
+	end)
 end
 
 -- A guest in another house accepted the summons: send them to the owner's house.
@@ -519,18 +805,28 @@ end
 ---------------------------------------------------------------------------------------------------
 -- An effect for everyone (HouseEvents.Effects): every screen plays it round its own guest. From
 -- the owner's spot when there is one (a shockwave blasts out from there).
+-- (The effects a guest gets a badge for having been there for.)
+local WITNESSED: { [string]: boolean } = { blackHole = true, ufo = true, meteor = true, titan = true }
+
 function AdminService.fx(id: string, byName: string, origin: Vector3?)
 	if not HouseEvents.effectById[id] and id ~= "intro" and id ~= "stop" then
 		return
 	end
 	broadcast({ op = "abuseFX", id = id, by = byName, origin = origin, seconds = cfg().fxSeconds[id] or 6 })
+	if WITNESSED[id] then
+		for _, p in Players:GetPlayers() do
+			AdminService.award(p, "fx_" .. id)
+		end
+	end
 end
 
 local surpriseToken = 0
 
 -- Everything at once: every event (quietly, then one great announcement), the whole house's
--- intro, fireworks, and a surprise for everyone every minute or so until it ends.
-function AdminService.abuse(seconds: number, byName: string)
+-- intro, fireworks, and a surprise for everyone every minute or so until it ends. `mega`: Mega
+-- Abuse, with every effect among the surprises, twice as often, a giveaway every few minutes and
+-- the Mega Abuse Medal for everyone in the house.
+function AdminService.abuse(seconds: number, byName: string, mega: boolean?)
 	for _, id in cfg().abuseEvents do
 		if HouseEvents.byId[id] then
 			AdminService.startEvent(id, seconds, byName, true)
@@ -538,21 +834,37 @@ function AdminService.abuse(seconds: number, byName: string)
 	end
 	local ends = os.time() + seconds
 	Workspace:SetAttribute("AbuseUntil", ends)
+	Workspace:SetAttribute("AbuseMega", if mega then true else nil)
 	AdminService.fx("intro", byName, nil)
-	broadcast({ op = "salute", id = "abuse", by = byName, effects = { "fireworks", "goldLeaf", "chandelier" }, seconds = 12, title = "Admin Abuse Night", line = "ADMIN ABUSE NIGHT: double Gilt, Mythic luck, gold rain, a treasure hunt, giants, low gravity, a house party, and surprises all night. Go!" })
-	AdminService.note("Admin Abuse Night has begun in the house.", false)
+	if mega then
+		broadcast({ op = "headline", text = "MEGA ADMIN ABUSE!!!", by = byName, style = "rainbow", seconds = 7 })
+		broadcast({ op = "salute", id = "abuse", by = byName, effects = { "fireworks", "goldLeaf", "chandelier" }, seconds = 12, title = "MEGA ABUSE", line = "MEGA ABUSE: every event at once, a surprise every few seconds, giveaways all night. Don't leave!" })
+		AdminService.note("Mega Abuse has begun in the house.", false)
+	else
+		broadcast({ op = "salute", id = "abuse", by = byName, effects = { "fireworks", "goldLeaf", "chandelier" }, seconds = 12, title = "Admin Abuse Night", line = "ADMIN ABUSE NIGHT: double Gilt, double XP, Mythic luck, gold rain, a treasure hunt, giants, low gravity, a house party, and surprises all night. Go!" })
+		AdminService.note("Admin Abuse Night has begun in the house.", false)
+	end
+	for _, p in Players:GetPlayers() do
+		AdminService.award(p, "abuseNight")
+		AdminService.tally(p, "abuseNights", 1, "night:" .. tostring(ends))
+		if mega then
+			Curios.forEvent(p, "abuseMedal", "mega:" .. tostring(ends))
+		end
+	end
 	surpriseToken += 1
 	local token = surpriseToken
 	task.spawn(function()
 		local last = ""
+		local nextGiveaway = os.time() + cfg().megaGiveawaySeconds
 		while surpriseToken == token and os.time() < ends do
-			task.wait(cfg().abuseSurpriseSeconds)
+			task.wait(if mega then cfg().megaSurpriseSeconds else cfg().abuseSurpriseSeconds)
 			if surpriseToken ~= token or os.time() >= ends then
 				break
 			end
 			-- A different surprise each time.
 			local pool = {}
-			for _, id in cfg().abuseSurprises do
+			local list: { string } = if mega then cfg().megaSurprises else cfg().abuseSurprises
+			for _, id in list do
 				if id ~= last and HouseEvents.effectById[id] then
 					table.insert(pool, id)
 				end
@@ -561,11 +873,20 @@ function AdminService.abuse(seconds: number, byName: string)
 				last = pool[math.random(1, #pool)]
 				AdminService.fx(last, byName, nil)
 			end
+			if mega and os.time() >= nextGiveaway then
+				nextGiveaway = os.time() + cfg().megaGiveawaySeconds
+				AdminService.giveaway(cfg().megaGiveawayGilt, byName)
+			end
 		end
 		if surpriseToken == token and Workspace:GetAttribute("AbuseUntil") == ends then
 			Workspace:SetAttribute("AbuseUntil", nil)
+			Workspace:SetAttribute("AbuseMega", nil)
 		end
 	end)
+end
+
+function AdminService.mega(seconds: number, byName: string)
+	AdminService.abuse(seconds, byName, true)
 end
 
 export type Planned = { id: string, at: number, what: string, minutes: number, by: string }
@@ -860,7 +1181,10 @@ function AdminService.stopAll(byName: string)
 		end
 	end
 	surpriseToken += 1
+	countdownToken += 1
 	Workspace:SetAttribute("AbuseUntil", nil)
+	Workspace:SetAttribute("AbuseMega", nil)
+	broadcast({ op = "countdown", id = "", stop = true })
 	setFrozen(false, nil)
 	if Workspace:GetAttribute("AdminClock") ~= nil then
 		setClock("midnight")
@@ -875,7 +1199,7 @@ local function powersView(player: Player): { [string]: any }
 	end
 	local effects = {}
 	for _, e in HouseEvents.Effects do
-		table.insert(effects, { id = e.id, name = e.name, line = e.line })
+		table.insert(effects, { id = e.id, name = e.name, line = e.line, glyph = e.glyph })
 	end
 	return {
 		ghost = player:GetAttribute("AdminGhost") == true,
@@ -908,7 +1232,11 @@ local function state(player: Player?): { [string]: any }
 	end
 	local events = {}
 	for _, e in HouseEvents.List do
-		table.insert(events, { id = e.id, name = e.name, line = e.line, endsAt = active[e.id] })
+		table.insert(events, { id = e.id, name = e.name, line = e.line, endsAt = active[e.id], glyph = e.glyph, holiday = e.holiday == true })
+	end
+	local countdowns = {}
+	for _, c in HouseEvents.Countdowns do
+		table.insert(countdowns, { id = c.id, name = c.name, label = c.label })
 	end
 	local seasons = {}
 	for _, s in Seasons.List do
@@ -932,8 +1260,129 @@ local function state(player: Player?): { [string]: any }
 		schedule = scheduleView(),
 		powers = if player then powersView(player) else nil,
 		now = os.time(),
+		-- The Owner Console's own lists.
+		headlines = HouseEvents.Headlines,
+		headlineStyles = HouseEvents.HeadlineStyles,
+		countdowns = countdowns,
+		countdownSeconds = cfg().countdowns,
+		giveawayGilt = cfg().giveawayGilt,
+		mega = Workspace:GetAttribute("AbuseMega") == true,
+		abuseUntil = Workspace:GetAttribute("AbuseUntil"),
+		guestsHere = #Players:GetPlayers(),
 	}
 end
+
+---------------------------------------------------------------------------------------------------
+-- Commands from the other servers of the game and from the Owner Remote
+---------------------------------------------------------------------------------------------------
+-- One command, checked against the same lists as the console's, then carried out in this house.
+-- `remote`: it came from outside the game (the Owner Remote), so typed words are filtered here.
+local function apply(m: { [string]: any }, byName: string, remote: boolean): boolean
+	local op = m.op
+	local function words(): string?
+		if type(m.preset) == "number" then
+			return HouseEvents.Headlines[m.preset]
+		elseif type(m.text) == "string" and #m.text > 0 and #m.text <= 160 then
+			-- (From another server the words were filtered there; from outside, here.)
+			return if remote then ownerText(m.text) else m.text
+		end
+		return nil
+	end
+	if op == "announce" then
+		local text = words()
+		if text then
+			announce(text, byName)
+		end
+		return text ~= nil
+	elseif op == "headline" then
+		local text = words()
+		if text then
+			AdminService.headline(text, byName, m.style, m.seconds)
+		end
+		return text ~= nil
+	elseif op == "event" and type(m.id) == "string" and HouseEvents.byId[m.id] then
+		local seconds = if type(m.seconds) == "number" then m.seconds elseif type(m.minutes) == "number" then m.minutes * 60 else 900
+		AdminService.startEvent(m.id, math.clamp(seconds, 60, 3600), byName)
+		return true
+	elseif op == "stop" and type(m.id) == "string" and HouseEvents.byId[m.id] then
+		AdminService.stopEvent(m.id)
+		return true
+	elseif op == "abuse" or op == "mega" then
+		local seconds = if type(m.seconds) == "number" then m.seconds elseif type(m.minutes) == "number" then m.minutes * 60 else 1800
+		AdminService.abuse(math.clamp(seconds, 60, 3600), byName, op == "mega")
+		return true
+	elseif op == "fx" and type(m.id) == "string" and HouseEvents.effectById[m.id] then
+		AdminService.fx(m.id, byName, nil)
+		return true
+	elseif op == "stopAll" then
+		AdminService.stopAll(byName)
+		return true
+	elseif op == "countdown" and type(m.id) == "string" and HouseEvents.countdownById[m.id] and type(m.seconds) == "number" and table.find(cfg().countdowns, m.seconds) then
+		AdminService.countdown(m.id, m.seconds, byName)
+		return true
+	elseif op == "giftAll" and type(m.amount) == "number" and table.find(cfg().giftGilt, m.amount) then
+		for _, p in Players:GetPlayers() do
+			giftGilt(p, m.amount, byName)
+		end
+		return true
+	elseif op == "giveaway" and type(m.amount) == "number" and table.find(cfg().giveawayGilt, m.amount) then
+		AdminService.giveaway(m.amount, byName)
+		return true
+	elseif op == "token" then
+		AdminService.token(byName)
+		return true
+	elseif op == "clock" and type(m.id) == "string" then
+		return setClock(m.id)
+	elseif op == "salute" and type(m.id) == "string" and Salutes.byId[m.id] then
+		AdminService.salute(nil, m.id, byName)
+		return true
+	elseif op == "summon" and not remote and type(m.jobId) == "string" then
+		summons[m.jobId] = os.time() + cfg().summonMinutes * 60
+		broadcast({ op = "summon", jobId = m.jobId, by = byName, text = tostring(m.text or "") })
+		return true
+	end
+	return false
+end
+AdminService.apply = apply
+
+-- Another server of the game, where the owner chose "every server".
+local function onMessage(message: any)
+	local m = if type(message) == "table" then message.Data else nil
+	if type(m) ~= "table" or m.jobId == game.JobId then
+		return
+	end
+	apply(m, string.sub(tostring(m.by or "The owner"), 1, 40), false)
+end
+
+-- The Owner Remote, outside the game: a line of JSON on the remote topic (Open Cloud), at most a
+-- few a second.
+local remoteTimes: { number } = {}
+local function onRemote(message: any)
+	local raw = if type(message) == "table" then message.Data else nil
+	local m: any = raw
+	if type(raw) == "string" then
+		local ok, decoded = pcall(function()
+			return HttpService:JSONDecode(raw)
+		end)
+		m = if ok then decoded else nil
+	end
+	if type(m) ~= "table" then
+		warn("[Maison] The Owner Remote sent something that isn't a command.")
+		return
+	end
+	local now = os.clock()
+	while #remoteTimes > 0 and now - remoteTimes[1] > 10 do
+		table.remove(remoteTimes, 1)
+	end
+	if #remoteTimes >= 20 then
+		return
+	end
+	table.insert(remoteTimes, now)
+	if not apply(m, cfg().ownerName or "The owner", true) then
+		warn("[Maison] The Owner Remote's command wasn't one the house knows: " .. tostring(m.op))
+	end
+end
+AdminService.onRemote = onRemote
 
 local function handle(player: Player, request: unknown): any
 	if not AdminService.isAdmin(player) then
@@ -1049,6 +1498,9 @@ local function handle(player: Player, request: unknown): any
 			giftGilt(p, amount, byName)
 		end
 		AdminService.note(string.format("The house gave every guest %d Gilt.", amount), false)
+		if r.everywhere == true then
+			publish({ op = "giftAll", amount = amount, by = byName, jobId = game.JobId })
+		end
 		return { ok = true }
 	elseif op == "announce" then
 		local text: string? = nil
@@ -1136,6 +1588,62 @@ local function handle(player: Player, request: unknown): any
 			return { ok = false, why = "Choose a time of day." }
 		end
 		return state(player)
+	elseif op == "mega" then
+		local minutes = if type(r.minutes) == "number" then math.clamp(r.minutes, 5, 60) else 30
+		AdminService.mega(minutes * 60, byName)
+		if r.everywhere == true then
+			publish({ op = "mega", seconds = minutes * 60, by = byName, jobId = game.JobId })
+		end
+		return state(player)
+	elseif op == "headline" then
+		local text: string? = nil
+		if type(r.preset) == "number" then
+			text = HouseEvents.Headlines[r.preset]
+		elseif type(r.text) == "string" and #r.text > 0 and #r.text <= 140 then
+			text = filtered(r.text, player)
+			if not text then
+				return { ok = false, why = "Roblox's filter couldn't check that just now." }
+			end
+		end
+		if not text then
+			return { ok = false, why = "Choose or write a headline." }
+		end
+		local style = if type(r.style) == "string" and table.find(HouseEvents.HeadlineStyles, r.style) then r.style else "gold"
+		local seconds = if type(r.seconds) == "number" then math.clamp(r.seconds, 3, 15) else cfg().headlineSeconds
+		AdminService.headline(text, byName, style, seconds)
+		if r.everywhere == true then
+			publish({ op = "headline", text = text, style = style, seconds = seconds, by = byName, jobId = game.JobId })
+		end
+		return { ok = true, text = text }
+	elseif op == "countdown" and type(r.id) == "string" and HouseEvents.countdownById[r.id] then
+		local seconds = if type(r.seconds) == "number" and table.find(cfg().countdowns, r.seconds) then r.seconds else nil
+		if not seconds then
+			return { ok = false, why = "Choose how long." }
+		end
+		AdminService.countdown(r.id, seconds, byName)
+		if r.everywhere == true then
+			publish({ op = "countdown", id = r.id, seconds = seconds, by = byName, jobId = game.JobId })
+		end
+		return { ok = true }
+	elseif op == "giveaway" then
+		local amount = if type(r.amount) == "number" and table.find(cfg().giveawayGilt, r.amount) then r.amount else nil
+		if not amount then
+			return { ok = false, why = "Choose an amount." }
+		end
+		local winner = AdminService.giveaway(amount, byName)
+		if r.everywhere == true then
+			publish({ op = "giveaway", amount = amount, by = byName, jobId = game.JobId })
+		end
+		if not winner and r.everywhere ~= true then
+			return { ok = false, why = "Nobody else is in this house to win it." }
+		end
+		return { ok = true, winner = if winner then winner.DisplayName else nil }
+	elseif op == "token" then
+		local given = AdminService.token(byName)
+		if r.everywhere == true then
+			publish({ op = "token", by = byName, jobId = game.JobId })
+		end
+		return { ok = true, given = given }
 	elseif op == "freeze" then
 		local on = r.on == true
 		setFrozen(on, player)
@@ -1155,6 +1663,30 @@ function AdminService.start()
 		task.spawn(function()
 			if AdminService.isAdmin(player) then
 				player:SetAttribute("MaisonAdmin", true)
+				-- The owner is here: the whole house hears it (and everyone here has met them).
+				if cfg().announceOwner then
+					task.delay(4, function()
+						if player.Parent == Players then
+							AdminService.headline("👑 THE OWNER IS IN THE SERVER! 👑", player.DisplayName, "rainbow", 7)
+						end
+					end)
+				end
+				for _, p in Players:GetPlayers() do
+					AdminService.award(p, "metOwner")
+				end
+			else
+				-- Arriving where the owner already is.
+				for _, p in Players:GetPlayers() do
+					if p ~= player and p:GetAttribute("MaisonAdmin") == true then
+						AdminService.award(player, "metOwner")
+					end
+				end
+				-- Arriving in the middle of Admin Abuse Night.
+				local until_ = Workspace:GetAttribute("AbuseUntil")
+				if type(until_) == "number" and until_ > os.time() then
+					AdminService.award(player, "abuseNight")
+					AdminService.tally(player, "abuseNights", 1, "night:" .. tostring(until_))
+				end
 			end
 		end)
 		-- New arrivals join a Night of Giants (or of Small Things) in progress; the owner keeps
@@ -1198,6 +1730,48 @@ function AdminService.start()
 	end)
 	pcall(function()
 		MessagingService:SubscribeAsync(TOPIC, onMessage)
+	end)
+	-- The Owner Remote (Open Cloud, from outside the game).
+	task.spawn(function()
+		local ok, err = pcall(function()
+			MessagingService:SubscribeAsync(cfg().remoteTopic, onRemote)
+		end)
+		if not ok and not RunService:IsStudio() then
+			warn("[Maison] The Owner Remote couldn't be heard in this server: " .. tostring(err))
+		end
+	end)
+	-- The Turkey Trot's turkeys run (only while it's on).
+	task.spawn(function()
+		while true do
+			local dt = task.wait(0.1)
+			if active.thanksgiving then
+				pcall(trot, dt)
+			end
+		end
+	end)
+	-- On the real holiday, the house starts its own hunt for the first minutes of every hour.
+	task.spawn(function()
+		local begun: { [string]: boolean } = {}
+		while true do
+			pcall(function()
+				local auto = cfg().holidayAuto
+				if not auto or not auto.enabled then
+					return
+				end
+				local t = os.date("!*t") :: any
+				local id = HouseEvents.holidayOn(t.year, t.month, t.day)
+				-- (Not with under a minute left: a server opening at :09:50 waits for the next hour.)
+				local left = (auto.minutes - t.min) * 60 - t.sec
+				if id and t.min < auto.minutes and left >= 60 then
+					local key = string.format("%s:%d:%d", id, t.yday, t.hour)
+					if not begun[key] and not AdminService.active(id) then
+						begun[key] = true
+						AdminService.startEvent(id, left, "The house")
+					end
+				end
+			end)
+			task.wait(20)
+		end
 	end)
 	task.spawn(function()
 		while true do

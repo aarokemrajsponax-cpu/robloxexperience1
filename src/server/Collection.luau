@@ -4,7 +4,6 @@
 -- Tonight board in every server), House Standing (the Concierge says so when it rises), the
 -- Evening's and the Week's Commissions, and Roblox badges.
 
-local BadgeService = game:GetService("BadgeService")
 local DataStoreService = game:GetService("DataStoreService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -15,6 +14,7 @@ local Rating = require(ReplicatedStorage.Shared.Rating)
 local Rooms = require(ReplicatedStorage.Shared.Rooms)
 local Standing = require(ReplicatedStorage.Shared.Standing)
 
+local Achievements = require(script.Parent.Achievements)
 local Analytics = require(script.Parent.Analytics)
 local Gilt = require(script.Parent.Gilt)
 local Profiles = require(script.Parent.Profiles)
@@ -39,25 +39,9 @@ end
 ---------------------------------------------------------------------------------------------------
 -- Badges
 ---------------------------------------------------------------------------------------------------
+-- (The Badge Book keeps every badge now: Achievements.)
 function Collection.badge(player: Player, key: string)
-	local data = Profiles.get(player)
-	if not data then
-		return
-	end
-	local d = record(data)
-	if d.badges[key] then
-		return
-	end
-	d.badges[key] = true
-	local id = (Config.data.Badges :: any)[key]
-	if type(id) == "number" and id ~= 0 then
-		task.spawn(function()
-			pcall(function()
-				BadgeService:AwardBadge(player.UserId, id)
-			end)
-		end)
-	end
-	Analytics.custom(player, "Badge", nil, { key = key })
+	Achievements.award(player, key)
 end
 
 ---------------------------------------------------------------------------------------------------
@@ -222,6 +206,7 @@ function Collection.round(player: Player, roomId: string, grade: string)
 	Collection.badge(player, "firstRound")
 	if grade == "Flawless" then
 		Collection.badge(player, "firstFlawless")
+		Collection.badge(player, "flawless_" .. roomId)
 		Collection.event(player, "flawless", roomId)
 	end
 	Collection.event(player, "rounds", roomId)

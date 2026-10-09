@@ -115,7 +115,7 @@ local function refresh()
 		end
 		local head = line("__head", 1, 17, "bodyBold", Color3.fromRGB(46, 30, 6), 2)
 		head.Text = if abusing
-			then string.format("ADMIN ABUSE NIGHT  ·  %d EVENTS ON  ·  %s", #on, clock((abuse :: number) - now()))
+			then string.format("%s  ·  %d EVENTS ON  ·  %s", if Workspace:GetAttribute("AbuseMega") == true then "MEGA ABUSE" else "ADMIN ABUSE NIGHT", #on, clock((abuse :: number) - now()))
 			else string.format("%d EVENTS ON  ·  %s", #on, clock(longest))
 		-- (The headline glows in time.)
 		head.TextColor3 = Brand.Colours.lightGold:Lerp(Color3.new(1, 1, 1), (math.sin(now() * 3) + 1) / 2 * 0.35)
@@ -237,7 +237,8 @@ function EventBanner.start()
 			return
 		end
 		for _, p in folder:GetChildren() do
-			if p:IsA("BasePart") then
+			-- (A running turkey is moved by the server, not bobbed here.)
+			if p:IsA("BasePart") and p:GetAttribute("Moves") ~= true then
 				local base = p:GetAttribute("Base")
 				if typeof(base) ~= "CFrame" then
 					base = p.CFrame

@@ -429,11 +429,61 @@ a Nightly attempt or a Mythic's odds.
       walking and running and a gold trail, for good; both switch off in Settings → Your perks.
   - Every remote a guest's screen can call is rate-limited and checked on the server
     (`Config.RemoteLimits`); a screen can only ever name a product, never a price or an amount.
-- **House controls** (the owner's panel): only you see the **House** key (or press **;**). Only
-  the experience's owner (for a group's experience, the group's owner) has House controls and
-  the powers below: nobody else, whatever their screen sends, since the server checks every
-  request. (In Studio, where test players aren't the owner, the first test player stands in:
-  `Config.Admin.studioFirstPlayer`; never in the live game.)
+- **The Owner Console** (Build 51): when **XxxXxxX_77797** joins, the screen says *WELCOME BACK,
+  OWNER* and the Owner Console opens by itself: every power as a big tile, in nine groups down
+  the left (**Abuse, Effects, Holidays, Events, Players, World, Message, Powers, More**). Reopen
+  it with the gold **👑 Owner** key or **;**. **ALL SERVERS** (on by default) or **THIS SERVER**
+  at the top decides where events, effects, headlines, giveaways and gifts go. Only that one
+  account has it: the server checks the UserId (`Config.Admin.ownerUserId = 8722595934`) on
+  every request, so nobody else gets anything whatever their screen sends. (In Studio the first
+  test player stands in, `Config.Admin.studioFirstPlayer`; never in the live game.) When you
+  arrive, your server sees *👑 THE OWNER IS IN THE SERVER! 👑*, your nameplate says **OWNER**, and
+  everyone there gets the **Met the Owner** badge.
+  - **Abuse**: Admin Abuse Night (15/30/60 min), **MEGA ABUSE** (every effect as a surprise every
+    25 seconds, a giveaway every couple of minutes, the Mega Abuse Medal for everyone there),
+    countdowns (big numbers on every screen, then Admin Abuse, Mega Abuse, a giveaway or a
+    surprise), and **Stop everything**.
+  - **Effects** (23, on every screen round every guest; nobody sorting is moved, nobody is hurt):
+    rocket launch, dance party, lightning storm, brainrot storm, confetti cannons, shockwave,
+    spin, **meteor shower, black hole, aurora, galaxy sky, UFO abduction, blizzard, earthquake,
+    rainbow mode, bubble party, gold wave, fire & ice, blackout, tornado, fireworks finale, titan
+    meme, zero gravity**.
+  - **Holidays**: the All Hallows' Hunt (pumpkins, bats), the Turkey Trot (turkeys that run from
+    you), the Gift Drop (presents and snow), the New Year Countdown (ten seconds, the year's
+    biggest fireworks and 200 Gilt for everyone), Sweethearts (love letters, hearts), the Lucky
+    Clover (clovers, and a rainbow down to the pot of gold) and the Egg Hunt. Each find pays Gilt
+    and a curio to keep; one golden prize per hunt, with a beam of light over it. On the real day
+    (Halloween, Thanksgiving, Christmas, New Year, Valentine's Day, St Patrick's Day, Easter; the
+    day in UTC, like the Nightly) the house runs its own for the first ten minutes of every hour
+    (`Config.Admin.holidayAuto`).
+  - **Events**: everything below, plus **Double XP**.
+  - **Players**: **giveaways** (250/1,000/5,000 Gilt: one guest in each server wins, drawn on
+    every screen, never you), Gilt for everyone, **the Owner's Token** (a curio from you, once a
+    day each), bring everyone, freeze, the guest list.
+  - **World**: the time of day; dress the house in any season.
+  - **Message**: **headlines** across the top of every screen (ten ready-made, or your own words,
+    always through Roblox's filter) in gold, red, rainbow, ice or green; announcements; a summons.
+  - **Powers**: fly, ghost, invisible, speed, super jump, size, go anywhere.
+  - **More**: the schedule, Salutes and Suite shows, and the classic House controls below.
+- **The Owner Remote** (outside the game, every server): the same powers from your phone or a
+  computer, sent to every live server through Roblox Open Cloud. Three ways, one setup:
+  1. **Make the key** (once): Creator Hub → **Open Cloud** → **API Keys** → **Create API Key** →
+     name it *Owner Remote* → **Access Permissions**: **messaging-service**, choose **Maison
+     Noir**, tick **Publish** → **Security**: add IP `0.0.0.0/0` → **Save & Generate Key** → copy.
+  2. **Give it to GitHub** (once): this repository → **Settings** → **Secrets and variables** →
+     **Actions** → **New repository secret** → name `ROBLOX_OPEN_CLOUD_KEY` → paste → **Add**.
+  3. **Use it**: **GitHub** (phone or computer): **Actions** → **Owner Remote** → **Run workflow**
+     → choose from the list (76 powers) → **Run workflow**; every server does it about half a
+     minute later. **The Owner Remote page** (the artifact): tap a power, **Send to every
+     server** (it starts the same workflow through claude.ai's GitHub connector). **PowerShell**
+     (instant, on a computer): `irm https://raw.githubusercontent.com/aarokemrajsponax-cpu/robloxexperience1/claude/nice-brown-a88p9r/remote.ps1 | iex`
+     (it asks for the key once and keeps it, encrypted, on that computer).
+  The game listens on the topic `MaisonRemote` and checks each command against its own lists
+  (a known effect, event, amount, headline...) before doing anything; typed headlines go
+  through Roblox's filter. The list of powers is made from the game's own
+  (`python3 tools/remote/build.py` after changing events or effects).
+- **House controls** (the owner's classic panel, from the console's **More** page): the pages
+  below.
   - **Effects for everyone** (Powers, at the top; one tap, this house or every house): **Rocket
     launch** (every guest shoots into the sky on a trail of smoke), **Dance party** (everyone
     dances under disco light), **Lightning storm** (forks of lightning round the house, thunder
@@ -475,6 +525,29 @@ a Nightly attempt or a Mythic's odds.
     (StudioAccessToApisNotAllowed) are folded into one line that says how to switch saving on:
     **Home → Game Settings → Security → Enable Studio Access to API Services → Save**. The live
     game always saves; this only matters in Studio.
+- **Levels, the Gilt bar, badges and the Gem Shop** (Build 51):
+  - **The Gilt bar**, top left while you walk: your Gilt (counting up as it comes in, with
+    *+25* floating off it), your Gems, and your level with its bar of XP. It steps aside at a
+    table and under any panel. Tap the Gems for the Gem Shop, the level for the Badge Book.
+  - **Levels 1 to 100**, from how well you play: XP for every piece put away correctly, far more
+    for a Flawless round (40) than a Cleared one (8), the Nightly, Library matches and wins, the
+    Ballroom (120 more for the last lamp), events, and the first visit of the day. Each level
+    pays Gilt (and Gems every tenth) once; LEVEL UP! fills the screen. Your level is the disc on
+    your nameplate, its colour by tier (bronze, silver, gold, emerald, sapphire, ruby), with
+    titles from Newcomer to Immortal; every tenth level is announced to the house. Double XP
+    and an XP Surge make it faster. Numbers in `Config.Levels`.
+  - **The Badge Book** (Menu → The Badge Book): **151 badges** in eleven groups (levels, the
+    tables, nights, the Library, the Ballroom, your collection, Gilt and Gems, events and Admin
+    Abuse, holidays, friends, secrets), each saying how to earn it and how far along you are.
+    Earned in the game at once, with a card on screen. Any of them can also be a real Roblox
+    badge: make it in Creator Hub (**Associated Items → Badges**) and put its id in
+    `Config.Badges` under the same key (`rounds_100`, `holiday_halloween`, `metOwner`...).
+  - **The Gem Shop** (the 💎 key on the dock, the Gems on the Gilt bar, or Menu): **12 auras**
+    (a glow round you that everyone sees: gold dust, rose, emerald, frost, embers, starlight,
+    velvet shadow, hearts, clovers, a crown of stars, galaxy, rainbow), **10 titles** (above your
+    name), **Gilt Surge** and **XP Surge** (half an hour each), **Gilt for Gems** at a set rate,
+    and the Cabinet's curios (six new ones). Every price is on the card before you choose;
+    buying takes two taps (the price, then Confirm); nothing is random; the server decides it.
 - **Feeling at home**: the Concierge remembers your last highlight, your milestones and who
   admired you; the table you use most carries your name while you're here and is offered as
   "your usual"; walk up to any guest and **Admire** them (R, or L1); sign the **Livre d'Or** once

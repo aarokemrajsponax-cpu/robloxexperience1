@@ -95,8 +95,14 @@ local function small(parent: Instance, text: string, primary: boolean, onPress: 
 	return k
 end
 
-function AdminPanel.open()
+function AdminPanel.open(startPage: string?)
+	if startPage then
+		page = startPage
+	end
 	if Root.isOpen(NAME) then
+		if startPage then
+			return
+		end
 		Root.close(NAME)
 		return
 	end

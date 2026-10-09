@@ -1,0 +1,367 @@
+<title>Maison Noir Remote</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;800&family=Bungee&family=Manrope:wght@400;600;800&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: a dark control board. Header and status first, then the powers as tiles by group,
+   a send bar fixed to the bottom, then the log and the one-time setup. Committed to one look
+   (the house at midnight), so the colours are set once, explicitly. */
+:root {
+  --night: #0b0a0d;
+  --panel: #16131a;
+  --panel-2: #201b26;
+  --line: #3a3142;
+  --bone: #f4ecdf;
+  --smoke: #b9b0a6;
+  --gold: #e8bd5a;
+  --gold-soft: #f6dc9a;
+  --abuse: #ff4f88;
+  --violet: #9a6bff;
+  --ok: #5fe0a0;
+  --warn: #ffc65c;
+  --bad: #ff6b6b;
+  --display: "Playfair Display", Georgia, "Times New Roman", serif;
+  --loud: "Bungee", "Arial Black", Impact, sans-serif;
+  --body: "Manrope", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+html { background: var(--night); }
+body { background: var(--night); color: var(--bone); font-family: var(--body); font-size: 15px; line-height: 1.5; padding-inline: 16px; padding-block: 0 160px; }
+* { box-sizing: border-box; }
+a { color: var(--gold-soft); }
+.wrap { max-width: 1100px; margin: 0 auto; }
+header.top { padding-block: 28px 18px; display: grid; gap: 10px; }
+.eyebrow { font-family: var(--loud); letter-spacing: 0.12em; font-size: 12px; color: var(--gold); }
+h1 { font-family: var(--display); font-weight: 800; font-size: clamp(34px, 6vw, 56px); line-height: 1.02; margin: 0; text-wrap: balance;
+  background: linear-gradient(180deg, #fff3cf, var(--gold) 70%, #b98a2e); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.lede { color: var(--smoke); max-width: 64ch; margin: 0; }
+.status { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.pill { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; font-size: 13px; background: var(--panel); }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--smoke); flex: none; }
+.pill[data-state="ready"] .dot { background: var(--ok); box-shadow: 0 0 10px var(--ok); }
+.pill[data-state="off"] .dot { background: var(--warn); }
+.pill[data-state="bad"] .dot { background: var(--bad); }
+nav.groups { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: linear-gradient(var(--night) 80%, transparent); padding-block: 10px 14px; display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
+nav.groups button { font-family: var(--loud); font-size: 13px; letter-spacing: 0.04em; color: var(--bone); background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 9px 16px; cursor: pointer; white-space: nowrap; }
+nav.groups button[aria-pressed="true"] { background: var(--gold); color: #1b1408; border-color: var(--gold); }
+nav.groups button:focus-visible, .tile:focus-visible, .btn:focus-visible { outline: 2px solid var(--gold-soft); outline-offset: 2px; }
+section.group { margin-block: 6px 26px; }
+section.group h2 { font-family: var(--loud); font-weight: 400; font-size: 18px; letter-spacing: 0.06em; margin: 0 0 4px; color: var(--gold-soft); }
+section.group p.note { margin: 0 0 12px; color: var(--smoke); font-size: 13px; max-width: 70ch; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
+.tile { text-align: left; display: grid; gap: 4px; align-content: start; min-width: 0; min-height: 120px; padding: 14px; border-radius: 14px; border: 1px solid var(--line); background: linear-gradient(180deg, var(--panel-2), var(--panel)); color: var(--bone); cursor: pointer; font: inherit; transition: transform .12s ease, border-color .12s ease; }
+.tile:hover { border-color: var(--gold); transform: translateY(-1px); }
+.tile[aria-pressed="true"] { border-color: var(--abuse); box-shadow: 0 0 0 1px var(--abuse), 0 0 22px rgba(255, 79, 136, .28); }
+.tile .glyph { font-size: 30px; line-height: 1; }
+.tile .name { font-weight: 800; font-size: 14px; line-height: 1.25; }
+.tile .line { color: var(--smoke); font-size: 12px; line-height: 1.35; }
+.tile.danger { background: linear-gradient(180deg, #3a1016, #22090d); border-color: #6b2230; }
+.custom { display: grid; gap: 10px; margin-top: 12px; padding: 14px; border: 1px dashed var(--line); border-radius: 14px; background: var(--panel); }
+.custom label { font-weight: 800; font-size: 13px; }
+.custom input { width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--line); background: var(--night); color: var(--bone); font: inherit; }
+.styles { display: flex; flex-wrap: wrap; gap: 8px; }
+.styles button { border-radius: 999px; padding: 6px 12px; border: 1px solid var(--line); background: var(--panel-2); color: var(--bone); font: 600 12px var(--body); cursor: pointer; }
+.styles button[aria-pressed="true"] { border-color: var(--abuse); color: var(--abuse); }
+.runs { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.run { border: 1px solid var(--line); border-radius: 14px; padding: 14px; background: var(--panel); display: grid; gap: 8px; min-width: 0; }
+.run h3 { margin: 0; font-family: var(--display); font-size: 20px; }
+.run ol { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+.run ol button { font: 600 13px var(--body); color: var(--bone); background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; cursor: pointer; text-align: left; width: 100%; }
+.sendbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); background: rgba(11, 10, 13, .96); border-top: 1px solid var(--line); }
+.sendbar .inner { max-width: 1100px; margin: 0 auto; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.sendbar .what { flex: 1 1 260px; min-width: 0; }
+.sendbar .what strong { display: block; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sendbar .what span { color: var(--smoke); font-size: 12px; }
+.btn { font-family: var(--loud); letter-spacing: 0.05em; font-size: 14px; border-radius: 12px; padding: 12px 18px; border: 0; cursor: pointer; }
+.btn.go { background: linear-gradient(180deg, #ff6f9f, var(--abuse)); color: #1a0710; box-shadow: 0 6px 24px rgba(255, 79, 136, .35); }
+.btn.go:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
+.btn.ghost { background: var(--panel-2); color: var(--bone); border: 1px solid var(--line); font-family: var(--body); font-weight: 800; letter-spacing: 0; }
+.panel { border: 1px solid var(--line); border-radius: 16px; background: var(--panel); padding: 18px; margin-block: 18px; }
+.panel h2 { font-family: var(--display); font-size: 26px; margin: 0 0 8px; }
+.steps { margin: 0; padding-left: 22px; display: grid; gap: 10px; }
+.steps li { max-width: 72ch; }
+.steps b { color: var(--gold-soft); }
+code, .mono { font-family: var(--mono); font-size: 12.5px; background: var(--night); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; word-break: break-all; }
+.log { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.log li { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; padding: 10px 12px; border-radius: 10px; background: var(--panel-2); min-width: 0; }
+.log .when { font-family: var(--mono); color: var(--smoke); font-size: 12px; font-variant-numeric: tabular-nums; }
+.log .msg { min-width: 0; overflow-wrap: anywhere; }
+.log .ok { color: var(--ok); } .log .warn { color: var(--warn); } .log .bad { color: var(--bad); }
+.fallback { display: grid; gap: 10px; }
+.fallback .row { display: flex; flex-wrap: wrap; gap: 8px; }
+.muted { color: var(--smoke); font-size: 13px; }
+@media (max-width: 520px) {
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tile { min-height: 110px; padding: 12px; }
+  .tile .glyph { font-size: 26px; }
+}
+@media (prefers-reduced-motion: reduce) { .tile { transition: none; } .tile:hover { transform: none; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="eyebrow">Maison Noir · for XxxXxxX_77797 only</div>
+    <h1>Owner Remote</h1>
+    <p class="lede">Admin abuse in every server of the game, from wherever you are. Choose a power, press Send, and every server does it about half a minute later (GitHub carries it to Roblox). In the game itself, the Owner Console does the same instantly.</p>
+    <div class="status">
+      <span class="pill" id="link" data-state="off"><span class="dot"></span><span id="linkText">Checking the GitHub connection…</span></span>
+      <span class="pill"><span class="dot" style="background:var(--gold)"></span><span>76 powers · every server · nothing random</span></span>
+    </div>
+  </header>
+
+  <nav class="groups" id="groups" aria-label="Groups of powers"></nav>
+  <div id="board"></div>
+
+  <section class="group" id="runs-section">
+    <h2>RUN SHEETS</h2>
+    <p class="note">Nights that work. Send each step in order; wait for the last one to land before the next.</p>
+    <div class="runs" id="runs"></div>
+  </section>
+
+  <div class="panel">
+    <h2>What you've sent</h2>
+    <ul class="log" id="log"><li><span class="when">—</span><span class="msg muted">Nothing yet. Your sends show here, with what GitHub said.</span></li></ul>
+  </div>
+
+  <div class="panel" id="fallback">
+    <h2>Without the GitHub connection</h2>
+    <div class="fallback">
+      <p class="muted" style="margin:0">The remote still works: GitHub's own button does the same thing, from a phone or a computer.</p>
+      <ol class="steps">
+        <li>Open <a href="https://github.com/aarokemrajsponax-cpu/robloxexperience1/actions/workflows/owner-remote.yml" target="_blank" rel="noopener">Owner Remote on GitHub</a>, then <b>Run workflow</b>.</li>
+        <li>In <b>What happens in every server</b>, choose the same power as here (for your own words, choose <b>📣 Headline: my own words</b> and type them in <b>Words</b>).</li>
+        <li>Press <b>Run workflow</b>. Every server does it in about half a minute.</li>
+      </ol>
+      <div class="row">
+        <button class="btn ghost" id="copyCmd" type="button">Copy the command (for the command box)</button>
+        <button class="btn ghost" id="copyPs" type="button">Copy the PowerShell remote (instant, on a computer)</button>
+      </div>
+      <p class="muted" id="copied" style="margin:0" hidden></p>
+      <p class="muted" style="margin:0">PowerShell: <code id="psLine">irm https://raw.githubusercontent.com/aarokemrajsponax-cpu/robloxexperience1/claude/nice-brown-a88p9r/remote.ps1 | iex</code></p>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Set it up once (10 minutes)</h2>
+    <ol class="steps">
+      <li><b>Make the key.</b> Creator Hub → <b>Open Cloud</b> → <b>API Keys</b> → <b>Create API Key</b>. Name it <code>Owner Remote</code>. Under <b>Access Permissions</b> choose <b>messaging-service</b>, pick <b>Maison Noir</b>, tick <b>Publish</b>. Under <b>Security</b> add the IP <code>0.0.0.0/0</code>. <b>Save &amp; Generate Key</b>, then copy the key.</li>
+      <li><b>Give it to GitHub.</b> Your repository → <b>Settings</b> → <b>Secrets and variables</b> → <b>Actions</b> → <b>New repository secret</b>. Name: <code>ROBLOX_OPEN_CLOUD_KEY</code>. Paste the key. <b>Add secret</b>. (Secrets are never shown to anyone, even in a public repository.)</li>
+      <li><b>Send from this page with one tap</b> (optional): claude.ai → <b>Settings</b> → <b>Connectors</b> → add <b>GitHub</b>. This page then sends straight away; the first time it asks you to allow it.</li>
+      <li><b>Try it.</b> Join the game, choose <b>☄️ Meteor shower</b> here, and send. Meteors should fall in your server about half a minute later.</li>
+    </ol>
+    <p class="muted">Only someone who can write to your GitHub repository, or who holds your Open Cloud key, can send a command, and the game checks every command against its own list before doing anything. Keep the key secret: if it ever leaks, delete it in Creator Hub and make a new one.</p>
+  </div>
+</div>
+
+<div class="sendbar" role="region" aria-label="Send">
+  <div class="inner">
+    <div class="what"><strong id="chosen">Choose a power</strong><span id="chosenLine">Tap a tile above.</span></div>
+    <button class="btn go" id="send" type="button" disabled>SEND TO EVERY SERVER</button>
+  </div>
+</div>
+
+<script>
+const DATA = {"universe": "10768398256", "topic": "MaisonRemote", "repo": "aarokemrajsponax-cpu/robloxexperience1", "branch": "claude/nice-brown-a88p9r", "custom": "📣 Headline: my own words (type them in Words)", "advanced": "⚙️ Advanced: the command box", "commands": [{"group": "Abuse", "label": "💥 Admin Abuse Night · 15 min", "line": "Every event at once, with a surprise effect every minute.", "command": {"op": "abuse", "minutes": 15}}, {"group": "Abuse", "label": "💥 Admin Abuse Night · 30 min", "line": "Every event at once, with a surprise effect every minute.", "command": {"op": "abuse", "minutes": 30}}, {"group": "Abuse", "label": "💥 Admin Abuse Night · 60 min", "line": "Every event at once, with a surprise effect every minute.", "command": {"op": "abuse", "minutes": 60}}, {"group": "Abuse", "label": "🌋 MEGA ABUSE · 15 min", "line": "Every effect as a surprise, giveaways, and the Mega Abuse Medal.", "command": {"op": "mega", "minutes": 15}}, {"group": "Abuse", "label": "🌋 MEGA ABUSE · 30 min", "line": "Every effect as a surprise, giveaways, and the Mega Abuse Medal.", "command": {"op": "mega", "minutes": 30}}, {"group": "Abuse", "label": "🌋 MEGA ABUSE · 60 min", "line": "Every effect as a surprise, giveaways, and the Mega Abuse Medal.", "command": {"op": "mega", "minutes": 60}}, {"group": "Abuse", "label": "⏱️ Countdown, then Admin Abuse (10s)", "line": "Ten seconds counted down on every screen first.", "command": {"op": "countdown", "id": "abuse", "seconds": 10}}, {"group": "Abuse", "label": "⏱️ Countdown, then MEGA ABUSE (10s)", "line": "Ten seconds counted down on every screen first.", "command": {"op": "countdown", "id": "mega", "seconds": 10}}, {"group": "Abuse", "label": "⏱️ Countdown, then a giveaway (10s)", "line": "Ten seconds counted down on every screen first.", "command": {"op": "countdown", "id": "giveaway", "seconds": 10}}, {"group": "Abuse", "label": "⏱️ Countdown, then a surprise effect (10s)", "line": "Ten seconds counted down on every screen first.", "command": {"op": "countdown", "id": "surprise", "seconds": 10}}, {"group": "Abuse", "label": "🛑 Stop everything", "line": "Every event, surprise and countdown, back to normal.", "command": {"op": "stopAll"}}, {"group": "Effects", "label": "🚀 Rocket launch", "line": "Every guest shoots into the sky.", "command": {"op": "fx", "id": "launch"}}, {"group": "Effects", "label": "💃 Dance party", "line": "Every guest dances, under disco light.", "command": {"op": "fx", "id": "dance"}}, {"group": "Effects", "label": "⚡ Lightning storm", "line": "Thunder and lightning over the house.", "command": {"op": "fx", "id": "storm"}}, {"group": "Effects", "label": "🗿 Brainrot storm", "line": "Memes pour from the sky round every guest.", "command": {"op": "fx", "id": "memeRain"}}, {"group": "Effects", "label": "🎉 Confetti cannons", "line": "Cannons of confetti round every guest.", "command": {"op": "fx", "id": "confetti"}}, {"group": "Effects", "label": "💥 Shockwave", "line": "A golden blast from you throws every guest near you back.", "command": {"op": "fx", "id": "shockwave"}}, {"group": "Effects", "label": "🌀 Spin", "line": "Every guest spins like a top.", "command": {"op": "fx", "id": "spin"}}, {"group": "Effects", "label": "☄️ Meteor shower", "line": "Blazing meteors streak down and slam round every guest.", "command": {"op": "fx", "id": "meteor"}}, {"group": "Effects", "label": "🕳️ Black hole", "line": "A black hole opens overhead and pulls everyone up into its swirl.", "command": {"op": "fx", "id": "blackHole"}}, {"group": "Effects", "label": "🌌 Aurora", "line": "Ribbons of green and violet light ripple across the sky.", "command": {"op": "fx", "id": "aurora"}}, {"group": "Effects", "label": "🪐 Galaxy sky", "line": "The sky turns to deep space: stars, nebulae and a ringed planet.", "command": {"op": "fx", "id": "galaxy"}}, {"group": "Effects", "label": "🛸 UFO abduction", "line": "A flying saucer hovers over each guest and beams them up.", "command": {"op": "fx", "id": "ufo"}}, {"group": "Effects", "label": "🌨️ Blizzard", "line": "A whiteout: snow sweeps sideways through the house.", "command": {"op": "fx", "id": "blizzard"}}, {"group": "Effects", "label": "🌋 Earthquake", "line": "The ground rumbles and every screen shakes.", "command": {"op": "fx", "id": "earthquake"}}, {"group": "Effects", "label": "🌈 Rainbow mode", "line": "Everything turns every colour at once, with rainbow trails.", "command": {"op": "fx", "id": "rainbow"}}, {"group": "Effects", "label": "🧼 Bubble party", "line": "Thousands of bubbles float up round every guest.", "command": {"op": "fx", "id": "bubbles"}}, {"group": "Effects", "label": "🌊 Gold wave", "line": "A tidal wave of gold coins washes over every screen.", "command": {"op": "fx", "id": "goldWave"}}, {"group": "Effects", "label": "🔥 Fire & Ice", "line": "Embers and snowflakes, red and blue, at once.", "command": {"op": "fx", "id": "fireIce"}}, {"group": "Effects", "label": "🔦 Blackout", "line": "The lights go out; spotlights sweep the dark, then everything blazes back.", "command": {"op": "fx", "id": "blackout"}}, {"group": "Effects", "label": "🌪️ Tornado", "line": "A whirlwind spins up beside every guest and carries them round.", "command": {"op": "fx", "id": "tornado"}}, {"group": "Effects", "label": "🎆 Fireworks finale", "line": "The sky fills with fireworks over every guest.", "command": {"op": "fx", "id": "fireworks"}}, {"group": "Effects", "label": "🗿 Titan meme", "line": "A colossal meme rises over the rooftops, looks round, and sinks.", "command": {"op": "fx", "id": "titan"}}, {"group": "Effects", "label": "🌙 Zero gravity", "line": "Everyone floats, slowly, then drifts back down.", "command": {"op": "fx", "id": "zeroG"}}, {"group": "Holidays", "label": "🎃 The All Hallows' Hunt · 15 min", "line": "Pumpkins are hidden all over the house. Find them for Gilt; one is solid gold.", "command": {"op": "event", "id": "halloween", "minutes": 15}}, {"group": "Holidays", "label": "🦃 The Turkey Trot · 15 min", "line": "Turkeys are loose in the house and they run. Catch one for Gilt; one is golden.", "command": {"op": "event", "id": "thanksgiving", "minutes": 15}}, {"group": "Holidays", "label": "🎁 The Gift Drop · 15 min", "line": "Presents are under every tree, and snow is falling. Open them for Gilt; one rings gold.", "command": {"op": "event", "id": "christmas", "minutes": 15}}, {"group": "Holidays", "label": "🎆 The New Year Countdown · 15 min", "line": "Ten seconds, then the biggest fireworks of the year and a present for everyone here.", "command": {"op": "event", "id": "newYear", "minutes": 15}}, {"group": "Holidays", "label": "💌 Sweethearts · 15 min", "line": "Love letters are hidden round the house. Find them for Gilt; one is a heart of gold.", "command": {"op": "event", "id": "valentine", "minutes": 15}}, {"group": "Holidays", "label": "🍀 The Lucky Clover · 15 min", "line": "Four-leaf clovers are everywhere, and a pot of gold waits at the rainbow's end.", "command": {"op": "event", "id": "stPatrick", "minutes": 15}}, {"group": "Holidays", "label": "🥚 The Egg Hunt · 15 min", "line": "Painted eggs are hidden all over the house. Find them for Gilt; one is golden.", "command": {"op": "event", "id": "easter", "minutes": 15}}, {"group": "Events", "label": "🪙 Golden Hour · 15 min", "line": "Gilt counts double.", "command": {"op": "event", "id": "goldenHour", "minutes": 15}}, {"group": "Events", "label": "🍀 Lucky Hour · 15 min", "line": "Mythics are ten times as likely in the four rooms.", "command": {"op": "event", "id": "luckyHour", "minutes": 15}}, {"group": "Events", "label": "⭐ Double XP · 15 min", "line": "Every level comes twice as fast.", "command": {"op": "event", "id": "doubleXP", "minutes": 15}}, {"group": "Events", "label": "📖 The Page-Turner · 15 min", "line": "The Ledger's pages turn twice as fast.", "command": {"op": "event", "id": "pageTurner", "minutes": 15}}, {"group": "Events", "label": "🦒 A Night of Giants · 15 min", "line": "Every guest walking the house stands tall.", "command": {"op": "event", "id": "giants", "minutes": 15}}, {"group": "Events", "label": "🐜 A Night of Small Things · 15 min", "line": "Every guest walking the house shrinks to half size.", "command": {"op": "event", "id": "tiny", "minutes": 15}}, {"group": "Events", "label": "👟 The Quickstep · 15 min", "line": "Everyone walks and runs faster.", "command": {"op": "event", "id": "quickstep", "minutes": 15}}, {"group": "Events", "label": "🪶 Featherlight · 15 min", "line": "The house's gravity is gentle. Jump.", "command": {"op": "event", "id": "featherlight", "minutes": 15}}, {"group": "Events", "label": "💰 Gold Rain · 15 min", "line": "Gold coins are scattered through the house. Walk over them for Gilt.", "command": {"op": "event", "id": "goldRain", "minutes": 15}}, {"group": "Events", "label": "🗝️ The Treasure Hunt · 15 min", "line": "Golden keys are hidden around the house. The finder of each wins Gilt.", "command": {"op": "event", "id": "treasure", "minutes": 15}}, {"group": "Events", "label": "🎈 The Brainrot Parade · 15 min", "line": "The meme curios are loose in the house. Catch them for Gilt, and a Parade Balloon to keep.", "command": {"op": "event", "id": "parade", "minutes": 15}}, {"group": "Events", "label": "🪩 Disco Night · 15 min", "line": "The Ballroom turns disco. Everyone in it gets the Disco Ball curio.", "command": {"op": "event", "id": "disco", "minutes": 15}}, {"group": "Events", "label": "🕺 The House Party · 15 min", "line": "Every lamp in the house turns disco, colours chasing round every room.", "command": {"op": "event", "id": "discoHouse", "minutes": 15}}, {"group": "Events", "label": "🏺 A Night of Curios · 15 min", "line": "Curios turn up among the pieces twice as often.", "command": {"op": "event", "id": "curioHour", "minutes": 15}}, {"group": "Players", "label": "🎁 Giveaway · 250 Gilt", "line": "One guest in each server wins, drawn on every screen.", "command": {"op": "giveaway", "amount": 250}}, {"group": "Players", "label": "🎁 Giveaway · 1000 Gilt", "line": "One guest in each server wins, drawn on every screen.", "command": {"op": "giveaway", "amount": 1000}}, {"group": "Players", "label": "🎁 Giveaway · 5000 Gilt", "line": "One guest in each server wins, drawn on every screen.", "command": {"op": "giveaway", "amount": 5000}}, {"group": "Players", "label": "🪙 Gilt for everyone · 100", "line": "Every guest in every server.", "command": {"op": "giftAll", "amount": 100}}, {"group": "Players", "label": "🪙 Gilt for everyone · 500", "line": "Every guest in every server.", "command": {"op": "giftAll", "amount": 500}}, {"group": "Players", "label": "🪙 Gilt for everyone · 1000", "line": "Every guest in every server.", "command": {"op": "giftAll", "amount": 1000}}, {"group": "Players", "label": "👑 The Owner's Token", "line": "A curio from you for every guest (once a day each).", "command": {"op": "token"}}, {"group": "Message", "label": "📣 ADMIN ABUSE IN 5 MINUTES! DON'T LEAVE!", "line": "Across the top of every screen.", "command": {"op": "headline", "preset": 1}}, {"group": "Message", "label": "📣 THE OWNER IS IN THE SERVER! SAY HI!", "line": "Across the top of every screen.", "command": {"op": "headline", "preset": 2}}, {"group": "Message", "label": "📣 DOUBLE GILT FOR EVERYONE RIGHT NOW!", "line": "Across the top of every screen.", "command": {"op": "headline", "preset": 3}}, {"group": "Message", "label": "📣 GIVEAWAY TIME! STAY IN THE SERVER!", "line": "Across the top of every screen.", "command": {"op": "headline", "preset": 4}}, {"group": "Message", "label": "📣 WHO'S READY FOR CHAOS?!", "line": "Across the top of every screen.", "command": {"op": "headline", "preset": 5}}, {"group": "Message", "label": "📣 HOLIDAY HUNT STARTING NOW! LOOK EVERYWHERE!", "line": "Across the top of every screen.", "command": {"op": "headline", "preset": 6}}, {"group": "Message", "label": "📣 NEW UPDATE IS LIVE! GO EXPLORE!", "line": "Across the top of every screen.", "command": {"op": "headline", "preset": 7}}, {"group": "Message", "label": "📣 BIGGEST ADMIN ABUSE EVER, TONIGHT!", "line": "Across the top of every screen.", "command": {"op": "headline", "preset": 8}}, {"group": "Message", "label": "📣 THANK YOU FOR PLAYING MAISON NOIR!", "line": "Across the top of every screen.", "command": {"op": "headline", "preset": 9}}, {"group": "Message", "label": "📣 HAVING FUN? LIKE THE GAME AND TELL A FRIEND!", "line": "Across the top of every screen.", "command": {"op": "headline", "preset": 10}}, {"group": "World", "label": "🌙 Time of day: Midnight", "line": "Every server's sky.", "command": {"op": "clock", "id": "midnight"}}, {"group": "World", "label": "🌄 Time of day: Dawn", "line": "Every server's sky.", "command": {"op": "clock", "id": "dawn"}}, {"group": "World", "label": "☀️ Time of day: Noon", "line": "Every server's sky.", "command": {"op": "clock", "id": "noon"}}, {"group": "World", "label": "🌇 Time of day: Sunset", "line": "Every server's sky.", "command": {"op": "clock", "id": "sunset"}}]};
+const SERVER = "GitHub";
+const OWNER = "aarokemrajsponax-cpu", REPO = "robloxexperience1", BRANCH = "claude/nice-brown-a88p9r";
+const RUNS = [
+  { title: "The classic", steps: ["⏱️ Countdown, then Admin Abuse (10s)", "☄️ Meteor shower", "🎁 Giveaway · 1000 Gilt", "🗿 Titan meme", "🎆 Fireworks finale"] },
+  { title: "Total chaos", steps: ["📣 BIGGEST ADMIN ABUSE EVER, TONIGHT!", "⏱️ Countdown, then MEGA ABUSE (10s)", "🕳️ Black hole", "🛸 UFO abduction", "🎁 Giveaway · 5000 Gilt"] },
+  { title: "Holiday hour", steps: ["📣 HOLIDAY HUNT STARTING NOW! LOOK EVERYWHERE!", "🎃 The All Hallows' Hunt · 15 min", "🌌 Aurora", "👑 The Owner's Token"] },
+];
+
+const byLabel = new Map(DATA.commands.map(c => [c.label, c]));
+const groupsOrder = ["Abuse", "Effects", "Holidays", "Events", "Players", "Message", "World"];
+const notes = {
+  Abuse: "The big ones. Admin Abuse runs every event at once; Mega Abuse adds every effect, twice as often, and giveaways.",
+  Effects: "Every guest sees it round them. Nobody sorting at a table is moved, and nobody is ever hurt.",
+  Holidays: "A hunt round the house for everyone: Gilt for each find, a curio to keep, one golden prize.",
+  Events: "Boosts and fun for 15 minutes in every server.",
+  Players: "Free gifts from you to everyone. Nobody pays anything.",
+  Message: "Big words across the top of every screen. Your own words are checked by Roblox's filter first.",
+  World: "Every server's sky.",
+};
+let current = null;      // the chosen command (or the custom headline)
+let style = "rainbow";
+let mcp = null;
+let linkState = "off";
+
+const $ = id => document.getElementById(id);
+
+function el(tag, props, ...kids) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(props || {})) {
+    if (k === "class") n.className = v; else if (k === "text") n.textContent = v; else n.setAttribute(k, v);
+  }
+  for (const k of kids) if (k) n.append(k);
+  return n;
+}
+
+function split(label) {
+  const m = label.match(/^(\S+)\s+(.*)$/u);
+  return m ? [m[1], m[2]] : ["✨", label];
+}
+
+function choose(entry) {
+  current = entry;
+  for (const t of document.querySelectorAll(".tile")) t.setAttribute("aria-pressed", String(t.dataset.label === entry.label));
+  $("chosen").textContent = entry.label;
+  $("chosenLine").textContent = entry.line || "";
+  $("send").disabled = entry.custom ? !$("words").value.trim() : false;
+}
+
+function drawBoard() {
+  const nav = $("groups"), board = $("board");
+  nav.textContent = ""; board.textContent = "";
+  for (const g of groupsOrder) {
+    const list = DATA.commands.filter(c => c.group === g);
+    if (!list.length) continue;
+    const b = el("button", { type: "button", "aria-pressed": "false", text: g.toUpperCase() });
+    b.addEventListener("click", () => {
+      for (const x of nav.children) x.setAttribute("aria-pressed", "false");
+      b.setAttribute("aria-pressed", "true");
+      document.getElementById("g-" + g).scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+    });
+    nav.append(b);
+    const sec = el("section", { class: "group", id: "g-" + g },
+      el("h2", { text: g.toUpperCase() }),
+      el("p", { class: "note", text: notes[g] || "" }));
+    const grid = el("div", { class: "grid" });
+    for (const c of list) {
+      const [glyph, name] = split(c.label);
+      const t = el("button", { class: "tile" + (c.command.op === "stopAll" ? " danger" : ""), type: "button", "aria-pressed": "false", "data-label": c.label },
+        el("span", { class: "glyph", text: glyph }), el("span", { class: "name", text: name }), el("span", { class: "line", text: c.line || "" }));
+      t.addEventListener("click", () => choose(c));
+      grid.append(t);
+    }
+    sec.append(grid);
+    if (g === "Message") {
+      const words = el("input", { id: "words", maxlength: "140", placeholder: "Type a headline for every screen…", autocomplete: "off" });
+      const styles = el("div", { class: "styles" });
+      for (const s of ["gold", "red", "rainbow", "ice", "green"]) {
+        const sb = el("button", { type: "button", "aria-pressed": String(s === style), text: s });
+        sb.addEventListener("click", () => { style = s; for (const x of styles.children) x.setAttribute("aria-pressed", String(x === sb)); });
+        styles.append(sb);
+      }
+      const box = el("div", { class: "custom" }, el("label", { for: "words", text: "Your own words (Roblox's filter checks them)" }), words, styles);
+      const mine = { group: "Message", label: DATA.custom, line: "Your own words across the top of every screen.", custom: true, command: { op: "headline" } };
+      words.addEventListener("input", () => { if (current && current.custom) $("send").disabled = !words.value.trim(); });
+      words.addEventListener("focus", () => choose(mine));
+      sec.append(box);
+    }
+    board.append(sec);
+  }
+  if (nav.firstChild) nav.firstChild.setAttribute("aria-pressed", "true");
+  const runs = $("runs");
+  for (const r of RUNS) {
+    const ol = el("ol");
+    for (const s of r.steps) {
+      const entry = byLabel.get(s);
+      if (!entry) continue;
+      const b = el("button", { type: "button", text: s });
+      b.addEventListener("click", () => { choose(entry); });
+      ol.append(el("li", {}, b));
+    }
+    runs.append(el("div", { class: "run" }, el("h3", { text: r.title }), ol));
+  }
+}
+
+function log(text, kind) {
+  const list = $("log");
+  if (list.firstElementChild && list.firstElementChild.querySelector(".muted")) list.textContent = "";
+  const when = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  list.prepend(el("li", {}, el("span", { class: "when", text: when }), el("span", { class: "msg " + (kind || ""), text })));
+}
+
+function setLink(state, text) {
+  linkState = state;
+  const p = $("link");
+  p.dataset.state = state === "ready" ? "ready" : state === "bad" ? "bad" : "off";
+  $("linkText").textContent = text;
+}
+
+function commandFor(entry) {
+  if (entry.custom) return JSON.stringify({ op: "headline", text: $("words").value.trim().slice(0, 140), style });
+  const c = Object.assign({}, entry.command);
+  if (c.op === "headline") c.style = style;
+  return JSON.stringify(c);
+}
+
+function inputsFor(entry) {
+  if (entry.custom) return { power: DATA.custom, words: $("words").value.trim().slice(0, 140), style };
+  if (entry.command.op === "headline") return { power: entry.label, style };
+  return { power: entry.label };
+}
+
+async function copy(text, what) {
+  const note = $("copied");
+  try { await navigator.clipboard.writeText(text); note.textContent = what + " copied."; }
+  catch { note.textContent = "Couldn't copy here; select it and copy: " + text; }
+  note.hidden = false;
+}
+
+$("copyCmd").addEventListener("click", () => {
+  if (!current) { $("copied").hidden = false; $("copied").textContent = "Choose a power first."; return; }
+  copy(commandFor(current), "The command");
+});
+$("copyPs").addEventListener("click", () => copy($("psLine").textContent, "The PowerShell line"));
+
+$("send").addEventListener("click", async () => {
+  if (!current) return;
+  const entry = current, label = entry.custom ? "📣 " + $("words").value.trim().slice(0, 140) : entry.label;
+  if (!mcp || linkState === "off-final") {
+    log(label + ": this page can't reach GitHub here. Use GitHub's Run workflow button below.", "warn");
+    $("fallback").scrollIntoView({ block: "start" });
+    return;
+  }
+  const btn = $("send");
+  btn.disabled = true; btn.textContent = "SENDING…";
+  try {
+    await mcp.callTool(SERVER, "actions_run_trigger", { method: "run_workflow", owner: OWNER, repo: REPO, workflow_id: "owner-remote.yml", ref: BRANCH, inputs: inputsFor(entry) });
+    log(label + ": sent. Every server does it in about half a minute.", "ok");
+    setLink("ready", "GitHub connected: sending works");
+  } catch (e) {
+    const code = e && e.code;
+    if (code === "server_not_connected" || code === "selection_required") {
+      setLink("off", "GitHub isn't connected: add it in claude.ai → Settings → Connectors, or use GitHub's button below");
+      log(label + ": not sent. Add GitHub in claude.ai Settings → Connectors, or use GitHub's Run workflow button below.", "warn");
+    } else if (code === "needs_reauth") {
+      setLink("bad", "Reconnect GitHub in claude.ai → Settings → Connectors");
+      log(label + ": not sent. Reconnect GitHub in claude.ai Settings → Connectors.", "bad");
+    } else if (code === "not_in_manifest" || code === "approval_required" || code === "not_granted" || code === "consent_required") {
+      setLink("off", "This page isn't allowed to use GitHub yet");
+      log(label + ": not sent. Allow GitHub for this page when it asks (or use GitHub's button below).", "warn");
+    } else if (code === "tool_error") {
+      log(label + ": GitHub said no: " + (e.message || "the workflow couldn't start") + ". Check the Owner Remote workflow on GitHub.", "bad");
+    } else {
+      log(label + ": didn't hear back from GitHub. Check GitHub → Actions → Owner Remote before sending again.", "warn");
+    }
+  } finally {
+    btn.textContent = "SEND TO EVERY SERVER";
+    btn.disabled = !current || (current.custom && !$("words").value.trim());
+  }
+});
+
+drawBoard();
+
+(async () => {
+  try {
+    mcp = window.claude && window.claude.use ? await window.claude.use("mcp") : null;
+  } catch { mcp = null; }
+  if (!mcp) {
+    linkState = "off-final";
+    setLink("off", "Send straight from here inside Claude; anywhere else, use GitHub's button below");
+    return;
+  }
+  try {
+    const r = await mcp.listTools(SERVER);
+    const s = (r.servers || []).find(x => x.server === SERVER);
+    if (!s || (s.tools || []).length === 0) setLink("off", "GitHub isn't connected yet: add it in claude.ai → Settings → Connectors (or use GitHub's button below)");
+    else if (s.authStatus === "needs_reauth") setLink("bad", "Reconnect GitHub in claude.ai → Settings → Connectors");
+    else setLink("ready", "GitHub connected: Send goes to every server");
+  } catch {
+    setLink("off", "Couldn't check GitHub just now; Send will try anyway");
+  }
+})();
+</script>

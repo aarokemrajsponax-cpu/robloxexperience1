@@ -3737,27 +3737,135 @@ do
 	check("no errors at the dock", #errors == 0, errors[1])
 end
 
--- House controls: only the owner has the key; the events show on everyone's screen.
+-- The Owner Console: only the owner has the key; it opens by itself (with a welcome) when they
+-- arrive; every tile asks the server (which checks it's the owner).
+local function pressNamed(name: string): boolean
+	local button = find(playerGui, function(d)
+		return d:IsA("TextButton") and d.Name == name and d.Visible ~= false
+	end)
+	if not button then
+		return false
+	end
+	signalOf(button, "Activated"):Fire()
+	return true
+end
+local function lastAsk(op: string): any
+	for i = #sent, 1, -1 do
+		local sm = sent[i]
+		if sm.remote == "AdminAsk" and sm.message[1] and sm.message[1].op == op then
+			return sm.message[1]
+		end
+	end
+	return nil
+end
 do
 	local hit = find(playerGui, function(d)
-		return d:IsA("TextButton") and d.Visible ~= false and norm(d.Text) == norm("House")
+		return d:IsA("TextButton") and d.Name == "OwnerKey"
 	end)
-	check("guests don't see the House key", hit == nil, hit and hit:GetFullName())
+	check("guests don't see the owner's key", hit == nil, hit and hit:GetFullName())
 end
-LocalPlayer:SetAttribute("MaisonAdmin", true)
-advance(0.5)
 invokeResults.AdminAsk = {
 	ok = true, minutes = { 5, 15, 30 }, giftGilt = { 100, 500, 1000 }, now = 0,
-	events = { { id = "goldenHour", name = "Golden Hour", line = "Gilt counts double." } },
+	events = {
+		{ id = "goldenHour", name = "Golden Hour", line = "Gilt counts double.", glyph = "🪙" },
+		{ id = "doubleXP", name = "Double XP", line = "Every level comes twice as fast.", glyph = "⭐" },
+		{ id = "halloween", name = "The All Hallows' Hunt", line = "Pumpkins are hidden all over the house.", glyph = "🎃", holiday = true },
+		{ id = "newYear", name = "The New Year Countdown", line = "Ten seconds, then fireworks.", glyph = "🎆", holiday = true },
+	},
 	salutes = { { id = "goldLeaf", name = "A Shower of Gold Confetti" } },
 	seasons = { { id = "yule", name = "Yuletide" } },
 	guests = { { userId = 2, name = "Ben", crowned = false } },
 	announcements = { "The owner is in the house tonight." },
-	powers = { fly = false, ghost = false, speed = 1, jump = 1, size = 1, invisible = false, frozen = false, abuseOn = true, clock = "midnight", clocks = { "midnight", "dawn", "noon", "sunset" }, effects = { { id = "launch", name = "Rocket launch" }, { id = "dance", name = "Dance party" }, { id = "storm", name = "Lightning storm" }, { id = "memeRain", name = "Brainrot storm" }, { id = "confetti", name = "Confetti cannons" }, { id = "shockwave", name = "Shockwave" }, { id = "spin", name = "Spin" } }, speeds = { 1, 2, 3, 5 }, jumps = { 1, 2, 4 }, sizes = { 0.5, 1, 2, 4 }, places = { "street", "foyer", "salon", "boutique", "vault", "library", "ballroom", "terrace", "suite" } },
+	headlines = { "ADMIN ABUSE IN 5 MINUTES! DON'T LEAVE!", "GIVEAWAY TIME! STAY IN THE SERVER!" },
+	headlineStyles = { "gold", "red", "rainbow", "ice", "green" },
+	countdowns = { { id = "abuse", name = "Admin Abuse Night", label = "ADMIN ABUSE IN" }, { id = "giveaway", name = "A giveaway", label = "GIVEAWAY IN" } },
+	countdownSeconds = { 10, 30, 60 },
+	giveawayGilt = { 250, 1000, 5000 },
+	abuseMinutes = { 15, 30, 60 },
+	powers = { fly = false, ghost = false, speed = 1, jump = 1, size = 1, invisible = false, frozen = false, abuseOn = true, clock = "midnight", clocks = { "midnight", "dawn", "noon", "sunset" }, effects = { { id = "launch", name = "Rocket launch", glyph = "🚀" }, { id = "dance", name = "Dance party" }, { id = "storm", name = "Lightning storm" }, { id = "memeRain", name = "Brainrot storm" }, { id = "confetti", name = "Confetti cannons" }, { id = "shockwave", name = "Shockwave" }, { id = "spin", name = "Spin" }, { id = "meteor", name = "Meteor shower", glyph = "☄️" }, { id = "blackHole", name = "Black hole", glyph = "🕳️" }, { id = "titan", name = "Titan meme", glyph = "🗿" } }, speeds = { 1, 2, 3, 5 }, jumps = { 1, 2, 4 }, sizes = { 0.5, 1, 2, 4 }, places = { "street", "foyer", "salon", "boutique", "vault", "library", "ballroom", "terrace", "suite" } },
 }
-check("the owner sees the House key", press("House"))
-advance(1)
-check("the owner's panel opens", textOnScreen("House controls") ~= nil and textOnScreen("Golden Hour") ~= nil)
+LocalPlayer:SetAttribute("MaisonAdmin", true)
+advance(2.5)
+check("the owner is welcomed when they arrive", textOnScreen("WELCOME BACK, OWNER") ~= nil)
+advance(3)
+check("then the Owner Console opens by itself", textOnScreen("OWNER CONSOLE") ~= nil)
+snapshot("owner-console")
+check("its categories: abuse, effects, holidays, events, players, world, message, powers, more", (function()
+	for _, id in { "abuse", "effects", "holidays", "events", "players", "world", "message", "powers", "more" } do
+		if not find(playerGui, function(d)
+			return d:IsA("TextButton") and d.Name == "Cat_" .. id
+		end) then
+			return false
+		end
+	end
+	return true
+end)())
+check("Admin Abuse and Mega Abuse, every length, and Stop everything, on the first page", textOnScreen("Admin Abuse · 30 min") ~= nil and textOnScreen("MEGA ABUSE · 60 min") ~= nil and textOnScreen("Stop everything") ~= nil)
+check("Admin Abuse goes to every server by default", pressNamed("Tile_abuse30") and (function()
+	advance(0.5)
+	local m = lastAsk("abuse")
+	return m ~= nil and m.minutes == 30 and m.everywhere == true
+end)())
+check("a countdown to it", pressNamed("Tile_countabuse10") and (function()
+	advance(0.5)
+	local m = lastAsk("countdown")
+	return m ~= nil and m.id == "abuse" and m.seconds == 10
+end)())
+check("the effects page has every effect as a tile", pressNamed("Cat_effects") and (function()
+	advance(0.3)
+	return textOnScreen("Meteor shower") ~= nil and textOnScreen("Black hole") ~= nil and textOnScreen("Titan meme") ~= nil
+end)())
+snapshot("owner-console-effects")
+check("THIS SERVER keeps it to this server", press("THIS SERVER") and pressNamed("Tile_fx_meteor") and (function()
+	advance(0.5)
+	local m = lastAsk("fx")
+	return m ~= nil and m.id == "meteor" and m.everywhere == false
+end)())
+press("🌍 ALL SERVERS")
+check("the holidays page: the hunts and the New Year", pressNamed("Cat_holidays") and (function()
+	advance(0.3)
+	return textOnScreen("All Hallows") ~= nil and textOnScreen("New Year Countdown") ~= nil and textOnScreen("Double XP") == nil
+end)())
+check("a holiday starts for the minutes chosen", press("30 MIN") and pressNamed("Tile_event_halloween") and (function()
+	advance(0.5)
+	local m = lastAsk("event")
+	return m ~= nil and m.id == "halloween" and m.minutes == 30 and m.everywhere == true
+end)())
+check("players: giveaways, gifts and the Owner's Token", pressNamed("Cat_players") and (function()
+	advance(0.3)
+	return textOnScreen("Giveaway · 1000") ~= nil and textOnScreen("Owner's Token") ~= nil and textOnScreen("Bring everyone") ~= nil
+end)())
+check("a giveaway asks the server for that amount", pressNamed("Tile_giveaway1000") and (function()
+	advance(0.5)
+	local m = lastAsk("giveaway")
+	return m ~= nil and m.amount == 1000
+end)())
+check("message: headlines, ready-made or your own", pressNamed("Cat_message") and (function()
+	advance(0.3)
+	return textOnScreen("READY-MADE HEADLINES") ~= nil and textOnScreen("GIVEAWAY TIME") ~= nil
+end)())
+check("a ready-made headline in the style chosen", press("RAINBOW") and pressNamed("Tile_headline2") and (function()
+	advance(0.5)
+	local m = lastAsk("headline")
+	return m ~= nil and m.preset == 2 and m.style == "rainbow"
+end)())
+snapshot("owner-console-message")
+check("powers: fly, ghost, vanish, speed, size, go anywhere", pressNamed("Cat_powers") and (function()
+	advance(0.3)
+	return textOnScreen("Fly") ~= nil and textOnScreen("Ghost") ~= nil and textOnScreen("COLOSSAL") ~= nil and textOnScreen("Ballroom") ~= nil
+end)())
+check("Fly asks the server (which checks it's the owner)", pressNamed("Tile_fly") and (function()
+	advance(0.5)
+	local m = lastAsk("power")
+	return m ~= nil and m.power == "fly"
+end)())
+check("the classic House controls are a tap away", pressNamed("Cat_more") and pressNamed("Tile_classic_events") and (function()
+	advance(1)
+	return textOnScreen("House controls") ~= nil and textOnScreen("Golden Hour") ~= nil
+end)())
+check("the owner has their own key (gold, with a crown)", find(playerGui, function(d)
+	return d:IsA("TextButton") and d.Name == "OwnerKey"
+end) ~= nil)
 check("Stop everything sits at the top of the Events page", textOnScreen("Stop everything") ~= nil and textOnScreen("Admin Abuse Night is on") ~= nil)
 snapshot("admin")
 check("Start begins an event", press("Start") and (function()
@@ -3765,7 +3873,8 @@ check("Start begins an event", press("Start") and (function()
 	for i = #sent, 1, -1 do
 		local sm = sent[i]
 		if sm.remote == "AdminAsk" and sm.message[1] and sm.message[1].op == "event" then
-			return sm.message[1].id == "goldenHour" and sm.message[1].minutes == 15
+			local id = sm.message[1].id
+			return (id == "goldenHour" or id == "doubleXP" or id == "halloween" or id == "newYear") and sm.message[1].minutes == 15
 		end
 	end
 	return false
@@ -3789,15 +3898,10 @@ check("the page you're on is the tab that's lit", (function()
 	return tab ~= nil and other ~= nil and tab.BackgroundColor3 ~= other.BackgroundColor3
 end)())
 snapshot("admin-powers")
-check("Fly asks the server (which checks it's the owner)", press("Fly") and (function()
+check("the classic Powers page's Fly asks the server too", press("Fly") and (function()
 	advance(0.5)
-	for i = #sent, 1, -1 do
-		local sm = sent[i]
-		if sm.remote == "AdminAsk" and sm.message[1] and sm.message[1].op == "power" then
-			return sm.message[1].power == "fly"
-		end
-	end
-	return false
+	local m = lastAsk("power")
+	return m ~= nil and m.power == "fly"
 end)())
 Root2.close()
 advance(0.5)
@@ -3906,6 +4010,151 @@ check("photo mode: Done hands the camera back", press("Done") and (function()
 end)())
 check("and the interface", playerGui:FindFirstChild("MaisonHud").Enabled == true)
 check("no errors in photo mode", #errors == 0, errors[1])
+
+-- Build 51: the owner's headlines, countdowns and giveaways on every screen; the Gilt bar; levels;
+-- badges; the Gem Shop; the Badge Book.
+serverSays("Salute", { op = "headline", text = "WHO'S READY FOR CHAOS?!", by = "XxxXxxX_77797", style = "rainbow", seconds = 6 })
+advance(0.6)
+check("a headline crosses the top of every screen, with who sent it", textOnScreen("WHO'S READY FOR CHAOS?!") ~= nil and textOnScreen("XxxXxxX_77797") ~= nil)
+snapshot("headline")
+advance(7)
+check("and goes after a few seconds", textOnScreen("WHO'S READY FOR CHAOS?!") == nil)
+serverSays("Salute", { op = "countdown", id = "abuse", label = "ADMIN ABUSE IN", seconds = 10, endsAt = workspace:GetServerTimeNow() + 10 })
+advance(0.5)
+check("a countdown in big numbers", textOnScreen("ADMIN ABUSE IN") ~= nil and textOnScreen("10") ~= nil)
+snapshot("countdown")
+advance(10)
+check("then GO!", textOnScreen("GO!") ~= nil)
+advance(2)
+serverSays("Salute", { op = "countdown", id = "abuse", label = "MEGA ABUSE IN", seconds = 30, endsAt = workspace:GetServerTimeNow() + 30 })
+advance(0.5)
+serverSays("Salute", { op = "countdown", id = "", stop = true })
+advance(0.3)
+check("Stop everything takes a countdown away", textOnScreen("MEGA ABUSE IN") == nil)
+serverSays("Salute", { op = "giveaway", names = { "Ben", "Ada", "Cy" }, winner = "Ben", winnerId = 2, amount = 1000, by = "XxxXxxX_77797" })
+advance(0.3)
+check("a giveaway is drawn on every screen, free", textOnScreen("GIVEAWAY") ~= nil and textOnScreen("free for everyone") ~= nil)
+advance(4)
+check("and lands on the winner", textOnScreen("Ben wins 1000 Gilt!") ~= nil)
+snapshot("giveaway")
+advance(4)
+serverSays("Salute", { op = "giveaway", names = { "You" }, winner = LocalPlayer.DisplayName, winnerId = LocalPlayer.UserId, amount = 250, by = "XxxXxxX_77797" })
+advance(4.5)
+check("the winner's own screen says YOU WON!", textOnScreen("YOU WON!") ~= nil)
+advance(4)
+-- The Gilt bar.
+LocalPlayer:SetAttribute("Gilt", 12500)
+LocalPlayer:SetAttribute("Gems", 340)
+LocalPlayer:SetAttribute("Level", 12)
+LocalPlayer:SetAttribute("LevelXP", 300)
+LocalPlayer:SetAttribute("LevelNeed", 940)
+advance(2)
+check("the Gilt bar shows Gilt, Gems and the level, live", textOnScreen("12,500") ~= nil and textOnScreen("340") ~= nil and textOnScreen("SORTER") ~= nil)
+snapshot("gilt-bar")
+local giltBar = find(playerGui, function(d)
+	return d.Name == "GiltBar"
+end)
+check("the Gilt bar steps aside under a panel", (function()
+	press("Settings")
+	advance(0.5)
+	local hidden = giltBar ~= nil and giltBar.Visible == false
+	Root2.close()
+	advance(0.5)
+	return hidden and giltBar.Visible == true
+end)())
+-- Levels and badges, celebrated.
+serverSays("Shop", { op = "levelUp", level = 20, title = "Adept", gilt = 350, gems = 20 })
+advance(0.6)
+check("LEVEL UP! with the new level, its name and its reward", textOnScreen("LEVEL UP!") ~= nil and textOnScreen("ADEPT") ~= nil and textOnScreen("+350 Gilt") ~= nil)
+snapshot("level-up")
+advance(4)
+serverSays("Shop", { op = "badge", key = "metOwner", name = "Met the Owner", line = "Be in the house with the owner.", glyph = "👑", tier = "gold" })
+serverSays("Shop", { op = "badge", key = "firstRound", name = "First Round", line = "Clear your first round at the tables.", glyph = "🃏", tier = "bronze" })
+advance(0.8)
+check("a badge earned slides in", textOnScreen("Met the Owner") ~= nil and textOnScreen("BADGE EARNED") ~= nil)
+snapshot("badge")
+advance(4.5)
+check("and the next waits its turn", textOnScreen("First Round") ~= nil)
+advance(5)
+-- The Gem Shop: every price on its card; two taps to buy; the screen never sends a price.
+invokeResults.GemAsk = { ok = true, gems = 500, owned = {}, aura = "", title = "", giltUntil = 0, xpUntil = 0, now = 0, cabinet = { items = { { id = "saffronJar", gems = 60 } } } }
+local GemShopPanel = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "GemShopPanel")
+GemShopPanel.open("aura")
+advance(1)
+check("the Gem Shop opens with your Gems and its auras, each with its price", textOnScreen("The Gem Shop") ~= nil and textOnScreen("500 Gems") ~= nil and textOnScreen("Gold Dust") ~= nil and textOnScreen("💎 120") ~= nil)
+snapshot("gem-shop")
+local buysBefore = 0
+for _, sm in sent do
+	if sm.remote == "GemAsk" and sm.message[1] and sm.message[1].op == "buy" then
+		buysBefore += 1
+	end
+end
+check("the first tap only asks you to confirm", press("💎 120") and (function()
+	advance(0.3)
+	local buys = 0
+	for _, sm in sent do
+		if sm.remote == "GemAsk" and sm.message[1] and sm.message[1].op == "buy" then
+			buys += 1
+		end
+	end
+	return buys == buysBefore and textOnScreen("CONFIRM · 💎 120") ~= nil
+end)())
+check("the second buys it, sending only what it is", press("CONFIRM · 💎 120") and (function()
+	advance(0.5)
+	for i = #sent, 1, -1 do
+		local sm = sent[i]
+		if sm.remote == "GemAsk" and sm.message[1] and sm.message[1].op == "buy" then
+			local m = sm.message[1]
+			local keys = 0
+			for _ in m do
+				keys += 1
+			end
+			return m.id == "aura_golddust" and keys == 2
+		end
+	end
+	return false
+end)())
+check("titles, surges, Gilt and curios are shelves of their own", press("TITLES") and (function()
+	advance(0.3)
+	return textOnScreen("Certified Legend") ~= nil
+end)() and press("SURGES") and (function()
+	advance(0.3)
+	return textOnScreen("Gilt Surge") ~= nil and textOnScreen("XP Surge") ~= nil
+end)() and press("CURIOS") and (function()
+	advance(0.3)
+	return textOnScreen("A Jar of Saffron") ~= nil
+end)())
+Root2.close()
+advance(0.5)
+-- The Badge Book.
+invokeResults.BadgeAsk = { ok = true, earned = { firstRound = 1790000000, metOwner = 1790000100 }, stats = { rounds = 7, level = 12 }, count = 2, total = 151 }
+local BadgeBookPanel = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "BadgeBookPanel")
+BadgeBookPanel.open()
+advance(1)
+check("the Badge Book: what's earned, and how far along the rest are", textOnScreen("The Badge Book") ~= nil and textOnScreen("2 of 151 badges earned") ~= nil and textOnScreen("Met the Owner") ~= nil and textOnScreen("7 / 10") ~= nil)
+snapshot("badge-book")
+check("its groups", press("HOLIDAYS") and (function()
+	advance(0.3)
+	return textOnScreen("All Hallows' Hunter") ~= nil
+end)())
+Root2.close()
+advance(0.5)
+-- Holidays and auras on this screen.
+workspace:SetAttribute("Event_valentine", workspace:GetServerTimeNow() + 600)
+signalOf(workspace, "attr:Event_valentine"):Fire()
+advance(1.5)
+check("Valentine's Day turns the light rosy", game:GetService("Lighting"):FindFirstChild("HolidayTint") ~= nil)
+workspace:SetAttribute("Event_valentine", nil)
+signalOf(workspace, "attr:Event_valentine"):Fire()
+advance(1.5)
+check("and back when it's over", game:GetService("Lighting"):FindFirstChild("HolidayTint") == nil)
+LocalPlayer:SetAttribute("Aura", "aura_golddust")
+advance(1)
+check("an aura glows round whoever wears it", root:FindFirstChild("MaisonAura") ~= nil)
+LocalPlayer:SetAttribute("Aura", nil)
+advance(1)
+check("and goes when it's taken off", root:FindFirstChild("MaisonAura") == nil)
+check("no errors in Build 51's screens", #errors == 0, errors[1])
 
 ---------------------------------------------------------------------------------------------------
 -- 8. A respawn hands straight back to the follow camera

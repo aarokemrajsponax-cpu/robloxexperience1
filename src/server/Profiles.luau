@@ -77,6 +77,15 @@ export type Data = {
 	-- Friend invitations (server/Referral): who invited this guest (0: nobody), and the thanks
 	-- for friends they invited: today's count (on `day`), the total, and the friends already thanked.
 	referral: { by: number, day: number, today: number, total: number, friends: { number } },
+	-- Levels: all the XP earned, the highest level reached (its rewards are paid once), and the
+	-- day of the last daily visit's XP.
+	level: { xp: number, best: number, day: number },
+	-- The Badge Book: when each badge came, and counts the badges climb that nothing else keeps.
+	badgeAt: { [string]: number },
+	tally: { [string]: number },
+	tallyOnce: { [string]: string },
+	-- The Gem Shop: what's owned, the aura and title worn, and when each Surge runs out.
+	gemShop: { owned: { [string]: boolean }, aura: string, title: string, giltUntil: number, xpUntil: number },
 }
 
 local TEMPLATE: Data = {
@@ -122,6 +131,11 @@ local TEMPLATE: Data = {
 	curios = { items = {}, favs = {}, recent = {}, found = 0, given = {} },
 	trades = {},
 	referral = { by = 0, day = -1, today = 0, total = 0, friends = {} },
+	level = { xp = 0, best = 1, day = -1 },
+	badgeAt = {},
+	tally = {},
+	tallyOnce = {},
+	gemShop = { owned = {}, aura = "", title = "", giltUntil = 0, xpUntil = 0 },
 }
 
 -- Each migration moves data from schema n to n + 1. Add new ones at the end.

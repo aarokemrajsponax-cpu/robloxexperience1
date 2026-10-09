@@ -38,6 +38,8 @@ Remotes.Functions = {
 	"TradeAsk", -- client -> server: trading curios with another guest
 	"SpectacleAsk", -- client -> server: Suite spectacles (the list, buy one, play one)
 	"SuiteAsk", -- client -> server: your friends' Suites (the list, visit one, go home)
+	"GemAsk", -- client -> server: the Gem Shop (auras, titles, Surges, Gilt for Gems, the Cabinet)
+	"BadgeAsk", -- client -> server: your Badge Book
 }
 
 local folder: Folder? = nil

@@ -1,0 +1,229 @@
+# The Owner Remote: Maison Noir's admin abuse in every server, from anywhere (made by
+# tools/remote/build.py; change the game's lists, then run it again, never this file by hand).
+#
+# GitHub → Actions → Owner Remote → Run workflow → choose → Run. Only people who can write to
+# this repository can run it. It needs one secret, ROBLOX_OPEN_CLOUD_KEY: an Open Cloud API key
+# with the Messaging Service's Publish for Maison Noir (README: The Owner Remote).
+name: Owner Remote
+on:
+  workflow_dispatch:
+    inputs:
+      power:
+        description: "What happens in every server"
+        type: choice
+        required: true
+        default: "💥 Admin Abuse Night · 15 min"
+        options:
+          - "💥 Admin Abuse Night · 15 min"
+          - "💥 Admin Abuse Night · 30 min"
+          - "💥 Admin Abuse Night · 60 min"
+          - "🌋 MEGA ABUSE · 15 min"
+          - "🌋 MEGA ABUSE · 30 min"
+          - "🌋 MEGA ABUSE · 60 min"
+          - "⏱️ Countdown, then Admin Abuse (10s)"
+          - "⏱️ Countdown, then MEGA ABUSE (10s)"
+          - "⏱️ Countdown, then a giveaway (10s)"
+          - "⏱️ Countdown, then a surprise effect (10s)"
+          - "🛑 Stop everything"
+          - "🚀 Rocket launch"
+          - "💃 Dance party"
+          - "⚡ Lightning storm"
+          - "🗿 Brainrot storm"
+          - "🎉 Confetti cannons"
+          - "💥 Shockwave"
+          - "🌀 Spin"
+          - "☄️ Meteor shower"
+          - "🕳️ Black hole"
+          - "🌌 Aurora"
+          - "🪐 Galaxy sky"
+          - "🛸 UFO abduction"
+          - "🌨️ Blizzard"
+          - "🌋 Earthquake"
+          - "🌈 Rainbow mode"
+          - "🧼 Bubble party"
+          - "🌊 Gold wave"
+          - "🔥 Fire & Ice"
+          - "🔦 Blackout"
+          - "🌪️ Tornado"
+          - "🎆 Fireworks finale"
+          - "🗿 Titan meme"
+          - "🌙 Zero gravity"
+          - "🎃 The All Hallows' Hunt · 15 min"
+          - "🦃 The Turkey Trot · 15 min"
+          - "🎁 The Gift Drop · 15 min"
+          - "🎆 The New Year Countdown · 15 min"
+          - "💌 Sweethearts · 15 min"
+          - "🍀 The Lucky Clover · 15 min"
+          - "🥚 The Egg Hunt · 15 min"
+          - "🪙 Golden Hour · 15 min"
+          - "🍀 Lucky Hour · 15 min"
+          - "⭐ Double XP · 15 min"
+          - "📖 The Page-Turner · 15 min"
+          - "🦒 A Night of Giants · 15 min"
+          - "🐜 A Night of Small Things · 15 min"
+          - "👟 The Quickstep · 15 min"
+          - "🪶 Featherlight · 15 min"
+          - "💰 Gold Rain · 15 min"
+          - "🗝️ The Treasure Hunt · 15 min"
+          - "🎈 The Brainrot Parade · 15 min"
+          - "🪩 Disco Night · 15 min"
+          - "🕺 The House Party · 15 min"
+          - "🏺 A Night of Curios · 15 min"
+          - "🎁 Giveaway · 250 Gilt"
+          - "🎁 Giveaway · 1000 Gilt"
+          - "🎁 Giveaway · 5000 Gilt"
+          - "🪙 Gilt for everyone · 100"
+          - "🪙 Gilt for everyone · 500"
+          - "🪙 Gilt for everyone · 1000"
+          - "👑 The Owner's Token"
+          - "📣 ADMIN ABUSE IN 5 MINUTES! DON'T LEAVE!"
+          - "📣 THE OWNER IS IN THE SERVER! SAY HI!"
+          - "📣 DOUBLE GILT FOR EVERYONE RIGHT NOW!"
+          - "📣 GIVEAWAY TIME! STAY IN THE SERVER!"
+          - "📣 WHO'S READY FOR CHAOS?!"
+          - "📣 HOLIDAY HUNT STARTING NOW! LOOK EVERYWHERE!"
+          - "📣 NEW UPDATE IS LIVE! GO EXPLORE!"
+          - "📣 BIGGEST ADMIN ABUSE EVER, TONIGHT!"
+          - "📣 THANK YOU FOR PLAYING MAISON NOIR!"
+          - "📣 HAVING FUN? LIKE THE GAME AND TELL A FRIEND!"
+          - "🌙 Time of day: Midnight"
+          - "🌄 Time of day: Dawn"
+          - "☀️ Time of day: Noon"
+          - "🌇 Time of day: Sunset"
+          - "📣 Headline: my own words (type them in Words)"
+          - "⚙️ Advanced: the command box"
+      words:
+        description: "Your headline, for 'my own words' (140 letters; Roblox's filter checks it)"
+        type: string
+        required: false
+      style:
+        description: "How a headline looks"
+        type: choice
+        required: false
+        default: rainbow
+        options: [gold, red, rainbow, ice, green]
+      command:
+        description: "Advanced: one command as JSON, for the command box"
+        type: string
+        required: false
+permissions: {}
+concurrency:
+  group: owner-remote
+  cancel-in-progress: false
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Send it to every server
+        env:
+          KEY: ${{ secrets.ROBLOX_OPEN_CLOUD_KEY }}
+          POWER: ${{ inputs.power }}
+          WORDS: ${{ inputs.words }}
+          STYLE: ${{ inputs.style }}
+          RAW: ${{ inputs.command }}
+          UNIVERSE: "10768398256"
+          TOPIC: "MaisonRemote"
+        run: |
+          set -euo pipefail
+          if [ -z "${KEY}" ]; then
+            echo "::error::Add the ROBLOX_OPEN_CLOUD_KEY secret first: Settings → Secrets and variables → Actions → New repository secret (README: The Owner Remote)."
+            exit 1
+          fi
+          STYLE="${STYLE:-rainbow}"
+          case "${POWER}" in
+            "💥 Admin Abuse Night · 15 min") CMD='{"op":"abuse","minutes":15}' ;;
+            "💥 Admin Abuse Night · 30 min") CMD='{"op":"abuse","minutes":30}' ;;
+            "💥 Admin Abuse Night · 60 min") CMD='{"op":"abuse","minutes":60}' ;;
+            "🌋 MEGA ABUSE · 15 min") CMD='{"op":"mega","minutes":15}' ;;
+            "🌋 MEGA ABUSE · 30 min") CMD='{"op":"mega","minutes":30}' ;;
+            "🌋 MEGA ABUSE · 60 min") CMD='{"op":"mega","minutes":60}' ;;
+            "⏱️ Countdown, then Admin Abuse (10s)") CMD='{"op":"countdown","id":"abuse","seconds":10}' ;;
+            "⏱️ Countdown, then MEGA ABUSE (10s)") CMD='{"op":"countdown","id":"mega","seconds":10}' ;;
+            "⏱️ Countdown, then a giveaway (10s)") CMD='{"op":"countdown","id":"giveaway","seconds":10}' ;;
+            "⏱️ Countdown, then a surprise effect (10s)") CMD='{"op":"countdown","id":"surprise","seconds":10}' ;;
+            "🛑 Stop everything") CMD='{"op":"stopAll"}' ;;
+            "🚀 Rocket launch") CMD='{"op":"fx","id":"launch"}' ;;
+            "💃 Dance party") CMD='{"op":"fx","id":"dance"}' ;;
+            "⚡ Lightning storm") CMD='{"op":"fx","id":"storm"}' ;;
+            "🗿 Brainrot storm") CMD='{"op":"fx","id":"memeRain"}' ;;
+            "🎉 Confetti cannons") CMD='{"op":"fx","id":"confetti"}' ;;
+            "💥 Shockwave") CMD='{"op":"fx","id":"shockwave"}' ;;
+            "🌀 Spin") CMD='{"op":"fx","id":"spin"}' ;;
+            "☄️ Meteor shower") CMD='{"op":"fx","id":"meteor"}' ;;
+            "🕳️ Black hole") CMD='{"op":"fx","id":"blackHole"}' ;;
+            "🌌 Aurora") CMD='{"op":"fx","id":"aurora"}' ;;
+            "🪐 Galaxy sky") CMD='{"op":"fx","id":"galaxy"}' ;;
+            "🛸 UFO abduction") CMD='{"op":"fx","id":"ufo"}' ;;
+            "🌨️ Blizzard") CMD='{"op":"fx","id":"blizzard"}' ;;
+            "🌋 Earthquake") CMD='{"op":"fx","id":"earthquake"}' ;;
+            "🌈 Rainbow mode") CMD='{"op":"fx","id":"rainbow"}' ;;
+            "🧼 Bubble party") CMD='{"op":"fx","id":"bubbles"}' ;;
+            "🌊 Gold wave") CMD='{"op":"fx","id":"goldWave"}' ;;
+            "🔥 Fire & Ice") CMD='{"op":"fx","id":"fireIce"}' ;;
+            "🔦 Blackout") CMD='{"op":"fx","id":"blackout"}' ;;
+            "🌪️ Tornado") CMD='{"op":"fx","id":"tornado"}' ;;
+            "🎆 Fireworks finale") CMD='{"op":"fx","id":"fireworks"}' ;;
+            "🗿 Titan meme") CMD='{"op":"fx","id":"titan"}' ;;
+            "🌙 Zero gravity") CMD='{"op":"fx","id":"zeroG"}' ;;
+            "🎃 The All Hallows' Hunt · 15 min") CMD='{"op":"event","id":"halloween","minutes":15}' ;;
+            "🦃 The Turkey Trot · 15 min") CMD='{"op":"event","id":"thanksgiving","minutes":15}' ;;
+            "🎁 The Gift Drop · 15 min") CMD='{"op":"event","id":"christmas","minutes":15}' ;;
+            "🎆 The New Year Countdown · 15 min") CMD='{"op":"event","id":"newYear","minutes":15}' ;;
+            "💌 Sweethearts · 15 min") CMD='{"op":"event","id":"valentine","minutes":15}' ;;
+            "🍀 The Lucky Clover · 15 min") CMD='{"op":"event","id":"stPatrick","minutes":15}' ;;
+            "🥚 The Egg Hunt · 15 min") CMD='{"op":"event","id":"easter","minutes":15}' ;;
+            "🪙 Golden Hour · 15 min") CMD='{"op":"event","id":"goldenHour","minutes":15}' ;;
+            "🍀 Lucky Hour · 15 min") CMD='{"op":"event","id":"luckyHour","minutes":15}' ;;
+            "⭐ Double XP · 15 min") CMD='{"op":"event","id":"doubleXP","minutes":15}' ;;
+            "📖 The Page-Turner · 15 min") CMD='{"op":"event","id":"pageTurner","minutes":15}' ;;
+            "🦒 A Night of Giants · 15 min") CMD='{"op":"event","id":"giants","minutes":15}' ;;
+            "🐜 A Night of Small Things · 15 min") CMD='{"op":"event","id":"tiny","minutes":15}' ;;
+            "👟 The Quickstep · 15 min") CMD='{"op":"event","id":"quickstep","minutes":15}' ;;
+            "🪶 Featherlight · 15 min") CMD='{"op":"event","id":"featherlight","minutes":15}' ;;
+            "💰 Gold Rain · 15 min") CMD='{"op":"event","id":"goldRain","minutes":15}' ;;
+            "🗝️ The Treasure Hunt · 15 min") CMD='{"op":"event","id":"treasure","minutes":15}' ;;
+            "🎈 The Brainrot Parade · 15 min") CMD='{"op":"event","id":"parade","minutes":15}' ;;
+            "🪩 Disco Night · 15 min") CMD='{"op":"event","id":"disco","minutes":15}' ;;
+            "🕺 The House Party · 15 min") CMD='{"op":"event","id":"discoHouse","minutes":15}' ;;
+            "🏺 A Night of Curios · 15 min") CMD='{"op":"event","id":"curioHour","minutes":15}' ;;
+            "🎁 Giveaway · 250 Gilt") CMD='{"op":"giveaway","amount":250}' ;;
+            "🎁 Giveaway · 1000 Gilt") CMD='{"op":"giveaway","amount":1000}' ;;
+            "🎁 Giveaway · 5000 Gilt") CMD='{"op":"giveaway","amount":5000}' ;;
+            "🪙 Gilt for everyone · 100") CMD='{"op":"giftAll","amount":100}' ;;
+            "🪙 Gilt for everyone · 500") CMD='{"op":"giftAll","amount":500}' ;;
+            "🪙 Gilt for everyone · 1000") CMD='{"op":"giftAll","amount":1000}' ;;
+            "👑 The Owner's Token") CMD='{"op":"token"}' ;;
+            "📣 ADMIN ABUSE IN 5 MINUTES! DON'T LEAVE!") CMD=$(jq -cn --arg s "$STYLE" --argjson p 1 '{op:"headline",preset:$p,style:$s}') ;;
+            "📣 THE OWNER IS IN THE SERVER! SAY HI!") CMD=$(jq -cn --arg s "$STYLE" --argjson p 2 '{op:"headline",preset:$p,style:$s}') ;;
+            "📣 DOUBLE GILT FOR EVERYONE RIGHT NOW!") CMD=$(jq -cn --arg s "$STYLE" --argjson p 3 '{op:"headline",preset:$p,style:$s}') ;;
+            "📣 GIVEAWAY TIME! STAY IN THE SERVER!") CMD=$(jq -cn --arg s "$STYLE" --argjson p 4 '{op:"headline",preset:$p,style:$s}') ;;
+            "📣 WHO'S READY FOR CHAOS?!") CMD=$(jq -cn --arg s "$STYLE" --argjson p 5 '{op:"headline",preset:$p,style:$s}') ;;
+            "📣 HOLIDAY HUNT STARTING NOW! LOOK EVERYWHERE!") CMD=$(jq -cn --arg s "$STYLE" --argjson p 6 '{op:"headline",preset:$p,style:$s}') ;;
+            "📣 NEW UPDATE IS LIVE! GO EXPLORE!") CMD=$(jq -cn --arg s "$STYLE" --argjson p 7 '{op:"headline",preset:$p,style:$s}') ;;
+            "📣 BIGGEST ADMIN ABUSE EVER, TONIGHT!") CMD=$(jq -cn --arg s "$STYLE" --argjson p 8 '{op:"headline",preset:$p,style:$s}') ;;
+            "📣 THANK YOU FOR PLAYING MAISON NOIR!") CMD=$(jq -cn --arg s "$STYLE" --argjson p 9 '{op:"headline",preset:$p,style:$s}') ;;
+            "📣 HAVING FUN? LIKE THE GAME AND TELL A FRIEND!") CMD=$(jq -cn --arg s "$STYLE" --argjson p 10 '{op:"headline",preset:$p,style:$s}') ;;
+            "🌙 Time of day: Midnight") CMD='{"op":"clock","id":"midnight"}' ;;
+            "🌄 Time of day: Dawn") CMD='{"op":"clock","id":"dawn"}' ;;
+            "☀️ Time of day: Noon") CMD='{"op":"clock","id":"noon"}' ;;
+            "🌇 Time of day: Sunset") CMD='{"op":"clock","id":"sunset"}' ;;
+            "📣 Headline: my own words (type them in Words)")
+              if [ -z "${WORDS}" ]; then echo "::error::Type your headline in Words."; exit 1; fi
+              CMD=$(jq -cn --arg t "${WORDS:0:140}" --arg s "$STYLE" '{op:"headline",text:$t,style:$s}') ;;
+            "⚙️ Advanced: the command box")
+              if ! printf '%s' "${RAW}" | jq -e 'type == "object" and (.op | type == "string")' >/dev/null; then echo "::error::The command box needs one command as JSON, like {\"op\":\"fx\",\"id\":\"meteor\"}."; exit 1; fi
+              CMD=$(printf '%s' "${RAW}" | jq -c .) ;;
+            *) echo "::error::Unknown choice."; exit 1 ;;
+          esac
+          if [ "${#CMD}" -gt 900 ]; then echo "::error::That command is too long."; exit 1; fi
+          BODY=$(jq -cn --arg m "$CMD" '{message:$m}')
+          CODE=$(curl -sS -o /tmp/reply -w '%{http_code}' -X POST "https://apis.roblox.com/messaging-service/v1/universes/${UNIVERSE}/topics/${TOPIC}" -H "x-api-key: ${KEY}" -H "Content-Type: application/json" --data "$BODY" || true)
+          if [ "$CODE" = "200" ]; then
+            echo "Sent to every server: ${CMD}"
+            echo "### Sent to every server" >> "$GITHUB_STEP_SUMMARY"
+            echo "${POWER}" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::error::Roblox said ${CODE}: $(cat /tmp/reply 2>/dev/null | head -c 300). 401/403: the key is wrong or lacks the Messaging Service's Publish for Maison Noir."
+            exit 1
+          fi

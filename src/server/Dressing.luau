@@ -11,6 +11,7 @@ local Brand = require(ReplicatedStorage.Shared.Brand)
 local Caps = require(ReplicatedStorage.Shared.Caps)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Ledger = require(ReplicatedStorage.Shared.Ledger)
+local Levels = require(ReplicatedStorage.Shared.Levels)
 local Rating = require(ReplicatedStorage.Shared.Rating)
 local Wardrobe = require(ReplicatedStorage.Shared.Wardrobe)
 
@@ -65,6 +66,7 @@ function Dressing.nameplate(player: Player)
 	gui.Name = "Nameplate"
 	gui.Size = UDim2.fromOffset(200, 34)
 	gui.StudsOffset = Vector3.new(0, 2.4, 0)
+	gui.ClipsDescendants = false
 	gui.MaxDistance = 45
 	gui.LightInfluence = 0
 	gui.Adornee = head
@@ -97,6 +99,63 @@ function Dressing.nameplate(player: Player)
 	local sizeLimit = Instance.new("UITextSizeConstraint")
 	sizeLimit.MaxTextSize = 18
 	sizeLimit.Parent = name
+	-- The guest's level, in a disc at the plate's left end, its colour by tier (bronze to ruby).
+	local level = player:GetAttribute("Level")
+	if type(level) == "number" then
+		local disc = Instance.new("TextLabel")
+		disc.Name = "Level"
+		disc.AnchorPoint = Vector2.new(0, 0.5)
+		disc.Position = UDim2.new(0, 3, 0.5, 0)
+		disc.Size = UDim2.new(0, 28, 0, 28)
+		disc.BackgroundColor3 = Color3.fromRGB(16, 14, 12)
+		disc.BackgroundTransparency = 0.05
+		disc.FontFace = Brand.Fonts.bodyBold
+		disc.TextScaled = true
+		disc.TextColor3 = Levels.colour(level)
+		disc.Text = tostring(level)
+		local dc = Instance.new("UICorner")
+		dc.CornerRadius = UDim.new(1, 0)
+		dc.Parent = disc
+		local ds = Instance.new("UIStroke")
+		ds.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		ds.Thickness = 2
+		ds.Color = Levels.colour(level)
+		ds.Parent = disc
+		local dp = Instance.new("UIPadding")
+		dp.PaddingLeft = UDim.new(0, 4)
+		dp.PaddingRight = UDim.new(0, 4)
+		dp.PaddingTop = UDim.new(0, 5)
+		dp.PaddingBottom = UDim.new(0, 5)
+		dp.Parent = disc
+		disc.Parent = plate
+		name.Position = UDim2.fromOffset(34, 0)
+		name.Size = UDim2.new(1, -40, 1, 0)
+	end
+	-- Above the name: OWNER for the owner, else the title the guest wears (the Gem Shop).
+	local owner = player:GetAttribute("MaisonAdmin") == true
+	local title = player:GetAttribute("Title")
+	if owner or type(title) == "string" then
+		local line = Instance.new("TextLabel")
+		line.Name = "Title"
+		line.BackgroundTransparency = 1
+		line.AnchorPoint = Vector2.new(0.5, 1)
+		line.Position = UDim2.new(0.5, 0, 0, -1)
+		line.Size = UDim2.new(1, 0, 0.6, 0)
+		line.FontFace = Brand.Fonts.bodyBold
+		line.TextScaled = true
+		line.TextStrokeTransparency = 0.4
+		line.TextColor3 = if owner then Color3.fromRGB(255, 214, 90) else Brand.Colours.lightGold
+		line.Text = if owner then "👑 OWNER 👑" else Caps(title :: string)
+		line.Parent = plate
+		if owner then
+			plate.BackgroundColor3 = Color3.fromRGB(26, 18, 4)
+			plate.BackgroundTransparency = 0.1
+			stroke.Color = Color3.fromRGB(255, 200, 80)
+			stroke.Thickness = 2
+			stroke.Transparency = 0
+			name.TextColor3 = Color3.fromRGB(255, 230, 160)
+		end
+	end
 	if data then
 		local frame = equippedItem(data, "nameplate")
 		if not frame and data.blackCard.active then
@@ -350,6 +409,23 @@ function Dressing.start()
 		player.CharacterAdded:Connect(function()
 			spawned(player)
 		end)
+		-- The plate follows the level, the title and the owner's mark as they change.
+		local pending = false
+		local function redraw()
+			if pending then
+				return
+			end
+			pending = true
+			task.delay(0.2, function()
+				pending = false
+				if player.Parent == Players then
+					Dressing.nameplate(player)
+				end
+			end)
+		end
+		for _, attr in { "Level", "Title", "MaisonAdmin" } do
+			player:GetAttributeChangedSignal(attr):Connect(redraw)
+		end
 		if player.Character then
 			task.spawn(spawned, player)
 		end

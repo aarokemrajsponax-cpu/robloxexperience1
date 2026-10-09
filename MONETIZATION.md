@@ -238,6 +238,18 @@ per Robux, plainly. Handler `gems` (`server/Curios.luau`) adds the Gems in the r
 Curios found at the tables are earned by playing only (never sold); trading is between guests,
 server-checked, curios only (Gems, Gilt and Robux items are never traded).
 
+**The Gem Shop** (Build 51; `shared/GemShop.luau`, `server/GemShop.luau`). What else Gems buy, each
+at one fixed price on its card: 12 auras (120 to 500 Gems; a glow everyone sees), 10 titles (100
+to 400; a line above the name), a Gilt Surge (60: ×1.5 Gilt for 30 minutes from purchase) and an
+XP Surge (60: ×2 XP for 30 minutes), Gilt for Gems at a set rate (25 → 1,000; 100 → 4,500; 250 →
+12,500), and the Cabinet's curios (four before, six new: 60 to 1,000). Never random; buying takes
+two taps (the price, then *Confirm · 💎 price*); nothing is sold that wins a game (a Surge changes
+Gilt or XP, never a score, and every Gilt boost together stays under
+`ProductConfig.Settings.MaxGiltMultiplier`). *Trust boundary:* the screen sends only an item's id
+(`GemAsk`: `op`, `id`, `kind`; any other field is refused), the server reads the price from the
+list, takes Gems only if the guest holds enough and says how many more otherwise. Level rewards
+(Gems every tenth level) are the only free Gems.
+
 **Suite spectacles** (Suite Fireworks 199, Meme Takeover 299, Golden Transformation 499). A show
 in the buyer's own Suite. Each receipt saves one show as a credit (`show:<key>`); the guest plays
 it from the Suite's bell → Spectacles, only while in their Suite. Cosmetic only. Handler

@@ -716,11 +716,14 @@ end
 do
 local AdminService = module("ServerScriptService", "Server", "AdminService")
 local GiltService = module("ServerScriptService", "Server", "Gilt")
--- The owner is the experience's creator: nobody else, ever (in Studio the first test player
--- stands in; off here, so the live rule is what's tested).
+-- The owner is one UserId (XxxXxxX_77797's, Config.Admin.ownerUserId): nobody else, ever (in
+-- Studio the first test player stands in; off here, so the live rule is what's tested).
 Config.data.Admin.studioFirstPlayer = false
+local realOwner = Config.data.Admin.ownerUserId
+check("the owner's powers are pinned to XxxXxxX_77797's UserId", realOwner == 8722595934)
+Config.data.Admin.ownerUserId = 100
 H.game.CreatorType = H.Enum.CreatorType.User
-H.game.CreatorId = 100
+H.game.CreatorId = 555
 local owner = guest("AJ", 100)
 local ned = guest("Ned", 101)
 local adminNotes = {}
@@ -749,21 +752,29 @@ local function lastBroadcast(op)
 	return nil
 end
 check("only the owner may use House controls", adminAs(ned, { op = "state" }).ok == false and adminAs(owner, { op = "state" }).ok == true)
+do
+	-- Not even whoever the experience belongs to on Roblox, unless they're the owner's UserId.
+	local creator = guest("Cid", 555)
+	check("the experience's creator account isn't the owner unless it's the owner's UserId", adminAs(creator, { op = "state" }).ok == false)
+end
 check("the owner is marked, so only they see the House key", owner:GetAttribute("MaisonAdmin") == true and ned:GetAttribute("MaisonAdmin") ~= true)
 do
-	-- A group's experience: the group's owner (rank 255 in it) has House controls, a member doesn't.
+	-- With no owner pinned (0) the experience's owner on Roblox has them: for a group's experience,
+	-- the group's owner (rank 255 in it), never a member.
+	Config.data.Admin.ownerUserId = 0
 	H.game.CreatorType = H.Enum.CreatorType.Group
 	H.game.CreatorId = 777
 	local gia, max = guest("Gia", 102), guest("Max", 103)
 	H.groups[102] = { { Id = 777, Rank = 255 } }
 	H.groups[103] = { { Id = 777, Rank = 10 }, { Id = 5, Rank = 255 } }
-	check("in a group's experience, the group's owner has House controls", adminAs(gia, { op = "state" }).ok == true)
+	check("with no owner pinned, a group's owner has House controls", adminAs(gia, { op = "state" }).ok == true)
 	check("and a member of the group doesn't", adminAs(max, { op = "state" }).ok == false)
 	H.game.CreatorType = H.Enum.CreatorType.User
-	H.game.CreatorId = 100
+	H.game.CreatorId = 555
+	Config.data.Admin.ownerUserId = 100
 end
 local st = adminAs(owner, { op = "state" })
-check("the panel lists the events, the seasons, the salutes and the guests", #st.events == 13 and #st.seasons == 10 and #st.salutes == 6 and #st.guests >= 2)
+check("the panel lists the events, the seasons, the salutes and the guests", #st.events == 21 and #st.seasons == 10 and #st.salutes == 6 and #st.guests >= 2)
 do
 	-- The Suite shows: the owner tries one on their own screen, free. Nobody else sees it, and
 	-- nobody else may ask for one.
@@ -1360,6 +1371,428 @@ do
 	check("only the offered things can be bought this way", askAs(buyer, { op = "offer", key = "tier99" }).ok == false)
 	MarketplaceService.devProducts = {}
 	run(Shop.discover)
+end
+
+---------------------------------------------------------------------------------------------------
+-- Build 51: the Owner Remote, holidays, giveaways, headlines, countdowns, Mega Abuse, levels, the
+-- Badge Book and the Gem Shop.
+---------------------------------------------------------------------------------------------------
+do
+	local serde = require("@lune/serde")
+	local fs = require("@lune/fs")
+	local AdminService = module("ServerScriptService", "Server", "AdminService")
+	local Achievements = module("ServerScriptService", "Server", "Achievements")
+	local Progress = module("ServerScriptService", "Server", "Progress")
+	local GemShop = module("ServerScriptService", "Server", "GemShop")
+	local CuriosS = module("ServerScriptService", "Server", "Curios")
+	local GiltModule = module("ServerScriptService", "Server", "Gilt")
+	local HouseEvents = module("ReplicatedStorage", "Shared", "HouseEvents")
+	local BadgeBook = module("ReplicatedStorage", "Shared", "BadgeBook")
+	local Levels = module("ReplicatedStorage", "Shared", "Levels")
+	local GemList = module("ReplicatedStorage", "Shared", "GemShop")
+	-- The hooks Main sets.
+	AdminService.award = Achievements.award
+	AdminService.tally = function(p, stat, n, once)
+		Achievements.tally(p, stat, n, once)
+	end
+	local told = {}
+	Achievements.notify = function(p, badge)
+		table.insert(told, { p = p, key = badge.key })
+	end
+	local owner
+	for _, g in guests do
+		if g.UserId == 100 then
+			owner = g
+		end
+	end
+	local function adminAs(player, request)
+		advance(0.5)
+		local r
+		run(function()
+			r = AdminService.handle(player, request)
+		end)
+		return r
+	end
+	local function lastCast(op)
+		for i = #broadcasts, 1, -1 do
+			if broadcasts[i].message.op == op then
+				return broadcasts[i].message
+			end
+		end
+		return nil
+	end
+	local function body(g, at)
+		local m = roblox.Instance.new("Model")
+		local r = roblox.Instance.new("Part")
+		r.Name = "HumanoidRootPart"
+		r.Position = at
+		r.CFrame = CFrame.new(at)
+		r.Parent = m
+		local h = roblox.Instance.new("Part")
+		h.Name = "Head"
+		h.Parent = m
+		g.Character = m
+		return r
+	end
+	run(function()
+		AdminService.stopAll("AJ")
+	end)
+
+	-- The holidays, on the right days.
+	check("the holidays fall on their days (Halloween, Christmas, New Year, Valentine's, St Patrick's)", HouseEvents.holidayOn(2026, 10, 31) == "halloween" and HouseEvents.holidayOn(2026, 12, 25) == "christmas" and HouseEvents.holidayOn(2027, 1, 1) == "newYear" and HouseEvents.holidayOn(2027, 2, 14) == "valentine" and HouseEvents.holidayOn(2027, 3, 17) == "stPatrick")
+	check("Thanksgiving is the fourth Thursday of November", HouseEvents.holidayOn(2026, 11, 26) == "thanksgiving" and HouseEvents.holidayOn(2026, 11, 19) == nil and HouseEvents.holidayOn(2027, 11, 25) == "thanksgiving")
+	check("Easter moves with the moon (Sunday and Monday)", HouseEvents.holidayOn(2026, 4, 5) == "easter" and HouseEvents.holidayOn(2026, 4, 6) == "easter" and HouseEvents.holidayOn(2027, 3, 28) == "easter" and HouseEvents.holidayOn(2026, 10, 9) == nil)
+
+	-- The Owner Remote: every command the remote offers is one the house knows...
+	local catalog = serde.decode("json", fs.readFile("tools/remote/commands.json"))
+	local accepted, refused = 0, {}
+	for _, c in catalog.commands do
+		local ok
+		run(function()
+			ok = AdminService.apply(c.command, "XxxXxxX_77797", true)
+		end)
+		if ok then
+			accepted += 1
+		else
+			table.insert(refused, c.label)
+		end
+		advance(0.2)
+	end
+	run(function()
+		AdminService.stopAll("XxxXxxX_77797")
+	end)
+	advance(1)
+	check("every one of the remote's commands is one the house carries out", accepted == #catalog.commands and accepted >= 70, refused[1])
+	check("the remote's workflow offers every one of them", (function()
+		local wf = fs.readFile(".github/workflows/owner-remote.yml")
+		for _, c in catalog.commands do
+			if not string.find(wf, c.label, 1, true) then
+				return false
+			end
+		end
+		return true
+	end)())
+	-- ...and it arrives as Open Cloud does: a line of JSON on the remote topic.
+	local remote = subscriptions[Config.data.Admin.remoteTopic]
+	check("every server listens for the Owner Remote", type(remote) == "function")
+	local castBefore = #broadcasts
+	run(function()
+		remote({ Data = '{"op":"fx","id":"meteor"}' })
+	end)
+	check("a remote effect plays on every screen", lastCast("abuseFX") ~= nil and lastCast("abuseFX").id == "meteor" and #broadcasts > castBefore)
+	run(function()
+		remote({ Data = '{"op":"headline","text":"rude remote words","style":"ice"}' })
+	end)
+	check("a remote headline is filtered by Roblox first", lastCast("headline") ~= nil and lastCast("headline").text == "#### remote words" and lastCast("headline").style == "ice" and lastCast("headline").by == "XxxXxxX_77797")
+	-- Nothing outside the lists does anything.
+	local giltBefore = {}
+	for _, g in guests do
+		if profiles[g] then
+			giltBefore[g] = profiles[g].Data.gilt
+		end
+	end
+	castBefore = #broadcasts
+	run(function()
+		remote({ Data = '{"op":"giftAll","amount":999999}' })
+		remote({ Data = '{"op":"kick","userId":101}' })
+		remote({ Data = '{"op":"event","id":"notAnEvent"}' })
+		remote({ Data = '{"op":"fx","id":"explodeEveryone"}' })
+		remote({ Data = "not json at all" })
+		remote({ Data = '["fx","meteor"]' })
+	end)
+	check("the remote can't give amounts that aren't on the list, or do anything unknown", (function()
+		for g, before in giltBefore do
+			if profiles[g].Data.gilt ~= before then
+				return false
+			end
+		end
+		return #broadcasts == castBefore
+	end)())
+	-- At most twenty commands in ten seconds.
+	advance(11)
+	castBefore = #broadcasts
+	run(function()
+		for _ = 1, 25 do
+			remote({ Data = '{"op":"fx","id":"confetti"}' })
+		end
+	end)
+	check("the remote is held to twenty commands in ten seconds", #broadcasts - castBefore == 20, #broadcasts - castBefore)
+	advance(11)
+
+	-- Holidays: a hunt round the house.
+	local hunter = guest("Holly", 301)
+	local hd = profiles[hunter].Data
+	local hroot = body(hunter, Vector3.new(0, 5, 0))
+	adminAs(owner, { op = "event", id = "halloween", minutes = 15 })
+	local folder = services.Workspace:FindFirstChild("HouseEvents", true)
+	local function hunts(huntId)
+		local list, jackpot = {}, nil
+		if folder then
+			for _, p in folder:GetChildren() do
+				if p:GetAttribute("Pickup") == "hunt" and p:GetAttribute("Hunt") == huntId then
+					if p:GetAttribute("Jackpot") then
+						jackpot = p
+					else
+						table.insert(list, p)
+					end
+				end
+			end
+		end
+		return list, jackpot
+	end
+	local pumpkins, golden = hunts("halloween")
+	check("the All Hallows' Hunt hides its pumpkins round the house, and one golden one", #pumpkins == Config.data.Admin.hunts.halloween.count and golden ~= nil)
+	check("every screen sees it's on", services.Workspace:GetAttribute("Event_halloween") ~= nil)
+	local giltWas = hd.gilt
+	hroot.Position = pumpkins[1].CFrame.Position
+	run(AdminService.collect)
+	check("finding a pumpkin pays Gilt", hd.gilt > giltWas and pumpkins[1].Parent == nil)
+	check("and gives the Jack-o'-Lantern to keep, and the badge", CuriosS.count(hd, "jackOLantern") == 1 and hd.badges.holiday_halloween == true)
+	hroot.Position = pumpkins[2].CFrame.Position
+	run(AdminService.collect)
+	check("one Jack-o'-Lantern a hunt, however many pumpkins", CuriosS.count(hd, "jackOLantern") == 1)
+	hroot.Position = golden.CFrame.Position
+	giltWas = hd.gilt
+	run(AdminService.collect)
+	check("the golden pumpkin pays far more, and is its own curio", hd.gilt - giltWas >= Config.data.Admin.hunts.halloween.jackpotGilt and CuriosS.count(hd, "goldenPumpkin") == 1)
+	check("and the whole house hears who found it", lastCast("salute") ~= nil and string.find(lastCast("salute").line, "Holly found The Golden Pumpkin", 1, true) ~= nil)
+	adminAs(owner, { op = "stop", id = "halloween" })
+	pumpkins = hunts("halloween")
+	check("stopping the hunt clears what's left", #pumpkins == 0)
+	-- The Turkey Trot: they run.
+	adminAs(owner, { op = "event", id = "thanksgiving", minutes = 15 })
+	local turkeys = hunts("thanksgiving")
+	check("the Turkey Trot lets its turkeys loose", #turkeys == Config.data.Admin.hunts.thanksgiving.count and turkeys[1]:GetAttribute("Moves") == true)
+	local t1 = turkeys[1]
+	local from = t1.CFrame.Position
+	hroot.Position = from + Vector3.new(6, 0, 0)
+	run(function()
+		for _ = 1, 10 do
+			AdminService.trot(0.1)
+		end
+	end)
+	check("a turkey runs from a guest who comes near", (t1.CFrame.Position - hroot.Position).Magnitude > (from - hroot.Position).Magnitude)
+	adminAs(owner, { op = "stop", id = "thanksgiving" })
+	-- The New Year: a countdown, then a present for everyone.
+	local newYearGilt = hd.gilt
+	adminAs(owner, { op = "event", id = "newYear", minutes = 5 })
+	check("the New Year counts down on every screen", lastCast("countdown") ~= nil and lastCast("countdown").label == "HAPPY NEW YEAR IN")
+	advance(11)
+	check("then fireworks, a headline and a present for everyone", lastCast("headline").text == "HAPPY NEW YEAR!" and hd.gilt == newYearGilt + Config.data.Admin.newYearGilt and CuriosS.count(hd, "newYearSparkler") == 1)
+	adminAs(owner, { op = "stop", id = "newYear" })
+
+	-- Headlines, countdowns, giveaways, the Owner's Token.
+	local refusedAll = adminAs(hunter, { op = "headline", preset = 1 }).ok == false and adminAs(hunter, { op = "giveaway", amount = 1000 }).ok == false and adminAs(hunter, { op = "token" }).ok == false and adminAs(hunter, { op = "mega", minutes = 5 }).ok == false
+	check("a guest can't send a headline, a giveaway, the token or Mega Abuse", refusedAll)
+	local pubBefore = #published
+	adminAs(owner, { op = "headline", preset = 2, style = "rainbow", everywhere = true })
+	check("a ready-made headline crosses every screen, in its style", lastCast("headline").text == HouseEvents.Headlines[2] and lastCast("headline").style == "rainbow")
+	check("and every server, when asked", #published > pubBefore and published[#published].message.op == "headline")
+	check("everyone there gets the Breaking News badge", hd.badges.headline == true)
+	adminAs(owner, { op = "headline", text = "rude but true" })
+	check("the owner's own words are filtered too", lastCast("headline").text == "#### but true")
+	check("a style that isn't one falls back to gold", (function()
+		adminAs(owner, { op = "headline", preset = 1, style = "neon<script>" })
+		return lastCast("headline").style == "gold"
+	end)())
+	check("only the countdowns offered", adminAs(owner, { op = "countdown", id = "giveaway", seconds = 7 }).ok == false)
+	adminAs(owner, { op = "countdown", id = "giveaway", seconds = 10 })
+	check("a countdown shows on every screen", lastCast("countdown").label == "GIVEAWAY IN")
+	local winnerGilt = hd.gilt
+	advance(11)
+	local draw = lastCast("giveaway")
+	check("then a giveaway is drawn", draw ~= nil and draw.amount == Config.data.Admin.giveawayGilt[2] and type(draw.names) == "table" and #draw.names >= 1)
+	check("the owner never wins their own giveaway", (function()
+		for _, n in draw.names do
+			if n == owner.DisplayName then
+				return false
+			end
+		end
+		return draw.winner ~= owner.DisplayName
+	end)())
+	check("only the amounts offered", adminAs(owner, { op = "giveaway", amount = 777 }).ok == false)
+	local gw = adminAs(owner, { op = "giveaway", amount = 250 })
+	check("the winner gets the Gilt and the badge", gw.ok and type(gw.winner) == "string" and (function()
+		for _, g in guests do
+			if g.DisplayName == gw.winner and profiles[g] then
+				return profiles[g].Data.badges.giveawayWinner == true
+			end
+		end
+		return false
+	end)())
+	local _ = winnerGilt
+	adminAs(owner, { op = "token" })
+	check("the Owner's Token goes to every guest", CuriosS.count(hd, "ownerToken") == 1)
+	advance(1)
+	adminAs(owner, { op = "token" })
+	check("once a day each", CuriosS.count(hd, "ownerToken") == 1)
+
+	-- Mega Abuse.
+	adminAs(owner, { op = "mega", minutes = 5 })
+	check("Mega Abuse: every event at once, marked as Mega", services.Workspace:GetAttribute("AbuseMega") == true and services.Workspace:GetAttribute("Event_doubleXP") ~= nil)
+	check("everyone there gets the Mega Abuse Medal, and Admin Abuse counted", CuriosS.count(hd, "abuseMedal") == 1 and hd.badges.abuseNight == true and (hd.tally.abuseNights or 0) == 1)
+	local fxBefore = 0
+	for _, b in broadcasts do
+		if b.message.op == "abuseFX" then
+			fxBefore += 1
+		end
+	end
+	advance(Config.data.Admin.megaSurpriseSeconds * 2 + 2)
+	local fxAfter = 0
+	for _, b in broadcasts do
+		if b.message.op == "abuseFX" then
+			fxAfter += 1
+		end
+	end
+	check("surprises come twice as often", fxAfter - fxBefore >= 2)
+	adminAs(owner, { op = "stopAll" })
+	check("Stop everything ends Mega Abuse too", services.Workspace:GetAttribute("AbuseMega") == nil and services.Workspace:GetAttribute("AbuseUntil") == nil)
+
+	-- Levels.
+	check("the level curve: 100 XP for level 2, level 100 at the top", Levels.of(0) == 1 and Levels.of(100) == 2 and Levels.of(Levels.total(100)) == 100 and (select(3, Levels.of(Levels.total(100) + 5))) == 0)
+	local ups = {}
+	Progress.levelUp = function(p, level, gilt, gems)
+		table.insert(ups, { p = p, level = level, gilt = gilt, gems = gems })
+	end
+	Progress.boost = function(_p)
+		return if AdminService.active("doubleXP") then Config.data.Admin.doubleXP else 1
+	end
+	local lv = guest("Lev", 302)
+	run(function()
+		Progress.add(lv, 99, "test")
+	end)
+	check("XP shows on the guest (their level for everyone)", lv:GetAttribute("Level") == 1 and lv:GetAttribute("LevelXP") == 99 and lv:GetAttribute("LevelNeed") == 100)
+	run(function()
+		Progress.give(lv, "round", "Flawless")
+	end)
+	check("a Flawless round is worth far more than a Cleared one", Config.data.Levels.round.Flawless > Config.data.Levels.round.Cleared * 4)
+	check("and reaching a level is celebrated once, with its reward", lv:GetAttribute("Level") == 2 and #ups == 1 and ups[1].level == 2 and ups[1].gilt == (Levels.reward(2)))
+	adminAs(owner, { op = "event", id = "doubleXP", minutes = 5 })
+	local gained
+	run(function()
+		gained = Progress.give(lv, "nightly")
+	end)
+	check("Double XP doubles it", gained == Config.data.Levels.nightly * 2)
+	adminAs(owner, { op = "stop", id = "doubleXP" })
+	run(function()
+		Progress.add(lv, 500000, "test")
+	end)
+	check("every level on the way is rewarded once, and the top is level 100", lv:GetAttribute("Level") == 100 and #ups == 99 and ups[#ups].level == 100 and ups[9].gems > 0)
+
+	-- The Badge Book.
+	check("ten times the badges there were (151)", BadgeBook.count >= 130)
+	check("every badge has a name, a glyph, a group and a way to earn it", (function()
+		local groups = {}
+		for _, g in BadgeBook.Groups do
+			groups[g.id] = true
+		end
+		for _, b in BadgeBook.List do
+			if b.name == "" or b.glyph == "" or b.line == "" or not groups[b.group] then
+				return false
+			end
+			if b.stat and not BadgeBook.Stats[b.stat] then
+				return false
+			end
+		end
+		return true
+	end)())
+	check("the badges from before keep their keys", BadgeBook.byKey.firstRound ~= nil and BadgeBook.byKey.firstFlawless ~= nil and BadgeBook.byKey.register50 ~= nil and BadgeBook.byKey.mythic ~= nil and BadgeBook.byKey.foundingTerm ~= nil)
+	local bb = guest("Bea", 303)
+	local bd = profiles[bb].Data
+	bd.stats.rounds = 12
+	bd.stats.flawless = 1
+	told = {}
+	run(function()
+		Achievements.check(bb)
+	end)
+	check("ladder badges come from what the guest has done", bd.badges.firstRound and bd.badges.rounds_10 and bd.badges.firstFlawless and not bd.badges.rounds_50)
+	check("each is said on their screen (a few at a time)", #told >= 1 and #told <= 3)
+	Config.data.Badges.rounds_10 = 5550001
+	bd.stats.rounds = 60
+	local awardedBefore = #awarded
+	run(function()
+		Achievements.check(bb)
+	end)
+	advance(0.5)
+	check("a badge with a Roblox badge id is awarded on Roblox too", bd.badges.rounds_50 == true and #awarded == awardedBefore)
+	bd.badges.rounds_10 = nil
+	run(function()
+		Achievements.check(bb)
+	end)
+	advance(0.5)
+	check("...when it's earned", #awarded == awardedBefore + 1 and awarded[#awarded].id == 5550001)
+	Config.data.Badges.rounds_10 = nil
+	run(function()
+		Achievements.tally(bb, "abuseNights", 1, "night:1")
+		Achievements.tally(bb, "abuseNights", 1, "night:1")
+	end)
+	check("a night counts once, however often you rejoin during it", bd.tally.abuseNights == 1)
+	local view = Achievements.view(bd)
+	check("the Badge Book shows what's earned and how far along", view.count >= 4 and view.total == BadgeBook.count and view.stats.rounds == 60)
+
+	-- The Gem Shop.
+	local gemmy = guest("Gem", 304)
+	local gd = profiles[gemmy].Data
+	gd.gems = 1000
+	GemShop.award = Achievements.award
+	GemShop.tally = function(p, stat, n)
+		if n > 0 then
+			Achievements.tally(p, stat, n)
+		else
+			Achievements.check(p)
+		end
+	end
+	run(GemShop.start)
+	local askGems = Remotes.funcs.GemAsk.OnServerInvoke
+	local function gemAs(req)
+		advance(0.5)
+		local r
+		run(function()
+			r = askGems(gemmy, req)
+		end)
+		return r
+	end
+	local st = gemAs({ op = "state" })
+	check("the Gem Shop opens with your Gems and the Cabinet", st.ok and st.gems == 1000 and type(st.cabinet) == "table")
+	local r1 = gemAs({ op = "buy", id = "aura_golddust" })
+	check("an aura costs exactly its price, once", r1.ok and gd.gems == 1000 - GemList.byId.aura_golddust.gems and r1.owned.aura_golddust == true)
+	check("and everyone sees it on you", gemmy:GetAttribute("Aura") == "aura_golddust")
+	check("it can't be bought twice", gemAs({ op = "buy", id = "aura_golddust" }).ok == false and gd.gems == 1000 - GemList.byId.aura_golddust.gems)
+	check("the screen can't send a price", gemAs({ op = "buy", id = "aura_rainbow", gems = 1 }).ok == false and gd.gems == 1000 - GemList.byId.aura_golddust.gems)
+	check("nothing that isn't in the shop", gemAs({ op = "buy", id = "aura_free" }).ok == false)
+	local r2 = gemAs({ op = "buy", id = "title_legend" })
+	check("a title, worn at once, over your name", r2.ok and gemmy:GetAttribute("Title") == "Certified Legend" and gd.badges.firstTitle == true)
+	check("taking it off", gemAs({ op = "equip", kind = "title", id = "" }).ok and gemmy:GetAttribute("Title") == nil)
+	check("you can't wear what you don't own", gemAs({ op = "equip", kind = "aura", id = "aura_rainbow" }).ok == false)
+	local gemsNow = gd.gems
+	local r3 = gemAs({ op = "buy", id = "boost_gilt" })
+	check("a Gilt Surge runs for half an hour", r3.ok and gd.gems == gemsNow - GemList.byId.boost_gilt.gems and gd.gemShop.giltUntil > fakeOs.time() + 1700)
+	GiltModule.surge = GemShop.giltBoost
+	local plain, surged
+	local other = guest("Plain", 305)
+	run(function()
+		plain = GiltModule.pay(other, profiles[other].Data, 100, "test")
+		surged = GiltModule.pay(gemmy, gd, 100, "test")
+	end)
+	check("and pays half again", surged == math.floor(plain * 1.5 + 0.5), tostring(plain) .. " / " .. tostring(surged))
+	advance(1801)
+	run(function()
+		surged = GiltModule.pay(gemmy, gd, 100, "test")
+	end)
+	check("then it runs out", surged == plain)
+	local giltNow = gd.gilt
+	gemsNow = gd.gems
+	check("Gems change for Gilt at the set rate", gemAs({ op = "buy", id = "swap_small" }).ok and gd.gilt == giltNow + 1000 and gd.gems == gemsNow - 25)
+	gd.gems = 10
+	local poor = gemAs({ op = "buy", id = "aura_rainbow" })
+	check("not enough Gems: says how many more, takes nothing", poor.ok == false and string.find(poor.why, "490 more", 1, true) ~= nil and gd.gems == 10)
+	gd.gems = 100
+	local cur = gemAs({ op = "curio", id = "saffronJar" })
+	check("the Cabinet's curios are bought here too, at their price", cur.ok and CuriosS.count(gd, "saffronJar") == 1 and gd.gems == 40)
+	check("and Gems spent are counted for the Badge Book", (gd.tally.gemsSpent or 0) >= 60)
+	GiltModule.surge = function()
+		return 1
+	end
 end
 
 H.finish()

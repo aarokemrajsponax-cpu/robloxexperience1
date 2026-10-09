@@ -65,6 +65,12 @@ local TradePanel = require(script.Parent.UI.TradePanel)
 local PianoPanel = require(script.Parent.UI.PianoPanel)
 local DecreeBanner = require(script.Parent.UI.DecreeBanner)
 local RainView = require(script.Parent.World.RainView)
+local OwnerConsole = require(script.Parent.UI.OwnerConsole)
+local Headline = require(script.Parent.UI.Headline)
+local GiltBar = require(script.Parent.UI.GiltBar)
+local BadgeBookPanel = require(script.Parent.UI.BadgeBookPanel)
+local GemShopPanel = require(script.Parent.UI.GemShopPanel)
+local Celebrate = require(script.Parent.UI.Celebrate)
 
 local player = Players.LocalPlayer
 
@@ -134,6 +140,10 @@ Closet.Message:Connect(function(op: string, m: any)
 		CirclePanel.offer(m)
 	elseif op == "notice" then
 		Toast.show(tostring(m.title), tostring(m.line), 4)
+	elseif op == "levelUp" and type(m.level) == "number" then
+		Celebrate.levelUp(m.level, tostring(m.title or ""), if type(m.gilt) == "number" then m.gilt else 0, if type(m.gems) == "number" then m.gems else 0)
+	elseif op == "badge" and type(m.name) == "string" then
+		Celebrate.badge(m)
 	end
 end)
 -- Every part of the house on this screen starts on its own: one that fails is reported and the
@@ -184,6 +194,16 @@ start("Effects for everyone", function()
 	end
 	AbuseFX.start()
 end)
+-- The owner's headlines, countdowns and giveaways (on every screen); the holidays' looks; auras.
+start("Headlines", Headline.start)
+start("Holidays", require(script.Parent.World.HolidayFX).start)
+start("Auras", require(script.Parent.World.Auras).start)
+GemShopPanel.getGems = function()
+	CuriosPanel.open("gems")
+end
+OwnerConsole.openClassic = function(page: string?)
+	AdminPanel.open(page)
+end
 -- Curios, Gems, trading, and the Menu's tiles.
 start("Curios", function()
 	CurioState.start()
@@ -206,7 +226,7 @@ start("Curios", function()
 	end
 	QuickDock.openWardrobe = WardrobePanel.open
 	QuickDock.openGems = function()
-		CuriosPanel.open("gems")
+		GemShopPanel.open()
 	end
 	QuickDock.invite = TradePanel.invite
 	QuickDock.inviteFriend = require(script.Parent.UI.Invite).house
@@ -232,6 +252,12 @@ start("Curios", function()
 		end },
 		{ id = "gems", title = "Gems", line = "Gem packs, and what Gems buy in the Cabinet.", glyph = "💎", open = function()
 			CuriosPanel.open("gems")
+		end },
+		{ id = "gemShop", title = "The Gem Shop", line = "Auras, titles, Surges and Gilt, for Gems. Fixed prices, never random.", glyph = "✨", open = function()
+			GemShopPanel.open()
+		end },
+		{ id = "badges", title = "The Badge Book", line = "Every badge in the house, and how far along you are.", glyph = "🏅", open = function()
+			BadgeBookPanel.open()
 		end },
 		{ id = "boutique", title = "The Boutique", line = "Looks, table styles, lamps and more. Style, never score.", glyph = "🛍️", open = function()
 			BoutiquePanel.open()
@@ -288,10 +314,12 @@ start("Perks", function()
 	TableClient.Seated.Event:Connect(function()
 		PerkChips.setHidden(true)
 		EventBanner.setSeated(true)
+		GiltBar.setSeated(true)
 	end)
 	TableClient.Left.Event:Connect(function()
 		PerkChips.setHidden(false)
 		EventBanner.setSeated(false)
+		GiltBar.setSeated(false)
 	end)
 end)
 AdmireCard.openBoutique = function(tab, forGuest)
@@ -396,17 +424,38 @@ local function startHud()
 		end
 		return Enum.ContextActionResult.Pass
 	end, false, Enum.KeyCode.M)
-	-- The owner's House controls: a key only they see (the server checks every request).
+	-- The live Gilt bar (Gilt, Gems, level), out of the way at a table or under a panel.
+	start("The Gilt bar", function()
+		GiltBar.openGems = function()
+			GemShopPanel.open()
+		end
+		GiltBar.openBadges = BadgeBookPanel.open
+		GiltBar.isBusy = function(): boolean
+			return TableClient.isSeated() or State.phase ~= "play"
+		end
+		GiltBar.start()
+	end)
+	-- The Owner Console: a key only the owner sees (the server checks every request), opened by
+	-- itself, with a welcome, when they arrive.
 	local function ownerKey()
 		if player:GetAttribute("MaisonAdmin") == true and not ownerKeyShown then
 			ownerKeyShown = true
-			Hud.setOwnerKey(AdminPanel.open)
+			Hud.setOwnerKey(function()
+				OwnerConsole.open()
+			end)
 			ContextActionService:BindAction("MaisonHouseControls", function(_, state)
 				if state == Enum.UserInputState.Begin then
-					AdminPanel.open()
+					OwnerConsole.toggle()
 				end
 				return Enum.ContextActionResult.Sink
 			end, false, Enum.KeyCode.Semicolon)
+			if Config.data.Admin.consoleOnJoin then
+				task.delay(1.5, function()
+					if not TableClient.isSeated() then
+						OwnerConsole.welcome()
+					end
+				end)
+			end
 		end
 	end
 	ownerKey()

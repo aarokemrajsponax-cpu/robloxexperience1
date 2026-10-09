@@ -150,6 +150,14 @@ boot("Boards", Boards.start)
 
 local LedgerService = require(script.Parent.LedgerService)
 local Collection = require(script.Parent.Collection)
+-- Levels, the Badge Book and the Gem Shop.
+local Achievements = require(script.Parent.Achievements)
+local Progress = require(script.Parent.Progress)
+local GemShop = require(script.Parent.GemShop)
+local GiltService = require(script.Parent.Gilt)
+local CuriosService = require(script.Parent.Curios)
+local LevelsShared = require(ReplicatedStorage.Shared.Levels)
+local ConfigData = require(ReplicatedStorage.Shared.Config).data
 local SoireeService = require(script.Parent.SoireeService)
 SoireeService.notice = function(player, title, line)
 	Remotes.event("Shop"):FireClient(player, { op = "notice", title = title, line = line })
@@ -235,6 +243,13 @@ BallroomService.onFinished = function(player, place, keys, counted)
 	end
 	b.weekPoints += require(ReplicatedStorage.Shared.LightsOut).points(place, keys)
 	Boards.submit(player, "ballroom", b.weekPoints)
+	Progress.give(player, "ballroom")
+	if place == 1 then
+		Progress.give(player, "lastLamp")
+	elseif place <= 5 then
+		Progress.give(player, "topFive")
+	end
+	Achievements.check(player)
 end
 BallroomService.onResult = function(tableNumber, name, keys)
 	Boards.ballroomResult(tableNumber, name, keys)
@@ -256,6 +271,13 @@ AdminService.season = Season.force
 AdminService.note = Boards.note
 AdminService.isSeated = function(player)
 	return TableService.isSeated(player) or DuelService.isSeated(player) or BallroomService.isSeated(player)
+end
+AdminService.award = Achievements.award
+AdminService.tally = function(player, stat, n, once)
+	Achievements.tally(player, stat, n, once)
+	if stat == "pickups" then
+		Progress.give(player, "pickup")
+	end
 end
 LedgerService.boost = AdminService.ledgerBoost
 TableService.mythicLuck = AdminService.mythicLuck
@@ -299,6 +321,7 @@ local Friends = require(script.Parent.Friends)
 local SuiteVisits = require(script.Parent.SuiteVisits)
 require(script.Parent.Gilt).friends = Friends.giltBoost
 Friends.arrived = function(player: Player, friend: Player)
+	Achievements.award(player, "friendHere")
 	local more = math.floor((require(ReplicatedStorage.Shared.Config).data.Friends.giltBoost - 1) * 100 + 0.5)
 	Remotes.event("Shop"):FireClient(player, { op = "notice", title = "A friend is here", line = string.format("%s is in the house: friends together earn %d%% more Gilt, and you can visit each other's Suites.", friend.DisplayName, more) })
 end
@@ -349,6 +372,8 @@ boot("Friend invitations", Referral.start)
 Concierge.usualRoom = Memory.usualRoom
 TableService.onRound = function(player, roomId, grade, tableId)
 	Collection.round(player, roomId, grade)
+	Progress.give(player, "round", grade)
+	Achievements.check(player)
 	Memory.round(player, tableId)
 	if grade == "Flawless" then
 		local room = require(ReplicatedStorage.Shared.Rooms).get(roomId)
@@ -358,6 +383,7 @@ end
 TableService.onFiling = function(player, correct)
 	if correct then
 		LedgerService.add(player, "filing")
+		Progress.give(player, "filing")
 	end
 end
 
@@ -390,6 +416,8 @@ TableService.onNightlyFinished = function(player, percentile)
 	CircleService.add(player, "nightly", percentile)
 	LedgerService.add(player, "nightly")
 	Collection.nightly(player)
+	Progress.give(player, "nightly")
+	Achievements.check(player)
 end
 DuelService.onFinished = function(a, b, winner, ranked, standIn)
 	local winnerPlayer = if winner == "a" then a elseif winner == "b" then b else nil
@@ -416,10 +444,20 @@ DuelService.onFinished = function(a, b, winner, ranked, standIn)
 	if a then
 		LedgerService.add(a, "library", if winner == "a" then 1 else 0)
 		Collection.library(a, winner == "a")
+		Progress.give(a, "library")
+		if winner == "a" then
+			Progress.give(a, "libraryWin")
+		end
+		Achievements.check(a)
 	end
 	if b then
 		LedgerService.add(b, "library", if winner == "b" then 1 else 0)
 		Collection.library(b, winner == "b")
+		Progress.give(b, "library")
+		if winner == "b" then
+			Progress.give(b, "libraryWin")
+		end
+		Achievements.check(b)
 	end
 	local _ = standIn
 end
@@ -442,6 +480,131 @@ TableService.onUnlock = function(player, room)
 end
 require(script.Parent.Profiles).Loaded:Connect(function(player)
 	Collection.arrived(player)
+	-- The level on the nameplate, the day's XP for coming, the Gilt and Gems on screen, and any
+	-- badge already earned (quietly: what was done before the Badge Book existed).
+	Progress.daily(player)
+	local data = require(script.Parent.Profiles).get(player)
+	if data then
+		player:SetAttribute("Gilt", data.gilt)
+		player:SetAttribute("Gems", data.gems)
+	end
+	Achievements.check(player, true)
+	GemShop.apply(player)
+end)
+
+-- Levels: the boosts (Double XP, an XP Surge) and what a new level brings.
+Progress.boost = function(player)
+	local b = 1
+	if AdminService.active("doubleXP") then
+		b *= ConfigData.Admin.doubleXP
+	end
+	if GemShop.xpSurge(player) then
+		b *= ConfigData.Levels.surge
+	end
+	return b
+end
+Progress.levelUp = function(player, level, gilt, gems)
+	local data = require(script.Parent.Profiles).get(player)
+	if not data then
+		return
+	end
+	data.gilt += gilt
+	Analytics.source(player, "Gilt", gilt, data.gilt, "Level " .. tostring(level))
+	if gems > 0 then
+		data.gems += gems
+		Analytics.source(player, "Gems", gems, data.gems, "Level " .. tostring(level))
+		CuriosService.push(player)
+	end
+	GiltService.changed(player)
+	Remotes.event("Shop"):FireClient(player, { op = "levelUp", level = level, title = LevelsShared.title(level), gilt = gilt, gems = gems })
+	Achievements.check(player)
+	if level % ConfigData.Levels.announceEvery == 0 then
+		Remotes.event("Salute"):FireAllClients({ op = "levelPublic", name = player.DisplayName, userId = player.UserId, level = level, title = LevelsShared.title(level) })
+	end
+end
+-- The Badge Book: a badge said on the guest's screen.
+Achievements.notify = function(player, badge)
+	Remotes.event("Shop"):FireClient(player, { op = "badge", key = badge.key, name = badge.name, line = badge.line, glyph = badge.glyph, tier = badge.tier })
+end
+-- Gilt: a Gilt Surge counts, every payment is counted, and the number on screen follows.
+GiltService.surge = GemShop.giltBoost
+GiltService.earned = function(player, paid)
+	Achievements.add(player, "giltEarned", paid)
+end
+do
+	local changed = GiltService.changed
+	GiltService.changed = function(player)
+		changed(player)
+		local data = require(script.Parent.Profiles).get(player)
+		if data then
+			player:SetAttribute("Gilt", data.gilt)
+		end
+		Achievements.check(player)
+	end
+	local push = CuriosService.push
+	CuriosService.push = function(player)
+		push(player)
+		local data = require(script.Parent.Profiles).get(player)
+		if data then
+			player:SetAttribute("Gems", data.gems)
+		end
+	end
+end
+CuriosService.secret = function(player)
+	Achievements.award(player, "nightOwl")
+end
+-- The Gem Shop.
+GemShop.award = Achievements.award
+GemShop.tally = function(player, stat, n)
+	if n > 0 then
+		Achievements.tally(player, stat, n)
+	else
+		Achievements.check(player)
+	end
+end
+boot("The Gem Shop", GemShop.start)
+-- Moments the Badge Book counts.
+require(script.Parent.TradeService).traded = function(player)
+	Achievements.tally(player, "trades", 1)
+end
+SuiteVisits.visited = function(player)
+	Achievements.award(player, "suiteVisit")
+end
+do
+	local admire = Social.admire
+	Social.admire = function(player, userId)
+		local r = admire(player, userId)
+		if type(r) == "table" and r.ok then
+			Achievements.award(player, "admired")
+		end
+		return r
+	end
+	local sign = Social.sign
+	Social.sign = function(player, data, line)
+		local r = sign(player, data, line)
+		if type(r) == "table" and r.ok then
+			Achievements.award(player, "guestBook")
+		end
+		return r
+	end
+	local circleChanged = CircleService.changed
+	CircleService.changed = function(player)
+		circleChanged(player)
+		local data = require(script.Parent.Profiles).get(player)
+		if data and data.circle.id ~= "" then
+			Achievements.award(player, "circle")
+		end
+	end
+end
+-- The Badge Book on the guest's screen.
+require(script.Parent.RemoteGuard).invoke(Remotes.func("BadgeAsk"), "badgeAsk", function(player: Player, _request: unknown): any
+	local data = require(script.Parent.Profiles).get(player)
+	if not data then
+		return { ok = false, why = "Your ledger is still being opened." }
+	end
+	local view = Achievements.view(data)
+	view.ok = true
+	return view
 end)
 
 -- Last: saved profiles (everything listening for them is connected by now).

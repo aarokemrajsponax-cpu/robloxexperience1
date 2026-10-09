@@ -30,6 +30,9 @@ local RECENT = 12 -- the latest finds kept for the "Recent" shelf
 Curios.GEM_KEYS = { "gems1", "gems2", "gems3" }
 local IS_GEM_KEY: { [string]: boolean } = { gems1 = true, gems2 = true, gems3 = true }
 
+-- The Midnight Owl was found (set by Main: its badge).
+Curios.secret = function(_player: Player) end
+
 -- The random numbers for finds (a test can make them fixed).
 Curios.random = Random.new()
 
@@ -140,6 +143,7 @@ function Curios.afterRun(player: Player, data: Profiles.Data, rounds: number, ac
 	if flawless and roomId == "midnight" and rounds >= 3 and (b.items.midnightOwl or 0) == 0 then
 		Curios.give(player, data, "midnightOwl", 1, "secret")
 		found = { id = "midnightOwl" }
+		Curios.secret(player)
 	elseif Curios.random:NextNumber() < Curios.chance(rounds, accuracy) then
 		local c = CurioList.pick(Curios.random:NextNumber(), Curios.random:NextNumber())
 		Curios.give(player, data, c.id, 1, "tables")

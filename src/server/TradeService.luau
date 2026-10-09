@@ -25,6 +25,9 @@ local RemoteGuard = require(script.Parent.RemoteGuard)
 
 local TradeService = {}
 
+-- A trade went through for this guest (set by Main: the Badge Book counts trades).
+TradeService.traded = function(_player: Player) end
+
 TradeService.Settings = {
 	maxKinds = 8, -- different curios on one side of a trade
 	maxEach = 99, -- of one curio
@@ -176,6 +179,7 @@ local function swap(t: Trade): (boolean, string?)
 			end)
 		end
 		Analytics.custom(p, "Trade", 1, { trade = t.id })
+		TradeService.traded(p)
 	end
 	return true, nil
 end

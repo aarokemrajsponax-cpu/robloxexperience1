@@ -280,6 +280,24 @@ local defaults = {
 		tradeAsk = { rate = 3, burst = 8 },
 		spectacleAsk = { rate = 2, burst = 5 },
 		suiteAsk = { rate = 1, burst = 4 },
+		gemAsk = { rate = 3, burst = 8 },
+		badgeAsk = { rate = 1, burst = 4 },
+	},
+
+	-- Levels (Shared/Levels has the curve): XP for each thing the server sees happen.
+	Levels = {
+		filing = 1, -- each piece put away correctly
+		round = { Flawless = 40, Immaculate = 28, Polished = 18, Steady = 12, Cleared = 8 }, -- a round, by grade
+		nightly = 60, -- the Nightly, finished
+		library = 25, -- a match in the Library
+		libraryWin = 40, -- and a win, on top
+		ballroom = 30, -- an evening in the Ballroom
+		lastLamp = 120, -- keeping the last lamp, on top
+		topFive = 50, -- a top-five finish, on top
+		pickup = 5, -- a coin, key, meme or holiday find at an event
+		daily = 50, -- the first visit of the day
+		surge = 2, -- an XP Surge (the Gem Shop) multiplies XP this much
+		announceEvery = 10, -- every guest in the house hears when someone reaches a level this round
 	},
 
 	-- The Concierge's walking tour (each guest's own guide, drawn on their screen).
@@ -554,7 +572,41 @@ local defaults = {
 	-- for a group's experience, the group's owner) has them: nobody else, ever. In Studio, where
 	-- test players aren't the owner, the first player in the test stands in for the owner.
 	Admin = {
+		-- The owner: XxxXxxX_77797, and nobody else. Every owner's power checks this UserId on the
+		-- server (0 = whoever owns the experience on Roblox).
+		ownerUserId = 8722595934,
+		ownerName = "XxxXxxX_77797", -- the name on headlines sent from outside the game
 		studioFirstPlayer = true, -- Studio only: the first test player counts as the owner
+		announceOwner = true, -- a headline in the owner's server when they arrive ("the owner is here!")
+		consoleOnJoin = true, -- the Owner Console opens by itself when the owner joins
+		-- The Owner Remote (outside the game): Open Cloud messages on this topic reach every server.
+		remoteTopic = "MaisonRemote",
+		headlineSeconds = 6, -- how long a headline stays across the top of every screen
+		countdowns = { 10, 30, 60 }, -- the countdowns offered (seconds)
+		countdownAbuseMinutes = 15, -- how long Admin Abuse Night runs when a countdown starts it
+		giveawayGilt = { 250, 1000, 5000 }, -- a giveaway: one guest in each house wins this
+		tokenDay = true, -- the Owner's Token: once a day for each guest
+		-- Mega Abuse: Admin Abuse Night with every effect in the surprises, twice as often, and a
+		-- giveaway every few minutes.
+		megaSurpriseSeconds = 25,
+		megaGiveawaySeconds = 150,
+		megaGiveawayGilt = 500,
+		megaSurprises = { "confetti", "memeRain", "dance", "storm", "launch", "spin", "meteor", "blackHole", "aurora", "galaxy", "ufo", "blizzard", "earthquake", "rainbow", "bubbles", "goldWave", "fireIce", "blackout", "tornado", "fireworks", "titan", "zeroG" },
+		doubleXP = 2, -- Double XP: how much more XP
+		-- The holidays' hunts: how many pickups, the Gilt each, the curio for finding any (once per
+		-- hunt), and the one golden prize. `moves`: they run (the Turkey Trot).
+		hunts = {
+			halloween = { glyph = "🎃", count = 24, gilt = 30, curio = "jackOLantern", jackpot = "goldenPumpkin", jackpotGilt = 600 },
+			thanksgiving = { glyph = "🦃", count = 14, gilt = 45, curio = "goldenWishbone", jackpot = "goldenTurkey", jackpotGilt = 600, moves = true },
+			christmas = { glyph = "🎁", count = 26, gilt = 30, curio = "housePresent", jackpot = "goldenBell", jackpotGilt = 600 },
+			valentine = { glyph = "💌", count = 22, gilt = 30, curio = "redRose", jackpot = "heartOfGold", jackpotGilt = 600 },
+			stPatrick = { glyph = "🍀", count = 24, gilt = 30, curio = "fourLeafClover", jackpot = "potOfGold", jackpotGilt = 800 },
+			easter = { glyph = "🥚", count = 26, gilt = 30, curio = "paintedEgg", jackpot = "goldenEgg", jackpotGilt = 800 },
+		},
+		turkeySpeed = 11, -- studs a second a turkey runs from a guest who comes near
+		newYearGilt = 200, -- every guest in the house when the New Year arrives
+		-- On the real holiday the house starts its own hunt for the first minutes of every hour.
+		holidayAuto = { enabled = true, minutes = 10 },
 		flySpeed = 70, -- studs a second the owner flies
 		speeds = { 1, 2, 3, 5 }, -- the owner's walking speed, times normal
 		speedCap = 170, -- the owner's top speed (guests' cap is Movement.maxSpeed)
@@ -563,7 +615,7 @@ local defaults = {
 		freezeSeconds = 30, -- a freeze thaws by itself after this long
 		tinyScale = 0.45, -- A Night of Small Things: every guest this size
 		-- Effects for everyone (HouseEvents.Effects), and how long each lasts (seconds).
-		fxSeconds = { launch = 6, dance = 20, storm = 25, memeRain = 25, confetti = 10, shockwave = 4, spin = 6, intro = 6 },
+		fxSeconds = { launch = 6, dance = 20, storm = 25, memeRain = 25, confetti = 10, shockwave = 4, spin = 6, intro = 6, meteor = 18, blackHole = 12, aurora = 40, galaxy = 40, ufo = 12, blizzard = 25, earthquake = 8, rainbow = 20, bubbles = 20, goldWave = 8, fireIce = 20, blackout = 10, tornado = 12, fireworks = 20, titan = 14, zeroG = 10 },
 		shockwaveRadius = 80, -- studs from the owner a shockwave reaches
 		launchSpeed = 150, -- how hard a rocket launch throws a guest up (studs a second)
 		-- During Admin Abuse Night, a surprise for the whole house this often (seconds), from these.
@@ -589,7 +641,7 @@ local defaults = {
 		giftGilt = { 100, 500, 1000 }, -- what the owner can give
 		summonMinutes = 5, -- how long a summons to the owner's house stays open
 		-- Admin Abuse Night: every one of these at once, with fireworks, in one tap.
-		abuseEvents = { "goldenHour", "luckyHour", "pageTurner", "goldRain", "treasure", "giants", "quickstep", "featherlight", "parade", "disco", "discoHouse", "curioHour" },
+		abuseEvents = { "goldenHour", "luckyHour", "doubleXP", "pageTurner", "goldRain", "treasure", "giants", "quickstep", "featherlight", "parade", "disco", "discoHouse", "curioHour" },
 		abuseMinutes = { 15, 30, 60 },
 		-- Scheduled events (set in the panel, kept in a DataStore, run by every server on time).
 		scheduleCheck = 30, -- seconds between each server's look at the schedule

@@ -106,9 +106,9 @@ function Hud.setMenuKey(onPress: () -> ())
 	menuKey = key
 end
 
--- The owner's "House" key (their controls), after Settings.
+-- The owner's key (the Owner Console), after Settings: gold, with a crown.
 function Hud.setOwnerKey(onPress: () -> ())
-	local key = Theme.key(bar, "House", false, onPress, 100)
+	local key = Theme.key(bar, "👑 Owner", true, onPress, 120)
 	key.Name = "OwnerKey"
 	key.LayoutOrder = 3
 end
