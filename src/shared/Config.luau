@@ -616,6 +616,32 @@ local defaults = {
 		tinyScale = 0.45, -- A Night of Small Things: every guest this size
 		-- Effects for everyone (HouseEvents.Effects), and how long each lasts (seconds).
 		fxSeconds = { launch = 6, dance = 20, storm = 25, memeRain = 25, confetti = 10, shockwave = 4, spin = 6, intro = 6, meteor = 18, blackHole = 12, aurora = 40, galaxy = 40, ufo = 12, blizzard = 25, earthquake = 8, rainbow = 20, bubbles = 20, goldWave = 8, fireIce = 20, blackout = 10, tornado = 12, fireworks = 20, titan = 14, zeroG = 10 },
+		-- Effects switched on from the Owner Console stay on until switched off. The ones that
+		-- move guests come in waves (`on` seconds of it, then `rest` seconds to walk and sort);
+		-- every other effect simply stays.
+		fxWaves = {
+			launch = { on = 5, rest = 10 },
+			shockwave = { on = 3, rest = 9 },
+			spin = { on = 5, rest = 8 },
+			blackHole = { on = 12, rest = 10 },
+			ufo = { on = 12, rest = 10 },
+			tornado = { on = 12, rest = 10 },
+			earthquake = { on = 6, rest = 8 },
+			goldWave = { on = 6, rest = 6 },
+			confetti = { on = 10, rest = 2 },
+			titan = { on = 18, rest = 6 },
+			fireworks = { on = 30, rest = 0 },
+		},
+		-- While Admin Abuse, Mega Abuse or an effect is on, the sorting tables join in: golden
+		-- pieces in every deal (the server picks them; filing one in its right case pays this much
+		-- Gilt, multiplied like all Gilt), and Mega Abuse makes all Gilt triple.
+		table = {
+			golden = { abuse = 2, mega = 3, effect = 1 }, -- golden pieces in each deal
+			goldenGilt = 40, -- what one pays (before Gilt's multipliers)
+			megaGilt = 3, -- all Gilt during Mega Abuse (Admin Abuse's Golden Hour doubles it)
+		},
+		-- Servers that open while something is on everywhere join in: they look this often (s).
+		liveCheck = 30,
 		shockwaveRadius = 80, -- studs from the owner a shockwave reaches
 		launchSpeed = 150, -- how hard a rocket launch throws a guest up (studs a second)
 		-- During Admin Abuse Night, a surprise for the whole house this often (seconds), from these.
@@ -865,6 +891,72 @@ local defaults = {
 				{ id = "rbxassetid://1842365951", gain = 1.00 }, -- Skater's Waltz · KPM 1000 LP Series (FUN TIME), 4:29
 			},
 		},
+		-- Music for Admin Abuse and the owner's effects (World/AbuseMusic), from the same licensed
+		-- library (APM Music, uploaded by APMOfficial): it takes over from the house's music while
+		-- Admin Abuse or a switched-on effect is on, and the house's music comes back after. `gain`
+		-- evens their loudness (measured, to about -17 dBFS: a little above the house's music).
+		AbuseMusic = {
+			abuse = {
+				{ id = "rbxassetid://1837110785", gain = 0.52 }, -- Feeling (dance), 3:45
+				{ id = "rbxassetid://1837110694", gain = 0.70 }, -- Skyhook (dance), 2:48
+				{ id = "rbxassetid://1846368080", gain = 0.79 }, -- Stadium Rave (A), 2:34
+				{ id = "rbxassetid://9038367768", gain = 0.48 }, -- Funky Disco Beats, 3:20
+				{ id = "rbxassetid://1837088784", gain = 0.72 }, -- Digital Dawn (dance), 2:20
+				{ id = "rbxassetid://1837088576", gain = 0.65 }, -- Bang On ! (electro pop), 3:01
+			},
+			mega = {
+				{ id = "rbxassetid://9038275152", gain = 0.59 }, -- Electric Shock (dubstep), 3:19
+				{ id = "rbxassetid://9038274387", gain = 0.60 }, -- Next Level (dubstep, electro), 3:15
+				{ id = "rbxassetid://1839931160", gain = 0.65 }, -- 8 Bit Dubstep, 2:25
+				{ id = "rbxassetid://9044545570", gain = 0.54 }, -- Night Run (drum and bass), 3:03
+				{ id = "rbxassetid://1837111002", gain = 0.59 }, -- Squad (dance), 3:12
+			},
+			cosmic = {
+				{ id = "rbxassetid://1841460294", gain = 1.17 }, -- Celestial Aurora, 3:02
+				{ id = "rbxassetid://1841460391", gain = 1.22 }, -- Stellar Dendrites, 3:06
+			},
+			scifi = {
+				{ id = "rbxassetid://9045959116", gain = 1.33 }, -- Galactron, 2:57
+				{ id = "rbxassetid://74182710760944", gain = 0.61 }, -- Barren Planet, 2:16
+			},
+			epic = {
+				{ id = "rbxassetid://1842754581", gain = 1.08 }, -- Enemy Escape, 2:08
+				{ id = "rbxassetid://118322552504405", gain = 0.99 }, -- Heroes Theme, 1:44
+				{ id = "rbxassetid://1839459610", gain = 1.16 }, -- Grand Overture, 1:22
+			},
+			hero = {
+				{ id = "rbxassetid://118322552504405", gain = 0.99 }, -- Heroes Theme, 1:44
+				{ id = "rbxassetid://1839459610", gain = 1.16 }, -- Grand Overture, 1:22
+			},
+			party = {
+				{ id = "rbxassetid://1835725225", gain = 0.67 }, -- Disco Sapiens, 2:35
+				{ id = "rbxassetid://9038367768", gain = 0.48 }, -- Funky Disco Beats, 3:20
+				{ id = "rbxassetid://1837088576", gain = 0.65 }, -- Bang On !, 3:01
+			},
+			winter = {
+				{ id = "rbxassetid://1841460670", gain = 1.07 }, -- Frost Flowers, 1:01
+				{ id = "rbxassetid://1841460294", gain = 1.17 }, -- Celestial Aurora, 3:02
+			},
+			gold = {
+				{ id = "rbxassetid://1839902859", gain = 0.63 }, -- Victory Fanfare (brass band), 1:01
+			},
+			spy = {
+				{ id = "rbxassetid://1842229516", gain = 1.55 }, -- Jazz Graphics (No. 4), 2:26
+				{ id = "rbxassetid://1842229501", gain = 1.55 }, -- Jazz Graphics (No. 3), 2:45
+			},
+			fireworks = {
+				{ id = "rbxassetid://9038221669", gain = 0.9 }, -- Tairitsu (taiko), the fireworks' own
+			},
+		},
+		-- Which music each effect plays while it's switched on.
+		AbuseThemes = {
+			galaxy = "cosmic", aurora = "cosmic", zeroG = "cosmic", ufo = "scifi",
+			meteor = "epic", blackHole = "epic", earthquake = "epic", tornado = "epic", storm = "epic", fireIce = "epic",
+			titan = "hero", launch = "hero", shockwave = "hero",
+			dance = "party", confetti = "party", rainbow = "party", bubbles = "party", memeRain = "party", spin = "party",
+			blizzard = "winter", goldWave = "gold", blackout = "spy", fireworks = "fireworks",
+		},
+		AbuseMusicVolume = 0.85,
 		-- One track of your own in place of a playlist ("rbxassetid://<id>"), e.g. the house's own
 		-- composed loops in assets/audio. "" plays the playlist. (A track named maison-lounge,
 		-- maison-table or maison-ballroom in SoundService is used if a playlist is emptied.)

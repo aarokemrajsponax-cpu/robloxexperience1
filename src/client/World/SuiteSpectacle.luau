@@ -1,6 +1,7 @@
 --!strict
--- Suite spectacles: the shows a guest buys for their own Suite, and plays from the bell. The
--- server spends the show and tells this screen to play it (Purchases/Spectacles); this draws it,
+-- Suite spectacles: the shows a guest buys for their own Suite; each plays the moment it's bought
+-- (one saved from before plays from the bell). The server spends the show and tells this screen to
+-- play it (Purchases/Spectacles); this draws it,
 -- only here (a Suite is its owner's alone). Also the small screen listing the three, plainly
 -- priced, with how many you hold.
 
@@ -45,6 +46,10 @@ local function golden(seconds: number)
 end
 
 function SuiteSpectacle.play(key: string, seconds: number?)
+	-- (Bought just now with this screen open: it steps aside for the show.)
+	if Root.isOpen(NAME) then
+		Root.close(NAME)
+	end
 	local s = seconds or 20
 	if key == "spectacleFireworks" then
 		fireworks(s)
@@ -62,7 +67,7 @@ function SuiteSpectacle.open()
 	local group, content = Theme.glass(Root.panels, NAME, UDim2.fromOffset(math.min(600, Root.size().X - 24), math.min(600, Root.size().Y - 40)))
 	Theme.list(content, 8).VerticalAlignment = Enum.VerticalAlignment.Top
 	Theme.text(content, "Spectacles", 24, "display", { LayoutOrder = 1 })
-	Theme.text(content, "A show in your own Suite, played when you choose. Each purchase is one show. Only you see it.", 13, "body", { LayoutOrder = 2, TextColor3 = C.smoke })
+	Theme.text(content, "A show in your own Suite. It starts the moment you buy it (or when you next step in). Only you see it.", 13, "body", { LayoutOrder = 2, TextColor3 = C.smoke })
 	-- The shows, each row as tall as its words (scrolling, on a small screen).
 	local list = Instance.new("ScrollingFrame")
 	list.Name = "Shows"

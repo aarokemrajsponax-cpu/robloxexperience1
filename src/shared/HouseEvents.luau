@@ -127,6 +127,12 @@ function HouseEvents.attribute(id: string): string
 	return "Event_" .. id
 end
 
+-- The Workspace attribute an effect the owner has switched on lives in (its value: when it was
+-- switched on, os.time). Every screen watches it: the effect stays on until it's gone.
+function HouseEvents.fxAttribute(id: string): string
+	return "Fx_" .. id
+end
+
 -- Easter Sunday in a year (the Gregorian calendar's computus): its month and day.
 function HouseEvents.easter(year: number): (number, number)
 	local a = year % 19

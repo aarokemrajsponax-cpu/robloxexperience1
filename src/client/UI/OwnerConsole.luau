@@ -5,7 +5,8 @@
 -- happens: this screen only chooses.
 --
 --   ABUSE      Admin Abuse Night, Mega Abuse, countdowns to them, and Stop everything
---   EFFECTS    twenty-three effects for everyone (meteors, a black hole, a UFO, a titan meme...)
+--   EFFECTS    twenty-three effects for everyone (meteors, a black hole, a UFO, a titan meme...),
+--              each switched on until you switch it off
 --   HOLIDAYS   the holiday hunts and the New Year countdown
 --   EVENTS     Golden Hour, Double XP, giants, gold rain, the treasure hunt...
 --   PLAYERS    giveaways, Gilt for everyone, the Owner's Token, bring and freeze everyone
@@ -537,13 +538,19 @@ function OwnerConsole.open(startPage: string?)
 			end)
 		elseif page == "effects" then
 			local powers = v.powers or {}
-			local s = section("EFFECTS FOR EVERYONE" .. scopeText(), "Every guest sees it round them. Nobody sorting at a table is moved; nobody is ever hurt.")
+			local s = section("EFFECTS FOR EVERYONE" .. scopeText(), "Tap one to switch it on: it stays on, for everyone, until you tap it again. The gentle ones simply stay; the ones that move guests come in waves. At the sorting tables: golden pieces, and the effect on the table too. Nobody sorting is moved; nobody is ever hurt.")
 			local g = grid(s)
+			local n = 0
 			for i, e in (powers.effects or {}) :: { any } do
-				tile(g, i, accent, { id = "fx_" .. tostring(e.id), glyph = tostring(e.glyph or "✨"), name = tostring(e.name), line = tostring(e.line or "") }, function()
-					send({ op = "fx", id = e.id, everywhere = everywhere }, tostring(e.name) .. "!")
+				local on = e.on == true
+				tile(g, i, accent, { id = "fx_" .. tostring(e.id), glyph = tostring(e.glyph or "✨"), name = tostring(e.name), line = if on then "ON. Tap to switch it off." else tostring(e.line or ""), lit = on, on = if on then "ON" else nil }, function()
+					send({ op = "fx", id = e.id, on = not on, everywhere = everywhere }, tostring(e.name) .. (if on then " off" else " on") .. scopeText() .. ".")
 				end)
+				n = i
 			end
+			tile(g, n + 1, rgb(255, 80, 80), { id = "fxAllOff", glyph = "🧹", name = "Every effect off", line = "Back to normal" .. scopeText() .. ".", danger = true }, function()
+				send({ op = "fxAllOff", everywhere = everywhere }, "Every effect off" .. scopeText() .. ".")
+			end)
 		elseif page == "holidays" or page == "events" then
 			minutesRow()
 			local holidays = page == "holidays"
@@ -556,7 +563,7 @@ function OwnerConsole.open(startPage: string?)
 					local left = eventLeft(e)
 					tile(g, n, accent, { id = "event_" .. tostring(e.id), glyph = tostring(e.glyph or "🎉"), name = tostring(e.name), line = tostring(e.line), lit = left > 0, on = if left > 0 then clock(left) else nil }, function()
 						if left > 0 then
-							send({ op = "stop", id = e.id }, tostring(e.name) .. " stopped.")
+							send({ op = "stop", id = e.id, everywhere = everywhere }, tostring(e.name) .. " stopped" .. scopeText() .. ".")
 						else
 							send({ op = "event", id = e.id, minutes = minutes, everywhere = everywhere }, tostring(e.name) .. " has begun" .. scopeText() .. ".")
 						end

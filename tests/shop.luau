@@ -1117,8 +1117,9 @@ do
 	ownerRoot.Position = Vector3.new(10, 5, 10)
 	ownerRoot.CFrame = CFrame.new(ownerRoot.Position)
 	local fired = adminAs(owner, { op = "fx", id = "shockwave" })
-	local fx = lastBroadcast("abuseFX")
-	check("the owner sets off an effect for everyone (a shockwave blasts out from where they stand)", fired.ok and fx.id == "shockwave" and typeof(fx.origin) == "Vector3" and (fx.origin - ownerRoot.Position).Magnitude < 0.01)
+	check("the owner switches an effect on for everyone, and it stays on (every screen watches the switch)", fired.ok and services.Workspace:GetAttribute("Fx_shockwave") ~= nil and fired.fxOn.shockwave == true)
+	local again = adminAs(owner, { op = "fx", id = "shockwave" })
+	check("...and a second tap switches it off", again.ok and services.Workspace:GetAttribute("Fx_shockwave") == nil and again.fxOn.shockwave == nil)
 	check("only the house's own effects", adminAs(owner, { op = "fx", id = "nuke" }).ok == false)
 	adminAs(owner, { op = "power", power = "ghost" })
 	check("Ghost: through walls (the owner's own power)", owner:GetAttribute("AdminGhost") == true)
@@ -1479,7 +1480,11 @@ do
 	run(function()
 		remote({ Data = '{"op":"fx","id":"meteor"}' })
 	end)
-	check("a remote effect plays on every screen", lastCast("abuseFX") ~= nil and lastCast("abuseFX").id == "meteor" and #broadcasts > castBefore)
+	check("a remote effect is switched on in every server (and stays on)", services.Workspace:GetAttribute("Fx_meteor") ~= nil)
+	run(function()
+		remote({ Data = '{"op":"fxAllOff"}' })
+	end)
+	check("...and the remote can switch every effect off", services.Workspace:GetAttribute("Fx_meteor") == nil)
 	run(function()
 		remote({ Data = '{"op":"headline","text":"rude remote words","style":"ice"}' })
 	end)
@@ -1513,7 +1518,7 @@ do
 	castBefore = #broadcasts
 	run(function()
 		for _ = 1, 25 do
-			remote({ Data = '{"op":"fx","id":"confetti"}' })
+			remote({ Data = '{"op":"headline","preset":1}' })
 		end
 	end)
 	check("the remote is held to twenty commands in ten seconds", #broadcasts - castBefore == 20, #broadcasts - castBefore)
@@ -1793,6 +1798,132 @@ do
 	GiltModule.surge = function()
 		return 1
 	end
+end
+
+---------------------------------------------------------------------------------------------------
+-- Build 53: effects that stay on until switched off, Admin Abuse at the sorting tables, and
+-- "every server" meaning every server (even ones that open while it's on)
+---------------------------------------------------------------------------------------------------
+do
+	local AdminService = module("ServerScriptService", "Server", "AdminService")
+	local owner, ned
+	for _, g in guests do
+		if g.UserId == 100 then
+			owner = g
+		elseif g.UserId == 101 then
+			ned = g
+		end
+	end
+	local function adminAs(player, request)
+		advance(0.5)
+		local r
+		run(function()
+			r = AdminService.handle(player, request)
+		end)
+		return r
+	end
+	local W = services.Workspace
+	local function live()
+		local store = dataStores.MaisonSchedule or {}
+		return store.live or {}
+	end
+	run(function()
+		AdminService.stopAll("test")
+	end)
+	advance(1)
+	-- Only the owner.
+	check("a guest can't switch an effect on, or every effect off", adminAs(ned, { op = "fx", id = "galaxy" }).ok == false and adminAs(ned, { op = "fxAllOff" }).ok == false and W:GetAttribute("Fx_galaxy") == nil)
+	check("a guest can't start Admin Abuse anywhere", adminAs(ned, { op = "abuse", minutes = 15, everywhere = true }).ok == false and W:GetAttribute("AbuseUntil") == nil)
+	check("nor make another server's message (only the game's own servers can publish)", type(subscriptions.MaisonAdmin) == "function")
+	-- The owner, every server.
+	local r = adminAs(owner, { op = "fx", id = "galaxy", everywhere = true })
+	advance(0.5)
+	check("the owner switches the galaxy on in every server: on here...", r.ok and W:GetAttribute("Fx_galaxy") ~= nil)
+	check("...sent to every server, saying on", published[#published].message.op == "fx" and published[#published].message.id == "galaxy" and published[#published].message.on == true)
+	check("...and written down for any server that opens while it's on", live().fx ~= nil and live().fx.galaxy ~= nil)
+	check("the console shows it lit", r.fxOn.galaxy == true and (function()
+		for _, e in r.powers.effects do
+			if e.id == "galaxy" then
+				return e.on == true
+			end
+		end
+		return false
+	end)())
+	advance(60)
+	check("it stays on (a minute later, still on)", W:GetAttribute("Fx_galaxy") ~= nil)
+	-- The sorting tables join in.
+	local twist = AdminService.tableTwist()
+	check("an effect on: golden pieces at the tables", twist ~= nil and twist.kind == "effect" and twist.golden == Config.data.Admin.table.golden.effect)
+	adminAs(owner, { op = "abuse", minutes = 15 })
+	twist = AdminService.tableTwist()
+	check("Admin Abuse: more golden pieces, and Gilt doubled (Golden Hour)", twist ~= nil and twist.kind == "abuse" and twist.golden == Config.data.Admin.table.golden.abuse and AdminService.giltBoost() == Config.data.Admin.goldenHourGilt)
+	adminAs(owner, { op = "mega", minutes = 15 })
+	twist = AdminService.tableTwist()
+	check("Mega Abuse: the most golden pieces, and all Gilt triple", twist ~= nil and twist.kind == "mega" and twist.golden == Config.data.Admin.table.golden.mega and AdminService.giltBoost() == Config.data.Admin.table.megaGilt)
+	-- Another server's switch.
+	run(function()
+		subscriptions.MaisonAdmin({ Data = { op = "fx", id = "aurora", on = true, by = "XxxXxxX_77797", jobId = "another-server" } })
+	end)
+	check("another server's switch is heard here", W:GetAttribute("Fx_aurora") ~= nil)
+	-- Stopping here only: what's written down everywhere doesn't undo it.
+	run(function()
+		AdminService.stopAll("test")
+	end)
+	check("Stop everything (this server) switches every effect off here", W:GetAttribute("Fx_galaxy") == nil and W:GetAttribute("Fx_aurora") == nil and W:GetAttribute("AbuseUntil") == nil)
+	run(AdminService.syncLive)
+	check("...and the record of what's on everywhere doesn't switch it back on", W:GetAttribute("Fx_galaxy") == nil)
+	-- A server that opens while something is on everywhere joins in.
+	local endsAt = fakeOs.time() + 600
+	dataStores.MaisonSchedule.live = {
+		abuse = { id = "night-77", ends = endsAt, mega = false, by = "XxxXxxX_77797" },
+		fx = { ufo = { since = fakeOs.time(), by = "XxxXxxX_77797" } },
+		events = { goldRain = { ends = fakeOs.time() + 300, by = "XxxXxxX_77797" } },
+	}
+	run(AdminService.syncLive)
+	local untilAt = W:GetAttribute("AbuseUntil")
+	-- (Within 128 seconds: this test harness keeps attribute numbers as 32-bit floats; Roblox keeps
+	-- them whole.)
+	check("a server catching up joins Admin Abuse, for what's left of it (ending when it ends everywhere)", type(untilAt) == "number" and math.abs(untilAt - endsAt) <= 128, untilAt)
+	check("...and every effect switched on everywhere", W:GetAttribute("Fx_ufo") ~= nil)
+	check("...and every event", W:GetAttribute("Event_goldRain") ~= nil)
+	local since = W:GetAttribute("AbuseSince")
+	advance(3)
+	run(AdminService.syncLive)
+	check("and never begins the same night twice", W:GetAttribute("AbuseSince") == since)
+	-- Off everywhere.
+	r = adminAs(owner, { op = "fxAllOff", everywhere = true })
+	advance(0.5)
+	check("Every effect off, in every server: off here, sent, and wiped from the record", r.ok and W:GetAttribute("Fx_ufo") == nil and published[#published].message.op == "fxAllOff" and next(live().fx or {}) == nil)
+	r = adminAs(owner, { op = "stopAll", everywhere = true })
+	advance(0.5)
+	check("Stop everything, in every server, wipes the record", r.ok and W:GetAttribute("AbuseUntil") == nil and live().abuse == nil and next(live().events or {}) == nil)
+	-- One night, one id, everywhere.
+	adminAs(owner, { op = "abuse", minutes = 15, everywhere = true })
+	advance(0.5)
+	local msg = published[#published].message
+	check("Admin Abuse in every server carries one id, written down with it", msg.op == "abuse" and type(msg.liveId) == "string" and live().abuse ~= nil and live().abuse.id == msg.liveId)
+	since = W:GetAttribute("AbuseSince")
+	advance(3)
+	run(AdminService.syncLive)
+	check("so the server that started it doesn't start it again", W:GetAttribute("AbuseSince") == since)
+	-- The Owner Remote: its run's id.
+	local remote = subscriptions[Config.data.Admin.remoteTopic]
+	run(function()
+		remote({ Data = '{"op":"mega","minutes":15,"rid":"4242"}' })
+	end)
+	advance(0.5)
+	check("a remote Mega Abuse is written down under the remote run's id", live().abuse ~= nil and live().abuse.id == "remote:4242" and live().abuse.mega == true)
+	since = W:GetAttribute("AbuseSince")
+	advance(3)
+	run(AdminService.syncLive)
+	check("and isn't begun twice either", W:GetAttribute("AbuseSince") == since)
+	run(function()
+		remote({ Data = '{"op":"fx","id":"blizzard","on":true,"rid":"4243"}' })
+	end)
+	advance(0.5)
+	check("a remote effect switch is written down too", W:GetAttribute("Fx_blizzard") ~= nil and live().fx ~= nil and live().fx.blizzard ~= nil)
+	adminAs(owner, { op = "stopAll", everywhere = true })
+	advance(1)
 end
 
 H.finish()

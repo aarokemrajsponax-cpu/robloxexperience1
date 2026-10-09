@@ -6,6 +6,10 @@ Writes:
   tools/remote/commands.json          every command: its label, group and JSON
   .github/workflows/owner-remote.yml  GitHub's "Run workflow" remote (any phone or computer)
   remote.ps1                          the PowerShell remote (a computer, instant)
+  tools/remote/owner-remote.html      the Owner Remote page's list of powers (then republish it)
+
+Every message carries "rid", an id of its own (the GitHub run's, or a fresh one), so a server that
+opens later and catches up with what's on everywhere never begins the same Admin Abuse twice.
 
 Run from the repository's root:  python3 tools/remote/build.py
 """
@@ -46,9 +50,10 @@ for m in (15, 30, 60):
     add("Abuse", f"🌋 MEGA ABUSE · {m} min", {"op": "mega", "minutes": m}, "Every effect as a surprise, giveaways, and the Mega Abuse Medal.")
 for what, name in (("abuse", "Admin Abuse"), ("mega", "MEGA ABUSE"), ("giveaway", "a giveaway"), ("surprise", "a surprise effect")):
     add("Abuse", f"⏱️ Countdown, then {name} (10s)", {"op": "countdown", "id": what, "seconds": 10}, "Ten seconds counted down on every screen first.")
-add("Abuse", "🛑 Stop everything", {"op": "stopAll"}, "Every event, surprise and countdown, back to normal.")
+add("Abuse", "🛑 Stop everything", {"op": "stopAll"}, "Every event, surprise, countdown and effect, back to normal.")
 for e in effects:
-    add("Effects", f"{e['glyph']} {e['name']}", {"op": "fx", "id": e["id"]}, e["line"])
+    add("Effects", f"{e['glyph']} {e['name']} ON", {"op": "fx", "id": e["id"], "on": True}, e["line"] + " Stays on until it's switched off.")
+add("Effects", "🧹 Every effect OFF", {"op": "fxAllOff"}, "Every effect switched off, in every server.")
 for e in events:
     if e["holiday"]:
         add("Holidays", f"{e['glyph']} {e['name']} · 15 min", {"op": "event", "id": e["id"], "minutes": 15}, e["line"])
@@ -153,6 +158,7 @@ script.append("    CMD=$(printf '%s' \"${RAW}\" | jq -c .) ;;")
 script.append("  *) echo \"::error::Unknown choice.\"; exit 1 ;;")
 script.append("esac")
 script.append("if [ \"${#CMD}\" -gt 900 ]; then echo \"::error::That command is too long.\"; exit 1; fi")
+script.append("CMD=$(printf '%s' \"$CMD\" | jq -c --arg r \"${GITHUB_RUN_ID:-0}\" '. + {rid: $r}')")
 script.append("BODY=$(jq -cn --arg m \"$CMD\" '{message:$m}')")
 script.append("CODE=$(curl -sS -o /tmp/reply -w '%{http_code}' -X POST \"https://apis.roblox.com/messaging-service/v1/universes/${UNIVERSE}/topics/${TOPIC}\" -H \"x-api-key: ${KEY}\" -H \"Content-Type: application/json\" --data \"$BODY\" || true)")
 script.append("if [ \"$CODE\" = \"200\" ]; then")
@@ -192,6 +198,9 @@ ps.append("    $secure | ConvertFrom-SecureString | Set-Content $KeyFile")
 ps.append("    return [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure))")
 ps.append("}")
 ps.append("function Send-Command([string]$Json) {")
+ps.append("    $obj = $Json | ConvertFrom-Json")
+ps.append("    $obj | Add-Member -NotePropertyName rid -NotePropertyValue ([guid]::NewGuid().ToString('N')) -Force")
+ps.append("    $Json = $obj | ConvertTo-Json -Compress")
 ps.append("    $body = @{ message = $Json } | ConvertTo-Json -Compress")
 ps.append("    try {")
 ps.append("        Invoke-RestMethod -Method Post -Uri \"https://apis.roblox.com/messaging-service/v1/universes/$Universe/topics/$Topic\" -Headers @{ 'x-api-key' = (Get-Key) } -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($body)) | Out-Null")
@@ -231,5 +240,16 @@ ps.append("    }")
 ps.append("}")
 with open(os.path.join(ROOT, "remote.ps1"), "w", encoding="utf-8-sig") as f:
     f.write("\r\n".join(ps) + "\r\n")
+
+# The Owner Remote page --------------------------------------------------------------------------
+page_path = os.path.join(ROOT, "tools/remote/owner-remote.html")
+if os.path.exists(page_path):
+    page = read("tools/remote/owner-remote.html")
+    data = json.dumps({"universe": UNIVERSE, "topic": TOPIC, "repo": REPO, "branch": BRANCH, "custom": CUSTOM, "advanced": ADVANCED, "commands": commands}, ensure_ascii=False)
+    page, n = re.subn(r"^const DATA = .*;$", lambda _m: "const DATA = " + data + ";", page, count=1, flags=re.M)
+    if n != 1:
+        sys.exit("the page's DATA line wasn't found")
+    with open(page_path, "w", encoding="utf-8") as f:
+        f.write(page)
 
 print(f"{len(commands)} commands ({len(effects)} effects, {len(events)} events, {len(headlines)} headlines)")

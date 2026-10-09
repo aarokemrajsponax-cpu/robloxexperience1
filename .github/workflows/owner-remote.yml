@@ -25,29 +25,30 @@ on:
           - "⏱️ Countdown, then a giveaway (10s)"
           - "⏱️ Countdown, then a surprise effect (10s)"
           - "🛑 Stop everything"
-          - "🚀 Rocket launch"
-          - "💃 Dance party"
-          - "⚡ Lightning storm"
-          - "🗿 Brainrot storm"
-          - "🎉 Confetti cannons"
-          - "💥 Shockwave"
-          - "🌀 Spin"
-          - "☄️ Meteor shower"
-          - "🕳️ Black hole"
-          - "🌌 Aurora"
-          - "🪐 Galaxy sky"
-          - "🛸 UFO abduction"
-          - "🌨️ Blizzard"
-          - "🌋 Earthquake"
-          - "🌈 Rainbow mode"
-          - "🧼 Bubble party"
-          - "🌊 Gold wave"
-          - "🔥 Fire & Ice"
-          - "🔦 Blackout"
-          - "🌪️ Tornado"
-          - "🎆 Fireworks finale"
-          - "🗿 Titan meme"
-          - "🌙 Zero gravity"
+          - "🚀 Rocket launch ON"
+          - "💃 Dance party ON"
+          - "⚡ Lightning storm ON"
+          - "🗿 Brainrot storm ON"
+          - "🎉 Confetti cannons ON"
+          - "💥 Shockwave ON"
+          - "🌀 Spin ON"
+          - "☄️ Meteor shower ON"
+          - "🕳️ Black hole ON"
+          - "🌌 Aurora ON"
+          - "🪐 Galaxy sky ON"
+          - "🛸 UFO abduction ON"
+          - "🌨️ Blizzard ON"
+          - "🌋 Earthquake ON"
+          - "🌈 Rainbow mode ON"
+          - "🧼 Bubble party ON"
+          - "🌊 Gold wave ON"
+          - "🔥 Fire & Ice ON"
+          - "🔦 Blackout ON"
+          - "🌪️ Tornado ON"
+          - "🎆 Fireworks finale ON"
+          - "🗿 Titan meme ON"
+          - "🌙 Zero gravity ON"
+          - "🧹 Every effect OFF"
           - "🎃 The All Hallows' Hunt · 15 min"
           - "🦃 The Turkey Trot · 15 min"
           - "🎁 The Gift Drop · 15 min"
@@ -143,29 +144,30 @@ jobs:
             "⏱️ Countdown, then a giveaway (10s)") CMD='{"op":"countdown","id":"giveaway","seconds":10}' ;;
             "⏱️ Countdown, then a surprise effect (10s)") CMD='{"op":"countdown","id":"surprise","seconds":10}' ;;
             "🛑 Stop everything") CMD='{"op":"stopAll"}' ;;
-            "🚀 Rocket launch") CMD='{"op":"fx","id":"launch"}' ;;
-            "💃 Dance party") CMD='{"op":"fx","id":"dance"}' ;;
-            "⚡ Lightning storm") CMD='{"op":"fx","id":"storm"}' ;;
-            "🗿 Brainrot storm") CMD='{"op":"fx","id":"memeRain"}' ;;
-            "🎉 Confetti cannons") CMD='{"op":"fx","id":"confetti"}' ;;
-            "💥 Shockwave") CMD='{"op":"fx","id":"shockwave"}' ;;
-            "🌀 Spin") CMD='{"op":"fx","id":"spin"}' ;;
-            "☄️ Meteor shower") CMD='{"op":"fx","id":"meteor"}' ;;
-            "🕳️ Black hole") CMD='{"op":"fx","id":"blackHole"}' ;;
-            "🌌 Aurora") CMD='{"op":"fx","id":"aurora"}' ;;
-            "🪐 Galaxy sky") CMD='{"op":"fx","id":"galaxy"}' ;;
-            "🛸 UFO abduction") CMD='{"op":"fx","id":"ufo"}' ;;
-            "🌨️ Blizzard") CMD='{"op":"fx","id":"blizzard"}' ;;
-            "🌋 Earthquake") CMD='{"op":"fx","id":"earthquake"}' ;;
-            "🌈 Rainbow mode") CMD='{"op":"fx","id":"rainbow"}' ;;
-            "🧼 Bubble party") CMD='{"op":"fx","id":"bubbles"}' ;;
-            "🌊 Gold wave") CMD='{"op":"fx","id":"goldWave"}' ;;
-            "🔥 Fire & Ice") CMD='{"op":"fx","id":"fireIce"}' ;;
-            "🔦 Blackout") CMD='{"op":"fx","id":"blackout"}' ;;
-            "🌪️ Tornado") CMD='{"op":"fx","id":"tornado"}' ;;
-            "🎆 Fireworks finale") CMD='{"op":"fx","id":"fireworks"}' ;;
-            "🗿 Titan meme") CMD='{"op":"fx","id":"titan"}' ;;
-            "🌙 Zero gravity") CMD='{"op":"fx","id":"zeroG"}' ;;
+            "🚀 Rocket launch ON") CMD='{"op":"fx","id":"launch","on":true}' ;;
+            "💃 Dance party ON") CMD='{"op":"fx","id":"dance","on":true}' ;;
+            "⚡ Lightning storm ON") CMD='{"op":"fx","id":"storm","on":true}' ;;
+            "🗿 Brainrot storm ON") CMD='{"op":"fx","id":"memeRain","on":true}' ;;
+            "🎉 Confetti cannons ON") CMD='{"op":"fx","id":"confetti","on":true}' ;;
+            "💥 Shockwave ON") CMD='{"op":"fx","id":"shockwave","on":true}' ;;
+            "🌀 Spin ON") CMD='{"op":"fx","id":"spin","on":true}' ;;
+            "☄️ Meteor shower ON") CMD='{"op":"fx","id":"meteor","on":true}' ;;
+            "🕳️ Black hole ON") CMD='{"op":"fx","id":"blackHole","on":true}' ;;
+            "🌌 Aurora ON") CMD='{"op":"fx","id":"aurora","on":true}' ;;
+            "🪐 Galaxy sky ON") CMD='{"op":"fx","id":"galaxy","on":true}' ;;
+            "🛸 UFO abduction ON") CMD='{"op":"fx","id":"ufo","on":true}' ;;
+            "🌨️ Blizzard ON") CMD='{"op":"fx","id":"blizzard","on":true}' ;;
+            "🌋 Earthquake ON") CMD='{"op":"fx","id":"earthquake","on":true}' ;;
+            "🌈 Rainbow mode ON") CMD='{"op":"fx","id":"rainbow","on":true}' ;;
+            "🧼 Bubble party ON") CMD='{"op":"fx","id":"bubbles","on":true}' ;;
+            "🌊 Gold wave ON") CMD='{"op":"fx","id":"goldWave","on":true}' ;;
+            "🔥 Fire & Ice ON") CMD='{"op":"fx","id":"fireIce","on":true}' ;;
+            "🔦 Blackout ON") CMD='{"op":"fx","id":"blackout","on":true}' ;;
+            "🌪️ Tornado ON") CMD='{"op":"fx","id":"tornado","on":true}' ;;
+            "🎆 Fireworks finale ON") CMD='{"op":"fx","id":"fireworks","on":true}' ;;
+            "🗿 Titan meme ON") CMD='{"op":"fx","id":"titan","on":true}' ;;
+            "🌙 Zero gravity ON") CMD='{"op":"fx","id":"zeroG","on":true}' ;;
+            "🧹 Every effect OFF") CMD='{"op":"fxAllOff"}' ;;
             "🎃 The All Hallows' Hunt · 15 min") CMD='{"op":"event","id":"halloween","minutes":15}' ;;
             "🦃 The Turkey Trot · 15 min") CMD='{"op":"event","id":"thanksgiving","minutes":15}' ;;
             "🎁 The Gift Drop · 15 min") CMD='{"op":"event","id":"christmas","minutes":15}' ;;
@@ -217,6 +219,7 @@ jobs:
             *) echo "::error::Unknown choice."; exit 1 ;;
           esac
           if [ "${#CMD}" -gt 900 ]; then echo "::error::That command is too long."; exit 1; fi
+          CMD=$(printf '%s' "$CMD" | jq -c --arg r "${GITHUB_RUN_ID:-0}" '. + {rid: $r}')
           BODY=$(jq -cn --arg m "$CMD" '{message:$m}')
           CODE=$(curl -sS -o /tmp/reply -w '%{http_code}' -X POST "https://apis.roblox.com/messaging-service/v1/universes/${UNIVERSE}/topics/${TOPIC}" -H "x-api-key: ${KEY}" -H "Content-Type: application/json" --data "$BODY" || true)
           if [ "$CODE" = "200" ]; then

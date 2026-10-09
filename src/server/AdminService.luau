@@ -120,8 +120,35 @@ function AdminService.active(id: string): boolean
 	return ends ~= nil and ends > os.time()
 end
 
+-- Effects the owner has switched on (they stay on until switched off): id -> when.
+local fxOn: { [string]: number } = {}
+
+local function abusing(): boolean
+	local ends = Workspace:GetAttribute("AbuseUntil")
+	return type(ends) == "number" and ends > os.time()
+end
+
+-- All Gilt: Admin Abuse's Golden Hour doubles it; Mega Abuse makes it triple.
 function AdminService.giltBoost(): number
-	return if AdminService.active("goldenHour") then cfg().goldenHourGilt else 1
+	local b = if AdminService.active("goldenHour") then cfg().goldenHourGilt else 1
+	if abusing() and Workspace:GetAttribute("AbuseMega") == true then
+		b = math.max(b, cfg().table.megaGilt)
+	end
+	return b
+end
+
+-- What the sorting tables get while the house is in uproar: how many golden pieces in each deal,
+-- and why (Mega Abuse, Admin Abuse, or an effect switched on). Nil when nothing is on.
+function AdminService.tableTwist(): { golden: number, kind: string }?
+	local t = cfg().table
+	if abusing() then
+		local mega = Workspace:GetAttribute("AbuseMega") == true
+		return { golden = if mega then t.golden.mega else t.golden.abuse, kind = if mega then "mega" else "abuse" }
+	end
+	if next(fxOn) ~= nil then
+		return { golden = t.golden.effect, kind = "effect" }
+	end
+	return nil
 end
 function AdminService.ledgerBoost(): number
 	return if AdminService.active("pageTurner") then cfg().pageTurnerLedger else 1
@@ -820,6 +847,45 @@ function AdminService.fx(id: string, byName: string, origin: Vector3?)
 	end
 end
 
+-- Switches an effect on (it stays on, for every guest, until it's switched off) or off. Every
+-- screen watches Workspace's Fx_<id> (so a guest arriving later joins in) and plays it round its
+-- own guest: the gentle ones simply stay; the ones that move guests come in waves (fxWaves).
+function AdminService.setFx(id: string, on: boolean, _byName: string): boolean
+	if not HouseEvents.effectById[id] then
+		return false
+	end
+	if on then
+		if fxOn[id] == nil then
+			fxOn[id] = os.time()
+			Workspace:SetAttribute(HouseEvents.fxAttribute(id), fxOn[id])
+			if WITNESSED[id] then
+				for _, p in Players:GetPlayers() do
+					AdminService.award(p, "fx_" .. id)
+				end
+			end
+		end
+	elseif fxOn[id] ~= nil then
+		fxOn[id] = nil
+		Workspace:SetAttribute(HouseEvents.fxAttribute(id), nil)
+	end
+	return true
+end
+
+function AdminService.isFxOn(id: string): boolean
+	return fxOn[id] ~= nil
+end
+
+-- Every effect off.
+function AdminService.allFxOff(byName: string)
+	local ids = {}
+	for id in fxOn do
+		table.insert(ids, id)
+	end
+	for _, id in ids do
+		AdminService.setFx(id, false, byName)
+	end
+end
+
 local surpriseToken = 0
 
 -- Everything at once: every event (quietly, then one great announcement), the whole house's
@@ -827,14 +893,17 @@ local surpriseToken = 0
 -- Abuse, with every effect among the surprises, twice as often, a giveaway every few minutes and
 -- the Mega Abuse Medal for everyone in the house.
 function AdminService.abuse(seconds: number, byName: string, mega: boolean?)
+	-- (When it ends is settled first: starting every event takes a moment.)
+	local ends = os.time() + seconds
 	for _, id in cfg().abuseEvents do
 		if HouseEvents.byId[id] then
-			AdminService.startEvent(id, seconds, byName, true)
+			AdminService.startEvent(id, math.max(1, ends - os.time()), byName, true)
 		end
 	end
-	local ends = os.time() + seconds
 	Workspace:SetAttribute("AbuseUntil", ends)
 	Workspace:SetAttribute("AbuseMega", if mega then true else nil)
+	-- (When it began: the music follows whatever was started last, this or an effect.)
+	Workspace:SetAttribute("AbuseSince", os.time())
 	AdminService.fx("intro", byName, nil)
 	if mega then
 		broadcast({ op = "headline", text = "MEGA ADMIN ABUSE!!!", by = byName, style = "rainbow", seconds = 7 })
@@ -881,6 +950,7 @@ function AdminService.abuse(seconds: number, byName: string, mega: boolean?)
 		if surpriseToken == token and Workspace:GetAttribute("AbuseUntil") == ends then
 			Workspace:SetAttribute("AbuseUntil", nil)
 			Workspace:SetAttribute("AbuseMega", nil)
+			Workspace:SetAttribute("AbuseSince", nil)
 		end
 	end)
 end
@@ -992,6 +1062,132 @@ local function runSchedule()
 		end)
 	end
 end
+
+---------------------------------------------------------------------------------------------------
+-- What's on everywhere (for servers that open while it's on)
+---------------------------------------------------------------------------------------------------
+-- When the owner starts something in every server, the other servers hear at once
+-- (MessagingService), and it's also written down here (the schedule's DataStore, key "live"), so a
+-- server that opens while it's still on joins in: Admin Abuse or Mega Abuse for what's left of it,
+-- every effect switched on, every event for what's left of it. Each server looks every liveCheck
+-- seconds. Stopping everything everywhere wipes it.
+type Live = {
+	abuse: { id: string, ends: number, mega: boolean, by: string }?,
+	fx: { [string]: { since: number, by: string } },
+	events: { [string]: { ends: number, by: string } },
+}
+local LIVE_KEY = "live"
+local liveBegun: { [string]: boolean } = {} -- Admin Abuse nights (by id) this server has begun
+local fxFromLive: { [string]: boolean } = {} -- effects on here because they're on everywhere
+local eventFromLive: { [string]: boolean } = {}
+-- Each thing written down that this server has already acted on (or wrote itself): it joins
+-- only what it hasn't, so stopping something in this server alone isn't undone a minute later.
+local seenLive: { [string]: boolean } = {}
+local function liveKey(kind: string, id: string, stamp: number): string
+	return kind .. ":" .. id .. ":" .. tostring(math.floor(stamp))
+end
+
+local function cleanLive(v: any): Live
+	local now = os.time()
+	local out: Live = { fx = {}, events = {} }
+	if type(v) ~= "table" then
+		return out
+	end
+	local a = v.abuse
+	if type(a) == "table" and type(a.id) == "string" and type(a.ends) == "number" and a.ends > now then
+		out.abuse = { id = a.id, ends = a.ends, mega = a.mega == true, by = string.sub(tostring(a.by or "The owner"), 1, 40) }
+	end
+	if type(v.fx) == "table" then
+		for id, f in v.fx do
+			if type(id) == "string" and HouseEvents.effectById[id] and type(f) == "table" then
+				out.fx[id] = { since = tonumber(f.since) or now, by = string.sub(tostring(f.by or "The owner"), 1, 40) }
+			end
+		end
+	end
+	if type(v.events) == "table" then
+		for id, e in v.events do
+			if type(id) == "string" and HouseEvents.byId[id] and type(e) == "table" and type(e.ends) == "number" and e.ends > now then
+				out.events[id] = { ends = e.ends, by = string.sub(tostring(e.by or "The owner"), 1, 40) }
+			end
+		end
+	end
+	return out
+end
+
+-- Writes what's on everywhere (never waits: the owner's tap isn't held up by the DataStore).
+local function changeLive(change: (Live) -> Live)
+	local store = scheduleStore
+	if not store then
+		return
+	end
+	task.spawn(function()
+		pcall(function()
+			store:UpdateAsync(LIVE_KEY, function(old: any)
+				return change(cleanLive(old))
+			end)
+		end)
+	end)
+end
+AdminService.changeLive = changeLive
+
+-- This server catches up with what's on everywhere.
+local function syncLive()
+	local store = scheduleStore
+	if not store then
+		return
+	end
+	local ok, value = pcall(function()
+		return store:GetAsync(LIVE_KEY)
+	end)
+	if not ok then
+		return
+	end
+	local live = cleanLive(value)
+	local now = os.time()
+	local a = live.abuse
+	if a and not liveBegun[a.id] then
+		liveBegun[a.id] = true
+		AdminService.abuse(a.ends - now, a.by, a.mega)
+	end
+	for id, f in live.fx do
+		local key = liveKey("fx", id, f.since)
+		if not seenLive[key] then
+			seenLive[key] = true
+			if fxOn[id] == nil then
+				AdminService.setFx(id, true, f.by)
+			end
+			fxFromLive[id] = true
+		end
+	end
+	-- Switched off everywhere since (the message may have been missed): off here too. (Not one
+	-- switched on in the last minute: it may not have been written down yet.)
+	for id in fxFromLive do
+		if not live.fx[id] then
+			fxFromLive[id] = nil
+			local since = fxOn[id]
+			if since and now - since > 60 then
+				AdminService.setFx(id, false, "The owner")
+			end
+		end
+	end
+	for id, e in live.events do
+		local key = liveKey("event", id, e.ends)
+		if not seenLive[key] then
+			seenLive[key] = true
+			local mine = active[id]
+			if not mine or mine < e.ends - 30 then
+				AdminService.startEvent(id, e.ends - now, e.by)
+			end
+			eventFromLive[id] = true
+		end
+	end
+	for id in eventFromLive do
+		if not live.events[id] then
+			eventFromLive[id] = nil
+		end
+	end
+end
+AdminService.syncLive = syncLive
 
 local function scheduleView(): { { [string]: any } }
 	local out = {}
@@ -1184,6 +1380,8 @@ function AdminService.stopAll(byName: string)
 	countdownToken += 1
 	Workspace:SetAttribute("AbuseUntil", nil)
 	Workspace:SetAttribute("AbuseMega", nil)
+	Workspace:SetAttribute("AbuseSince", nil)
+	AdminService.allFxOff(byName)
 	broadcast({ op = "countdown", id = "", stop = true })
 	setFrozen(false, nil)
 	if Workspace:GetAttribute("AdminClock") ~= nil then
@@ -1199,7 +1397,7 @@ local function powersView(player: Player): { [string]: any }
 	end
 	local effects = {}
 	for _, e in HouseEvents.Effects do
-		table.insert(effects, { id = e.id, name = e.name, line = e.line, glyph = e.glyph })
+		table.insert(effects, { id = e.id, name = e.name, line = e.line, glyph = e.glyph, on = fxOn[e.id] ~= nil })
 	end
 	return {
 		ghost = player:GetAttribute("AdminGhost") == true,
@@ -1269,6 +1467,13 @@ local function state(player: Player?): { [string]: any }
 		mega = Workspace:GetAttribute("AbuseMega") == true,
 		abuseUntil = Workspace:GetAttribute("AbuseUntil"),
 		guestsHere = #Players:GetPlayers(),
+		fxOn = (function()
+			local on = {}
+			for id in fxOn do
+				on[id] = true
+			end
+			return on
+		end)(),
 	}
 end
 
@@ -1301,21 +1506,91 @@ local function apply(m: { [string]: any }, byName: string, remote: boolean): boo
 		end
 		return text ~= nil
 	elseif op == "event" and type(m.id) == "string" and HouseEvents.byId[m.id] then
-		local seconds = if type(m.seconds) == "number" then m.seconds elseif type(m.minutes) == "number" then m.minutes * 60 else 900
-		AdminService.startEvent(m.id, math.clamp(seconds, 60, 3600), byName)
+		local id = m.id
+		local seconds = math.clamp(if type(m.seconds) == "number" then m.seconds elseif type(m.minutes) == "number" then m.minutes * 60 else 900, 60, 3600)
+		AdminService.startEvent(id, seconds, byName)
+		eventFromLive[id] = true
+		if remote then
+			-- (From outside the game, every server writes it down: the same thing, so no harm.)
+			local ends = os.time() + seconds
+			seenLive[liveKey("event", id, ends)] = true
+			changeLive(function(live)
+				live.events[id] = { ends = ends, by = byName }
+				return live
+			end)
+		end
 		return true
 	elseif op == "stop" and type(m.id) == "string" and HouseEvents.byId[m.id] then
-		AdminService.stopEvent(m.id)
+		local id = m.id
+		AdminService.stopEvent(id)
+		eventFromLive[id] = nil
+		if remote then
+			changeLive(function(live)
+				live.events[id] = nil
+				return live
+			end)
+		end
 		return true
 	elseif op == "abuse" or op == "mega" then
-		local seconds = if type(m.seconds) == "number" then m.seconds elseif type(m.minutes) == "number" then m.minutes * 60 else 1800
-		AdminService.abuse(math.clamp(seconds, 60, 3600), byName, op == "mega")
+		local seconds = math.clamp(if type(m.seconds) == "number" then m.seconds elseif type(m.minutes) == "number" then m.minutes * 60 else 1800, 60, 3600)
+		-- The same night, known by one id in every server (so a server catching up later doesn't
+		-- begin it twice): the owner's server gave it one; the Owner Remote sends its run's.
+		local liveId = if type(m.liveId) == "string" then m.liveId elseif type(m.rid) == "string" or type(m.rid) == "number" then "remote:" .. tostring(m.rid) else nil
+		if liveId then
+			liveBegun[liveId] = true
+		end
+		AdminService.abuse(seconds, byName, op == "mega")
+		if remote and liveId then
+			local ends, mega = os.time() + seconds, op == "mega"
+			changeLive(function(live)
+				live.abuse = { id = liveId :: string, ends = ends, mega = mega, by = byName }
+				return live
+			end)
+		end
 		return true
 	elseif op == "fx" and type(m.id) == "string" and HouseEvents.effectById[m.id] then
-		AdminService.fx(m.id, byName, nil)
+		-- On (it stays on) unless the message says off.
+		local id, on = m.id, m.on ~= false
+		AdminService.setFx(id, on, byName)
+		if on then
+			fxFromLive[id] = true
+		else
+			fxFromLive[id] = nil
+		end
+		if remote then
+			local since = os.time()
+			if on then
+				seenLive[liveKey("fx", id, since)] = true
+			end
+			changeLive(function(live)
+				if on then
+					live.fx[id] = { since = since, by = byName }
+				else
+					live.fx[id] = nil
+				end
+				return live
+			end)
+		end
+		return true
+	elseif op == "fxAllOff" then
+		AdminService.allFxOff(byName)
+		table.clear(fxFromLive)
+		if remote then
+			changeLive(function(live)
+				live.fx = {}
+				return live
+			end)
+		end
 		return true
 	elseif op == "stopAll" then
 		AdminService.stopAll(byName)
+		table.clear(fxFromLive)
+		table.clear(eventFromLive)
+		if remote then
+			changeLive(function(_live)
+				return { fx = {}, events = {} }
+			end)
+		end
 		return true
 	elseif op == "countdown" and type(m.id) == "string" and HouseEvents.countdownById[m.id] and type(m.seconds) == "number" and table.find(cfg().countdowns, m.seconds) then
 		AdminService.countdown(m.id, m.seconds, byName)
@@ -1403,17 +1678,33 @@ local function handle(player: Player, request: unknown): any
 	if op == "state" then
 		return state(player)
 	elseif op == "event" and type(r.id) == "string" and HouseEvents.byId[r.id] then
+		local id = r.id
 		local minutes = if type(r.minutes) == "number" then math.clamp(r.minutes, 1, 60) else 15
-		AdminService.startEvent(r.id, minutes * 60, byName)
+		AdminService.startEvent(id, minutes * 60, byName)
 		if r.everywhere == true then
-			publish({ op = "event", id = r.id, seconds = minutes * 60, by = byName, jobId = game.JobId })
+			publish({ op = "event", id = id, seconds = minutes * 60, by = byName, jobId = game.JobId })
+			local ends = os.time() + minutes * 60
+			seenLive[liveKey("event", id, ends)] = true
+			changeLive(function(live)
+				live.events[id] = { ends = ends, by = byName }
+				return live
+			end)
 		end
 		return state(player)
-	elseif op == "abuse" then
+	elseif op == "abuse" or op == "mega" then
 		local minutes = if type(r.minutes) == "number" then math.clamp(r.minutes, 5, 60) else 30
-		AdminService.abuse(minutes * 60, byName)
+		local mega = op == "mega"
+		AdminService.abuse(minutes * 60, byName, mega)
 		if r.everywhere == true then
-			publish({ op = "abuse", seconds = minutes * 60, by = byName, jobId = game.JobId })
+			-- Every server now, and any server that opens while it's still on.
+			local liveId = HttpService:GenerateGUID(false)
+			liveBegun[liveId] = true
+			publish({ op = op, seconds = minutes * 60, by = byName, jobId = game.JobId, liveId = liveId })
+			local ends = os.time() + minutes * 60
+			changeLive(function(live)
+				live.abuse = { id = liveId, ends = ends, mega = mega, by = byName }
+				return live
+			end)
 		end
 		return state(player)
 	elseif op == "schedule" then
@@ -1448,7 +1739,15 @@ local function handle(player: Player, request: unknown): any
 		task.spawn(runSchedule)
 		return state(player)
 	elseif op == "stop" and type(r.id) == "string" and HouseEvents.byId[r.id] then
-		AdminService.stopEvent(r.id)
+		local id = r.id
+		AdminService.stopEvent(id)
+		if r.everywhere == true then
+			publish({ op = "stop", id = id, by = byName, jobId = game.JobId })
+			changeLive(function(live)
+				live.events[id] = nil
+				return live
+			end)
+		end
 		return state(player)
 	elseif op == "salute" and type(r.id) == "string" and Salutes.byId[r.id] then
 		AdminService.salute(nil, r.id, byName)
@@ -1570,29 +1869,49 @@ local function handle(player: Player, request: unknown): any
 		broadcast({ op = "salute", id = "bringAll", by = byName, effects = { "goldLeaf" }, seconds = 6, title = "Everyone, gather round", line = byName .. " has called every guest together." })
 		return { ok = true, brought = #others }
 	elseif op == "fx" and type(r.id) == "string" and HouseEvents.effectById[r.id] then
-		local root = rootOf(player)
-		AdminService.fx(r.id, byName, if root then root.Position else nil)
+		-- Switched on (it stays on until switched off) or off; a tap on a lit one switches it off.
+		local id = r.id
+		local on = if type(r.on) == "boolean" then r.on else not AdminService.isFxOn(id)
+		AdminService.setFx(id, on, byName)
 		if r.everywhere == true then
-			publish({ op = "fx", id = r.id, by = byName, jobId = game.JobId })
+			publish({ op = "fx", id = id, on = on, by = byName, jobId = game.JobId })
+			local since = os.time()
+			if on then
+				seenLive[liveKey("fx", id, since)] = true
+			end
+			changeLive(function(live)
+				if on then
+					live.fx[id] = { since = since, by = byName }
+				else
+					live.fx[id] = nil
+				end
+				return live
+			end)
 		end
-		return { ok = true }
+		return state(player)
+	elseif op == "fxAllOff" then
+		AdminService.allFxOff(byName)
+		if r.everywhere == true then
+			publish({ op = "fxAllOff", by = byName, jobId = game.JobId })
+			changeLive(function(live)
+				live.fx = {}
+				return live
+			end)
+		end
+		return state(player)
 	elseif op == "stopAll" then
 		AdminService.stopAll(byName)
 		if r.everywhere == true then
 			publish({ op = "stopAll", by = byName, jobId = game.JobId })
+			changeLive(function(_live)
+				return { fx = {}, events = {} }
+			end)
 		end
 		broadcast({ op = "salute", id = "halt", by = byName, effects = {}, seconds = 5, title = "That's all", line = byName .. " called a halt: the house is back to normal." })
 		return state(player)
 	elseif op == "clock" and type(r.id) == "string" then
 		if not setClock(r.id) then
 			return { ok = false, why = "Choose a time of day." }
-		end
-		return state(player)
-	elseif op == "mega" then
-		local minutes = if type(r.minutes) == "number" then math.clamp(r.minutes, 5, 60) else 30
-		AdminService.mega(minutes * 60, byName)
-		if r.everywhere == true then
-			publish({ op = "mega", seconds = minutes * 60, by = byName, jobId = game.JobId })
 		end
 		return state(player)
 	elseif op == "headline" then
@@ -1686,6 +2005,12 @@ function AdminService.start()
 				if type(until_) == "number" and until_ > os.time() then
 					AdminService.award(player, "abuseNight")
 					AdminService.tally(player, "abuseNights", 1, "night:" .. tostring(until_))
+				end
+				-- Arriving while a black hole (say) is switched on: they're there for it too.
+				for id in fxOn do
+					if WITNESSED[id] then
+						AdminService.award(player, "fx_" .. id)
+					end
 				end
 			end
 		end)
@@ -1783,6 +2108,13 @@ function AdminService.start()
 		while true do
 			pcall(runSchedule)
 			task.wait(cfg().scheduleCheck)
+		end
+	end)
+	-- What's on everywhere: at once (a server opening mid-abuse joins in), then now and then.
+	task.spawn(function()
+		while true do
+			pcall(syncLive)
+			task.wait(cfg().liveCheck)
 		end
 	end)
 end

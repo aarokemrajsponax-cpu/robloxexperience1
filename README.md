@@ -261,7 +261,9 @@ a Nightly attempt or a Mythic's odds.
   curio), the Treasure Hunt, the Brainrot Parade (meme curios loose in the house to catch),
   Disco Night (a mirror ball and colour-cycling Ballroom lights; a Disco Ball curio), and a Night
   of Curios (finds twice as likely). Admin Abuse Night runs them all at once.
-- **Suite spectacles**, played in your own Suite from the bell: **fireworks** (a 45-second show
+- **Suite spectacles**, played in your own Suite the moment you buy one (bought elsewhere, the
+  moment you step back into your Suite; bought while a show is on, straight after it, since two
+  never overlap; one saved from before plays from the bell): **fireworks** (a 45-second show
   over the whole estate; your camera goes out across the street to watch it, and comes back with
   the key or any step), the **Meme Takeover** (ninety seconds in six acts: a warning siren, a
   portal spewing memes that bounce off the walls (to an electro swing, with air horns, record
@@ -447,7 +449,31 @@ a Nightly attempt or a Mythic's odds.
     rocket launch, dance party, lightning storm, brainrot storm, confetti cannons, shockwave,
     spin, **meteor shower, black hole, aurora, galaxy sky, UFO abduction, blizzard, earthquake,
     rainbow mode, bubble party, gold wave, fire & ice, blackout, tornado, fireworks finale, titan
-    meme, zero gravity**.
+    meme, zero gravity**. Each is a **switch** (Build 53): tap it and it stays on, with **ON** on
+    its tile, until you tap it again; switch on as many as you like together, and **Every effect
+    OFF** ends them all (so does Stop everything). Effects that move guests (the rocket, the
+    shockwave, the spin, the black hole, the UFO, the tornado, the earthquake...) come round
+    again in waves every few seconds (`Config.Admin.fxWaves`); the rest simply stay. Guests who
+    arrive while one is on see it too.
+  - **At the sorting tables** (Build 53), so nobody sorting misses out: while Admin Abuse or an
+    effect is on, the sorting screen itself carries it, drawn on the felt round the pieces (the
+    galaxy's stars and a ringed planet, meteors, the tornado's funnel, snow, the UFO's beam, the
+    blackout's spotlight, every one of the 23, plus Admin Abuse's and Mega Abuse's own), with a
+    ribbon saying what's on. Each deal at a room table gets **golden pieces**, chosen by the
+    server: 1 while an effect is on, 2 in Admin Abuse, 3 in Mega Abuse; each glows gold, and
+    filing it in the right case pays **+40 Gilt** (`Config.Admin.table`). In **Mega Abuse all
+    Gilt is tripled** (Admin Abuse's Golden Hour doubles it). Scores are never touched.
+  - **Every server** (Build 53): with **ALL SERVERS** on, what you switch on is also written to
+    one small record (`MaisonSchedule` → `live`) that every server reads every 30 seconds
+    (`Config.Admin.liveCheck`), so a server that missed the message, or opens later, joins in for
+    the time left: Admin Abuse, Mega Abuse, events and effects alike. Stopping is written there
+    too, so nothing comes back on by itself.
+  - **Music** (Build 53): while Admin Abuse is on, a run of dance tracks plays in place of the
+    house's music (Mega Abuse: dubstep and drum and bass); while an effect is on, its own (the
+    galaxy, the aurora and zero gravity: something cosmic; the meteors, the black hole, the
+    tornado and the storm: something epic; the dance party: disco; the blizzard: winter; the gold
+    wave: a brass fanfare; the blackout: spy jazz). Whichever was switched on last plays; when
+    all are off, the house's music comes back. See *Music and sounds* below.
   - **Holidays**: the All Hallows' Hunt (pumpkins, bats), the Turkey Trot (turkeys that run from
     you), the Gift Drop (presents and snow), the New Year Countdown (ten seconds, the year's
     biggest fireworks and 200 Gilt for everyone), Sweethearts (love letters, hearts), the Lucky
@@ -473,7 +499,8 @@ a Nightly attempt or a Mythic's odds.
   2. **Give it to GitHub** (once): this repository → **Settings** → **Secrets and variables** →
      **Actions** → **New repository secret** → name `ROBLOX_OPEN_CLOUD_KEY` → paste → **Add**.
   3. **Use it**: **GitHub** (phone or computer): **Actions** → **Owner Remote** → **Run workflow**
-     → choose from the list (76 powers) → **Run workflow**; every server does it about half a
+     → choose from the list (77 powers; effects say **ON**, and **Every effect OFF** ends them)
+     → **Run workflow**; every server does it about half a
      minute later. **The Owner Remote page** (the artifact): tap a power, **Send to every
      server** (it starts the same workflow through claude.ai's GitHub connector). **PowerShell**
      (instant, on a computer): `irm https://raw.githubusercontent.com/aarokemrajsponax-cpu/robloxexperience1/claude/nice-brown-a88p9r/remote.ps1 | iex`
@@ -484,7 +511,7 @@ a Nightly attempt or a Mythic's odds.
   (`python3 tools/remote/build.py` after changing events or effects).
 - **House controls** (the owner's classic panel, from the console's **More** page): the pages
   below.
-  - **Effects for everyone** (Powers, at the top; one tap, this house or every house): **Rocket
+  - **Effects for everyone** (Powers, at the top; switches, this house or every house): **Rocket
     launch** (every guest shoots into the sky on a trail of smoke), **Dance party** (everyone
     dances under disco light), **Lightning storm** (forks of lightning round the house, thunder
     after), **Brainrot storm** (the house's memes pour from the sky round every guest), **Confetti
@@ -600,6 +627,12 @@ recordings from Roblox's own licensed libraries, free to use in any experience.
   - a clean chime that climbs a step with each piece in a streak.
 
   Each has the pitch and level that suit it.
+- **Admin Abuse and effect music** (`Assets.AbuseMusic`, `Assets.AbuseThemes`, `World/AbuseMusic`):
+  more APM tracks from the same licensed library, each levelled to the others: dance (*Feeling*,
+  *Skyhook*, *Stadium Rave*...) for Admin Abuse; dubstep and drum and bass (*Electric Shock*,
+  *Next Level*, *Night Run*...) for Mega Abuse; and a set for the effects (cosmic, sci-fi, epic,
+  heroic, disco, winter, a brass fanfare, spy jazz). `Assets.AbuseThemes` says which set each
+  effect plays, and `Assets.AbuseMusicVolume` how loud.
 
 ### Optional: the house's own composed audio (`assets/audio`)
 

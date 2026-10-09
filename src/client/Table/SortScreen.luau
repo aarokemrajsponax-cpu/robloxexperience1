@@ -32,11 +32,13 @@ local Voice = require(ReplicatedStorage.Shared.Voice)
 local PieceIcon = require(script.Parent.Parent.UI.PieceIcon)
 local Closet = require(script.Parent.Parent.Closet)
 local GuideTrail = require(script.Parent.GuideTrail)
+local ScreenFX = require(script.Parent.Parent.UI.ScreenFX)
 local State = require(script.Parent.Parent.State)
 
 local SortScreen = {}
 
-export type PieceInfo = { uid: number, id: string, name: string, case: string, rare: boolean, mythic: boolean, seasonal: boolean }
+-- `golden`: a golden piece (Admin Abuse at the table; the server picked it): its right case pays.
+export type PieceInfo = { uid: number, id: string, name: string, case: string, rare: boolean, mythic: boolean, seasonal: boolean, golden: boolean? }
 
 type Card = {
 	info: PieceInfo,
@@ -162,6 +164,8 @@ local stats: { [string]: Stat } = {}
 local motes: { Mote } = {}
 local moteKind = ""
 local trail: { uid: number, bin: Bin, since: number }? = nil
+-- Admin Abuse and the owner's effects, drawn over this table too (UI/ScreenFX).
+local tableFX: ScreenFX.FX? = nil
 
 local cards: { [number]: Card } = {}
 local bins: { [string]: Bin } = {}
@@ -579,6 +583,14 @@ local function build()
 		end
 	end
 
+	-- Admin Abuse and the owner's effects at the table: one layer over the leather and under the
+	-- cases and pieces, one over everything (neither ever takes a click), and a ribbon.
+	local abuseBack = Instance.new("Frame")
+	abuseBack.Name = "AbuseBack"
+	abuseBack.Size = UDim2.fromScale(1, 1)
+	abuseBack.ZIndex = 3
+	abuseBack.Parent = root
+
 	-- Header: the house's mark and the room on the left; score, combo, time and round on the
 	-- right, each a small label over a large figure; a gold rule beneath.
 	local head = Instance.new("Frame")
@@ -659,6 +671,15 @@ local function build()
 	fxLayer.Size = UDim2.fromScale(1, 1)
 	fxLayer.ZIndex = 7
 	fxLayer.Parent = root
+	local abuseFront = Instance.new("Frame")
+	abuseFront.Name = "AbuseFront"
+	abuseFront.Size = UDim2.fromScale(1, 1)
+	abuseFront.ZIndex = 8
+	abuseFront.Parent = root
+	tableFX = ScreenFX.new(abuseBack, abuseFront, function(): Vector2
+		return L.vp
+	end, "table", root)
+	ScreenFX.setEnabled(tableFX :: ScreenFX.FX, false)
 
 	curtain = Instance.new("Frame")
 	curtain.Name = "Curtain"
@@ -847,6 +868,9 @@ local function layoutChrome()
 	local rule = header.rule :: Frame
 	rule.Position = UDim2.fromOffset(L.left, ruleY)
 	rule.Size = UDim2.fromOffset(L.width, 1)
+	if tableFX then
+		ScreenFX.placeRibbon(tableFX, ruleY + math.floor(6 * s))
+	end
 	local rail = header.rail :: Frame
 	rail.Position = UDim2.fromOffset(L.left, ruleY - 1)
 	rail.Size = UDim2.fromOffset(L.width, math.max(2, math.floor(2 * s)))
@@ -1368,6 +1392,35 @@ local function cardFrame(info: PieceInfo, icon: number): (Frame, UIScale, Frame,
 			corner(glow, 9999)
 		end
 	end
+	-- A golden piece (Admin Abuse): a bright gold halo, a gold ring and its tag.
+	if info.golden then
+		for k = 1, 6 do
+			local glow = sheet(f, "GoldenGlow", Color3.fromRGB(255, 205, 80), 1)
+			glow.AnchorPoint = Vector2.new(0.5, 0.5)
+			glow.Position = UDim2.fromScale(0.5, 0.5)
+			local size = 1.6 - (k - 1) * 0.12
+			glow.Size = UDim2.fromOffset(icon * size, icon * size)
+			glow.BackgroundTransparency = 0.9
+			corner(glow, 9999)
+		end
+		local band = sheet(f, "GoldenRing", Color3.fromRGB(255, 214, 90), 1)
+		band.AnchorPoint = Vector2.new(0.5, 0.5)
+		band.Position = UDim2.fromScale(0.5, 0.5)
+		band.Size = UDim2.fromOffset(icon * 1.12, icon * 1.12)
+		band.BackgroundTransparency = 1
+		corner(band, 9999)
+		stroke(band, Color3.fromRGB(255, 220, 110), 0, math.max(2, 3 * s))
+		local chip = label(f, "GOLDEN", math.max(9, 10 * s), F.bodyBold, Color3.fromRGB(40, 24, 4), {
+			Name = "Golden",
+			AnchorPoint = Vector2.new(0.5, 0),
+			Position = UDim2.new(0.5, 0, 1, math.floor(2 * s)),
+			Size = UDim2.fromOffset(math.floor(64 * s), math.floor(16 * s)),
+			BackgroundTransparency = 0,
+			BackgroundColor3 = Color3.fromRGB(255, 206, 84),
+			ZIndex = 3,
+		})
+		corner(chip, 9999)
+	end
 	local ring = sheet(f, "Selected", LIGHT, 1)
 	ring.AnchorPoint = Vector2.new(0.5, 0.5)
 	ring.Position = UDim2.fromScale(0.5, 0.5)
@@ -1385,9 +1438,9 @@ local function cardFrame(info: PieceInfo, icon: number): (Frame, UIScale, Frame,
 	art.ZIndex = 2
 	art.Parent = f
 	PieceIcon.piece(art, info.id, icon, info.case)
-	-- A glint that comes and goes on the gilded ones.
+	-- A glint that comes and goes on the gilded ones (and the golden ones).
 	local twinkle: Frame? = nil
-	if info.rare or info.mythic then
+	if info.rare or info.mythic or info.golden then
 		local tw = Instance.new("Frame")
 		tw.Name = "Twinkle"
 		tw.BackgroundTransparency = 1
@@ -1935,6 +1988,9 @@ function SortScreen.open(roomName: string, roundText: string)
 		return
 	end
 	isOpen = true
+	if tableFX then
+		ScreenFX.setEnabled(tableFX, true)
+	end
 	local g = gui :: ScreenGui
 	-- A dip to black, then the screen.
 	curtain.BackgroundTransparency = 1
@@ -1956,6 +2012,9 @@ function SortScreen.close()
 	end
 	isOpen = false
 	playing = false
+	if tableFX then
+		ScreenFX.setEnabled(tableFX, false)
+	end
 	SortScreen.unbind()
 	release()
 	press = nil
@@ -2132,6 +2191,27 @@ function SortScreen.correct(uid: number, caseId: string, points: number?, multip
 	end
 	popText(bin.centre - Vector2.new(0, bin.size.Y * 0.55), lines, false)
 	select(padIndex)
+end
+
+-- A golden piece in its right case: what it paid, big, over its case.
+function SortScreen.golden(caseId: string, gilt: number)
+	local bin = bins[caseId]
+	if not bin then
+		return
+	end
+	local at = bin.centre - Vector2.new(0, bin.size.Y * 1.25)
+	popText(at, {
+		{ text = "GOLDEN!", size = 24, font = F.bodyBold, colour = Color3.fromRGB(255, 214, 90) },
+		{ text = "+" .. number(gilt) .. " GILT", size = 34, font = F.figures, colour = Color3.fromRGB(255, 236, 170) },
+	}, false)
+	burst(bin.centre, 26, Color3.fromRGB(255, 206, 84))
+end
+
+-- Whether this table's deals hold golden pieces while the house is in uproar (the rooms do).
+function SortScreen.setGolden(on: boolean)
+	if tableFX then
+		ScreenFX.setGolden(tableFX, on)
+	end
 end
 
 -- The server filed it after all (a quiet correction): in it goes, without a fuss.

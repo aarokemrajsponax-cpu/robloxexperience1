@@ -251,9 +251,12 @@ list, takes Gems only if the guest holds enough and says how many more otherwise
 (Gems every tenth level) are the only free Gems.
 
 **Suite spectacles** (Suite Fireworks 199, Meme Takeover 299, Golden Transformation 499). A show
-in the buyer's own Suite. Each receipt saves one show as a credit (`show:<key>`); the guest plays
-it from the Suite's bell → Spectacles, only while in their Suite. Cosmetic only. Handler
-`spectacle` (`Purchases/Spectacles.luau`).
+in the buyer's own Suite. Each receipt saves one show as a credit (`show:<key>`) first; once the
+purchase is settled the server spends it and the show starts at once if the guest is in their
+Suite, else the moment they step back in (Build 53), and a show bought while another is on plays
+straight after it (shows never overlap, so none is lost). One not played before they leave stays
+saved, for the Suite's bell → Spectacles. Cosmetic only. Handler `spectacle`
+(`Purchases/Spectacles.luau`).
 
 **Honesty rules (all products).** Every price on screen is Roblox's, read by the server; Roblox's
 own confirmation window always follows. No invented scarcity, countdowns or social proof: the

@@ -1,8 +1,9 @@
 --!strict
 -- Suite spectacles: a show in a guest's own Suite (fireworks, a meme takeover, a golden
--- transformation). A receipt saves one show as a credit; the guest plays it from the Suite's bell
--- when they like, and only while they're in their Suite. The server spends the credit, then tells
--- their screen to play the show (World/SuiteSpectacle draws it).
+-- transformation). A receipt saves one show as a credit (that's what makes it safe); then, the
+-- moment the purchase is settled, it plays: at once if they're in their Suite, else the moment they
+-- step back into it. One saved from before plays from the Suite's bell. The server spends the
+-- credit, then tells their screen to play the show (World/SuiteSpectacle draws it).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -25,11 +26,26 @@ for _, k in Spectacles.KEYS do
 end
 local SECONDS = { spectacleFireworks = 45, spectacleMemes = 90, spectacleGolden = 40 }
 
+-- When the show on each guest's screen ends: shows never overlap (a second Meme Takeover started
+-- during one would be lost, and two Golden Transformations would tangle the gold), so the next
+-- waits for this one.
+local showingUntil: { [Player]: number } = {}
+
+local function busy(player: Player): boolean
+	return (showingUntil[player] or 0) > os.clock()
+end
+
+local function showing(player: Player, key: string)
+	showingUntil[player] = os.clock() + (SECONDS[key] or 20) + 2
+end
+
 -- The owner tries a show on their own screen, free (House controls; AdminService checks who asks).
 function Spectacles.preview(player: Player, key: string): boolean
 	if not IS_KEY[key] then
 		return false
 	end
+	-- (Never refused, it's free; a show bought meanwhile waits for it.)
+	showing(player, key)
 	Perks.tell(player, { op = "spectacle", key = key, seconds = SECONDS[key] })
 	return true
 end
@@ -92,9 +108,13 @@ local function onAsk(player: Player, request: unknown): any
 		if not inSuite(player) then
 			return { ok = false, why = "Shows play in your Suite." }
 		end
+		if busy(player) then
+			return { ok = false, why = "One show at a time: this one's still on." }
+		end
 		if not Perks.use(player, data, credit(key), key) then
 			return { ok = false, why = "You've none of those to play." }
 		end
+		showing(player, key)
 		Perks.tell(player, { op = "spectacle", key = key, seconds = SECONDS[key] })
 		Perks.push(player)
 		return { ok = true }
@@ -102,17 +122,72 @@ local function onAsk(player: Player, request: unknown): any
 	return { ok = false }
 end
 
+-- Shows just bought, waiting for their guest to be in their Suite (only for this visit: one not
+-- played before they leave stays saved, for the bell).
+local waiting: { [Player]: { string } } = {}
+
+-- Spends one saved show and plays it. False if there's none to play.
+local function playNow(player: Player, key: string): boolean
+	local data = Profiles.get(player)
+	if not data or not Perks.use(player, data, credit(key), key) then
+		return false
+	end
+	showing(player, key)
+	Perks.tell(player, { op = "spectacle", key = key, seconds = SECONDS[key] })
+	Perks.push(player)
+	return true
+end
+Spectacles.playNow = playNow
+
 local function grant(ctx: Grants.Context)
 	Perks.add(ctx.data, credit(ctx.key), 1)
+	-- (After the purchase is settled: the credit is safely kept first, then spent on the show.)
 	ctx:after(function()
-		Perks.push(ctx.player)
-		Perks.tell(ctx.player, { op = "notice", title = ctx.product.UX.DisplayName, line = "Yours to play in your Suite, from the bell, whenever you like." })
+		local player, key = ctx.player, ctx.key
+		local here = inSuite(player)
+		if here and not busy(player) and playNow(player, key) then
+			return
+		end
+		Perks.push(player)
+		local list = waiting[player] or {}
+		table.insert(list, key)
+		waiting[player] = list
+		local line = if here then "It plays the moment the show on now ends." else "It plays the moment you step into your Suite."
+		Perks.tell(player, { op = "notice", title = ctx.product.UX.DisplayName, line = line })
 	end)
+end
+
+-- Plays a waiting show when its guest is in their Suite (and the one before it has ended).
+function Spectacles.tick()
+	for player in showingUntil do
+		if player.Parent == nil then
+			showingUntil[player] = nil
+		end
+	end
+	for player, list in waiting do
+		if player.Parent == nil then
+			waiting[player] = nil
+		elseif #list > 0 and inSuite(player) and not busy(player) then
+			local key = table.remove(list, 1)
+			if key then
+				playNow(player, key)
+			end
+			if #list == 0 then
+				waiting[player] = nil
+			end
+		end
+	end
 end
 
 function Spectacles.start()
 	Grants.register("spectacle", grant)
 	RemoteGuard.invoke(Remotes.func("SpectacleAsk"), "spectacleAsk", onAsk)
+	task.spawn(function()
+		while true do
+			task.wait(1)
+			pcall(Spectacles.tick)
+		end
+	end)
 end
 
 return Spectacles

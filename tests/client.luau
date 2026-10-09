@@ -4157,6 +4157,107 @@ check("and goes when it's taken off", root:FindFirstChild("MaisonAura") == nil)
 check("no errors in Build 51's screens", #errors == 0, errors[1])
 
 ---------------------------------------------------------------------------------------------------
+-- Build 53: effects switched on stay on (and come to the sorting tables), golden pieces, music
+---------------------------------------------------------------------------------------------------
+do
+	local SoundService = game:GetService("SoundService")
+	local function fxOn(id, on)
+		workspace:SetAttribute("Fx_" .. id, if on then os.time() else nil)
+		signalOf(workspace, "attr:Fx_" .. id):Fire()
+	end
+	local function busy(layer)
+		return layer ~= nil and #layer:GetDescendants() > 4
+	end
+	local function scoreId()
+		local s = SoundService:FindFirstChild("ScoreList")
+		return if s then s.SoundId else nil
+	end
+	local function inList(id, list)
+		for _, song in Config.data.Assets.AbuseMusic[list] do
+			if song.id == id then
+				return true
+			end
+		end
+		return false
+	end
+	local walk = playerGui:FindFirstChild("MaisonScreenFX")
+	check("the walking screen has a layer of its own for the effects", walk ~= nil)
+	fxOn("meteor", true)
+	advance(1.5)
+	check("an effect switched on plays at once", textOnScreen("METEOR SHOWER") ~= nil)
+	check("...and shows on the screen as well (indoors too)", busy(walk))
+	snapshot("walk-meteor")
+	advance(45)
+	check("and it's still going long after: it stays on until it's switched off", busy(walk))
+	check("its own music plays (a meteor shower: something epic)", inList(scoreId(), "epic"), scoreId())
+	fxOn("meteor", false)
+	advance(3)
+	check("switched off: it stops, and the screen clears", not busy(walk))
+	check("and the house's own music comes back", scoreId() == nil)
+	-- Effects that move guests come in waves, with a rest between.
+	fxOn("launch", true)
+	advance(1)
+	check("a rocket launch switched on: lift off", textOnScreen("LIFT OFF") ~= nil)
+	fxOn("launch", false)
+	advance(1)
+	-- Admin Abuse's music, then Mega Abuse's.
+	workspace:SetAttribute("AbuseUntil", workspace:GetServerTimeNow() + 900)
+	workspace:SetAttribute("AbuseSince", os.time())
+	signalOf(workspace, "attr:AbuseUntil"):Fire()
+	advance(1)
+	check("Admin Abuse: dance music over the house", inList(scoreId(), "abuse"), scoreId())
+	workspace:SetAttribute("AbuseMega", true)
+	signalOf(workspace, "attr:AbuseMega"):Fire()
+	advance(3)
+	check("Mega Abuse: harder music", inList(scoreId(), "mega"), scoreId())
+	-- At a table in the middle of it.
+	serverSays("Table", { op = "seated", table = salonTable:GetAttribute("TableId"), room = "salon", mode = "room" })
+	advance(2)
+	local list = pieceList(8, cases)
+	list[3].golden = true
+	list[6].golden = true
+	serverSays("Table", { op = "deal", round = 1, room = "salon", mode = "room", cases = cases, pieces = list, score = 0, twist = "mega" })
+	advance(2.5)
+	check("at the table, a ribbon says what's on and what it brings", textOnScreen("MEGA ABUSE · ×3 GILT · GOLDEN PIECES") ~= nil)
+	check("golden pieces wear their gold (only those)", Sort.card(3):FindFirstChild("Golden") ~= nil and Sort.card(6):FindFirstChild("Golden") ~= nil and Sort.card(1):FindFirstChild("Golden") == nil)
+	check("Mega Abuse's glow shows round the table", busy(sortGui.Root.AbuseBack) or busy(sortGui.Root.AbuseFront))
+	check("the walking screen's effects step aside at the table (the table has its own)", not busy(walk))
+	snapshot("table-mega")
+	serverSays("Table", { op = "filed", uid = 3, case = list[3].case, correct = true, points = 30, setBonus = 0, penalty = 0, score = 30, streak = 1, multiplier = 1, runLength = 1, remaining = 7, golden = 120 })
+	advance(0.3)
+	check("a golden piece in its right case: GOLDEN! and what it paid", textOnScreen("GOLDEN!") ~= nil and textOnScreen("+120 GILT") ~= nil)
+	snapshot("table-golden")
+	advance(2)
+	-- Every effect has its own look on the table.
+	workspace:SetAttribute("AbuseUntil", nil)
+	workspace:SetAttribute("AbuseMega", nil)
+	workspace:SetAttribute("AbuseSince", nil)
+	signalOf(workspace, "attr:AbuseUntil"):Fire()
+	advance(3)
+	local looks = {}
+	for _, id in { "meteor", "blackHole", "aurora", "galaxy", "ufo", "blizzard", "earthquake", "rainbow", "bubbles", "goldWave", "fireIce", "blackout", "tornado", "fireworks", "titan", "zeroG", "dance", "storm", "memeRain", "confetti", "shockwave", "spin", "launch" } do
+		fxOn(id, true)
+		advance(2.5)
+		if not (busy(sortGui.Root.AbuseBack) or busy(sortGui.Root.AbuseFront)) then
+			table.insert(looks, id)
+		end
+		snapshot("table-fx-" .. id)
+		fxOn(id, false)
+		advance(1)
+	end
+	check("every effect has its own look over the sorting table", #looks == 0, table.concat(looks, ", "))
+	fxOn("galaxy", true)
+	advance(1)
+	check("an effect on, at the table: the ribbon says so", textOnScreen("GALAXY SKY · GOLDEN PIECES") ~= nil)
+	fxOn("galaxy", false)
+	advance(1)
+	check("nothing on: no ribbon", textOnScreen("GOLDEN PIECES") == nil)
+	serverSays("Table", { op = "left" })
+	advance(3)
+	check("no errors in Build 53's screens", #errors == 0, errors[1])
+end
+
+---------------------------------------------------------------------------------------------------
 -- 8. A respawn hands straight back to the follow camera
 ---------------------------------------------------------------------------------------------------
 camera.CameraType = roblox.Enum.CameraType.Scriptable

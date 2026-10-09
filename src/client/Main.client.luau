@@ -71,6 +71,7 @@ local GiltBar = require(script.Parent.UI.GiltBar)
 local BadgeBookPanel = require(script.Parent.UI.BadgeBookPanel)
 local GemShopPanel = require(script.Parent.UI.GemShopPanel)
 local Celebrate = require(script.Parent.UI.Celebrate)
+local ScreenFX = require(script.Parent.UI.ScreenFX)
 
 local player = Players.LocalPlayer
 
@@ -198,6 +199,14 @@ end)
 start("Headlines", Headline.start)
 start("Holidays", require(script.Parent.World.HolidayFX).start)
 start("Auras", require(script.Parent.World.Auras).start)
+-- Admin Abuse and the owner's effects drawn on the screen too (over the house as you walk; the
+-- sorting screen has its own), and their music.
+local walkFX: ScreenFX.FX? = nil
+start("Screen effects", function()
+	ScreenFX.start()
+	walkFX = ScreenFX.walkLayer()
+end)
+start("Abuse music", require(script.Parent.World.AbuseMusic).start)
 GemShopPanel.getGems = function()
 	CuriosPanel.open("gems")
 end
@@ -315,11 +324,17 @@ start("Perks", function()
 		PerkChips.setHidden(true)
 		EventBanner.setSeated(true)
 		GiltBar.setSeated(true)
+		if walkFX then
+			ScreenFX.setEnabled(walkFX, false)
+		end
 	end)
 	TableClient.Left.Event:Connect(function()
 		PerkChips.setHidden(false)
 		EventBanner.setSeated(false)
 		GiltBar.setSeated(false)
+		if walkFX then
+			ScreenFX.setEnabled(walkFX, true)
+		end
 	end)
 end)
 AdmireCard.openBoutique = function(tab, forGuest)

@@ -4,6 +4,6 @@
 -- see whether Studio has the latest code from GitHub.
 
 return {
-	number = 52,
-	label = "Build 52 · 9 Oct · the keys, the Gilt bar and the Owner Console always come up",
+	number = 53,
+	label = "Build 53 · 9 Oct · effects stay on until switched off, Admin Abuse at the tables, instant Suite shows, music",
 }

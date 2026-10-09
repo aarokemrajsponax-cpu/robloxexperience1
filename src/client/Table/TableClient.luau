@@ -328,6 +328,7 @@ local function infoFor(data: { [string]: any }): Piece
 		rare = data.rare == true,
 		seasonal = data.seasonal == true,
 		mythic = data.mythic == true,
+		golden = data.golden == true,
 	} :: any
 end
 
@@ -355,6 +356,8 @@ local function renderDeal(message: { [string]: any })
 	SortScreen.setRound(roomTitle(), roundTitle())
 	SortScreen.setRules(namesAllowed(), r.tuning.guide, r.tuning.guideDelay)
 	SortScreen.setCases(openCases)
+	-- (Golden pieces come to the rooms' tables while the house is in uproar, not to the Nightly.)
+	SortScreen.setGolden(tableMode == "room")
 	local list = {}
 	for _, data in message.pieces :: { { [string]: any } } do
 		local p = infoFor(data)
@@ -449,6 +452,12 @@ local function onFiled(message: { [string]: any })
 	local_.runLength = server.runLength
 	local_.multiplier = server.multiplier
 	local_.lastCase = server.lastCase
+	-- A golden piece in its right case: the server paid it; say how much.
+	if message.correct and type(message.golden) == "number" and message.golden > 0 then
+		SortScreen.golden(message.case, message.golden)
+		Sound.play("coinDrop", 0.8)
+		task.delay(0.15, Sound.shimmer)
+	end
 	if message.clock then
 		clockLeft = message.clock.left
 		clockRunning = message.clock.running

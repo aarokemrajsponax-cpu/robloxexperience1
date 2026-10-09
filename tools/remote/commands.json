@@ -103,216 +103,247 @@
   {
    "group": "Abuse",
    "label": "🛑 Stop everything",
-   "line": "Every event, surprise and countdown, back to normal.",
+   "line": "Every event, surprise, countdown and effect, back to normal.",
    "command": {
     "op": "stopAll"
    }
   },
   {
    "group": "Effects",
-   "label": "🚀 Rocket launch",
-   "line": "Every guest shoots into the sky.",
+   "label": "🚀 Rocket launch ON",
+   "line": "Every guest shoots into the sky. Stays on until it's switched off.",
    "command": {
     "op": "fx",
-    "id": "launch"
+    "id": "launch",
+    "on": true
    }
   },
   {
    "group": "Effects",
-   "label": "💃 Dance party",
-   "line": "Every guest dances, under disco light.",
+   "label": "💃 Dance party ON",
+   "line": "Every guest dances, under disco light. Stays on until it's switched off.",
    "command": {
     "op": "fx",
-    "id": "dance"
+    "id": "dance",
+    "on": true
    }
   },
   {
    "group": "Effects",
-   "label": "⚡ Lightning storm",
-   "line": "Thunder and lightning over the house.",
+   "label": "⚡ Lightning storm ON",
+   "line": "Thunder and lightning over the house. Stays on until it's switched off.",
    "command": {
     "op": "fx",
-    "id": "storm"
+    "id": "storm",
+    "on": true
    }
   },
   {
    "group": "Effects",
-   "label": "🗿 Brainrot storm",
-   "line": "Memes pour from the sky round every guest.",
+   "label": "🗿 Brainrot storm ON",
+   "line": "Memes pour from the sky round every guest. Stays on until it's switched off.",
    "command": {
     "op": "fx",
-    "id": "memeRain"
+    "id": "memeRain",
+    "on": true
    }
   },
   {
    "group": "Effects",
-   "label": "🎉 Confetti cannons",
-   "line": "Cannons of confetti round every guest.",
+   "label": "🎉 Confetti cannons ON",
+   "line": "Cannons of confetti round every guest. Stays on until it's switched off.",
    "command": {
     "op": "fx",
-    "id": "confetti"
+    "id": "confetti",
+    "on": true
    }
   },
   {
    "group": "Effects",
-   "label": "💥 Shockwave",
-   "line": "A golden blast from you throws every guest near you back.",
+   "label": "💥 Shockwave ON",
+   "line": "A golden blast from you throws every guest near you back. Stays on until it's switched off.",
    "command": {
     "op": "fx",
-    "id": "shockwave"
+    "id": "shockwave",
+    "on": true
    }
   },
   {
    "group": "Effects",
-   "label": "🌀 Spin",
-   "line": "Every guest spins like a top.",
+   "label": "🌀 Spin ON",
+   "line": "Every guest spins like a top. Stays on until it's switched off.",
    "command": {
     "op": "fx",
-    "id": "spin"
+    "id": "spin",
+    "on": true
    }
   },
   {
    "group": "Effects",
-   "label": "☄️ Meteor shower",
-   "line": "Blazing meteors streak down and slam round every guest.",
+   "label": "☄️ Meteor shower ON",
+   "line": "Blazing meteors streak down and slam round every guest. Stays on until it's switched off.",
    "command": {
     "op": "fx",
-    "id": "meteor"
+    "id": "meteor",
+    "on": true
    }
   },
   {
    "group": "Effects",
-   "label": "🕳️ Black hole",
-   "line": "A black hole opens overhead and pulls everyone up into its swirl.",
+   "label": "🕳️ Black hole ON",
+   "line": "A black hole opens overhead and pulls everyone up into its swirl. Stays on until it's switched off.",
    "command": {
     "op": "fx",
-    "id": "blackHole"
+    "id": "blackHole",
+    "on": true
    }
   },
   {
    "group": "Effects",
-   "label": "🌌 Aurora",
-   "line": "Ribbons of green and violet light ripple across the sky.",
+   "label": "🌌 Aurora ON",
+   "line": "Ribbons of green and violet light ripple across the sky. Stays on until it's switched off.",
    "command": {
     "op": "fx",
-    "id": "aurora"
+    "id": "aurora",
+    "on": true
    }
   },
   {
    "group": "Effects",
-   "label": "🪐 Galaxy sky",
-   "line": "The sky turns to deep space: stars, nebulae and a ringed planet.",
+   "label": "🪐 Galaxy sky ON",
+   "line": "The sky turns to deep space: stars, nebulae and a ringed planet. Stays on until it's switched off.",
    "command": {
     "op": "fx",
-    "id": "galaxy"
+    "id": "galaxy",
+    "on": true
    }
   },
   {
    "group": "Effects",
-   "label": "🛸 UFO abduction",
-   "line": "A flying saucer hovers over each guest and beams them up.",
+   "label": "🛸 UFO abduction ON",
+   "line": "A flying saucer hovers over each guest and beams them up. Stays on until it's switched off.",
    "command": {
     "op": "fx",
-    "id": "ufo"
+    "id": "ufo",
+    "on": true
    }
   },
   {
    "group": "Effects",
-   "label": "🌨️ Blizzard",
-   "line": "A whiteout: snow sweeps sideways through the house.",
+   "label": "🌨️ Blizzard ON",
+   "line": "A whiteout: snow sweeps sideways through the house. Stays on until it's switched off.",
    "command": {
     "op": "fx",
-    "id": "blizzard"
+    "id": "blizzard",
+    "on": true
    }
   },
   {
    "group": "Effects",
-   "label": "🌋 Earthquake",
-   "line": "The ground rumbles and every screen shakes.",
+   "label": "🌋 Earthquake ON",
+   "line": "The ground rumbles and every screen shakes. Stays on until it's switched off.",
    "command": {
     "op": "fx",
-    "id": "earthquake"
+    "id": "earthquake",
+    "on": true
    }
   },
   {
    "group": "Effects",
-   "label": "🌈 Rainbow mode",
-   "line": "Everything turns every colour at once, with rainbow trails.",
+   "label": "🌈 Rainbow mode ON",
+   "line": "Everything turns every colour at once, with rainbow trails. Stays on until it's switched off.",
    "command": {
     "op": "fx",
-    "id": "rainbow"
+    "id": "rainbow",
+    "on": true
    }
   },
   {
    "group": "Effects",
-   "label": "🧼 Bubble party",
-   "line": "Thousands of bubbles float up round every guest.",
+   "label": "🧼 Bubble party ON",
+   "line": "Thousands of bubbles float up round every guest. Stays on until it's switched off.",
    "command": {
     "op": "fx",
-    "id": "bubbles"
+    "id": "bubbles",
+    "on": true
    }
   },
   {
    "group": "Effects",
-   "label": "🌊 Gold wave",
-   "line": "A tidal wave of gold coins washes over every screen.",
+   "label": "🌊 Gold wave ON",
+   "line": "A tidal wave of gold coins washes over every screen. Stays on until it's switched off.",
    "command": {
     "op": "fx",
-    "id": "goldWave"
+    "id": "goldWave",
+    "on": true
    }
   },
   {
    "group": "Effects",
-   "label": "🔥 Fire & Ice",
-   "line": "Embers and snowflakes, red and blue, at once.",
+   "label": "🔥 Fire & Ice ON",
+   "line": "Embers and snowflakes, red and blue, at once. Stays on until it's switched off.",
    "command": {
     "op": "fx",
-    "id": "fireIce"
+    "id": "fireIce",
+    "on": true
    }
   },
   {
    "group": "Effects",
-   "label": "🔦 Blackout",
-   "line": "The lights go out; spotlights sweep the dark, then everything blazes back.",
+   "label": "🔦 Blackout ON",
+   "line": "The lights go out; spotlights sweep the dark, then everything blazes back. Stays on until it's switched off.",
    "command": {
     "op": "fx",
-    "id": "blackout"
+    "id": "blackout",
+    "on": true
    }
   },
   {
    "group": "Effects",
-   "label": "🌪️ Tornado",
-   "line": "A whirlwind spins up beside every guest and carries them round.",
+   "label": "🌪️ Tornado ON",
+   "line": "A whirlwind spins up beside every guest and carries them round. Stays on until it's switched off.",
    "command": {
     "op": "fx",
-    "id": "tornado"
+    "id": "tornado",
+    "on": true
    }
   },
   {
    "group": "Effects",
-   "label": "🎆 Fireworks finale",
-   "line": "The sky fills with fireworks over every guest.",
+   "label": "🎆 Fireworks finale ON",
+   "line": "The sky fills with fireworks over every guest. Stays on until it's switched off.",
    "command": {
     "op": "fx",
-    "id": "fireworks"
+    "id": "fireworks",
+    "on": true
    }
   },
   {
    "group": "Effects",
-   "label": "🗿 Titan meme",
-   "line": "A colossal meme rises over the rooftops, looks round, and sinks.",
+   "label": "🗿 Titan meme ON",
+   "line": "A colossal meme rises over the rooftops, looks round, and sinks. Stays on until it's switched off.",
    "command": {
     "op": "fx",
-    "id": "titan"
+    "id": "titan",
+    "on": true
    }
   },
   {
    "group": "Effects",
-   "label": "🌙 Zero gravity",
-   "line": "Everyone floats, slowly, then drifts back down.",
+   "label": "🌙 Zero gravity ON",
+   "line": "Everyone floats, slowly, then drifts back down. Stays on until it's switched off.",
    "command": {
     "op": "fx",
-    "id": "zeroG"
+    "id": "zeroG",
+    "on": true
+   }
+  },
+  {
+   "group": "Effects",
+   "label": "🧹 Every effect OFF",
+   "line": "Every effect switched off, in every server.",
+   "command": {
+    "op": "fxAllOff"
    }
   },
   {

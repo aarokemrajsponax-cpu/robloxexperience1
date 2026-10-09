@@ -1256,7 +1256,8 @@ local function offerWatch(on: boolean)
 	gui.Name = "FireworksWatch"
 	gui.IgnoreGuiInset = false
 	gui.ResetOnSpawn = false
-	gui.DisplayOrder = 25
+	-- (Just under the sorting screen: a guest at a table isn't offered it over their pieces.)
+	gui.DisplayOrder = 17
 	local k = Instance.new("TextButton")
 	k.Name = "Watch"
 	-- Clear of the notices at the top that announce the show, and of the Eat key below it.

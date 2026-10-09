@@ -33,7 +33,8 @@ local Store = require(script.Parent.Purchases.Store)
 
 local TableService = {}
 
-type SessionPiece = Deal.DealtPiece & { uid: number, filed: boolean }
+-- `golden`: a golden piece (while Admin Abuse or an effect is on): the right case pays Gilt.
+type SessionPiece = Deal.DealtPiece & { uid: number, filed: boolean, golden: boolean? }
 
 export type Mode = "room" | "nightly" | "rehearsal"
 
@@ -104,6 +105,11 @@ TableService.onNightlyFinished = function(_player: Player, _percentile: number?)
 TableService.mythicLuck = function(): number
 	return 1
 end
+-- While the house is in uproar (Admin Abuse, Mega Abuse, an effect switched on), how many golden
+-- pieces each deal in the rooms holds, and why (set by Main: AdminService.tableTwist).
+TableService.twist = function(): { golden: number, kind: string }?
+	return nil
+end
 -- Set by the server: is the guest busy elsewhere (a Library duel)?
 TableService.isBusy = function(_player: Player): boolean
 	return false
@@ -167,6 +173,7 @@ local function publicPiece(p: SessionPiece): { [string]: any }
 		rare = p.rare,
 		seasonal = p.seasonal,
 		mythic = p.mythic,
+		golden = p.golden == true,
 	}
 end
 
@@ -220,12 +227,33 @@ local function dealRound(s: Session)
 	s.roundCorrect = 0
 	s.roundRevives = 0
 	local list = {}
+	local dealt: { SessionPiece } = {}
 	for _, p in result.pieces do
 		s.nextUid += 1
 		local sp: SessionPiece = table.clone(p) :: any
 		sp.uid = s.nextUid
 		sp.filed = false
 		s.pieces[sp.uid] = sp
+		table.insert(dealt, sp)
+	end
+	-- Admin Abuse at the table: golden pieces, picked here (never by a guest's screen), in the
+	-- rooms only (the Nightly is the same for everyone and stays so).
+	local twist = if s.mode == "room" then TableService.twist() else nil
+	if twist and twist.golden > 0 and #dealt > 0 then
+		local rng = Random.new()
+		for _ = 1, math.min(twist.golden, #dealt) do
+			local tries = 0
+			repeat
+				local pick = dealt[rng:NextInteger(1, #dealt)]
+				tries += 1
+				if not pick.golden then
+					pick.golden = true
+					break
+				end
+			until tries > 20
+		end
+	end
+	for _, sp in dealt do
 		table.insert(list, publicPiece(sp))
 	end
 	local budget = Clock.budget(s.room, s.dealSize)
@@ -248,6 +276,7 @@ local function dealRound(s: Session)
 		pieces = list,
 		score = s.score,
 		clock = clockState(s),
+		twist = if twist then twist.kind else nil,
 	})
 
 	-- The Concierge notices the first gilded piece a guest ever sees, and any Mythic.
@@ -619,6 +648,7 @@ local function file(s: Session, uid: number, caseId: string)
 	local mult = s.room.tuning.multiplier
 	local correct = piece.case == caseId
 	local points, setBonus, penalty = 0, 0, 0
+	local goldenPaid: number? = nil
 	TableService.onFiling(s.player, correct)
 	if correct then
 		piece.filed = true
@@ -641,6 +671,10 @@ local function file(s: Session, uid: number, caseId: string)
 			s.clock.left = Clock.refund(s.room, Scoring.multiplier(s.streak), s.clock.left, s.clock.budget)
 		end
 		register(s.player, piece, s.room.id)
+		-- A golden piece in its right case: its Gilt, now (multiplied like all Gilt).
+		if piece.golden and data then
+			goldenPaid = Gilt.pay(s.player, data, Config.data.Admin.table.goldenGilt, "Golden piece")
+		end
 		if s.runCorrect == 1 then
 			Analytics.step(s.player, 7)
 			local pressed = Analytics.stamp(s.player, "Play pressed")
@@ -679,6 +713,7 @@ local function file(s: Session, uid: number, caseId: string)
 		runLength = s.runLength,
 		remaining = s.remaining,
 		clock = clockState(s),
+		golden = goldenPaid,
 	})
 	if s.remaining == 0 then
 		roundComplete(s)

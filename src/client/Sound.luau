@@ -97,6 +97,66 @@ function Sound.score(id: string, volume: number?): () -> ()
 	end
 end
 
+-- A show's music as a playlist (Admin Abuse, an effect switched on): `songs` play one after
+-- another in a shuffled order, each at its own gain, round and round, at the music level while
+-- the house's music sinks under it. Returns a function that fades it out (and brings the house's
+-- music back once no score is playing).
+function Sound.scoreList(songs: { { id: string, gain: number? } }, volume: number?): () -> ()
+	if #songs == 0 then
+		return function() end
+	end
+	scoring += 1
+	TweenService:Create(music, TweenInfo.new(1.2, Enum.EasingStyle.Sine), { Volume = levels.music * 0.12 }):Play()
+	local order = {}
+	for i = 1, #songs do
+		order[i] = i
+	end
+	for i = #order, 2, -1 do
+		local j = math.random(1, i)
+		order[i], order[j] = order[j], order[i]
+	end
+	local s = Instance.new("Sound")
+	s.Name = "ScoreList"
+	s.Volume = 0
+	s.SoundGroup = show
+	s.Parent = SoundService
+	local stopped = false
+	local index = 0
+	local base = volume or 0.8
+	local function nextSong()
+		if stopped then
+			return
+		end
+		index = index % #order + 1
+		local song = songs[order[index]]
+		s.SoundId = song.id
+		s.TimePosition = 0
+		s:Play()
+		TweenService:Create(s, TweenInfo.new(1, Enum.EasingStyle.Sine), { Volume = base * (song.gain or 1) }):Play()
+	end
+	pcall(function()
+		s.Ended:Connect(function()
+			task.wait(0.4)
+			nextSong()
+		end)
+	end)
+	nextSong()
+	return function()
+		if stopped then
+			return
+		end
+		stopped = true
+		scoring = math.max(0, scoring - 1)
+		TweenService:Create(s, TweenInfo.new(1.6, Enum.EasingStyle.Sine), { Volume = 0 }):Play()
+		task.delay(1.7, function()
+			s:Destroy()
+		end)
+		if scoring == 0 then
+			TweenService:Create(music, TweenInfo.new(2.5, Enum.EasingStyle.Sine), { Volume = if dipped then levels.music * 0.45 else levels.music }):Play()
+		end
+	end
+end
+
 -- A short dip for round cards (about three seconds).
 function Sound.briefDip(seconds: number?)
 	Sound.dip(true)

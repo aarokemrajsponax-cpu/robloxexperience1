@@ -281,6 +281,7 @@ AdminService.tally = function(player, stat, n, once)
 end
 LedgerService.boost = AdminService.ledgerBoost
 TableService.mythicLuck = AdminService.mythicLuck
+TableService.twist = AdminService.tableTwist
 boot("House controls", AdminService.start)
 CircleService.changed = function(player)
 	Dressing.nameplate(player)

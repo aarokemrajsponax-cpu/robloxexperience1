@@ -19,6 +19,9 @@ function Get-Key {
     return [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure))
 }
 function Send-Command([string]$Json) {
+    $obj = $Json | ConvertFrom-Json
+    $obj | Add-Member -NotePropertyName rid -NotePropertyValue ([guid]::NewGuid().ToString('N')) -Force
+    $Json = $obj | ConvertTo-Json -Compress
     $body = @{ message = $Json } | ConvertTo-Json -Compress
     try {
         Invoke-RestMethod -Method Post -Uri "https://apis.roblox.com/messaging-service/v1/universes/$Universe/topics/$Topic" -Headers @{ 'x-api-key' = (Get-Key) } -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($body)) | Out-Null
@@ -40,29 +43,30 @@ $Commands = @(
     @{ Label = '⏱️ Countdown, then a giveaway (10s)'; Json = '{"op":"countdown","id":"giveaway","seconds":10}' }
     @{ Label = '⏱️ Countdown, then a surprise effect (10s)'; Json = '{"op":"countdown","id":"surprise","seconds":10}' }
     @{ Label = '🛑 Stop everything'; Json = '{"op":"stopAll"}' }
-    @{ Label = '🚀 Rocket launch'; Json = '{"op":"fx","id":"launch"}' }
-    @{ Label = '💃 Dance party'; Json = '{"op":"fx","id":"dance"}' }
-    @{ Label = '⚡ Lightning storm'; Json = '{"op":"fx","id":"storm"}' }
-    @{ Label = '🗿 Brainrot storm'; Json = '{"op":"fx","id":"memeRain"}' }
-    @{ Label = '🎉 Confetti cannons'; Json = '{"op":"fx","id":"confetti"}' }
-    @{ Label = '💥 Shockwave'; Json = '{"op":"fx","id":"shockwave"}' }
-    @{ Label = '🌀 Spin'; Json = '{"op":"fx","id":"spin"}' }
-    @{ Label = '☄️ Meteor shower'; Json = '{"op":"fx","id":"meteor"}' }
-    @{ Label = '🕳️ Black hole'; Json = '{"op":"fx","id":"blackHole"}' }
-    @{ Label = '🌌 Aurora'; Json = '{"op":"fx","id":"aurora"}' }
-    @{ Label = '🪐 Galaxy sky'; Json = '{"op":"fx","id":"galaxy"}' }
-    @{ Label = '🛸 UFO abduction'; Json = '{"op":"fx","id":"ufo"}' }
-    @{ Label = '🌨️ Blizzard'; Json = '{"op":"fx","id":"blizzard"}' }
-    @{ Label = '🌋 Earthquake'; Json = '{"op":"fx","id":"earthquake"}' }
-    @{ Label = '🌈 Rainbow mode'; Json = '{"op":"fx","id":"rainbow"}' }
-    @{ Label = '🧼 Bubble party'; Json = '{"op":"fx","id":"bubbles"}' }
-    @{ Label = '🌊 Gold wave'; Json = '{"op":"fx","id":"goldWave"}' }
-    @{ Label = '🔥 Fire & Ice'; Json = '{"op":"fx","id":"fireIce"}' }
-    @{ Label = '🔦 Blackout'; Json = '{"op":"fx","id":"blackout"}' }
-    @{ Label = '🌪️ Tornado'; Json = '{"op":"fx","id":"tornado"}' }
-    @{ Label = '🎆 Fireworks finale'; Json = '{"op":"fx","id":"fireworks"}' }
-    @{ Label = '🗿 Titan meme'; Json = '{"op":"fx","id":"titan"}' }
-    @{ Label = '🌙 Zero gravity'; Json = '{"op":"fx","id":"zeroG"}' }
+    @{ Label = '🚀 Rocket launch ON'; Json = '{"op":"fx","id":"launch","on":true}' }
+    @{ Label = '💃 Dance party ON'; Json = '{"op":"fx","id":"dance","on":true}' }
+    @{ Label = '⚡ Lightning storm ON'; Json = '{"op":"fx","id":"storm","on":true}' }
+    @{ Label = '🗿 Brainrot storm ON'; Json = '{"op":"fx","id":"memeRain","on":true}' }
+    @{ Label = '🎉 Confetti cannons ON'; Json = '{"op":"fx","id":"confetti","on":true}' }
+    @{ Label = '💥 Shockwave ON'; Json = '{"op":"fx","id":"shockwave","on":true}' }
+    @{ Label = '🌀 Spin ON'; Json = '{"op":"fx","id":"spin","on":true}' }
+    @{ Label = '☄️ Meteor shower ON'; Json = '{"op":"fx","id":"meteor","on":true}' }
+    @{ Label = '🕳️ Black hole ON'; Json = '{"op":"fx","id":"blackHole","on":true}' }
+    @{ Label = '🌌 Aurora ON'; Json = '{"op":"fx","id":"aurora","on":true}' }
+    @{ Label = '🪐 Galaxy sky ON'; Json = '{"op":"fx","id":"galaxy","on":true}' }
+    @{ Label = '🛸 UFO abduction ON'; Json = '{"op":"fx","id":"ufo","on":true}' }
+    @{ Label = '🌨️ Blizzard ON'; Json = '{"op":"fx","id":"blizzard","on":true}' }
+    @{ Label = '🌋 Earthquake ON'; Json = '{"op":"fx","id":"earthquake","on":true}' }
+    @{ Label = '🌈 Rainbow mode ON'; Json = '{"op":"fx","id":"rainbow","on":true}' }
+    @{ Label = '🧼 Bubble party ON'; Json = '{"op":"fx","id":"bubbles","on":true}' }
+    @{ Label = '🌊 Gold wave ON'; Json = '{"op":"fx","id":"goldWave","on":true}' }
+    @{ Label = '🔥 Fire & Ice ON'; Json = '{"op":"fx","id":"fireIce","on":true}' }
+    @{ Label = '🔦 Blackout ON'; Json = '{"op":"fx","id":"blackout","on":true}' }
+    @{ Label = '🌪️ Tornado ON'; Json = '{"op":"fx","id":"tornado","on":true}' }
+    @{ Label = '🎆 Fireworks finale ON'; Json = '{"op":"fx","id":"fireworks","on":true}' }
+    @{ Label = '🗿 Titan meme ON'; Json = '{"op":"fx","id":"titan","on":true}' }
+    @{ Label = '🌙 Zero gravity ON'; Json = '{"op":"fx","id":"zeroG","on":true}' }
+    @{ Label = '🧹 Every effect OFF'; Json = '{"op":"fxAllOff"}' }
     @{ Label = '🎃 The All Hallows'' Hunt · 15 min'; Json = '{"op":"event","id":"halloween","minutes":15}' }
     @{ Label = '🦃 The Turkey Trot · 15 min'; Json = '{"op":"event","id":"thanksgiving","minutes":15}' }
     @{ Label = '🎁 The Gift Drop · 15 min'; Json = '{"op":"event","id":"christmas","minutes":15}' }

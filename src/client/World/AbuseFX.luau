@@ -38,6 +38,7 @@ local Workspace = game:GetService("Workspace")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Curios = require(ReplicatedStorage.Shared.Curios)
+local HouseEvents = require(ReplicatedStorage.Shared.HouseEvents)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Fireworks = require(script.Parent.Fireworks)
 local Flakes = require(script.Parent.Flakes)
@@ -60,6 +61,17 @@ local SMOKE = "rbxasset://textures/particles/smoke_main.dds"
 local SPARK = "rbxasset://textures/particles/sparkles_main.dds"
 
 local token = 0 -- bumped by "stop": every effect still playing ends
+-- Each effect's own life: switching one effect off ends only it (its channel is bumped).
+local channel: { [string]: number } = {}
+local starting = "" -- the effect being started just now (set by AbuseFX.play)
+local repeating = false -- a switched-on effect coming round again (its banner was shown)
+export type Life = { gen: number, id: string, chan: number }
+local function life(): Life
+	return { gen = token, id = starting, chan = channel[starting] or 0 }
+end
+local function alive(l: Life): boolean
+	return token == l.gen and (channel[l.id] or 0) == l.chan
+end
 
 -- What an effect must put back if it's stopped part-way (the camera, gravity, a guest held up).
 local undo: { [number]: () -> () } = {}
@@ -131,6 +143,9 @@ end
 
 -- Big words slammed onto the screen, then gone.
 local function banner(text: string, colour: Color3, seconds: number)
+	if repeating then
+		return
+	end
 	local label = Instance.new("TextLabel")
 	label.Name = "Banner"
 	label.BackgroundTransparency = 1
@@ -268,14 +283,14 @@ local DANCES = { "dance", "dance2", "dance3" }
 local function dance(seconds: number)
 	banner("DANCE PARTY!", rgb(255, 80, 200), 2.5)
 	sound("partyHorn", 1)
-	local my = token
+	local my = life()
 	local cc = Instance.new("ColorCorrectionEffect")
 	cc.Name = "DanceLight"
 	cc.Parent = Lighting
 	task.spawn(function()
 		local started = os.clock()
 		local beat = 0
-		while token == my and os.clock() - started < seconds do
+		while alive(my) and os.clock() - started < seconds do
 			beat += 1
 			cc.TintColor = Color3.new(1, 1, 1):Lerp(RAINBOW[beat % #RAINBOW + 1], 0.16)
 			if beat % 12 == 1 and free() then
@@ -335,11 +350,11 @@ end
 
 local function storm(seconds: number)
 	banner("LIGHTNING STORM", rgb(190, 215, 255), 2.5)
-	local my = token
+	local my = life()
 	task.spawn(function()
 		local started = os.clock()
 		local rng = Random.new()
-		while token == my and os.clock() - started < seconds do
+		while alive(my) and os.clock() - started < seconds do
 			local root = rootOf()
 			if root then
 				local a = rng:NextNumber(0, math.pi * 2)
@@ -370,7 +385,7 @@ local function memeRain(seconds: number)
 	if #glyphs == 0 then
 		glyphs = { "🤡", "🗿", "💀" }
 	end
-	local my = token
+	local my = life()
 	task.spawn(function()
 		local started = os.clock()
 		local rng = Random.new()
@@ -395,7 +410,7 @@ local function memeRain(seconds: number)
 				end
 			end
 		end)
-		while token == my and os.clock() - started < seconds do
+		while alive(my) and os.clock() - started < seconds do
 			local root = rootOf()
 			if root then
 				for _ = 1, 3 do
@@ -437,7 +452,7 @@ local function confetti(seconds: number)
 	task.delay(0.3, function()
 		sound("partyHorn", 1, 1.15)
 	end)
-	local my = token
+	local my = life()
 	local stops = {}
 	for i = 0, 3 do
 		local a = i * math.pi / 2 + math.pi / 4
@@ -463,7 +478,7 @@ local function confetti(seconds: number)
 	task.spawn(function()
 		local started = os.clock()
 		while os.clock() - started < seconds do
-			if token ~= my then
+			if not alive(my) then
 				for _, stop in stops do
 					stop()
 				end
@@ -515,13 +530,13 @@ local function spin(seconds: number)
 	if not h or not root then
 		return
 	end
-	local my = token
+	local my = life()
 	local was = h.AutoRotate
 	h.AutoRotate = false
 	local started = os.clock()
 	local conn: RBXScriptConnection? = nil
 	conn = RunService.RenderStepped:Connect(function(dt: number)
-		if token ~= my or os.clock() - started > seconds or not root.Parent then
+		if not alive(my) or os.clock() - started > seconds or not root.Parent then
 			if conn then
 				conn:Disconnect()
 			end
@@ -568,14 +583,14 @@ local function emitter(parent: Instance, texture: string, colour: ColorSequence,
 end
 
 -- The camera shakes for a while (strength in studs, easing off).
-local function shake(seconds: number, strength: number)
+local function shake(seconds: number, strength: number, given: Life?)
 	local name = "MaisonShake" .. tostring(math.random(1, 1e6))
 	local started = os.clock()
-	local my = token
+	local my = given or life()
 	local ok = pcall(function()
 		RunService:BindToRenderStep(name, Enum.RenderPriority.Camera.Value + 1, function()
 			local t = os.clock() - started
-			if t > seconds or token ~= my then
+			if t > seconds or not alive(my) then
 				RunService:UnbindFromRenderStep(name)
 				return
 			end
@@ -601,7 +616,7 @@ end
 
 -- Holds the guest up in the air (a black hole, a UFO, a tornado): while `hold` gives a point, they
 -- drift towards it; then they're let go to fall softly. Returns at once.
-local function carry(seconds: number, hold: (t: number) -> Vector3?)
+local function carry(seconds: number, hold: (t: number) -> Vector3?, given: Life?)
 	if not free() then
 		return
 	end
@@ -609,7 +624,7 @@ local function carry(seconds: number, hold: (t: number) -> Vector3?)
 	if not root or not h then
 		return
 	end
-	local my = token
+	local my = given or life()
 	local started = os.clock()
 	pcall(function()
 		h.PlatformStand = true
@@ -631,7 +646,7 @@ local function carry(seconds: number, hold: (t: number) -> Vector3?)
 	conn = RunService.Heartbeat:Connect(function()
 		local t = os.clock() - started
 		local target = hold(t)
-		if t > seconds or token ~= my or not target or not root.Parent then
+		if t > seconds or not alive(my) or not target or not root.Parent then
 			finished(id)
 			return
 		end
@@ -710,11 +725,11 @@ end
 local function meteor(seconds: number)
 	banner("METEOR SHOWER!", rgb(255, 150, 60), 2.5)
 	flash(rgb(255, 170, 110), 0.25, 1)
-	local my = token
+	local my = life()
 	task.spawn(function()
 		local rng = Random.new()
 		local started = os.clock()
-		while token == my and os.clock() - started < seconds do
+		while alive(my) and os.clock() - started < seconds do
 			local root = rootOf()
 			if root then
 				oneMeteor(root.Position, rng)
@@ -730,7 +745,7 @@ local function blackHole(seconds: number)
 	if not root then
 		return
 	end
-	local my = token
+	local my = life()
 	local centre = root.Position + Vector3.new(0, 48, 0)
 	local hole = part("BlackHole", Vector3.new(2, 2, 2), Color3.new(0, 0, 0), Enum.Material.SmoothPlastic)
 	hole.Shape = Enum.PartType.Ball
@@ -766,7 +781,7 @@ local function blackHole(seconds: number)
 		return centre + Vector3.new(math.cos(a) * r, -16 + math.min(8, t * 2), math.sin(a) * r)
 	end)
 	task.spawn(function()
-		while token == my and os.clock() - started < seconds do
+		while alive(my) and os.clock() - started < seconds do
 			task.wait(0.2)
 		end
 		conn:Disconnect()
@@ -786,9 +801,9 @@ local function aurora(seconds: number)
 	if not root then
 		return
 	end
-	local my = token
+	local my = life()
 	local centre = root.Position
-	local curtains: { { a0: Attachment, a1: Attachment, base: Vector3, phase: number } } = {}
+	local curtains: { { a0: Attachment, a1: Attachment, base: Vector3, a1base: Vector3, phase: number } } = {}
 	local holderPart = part("Aurora", Vector3.new(1, 1, 1), Color3.new(1, 1, 1), Enum.Material.SmoothPlastic, 1)
 	holderPart.Position = centre
 	local colours = {
@@ -819,7 +834,7 @@ local function aurora(seconds: number)
 		beam.CurveSize1 = -20
 		beam.Segments = 20
 		beam.Parent = holderPart
-		table.insert(curtains, { a0 = a0, a1 = a1, base = base, phase = i })
+		table.insert(curtains, { a0 = a0, a1 = a1, base = base, a1base = a1.WorldPosition, phase = i })
 	end
 	local cc = Instance.new("ColorCorrectionEffect")
 	cc.Name = "AuroraNight"
@@ -829,13 +844,17 @@ local function aurora(seconds: number)
 	local started = os.clock()
 	local conn = RunService.RenderStepped:Connect(function()
 		local t = os.clock() - started
+		-- (It keeps over the guest as they walk: switched on, it may be up a long while.)
+		local r = rootOf()
+		local shift = if r then r.Position - centre else Vector3.zero
 		for _, c in curtains do
 			local wave = Vector3.new(math.sin(t * 0.5 + c.phase) * 8, math.sin(t * 0.8 + c.phase * 2) * 6, math.cos(t * 0.4 + c.phase) * 8)
-			c.a0.WorldPosition = c.base + wave
+			c.a0.WorldPosition = c.base + shift + wave
+			c.a1.WorldPosition = c.base + shift + (c.a1base - c.base)
 		end
 	end)
 	task.spawn(function()
-		while token == my and os.clock() - started < seconds do
+		while alive(my) and os.clock() - started < seconds do
 			task.wait(0.25)
 		end
 		conn:Disconnect()
@@ -851,7 +870,7 @@ local function galaxy(seconds: number)
 	if not root then
 		return
 	end
-	local my = token
+	local my = life()
 	local centre = root.Position
 	local rng = Random.new()
 	local folder = Instance.new("Folder")
@@ -890,10 +909,22 @@ local function galaxy(seconds: number)
 	cc.Parent = Lighting
 	local started = os.clock()
 	task.spawn(function()
-		while token == my and os.clock() - started < seconds do
+		local at = centre
+		while alive(my) and os.clock() - started < seconds do
 			for _ = 1, 10 do
 				local s = stars[rng:NextInteger(1, #stars)]
 				s.Transparency = rng:NextNumber(0, 0.7)
+			end
+			-- (The sky goes with the guest: switched on, they may walk the whole house under it.)
+			local r = rootOf()
+			if r and (r.Position - at).Magnitude > 60 then
+				local shift = r.Position - at
+				at = r.Position
+				for _, p in folder:GetChildren() do
+					if p:IsA("BasePart") then
+						p.CFrame = p.CFrame + shift
+					end
+				end
 			end
 			task.wait(0.15)
 		end
@@ -908,7 +939,7 @@ local function ufo(seconds: number)
 	if not root then
 		return
 	end
-	local my = token
+	local my = life()
 	local hover = root.Position + Vector3.new(0, 34, 0)
 	local saucer = part("Saucer", Vector3.new(4, 26, 26), rgb(170, 180, 190), Enum.Material.Metal)
 	saucer.Shape = Enum.PartType.Cylinder
@@ -949,16 +980,16 @@ local function ufo(seconds: number)
 		beam.CFrame = CFrame.new(at - Vector3.new(0, 17, 0)) * CFrame.Angles(0, 0, math.rad(90))
 	end)
 	task.delay(1.6, function()
-		if token ~= my then
+		if not alive(my) then
 			return
 		end
 		sound("shimmer", 1, 0.7)
 		carry(seconds - 3.4, function(t: number): Vector3?
 			return hover - Vector3.new(0, math.max(8, 30 - t * 6), 0)
-		end)
+		end, my)
 	end)
 	task.spawn(function()
-		while token == my and os.clock() - started < seconds do
+		while alive(my) and os.clock() - started < seconds do
 			task.wait(0.2)
 		end
 		conn:Disconnect()
@@ -1004,7 +1035,7 @@ end
 local function blizzard(seconds: number)
 	banner("BLIZZARD!", rgb(220, 240, 255), 2.5)
 	sound("fireworkHiss", 1, 0.5)
-	local my = token
+	local my = life()
 	local stopSnow = cloud("Blizzard", Vector3.new(120, 30, 120), Vector3.new(0, 18, 0), function(att)
 		boxed(emitter(att, SPARK, ColorSequence.new(Color3.new(1, 1, 1)), { Rate = 900, Lifetime = NumberRange.new(1.5, 2.5), Speed = NumberRange.new(4, 8), Acceleration = Vector3.new(60, -25, 10), Size = NumberSequence.new(0.35, 0.2), LightEmission = 0.4 }))
 		boxed(emitter(att, SMOKE, ColorSequence.new(rgb(240, 248, 255)), { Rate = 25, Lifetime = NumberRange.new(2, 3), Speed = NumberRange.new(2, 4), Acceleration = Vector3.new(30, -4, 0), Size = NumberSequence.new(10, 18), Transparency = NumberSequence.new(0.75, 1) }))
@@ -1017,7 +1048,7 @@ local function blizzard(seconds: number)
 	cc.Parent = Lighting
 	task.spawn(function()
 		local started = os.clock()
-		while token == my and os.clock() - started < seconds do
+		while alive(my) and os.clock() - started < seconds do
 			task.wait(0.25)
 		end
 		stopSnow()
@@ -1030,13 +1061,13 @@ local function earthquake(seconds: number)
 	sound("fireworkRumble", 1.2, 0.45)
 	task.delay(0.5, sound, "fireworkTaiko", 1, 0.6)
 	shake(seconds, 1.8)
-	local my = token
+	local my = life()
 	local stopDust = cloud("Dust", Vector3.new(60, 2, 60), Vector3.new(0, -3, 0), function(att)
 		boxed(emitter(att, SMOKE, ColorSequence.new(rgb(170, 150, 120)), { Rate = 40, Lifetime = NumberRange.new(1.5, 2.5), Speed = NumberRange.new(2, 6), Size = NumberSequence.new(3, 8), Transparency = NumberSequence.new(0.5, 1) }))
 	end)
 	task.spawn(function()
 		local started = os.clock()
-		while token == my and os.clock() - started < seconds do
+		while alive(my) and os.clock() - started < seconds do
 			if free() and math.random() < 0.35 then
 				throw(Vector3.new(math.random(-8, 8), 22, math.random(-8, 8)))
 			end
@@ -1049,7 +1080,7 @@ end
 local function rainbowMode(seconds: number)
 	banner("RAINBOW MODE!", Color3.new(1, 1, 1), 2)
 	sound("shimmer", 1)
-	local my = token
+	local my = life()
 	local cc = Instance.new("ColorCorrectionEffect")
 	cc.Name = "Rainbow"
 	cc.Saturation = 0.5
@@ -1085,7 +1116,7 @@ local function rainbowMode(seconds: number)
 		cc.TintColor = Color3.new(1, 1, 1):Lerp(Color3.fromHSV((t * 0.35) % 1, 0.8, 1), 0.3)
 	end)
 	task.spawn(function()
-		while token == my and os.clock() - started < seconds do
+		while alive(my) and os.clock() - started < seconds do
 			task.wait(0.25)
 		end
 		conn:Disconnect()
@@ -1099,7 +1130,7 @@ end
 local function bubbles(seconds: number)
 	banner("BUBBLES!", rgb(160, 220, 255), 2)
 	sound("shimmer", 0.8, 1.3)
-	local my = token
+	local my = life()
 	local rng = Random.new()
 	local list: { { part: Part, speed: number, phase: number } } = {}
 	for _ = 1, 45 do
@@ -1133,7 +1164,7 @@ local function bubbles(seconds: number)
 		end
 	end)
 	task.spawn(function()
-		while token == my and os.clock() - started < seconds do
+		while alive(my) and os.clock() - started < seconds do
 			task.wait(0.25)
 		end
 		conn:Disconnect()
@@ -1147,6 +1178,10 @@ local function goldWave(seconds: number)
 	sound("coinDrop", 1)
 	task.delay(0.3, sound, "coinDrop", 1, 1.1)
 	task.delay(0.6, sound, "crowdCheer", 0.6)
+	if AbuseFX.isBusy() then
+		-- (At a table the sorting screen draws its own wave of gold.)
+		return
+	end
 	local gui = screen()
 	local holderFrame = Instance.new("Frame")
 	holderFrame.Name = "GoldWave"
@@ -1188,7 +1223,7 @@ end
 local function fireIce(seconds: number)
 	banner("FIRE & ICE", rgb(255, 160, 120), 2.2)
 	sound("fireworkHiss", 0.9)
-	local my = token
+	local my = life()
 	local stopFire = cloud("Embers", Vector3.new(50, 2, 50), Vector3.new(0, -3, 0), function(att)
 		boxed(emitter(att, FIRE, ColorSequence.new(rgb(255, 200, 90), rgb(255, 60, 30)), { Rate = 60, Lifetime = NumberRange.new(1.2, 2.2), Speed = NumberRange.new(4, 9), Size = NumberSequence.new(0.9, 0), LightEmission = 1, Acceleration = Vector3.new(0, 6, 0) }))
 	end)
@@ -1198,6 +1233,8 @@ local function fireIce(seconds: number)
 	local gui = screen()
 	local sides = Instance.new("Frame")
 	sides.Name = "FireIce"
+	-- (At a table the sorting screen draws its own fire and ice.)
+	sides.Visible = not AbuseFX.isBusy()
 	sides.BackgroundTransparency = 1
 	sides.Size = UDim2.fromScale(1, 1)
 	sides.Parent = gui
@@ -1214,7 +1251,7 @@ local function fireIce(seconds: number)
 	end
 	task.spawn(function()
 		local started = os.clock()
-		while token == my and os.clock() - started < seconds do
+		while alive(my) and os.clock() - started < seconds do
 			task.wait(0.25)
 		end
 		stopFire()
@@ -1225,7 +1262,7 @@ end
 
 local function blackout(seconds: number)
 	sound("bellStrike", 0.9, 0.6)
-	local my = token
+	local my = life()
 	local cc = Instance.new("ColorCorrectionEffect")
 	cc.Name = "Blackout"
 	cc.Brightness = 0
@@ -1263,7 +1300,7 @@ local function blackout(seconds: number)
 		end
 	end)
 	task.spawn(function()
-		while token == my and os.clock() - started < seconds do
+		while alive(my) and os.clock() - started < seconds do
 			task.wait(0.2)
 		end
 		conn:Disconnect()
@@ -1271,7 +1308,7 @@ local function blackout(seconds: number)
 			p:Destroy()
 		end
 		cc:Destroy()
-		if token == my then
+		if alive(my) then
 			flash(Color3.new(1, 1, 1), 0.8, 1.2)
 			sound("fireworkBoom", 1, 0.9)
 			sound("crowdCheer", 0.6)
@@ -1288,7 +1325,7 @@ local function tornado(seconds: number)
 	if not root then
 		return
 	end
-	local my = token
+	local my = life()
 	local rng = Random.new()
 	local start = root.Position + Vector3.new(26, -3, 0)
 	local rings: { Part } = {}
@@ -1328,17 +1365,17 @@ local function tornado(seconds: number)
 		end
 	end)
 	task.delay(2, function()
-		if token ~= my then
+		if not alive(my) then
 			return
 		end
 		carry(seconds - 4, function(t: number): Vector3?
 			local a = t * 3.2
 			local rr = 9
 			return centreAt + Vector3.new(math.cos(a) * rr, 8 + math.min(14, t * 3), math.sin(a) * rr)
-		end)
+		end, my)
 	end)
 	task.spawn(function()
-		while token == my and os.clock() - started < seconds do
+		while alive(my) and os.clock() - started < seconds do
 			task.wait(0.2)
 		end
 		conn:Disconnect()
@@ -1371,7 +1408,7 @@ local function titan(seconds: number)
 	if not camera or not root then
 		return
 	end
-	local my = token
+	local my = life()
 	local look = Vector3.new(camera.CFrame.LookVector.X, 0, camera.CFrame.LookVector.Z)
 	local dir = if look.Magnitude > 0.1 then look.Unit else Vector3.new(0, 0, -1)
 	local base = root.Position + dir * 260
@@ -1398,7 +1435,7 @@ local function titan(seconds: number)
 		face.Rotation = math.sin(t * 1.2) * 14
 	end)
 	task.delay(3.2, function()
-		if token == my then
+		if alive(my) then
 			sound("gong", 1.2, 0.6)
 			sound("airHorn", 1, 0.7)
 			flash(rgb(255, 220, 200), 0.3, 0.6)
@@ -1410,7 +1447,7 @@ local function titan(seconds: number)
 		end
 	end)
 	task.spawn(function()
-		while token == my and os.clock() - started < seconds do
+		while alive(my) and os.clock() - started < seconds do
 			task.wait(0.2)
 		end
 		conn:Disconnect()
@@ -1441,7 +1478,7 @@ local function zeroG(seconds: number)
 	if free() then
 		throw(Vector3.new(0, 28, 0))
 	end
-	local my = token
+	local my = life()
 	local done = false
 	local function back()
 		if done then
@@ -1456,7 +1493,7 @@ local function zeroG(seconds: number)
 	local id = onStop(back)
 	task.spawn(function()
 		local started = os.clock()
-		while token == my and os.clock() - started < seconds do
+		while alive(my) and os.clock() - started < seconds do
 			task.wait(0.2)
 		end
 		finished(id)
@@ -1538,8 +1575,9 @@ local PLAYERS: { [string]: (number, Vector3?) -> () } = {
 	end,
 }
 
--- Plays one effect (as the server said), or "stop".
-function AbuseFX.play(id: string, seconds: number?, origin: Vector3?)
+-- Plays one effect (as the server said), or "stop". `lasting`: switched on (no time limit: it
+-- runs until its switch goes off).
+function AbuseFX.play(id: string, seconds: number?, origin: Vector3?, lasting: boolean?)
 	if id == "stop" then
 		token += 1
 		-- Put back what's held (a guest in the air, the camera, gravity), then clear the stage.
@@ -1558,16 +1596,86 @@ function AbuseFX.play(id: string, seconds: number?, origin: Vector3?)
 				c:Destroy()
 			end
 		end
+		-- (Anything still switched on starts again: only the server's switches decide.)
+		task.delay(0.5, AbuseFX.resync)
 		return
 	end
 	local fn = PLAYERS[id]
 	if fn then
 		local s = seconds or (cfg().fxSeconds[id] or 6)
+		local was = starting
+		starting = id
 		local ok, err = pcall(function()
-			fn(math.clamp(s, 1, 60), origin)
+			fn(if lasting then math.max(1, s) else math.clamp(s, 1, 60), origin)
 		end)
+		starting = was
 		if not ok then
 			warn("[Maison] effect " .. id .. ": " .. tostring(err))
+		end
+	end
+end
+
+---------------------------------------------------------------------------------------------------
+-- Switched on: until it's switched off
+---------------------------------------------------------------------------------------------------
+-- The owner switches an effect on and it stays on, for everyone, until switched off (the server
+-- keeps the switch: Workspace's Fx_<id>, so a guest arriving later joins in). The gentle ones
+-- simply stay; the ones that move guests come in waves (Config.Admin.fxWaves), with a rest
+-- between to walk and sort.
+local LASTING = 1e7
+local switched: { [string]: number } = {} -- id -> its run (bumped each time it's switched)
+local onState: { [string]: boolean } = {} -- what this screen last heard each switch say
+
+local function isOn(id: string): boolean
+	return Workspace:GetAttribute(HouseEvents.fxAttribute(id)) ~= nil
+end
+
+function AbuseFX.sustain(id: string, on: boolean)
+	if not PLAYERS[id] then
+		return
+	end
+	local run = (switched[id] or 0) + 1
+	switched[id] = run
+	-- Whatever of it is playing now ends (a fresh start when switched on again).
+	channel[id] = (channel[id] or 0) + 1
+	if not on then
+		return
+	end
+	task.spawn(function()
+		-- (Arriving: wait for this guest's own character, round which it all plays.)
+		while switched[id] == run and not rootOf() do
+			task.wait(0.5)
+		end
+		local wave = (cfg().fxWaves :: any)[id]
+		local first = true
+		while switched[id] == run do
+			repeating = not first
+			if wave then
+				AbuseFX.play(id, wave.on)
+			else
+				AbuseFX.play(id, LASTING, nil, true)
+			end
+			repeating = false
+			first = false
+			if not wave then
+				return
+			end
+			local waited = 0
+			while switched[id] == run and waited < wave.on + wave.rest do
+				task.wait(0.25)
+				waited += 0.25
+			end
+		end
+	end)
+end
+
+-- Every switch as the server has it now (after a stop, the ones still on start again).
+function AbuseFX.resync()
+	for _, e in HouseEvents.Effects do
+		local on = isOn(e.id)
+		if on or onState[e.id] then
+			onState[e.id] = on
+			AbuseFX.sustain(e.id, on)
 		end
 	end
 end
@@ -1578,6 +1686,27 @@ function AbuseFX.start()
 			local origin = if typeof(m.origin) == "Vector3" then m.origin else nil
 			AbuseFX.play(m.id, if type(m.seconds) == "number" then m.seconds else nil, origin)
 		end
+	end)
+	for _, e in HouseEvents.Effects do
+		local id = e.id
+		Workspace:GetAttributeChangedSignal(HouseEvents.fxAttribute(id)):Connect(function()
+			local on = isOn(id)
+			if on ~= (onState[id] == true) then
+				onState[id] = on
+				AbuseFX.sustain(id, on)
+			end
+		end)
+	end
+	AbuseFX.resync()
+	-- A new character (a reset): the switched-on effects start again round it.
+	player.CharacterAdded:Connect(function()
+		task.delay(1, function()
+			for id, on in onState do
+				if on then
+					AbuseFX.sustain(id, true)
+				end
+			end
+		end)
 	end)
 end
 

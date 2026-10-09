@@ -1598,7 +1598,7 @@ do
 end
 
 ---------------------------------------------------------------------------------------------------
--- N. Suite spectacles: kept as shows, played only in your own Suite
+-- N. Suite spectacles: kept safe as a show first, then played at once in your own Suite
 ---------------------------------------------------------------------------------------------------
 do
 	local Layout = module("ReplicatedStorage", "Shared", "Layout")
@@ -1630,7 +1630,18 @@ do
 	local before = #prompts
 	r = show(pia, { op = "buy", key = "spectacleFireworks" })
 	check("buying opens Roblox's purchase window", r.ok == true and #prompts == before + 1)
-	check("the receipt keeps one show", receipt(pia, 5401, "show-1", 199) == GRANTED and Perks.credits(piaData, "show:spectacleFireworks") == 1)
+	local function shows(player)
+		local n = 0
+		for _, m in player.inbox do
+			if m.op == "spectacle" then
+				n += 1
+			end
+		end
+		return n
+	end
+	-- Bought away from the Suite (Pia isn't in the house's rooms at all yet).
+	check("the receipt keeps the show safe first", receipt(pia, 5401, "show-1", 199) == GRANTED and Perks.credits(piaData, "show:spectacleFireworks") == 1)
+	check("away from the Suite, it waits, and says so", shows(pia) == 0 and string.find(lastOp(pia, "notice") and lastOp(pia, "notice").line or "", "step into your Suite", 1, true) ~= nil)
 	pia.Character = {
 		FindFirstChild = function(_, n)
 			return if n == "HumanoidRootPart" then pia.root else nil
@@ -1639,12 +1650,23 @@ do
 	pia.root.Position = H.Vector3.new(0, 5, -40)
 	r = show(pia, { op = "play", key = "spectacleFireworks" })
 	check("a show plays only in your Suite", r.ok == false and Perks.credits(piaData, "show:spectacleFireworks") == 1)
-	pia.root.Position = Layout.Suite.arrival + H.Vector3.new(0, 3, 0)
 	-- Another guest in the house (in their own Suite, even): Pia's show is hers alone.
 	local quin = guest("Quin", 9601)
 	local quinBefore, castBefore = #quin.inbox, #broadcasts
-	r = show(pia, { op = "play", key = "spectacleFireworks" })
-	check("in the Suite it plays, and the show is spent", type(r) == "table" and r.ok == true and Perks.credits(piaData, "show:spectacleFireworks") == 0 and lastOp(pia, "spectacle") ~= nil, r and r.why)
+	pia.root.Position = Layout.Suite.arrival + H.Vector3.new(0, 3, 0)
+	advance(1.5)
+	check("stepping into the Suite, the show just bought plays at once, and is spent", Perks.credits(piaData, "show:spectacleFireworks") == 0 and shows(pia) == 1)
+	-- Bought while that show is still on: it waits for it to end (shows never overlap), then plays.
+	r = show(pia, { op = "buy", key = "spectacleMemes" })
+	check("bought during a show, it waits for that one to end, and says so", receipt(pia, 5402, "show-m", 299) == GRANTED and Perks.credits(piaData, "show:spectacleMemes") == 1 and shows(pia) == 1 and string.find(lastOp(pia, "notice") and lastOp(pia, "notice").line or "", "show on now ends", 1, true) ~= nil)
+	r = show(pia, { op = "play", key = "spectacleMemes" })
+	check("the bell won't start a second show over the first", r.ok == false and Perks.credits(piaData, "show:spectacleMemes") == 1)
+	advance(48)
+	check("...and it plays when the first one ends", Perks.credits(piaData, "show:spectacleMemes") == 0 and shows(pia) == 2)
+	advance(93)
+	-- Bought in the Suite: it plays the moment the purchase is settled (no Play to press).
+	r = show(pia, { op = "buy", key = "spectacleFireworks" })
+	check("bought in the Suite, it plays at once", receipt(pia, 5401, "show-2", 199) == GRANTED and Perks.credits(piaData, "show:spectacleFireworks") == 0 and shows(pia) == 3)
 	local spread = {}
 	for i = castBefore + 1, #broadcasts do
 		if broadcasts[i].message.op == "spectacle" then
@@ -1763,6 +1785,98 @@ do
 	Referral.arrived(f2, fd2)
 	check("and start again the next day", riaData.gilt == before2 + cfg.thankGilt and riaData.referral.today == 1)
 	check("only Gilt is given: no Robux items, no random rewards", cfg.welcomeGilt > 0 and cfg.thankGilt > 0 and paid == 1)
+end
+
+---------------------------------------------------------------------------------------------------
+-- Build 53. Admin Abuse at the sorting tables: golden pieces, picked and paid by the server
+---------------------------------------------------------------------------------------------------
+do
+	local TableService = module("ServerScriptService", "Server", "TableService")
+	local model = H.Instance.new("Model")
+	model.Name = "GoldTable"
+	model:SetAttribute("Room", "salon")
+	model:SetAttribute("TableId", "T-G1")
+	local chair = H.Instance.new("Seat")
+	chair.Name = "Chair"
+	chair.Parent = model
+	local gus = H.newGuest("Gus", 9700)
+	table.insert(H.guests, gus)
+	H.newProfile(gus, H.TEMPLATE)
+	local gd = profiles[gus].Data
+	gd.best, gd.bestRound, gd.nightly = {}, {}, { day = -1 }
+	H.loadedSignal:Fire(gus, gd)
+	local tableEvent = Remotes.event("Table")
+	local function send(m)
+		advance(0.3)
+		tableEvent.OnServerEvent:Fire(gus, m)
+	end
+	local function golden(deal)
+		local list = {}
+		for _, p in deal.pieces do
+			if p.golden then
+				table.insert(list, p)
+			end
+		end
+		return list
+	end
+	-- Nothing on in the house: no golden pieces.
+	TableService.twist = function()
+		return nil
+	end
+	run(function()
+		TableService.seat(gus, model, true, "room")
+	end)
+	advance(1)
+	local deal = lastOp(gus, "deal")
+	check("nothing on: no golden pieces at the table", deal ~= nil and #golden(deal) == 0 and deal.twist == nil)
+	send({ op = "leave" })
+	advance(2)
+	-- Admin Abuse on: golden pieces in the deal, chosen here.
+	TableService.twist = function()
+		return { golden = 2, kind = "abuse" }
+	end
+	run(function()
+		TableService.seat(gus, model, true, "room")
+	end)
+	advance(1)
+	deal = lastOp(gus, "deal")
+	local gold = if deal then golden(deal) else {}
+	check("Admin Abuse on: the deal holds its golden pieces (the server picks them)", deal ~= nil and #gold == 2 and deal.twist == "abuse")
+	local g = gold[1]
+	local wrong = nil
+	for _, c in deal.cases do
+		if c ~= g.case then
+			wrong = c
+			break
+		end
+	end
+	local before = gd.gilt
+	send({ op = "file", uid = g.uid, case = wrong })
+	local filed = lastOp(gus, "filed")
+	check("a golden piece in the wrong case pays nothing", filed ~= nil and filed.correct == false and filed.golden == nil and gd.gilt == before)
+	send({ op = "file", uid = g.uid, case = g.case })
+	filed = lastOp(gus, "filed")
+	check("in its right case it pays its Gilt at once, and says how much", filed ~= nil and filed.correct == true and type(filed.golden) == "number" and filed.golden >= Config.data.Admin.table.goldenGilt and gd.gilt - before == filed.golden, filed and filed.golden)
+	send({ op = "file", uid = g.uid, case = g.case })
+	check("and only once", gd.gilt - before == filed.golden)
+	local plain = nil
+	for _, p in deal.pieces do
+		if not p.golden then
+			plain = p
+			break
+		end
+	end
+	before = gd.gilt
+	send({ op = "file", uid = plain.uid, case = plain.case })
+	check("an ordinary piece pays nothing extra", lastOp(gus, "filed").golden == nil and gd.gilt == before)
+	-- What a guest's screen claims changes nothing: only the server's own pieces are golden.
+	send({ op = "file", uid = plain.uid, case = plain.case, golden = true })
+	check("a screen can't make a piece golden", lastOp(gus, "filed").golden == nil and gd.gilt == before)
+	send({ op = "leave" })
+	advance(2)
+	TableService.twist = function()
+		return nil
+	end
 end
 
 H.finish()
