@@ -91,7 +91,7 @@ function DuelPanel.show(message: { [string]: any }, actions: Actions)
 		Root.close(NAME)
 		actions.again()
 	end, 260).LayoutOrder = 1
-	if message.won or (type(message.markAfter) == "string" and message.markAfter ~= message.markBefore) then
+	if Share.allowed() and (message.won or (type(message.markAfter) == "string" and message.markAfter ~= message.markBefore)) then
 		Theme.key(keys, "Share", false, function()
 			Share.moment("library")
 		end, 260).LayoutOrder = 2

@@ -4,7 +4,6 @@
 -- names only, nothing personal. Share sends it through Roblox's own capture sharing with an
 -- invite attached; Invite asks a friend to try the same deal.
 
-local CaptureService = game:GetService("CaptureService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SocialService = game:GetService("SocialService")
@@ -15,6 +14,7 @@ local Voice = require(ReplicatedStorage.Shared.Voice)
 local Hallmark = require(script.Parent.Hallmark)
 local Root = require(script.Parent.Root)
 local RoundPanel = require(script.Parent.RoundPanel)
+local Share = require(script.Parent.Share)
 local Theme = require(script.Parent.Theme)
 local Toast = require(script.Parent.Toast)
 
@@ -44,16 +44,7 @@ local function ordinal(n: number): string
 end
 
 local function share()
-	local ok = pcall(function()
-		CaptureService:CaptureScreenshot(function(contentId: any)
-			pcall(function()
-				CaptureService:PromptShareCapture(Content.fromUri(tostring(contentId)), LAUNCH, function() end, function() end)
-			end)
-		end)
-	end)
-	if not ok then
-		Toast.show("Share", "Sharing isn't available on this device.", 3)
-	end
+	Share.moment(LAUNCH)
 end
 
 local function invite()
@@ -130,7 +121,9 @@ function NightlyCard.show(card: { [string]: any }, actions: Actions)
 	row.LayoutOrder = 1
 	row.Parent = keys
 	Theme.list(row, 8, true)
-	Theme.key(row, "Share", true, share, 150).LayoutOrder = 1
+	if Share.allowed() then
+		Theme.key(row, "Share", true, share, 150).LayoutOrder = 1
+	end
 	Theme.key(row, "Invite", false, invite, 150).LayoutOrder = 2
 	Theme.key(keys, "Rehearse it", false, function()
 		Root.close(NAME)

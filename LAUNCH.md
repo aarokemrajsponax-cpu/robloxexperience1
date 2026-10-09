@@ -130,6 +130,13 @@ and alcohol pieces replaced (§19 #2):
   checks each guest's policy (`PolicyService`, `IsPaidItemTradingAllowed`) and, where trading
   bought things isn't allowed, keeps Gem-bought curios out of that guest's trades (curios found
   at the tables still trade). Tick this box, or the experience can be restricted.
+- **Content from other experiences shown in-game:** **no.**
+- **Generative AI that players interact with:** **no** (every line is written in advance).
+- **IsPaidItemTradingAllowed respected:** **yes** (above).
+- **Players share media from their play:** **yes**, screenshots only, through Roblox's own share
+  prompt (Photo mode's Capture, and Share on the Nightly card and at big moments).
+- **IsContentSharingAllowed respected:** **yes.** The server asks Roblox for each guest
+  (`server/Policy`); until Roblox says yes, that guest's screen shows no Share or Capture key.
 - **Social:** Roblox's own chat only; no custom chat.
 - **Free-form user creation:** none (no drawing, painting or building by guests; Circle names
   are chosen from lists). The only typing is the Emperor's Decree's words, and those always pass

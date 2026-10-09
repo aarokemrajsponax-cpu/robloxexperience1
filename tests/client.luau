@@ -2188,6 +2188,12 @@ end
 check("tonight's table says which room's rules it plays by", textOnScreen("Tonight's table · The Velvet Room") ~= nil)
 serverSays("Shop", { op = "state", owned = {}, equipped = {}, gilt = 0, goldKey = false, credits = {} })
 check("a timed deal shows the clock: a draining gold rail and the seconds", sortGui.Root.Clock.Visible == true and sortGui.Root.Clock.Fill.Size.X.Scale > 0 and textOnScreen("0:") ~= nil)
+-- Roblox's policy doesn't (yet) let this guest share captures: no Share key at all.
+LocalPlayer:SetAttribute("ContentSharingAllowed", nil)
+serverSays("Table", { op = "nightlyCard", key = "2026-09-29", room = "velvet", score = 4210, grade = "Immaculate", rounds = { "Flawless", "Immaculate", "", "", "" }, scored = true, gilt = 120, rank = 12, total = 300, percentile = 4, connections = { place = 2, of = 5 } })
+advance(2)
+check("where Roblox's policy doesn't allow sharing, the Nightly card has no Share key", textOnScreen("Invite") ~= nil and textOnScreen("Share") == nil)
+LocalPlayer:SetAttribute("ContentSharingAllowed", true)
 serverSays("Table", { op = "nightlyCard", key = "2026-09-29", room = "velvet", score = 4210, grade = "Immaculate", rounds = { "Flawless", "Immaculate", "", "", "" }, scored = true, gilt = 120, rank = 12, total = 300, percentile = 4, connections = { place = 2, of = 5 } })
 advance(2)
 check("the Nightly card shows the score", textOnScreen("4,210") ~= nil)

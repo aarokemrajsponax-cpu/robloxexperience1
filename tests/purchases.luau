@@ -1571,6 +1571,7 @@ do
 	r = trade(pip, { op = "offer", items = { truffle = 1 } })
 	check("where Roblox doesn't allow paid item trading, a Gem-bought curio can't be offered", r.ok == false and string.find(r.why or "", "Gems", 1, true) ~= nil)
 	check("...and the guest's screen is told so (it hides those curios)", lastOp(pip, "trade").paid == false and pip:GetAttribute("PaidTradingAllowed") == false)
+	check("Roblox's sharing policy reaches each guest's screen (no answer from Roblox: no sharing)", pip:GetAttribute("ContentSharingAllowed") == false and quin:GetAttribute("ContentSharingAllowed") ~= true)
 	r = trade(mo, { op = "offer", items = { croissantino = 1 } })
 	check("...nor can the other guest offer one to them", (function()
 		local rr = trade(mo, { op = "offer", items = { truffle = 1 } })

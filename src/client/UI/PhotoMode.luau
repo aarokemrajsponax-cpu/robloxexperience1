@@ -16,6 +16,7 @@ local Workspace = game:GetService("Workspace")
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local Caps = require(ReplicatedStorage.Shared.Caps)
 local Root = require(script.Parent.Root)
+local Share = require(script.Parent.Share)
 local Theme = require(script.Parent.Theme)
 local Toast = require(script.Parent.Toast)
 
@@ -84,6 +85,10 @@ local function key(parent: Instance, text: string, primary: boolean, fn: () -> (
 end
 
 function PhotoMode.capture()
+	-- (Only for guests whose Roblox policy allows sharing: Share.allowed.)
+	if not Share.allowed() then
+		return
+	end
 	local b, m = bar, mark
 	if b then
 		b.Visible = false
@@ -140,9 +145,11 @@ local function buildOverlay()
 	key(b, "Gesture", false, function()
 		PhotoMode.gesture()
 	end, 4)
-	key(b, "Capture", true, function()
-		task.spawn(PhotoMode.capture)
-	end, 5)
+	if Share.allowed() then
+		key(b, "Capture", true, function()
+			task.spawn(PhotoMode.capture)
+		end, 5)
+	end
 	key(b, "Done", false, function()
 		PhotoMode.exit()
 	end, 6)

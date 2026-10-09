@@ -89,9 +89,11 @@ local function card(caps: string, heading: string, sub: string?, rows: { { strin
 		end, 260).LayoutOrder = i
 	end
 	if heading == Voice.Ballroom.lastLamp then
-		Theme.key(keys, "Share", false, function()
-			Share.moment("ballroom")
-		end, 260).LayoutOrder = 3
+		if Share.allowed() then
+			Theme.key(keys, "Share", false, function()
+				Share.moment("ballroom")
+			end, 260).LayoutOrder = 3
+		end
 		-- The moment to celebrate with the whole house (a Salute: spectacle only).
 		Theme.key(keys, "Salute the house", false, function()
 			BallroomPanel.close()

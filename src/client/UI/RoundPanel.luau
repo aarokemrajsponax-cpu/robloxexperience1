@@ -124,7 +124,7 @@ local function panel(heading: string, sub: string?, grade: string, rows: { { str
 			onSecondary()
 		end, 260).LayoutOrder = 2
 	end
-	if grade == "Flawless" then
+	if grade == "Flawless" and Share.allowed() then
 		Theme.key(keys, "Share", false, function()
 			Share.moment("salon")
 		end, 260).LayoutOrder = 3

@@ -5,6 +5,8 @@
 -- it can't be asked, the answer is no: Gem-bought curios stay out of that guest's trades, and the
 -- curios found at the tables trade as ever. Published to the guest's screen as the player
 -- attribute "PaidTradingAllowed", so their trade screen shows only what they may offer.
+-- And one more: may this guest share captures of their play (IsContentSharingAllowed)? Published as
+-- "ContentSharingAllowed"; until Roblox says yes, every Share and Capture key stays hidden.
 
 local Players = game:GetService("Players")
 
@@ -20,6 +22,9 @@ end
 -- Asks again (it yields); the answer, or nil if Roblox couldn't say.
 function Policy.refresh(player: Player): boolean?
 	local ok, info = pcall(Policy.lookup, player)
+	if ok and type(info) == "table" and player.Parent then
+		player:SetAttribute("ContentSharingAllowed", info.IsContentSharingAllowed == true)
+	end
 	if ok and type(info) == "table" and type(info.IsPaidItemTradingAllowed) == "boolean" then
 		known[player] = info.IsPaidItemTradingAllowed
 		if player.Parent then
