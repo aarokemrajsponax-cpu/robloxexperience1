@@ -106,7 +106,7 @@ code, .mono { font-family: var(--mono); font-size: 12.5px; background: var(--nig
     <p class="lede">Admin abuse in every server of the game, from wherever you are. Choose a power, press Send, and every server does it about half a minute later (GitHub carries it to Roblox). In the game itself, the Owner Console does the same instantly.</p>
     <div class="status">
       <span class="pill" id="link" data-state="off"><span class="dot"></span><span id="linkText">Checking the GitHub connection…</span></span>
-      <span class="pill"><span class="dot" style="background:var(--gold)"></span><span>76 powers · every server · nothing random</span></span>
+      <span class="pill"><span class="dot" style="background:var(--gold)"></span><span>77 powers · every server · nothing random</span></span>
     </div>
   </header>
 
@@ -148,7 +148,7 @@ code, .mono { font-family: var(--mono); font-size: 12.5px; background: var(--nig
       <li><b>Make the key.</b> Creator Hub → <b>Open Cloud</b> → <b>API Keys</b> → <b>Create API Key</b>. Name it <code>Owner Remote</code>. Under <b>Access Permissions</b> choose <b>messaging-service</b>, pick <b>Maison Noir</b>, tick <b>Publish</b>. Under <b>Security</b> add the IP <code>0.0.0.0/0</code>. <b>Save &amp; Generate Key</b>, then copy the key.</li>
       <li><b>Give it to GitHub.</b> Your repository → <b>Settings</b> → <b>Secrets and variables</b> → <b>Actions</b> → <b>New repository secret</b>. Name: <code>ROBLOX_OPEN_CLOUD_KEY</code>. Paste the key. <b>Add secret</b>. (Secrets are never shown to anyone, even in a public repository.)</li>
       <li><b>Send from this page with one tap</b> (optional): claude.ai → <b>Settings</b> → <b>Connectors</b> → add <b>GitHub</b>. This page then sends straight away; the first time it asks you to allow it.</li>
-      <li><b>Try it.</b> Join the game, choose <b>☄️ Meteor shower</b> here, and send. Meteors should fall in your server about half a minute later.</li>
+      <li><b>Try it.</b> Join the game, choose <b>☄️ Meteor shower ON</b> here, and send. Meteors should start falling in your server about half a minute later, and keep falling until you send <b>🧹 Every effect OFF</b>.</li>
     </ol>
     <p class="muted">Only someone who can write to your GitHub repository, or who holds your Open Cloud key, can send a command, and the game checks every command against its own list before doing anything. Keep the key secret: if it ever leaks, delete it in Creator Hub and make a new one.</p>
   </div>
@@ -166,16 +166,16 @@ const DATA = {"universe": "10768398256", "topic": "MaisonRemote", "repo": "aarok
 const SERVER = "GitHub";
 const OWNER = "aarokemrajsponax-cpu", REPO = "robloxexperience1", BRANCH = "claude/nice-brown-a88p9r";
 const RUNS = [
-  { title: "The classic", steps: ["⏱️ Countdown, then Admin Abuse (10s)", "☄️ Meteor shower", "🎁 Giveaway · 1000 Gilt", "🗿 Titan meme", "🎆 Fireworks finale"] },
-  { title: "Total chaos", steps: ["📣 BIGGEST ADMIN ABUSE EVER, TONIGHT!", "⏱️ Countdown, then MEGA ABUSE (10s)", "🕳️ Black hole", "🛸 UFO abduction", "🎁 Giveaway · 5000 Gilt"] },
-  { title: "Holiday hour", steps: ["📣 HOLIDAY HUNT STARTING NOW! LOOK EVERYWHERE!", "🎃 The All Hallows' Hunt · 15 min", "🌌 Aurora", "👑 The Owner's Token"] },
+  { title: "The classic", steps: ["⏱️ Countdown, then Admin Abuse (10s)", "☄️ Meteor shower ON", "🎁 Giveaway · 1000 Gilt", "🗿 Titan meme ON", "🎆 Fireworks finale ON", "🧹 Every effect OFF"] },
+  { title: "Total chaos", steps: ["📣 BIGGEST ADMIN ABUSE EVER, TONIGHT!", "⏱️ Countdown, then MEGA ABUSE (10s)", "🕳️ Black hole ON", "🛸 UFO abduction ON", "🎁 Giveaway · 5000 Gilt", "🛑 Stop everything"] },
+  { title: "Holiday hour", steps: ["📣 HOLIDAY HUNT STARTING NOW! LOOK EVERYWHERE!", "🎃 The All Hallows' Hunt · 15 min", "🌌 Aurora ON", "👑 The Owner's Token", "🧹 Every effect OFF"] },
 ];
 
 const byLabel = new Map(DATA.commands.map(c => [c.label, c]));
 const groupsOrder = ["Abuse", "Effects", "Holidays", "Events", "Players", "Message", "World"];
 const notes = {
-  Abuse: "The big ones. Admin Abuse runs every event at once; Mega Abuse adds every effect, twice as often, and giveaways.",
-  Effects: "Every guest sees it round them. Nobody sorting at a table is moved, and nobody is ever hurt.",
+  Abuse: "The big ones. Admin Abuse runs every event at once; Mega Abuse adds every effect, giveaways and triple Gilt. Both reach the sorting tables too (golden pieces in every deal), and a server that opens later joins in.",
+  Effects: "Switches: each stays on, in every server, until you send Every effect OFF (or Stop everything). Turn on as many as you like. Every guest sees it round them, and guests sorting at a table see it on their sorting screen, with golden pieces worth extra Gilt. Nobody sorting is moved, and nobody is ever hurt.",
   Holidays: "A hunt round the house for everyone: Gilt for each find, a curio to keep, one golden prize.",
   Events: "Boosts and fun for 15 minutes in every server.",
   Players: "Free gifts from you to everyone. Nobody pays anything.",
