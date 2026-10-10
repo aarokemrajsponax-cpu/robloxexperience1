@@ -8,6 +8,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Layout = require(ReplicatedStorage.Shared.Layout)
+local MemeTakeovers = require(ReplicatedStorage.Shared.MemeTakeovers)
 local ProductConfig = require(ReplicatedStorage.Shared.ProductConfig)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Profiles = require(script.Parent.Parent.Profiles)
@@ -39,6 +40,41 @@ local function showing(player: Player, key: string)
 	showingUntil[player] = os.clock() + (SECONDS[key] or 20) + 2
 end
 
+-- The Meme Takeover's edition this time: one this guest hasn't seen lately (the last few are kept
+-- with their perks), so it's never the same show twice in a row. Chosen here, never by their screen.
+local RECENT = math.min(6, #MemeTakeovers.List - 1)
+local rng = Random.new()
+function Spectacles.memeEdition(player: Player): string
+	local data = Profiles.get(player)
+	local perks: any = if data then data.perks else nil
+	local recent: { string } = {}
+	if type(perks) == "table" then
+		if type(perks.shows) ~= "table" then
+			perks.shows = { memes = {} }
+		end
+		if type(perks.shows.memes) ~= "table" then
+			perks.shows.memes = {}
+		end
+		recent = perks.shows.memes
+	end
+	local id = MemeTakeovers.pick(recent, rng:NextNumber())
+	table.insert(recent, id)
+	while #recent > RECENT do
+		table.remove(recent, 1)
+	end
+	return id
+end
+
+-- Tells the guest's own screen to play a show (the Meme Takeover with its edition).
+local function tellShow(player: Player, key: string)
+	Perks.tell(player, {
+		op = "spectacle",
+		key = key,
+		seconds = SECONDS[key],
+		variant = if key == "spectacleMemes" then Spectacles.memeEdition(player) else nil,
+	})
+end
+
 -- The owner tries a show on their own screen, free (House controls; AdminService checks who asks).
 function Spectacles.preview(player: Player, key: string): boolean
 	if not IS_KEY[key] then
@@ -46,7 +82,7 @@ function Spectacles.preview(player: Player, key: string): boolean
 	end
 	-- (Never refused, it's free; a show bought meanwhile waits for it.)
 	showing(player, key)
-	Perks.tell(player, { op = "spectacle", key = key, seconds = SECONDS[key] })
+	tellShow(player, key)
 	return true
 end
 
@@ -115,7 +151,7 @@ local function onAsk(player: Player, request: unknown): any
 			return { ok = false, why = "You've none of those to play." }
 		end
 		showing(player, key)
-		Perks.tell(player, { op = "spectacle", key = key, seconds = SECONDS[key] })
+		tellShow(player, key)
 		Perks.push(player)
 		return { ok = true }
 	end
@@ -133,7 +169,7 @@ local function playNow(player: Player, key: string): boolean
 		return false
 	end
 	showing(player, key)
-	Perks.tell(player, { op = "spectacle", key = key, seconds = SECONDS[key] })
+	tellShow(player, key)
 	Perks.push(player)
 	return true
 end

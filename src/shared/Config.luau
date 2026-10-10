@@ -724,8 +724,13 @@ local defaults = {
 
 	-- Friends on Roblox in the house together (server Friends): they may visit each other's
 	-- Suites, and both earn more Gilt while together.
+	-- The Friend Booster: friends on Roblox in the house together both earn more, and more again
+	-- for each friend who joins them (the card in the bottom-right corner shows it).
 	Friends = {
 		giltBoost = 1.25, -- every Gilt earned, while a friend is in the house (+25%)
+		perFriend = 0.1, -- +10% more for each further friend here...
+		maxBoost = 1.55, -- ...up to +55% (four friends or more)
+		xpBoost = 1.1, -- XP too, while a friend is in the house (+10%)
 		studioFriends = true, -- in Studio only: test players count as friends, to try visits and the boost
 	},
 

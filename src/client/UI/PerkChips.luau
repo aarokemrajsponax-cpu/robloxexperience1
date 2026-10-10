@@ -1,17 +1,15 @@
 --!strict
 -- A guest's perks at a glance, at the left edge while they walk the house (clear of the keys
 -- and the objective card at the top right, the chat at the top left and the thumbstick below):
--- friends here (friends on Roblox in the house together earn more Gilt), God-Mode Luck's time
--- left (it only runs while they're here), and anything bought and waiting
+-- God-Mode Luck's time left (it only runs while they're here), and anything bought and waiting
 -- (a decree to write, revives kept for the next run, a rain waiting its turn). Nothing is shown
--- when there's nothing to show, and it's hidden at the table.
+-- when there's nothing to show, and it's hidden at the table. (Friends here: the Friend Booster
+-- card, bottom right.)
 
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
-local Config = require(ReplicatedStorage.Shared.Config)
 local Root = require(script.Parent.Root)
 local Theme = require(script.Parent.Theme)
 local Perks = require(script.Parent.Parent.Perks)
@@ -119,10 +117,7 @@ end
 
 local function refresh()
 	stack.Visible = not hidden
-	-- Friends in the house: the server counts them (and pays the boost).
-	local friends = Players.LocalPlayer:GetAttribute("FriendsHere")
-	local more = math.floor((Config.data.Friends.giltBoost - 1) * 100 + 0.5)
-	chip("Friends", 0, if type(friends) == "number" and friends > 0 then string.format("FRIENDS HERE (%d)  ·  +%d%% GILT", friends, more) else nil)
+	-- (Friends in the house: the Friend Booster card in the bottom-right corner shows them.)
 	local luck = Perks.luckLeft()
 	local mult = if type(Perks.state.luck) == "table" then tonumber(Perks.state.luck.multiplier) else nil
 	chip("Luck", 1, if luck > 0 then string.format("LUCK BOOSTER  %s×  ·  %s", tostring(mult or 2.5), clock(luck)) else nil)
@@ -151,7 +146,6 @@ end
 
 function PerkChips.start()
 	Perks.Changed:Connect(refresh)
-	Players.LocalPlayer:GetAttributeChangedSignal("FriendsHere"):Connect(refresh)
 	local acc = 0
 	RunService.Heartbeat:Connect(function(dt)
 		acc += dt

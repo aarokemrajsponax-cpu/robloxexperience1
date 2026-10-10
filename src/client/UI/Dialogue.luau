@@ -124,6 +124,11 @@ function Dialogue.show(speaker: string, line: string, choices: { Choice }?, onCh
 	end
 end
 
+-- Whether a line is on screen.
+function Dialogue.isOpen(): boolean
+	return current ~= nil and current.Parent ~= nil
+end
+
 function Dialogue.close()
 	Waypoint.clear()
 	if current then

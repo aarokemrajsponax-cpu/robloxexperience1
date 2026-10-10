@@ -265,11 +265,9 @@ a Nightly attempt or a Mythic's odds.
   moment you step back into your Suite; bought while a show is on, straight after it, since two
   never overlap; one saved from before plays from the bell): **fireworks** (a 45-second show
   over the whole estate; your camera goes out across the street to watch it, and comes back with
-  the key or any step), the **Meme Takeover** (ninety seconds in six acts: a warning siren, a
-  portal spewing memes that bounce off the walls (to an electro swing, with air horns, record
-  scratches, party horns and a kazoo fanfare for the boss), a conga line dancing round you under disco
-  lights, memes raining from the ceiling with confetti, a giant boss meme with laser eyes, then
-  chaos and a confetti finale), or the **Golden Transformation**, the Midas touch (forty seconds,
+  the key or any step), the **Meme Takeover** (ninety seconds in six acts and a finale, in one of
+  **fifteen editions**, Build 57: never the same twice in a row; see below), or the **Golden
+  Transformation**, the Midas touch (forty seconds,
   `World/Midas`): a temple gong, the lights sink, and a ring of gold runs out across the floor
   from where you stand, turning everything it passes to gold (floors, walls, ceilings, every
   piece of furniture, the fireplace); a heavenly choir, gold confetti fluttering through the
@@ -296,9 +294,20 @@ a Nightly attempt or a Mythic's odds.
 - **The quick dock** (left of the screen): **Collection** (C), **Trade** (T: everyone in the house
   with a Trade key each, and your past trades), **Wardrobe** (V), **Gems**, **Suites** (your own,
   or a friend's) and **Invite**, one tap away.
-- **Friends together earn more**: while a friend on Roblox is in the same house, both earn 25%
-  more Gilt (`Config.Friends.giltBoost`; the server checks the friendship, and the boost shows at
-  the left edge: "FRIENDS HERE · +25% GILT").
+- **The Friend Booster** (Build 57; `server/Friends`, `UI/FriendBooster`, `Config.Friends`):
+  friends on Roblox in the same house both earn more, and more again for every friend who joins:
+  **+25% Gilt** with one friend, **+35%** with two, **+45%** with three, **+55%** with four or more,
+  and **+10% XP** while any friend is here. The server checks every friendship with Roblox and
+  pays the boost; a guest's screen is told only about their own friends. The card in the
+  bottom-right corner shows it: *FRIEND BOOSTER* with a live light, the boost in big gold figures
+  and the XP beside it, the faces of the friends here (AJKR's crest for the owner, never their
+  avatar), the four steps with yours lit, what one more friend would bring, and **Invite friends**
+  (Roblox's own invite; a friend's first visit is thanked in Gilt too, see *Friend invitations*).
+  With nobody here it's a small invitation (*Play with a friend: +25% Gilt · +10% XP, for you
+  both*). It folds to a slim pill after ten seconds (tap it to open it), opens by itself with a
+  ping when a friend arrives (*Ben arrived: +35% Gilt now*), and steps aside while you sort at a
+  table, have a panel open, take photos, or (on a narrow screen) talk with the Concierge. On a
+  touch screen it sits above Roblox's jump button.
 - **The seasons, every year**: the calendar is the same every year (Harvest Nights, All Hallows,
   The Long Table, Yuletide, Midnight Toast, Deep Winter, Rose Hour, Emerald Hour, First Bloom,
   High Summer), and every Term has its own Limited curio with its year on it (Autumn 2026's
@@ -333,7 +342,12 @@ a Nightly attempt or a Mythic's odds.
   works out a Suite seat from the sitter's own Suite), and another guest in their Suite at the
   same moment isn't drawn on yours, nor their name, a glow or a light they wear, or their
   footsteps. Suite shows (fireworks, the Meme Takeover, the Golden Transformation) play only on
-  the screen of the guest who plays them; Salutes are for the whole house.
+  the screen of the guest who plays them; Salutes are for the whole house. Build 57: a guest
+  stepping into another Suite vanishes from yours the moment they do (not a moment later), and
+  the owner's powers keep out of Suites too: *go to a guest* refuses a guest in their Suite, and
+  *bring* refuses while you stand in yours (*Step out of your Suite first: Suites are private*).
+  So a Suite is only ever entered by its own guest, while they're in the game, or by their
+  friends on Roblox through the **Suites** key.
   - **The bell's page says plainly how it works**: what the Suite is, three numbered steps (get a
     piece, change a spot with ‹ ›, the Gold Key adds two rooms), how many spots hold your own
     pieces and your Gilt. Each spot shows what stands there and up to two pieces you could put
@@ -424,6 +438,22 @@ a Nightly attempt or a Mythic's odds.
     studs (`Kit.studs`; Roblox only draws them on plain Plastic, so those two blocks are Plastic in
     their own dark colours). Nowhere else.
   - **Perk chips** (Luck, decrees, revives, piano time) are glass capsules with a point of colour.
+- **The Meme Takeover's fifteen editions** (Build 57; `shared/MemeTakeovers`,
+  `World/MemeTakeover`): each time you play it, the server picks an edition you haven't seen in
+  your last six shows. Each has its own colours, cast, boss, music and words, and its own way
+  through the acts: the opening (a siren of colour, a glitch, a 3-2-1 countdown, or the lights
+  going out), the entrance (a portal, a drop from the ceiling, a fountain, a march, a swirl), the
+  dance (a conga, a tornado, orbits, a stadium wave, a bounce on the beat, a dance-off, a wobbling
+  tower), the rain (little memes, or stars, coins, sweets, snow, bread, notes, or bubbles rising),
+  the boss (laser eyes, a stomp that sends a ring of light across the floor, a spin, a split into
+  copies that circle and merge, a halo of light), the chaos (a frenzy, zero gravity, a rainbow,
+  slow motion and then the drop) and the finale (a burst, an implosion, a freeze that shatters,
+  rockets, a bow, everything turning to gold). The editions: *The Classic*, *Cosmic Memes*, *Neon
+  Glitch*, *Solid Gold*, *Disco Inferno*, *Frostbite*, *Jungle Jam*, *Sugar Rush*, *Retro
+  Arcade*, *The Royal Court*, *Deep Sea Disco*, *Pastry Panic*, *Midnight Owl*, *Teatime
+  Tornado*, *Panda Piano Party*. The captions are big heavy letters in the edition's colours with
+  a dark edge, the first with the edition's name over it. Same price whichever comes; nothing in
+  it is a prize.
 - **A welcome for every guest, on their own screen** (Build 56; `UI/Welcome`, `Config.Welcome`):
   as they arrive, **WELCOME** lights up letter by letter in gold, with their name under it, on a
   band of dark glass between two lines of light; a sweep of light crosses it, gold sparks burst

@@ -69,6 +69,7 @@ local OwnerConsole = require(script.Parent.UI.OwnerConsole)
 local Headline = require(script.Parent.UI.Headline)
 local GiltBar = require(script.Parent.UI.GiltBar)
 local Welcome = require(script.Parent.UI.Welcome)
+local FriendBooster = require(script.Parent.UI.FriendBooster)
 local ConciergeGuide = require(script.Parent.World.ConciergeGuide)
 local Names = require(ReplicatedStorage.Shared.Names)
 local BadgeBookPanel = require(script.Parent.UI.BadgeBookPanel)
@@ -327,7 +328,7 @@ start("Perks", function()
 		elseif op == "rainShare" then
 			RainView.share(m)
 		elseif op == "spectacle" and type(m.key) == "string" then
-			require(script.Parent.World.SuiteSpectacle).play(m.key, m.seconds)
+			require(script.Parent.World.SuiteSpectacle).play(m.key, m.seconds, m.variant)
 		elseif op == "pianoOffer" then
 			PianoPanel.offer()
 		elseif op == "pianoEnd" then
@@ -352,6 +353,7 @@ start("At the table", function()
 		pcall(EventBanner.setSeated, on)
 		pcall(GiltBar.setSeated, on)
 		pcall(PerkChips.setHidden, on)
+		pcall(FriendBooster.setSeated, on)
 		if walkFX then
 			pcall(ScreenFX.setEnabled, walkFX, not on)
 		end
@@ -477,6 +479,11 @@ local function startHud()
 			return TableClient.isSeated() or State.phase ~= "play"
 		end
 		GiltBar.start()
+	end)
+	-- The Friend Booster, in the bottom-right corner (out of the way at a table or under a panel).
+	start("The Friend Booster", function()
+		FriendBooster.setSeated(TableClient.isSeated())
+		FriendBooster.start()
 	end)
 	-- The Owner Console: a key only the owner sees (the server checks every request), opened by
 	-- itself, with a welcome, when they arrive.
@@ -686,6 +693,10 @@ end, false, Enum.KeyCode.G, Enum.KeyCode.DPadUp)
 local PhotoMode = require(script.Parent.UI.PhotoMode)
 PhotoMode.canEnter = function()
 	return not TableClient.isSeated()
+end
+-- (The Friend Booster steps aside for the title and for photo mode too.)
+FriendBooster.isBusy = function(): boolean
+	return State.phase ~= "play" or PhotoMode.isActive()
 end
 PhotoMode.onEnter = function()
 	setControls(false)

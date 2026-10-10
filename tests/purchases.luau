@@ -1674,6 +1674,57 @@ do
 	check("the bell won't start a second show over the first", r.ok == false and Perks.credits(piaData, "show:spectacleMemes") == 1)
 	advance(48)
 	check("...and it plays when the first one ends", Perks.credits(piaData, "show:spectacleMemes") == 0 and shows(pia) == 2)
+	do
+		-- The Meme Takeover comes in editions, the server's choice, never one seen lately.
+		local MemeTakeovers = module("ReplicatedStorage", "Shared", "MemeTakeovers")
+		local Spectacles = purchases("Spectacles")
+		local memeShow = nil
+		for i = #pia.inbox, 1, -1 do
+			local m = pia.inbox[i]
+			if m.op == "spectacle" and m.key == "spectacleMemes" then
+				memeShow = m
+				break
+			end
+		end
+		check("the Meme Takeover is sent with its edition, chosen by the server", memeShow ~= nil and type(memeShow.variant) == "string" and MemeTakeovers.byId[memeShow.variant] ~= nil, memeShow and memeShow.variant)
+		check("there are many editions, each its own show", #MemeTakeovers.List >= 12)
+		local picks = { memeShow and memeShow.variant or "" }
+		for _ = 1, 40 do
+			local id
+			run(function()
+				id = Spectacles.memeEdition(pia)
+			end)
+			table.insert(picks, id)
+		end
+		local repeated = nil
+		for i = 2, #picks do
+			for j = math.max(1, i - 6), i - 1 do
+				if picks[j] == picks[i] then
+					repeated = string.format("%s at %d and %d", picks[i], j, i)
+				end
+			end
+		end
+		local distinct = {}
+		for _, id in picks do
+			distinct[id] = true
+		end
+		local count = 0
+		for _ in distinct do
+			count += 1
+		end
+		check("...never the same twice in a row, nor any of the last six", repeated == nil, repeated)
+		check("...and over many shows, every edition comes round", count == #MemeTakeovers.List, count)
+		local memes = piaData.perks.shows and piaData.perks.shows.memes
+		check("only the last few are kept with the guest's perks", type(memes) == "table" and #memes <= 6)
+		check("the other shows have no edition", (function()
+			for _, m in pia.inbox do
+				if m.op == "spectacle" and m.key ~= "spectacleMemes" and m.variant ~= nil then
+					return false
+				end
+			end
+			return true
+		end)())
+	end
 	advance(93)
 	-- Bought in the Suite: it plays the moment the purchase is settled (no Play to press).
 	r = show(pia, { op = "buy", key = "spectacleFireworks" })

@@ -63,7 +63,7 @@ export type Data = {
 	-- Purchases (server/Purchases): what's bought and waiting to be used (credits: revives,
 	-- decrees, rains, salutes...), God-Mode Luck's time left (it only runs while you're here), VIP
 	-- Velocity Elite (velocityPass: verified as a game pass), and the rains already received.
-	perks: { credits: { [string]: number }, luck: { remaining: number }, velocity: boolean, velocityPass: boolean, rains: { string }, piano: { seconds: number, tasteDay: number? }, bar: { pourDay: number, served: number } },
+	perks: { credits: { [string]: number }, luck: { remaining: number }, velocity: boolean, velocityPass: boolean, rains: { string }, piano: { seconds: number, tasteDay: number? }, bar: { pourDay: number, served: number }, shows: { memes: { string } }? },
 	-- The purchase risk check: countries seen, recent receipts and failures, and the state.
 	risk: { regions: { { code: string, at: number } }, purchases: { number }, failures: { number }, state: string, restrictedUntil: number },
 	-- Granted receipts whose ledger record is still to be marked Granted (retried until it is).
@@ -124,7 +124,7 @@ local TEMPLATE: Data = {
 	suite = {},
 	circle = { id = "", week = -1, points = 0 },
 	memory = { lastSeen = 0, highlight = "", highlightAt = 0, tables = {}, admired = 0, admiredSince = 0, signedDay = -1 },
-	perks = { credits = {}, luck = { remaining = 0 }, velocity = false, velocityPass = false, rains = {}, piano = { seconds = 0 }, bar = { pourDay = -1, served = 0 } },
+	perks = { credits = {}, luck = { remaining = 0 }, velocity = false, velocityPass = false, rains = {}, piano = { seconds = 0 }, bar = { pourDay = -1, served = 0 }, shows = { memes = {} } },
 	risk = { regions = {}, purchases = {}, failures = {}, state = "Normal", restrictedUntil = 0 },
 	ledgerOutbox = {},
 	gems = 0,

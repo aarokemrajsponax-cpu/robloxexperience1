@@ -1826,7 +1826,7 @@ check("the header counts what's left on the cloth", textOnScreen("8 pieces left"
 workspace:SetAttribute("Event_goldenHour", workspace:GetServerTimeNow() + 600)
 signalOf(workspace, "attr:Event_goldenHour"):Fire()
 advance(1.1)
-check("at a table, what's on shows on the room's line, not across the cloth", string.find(sortGui.Root.Header.Room.Text, "Golden Hour 9:", 1, true) ~= nil and playerGui.MaisonHud:FindFirstChild("HouseEvents", true).Visible == false, sortGui.Root.Header.Room.Text)
+check("at a table, what's on shows on the room's line, not across the cloth", string.find(sortGui.Root.Header.Room.Text, string.format("Golden Hour %d:", ((workspace:GetAttribute("Event_goldenHour") or 0) - workspace:GetServerTimeNow()) // 60), 1, true) ~= nil and playerGui.MaisonHud:FindFirstChild("HouseEvents", true).Visible == false, sortGui.Root.Header.Room.Text)
 workspace:SetAttribute("Event_goldenHour", nil)
 signalOf(workspace, "attr:Event_goldenHour"):Fire()
 advance(1.1)
@@ -3037,6 +3037,11 @@ do
 	groot.CFrame = CFrame.new(groot.Position)
 	advance(1)
 	check("once they leave the Suite they're seen again, just as they were", groot.LocalTransparencyModifier == 0 and hat.LocalTransparencyModifier == 0 and gplate.Enabled == true and gaura.Enabled == true and glight.Enabled == true and math.abs(gsteps.Volume - 0.5) < 1e-3)
+	-- Stepping into a Suite again: gone from your screen the moment they do (the next frame).
+	groot.Position = SuiteLayout.arrival + Vector3.new(4, 3, 0)
+	groot.CFrame = CFrame.new(groot.Position)
+	advance(0.05)
+	check("...and the moment they step into a Suite again, they're gone from yours", groot.LocalTransparencyModifier == 1 and gplate.Enabled == false and gsteps.Volume == 0)
 	table.remove(otherPlayers, table.find(otherPlayers, quin))
 	ghost:Destroy()
 end
@@ -3736,14 +3741,115 @@ check("...and when it's over, the room is put back", workspace.MaisonLocal:FindF
 	return d.Name == "MemeTakeover"
 end) == nil)
 check("no errors in the spectacles", #errors == 0, errors[1])
+do
+	-- Every edition of the Meme Takeover plays through: its own words, its own boss, its own
+	-- finale, and the room put back after.
+	local MemeTakeover = module("StarterPlayer", "StarterPlayerScripts", "Client", "World", "MemeTakeover")
+	local MemeTakeovers = module("ReplicatedStorage", "Shared", "MemeTakeovers")
+	local Curios = module("ReplicatedStorage", "Shared", "Curios")
+	local problems = {}
+	local errorsBefore = #errors
+	for _, V in MemeTakeovers.List do
+		serverSays("Purchase", { op = "spectacle", key = "spectacleMemes", seconds = 14, variant = V.id })
+		advance(1)
+		local folder = workspace.MaisonLocal:FindFirstChild("MemeTakeover")
+		if not (folder and folder:GetAttribute("Edition") == V.id and MemeTakeover.lastEdition() == V.id) then
+			table.insert(problems, V.id .. ": didn't start as itself")
+		end
+		advance(8.5)
+		if textOnScreen(V.captions[5]) == nil then
+			table.insert(problems, V.id .. ": no boss words")
+		end
+		local bossGlyph = Curios.byId[V.boss] and Curios.byId[V.boss].glyph
+		local bossFound = folder and find(folder, function(d)
+			return d:IsA("TextLabel") and d.Text == bossGlyph
+		end)
+		if not bossFound then
+			table.insert(problems, V.id .. ": no boss")
+		end
+		if V.id == "cosmic" or V.id == "solidGold" or V.id == "glitch" then
+			snapshot("meme-" .. V.id)
+		end
+		advance(8)
+		if workspace.MaisonLocal:FindFirstChild("MemeTakeover") ~= nil or find(playerGui, function(d)
+			return d.Name == "MemeTakeover"
+		end) ~= nil then
+			table.insert(problems, V.id .. ": not put back")
+		end
+		if not MemeTakeover.finaleDone() then
+			table.insert(problems, V.id .. ": the finale didn't finish")
+		end
+	end
+	check("every edition of the Meme Takeover plays through as itself, boss, finale and all, and the room is put back", #problems == 0, table.concat(problems, "; "))
+	check("...without a fault in any of them", #errors == errorsBefore, errors[errorsBefore + 1])
+	serverSays("Purchase", { op = "spectacle", key = "spectacleMemes", seconds = 6, variant = "notAnEdition" })
+	advance(1)
+	check("an edition this screen doesn't know plays the classic", MemeTakeover.lastEdition() == "classic")
+	advance(9)
+end
 
--- Friends in the house: a word at the left edge (the server counts them, and pays the boost).
-LocalPlayer:SetAttribute("FriendsHere", 1)
-advance(0.3)
-check("friends in the house: the boost is shown", textOnScreen("FRIENDS HERE (1)") ~= nil and textOnScreen("GILT") ~= nil)
-LocalPlayer:SetAttribute("FriendsHere", nil)
-advance(0.3)
-check("...and goes when they do", textOnScreen("FRIENDS HERE") == nil)
+-- The Friend Booster, in the bottom-right corner: the server says which friends are here, and the
+-- boost (more with every friend); the card shows it, and invites more.
+do
+	local FriendBooster = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "FriendBooster")
+	local SettingsPanel = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "SettingsPanel")
+	local RootUI = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "Root")
+	local booster = find(playerGui, function(d)
+		return d.Name == "FriendBooster" and d:IsA("Frame") and d.Parent and d.Parent.Name == "MaisonHud"
+	end)
+	check("the Friend Booster sits in the bottom-right corner", booster ~= nil and booster.AnchorPoint == Vector2.new(1, 1) and booster.Position.X.Scale == 1 and booster.Position.Y.Scale == 1)
+	FriendBooster.unfold()
+	advance(0.4)
+	check("with no friend here: an invitation (+25% for you both) and a key to invite friends", textOnScreen("Play with a friend") ~= nil and textOnScreen("+25% GILT") ~= nil and textOnScreen("For you both") ~= nil and textOnScreen("INVITE FRIENDS") ~= nil)
+	snapshot("friend-booster-none")
+	local invitesBefore = shared.invites
+	press("INVITE FRIENDS")
+	advance(0.2)
+	check("...which opens Roblox's own invite", shared.invites == invitesBefore + 1)
+	serverSays("Guest", { op = "friends", friends = { { userId = 2, name = "Ben" } }, gilt = 1.25, xp = 1.1 })
+	advance(0.8)
+	local function face(id)
+		return find(booster, function(d)
+			return d:IsA("ImageLabel") and string.find(d.Image, "id=" .. tostring(id) .. "&", 1, true) ~= nil
+		end)
+	end
+	check("a friend arrives: the card opens, lit: +25% Gilt, +10% XP, and their face", FriendBooster.isOpen() and textOnScreen("+25%") ~= nil and textOnScreen("+10% XP") ~= nil and textOnScreen("Ben arrived") ~= nil and face(2) ~= nil)
+	snapshot("friend-booster")
+	local ownerId = Config.data.Admin.ownerUserId
+	serverSays("Guest", { op = "friends", friends = { { userId = 2, name = "Ben" }, { userId = ownerId, name = "AJKR", owner = true } }, gilt = 1.35, xp = 1.1 })
+	advance(0.8)
+	check("a second friend: +35%, the owner shown by AJKR's crest (never their avatar)", textOnScreen("+35%") ~= nil and textOnScreen("AJKR arrived") ~= nil and find(booster, function(d)
+		return d.Name == "Crest"
+	end) ~= nil and face(ownerId) == nil)
+	advance(11)
+	check("after a few seconds it folds to a slim pill", FriendBooster.isOpen() == false and textOnScreen("+35% GILT") ~= nil)
+	snapshot("friend-booster-pill")
+	local pill = find(booster, function(d)
+		return d.Name == "Pill" and d:IsA("TextButton")
+	end)
+	if pill then
+		signalOf(pill, "Activated"):Fire()
+	end
+	advance(0.5)
+	check("...a tap opens it again, with what one more friend would bring", FriendBooster.isOpen() and textOnScreen("2 friends here") ~= nil and textOnScreen("One more friend here: +45%") ~= nil)
+	FriendBooster.setSeated(true)
+	advance(0.3)
+	check("it steps aside while sorting at a table", booster.Visible == false)
+	FriendBooster.setSeated(false)
+	advance(0.3)
+	check("...and comes back after", booster.Visible == true)
+	SettingsPanel.open()
+	advance(0.5)
+	check("...and under any panel", booster.Visible == false)
+	RootUI.close()
+	advance(0.5)
+	check("...and back when it's closed", booster.Visible == true)
+	serverSays("Guest", { op = "friends", friends = {}, gilt = 1, xp = 1 })
+	advance(0.3)
+	check("when they've gone, it's the invitation again", FriendBooster.count() == 0 and textOnScreen("+35% GILT") == nil)
+	FriendBooster.fold()
+	advance(0.2)
+end
 
 -- The House Party: every lamp in the house turns disco, then back exactly as it was.
 do
@@ -4201,7 +4307,11 @@ advance(0.5)
 workspace:SetAttribute("Event_goldenHour", workspace:GetServerTimeNow() + 600)
 signalOf(workspace, "attr:Event_goldenHour"):Fire()
 advance(1.2)
-check("every guest sees what's on, and for how long", textOnScreen("GOLDEN HOUR") ~= nil and textOnScreen("9:5") ~= nil)
+-- (Lune keeps an attribute's number to a float's precision, about two minutes at today's server
+-- time, so the clock expected is worked out from the end as it was stored.)
+local goldenLeft = (workspace:GetAttribute("Event_goldenHour") or 0) - workspace:GetServerTimeNow()
+local goldenClock = string.format("%d:%d", goldenLeft // 60, (goldenLeft % 60) // 10)
+check("every guest sees what's on, and for how long", textOnScreen("GOLDEN HOUR") ~= nil and goldenLeft > 300 and textOnScreen(goldenClock) ~= nil, goldenClock)
 workspace:SetAttribute("Event_goldenHour", nil)
 signalOf(workspace, "attr:Event_goldenHour"):Fire()
 advance(1.2)

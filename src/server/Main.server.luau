@@ -323,14 +323,13 @@ boot("Guest policies", require(script.Parent.Policy).start)
 boot("Trading", require(script.Parent.TradeService).start)
 boot("Remote limits", require(script.Parent.RemoteGuard).start)
 -- Friends on Roblox in the house together: each may visit the other's Suite, and both earn more
--- Gilt while they're here.
+-- Gilt (more with every friend) and XP while they're here. (The guest's own screen is told who's
+-- here by Friends; its Friend Booster card says so when a friend arrives.)
 local Friends = require(script.Parent.Friends)
 local SuiteVisits = require(script.Parent.SuiteVisits)
 require(script.Parent.Gilt).friends = Friends.giltBoost
-Friends.arrived = function(player: Player, friend: Player)
+Friends.arrived = function(player: Player, _friend: Player)
 	Achievements.award(player, "friendHere")
-	local more = math.floor((require(ReplicatedStorage.Shared.Config).data.Friends.giltBoost - 1) * 100 + 0.5)
-	Remotes.event("Shop"):FireClient(player, { op = "notice", title = "A friend is here", line = string.format("%s is in the house: friends together earn %d%% more Gilt, and you can visit each other's Suites.", Names.of(friend), more) })
 end
 SuiteVisits.isSeated = AdminService.isSeated
 require(script.Parent.Seating).suiteData = SuiteVisits.dataFor
@@ -508,6 +507,8 @@ Progress.boost = function(player)
 	if GemShop.xpSurge(player) then
 		b *= ConfigData.Levels.surge
 	end
+	-- The Friend Booster: more XP with a friend in the house.
+	b *= Friends.xpBoost(player)
 	return b
 end
 Progress.levelUp = function(player, level, gilt, gems)

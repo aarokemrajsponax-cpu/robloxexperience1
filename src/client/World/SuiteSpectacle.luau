@@ -35,9 +35,9 @@ local function fireworks(seconds: number)
 	Fireworks.show(seconds, { scale = 1.15, watch = true })
 end
 
--- The Meme Takeover: ninety seconds, six acts (World/MemeTakeover).
-local function memes(seconds: number)
-	MemeTakeover.play(seconds)
+-- The Meme Takeover: ninety seconds, six acts, in the edition the server chose (World/MemeTakeover).
+local function memes(seconds: number, edition: string?)
+	MemeTakeover.play(seconds, edition)
 end
 
 -- The Golden Transformation: the Midas touch (World/Midas).
@@ -45,7 +45,7 @@ local function golden(seconds: number)
 	Midas.play(seconds)
 end
 
-function SuiteSpectacle.play(key: string, seconds: number?)
+function SuiteSpectacle.play(key: string, seconds: number?, edition: any?)
 	-- (Bought just now with this screen open: it steps aside for the show.)
 	if Root.isOpen(NAME) then
 		Root.close(NAME)
@@ -54,7 +54,7 @@ function SuiteSpectacle.play(key: string, seconds: number?)
 	if key == "spectacleFireworks" then
 		fireworks(s)
 	elseif key == "spectacleMemes" then
-		memes(s)
+		memes(s, if type(edition) == "string" then edition else nil)
 	elseif key == "spectacleGolden" then
 		golden(s)
 	end

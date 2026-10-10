@@ -527,20 +527,35 @@ local function suiteOf(p: Player): number
 	return if type(host) == "number" then host else p.UserId
 end
 
+-- Whether another guest is in a Suite that isn't the one this guest is in. (Seen only when in the
+-- very same Suite: a friend visiting, or the friend you visit.)
+local function elsewhere(other: Player, mine: number): boolean
+	local character = other.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	return root ~= nil and root:IsA("BasePart") and Layout.zoneAt(root.Position) == "suite" and suiteOf(other) ~= mine
+end
+
 local function privacy()
 	local mine = suiteOf(player)
 	for _, other in Players:GetPlayers() do
 		if other ~= player then
-			local character = other.Character
-			local root = character and character:FindFirstChild("HumanoidRootPart")
-			-- (Seen only when in the very same Suite: a friend visiting, or the friend you visit.)
-			local there = root ~= nil and root:IsA("BasePart") and Layout.zoneAt(root.Position) == "suite" and suiteOf(other) ~= mine
-			if there then
+			if elsewhere(other, mine) then
 				-- (Again each time: what they've put on since, or a new character, is hidden too.)
 				setHidden(other, true)
 			elseif hidden[other] then
 				setHidden(other, false)
 			end
+		end
+	end
+end
+
+-- Every frame: a guest stepping into another Suite is hidden the moment they do (the pass above,
+-- four times a second, catches what they put on and brings back whoever leaves).
+local function privacyNow()
+	local mine = suiteOf(player)
+	for _, other in Players:GetPlayers() do
+		if other ~= player and not hidden[other] and elsewhere(other, mine) then
+			setHidden(other, true)
 		end
 	end
 end
@@ -590,6 +605,7 @@ function SuiteView.start()
 		if inside then
 			animate()
 		end
+		privacyNow()
 	end)
 	task.spawn(function()
 		while true do

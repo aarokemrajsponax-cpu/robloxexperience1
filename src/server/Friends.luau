@@ -1,15 +1,18 @@
 --!strict
 -- Who in this server is friends with whom, on Roblox (asked by the server, once a pair, never told
 -- by a guest's screen). Two things use it: friends may visit each other's Suites (SuiteVisits), and
--- friends in the house together both earn more Gilt (Config.Friends.giltBoost, through Gilt.pay).
--- Each guest carries the number of their friends here as the attribute "FriendsHere", for their
--- screen to show the boost.
+-- the Friend Booster: friends in the house together both earn more Gilt, more again for each
+-- further friend (Config.Friends: +25% with one, +10% for each more, up to +55%), and more XP.
+-- Each guest carries the number of their friends here as the attribute "FriendsHere", and their
+-- own screen is told who they are (the Friend Booster card shows them); nobody else is told.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local Names = require(ReplicatedStorage.Shared.Names)
+local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
 local Friends = {}
 
@@ -70,10 +73,55 @@ function Friends.inServer(player: Player): { Player }
 	return out
 end
 
--- The Gilt boost for this guest: Config.Friends.giltBoost while a friend is in the house.
+-- The Gilt boost for `n` friends in the house: +25% with one, +10% for each more, never past
+-- the cap (Config.Friends).
+function Friends.boostFor(n: number): number
+	local c = cfg()
+	if n <= 0 then
+		return 1
+	end
+	return math.min(c.maxBoost, c.giltBoost + c.perFriend * (n - 1))
+end
+
+-- The Gilt boost for this guest (the server's own count of their friends here).
 function Friends.giltBoost(player: Player): number
 	local n = player:GetAttribute("FriendsHere")
-	return if type(n) == "number" and n > 0 then cfg().giltBoost else 1
+	return Friends.boostFor(if type(n) == "number" then n else 0)
+end
+
+-- The XP boost for this guest: Config.Friends.xpBoost while a friend is in the house.
+function Friends.xpBoost(player: Player): number
+	local n = player:GetAttribute("FriendsHere")
+	return if type(n) == "number" and n > 0 then cfg().xpBoost else 1
+end
+
+-- What each guest's screen was last told, so it's told again only when it changes.
+local told: { [Player]: string } = {}
+
+-- Tells a guest's own screen who of their friends is here and what the boost is.
+local function tell(player: Player, friends: { Player })
+	local list = {}
+	local ids = {}
+	for _, f in friends do
+		table.insert(list, { userId = f.UserId, name = Names.of(f), owner = Names.isOwner(f) })
+		table.insert(ids, tostring(f.UserId))
+	end
+	local key = table.concat(ids, ",")
+	if told[player] == key then
+		return
+	end
+	told[player] = key
+	pcall(function()
+		Remotes.event("Guest"):FireClient(player, {
+			op = "friends",
+			friends = list,
+			gilt = Friends.boostFor(#friends),
+			xp = if #friends > 0 then cfg().xpBoost else 1,
+			perFriend = cfg().perFriend,
+			first = cfg().giltBoost,
+			max = cfg().maxBoost,
+		})
+	end)
 end
 
 local function refresh()
@@ -85,6 +133,7 @@ local function refresh()
 		if n > (if type(before) == "number" then before else 0) then
 			Friends.arrived(p, friends[#friends])
 		end
+		tell(p, friends)
 	end
 end
 Friends.refresh = refresh
@@ -94,6 +143,7 @@ function Friends.start()
 		task.spawn(refresh)
 	end)
 	Players.PlayerRemoving:Connect(function(player: Player)
+		told[player] = nil
 		-- Asked afresh next time (friendships change).
 		for k in known do
 			local a, b = string.match(k, "^(%-?%d+):(%-?%d+)$")

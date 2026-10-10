@@ -4,6 +4,6 @@
 -- see whether Studio has the latest code from GitHub.
 
 return {
-	number = 56,
-	label = "Build 56 · 10 Oct · the 2070 look, the Register and the Vault, a welcome and a gold arrow for new guests, owner powers for AJKR alone",
+	number = 57,
+	label = "Build 57 · 10 Oct · 15 Meme Takeover editions, the Friend Booster, private Suites, a welcome for new guests, owner powers for AJKR alone",
 }

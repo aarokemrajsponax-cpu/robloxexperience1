@@ -1582,6 +1582,14 @@ local function rootOf(player: Player): BasePart?
 	return if root and root:IsA("BasePart") then root else nil
 end
 
+-- Whether a guest stands in the Suites. Each guest's Suite is theirs alone (friends visit from the
+-- Suites key), so the owner's powers never take anyone into one: not the owner to a guest there,
+-- not guests to the owner standing in their own.
+local function inSuites(player: Player): boolean
+	local root = rootOf(player)
+	return root ~= nil and Layout.zoneAt(root.Position) == "suite"
+end
+
 local function humanoidOf(player: Player): Humanoid?
 	local character = player.Character
 	return character and character:FindFirstChildOfClass("Humanoid")
@@ -2154,6 +2162,9 @@ local function handle(player: Player, request: unknown): any
 			end
 			giftGilt(target, amount, byName)
 		elseif op == "bring" then
+			if inSuites(player) then
+				return { ok = false, why = "Step out of your Suite first: Suites are private." }
+			end
 			local mine = player.Character
 			local theirs = target.Character
 			if mine and theirs and not AdminService.isSeated(target) then
@@ -2214,6 +2225,9 @@ local function handle(player: Player, request: unknown): any
 		local at: Vector3? = nil
 		if type(r.userId) == "number" then
 			local target = Players:GetPlayerByUserId(r.userId)
+			if target and target ~= player and inSuites(target) then
+				return { ok = false, why = Names.of(target) .. " is in their Suite: Suites are private." }
+			end
 			local root = if target then rootOf(target) else nil
 			if root then
 				at = root.Position + Vector3.new(4, 0, 0)
@@ -2231,6 +2245,9 @@ local function handle(player: Player, request: unknown): any
 		local mine = player.Character
 		if not mine then
 			return { ok = false, why = "Nowhere to bring them." }
+		end
+		if inSuites(player) then
+			return { ok = false, why = "Step out of your Suite first: Suites are private." }
 		end
 		local base = mine:GetPivot()
 		local others = {}

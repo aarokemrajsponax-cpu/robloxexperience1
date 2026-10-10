@@ -1157,6 +1157,26 @@ do
 	check("...or straight to any guest", (ownerRoot.Position - zedRoot.Position).Magnitude < 6, tostring(ownerRoot.Position) .. " / " .. tostring(zedRoot.Position))
 	local brought = adminAs(owner, { op = "bringAll" })
 	check("bring everyone: every guest gathers round the owner", brought.ok and (nedRoot.Position - ownerRoot.Position).Magnitude < 10 and (zedRoot.Position - ownerRoot.Position).Magnitude < 10, brought.brought)
+	do
+		-- Suites are private, from the owner's powers too: never to a guest in their Suite, and
+		-- never bringing guests into the owner's own (friends visit from the Suites key).
+		local suiteSpot = Layout.Suite.arrival + Vector3.new(0, 3, 0)
+		local zedWas = zedRoot.Position
+		zedRoot.Position = suiteSpot
+		zedRoot.CFrame = CFrame.new(suiteSpot)
+		local ownerWas = ownerRoot.Position
+		local refusedGoto = adminAs(owner, { op = "goto", userId = zed.UserId })
+		check("the owner can't go to a guest in their Suite: Suites are private", refusedGoto.ok == false and string.find(tostring(refusedGoto.why), "Suite", 1, true) ~= nil and (ownerRoot.Position - ownerWas).Magnitude < 0.01, refusedGoto.why)
+		adminAs(owner, { op = "goto", place = "suite" })
+		local nedWas = nedRoot.Position
+		local refusedAll = adminAs(owner, { op = "bringAll" })
+		local refusedOne = adminAs(owner, { op = "bring", userId = ned.UserId })
+		check("...nor bring guests into the Suite they stand in", Layout.zoneAt(ownerRoot.Position) == "suite" and refusedAll.ok == false and refusedOne.ok == false and (nedRoot.Position - nedWas).Magnitude < 0.01)
+		adminAs(owner, { op = "goto", place = "ballroom" })
+		check("...and out of the Suites, bringing works as before", adminAs(owner, { op = "bring", userId = ned.UserId }).ok ~= false and (nedRoot.Position - ownerRoot.Position).Magnitude < 10)
+		zedRoot.Position = zedWas
+		zedRoot.CFrame = CFrame.new(zedWas)
+	end
 	adminAs(owner, { op = "freeze", on = true })
 	check("freeze the house: everyone else stands still", nedRoot.Anchored == true and zedRoot.Anchored == true and ownerRoot.Anchored == false and lastBroadcast("salute").title == "Freeze!")
 	adminAs(owner, { op = "freeze", on = false })
@@ -1230,6 +1250,33 @@ run(function()
 	alone = Gilt.pay(rook, rd, 100, "test")
 end)
 check("friends in the house together both earn more Gilt", together == math.floor(100 * Config.data.Friends.giltBoost + 0.5) and alone == 100, string.format("%s / %s", tostring(together), tostring(alone)))
+do
+	-- The Friend Booster grows with every friend here: +25%, +35%, +45%, then +55% at most.
+	local near = function(a, b)
+		return math.abs(a - b) < 1e-9
+	end
+	check("the Friend Booster grows with each friend, to a cap", near(Friends.boostFor(0), 1) and near(Friends.boostFor(1), 1.25) and near(Friends.boostFor(2), 1.35) and near(Friends.boostFor(3), 1.45) and near(Friends.boostFor(4), 1.55) and near(Friends.boostFor(9), 1.55))
+	local told = lastOp(pip, "friends")
+	check("each guest's own screen is told which friends are here, and the boost", told ~= nil and #told.friends == 1 and told.friends[1].userId == 202 and told.friends[1].name == "Quill" and near(told.gilt, 1.25) and near(told.xp, Config.data.Friends.xpBoost))
+	local rookTold = lastOp(rook, "friends")
+	check("...and nobody is told about anyone else's friends", rookTold ~= nil and #rookTold.friends == 0 and near(rookTold.gilt, 1))
+	friendsOf[201][204] = true
+	friendsOf[204] = { [201] = true }
+	local sol = guest("Sol", 204)
+	stand(sol, street)
+	run(Friends.refresh)
+	told = lastOp(pip, "friends")
+	check("a second friend arrives: the boost goes up for you (+35%)", pip:GetAttribute("FriendsHere") == 2 and near(Friends.giltBoost(pip), 1.35) and told ~= nil and #told.friends == 2 and near(told.gilt, 1.35))
+	check("...while your friends each have theirs (one friend here each: +25%)", near(Friends.giltBoost(quill), 1.25) and near(Friends.giltBoost(sol), 1.25) and near(Friends.giltBoost(rook), 1))
+	check("XP comes faster with a friend here too", near(Friends.xpBoost(pip), Config.data.Friends.xpBoost) and Friends.xpBoost(rook) == 1)
+	local sentBefore = #pip.inbox
+	run(Friends.refresh)
+	check("...and a screen is told again only when its friends change", #pip.inbox == sentBefore)
+	sol.Parent = nil
+	friendsOf[201][204] = nil
+	run(Friends.refresh)
+	check("when a friend leaves, the boost goes down again", pip:GetAttribute("FriendsHere") == 1 and near(Friends.giltBoost(pip), 1.25) and #lastOp(pip, "friends").friends == 1)
+end
 
 local function ask(g, request)
 	advance(0.1)
