@@ -43,7 +43,7 @@ end
 
 -- Told when a guest sits down to play or gets up (Main moves the Pianist aside and back).
 Piano.onSession = function(_playing: boolean) end
--- Whether a guest plays free (Main: the owner, or anyone in Studio). Never from the client.
+-- Whether a guest plays free (Main: the owner only). Never from the client.
 Piano.isOwner = function(_player: Player): boolean
 	return false
 end

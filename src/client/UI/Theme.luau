@@ -1,7 +1,8 @@
 --!strict
--- The look of every panel: smoked liquid glass with a gold hairline, serif display type,
--- a clean sans for everything else, brass keys that press in. Text follows the Text size
--- and Lettering settings live.
+-- The look of every panel (Build 56, "2070"): black glass with rounded corners and a gold edge that
+-- catches the light as it turns, a soft glow round it; headings in Michroma capitals with a metal
+-- sheen, everything else in Gotham SSm; gold keys that light up and press in. Text follows the Text
+-- size and Lettering settings live.
 --
 -- Typography: every size is set on one scale (Theme.Scale), with line spacing by kind; keys set
 -- their words at a fixed size (never TextScaled, which squeezes letters), a step smaller only if
@@ -10,6 +11,7 @@
 
 local ContentProvider = game:GetService("ContentProvider")
 local HapticService = game:GetService("HapticService")
+local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
@@ -24,7 +26,7 @@ local Theme = {}
 local C = Brand.Colours
 
 Theme.colours = {
-	glass = Color3.fromRGB(12, 13, 16),
+	glass = Color3.fromRGB(8, 9, 12),
 	bone = C.bone,
 	smoke = C.smoke,
 	dim = C.dim,
@@ -54,8 +56,9 @@ function Theme.snap(size: number): number
 	return if size > Theme.Scale[#Theme.Scale] then size else best
 end
 
--- Line spacing by kind: running text opens up a little, display type sits tight.
-local LINE_HEIGHT: { [string]: number } = { display = 1.04, italic = 1.04, caps = 1.1 }
+-- Line spacing by kind: running text opens up a little, display type sits tight (Michroma's capitals
+-- stand tall: a touch more room between their lines).
+local LINE_HEIGHT: { [string]: number } = { display = 1.12, italic = 1.04, caps = 1.1 }
 type Registered = { label: TextLabel | TextButton, size: number, kind: TextKind }
 
 local registry: { Registered } = {}
@@ -93,16 +96,16 @@ end
 -- it still comes out at least MIN_PX pixels tall, up to FLOOR_MAX.
 local FLOOR: { [string]: number } = { caps = 13 }
 local FLOOR_TEXT = 14
-local MIN_PX: { [string]: number } = { caps = 12 }
-local MIN_PX_TEXT = 13
-local FLOOR_MAX = 18
+local MIN_PX: { [string]: number } = { caps = 13 }
+local MIN_PX_TEXT = 14
+local FLOOR_MAX = 19
 local uiScale = Root.scale
 
 local function applyText(r: Registered)
 	local label = r.label :: any
-	-- The serif is for headings: below heading size it reads as wiry, so small "display" text
-	-- (a line of dialogue, a caption) is set in the clean sans instead.
-	label.FontFace = if r.kind == "display" and r.size < 22 then Brand.Fonts.body else fontFor(r.kind)
+	-- The display face is for headings: below heading size it runs too wide, so small "display"
+	-- text (a line of dialogue, a caption) is set in the clean sans instead.
+	label.FontFace = if r.kind == "display" and r.size < 22 then Brand.Fonts.bodyBold else fontFor(r.kind)
 	local floor = math.max(FLOOR[r.kind] or FLOOR_TEXT, math.min(FLOOR_MAX, (MIN_PX[r.kind] or MIN_PX_TEXT) / uiScale))
 	local size = math.floor(math.max(Theme.snap(r.size), floor) * textScale + 0.5)
 	label.TextSize = size
@@ -187,8 +190,96 @@ function Theme.text(parent: Instance, text: string, size: number, kind: TextKind
 	local r = { label = label, size = size, kind = k }
 	applyText(r)
 	table.insert(registry, r)
+	-- Headings: in capitals (whatever they're changed to later), and in the house's own colour, a
+	-- sheen of light gold down through deep gold, like lettering cut in metal.
+	if k == "display" and size >= 22 then
+		label.Text = Caps(label.Text)
+		label:GetPropertyChangedSignal("Text"):Connect(function()
+			local up = Caps(label.Text)
+			if up ~= label.Text then
+				label.Text = up
+			end
+		end)
+		if label.TextColor3 == C.bone then
+			Theme.metal(label)
+		end
+	end
 	label.Parent = parent
 	return label
+end
+
+-- A gold sheen on text or a fill: bright at the top through the house's gold to a deeper gold.
+function Theme.metal(target: GuiObject, bright: boolean?): UIGradient
+	local g = Instance.new("UIGradient")
+	g.Name = "Metal"
+	g.Rotation = 90
+	g.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, if bright then Color3.fromRGB(255, 248, 222) else Color3.fromRGB(255, 240, 200)),
+		ColorSequenceKeypoint.new(0.45, if bright then C.brightGold else C.lightGold),
+		ColorSequenceKeypoint.new(1, if bright then C.gold else Color3.fromRGB(214, 172, 92)),
+	})
+	g.Parent = target
+	return g
+end
+
+-- A gold edge that catches the light: bright at two corners, fading between, slowly turning (as
+-- if the light moved round the glass; still for a guest whose Movement setting is Still). On a
+-- UIStroke or any frame's outline.
+function Theme.edge(stroke: UIStroke, strength: number?): UIGradient
+	local k = strength or 1
+	local g = Instance.new("UIGradient")
+	g.Name = "Edge"
+	g.Rotation = 35
+	g.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, C.brightGold),
+		ColorSequenceKeypoint.new(0.3, C.gold),
+		ColorSequenceKeypoint.new(0.5, C.deepGold),
+		ColorSequenceKeypoint.new(0.7, C.gold),
+		ColorSequenceKeypoint.new(1, C.brightGold),
+	})
+	g.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0),
+		NumberSequenceKeypoint.new(0.5, math.clamp(0.25 + 0.45 * k, 0, 0.9)),
+		NumberSequenceKeypoint.new(1, 0),
+	})
+	g.Parent = stroke
+	if State.get("movement") ~= "Still" then
+		-- (A full turn every twelve seconds, run by the engine.)
+		TweenService:Create(g, TweenInfo.new(12, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), { Rotation = 395 }):Play()
+	end
+	return g
+end
+
+-- A soft glow round a frame (two widening haloes of its colour behind everything else in it), for
+-- what should catch the eye: a panel, a key on the dock, the result of a round. `target` is a
+-- holder (its own fill drawn by its children): a child is always drawn over its parent's own
+-- fill and words. Returns the haloes' holder.
+function Theme.glow(target: GuiObject, colour: Color3?, radius: number?, strength: number?): Frame
+	local holder = Instance.new("Frame")
+	holder.Name = "Glow"
+	holder.BackgroundTransparency = 1
+	holder.Size = UDim2.fromScale(1, 1)
+	holder.ZIndex = 0
+	local c = colour or C.glow
+	local base = radius or 14
+	local k = strength or 1
+	for i, spread in { 6, 14 } do
+		local h = Instance.new("Frame")
+		h.Name = "Halo" .. i
+		h.BorderSizePixel = 0
+		h.BackgroundColor3 = c
+		h.BackgroundTransparency = 1 - (if i == 1 then 0.16 else 0.07) * k
+		h.AnchorPoint = Vector2.new(0.5, 0.5)
+		h.Position = UDim2.fromScale(0.5, 0.5)
+		h.Size = UDim2.new(1, spread * 2, 1, spread * 2)
+		h.ZIndex = holder.ZIndex
+		local hc = Instance.new("UICorner")
+		hc.CornerRadius = UDim.new(0, base + spread)
+		hc.Parent = h
+		h.Parent = holder
+	end
+	holder.Parent = target
+	return holder
 end
 
 function Theme.hairline(parent: Instance, width: UDim?, order: number?): Frame
@@ -196,9 +287,17 @@ function Theme.hairline(parent: Instance, width: UDim?, order: number?): Frame
 	line.Name = "Hairline"
 	line.BorderSizePixel = 0
 	line.BackgroundColor3 = C.gold
-	line.BackgroundTransparency = 0.25
+	line.BackgroundTransparency = 0
 	line.Size = UDim2.new(width or UDim.new(0.4, 0), UDim.new(0, 1))
 	line.LayoutOrder = order or 0
+	-- (A line of light, brightest in the middle, gone at its ends.)
+	local g = Instance.new("UIGradient")
+	g.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 1),
+		NumberSequenceKeypoint.new(0.5, 0.05),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	g.Parent = line
 	line.Parent = parent
 	return line
 end
@@ -209,7 +308,8 @@ function Theme.glass(parent: Instance, name: string, size: UDim2, position: UDim
 	local group = Instance.new("Frame")
 	group.Name = name
 	group.BackgroundTransparency = 1
-	group.ClipsDescendants = true -- (as a CanvasGroup did: nothing spills past the glass)
+	-- (What's on the glass is kept to it by its content frame; the glow is let out round it.)
+	group.ClipsDescendants = false
 	group.Size = size
 	group.Position = position or UDim2.fromScale(0.5, 0.5)
 	group.AnchorPoint = anchor or Vector2.new(0.5, 0.5)
@@ -223,46 +323,58 @@ function Theme.glass(parent: Instance, name: string, size: UDim2, position: UDim
 	end
 	group.Parent = parent
 
+	-- A faint gold glow round the glass.
+	Theme.glow(group, C.glow, 16, 0.45)
 	local fill = Instance.new("Frame")
 	fill.Name = "Fill"
 	fill.Size = UDim2.fromScale(1, 1)
-	fill.BackgroundColor3 = Theme.colours.glass
-	-- Nearly solid: name tags and prompts in the world never show through a panel.
-	fill.BackgroundTransparency = 0.04
+	fill.BackgroundColor3 = Color3.new(1, 1, 1)
+	-- Solid: name tags, prompts and the table's own words never show through a panel.
+	fill.BackgroundTransparency = 0
 	fill.BorderSizePixel = 0
 	fill.Parent = group
 	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 3)
+	corner.CornerRadius = UDim.new(0, 16)
 	corner.Parent = fill
 	local stroke = Instance.new("UIStroke")
-	stroke.Color = C.gold
-	stroke.Transparency = 0.45
-	stroke.Thickness = 1
+	stroke.Color = Color3.new(1, 1, 1)
+	stroke.Transparency = 0.05
+	stroke.Thickness = 1.5
 	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 	stroke.Parent = fill
-	-- A lighter edge at the top shading down into the glass (solid all the way: what's behind a
-	-- panel never shows through its words).
+	Theme.edge(stroke)
+	-- Black glass, a little lighter at the top (as if lit from above), deepest at the foot; solid
+	-- all the way, so what's behind a panel never shows through its words.
 	local sheen = Instance.new("UIGradient")
 	sheen.Rotation = 90
 	sheen.Color = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, Color3.fromRGB(46, 46, 52)),
-		ColorSequenceKeypoint.new(0.18, Theme.colours.glass:Lerp(Color3.fromRGB(46, 46, 52), 0.35)),
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 30, 38)),
+		ColorSequenceKeypoint.new(0.22, Color3.fromRGB(16, 17, 22)),
 		ColorSequenceKeypoint.new(1, Theme.colours.glass),
 	})
 	sheen.Parent = fill
-	-- A soft highlight along the top edge
+	-- A line of light along the top edge.
 	local highlight = Instance.new("Frame")
 	highlight.Name = "Highlight"
 	highlight.BorderSizePixel = 0
-	highlight.BackgroundColor3 = C.lightGold
-	highlight.BackgroundTransparency = 0.7
-	highlight.Size = UDim2.new(1, -12, 0, 1)
-	highlight.Position = UDim2.new(0, 6, 0, 1)
+	highlight.BackgroundColor3 = C.brightGold
+	highlight.BackgroundTransparency = 0
+	highlight.Size = UDim2.new(0.7, 0, 0, 1)
+	highlight.AnchorPoint = Vector2.new(0.5, 0)
+	highlight.Position = UDim2.new(0.5, 0, 0, 1)
 	highlight.Parent = group
+	local hg = Instance.new("UIGradient")
+	hg.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 1),
+		NumberSequenceKeypoint.new(0.5, 0.15),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	hg.Parent = highlight
 
 	local content = Instance.new("Frame")
 	content.Name = "Content"
 	content.BackgroundTransparency = 1
+	content.ClipsDescendants = true -- (nothing spills past the glass)
 	content.Size = UDim2.fromScale(1, 1)
 	content.Parent = group
 	local pad = Instance.new("UIPadding")
@@ -330,7 +442,7 @@ local function selectionRing(): Frame
 	ring.Size = UDim2.new(1, 8, 1, 8)
 	ring.Position = UDim2.fromOffset(-4, -4)
 	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 4)
+	corner.CornerRadius = UDim.new(0, 14)
 	corner.Parent = ring
 	local stroke = Instance.new("UIStroke")
 	stroke.Color = C.lightGold
@@ -346,9 +458,11 @@ function Theme.key(parent: Instance, text: string, primary: boolean?, onPress: (
 	local button = Instance.new("TextButton")
 	button.Name = "Key_" .. text
 	button.AutoButtonColor = false
-	local baseColour = if primary then C.gold else Color3.fromRGB(20, 20, 24)
-	local hoverColour = if primary then C.lightGold else Color3.fromRGB(34, 32, 30)
-	local baseFill = if primary then 0.08 else 0.3
+	-- Gold keys are gold leaf (a sheen from light to deep gold, brightening under the pointer); the
+	-- others are black glass with the gold edge that catches the light.
+	local baseColour = if primary then Color3.fromRGB(232, 232, 232) else Color3.fromRGB(18, 19, 24)
+	local hoverColour = if primary then Color3.new(1, 1, 1) else Color3.fromRGB(36, 34, 30)
+	local baseFill = if primary then 0 else 0.08
 	button.BackgroundColor3 = baseColour
 	button.BackgroundTransparency = baseFill
 	button.BorderSizePixel = 0
@@ -378,8 +492,8 @@ function Theme.key(parent: Instance, text: string, primary: boolean?, onPress: (
 		end
 		local chars = utf8.len(button.Text) or #button.Text
 		local size = 16
-		-- Poppins Medium capitals run about 0.68 of their size wide.
-		while size > 13 and chars * size * 0.68 > width do
+		-- Gotham SSm Bold capitals run about 0.74 of their size wide.
+		while size > 13 and chars * size * 0.74 > width do
 			size = if size == 16 then 14 else 13
 		end
 		r.size = size
@@ -398,13 +512,19 @@ function Theme.key(parent: Instance, text: string, primary: boolean?, onPress: (
 	end)
 	button:GetPropertyChangedSignal("Text"):Connect(fitWords)
 	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 2)
+	corner.CornerRadius = UDim.new(0, 12)
 	corner.Parent = button
 	local stroke = Instance.new("UIStroke")
 	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	stroke.Color = C.gold
-	stroke.Transparency = if primary then 0.2 else 0.5
+	stroke.Color = if primary then C.brightGold else Color3.new(1, 1, 1)
+	stroke.Thickness = if primary then 1 else 1.5
+	stroke.Transparency = if primary then 0.2 else 0.35
 	stroke.Parent = button
+	if primary then
+		Theme.metal(button, true)
+	else
+		Theme.edge(stroke, 0.8)
+	end
 	local scale = Instance.new("UIScale")
 	scale.Parent = button
 	-- The glint: a band of light across the key when it is taken.
@@ -417,13 +537,13 @@ function Theme.key(parent: Instance, text: string, primary: boolean?, onPress: (
 	glint.ZIndex = button.ZIndex + 1
 	glint.Parent = button
 	local glintCorner = Instance.new("UICorner")
-	glintCorner.CornerRadius = UDim.new(0, 2)
+	glintCorner.CornerRadius = UDim.new(0, 12)
 	glintCorner.Parent = glint
 
 	local over = false
 	local function lit(on: boolean)
 		over = on
-		Ease.play(stroke, Ease.quick, { Transparency = if on then 0 else (if primary then 0.2 else 0.5) })
+		Ease.play(stroke, Ease.quick, { Transparency = if on then 0 else (if primary then 0.2 else 0.35) })
 		Ease.play(scale, Ease.info(0.16, Enum.EasingStyle.Quad), { Scale = if on then 1.025 else 1 })
 		Ease.play(button, Ease.quick, {
 			BackgroundColor3 = if on then hoverColour else baseColour,
@@ -512,12 +632,19 @@ function Theme.tabs(parent: Instance, specs: { { string } }, current: string, on
 	local function paint()
 		for id, k in keys do
 			local on = id == chosen
-			k.BackgroundColor3 = if on then C.gold else Color3.fromRGB(20, 20, 24)
-			k.BackgroundTransparency = if on then 0.06 else 0.35
-			k.TextColor3 = if on then Color3.fromRGB(24, 18, 8) else C.lightGold
+			-- The chosen tab is gold leaf; the rest black glass, their words in pale gold.
+			k.BackgroundColor3 = if on then Color3.new(1, 1, 1) else Color3.fromRGB(18, 19, 24)
+			k.BackgroundTransparency = if on then 0 else 0.1
+			k.TextColor3 = if on then Color3.fromRGB(28, 20, 6) else C.lightGold
+			local sheen = k:FindFirstChild("Metal")
+			if on and not sheen then
+				Theme.metal(k, true)
+			elseif not on and sheen then
+				sheen:Destroy()
+			end
 			local stroke = k:FindFirstChildOfClass("UIStroke")
 			if stroke then
-				stroke.Transparency = if on then 0.15 else 0.55
+				stroke.Transparency = if on then 0.1 else 0.6
 			end
 		end
 	end

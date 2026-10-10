@@ -29,7 +29,8 @@ type Box = { minX: number, maxX: number, minZ: number, maxZ: number }
 type Actor = { part: Part, gui: BillboardGui, glyph: TextLabel, size: number, v: Vector3, at: Vector3, spin: number, phase: number, home: number }
 
 local DISCO = { Color3.fromRGB(255, 60, 200), Color3.fromRGB(60, 200, 255), Color3.fromRGB(120, 255, 90), Color3.fromRGB(255, 220, 60), Color3.fromRGB(170, 80, 255), Color3.fromRGB(255, 90, 60) }
-local IMPACT = Font.fromEnum(Enum.Font.LuckiestGuy)
+-- (The big words: the house's sans at its heaviest, cut clean.)
+local IMPACT = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Heavy)
 
 local running = false
 

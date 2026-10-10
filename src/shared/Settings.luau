@@ -34,7 +34,7 @@ Settings.Groups = { "The room", "The table", "The guide", "The Club", "Your perk
 Settings.Definitions = {
 	-- The room
 	choice("houseStyle", "The room", "House style", { "Luxury Black", "Luxury Gold", "Emerald Club", "Bordeaux", "Platinum", "Ivory Suite" }, true),
-	choice("lettering", "The room", "Lettering", { "Editorial", "Book", "Modern", "Ledger" }, true),
+	choice("lettering", "The room", "Lettering", { "Future", "Editorial", "Book", "Ledger" }, true),
 	choice("textSize", "The room", "Text size", { "Normal", "Large", "Largest", "Small" }, true),
 	choice("roundNumbers", "The room", "Round numbers", { "IV", "4", "Four" }, true),
 	choice("atmosphere", "The room", "Atmosphere", { "Full", "Light", "Off" }, true, "dust in the lamplight, the city beyond the glass, weather density"),

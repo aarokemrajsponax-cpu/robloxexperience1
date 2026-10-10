@@ -376,6 +376,13 @@ local function toScreen(cam, p)
 	local nx, ny = (rel.X / -rel.Z) / tx, (rel.Y / -rel.Z) / ty
 	return Vector2.new((nx + 1) / 2 * vp.X, (1 - ny) / 2 * vp.Y)
 end
+-- (As Roblox's: the point on screen, its depth in front of the camera, and whether it's in view.)
+roblox.implementMethod("Camera", "WorldToViewportPoint", function(self, p)
+	local depth = -self.CFrame:PointToObjectSpace(p).Z
+	local at = toScreen(self, p)
+	local vp = self.ViewportSize
+	return Vector3.new(at.X, at.Y, depth), depth > 0 and at.X >= 0 and at.X <= vp.X and at.Y >= 0 and at.Y <= vp.Y
+end)
 
 ---------------------------------------------------------------------------------------------------
 -- The DataModel, services and the local guest
@@ -1071,8 +1078,17 @@ local function find(parent, pred)
 	return nil
 end
 -- Text is compared without spacing or case (the house letter-spaces its capitals).
+-- (Headings are set in capitals, accents and all: "SOIRÉE" reads as "soirée".)
+local LOWER_ACCENTS = {
+	["À"] = "à", ["Á"] = "á", ["Â"] = "â", ["Ä"] = "ä", ["Æ"] = "æ", ["Ç"] = "ç", ["È"] = "è", ["É"] = "é",
+	["Ê"] = "ê", ["Ë"] = "ë", ["Ì"] = "ì", ["Í"] = "í", ["Î"] = "î", ["Ï"] = "ï", ["Ñ"] = "ñ", ["Ò"] = "ò",
+	["Ó"] = "ó", ["Ô"] = "ô", ["Ö"] = "ö", ["Ù"] = "ù", ["Ú"] = "ú", ["Û"] = "û", ["Ü"] = "ü", ["Œ"] = "œ",
+}
 local function norm(text: string): string
-	return (string.lower(string.gsub(text, "%s+", "")))
+	local low = string.lower(string.gsub(text, "%s+", ""))
+	return (string.gsub(low, "[\195\197][\128-\191]", function(ch)
+		return LOWER_ACCENTS[ch] or ch
+	end))
 end
 local function textOnScreen(text)
 	local wanted = norm(text)
@@ -1168,6 +1184,7 @@ local function snapshot(name: string)
 			n.thickness = inst.Thickness
 			n.trans = inst.Transparency
 			n.enabled = inst.Enabled
+			n.mode = get(inst, "ApplyStrokeMode") and inst.ApplyStrokeMode.Name or nil
 		elseif inst:IsA("UIScale") then
 			n.scale = inst.Scale
 		elseif inst:IsA("UIListLayout") then
@@ -1337,6 +1354,183 @@ check("a first visit offers Straight to the table", textOnScreen("Straight to th
 check("what's next, while walking: take a seat", textOnScreen("Take a seat at any table in the Salon") ~= nil)
 check("and how, with the keys in your hands", textOnScreen("Walk up to a chair and press E") ~= nil)
 check("no errors after Play", #errors == 0, errors[1])
+
+-- The welcome: WELCOME and the guest's name on their own screen (a first evening: a line about the
+-- Concierge), then a gold arrow to the Concierge, who shows new guests round.
+do
+	local State = module("StarterPlayer", "StarterPlayerScripts", "Client", "State")
+	local Welcome = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "Welcome")
+	local Guide = module("StarterPlayer", "StarterPlayerScripts", "Client", "World", "ConciergeGuide")
+	local function spelled(gui)
+		local word = gui and gui:FindFirstChild("Word", true)
+		if not word then
+			return ""
+		end
+		local letters = {}
+		for _, l in word:GetChildren() do
+			if l:IsA("TextLabel") then
+				table.insert(letters, l)
+			elseif l:IsA("Frame") and l.Name == "Gap" then
+				table.insert(letters, { LayoutOrder = l.LayoutOrder, Text = " " })
+			end
+		end
+		table.sort(letters, function(a, b)
+			return a.LayoutOrder < b.LayoutOrder
+		end)
+		local out = ""
+		for _, l in letters do
+			out ..= l.Text
+		end
+		return out
+	end
+	local function sameSize(gui)
+		local word = gui and gui:FindFirstChild("Word", true)
+		local size
+		for _, l in (word and word:GetChildren() or {}) do
+			if l:IsA("TextLabel") then
+				if l.TextScaled or (size and l.TextSize ~= size) then
+					return false
+				end
+				size = l.TextSize
+			end
+		end
+		return size ~= nil
+	end
+	local welcomeGui = playerGui:FindFirstChild("MaisonWelcome")
+	check("a new guest is welcomed on their own screen: WELCOME and their name", welcomeGui ~= nil and spelled(welcomeGui) == "WELCOME" and textOnScreen("ADA") ~= nil, spelled(welcomeGui))
+	check("...every letter lit, the same size, in gold", sameSize(welcomeGui) and (function()
+		for _, l in welcomeGui.Welcome.Word:GetChildren() do
+			if l:IsA("TextLabel") and (l.TextTransparency > 0.01 or not l:FindFirstChild("Metal")) then
+				return false
+			end
+		end
+		return true
+	end)())
+	check("...and on a first evening, the line about the Concierge and the gold arrow", textOnScreen("The Concierge shows new guests round") ~= nil)
+	check("...drawn on this guest's screen only (their own PlayerGui; the ring of light in their own camera)", welcomeGui and welcomeGui.Parent == playerGui)
+	advance(1)
+	snapshot("welcome")
+
+	-- The Concierge at the lectern, as the server's rig arrives on this screen; the guest across the
+	-- Foyer, where new guests spawn.
+	local home = Vector3.new(9, 3, 4.2) * GRAND()
+	local cg = Instance.new("Model")
+	cg.Name = "Concierge"
+	cg:SetAttribute("Staff", "Concierge")
+	local croot = Instance.new("Part")
+	croot.Name = "HumanoidRootPart"
+	croot.Size = Vector3.new(2, 2, 1)
+	croot.CFrame = CFrame.new(home + Vector3.new(0, 3, 0))
+	croot.Parent = cg
+	local chead = Instance.new("Part")
+	chead.Name = "Head"
+	chead.Size = Vector3.new(1, 1, 1)
+	chead.CFrame = CFrame.new(home + Vector3.new(0, 4.5, 0))
+	chead.Parent = cg
+	local speak = Instance.new("ProximityPrompt")
+	speak.Name = "SpeakPrompt"
+	speak.Parent = chead
+	cg.PrimaryPart = croot
+	cg.Parent = workspace
+	local was, camWas = root.Position, camera.CFrame
+	local function moveGuest(p)
+		root.CFrame = CFrame.new(p)
+		root.Position = p
+	end
+	local spawnAt = Vector3.new(-20, 6, 12) * GRAND()
+	moveGuest(spawnAt)
+	advance(2.5)
+	check("a first evening: the gold arrow to the Concierge is up", Guide.active())
+	local bb = playerGui:FindFirstChild("MaisonConciergeGuide")
+	check("over the Concierge: THE CONCIERGE, Talk to learn the game, and a chevron", bb ~= nil and bb.Adornee == chead and bb.AlwaysOnTop == true and textOnScreen("Talk to learn the game") ~= nil and bb:FindFirstChild("Chevron") ~= nil)
+	local folder = camera:FindFirstChild("MaisonConciergeGuide")
+	local arrows = {}
+	for _, p in (folder and folder:GetChildren() or {}) do
+		if p:IsA("BasePart") then
+			table.insert(arrows, p)
+		end
+	end
+	check("on the floor: three gold chevrons, on this screen only (in the guest's camera)", #arrows == 6, #arrows)
+	local first = folder and folder:FindFirstChild("GuideChevron1R")
+	local firstL = folder and folder:FindFirstChild("GuideChevron1L")
+	local toConcierge = (home - spawnAt) * Vector3.new(1, 0, 1)
+	-- (The middle of the nearest chevron, between its two arms.)
+	local middle = first and firstL and (first.CFrame.Position + firstL.CFrame.Position) / 2
+	local toArrow = middle and (middle - spawnAt) * Vector3.new(1, 0, 1)
+	check("...pointing the way to the Concierge", toArrow ~= nil and toConcierge.Unit:Dot(toArrow.Unit) > 0.999 and toArrow.Magnitude > 1.5 and toArrow.Magnitude < 4, toArrow and toConcierge.Unit:Dot(toArrow.Unit))
+	local feetY = spawnAt.Y - humanoid.HipHeight - root.Size.Y / 2
+	check("...lit, at the guest's feet", first ~= nil and first.Transparency < 0.7 and math.abs(first.CFrame.Position.Y - feetY) < 0.2, first and first.CFrame.Position.Y)
+	-- The Concierge behind the camera: an arrow at the screen's edge; in view, it steps aside.
+	local edge = playerGui:FindFirstChild("MaisonGuideEdge")
+	camera.CFrame = CFrame.lookAt(spawnAt + Vector3.new(0, 6, 0), spawnAt + Vector3.new(0, 6, 0) - toConcierge)
+	advance(0.1)
+	check("the Concierge out of view: an arrow at the screen's edge points the way", edge ~= nil and edge.Arrow.Visible == true and edge.Label.Visible == true)
+	camera.CFrame = CFrame.lookAt(spawnAt + Vector3.new(0, 6, 0), home + Vector3.new(0, 4, 0))
+	advance(0.1)
+	check("...and in view, the edge arrow steps aside", edge ~= nil and edge.Arrow.Visible == false)
+	-- Close by: the floor arrows go, and the line says how to talk.
+	moveGuest(home + Vector3.new(0, 3, 9))
+	advance(0.2)
+	local lit = 0
+	for _, p in arrows do
+		if p.Transparency < 1 then
+			lit += 1
+		end
+	end
+	check("close to the Concierge: how to talk, and the floor arrows go", textOnScreen("Press E to talk") ~= nil and lit == 0, lit)
+	-- Speaking to the Concierge: done, for good.
+	services.ProximityPromptService.PromptTriggered:Fire(speak)
+	advance(1)
+	check("speaking to the Concierge: the arrow is done", not Guide.active() and playerGui:FindFirstChild("MaisonConciergeGuide") == nil and camera:FindFirstChild("MaisonConciergeGuide") == nil and playerGui:FindFirstChild("MaisonGuideEdge") == nil)
+	check("...and doesn't come back", Guide.start() == false and not Guide.active())
+	advance(4)
+	check("the welcome goes by itself after a few seconds, with its ring of light", playerGui:FindFirstChild("MaisonWelcome") == nil and camera:FindFirstChild("MaisonWelcomeRing") == nil and root:FindFirstChild("MaisonWelcomeSparkles") == nil)
+	cg:Destroy()
+	moveGuest(was)
+	camera.CFrame = camWas
+
+	-- A returning guest: WELCOME BACK, and no arrow.
+	Welcome.show("Ben", false)
+	advance(2)
+	local back = playerGui:FindFirstChild("MaisonWelcome")
+	check("a returning guest: WELCOME BACK and their name", back ~= nil and spelled(back) == "WELCOME BACK" and textOnScreen("BEN") ~= nil and sameSize(back), spelled(back))
+	check("...without the Concierge's line", textOnScreen("The Concierge shows new guests round") == nil)
+	snapshot("welcome-back")
+	advance(2.2)
+	check("...and it goes sooner", playerGui:FindFirstChild("MaisonWelcome") == nil)
+	-- On a phone, it fits; with the Movement setting on Still, the words alone.
+	camera.ViewportSize = Vector2.new(390, 844)
+	signalOf(camera, "prop:ViewportSize"):Fire()
+	local movement = State.settings.movement
+	State.settings.movement = "Still"
+	Welcome.show("Ada", true)
+	advance(2)
+	local phone = playerGui:FindFirstChild("MaisonWelcome")
+	local holder = phone and phone:FindFirstChild("Welcome")
+	local letters, width = 0, 0
+	for _, l in (holder and holder.Word:GetChildren() or {}) do
+		if l:IsA("TextLabel") then
+			letters += 1
+			width = l.TextSize
+		end
+	end
+	check("on a phone the word fits across the screen", letters == 7 and width * 7 * 1.2 <= 390 - 40, width)
+	local flew = 0
+	for _, d in (holder and holder:GetDescendants() or {}) do
+		if d.Name == "Spark" or d.Name == "Mote" then
+			flew += 1
+		end
+	end
+	check("with Movement on Still: no sparks, no sweep", flew == 0 and holder ~= nil and holder.Sweep.Glint.Visible == false, flew)
+	check("...and the line about the Concierge wraps rather than shrinking", holder ~= nil and holder.Line.TextWrapped == true and holder.Line.Size.Y.Offset >= 30)
+	snapshot("welcome-phone")
+	State.settings.movement = movement
+	advance(6)
+	camera.ViewportSize = Vector2.new(1280, 720)
+	signalOf(camera, "prop:ViewportSize"):Fire()
+	advance(0.5)
+	check("no errors in the welcome", #errors == 0, errors[1])
+end
 
 -- The Black Card on the lectern: not there until it's offered, and never in a guest's first minutes.
 local blackCard = CollectionService:GetTagged("BlackCardLectern")[1]
@@ -1867,6 +2061,8 @@ end
 serverSays("Table", { op = "roundEnd", round = 1, room = "salon", mode = "room", score = 360, grade = "Polished", bestStreak = 8, bonus = { perfect = 0, streak = 40, time = 0 }, last = false })
 advance(3)
 check("the round panel offers the next round", textOnScreen("Next round") ~= nil)
+advance(2.5)
+snapshot("round")
 check("and banking the run", textOnScreen("Bank the run") ~= nil)
 press("Next round")
 advance(0.5)
@@ -2737,7 +2933,14 @@ snapshot("register")
 check("a case page shows the found piece in 3D", press(catalogueForTest.Cases[1].name) and textOnScreen(firstCore.name) ~= nil and find(playerGui, function(d)
 	return d:IsA("ViewportFrame")
 end) ~= nil)
+check("...each piece in its own vitrine, the ones not yet found in shadow", find(playerGui, function(d)
+	return d.Name == "Entry_" .. firstCore.id and d:FindFirstChild("Spot") ~= nil and d:FindFirstChild("Plinth") ~= nil
+end) ~= nil and textOnScreen("Not yet found") ~= nil and textOnScreen("1 OF") ~= nil)
+advance(0.5)
+snapshot("register-case")
 check("the Mythics page prints the odds and the serial", press("Mythics") and textOnScreen("1 in 40,000") ~= nil and textOnScreen("No. 00412") ~= nil)
+advance(0.5)
+snapshot("register-mythics")
 advance(1)
 Root2.close()
 advance(1)
@@ -2858,7 +3061,7 @@ check("home again: your own Suite and your Gold Key rooms", alcove.CanCollide ==
 -- The Suites key in the dock: your Suite, or a friend's.
 invokeResults.SuiteAsk = { ok = true, friends = { { userId = 77, name = "Quin" } } }
 local suitesKey = find(playerGui, function(d)
-	return d:IsA("TextButton") and d.Name == "Suites"
+	return d:IsA("TextButton") and d.Name == "Key" and d.Parent ~= nil and d.Parent.Name == "Suites"
 end)
 check("the Suites key sits in the dock on the left", suitesKey ~= nil)
 if suitesKey then
@@ -3366,23 +3569,37 @@ advance(0.5)
 check("no errors in a salute", #errors == 0, errors[1])
 
 -- Fireworks: a key to go out and watch them (and the giver is taken out at once).
-serverSays("Salute", { op = "salute", id = "fireworks", by = "Ada", userId = LocalPlayer.UserId, seconds = 10, scale = 1, effects = { "fireworks" }, line = "Ada lit fireworks over the house." })
-advance(1)
-local watchKey = find(playerGui, function(d)
-	return d:IsA("TextButton") and d.Name == "Watch"
-end)
-check("fireworks: a key to watch them from outside", watchKey ~= nil)
-check("...and the guest who lit them is taken out to watch at once", watchKey ~= nil and watchKey.Text == "Back to the house", watchKey and watchKey.Text)
-snapshot("fireworks-watch")
-if watchKey then
-	signalOf(watchKey, "Activated"):Fire()
+do
+	serverSays("Salute", { op = "salute", id = "fireworks", by = "Ada", userId = LocalPlayer.UserId, seconds = 10, scale = 1, effects = { "fireworks" }, line = "Ada lit fireworks over the house." })
+	advance(1)
+	local function watchTile()
+		local dockFrame = find(playerGui, function(d)
+			return d.Name == "QuickDock" and d:IsA("Frame")
+		end)
+		return dockFrame and dockFrame:FindFirstChild("Watch")
+	end
+	local function watchLabel(): string?
+		local t = watchTile()
+		local l = t and t:FindFirstChild("Label", true)
+		return l and l.Text
+	end
+	local tileNow = watchTile()
+	local invite = tileNow and tileNow.Parent:FindFirstChild("Invite")
+	check("fireworks: a key to watch them from outside, at the foot of the dock under Invite", tileNow ~= nil and invite ~= nil and tileNow.LayoutOrder > invite.LayoutOrder)
+	check("...never a key in the middle of the screen", find(playerGui, function(d)
+		return d.Name == "FireworksWatch"
+	end) == nil)
+	check("...and the guest who lit them is taken out to watch at once", watchLabel() == "Back", watchLabel())
+	snapshot("fireworks-watch")
+	local watchKey = tileNow and tileNow:FindFirstChild("Key")
+	if watchKey then
+		signalOf(watchKey, "Activated"):Fire()
+	end
+	advance(0.5)
+	check("...and brought back with the same key", watchLabel() == "Watch", watchLabel())
+	advance(20)
+	check("when the show is over, the key goes", watchTile() == nil)
 end
-advance(0.5)
-check("...and brought back with the same key", watchKey ~= nil and watchKey.Text == "Watch the fireworks")
-advance(20)
-check("when the show is over, the key goes", find(playerGui, function(d)
-	return d:IsA("TextButton") and d.Name == "Watch"
-end) == nil)
 
 -- A long show plays all three acts, each to its own score: Hanabi, Liberty (with Niagara Falls
 -- pouring down the front of the house) and Majesty (searchlights, the house's monogram in gold,
@@ -3598,6 +3815,21 @@ do
 	workspace:SetAttribute("AbuseNight", "midasHeist")
 	advance(1.2)
 	check("...naming tonight's night: ADMIN ABUSE · THE MIDAS HEIST", textOnScreen("ADMIN ABUSE  ·  THE MIDAS HEIST") ~= nil)
+	advance(3.2) -- (the second line turns to the next event)
+	local clocked = strip and find(strip, function(d)
+		return d:IsA("TextLabel") and string.find(d.Text, "%d+:%d%d") ~= nil
+	end)
+	check("...and never a clock while Admin Abuse is on (how long it lasts is AJKR's business)", clocked == nil, clocked and clocked.Text)
+	-- A notice that comes in now lands below the strip, never over it.
+	module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "Toast").show("You caught Homard de Luxe", "+72 Gilt", 4)
+	advance(0.4)
+	local note = find(playerGui, function(d)
+		return d.Name == "Toast" and d:IsA("Frame")
+	end)
+	check("a notice during Admin Abuse comes in at the foot of the screen, never over the strip", note ~= nil and note.Position.Y.Scale == 1 and note.AnchorPoint.Y == 1, note and tostring(note.Position))
+	advance(0.8)
+	snapshot("toast-under-strip")
+	advance(4.2)
 	workspace:SetAttribute("AbuseNight", nil)
 	for _, id in { "goldenHour", "luckyHour", "giants", "quickstep", "goldRain", "featherlight" } do
 		workspace:SetAttribute("Event_" .. id, nil)
@@ -3772,10 +4004,15 @@ do
 	local dockKeys = {}
 	for _, name in { "Collection", "Trade", "Wardrobe", "Gems", "Invite" } do
 		dockKeys[name] = find(playerGui, function(d)
-			return d:IsA("TextButton") and d.Name == name and d.Parent ~= nil and d.Parent.Name == "QuickDock"
+			return d:IsA("TextButton") and d.Name == "Key" and d.Parent ~= nil and d.Parent.Name == name and d.Parent.Parent ~= nil and d.Parent.Parent.Name == "QuickDock"
 		end)
 	end
 	check("the dock: Collection, Trade, Wardrobe, Gems and Invite on screen", dockKeys.Collection ~= nil and dockKeys.Trade ~= nil and dockKeys.Wardrobe ~= nil and dockKeys.Gems ~= nil and dockKeys.Invite ~= nil)
+	-- (Each key glows in its own colour, its name under its icon: nobody misses the dock.)
+	local lit = dockKeys.Gems and dockKeys.Gems.Parent:FindFirstChild("Glow")
+	local named = dockKeys.Gems and dockKeys.Gems:FindFirstChild("Label")
+	check("...each key glowing in its own colour, its name under its icon", lit ~= nil and #lit:GetChildren() >= 2 and named ~= nil and named.Text == "Gems")
+	snapshot("dock")
 	local invitesBefore = shared.invites
 	if dockKeys.Invite then
 		signalOf(dockKeys.Invite, "Activated"):Fire()
@@ -4069,10 +4306,21 @@ check("no errors in photo mode", #errors == 0, errors[1])
 
 -- Build 51: the owner's headlines, countdowns and giveaways on every screen; the Gilt bar; levels;
 -- badges; the Gem Shop; the Badge Book.
-serverSays("Salute", { op = "headline", text = "WHO'S READY FOR CHAOS?!", by = "AJKR", style = "rainbow", seconds = 6 })
-advance(0.6)
-check("a headline crosses the top of every screen, with who sent it (AJKR)", textOnScreen("WHO'S READY FOR CHAOS?!") ~= nil and textOnScreen("AJKR") ~= nil)
-snapshot("headline")
+do
+	local SoundModule = module("StarterPlayer", "StarterPlayerScripts", "Client", "Sound")
+	local realPlay = SoundModule.play
+	local heard: { string } = {}
+	SoundModule.play = function(name, ...)
+		table.insert(heard, name)
+		return realPlay(name, ...)
+	end
+	serverSays("Salute", { op = "headline", text = "WHO'S READY FOR CHAOS?!", by = "AJKR", style = "rainbow", seconds = 6 })
+	advance(0.6)
+	check("a headline crosses the top of every screen, with who sent it (AJKR)", textOnScreen("WHO'S READY FOR CHAOS?!") ~= nil and textOnScreen("AJKR") ~= nil)
+	check("...arriving with a quick two-note ping, like a phone's (no fanfare, no horn)", table.concat(heard, ",") == "notify,notify", table.concat(heard, ","))
+	SoundModule.play = realPlay
+	snapshot("headline")
+end
 advance(7)
 check("and goes after a few seconds", textOnScreen("WHO'S READY FOR CHAOS?!") == nil)
 serverSays("Salute", { op = "countdown", id = "abuse", label = "ADMIN ABUSE IN", seconds = 10, endsAt = workspace:GetServerTimeNow() + 10 })
@@ -4765,7 +5013,12 @@ end)()
 		advance(0.2)
 		local cleared = shells()
 		advance(8)
-		check("Every effect OFF clears the effect's fireworks at once, and none follow", during > 0 and cleared == 0 and shells() == 0 and Fireworks.live() == 0, string.format("%d %d %d %d", during, cleared, shells(), Fireworks.live()))
+		local left = {}
+		local f = (workspace:FindFirstChild("MaisonLocal") or workspace):FindFirstChild("Fireworks")
+		for _, c in (f and f:GetChildren() or {}) do
+			table.insert(left, c.Name .. ":" .. c.ClassName)
+		end
+		check("Every effect OFF clears the effect's fireworks at once, and none follow", during > 0 and cleared == 0 and shells() == 0 and Fireworks.live() == 0, string.format("%d %d %d %d %s", during, cleared, shells(), Fireworks.live(), table.concat(left, ",")))
 		Fireworks.show(30, { scale = 1, music = false })
 		AbuseFX.play("fireworks", 30)
 		advance(6)
@@ -4808,6 +5061,45 @@ end)()
 	ChatNames.playerFor = realFor
 	check("no errors in Build 55's nights", #errors == errorsBefore, errors[errorsBefore + 1])
 end)()
+
+-- The owner's notices: Roblox's services having a moment is a calm house note, once; a real fault
+-- is the panel's.
+do
+	local hud = playerGui:FindFirstChild("MaisonHud")
+	local function notes()
+		local n = 0
+		for _, d in hud:GetChildren() do
+			if d.Name == "HouseNote" then
+				n += 1
+			end
+		end
+		return n
+	end
+	local panelBefore = hud:FindFirstChild("Errors")
+	serverSays("Errors", "Server: MemoryStoreService: InternalError: Unknown Error. API: SortedMap.GetRange, Data Structure: MaisonNoir_Board_library_week_2962")
+	serverSays("Errors", "MemoryStoreService: InternalError: Unknown Error. API: SortedMap.GetSize, Data Structure: MaisonNoir_Soiree_2026-10-10")
+	advance(0.5)
+	local panel = hud:FindFirstChild("Errors")
+	check("the live boards not answering is one calm house note, not a red error", notes() == 1 and textOnScreen("live leaderboards") ~= nil and (panel == nil or panel == panelBefore and (panel.Visible == false or textOnScreen("MemoryStoreService") == nil)), notes())
+	snapshot("notes")
+	advance(16)
+	check("...which leaves by itself", notes() == 0)
+	serverSays("Errors", "Server: MemoryStoreService: InternalError: Unknown Error. API: SortedMap.GetRange, Data Structure: nightly_2026-10-10")
+	advance(0.5)
+	check("...and isn't shown again", notes() == 0)
+	serverSays("Errors", "Server: ServerScriptService.Server.Example:12: attempt to index nil with 'Name'")
+	advance(0.5)
+	panel = hud:FindFirstChild("Errors")
+	check("a real fault shows in the owner's panel", panel ~= nil and panel.Visible and textOnScreen("attempt to index nil") ~= nil)
+	if panel then
+		local close = panel:FindFirstChild("Close", true)
+		if close then
+			signalOf(close, "Activated"):Fire()
+		end
+	end
+	advance(0.5)
+	check("...until it's hidden", panel == nil or panel.Visible == false)
+end
 
 ---------------------------------------------------------------------------------------------------
 -- 8. A respawn hands straight back to the follow camera

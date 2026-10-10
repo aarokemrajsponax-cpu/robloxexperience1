@@ -42,6 +42,8 @@ class Roblox:
         self.cross_once = False  # another server writes between this read and write, once
         self.writes = 0
         self.bad_md5 = 0
+        self.answer_ping = 0  # how many pretend servers answer the remote's test
+        self.pending_pong = None
 
 
 def handler_for(rb):
@@ -69,6 +71,13 @@ def handler_for(rb):
                 return self.reply(404)
             if rb.deny_store:
                 return self.reply(403, b'{"error":"PERMISSION_DENIED"}')
+            if rb.pending_pong is not None:
+                # The servers that heard the test say so in the record (as their UpdateAsync would).
+                rec = json.loads(rb.value) if rb.value else {}
+                rec["pong"] = rb.pending_pong
+                rb.pending_pong = None
+                rb.value = json.dumps(rec)
+                rb.version += 1
             if rb.value is None:
                 return self.reply(404, b'{"error":"NOT_FOUND"}')
             body = rb.value.encode()
@@ -85,6 +94,9 @@ def handler_for(rb):
                 if rb.deny_publish:
                     return self.reply(403, b'{"error":"PERMISSION_DENIED"}')
                 rb.messages.append(json.loads(body))
+                sent = json.loads(rb.messages[-1]["message"])
+                if sent.get("op") == "ping" and rb.answer_ping > 0:
+                    rb.pending_pong = {"rid": sent.get("rid"), "at": sent.get("at"), "servers": rb.answer_ping}
                 return self.reply(200)
             if not self.entry_path(u):
                 return self.reply(404)
@@ -129,13 +141,13 @@ def workflow():
     return step["run"], step["env"]
 
 
-def run_workflow(api, power, words="", style="rainbow", raw="", key="test-key", run_id="777", night=""):
+def run_workflow(api, power, words="", style="rainbow", raw="", key="test-key", run_id="777", night="", ping_wait="0.05"):
     script, env = workflow()
     tmp = tempfile.mkdtemp()
     summary = os.path.join(tmp, "summary.md")
     e = dict(os.environ)
     e.update({k: str(v) for k, v in env.items() if not str(v).startswith("${{")})
-    e.update({"KEY": key, "POWER": power, "WORDS": words, "STYLE": style, "RAW": raw, "NIGHT": night, "API": api, "GITHUB_STEP_SUMMARY": summary, "GITHUB_RUN_ID": run_id, "GITHUB_RUN_ATTEMPT": "1"})
+    e.update({"KEY": key, "POWER": power, "WORDS": words, "STYLE": style, "RAW": raw, "NIGHT": night, "API": api, "GITHUB_STEP_SUMMARY": summary, "GITHUB_RUN_ID": run_id, "GITHUB_RUN_ATTEMPT": "1", "PING_WAIT": ping_wait})
     p = subprocess.run(["bash", "-c", script], env=e, capture_output=True, text=True, timeout=120)
     out = p.stdout + p.stderr
     text = open(summary).read() if os.path.exists(summary) else ""
@@ -224,6 +236,19 @@ def test_workflow():
         check("a key that can't publish fails, saying so", code != 0 and "::error::" in out and "403" in out, out)
         rb.deny_publish = False
 
+        # The remote's own test: the servers that heard it answer in the record, and the run says how
+        # many; with none open, it says so (and why that's fine) without failing.
+        catalog = json.load(open(os.path.join(ROOT, "tools/remote/commands.json"), encoding="utf-8"))
+        test = next(c for c in catalog["commands"] if c["command"]["op"] == "ping")
+        rb.answer_ping = 2
+        code, out, summary = run_workflow(api, test["label"], run_id="795")
+        check("the remote's test is sent to every server", code == 0 and last_message(rb).get("op") == "ping" and last_message(rb).get("rid") == "795-1", out)
+        check("...and the run says how many servers heard it", "2 open server(s) heard it" in out and "2 open server(s) heard it" in summary, out)
+        check("...leaving what the servers wrote in the record as it was", record(rb).get("pong", {}).get("servers") == 2, record(rb))
+        rb.answer_ping = 0
+        code, out, summary = run_workflow(api, test["label"], run_id="796")
+        check("with no server open, the test says so (and that it's fine) without failing", code == 0 and "no server answered" in out and "::warning::" in out, out)
+
         # Every power on the list runs.
         catalog = json.load(open(os.path.join(ROOT, "tools/remote/commands.json"), encoding="utf-8"))
         bad = []
@@ -264,6 +289,11 @@ def test_powershell(pwsh):
         p = subprocess.run([pwsh, "-NoProfile", "-NonInteractive", "-Command", '. "' + script + '"; Send-Command (Add-Night \'{"op":"mega","minutes":15}\' \'midas\'); Send-Command (Add-Night \'{"op":"token"}\' \'midas\')'], env=env, capture_output=True, text=True, timeout=120)
         sent = [json.loads(x["message"]) for x in rb.messages[-2:]]
         check("the PowerShell remote sends the night asked for with Mega Abuse (and never with anything else)", sent[0].get("op") == "mega" and sent[0].get("night") == "midasHeist" and "night" not in sent[1], p.stdout + p.stderr)
+        rb.answer_ping = 3
+        env["MAISON_REMOTE_PING_WAIT"] = "0.05"
+        p = subprocess.run([pwsh, "-NoProfile", "-NonInteractive", "-Command", '. "' + script + '"; Send-Command \'{"op":"ping"}\''], env=env, capture_output=True, text=True, timeout=120)
+        check("the PowerShell remote's test says how many servers heard it", last_message(rb).get("op") == "ping" and "3 open server(s) heard it" in (p.stdout + p.stderr), p.stdout + p.stderr)
+        rb.answer_ping = 0
         shutil.rmtree(tmp, ignore_errors=True)
     finally:
         server.shutdown()

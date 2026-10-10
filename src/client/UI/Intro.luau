@@ -33,7 +33,15 @@ cover.Size = UDim2.fromScale(1, 1)
 cover.ZIndex = 1
 cover.Parent = Root.intro
 
+-- Whether the intro (or its black cover) is still over the screen.
+local playing = true
+
+function Intro.playing(): boolean
+	return playing
+end
+
 function Intro.play(onShown: (() -> ())?)
+	playing = true
 	local size = Root.size()
 	local group = Instance.new("Frame")
 	group.Name = "Intro"
@@ -182,12 +190,14 @@ function Intro.play(onShown: (() -> ())?)
 	tween(cover, if skipped then 0.5 else 0.9, { BackgroundTransparency = 1 }, Enum.EasingStyle.Sine)
 	fade.Completed:Wait()
 	group:Destroy()
+	playing = false
 end
 
 -- Removes the cover without the intro (Studio, and respawns never replay it).
 function Intro.clear()
 	cover.BackgroundTransparency = 1
 	cover.Visible = false
+	playing = false
 end
 
 return Intro

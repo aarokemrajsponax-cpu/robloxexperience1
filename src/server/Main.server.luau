@@ -314,9 +314,9 @@ boot("Purchases", Purchases.start)
 Purchases.Piano.onSession = function(playing: boolean)
 	Pianist.stepAside(playing)
 end
--- The owner plays free (and anyone testing in Studio).
+-- The owner plays free (when Config.Piano.ownerFree is on): the owner only.
 Purchases.Piano.isOwner = function(player: Player): boolean
-	return game:GetService("RunService"):IsStudio() or AdminService.isAdmin(player)
+	return AdminService.isAdmin(player)
 end
 -- Trading curios between guests (the curios and Gems themselves start with Purchases).
 boot("Guest policies", require(script.Parent.Policy).start)

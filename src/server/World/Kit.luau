@@ -221,6 +221,14 @@ function Kit.sign(parent: Instance, name: string, cf: CFrame, width: number, hei
 	return board
 end
 
+-- Roblox's classic studs on a part's top face, quietly: the studs only show on plain Plastic, so
+-- the part keeps its colour and becomes Plastic. (For plain outdoor blocks, never the rooms.)
+function Kit.studs(part: BasePart)
+	part.Material = Enum.Material.Plastic
+	part.Reflectance = 0
+	part.TopSurface = Enum.SurfaceType.Studs
+end
+
 -- Everything in a model stays in memory on every client (streaming never drops it).
 function Kit.persist(model: Model)
 	model.ModelStreamingMode = Enum.ModelStreamingMode.Persistent

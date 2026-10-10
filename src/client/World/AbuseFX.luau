@@ -59,7 +59,8 @@ local player = Players.LocalPlayer
 local rgb = Color3.fromRGB
 local GOLD = rgb(255, 204, 110)
 local RAINBOW = { rgb(255, 60, 140), rgb(80, 140, 255), rgb(90, 255, 170), rgb(255, 214, 80), rgb(190, 90, 255), rgb(255, 120, 40), rgb(60, 230, 255) }
-local IMPACT = Font.fromEnum(Enum.Font.LuckiestGuy)
+-- (The big words: the house's sans at its heaviest, cut clean.)
+local IMPACT = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Heavy)
 local SMOKE = "rbxasset://textures/particles/smoke_main.dds"
 local SPARK = "rbxasset://textures/particles/sparkles_main.dds"
 

@@ -56,7 +56,8 @@ local rgb = Color3.fromRGB
 local GOLD = rgb(255, 204, 110)
 local GOLD_LIGHT = rgb(255, 238, 190)
 local GOLD_DEEP = rgb(196, 140, 48)
-local IMPACT = Font.fromEnum(Enum.Font.LuckiestGuy)
+-- (The big words: the house's sans at its heaviest, cut clean.)
+local IMPACT = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Heavy)
 local HEAVY = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Heavy)
 local BOLD = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold)
 local SPARK = "rbxasset://textures/particles/sparkles_main.dds"
@@ -1524,8 +1525,13 @@ function AbuseShow.arrived(mega: boolean)
 	card.Position = UDim2.new(0.5, 0, 0, -140 * u)
 	card.Size = UDim2.fromOffset(math.min(v.X - 24, 640 * u), 122 * u)
 	corner(card, UDim.new(0, 18 * u))
+	-- (Black glass, a breath of the night's colour at its top, its edge in the night's light.)
 	local fill = Instance.new("UIGradient")
-	fill.Color = ColorSequence.new(P.deep:Lerp(Color3.new(0, 0, 0), 0.55), rgb(12, 9, 6))
+	fill.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, P.deep:Lerp(rgb(20, 20, 26), 0.6)),
+		ColorSequenceKeypoint.new(0.5, rgb(14, 14, 18)),
+		ColorSequenceKeypoint.new(1, rgb(7, 7, 9)),
+	})
 	fill.Rotation = 90
 	fill.Parent = card
 	stroke(card, if mega then rgb(210, 130, 255) else P.main, 2)
@@ -1540,7 +1546,9 @@ function AbuseShow.arrived(mega: boolean)
 	small.Position = UDim2.new(0, 16 * u, 0, 86 * u)
 	small.Size = UDim2.new(1, -32 * u, 0, 22 * u)
 	sound("stinger", 0.8)
-	tween(card, 0.5, { Position = UDim2.new(0.5, 0, 0, 70 * u) }, Enum.EasingStyle.Back)
+	-- (It comes to rest a third of the way down: under the keys and the strip at the top, never
+	-- over them.)
+	tween(card, 0.5, { Position = UDim2.new(0.5, 0, 0.3, 0) }, Enum.EasingStyle.Back)
 	task.delay(5.5, function()
 		if card.Parent then
 			tween(card, 0.4, { Position = UDim2.new(0.5, 0, 0, -160 * u) }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
@@ -2702,11 +2710,14 @@ function AbuseShow.start()
 		Workspace:GetAttributeChangedSignal(attr):Connect(function()
 			local on = Workspace:GetAttribute(attr) ~= nil
 			if on and not was then
-				-- (In the looks it was switched on with: "switched on ☄️ ICE COMETS!")
+				-- (In the looks it was switched on with, and one of AJKR's lines for it, the same on
+				-- every screen: "☄️ ICE COMETS!  Heads up!". Never how it works behind the scenes.)
 				local v = Workspace:GetAttribute(HouseEvents.fxVariantAttribute(e.id))
 				local looks = AbuseNights.variant(e.id, if type(v) == "number" then v else nil)
 				local name = if looks then looks.banner else string.upper(tostring(e.name)) .. "!"
-				OwnerCameo.say(string.format("switched on %s %s It stays on.", tostring(e.glyph), name), "point", 4)
+				local since = Workspace:GetAttribute(attr)
+				local r = AbuseNights.rng(AbuseNights.seedOf(e.id .. ":" .. tostring(since)))
+				OwnerCameo.say(string.format("%s %s  %s", tostring(e.glyph), name, AbuseNights.quip(e.id, r)), "point", 4)
 				OwnerCameo.gesture("point")
 			end
 			was = on

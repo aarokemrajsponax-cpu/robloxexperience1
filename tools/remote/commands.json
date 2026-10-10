@@ -1086,6 +1086,14 @@
     "op": "clock",
     "id": "sunset"
    }
+  },
+  {
+   "group": "Test",
+   "label": "🔔 Test the remote (nothing happens in the game)",
+   "line": "Every open server answers; nothing happens in the game. The answer shows on GitHub's run (Owner Remote → the latest run).",
+   "command": {
+    "op": "ping"
+   }
   }
  ]
 }

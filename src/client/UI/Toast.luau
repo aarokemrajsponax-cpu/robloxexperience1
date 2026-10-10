@@ -1,7 +1,8 @@
 --!strict
--- Quiet notices at the top of the screen (a season turning, a table being taken), or in the
--- bottom-right corner while a panel is open, clear of it (and of the keys down the left). Nothing
--- pops.
+-- Quiet notices (a season turning, a table being taken, a catch's Gilt): at the top of the
+-- screen; at its foot while the events strip or Admin Abuse's headline stands along the top, so
+-- they never cover or crowd it; or in the bottom-right corner while a panel is open, clear of it
+-- (and of the keys down the left). Nothing pops.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -26,6 +27,16 @@ local function widest(low: boolean): number
 	return math.min(if beside >= 150 then math.min(250, beside) else 250, room)
 end
 
+-- Where a notice stands with no panel open: at the top; but while something stands along the
+-- top (the events strip, Admin Abuse's headline) it comes in at the foot of the screen instead,
+-- so the show up there is never covered or crowded.
+local function shown(): (UDim2, Vector2)
+	if Root.topClear() > 0 then
+		return UDim2.new(0.5, 0, 1, -110), Vector2.new(0.5, 1)
+	end
+	return UDim2.new(0.5, 0, 0, 58), Vector2.new(0.5, 0)
+end
+
 function Toast.show(title: string, line: string?, seconds: number?)
 	if current then
 		current:Destroy()
@@ -33,12 +44,13 @@ function Toast.show(title: string, line: string?, seconds: number?)
 	end
 	-- At the top; with a panel open, at the foot of the screen instead, clear of its heading.
 	local low = Root.isOpen()
+	local at, anchor = shown()
 	local group, content = Theme.glass(
 		Root.toasts,
 		"Toast",
 		UDim2.fromOffset(420, 0),
-		if low then UDim2.new(1, -14, 1, -34) else UDim2.new(0.5, 0, 0, 58),
-		if low then Vector2.new(1, 1) else Vector2.new(0.5, 0)
+		if low then UDim2.new(1, -14, 1, -34) else at,
+		if low then Vector2.new(1, 1) else anchor
 	)
 	group.AutomaticSize = Enum.AutomaticSize.Y
 	content.AutomaticSize = Enum.AutomaticSize.Y
@@ -72,11 +84,22 @@ Root.PanelsChanged:Connect(function()
 		return
 	end
 	local low = Root.isOpen()
-	g.AnchorPoint = if low then Vector2.new(1, 1) else Vector2.new(0.5, 0)
-	g.Position = if low then UDim2.new(1, -14, 1, -34) else UDim2.new(0.5, 0, 0, 58)
+	local at, anchor = shown()
+	g.AnchorPoint = if low then Vector2.new(1, 1) else anchor
+	g.Position = if low then UDim2.new(1, -14, 1, -34) else at
 	local limit = g:FindFirstChildOfClass("UISizeConstraint")
 	if limit then
 		limit.MaxSize = Vector2.new(widest(low), math.huge)
+	end
+end)
+
+-- The strip comes or goes while a notice is up: the notice moves with it.
+Root.TopChanged:Connect(function()
+	local g = current
+	if g and not Root.isOpen() then
+		local at, anchor = shown()
+		g.AnchorPoint = anchor
+		g.Position = at
 	end
 end)
 

@@ -4,6 +4,6 @@
 -- see whether Studio has the latest code from GitHub.
 
 return {
-	number = 55,
-	label = "Build 55 · 10 Oct · AJKR everywhere, 55 Admin Abuse nights and 93 effect looks the same in every server, bug sweep",
+	number = 56,
+	label = "Build 56 · 10 Oct · the 2070 look, the Register and the Vault, a welcome and a gold arrow for new guests, owner powers for AJKR alone",
 }

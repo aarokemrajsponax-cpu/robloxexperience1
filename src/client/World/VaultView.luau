@@ -1,6 +1,6 @@
 --!strict
--- The Vault's cabinets, filled on this guest's screen with the pieces they have filed (each guest
--- sees their own). The centre cabinet holds their Mythics, each with its serial number.
+-- The Vault's vitrines, filled on this guest's screen with the pieces they have filed (each guest
+-- sees their own). The centre vitrine holds their Mythics, each with its serial number.
 
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
@@ -19,11 +19,20 @@ local player = Players.LocalPlayer
 local folder: Folder? = nil
 local inside = false
 
--- The shelf positions of a cabinet, in its own frame: three shelves of four.
-local function slot(i: number): CFrame
-	local shelf = math.floor((i - 1) / 4) + 1
+-- Where the pieces stand in a vitrine, in its own frame: its shelves (as the vitrine says; three
+-- of four in an older one), four to a shelf, each turned a little towards the middle.
+type Shelves = { count: number, first: number, step: number, span: number }
+local function shelvesOf(cabinet: Instance): Shelves
+	local function num(name: string, default: number): number
+		local v = cabinet:GetAttribute(name)
+		return if type(v) == "number" then v else default
+	end
+	return { count = num("SlotShelves", 3), first = num("SlotFirstY", 2.8), step = num("SlotStepY", 2), span = num("SlotSpan", 2.4) }
+end
+local function slot(s: Shelves, i: number): CFrame
+	local shelf = math.floor((i - 1) / 4)
 	local col = (i - 1) % 4
-	return CFrame.new(-1.2 + col * 0.8, 0.8 + shelf * 2 + 0.25, 0.1) * CFrame.Angles(0, math.rad(20 - col * 13), 0)
+	return CFrame.new(-s.span / 2 + col * s.span / 3, s.first + shelf * s.step + 0.25, 0.1) * CFrame.Angles(0, math.rad(20 - col * 13), 0)
 end
 
 local function place(parent: Instance, pieceId: string, at: CFrame, gilded: boolean): Model?
@@ -61,6 +70,8 @@ local function fill(view: { [string]: any })
 	for _, cabinet in CollectionService:GetTagged("VaultCabinet") do
 		local frame = cabinet:GetAttribute("Frame")
 		if typeof(frame) == "CFrame" then
+			local shelves = shelvesOf(cabinet)
+			local room = shelves.count * 4
 			local caseId = cabinet:GetAttribute("Case")
 			if type(caseId) == "string" then
 				local found = {}
@@ -75,14 +86,14 @@ local function fill(view: { [string]: any })
 					end
 				end
 				for i, id in found do
-					if i <= 12 then
-						place(f, id, frame * slot(i), false)
+					if i <= room then
+						place(f, id, frame * slot(shelves, i), false)
 					end
 				end
 			else
 				for i, m in view.mythics or {} do
-					if i <= 12 then
-						local model = place(f, m.id, frame * slot(i), true)
+					if i <= room then
+						local model = place(f, m.id, frame * slot(shelves, i), true)
 						local primary = model and model.PrimaryPart
 						if model and primary then
 							local gui = Instance.new("BillboardGui")

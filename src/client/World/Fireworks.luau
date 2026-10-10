@@ -1221,10 +1221,66 @@ local function shot(i: number): CFrame
 	return CFrame.lookAt(eye, sky)
 end
 
-local function setKey(text: string)
+-- The key to watch (and to come back), offered while a show is on: at the foot of the dock, under
+-- Invite (Main sets `Fireworks.dockKey`), never in the middle of the screen. Kept out of sight for a
+-- while under a cinematic that has the screen and the camera (Admin Abuse's opening).
+local offered = false
+local watchHiddenUntil = 0
+Fireworks.dockKey = nil :: ((show: boolean, watching: boolean) -> ())?
+
+local function showKey()
+	local visible = offered and os.clock() >= watchHiddenUntil - 0.05
+	local dockKey = Fireworks.dockKey
+	if dockKey then
+		pcall(dockKey, visible, watching)
+		return
+	end
+	-- (No dock: a key of its own at the left of the screen, where the dock would be.)
+	if not visible then
+		local gui = watchGui
+		watchGui = nil
+		watchKey = nil
+		if gui then
+			gui:Destroy()
+		end
+		return
+	end
+	if not watchGui then
+		local player = Players.LocalPlayer
+		local parent = player and player:FindFirstChild("PlayerGui")
+		if not parent then
+			return
+		end
+		local gui = Instance.new("ScreenGui")
+		gui.Name = "FireworksWatch"
+		gui.IgnoreGuiInset = false
+		gui.ResetOnSpawn = false
+		-- (Just under the sorting screen: a guest at a table isn't offered it over their pieces.)
+		gui.DisplayOrder = 17
+		local k = Instance.new("TextButton")
+		k.Name = "Watch"
+		k.AnchorPoint = Vector2.new(0, 0.5)
+		k.Position = UDim2.new(0, 16, 0.5, 250)
+		k.Size = UDim2.fromOffset(200, 44)
+		k.BackgroundColor3 = Color3.fromRGB(255, 226, 150)
+		k.TextColor3 = Color3.fromRGB(28, 20, 6)
+		k.FontFace = Brand.Fonts.bodyBold
+		k.TextSize = 16
+		k.AutoButtonColor = true
+		local corner = Instance.new("UICorner")
+		corner.CornerRadius = UDim.new(0, 14)
+		corner.Parent = k
+		k.Activated:Connect(function()
+			Fireworks.watch(not watching)
+		end)
+		k.Parent = gui
+		gui.Parent = parent
+		watchGui = gui
+		watchKey = k
+	end
 	local k = watchKey
 	if k then
-		k.Text = text
+		k.Text = if watching then "🏠  Back to the house" else "🎆  Watch the fireworks"
 	end
 end
 
@@ -1242,83 +1298,25 @@ function Fireworks.watch(on: boolean)
 			i += 1
 			return shot(i)
 		end, 7)
-		setKey("Back to the house")
 	else
 		CameraRig.stopWatching()
-		setKey("Watch the fireworks")
 	end
+	showKey()
 end
 
 function Fireworks.isWatching(): boolean
 	return watching
 end
 
--- (Kept out of sight for a while under a cinematic that has the screen and the camera: Admin
--- Abuse's opening. It comes back by itself after.)
-local watchHiddenUntil = 0
-
 function Fireworks.hideWatch(seconds: number)
 	watchHiddenUntil = math.max(watchHiddenUntil, os.clock() + seconds)
-	local gui = watchGui
-	if gui then
-		gui.Enabled = false
-	end
-	task.delay(seconds, function()
-		local g = watchGui
-		if g and os.clock() >= watchHiddenUntil - 0.05 then
-			g.Enabled = true
-		end
-	end)
+	showKey()
+	task.delay(seconds, showKey)
 end
 
--- The key to watch (and to come back), low in the middle of the screen while a show is on.
 local function offerWatch(on: boolean)
-	if not on then
-		local gui = watchGui
-		watchGui = nil
-		watchKey = nil
-		if gui then
-			gui:Destroy()
-		end
-		return
-	end
-	if watchGui then
-		return
-	end
-	local player = Players.LocalPlayer
-	local parent = player and player:FindFirstChild("PlayerGui")
-	if not parent then
-		return
-	end
-	local gui = Instance.new("ScreenGui")
-	gui.Name = "FireworksWatch"
-	gui.IgnoreGuiInset = false
-	gui.ResetOnSpawn = false
-	-- (Just under the sorting screen: a guest at a table isn't offered it over their pieces.)
-	gui.DisplayOrder = 17
-	gui.Enabled = os.clock() >= watchHiddenUntil
-	local k = Instance.new("TextButton")
-	k.Name = "Watch"
-	-- Clear of the notices at the top that announce the show, and of the Eat key below it.
-	k.AnchorPoint = Vector2.new(0.5, 1)
-	k.Position = UDim2.new(0.5, 0, 1, -190)
-	k.Size = UDim2.fromOffset(260, 44)
-	k.BackgroundColor3 = Color3.fromRGB(176, 140, 72)
-	k.TextColor3 = Color3.fromRGB(20, 16, 10)
-	k.FontFace = Brand.Fonts.bodyBold
-	k.TextSize = 18
-	k.AutoButtonColor = true
-	k.Text = if watching then "Back to the house" else "Watch the fireworks"
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(1, 0)
-	corner.Parent = k
-	k.Activated:Connect(function()
-		Fireworks.watch(not watching)
-	end)
-	k.Parent = gui
-	gui.Parent = parent
-	watchGui = gui
-	watchKey = k
+	offered = on
+	showKey()
 end
 
 -- Moving (or jumping) while watching brings the camera home.
@@ -1394,6 +1392,11 @@ local function body(t0: number, untilT: number, s: number, act: ActPlan, busy: n
 			local n = math.random(3, 5)
 			local cx = randomIn(x0 + 60, x1 - 60)
 			for i = 1, n do
+				-- (A volley stopped halfway fires nothing more: its next rocket would climb into a
+				-- sky that has just been cleared.)
+				if not alive() then
+					break
+				end
 				local from, top = sites(cx + (i - (n + 1) / 2) * 42)
 				launch(kind, s, paint, from, top)
 				task.wait(0.1)

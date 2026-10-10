@@ -150,8 +150,9 @@ local function ground(parent: Instance)
 	local road = S.roadZ
 	local pave = S.pavementZ
 	Kit.span(m, "Road", Vector3.new(-120, -2, road[1] - 60), Vector3.new(120, 0, road[2]), L.asphalt)
-	Kit.span(m, "Pavement", Vector3.new(-120, -2, pave[1]), Vector3.new(120, 0, pave[2]), L.wetStone)
-	Kit.span(m, "Kerb", Vector3.new(-120, -2, S.kerbZ - 0.8), Vector3.new(120, 0.35, S.kerbZ), L.kerb)
+	-- (The pavement and the kerb carry Roblox's classic studs, faint on the dark stone.)
+	Kit.studs(Kit.span(m, "Pavement", Vector3.new(-120, -2, pave[1]), Vector3.new(120, 0, pave[2]), L.wetStone))
+	Kit.studs(Kit.span(m, "Kerb", Vector3.new(-120, -2, S.kerbZ - 0.8), Vector3.new(120, 0.35, S.kerbZ), L.kerb))
 	-- Paving joints read as a grid of slightly different stones.
 	for x = -60, 60, 6 do
 		Kit.part(m, "Joint", Vector3.new(0.12, 0.02, pave[2] - pave[1]), CFrame.new(x, 0.01, (pave[1] + pave[2]) / 2), { color = Color3.fromRGB(26, 27, 30), material = Enum.Material.Slate }, { collide = false, query = false, shadow = false })

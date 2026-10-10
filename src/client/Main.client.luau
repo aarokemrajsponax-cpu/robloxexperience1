@@ -68,6 +68,9 @@ local RainView = require(script.Parent.World.RainView)
 local OwnerConsole = require(script.Parent.UI.OwnerConsole)
 local Headline = require(script.Parent.UI.Headline)
 local GiltBar = require(script.Parent.UI.GiltBar)
+local Welcome = require(script.Parent.UI.Welcome)
+local ConciergeGuide = require(script.Parent.World.ConciergeGuide)
+local Names = require(ReplicatedStorage.Shared.Names)
 local BadgeBookPanel = require(script.Parent.UI.BadgeBookPanel)
 local GemShopPanel = require(script.Parent.UI.GemShopPanel)
 local Celebrate = require(script.Parent.UI.Celebrate)
@@ -260,6 +263,12 @@ start("Curios", function()
 		return TableClient.isSeated() or Root.isOpen()
 	end
 	QuickDock.start()
+	-- The key to watch a fireworks show stands at the foot of the dock, under Invite.
+	local Fireworks = require(script.Parent.World.Fireworks)
+	QuickDock.watchPressed = function()
+		Fireworks.watch(not Fireworks.isWatching())
+	end
+	Fireworks.dockKey = QuickDock.setWatch
 	TableClient.Seated.Event:Connect(function()
 		QuickDock.setSeated(true)
 	end)
@@ -333,22 +342,25 @@ start("Perks", function()
 	end
 	PianoPanel.start()
 	PerkChips.start()
+end)
+-- At a table the sorting screen is the whole picture: the strip of events, the Gilt bar and the
+-- perk chips step aside (and come back on leaving). On its own, so nothing that fails to start
+-- above can leave them lying across the cloth; each step on its own too.
+start("At the table", function()
 	EventBanner.onSeatedLine = SortScreen.setEvent
-	TableClient.Seated.Event:Connect(function()
-		PerkChips.setHidden(true)
-		EventBanner.setSeated(true)
-		GiltBar.setSeated(true)
+	local function seated(on: boolean)
+		pcall(EventBanner.setSeated, on)
+		pcall(GiltBar.setSeated, on)
+		pcall(PerkChips.setHidden, on)
 		if walkFX then
-			ScreenFX.setEnabled(walkFX, false)
+			pcall(ScreenFX.setEnabled, walkFX, not on)
 		end
+	end
+	TableClient.Seated.Event:Connect(function()
+		seated(true)
 	end)
 	TableClient.Left.Event:Connect(function()
-		PerkChips.setHidden(false)
-		EventBanner.setSeated(false)
-		GiltBar.setSeated(false)
-		if walkFX then
-			ScreenFX.setEnabled(walkFX, true)
-		end
+		seated(false)
 	end)
 end)
 AdmireCard.openBoutique = function(tab, forGuest)
@@ -508,6 +520,42 @@ local function waitForCharacter(): Model
 	return character :: Model
 end
 
+-- A welcome on the guest's own screen as they arrive (WELCOME and their name; WELCOME BACK for a
+-- returning guest), and on a first evening a gold arrow to the Concierge, who shows new guests
+-- round. Not for the owner (who has their own welcome), not over the intro, Admin Abuse's arrival
+-- card or a table.
+ConciergeGuide.isBusy = function(): boolean
+	return TableClient.isSeated() or Tour.active()
+end
+local function welcome()
+	local guest = State.waitForWelcome(10)
+	local first = guest ~= nil and State.isFirstVisit()
+	local limit = os.clock() + 12
+	local function clear(): boolean
+		local gui = player:FindFirstChild("PlayerGui")
+		local show = gui and gui:FindFirstChild("MaisonAbuseShow")
+		return not Intro.playing() and not Title.isShowing() and not (show and show:FindFirstChild("Arrival"))
+	end
+	while not clear() and os.clock() < limit do
+		task.wait(0.2)
+	end
+	task.wait(0.3)
+	-- (Checked last: in Studio the stand-in owner's mark can arrive a moment after the character.)
+	if TableClient.isSeated() or Names.isOwner(player) then
+		return
+	end
+	start("The welcome", function()
+		Welcome.show(Names.of(player), first)
+	end)
+	if first then
+		task.delay(1.6, function()
+			start("The arrow to the Concierge", function()
+				ConciergeGuide.start()
+			end)
+		end)
+	end
+end
+
 local playing = false
 local function onPlay(fromTitle: boolean?)
 	if playing then
@@ -559,6 +607,9 @@ local function onPlay(fromTitle: boolean?)
 		Hud.showStraight(function()
 			quickSit("room")
 		end)
+	end
+	if launch == "" then
+		task.spawn(welcome)
 	end
 end
 
@@ -776,15 +827,42 @@ else
 		end
 	end
 end
--- A guard for the keys and the Gilt bar: if play hasn't brought them up within a few seconds
--- (a step that stalled), bring them up anyway, and say so in the Output.
-task.delay(8, function()
-	if not hudStarted and not Title.isShowing() then
-		warn("[Maison] The keys weren't up after 8 seconds; starting them now.")
-		if State.phase ~= "play" and State.phase ~= "title" and State.phase ~= "intro" then
-			State.setPhase("play")
+-- A guard for the keys and the Gilt bar. Play brings them up the moment the guest's character is
+-- in; in Studio that can take a while (the house is built and the profile loaded first), and a
+-- slow character is no fault, so the clock only starts once it has arrived. Still not up a few
+-- seconds after that (a step that stalled): bring them up anyway and say so in the Output. No
+-- character at all after half a minute (the server's own Failsafe spawns one by then): bring them
+-- up too, quietly. (While the intro or the title is up, the keys wait for them.)
+task.spawn(function()
+	local began = os.clock()
+	local arrived: number? = nil
+	while not hudStarted do
+		task.wait(0.5)
+		if hudStarted then
+			break
 		end
-		startHud()
+		if Title.isShowing() or State.phase == "intro" or State.phase == "title" then
+			began = os.clock()
+			arrived = nil
+			continue
+		end
+		local character = player.Character
+		if arrived == nil and character and character:FindFirstChild("HumanoidRootPart") then
+			arrived = os.clock()
+		end
+		local since = arrived
+		local stalled = since ~= nil and os.clock() - since > 6
+		if stalled or (since == nil and os.clock() - began > 30) then
+			if stalled then
+				warn("[Maison] The keys weren't up 6 seconds after the character arrived; starting them now.")
+			else
+				print("[Maison] No character yet after 30 seconds; the keys come up meanwhile.")
+			end
+			if State.phase ~= "play" then
+				State.setPhase("play")
+			end
+			startHud()
+		end
 	end
 end)
 -- A last guard: if a guest is somehow still without their character after a minute (a title

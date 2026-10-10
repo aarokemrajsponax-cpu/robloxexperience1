@@ -759,19 +759,64 @@ do
 end
 check("the owner is marked, so only they see the House key", owner:GetAttribute("MaisonAdmin") == true and ned:GetAttribute("MaisonAdmin") ~= true)
 do
-	-- With no owner pinned (0) the experience's owner on Roblox has them: for a group's experience,
-	-- the group's owner (rank 255 in it), never a member.
+	-- With no owner pinned (0), nobody has them: not the experience's creator, not a group's owner
+	-- (rank 255 in it), not a member.
 	Config.data.Admin.ownerUserId = 0
 	H.game.CreatorType = H.Enum.CreatorType.Group
 	H.game.CreatorId = 777
 	local gia, max = guest("Gia", 102), guest("Max", 103)
 	H.groups[102] = { { Id = 777, Rank = 255 } }
 	H.groups[103] = { { Id = 777, Rank = 10 }, { Id = 5, Rank = 255 } }
-	check("with no owner pinned, a group's owner has House controls", adminAs(gia, { op = "state" }).ok == true)
-	check("and a member of the group doesn't", adminAs(max, { op = "state" }).ok == false)
+	check("with no owner pinned, nobody has House controls: not a group's owner", adminAs(gia, { op = "state" }).ok == false)
+	check("...nor a member of the group", adminAs(max, { op = "state" }).ok == false)
 	H.game.CreatorType = H.Enum.CreatorType.User
 	H.game.CreatorId = 555
 	Config.data.Admin.ownerUserId = 100
+end
+do
+	-- AJKR and nobody else (XxxXxxX_77797's UserId): names count for nothing, nor does a mark the
+	-- server didn't give, nor a real account standing in for the owner in Studio.
+	local added = {}
+	local function arrive(name, id)
+		local g = guest(name, id)
+		table.insert(added, g)
+		return g
+	end
+	local lookalike = arrive("XxxXxxX_77797", 104)
+	lookalike.DisplayName = "AJKR"
+	check("a guest named like the owner (XxxXxxX_77797, AJKR) isn't the owner", not AdminService.isAdmin(lookalike) and lookalike:GetAttribute("MaisonAdmin") ~= true)
+	local forger = arrive("Fox", 105)
+	forger:SetAttribute("MaisonAdmin", true)
+	check("a guest marked as the owner by anything but the server's own check has no House controls", not AdminService.isAdmin(forger))
+	local studio = services.RunService.IsStudio
+	services.RunService.IsStudio = function()
+		return false -- a live server
+	end
+	local Names = module("ReplicatedStorage", "Shared", "Names")
+	check("...and on a live server the house never takes them for the owner (their own name shows)", not Names.isOwner(forger) and Names.of(forger) == "Fox" and Names.isOwner(owner))
+	check("a look-alike is shown by their @username, the owner as AJKR", Names.of(lookalike) == "@XxxXxxX_77797" and Names.of(owner) == Names.owner())
+	services.RunService.IsStudio = studio
+	forger:SetAttribute("MaisonAdmin", nil)
+	-- Studio: the first of Studio's pretend players (Player1, no real account: UserId 0 or less)
+	-- stands in, so the panel can be tested. A real account that isn't the owner's never does
+	-- (a collaborator in a Team Test).
+	Config.data.Admin.studioFirstPlayer = true
+	local collaborator = arrive("Cora", 106)
+	check("in Studio, a real account that isn't the owner never stands in for the owner", not AdminService.isAdmin(collaborator))
+	local player1 = arrive("Player1", -1)
+	local player2 = arrive("Player2", -2)
+	check("in Studio, the first pretend test player stands in for the owner (one, not two)", AdminService.isAdmin(player1) and not AdminService.isAdmin(player2))
+	check("...and the owner's own account is the owner in Studio too", AdminService.isAdmin(owner))
+	-- Nor can a Config on the Creator Dashboard change who the owner is.
+	check("no dashboard Config can change who the owner is", Config.set("Admin.ownerUserId", 104) == false and Config.set("Admin.studioFirstPlayer", true) == false and Config.data.Admin.ownerUserId == 100 and table.find(Config.paths(), "Admin.ownerUserId") == nil)
+	check("...while the owner's other settings still can be", Config.set("Admin.headlineSeconds", 6) == true and table.find(Config.paths(), "Admin.headlineSeconds") ~= nil)
+	Config.data.Admin.studioFirstPlayer = false
+	for _, g in added do
+		local i = table.find(guests, g)
+		if i then
+			table.remove(guests, i)
+		end
+	end
 end
 local st = adminAs(owner, { op = "state" })
 check("the panel lists the events, the seasons, the salutes and the guests", #st.events == 21 and #st.seasons == 10 and #st.salutes == 6 and #st.guests >= 2)
@@ -1659,7 +1704,15 @@ do
 			fxBefore += 1
 		end
 	end
-	local megaPlan = module("ReplicatedStorage", "Shared", "AbuseNights").plan(services.Workspace:GetAttribute("AbuseSeed"), true, 300, services.Workspace:GetAttribute("AbuseNight"))
+	-- (Planned exactly as the server plans it: Mega Abuse's realms shuffle into the same stream, so
+	-- leaving them out would move every surprise.)
+	local show = Config.data.Admin.show
+	local megaPlan = module("ReplicatedStorage", "Shared", "AbuseNights").plan(services.Workspace:GetAttribute("AbuseSeed"), true, 300, services.Workspace:GetAttribute("AbuseNight"), {
+		realms = show.realms,
+		giant = show.giant,
+		giftEvery = show.giftEvery,
+		realmSeconds = show.realmSeconds,
+	})
 	advance(megaPlan.beats[2].at + 2)
 	local fxAfter = 0
 	for _, b in broadcasts do
@@ -1983,6 +2036,18 @@ do
 	if owner then
 		owner.Parent = nil
 	end
+
+	-- 0. The remote's own test: nothing happens in the house, and this server says it heard it, in
+	-- the record the remote reads back.
+	local fxBefore = W:GetAttribute("Fx_meteor")
+	run(function()
+		remote({ Data = '{"op":"ping","rid":"PING1"}' })
+	end)
+	advance(2)
+	local pong = live().pong
+	check("the remote's test: this server says it heard it, in the record the remote reads back", type(pong) == "table" and pong.rid == "PING1" and pong.servers == 1, pong and pong.servers)
+	check("...and nothing happens in the house", W:GetAttribute("AbuseUntil") == nil and W:GetAttribute("Fx_meteor") == fxBefore)
+	check("...and it survives the record being read back", AdminService.cleanLive(live()).pong ~= nil and AdminService.cleanLive(live()).pong.rid == "PING1")
 
 	-- 1. Order: an older command arriving late never undoes a newer one.
 	local L = AdminService.cleanLive(nil)

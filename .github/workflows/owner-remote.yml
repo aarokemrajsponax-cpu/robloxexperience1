@@ -93,6 +93,7 @@ on:
           - "🌄 Time of day: Dawn"
           - "☀️ Time of day: Noon"
           - "🌇 Time of day: Sunset"
+          - "🔔 Test the remote (nothing happens in the game)"
           - "📣 Headline: my own words (type them in Words)"
           - "⚙️ Advanced: the command box"
       night:
@@ -279,6 +280,7 @@ jobs:
             "🌄 Time of day: Dawn") CMD='{"op":"clock","id":"dawn"}' ;;
             "☀️ Time of day: Noon") CMD='{"op":"clock","id":"noon"}' ;;
             "🌇 Time of day: Sunset") CMD='{"op":"clock","id":"sunset"}' ;;
+            "🔔 Test the remote (nothing happens in the game)") CMD='{"op":"ping"}' ;;
             "📣 Headline: my own words (type them in Words)")
               if [ -z "${WORDS}" ]; then echo "::error::Type your headline in Words."; exit 1; fi
               CMD=$(jq -cn --arg t "${WORDS:0:140}" --arg s "$STYLE" '{op:"headline",text:$t,style:$s}') ;;
@@ -395,4 +397,26 @@ jobs:
             echo "::warning::Sent to every open server, but not written down: the key can't use Maison Noir's data stores, so a server that opens later won't join in. Creator Hub → Open Cloud → API Keys → your key → Edit → Add API System: universe-datastores → Maison Noir → Read Entry, Create Entry, Update Entry → Save (README: The Owner Remote)."
           else
             echo "::warning::Sent to every open server, but Roblox's data stores didn't answer, so a server that opens later may not join in. Send it again if that matters."
+          fi
+          # The remote's own test: every open server that heard it says so in the record. Read the answers.
+          if printf '%s' "$CMD" | jq -e '.op == "ping"' >/dev/null; then
+            HEARD=0
+            for TRY in 1 2 3 4 5 6 7 8 9 10; do
+              sleep "${PING_WAIT:-3}"
+              GOT=$(curl -sS -o /tmp/live.json -w '%{http_code}' -H "x-api-key: ${KEY}" "$URL" || echo 000)
+              if [ "$GOT" = "200" ]; then
+                N=$(jq -r --arg r "$RID" '(.pong // {}) | if ((.rid // "") | tostring) == $r then (.servers // 0) else 0 end' /tmp/live.json 2>/dev/null || echo 0)
+                N=$(printf '%s' "$N" | tr -cd '0-9')
+                HEARD=${N:-0}
+                # (Once one has answered, a moment more for the others.)
+                if [ "$HEARD" -gt 0 ] && [ "$TRY" -ge 3 ]; then break; fi
+              fi
+            done
+            if [ "$HEARD" -gt 0 ]; then
+              echo "The test arrived: ${HEARD} open server(s) heard it. The remote works in every server, whether or not you're in the game."
+              echo "**The test arrived: ${HEARD} open server(s) heard it.** The remote works in every server, whether or not you're in the game." >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "::warning::Roblox took the test, but no server answered within 30 seconds. If nobody is playing right now there's no server to answer, and that's fine: what you send is also written down for the next server that opens. If someone is playing, publish the game again (Studio: File → Publish to Roblox) so its servers know the test, then try again."
+              echo "Roblox took the test; no server answered (none open right now, or the game needs publishing)." >> "$GITHUB_STEP_SUMMARY"
+            fi
           fi

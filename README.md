@@ -385,7 +385,76 @@ a Nightly attempt or a Mythic's odds.
   with the run (Correct, Great, Excellent, Perfect, Legendary).
 - **Type.** One type scale across every panel, set crisp: panels are plain frames (no
   CanvasGroups, which blur text), keys never squeeze their letters, and panels sit below the
-  keys at the top of the screen.
+  keys at the top of the screen. Build 56: every word on screen is set in **Gotham** (Roblox's
+  `GothamSSm`), headings in **Michroma**, a wide display face, in capitals and gold metal;
+  quotes stay in Playfair italic. The big moments (*LEVEL UP!*, *MEGA ABUSE*, the show's titles)
+  are the sans at its heaviest: no cartoon face anywhere. Settings → Lettering: **Future** (the
+  default), Editorial, Book or Ledger.
+- **The look of the house** (Build 56, "2070"):
+  - **Panels** are solid black glass with a soft gold glow round them, a fine gold edge that
+    catches the light and slowly turns (still with Settings → Movement: Still) and a line of light
+    along the top; primary keys are gold metal, the others glass.
+  - **The dock** down the left: glossy keys in their own colours (Collection C, Trade T,
+    Wardrobe V, Gems, Suites, Invite) with a glow that breathes and a shine that passes now and
+    then; they lift under the pointer and sink when pressed. While a fireworks show is on, a
+    seventh key, **Watch**, sits under Invite (**Back** while you're watching): never in the middle
+    of the screen.
+  - **The events strip**: capsules of black glass under the Gilt bar, the headline in gold metal
+    with a live light; Admin and Mega Abuse never show the house a clock. While the strip is up,
+    notices ("You caught ... +72 Gilt") come in at the foot of the screen, never over it, and the
+    card of what to do next steps down if a narrow screen brings the two together.
+  - **The round card**: in the grade's own light (Flawless rose-gold, Immaculate gold, Polished
+    champagne, Steady blue, Cleared copper), gold brackets at its corners, a band of light that
+    reads it in, the grade as a glass badge, the heading on one line, the tally counting up line
+    by line, and the keys under it; it fits a small screen.
+  - **The Register**: each piece in its own vitrine (a spotlight from above, a lit plinth, the
+    real model turning on it, its edge in the piece's light: gold for the house's pieces, blue for
+    the season's, violet for the Mythics), pieces not yet found in shadow; "3 OF 5 FOUND" on every
+    page; your standing large, with bars to the next; tiles for pieces, badges and nights; the
+    Commissions as cards with their progress.
+  - **The Vault**: tall vitrines with four shelves of softly lit glass, gold lines of light up
+    their front corners and along their feet, and a lit ceiling with a spotlight inside each; the
+    Mythics' violet vitrine in a ring of light set in the polished black floor, under a shaft of
+    light; lines of light up the walls and round the ceiling; the round vault door (now opened out
+    with the room as one piece, its wheel and bolts the right size for it) in a halo of light
+    behind a soft laser grid (light only); gold motes drifting in the air; and *THE REGISTER*
+    glowing over the Archivist's desk. (The house stays inside its part budget for phones: the
+    Salon's books are a touch wider, so its shelves hold fewer, larger spines.)
+  - **Studs**, quietly: the pavement and the kerb outside the front doors carry Roblox's classic
+    studs (`Kit.studs`; Roblox only draws them on plain Plastic, so those two blocks are Plastic in
+    their own dark colours). Nowhere else.
+  - **Perk chips** (Luck, decrees, revives, piano time) are glass capsules with a point of colour.
+- **A welcome for every guest, on their own screen** (Build 56; `UI/Welcome`, `Config.Welcome`):
+  as they arrive, **WELCOME** lights up letter by letter in gold, with their name under it, on a
+  band of dark glass between two lines of light; a sweep of light crosses it, gold sparks burst
+  out, a soft chime plays, and a ring of light and gold sparkles open round their feet. Only they
+  see it (it's made on their screen; nothing goes to anyone else). A returning guest sees
+  **WELCOME BACK** and their name, shorter. It waits for the intro, never covers a table or Admin
+  Abuse's arrival card, and goes after a few seconds by itself. With Settings → Movement: Still,
+  just the words. (Not for you: your own *WELCOME BACK, AJKR* is the Owner Console's. To see a
+  guest's, test in Studio with Test → Clients and Servers, 2 players, and look at Player2's
+  window.)
+- **A gold arrow to the Concierge** on a guest's first evening (`World/ConciergeGuide`): the
+  Concierge shows new guests round and teaches the game, so a first-time guest is pointed there.
+  Over the Concierge: *THE CONCIERGE · Talk to learn the game* and a gold chevron bobbing under it
+  (seen from anywhere in the house); on the floor in front of the guest, three gold chevrons
+  pointing the way, lit in turn like runway lights; and when the Concierge is out of view, a gold
+  arrow at the edge of the screen turning to point at them. Close by, the floor arrows go and the
+  line says how to talk (*Press E to talk*, *Tap Speak to talk*, *Press X to talk*). It's done
+  when they speak to the Concierge (with a little chime), start the tour or sit at a table, and it
+  goes by itself after three minutes (`Config.Welcome.guideMinutes`). Only that guest sees any
+  of it.
+- **A message from AJKR arrives with a ping** (Build 56): a headline or an announcement across
+  every screen comes in with a quick two-note ping, like a phone's notification (a short synth
+  blip from Roblox's licensed library, `Assets.LibrarySounds.notify`), never a fanfare or a horn.
+  (The Owner Console's *WELCOME BACK, AJKR* keeps its fanfare: that's for you alone.)
+- **Owner notices** (Build 56): a real fault still shows in the owner's red panel. Roblox's own
+  services having a moment (saving in Studio, the live leaderboards' "MemoryStoreService:
+  InternalError") is a calm *house note* instead, once each, that leaves by itself; and a
+  leaderboard store that fails rests a while (a minute, then two, four... up to half an hour) and
+  the boards show the server's own scores meanwhile (`server/Gate`), so Studio's Output isn't
+  filled with red. The keys' start-up guard now counts from the moment your character arrives, so
+  a slow start in Studio no longer warns "The keys weren't up after 8 seconds".
 - **The guide on the sorting screen.** Pick a piece up and, in the rooms that help you (the Salon
   and the Velvet Room at once, Obsidian after a moment, never in Midnight), a thread of gold light
   runs from it to its case with sparkles twinkling along it and a brighter pulse running toward
@@ -445,9 +514,28 @@ a Nightly attempt or a Mythic's odds.
   the gold **👑 Owner** key or **;**. **ALL SERVERS** (on by default) or **THIS SERVER** at the top
   decides where events, effects, headlines, giveaways and gifts go. Only your account has it: the
   server checks the UserId on every request, so nobody else gets anything whatever their screen
-  sends. (In Studio the first test player stands in, `Config.Admin.studioFirstPlayer`; never in
-  the live game.) When you arrive, your server sees *👑 AJKR IS IN THE SERVER! 👑*, your nameplate
+  sends. When you arrive, your server sees *👑 AJKR IS IN THE SERVER! 👑*, your nameplate
   says **OWNER**, and everyone there gets the **Met the Owner** badge.
+- **The owner's powers are AJKR's alone** (Build 56): the account **XxxXxxX_77797** (display name
+  AJKR), UserId **8722595934** (checked with Roblox's users service), and nothing else:
+  - The server compares UserIds, never names: a guest called *XxxXxxX_77797* or *AJKR* on another
+    account gets nothing (and is shown by their @username). A username can change and a display
+    name can be copied; the UserId never changes, so if you rename your account your powers stay
+    with you, and whoever takes your old name later gets none of them.
+  - No fallbacks: not the account or group the experience belongs to, not a group's rank. With no
+    UserId set, nobody has the powers.
+  - The *owner* mark on a guest (`MaisonAdmin`) is given only by that same check; the server never
+    reads it to decide anything, and on a live server the house never takes a guest for the owner
+    because of it.
+  - A Config on the Creator Dashboard can't change who the owner is: `Admin.ownerUserId` and
+    `Admin.studioFirstPlayer` are locked in the code (`LOCKED` in `shared/Config`), whoever
+    else may one day help run the experience.
+  - In Studio, your own account is the owner as live. Testing with Studio's pretend players
+    (Test → Clients and Servers: Player1, Player2, who have no real account), the first one in
+    stands in so the panel can be tried (`Config.Admin.studioFirstPlayer`). A real account that
+    isn't yours never does, even in Studio (a friend in a Team Test gets nothing).
+  - The Owner Remote runs only from your GitHub repository (only accounts with write access can
+    run a workflow, and you're the only one), with your Open Cloud key stored there as a secret.
   - **Abuse**: **TONIGHT'S SHOW** (Build 55): **🎲 SURPRISE ME** (a different night every time)
     or **◀ ▶** through all 55 nights to choose one; then Admin Abuse Night (15/30/60 min), **MEGA
     ABUSE** (faster surprises, two at once more often, realm after realm, a giveaway every few
@@ -594,6 +682,13 @@ a Nightly attempt or a Mythic's odds.
      server** (it starts the same workflow through claude.ai's GitHub connector). **PowerShell**
      (instant, on a computer): `irm https://raw.githubusercontent.com/aarokemrajsponax-cpu/robloxexperience1/claude/nice-brown-a88p9r/remote.ps1 | iex`
      (it asks for the key once and keeps it, encrypted, on that computer).
+  4. **Test it** (Build 56): choose **🔔 Test the remote** (the page's TEST group, or the same
+     choice on GitHub) and send. Nothing happens in the game: every open server notes in the
+     game's record that it heard it, and GitHub's run (**Actions** → **Owner Remote** → the newest
+     run) reads the answers back: *The test arrived: 3 open server(s) heard it*. If nobody is
+     playing there's no server to answer, and the run says so (that's fine: everything you send is
+     written down for the next server that opens). If the run fails at once with *Add the
+     ROBLOX_OPEN_CLOUD_KEY secret first*, step 2 isn't done yet.
   The game listens on the topic `MaisonRemote` and checks each command against its own lists
   (a known effect, event, amount, headline...) before doing anything; typed headlines go
   through Roblox's filter. Each command carries its own id and the moment it was sent, so a

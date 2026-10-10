@@ -12,6 +12,7 @@ local Workspace = game:GetService("Workspace")
 
 local Names = require(ReplicatedStorage.Shared.Names)
 local Config = require(ReplicatedStorage.Shared.Config)
+local Gate = require(script.Parent.Gate)
 local Soiree = require(ReplicatedStorage.Shared.Soiree)
 local Wardrobe = require(ReplicatedStorage.Shared.Wardrobe)
 
@@ -67,7 +68,7 @@ function SoireeService.record(player: Player, format: "ballroom" | "library", re
 	task.spawn(function()
 		local m = map(weekend.key)
 		if m then
-			pcall(function()
+			Gate.write("soiree", function()
 				m:UpdateAsync(tostring(player.UserId), function()
 					return Names.of(player), score
 				end, KEEP_SECONDS)
@@ -92,10 +93,13 @@ local function claim(player: Player)
 	if not m then
 		return
 	end
-	local okSize, total = pcall(function()
+	local okSize, total = Gate.read("soiree", function()
 		return m:GetSizeAsync()
 	end)
-	local okAbove, above = pcall(function()
+	if not okSize then
+		return
+	end
+	local okAbove, above = Gate.read("soiree", function()
 		-- How many scored higher.
 		local items = m:GetRangeAsync(Enum.SortDirection.Descending, 200)
 		local n = 0
@@ -106,7 +110,7 @@ local function claim(player: Player)
 		end
 		return n
 	end)
-	if not okSize or not okAbove then
+	if not okSize or not okAbove or above == nil or total == nil then
 		return
 	end
 	s.claimed = s.key
@@ -129,7 +133,7 @@ local function refreshBoard()
 	if not m then
 		return
 	end
-	local ok, items = pcall(function()
+	local ok, items = Gate.read("soiree", function()
 		return m:GetRangeAsync(Enum.SortDirection.Descending, 10)
 	end)
 	if ok and items then

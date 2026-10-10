@@ -13,47 +13,54 @@ Brand.Colours = {
 	room = Color3.fromHex("0E1116"),
 	roomDeep = Color3.fromHex("050608"),
 	bone = Color3.fromHex("F2ECE2"),
-	smoke = Color3.fromHex("AAB0B9"),
-	dim = Color3.fromHex("868D97"),
+	-- (Secondary lines, raised for contrast on the black glass: never grey on grey.)
+	smoke = Color3.fromHex("C2C7CF"),
+	dim = Color3.fromHex("9EA5AF"),
 	gold = Color3.fromRGB(198, 160, 82),
 	lightGold = Color3.fromRGB(236, 216, 166),
 	deepGold = Color3.fromRGB(111, 87, 34),
 	felt = Color3.fromRGB(16, 17, 20),
 	burgundy = Color3.fromRGB(74, 22, 32),
 	glass = Color3.fromRGB(24, 28, 34),
+	-- The 2070 light: the gold edge as it catches, and the glow behind it.
+	brightGold = Color3.fromRGB(255, 226, 150),
+	glow = Color3.fromRGB(255, 196, 92),
 }
 
--- The house type, as on the web edition: a high-contrast Didone serif for names, headings and
--- numbers (Playfair Display), and a clean geometric sans for everything else (Poppins), set in
--- letter-spaced capitals for labels. Both are Roblox's own fonts from the Creator Store, free in
--- any experience; they load as the guest arrives (Theme.preloadFonts). The Lettering setting can
--- swap the display face.
+-- The house type (Build 56, "2070"): Michroma, a wide engineered face in the line of the space-age
+-- display letters, for titles and headings (set in capitals); and Gotham SSm, a sans drawn for
+-- screens, for everything else, crisp and even at any size on any screen. Both are Roblox's own
+-- built-in faces: nothing to fetch, nothing thin, never a stand-in while they load. Playfair
+-- Display's italic stays for the house's few quoted lines; the Lettering setting can swap the
+-- display face back to a serif.
+local GOTHAM = "rbxasset://fonts/families/GothamSSm.json"
+local MICHROMA = "rbxasset://fonts/families/Michroma.json"
 local PLAYFAIR = "rbxassetid://12187374765"
-local POPPINS = "rbxassetid://11702779409"
 local BASKERVILLE = "rbxassetid://12187365769"
--- Playfair's figures are old-style (its 0 reads as an o); scores and clocks are set in Lora,
--- whose figures stand at full height like the web edition's.
-local LORA = "rbxassetid://12187366657"
 
-Brand.FontAssets = { display = PLAYFAIR, ui = POPPINS, book = BASKERVILLE, figures = LORA }
+Brand.FontAssets = { display = MICHROMA, ui = GOTHAM, book = BASKERVILLE, serif = PLAYFAIR }
 
 Brand.Fonts = {
-	display = Font.new(PLAYFAIR, Enum.FontWeight.Regular),
+	display = Font.new(MICHROMA, Enum.FontWeight.Regular),
 	displayItalic = Font.new(PLAYFAIR, Enum.FontWeight.Regular, Enum.FontStyle.Italic),
-	figures = Font.new(LORA, Enum.FontWeight.Regular),
-	body = Font.new(POPPINS, Enum.FontWeight.Regular),
-	bodyMedium = Font.new(POPPINS, Enum.FontWeight.Medium),
-	bodyBold = Font.new(POPPINS, Enum.FontWeight.SemiBold),
-	light = Font.new(POPPINS, Enum.FontWeight.Light),
+	-- Scores, clocks and prices: full-height figures, heavy enough to read at a glance.
+	figures = Font.new(GOTHAM, Enum.FontWeight.Bold),
+	body = Font.new(GOTHAM, Enum.FontWeight.Medium),
+	bodyMedium = Font.new(GOTHAM, Enum.FontWeight.Bold),
+	bodyBold = Font.new(GOTHAM, Enum.FontWeight.Bold),
+	heavy = Font.new(GOTHAM, Enum.FontWeight.Heavy),
+	light = Font.new(GOTHAM, Enum.FontWeight.Regular),
 	-- For the few things that are engraved (a signet, a coin).
 	serif = Font.new(PLAYFAIR, Enum.FontWeight.Bold),
 }
 
 Brand.Lettering = {
-	Editorial = Brand.Fonts.display,
+	Future = Brand.Fonts.display,
+	Editorial = Font.new(PLAYFAIR, Enum.FontWeight.Regular),
 	Book = Font.new(BASKERVILLE, Enum.FontWeight.Regular),
-	Modern = Font.new(POPPINS, Enum.FontWeight.Light),
 	Ledger = Font.fromEnum(Enum.Font.Merriweather),
+	-- (An earlier choice, still read from saves.)
+	Modern = Font.new(GOTHAM, Enum.FontWeight.Bold),
 } :: { [string]: Font }
 
 -- House style swatches (Appendix F): accent on base.

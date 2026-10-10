@@ -26,8 +26,9 @@ local Headline = {}
 
 local player = Players.LocalPlayer
 local rgb = Color3.fromRGB
-local HEAVY = Font.fromEnum(Enum.Font.GothamBlack)
-local IMPACT = Font.fromEnum(Enum.Font.LuckiestGuy)
+local HEAVY = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Heavy)
+-- (The big words: the house's sans at its heaviest, cut clean.)
+local IMPACT = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Heavy)
 
 local RAINBOW = ColorSequence.new({
 	ColorSequenceKeypoint.new(0, rgb(255, 70, 120)),
@@ -181,10 +182,9 @@ function Headline.show(text: string, by: string, style: string?, seconds: number
 	bar.ClipsDescendants = true
 	current = bar
 	TweenService:Create(bar, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Position = UDim2.new(0.5, 0, 0, 8) }):Play()
-	sound("regalFanfare", 0.7)
-	if style == "rainbow" or style == "red" then
-		task.delay(0.2, sound, "airHorn", 0.8)
-	end
+	-- Its arrival: a quick two-note ping, like a phone's notification (no fanfare, no horn).
+	sound("notify", 0.9, 1.25)
+	task.delay(0.11, sound, "notify", 0.9, 1.68)
 	local started = os.clock()
 	local conn: RBXScriptConnection? = nil
 	conn = RunService.RenderStepped:Connect(function()

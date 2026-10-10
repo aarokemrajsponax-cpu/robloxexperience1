@@ -17,9 +17,10 @@ local Celebrate = {}
 
 local player = Players.LocalPlayer
 local rgb = Color3.fromRGB
-local HEAVY = Font.fromEnum(Enum.Font.GothamBlack)
+local HEAVY = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Heavy)
 local BODY = Font.fromEnum(Enum.Font.GothamMedium)
-local IMPACT = Font.fromEnum(Enum.Font.LuckiestGuy)
+-- (The big words: the house's sans at its heaviest, cut clean.)
+local IMPACT = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Heavy)
 
 local TIER: { [string]: Color3 } = {
 	bronze = rgb(205, 127, 72),
@@ -82,10 +83,19 @@ function Celebrate.levelUp(level: number, title: string, gilt: number, gems: num
 	head.Size = UDim2.new(1, 0, 0, 56)
 	head.FontFace = IMPACT
 	head.TextScaled = true
-	head.TextColor3 = rgb(255, 236, 170)
-	head.TextStrokeTransparency = 0
-	head.TextStrokeColor3 = rgb(40, 24, 4)
+	head.TextColor3 = Color3.new(1, 1, 1)
+	head.TextStrokeTransparency = 0.25
+	head.TextStrokeColor3 = rgb(36, 22, 4)
 	head.Text = "LEVEL UP!"
+	-- (In gold metal: bright at the top, deep at the foot.)
+	local metal = Instance.new("UIGradient")
+	metal.Rotation = 90
+	metal.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, rgb(255, 250, 226)),
+		ColorSequenceKeypoint.new(0.5, rgb(255, 214, 120)),
+		ColorSequenceKeypoint.new(1, rgb(214, 150, 50)),
+	})
+	metal.Parent = head
 	head.Parent = box
 	local disc = Instance.new("TextLabel")
 	disc.Name = "Level"

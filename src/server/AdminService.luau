@@ -1,8 +1,8 @@
 --!strict
 -- House controls: the owner's panel for keeping the house lively (the "admin abuse" evenings
 -- other Roblox games are known for, in the house's own manner), and the owner's own powers. Only
--- the owner, XxxXxxX_77797 (Config.Admin.ownerUserId), may use any of it: nobody else, whatever
--- their screen sends. Every request is checked here, never on the guest's screen; the powers the
+-- the owner, AJKR (the Roblox account XxxXxxX_77797, UserId 8722595934: Config.Admin.ownerUserId),
+-- may use any of it: nobody else, whatever their screen sends. Every request is checked here, never on the guest's screen; the powers the
 -- owner's screen carries out (flying) are switched on by the server.
 --
 -- Three ways in, one set of rules: the Owner Console in the game (AdminAsk, owner only), the other
@@ -22,7 +22,6 @@
 -- countdowns, giveaways, the Owner's Token, and Mega Abuse.
 
 local DataStoreService = game:GetService("DataStoreService")
-local GroupService = game:GetService("GroupService")
 local HttpService = game:GetService("HttpService")
 local Lighting = game:GetService("Lighting")
 local MessagingService = game:GetService("MessagingService")
@@ -86,30 +85,17 @@ function AdminService.isAdmin(player: Player): boolean
 	if cached ~= nil then
 		return cached
 	end
-	local yes = false
-	if RunService:IsStudio() and cfg().studioFirstPlayer and (studioOwner == nil or studioOwner == player or studioOwner.Parent ~= Players) then
-		-- (Testing in Studio: one owner, the first player in. Never in the live game.)
+	-- The owner, by their UserId: XxxXxxX_77797's, AJKR (never a name: a username can change, and a
+	-- display name anyone can copy). Nothing else counts: not the account or group the experience
+	-- belongs to, not a group rank, not a Studio collaborator. No UserId set, nobody has them.
+	local owner = cfg().ownerUserId
+	local yes = type(owner) == "number" and owner > 0 and player.UserId == owner
+	if not yes and RunService:IsStudio() and cfg().studioFirstPlayer and player.UserId <= 0 and (studioOwner == nil or studioOwner == player or studioOwner.Parent ~= Players) then
+		-- (Testing in Studio with its pretend players, Player1 and Player2, who have no real
+		-- account: the first one in plays the owner. A real account never stands in, even in
+		-- Studio; on a live server there are no pretend players.)
 		studioOwner = player
 		yes = true
-	else
-		local ok, result = pcall(function()
-			-- The owner, by their UserId (never a name, which can change).
-			local owner = cfg().ownerUserId
-			if type(owner) == "number" and owner > 0 then
-				return player.UserId == owner
-			end
-			if game.CreatorType == Enum.CreatorType.User then
-				return game.CreatorId == player.UserId
-			end
-			-- The group's owner holds rank 255 in it.
-			for _, group in GroupService:GetGroupsAsync(player.UserId) do
-				if type(group) == "table" and group.Id == game.CreatorId then
-					return (tonumber(group.Rank) or 0) >= 255
-				end
-			end
-			return false
-		end)
-		yes = ok and result == true
 	end
 	ownerCache[player] = yes
 	return yes
@@ -1205,6 +1191,8 @@ type Live = {
 	events: { [string]: { ends: number, by: string } },
 	marks: { [string]: number },
 	log: { LogEntry },
+	-- The Owner Remote's test: which test, when, and how many servers have said they heard it.
+	pong: { rid: string, at: number, servers: number }?,
 }
 local LIVE_KEY = "live"
 local LOG_MAX = 40 -- the Owner Remote's commands kept written down
@@ -1264,6 +1252,10 @@ local function cleanLive(v: any): Live
 				out.marks[k] = at
 			end
 		end
+	end
+	local pong = v.pong
+	if type(pong) == "table" and (type(pong.rid) == "string" or type(pong.rid) == "number") and type(pong.at) == "number" and pong.at > now - KEEP_SECONDS then
+		out.pong = { rid = string.sub(tostring(pong.rid), 1, 64), at = pong.at, servers = math.clamp(math.floor(tonumber(pong.servers) or 0), 0, 100000) }
 	end
 	if type(v.log) == "table" then
 		for _, e in v.log do
@@ -1967,6 +1959,23 @@ local function apply(m: { [string]: any }, byName: string, remote: boolean, give
 		return setClock(m.id)
 	elseif op == "salute" and type(m.id) == "string" and Salutes.byId[m.id] then
 		AdminService.salute(nil, m.id, byName)
+		return true
+	elseif op == "ping" and remote then
+		-- The Owner Remote's test: nothing happens in the house. This server says it heard it, in
+		-- the record the remote reads back ("3 servers heard it").
+		local rid = if type(m.rid) == "string" or type(m.rid) == "number" then string.sub(tostring(m.rid), 1, 64) else nil
+		if rid then
+			changeLive(function(live: Live): boolean
+				local p = live.pong
+				if p and p.rid == rid then
+					p.servers += 1
+				else
+					live.pong = { rid = rid, at = at, servers = 1 }
+				end
+				return true
+			end)
+		end
+		print("[Maison] The Owner Remote's test arrived in this server.")
 		return true
 	elseif op == "summon" and not remote and type(m.jobId) == "string" then
 		summons[m.jobId] = os.time() + cfg().summonMinutes * 60

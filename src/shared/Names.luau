@@ -6,6 +6,8 @@
 --   Nobody else can pass for the owner: a guest whose display name reads as the owner's house name
 --   ("AJKR", "a.j.k.r", "AJKR_") is shown by their @username instead.
 
+local RunService = game:GetService("RunService")
+
 local Config = require(script.Parent.Config)
 
 local Names = {}
@@ -26,12 +28,16 @@ local function ownerId(): number
 	return if type(id) == "number" then id else 0
 end
 
--- Whether this is the owner: by UserId (never a name, which can change), or the stand-in owner
--- the server has marked (Studio's first test player, or a group's owner).
+-- Whether this is the owner: by UserId only (never a name, which can change or be copied). In
+-- Studio, also the pretend test player the server marked as standing in for the owner; never on
+-- a live server, whatever a guest's screen says about them.
 function Names.isOwner(player: Player): boolean
 	local id = ownerId()
 	if id > 0 and player.UserId == id then
 		return true
+	end
+	if not RunService:IsStudio() then
+		return false
 	end
 	local ok, marked = pcall(function()
 		return player:GetAttribute("MaisonAdmin")

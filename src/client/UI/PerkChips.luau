@@ -27,14 +27,23 @@ local stack = Instance.new("Frame")
 stack.Name = "PerkChips"
 stack.BackgroundTransparency = 1
 stack.AnchorPoint = Vector2.new(0, 0.5)
--- (Just right of the quick dock down the left edge.)
-stack.Position = UDim2.new(0, 86, 0.42, 0)
+-- (Just right of the quick dock down the left edge, clear of its glow.)
+stack.Position = UDim2.new(0, 100, 0.42, 0)
 stack.Size = UDim2.fromOffset(CHIP_WIDTH, 0)
 stack.AutomaticSize = Enum.AutomaticSize.Y
 stack.Parent = Root.hud
-Theme.list(stack, 4).HorizontalAlignment = Enum.HorizontalAlignment.Left
+Theme.list(stack, 6).HorizontalAlignment = Enum.HorizontalAlignment.Left
 
 local chips: { [string]: TextButton } = {}
+-- Each perk's own point of light.
+local DOTS: { [string]: Color3 } = {
+	Friends = Color3.fromRGB(120, 236, 150),
+	Luck = Color3.fromRGB(140, 230, 120),
+	Decree = Color3.fromRGB(255, 214, 120),
+	Revive = Color3.fromRGB(150, 200, 255),
+	Rain = Color3.fromRGB(255, 196, 92),
+	Piano = Color3.fromRGB(230, 180, 255),
+}
 local hidden = false
 
 local function clock(seconds: number): string
@@ -55,33 +64,49 @@ local function chip(id: string, order: number, text: string?, onPress: (() -> ()
 		return
 	end
 	if not c then
+		-- A capsule of black glass with a fine turning gold edge and a point of the perk's own
+		-- light at its left; its words in bright gold.
 		local b = Instance.new("TextButton")
 		b.Name = id
 		b.AutoButtonColor = false
-		b.BackgroundColor3 = Color3.fromRGB(14, 12, 8)
-		b.BackgroundTransparency = 0.2
-		b.Size = UDim2.fromOffset(CHIP_WIDTH, 28)
+		b.BackgroundColor3 = Color3.new(1, 1, 1)
+		b.BackgroundTransparency = 0.06
+		b.Size = UDim2.fromOffset(CHIP_WIDTH, 30)
 		b.LayoutOrder = order
-		b.FontFace = Brand.Fonts.body
-		b.TextSize = 14
+		b.FontFace = Brand.Fonts.bodyBold
+		b.TextSize = 13
 		b.TextXAlignment = Enum.TextXAlignment.Left
 		b.TextTruncate = Enum.TextTruncate.AtEnd
-		b.TextColor3 = Brand.Colours.lightGold
+		b.TextColor3 = Brand.Colours.brightGold
 		b.Active = onPress ~= nil
+		local fill = Instance.new("UIGradient")
+		fill.Rotation = 90
+		fill.Color = ColorSequence.new(Color3.fromRGB(30, 28, 32), Color3.fromRGB(9, 9, 12))
+		fill.Parent = b
 		local pad = Instance.new("UIPadding")
-		pad.PaddingLeft = UDim.new(0, 10)
-		pad.PaddingRight = UDim.new(0, 10)
-		pad.PaddingTop = UDim.new(0, 4)
-		pad.PaddingBottom = UDim.new(0, 4)
+		pad.PaddingLeft = UDim.new(0, 26)
+		pad.PaddingRight = UDim.new(0, 12)
 		pad.Parent = b
 		local stroke = Instance.new("UIStroke")
-		stroke.Color = Brand.Colours.gold
-		stroke.Transparency = 0.45
+		stroke.Color = Color3.new(1, 1, 1)
+		stroke.Transparency = 0.15
 		stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 		stroke.Parent = b
+		Theme.edge(stroke, 1.1)
 		local corner = Instance.new("UICorner")
-		corner.CornerRadius = UDim.new(0, 2)
+		corner.CornerRadius = UDim.new(0, 15)
 		corner.Parent = b
+		local dot = Instance.new("Frame")
+		dot.Name = "Dot"
+		dot.AnchorPoint = Vector2.new(0.5, 0.5)
+		dot.Position = UDim2.new(0, -13, 0.5, 0)
+		dot.Size = UDim2.fromOffset(8, 8)
+		dot.BorderSizePixel = 0
+		dot.BackgroundColor3 = DOTS[id] or Brand.Colours.brightGold
+		local dc = Instance.new("UICorner")
+		dc.CornerRadius = UDim.new(1, 0)
+		dc.Parent = dot
+		dot.Parent = b
 		if onPress then
 			b.Activated:Connect(onPress)
 		end

@@ -58,6 +58,24 @@ def house_font(family, weight, style, px):
             except Exception:
                 pass
             return f
+    if "GothamSSm" in family or "Montserrat" in family:
+        # Gotham SSm (Roblox's own, not distributable): Montserrat, the same geometric build, stands in.
+        path = os.path.join(FONT_DIR, "Montserrat[wght].ttf")
+        if os.path.exists(path):
+            f = ImageFont.truetype(path, px)
+            try:
+                f.set_variation_by_axes([max(100, min(900, w))])
+            except Exception:
+                pass
+            return f
+    if "Michroma" in family:
+        path = os.path.join(FONT_DIR, "Michroma-Regular.ttf")
+        if os.path.exists(path):
+            return ImageFont.truetype(path, px)
+    if "LuckiestGuy" in family:
+        path = os.path.join(FONT_DIR, "LuckiestGuy-Regular.ttf")
+        if os.path.exists(path):
+            return ImageFont.truetype(path, px)
     if "11702779409" in family:  # Poppins
         nearest = min(POPPINS, key=lambda k: abs(k - w))
         path = os.path.join(FONT_DIR, POPPINS[nearest])
@@ -364,6 +382,11 @@ def draw_node(canvas, node, alpha_mul, k, clip=None):
         a[..., 3] = (a[..., 3].astype(np.float32) * np.array(m) / 255 * amul).astype(np.uint8)
         layer.alpha_composite(Image.fromarray(a, "RGBA"), (int(round(X)), int(round(Y))))
     stroke = first(node, "UIStroke")
+    # On a text object a stroke outlines the letters (ApplyStrokeMode Contextual, Roblox's default);
+    # only Border draws round the box.
+    text_stroke = None
+    if stroke and node["class"] in ("TextLabel", "TextButton", "TextBox") and stroke.get("mode", "Contextual") != "Border":
+        text_stroke, stroke = stroke, None
     if stroke and stroke.get("enabled", True) and stroke["trans"] < 1 and W >= 1:
         t = max(1, stroke["thickness"] * k * node["_s"] * node.get("_S", 1))
         pad = int(t + 2)
@@ -409,6 +432,10 @@ def draw_node(canvas, node, alpha_mul, k, clip=None):
             lw = f.getlength(line)
             xa = node.get("xAlign", "Center")
             x = X + (W - lw) / 2 if xa == "Center" else (X if xa == "Left" else X + W - lw)
+            if text_stroke and text_stroke.get("enabled", True) and text_stroke["trans"] < 1:
+                sw = max(1, int(round(text_stroke["thickness"] * ts * k)))
+                sc = tuple(int(255 * v) for v in text_stroke["color"]) + (int(255 * (1 - text_stroke["trans"]) * amul),)
+                d.text((x, y + line_h * 0.08), line, font=f, fill=sc, stroke_width=sw, stroke_fill=sc)
             d.text((x, y + line_h * 0.08), line, font=f, fill=tcol)
             y += line_h
     kids = [kk for kk in node["kids"] if is_gui(kk)]

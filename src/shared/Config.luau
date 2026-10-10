@@ -569,18 +569,34 @@ local defaults = {
 		straightToTableOfferSeconds = 12,
 	},
 
-	-- The owner's panel (House controls) and the owner's powers. Only the experience's owner (or,
-	-- for a group's experience, the group's owner) has them: nobody else, ever. In Studio, where
-	-- test players aren't the owner, the first player in the test stands in for the owner.
+	-- A guest's welcome as they arrive, on their own screen only (nobody else sees it): WELCOME and
+	-- their name, WELCOME BACK for a returning guest; and on a first evening a gold arrow to the
+	-- Concierge, who shows new guests round and teaches them the game (UI/Welcome,
+	-- World/ConciergeGuide). Not for the owner, who has their own welcome.
+	Welcome = {
+		enabled = true,
+		seconds = 4.6, -- how long the welcome stays on a first evening
+		backSeconds = 3.2, -- ...and for a returning guest
+		returning = true, -- welcome a returning guest back too
+		heightAt = 0.42, -- where it sits down the screen (0 the top, 1 the bottom), clear of the keys along the top
+		guide = true, -- the gold arrow to the Concierge, on a first evening
+		guideMinutes = 3, -- the arrow goes by itself after this long
+		guideNearStuds = 16, -- this close to the Concierge, the floor arrows go and "Press E to talk" shows
+	},
+
+	-- The owner's panel (House controls) and the owner's powers. Only AJKR has them: nobody else,
+	-- ever. In Studio, testing with Studio's pretend players (Player1, Player2), the first one in
+	-- stands in for the owner; a real account that isn't AJKR's never does.
 	Admin = {
-		-- The owner (the Roblox account XxxXxxX_77797), and nobody else. Every owner's power checks
-		-- this UserId on the server (0 = whoever owns the experience on Roblox).
+		-- The owner: the Roblox account XxxXxxX_77797 (display name AJKR), and nobody else. Every
+		-- owner's power checks this UserId on the server, never a name (checked with Roblox's users
+		-- service, October 2026). 0 = nobody: the powers stay locked.
 		ownerUserId = 8722595934,
 		-- The owner's name in the house: everything the owner does shows as this (headlines,
 		-- giveaways, gifts, the nameplate, chat, boards), never the Roblox username; and no other
 		-- guest can pass for it (shared/Names).
 		ownerName = "AJKR",
-		studioFirstPlayer = true, -- Studio only: the first test player counts as the owner
+		studioFirstPlayer = true, -- Studio only: the first pretend test player (no real account) counts as the owner
 		announceOwner = true, -- a headline in the owner's server when they arrive ("the owner is here!")
 		consoleOnJoin = true, -- the Owner Console opens by itself when the owner joins
 		-- The Owner Remote (outside the game): Open Cloud messages on this topic reach every server.
@@ -869,6 +885,9 @@ local defaults = {
 			chair = { { id = "rbxassetid://9116248762", pitch = 1.05, volume = 3.67 } },
 			leave = { { id = "rbxassetid://9120806410", pitch = 1, volume = 4.00 } },
 			click = { { id = "rbxassetid://15675032796", pitch = 1, volume = 1.00 } },
+			-- A message from AJKR arriving: one short synth blip (Pro Sound Effects), played twice,
+			-- rising, like a phone's notification (UI/Headline).
+			notify = { { id = "rbxassetid://9125397583", pitch = 1, volume = 0.9 }, { id = "rbxassetid://9125397359", pitch = 1, volume = 0.9 } },
 			tick = { { id = "rbxassetid://15675032796", pitch = 1.35, volume = 1.00 } },
 			-- Admin Abuse's show (Pro Sound Effects; measured: each levelled to about -16 dBFS, and
 			-- where its hit falls). The riser climbs to its peak 3.75 s in; the build-up's impact
@@ -1080,13 +1099,20 @@ local defaults = {
 
 Config.data = defaults
 
+-- What no Config on the dashboard may change: who the owner is. The owner's powers belong to
+-- AJKR's account alone, set here in the code, whoever may one day help run the experience.
+local LOCKED: { [string]: boolean } = {
+	["Admin.ownerUserId"] = true,
+	["Admin.studioFirstPlayer"] = true,
+}
+
 -- Flattens the defaults into "A.b.c" paths so LiveConfig knows which keys to look up.
 local function flatten(tree: { [string]: any }, prefix: string, out: { string })
 	for key, value in tree do
 		local path = if prefix == "" then key else prefix .. "." .. key
 		if type(value) == "table" then
 			flatten(value, path, out)
-		else
+		elseif not LOCKED[path] then
 			table.insert(out, path)
 		end
 	end
@@ -1110,8 +1136,12 @@ function Config.get(path: string): any
 	return node
 end
 
--- Sets one value by path. Only existing leaves can be overridden, and the type must match.
+-- Sets one value by path. Only existing leaves can be overridden, the type must match, and who
+-- the owner is can't be (LOCKED).
 function Config.set(path: string, value: any): boolean
+	if LOCKED[path] then
+		return false
+	end
 	local node: any = defaults
 	local segments = {}
 	for segment in string.gmatch(path, "[^%.]+") do

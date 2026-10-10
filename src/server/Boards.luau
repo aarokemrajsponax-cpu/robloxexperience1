@@ -15,6 +15,7 @@ local Workspace = game:GetService("Workspace")
 local Names = require(ReplicatedStorage.Shared.Names)
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local Config = require(ReplicatedStorage.Shared.Config)
+local Gate = require(script.Parent.Gate)
 local Nightly = require(ReplicatedStorage.Shared.Nightly)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Rooms = require(ReplicatedStorage.Shared.Rooms)
@@ -313,7 +314,7 @@ local function refreshRoom(room: string)
 	end
 	local week = weekMap(room)
 	if week then
-		local ok, items = pcall(function()
+		local ok, items = Gate.read("board:" .. room .. ":week", function()
 			return week:GetRangeAsync(Enum.SortDirection.Descending, Config.data.Boards.top)
 		end)
 		if ok and items then
@@ -347,12 +348,15 @@ local function refreshNightly()
 	if not map then
 		return
 	end
-	local ok, items = pcall(function()
+	local ok, items = Gate.read("board:nightly", function()
 		return map:GetRangeAsync(Enum.SortDirection.Descending, Config.data.Boards.top)
 	end)
-	local okSize, size = pcall(function()
-		return map:GetSizeAsync()
-	end)
+	local okSize: boolean, size: number? = false, nil
+	if ok then
+		okSize, size = Gate.read("board:nightly", function()
+			return map:GetSizeAsync()
+		end)
+	end
 	if ok and items then
 		local ids = {}
 		for _, item in items do
@@ -365,7 +369,7 @@ local function refreshNightly()
 			local sortKey = if type(item.sortKey) == "number" then item.sortKey else 0
 			table.insert(entries, { userId = id, name = names[id] or "A guest", score = Nightly.scoreFromSortKey(sortKey) })
 		end
-		cache["nightly:tonight"] = { entries = entries, available = true, count = if okSize then size else #entries }
+		cache["nightly:tonight"] = { entries = entries, available = true, count = if okSize and size then size else #entries }
 	end
 end
 
@@ -393,7 +397,7 @@ function Boards.submit(player: Player, room: string, score: number)
 		end
 		local week = weekMap(room)
 		if week then
-			pcall(function()
+			Gate.write("board:" .. room .. ":week", function()
 				week:UpdateAsync(tostring(player.UserId), function(_old: any, oldSort: any)
 					if type(oldSort) == "number" and oldSort >= score then
 						return nil
@@ -445,23 +449,27 @@ function Boards.submitNightly(player: Player, key: string, score: number, finish
 	local map = nightlyMap(key)
 	local standing: Standing = {}
 	if map and not flagged then
-		local okSet = pcall(function()
+		local okSet = Gate.write("board:nightly", function()
 			map:SetAsync(tostring(player.UserId), tostring(score), Config.data.Nightly.boardHours * 3600, sortKey)
 		end)
 		if okSet then
-			local okAbove, above = pcall(function()
+			local okAbove, above = Gate.read("board:nightly", function()
 				return map:GetRangeAsync(Enum.SortDirection.Descending, 200, { key = tostring(player.UserId), sortKey = sortKey }, nil)
 			end)
-			local okSize, size = pcall(function()
-				return map:GetSizeAsync()
-			end)
-			if okAbove and okSize and size > 0 then
+			local okSize: boolean, size: number? = false, nil
+			if okAbove then
+				okSize, size = Gate.read("board:nightly", function()
+					return map:GetSizeAsync()
+				end)
+			end
+			local total = size or 0
+			if okAbove and okSize and above and total > 0 then
 				local rank = #above + 1
 				standing.rank = if #above < 200 then rank else nil
-				standing.total = size
-				standing.percentile = math.clamp(math.ceil(rank / size * 100), 1, 100)
+				standing.total = total
+				standing.percentile = math.clamp(math.ceil(rank / total * 100), 1, 100)
 				local board = cache["nightly:tonight"]
-				board.count = math.max(board.count or 0, size)
+				board.count = math.max(board.count or 0, total)
 				return standing
 			end
 		end

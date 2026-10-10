@@ -15,6 +15,7 @@ local Names = require(ReplicatedStorage.Shared.Names)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Rating = require(ReplicatedStorage.Shared.Rating)
 local Soiree = require(ReplicatedStorage.Shared.Soiree)
+local Gate = require(script.Parent.Gate)
 local Private = require(script.Parent.Private)
 
 local Notify = {}
@@ -105,7 +106,7 @@ function Notify.seen(player: Player)
 	local map = recentMap()
 	if map then
 		task.spawn(function()
-			pcall(function()
+			Gate.write("recent", function()
 				(map :: MemoryStoreSortedMap):SetAsync(tostring(player.UserId), os.time(), cfg().recentDays * 86400)
 			end)
 		end)
@@ -131,7 +132,7 @@ local function broadcast(kind: string, launch: string, params: { [string]: strin
 	if not map then
 		return
 	end
-	local ok, items = pcall(function()
+	local ok, items = Gate.read("recent", function()
 		return (map :: MemoryStoreSortedMap):GetRangeAsync(Enum.SortDirection.Descending, cfg().maxBatch)
 	end)
 	if not ok or type(items) ~= "table" then

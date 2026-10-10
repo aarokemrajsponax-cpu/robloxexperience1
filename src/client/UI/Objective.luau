@@ -86,12 +86,27 @@ local function hide()
 	end)
 end
 
+-- Under the keys at the top right; a touch lower while the events strip reaches across to it (a
+-- narrow screen), never over it.
+local WIDTH = 300
+local function where(): UDim2
+	local right = Root.size().X - 12
+	return UDim2.new(1, -12, 0, math.max(62, Root.topClearAt(right - WIDTH, right) + 8))
+end
+
+Root.TopChanged:Connect(function()
+	local group = card
+	if group then
+		Ease.play(group, Ease.scaled(Ease.settle), { Position = where() })
+	end
+end)
+
 local function show(goal: Goal)
 	if card and shownKey == goal.key then
 		return
 	end
 	hide()
-	local group, content = Theme.glass(Root.hud, "Objective", UDim2.fromOffset(300, 0), UDim2.new(1, -12, 0, 62), Vector2.new(1, 0))
+	local group, content = Theme.glass(Root.hud, "Objective", UDim2.fromOffset(WIDTH, 0), where(), Vector2.new(1, 0))
 	group.AutomaticSize = Enum.AutomaticSize.Y
 	content.AutomaticSize = Enum.AutomaticSize.Y
 	content.Size = UDim2.new(1, 0, 0, 0)

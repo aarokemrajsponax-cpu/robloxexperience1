@@ -151,7 +151,7 @@ function OwnerCameo.crest(parent: GuiObject, tint: Color3?): Frame
 	name.AnchorPoint = Vector2.new(0.5, 0.5)
 	name.Position = UDim2.fromScale(0.5, 0.6)
 	name.Size = UDim2.fromScale(0.78, 0.34)
-	name.FontFace = Font.fromEnum(Enum.Font.LuckiestGuy)
+	name.FontFace = HEAVY
 	name.TextScaled = true
 	name.Text = string.upper(ownerName())
 	name.TextColor3 = Color3.new(1, 1, 1)
@@ -416,7 +416,7 @@ local function build(mega: boolean?): Model?
 		words.Name = "Words"
 		words.BackgroundTransparency = 1
 		words.Size = UDim2.fromScale(1, 0.72)
-		words.FontFace = Font.fromEnum(Enum.Font.LuckiestGuy)
+		words.FontFace = HEAVY
 		words.TextScaled = true
 		words.TextColor3 = Color3.new(1, 1, 1)
 		words.TextStrokeColor3 = rgb(40, 22, 4)

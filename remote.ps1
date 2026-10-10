@@ -94,6 +94,23 @@ function Send-Command([string]$Json) {
         'denied' { Write-Host '  Not written down: the key can''t use Maison Noir''s data stores, so a server that opens later won''t join in. Creator Hub > Open Cloud > API Keys > your key > Edit > Add API System: universe-datastores > Maison Noir > Read Entry, Create Entry, Update Entry > Save.' -ForegroundColor Yellow }
         default { Write-Host '  Not written down (Roblox''s data stores didn''t answer): a server that opens later may not join in.' -ForegroundColor Yellow }
     }
+    # The remote's own test: every open server that heard it says so in the record.
+    if ($obj.op -eq 'ping') {
+        $uri = "$Api/datastores/v1/universes/$Universe/standard-datastores/datastore/entries/entry?datastoreName=$Store&entryKey=$Entry"
+        $wait = if ($Testing -and $env:MAISON_REMOTE_PING_WAIT) { [double]$env:MAISON_REMOTE_PING_WAIT } else { 3 }
+        $heard = 0
+        for ($try = 1; $try -le 10; $try++) {
+            Start-Sleep -Milliseconds ([int]($wait * 1000))
+            $got = Invoke-Roblox 'GET' $uri $null
+            if ($got.Code -eq 200) {
+                try { $rec = $got.Content | ConvertFrom-Json } catch { $rec = $null }
+                if ($rec -and $rec.PSObject.Properties['pong'] -and [string]$rec.pong.rid -eq $rid) { $heard = [int]$rec.pong.servers }
+                if ($heard -gt 0 -and $try -ge 3) { break }
+            }
+        }
+        if ($heard -gt 0) { Write-Host ('  The test arrived: ' + $heard + ' open server(s) heard it.') -ForegroundColor Green }
+        else { Write-Host '  No server answered within 30 seconds: nobody may be playing right now (that''s fine), or the game needs publishing again.' -ForegroundColor Yellow }
+    }
 }
 $Commands = @(
     @{ Label = '💥 Admin Abuse Night · 15 min'; Json = '{"op":"abuse","minutes":15}' }
@@ -174,6 +191,7 @@ $Commands = @(
     @{ Label = '🌄 Time of day: Dawn'; Json = '{"op":"clock","id":"dawn"}' }
     @{ Label = '☀️ Time of day: Noon'; Json = '{"op":"clock","id":"noon"}' }
     @{ Label = '🌇 Time of day: Sunset'; Json = '{"op":"clock","id":"sunset"}' }
+    @{ Label = '🔔 Test the remote (nothing happens in the game)'; Json = '{"op":"ping"}' }
 )
 $Nights = @(
     @{ Id = 'classic'; Name = 'THE CLASSIC' }

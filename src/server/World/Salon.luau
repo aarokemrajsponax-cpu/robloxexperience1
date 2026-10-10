@@ -32,7 +32,7 @@ local function bookshelves(m: Model)
 			Kit.span(model, "Shelf", Vector3.new(S.minX + 0.2, y, z0 + 0.3), Vector3.new(S.minX + 2, y + 0.15, z0 + 5.3), L.walnut, { collide = false })
 			local z = z0 + 0.4
 			while z < z0 + 5.1 do
-				local w = rng:NextNumber(0.2, 0.42)
+				local w = rng:NextNumber(0.26, 0.5)
 				local h = rng:NextNumber(1.2, 1.75)
 				if z + w > z0 + 5.2 then
 					break

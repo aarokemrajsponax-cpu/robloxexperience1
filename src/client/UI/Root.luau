@@ -165,6 +165,52 @@ end
 local panelChanged = Instance.new("BindableEvent")
 Root.PanelsChanged = panelChanged.Event
 
+-- What stands along the top of the screen (the events strip, Admin Abuse's headline), centred, as
+-- the lowest edge of each in the UI's own units and how far it reaches either side of the middle:
+-- notices come in below it all, never over it, and a card at the side steps down only if it meets it.
+type TopEdge = { bottom: number, half: number }
+local topEdges: { [string]: TopEdge } = {}
+local topChanged = Instance.new("BindableEvent")
+Root.TopChanged = topChanged.Event
+
+function Root.setTop(key: string, bottom: number?, halfWidth: number?)
+	local was = topEdges[key]
+	if bottom == nil then
+		if was == nil then
+			return
+		end
+		topEdges[key] = nil
+	else
+		local half = halfWidth or math.huge
+		if was and was.bottom == bottom and was.half == half then
+			return
+		end
+		topEdges[key] = { bottom = bottom, half = half }
+	end
+	topChanged:Fire()
+end
+
+-- The lowest edge of what stands along the top (0: nothing there).
+function Root.topClear(): number
+	local low = 0
+	for _, edge in topEdges do
+		low = math.max(low, edge.bottom)
+	end
+	return low
+end
+
+-- The same, counting only what reaches across from `left` to `right` (UI units from the left).
+function Root.topClearAt(left: number, right: number): number
+	local middle = Root.size().X / 2
+	local low = 0
+	for _, edge in topEdges do
+		if middle - edge.half < right and middle + edge.half > left then
+			low = math.max(low, edge.bottom)
+		end
+	end
+	return low
+end
+
 -- Each panel eases in from a touch smaller and lower, and eases away the same way.
 local function openScale(group: Frame): UIScale
 	local existing = group:FindFirstChild("OpenScale")
