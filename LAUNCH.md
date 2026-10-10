@@ -178,7 +178,7 @@ All in `src/shared/Config.luau` (or live, in Creator Hub → Configs, as `Sectio
 | The Black Card | `Products.blackCard` | the subscription's id (`EXP-…`), or leave `""` to launch without it |
 | Badges | `Badges.*` | optional: all 151 work in the game's Badge Book already. To make one a real Roblox badge, create it in Creator Hub → your experience → **Associated Items** → **Badges** (Roblox allows a few free each day, then charges Robux per badge) and put its id under the same key, e.g. `metOwner = 123456` (keys: `src/shared/BadgeBook.luau`). Start with the ones players brag about: `metOwner`, `abuseNight`, `firstFlawless`, `level_50`, `holiday_halloween`. |
 | The owner | `Admin.ownerUserId` | `8722595934` (XxxXxxX_77797): already set; only this account gets the Owner Console |
-| The Owner Remote | GitHub secret `ROBLOX_OPEN_CLOUD_KEY` | an Open Cloud key with **messaging-service → Publish** for Maison Noir (README: The Owner Remote) |
+| The Owner Remote | GitHub secret `ROBLOX_OPEN_CLOUD_KEY` | an Open Cloud key with **messaging-service → Publish** and **universe-datastores → Read/Create/Update Entry** for Maison Noir (README: The Owner Remote) |
 | Circles | `Circles.enabled` | `true` at launch, or `false` for later (§19 #10) |
 | Notification templates | `Notifications.messages.*` | from Creator Hub → Engagement → Notifications |
 | The house's music and sounds | `Assets.Playlists`, `Assets.LibrarySounds` | nothing: licensed recordings play from the start (README, "Music and sounds"). Optional: upload `assets/audio/maison-sounds.ogg` for the house's own table sounds and the Boutique's chimes |

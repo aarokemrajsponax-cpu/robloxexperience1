@@ -445,11 +445,50 @@ a Nightly attempt or a Mythic's odds.
     25 seconds, a giveaway every couple of minutes, the Mega Abuse Medal for everyone there),
     countdowns (big numbers on every screen, then Admin Abuse, Mega Abuse, a giveaway or a
     surprise), and **Stop everything**.
-  - **Effects** (23, on every screen round every guest; nobody sorting is moved, nobody is hurt):
+  - **Admin Abuse is a show** (Build 54; `server/AbuseShow`, `World/AbuseShow`,
+    `World/OwnerCameo`, numbers in `Config.Admin.show`):
+    - **The opening**, on every screen: cinema bars, then a transmission comes in (*LIVE ·
+      INCOMING TRANSMISSION*), your own avatar in a ring of gold with *XXXXXXX_77797 IS ABUSING
+      THEIR POWERS* (Mega: *HAS BROKEN THE MULTIVERSE*) glitching under it, while a riser climbs,
+      the house's music falls away and the camera flies out over the street; you rise, giant,
+      from behind the house. At 3.75 seconds, **the drop**: a white flash, **ADMIN ABUSE**
+      slammed onto the screen, a shockwave, confetti, a sonic boom and air horns, the fireworks,
+      and the dance music starts. Guests at a table get the same over their sorting screen (the
+      camera stays). A guest who arrives later is welcomed (*YOU ARRIVED DURING ADMIN ABUSE!*).
+    - **You, over the house, all night**: your avatar (built by the server from your UserId, so
+      it's there whether or not you're in that server) stands about 300 studs tall behind the
+      house, dancing, ringed in gold, a crown of light over your head, searchlights sweeping up at
+      you and **ADMIN ABUSE** with your name in the sky above (seen from the street, the Terrace
+      and every window). At the end you wave goodbye and sink back behind the house.
+    - **Your hologram**: whenever you cast a surprise, switch an effect on or start a giveaway, a
+      portrait of you slides up at the foot of every screen (over any panel, over the sorting
+      screen), doing an emote, saying what you did (*cast ☄️ METEOR SHOWER!*). And when you walk
+      into a server, everyone already there sees you wave hello.
+    - **Realms** (Mega Abuse): every 90 seconds the whole house moves to another realm, **THE
+      COSMOS**, **SUGAR RUSH**, **THE MIDAS REALM**, **NEON CITY**, **THE ABYSS**, **FROSTBITE**,
+      with a *REALM SHIFT* glitch and its name, its own colours and glow, its own air round every
+      guest (stars and a ringed planet, sweets, gold, neon, bubbles, snow) and its look on the
+      sorting screen. Admin Abuse keeps to **the gilded night**.
+    - **Your gifts**: every 75 seconds (45 in Mega Abuse) a gift from you appears on every guest's
+      screen, with a golden box falling beside them; **OPEN IT!** (or walk into the box) within
+      25 seconds. The server checks it's theirs and still open, and pays **40 Gilt** (multiplied
+      like all Gilt: ×2 in Admin Abuse, ×3 in Mega). The **third** gift opened in one night gives
+      **the Admin's Crown**, a new Legendary curio (once ever; after that, 150 Gilt instead). It
+      says what's inside before it's opened: nothing random, nothing paid.
+    - **The finale**: when it ends, fireworks, *THAT'S A WRAP!* and each guest's haul (the Gilt
+      they won, gifts opened, golden pieces, realms visited); you wave goodbye.
+    - Surprises come every 45 seconds in Admin Abuse now, from a bigger list (meteors, the
+      galaxy, the aurora, the UFO, the titan, fireworks, the owner's army...).
+  - **Effects** (24, on every screen round every guest; nobody sorting is moved, nobody is hurt):
     rocket launch, dance party, lightning storm, brainrot storm, confetti cannons, shockwave,
     spin, **meteor shower, black hole, aurora, galaxy sky, UFO abduction, blizzard, earthquake,
     rainbow mode, bubble party, gold wave, fire & ice, blackout, tornado, fireworks finale, titan
-    meme, zero gravity**. Each is a **switch** (Build 53): tap it and it stays on, with **ON** on
+    meme, zero gravity**, and **the owner's army** (Build 54: twelve copies of you drop from the
+    sky in a ring round every guest and dance round them). Build 54 made the meteors twice the
+    size with streaks of fire, a giant one every seventh (sonic boom), scorch marks, thrown rock
+    and dust; the black hole three discs of fire, a ring of light, the night pulled in and
+    stretched, and a supernova at the end; light rising up the UFO's beam; and every effect's
+    name lands with a gleam. Each is a **switch** (Build 53): tap it and it stays on, with **ON** on
     its tile, until you tap it again; switch on as many as you like together, and **Every effect
     OFF** ends them all (so does Stop everything). Effects that move guests (the rocket, the
     shockwave, the spin, the black hole, the UFO, the tornado, the earthquake...) come round
@@ -459,7 +498,7 @@ a Nightly attempt or a Mythic's odds.
     effect is on, the sorting screen itself carries it, drawn on the felt round the pieces (the
     galaxy's stars and a ringed planet, meteors, the tornado's funnel, snow, the UFO's beam, the
     blackout's spotlight, every one of the 23, plus Admin Abuse's and Mega Abuse's own), with a
-    ribbon saying what's on. Each deal at a room table gets **golden pieces**, chosen by the
+    ribbon saying what's on (in Mega Abuse, the realm too). Each deal at a room table gets **golden pieces**, chosen by the
     server: 1 while an effect is on, 2 in Admin Abuse, 3 in Mega Abuse; each glows gold, and
     filing it in the right case pays **+40 Gilt** (`Config.Admin.table`). In **Mega Abuse all
     Gilt is tripled** (Admin Abuse's Golden Hour doubles it). Scores are never touched.
@@ -467,7 +506,10 @@ a Nightly attempt or a Mythic's odds.
     one small record (`MaisonSchedule` → `live`) that every server reads every 30 seconds
     (`Config.Admin.liveCheck`), so a server that missed the message, or opens later, joins in for
     the time left: Admin Abuse, Mega Abuse, events and effects alike. Stopping is written there
-    too, so nothing comes back on by itself.
+    too, so nothing comes back on by itself. Build 54: every command carries the moment it was
+    given, so Admin Abuse and events end at the same moment in every server, and an older command
+    arriving late (two servers writing at once) can never undo a newer one; a server that opens
+    during a countdown to Admin Abuse counts down with the rest.
   - **Music** (Build 53): while Admin Abuse is on, a run of dance tracks plays in place of the
     house's music (Mega Abuse: dubstep and drum and bass); while an effect is on, its own (the
     galaxy, the aurora and zero gravity: something cosmic; the meteors, the black hole, the
@@ -492,14 +534,24 @@ a Nightly attempt or a Mythic's odds.
   - **Powers**: fly, ghost, invisible, speed, super jump, size, go anywhere.
   - **More**: the schedule, Salutes and Suite shows, and the classic House controls below.
 - **The Owner Remote** (outside the game, every server): the same powers from your phone or a
-  computer, sent to every live server through Roblox Open Cloud. Three ways, one setup:
+  computer, sent to every live server through Roblox Open Cloud, **whether or not you're in the
+  game**: the servers do it themselves, and need nobody in particular in them. Each command is
+  also written down in the game's own record (Build 54), so **servers that open afterwards join
+  in too, even if no server was open when you sent it** (Admin Abuse and events for the time
+  left, effects switched on, a countdown to Admin Abuse with the rest of its time). Three ways,
+  one setup:
   1. **Make the key** (once): Creator Hub → **Open Cloud** → **API Keys** → **Create API Key** →
      name it *Owner Remote* → **Access Permissions**: **messaging-service**, choose **Maison
-     Noir**, tick **Publish** → **Security**: add IP `0.0.0.0/0` → **Save & Generate Key** → copy.
+     Noir**, tick **Publish**; then **Add API System** → **universe-datastores** (Data Stores),
+     choose **Maison Noir**, tick **Read Entry**, **Create Entry** and **Update Entry** (and
+     **Create Data Store** if it's offered) → **Security**: add IP `0.0.0.0/0` → **Save &
+     Generate Key** → copy. (A key you already made: open it → **Edit** → add the
+     universe-datastores part → **Save**; the key itself stays the same, nothing to change on
+     GitHub. Without it, commands still reach every open server, and the run says so.)
   2. **Give it to GitHub** (once): this repository → **Settings** → **Secrets and variables** →
      **Actions** → **New repository secret** → name `ROBLOX_OPEN_CLOUD_KEY` → paste → **Add**.
   3. **Use it**: **GitHub** (phone or computer): **Actions** → **Owner Remote** → **Run workflow**
-     → choose from the list (77 powers; effects say **ON**, and **Every effect OFF** ends them)
+     → choose from the list (78 powers; effects say **ON**, and **Every effect OFF** ends them)
      → **Run workflow**; every server does it about half a
      minute later. **The Owner Remote page** (the artifact): tap a power, **Send to every
      server** (it starts the same workflow through claude.ai's GitHub connector). **PowerShell**
@@ -507,8 +559,11 @@ a Nightly attempt or a Mythic's odds.
      (it asks for the key once and keeps it, encrypted, on that computer).
   The game listens on the topic `MaisonRemote` and checks each command against its own lists
   (a known effect, event, amount, headline...) before doing anything; typed headlines go
-  through Roblox's filter. The list of powers is made from the game's own
-  (`python3 tools/remote/build.py` after changing events or effects).
+  through Roblox's filter. Each command carries its own id and the moment it was sent, so a
+  server that hears it twice (the message, then the record) carries it out once. The list of
+  powers is made from the game's own (`python3 tools/remote/build.py` after changing events or
+  effects); `tests/remote.py` runs the workflow's script and the PowerShell remote against a
+  pretend Roblox.
 - **House controls** (the owner's classic panel, from the console's **More** page): the pages
   below.
   - **Effects for everyone** (Powers, at the top; switches, this house or every house): **Rocket
@@ -627,6 +682,11 @@ recordings from Roblox's own licensed libraries, free to use in any experience.
   - a clean chime that climbs a step with each piece in a streak.
 
   Each has the pitch and level that suit it.
+- **Admin Abuse's opening** (`Assets.LibrarySounds`, Pro Sound Effects, Build 54): a synth
+  riser and a huge whooshing build-up, measured so they peak together at the drop (3.75 s), a
+  big low-end impact, sonic booms, a time-warp burst and a glitch for each realm shift, a
+  heavenly choir as you rise over the house, sparkles for your hologram, fairy dust and a cash
+  register for the gifts. The abuse music waits for the drop.
 - **Admin Abuse and effect music** (`Assets.AbuseMusic`, `Assets.AbuseThemes`, `World/AbuseMusic`):
   more APM tracks from the same licensed library, each levelled to the others: dance (*Feeling*,
   *Skyhook*, *Stadium Rave*...) for Admin Abuse; dubstep and drum and bass (*Electric Shock*,

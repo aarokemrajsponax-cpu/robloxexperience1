@@ -4,6 +4,6 @@
 -- see whether Studio has the latest code from GitHub.
 
 return {
-	number = 53,
-	label = "Build 53 · 9 Oct · effects stay on until switched off, Admin Abuse at the tables, instant Suite shows, music",
+	number = 54,
+	label = "Build 54 · 10 Oct · Admin Abuse as a show (the owner giant, realms, gifts), remote reaches every server, streaks catch fire",
 }
