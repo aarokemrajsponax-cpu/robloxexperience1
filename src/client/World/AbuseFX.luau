@@ -1672,7 +1672,7 @@ local function fireworksShow(seconds: number)
 	local V = looks("fireworks")
 	banner(V.banner, V.colour, 2)
 	pcall(function()
-		Fireworks.show(seconds, { scale = 1, watch = false, music = false, act = if type(V.act) == "string" then V.act else nil })
+		Fireworks.show(seconds, { scale = 1, watch = false, music = false, act = if type(V.act) == "string" then V.act else nil, tag = "effect" })
 	end)
 end
 
@@ -1980,7 +1980,7 @@ function AbuseFX.play(id: string, seconds: number?, origin: Vector3?, lasting: b
 		for key in undo do
 			finished(key)
 		end
-		pcall(Fireworks.stop)
+		pcall(Fireworks.stop, "effect")
 		local f = (Workspace:FindFirstChild("MaisonLocal") or Workspace):FindFirstChild("AbuseFX")
 		if f then
 			f:Destroy()

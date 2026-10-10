@@ -395,6 +395,16 @@ def draw_node(canvas, node, alpha_mul, k, clip=None):
         d = ImageDraw.Draw(layer)
         c = node.get("textColor", [1, 1, 1])
         tcol = tuple(int(255 * v) for v in c) + (int(255 * (1 - node["textT"]) * amul),)
+        # TextTruncate AtEnd: a line too long for its box ends in "…" (Roblox's own).
+        if node.get("truncate") == "AtEnd" and not node.get("scaled"):
+            cut = []
+            for line in lines:
+                if f.getlength(line) > W + 0.5:
+                    while line and f.getlength(line + "…") > W:
+                        line = line[:-1]
+                    line = line + "…"
+                cut.append(line)
+            lines = cut
         for line in lines:
             lw = f.getlength(line)
             xa = node.get("xAlign", "Center")

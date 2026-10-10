@@ -312,11 +312,13 @@ local function establishing(plan: AbuseNights.Plan?): CFrame
 		return CFrame.lookAt(eye, Vector3.new(feet.X, 170, feet.Z))
 	end
 	local house = Vector3.new(0, 34, 60 * S)
+	-- (Each one looked at in the 3D viewer: the whole lit house, from wherever the night picks.)
 	local shots = {
-		CFrame.lookAt(Vector3.new(40, 110, front - 140), house),
-		CFrame.lookAt(Vector3.new(-14, 9, front - 70), house + Vector3.new(0, 30, 0)),
-		CFrame.lookAt(Vector3.new(220, 120, front - 40), house),
-		CFrame.lookAt(Vector3.new(-60, 260, front - 30), house - Vector3.new(0, 20, 0)),
+		CFrame.lookAt(Vector3.new(40, 110, front - 140), house), -- high, from the front right
+		CFrame.lookAt(Vector3.new(-14, 9, front - 70), house + Vector3.new(0, 30, 0)), -- low, at the door
+		CFrame.lookAt(Vector3.new(-150, 70, front - 107), Vector3.new(0, 30, 60)), -- down the street from the west
+		CFrame.lookAt(Vector3.new(-90, 150, front - 157), Vector3.new(0, 20, 70)), -- high, from the front left
+		CFrame.lookAt(Vector3.new(0, 40, front - 187), Vector3.new(0, 40, 60)), -- straight on, across the street
 	}
 	local pick = if plan then (plan.seed % #shots) + 1 else 1
 	return shots[pick]
@@ -1358,6 +1360,8 @@ function AbuseShow.opening(mega: boolean, seed: number?, nightId: string?)
 	if not AbuseShow.isBusy() then
 		pcall(AbuseShow.cameraMoment, establishing(plan), math.max(1, total - 3.2))
 	end
+	-- (The opening has the screen and the camera: no "Watch the fireworks" key over it.)
+	pcall(Fireworks.hideWatch, total)
 	local started = os.clock()
 	local dropped = false
 	local shakeLeft = 0
@@ -2262,8 +2266,12 @@ local function haulCard(n: Night, stopped: boolean, P: AbuseNights.Palette, dela
 	if old then
 		old:Destroy()
 	end
+	-- (Only what there is to tell: no "+0 GILT" for a guest, or AJKR, who didn't sort tonight.)
 	local gained = math.max(0, giltNow() - n.gilt)
-	local rows: { { glyph: string, text: string } } = { { glyph = "🪙", text = "+" .. thousands(gained) .. " GILT" } }
+	local rows: { { glyph: string, text: string } } = {}
+	if gained > 0 then
+		table.insert(rows, { glyph = "🪙", text = "+" .. thousands(gained) .. " GILT" })
+	end
 	if n.gifts > 0 then
 		table.insert(rows, { glyph = "🎁", text = tostring(n.gifts) .. (if n.gifts == 1 then " GIFT OPENED" else " GIFTS OPENED") })
 	end
@@ -2284,7 +2292,7 @@ local function haulCard(n: Night, stopped: boolean, P: AbuseNights.Palette, dela
 	if seen > 0 then
 		table.insert(rows, { glyph = "🎆", text = tostring(seen) .. (if seen == 1 then " EFFECT WITNESSED" else " EFFECTS WITNESSED") })
 	end
-	local height = (176 + #rows * 40) * u
+	local height = (if #rows > 0 then 176 + #rows * 40 else 146) * u
 	local card = frame(gui, "Finale", Color3.new(1, 1, 1), 0)
 	card.AnchorPoint = Vector2.new(0.5, 0.5)
 	card.Position = UDim2.fromScale(0.5, 0.45)
@@ -2307,7 +2315,7 @@ local function haulCard(n: Night, stopped: boolean, P: AbuseNights.Palette, dela
 	which.Position = UDim2.new(0, 18 * u, 0, 78 * u)
 	which.Size = UDim2.new(1, -36 * u, 0, 22 * u)
 	which.ZIndex = 51
-	local thanks = label(card, "Thanks", "THANK YOU FOR COMING  ·  YOUR HAUL", HEAVY, rgb(245, 236, 220))
+	local thanks = label(card, "Thanks", if #rows > 0 then "THANK YOU FOR COMING  ·  YOUR HAUL" else "THANK YOU FOR COMING", HEAVY, rgb(245, 236, 220))
 	thanks.Position = UDim2.new(0, 18 * u, 0, 106 * u)
 	thanks.Size = UDim2.new(1, -36 * u, 0, 18 * u)
 	thanks.ZIndex = 51
@@ -2391,7 +2399,28 @@ FINALES.credits = function(n: Night, stopped: boolean, P: AbuseNights.Palette)
 	local layer = finaleLayer(seconds + 0.6)
 	layer.BackgroundTransparency = 1
 	tween(layer, 0.6, { BackgroundTransparency = 0.25 })
-	local roll = frame(layer, "Credits", Color3.new(0, 0, 0), 1)
+	-- (The roll runs in a window between the keys along the top and AJKR's farewell at the foot of
+	-- the screen, its edges softened into the dark.)
+	local clear = 170
+	local top = math.floor(v.Y * 0.16)
+	local window = frame(layer, "Window", Color3.new(0, 0, 0), 1)
+	window.Position = UDim2.fromOffset(0, top)
+	window.Size = UDim2.new(1, 0, 1, -(clear + top))
+	window.ClipsDescendants = true
+	window.ZIndex = 46
+	for i, edge in { 0, 1 } do
+		local fade = frame(window, "Fade", Color3.new(0, 0, 0), 0.25)
+		fade.AnchorPoint = Vector2.new(0, edge)
+		fade.Position = UDim2.fromScale(0, edge)
+		fade.Size = UDim2.new(1, 0, 0, 70 * u)
+		fade.ZIndex = 48
+		local g = Instance.new("UIGradient")
+		g.Rotation = if i == 1 then 90 else -90
+		g.Transparency = NumberSequence.new(0, 1)
+		g.Parent = fade
+	end
+	pcall(Fireworks.hideWatch, seconds + 1)
+	local roll = frame(window, "Credits", Color3.new(0, 0, 0), 1)
 	roll.AnchorPoint = Vector2.new(0.5, 0)
 	roll.Size = UDim2.fromOffset(math.min(v.X - 40, 640 * u), 10)
 	roll.Position = UDim2.new(0.5, 0, 1, 0)
@@ -2413,16 +2442,30 @@ FINALES.credits = function(n: Night, stopped: boolean, P: AbuseNights.Palette)
 		{ text = n.glyph .. "  " .. n.name, big = true },
 		{ text = " " },
 		{ text = "STARRING" },
-		{ text = string.upper(Names.of(player)) .. "  as  THE GUEST", big = true },
-		{ text = "AND" },
-		{ text = string.upper(ownerName()) .. "  as  THE OWNER", big = true },
-		{ text = " " },
-		{ text = "SPECIAL EFFECTS" },
 	}
+	-- (Each guest stars as themselves; AJKR's own screen thanks the house's guests instead of
+	-- naming AJKR twice.)
+	if Names.isOwner(player) then
+		table.insert(lines, { text = string.upper(ownerName()) .. "  as  THE OWNER", big = true })
+		table.insert(lines, { text = "AND" })
+		table.insert(lines, { text = "EVERY GUEST  as  THEMSELVES", big = true })
+	else
+		table.insert(lines, { text = string.upper(Names.of(player)) .. "  as  THE GUEST", big = true })
+		table.insert(lines, { text = "AND" })
+		table.insert(lines, { text = string.upper(ownerName()) .. "  as  THE OWNER", big = true })
+	end
+	table.insert(lines, { text = " " })
+	table.insert(lines, { text = "SPECIAL EFFECTS" })
 	for i = 1, math.min(8, #seen) do
 		table.insert(lines, { text = seen[i] })
 	end
-	for _, extra in { " ", "GILT EARNED TONIGHT", "+" .. thousands(math.max(0, giltNow() - n.gilt)), " ", "NO GUESTS WERE HARMED IN THE MAKING OF THIS NIGHT", " ", "THANK YOU FOR COMING" } do
+	-- (The Gilt earned, when there is some to tell.)
+	local earned = math.max(0, giltNow() - n.gilt)
+	local tail: { string } = if earned > 0 then { " ", "GILT EARNED TONIGHT", "+" .. thousands(earned) } else {}
+	for _, extra in { " ", "NO GUESTS WERE HARMED IN THE MAKING OF THIS NIGHT", " ", "THANK YOU FOR COMING" } do
+		table.insert(tail, extra)
+	end
+	for _, extra in tail do
 		table.insert(lines, { text = extra, big = extra == "THANK YOU FOR COMING" })
 	end
 	local height = 0
@@ -2446,7 +2489,7 @@ FINALES.credits = function(n: Night, stopped: boolean, P: AbuseNights.Palette)
 			return
 		end
 		local k = math.clamp((os.clock() - started) / seconds, 0, 1)
-		roll.Position = UDim2.new(0.5, 0, 1, -k * (v.Y + height))
+		roll.Position = UDim2.new(0.5, 0, 1, -k * (v.Y - clear - top + height))
 	end)
 	sound("regalFanfare", 0.6)
 	haulCard(n, stopped, P, seconds - 1)
@@ -2659,7 +2702,11 @@ function AbuseShow.start()
 		Workspace:GetAttributeChangedSignal(attr):Connect(function()
 			local on = Workspace:GetAttribute(attr) ~= nil
 			if on and not was then
-				OwnerCameo.say(string.format("switched on %s %s! It stays on.", tostring(e.glyph), string.upper(tostring(e.name))), "point", 4)
+				-- (In the looks it was switched on with: "switched on ☄️ ICE COMETS!")
+				local v = Workspace:GetAttribute(HouseEvents.fxVariantAttribute(e.id))
+				local looks = AbuseNights.variant(e.id, if type(v) == "number" then v else nil)
+				local name = if looks then looks.banner else string.upper(tostring(e.name)) .. "!"
+				OwnerCameo.say(string.format("switched on %s %s It stays on.", tostring(e.glyph), name), "point", 4)
 				OwnerCameo.gesture("point")
 			end
 			was = on

@@ -4,6 +4,6 @@
 -- see whether Studio has the latest code from GitHub.
 
 return {
-	number = 54,
-	label = "Build 54 · 10 Oct · Admin Abuse as a show (the owner giant, realms, gifts), remote reaches every server, streaks catch fire",
+	number = 55,
+	label = "Build 55 · 10 Oct · AJKR everywhere, 55 Admin Abuse nights and 93 effect looks the same in every server, bug sweep",
 }

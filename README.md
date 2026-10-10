@@ -431,54 +431,88 @@ a Nightly attempt or a Mythic's odds.
       walking and running and a gold trail, for good; both switch off in Settings → Your perks.
   - Every remote a guest's screen can call is rate-limited and checked on the server
     (`Config.RemoteLimits`); a screen can only ever name a product, never a price or an amount.
-- **The Owner Console** (Build 51): when **XxxXxxX_77797** joins, the screen says *WELCOME BACK,
-  OWNER* and the Owner Console opens by itself: every power as a big tile, in nine groups down
-  the left (**Abuse, Effects, Holidays, Events, Players, World, Message, Powers, More**). Reopen
-  it with the gold **👑 Owner** key or **;**. **ALL SERVERS** (on by default) or **THIS SERVER**
-  at the top decides where events, effects, headlines, giveaways and gifts go. Only that one
-  account has it: the server checks the UserId (`Config.Admin.ownerUserId = 8722595934`) on
-  every request, so nobody else gets anything whatever their screen sends. (In Studio the first
-  test player stands in, `Config.Admin.studioFirstPlayer`; never in the live game.) When you
-  arrive, your server sees *👑 THE OWNER IS IN THE SERVER! 👑*, your nameplate says **OWNER**, and
-  everyone there gets the **Met the Owner** badge.
-  - **Abuse**: Admin Abuse Night (15/30/60 min), **MEGA ABUSE** (every effect as a surprise every
-    25 seconds, a giveaway every couple of minutes, the Mega Abuse Medal for everyone there),
-    countdowns (big numbers on every screen, then Admin Abuse, Mega Abuse, a giveaway or a
-    surprise), and **Stop everything**.
+- **AJKR, everywhere** (Build 55): whatever the owner does in the house, it's **AJKR** doing it,
+  never the Roblox username: headlines, giveaways, gifts, the nameplate (*👑 OWNER 👑*, AJKR),
+  chat (*👑 AJKR* in gold), boards, trades, decrees, notices, the opening and the credits
+  (`shared/Names`, `Config.Admin.ownerName = "AJKR"`). The owner is still recognised by UserId
+  (`Config.Admin.ownerUserId = 8722595934`), never by a name, so changing the Roblox name changes
+  nothing. Nobody can pass for AJKR: a guest whose display name reads as AJKR (*A.J.K.R*, *ajkr_*)
+  is shown by their @username instead. The stored picture of your avatar is gone from the cards
+  (a gold **AJKR crest** in its place); see *Your avatar* below for where it still appears.
+- **The Owner Console** (Build 51): when you join, the screen says *WELCOME BACK, AJKR* and the
+  Owner Console opens by itself: every power as a big tile, in nine groups down the left
+  (**Abuse, Effects, Holidays, Events, Players, World, Message, Powers, More**). Reopen it with
+  the gold **👑 Owner** key or **;**. **ALL SERVERS** (on by default) or **THIS SERVER** at the top
+  decides where events, effects, headlines, giveaways and gifts go. Only your account has it: the
+  server checks the UserId on every request, so nobody else gets anything whatever their screen
+  sends. (In Studio the first test player stands in, `Config.Admin.studioFirstPlayer`; never in
+  the live game.) When you arrive, your server sees *👑 AJKR IS IN THE SERVER! 👑*, your nameplate
+  says **OWNER**, and everyone there gets the **Met the Owner** badge.
+  - **Abuse**: **TONIGHT'S SHOW** (Build 55): **🎲 SURPRISE ME** (a different night every time)
+    or **◀ ▶** through all 55 nights to choose one; then Admin Abuse Night (15/30/60 min), **MEGA
+    ABUSE** (faster surprises, two at once more often, realm after realm, a giveaway every few
+    minutes, the Mega Abuse Medal for everyone there), countdowns (big numbers on every screen,
+    then Admin Abuse, Mega Abuse, a giveaway or a surprise), and **Stop everything**.
+  - **55 nights, so no two Admin Abuses are the same** (Build 55; `shared/AbuseNights`): every
+    Admin Abuse is one of 55 nights, from *The Classic* and *The Midas Heist* to *Cosmic Takeover*,
+    *Brainrot Apocalypse*, *Frostbite Frenzy*, *Retrowave '86*, *The Glitch*, *Midnight Agent*,
+    *Carnival Night*, *The Final Boss*, *Wild West Showdown* and *King of the House*. Each night
+    has its own:
+    - **opening** (12 kinds): the transmission, a 3-2-1 countdown, a blackout with one spotlight,
+      the screen cracking, a vault door, hyperspace, a hijacked signal, velvet curtains, BREAKING
+      NEWS, a hacker's terminal, a portal, a bass pulse; and the camera flies out to one of five
+      views of the house;
+    - **title** landing its own way (6: slammed, dropped, stamped letter by letter, zoomed,
+      split, a buzzing neon sign), in the night's **colours** (14 palettes);
+    - **realm** (15: the gilded night, the cosmos, sugar rush, the Midas realm, neon city, the
+      abyss, frostbite, the inferno, cloud nine, the mainframe, cherry blossom, retrowave, the
+      wild, the storm, the golden sands);
+    - **surprises**: its own list, in its own order, at its own pace, sometimes two at once, each
+      effect in one of its **93 looks** (2 to 5 per effect: *ICE COMETS*, *GOLDEN AURORA*,
+      *NEON TORNADO*...);
+    - **music**, **twist** (giants, tiny guests, quickstep, featherlight...), **hunts** (gold
+      rain, the treasure hunt, the parade), how often your **gifts** come, and **finale** (6:
+      fireworks, a gold shower, closing credits starring the guest and AJKR, a supernova, a
+      confetti storm, a curtain call), always ending on each guest's haul.
+    The same night, in every server: one number (the night's seed) decides everything, and it
+    travels with the command, the Owner Remote's run, the schedule and the game's live record. So
+    every server plays the same night with the same surprises at the same moments, and a server
+    that opens halfway through joins in step. Effects you switch on one at a time get one of their
+    looks the same way.
   - **Admin Abuse is a show** (Build 54; `server/AbuseShow`, `World/AbuseShow`,
     `World/OwnerCameo`, numbers in `Config.Admin.show`):
-    - **The opening**, on every screen: cinema bars, then a transmission comes in (*LIVE ·
-      INCOMING TRANSMISSION*), your own avatar in a ring of gold with *XXXXXXX_77797 IS ABUSING
-      THEIR POWERS* (Mega: *HAS BROKEN THE MULTIVERSE*) glitching under it, while a riser climbs,
-      the house's music falls away and the camera flies out over the street; you rise, giant,
-      from behind the house. At 3.75 seconds, **the drop**: a white flash, **ADMIN ABUSE**
-      slammed onto the screen, a shockwave, confetti, a sonic boom and air horns, the fireworks,
-      and the dance music starts. Guests at a table get the same over their sorting screen (the
-      camera stays). A guest who arrives later is welcomed (*YOU ARRIVED DURING ADMIN ABUSE!*).
-    - **You, over the house, all night**: your avatar (built by the server from your UserId, so
-      it's there whether or not you're in that server) stands about 300 studs tall behind the
-      house, dancing, ringed in gold, a crown of light over your head, searchlights sweeping up at
-      you and **ADMIN ABUSE** with your name in the sky above (seen from the street, the Terrace
-      and every window). At the end you wave goodbye and sink back behind the house.
+    - **The opening**, on every screen: cinema bars, the night's own opening (*TONIGHT: THE MIDAS
+      HEIST*), *AJKR IS ABUSING THEIR POWERS* (Mega: *HAS BROKEN THE MULTIVERSE*), a riser, the
+      house's music falling away and the camera flying out over the street. At 3.75 seconds,
+      **the drop**: a white flash, the title, a shockwave, confetti, a sonic boom and air horns,
+      and the night's music starts. Guests at a table get the same over their sorting screen (the
+      camera stays). A guest who arrives later is welcomed (*YOU ARRIVED DURING ADMIN ABUSE!*,
+      with tonight's night under it).
+    - **Your avatar** (Build 55): shown only on the nights made for it (*King of the House*,
+      *AJKR's Army*, *The Colossus Rises*), about 300 studs tall behind the house, dancing, ringed
+      in gold, a crown of light over your head, searchlights sweeping up at you. It's rebuilt from
+      your look **as it is**: what you're wearing in the server (else your Roblox avatar) at the
+      start of every night and every five minutes, so a change of outfit shows up. Prefer it
+      never, or every night? `Config.Admin.show.giant` = `"never"` or `"always"` (default
+      `"rare"`).
     - **Your hologram**: whenever you cast a surprise, switch an effect on or start a giveaway, a
-      portrait of you slides up at the foot of every screen (over any panel, over the sorting
-      screen), doing an emote, saying what you did (*cast ☄️ METEOR SHOWER!*). And when you walk
-      into a server, everyone already there sees you wave hello.
-    - **Realms** (Mega Abuse): every 90 seconds the whole house moves to another realm, **THE
-      COSMOS**, **SUGAR RUSH**, **THE MIDAS REALM**, **NEON CITY**, **THE ABYSS**, **FROSTBITE**,
-      with a *REALM SHIFT* glitch and its name, its own colours and glow, its own air round every
-      guest (stars and a ringed planet, sweets, gold, neon, bubbles, snow) and its look on the
-      sorting screen. Admin Abuse keeps to **the gilded night**.
-    - **Your gifts**: every 75 seconds (45 in Mega Abuse) a gift from you appears on every guest's
-      screen, with a golden box falling beside them; **OPEN IT!** (or walk into the box) within
-      25 seconds. The server checks it's theirs and still open, and pays **40 Gilt** (multiplied
-      like all Gilt: ×2 in Admin Abuse, ×3 in Mega). The **third** gift opened in one night gives
-      **the Admin's Crown**, a new Legendary curio (once ever; after that, 150 Gilt instead). It
-      says what's inside before it's opened: nothing random, nothing paid.
-    - **The finale**: when it ends, fireworks, *THAT'S A WRAP!* and each guest's haul (the Gilt
-      they won, gifts opened, golden pieces, realms visited); you wave goodbye.
-    - Surprises come every 45 seconds in Admin Abuse now, from a bigger list (meteors, the
-      galaxy, the aurora, the UFO, the titan, fireworks, the owner's army...).
+      card slides up at the foot of every screen (over any panel, over the sorting screen) with
+      the AJKR crest, saying what you did by that look's own name, with your line for it (*☄️ ICE
+      COMETS! Heads up!*). And when you walk into a server, everyone already there sees you wave
+      hello.
+    - **Realms** (Mega Abuse): every 90 seconds or so (quicker on a wild night, slower on a calm
+      one) the whole house
+      moves to another realm, with a *REALM SHIFT* glitch and its name, its own colours and glow,
+      its own air round every guest and its look on the sorting screen.
+    - **Your gifts**: every 75 seconds (45 in Mega Abuse; each night sets its own pace) a
+      gift from you appears on every guest's screen, with a golden box falling beside them; **OPEN
+      IT!** (or walk into the box) within 25 seconds. The server checks it's theirs and still
+      open, and pays **40 Gilt** (multiplied like all Gilt: ×2 in Admin Abuse, ×3 in Mega). The
+      **third** gift opened in one night gives **the Admin's Crown**, a new Legendary curio (once
+      ever; after that, 150 Gilt instead). It says what's inside before it's opened: nothing
+      random, nothing paid.
+    - **The finale**: when it ends, the night's own finale, then each guest's haul (the Gilt they
+      won, gifts opened, golden pieces, realms visited, effects seen); you wave goodbye.
   - **Effects** (24, on every screen round every guest; nobody sorting is moved, nobody is hurt):
     rocket launch, dance party, lightning storm, brainrot storm, confetti cannons, shockwave,
     spin, **meteor shower, black hole, aurora, galaxy sky, UFO abduction, blizzard, earthquake,
@@ -490,10 +524,12 @@ a Nightly attempt or a Mythic's odds.
     stretched, and a supernova at the end; light rising up the UFO's beam; and every effect's
     name lands with a gleam. Each is a **switch** (Build 53): tap it and it stays on, with **ON** on
     its tile, until you tap it again; switch on as many as you like together, and **Every effect
-    OFF** ends them all (so does Stop everything). Effects that move guests (the rocket, the
-    shockwave, the spin, the black hole, the UFO, the tornado, the earthquake...) come round
-    again in waves every few seconds (`Config.Admin.fxWaves`); the rest simply stay. Guests who
-    arrive while one is on see it too.
+    OFF** ends them all (so does Stop everything; Build 55: the effect's fireworks too, at once,
+    with no rocket still climbing, while a guest's own Salute fireworks carry on). Each effect
+    has 2 to 5 looks (93 in all), and the server picks one, the same in every server. Effects
+    that move guests (the rocket, the shockwave, the spin, the black hole, the UFO, the tornado,
+    the earthquake...) come round again in waves every few seconds (`Config.Admin.fxWaves`); the
+    rest simply stay. Guests who arrive while one is on see it too.
   - **At the sorting tables** (Build 53), so nobody sorting misses out: while Admin Abuse or an
     effect is on, the sorting screen itself carries it, drawn on the felt round the pieces (the
     galaxy's stars and a ringed planet, meteors, the tornado's funnel, snow, the UFO's beam, the
@@ -552,8 +588,9 @@ a Nightly attempt or a Mythic's odds.
      **Actions** → **New repository secret** → name `ROBLOX_OPEN_CLOUD_KEY` → paste → **Add**.
   3. **Use it**: **GitHub** (phone or computer): **Actions** → **Owner Remote** → **Run workflow**
      → choose from the list (78 powers; effects say **ON**, and **Every effect OFF** ends them)
-     → **Run workflow**; every server does it about half a
-     minute later. **The Owner Remote page** (the artifact): tap a power, **Send to every
+     → for Admin Abuse, Mega Abuse or a countdown to them, **night** picks one of the 55 (or
+     leave it on *🎲 Surprise me*) → **Run workflow**; every server does it about half a
+     minute later, the same night in every one. **The Owner Remote page** (the artifact): tap a power, **Send to every
      server** (it starts the same workflow through claude.ai's GitHub connector). **PowerShell**
      (instant, on a computer): `irm https://raw.githubusercontent.com/aarokemrajsponax-cpu/robloxexperience1/claude/nice-brown-a88p9r/remote.ps1 | iex`
      (it asks for the key once and keeps it, encrypted, on that computer).

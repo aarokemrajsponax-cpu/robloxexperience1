@@ -272,7 +272,15 @@ local globals = {
 		end,
 	},
 	NumberRange = roblox.NumberRange,
-	NumberSequence = roblox.NumberSequence,
+	-- (Lune's NumberSequence.new(a, b) loses b; Roblox's runs from a to b.)
+	NumberSequence = {
+		new = function(a: any, b: any?, ...: any)
+			if type(a) == "number" and type(b) == "number" then
+				return roblox.NumberSequence.new({ roblox.NumberSequenceKeypoint.new(0, a), roblox.NumberSequenceKeypoint.new(1, b) })
+			end
+			return if b == nil then roblox.NumberSequence.new(a) else roblox.NumberSequence.new(a, b, ...)
+		end,
+	},
 	NumberSequenceKeypoint = roblox.NumberSequenceKeypoint,
 	ColorSequence = roblox.ColorSequence,
 	ColorSequenceKeypoint = roblox.ColorSequenceKeypoint,

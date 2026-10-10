@@ -177,7 +177,7 @@ All in `src/shared/Config.luau` (or live, in Creator Hub → Configs, as `Sectio
 | VIP Velocity Elite (game pass) | `Products.velocityElite` | the pass's id (Creator Hub → Monetization → Passes); without it the perk is sold as a developer product of the same name |
 | The Black Card | `Products.blackCard` | the subscription's id (`EXP-…`), or leave `""` to launch without it |
 | Badges | `Badges.*` | optional: all 151 work in the game's Badge Book already. To make one a real Roblox badge, create it in Creator Hub → your experience → **Associated Items** → **Badges** (Roblox allows a few free each day, then charges Robux per badge) and put its id under the same key, e.g. `metOwner = 123456` (keys: `src/shared/BadgeBook.luau`). Start with the ones players brag about: `metOwner`, `abuseNight`, `firstFlawless`, `level_50`, `holiday_halloween`. |
-| The owner | `Admin.ownerUserId` | `8722595934` (XxxXxxX_77797): already set; only this account gets the Owner Console |
+| The owner | `Admin.ownerUserId`, `Admin.ownerName` | `8722595934` (your account) and `"AJKR"`: already set; only this account gets the Owner Console, and in the house it always shows as AJKR, never its Roblox username |
 | The Owner Remote | GitHub secret `ROBLOX_OPEN_CLOUD_KEY` | an Open Cloud key with **messaging-service → Publish** and **universe-datastores → Read/Create/Update Entry** for Maison Noir (README: The Owner Remote) |
 | Circles | `Circles.enabled` | `true` at launch, or `false` for later (§19 #10) |
 | Notification templates | `Notifications.messages.*` | from Creator Hub → Engagement → Notifications |

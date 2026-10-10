@@ -28,7 +28,6 @@ local Brand = require(ReplicatedStorage.Shared.Brand)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Root = require(script.Parent.Root)
-local Toast = require(script.Parent.Toast)
 
 local OwnerConsole = {}
 
@@ -332,6 +331,15 @@ function OwnerConsole.open(startPage: string?)
 	local view: { [string]: any }? = nil
 	local render: () -> ()
 
+	-- What just happened, said in the console's own status line for a few seconds (gold, or red
+	-- for a no), rather than a notice over the console's own rail.
+	local noticeUntil = 0
+	local function notice(text: string, bad: boolean?, seconds: number?)
+		noticeUntil = os.clock() + (seconds or 3)
+		status.Text = text
+		status.TextColor3 = if bad then rgb(255, 120, 120) else GOLD
+	end
+
 	local function reload(result: any?)
 		task.spawn(function()
 			local v = if type(result) == "table" and result.guests then result else ask({ op = "state" })
@@ -339,7 +347,7 @@ function OwnerConsole.open(startPage: string?)
 				view = v
 				render()
 			elseif type(v) == "table" and v.why then
-				Toast.show("Owner Console", tostring(v.why), 3)
+				notice(tostring(v.why), true)
 			end
 		end)
 	end
@@ -348,9 +356,9 @@ function OwnerConsole.open(startPage: string?)
 		task.spawn(function()
 			local r = ask(request)
 			if type(r) == "table" and r.ok == false then
-				Toast.show("Owner Console", tostring(r.why), 3)
+				notice(tostring(r.why), true)
 			elseif done then
-				Toast.show("Owner Console", done, 2.5)
+				notice(done, false, 2.5)
 			end
 			reload(r)
 		end)
@@ -700,7 +708,7 @@ function OwnerConsole.open(startPage: string?)
 			chipKey(sendRow, 1, "📣 HEADLINE", true, accent, function()
 				local text = string.sub(box.Text, 1, 140)
 				if text == "" then
-					Toast.show("Owner Console", "Type something first.", 2)
+					notice("Type something first.", true, 2)
 					return
 				end
 				send({ op = "headline", text = text, style = headlineStyle, everywhere = everywhere }, "Headline sent" .. scopeText() .. ".")
@@ -708,7 +716,7 @@ function OwnerConsole.open(startPage: string?)
 			chipKey(sendRow, 2, "💬 ANNOUNCE", false, accent, function()
 				local text = string.sub(box.Text, 1, 140)
 				if text == "" then
-					Toast.show("Owner Console", "Type something first.", 2)
+					notice("Type something first.", true, 2)
 					return
 				end
 				send({ op = "announce", text = text, everywhere = everywhere }, "Announced" .. scopeText() .. ".")
@@ -775,11 +783,14 @@ function OwnerConsole.open(startPage: string?)
 	task.spawn(function()
 		while group.Parent do
 			local v = view
-			if v then
+			if v and os.clock() >= noticeUntil then
+				status.TextColor3 = rgb(200, 190, 170)
 				local parts = { string.format("%d in this server", #Players:GetPlayers()) }
 				local until_ = Workspace:GetAttribute("AbuseUntil")
 				if type(until_) == "number" and until_ > os.time() then
-					table.insert(parts, (if Workspace:GetAttribute("AbuseMega") == true then "MEGA ABUSE " else "ADMIN ABUSE ") .. clock(until_ - os.time()) .. " left")
+					local id = Workspace:GetAttribute("AbuseNight")
+					local night = if type(id) == "string" then AbuseNights.byId[id] else nil
+					table.insert(parts, (if Workspace:GetAttribute("AbuseMega") == true then "MEGA ABUSE " else "ADMIN ABUSE ") .. clock(until_ - os.time()) .. " left" .. (if night then " (" .. night.name .. ")" else ""))
 				end
 				local on = 0
 				for _, e in (v.events or {}) :: { any } do
@@ -828,12 +839,12 @@ function OwnerConsole.welcome()
 	dim.Size = UDim2.fromScale(1, 1)
 	dim.Parent = s
 	local crown = label(dim, "👑", 90, BOLD, Color3.new(1, 1, 1), { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.36), Size = UDim2.fromOffset(160, 120), TextScaled = true })
-	local words = label(dim, "WELCOME BACK, OWNER", 40, HEAVY, Color3.new(1, 1, 1), { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.52), Size = UDim2.new(0.9, 0, 0, 56), TextScaled = true })
+	local words = label(dim, "WELCOME BACK, " .. string.upper(Names.owner()), 40, HEAVY, Color3.new(1, 1, 1), { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.52), Size = UDim2.new(0.9, 0, 0, 56), TextScaled = true })
 	local wg = Instance.new("UIGradient")
 	wg.Color = ColorSequence.new(rgb(255, 240, 180), rgb(230, 150, 40))
 	wg.Rotation = 90
 	wg.Parent = words
-	local sub = label(dim, Names.owner() .. " · every power in the house is yours", 18, BODY, rgb(236, 226, 206), { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.6), Size = UDim2.new(0.9, 0, 0, 24) })
+	local sub = label(dim, "The owner · every power in the house is yours", 18, BODY, rgb(236, 226, 206), { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.6), Size = UDim2.new(0.9, 0, 0, 24) })
 	local scale = Instance.new("UIScale")
 	scale.Scale = 0.4
 	scale.Parent = crown

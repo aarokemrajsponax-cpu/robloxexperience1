@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
+local AbuseNights = require(ReplicatedStorage.Shared.AbuseNights)
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local Caps = require(ReplicatedStorage.Shared.Caps)
 local HouseEvents = require(ReplicatedStorage.Shared.HouseEvents)
@@ -114,8 +115,14 @@ local function refresh()
 			longest = math.max(longest, a.ends - now())
 		end
 		local head = line("__head", 1, 17, "bodyBold", Color3.fromRGB(46, 30, 6), 2)
-		head.Text = if abusing
-			then string.format("%s  ·  %d EVENTS ON  ·  %s", if Workspace:GetAttribute("AbuseMega") == true then "MEGA ABUSE" else "ADMIN ABUSE NIGHT", #on, clock((abuse :: number) - now()))
+		-- (Tonight's night by name, "ADMIN ABUSE · THE MIDAS HEIST · 14:59", on one line: the line
+		-- under it turns through the events.)
+		local nightId = Workspace:GetAttribute("AbuseNight")
+		local night = if type(nightId) == "string" then AbuseNights.byId[nightId] else nil
+		local mega = Workspace:GetAttribute("AbuseMega") == true
+		head.Text = if abusing and night
+			then string.format("%s  ·  %s  ·  %s", if mega then "MEGA ABUSE" else "ADMIN ABUSE", string.upper(night.name), clock((abuse :: number) - now()))
+			elseif abusing then string.format("%s  ·  %d EVENTS ON  ·  %s", if mega then "MEGA ABUSE" else "ADMIN ABUSE NIGHT", #on, clock((abuse :: number) - now()))
 			else string.format("%d EVENTS ON  ·  %s", #on, clock(longest))
 		-- (The headline glows in time.)
 		head.TextColor3 = Brand.Colours.lightGold:Lerp(Color3.new(1, 1, 1), (math.sin(now() * 3) + 1) / 2 * 0.35)

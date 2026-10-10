@@ -266,6 +266,20 @@ function Root.top(): string?
 	return if p then p.name else nil
 end
 
+-- How much of the screen is free to the right of the top panel (in the UI's own units), worked
+-- out from where it is placed, not where it is drawn (it may still be easing in). 0 with none open.
+function Root.rightOfTop(): number
+	local p = stack[#stack]
+	if not p then
+		return 0
+	end
+	local s = Root.size()
+	local g = p.group
+	local w = g.Size.X.Scale * s.X + g.Size.X.Offset
+	local left = g.Position.X.Scale * s.X + g.Position.X.Offset - g.AnchorPoint.X * w
+	return math.max(0, s.X - (left + w))
+end
+
 -- Esc (or B on a gamepad) closes the top panel.
 ContextActionService:BindActionAtPriority("MaisonClosePanel", function(_, inputState)
 	if inputState ~= Enum.UserInputState.Begin then

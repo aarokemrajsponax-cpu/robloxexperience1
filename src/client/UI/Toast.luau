@@ -1,6 +1,7 @@
 --!strict
 -- Quiet notices at the top of the screen (a season turning, a table being taken), or in the
--- bottom-left corner while a panel is open, clear of it. Nothing pops.
+-- bottom-right corner while a panel is open, clear of it (and of the keys down the left). Nothing
+-- pops.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -13,6 +14,18 @@ local Toast = {}
 
 local current: Frame? = nil
 
+-- How wide a notice may be: at the top, up to 420; with a panel open, as wide as the room beside
+-- the panel allows (and no wider than 250), so it never sits over the panel itself. (On a screen
+-- the panel fills, there is no room beside it: 250, over the panel's foot.)
+local function widest(low: boolean): number
+	local room = Root.size().X - 24
+	if not low then
+		return math.min(420, room)
+	end
+	local beside = Root.rightOfTop() - 14 - 10
+	return math.min(if beside >= 150 then math.min(250, beside) else 250, room)
+end
+
 function Toast.show(title: string, line: string?, seconds: number?)
 	if current then
 		current:Destroy()
@@ -24,14 +37,14 @@ function Toast.show(title: string, line: string?, seconds: number?)
 		Root.toasts,
 		"Toast",
 		UDim2.fromOffset(420, 0),
-		if low then UDim2.new(0, 14, 1, -34) else UDim2.new(0.5, 0, 0, 58),
-		if low then Vector2.new(0, 1) else Vector2.new(0.5, 0)
+		if low then UDim2.new(1, -14, 1, -34) else UDim2.new(0.5, 0, 0, 58),
+		if low then Vector2.new(1, 1) else Vector2.new(0.5, 0)
 	)
 	group.AutomaticSize = Enum.AutomaticSize.Y
 	content.AutomaticSize = Enum.AutomaticSize.Y
 	content.Size = UDim2.new(1, 0, 0, 0)
 	local limit = Instance.new("UISizeConstraint")
-	limit.MaxSize = Vector2.new(math.min(if low then 250 else 420, Root.size().X - 24), math.huge)
+	limit.MaxSize = Vector2.new(widest(low), math.huge)
 	limit.Parent = group
 	Theme.list(content, 4)
 	Theme.text(content, title, 12, "caps", { LayoutOrder = 1 })
@@ -59,11 +72,11 @@ Root.PanelsChanged:Connect(function()
 		return
 	end
 	local low = Root.isOpen()
-	g.AnchorPoint = if low then Vector2.new(0, 1) else Vector2.new(0.5, 0)
-	g.Position = if low then UDim2.new(0, 14, 1, -34) else UDim2.new(0.5, 0, 0, 58)
+	g.AnchorPoint = if low then Vector2.new(1, 1) else Vector2.new(0.5, 0)
+	g.Position = if low then UDim2.new(1, -14, 1, -34) else UDim2.new(0.5, 0, 0, 58)
 	local limit = g:FindFirstChildOfClass("UISizeConstraint")
 	if limit then
-		limit.MaxSize = Vector2.new(math.min(if low then 250 else 420, Root.size().X - 24), math.huge)
+		limit.MaxSize = Vector2.new(widest(low), math.huge)
 	end
 end)
 

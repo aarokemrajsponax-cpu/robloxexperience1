@@ -36,8 +36,17 @@ local function lookAt(at, target, up)
 end
 local CFrame = setmetatable({ lookAt = lookAt }, { __index = roblox.CFrame })
 
+-- (Lune seeds math.random afresh every run; a fixed seed makes every run the same. SEED=n tries
+-- another. TRACE=1 names each check as it's made, TRACE=timers every timer too: where a run that
+-- stops short got to.)
+math.randomseed(tonumber(process.env.SEED) or 1)
+local TRACE = process.env.TRACE
+
 local passed, failed = 0, 0
 local function check(name: string, ok: boolean, detail: any?)
+	if TRACE then
+		require("@lune/stdio").ewrite("check: " .. name .. "\n")
+	end
 	if ok then
 		passed += 1
 	else
@@ -178,6 +187,15 @@ local function step(dt: number)
 		end
 		nextTimer()
 		now = math.max(now, t.at)
+		if TRACE == "timers" then
+			local okInfo, src, line = pcall(function()
+				if type(t.fn) == "thread" then
+					return debug.info(t.fn, 1, "sl")
+				end
+				return debug.info(t.fn, "sl")
+			end)
+			require("@lune/stdio").ewrite(string.format("timer %.2f %s:%s\n", now, tostring(okInfo and src), tostring(okInfo and line)))
+		end
 		if type(t.fn) == "thread" then
 			resume(t.fn, table.unpack(t.args, 1, t.args.n))
 		else
@@ -841,6 +859,14 @@ local fakeOs = setmetatable({
 	clock = function()
 		return now
 	end,
+	-- (The server's clock, as GetServerTimeNow has it: never the real one, so a run doesn't
+	-- depend on the time of day it starts.)
+	time = function(t: any?)
+		if t ~= nil then
+			return os.time(t)
+		end
+		return 1790000000 + math.floor(now)
+	end,
 }, { __index = os })
 
 -- Parts made by the client start with a readable Position too.
@@ -886,7 +912,15 @@ local globals = {
 		end,
 	},
 	NumberRange = roblox.NumberRange,
-	NumberSequence = roblox.NumberSequence,
+	-- (Lune's NumberSequence.new(a, b) loses b; Roblox's runs from a to b.)
+	NumberSequence = {
+		new = function(a: any, b: any?, ...: any)
+			if type(a) == "number" and type(b) == "number" then
+				return roblox.NumberSequence.new({ roblox.NumberSequenceKeypoint.new(0, a), roblox.NumberSequenceKeypoint.new(1, b) })
+			end
+			return if b == nil then roblox.NumberSequence.new(a) else roblox.NumberSequence.new(a, b, ...)
+		end,
+	},
 	NumberSequenceKeypoint = roblox.NumberSequenceKeypoint,
 	ColorSequence = roblox.ColorSequence,
 	ColorSequenceKeypoint = roblox.ColorSequenceKeypoint,
@@ -1102,6 +1136,8 @@ local function snapshot(name: string)
 				n.yAlign = inst.TextYAlignment.Name
 				n.wrap = inst.TextWrapped
 				n.scaled = inst.TextScaled
+				local trunc = get(inst, "TextTruncate")
+				n.truncate = if trunc then trunc.Name else "None"
 				local ff = get(inst, "FontFace")
 				n.weight = if ff then ff.Weight.Name else "Regular"
 				n.style = if ff then ff.Style.Name else "Normal"
@@ -3558,6 +3594,11 @@ do
 	end
 	check("Admin Abuse Night: one headline on every screen, and one line turning through the events", textOnScreen("ADMIN ABUSE NIGHT") ~= nil and textOnScreen("6 EVENTS ON") ~= nil and lines <= 3, lines)
 	snapshot("abuse-banner")
+	-- (With tonight's night known, the headline names it.)
+	workspace:SetAttribute("AbuseNight", "midasHeist")
+	advance(1.2)
+	check("...naming tonight's night: ADMIN ABUSE · THE MIDAS HEIST", textOnScreen("ADMIN ABUSE  ·  THE MIDAS HEIST") ~= nil)
+	workspace:SetAttribute("AbuseNight", nil)
 	for _, id in { "goldenHour", "luckyHour", "giants", "quickstep", "goldRain", "featherlight" } do
 		workspace:SetAttribute("Event_" .. id, nil)
 		signalOf(workspace, "attr:Event_" .. id):Fire()
@@ -3565,7 +3606,11 @@ do
 	workspace:SetAttribute("AbuseUntil", nil)
 	signalOf(workspace, "attr:AbuseUntil"):Fire()
 	advance(1.2)
-	check("...and it goes when the night ends", textOnScreen("ADMIN ABUSE NIGHT") == nil)
+	-- (In the strip: the build's own label in the corner may name Admin Abuse nights too.)
+	local still = strip and find(strip, function(d)
+		return d:IsA("TextLabel") and string.find(norm(d.Text), norm("ADMIN ABUSE"), 1, true) ~= nil
+	end)
+	check("...and it goes when the night ends", still == nil, still and (still:GetFullName() .. ": " .. still.Text))
 end
 
 -- Effects for everyone (the server says which; this screen plays it round its guest).
@@ -3797,7 +3842,7 @@ invokeResults.AdminAsk = {
 }
 LocalPlayer:SetAttribute("MaisonAdmin", true)
 advance(2.5)
-check("the owner is welcomed when they arrive", textOnScreen("WELCOME BACK, OWNER") ~= nil)
+check("the owner is welcomed when they arrive, as AJKR", textOnScreen("WELCOME BACK, AJKR") ~= nil)
 advance(3)
 check("then the Owner Console opens by itself", textOnScreen("OWNER CONSOLE") ~= nil)
 snapshot("owner-console")
@@ -4024,9 +4069,9 @@ check("no errors in photo mode", #errors == 0, errors[1])
 
 -- Build 51: the owner's headlines, countdowns and giveaways on every screen; the Gilt bar; levels;
 -- badges; the Gem Shop; the Badge Book.
-serverSays("Salute", { op = "headline", text = "WHO'S READY FOR CHAOS?!", by = "XxxXxxX_77797", style = "rainbow", seconds = 6 })
+serverSays("Salute", { op = "headline", text = "WHO'S READY FOR CHAOS?!", by = "AJKR", style = "rainbow", seconds = 6 })
 advance(0.6)
-check("a headline crosses the top of every screen, with who sent it", textOnScreen("WHO'S READY FOR CHAOS?!") ~= nil and textOnScreen("XxxXxxX_77797") ~= nil)
+check("a headline crosses the top of every screen, with who sent it (AJKR)", textOnScreen("WHO'S READY FOR CHAOS?!") ~= nil and textOnScreen("AJKR") ~= nil)
 snapshot("headline")
 advance(7)
 check("and goes after a few seconds", textOnScreen("WHO'S READY FOR CHAOS?!") == nil)
@@ -4042,14 +4087,14 @@ advance(0.5)
 serverSays("Salute", { op = "countdown", id = "", stop = true })
 advance(0.3)
 check("Stop everything takes a countdown away", textOnScreen("MEGA ABUSE IN") == nil)
-serverSays("Salute", { op = "giveaway", names = { "Ben", "Ada", "Cy" }, winner = "Ben", winnerId = 2, amount = 1000, by = "XxxXxxX_77797" })
+serverSays("Salute", { op = "giveaway", names = { "Ben", "Ada", "Cy" }, winner = "Ben", winnerId = 2, amount = 1000, by = "AJKR" })
 advance(0.3)
 check("a giveaway is drawn on every screen, free", textOnScreen("GIVEAWAY") ~= nil and textOnScreen("free for everyone") ~= nil)
 advance(4)
 check("and lands on the winner", textOnScreen("Ben wins 1000 Gilt!") ~= nil)
 snapshot("giveaway")
 advance(4)
-serverSays("Salute", { op = "giveaway", names = { "You" }, winner = LocalPlayer.DisplayName, winnerId = LocalPlayer.UserId, amount = 250, by = "XxxXxxX_77797" })
+serverSays("Salute", { op = "giveaway", names = { "You" }, winner = LocalPlayer.DisplayName, winnerId = LocalPlayer.UserId, amount = 250, by = "AJKR" })
 advance(4.5)
 check("the winner's own screen says YOU WON!", textOnScreen("YOU WON!") ~= nil)
 advance(4)
@@ -4627,7 +4672,12 @@ end)()
 		advance(3)
 		serverSays("Salute", { op = "abuseFX", id = "confetti", by = "AJKR", seconds = 4, v = 2, line = "Confetti budget: unlimited. 🎉" })
 		advance(5)
-		LocalPlayer:SetAttribute("Gilt", 5000)
+		-- (Each night earns its own Gilt.)
+		LocalPlayer:SetAttribute("Gilt", (tonumber(LocalPlayer:GetAttribute("Gilt")) or 0) + 4000)
+		if finale == "credits" then
+			-- (Seen by a guest.)
+			LocalPlayer:SetAttribute("MaisonAdmin", false)
+		end
 		abuse(false)
 		advance(1.5)
 		local waited = 1.5
@@ -4635,7 +4685,13 @@ end)()
 			advance(2)
 			waited += 2
 			check("the credits roll: starring the guest, and AJKR as the owner", textOnScreen("STARRING") ~= nil and textOnScreen("as  THE GUEST") ~= nil and textOnScreen("AJKR  as  THE OWNER") ~= nil)
+			check("...with the Gilt the guest earned tonight", textOnScreen("GILT EARNED TONIGHT") ~= nil)
+			local window = find(playerGui, function(d)
+				return d.Name == "Window" and d.Parent ~= nil and d.Parent.Name == "FinaleShow"
+			end)
+			check("...rolling in a window clear of the keys along the top and AJKR's farewell at the foot", window ~= nil and window.ClipsDescendants == true and window.Size.Y.Scale == 1 and window.Size.Y.Offset <= -150 and window.Position.Y.Offset > 0)
 			snapshot("finale-credits")
+			LocalPlayer:SetAttribute("MaisonAdmin", true)
 		elseif finale == "curtainCall" then
 			advance(0.6)
 			waited += 0.6
@@ -4658,6 +4714,24 @@ end)()
 		endings += 1
 	end
 	check("every one of the six finales ends on the guest's haul (with the effects they saw)", endings == #AbuseNights.Finales, endings)
+	-- On AJKR's own screen the credits never name AJKR twice; and Gilt that didn't change isn't
+	-- read out as "+0".
+	do
+		local creditsNight
+		for _, n in AbuseNights.List do
+			if n.finale == "credits" then
+				creditsNight = n.id
+				break
+			end
+		end
+		abuse(true, false, 11, creditsNight)
+		advance(8)
+		abuse(false)
+		advance(3.5)
+		check("on AJKR's screen: AJKR as the owner, and every guest as themselves", textOnScreen("AJKR  as  THE OWNER") ~= nil and textOnScreen("EVERY GUEST  as  THEMSELVES") ~= nil and textOnScreen("as  THE GUEST") == nil)
+		check("...and no '+0' Gilt line when none was earned", textOnScreen("GILT EARNED TONIGHT") == nil and textOnScreen("+0") == nil)
+		advance(26)
+	end
 	-- Every look of every effect: it plays, its own words on the screen.
 	local plain = {}
 	for id, list in AbuseNights.Variants do
@@ -4676,6 +4750,30 @@ end)()
 		end
 	end
 	check("every look of every effect plays, saying its own name", #plain == 0, plain[1])
+	-- Every effect OFF ends the effect's fireworks for good (no rocket climbing on after it, nothing
+	-- landing in a shell that's gone); a guest's own Salute fireworks go on regardless.
+	do
+		local Fireworks = module("StarterPlayer", "StarterPlayerScripts", "Client", "World", "Fireworks")
+		local function shells()
+			local f = (workspace:FindFirstChild("MaisonLocal") or workspace):FindFirstChild("Fireworks")
+			return if f then #f:GetChildren() else 0
+		end
+		AbuseFX.play("fireworks", 40)
+		advance(9)
+		local during = shells()
+		AbuseFX.play("stop")
+		advance(0.2)
+		local cleared = shells()
+		advance(8)
+		check("Every effect OFF clears the effect's fireworks at once, and none follow", during > 0 and cleared == 0 and shells() == 0 and Fireworks.live() == 0, string.format("%d %d %d %d", during, cleared, shells(), Fireworks.live()))
+		Fireworks.show(30, { scale = 1, music = false })
+		AbuseFX.play("fireworks", 30)
+		advance(6)
+		AbuseFX.play("stop")
+		advance(6)
+		check("...while a guest's Salute fireworks carry on", shells() > 0)
+		advance(40)
+	end
 	-- An effect switched on keeps the looks the server gave it.
 	workspace:SetAttribute("FxV_aurora", 3)
 	workspace:SetAttribute("Fx_aurora", os.time())

@@ -195,10 +195,14 @@ function AdminPanel.open(startPage: string?)
 			-- Effects for everyone first: the fun of the night, one tap each.
 			if type(pw.effects) == "table" then
 				Theme.text(scroll, "Effects for everyone" .. (if everywhere then " (every house)" else ""), 11, "caps", { LayoutOrder = add(), TextXAlignment = Enum.TextXAlignment.Left })
-				local fx = row(scroll, add(), "Play one now", "Every guest sees it round them; nobody sorting at a table is moved.", true)
-				local fx2 = row(scroll, add(), "", nil, true)
+				-- (Four to a row, as many rows as it takes: none runs off the panel.)
+				local fxRows: { Frame } = {}
 				for i, e in pw.effects do
-					local k = small(if i <= 4 then fx else fx2, tostring(e.name), true, function()
+					local r = (i - 1) // 4 + 1
+					if not fxRows[r] then
+						fxRows[r] = if r == 1 then row(scroll, add(), "Switch one on", "It stays on, for every guest, until you tap it again. Nobody sorting at a table is moved.", true) else row(scroll, add(), "", nil, true)
+					end
+					local k = small(fxRows[r], tostring(e.name), true, function()
 						send({ op = "fx", id = e.id, everywhere = everywhere }, e.name .. "!")
 					end)
 					k.Name = "Fx_" .. tostring(e.id)
@@ -270,7 +274,7 @@ function AdminPanel.open(startPage: string?)
 				send({ op = "stopAll", everywhere = everywhere }, "Everything stopped.")
 			end)
 			-- The big one: everything at once.
-			local abuse = row(scroll, add(), "Admin Abuse Night", "Every event at once with an intro and fireworks: double Gilt, Mythic luck, gold rain, a treasure hunt, giants, low gravity, the House Party, and a surprise effect for everyone every minute. Turn on Every house to run it in every server.", true)
+			local abuse = row(scroll, add(), "Admin Abuse Night", "A different night every time (pick one in the Owner Console): its own opening, surprises and finale, with double Gilt, double XP, Mythic luck and your gifts. With Every house on, every server gets the same night.", true)
 			for _, m in v.abuseMinutes or { 15, 30, 60 } do
 				small(abuse, tostring(m) .. " min", true, function()
 					send({ op = "abuse", minutes = m, everywhere = everywhere }, "Admin Abuse Night has begun" .. (if everywhere then " in every house." else "."))

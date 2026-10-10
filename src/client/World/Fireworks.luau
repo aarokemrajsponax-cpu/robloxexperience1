@@ -42,6 +42,7 @@ export type Options = {
 	watch: boolean?, -- this guest bought it: the camera goes out to watch at once
 	music: boolean?, -- play the show's score (default true)
 	act: string?, -- one act only, the whole show long ("hanabi", "liberty" or "majesty"): an effect's own looks
+	tag: string?, -- who it's for: "effect" (an Admin Abuse effect's), stopped with the rest by Fireworks.stop("effect")
 }
 
 local SPARK = "rbxasset://textures/particles/sparkles_main.dds" -- a star with a soft glow
@@ -220,17 +221,28 @@ local function emitter(parent: Instance, props: { [string]: any }): ParticleEmit
 	return e
 end
 
+-- The sky's generation: clearing it (Fireworks.stop) starts a new one, and what a shell still had
+-- to do (its second burst, a flash, its own clearing) is dropped with it, never done in a shell
+-- that's gone.
+local generation = 0
+
 local function later(seconds: number, fn: () -> ())
+	local born = generation
 	task.delay(seconds, function()
-		pcall(fn)
+		if born == generation then
+			pcall(fn)
+		end
 	end)
 end
 
 -- A shell's things are cleared once its last star is out.
 local function done(p: Instance, after: number)
+	local born = generation
 	task.delay(after, function()
-		p:Destroy()
-		live -= 1
+		if born == generation then
+			p:Destroy()
+			live -= 1
+		end
 	end)
 end
 
@@ -983,7 +995,11 @@ local function launch(kind: string, s: number, paint: Palette, from: Vector3, to
 	end
 	local rise = randomIn(1.4, 2.1)
 	TweenService:Create(rocket, TweenInfo.new(rise, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Position = top }):Play()
+	local born = generation
 	task.delay(rise, function()
+		if born ~= generation then
+			return -- (the sky was cleared while it climbed)
+		end
 		rocket:Destroy()
 		local burst = KINDS[kind] or kiku
 		local ok = pcall(burst, top, s, paint)
@@ -1000,12 +1016,15 @@ end
 ---------------------------------------------------------------------------------------------------
 
 -- A fan of shells side by side across the sky, in the colours given in turn.
-local function fan(kind: string, s: number, paints: { Palette }, height: number?)
+local function fan(kind: string, s: number, paints: { Palette }, height: number?, alive: (() -> boolean)?)
 	local x0, x1 = stage()
 	local n = #paints
 	local _, _, z0, z1 = stage()
 	local z = (z0 + z1) / 2
 	for i, paint in paints do
+		if alive and not alive() then
+			return
+		end
 		local x = x0 + (x1 - x0) * (i - 0.5) / n
 		local from, top = sites(x, height)
 		launch(kind, s, paint, Vector3.new(from.X, 0, z + randomIn(-10, 10)), Vector3.new(top.X, top.Y, z))
@@ -1234,6 +1253,24 @@ function Fireworks.isWatching(): boolean
 	return watching
 end
 
+-- (Kept out of sight for a while under a cinematic that has the screen and the camera: Admin
+-- Abuse's opening. It comes back by itself after.)
+local watchHiddenUntil = 0
+
+function Fireworks.hideWatch(seconds: number)
+	watchHiddenUntil = math.max(watchHiddenUntil, os.clock() + seconds)
+	local gui = watchGui
+	if gui then
+		gui.Enabled = false
+	end
+	task.delay(seconds, function()
+		local g = watchGui
+		if g and os.clock() >= watchHiddenUntil - 0.05 then
+			g.Enabled = true
+		end
+	end)
+end
+
 -- The key to watch (and to come back), low in the middle of the screen while a show is on.
 local function offerWatch(on: boolean)
 	if not on then
@@ -1259,6 +1296,7 @@ local function offerWatch(on: boolean)
 	gui.ResetOnSpawn = false
 	-- (Just under the sorting screen: a guest at a table isn't offered it over their pieces.)
 	gui.DisplayOrder = 17
+	gui.Enabled = os.clock() >= watchHiddenUntil
 	local k = Instance.new("TextButton")
 	k.Name = "Watch"
 	-- Clear of the notices at the top that announce the show, and of the Eat key below it.
@@ -1340,6 +1378,9 @@ local ACTS: { [string]: ActPlan } = {
 	majesty = { mix = { "kamuro", "brocade", "kiku", "crackle", "ring", "palm", "salute", "senrin", "willow", "yae", "botan" }, palettes = MAJESTY, pace = 2.4 },
 }
 
+-- (Thrown through a show that's been stopped, to end it where it stands.)
+local HALTED = "[Maison] fireworks halted"
+
 -- Fires the act's own shells at its pace until `untilT` (seconds since the show began), `busy` the
 -- pace's multiple (the finale's barrage).
 local function body(t0: number, untilT: number, s: number, act: ActPlan, busy: number, alive: () -> boolean)
@@ -1363,9 +1404,14 @@ local function body(t0: number, untilT: number, s: number, act: ActPlan, busy: n
 		end
 		task.wait(randomIn(0.55, 1.35) / math.max(0.25, rate))
 	end
+	if not alive() then
+		error(HALTED, 0)
+	end
 end
 
 local shows = 0
+-- The shows going on now, each with its tag and the way to stop it.
+local running: { [number]: { tag: string?, halt: (now: boolean) -> () } } = {}
 
 -- Plays a show of `seconds` over the whole estate.
 function Fireworks.show(seconds: number, options: Options?)
@@ -1385,120 +1431,153 @@ function Fireworks.show(seconds: number, options: Options?)
 		Fireworks.watch(true)
 	end
 	local stopped = false
+	local halted = false
 	local function alive(): boolean
-		return not stopped
+		return not stopped and not halted
 	end
-	task.delay(seconds + 7, function()
+	local ended = false
+	local function finish()
+		if ended then
+			return
+		end
+		ended = true
 		stopped = true
+		running[me] = nil
 		clearSky(false)
 		if showsOn == 0 then
 			offerWatch(false)
 			Fireworks.watch(false)
 			searchlights(false)
 		end
-	end)
+	end
+	-- Stopped: no more launches; it ends at once (the sky cleared) or once its last shells are out.
+	running[me] = {
+		tag = o.tag,
+		halt = function(now: boolean)
+			halted = true
+			if now then
+				finish()
+			else
+				task.delay(4, finish)
+			end
+		end,
+	}
+	task.delay(seconds + 7, finish)
 	task.spawn(function()
 		local t0 = os.clock()
+		-- (Every pause in the show ends it if it's been stopped meanwhile.)
+		local function pause(t: number)
+			task.wait(t)
+			if not alive() then
+				error(HALTED, 0)
+			end
+		end
 		local function at(tt: number)
 			local wait = tt - (os.clock() - t0)
 			if wait > 0 then
-				task.wait(wait)
+				pause(wait)
 			end
 		end
 		pcall(Sound.play, "fireworkTaiko", 0.9)
 		local acts: { Act } = if o.act and ACTS[o.act] then { { name = o.act, from = 0, to = seconds } :: Act } else Fireworks.acts(seconds)
-		for _, act in acts do
-			if not alive() then
-				return
-			end
-			at(act.from)
-			local plan = ACTS[act.name]
-			local len = act.to - act.from
-			music(me, act.name)
-			if act.name == "hanabi" then
-				-- The opening: three salutes across the sky, fountains of gold along the parapet, then
-				-- the first great chrysanthemum alone. (A short act keeps only the chrysanthemum.)
-				if len >= 10 then
-					task.spawn(fan, "salute", s, { { WHITE }, { WHITE }, { WHITE } })
-					task.spawn(fountains, s, math.min(6, len * 0.3))
-					task.wait(1.6)
+		local ok, why = pcall(function(): string?
+			for _, act in acts do
+				if not alive() then
+					return nil
 				end
-				local from, top = sites()
-				local x0, x1 = stage()
-				launch("kiku", s * 1.15, pick(HANABI), Vector3.new((x0 + x1) / 2, 0, from.Z), Vector3.new((x0 + x1) / 2, top.Y, top.Z))
-				if len >= 16 then
-					task.wait(1.4)
-					body(t0, act.from + len * 0.4, s, plan, 1, alive)
-					local f1, top1 = sites()
-					launch("heart", s, { SAKURA, ROSE }, f1, top1)
-					task.wait(0.8)
-					body(t0, act.from + len * 0.62, s, plan, 1, alive)
-					local f2, top2 = sites()
-					launch(pick({ "star", "smile", "rings" }), s, pick(HANABI), f2, top2)
-					local f3, top3 = sites()
-					launch("saturn", s, pick(HANABI), f3, top3)
-					task.wait(0.8)
-					body(t0, act.from + len * 0.86, s, plan, 1.2, alive)
-					task.spawn(fan, "kamuro", s, { GOLDEN, GOLDEN })
-				end
-				body(t0, act.to, s, plan, 1, alive)
-			elseif act.name == "liberty" then
-				-- The flag across the sky and two salutes; then mines, Niagara, the body, and a volley of
-				-- salutes to end it.
-				task.spawn(fan, "botan", s, { { RED }, { WHITE }, { BLUE }, { WHITE }, { RED } })
-				task.wait(1.2)
-				task.spawn(fan, "salute", s, { { WHITE }, { WHITE } })
-				body(t0, act.from + len * 0.3, s, plan, 1, alive)
-				local x0, x1, z0 = stage()
-				for i = 1, 5 do
-					mine(Vector3.new(x0 + (x1 - x0) * (i - 0.5) / 5, 0, z0 - 6), s, pick(LIBERTY))
-					task.wait(0.2)
-				end
-				body(t0, act.from + len * 0.45, s, plan, 1, alive)
-				task.spawn(niagara, s, math.min(10, len * 0.4))
-				body(t0, act.from + len * 0.85, s, plan, 1.2, alive)
-				task.spawn(fan, "salute", s, { { WHITE }, { WHITE }, { WHITE }, { WHITE }, { WHITE } })
-				body(t0, act.to, s, plan, 1, alive)
-			else
-				-- Majesty: searchlights, a canopy of gold, the barrage, the house's monogram, and the
-				-- last wall of golden willows.
-				searchlights(true)
-				if len >= 12 then
-					task.spawn(fan, "kamuro", s, { GOLDEN, GOLDEN, GOLDEN, GOLDEN, GOLDEN })
-					task.wait(1.5)
-				end
-				if not grand then
-					body(t0, act.to, s, plan, 1.2, alive)
-					continue
-				end
-				-- (The close takes its last five seconds.)
-				local close = math.max(act.from, act.to - 5)
-				body(t0, act.from + (close - act.from) * 0.35, s, plan, 1.3, alive)
-				body(t0, act.from + (close - act.from) * 0.6, s, plan, cfg().barrage, alive)
-				if len >= 14 then
-					local _, top = sites(nil, cfg().heightMax * 0.8)
+				at(act.from)
+				local plan = ACTS[act.name]
+				local len = act.to - act.from
+				music(me, act.name)
+				if act.name == "hanabi" then
+					-- The opening: three salutes across the sky, fountains of gold along the parapet, then
+					-- the first great chrysanthemum alone. (A short act keeps only the chrysanthemum.)
+					if len >= 10 then
+						task.spawn(fan, "salute", s, { { WHITE }, { WHITE }, { WHITE } }, nil, alive)
+						task.spawn(fountains, s, math.min(6, len * 0.3))
+						pause(1.6)
+					end
+					local from, top = sites()
 					local x0, x1 = stage()
-					launch("monogram", s * 1.1, GOLDEN, Vector3.new((x0 + x1) / 2, 0, top.Z), Vector3.new((x0 + x1) / 2, top.Y, top.Z))
-					task.spawn(fan, "ring", s, { { GOLD }, { WHITE } })
-					task.wait(1)
-				end
-				body(t0, close, s, plan, cfg().barrage, alive)
-				-- The close: a wall of gold willows over every roof, crackling, and the last salutes.
-				music(me, "close")
-				local wall: { Palette } = {}
-				for _ = 1, cfg().closingWillows do
-					table.insert(wall, GOLDEN)
-				end
-				task.spawn(fan, "willow", s * 1.2, wall, cfg().heightMax)
-				task.wait(0.6)
-				task.spawn(fan, "crackle", s, { GOLDEN, GOLDEN, GOLDEN })
-				task.wait(1.4)
-				task.spawn(fan, "salute", s * 1.2, { { WHITE }, { WHITE }, { WHITE } })
-				task.wait(1)
-				if me == conductor then
-					pcall(Sound.play, "crowdCheer", 0.8)
+					launch("kiku", s * 1.15, pick(HANABI), Vector3.new((x0 + x1) / 2, 0, from.Z), Vector3.new((x0 + x1) / 2, top.Y, top.Z))
+					if len >= 16 then
+						pause(1.4)
+						body(t0, act.from + len * 0.4, s, plan, 1, alive)
+						local f1, top1 = sites()
+						launch("heart", s, { SAKURA, ROSE }, f1, top1)
+						pause(0.8)
+						body(t0, act.from + len * 0.62, s, plan, 1, alive)
+						local f2, top2 = sites()
+						launch(pick({ "star", "smile", "rings" }), s, pick(HANABI), f2, top2)
+						local f3, top3 = sites()
+						launch("saturn", s, pick(HANABI), f3, top3)
+						pause(0.8)
+						body(t0, act.from + len * 0.86, s, plan, 1.2, alive)
+						task.spawn(fan, "kamuro", s, { GOLDEN, GOLDEN }, nil, alive)
+					end
+					body(t0, act.to, s, plan, 1, alive)
+				elseif act.name == "liberty" then
+					-- The flag across the sky and two salutes; then mines, Niagara, the body, and a volley of
+					-- salutes to end it.
+					task.spawn(fan, "botan", s, { { RED }, { WHITE }, { BLUE }, { WHITE }, { RED } }, nil, alive)
+					pause(1.2)
+					task.spawn(fan, "salute", s, { { WHITE }, { WHITE } }, nil, alive)
+					body(t0, act.from + len * 0.3, s, plan, 1, alive)
+					local x0, x1, z0 = stage()
+					for i = 1, 5 do
+						mine(Vector3.new(x0 + (x1 - x0) * (i - 0.5) / 5, 0, z0 - 6), s, pick(LIBERTY))
+						pause(0.2)
+					end
+					body(t0, act.from + len * 0.45, s, plan, 1, alive)
+					task.spawn(niagara, s, math.min(10, len * 0.4))
+					body(t0, act.from + len * 0.85, s, plan, 1.2, alive)
+					task.spawn(fan, "salute", s, { { WHITE }, { WHITE }, { WHITE }, { WHITE }, { WHITE } }, nil, alive)
+					body(t0, act.to, s, plan, 1, alive)
+				else
+					-- Majesty: searchlights, a canopy of gold, the barrage, the house's monogram, and the
+					-- last wall of golden willows.
+					searchlights(true)
+					if len >= 12 then
+						task.spawn(fan, "kamuro", s, { GOLDEN, GOLDEN, GOLDEN, GOLDEN, GOLDEN }, nil, alive)
+						pause(1.5)
+					end
+					if not grand then
+						body(t0, act.to, s, plan, 1.2, alive)
+						continue
+					end
+					-- (The close takes its last five seconds.)
+					local close = math.max(act.from, act.to - 5)
+					body(t0, act.from + (close - act.from) * 0.35, s, plan, 1.3, alive)
+					body(t0, act.from + (close - act.from) * 0.6, s, plan, cfg().barrage, alive)
+					if len >= 14 then
+						local _, top = sites(nil, cfg().heightMax * 0.8)
+						local x0, x1 = stage()
+						launch("monogram", s * 1.1, GOLDEN, Vector3.new((x0 + x1) / 2, 0, top.Z), Vector3.new((x0 + x1) / 2, top.Y, top.Z))
+						task.spawn(fan, "ring", s, { { GOLD }, { WHITE } }, nil, alive)
+						pause(1)
+					end
+					body(t0, close, s, plan, cfg().barrage, alive)
+					-- The close: a wall of gold willows over every roof, crackling, and the last salutes.
+					music(me, "close")
+					local wall: { Palette } = {}
+					for _ = 1, cfg().closingWillows do
+						table.insert(wall, GOLDEN)
+					end
+					task.spawn(fan, "willow", s * 1.2, wall, cfg().heightMax, alive)
+					pause(0.6)
+					task.spawn(fan, "crackle", s, { GOLDEN, GOLDEN, GOLDEN }, nil, alive)
+					pause(1.4)
+					task.spawn(fan, "salute", s * 1.2, { { WHITE }, { WHITE }, { WHITE } }, nil, alive)
+					pause(1)
+					if me == conductor then
+						pcall(Sound.play, "crowdCheer", 0.8)
+					end
 				end
 			end
+			return nil
+		end)
+		if not ok and why ~= HALTED then
+			warn("[Maison] fireworks: " .. tostring(why))
 		end
 		if me == conductor then
 			music(me, nil)
@@ -1506,8 +1585,25 @@ function Fireworks.show(seconds: number, options: Options?)
 	end)
 end
 
--- Clears the sky at once.
-function Fireworks.stop()
+-- Stops shows: those with `tag` ("effect": Admin Abuse's, for Every effect OFF), or with none
+-- given, every one. They launch nothing more. If no other show is left in the sky it's cleared at
+-- once; otherwise (a guest's Salute going on) the stopped ones' last shells simply burn out.
+function Fireworks.stop(tag: string?)
+	local others = false
+	for _, r in running do
+		if tag ~= nil and r.tag ~= tag then
+			others = true
+		end
+	end
+	for _, r in running do
+		if tag == nil or r.tag == tag then
+			r.halt(not others)
+		end
+	end
+	if others then
+		return
+	end
+	generation += 1
 	local f = (Workspace:FindFirstChild("MaisonLocal") or Workspace):FindFirstChild("Fireworks")
 	if f then
 		f:ClearAllChildren()

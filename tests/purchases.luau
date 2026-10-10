@@ -718,6 +718,17 @@ do
 	local promptsBefore = #prompts
 	local used = perk(ivy, { op = "decreeProclaim" })
 	check("written later, it's proclaimed without another purchase", used.ok and used.used and #prompts == promptsBefore and Perks.credits(profiles[ivy].Data, "decree") == 0)
+
+	-- The owner proclaims as AJKR, never by their Roblox username.
+	advance(60)
+	local own = guest("XxxXxxX_77797", Config.data.Admin.ownerUserId)
+	Perks.add(profiles[own].Data, "decree", 1)
+	perk(own, { op = "decreeCompose", text = "Welcome to my house" })
+	local ownBefore = countBroadcasts("decree")
+	local mine = perk(own, { op = "decreeProclaim" })
+	advance(1)
+	local said = lastBroadcast("decree")
+	check("the owner's decree is AJKR's, with no username shown", mine.ok and countBroadcasts("decree") == ownBefore + 1 and said.name == "AJKR" and said.user == "AJKR", said and (tostring(said.name) .. " / " .. tostring(said.user)))
 end
 
 ---------------------------------------------------------------------------------------------------
