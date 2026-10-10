@@ -10,6 +10,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
+local Names = require(ReplicatedStorage.Shared.Names)
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Root = require(script.Parent.Root)
@@ -56,9 +57,9 @@ function QuickDock.openTrade()
 	else
 		Theme.text(content, "Choose a guest. They're asked first; nothing changes hands until you both confirm.", 13, "body", { LayoutOrder = 2, TextColor3 = C.smoke, TextWrapped = true })
 		for i, p in others do
-			local k = Theme.key(content, p.DisplayName, i == 1, function()
+			local k = Theme.key(content, Names.of(p), i == 1, function()
 				Root.close(PICKER)
-				QuickDock.invite(p.UserId, p.DisplayName)
+				QuickDock.invite(p.UserId, Names.of(p))
 			end, 320)
 			k.LayoutOrder = 2 + i
 		end

@@ -15,6 +15,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
+local Names = require(ReplicatedStorage.Shared.Names)
 local CurioList = require(ReplicatedStorage.Shared.Curios)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Analytics = require(script.Parent.Analytics)
@@ -76,7 +77,7 @@ local function view(t: Trade, p: Player): { [string]: any }
 	return {
 		op = "trade",
 		id = t.id,
-		with = o.DisplayName,
+		with = Names.of(o),
 		withId = o.UserId,
 		mine = table.clone(t.offers[p]),
 		theirs = table.clone(t.offers[o]),
@@ -165,7 +166,7 @@ local function swap(t: Trade): (boolean, string?)
 	for _, side in sides do
 		local data = side[1]
 		data.trades = data.trades or {}
-		table.insert(data.trades, 1, { with = side[2].DisplayName, gave = side[3], got = side[4], at = now })
+		table.insert(data.trades, 1, { with = Names.of(side[2]), gave = side[3], got = side[4], at = now })
 		while #data.trades > TradeService.Settings.history do
 			table.remove(data.trades)
 		end
@@ -278,7 +279,7 @@ local function onAsk(player: Player, request: unknown): any
 		lastInvite[player][to] = now
 		invites[to] = invites[to] or {}
 		invites[to][player] = now
-		curioEvent:FireClient(to, { op = "tradeInvite", from = player.DisplayName, userId = player.UserId })
+		curioEvent:FireClient(to, { op = "tradeInvite", from = Names.of(player), userId = player.UserId })
 		return { ok = true }
 	elseif op == "accept" then
 		local from = target()
@@ -298,7 +299,7 @@ local function onAsk(player: Player, request: unknown): any
 		local from = target()
 		if from and invites[player] then
 			invites[player][from] = nil
-			curioEvent:FireClient(from, { op = "tradeEnd", id = 0, state = "cancelled", why = player.DisplayName .. " said no thank you." })
+			curioEvent:FireClient(from, { op = "tradeEnd", id = 0, state = "cancelled", why = Names.of(player) .. " said no thank you." })
 		end
 		return { ok = true }
 	elseif op == "block" or op == "report" then
@@ -325,7 +326,7 @@ local function onAsk(player: Player, request: unknown): any
 		return { ok = false, why = "You aren't trading." }
 	end
 	if op == "cancel" then
-		finish(t, "cancelled", player.DisplayName .. " cancelled the trade.")
+		finish(t, "cancelled", Names.of(player) .. " cancelled the trade.")
 		return { ok = true }
 	elseif op == "offer" then
 		local offer = readOffer(r.items)
@@ -417,7 +418,7 @@ function TradeService.start()
 	Players.PlayerRemoving:Connect(function(player: Player)
 		local t = trades[player]
 		if t then
-			finish(t, "cancelled", player.DisplayName .. " left the house.")
+			finish(t, "cancelled", Names.of(player) .. " left the house.")
 		end
 		invites[player] = nil
 		lastInvite[player] = nil

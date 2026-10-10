@@ -7,6 +7,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Names = require(ReplicatedStorage.Shared.Names)
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local Caps = require(ReplicatedStorage.Shared.Caps)
 local Config = require(ReplicatedStorage.Shared.Config)
@@ -94,7 +95,7 @@ function Dressing.nameplate(player: Player)
 	name.FontFace = Brand.Fonts.bodyMedium
 	name.TextScaled = true
 	name.TextColor3 = Brand.Colours.bone
-	name.Text = player.DisplayName
+	name.Text = Names.of(player)
 	name.Parent = plate
 	local sizeLimit = Instance.new("UITextSizeConstraint")
 	sizeLimit.MaxTextSize = 18

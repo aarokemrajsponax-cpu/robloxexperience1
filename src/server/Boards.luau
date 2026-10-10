@@ -12,6 +12,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserService = game:GetService("UserService")
 local Workspace = game:GetService("Workspace")
 
+local Names = require(ReplicatedStorage.Shared.Names)
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Nightly = require(ReplicatedStorage.Shared.Nightly)
@@ -84,7 +85,7 @@ local function resolveNames(ids: { number })
 		if names[id] == nil then
 			local online = Players:GetPlayerByUserId(id)
 			if online then
-				names[id] = online.DisplayName
+				names[id] = Names.of(online)
 			else
 				table.insert(missing, id)
 			end
@@ -98,7 +99,7 @@ local function resolveNames(ids: { number })
 	end)
 	if ok and infos then
 		for _, info in infos do
-			names[info.Id] = info.DisplayName
+			names[info.Id] = Names.forUser(info.Id, info.DisplayName, info.Username)
 		end
 	end
 end
@@ -373,8 +374,8 @@ function Boards.submit(player: Player, room: string, score: number)
 	if score <= 0 or not Private.records() then
 		return
 	end
-	names[player.UserId] = player.DisplayName
-	local entry = { userId = player.UserId, name = player.DisplayName, score = score }
+	names[player.UserId] = Names.of(player)
+	local entry = { userId = player.UserId, name = Names.of(player), score = score }
 	merge(room .. ":week", entry)
 	merge(room .. ":all", entry)
 	publish()
@@ -409,7 +410,7 @@ function Boards.submitRating(player: Player, rating: number)
 	if not Private.records() then
 		return
 	end
-	names[player.UserId] = player.DisplayName
+	names[player.UserId] = Names.of(player)
 	local value = math.floor(rating + 0.5)
 	local board = cache["library:all"]
 	for i = #board.entries, 1, -1 do
@@ -417,7 +418,7 @@ function Boards.submitRating(player: Player, rating: number)
 			table.remove(board.entries, i)
 		end
 	end
-	merge("library:all", { userId = player.UserId, name = player.DisplayName, score = value })
+	merge("library:all", { userId = player.UserId, name = Names.of(player), score = value })
 	publish()
 	task.spawn(function()
 		local store = allTimeStore("library")
@@ -432,11 +433,11 @@ end
 -- Records a scored Nightly attempt and returns where it stands tonight. Flagged results are
 -- kept off the public board until reviewed.
 function Boards.submitNightly(player: Player, key: string, score: number, finishedAt: number, flagged: boolean): Standing
-	names[player.UserId] = player.DisplayName
+	names[player.UserId] = Names.of(player)
 	local sortKey = Nightly.sortKey(score, finishedAt)
 	localNightly[player.UserId] = { score = score, sortKey = sortKey }
 	if not flagged and key == tonightKey then
-		merge("nightly:tonight", { userId = player.UserId, name = player.DisplayName, score = score }, Config.data.Nightly.boardTop)
+		merge("nightly:tonight", { userId = player.UserId, name = Names.of(player), score = score }, Config.data.Nightly.boardTop)
 		local board = cache["nightly:tonight"]
 		board.count = math.max(board.count or 0, #board.entries)
 		publish()

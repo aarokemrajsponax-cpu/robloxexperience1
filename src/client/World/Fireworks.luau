@@ -41,6 +41,7 @@ export type Options = {
 	finale: boolean?, -- end on the grand finale (default true)
 	watch: boolean?, -- this guest bought it: the camera goes out to watch at once
 	music: boolean?, -- play the show's score (default true)
+	act: string?, -- one act only, the whole show long ("hanabi", "liberty" or "majesty"): an effect's own looks
 }
 
 local SPARK = "rbxasset://textures/particles/sparkles_main.dds" -- a star with a soft glow
@@ -1405,7 +1406,8 @@ function Fireworks.show(seconds: number, options: Options?)
 			end
 		end
 		pcall(Sound.play, "fireworkTaiko", 0.9)
-		for _, act in Fireworks.acts(seconds) do
+		local acts: { Act } = if o.act and ACTS[o.act] then { { name = o.act, from = 0, to = seconds } :: Act } else Fireworks.acts(seconds)
+		for _, act in acts do
 			if not alive() then
 				return
 			end

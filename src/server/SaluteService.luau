@@ -7,6 +7,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Names = require(ReplicatedStorage.Shared.Names)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Salutes = require(ReplicatedStorage.Shared.Salutes)
@@ -55,7 +56,7 @@ function SaluteService.play(player: Player?, id: string, byName: string?)
 	if not Salutes.byId[id] then
 		return
 	end
-	local name = byName or (if player then player.DisplayName else "The house")
+	local name = byName or (if player then Names.of(player) else "The house")
 	table.insert(queue, { id = id, name = name, userId = if player then player.UserId else 0 })
 	if player then
 		Analytics.custom(player, "Salute given", nil, { salute = id })

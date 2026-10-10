@@ -22,6 +22,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
+local AbuseNights = require(ReplicatedStorage.Shared.AbuseNights)
+local Names = require(ReplicatedStorage.Shared.Names)
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
@@ -58,6 +60,7 @@ OwnerConsole.Categories = {
 local page = "abuse"
 local everywhere = true
 local minutes = 15
+local nightChoice: string? = nil -- the night chosen for the next Admin Abuse (nil: a surprise)
 local headlineStyle = "gold"
 local welcomed = false
 
@@ -263,7 +266,7 @@ function OwnerConsole.open(startPage: string?)
 	tg.Color = ColorSequence.new(rgb(255, 236, 170), rgb(230, 160, 50))
 	tg.Rotation = 90
 	tg.Parent = title
-	local status = label(header, "Welcome back, " .. player.Name .. ". Only you can see this.", 12, BODY, rgb(200, 190, 170), {
+	local status = label(header, "Welcome back, " .. Names.owner() .. ". Only you can see this.", 12, BODY, rgb(200, 190, 170), {
 		Name = "Status",
 		Position = UDim2.fromOffset(18, 44),
 		Size = UDim2.new(if narrow then 1 else 0.55, -24, 0, 18),
@@ -506,18 +509,65 @@ function OwnerConsole.open(startPage: string?)
 		if page == "abuse" then
 			local abuseUntil = v.abuseUntil
 			local onNow = type(abuseUntil) == "number" and abuseUntil > os.time()
-			local s = section("ADMIN ABUSE" .. scopeText(), "Every event at once: double Gilt, double XP, Mythic luck, gold rain, a treasure hunt, giants, low gravity, the House Party, and a surprise effect for everyone every minute.")
+			-- Tonight's show: one of the house's nights, by chance or by choice.
+			local list = AbuseNights.List
+			local chosen = if nightChoice then AbuseNights.byId[nightChoice] else nil
+			local playing = if onNow and type(v.abuseNight) == "string" then AbuseNights.byId[v.abuseNight] else nil
+			local s0 = section("TONIGHT'S SHOW", string.format("Every Admin Abuse is one of %d nights: its own opening, colours, realm, surprises, music and finale, and the same night in every server. Leave it to chance, or choose one.", #list) .. (if playing then "  Now: " .. playing.glyph .. " " .. playing.name .. "." else ""))
+			local row = Instance.new("Frame")
+			row.Name = "Nights"
+			row.BackgroundTransparency = 1
+			row.Size = UDim2.new(1, 0, 0, 0)
+			row.AutomaticSize = Enum.AutomaticSize.Y
+			row.LayoutOrder = 3
+			row.Parent = s0
+			local rl = Instance.new("UIListLayout")
+			rl.FillDirection = Enum.FillDirection.Horizontal
+			rl.Padding = UDim.new(0, 8)
+			rl.SortOrder = Enum.SortOrder.LayoutOrder
+			pcall(function()
+				(rl :: any).Wraps = true
+			end)
+			rl.Parent = row
+			local function stepNight(d: number)
+				local at = 0
+				for i, n in list do
+					if n.id == nightChoice then
+						at = i
+					end
+				end
+				local nextAt = if at == 0 then (if d > 0 then 1 else #list) else ((at - 1 + d) % #list) + 1
+				nightChoice = list[nextAt].id
+				render()
+			end
+			chipKey(row, 1, "🎲 SURPRISE ME", chosen == nil, accent, function()
+				nightChoice = nil
+				render()
+			end)
+			chipKey(row, 2, "◀", false, accent, function()
+				stepNight(-1)
+			end)
+			chipKey(row, 3, if chosen then chosen.glyph .. "  " .. chosen.name else "CHOOSE A NIGHT", chosen ~= nil, accent, function()
+				stepNight(1)
+			end)
+			chipKey(row, 4, "▶", false, accent, function()
+				stepNight(1)
+			end)
+			if chosen then
+				label(s0, chosen.line, 11, BODY, rgb(236, 226, 206), { LayoutOrder = 4, TextXAlignment = Enum.TextXAlignment.Left, AutomaticSize = Enum.AutomaticSize.Y, Size = UDim2.new(1, 0, 0, 0) })
+			end
+			local s = section("ADMIN ABUSE" .. scopeText(), "Double Gilt, double XP, Mythic luck, golden pieces at every table, the night's twist and hunts, your gifts to everyone, and the night's surprises.")
 			local g = grid(s)
 			for i, m in (v.abuseMinutes or { 15, 30, 60 }) :: { number } do
-				tile(g, i, accent, { id = "abuse" .. m, glyph = "💥", name = "Admin Abuse · " .. m .. " min", line = "The full night of chaos.", lit = onNow and v.mega ~= true, on = if onNow and v.mega ~= true and i == 1 then clock(abuseUntil - os.time()) else nil }, function()
-					send({ op = "abuse", minutes = m, everywhere = everywhere }, "ADMIN ABUSE" .. scopeText() .. "!")
+				tile(g, i, accent, { id = "abuse" .. m, glyph = "💥", name = "Admin Abuse · " .. m .. " min", line = if chosen then chosen.name else "A night of chaos.", lit = onNow and v.mega ~= true, on = if onNow and v.mega ~= true and i == 1 then clock(abuseUntil - os.time()) else nil }, function()
+					send({ op = "abuse", minutes = m, everywhere = everywhere, night = nightChoice }, "ADMIN ABUSE" .. scopeText() .. "!")
 				end)
 			end
-			local s2 = section("MEGA ABUSE" .. scopeText(), "Admin Abuse with every effect as a surprise, twice as often, a giveaway every few minutes, and the Mega Abuse Medal for everyone there.")
+			local s2 = section("MEGA ABUSE" .. scopeText(), "The night and more: extra surprises, faster, two at once more often, realm after realm, triple Gilt, a giveaway every few minutes, and the Mega Abuse Medal for everyone there.")
 			local g2 = grid(s2)
 			for i, m in (v.abuseMinutes or { 15, 30, 60 }) :: { number } do
 				tile(g2, i, rgb(190, 90, 255), { id = "mega" .. m, glyph = "🌋", name = "MEGA ABUSE · " .. m .. " min", line = "Everything. All of it. At once.", lit = onNow and v.mega == true }, function()
-					send({ op = "mega", minutes = m, everywhere = everywhere }, "MEGA ABUSE" .. scopeText() .. "!")
+					send({ op = "mega", minutes = m, everywhere = everywhere, night = nightChoice }, "MEGA ABUSE" .. scopeText() .. "!")
 				end)
 			end
 			local s3 = section("COUNTDOWNS" .. scopeText(), "Big numbers on every screen, then it happens. Great for getting everyone ready.")
@@ -527,7 +577,7 @@ function OwnerConsole.open(startPage: string?)
 				for _, secs in (v.countdownSeconds or { 10, 30, 60 }) :: { number } do
 					n += 1
 					tile(g3, n, rgb(255, 170, 60), { id = "count" .. tostring(c.id) .. secs, glyph = "⏱️", name = tostring(c.name) .. " in " .. secs .. "s", line = tostring(c.label) .. " " .. secs }, function()
-						send({ op = "countdown", id = c.id, seconds = secs, everywhere = everywhere }, "Counting down" .. scopeText() .. ".")
+						send({ op = "countdown", id = c.id, seconds = secs, everywhere = everywhere, night = nightChoice }, "Counting down" .. scopeText() .. ".")
 					end)
 				end
 			end
@@ -783,7 +833,7 @@ function OwnerConsole.welcome()
 	wg.Color = ColorSequence.new(rgb(255, 240, 180), rgb(230, 150, 40))
 	wg.Rotation = 90
 	wg.Parent = words
-	local sub = label(dim, player.Name .. " · every power in the house is yours", 18, BODY, rgb(236, 226, 206), { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.6), Size = UDim2.new(0.9, 0, 0, 24) })
+	local sub = label(dim, Names.owner() .. " · every power in the house is yours", 18, BODY, rgb(236, 226, 206), { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.6), Size = UDim2.new(0.9, 0, 0, 24) })
 	local scale = Instance.new("UIScale")
 	scale.Scale = 0.4
 	scale.Parent = crown

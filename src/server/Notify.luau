@@ -11,6 +11,7 @@ local MemoryStoreService = game:GetService("MemoryStoreService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Names = require(ReplicatedStorage.Shared.Names)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Rating = require(ReplicatedStorage.Shared.Rating)
 local Soiree = require(ReplicatedStorage.Shared.Soiree)
@@ -89,7 +90,7 @@ function Notify.rivalPassed(player: Player, rivalUserId: number, ahead: boolean)
 	if not ahead or rivalUserId == 0 or Players:GetPlayerByUserId(rivalUserId) then
 		return -- (a rival in the same house sees the plate turn instead)
 	end
-	task.spawn(Notify.send, rivalUserId, "rivalPassed", { name = player.DisplayName }, "nightly")
+	task.spawn(Notify.send, rivalUserId, "rivalPassed", { name = Names.of(player) }, "nightly")
 end
 
 -- Guests seen lately (so the Soirée and the Term's end reach them).

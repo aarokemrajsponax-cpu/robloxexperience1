@@ -1,14 +1,14 @@
 --!strict
--- The owner, on every screen, during Admin Abuse: their own avatar (the server builds it from the
--- owner's UserId and keeps it in ReplicatedStorage, so it's there whether or not the owner is in
--- this server), drawn two ways:
---   the hologram  a portrait that slides up at the foot of the screen, lit in gold, doing one of
---                 Roblox's own emotes, with a line ("cast METEOR SHOWER!"): every time the owner
---                 casts something. It sits above any panel, and over the sorting screen too.
---   the colossus  the owner as a giant over the house all night (behind it, facing the street),
---                 dancing, ringed in gold light, a crown of light over their head and searchlights
---                 sweeping up at them: seen from the street, the Terrace and any window. It rises
---                 from behind the house at the opening, and waves goodbye and sinks at the end.
+-- AJKR, on every screen, during Admin Abuse:
+--   the card      AJKR's crest (their name in gold under a crown: never a picture of their avatar,
+--                 which they change all the time) slides up at the foot of the screen with a line
+--                 ("Heads up! ☄️") every time a surprise lands. It sits above any panel, and over
+--                 the sorting screen too.
+--   the colossus  on the few nights made for it (shared/AbuseNights' `giant`), AJKR's own avatar
+--                 as a giant over the house (behind it, facing the street), dancing, ringed in gold
+--                 light, a crown of light over their head and searchlights sweeping up at them. The
+--                 server rebuilds the avatar from AJKR's look as it is now (every night, and every
+--                 few minutes), and a giant already standing changes with it.
 -- Nothing here is touched or kept: it's this screen's own copy.
 
 local Players = game:GetService("Players")
@@ -106,44 +106,85 @@ local function corner(parent: Instance, radius: UDim)
 	c.Parent = parent
 end
 
--- A portrait of the owner in a little 3D window: the avatar, waist up, lit warm and gold, doing
--- `pose`. Returns the window (or nil without the avatar).
-function OwnerCameo.portrait(parent: GuiObject, pose: string?): ViewportFrame?
-	local template = OwnerCameo.template()
-	if not template then
-		return nil
-	end
-	local vp = Instance.new("ViewportFrame")
-	vp.Name = "Portrait"
-	vp.BackgroundTransparency = 1
-	vp.Size = UDim2.fromScale(1, 1)
-	vp.Ambient = rgb(170, 150, 120)
-	vp.LightColor = rgb(255, 232, 190)
-	vp.LightDirection = Vector3.new(-0.5, -0.8, 0.6)
-	vp.Parent = parent
-	local world = Instance.new("WorldModel")
-	world.Parent = vp
-	local model = template:Clone()
-	model.Parent = world
-	local camera = Instance.new("Camera")
-	camera.FieldOfView = 28
-	camera.Parent = vp
-	vp.CurrentCamera = camera
-	pcall(function()
-		model:PivotTo(CFrame.new())
-		local head = model:FindFirstChild("Head")
-		local headY = if head and head:IsA("BasePart") then head.Position.Y else 1.5
-		-- (The avatar faces -Z: the camera stands in front of it, a little to one side and below the
-		-- eyes, looking up at the face: the owner looks down at you.)
-		camera.CFrame = CFrame.lookAt(Vector3.new(1.1, headY - 0.6, -7.2), Vector3.new(0, headY - 0.9, 0))
+-- AJKR's crest: their name in gold under a crown, in a dark disc with a gold ring, a gleam of light
+-- crossing it now and then. Fills `parent`. (In place of a picture of their avatar.)
+function OwnerCameo.crest(parent: GuiObject, tint: Color3?): Frame
+	local colour = tint or GOLD
+	local disc = Instance.new("Frame")
+	disc.Name = "Crest"
+	disc.BackgroundColor3 = Color3.new(1, 1, 1)
+	disc.Size = UDim2.fromScale(1, 1)
+	disc.ZIndex = parent.ZIndex + 1
+	disc.Parent = parent
+	corner(disc, UDim.new(1, 0))
+	local fill = Instance.new("UIGradient")
+	fill.Color = ColorSequence.new(colour:Lerp(Color3.new(0, 0, 0), 0.62), rgb(10, 8, 6))
+	fill.Rotation = 90
+	fill.Parent = disc
+	local inner = Instance.new("Frame")
+	inner.Name = "Ring"
+	inner.BackgroundTransparency = 1
+	inner.AnchorPoint = Vector2.new(0.5, 0.5)
+	inner.Position = UDim2.fromScale(0.5, 0.5)
+	inner.Size = UDim2.fromScale(0.86, 0.86)
+	inner.ZIndex = disc.ZIndex
+	inner.Parent = disc
+	corner(inner, UDim.new(1, 0))
+	local ring = Instance.new("UIStroke")
+	ring.Color = colour
+	ring.Thickness = 1.5
+	ring.Transparency = 0.25
+	ring.Parent = inner
+	local crown = Instance.new("TextLabel")
+	crown.Name = "Crown"
+	crown.BackgroundTransparency = 1
+	crown.AnchorPoint = Vector2.new(0.5, 0.5)
+	crown.Position = UDim2.fromScale(0.5, 0.27)
+	crown.Size = UDim2.fromScale(0.42, 0.28)
+	crown.TextScaled = true
+	crown.Text = "👑"
+	crown.ZIndex = disc.ZIndex + 1
+	crown.Parent = disc
+	local name = Instance.new("TextLabel")
+	name.Name = "Name"
+	name.BackgroundTransparency = 1
+	name.AnchorPoint = Vector2.new(0.5, 0.5)
+	name.Position = UDim2.fromScale(0.5, 0.6)
+	name.Size = UDim2.fromScale(0.78, 0.34)
+	name.FontFace = Font.fromEnum(Enum.Font.LuckiestGuy)
+	name.TextScaled = true
+	name.Text = string.upper(ownerName())
+	name.TextColor3 = Color3.new(1, 1, 1)
+	name.TextStrokeColor3 = rgb(30, 18, 4)
+	name.TextStrokeTransparency = 0.2
+	name.ZIndex = disc.ZIndex + 1
+	name.Parent = disc
+	local lit = Instance.new("UIGradient")
+	lit.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1):Lerp(colour, 0.3)),
+		ColorSequenceKeypoint.new(0.45, colour),
+		ColorSequenceKeypoint.new(0.5, Color3.new(1, 1, 1)),
+		ColorSequenceKeypoint.new(0.55, colour),
+		ColorSequenceKeypoint.new(1, colour:Lerp(Color3.new(0, 0, 0), 0.3)),
+	})
+	lit.Rotation = 20
+	lit.Offset = Vector2.new(-1, 0)
+	lit.Parent = name
+	-- The gleam crossing it, every couple of seconds.
+	task.spawn(function()
+		while name.Parent do
+			lit.Offset = Vector2.new(-1, 0)
+			TweenService:Create(lit, TweenInfo.new(0.9, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Offset = Vector2.new(1, 0) }):Play()
+			task.wait(2.2)
+		end
 	end)
-	emote(model, pose or "wave", false)
-	return vp
+	return disc
 end
 
 local cardToken = 0
 
--- The owner says something on every screen: the hologram slides up, does `pose`, says `line`.
+-- AJKR says something on every screen: the card slides up with their crest and says `line` (the
+-- giant, if it's up, does `pose`).
 function OwnerCameo.say(line: string, pose: string?, seconds: number?, accent: Color3?)
 	cardToken += 1
 	local my = cardToken
@@ -174,7 +215,7 @@ function OwnerCameo.say(line: string, pose: string?, seconds: number?, accent: C
 	edge.Color = tint
 	edge.Thickness = 2
 	edge.Parent = card
-	-- The hologram's window: a ring of gold, the portrait inside it, a scan of light over it.
+	-- The crest's window: a ring of gold, AJKR's crest inside it, a scan of light over it.
 	local ring = Instance.new("Frame")
 	ring.Name = "Ring"
 	ring.AnchorPoint = Vector2.new(0, 0.5)
@@ -191,19 +232,7 @@ function OwnerCameo.say(line: string, pose: string?, seconds: number?, accent: C
 	glow.Color = ColorSequence.new(rgb(90, 66, 30), rgb(20, 14, 8))
 	glow.Rotation = 90
 	glow.Parent = ring
-	local vp = OwnerCameo.portrait(ring, pose)
-	if vp then
-		corner(vp, UDim.new(1, 0))
-	else
-		-- (Without the avatar: the owner's crown.)
-		local crown = Instance.new("TextLabel")
-		crown.Name = "Crown"
-		crown.BackgroundTransparency = 1
-		crown.Size = UDim2.fromScale(1, 1)
-		crown.TextScaled = true
-		crown.Text = "👑"
-		crown.Parent = ring
-	end
+	OwnerCameo.crest(ring, tint)
 	local scan = Instance.new("Frame")
 	scan.Name = "Scan"
 	scan.BackgroundColor3 = tint
@@ -280,6 +309,9 @@ function OwnerCameo.say(line: string, pose: string?, seconds: number?, accent: C
 		ringEdge.Transparency = 0.15 + 0.25 * math.abs(math.sin(t * 3))
 		live.BackgroundTransparency = if math.floor(t * 2) % 2 == 0 then 0 else 0.35
 	end)
+	if pose then
+		pcall(OwnerCameo.gesture, pose)
+	end
 	task.delay(seconds or 4.5, function()
 		if cardToken ~= my or not card.Parent then
 			return
@@ -302,6 +334,7 @@ local colossusConn: RBXScriptConnection? = nil
 local colossusToken = 0
 local danceAt = 0
 local highlight: Highlight? = nil
+local colossusMega: boolean? = nil
 
 local function stage(): Instance
 	return Workspace:FindFirstChild("MaisonLocal") or Workspace
@@ -502,6 +535,7 @@ function OwnerCameo.colossus(on: boolean, rise: number?, mega: boolean?)
 	if colossus and colossus.Parent then
 		return
 	end
+	colossusMega = mega
 	local model = build(mega)
 	if not model then
 		return
@@ -558,6 +592,38 @@ function OwnerCameo.colossus(on: boolean, rise: number?, mega: boolean?)
 		end
 	end)
 end
+
+-- AJKR's look changed (the server rebuilt their avatar): a giant already standing takes it on,
+-- where it stands.
+function OwnerCameo.refresh()
+	local model = colossus
+	if not model or not model.Parent then
+		return
+	end
+	local mega = colossusMega
+	colossusToken += 1
+	colossus = nil
+	if colossusConn then
+		colossusConn:Disconnect()
+		colossusConn = nil
+	end
+	model:Destroy()
+	for _, p in colossusParts do
+		p:Destroy()
+	end
+	colossusParts = {}
+	highlight = nil
+	marquee = nil
+	OwnerCameo.colossus(true, nil, mega)
+end
+
+pcall(function()
+	ReplicatedStorage.ChildAdded:Connect(function(child: Instance)
+		if child.Name == AVATAR then
+			task.defer(OwnerCameo.refresh)
+		end
+	end)
+end)
 
 -- The giant does something for a moment (a point when the owner casts a surprise), then dances on.
 function OwnerCameo.gesture(name: string)

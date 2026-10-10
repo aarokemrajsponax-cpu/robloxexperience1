@@ -161,7 +161,7 @@ $Commands = @(
     @{ Label = '🪙 Gilt for everyone · 1000'; Json = '{"op":"giftAll","amount":1000}' }
     @{ Label = '👑 The Owner''s Token'; Json = '{"op":"token"}' }
     @{ Label = '📣 ADMIN ABUSE IN 5 MINUTES! DON''T LEAVE!'; Json = '{"op":"headline","preset":1,"style":"rainbow"}' }
-    @{ Label = '📣 THE OWNER IS IN THE SERVER! SAY HI!'; Json = '{"op":"headline","preset":2,"style":"rainbow"}' }
+    @{ Label = '📣 AJKR IS IN THE SERVER! SAY HI!'; Json = '{"op":"headline","preset":2,"style":"rainbow"}' }
     @{ Label = '📣 DOUBLE GILT FOR EVERYONE RIGHT NOW!'; Json = '{"op":"headline","preset":3,"style":"rainbow"}' }
     @{ Label = '📣 GIVEAWAY TIME! STAY IN THE SERVER!'; Json = '{"op":"headline","preset":4,"style":"rainbow"}' }
     @{ Label = '📣 WHO''S READY FOR CHAOS?!'; Json = '{"op":"headline","preset":5,"style":"rainbow"}' }
@@ -175,6 +175,76 @@ $Commands = @(
     @{ Label = '☀️ Time of day: Noon'; Json = '{"op":"clock","id":"noon"}' }
     @{ Label = '🌇 Time of day: Sunset'; Json = '{"op":"clock","id":"sunset"}' }
 )
+$Nights = @(
+    @{ Id = 'classic'; Name = 'THE CLASSIC' }
+    @{ Id = 'midasHeist'; Name = 'THE MIDAS HEIST' }
+    @{ Id = 'cosmicTakeover'; Name = 'COSMIC TAKEOVER' }
+    @{ Id = 'brainrotApocalypse'; Name = 'BRAINROT APOCALYPSE' }
+    @{ Id = 'hotDisco'; Name = 'HOT HOT DISCO' }
+    @{ Id = 'frostbiteFrenzy'; Name = 'FROSTBITE FRENZY' }
+    @{ Id = 'candyChaos'; Name = 'CANDY CHAOS' }
+    @{ Id = 'neonOverdrive'; Name = 'NEON OVERDRIVE' }
+    @{ Id = 'deepDive'; Name = 'THE DEEP DIVE' }
+    @{ Id = 'thunderPalace'; Name = 'THUNDER PALACE' }
+    @{ Id = 'meteorMadness'; Name = 'METEOR MADNESS' }
+    @{ Id = 'singularity'; Name = 'THE SINGULARITY' }
+    @{ Id = 'alienInvasion'; Name = 'ALIEN INVASION' }
+    @{ Id = 'royalBall'; Name = 'THE ROYAL BALL' }
+    @{ Id = 'aboveTheClouds'; Name = 'ABOVE THE CLOUDS' }
+    @{ Id = 'jungleRumble'; Name = 'JUNGLE RUMBLE' }
+    @{ Id = 'pharaohsGold'; Name = 'THE PHARAOH''S GOLD' }
+    @{ Id = 'cherryBlossom'; Name = 'CHERRY BLOSSOM NIGHT' }
+    @{ Id = 'retrowave'; Name = 'RETROWAVE ''86' }
+    @{ Id = 'theGlitch'; Name = 'THE GLITCH' }
+    @{ Id = 'rocketNight'; Name = 'ROCKET NIGHT' }
+    @{ Id = 'zeroGravityGala'; Name = 'ZERO GRAVITY GALA' }
+    @{ Id = 'confettiCannonade'; Name = 'THE CONFETTI CANNONADE' }
+    @{ Id = 'titanShowdown'; Name = 'TITAN SHOWDOWN' }
+    @{ Id = 'lightsOutParty'; Name = 'LIGHTS OUT PARTY' }
+    @{ Id = 'midnightAgent'; Name = 'MIDNIGHT AGENT' }
+    @{ Id = 'tornadoAlley'; Name = 'TORNADO ALLEY' }
+    @{ Id = 'goldRushHour'; Name = 'GOLD RUSH HOUR' }
+    @{ Id = 'fireAndIce'; Name = 'FIRE & ICE' }
+    @{ Id = 'bubbleMania'; Name = 'BUBBLE MANIA' }
+    @{ Id = 'rainbowRiot'; Name = 'RAINBOW RIOT' }
+    @{ Id = 'memeLords'; Name = 'RISE OF THE MEME LORDS' }
+    @{ Id = 'supernova'; Name = 'SUPERNOVA' }
+    @{ Id = 'endOfTheWorld'; Name = 'END OF THE WORLD PARTY' }
+    @{ Id = 'galaxyBrain'; Name = 'GALAXY BRAIN' }
+    @{ Id = 'wizardsTower'; Name = 'THE WIZARD''S TOWER' }
+    @{ Id = 'kingOfTheHouse'; Name = 'KING OF THE HOUSE' }
+    @{ Id = 'ajkrsArmy'; Name = 'AJKR''S ARMY' }
+    @{ Id = 'colossusRises'; Name = 'THE COLOSSUS RISES' }
+    @{ Id = 'arcadeMode'; Name = 'ARCADE MODE' }
+    @{ Id = 'stormChasers'; Name = 'STORM CHASERS' }
+    @{ Id = 'greenRoom'; Name = 'THE GREEN ROOM' }
+    @{ Id = 'vipLounge'; Name = 'THE VIP LOUNGE' }
+    @{ Id = 'carnivalNight'; Name = 'CARNIVAL NIGHT' }
+    @{ Id = 'hyperdrive'; Name = 'HYPERDRIVE' }
+    @{ Id = 'volcanoNight'; Name = 'VOLCANO NIGHT' }
+    @{ Id = 'snowGlobe'; Name = 'THE SNOW GLOBE' }
+    @{ Id = 'dreamland'; Name = 'DREAMLAND' }
+    @{ Id = 'finalBoss'; Name = 'THE FINAL BOSS' }
+    @{ Id = 'theHack'; Name = 'THE HACK' }
+    @{ Id = 'goldenAge'; Name = 'THE GOLDEN AGE' }
+    @{ Id = 'chaosTheory'; Name = 'CHAOS THEORY' }
+    @{ Id = 'masquerade'; Name = 'MIDNIGHT MASQUERADE' }
+    @{ Id = 'palmBeach'; Name = 'PALM BEACH NIGHTS' }
+    @{ Id = 'wildWest'; Name = 'WILD WEST SHOWDOWN' }
+)
+# Admin Abuse or Mega Abuse: which night (Enter for a surprise: the same in every server either way).
+function Add-Night([string]$Json, [string]$Asked) {
+    $obj = $Json | ConvertFrom-Json
+    $abuse = $obj.op -eq 'abuse' -or $obj.op -eq 'mega' -or ($obj.op -eq 'countdown' -and ($obj.id -eq 'abuse' -or $obj.id -eq 'mega'))
+    if (-not $abuse -or -not $Asked) { return $Json }
+    $n = 0
+    $pick = $null
+    if ([int]::TryParse($Asked, [ref]$n) -and $n -ge 1 -and $n -le $Nights.Count) { $pick = $Nights[$n - 1] }
+    else { $pick = $Nights | Where-Object { $_.Name -like ('*' + $Asked + '*') } | Select-Object -First 1 }
+    if (-not $pick) { return $Json }
+    $obj | Add-Member -NotePropertyName night -NotePropertyValue $pick.Id -Force
+    return ($obj | ConvertTo-Json -Compress)
+}
 if ($Testing) { return }
 [Console]::OutputEncoding = [Text.Encoding]::UTF8
 while ($true) {
@@ -193,6 +263,12 @@ while ($true) {
     $n = 0
     if ([int]::TryParse($choice, [ref]$n) -and $n -ge 1 -and $n -le $Commands.Count) {
         Write-Host ('  ' + $Commands[$n - 1].Label)
-        Send-Command $Commands[$n - 1].Json
+        $json = $Commands[$n - 1].Json
+        if ($json -match '\"op\":\"(abuse|mega|countdown)\"') {
+            for ($i = 0; $i -lt $Nights.Count; $i++) { Write-Host ('  {0,3}  {1}' -f ($i + 1), $Nights[$i].Name) -ForegroundColor DarkYellow }
+            $asked = Read-Host '  Which night? (Enter for a surprise, or its number or name)'
+            $json = Add-Night $json $asked
+        }
+        Send-Command $json
     }
 }

@@ -19,6 +19,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
+local Names = require(ReplicatedStorage.Shared.Names)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Layout = require(ReplicatedStorage.Shared.Layout)
 local ProductConfig = require(ReplicatedStorage.Shared.ProductConfig)
@@ -133,7 +134,7 @@ end
 local function publish()
 	local s = session
 	Workspace:SetAttribute("PianoPlayer", if s then s.player.UserId else nil)
-	Workspace:SetAttribute("PianoName", if s then s.player.DisplayName else nil)
+	Workspace:SetAttribute("PianoName", if s then Names.of(s.player) else nil)
 	Workspace:SetAttribute("PianoEnds", if s then Workspace:GetServerTimeNow() + math.max(0, s.ends - os.clock()) else nil)
 end
 
@@ -176,7 +177,7 @@ function Piano.sit(player: Player): (boolean, string?)
 		if s.player == player then
 			return true, nil
 		end
-		return false, string.format("%s is at the piano (%s left). Your time waits for you.", s.player.DisplayName, clock(s.ends - os.clock()))
+		return false, string.format("%s is at the piano (%s left). Your time waits for you.", Names.of(s.player), clock(s.ends - os.clock()))
 	end
 	local data = Profiles.get(player)
 	if not data then
@@ -238,7 +239,7 @@ function Piano.info(player: Player): { [string]: any }
 		ok = true,
 		seconds = math.floor(Piano.remaining(player, data)),
 		playing = s ~= nil and s.player == player,
-		busy = if s and s.player ~= player then s.player.DisplayName else nil,
+		busy = if s and s.player ~= player then Names.of(s.player) else nil,
 		busyLeft = if s and s.player ~= player then math.floor(s.ends - os.clock()) else nil,
 		offers = offers,
 		-- Today's free taste, still to be had (its length), and whether this guest plays free.

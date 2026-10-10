@@ -5,6 +5,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Names = require(ReplicatedStorage.Shared.Names)
 local Layout = require(ReplicatedStorage.Shared.Layout)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Voice = require(ReplicatedStorage.Shared.Voice)
@@ -173,7 +174,7 @@ local function menu(player: Player)
 	if usual then
 		table.insert(choices, 1, { id = "usual", text = V.memory.usual })
 	end
-	Dialogue.say(player, V.speaker, V.returning:gsub("{name}", player.DisplayName), choices, function(choice)
+	Dialogue.say(player, V.speaker, V.returning:gsub("{name}", Names.of(player)), choices, function(choice)
 		if choice == "usual" and usual then
 			Concierge.lead(player, usual)
 		elseif choice == "tour" then
@@ -235,7 +236,7 @@ function Concierge.greet(player: Player, firstVisit: boolean, nightlyPending: bo
 			end
 		end)
 	else
-		Dialogue.say(player, V.speaker, (V.returning:gsub("{name}", player.DisplayName)), nil, nil, 3.5)
+		Dialogue.say(player, V.speaker, (V.returning:gsub("{name}", Names.of(player))), nil, nil, 3.5)
 		-- One thing the house remembers (last time, a milestone, being missed).
 		local extra = 0
 		if remembered then

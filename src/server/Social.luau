@@ -8,6 +8,7 @@ local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Names = require(ReplicatedStorage.Shared.Names)
 local Boutique = require(ReplicatedStorage.Shared.Boutique)
 local GuestBook = require(ReplicatedStorage.Shared.GuestBook)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
@@ -88,10 +89,10 @@ function Social.admire(player: Player, userId: number): { [string]: any }
 	if fresh then
 		lastAdmire[key] = now
 		Memory.admired(target)
-		Remotes.event("Shop"):FireClient(target, { op = "admired", from = player.DisplayName })
+		Remotes.event("Shop"):FireClient(target, { op = "admired", from = Names.of(player) })
 		Analytics.custom(player, "Admired a guest", nil, nil)
 	end
-	return { ok = true, name = target.DisplayName, userId = target.UserId, pieces = Social.outfit(tdata), counted = fresh }
+	return { ok = true, name = Names.of(target), userId = target.UserId, pieces = Social.outfit(tdata), counted = fresh }
 end
 
 ---------------------------------------------------------------------------------------------------
@@ -145,7 +146,7 @@ function Social.sign(player: Player, data: Profiles.Data, line: number): { [stri
 		return { ok = false, why = "You've signed the book tonight. Come back tomorrow." }
 	end
 	data.memory.signedDay = today
-	local entry: Signature = { name = player.DisplayName, line = line, at = os.time() }
+	local entry: Signature = { name = Names.of(player), line = line, at = os.time() }
 	local s = store()
 	local written = false
 	if s then

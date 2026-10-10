@@ -7,6 +7,7 @@ local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Names = require(ReplicatedStorage.Shared.Names)
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local Root = require(script.Parent.Root)
 local Theme = require(script.Parent.Theme)
@@ -117,7 +118,7 @@ local function attach(other: Player, character: Model)
 	local p = Instance.new("ProximityPrompt")
 	p.Name = "AdmirePrompt"
 	p.ActionText = "Admire"
-	p.ObjectText = other.DisplayName
+	p.ObjectText = Names.of(other)
 	p.KeyboardKeyCode = Enum.KeyCode.R
 	p.GamepadKeyCode = Enum.KeyCode.ButtonL1
 	p.HoldDuration = 0

@@ -573,10 +573,13 @@ local defaults = {
 	-- for a group's experience, the group's owner) has them: nobody else, ever. In Studio, where
 	-- test players aren't the owner, the first player in the test stands in for the owner.
 	Admin = {
-		-- The owner: XxxXxxX_77797, and nobody else. Every owner's power checks this UserId on the
-		-- server (0 = whoever owns the experience on Roblox).
+		-- The owner (the Roblox account XxxXxxX_77797), and nobody else. Every owner's power checks
+		-- this UserId on the server (0 = whoever owns the experience on Roblox).
 		ownerUserId = 8722595934,
-		ownerName = "XxxXxxX_77797", -- the name on headlines sent from outside the game
+		-- The owner's name in the house: everything the owner does shows as this (headlines,
+		-- giveaways, gifts, the nameplate, chat, boards), never the Roblox username; and no other
+		-- guest can pass for it (shared/Names).
+		ownerName = "AJKR",
 		studioFirstPlayer = true, -- Studio only: the first test player counts as the owner
 		announceOwner = true, -- a headline in the owner's server when they arrive ("the owner is here!")
 		consoleOnJoin = true, -- the Owner Console opens by itself when the owner joins
@@ -587,12 +590,10 @@ local defaults = {
 		countdownAbuseMinutes = 15, -- how long Admin Abuse Night runs when a countdown starts it
 		giveawayGilt = { 250, 1000, 5000 }, -- a giveaway: one guest in each house wins this
 		tokenDay = true, -- the Owner's Token: once a day for each guest
-		-- Mega Abuse: Admin Abuse Night with every effect in the surprises, twice as often, and a
-		-- giveaway every few minutes.
-		megaSurpriseSeconds = 25,
+		-- Mega Abuse: the night's surprises and more, faster, and a giveaway every few minutes.
+		-- (Which night, which surprises and how often: shared/AbuseNights.)
 		megaGiveawaySeconds = 150,
 		megaGiveawayGilt = 500,
-		megaSurprises = { "confetti", "memeRain", "dance", "storm", "launch", "spin", "meteor", "blackHole", "aurora", "galaxy", "ufo", "blizzard", "earthquake", "rainbow", "bubbles", "goldWave", "fireIce", "blackout", "tornado", "fireworks", "titan", "zeroG", "ownerArmy" },
 		doubleXP = 2, -- Double XP: how much more XP
 		-- The holidays' hunts: how many pickups, the Gilt each, the curio for finding any (once per
 		-- hunt), and the one golden prize. `moves`: they run (the Turkey Trot).
@@ -660,19 +661,24 @@ local defaults = {
 			giftGilt = 40,
 			crownAfter = 3,
 			crownBonus = 150,
-			-- The realms of Mega Abuse, in turn (World/AbuseShow draws them); Admin Abuse keeps to
-			-- the first ("gilded"). Each lasts `realmSeconds`.
-			realms = { "cosmos", "candy", "midas", "neon", "abyss", "frost" },
+			-- The realms (World/AbuseShow draws them): every night has its own (shared/AbuseNights);
+			-- Mega Abuse goes on from it through these, in an order of the night's own, each for
+			-- about `realmSeconds` (less on a wild night, more on a calm one). `abuseRealm`: the
+			-- realm when there's no night (never, in the house as it is).
+			realms = { "cosmos", "candy", "midas", "neon", "abyss", "frost", "inferno", "heaven", "matrix", "sakura", "synthwave", "jungle", "thunder", "desert" },
 			abuseRealm = "gilded",
 			realmSeconds = 90,
+			-- AJKR's own avatar (the giant over the house, AJKR's army): "rare" shows it only on the
+			-- few nights made for it, "never" not at all, "always" every night. It's rebuilt from
+			-- AJKR's look as it is (what they're wearing in the server, else their Roblox avatar) at
+			-- every night's start and every `avatarRefreshSeconds`, so it's never out of date.
+			giant = "rare",
+			avatarRefreshSeconds = 300,
 			-- The finale when it ends: the owner's goodbye, fireworks and each guest's haul.
 			finaleSeconds = 9,
 		},
 		shockwaveRadius = 80, -- studs from the owner a shockwave reaches
 		launchSpeed = 150, -- how hard a rocket launch throws a guest up (studs a second)
-		-- During Admin Abuse Night, a surprise for the whole house this often (seconds), from these.
-		abuseSurpriseSeconds = 45,
-		abuseSurprises = { "confetti", "memeRain", "dance", "storm", "launch", "shockwave", "spin", "meteor", "aurora", "galaxy", "rainbow", "bubbles", "goldWave", "fireworks", "titan", "ufo", "ownerArmy" },
 		-- The time of day the owner can set (the house's own is midnight).
 		clocks = { midnight = 0.2, dawn = 6.3, noon = 12.5, sunset = 17.9 },
 		minutes = { 5, 15, 30 }, -- the event lengths offered
@@ -692,8 +698,7 @@ local defaults = {
 		curioHourFind = 2, -- the Night of Curios: how much likelier a find is (never above 0.95)
 		giftGilt = { 100, 500, 1000 }, -- what the owner can give
 		summonMinutes = 5, -- how long a summons to the owner's house stays open
-		-- Admin Abuse Night: every one of these at once, with fireworks, in one tap.
-		abuseEvents = { "goldenHour", "luckyHour", "doubleXP", "pageTurner", "goldRain", "treasure", "giants", "quickstep", "featherlight", "parade", "disco", "discoHouse", "curioHour" },
+		-- (Admin Abuse Night's events: its boosts, its night's twist and hunts: shared/AbuseNights.)
 		abuseMinutes = { 15, 30, 60 },
 		-- Scheduled events (set in the panel, kept in a DataStore, run by every server on time).
 		scheduleCheck = 30, -- seconds between each server's look at the schedule

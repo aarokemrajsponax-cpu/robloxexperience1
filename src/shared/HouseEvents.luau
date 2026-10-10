@@ -95,7 +95,7 @@ HouseEvents.Announcements = {
 -- each (or the owner's own words, filtered by Roblox first).
 HouseEvents.Headlines = {
 	"ADMIN ABUSE IN 5 MINUTES! DON'T LEAVE!",
-	"THE OWNER IS IN THE SERVER! SAY HI!",
+	"AJKR IS IN THE SERVER! SAY HI!",
 	"DOUBLE GILT FOR EVERYONE RIGHT NOW!",
 	"GIVEAWAY TIME! STAY IN THE SERVER!",
 	"WHO'S READY FOR CHAOS?!",
@@ -118,8 +118,8 @@ HouseEvents.Countdowns = {
 	{ id = "surprise", label = "SURPRISE IN", name = "A surprise effect" },
 } :: { Countdown }
 
--- Admin Abuse's realms (server/AbuseShow chooses, World/AbuseShow draws): Mega Abuse moves from
--- one to the next; Admin Abuse keeps to the gilded night.
+-- Admin Abuse's realms (server/AbuseShow chooses, World/AbuseShow draws): each night has its own
+-- (shared/AbuseNights); Mega Abuse moves from the night's realm to the next, and the next.
 export type Realm = { id: string, name: string, glyph: string, line: string }
 HouseEvents.Realms = {
 	{ id = "gilded", name = "THE GILDED NIGHT", glyph = "👑", line = "Double Gilt. Golden pieces. Gifts from the owner." },
@@ -129,6 +129,14 @@ HouseEvents.Realms = {
 	{ id = "neon", name = "NEON CITY", glyph = "🌃", line = "The lights are too bright. Good." },
 	{ id = "abyss", name = "THE ABYSS", glyph = "🐙", line = "The whole house is underwater. Hold your breath." },
 	{ id = "frost", name = "FROSTBITE", glyph = "❄️", line = "Snow in the hallways. Ice on the chandeliers." },
+	{ id = "inferno", name = "THE INFERNO", glyph = "🔥", line = "The floor is lava. (It isn't. Keep sorting.)" },
+	{ id = "heaven", name = "CLOUD NINE", glyph = "☁️", line = "The house is floating above the clouds." },
+	{ id = "matrix", name = "THE MAINFRAME", glyph = "💾", line = "The house is made of code. Somebody hacked it." },
+	{ id = "sakura", name = "CHERRY BLOSSOM", glyph = "🌸", line = "Petals everywhere. Everything is soft and pink." },
+	{ id = "synthwave", name = "RETROWAVE", glyph = "🌆", line = "Pink sun, purple sky, chrome everything." },
+	{ id = "jungle", name = "THE WILD", glyph = "🌿", line = "Vines in the ballroom. Fireflies in the library." },
+	{ id = "thunder", name = "THE STORM", glyph = "⛈️", line = "Lightning in every window." },
+	{ id = "desert", name = "THE GOLDEN SANDS", glyph = "🏜️", line = "A desert of gold dust and heat haze." },
 } :: { Realm }
 HouseEvents.realmById = {} :: { [string]: Realm }
 for _, r in HouseEvents.Realms do
@@ -149,6 +157,12 @@ end
 -- switched on, os.time). Every screen watches it: the effect stays on until it's gone.
 function HouseEvents.fxAttribute(id: string): string
 	return "Fx_" .. id
+end
+
+-- The Workspace attribute holding which of its looks a switched-on effect has (shared/AbuseNights'
+-- Variants): set just before its switch, the same in every server.
+function HouseEvents.fxVariantAttribute(id: string): string
+	return "FxV_" .. id
 end
 
 -- Easter Sunday in a year (the Gregorian calendar's computus): its month and day.

@@ -7,6 +7,7 @@ local PhysicsService = game:GetService("PhysicsService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
+local Names = require(ReplicatedStorage.Shared.Names)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Layout = require(ReplicatedStorage.Shared.Layout)
 local Nightly = require(ReplicatedStorage.Shared.Nightly)
@@ -72,7 +73,7 @@ local function payload(player: Player, data: Profiles.Data, visit: Visit): { [st
 	return {
 		op = "welcome",
 		firstVisit = visit.firstVisit,
-		displayName = player.DisplayName,
+		displayName = Names.of(player),
 		settings = data.settings,
 		overrides = LiveConfig.overrides,
 		nights = data.nights.count,

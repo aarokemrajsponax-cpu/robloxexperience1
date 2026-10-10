@@ -9,6 +9,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
+local Names = require(ReplicatedStorage.Shared.Names)
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local Catalogue = require(ReplicatedStorage.Shared.Catalogue)
 local Config = require(ReplicatedStorage.Shared.Config)
@@ -580,7 +581,7 @@ local function remember(a: Side, b: Side)
 					table.remove(recent, i)
 				end
 			end
-			table.insert(recent, 1, { userId = rival.UserId, name = rival.DisplayName, at = os.time() })
+			table.insert(recent, 1, { userId = rival.UserId, name = Names.of(rival), at = os.time() })
 			while #recent > 10 do
 				table.remove(recent)
 			end
@@ -594,7 +595,7 @@ local function startMatch(tbl: DuelTable, standIn: boolean)
 	for _, key in { "a", "b" } do
 		local player = tbl.seated[key]
 		if player then
-			sides[key] = newSide(key, tbl.halves[key], player, nil, player.DisplayName, ratingOf(player))
+			sides[key] = newSide(key, tbl.halves[key], player, nil, Names.of(player), ratingOf(player))
 		end
 	end
 	if standIn then
@@ -977,7 +978,7 @@ local function dropped(player: Player): boolean
 	match.sides[at.side].player = nil
 	local grace = Config.data.Library.disconnectGrace
 	match.away = { key = at.side, userId = player.UserId, untilAt = os.clock() + grace, pausedAt = os.clock() }
-	send(rival.player, { op = "rivalAway", seconds = grace, name = player.DisplayName })
+	send(rival.player, { op = "rivalAway", seconds = grace, name = Names.of(player) })
 	return true
 end
 
@@ -1043,7 +1044,7 @@ local function rejoin(player: Player)
 		})
 		send(player, { op = "rivalDeal", side = other(key), cases = match.cases, pieces = list(rival) })
 	end
-	send(rival.player, { op = "rivalBack", name = player.DisplayName })
+	send(rival.player, { op = "rivalBack", name = Names.of(player) })
 end
 
 local function onMessage(player: Player, message: unknown)
@@ -1083,7 +1084,7 @@ local function onMessage(player: Player, message: unknown)
 				tbl.match = nil
 				startMatch(tbl, false)
 			else
-				send(rival.player, { op = "rematchAsked", by = player.DisplayName })
+				send(rival.player, { op = "rematchAsked", by = Names.of(player) })
 			end
 		end
 	end

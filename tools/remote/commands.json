@@ -5,11 +5,344 @@
  "branch": "claude/nice-brown-a88p9r",
  "custom": "📣 Headline: my own words (type them in Words)",
  "advanced": "⚙️ Advanced: the command box",
+ "surprise": "🎲 Surprise me (a different night every time)",
+ "nights": [
+  {
+   "id": "classic",
+   "name": "THE CLASSIC",
+   "glyph": "👑",
+   "line": "The original. Everything you came for."
+  },
+  {
+   "id": "midasHeist",
+   "name": "THE MIDAS HEIST",
+   "glyph": "🪙",
+   "line": "AJKR cracked the vault. Everything is gold."
+  },
+  {
+   "id": "cosmicTakeover",
+   "name": "COSMIC TAKEOVER",
+   "glyph": "🪐",
+   "line": "The house has left the planet."
+  },
+  {
+   "id": "brainrotApocalypse",
+   "name": "BRAINROT APOCALYPSE",
+   "glyph": "🗿",
+   "line": "The memes have escaped. Nobody is safe."
+  },
+  {
+   "id": "hotDisco",
+   "name": "HOT HOT DISCO",
+   "glyph": "🪩",
+   "line": "The dance floor is on fire. Keep dancing."
+  },
+  {
+   "id": "frostbiteFrenzy",
+   "name": "FROSTBITE FRENZY",
+   "glyph": "❄️",
+   "line": "Winter came early. And it brought friends."
+  },
+  {
+   "id": "candyChaos",
+   "name": "CANDY CHAOS",
+   "glyph": "🍭",
+   "line": "Too much sugar. Way too much."
+  },
+  {
+   "id": "neonOverdrive",
+   "name": "NEON OVERDRIVE",
+   "glyph": "🌃",
+   "line": "Every light in the house turned up to eleven."
+  },
+  {
+   "id": "deepDive",
+   "name": "THE DEEP DIVE",
+   "glyph": "🐙",
+   "line": "The house sank. The party didn't."
+  },
+  {
+   "id": "thunderPalace",
+   "name": "THUNDER PALACE",
+   "glyph": "⛈️",
+   "line": "Two storms walk into a house."
+  },
+  {
+   "id": "meteorMadness",
+   "name": "METEOR MADNESS",
+   "glyph": "☄️",
+   "line": "Look up. No, really, look up."
+  },
+  {
+   "id": "singularity",
+   "name": "THE SINGULARITY",
+   "glyph": "🕳️",
+   "line": "Gravity is optional tonight."
+  },
+  {
+   "id": "alienInvasion",
+   "name": "ALIEN INVASION",
+   "glyph": "🛸",
+   "line": "They came in peace. Mostly."
+  },
+  {
+   "id": "royalBall",
+   "name": "THE ROYAL BALL",
+   "glyph": "👗",
+   "line": "Dress code: fabulous. Gravity: optional."
+  },
+  {
+   "id": "aboveTheClouds",
+   "name": "ABOVE THE CLOUDS",
+   "glyph": "☁️",
+   "line": "The house is floating above the clouds."
+  },
+  {
+   "id": "jungleRumble",
+   "name": "JUNGLE RUMBLE",
+   "glyph": "🌿",
+   "line": "Vines in the ballroom. Something is drumming."
+  },
+  {
+   "id": "pharaohsGold",
+   "name": "THE PHARAOH'S GOLD",
+   "glyph": "🏺",
+   "line": "The sands have shifted. The gold is real."
+  },
+  {
+   "id": "cherryBlossom",
+   "name": "CHERRY BLOSSOM NIGHT",
+   "glyph": "🌸",
+   "line": "Soft, pink, and a little bit magical."
+  },
+  {
+   "id": "retrowave",
+   "name": "RETROWAVE '86",
+   "glyph": "🌆",
+   "line": "Pink sun. Chrome everything. Maximum volume."
+  },
+  {
+   "id": "theGlitch",
+   "name": "THE GLITCH",
+   "glyph": "💾",
+   "line": "Something is wrong with the house. Everything is wrong. It's great."
+  },
+  {
+   "id": "rocketNight",
+   "name": "ROCKET NIGHT",
+   "glyph": "🚀",
+   "line": "3, 2, 1... everybody up."
+  },
+  {
+   "id": "zeroGravityGala",
+   "name": "ZERO GRAVITY GALA",
+   "glyph": "🌙",
+   "line": "A black-tie dinner. In orbit."
+  },
+  {
+   "id": "confettiCannonade",
+   "name": "THE CONFETTI CANNONADE",
+   "glyph": "🎉",
+   "line": "We bought too much confetti. All of it goes tonight."
+  },
+  {
+   "id": "titanShowdown",
+   "name": "TITAN SHOWDOWN",
+   "glyph": "🗿",
+   "line": "Two giant memes. One house. Pick a side."
+  },
+  {
+   "id": "lightsOutParty",
+   "name": "LIGHTS OUT PARTY",
+   "glyph": "🔦",
+   "line": "Who turned the lights off? (We did.)"
+  },
+  {
+   "id": "midnightAgent",
+   "name": "MIDNIGHT AGENT",
+   "glyph": "🕶️",
+   "line": "Your mission tonight: total chaos."
+  },
+  {
+   "id": "tornadoAlley",
+   "name": "TORNADO ALLEY",
+   "glyph": "🌪️",
+   "line": "Hold on to something. Anything."
+  },
+  {
+   "id": "goldRushHour",
+   "name": "GOLD RUSH HOUR",
+   "glyph": "💰",
+   "line": "Gold in the hallways. Gold on the stairs. Grab it."
+  },
+  {
+   "id": "fireAndIce",
+   "name": "FIRE & ICE",
+   "glyph": "🔥",
+   "line": "Half the house is burning. The other half is frozen."
+  },
+  {
+   "id": "bubbleMania",
+   "name": "BUBBLE MANIA",
+   "glyph": "🫧",
+   "line": "Pop them all. There are millions."
+  },
+  {
+   "id": "rainbowRiot",
+   "name": "RAINBOW RIOT",
+   "glyph": "🌈",
+   "line": "Every colour. All at once. On purpose."
+  },
+  {
+   "id": "memeLords",
+   "name": "RISE OF THE MEME LORDS",
+   "glyph": "🤡",
+   "line": "The memes have taken over the house. They seem nice."
+  },
+  {
+   "id": "supernova",
+   "name": "SUPERNOVA",
+   "glyph": "💥",
+   "line": "A star is about to go off. Front row seats."
+  },
+  {
+   "id": "endOfTheWorld",
+   "name": "END OF THE WORLD PARTY",
+   "glyph": "🌋",
+   "line": "If it's the end, we're ending it dancing."
+  },
+  {
+   "id": "galaxyBrain",
+   "name": "GALAXY BRAIN",
+   "glyph": "🧠",
+   "line": "Big thoughts. Bigger effects."
+  },
+  {
+   "id": "wizardsTower",
+   "name": "THE WIZARD'S TOWER",
+   "glyph": "🧙",
+   "line": "Somebody read the spellbook out loud."
+  },
+  {
+   "id": "kingOfTheHouse",
+   "name": "KING OF THE HOUSE",
+   "glyph": "👑",
+   "line": "AJKR, standing over the house. Bow."
+  },
+  {
+   "id": "ajkrsArmy",
+   "name": "AJKR'S ARMY",
+   "glyph": "🕺",
+   "line": "One AJKR wasn't enough."
+  },
+  {
+   "id": "colossusRises",
+   "name": "THE COLOSSUS RISES",
+   "glyph": "🗽",
+   "line": "Something enormous is standing behind the house."
+  },
+  {
+   "id": "arcadeMode",
+   "name": "ARCADE MODE",
+   "glyph": "🕹️",
+   "line": "Insert coin. Actually, it's free. Go."
+  },
+  {
+   "id": "stormChasers",
+   "name": "STORM CHASERS",
+   "glyph": "🌩️",
+   "line": "Breaking: every weather, at once, indoors."
+  },
+  {
+   "id": "greenRoom",
+   "name": "THE GREEN ROOM",
+   "glyph": "🍀",
+   "line": "Backstage, everything is green and lucky."
+  },
+  {
+   "id": "vipLounge",
+   "name": "THE VIP LOUNGE",
+   "glyph": "🥂",
+   "line": "Velvet ropes, gold lights. Everybody's on the list."
+  },
+  {
+   "id": "carnivalNight",
+   "name": "CARNIVAL NIGHT",
+   "glyph": "🎪",
+   "line": "Step right up! Everything spins!"
+  },
+  {
+   "id": "hyperdrive",
+   "name": "HYPERDRIVE",
+   "glyph": "🌠",
+   "line": "Punch it."
+  },
+  {
+   "id": "volcanoNight",
+   "name": "VOLCANO NIGHT",
+   "glyph": "🌋",
+   "line": "The floor is lava. (It isn't. Keep sorting.)"
+  },
+  {
+   "id": "snowGlobe",
+   "name": "THE SNOW GLOBE",
+   "glyph": "🔮",
+   "line": "Someone picked up the house and shook it."
+  },
+  {
+   "id": "dreamland",
+   "name": "DREAMLAND",
+   "glyph": "💤",
+   "line": "You fell asleep at the table. This is the dream."
+  },
+  {
+   "id": "finalBoss",
+   "name": "THE FINAL BOSS",
+   "glyph": "⚔️",
+   "line": "BOSS INCOMING. It's a meme. It's enormous."
+  },
+  {
+   "id": "theHack",
+   "name": "THE HACK",
+   "glyph": "💻",
+   "line": "AJKR typed one command. The house did the rest."
+  },
+  {
+   "id": "goldenAge",
+   "name": "THE GOLDEN AGE",
+   "glyph": "🏛️",
+   "line": "The house at its most magnificent."
+  },
+  {
+   "id": "chaosTheory",
+   "name": "CHAOS THEORY",
+   "glyph": "🎲",
+   "line": "No plan. No order. Everything."
+  },
+  {
+   "id": "masquerade",
+   "name": "MIDNIGHT MASQUERADE",
+   "glyph": "🎭",
+   "line": "Masks on. Lights low. Music loud."
+  },
+  {
+   "id": "palmBeach",
+   "name": "PALM BEACH NIGHTS",
+   "glyph": "🌴",
+   "line": "Pool party. In a mansion. At midnight."
+  },
+  {
+   "id": "wildWest",
+   "name": "WILD WEST SHOWDOWN",
+   "glyph": "🤠",
+   "line": "This house ain't big enough for all these effects."
+  }
+ ],
  "commands": [
   {
    "group": "Abuse",
    "label": "💥 Admin Abuse Night · 15 min",
-   "line": "Every event at once, with a surprise effect every minute.",
+   "line": "One of 55 nights, the same in every server: its own opening, realm, surprises and finale.",
    "command": {
     "op": "abuse",
     "minutes": 15
@@ -18,7 +351,7 @@
   {
    "group": "Abuse",
    "label": "💥 Admin Abuse Night · 30 min",
-   "line": "Every event at once, with a surprise effect every minute.",
+   "line": "One of 55 nights, the same in every server: its own opening, realm, surprises and finale.",
    "command": {
     "op": "abuse",
     "minutes": 30
@@ -27,7 +360,7 @@
   {
    "group": "Abuse",
    "label": "💥 Admin Abuse Night · 60 min",
-   "line": "Every event at once, with a surprise effect every minute.",
+   "line": "One of 55 nights, the same in every server: its own opening, realm, surprises and finale.",
    "command": {
     "op": "abuse",
     "minutes": 60
@@ -36,7 +369,7 @@
   {
    "group": "Abuse",
    "label": "🌋 MEGA ABUSE · 15 min",
-   "line": "Every effect as a surprise, giveaways, and the Mega Abuse Medal.",
+   "line": "The night and more: extra surprises, realm after realm, giveaways, the Mega Abuse Medal.",
    "command": {
     "op": "mega",
     "minutes": 15
@@ -45,7 +378,7 @@
   {
    "group": "Abuse",
    "label": "🌋 MEGA ABUSE · 30 min",
-   "line": "Every effect as a surprise, giveaways, and the Mega Abuse Medal.",
+   "line": "The night and more: extra surprises, realm after realm, giveaways, the Mega Abuse Medal.",
    "command": {
     "op": "mega",
     "minutes": 30
@@ -54,7 +387,7 @@
   {
    "group": "Abuse",
    "label": "🌋 MEGA ABUSE · 60 min",
-   "line": "Every effect as a surprise, giveaways, and the Mega Abuse Medal.",
+   "line": "The night and more: extra surprises, realm after realm, giveaways, the Mega Abuse Medal.",
    "command": {
     "op": "mega",
     "minutes": 60
@@ -639,7 +972,7 @@
   },
   {
    "group": "Message",
-   "label": "📣 THE OWNER IS IN THE SERVER! SAY HI!",
+   "label": "📣 AJKR IS IN THE SERVER! SAY HI!",
    "line": "Across the top of every screen.",
    "command": {
     "op": "headline",

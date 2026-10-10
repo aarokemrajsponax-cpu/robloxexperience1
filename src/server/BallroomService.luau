@@ -11,6 +11,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
+local Names = require(ReplicatedStorage.Shared.Names)
 local Catalogue = require(ReplicatedStorage.Shared.Catalogue)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Deal = require(ReplicatedStorage.Shared.Deal)
@@ -803,7 +804,7 @@ function BallroomService.seatGuest(player: Player, index: number): boolean
 		return false
 	end
 	seatOf[player] = index
-	s.name = player.DisplayName
+	s.name = Names.of(player)
 	s.model:SetAttribute("Occupant", player.UserId)
 	-- The guest's own default tab (Settings: "Ballroom parcels go to").
 	local data = Profiles.get(player)

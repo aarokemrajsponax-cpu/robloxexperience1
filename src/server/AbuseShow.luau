@@ -1,13 +1,15 @@
 --!strict
 -- Admin Abuse as a show, on the server:
---   the owner     the owner's own avatar, built here once (only a server can) and kept in
---                 ReplicatedStorage, so every screen can draw it: in the hologram that casts each
---                 surprise, and as the giant over the house. It's built from the owner's UserId, so
---                 it's there whether or not the owner is in this server.
---   the realms    Mega Abuse moves the house from realm to realm (the cosmos, a sugar rush, Midas
---                 gold, neon, the abyss, frost), each for a while; Admin Abuse keeps to one (gilded).
---                 The server only says which (Workspace's AbuseRealm, AbuseRealmAt); every screen
---                 draws it.
+--   the owner     AJKR's own avatar, built here (only a server can) and kept in ReplicatedStorage
+--                 for the few nights made for it (AJKR's giant over the house, AJKR's army). It's
+--                 never a stored picture: it's built again from AJKR's look as it is now: from what
+--                 they're wearing in this server if they're here, else from their Roblox avatar
+--                 (fetched again at the start of every night, and every few minutes), so a change of
+--                 outfit shows up by itself.
+--   the realms    each night has its realm (shared/AbuseNights); Mega Abuse moves from the night's
+--                 realm to the next, and the next, each for a while, at the same moments in every
+--                 server. The server only says which (Workspace's AbuseRealm, AbuseRealmAt); every
+--                 screen draws it.
 --   the gifts     every so often, a gift from the owner on every guest's screen, theirs to open
 --                 while it lasts. Opening it is checked here (their own gift, still open, Admin Abuse
 --                 still on) and pays Gilt; the third opened in one night gives the Admin's Crown
@@ -17,6 +19,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
+local AbuseNights = require(ReplicatedStorage.Shared.AbuseNights)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Curios = require(script.Parent.Curios)
@@ -51,18 +54,37 @@ AbuseShow.home = function(): Instance
 	return ReplicatedStorage
 end
 
--- (Set for tests: what Roblox's Players gives for a UserId.)
+-- AJKR's look as it is now: what they're wearing here if they're in this server, else their
+-- Roblox avatar. (Set for tests.)
+AbuseShow.describeOwner = function(userId: number): HumanoidDescription
+	local here = Players:GetPlayerByUserId(userId)
+	local character = here and here.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		local ok, worn = pcall(function()
+			return humanoid:GetAppliedDescription()
+		end)
+		if ok and worn then
+			return worn
+		end
+	end
+	return Players:GetHumanoidDescriptionFromUserId(userId)
+end
+
+-- (Set for tests: the avatar built from a look.)
 AbuseShow.makeAvatar = function(userId: number): Model?
-	local description = Players:GetHumanoidDescriptionFromUserId(userId)
-	return Players:CreateHumanoidModelFromDescription(description, Enum.HumanoidRigType.R15)
+	return Players:CreateHumanoidModelFromDescription(AbuseShow.describeOwner(userId), Enum.HumanoidRigType.R15)
 end
 
 local building = false
--- Builds the owner's avatar for every screen, if it isn't there yet. False if Roblox couldn't
+local builtAt = -math.huge
+-- Builds AJKR's avatar for every screen from their look now. `fresh`: again even if one is there
+-- (replacing it once the new one is ready; not more than once a minute). False if Roblox couldn't
 -- give it just now (tried again later).
-function AbuseShow.buildAvatar(): boolean
+function AbuseShow.buildAvatar(fresh: boolean?): boolean
 	local home = AbuseShow.home()
-	if home:FindFirstChild(AbuseShow.AVATAR) then
+	local old = home:FindFirstChild(AbuseShow.AVATAR)
+	if old and not (fresh and os.clock() - builtAt >= 60) then
 		return true
 	end
 	if building then
@@ -72,8 +94,9 @@ function AbuseShow.buildAvatar(): boolean
 	local ok, model = pcall(AbuseShow.makeAvatar, Config.data.Admin.ownerUserId)
 	building = false
 	if not ok or typeof(model) ~= "Instance" or not (model :: Instance):IsA("Model") then
-		return false
+		return old ~= nil
 	end
+	builtAt = os.clock()
 	local m = model :: Model
 	-- Only its look: no scripts, no sounds; nothing to bump into.
 	for _, d in m:GetDescendants() do
@@ -100,7 +123,12 @@ function AbuseShow.buildAvatar(): boolean
 	end
 	m.Name = AbuseShow.AVATAR
 	m:SetAttribute("UserId", Config.data.Admin.ownerUserId)
+	m:SetAttribute("BuiltAt", os.time())
+	-- (The new one in, then the old one out: a screen copying it always finds one.)
 	m.Parent = home
+	if old and old ~= m then
+		old:Destroy()
+	end
 	return true
 end
 
@@ -195,30 +223,43 @@ end
 ---------------------------------------------------------------------------------------------------
 local runToken = 0
 
--- Admin Abuse (or Mega Abuse) has begun: the realms in turn, and the gifts, while it's on.
-function AbuseShow.began(mega: boolean)
+-- Admin Abuse (or Mega Abuse) has begun: the night's realm (Mega Abuse: its realms in turn, at
+-- the same moments in every server, counted from `since`), and AJKR's gifts, while it's on.
+function AbuseShow.began(mega: boolean, plan: AbuseNights.Plan?, since: number?)
 	runToken += 1
 	local my = runToken
 	local c = cfg()
-	local realms: { string } = c.realms
-	if mega and #realms > 0 then
-		setRealm(realms[1])
-	else
-		setRealm(c.abuseRealm)
+	local start = since or os.time()
+	local realms: { string } = if plan then plan.realms elseif mega then c.realms else { c.abuseRealm }
+	local realmSeconds: number = math.max(10, if plan then plan.realmSeconds else c.realmSeconds)
+	local giftEvery: number = math.max(10, if plan then plan.giftEvery elseif mega then c.giftEvery.mega else c.giftEvery.abuse)
+	local function realmAt(now: number): string?
+		if #realms == 0 then
+			return nil
+		end
+		local k = math.floor(math.max(0, now - start) / realmSeconds)
+		return realms[k % #realms + 1]
+	end
+	local current = realmAt(os.time())
+	setRealm(current)
+	-- AJKR's own look, as it is now, for the nights that show it.
+	if plan and (plan.giant or table.find(plan.night.pool, "ownerArmy")) then
+		task.spawn(AbuseShow.buildAvatar, true)
 	end
 	task.spawn(function()
-		local i = 1
-		local nextRealm = os.time() + c.realmSeconds
-		local nextGift = os.time() + math.floor((if mega then c.giftEvery.mega else c.giftEvery.abuse) * 0.4)
+		local nextGift = start + math.floor(giftEvery * 0.4)
+		while nextGift < os.time() do
+			nextGift += giftEvery
+		end
 		while runToken == my and night() do
 			local now = os.time()
-			if mega and #realms > 1 and now >= nextRealm then
-				i = i % #realms + 1
-				setRealm(realms[i])
-				nextRealm = now + c.realmSeconds
+			local want = realmAt(now)
+			if want ~= current then
+				current = want
+				setRealm(want)
 			end
 			if now >= nextGift then
-				nextGift = now + (if mega then c.giftEvery.mega else c.giftEvery.abuse)
+				nextGift = now + giftEvery
 				for _, p in Players:GetPlayers() do
 					AbuseShow.offer(p)
 				end
@@ -245,15 +286,29 @@ function AbuseShow.start()
 		open[player] = nil
 		opened[player] = nil
 	end)
-	-- The owner's avatar: now, and again later if Roblox couldn't give it.
+	-- AJKR's avatar: now, and again every few minutes (their look as it is then), so it's never
+	-- out of date; and as soon as AJKR's own character appears here (what they're wearing now).
 	task.spawn(function()
-		for _ = 1, 20 do
-			if AbuseShow.buildAvatar() then
-				return
-			end
-			task.wait(60)
+		local first = true
+		while true do
+			pcall(AbuseShow.buildAvatar, not first)
+			first = false
+			task.wait(math.max(60, cfg().avatarRefreshSeconds or 300))
 		end
 	end)
+	local function watch(p: Player)
+		if p.UserId == Config.data.Admin.ownerUserId then
+			pcall(function()
+				p.CharacterAppearanceLoaded:Connect(function()
+					task.delay(1, AbuseShow.buildAvatar, true)
+				end)
+			end)
+		end
+	end
+	Players.PlayerAdded:Connect(watch)
+	for _, p in Players:GetPlayers() do
+		watch(p)
+	end
 end
 
 return AbuseShow

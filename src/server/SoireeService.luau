@@ -10,6 +10,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
+local Names = require(ReplicatedStorage.Shared.Names)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Soiree = require(ReplicatedStorage.Shared.Soiree)
 local Wardrobe = require(ReplicatedStorage.Shared.Wardrobe)
@@ -68,7 +69,7 @@ function SoireeService.record(player: Player, format: "ballroom" | "library", re
 		if m then
 			pcall(function()
 				m:UpdateAsync(tostring(player.UserId), function()
-					return player.DisplayName, score
+					return Names.of(player), score
 				end, KEEP_SECONDS)
 			end)
 		end

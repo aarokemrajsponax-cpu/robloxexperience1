@@ -47,14 +47,25 @@ headlines = re.findall(r'^\t"([^"]+)",$', block("Headlines"), re.M)
 if len(events) < 20 or len(effects) < 20 or len(headlines) < 8:
     sys.exit(f"lists look wrong: {len(events)} events, {len(effects)} effects, {len(headlines)} headlines")
 
+# Admin Abuse's nights (src/shared/AbuseNights.luau): the remote can choose one, or leave it to the
+# seed (a different night every time, the same in every server).
+nights_src = read("src/shared/AbuseNights.luau")
+NIGHT = re.compile(r'\{ id = "(\w+)", name = "([^"]+)", glyph = "([^"]+)", line = "([^"]*)"')
+nights = [dict(id=m[0], name=m[1], glyph=m[2], line=m[3]) for m in NIGHT.findall(nights_src)]
+if len(nights) < 50:
+    sys.exit(f"the nights look wrong: {len(nights)}")
+SURPRISE = "🎲 Surprise me (a different night every time)"
+def night_label(n):
+    return f"{n['glyph']} {n['name']}"
+
 commands = []
 def add(group, label, cmd, line=""):
     commands.append({"group": group, "label": label, "line": line, "command": cmd})
 
 for m in (15, 30, 60):
-    add("Abuse", f"💥 Admin Abuse Night · {m} min", {"op": "abuse", "minutes": m}, "Every event at once, with a surprise effect every minute.")
+    add("Abuse", f"💥 Admin Abuse Night · {m} min", {"op": "abuse", "minutes": m}, f"One of {len(nights)} nights, the same in every server: its own opening, realm, surprises and finale.")
 for m in (15, 30, 60):
-    add("Abuse", f"🌋 MEGA ABUSE · {m} min", {"op": "mega", "minutes": m}, "Every effect as a surprise, giveaways, and the Mega Abuse Medal.")
+    add("Abuse", f"🌋 MEGA ABUSE · {m} min", {"op": "mega", "minutes": m}, "The night and more: extra surprises, realm after realm, giveaways, the Mega Abuse Medal.")
 for what, name in (("abuse", "Admin Abuse"), ("mega", "MEGA ABUSE"), ("giveaway", "a giveaway"), ("surprise", "a surprise effect")):
     add("Abuse", f"⏱️ Countdown, then {name} (10s)", {"op": "countdown", "id": what, "seconds": 10}, "Ten seconds counted down on every screen first.")
 add("Abuse", "🛑 Stop everything", {"op": "stopAll"}, "Every event, surprise, countdown and effect, back to normal.")
@@ -81,7 +92,7 @@ CUSTOM = "📣 Headline: my own words (type them in Words)"
 ADVANCED = "⚙️ Advanced: the command box"
 
 with open(os.path.join(ROOT, "tools/remote/commands.json"), "w", encoding="utf-8") as f:
-    json.dump({"universe": UNIVERSE, "topic": TOPIC, "repo": REPO, "branch": BRANCH, "custom": CUSTOM, "advanced": ADVANCED, "commands": commands}, f, ensure_ascii=False, indent=1)
+    json.dump({"universe": UNIVERSE, "topic": TOPIC, "repo": REPO, "branch": BRANCH, "custom": CUSTOM, "advanced": ADVANCED, "surprise": SURPRISE, "nights": nights, "commands": commands}, f, ensure_ascii=False, indent=1)
 
 # The GitHub workflow ------------------------------------------------------------------------------
 def yaml_str(s):
@@ -109,6 +120,15 @@ for c in commands:
     lines.append("          - " + yaml_str(c["label"]))
 lines.append("          - " + yaml_str(CUSTOM))
 lines.append("          - " + yaml_str(ADVANCED))
+lines.append("      night:")
+lines.append("        description: \"Admin Abuse or Mega Abuse: which night (or a surprise)\"")
+lines.append("        type: choice")
+lines.append("        required: false")
+lines.append("        default: " + yaml_str(SURPRISE))
+lines.append("        options:")
+lines.append("          - " + yaml_str(SURPRISE))
+for n in nights:
+    lines.append("          - " + yaml_str(night_label(n)))
 lines.append("      words:")
 lines.append("        description: \"Your headline, for 'my own words' (140 letters; Roblox's filter checks it)\"")
 lines.append("        type: string")
@@ -136,6 +156,7 @@ lines.append("      - name: Send it to every server")
 lines.append("        env:")
 lines.append("          KEY: ${{ secrets.ROBLOX_OPEN_CLOUD_KEY }}")
 lines.append("          POWER: ${{ inputs.power }}")
+lines.append("          NIGHT: ${{ inputs.night }}")
 lines.append("          WORDS: ${{ inputs.words }}")
 lines.append("          STYLE: ${{ inputs.style }}")
 lines.append("          RAW: ${{ inputs.command }}")
@@ -168,6 +189,15 @@ script.append("    if ! printf '%s' \"${RAW}\" | jq -e 'type == \"object\" and (
 script.append("    CMD=$(printf '%s' \"${RAW}\" | jq -c .) ;;")
 script.append("  *) echo \"::error::Unknown choice.\"; exit 1 ;;")
 script.append("esac")
+script.append("# The night chosen, for Admin Abuse or Mega Abuse (a surprise: none, the command's id decides).")
+script.append("case \"${NIGHT:-}\" in")
+for n in nights:
+    script.append("  " + json.dumps(night_label(n), ensure_ascii=False) + ") NIGHT_ID=\"" + n["id"] + "\" ;;")
+script.append("  *) NIGHT_ID=\"\" ;;")
+script.append("esac")
+script.append("if [ -n \"$NIGHT_ID\" ] && printf '%s' \"$CMD\" | jq -e '.op == \"abuse\" or .op == \"mega\" or (.op == \"countdown\" and (.id == \"abuse\" or .id == \"mega\"))' >/dev/null; then")
+script.append("  CMD=$(printf '%s' \"$CMD\" | jq -c --arg n \"$NIGHT_ID\" '. + {night: $n}')")
+script.append("fi")
 script.append("if [ \"${#CMD}\" -gt 900 ]; then echo \"::error::That command is too long.\"; exit 1; fi")
 script.append("# Its own id (a re-run is a new command) and when it was sent.")
 script.append("RID=\"${GITHUB_RUN_ID:-0}-${GITHUB_RUN_ATTEMPT:-1}\"")
@@ -328,6 +358,23 @@ for c in commands:
         cmd = json.dumps(dict(c["command"], style="rainbow"), separators=(",", ":"), ensure_ascii=False)
     ps.append("    @{ Label = '" + label + "'; Json = '" + cmd.replace("'", "''") + "' }")
 ps.append(")")
+ps.append("$Nights = @(")
+for n in nights:
+    ps.append("    @{ Id = '" + n["id"] + "'; Name = '" + n["name"].replace("'", "''") + "' }")
+ps.append(")")
+ps.append("# Admin Abuse or Mega Abuse: which night (Enter for a surprise: the same in every server either way).")
+ps.append("function Add-Night([string]$Json, [string]$Asked) {")
+ps.append("    $obj = $Json | ConvertFrom-Json")
+ps.append("    $abuse = $obj.op -eq 'abuse' -or $obj.op -eq 'mega' -or ($obj.op -eq 'countdown' -and ($obj.id -eq 'abuse' -or $obj.id -eq 'mega'))")
+ps.append("    if (-not $abuse -or -not $Asked) { return $Json }")
+ps.append("    $n = 0")
+ps.append("    $pick = $null")
+ps.append("    if ([int]::TryParse($Asked, [ref]$n) -and $n -ge 1 -and $n -le $Nights.Count) { $pick = $Nights[$n - 1] }")
+ps.append("    else { $pick = $Nights | Where-Object { $_.Name -like ('*' + $Asked + '*') } | Select-Object -First 1 }")
+ps.append("    if (-not $pick) { return $Json }")
+ps.append("    $obj | Add-Member -NotePropertyName night -NotePropertyValue $pick.Id -Force")
+ps.append("    return ($obj | ConvertTo-Json -Compress)")
+ps.append("}")
 ps.append("if ($Testing) { return }")
 ps.append("[Console]::OutputEncoding = [Text.Encoding]::UTF8")
 ps.append("while ($true) {")
@@ -346,7 +393,13 @@ ps.append("    }")
 ps.append("    $n = 0")
 ps.append("    if ([int]::TryParse($choice, [ref]$n) -and $n -ge 1 -and $n -le $Commands.Count) {")
 ps.append("        Write-Host ('  ' + $Commands[$n - 1].Label)")
-ps.append("        Send-Command $Commands[$n - 1].Json")
+ps.append("        $json = $Commands[$n - 1].Json")
+ps.append("        if ($json -match '\\\"op\\\":\\\"(abuse|mega|countdown)\\\"') {")
+ps.append("            for ($i = 0; $i -lt $Nights.Count; $i++) { Write-Host ('  {0,3}  {1}' -f ($i + 1), $Nights[$i].Name) -ForegroundColor DarkYellow }")
+ps.append("            $asked = Read-Host '  Which night? (Enter for a surprise, or its number or name)'")
+ps.append("            $json = Add-Night $json $asked")
+ps.append("        }")
+ps.append("        Send-Command $json")
 ps.append("    }")
 ps.append("}")
 with open(os.path.join(ROOT, "remote.ps1"), "w", encoding="utf-8-sig") as f:
@@ -356,11 +409,11 @@ with open(os.path.join(ROOT, "remote.ps1"), "w", encoding="utf-8-sig") as f:
 page_path = os.path.join(ROOT, "tools/remote/owner-remote.html")
 if os.path.exists(page_path):
     page = read("tools/remote/owner-remote.html")
-    data = json.dumps({"universe": UNIVERSE, "topic": TOPIC, "repo": REPO, "branch": BRANCH, "custom": CUSTOM, "advanced": ADVANCED, "commands": commands}, ensure_ascii=False)
+    data = json.dumps({"universe": UNIVERSE, "topic": TOPIC, "repo": REPO, "branch": BRANCH, "custom": CUSTOM, "advanced": ADVANCED, "surprise": SURPRISE, "nights": nights, "commands": commands}, ensure_ascii=False)
     page, n = re.subn(r"^const DATA = .*;$", lambda _m: "const DATA = " + data + ";", page, count=1, flags=re.M)
     if n != 1:
         sys.exit("the page's DATA line wasn't found")
     with open(page_path, "w", encoding="utf-8") as f:
         f.write(page)
 
-print(f"{len(commands)} commands ({len(effects)} effects, {len(events)} events, {len(headlines)} headlines)")
+print(f"{len(commands)} commands ({len(effects)} effects, {len(events)} events, {len(headlines)} headlines, {len(nights)} nights)")

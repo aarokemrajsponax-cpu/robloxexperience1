@@ -4282,8 +4282,22 @@ end
 		local s = show()
 		return s and s:FindFirstChild(name)
 	end
-	local function abuse(on, mega)
+	local AbuseNights = module("ReplicatedStorage", "Shared", "AbuseNights")
+	-- (A seed that gives this night this opening, and this title if asked.)
+	local function seedFor(night, opening, title)
+		for seed = 1, 20000 do
+			local p = AbuseNights.plan(seed, false, 0, night)
+			if p.opening == opening and (title == nil or p.title == title) then
+				return seed
+			end
+		end
+		error("no seed for " .. night .. " " .. opening)
+	end
+	local classicSeed = seedFor("classic", "transmission", "slam")
+	local function abuse(on, mega, seed, night)
 		if on then
+			workspace:SetAttribute("AbuseSeed", seed or classicSeed)
+			workspace:SetAttribute("AbuseNight", night or "classic")
 			workspace:SetAttribute("AbuseUntil", workspace:GetServerTimeNow() + 900)
 			workspace:SetAttribute("AbuseSince", os.time())
 			workspace:SetAttribute("AbuseMega", if mega then true else nil)
@@ -4292,6 +4306,8 @@ end
 			workspace:SetAttribute("AbuseSince", nil)
 			workspace:SetAttribute("AbuseMega", nil)
 			workspace:SetAttribute("AbuseRealm", nil)
+			workspace:SetAttribute("AbuseSeed", nil)
+			workspace:SetAttribute("AbuseNight", nil)
 		end
 		signalOf(workspace, "attr:AbuseUntil"):Fire()
 	end
@@ -4303,36 +4319,46 @@ end
 	LocalPlayer:SetAttribute("Gilt", 1000)
 	advance(1)
 	-- The opening.
-	serverSays("Salute", { op = "abuseShow", stage = "intro", mega = false, by = "XxxXxxX_77797" })
+	serverSays("Salute", { op = "abuseShow", stage = "intro", mega = false, by = "AJKR", seed = classicSeed, night = "classic" })
 	abuse(true, false)
 	realm("gilded")
 	advance(1.2)
 	check("the opening: the screen goes cinematic, bars top and bottom", part("Opening") ~= nil and part("Opening"):FindFirstChild("BarTop") ~= nil)
-	check("...a transmission from the owner: their name, and what they're doing", textOnScreen("XXXXXXX_77797") ~= nil and textOnScreen("IS ABUSING THEIR POWERS") ~= nil and textOnScreen("INCOMING TRANSMISSION") ~= nil)
+	check("...a transmission from AJKR: their name, and what they're doing", textOnScreen("AJKR") ~= nil and textOnScreen("IS ABUSING THEIR POWERS") ~= nil and textOnScreen("INCOMING TRANSMISSION") ~= nil and textOnScreen("XXXXXXX") == nil)
+	check("...AJKR's crest in the ring, never a picture of their avatar", find(part("Opening"), function(d)
+		return d.Name == "Crest"
+	end) ~= nil and find(playerGui, function(d)
+		return d:IsA("ViewportFrame")
+	end) == nil)
 	check("...and nothing slammed onto the screen yet (that's the drop)", part("Opening"):FindFirstChild("Title") == nil)
 	snapshot("abuse-opening")
 	advance(Config.data.Admin.show.dropAt - 1.2 + 0.6)
 	local title = part("Opening") and part("Opening"):FindFirstChild("Title")
-	check("the drop: ADMIN ABUSE slammed onto the screen, and what it brings", title ~= nil and title.Text == "ADMIN ABUSE" and textOnScreen("GIFTS FROM THE OWNER") ~= nil)
+	check("the drop: ADMIN ABUSE slammed onto the screen, and what it brings", title ~= nil and title.Text == "ADMIN ABUSE" and textOnScreen("GIFTS FROM AJKR") ~= nil)
+	check("...and tonight's night by name over it", textOnScreen("TONIGHT:  THE CLASSIC") ~= nil)
 	check("...the transmission gone", textOnScreen("INCOMING TRANSMISSION") == nil)
 	advance(0.8)
 	snapshot("abuse-drop")
 	advance(Config.data.Admin.show.seconds)
 	check("after the opening the screen is the house's again", part("Opening") == nil)
-	check("and the owner says it's on", textOnScreen("ADMIN ABUSE IS ON") ~= nil)
+	check("and AJKR says what tonight is", textOnScreen("Tonight: THE CLASSIC!") ~= nil)
 	check("the gilded night's colours are over the house", Lighting:FindFirstChild("AbuseRealm") ~= nil)
 	advance(6)
 	-- A surprise cast by the owner: the hologram.
-	serverSays("Salute", { op = "abuseFX", id = "meteor", by = "XxxXxxX_77797", seconds = 18 })
+	serverSays("Salute", { op = "abuseFX", id = "meteor", by = "AJKR", seconds = 18, v = 2, line = "Heads up! ☄️" })
 	advance(1.2)
-	check("a surprise: the owner's hologram casts it (named, with its glyph)", textOnScreen("cast ☄️ METEOR SHOWER!") ~= nil and textOnScreen("THE OWNER") ~= nil)
+	local cardLine = find(playerGui, function(d)
+		return d:IsA("TextLabel") and d.Name == "Line" and d.Parent ~= nil and d.Parent.Name == "Cameo"
+	end)
+	check("a surprise: AJKR's card says it, in tonight's looks, with their line", cardLine ~= nil and string.find(cardLine.Text, "ICE COMETS!", 1, true) ~= nil and string.find(cardLine.Text, "Heads up!", 1, true) ~= nil and textOnScreen("THE OWNER") ~= nil, cardLine and cardLine.Text)
+	check("...and the effect wears those looks (ice comets, not plain meteors)", textOnScreen("ICE COMETS!") ~= nil)
 	snapshot("owner-cameo")
 	advance(5)
 	-- The owner's gift.
 	invokeResults.AbuseGiftAsk = { ok = true, gilt = 120, crown = true, count = 3 }
 	serverSays("Salute", { op = "abuseGift", id = 7, gilt = 40, crown = true, number = 3, seconds = 25 })
 	advance(1)
-	check("a gift from the owner: a card to open, saying what's in it", part("Gift") ~= nil and textOnScreen("A GIFT FROM XXXXXXX_77797") ~= nil and textOnScreen("+40 GILT") ~= nil and textOnScreen("THE ADMIN'S CROWN") ~= nil)
+	check("a gift from AJKR: a card to open, saying what's in it", part("Gift") ~= nil and textOnScreen("A GIFT FROM AJKR") ~= nil and textOnScreen("+40 GILT") ~= nil and textOnScreen("THE ADMIN'S CROWN") ~= nil)
 	snapshot("abuse-gift")
 	local before = #sent
 	check("the gift opens with a press", press("OPEN IT!"))
@@ -4356,7 +4382,7 @@ end
 	-- Mega Abuse: the realms.
 	abuse(false)
 	advance(12)
-	serverSays("Salute", { op = "abuseShow", stage = "intro", mega = true, by = "XxxXxxX_77797" })
+	serverSays("Salute", { op = "abuseShow", stage = "intro", mega = true, by = "AJKR", seed = classicSeed, night = "classic" })
 	abuse(true, true)
 	realm("cosmos")
 	advance(1.2)
@@ -4374,7 +4400,7 @@ end
 	advance(1)
 	snapshot("realm-shift")
 	advance(5)
-	for _, id in { "midas", "neon", "abyss", "frost" } do
+	for _, id in { "midas", "neon", "abyss", "frost", "inferno", "heaven", "matrix", "sakura", "synthwave", "jungle", "thunder", "desert" } do
 		realm(id)
 		advance(1)
 		check("the realm " .. id .. " is drawn", Lighting:FindFirstChild("AbuseRealm") ~= nil and textOnScreen(HouseEvents.realmById[id].name) ~= nil)
@@ -4417,16 +4443,26 @@ end
 	OwnerCameo.template = function()
 		return rig
 	end
-	OwnerCameo.say("cast ☄️ METEOR SHOWER!", "point", 4)
+	OwnerCameo.say("☄️ METEOR SHOWER!", "point", 4)
 	advance(1)
-	check("the hologram draws the owner's own avatar (in a 3D window)", find(playerGui, function(d)
-		return d:IsA("ViewportFrame") and d.Name == "Portrait"
+	check("the card shows AJKR's crest, never a picture of their avatar (even with the avatar there)", find(playerGui, function(d)
+		return d:IsA("ViewportFrame")
+	end) == nil and find(playerGui, function(d)
+		return d.Name == "Crest"
 	end) ~= nil)
 	advance(5)
-	abuse(true, true)
+	abuse(true, true, classicSeed, "classic")
+	advance(2.5)
+	check("on a night not made for it, no giant (AJKR's avatar is kept for a few nights)", workspace.MaisonLocal:FindFirstChild("OwnerColossus") == nil)
+	abuse(false)
+	advance(12)
+	abuse(true, true, 77, "kingOfTheHouse")
 	advance(2.5)
 	local giant = workspace.MaisonLocal:FindFirstChild("OwnerColossus")
-	check("the owner stands giant over the house, with ADMIN ABUSE in the sky over them", giant ~= nil and giant:FindFirstChild("Marquee", true) ~= nil)
+	check("on KING OF THE HOUSE, AJKR stands giant over the house, with ADMIN ABUSE in the sky over them", giant ~= nil and giant:FindFirstChild("Marquee", true) ~= nil)
+	check("...and their name over it is AJKR", textOnScreen("👑 AJKR 👑") ~= nil or find(workspace.MaisonLocal, function(d)
+		return d:IsA("TextLabel") and d.Text == "👑 AJKR 👑"
+	end) ~= nil)
 	AbuseFX.play("ownerArmy", 6)
 	advance(2.5)
 	local copies = 0
@@ -4475,6 +4511,204 @@ end
 	serverSays("Table", { op = "left" })
 	advance(3)
 	check("no errors in Build 54's show", #errors == 0, errors[1])
+end)()
+
+---------------------------------------------------------------------------------------------------
+-- Build 55: Admin Abuse's nights on this screen: every opening, every title, every finale, every
+-- realm, every look of every effect; the owner as AJKR (and nobody else); the chat
+---------------------------------------------------------------------------------------------------
+;(function()
+	local AbuseNights = module("ReplicatedStorage", "Shared", "AbuseNights")
+	local AbuseFX = module("StarterPlayer", "StarterPlayerScripts", "Client", "World", "AbuseFX")
+	local ChatNames = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "ChatNames")
+	local show = function()
+		return playerGui:FindFirstChild("MaisonAbuseShow")
+	end
+	local function abuse(on, mega, seed, night)
+		if on then
+			workspace:SetAttribute("AbuseSeed", seed)
+			workspace:SetAttribute("AbuseNight", night)
+			workspace:SetAttribute("AbuseUntil", workspace:GetServerTimeNow() + 900)
+			workspace:SetAttribute("AbuseSince", os.time())
+			workspace:SetAttribute("AbuseMega", if mega then true else nil)
+		else
+			for _, name in { "AbuseUntil", "AbuseSince", "AbuseMega", "AbuseRealm", "AbuseSeed", "AbuseNight" } do
+				workspace:SetAttribute(name, nil)
+			end
+		end
+		signalOf(workspace, "attr:AbuseUntil"):Fire()
+	end
+	-- (A night and seed for each opening, and for each title.)
+	local function find2(want)
+		for _, n in AbuseNights.List do
+			for seed = 1, 4000 do
+				local p = AbuseNights.plan(seed, false, 0, n.id)
+				if want(p) then
+					return seed, n.id, p
+				end
+			end
+		end
+		return nil
+	end
+	local errorsBefore = #errors
+	advance(15)
+	local shown = {}
+	for _, opening in AbuseNights.Openings do
+		local seed, night, p = find2(function(p)
+			return p.opening == opening
+		end)
+		if seed then
+			serverSays("Salute", { op = "abuseShow", stage = "intro", mega = false, by = "AJKR", seed = seed, night = night })
+			abuse(true, false, seed, night)
+			advance(1.5)
+			local root = show() and show():FindFirstChild("Opening")
+			local styled = root ~= nil and root:GetAttribute("Style") == opening
+			local spent = 0
+			if opening == "vault" or opening == "terminal" or opening == "hijack" or opening == "breaking" or opening == "countdown" or opening == "curtain" or opening == "warp" or opening == "portal" or opening == "transmission" or opening == "blackout" then
+				spent = 1.2
+				advance(spent)
+				snapshot("opening-" .. opening)
+			end
+			advance(Config.data.Admin.show.dropAt + 0.4 - 1.5 - spent)
+			local title = root and root:FindFirstChild("Title")
+			local named = textOnScreen("TONIGHT:") ~= nil and textOnScreen(p.night.name) ~= nil
+			if styled and title and named then
+				table.insert(shown, opening)
+			else
+				print("  (opening " .. opening .. ": styled " .. tostring(styled) .. ", title " .. tostring(title ~= nil) .. ", named " .. tostring(named) .. ")")
+			end
+			if opening == "skyCrack" or opening == "pulse" then
+				advance(0.3)
+				snapshot("opening-" .. opening .. "-drop")
+			end
+			advance(Config.data.Admin.show.seconds)
+			abuse(false)
+			advance(12)
+		end
+	end
+	check("every one of the twelve openings plays, its title lands, tonight's night named over it", #shown == #AbuseNights.Openings, #shown)
+	local titled = {}
+	for _, style in AbuseNights.TitleStyles do
+		local seed, night = find2(function(p)
+			return p.title == style
+		end)
+		if seed then
+			serverSays("Salute", { op = "abuseShow", stage = "intro", mega = true, by = "AJKR", seed = seed, night = night })
+			abuse(true, true, seed, night)
+			advance(Config.data.Admin.show.dropAt + 1)
+			local root = show() and show():FindFirstChild("Opening")
+			if root and root:GetAttribute("TitleStyle") == style and root:FindFirstChild("Title") then
+				titled[style] = true
+			end
+			if style == "stamp" or style == "split" or style == "flicker" then
+				snapshot("title-" .. style)
+			end
+			advance(Config.data.Admin.show.seconds)
+			abuse(false)
+			advance(12)
+		end
+	end
+	local titles = 0
+	for _ in titled do
+		titles += 1
+	end
+	check("every one of the six titles lands its own way", titles == #AbuseNights.TitleStyles, titles)
+	-- Every finale.
+	local ended = {}
+	for _, finale in AbuseNights.Finales do
+		local night
+		for _, n in AbuseNights.List do
+			if n.finale == finale then
+				night = n.id
+				break
+			end
+		end
+		abuse(true, false, 11, night)
+		advance(3)
+		serverSays("Salute", { op = "abuseFX", id = "confetti", by = "AJKR", seconds = 4, v = 2, line = "Confetti budget: unlimited. 🎉" })
+		advance(5)
+		LocalPlayer:SetAttribute("Gilt", 5000)
+		abuse(false)
+		advance(1.5)
+		local waited = 1.5
+		if finale == "credits" then
+			advance(2)
+			waited += 2
+			check("the credits roll: starring the guest, and AJKR as the owner", textOnScreen("STARRING") ~= nil and textOnScreen("as  THE GUEST") ~= nil and textOnScreen("AJKR  as  THE OWNER") ~= nil)
+			snapshot("finale-credits")
+		elseif finale == "curtainCall" then
+			advance(0.6)
+			waited += 0.6
+			snapshot("finale-curtain")
+		elseif finale == "goldShower" then
+			snapshot("finale-gold")
+		end
+		-- (Each finale shows the haul in its own time.)
+		while waited < 14 and not ended[finale] do
+			advance(0.5)
+			waited += 0.5
+			if textOnScreen("YOUR HAUL") ~= nil and textOnScreen("EFFECT WITNESSED") ~= nil then
+				ended[finale] = true
+			end
+		end
+		advance(12)
+	end
+	local endings = 0
+	for _ in ended do
+		endings += 1
+	end
+	check("every one of the six finales ends on the guest's haul (with the effects they saw)", endings == #AbuseNights.Finales, endings)
+	-- Every look of every effect: it plays, its own words on the screen.
+	local plain = {}
+	for id, list in AbuseNights.Variants do
+		for v, looks in list do
+			AbuseFX.play(id, 3, nil, nil, v)
+			advance(0.3)
+			if id ~= "shockwave" and id ~= "titan" and textOnScreen(looks.banner) == nil then
+				table.insert(plain, id .. " " .. v)
+			end
+			if (id == "meteor" and v == 2) or (id == "blackHole" and v == 4) or (id == "goldWave" and v == 2) or (id == "blizzard" and v == 2) then
+				snapshot("fx-" .. id .. "-" .. v)
+			end
+			advance(4)
+			AbuseFX.play("stop")
+			advance(1)
+		end
+	end
+	check("every look of every effect plays, saying its own name", #plain == 0, plain[1])
+	-- An effect switched on keeps the looks the server gave it.
+	workspace:SetAttribute("FxV_aurora", 3)
+	workspace:SetAttribute("Fx_aurora", os.time())
+	signalOf(workspace, "attr:Fx_aurora"):Fire()
+	advance(1)
+	check("an effect switched on wears the looks the server chose (the same in every server)", textOnScreen("GOLDEN AURORA") ~= nil)
+	workspace:SetAttribute("Fx_aurora", nil)
+	workspace:SetAttribute("FxV_aurora", nil)
+	signalOf(workspace, "attr:Fx_aurora"):Fire()
+	advance(3)
+	-- The ribbon over the sorting table names tonight's night.
+	abuse(true, false, 5, "midasHeist")
+	advance(2)
+	check("the ribbon at the table names tonight's night", (module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "ScreenFX").ribbonText(true) or ""):find("THE MIDAS HEIST", 1, true) ~= nil)
+	abuse(false)
+	advance(12)
+	-- The chat: AJKR in gold for the owner; a look-alike shown by their @username.
+	local realFor = ChatNames.playerFor
+	local fakeOwner = { UserId = Config.data.Admin.ownerUserId, DisplayName = "XxxXxxX_77797", Name = "XxxXxxX_77797", GetAttribute = function()
+		return nil
+	end }
+	local copycat = { UserId = 4242, DisplayName = "AJKR", Name = "copycat_99", GetAttribute = function()
+		return nil
+	end }
+	ChatNames.playerFor = function(id)
+		return if id == fakeOwner.UserId then fakeOwner elseif id == 4242 then copycat else nil
+	end
+	local ownerPrefix = ChatNames.prefix(fakeOwner.UserId, "XxxXxxX_77797:")
+	local copyPrefix = ChatNames.prefix(4242, "AJKR:")
+	check("in the chat the owner is AJKR, crowned in gold (never their username)", ownerPrefix ~= nil and string.find(ownerPrefix, "AJKR", 1, true) ~= nil and string.find(ownerPrefix, "XxxXxxX", 1, true) == nil, ownerPrefix)
+	check("...and a guest calling themselves AJKR is shown by their @username", copyPrefix == "@copycat_99:", copyPrefix)
+	ChatNames.playerFor = realFor
+	check("no errors in Build 55's nights", #errors == errorsBefore, errors[errorsBefore + 1])
 end)()
 
 ---------------------------------------------------------------------------------------------------

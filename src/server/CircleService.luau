@@ -12,6 +12,7 @@ local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Names = require(ReplicatedStorage.Shared.Names)
 local Circle = require(ReplicatedStorage.Shared.Circle)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
@@ -214,7 +215,7 @@ function CircleService.found(player: Player, data: Profiles.Data, choice: any): 
 		emblem = c.emblem,
 		colour = c.colour,
 		host = player.UserId,
-		members = { [tostring(player.UserId)] = { name = player.DisplayName, week = week, points = if data.circle.week == week then data.circle.points else 0 } },
+		members = { [tostring(player.UserId)] = { name = Names.of(player), week = week, points = if data.circle.week == week then data.circle.points else 0 } },
 		created = os.time(),
 	}
 	if s then
@@ -240,7 +241,7 @@ local function join(player: Player, data: Profiles.Data, id: string): { [string]
 			full = true
 			return nil
 		end
-		old.members[tostring(player.UserId)] = { name = player.DisplayName, week = data.circle.week, points = data.circle.points }
+		old.members[tostring(player.UserId)] = { name = Names.of(player), week = data.circle.week, points = data.circle.points }
 		return old
 	end)
 	if full then
@@ -289,12 +290,12 @@ function CircleService.invite(player: Player, data: Profiles.Data, userId: numbe
 	elseif not target or not targetData or target == player then
 		return { ok = false, why = "They've left the house." }
 	elseif targetData.circle.id ~= "" then
-		return { ok = false, why = target.DisplayName .. " is already in a Circle." }
+		return { ok = false, why = Names.of(target) .. " is already in a Circle." }
 	elseif count(r) >= cfg().maxMembers then
 		return { ok = false, why = "Your Circle is full." }
 	end
-	offer(target, { kind = "invite", circle = r.id, from = player.UserId, fromName = player.DisplayName, at = os.clock() })
-	send(target, { op = "circleOffer", kind = "invite", circle = r.id, from = player.UserId, fromName = player.DisplayName, name = Circle.name(choiceOf(r)), emblem = r.emblem, colour = r.colour })
+	offer(target, { kind = "invite", circle = r.id, from = player.UserId, fromName = Names.of(player), at = os.clock() })
+	send(target, { op = "circleOffer", kind = "invite", circle = r.id, from = player.UserId, fromName = Names.of(player), name = Circle.name(choiceOf(r)), emblem = r.emblem, colour = r.colour })
 	return { ok = true }
 end
 
@@ -312,8 +313,8 @@ function CircleService.request(player: Player, data: Profiles.Data, userId: numb
 	if not host then
 		return { ok = false, why = "The Circle's host isn't in the house tonight. Ask a member to invite you." }
 	end
-	offer(host, { kind = "request", circle = r.id, from = player.UserId, fromName = player.DisplayName, at = os.clock() })
-	send(host, { op = "circleOffer", kind = "request", circle = r.id, from = player.UserId, fromName = player.DisplayName, name = Circle.name(choiceOf(r)), emblem = r.emblem, colour = r.colour })
+	offer(host, { kind = "request", circle = r.id, from = player.UserId, fromName = Names.of(player), at = os.clock() })
+	send(host, { op = "circleOffer", kind = "request", circle = r.id, from = player.UserId, fromName = Names.of(player), name = Circle.name(choiceOf(r)), emblem = r.emblem, colour = r.colour })
 	return { ok = true }
 end
 
@@ -340,7 +341,7 @@ function CircleService.answer(player: Player, data: Profiles.Data, kind: string,
 	elseif not r or r.id ~= circle or r.host ~= player.UserId then
 		return { ok = false, why = "Only the host can say yes." }
 	elseif askerData.circle.id ~= "" then
-		return { ok = false, why = asker.DisplayName .. " is already in a Circle." }
+		return { ok = false, why = Names.of(asker) .. " is already in a Circle." }
 	end
 	local result = join(asker, askerData, circle)
 	if result.ok then
@@ -419,7 +420,7 @@ function CircleService.add(player: Player, source: string, detail: number?)
 			if not old.members[key] then
 				return nil -- they were removed elsewhere
 			end
-			old.members[key] = { name = player.DisplayName, week = week, points = total }
+			old.members[key] = { name = Names.of(player), week = week, points = total }
 			return old
 		end)
 		if r then
@@ -460,9 +461,9 @@ function CircleService.view(player: Player, data: Profiles.Data): { [string]: an
 		if od then
 			local theirs = CircleService.of(od)
 			if r and not theirs then
-				table.insert(guests, { userId = other.UserId, name = other.DisplayName, action = "invite" })
+				table.insert(guests, { userId = other.UserId, name = Names.of(other), action = "invite" })
 			elseif not r and theirs then
-				table.insert(guests, { userId = other.UserId, name = other.DisplayName, action = "request", circle = Circle.name(choiceOf(theirs)) })
+				table.insert(guests, { userId = other.UserId, name = Names.of(other), action = "request", circle = Circle.name(choiceOf(theirs)) })
 			end
 		end
 	end

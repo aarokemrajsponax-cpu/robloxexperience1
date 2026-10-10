@@ -22,6 +22,7 @@ local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Names = require(ReplicatedStorage.Shared.Names)
 local ProductConfig = require(ReplicatedStorage.Shared.ProductConfig)
 local Analytics = require(script.Parent.Parent.Analytics)
 local Profiles = require(script.Parent.Parent.Profiles)
@@ -110,7 +111,7 @@ local function start(buyer: Player, data: Profiles.Data, id: string?): boolean
 	local reward, rules = entry().Reward, entry().Rules
 	local rain: Active = {
 		id = id or HttpService:GenerateGUID(false),
-		by = buyer.DisplayName,
+		by = Names.of(buyer),
 		user = buyer.Name,
 		byUserId = buyer.UserId,
 		endsAt = os.clock() + reward.DurationSeconds,

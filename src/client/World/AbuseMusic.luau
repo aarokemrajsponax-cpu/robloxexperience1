@@ -30,7 +30,10 @@ function AbuseMusic.choose(): string
 	local ends = Workspace:GetAttribute("AbuseUntil")
 	if type(ends) == "number" and ends > Workspace:GetServerTimeNow() then
 		local since = Workspace:GetAttribute("AbuseSince")
-		best = if Workspace:GetAttribute("AbuseMega") == true then "mega" else "abuse"
+		-- (The night's own music, if the house has it: the cosmos, a brass band, spy jazz...)
+		local lists = assets().AbuseMusic or {}
+		local own = Workspace:GetAttribute("AbuseMusic")
+		best = if type(own) == "string" and type(lists[own]) == "table" then own elseif Workspace:GetAttribute("AbuseMega") == true then "mega" else "abuse"
 		bestAt = if type(since) == "number" then since else 0
 	end
 	for _, e in HouseEvents.Effects do
@@ -65,7 +68,17 @@ local function apply()
 	local lists = assets().AbuseMusic or {}
 	local songs = lists[want]
 	if want ~= "" and type(songs) == "table" and #songs > 0 then
-		stopCurrent = Sound.scoreList(songs, assets().AbuseMusicVolume or 0.85)
+		-- (Admin Abuse's night starts its playlist at a track of its own: not the same song first
+		-- every night.)
+		local first = Workspace:GetAttribute("AbuseTrack")
+		local order = songs
+		if type(first) == "number" and AbuseMusic.choose() == want and Workspace:GetAttribute("AbuseUntil") ~= nil then
+			order = {}
+			for i = 1, #songs do
+				table.insert(order, songs[((math.floor(first) - 1 + i - 1) % #songs) + 1])
+			end
+		end
+		stopCurrent = Sound.scoreList(order, assets().AbuseMusicVolume or 0.85)
 	end
 end
 
@@ -76,7 +89,7 @@ function AbuseMusic.holdFor(seconds: number)
 end
 
 function AbuseMusic.start()
-	for _, name in { "AbuseUntil", "AbuseMega", "AbuseSince" } do
+	for _, name in { "AbuseUntil", "AbuseMega", "AbuseSince", "AbuseMusic" } do
 		Workspace:GetAttributeChangedSignal(name):Connect(apply)
 	end
 	for _, e in HouseEvents.Effects do

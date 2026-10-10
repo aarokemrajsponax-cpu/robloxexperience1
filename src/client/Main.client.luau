@@ -207,6 +207,8 @@ start("Screen effects", function()
 	walkFX = ScreenFX.walkLayer()
 end)
 start("Abuse music", require(script.Parent.World.AbuseMusic).start)
+-- The chat: the owner speaks as AJKR (and nobody else can).
+start("Chat names", require(script.Parent.UI.ChatNames).start)
 -- Admin Abuse as a show: the opening, the owner's hologram and the giant, the realms, the owner's
 -- gifts and the finale (the camera only moves for a guest who isn't at a table).
 start("Admin Abuse's show", function()

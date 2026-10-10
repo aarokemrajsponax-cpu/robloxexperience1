@@ -80,7 +80,7 @@ on:
           - "🪙 Gilt for everyone · 1000"
           - "👑 The Owner's Token"
           - "📣 ADMIN ABUSE IN 5 MINUTES! DON'T LEAVE!"
-          - "📣 THE OWNER IS IN THE SERVER! SAY HI!"
+          - "📣 AJKR IS IN THE SERVER! SAY HI!"
           - "📣 DOUBLE GILT FOR EVERYONE RIGHT NOW!"
           - "📣 GIVEAWAY TIME! STAY IN THE SERVER!"
           - "📣 WHO'S READY FOR CHAOS?!"
@@ -95,6 +95,68 @@ on:
           - "🌇 Time of day: Sunset"
           - "📣 Headline: my own words (type them in Words)"
           - "⚙️ Advanced: the command box"
+      night:
+        description: "Admin Abuse or Mega Abuse: which night (or a surprise)"
+        type: choice
+        required: false
+        default: "🎲 Surprise me (a different night every time)"
+        options:
+          - "🎲 Surprise me (a different night every time)"
+          - "👑 THE CLASSIC"
+          - "🪙 THE MIDAS HEIST"
+          - "🪐 COSMIC TAKEOVER"
+          - "🗿 BRAINROT APOCALYPSE"
+          - "🪩 HOT HOT DISCO"
+          - "❄️ FROSTBITE FRENZY"
+          - "🍭 CANDY CHAOS"
+          - "🌃 NEON OVERDRIVE"
+          - "🐙 THE DEEP DIVE"
+          - "⛈️ THUNDER PALACE"
+          - "☄️ METEOR MADNESS"
+          - "🕳️ THE SINGULARITY"
+          - "🛸 ALIEN INVASION"
+          - "👗 THE ROYAL BALL"
+          - "☁️ ABOVE THE CLOUDS"
+          - "🌿 JUNGLE RUMBLE"
+          - "🏺 THE PHARAOH'S GOLD"
+          - "🌸 CHERRY BLOSSOM NIGHT"
+          - "🌆 RETROWAVE '86"
+          - "💾 THE GLITCH"
+          - "🚀 ROCKET NIGHT"
+          - "🌙 ZERO GRAVITY GALA"
+          - "🎉 THE CONFETTI CANNONADE"
+          - "🗿 TITAN SHOWDOWN"
+          - "🔦 LIGHTS OUT PARTY"
+          - "🕶️ MIDNIGHT AGENT"
+          - "🌪️ TORNADO ALLEY"
+          - "💰 GOLD RUSH HOUR"
+          - "🔥 FIRE & ICE"
+          - "🫧 BUBBLE MANIA"
+          - "🌈 RAINBOW RIOT"
+          - "🤡 RISE OF THE MEME LORDS"
+          - "💥 SUPERNOVA"
+          - "🌋 END OF THE WORLD PARTY"
+          - "🧠 GALAXY BRAIN"
+          - "🧙 THE WIZARD'S TOWER"
+          - "👑 KING OF THE HOUSE"
+          - "🕺 AJKR'S ARMY"
+          - "🗽 THE COLOSSUS RISES"
+          - "🕹️ ARCADE MODE"
+          - "🌩️ STORM CHASERS"
+          - "🍀 THE GREEN ROOM"
+          - "🥂 THE VIP LOUNGE"
+          - "🎪 CARNIVAL NIGHT"
+          - "🌠 HYPERDRIVE"
+          - "🌋 VOLCANO NIGHT"
+          - "🔮 THE SNOW GLOBE"
+          - "💤 DREAMLAND"
+          - "⚔️ THE FINAL BOSS"
+          - "💻 THE HACK"
+          - "🏛️ THE GOLDEN AGE"
+          - "🎲 CHAOS THEORY"
+          - "🎭 MIDNIGHT MASQUERADE"
+          - "🌴 PALM BEACH NIGHTS"
+          - "🤠 WILD WEST SHOWDOWN"
       words:
         description: "Your headline, for 'my own words' (140 letters; Roblox's filter checks it)"
         type: string
@@ -122,6 +184,7 @@ jobs:
         env:
           KEY: ${{ secrets.ROBLOX_OPEN_CLOUD_KEY }}
           POWER: ${{ inputs.power }}
+          NIGHT: ${{ inputs.night }}
           WORDS: ${{ inputs.words }}
           STYLE: ${{ inputs.style }}
           RAW: ${{ inputs.command }}
@@ -203,7 +266,7 @@ jobs:
             "🪙 Gilt for everyone · 1000") CMD='{"op":"giftAll","amount":1000}' ;;
             "👑 The Owner's Token") CMD='{"op":"token"}' ;;
             "📣 ADMIN ABUSE IN 5 MINUTES! DON'T LEAVE!") CMD=$(jq -cn --arg s "$STYLE" --argjson p 1 '{op:"headline",preset:$p,style:$s}') ;;
-            "📣 THE OWNER IS IN THE SERVER! SAY HI!") CMD=$(jq -cn --arg s "$STYLE" --argjson p 2 '{op:"headline",preset:$p,style:$s}') ;;
+            "📣 AJKR IS IN THE SERVER! SAY HI!") CMD=$(jq -cn --arg s "$STYLE" --argjson p 2 '{op:"headline",preset:$p,style:$s}') ;;
             "📣 DOUBLE GILT FOR EVERYONE RIGHT NOW!") CMD=$(jq -cn --arg s "$STYLE" --argjson p 3 '{op:"headline",preset:$p,style:$s}') ;;
             "📣 GIVEAWAY TIME! STAY IN THE SERVER!") CMD=$(jq -cn --arg s "$STYLE" --argjson p 4 '{op:"headline",preset:$p,style:$s}') ;;
             "📣 WHO'S READY FOR CHAOS?!") CMD=$(jq -cn --arg s "$STYLE" --argjson p 5 '{op:"headline",preset:$p,style:$s}') ;;
@@ -224,6 +287,68 @@ jobs:
               CMD=$(printf '%s' "${RAW}" | jq -c .) ;;
             *) echo "::error::Unknown choice."; exit 1 ;;
           esac
+          # The night chosen, for Admin Abuse or Mega Abuse (a surprise: none, the command's id decides).
+          case "${NIGHT:-}" in
+            "👑 THE CLASSIC") NIGHT_ID="classic" ;;
+            "🪙 THE MIDAS HEIST") NIGHT_ID="midasHeist" ;;
+            "🪐 COSMIC TAKEOVER") NIGHT_ID="cosmicTakeover" ;;
+            "🗿 BRAINROT APOCALYPSE") NIGHT_ID="brainrotApocalypse" ;;
+            "🪩 HOT HOT DISCO") NIGHT_ID="hotDisco" ;;
+            "❄️ FROSTBITE FRENZY") NIGHT_ID="frostbiteFrenzy" ;;
+            "🍭 CANDY CHAOS") NIGHT_ID="candyChaos" ;;
+            "🌃 NEON OVERDRIVE") NIGHT_ID="neonOverdrive" ;;
+            "🐙 THE DEEP DIVE") NIGHT_ID="deepDive" ;;
+            "⛈️ THUNDER PALACE") NIGHT_ID="thunderPalace" ;;
+            "☄️ METEOR MADNESS") NIGHT_ID="meteorMadness" ;;
+            "🕳️ THE SINGULARITY") NIGHT_ID="singularity" ;;
+            "🛸 ALIEN INVASION") NIGHT_ID="alienInvasion" ;;
+            "👗 THE ROYAL BALL") NIGHT_ID="royalBall" ;;
+            "☁️ ABOVE THE CLOUDS") NIGHT_ID="aboveTheClouds" ;;
+            "🌿 JUNGLE RUMBLE") NIGHT_ID="jungleRumble" ;;
+            "🏺 THE PHARAOH'S GOLD") NIGHT_ID="pharaohsGold" ;;
+            "🌸 CHERRY BLOSSOM NIGHT") NIGHT_ID="cherryBlossom" ;;
+            "🌆 RETROWAVE '86") NIGHT_ID="retrowave" ;;
+            "💾 THE GLITCH") NIGHT_ID="theGlitch" ;;
+            "🚀 ROCKET NIGHT") NIGHT_ID="rocketNight" ;;
+            "🌙 ZERO GRAVITY GALA") NIGHT_ID="zeroGravityGala" ;;
+            "🎉 THE CONFETTI CANNONADE") NIGHT_ID="confettiCannonade" ;;
+            "🗿 TITAN SHOWDOWN") NIGHT_ID="titanShowdown" ;;
+            "🔦 LIGHTS OUT PARTY") NIGHT_ID="lightsOutParty" ;;
+            "🕶️ MIDNIGHT AGENT") NIGHT_ID="midnightAgent" ;;
+            "🌪️ TORNADO ALLEY") NIGHT_ID="tornadoAlley" ;;
+            "💰 GOLD RUSH HOUR") NIGHT_ID="goldRushHour" ;;
+            "🔥 FIRE & ICE") NIGHT_ID="fireAndIce" ;;
+            "🫧 BUBBLE MANIA") NIGHT_ID="bubbleMania" ;;
+            "🌈 RAINBOW RIOT") NIGHT_ID="rainbowRiot" ;;
+            "🤡 RISE OF THE MEME LORDS") NIGHT_ID="memeLords" ;;
+            "💥 SUPERNOVA") NIGHT_ID="supernova" ;;
+            "🌋 END OF THE WORLD PARTY") NIGHT_ID="endOfTheWorld" ;;
+            "🧠 GALAXY BRAIN") NIGHT_ID="galaxyBrain" ;;
+            "🧙 THE WIZARD'S TOWER") NIGHT_ID="wizardsTower" ;;
+            "👑 KING OF THE HOUSE") NIGHT_ID="kingOfTheHouse" ;;
+            "🕺 AJKR'S ARMY") NIGHT_ID="ajkrsArmy" ;;
+            "🗽 THE COLOSSUS RISES") NIGHT_ID="colossusRises" ;;
+            "🕹️ ARCADE MODE") NIGHT_ID="arcadeMode" ;;
+            "🌩️ STORM CHASERS") NIGHT_ID="stormChasers" ;;
+            "🍀 THE GREEN ROOM") NIGHT_ID="greenRoom" ;;
+            "🥂 THE VIP LOUNGE") NIGHT_ID="vipLounge" ;;
+            "🎪 CARNIVAL NIGHT") NIGHT_ID="carnivalNight" ;;
+            "🌠 HYPERDRIVE") NIGHT_ID="hyperdrive" ;;
+            "🌋 VOLCANO NIGHT") NIGHT_ID="volcanoNight" ;;
+            "🔮 THE SNOW GLOBE") NIGHT_ID="snowGlobe" ;;
+            "💤 DREAMLAND") NIGHT_ID="dreamland" ;;
+            "⚔️ THE FINAL BOSS") NIGHT_ID="finalBoss" ;;
+            "💻 THE HACK") NIGHT_ID="theHack" ;;
+            "🏛️ THE GOLDEN AGE") NIGHT_ID="goldenAge" ;;
+            "🎲 CHAOS THEORY") NIGHT_ID="chaosTheory" ;;
+            "🎭 MIDNIGHT MASQUERADE") NIGHT_ID="masquerade" ;;
+            "🌴 PALM BEACH NIGHTS") NIGHT_ID="palmBeach" ;;
+            "🤠 WILD WEST SHOWDOWN") NIGHT_ID="wildWest" ;;
+            *) NIGHT_ID="" ;;
+          esac
+          if [ -n "$NIGHT_ID" ] && printf '%s' "$CMD" | jq -e '.op == "abuse" or .op == "mega" or (.op == "countdown" and (.id == "abuse" or .id == "mega"))' >/dev/null; then
+            CMD=$(printf '%s' "$CMD" | jq -c --arg n "$NIGHT_ID" '. + {night: $n}')
+          fi
           if [ "${#CMD}" -gt 900 ]; then echo "::error::That command is too long."; exit 1; fi
           # Its own id (a re-run is a new command) and when it was sent.
           RID="${GITHUB_RUN_ID:-0}-${GITHUB_RUN_ATTEMPT:-1}"

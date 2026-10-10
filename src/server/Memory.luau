@@ -9,6 +9,7 @@ local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Names = require(ReplicatedStorage.Shared.Names)
 local Voice = require(ReplicatedStorage.Shared.Voice)
 local Profiles = require(script.Parent.Profiles)
 
@@ -83,7 +84,7 @@ local function claim(player: Player, data: Profiles.Data)
 	local m = id and tableModel(id)
 	if m and m:GetAttribute("RegularId") == nil then
 		m:SetAttribute("RegularId", player.UserId)
-		m:SetAttribute("Regular", player.DisplayName)
+		m:SetAttribute("Regular", Names.of(player))
 	end
 end
 
@@ -106,7 +107,7 @@ function Memory.greeting(player: Player): string?
 	local n = data.nights.count
 	if table.find(MILESTONES, n) then
 		if n >= 10 then
-			Memory.note(string.format("%s's %s night at the house.", player.DisplayName, Memory.ordinal(n)))
+			Memory.note(string.format("%s's %s night at the house.", Names.of(player), Memory.ordinal(n)))
 		end
 		return (string.gsub(V.milestone, "{n}", Memory.ordinal(n)))
 	end

@@ -8,6 +8,7 @@ local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Names = require(ReplicatedStorage.Shared.Names)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Nightly = require(ReplicatedStorage.Shared.Nightly)
 local Rival = require(ReplicatedStorage.Shared.Rival)
@@ -42,7 +43,7 @@ end
 
 local function cardOf(player: Player, data: Profiles.Data): Rival.Card
 	return {
-		name = player.DisplayName,
+		name = Names.of(player),
 		r = data.duel.r,
 		matches = data.duel.matches,
 		nightlyKey = data.nightly.key,

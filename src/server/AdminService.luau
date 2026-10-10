@@ -33,6 +33,8 @@ local TeleportService = game:GetService("TeleportService")
 local TextService = game:GetService("TextService")
 local Workspace = game:GetService("Workspace")
 
+local Names = require(ReplicatedStorage.Shared.Names)
+local AbuseNights = require(ReplicatedStorage.Shared.AbuseNights)
 local Config = require(ReplicatedStorage.Shared.Config)
 local HouseEvents = require(ReplicatedStorage.Shared.HouseEvents)
 local Layout = require(ReplicatedStorage.Shared.Layout)
@@ -70,7 +72,7 @@ AdminService.note = function(_text: string, _everywhere: boolean) end
 AdminService.award = function(_player: Player, _key: string) end
 AdminService.tally = function(_player: Player, _stat: string, _n: number, _once: string?) end
 -- Admin Abuse's show (set by Main: AbuseShow): it began (the realms, the gifts), or was stopped.
-AdminService.showBegan = function(_mega: boolean) end
+AdminService.showBegan = function(_mega: boolean, _plan: AbuseNights.Plan?, _since: number?) end
 AdminService.showStopped = function() end
 
 ---------------------------------------------------------------------------------------------------
@@ -461,7 +463,7 @@ function AdminService.startEvent(id: string, seconds: number, byName: string, qu
 		clearPickups("coin")
 		local owner = nil
 		for _, p in Players:GetPlayers() do
-			if p.DisplayName == byName then
+			if Names.of(p) == byName then
 				owner = p
 			end
 		end
@@ -545,7 +547,7 @@ local function collectHunt(player: Player, item: BasePart, gilt: number)
 	local prize = if jackpot and type(h) == "table" then CurioList.byId[h.jackpot] else nil
 	Remotes.event("Shop"):FireClient(player, { op = "notice", title = if prize then "You found " .. prize.name .. "!" else eventName, line = string.format("+%d Gilt", paid) })
 	if prize then
-		broadcast({ op = "salute", id = "jackpot", by = player.DisplayName, effects = { "fireworks", "goldLeaf" }, seconds = 8, title = eventName, line = player.DisplayName .. " found " .. prize.name .. "!" })
+		broadcast({ op = "salute", id = "jackpot", by = Names.of(player), effects = { "fireworks", "goldLeaf" }, seconds = 8, title = eventName, line = Names.of(player) .. " found " .. prize.name .. "!" })
 	end
 	local left = 0
 	if folder then
@@ -614,7 +616,7 @@ local function collect()
 						end
 					end
 					if kind == "key" then
-						broadcast({ op = "salute", id = "key", by = player.DisplayName, effects = {}, seconds = 4, title = "The Treasure Hunt", line = player.DisplayName .. " found a golden key." })
+						broadcast({ op = "salute", id = "key", by = Names.of(player), effects = {}, seconds = 4, title = "The Treasure Hunt", line = Names.of(player) .. " found a golden key." })
 						local left = 0
 						for _, other in folder:GetChildren() do
 							if other:GetAttribute("Pickup") == "key" then
@@ -747,13 +749,13 @@ function AdminService.giveaway(amount: number, byName: string): Player?
 	end
 	local names = {}
 	for _, p in pool do
-		table.insert(names, p.DisplayName)
+		table.insert(names, Names.of(p))
 	end
 	local winner = pool[math.random(1, #pool)]
 	giftGilt(winner, amount, byName)
 	AdminService.award(winner, "giveawayWinner")
-	broadcast({ op = "giveaway", names = names, winner = winner.DisplayName, winnerId = winner.UserId, amount = amount, by = byName })
-	AdminService.note(string.format("%s won %d Gilt in a giveaway.", winner.DisplayName, amount), false)
+	broadcast({ op = "giveaway", names = names, winner = Names.of(winner), winnerId = winner.UserId, amount = amount, by = byName })
+	AdminService.note(string.format("%s won %d Gilt in a giveaway.", Names.of(winner), amount), false)
 	return winner
 end
 
@@ -770,9 +772,10 @@ function AdminService.token(byName: string): number
 	return given
 end
 
--- A countdown on every screen, then what it was counting down to.
+-- A countdown on every screen, then what it was counting down to. `options`: the night's (a
+-- countdown to Admin Abuse) or the surprise's seed, so every server has the same.
 local countdownToken = 0
-function AdminService.countdown(id: string, seconds: number, byName: string)
+function AdminService.countdown(id: string, seconds: number, byName: string, options: AbuseOptions?)
 	local c = HouseEvents.countdownById[id]
 	if not c then
 		return
@@ -784,15 +787,15 @@ function AdminService.countdown(id: string, seconds: number, byName: string)
 		if countdownToken ~= my then
 			return
 		end
-		if id == "abuse" then
-			AdminService.abuse(cfg().countdownAbuseMinutes * 60, byName)
-		elseif id == "mega" then
-			AdminService.mega(cfg().countdownAbuseMinutes * 60, byName)
+		local o: AbuseOptions = options or {}
+		if id == "abuse" or id == "mega" then
+			AdminService.abuse(cfg().countdownAbuseMinutes * 60, byName, id == "mega", o)
 		elseif id == "giveaway" then
 			AdminService.giveaway(cfg().giveawayGilt[2] or 1000, byName)
 		elseif id == "surprise" then
-			local list = HouseEvents.Effects
-			AdminService.fx(list[math.random(1, #list)].id, byName, nil)
+			local r = AbuseNights.rng(AbuseNights.cleanSeed(o.seed) or AbuseNights.newSeed())
+			local e = AbuseNights.pick(r, HouseEvents.Effects)
+			AdminService.fx(e.id, byName, nil, AbuseNights.int(r, 1, math.max(1, AbuseNights.variantCount(e.id))), AbuseNights.quip(e.id, r))
 		end
 	end)
 end
@@ -838,11 +841,13 @@ end
 -- (The effects a guest gets a badge for having been there for.)
 local WITNESSED: { [string]: boolean } = { blackHole = true, ufo = true, meteor = true, titan = true }
 
-function AdminService.fx(id: string, byName: string, origin: Vector3?)
+-- `v`: which of its looks (shared/AbuseNights' Variants; the same on every screen in every server);
+-- `line`: what AJKR says as it lands.
+function AdminService.fx(id: string, byName: string, origin: Vector3?, v: number?, line: string?)
 	if not HouseEvents.effectById[id] and id ~= "intro" and id ~= "stop" then
 		return
 	end
-	broadcast({ op = "abuseFX", id = id, by = byName, origin = origin, seconds = cfg().fxSeconds[id] or 6 })
+	broadcast({ op = "abuseFX", id = id, by = byName, origin = origin, seconds = cfg().fxSeconds[id] or 6, v = v, line = line })
 	if WITNESSED[id] then
 		for _, p in Players:GetPlayers() do
 			AdminService.award(p, "fx_" .. id)
@@ -853,13 +858,28 @@ end
 -- Switches an effect on (it stays on, for every guest, until it's switched off) or off. Every
 -- screen watches Workspace's Fx_<id> (so a guest arriving later joins in) and plays it round its
 -- own guest: the gentle ones simply stay; the ones that move guests come in waves (fxWaves).
-function AdminService.setFx(id: string, on: boolean, _byName: string): boolean
+-- `v`: which of its looks (given by the server the owner switched it in, so it's the same
+-- everywhere; a fresh one if not given).
+local fxVariant: { [string]: number } = {}
+local function cleanVariant(id: string, v: any): number?
+	local count = AbuseNights.variantCount(id)
+	if type(v) == "number" and v == v and v >= 1 and v <= count then
+		return math.floor(v)
+	end
+	return nil
+end
+
+function AdminService.setFx(id: string, on: boolean, _byName: string, v: number?): boolean
 	if not HouseEvents.effectById[id] then
 		return false
 	end
 	if on then
 		if fxOn[id] == nil then
 			fxOn[id] = os.time()
+			local variant = cleanVariant(id, v) or math.random(1, math.max(1, AbuseNights.variantCount(id)))
+			fxVariant[id] = variant
+			-- (Its looks first: a screen seeing the switch go on already knows which.)
+			Workspace:SetAttribute(HouseEvents.fxVariantAttribute(id), variant)
 			Workspace:SetAttribute(HouseEvents.fxAttribute(id), fxOn[id])
 			if WITNESSED[id] then
 				for _, p in Players:GetPlayers() do
@@ -869,13 +889,20 @@ function AdminService.setFx(id: string, on: boolean, _byName: string): boolean
 		end
 	elseif fxOn[id] ~= nil then
 		fxOn[id] = nil
+		fxVariant[id] = nil
 		Workspace:SetAttribute(HouseEvents.fxAttribute(id), nil)
+		Workspace:SetAttribute(HouseEvents.fxVariantAttribute(id), nil)
 	end
 	return true
 end
 
 function AdminService.isFxOn(id: string): boolean
 	return fxOn[id] ~= nil
+end
+
+-- Which looks a switched-on effect has here (nil when it's off).
+function AdminService.fxVariant(id: string): number?
+	return fxVariant[id]
 end
 
 -- Every effect off.
@@ -891,41 +918,106 @@ end
 
 local surpriseToken = 0
 local openingCount = 0 -- (each Admin Abuse's opening: its fireworks wait for the drop)
+local recentNights: { string } = {} -- (the nights this server began lately: a fresh seed avoids them)
 
--- Everything at once: every event (quietly, then one great announcement), the whole house's
--- intro, fireworks, and a surprise for everyone every minute or so until it ends. `mega`: Mega
--- Abuse, with every effect among the surprises, twice as often, a giveaway every few minutes and
--- the Mega Abuse Medal for everyone in the house.
-function AdminService.abuse(seconds: number, byName: string, mega: boolean?)
+-- What Admin Abuse keeps on the Workspace for every screen: when it ends (and whether it's Mega
+-- Abuse), when it began, its seed and night (every screen works out the same show from them),
+-- its music, and whether AJKR's giant stands over the house.
+local ABUSE_ATTRIBUTES = { "AbuseUntil", "AbuseMega", "AbuseSince", "AbuseSeed", "AbuseNight", "AbuseMusic", "AbuseTrack", "AbuseGiant" }
+local function clearAbuse()
+	for _, name in ABUSE_ATTRIBUTES do
+		Workspace:SetAttribute(name, nil)
+	end
+end
+
+-- A seed for a new night that isn't one of the last few played here.
+function AdminService.freshSeed(): number
+	local seed = AbuseNights.newSeed()
+	for _ = 1, 16 do
+		if not table.find(recentNights, AbuseNights.nightFor(seed).id) then
+			break
+		end
+		seed = AbuseNights.newSeed()
+	end
+	return seed
+end
+
+-- The words for a night's twist and hunts (for its announcement).
+local BODY_WORDS = { classic = "giants, quick feet and low gravity", giants = "giants and quick feet", tiny = "tiny guests and low gravity", moon = "moon gravity", speed = "quick feet" }
+local HUNT_WORDS = { all = "gold rain, a treasure hunt and the meme parade", gold = "gold rain", keys = "a treasure hunt", memes = "the meme parade", goldKeys = "gold rain and a treasure hunt" }
+-- (Two twists that can't both be on: a guest is either a giant or tiny.)
+local CONFLICTS = { giants = "tiny", tiny = "giants" }
+
+export type AbuseOptions = { seed: number?, night: string?, since: number? }
+
+-- Admin Abuse: one of the house's nights (shared/AbuseNights), worked out from its seed, the same
+-- in every server: its boosts, its twist and its hunts, its opening on every screen, its realm (in
+-- Mega Abuse, one realm after another), its surprises in its own order at its own moments (two at
+-- once, now and then), AJKR's gifts, and the music. `mega`: Mega Abuse (more surprises, faster,
+-- giveaways all night, triple Gilt and the Mega Abuse Medal). `options`: the night's seed (else
+-- a fresh one), the night asked for (else the seed's), and when it began (a server joining in late
+-- keeps to the same moments as the rest).
+function AdminService.abuse(seconds: number, byName: string, mega: boolean?, options: AbuseOptions?)
+	local o: AbuseOptions = options or {}
 	-- (When it ends is settled first: starting every event takes a moment.)
-	local ends = os.time() + seconds
-	for _, id in cfg().abuseEvents do
+	local now = os.time()
+	local ends = now + seconds
+	local since = if type(o.since) == "number" and o.since <= now and o.since > now - 7200 then math.floor(o.since) else now
+	local seed = AbuseNights.cleanSeed(o.seed) or AdminService.freshSeed()
+	local show = (cfg() :: any).show
+	local plan = AbuseNights.plan(seed, mega == true, ends - since, o.night, {
+		realms = show.realms,
+		giant = show.giant,
+		giftEvery = show.giftEvery,
+		realmSeconds = show.realmSeconds,
+	})
+	local night = plan.night
+	table.insert(recentNights, night.id)
+	while #recentNights > 8 do
+		table.remove(recentNights, 1)
+	end
+	for _, id in plan.events do
 		if HouseEvents.byId[id] then
+			local other = CONFLICTS[id]
+			if other and active[other] then
+				AdminService.stopEvent(other)
+			end
 			AdminService.startEvent(id, math.max(1, ends - os.time()), byName, true)
 		end
 	end
-	Workspace:SetAttribute("AbuseUntil", ends)
 	Workspace:SetAttribute("AbuseMega", if mega then true else nil)
-	-- (When it began: the music follows whatever was started last, this or an effect.)
-	Workspace:SetAttribute("AbuseSince", os.time())
-	-- The opening on every screen (World/AbuseShow): the transmission, the riser, then the drop,
-	-- when the fireworks go up and the music starts.
-	broadcast({ op = "abuseShow", stage = "intro", mega = mega == true, by = byName })
+	Workspace:SetAttribute("AbuseSince", since)
+	Workspace:SetAttribute("AbuseSeed", seed)
+	Workspace:SetAttribute("AbuseNight", night.id)
+	Workspace:SetAttribute("AbuseMusic", plan.music)
+	Workspace:SetAttribute("AbuseTrack", plan.track)
+	Workspace:SetAttribute("AbuseGiant", if plan.giant then true else nil)
+	-- (Last: every screen begins the night when this changes, and reads the rest then.)
+	Workspace:SetAttribute("AbuseUntil", ends)
+	-- The opening on every screen (World/AbuseShow): the night's own (a transmission, a countdown,
+	-- a vault door...), then the drop, when the fireworks go up and the music starts.
+	broadcast({ op = "abuseShow", stage = "intro", mega = mega == true, by = byName, seed = seed, night = night.id })
 	openingCount += 1
 	local opening = openingCount
-	local dropAt = (cfg() :: any).show.dropAt
+	local dropAt = show.dropAt
 	task.delay(dropAt, function()
 		if openingCount ~= opening or not abusing() then
 			return
 		end
 		if mega then
-			broadcast({ op = "salute", id = "abuse", by = byName, effects = { "fireworks", "goldLeaf", "chandelier" }, seconds = 12, title = "MEGA ABUSE", line = "MEGA ABUSE: every event at once, a new realm every minute and a half, triple Gilt, gifts from the owner, giveaways all night. Don't leave!" })
+			broadcast({ op = "salute", id = "abuse", by = byName, effects = { "fireworks", "goldLeaf", "chandelier" }, seconds = 12, title = "MEGA ABUSE", line = string.format("MEGA ABUSE · %s: every event at once, a new realm every minute or so, triple Gilt, gifts from %s, giveaways all night. Don't leave!", night.name, byName) })
 		else
-			broadcast({ op = "salute", id = "abuse", by = byName, effects = { "fireworks", "goldLeaf", "chandelier" }, seconds = 12, title = "Admin Abuse Night", line = "ADMIN ABUSE NIGHT: double Gilt, double XP, Mythic luck, gold rain, a treasure hunt, giants, low gravity, gifts from the owner, and surprises all night. Go!" })
+			local extras = {}
+			for _, words in { HUNT_WORDS[night.hunts], BODY_WORDS[night.body] } do
+				if words then
+					table.insert(extras, words)
+				end
+			end
+			broadcast({ op = "salute", id = "abuse", by = byName, effects = { "fireworks", "goldLeaf", "chandelier" }, seconds = 12, title = "Admin Abuse Night", line = string.format("ADMIN ABUSE · %s: double Gilt, double XP, Mythic luck, %s, gifts from %s and surprises all night. Go!", night.name, table.concat(extras, ", "), byName) })
 		end
 	end)
-	AdminService.note(if mega then "Mega Abuse has begun in the house." else "Admin Abuse Night has begun in the house.", false)
-	AdminService.showBegan(mega == true)
+	AdminService.note(string.format("%s has begun in the house: %s.", if mega then "Mega Abuse" else "Admin Abuse Night", night.name), false)
+	AdminService.showBegan(mega == true, plan, since)
 	for _, p in Players:GetPlayers() do
 		AdminService.award(p, "abuseNight")
 		AdminService.tally(p, "abuseNights", 1, "night:" .. tostring(ends))
@@ -933,43 +1025,52 @@ function AdminService.abuse(seconds: number, byName: string, mega: boolean?)
 			Curios.forEvent(p, "abuseMedal", "mega:" .. tostring(ends))
 		end
 	end
+	-- The surprises, at the night's own moments (counted from when it began, so every server lands
+	-- each one together; a server joining in late skips those already past).
 	surpriseToken += 1
 	local token = surpriseToken
 	task.spawn(function()
-		local last = ""
-		local nextGiveaway = os.time() + cfg().megaGiveawaySeconds
+		local nextGiveaway = since + cfg().megaGiveawaySeconds
+		while nextGiveaway < os.time() do
+			nextGiveaway += cfg().megaGiveawaySeconds
+		end
+		local i = 1
+		while i <= #plan.beats and since + plan.beats[i].at < os.time() - 2 do
+			i += 1
+		end
 		while surpriseToken == token and os.time() < ends do
-			task.wait(if mega then cfg().megaSurpriseSeconds else cfg().abuseSurpriseSeconds)
+			local beat = plan.beats[i]
+			local wake = if beat then since + beat.at else ends
+			if mega then
+				wake = math.min(wake, nextGiveaway)
+			end
+			wake = math.min(wake, ends)
+			while surpriseToken == token and os.time() < wake do
+				task.wait(math.clamp(wake - os.time(), 0.25, 1))
+			end
 			if surpriseToken ~= token or os.time() >= ends then
 				break
 			end
-			-- A different surprise each time.
-			local pool = {}
-			local list: { string } = if mega then cfg().megaSurprises else cfg().abuseSurprises
-			for _, id in list do
-				if id ~= last and HouseEvents.effectById[id] then
-					table.insert(pool, id)
+			if beat and os.time() >= since + beat.at then
+				AdminService.fx(beat.id, byName, nil, beat.v, beat.line)
+				if beat.also then
+					AdminService.fx(beat.also, byName, nil, beat.alsoV, nil)
 				end
-			end
-			if #pool > 0 then
-				last = pool[math.random(1, #pool)]
-				AdminService.fx(last, byName, nil)
+				i += 1
 			end
 			if mega and os.time() >= nextGiveaway then
-				nextGiveaway = os.time() + cfg().megaGiveawaySeconds
+				nextGiveaway += cfg().megaGiveawaySeconds
 				AdminService.giveaway(cfg().megaGiveawayGilt, byName)
 			end
 		end
 		if surpriseToken == token and Workspace:GetAttribute("AbuseUntil") == ends then
-			Workspace:SetAttribute("AbuseUntil", nil)
-			Workspace:SetAttribute("AbuseMega", nil)
-			Workspace:SetAttribute("AbuseSince", nil)
+			clearAbuse()
 		end
 	end)
 end
 
-function AdminService.mega(seconds: number, byName: string)
-	AdminService.abuse(seconds, byName, true)
+function AdminService.mega(seconds: number, byName: string, options: AbuseOptions?)
+	AdminService.abuse(seconds, byName, true, options)
 end
 
 export type Planned = { id: string, at: number, what: string, minutes: number, by: string }
@@ -1040,7 +1141,8 @@ local function runSchedule()
 			begun[p.id] = true
 			local left = ends - now
 			if p.what == "abuse" then
-				AdminService.abuse(left, p.by)
+				-- (Its seed from its own id: the same night, at the same moments, in every server.)
+				AdminService.abuse(left, p.by, false, { seed = AbuseNights.seedOf(p.id), since = p.at })
 			elseif HouseEvents.byId[p.what] then
 				AdminService.startEvent(p.what, left, p.by)
 			end
@@ -1093,11 +1195,13 @@ end
 -- that weren't open to hear them, even when no server at all was open: each server carries out the
 -- ones it hasn't (in the order given, skipping any a newer command has overtaken; a giveaway or a
 -- headline only within a minute and a half), then writes what they did into the record.
-type LiveAbuse = { id: string, starts: number?, ends: number, mega: boolean, by: string }
+-- (An Admin Abuse night: its id, when it began (or begins, after a countdown) and ends, its seed
+-- and the night asked for, so a server joining in plays the very same night.)
+type LiveAbuse = { id: string, starts: number?, since: number?, ends: number, mega: boolean, by: string, seed: number?, night: string? }
 type LogEntry = { cmd: { [string]: any }, at: number, rid: string }
 type Live = {
 	abuse: LiveAbuse?,
-	fx: { [string]: { since: number, by: string } },
+	fx: { [string]: { since: number, by: string, v: number? } },
 	events: { [string]: { ends: number, by: string } },
 	marks: { [string]: number },
 	log: { LogEntry },
@@ -1129,12 +1233,21 @@ local function cleanLive(v: any): Live
 	end
 	local a = v.abuse
 	if type(a) == "table" and type(a.id) == "string" and type(a.ends) == "number" and a.ends > now then
-		out.abuse = { id = string.sub(a.id, 1, 80), starts = if type(a.starts) == "number" then a.starts else nil, ends = a.ends, mega = a.mega == true, by = nameOf(a.by) }
+		out.abuse = {
+			id = string.sub(a.id, 1, 80),
+			starts = if type(a.starts) == "number" then a.starts else nil,
+			since = if type(a.since) == "number" then a.since else nil,
+			ends = a.ends,
+			mega = a.mega == true,
+			by = nameOf(a.by),
+			seed = AbuseNights.cleanSeed(a.seed),
+			night = if type(a.night) == "string" and AbuseNights.byId[a.night] then a.night else nil,
+		}
 	end
 	if type(v.fx) == "table" then
 		for id, f in v.fx do
 			if type(id) == "string" and HouseEvents.effectById[id] and type(f) == "table" then
-				out.fx[id] = { since = tonumber(f.since) or now, by = nameOf(f.by) }
+				out.fx[id] = { since = tonumber(f.since) or now, by = nameOf(f.by), v = cleanVariant(id, f.v) }
 			end
 		end
 	end
@@ -1174,6 +1287,35 @@ local function abuseSeconds(m: { [string]: any }): number
 end
 local function eventSeconds(m: { [string]: any }): number
 	return math.clamp(if type(m.seconds) == "number" then m.seconds elseif type(m.minutes) == "number" then m.minutes * 60 else 900, 60, 3600)
+end
+
+-- A command's seed (a night's, a surprise's): the one it carries, else one from its own id, so
+-- every server works out the same.
+local function seedFor(m: { [string]: any }, at: number): number
+	local given = AbuseNights.cleanSeed(m.seed)
+	if given then
+		return given
+	elseif type(m.rid) == "string" or type(m.rid) == "number" then
+		return AbuseNights.seedOf("rid:" .. tostring(m.rid))
+	elseif type(m.liveId) == "string" then
+		return AbuseNights.seedOf(m.liveId)
+	end
+	return AbuseNights.seedOf("at:" .. tostring(math.floor(at)))
+end
+local function nightOf(m: { [string]: any }): string?
+	return if type(m.night) == "string" and AbuseNights.byId[m.night] then m.night else nil
+end
+-- Which looks a switched-on effect has: the command's, else one from its seed.
+local function variantFor(m: { [string]: any }, at: number): number?
+	if type(m.id) ~= "string" then
+		return nil
+	end
+	local given = cleanVariant(m.id, m.v)
+	if given then
+		return given
+	end
+	local count = AbuseNights.variantCount(m.id)
+	return if count > 0 then 1 + seedFor(m, at) % count else nil
 end
 
 -- The one id an Admin Abuse night is known by in every server (so none begins it twice).
@@ -1225,13 +1367,13 @@ local function writeLive(live: Live, m: { [string]: any }, at: number, byName: s
 	end
 	local op = m.op
 	if op == "abuse" or op == "mega" then
-		live.abuse = { id = liveIdOf(m, at), ends = at + abuseSeconds(m), mega = op == "mega", by = byName }
+		live.abuse = { id = liveIdOf(m, at), since = math.floor(at), ends = at + abuseSeconds(m), mega = op == "mega", by = byName, seed = seedFor(m, at), night = nightOf(m) }
 	elseif op == "countdown" then
 		local starts = at + (if type(m.seconds) == "number" then m.seconds else 10)
-		live.abuse = { id = liveIdOf(m, at), starts = starts, ends = starts + cfg().countdownAbuseMinutes * 60, mega = m.id == "mega", by = byName }
+		live.abuse = { id = liveIdOf(m, at), starts = starts, since = math.floor(starts), ends = starts + cfg().countdownAbuseMinutes * 60, mega = m.id == "mega", by = byName, seed = seedFor(m, at), night = nightOf(m) }
 	elseif op == "fx" then
 		if m.on ~= false then
-			live.fx[m.id] = { since = at, by = byName }
+			live.fx[m.id] = { since = at, by = byName, v = variantFor(m, at) }
 		else
 			live.fx[m.id] = nil
 		end
@@ -1347,15 +1489,17 @@ local function syncLive()
 	end
 	local a = live.abuse
 	if a and not liveBegun[a.id] then
+		-- (The same night as everywhere else: its seed, and its moments counted from when it began.)
+		local options = { seed = a.seed or AbuseNights.seedOf(a.id), night = a.night, since = a.since or a.starts }
 		if a.starts and a.starts > now then
 			-- (Opening during the countdown to it: the rest of the countdown, then it.)
 			if a.starts - now >= 3 then
 				liveBegun[a.id] = true
-				AdminService.countdown(if a.mega then "mega" else "abuse", a.starts - now, a.by)
+				AdminService.countdown(if a.mega then "mega" else "abuse", a.starts - now, a.by, options)
 			end
 		else
 			liveBegun[a.id] = true
-			AdminService.abuse(a.ends - now, a.by, a.mega)
+			AdminService.abuse(a.ends - now, a.by, a.mega, options)
 		end
 	end
 	for id, f in live.fx do
@@ -1363,7 +1507,7 @@ local function syncLive()
 		if not seenLive[key] then
 			seenLive[key] = true
 			if fxOn[id] == nil then
-				AdminService.setFx(id, true, f.by)
+				AdminService.setFx(id, true, f.by, f.v)
 			end
 			fxFromLive[id] = true
 		end
@@ -1590,9 +1734,7 @@ function AdminService.stopAll(byName: string)
 	end
 	surpriseToken += 1
 	countdownToken += 1
-	Workspace:SetAttribute("AbuseUntil", nil)
-	Workspace:SetAttribute("AbuseMega", nil)
-	Workspace:SetAttribute("AbuseSince", nil)
+	clearAbuse()
 	AdminService.showStopped()
 	AdminService.allFxOff(byName)
 	broadcast({ op = "countdown", id = "", stop = true })
@@ -1639,7 +1781,7 @@ local lastAsk: { [Player]: number } = {}
 local function state(player: Player?): { [string]: any }
 	local guests = {}
 	for _, p in Players:GetPlayers() do
-		table.insert(guests, { userId = p.UserId, name = p.DisplayName, crowned = p:GetAttribute("GuestOfHonour") == true })
+		table.insert(guests, { userId = p.UserId, name = Names.of(p), crowned = p:GetAttribute("GuestOfHonour") == true })
 	end
 	local events = {}
 	for _, e in HouseEvents.List do
@@ -1679,6 +1821,7 @@ local function state(player: Player?): { [string]: any }
 		giveawayGilt = cfg().giveawayGilt,
 		mega = Workspace:GetAttribute("AbuseMega") == true,
 		abuseUntil = Workspace:GetAttribute("AbuseUntil"),
+		abuseNight = Workspace:GetAttribute("AbuseNight"),
 		guestsHere = #Players:GetPlayers(),
 		fxOn = (function()
 			local on = {}
@@ -1755,14 +1898,18 @@ local function apply(m: { [string]: any }, byName: string, remote: boolean, give
 		local left = math.floor(at + abuseSeconds(m) - now)
 		if not liveBegun[liveId] and left > 0 then
 			liveBegun[liveId] = true
-			AdminService.abuse(left, byName, op == "mega")
+			-- (The same night as every other server: its seed, its moments counted from `at`.)
+			AdminService.abuse(left, byName, op == "mega", { seed = seedFor(m, at), night = nightOf(m), since = math.floor(at) })
 		end
 		writeDown()
 		return true
 	elseif op == "fx" and type(m.id) == "string" and HouseEvents.effectById[m.id] then
-		-- On (it stays on) unless the message says off.
+		-- On (it stays on) unless the message says off; its looks the command's (or its seed's).
 		local id, on = m.id, m.on ~= false
-		AdminService.setFx(id, on, byName)
+		if on then
+			m.v = variantFor(m, at)
+		end
+		AdminService.setFx(id, on, byName, m.v)
 		if on then
 			fxFromLive[id] = true
 		else
@@ -1785,23 +1932,24 @@ local function apply(m: { [string]: any }, byName: string, remote: boolean, give
 	elseif op == "countdown" and type(m.id) == "string" and HouseEvents.countdownById[m.id] and type(m.seconds) == "number" and table.find(cfg().countdowns, m.seconds) then
 		local id = m.id
 		local left = at + m.seconds - now
+		local options = { seed = seedFor(m, at), night = nightOf(m), since = math.floor(at + m.seconds) }
 		if id == "abuse" or id == "mega" then
 			local liveId = liveIdOf(m, at)
 			if not liveBegun[liveId] then
 				liveBegun[liveId] = true
 				if left >= 3 then
-					AdminService.countdown(id, left, byName)
+					AdminService.countdown(id, left, byName, options)
 				else
 					-- (Heard after the countdown was over: Admin Abuse for what's left of it.)
 					local rest = math.floor(at + m.seconds + cfg().countdownAbuseMinutes * 60 - now)
 					if rest > 0 then
-						AdminService.abuse(rest, byName, id == "mega")
+						AdminService.abuse(rest, byName, id == "mega", options)
 					end
 				end
 			end
 			writeDown()
 		else
-			AdminService.countdown(id, math.max(3, left), byName)
+			AdminService.countdown(id, math.max(3, left), byName, options)
 		end
 		return true
 	elseif op == "giftAll" and type(m.amount) == "number" and table.find(cfg().giftGilt, m.amount) then
@@ -1907,7 +2055,7 @@ local function handle(player: Player, request: unknown): any
 	lastAsk[player] = now
 	local r = request :: { [string]: any }
 	local op = r.op
-	local byName = player.DisplayName
+	local byName = Names.of(player)
 	Analytics.custom(player, "House controls", nil, { op = tostring(op) })
 	if op == "state" then
 		return state(player)
@@ -1922,10 +2070,14 @@ local function handle(player: Player, request: unknown): any
 	elseif op == "abuse" or op == "mega" then
 		local minutes = if type(r.minutes) == "number" then math.clamp(r.minutes, 5, 60) else 30
 		local mega = op == "mega"
-		AdminService.abuse(minutes * 60, byName, mega)
+		-- The night: the one the owner chose, else one of the house's nights by a fresh seed.
+		local night = if type(r.night) == "string" and AbuseNights.byId[r.night] then r.night else nil
+		local seed = AdminService.freshSeed()
+		AdminService.abuse(minutes * 60, byName, mega, { seed = seed, night = night })
 		if r.everywhere == true then
-			-- Every server now, and any server that opens while it's still on (one id for the night).
-			everywhere({ op = op, seconds = minutes * 60, liveId = HttpService:GenerateGUID(false) }, byName)
+			-- Every server now, and any server that opens while it's still on (one id for the night;
+			-- its seed, so every server plays the very same night).
+			everywhere({ op = op, seconds = minutes * 60, liveId = HttpService:GenerateGUID(false), seed = seed, night = night }, byName)
 		end
 		return state(player)
 	elseif op == "schedule" then
@@ -1982,10 +2134,10 @@ local function handle(player: Player, request: unknown): any
 		end
 		if op == "crown" then
 			crown(target)
-			broadcast({ op = "salute", id = "crown", by = byName, userId = target.UserId, effects = { "encore", "goldLeaf" }, seconds = 20, title = "A Guest of Honour", line = target.DisplayName .. " is tonight's Guest of Honour." })
-			AdminService.note(target.DisplayName .. " is tonight's Guest of Honour.", false)
+			broadcast({ op = "salute", id = "crown", by = byName, userId = target.UserId, effects = { "encore", "goldLeaf" }, seconds = 20, title = "A Guest of Honour", line = Names.of(target) .. " is tonight's Guest of Honour." })
+			AdminService.note(Names.of(target) .. " is tonight's Guest of Honour.", false)
 		elseif op == "spotlight" then
-			broadcast({ op = "salute", id = "spotlight", by = byName, userId = target.UserId, effects = { "encore" }, seconds = 20, title = "The spotlight", line = "The spotlight finds " .. target.DisplayName .. "." })
+			broadcast({ op = "salute", id = "spotlight", by = byName, userId = target.UserId, effects = { "encore" }, seconds = 20, title = "The spotlight", line = "The spotlight finds " .. Names.of(target) .. "." })
 		elseif op == "gift" then
 			local amount = if type(r.amount) == "number" and table.find(cfg().giftGilt, r.amount) then r.amount else nil
 			if not amount then
@@ -2091,7 +2243,8 @@ local function handle(player: Player, request: unknown): any
 		local on = if type(r.on) == "boolean" then r.on else not AdminService.isFxOn(id)
 		AdminService.setFx(id, on, byName)
 		if r.everywhere == true then
-			everywhere({ op = "fx", id = id, on = on }, byName)
+			-- (Its looks too: the same in every server.)
+			everywhere({ op = "fx", id = id, on = on, v = if on then AdminService.fxVariant(id) else nil }, byName)
 		end
 		return state(player)
 	elseif op == "fxAllOff" then
@@ -2137,11 +2290,13 @@ local function handle(player: Player, request: unknown): any
 		if not seconds then
 			return { ok = false, why = "Choose how long." }
 		end
-		AdminService.countdown(r.id, seconds, byName)
+		local night = if type(r.night) == "string" and AbuseNights.byId[r.night] then r.night else nil
+		local seed = if r.id == "abuse" or r.id == "mega" then AdminService.freshSeed() else AbuseNights.newSeed()
+		AdminService.countdown(r.id, seconds, byName, { seed = seed, night = night })
 		if r.everywhere == true then
 			-- (A countdown to Admin Abuse: written down too, so a server opening meanwhile counts down
 			-- with the rest, and one opening after joins in.)
-			everywhere({ op = "countdown", id = r.id, seconds = seconds, liveId = HttpService:GenerateGUID(false) }, byName)
+			everywhere({ op = "countdown", id = r.id, seconds = seconds, liveId = HttpService:GenerateGUID(false), seed = seed, night = night }, byName)
 		end
 		return { ok = true }
 	elseif op == "giveaway" then
@@ -2156,7 +2311,7 @@ local function handle(player: Player, request: unknown): any
 		if not winner and r.everywhere ~= true then
 			return { ok = false, why = "Nobody else is in this house to win it." }
 		end
-		return { ok = true, winner = if winner then winner.DisplayName else nil }
+		return { ok = true, winner = if winner then Names.of(winner) else nil }
 	elseif op == "token" then
 		local given = AdminService.token(byName)
 		if r.everywhere == true then
@@ -2186,7 +2341,7 @@ function AdminService.start()
 				if cfg().announceOwner then
 					task.delay(4, function()
 						if player.Parent == Players then
-							AdminService.headline("👑 THE OWNER IS IN THE SERVER! 👑", player.DisplayName, "rainbow", 7)
+							AdminService.headline("👑 " .. string.upper(Names.owner()) .. " IS IN THE SERVER! 👑", Names.owner(), "rainbow", 7)
 						end
 					end)
 				end

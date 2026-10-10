@@ -38,6 +38,7 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
+local AbuseNights = require(ReplicatedStorage.Shared.AbuseNights)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Curios = require(ReplicatedStorage.Shared.Curios)
 local HouseEvents = require(ReplicatedStorage.Shared.HouseEvents)
@@ -58,10 +59,29 @@ local player = Players.LocalPlayer
 local rgb = Color3.fromRGB
 local GOLD = rgb(255, 204, 110)
 local RAINBOW = { rgb(255, 60, 140), rgb(80, 140, 255), rgb(90, 255, 170), rgb(255, 214, 80), rgb(190, 90, 255), rgb(255, 120, 40), rgb(60, 230, 255) }
-local CONFETTI = { rgb(255, 60, 140), rgb(80, 140, 255), rgb(90, 255, 170), rgb(255, 214, 80), rgb(246, 206, 112), rgb(255, 240, 200), rgb(190, 90, 255) }
 local IMPACT = Font.fromEnum(Enum.Font.LuckiestGuy)
 local SMOKE = "rbxasset://textures/particles/smoke_main.dds"
 local SPARK = "rbxasset://textures/particles/sparkles_main.dds"
+
+-- Which of its looks each effect has as it starts (shared/AbuseNights' Variants: ice comets or
+-- golden meteors, a crimson vortex or a white hole...): set by AbuseFX.play, the same in every
+-- server (the server chose it).
+local looksNow: { [string]: number } = {}
+local function looks(id: string): AbuseNights.Variant
+	return AbuseNights.variant(id, looksNow[id]) :: AbuseNights.Variant
+end
+
+-- Colours into a sequence (one colour: just it).
+local function sequence(colours: { Color3 }): ColorSequence
+	if #colours <= 1 then
+		return ColorSequence.new(colours[1] or Color3.new(1, 1, 1))
+	end
+	local keys = {}
+	for i, c in colours do
+		table.insert(keys, ColorSequenceKeypoint.new((i - 1) / (#colours - 1), c))
+	end
+	return ColorSequence.new(keys)
+end
 
 local token = 0 -- bumped by "stop": every effect still playing ends
 -- Each effect's own life: switching one effect off ends only it (its channel is bumped).
@@ -292,7 +312,8 @@ local function intro(seconds: number)
 end
 
 local function launch(seconds: number)
-	banner("LIFT OFF!", rgb(255, 120, 60), 2)
+	local V = looks("launch")
+	banner(V.banner, V.colour, 2)
 	sound("fireworkLaunch", 1.2, 0.8)
 	if not free() then
 		return
@@ -312,7 +333,7 @@ local function launch(seconds: number)
 	smoke.SpreadAngle = Vector2.new(25, 25)
 	smoke.Size = NumberSequence.new(1.2, 4)
 	smoke.Transparency = NumberSequence.new(0.3, 1)
-	smoke.Color = ColorSequence.new(rgb(255, 200, 120), rgb(120, 110, 100))
+	smoke.Color = ColorSequence.new(V.colours[1], rgb(120, 110, 100))
 	smoke.Parent = trail
 	local sparks = Instance.new("ParticleEmitter")
 	sparks.Texture = SPARK
@@ -321,7 +342,7 @@ local function launch(seconds: number)
 	sparks.Speed = NumberRange.new(6, 12)
 	sparks.LightEmission = 1
 	sparks.Size = NumberSequence.new(0.5, 0)
-	sparks.Color = ColorSequence.new(GOLD)
+	sparks.Color = sequence(V.colours)
 	sparks.Parent = trail
 	local rng = Random.new()
 	throw(Vector3.new(rng:NextNumber(-12, 12), cfg().launchSpeed, rng:NextNumber(-12, 12)))
@@ -336,8 +357,9 @@ end
 
 local DANCES = { "dance", "dance2", "dance3" }
 
-local function dance(seconds: number)
-	banner("DANCE PARTY!", rgb(255, 80, 200), 2.5)
+local function dance(seconds: number, words: string?, colour: Color3?)
+	local V = looks("dance")
+	banner(words or V.banner, colour or V.colour, 2.5)
 	sound("partyHorn", 1)
 	local my = life()
 	local cc = Instance.new("ColorCorrectionEffect")
@@ -348,7 +370,7 @@ local function dance(seconds: number)
 		local beat = 0
 		while alive(my) and os.clock() - started < seconds do
 			beat += 1
-			cc.TintColor = Color3.new(1, 1, 1):Lerp(RAINBOW[beat % #RAINBOW + 1], 0.16)
+			cc.TintColor = Color3.new(1, 1, 1):Lerp(V.colours[beat % #V.colours + 1], 0.16)
 			if beat % 12 == 1 and free() then
 				local h = humanoidOf()
 				if h then
@@ -366,7 +388,7 @@ local function dance(seconds: number)
 end
 
 -- One fork of lightning from the sky to the ground, near the guest.
-local function bolt(at: Vector3)
+local function bolt(at: Vector3, colour: Color3)
 	local rng = Random.new()
 	local top = at + Vector3.new(0, 140, 0)
 	local folder = Instance.new("Folder")
@@ -387,7 +409,7 @@ local function bolt(at: Vector3)
 		seg.CanTouch = false
 		seg.CastShadow = false
 		seg.Material = Enum.Material.Neon
-		seg.Color = rgb(210, 225, 255)
+		seg.Color = colour
 		seg.Size = Vector3.new(0.6, 0.6, length)
 		seg.CFrame = CFrame.lookAt((from + to) / 2, to)
 		seg.Position = (from + to) / 2
@@ -397,7 +419,7 @@ local function bolt(at: Vector3)
 	local glow = Instance.new("PointLight")
 	glow.Range = 60
 	glow.Brightness = 6
-	glow.Color = rgb(200, 220, 255)
+	glow.Color = colour
 	glow.Parent = folder:FindFirstChild("Fork")
 	task.delay(0.18, function()
 		folder:Destroy()
@@ -405,7 +427,8 @@ local function bolt(at: Vector3)
 end
 
 local function storm(seconds: number)
-	banner("LIGHTNING STORM", rgb(190, 215, 255), 2.5)
+	local V = looks("storm")
+	banner(V.banner, V.colour, 2.5)
 	local my = life()
 	task.spawn(function()
 		local started = os.clock()
@@ -415,8 +438,8 @@ local function storm(seconds: number)
 			if root then
 				local a = rng:NextNumber(0, math.pi * 2)
 				local r = rng:NextNumber(40, 130)
-				bolt(Vector3.new(root.Position.X + math.cos(a) * r, root.Position.Y - 3, root.Position.Z + math.sin(a) * r))
-				flash(rgb(210, 225, 255), 0.35, 0.5)
+				bolt(Vector3.new(root.Position.X + math.cos(a) * r, root.Position.Y - 3, root.Position.Z + math.sin(a) * r), V.colours[1])
+				flash(V.colours[1], 0.35, 0.5)
 				task.delay(rng:NextNumber(0.3, 1.1), function()
 					sound(if rng:NextNumber() < 0.5 then "fireworkRumble" else "fireworkBoom", 0.9, rng:NextNumber(0.6, 0.8))
 				end)
@@ -427,15 +450,20 @@ local function storm(seconds: number)
 end
 
 local function memeRain(seconds: number)
-	banner("BRAINROT STORM", rgb(120, 255, 120), 2.5)
+	local V = looks("memeRain")
+	banner(V.banner, V.colour, 2.5)
 	sound("airHorn", 1)
 	task.delay(0.6, function()
 		sound("airHorn", 1, 1.1)
 	end)
 	local glyphs = {}
-	for _, c in Curios.List do
-		if c.family == "meme" then
-			table.insert(glyphs, c.glyph)
+	if type(V.glyphs) == "table" then
+		glyphs = V.glyphs
+	else
+		for _, c in Curios.List do
+			if c.family == "meme" then
+				table.insert(glyphs, c.glyph)
+			end
 		end
 	end
 	if #glyphs == 0 then
@@ -503,7 +531,8 @@ local function memeRain(seconds: number)
 end
 
 local function confetti(seconds: number)
-	banner("CONFETTI!", rgb(255, 214, 80), 2)
+	local V = looks("confetti")
+	banner(V.banner, V.colour, 2)
 	sound("partyHorn", 1)
 	task.delay(0.3, function()
 		sound("partyHorn", 1, 1.15)
@@ -519,7 +548,7 @@ local function confetti(seconds: number)
 				local root = rootOf()
 				return if root then root.Position + offset else nil
 			end,
-			colours = CONFETTI,
+			colours = V.colours,
 			material = Enum.Material.SmoothPlastic,
 			reflectance = 0.1,
 			size = Vector3.new(0.34, 0.02, 0.18),
@@ -546,6 +575,7 @@ local function confetti(seconds: number)
 end
 
 local function shockwave(seconds: number, origin: Vector3?)
+	local V = looks("shockwave")
 	local root = rootOf()
 	local centre = origin or (if root then root.Position else nil)
 	if not centre then
@@ -556,7 +586,7 @@ local function shockwave(seconds: number, origin: Vector3?)
 	local ring = anchor("Shockwave", centre, Vector3.new(0.4, 2, 2))
 	ring.Shape = Enum.PartType.Cylinder
 	ring.Material = Enum.Material.Neon
-	ring.Color = GOLD
+	ring.Color = V.colours[1]
 	ring.Transparency = 0.2
 	ring.CFrame = CFrame.new(centre) * CFrame.Angles(0, 0, math.rad(90))
 	local reach = cfg().shockwaveRadius
@@ -577,7 +607,9 @@ local function shockwave(seconds: number, origin: Vector3?)
 end
 
 local function spin(seconds: number)
-	banner("SPIN!", rgb(90, 230, 255), 1.5)
+	local V = looks("spin")
+	banner(V.banner, V.colour, 1.5)
+	local speed: number = if type(V.speed) == "number" then V.speed else 14
 	if not free() then
 		return
 	end
@@ -599,7 +631,7 @@ local function spin(seconds: number)
 			h.AutoRotate = was
 			return
 		end
-		root.CFrame = root.CFrame * CFrame.Angles(0, 14 * dt, 0)
+		root.CFrame = root.CFrame * CFrame.Angles(0, speed * dt, 0)
 	end)
 end
 
@@ -765,13 +797,18 @@ end
 -- One meteor: from high in the sky, at a slant, streaking fire, into the ground near the guest:
 -- a flash, a ring of fire racing out, rock thrown up, a cloud of dust. A big one (every few):
 -- three times the size, slower, and a sonic boom when it lands.
-local function oneMeteor(centre: Vector3, rng: Random, big: boolean?)
+local function oneMeteor(centre: Vector3, rng: Random, big: boolean?, V: AbuseNights.Variant)
+	local hot, mid, deep = V.colours[1], V.colours[2] or V.colours[1], V.colours[3] or V.colours[1]
+	if V.rainbow then
+		mid = AbuseNights.RAINBOW[rng:NextInteger(1, #AbuseNights.RAINBOW)]
+		deep = mid:Lerp(Color3.new(0, 0, 0), 0.4)
+	end
 	local a = rng:NextNumber(0, math.pi * 2)
 	local r = if big then rng:NextNumber(30, 60) else rng:NextNumber(14, 80)
 	local hit = groundUnder(Vector3.new(centre.X + math.cos(a) * r, centre.Y, centre.Z + math.sin(a) * r))
 	local from = hit + Vector3.new(rng:NextNumber(-90, 90), if big then 280 else 190, rng:NextNumber(-90, 90))
 	local size = if big then 20 else rng:NextNumber(5, 8.5)
-	local rock = part("Meteor", Vector3.one * size, rgb(255, 160, 70))
+	local rock = part("Meteor", Vector3.one * size, mid)
 	rock.Shape = Enum.PartType.Ball
 	rock.Position = from
 	local core = Instance.new("Attachment")
@@ -790,14 +827,14 @@ local function oneMeteor(centre: Vector3, rng: Random, big: boolean?)
 	streak.Lifetime = if big then 1 else 0.55
 	streak.LightEmission = 1
 	streak.LightInfluence = 0
-	streak.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, rgb(255, 250, 220)), ColorSequenceKeypoint.new(0.25, rgb(255, 180, 70)), ColorSequenceKeypoint.new(1, rgb(190, 50, 20)) })
+	streak.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, hot), ColorSequenceKeypoint.new(0.25, mid), ColorSequenceKeypoint.new(1, deep) })
 	streak.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(1, 1) })
 	streak.WidthScale = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(1, 0.15) })
 	streak.Parent = rock
-	emitter(core, FIRE, ColorSequence.new(rgb(255, 230, 140), rgb(255, 80, 30)), { Rate = if big then 220 else 120, Lifetime = NumberRange.new(0.4, 0.9), Speed = NumberRange.new(1, 4), Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, size * 0.9), NumberSequenceKeypoint.new(1, size * 0.15) }), LightEmission = 1, Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.1), NumberSequenceKeypoint.new(1, 1) }) })
+	emitter(core, FIRE, ColorSequence.new(hot, mid), { Rate = if big then 220 else 120, Lifetime = NumberRange.new(0.4, 0.9), Speed = NumberRange.new(1, 4), Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, size * 0.9), NumberSequenceKeypoint.new(1, size * 0.15) }), LightEmission = 1, Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.1), NumberSequenceKeypoint.new(1, 1) }) })
 	emitter(core, SMOKE, ColorSequence.new(rgb(90, 70, 60)), { Rate = 45, Lifetime = NumberRange.new(1.2, 2), Speed = NumberRange.new(0.5, 1.5), Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, size * 0.6), NumberSequenceKeypoint.new(1, size * 1.6) }), Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.4), NumberSequenceKeypoint.new(1, 1) }) })
 	local glow = Instance.new("PointLight")
-	glow.Color = rgb(255, 170, 80)
+	glow.Color = mid
 	glow.Range = 60
 	glow.Brightness = if big then 8 else 4
 	glow.Parent = rock
@@ -821,7 +858,7 @@ local function oneMeteor(centre: Vector3, rng: Random, big: boolean?)
 		TweenService:Create(glow, TweenInfo.new(0.9), { Brightness = 0 }):Play()
 		-- The impact: a ring of fire racing out, sparks, rock, dust, a boom; the screen shakes if near.
 		local reach = if big then 110 else 46
-		local ring = part("Impact", Vector3.new(0.6, 4, 4), rgb(255, 150, 60), Enum.Material.Neon, 0.05)
+		local ring = part("Impact", Vector3.new(0.6, 4, 4), mid, Enum.Material.Neon, 0.05)
 		ring.Shape = Enum.PartType.Cylinder
 		ring.CFrame = CFrame.new(hit + Vector3.new(0, 0.3, 0)) * CFrame.Angles(0, 0, math.rad(90))
 		TweenService:Create(ring, TweenInfo.new(if big then 1.1 else 0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Vector3.new(0.6, reach, reach), Transparency = 1 }):Play()
@@ -832,7 +869,7 @@ local function oneMeteor(centre: Vector3, rng: Random, big: boolean?)
 		local burst = Instance.new("Attachment")
 		burst.WorldPosition = hit + Vector3.new(0, 1, 0)
 		burst.Parent = Workspace.Terrain
-		local sp = emitter(burst, SPARKS, ColorSequence.new(rgb(255, 230, 140), rgb(255, 90, 30)), { Rate = 0, Lifetime = NumberRange.new(0.6, 1.2), Speed = NumberRange.new(if big then 40 else 20, if big then 90 else 45), SpreadAngle = Vector2.new(70, 70), Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, if big then 2.4 else 1.2), NumberSequenceKeypoint.new(1, 0) }), LightEmission = 1, Acceleration = Vector3.new(0, -40, 0) })
+		local sp = emitter(burst, SPARKS, ColorSequence.new(hot, mid), { Rate = 0, Lifetime = NumberRange.new(0.6, 1.2), Speed = NumberRange.new(if big then 40 else 20, if big then 90 else 45), SpreadAngle = Vector2.new(70, 70), Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, if big then 2.4 else 1.2), NumberSequenceKeypoint.new(1, 0) }), LightEmission = 1, Acceleration = Vector3.new(0, -40, 0) })
 		local dust = emitter(burst, SMOKE, ColorSequence.new(rgb(150, 130, 110)), { Rate = 0, Lifetime = NumberRange.new(1.6, 2.8), Speed = NumberRange.new(4, if big then 28 else 14), SpreadAngle = Vector2.new(80, 80), Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, size * 0.8), NumberSequenceKeypoint.new(1, size * 3) }), Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.35), NumberSequenceKeypoint.new(1, 1) }), Acceleration = Vector3.new(0, 3, 0) })
 		pcall(function()
 			sp:Emit(if big then 160 else 60)
@@ -872,14 +909,15 @@ local function oneMeteor(centre: Vector3, rng: Random, big: boolean?)
 end
 
 local function meteor(seconds: number)
-	banner("METEOR SHOWER!", rgb(255, 150, 60), 2.5)
-	flash(rgb(255, 170, 110), 0.25, 1)
+	local V = looks("meteor")
+	banner(V.banner, V.colour, 2.5)
+	flash(V.colour, 0.25, 1)
 	local my = life()
 	-- The sky glows the colour of fire while it lasts.
 	local cc = Instance.new("ColorCorrectionEffect")
 	cc.Name = "MeteorSky"
 	cc.Parent = Lighting
-	TweenService:Create(cc, TweenInfo.new(1.5), { TintColor = rgb(255, 222, 200), Contrast = 0.08 }):Play()
+	TweenService:Create(cc, TweenInfo.new(1.5), { TintColor = if typeof(V.sky) == "Color3" then V.sky else rgb(255, 222, 200), Contrast = 0.08 }):Play()
 	task.spawn(function()
 		local rng = Random.new()
 		local started = os.clock()
@@ -889,9 +927,9 @@ local function meteor(seconds: number)
 			if root then
 				count += 1
 				-- (Every seventh, a giant.)
-				oneMeteor(root.Position, rng, count % 7 == 0)
+				oneMeteor(root.Position, rng, count % 7 == 0, V)
 				if rng:NextNumber() < 0.35 then
-					oneMeteor(root.Position, rng)
+					oneMeteor(root.Position, rng, false, V)
 				end
 			end
 			task.wait(rng:NextNumber(0.45, 1.1))
@@ -907,7 +945,9 @@ end
 -- bent round it), everything near pulled in spirals and stretched thin; at the end it bursts in a
 -- supernova of white light.
 local function blackHole(seconds: number)
-	banner("BLACK HOLE!", rgb(190, 120, 255), 2.5)
+	local V = looks("blackHole")
+	local c1, c2, c3 = V.colours[1], V.colours[2] or V.colours[1], V.colours[3] or V.colours[1]
+	banner(V.banner, V.colour, 2.5)
 	local root = rootOf()
 	if not root then
 		return
@@ -918,30 +958,30 @@ local function blackHole(seconds: number)
 	hole.Shape = Enum.PartType.Ball
 	hole.Position = centre
 	local disks: { { p: Part, size: number, spin: number, tilt: number } } = {}
-	for i, spec in { { size = 70, colour = rgb(255, 120, 40), alpha = 0.2, spin = 2.2, tilt = 12 }, { size = 96, colour = rgb(255, 190, 90), alpha = 0.55, spin = 1.5, tilt = 10 }, { size = 128, colour = rgb(170, 90, 255), alpha = 0.7, spin = -1, tilt = 14 } } do
+	for i, spec in { { size = 70, colour = c1, alpha = 0.2, spin = 2.2, tilt = 12 }, { size = 96, colour = c2, alpha = 0.55, spin = 1.5, tilt = 10 }, { size = 128, colour = c3, alpha = 0.7, spin = -1, tilt = 14 } } do
 		local d = part("Disk" .. i, Vector3.new(0.5, 2, 2), spec.colour, Enum.Material.Neon, spec.alpha)
 		d.Shape = Enum.PartType.Cylinder
 		table.insert(disks, { p = d, size = spec.size, spin = spec.spin, tilt = spec.tilt })
 	end
 	-- The ring of light round its edge, always facing the guest.
-	local photon = part("PhotonRing", Vector3.new(0.3, 2, 2), rgb(255, 245, 220), Enum.Material.Neon, 0.1)
+	local photon = part("PhotonRing", Vector3.new(0.3, 2, 2), c2:Lerp(Color3.new(1, 1, 1), 0.7), Enum.Material.Neon, 0.1)
 	photon.Shape = Enum.PartType.Cylinder
 	local swirl = Instance.new("Attachment")
 	swirl.Parent = hole
-	emitter(swirl, RING, ColorSequence.new(rgb(200, 140, 255), rgb(255, 150, 80)), { Rate = 12, Lifetime = NumberRange.new(1.5, 2), Speed = NumberRange.new(0, 0), Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 60), NumberSequenceKeypoint.new(1, 10) }), LightEmission = 1, Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.3), NumberSequenceKeypoint.new(1, 1) }), RotSpeed = NumberRange.new(120, 200), Rotation = NumberRange.new(0, 360) })
-	emitter(swirl, SPARK, ColorSequence.new(rgb(220, 180, 255)), { Rate = 90, Lifetime = NumberRange.new(1, 2), Speed = NumberRange.new(-40, -24), SpreadAngle = Vector2.new(180, 180), Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(1, 0) }), LightEmission = 1 })
+	emitter(swirl, RING, ColorSequence.new(c3, c1), { Rate = 12, Lifetime = NumberRange.new(1.5, 2), Speed = NumberRange.new(0, 0), Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 60), NumberSequenceKeypoint.new(1, 10) }), LightEmission = 1, Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.3), NumberSequenceKeypoint.new(1, 1) }), RotSpeed = NumberRange.new(120, 200), Rotation = NumberRange.new(0, 360) })
+	emitter(swirl, SPARK, ColorSequence.new(c3:Lerp(Color3.new(1, 1, 1), 0.4)), { Rate = 90, Lifetime = NumberRange.new(1, 2), Speed = NumberRange.new(-40, -24), SpreadAngle = Vector2.new(180, 180), Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(1, 0) }), LightEmission = 1 })
 	-- Bits of the night pulled in: stretched thin as they spiral down into it.
 	local rng = Random.new()
 	local pulled: { { p: Part, a: number, r: number, h: number, speed: number } } = {}
 	for _ = 1, 26 do
-		local p = part("Pulled", Vector3.new(0.6, 0.6, 1.6), if rng:NextNumber() < 0.5 then rgb(255, 200, 120) else rgb(190, 150, 255), Enum.Material.Neon, 0.1)
+		local p = part("Pulled", Vector3.new(0.6, 0.6, 1.6), if rng:NextNumber() < 0.5 then c2 else c3, Enum.Material.Neon, 0.1)
 		table.insert(pulled, { p = p, a = rng:NextNumber(0, math.pi * 2), r = rng:NextNumber(30, 90), h = rng:NextNumber(-20, 20), speed = rng:NextNumber(0.8, 1.6) })
 	end
 	local cc = Instance.new("ColorCorrectionEffect")
 	cc.Name = "BlackHoleDark"
 	cc.Brightness = -0.18
 	cc.Contrast = 0.15
-	cc.TintColor = rgb(200, 180, 255)
+	cc.TintColor = Color3.new(1, 1, 1):Lerp(c3, 0.25)
 	cc.Parent = Lighting
 	sound("fireworkRumble", 1, 0.5)
 	sound("warpBuild", 0.8, 0.7)
@@ -1015,7 +1055,8 @@ local function blackHole(seconds: number)
 end
 
 local function aurora(seconds: number)
-	banner("AURORA", rgb(120, 255, 200), 2)
+	local V = looks("aurora")
+	banner(V.banner, V.colour, 2)
 	sound("shimmerFall", 0.8)
 	local root = rootOf()
 	if not root then
@@ -1026,11 +1067,10 @@ local function aurora(seconds: number)
 	local curtains: { { a0: Attachment, a1: Attachment, base: Vector3, a1base: Vector3, phase: number } } = {}
 	local holderPart = part("Aurora", Vector3.new(1, 1, 1), Color3.new(1, 1, 1), Enum.Material.SmoothPlastic, 1)
 	holderPart.Position = centre
-	local colours = {
-		ColorSequence.new(rgb(80, 255, 170), rgb(120, 200, 255)),
-		ColorSequence.new(rgb(120, 255, 140), rgb(190, 110, 255)),
-		ColorSequence.new(rgb(90, 220, 255), rgb(220, 120, 255)),
-	}
+	local colours = {}
+	for i, c in V.colours do
+		table.insert(colours, ColorSequence.new(c, V.colours[i % #V.colours + 1]))
+	end
 	for i = 1, 9 do
 		local a = (i / 9) * math.pi * 1.6 - 0.8
 		local base = centre + Vector3.new(math.cos(a) * 140, 110 + (i % 3) * 14, math.sin(a) * 140)
@@ -1084,7 +1124,8 @@ local function aurora(seconds: number)
 end
 
 local function galaxy(seconds: number)
-	banner("TO THE STARS", rgb(170, 150, 255), 2.5)
+	local V = looks("galaxy")
+	banner(V.banner, V.colour, 2.5)
 	sound("shimmerFall", 0.9, 0.8)
 	local root = rootOf()
 	if not root then
@@ -1107,13 +1148,13 @@ local function galaxy(seconds: number)
 	end
 	for _ = 1, 7 do
 		local dir = Vector3.new(rng:NextNumber(-1, 1), rng:NextNumber(0.25, 0.9), rng:NextNumber(-1, 1)).Unit
-		local n = part("Nebula", Vector3.new(1, 1, 1) * rng:NextNumber(110, 200), if rng:NextNumber() < 0.5 then rgb(160, 80, 255) else rgb(60, 140, 255), Enum.Material.Neon, 0.86)
+		local n = part("Nebula", Vector3.new(1, 1, 1) * rng:NextNumber(110, 200), if rng:NextNumber() < 0.5 then V.colours[1] else V.colours[2] or V.colours[1], Enum.Material.Neon, 0.86)
 		n.Shape = Enum.PartType.Ball
 		n.Position = centre + dir * 560
 		n.Parent = folder
 	end
 	local planetAt = centre + Vector3.new(-260, 190, -320)
-	local planet = part("Planet", Vector3.new(110, 110, 110), rgb(220, 150, 90), Enum.Material.SmoothPlastic)
+	local planet = part("Planet", Vector3.new(110, 110, 110), if typeof(V.planet) == "Color3" then V.planet else rgb(220, 150, 90), Enum.Material.SmoothPlastic)
 	planet.Shape = Enum.PartType.Ball
 	planet.Position = planetAt
 	planet.Parent = folder
@@ -1154,7 +1195,9 @@ local function galaxy(seconds: number)
 end
 
 local function ufo(seconds: number)
-	banner("ABDUCTED!", rgb(120, 255, 140), 2.5)
+	local V = looks("ufo")
+	local tone = V.colours[1]
+	banner(V.banner, V.colour, 2.5)
 	local root = rootOf()
 	if not root then
 		return
@@ -1164,7 +1207,7 @@ local function ufo(seconds: number)
 	local saucer = part("Saucer", Vector3.new(4, 26, 26), rgb(170, 180, 190), Enum.Material.Metal)
 	saucer.Shape = Enum.PartType.Cylinder
 	saucer.Reflectance = 0.3
-	local dome = part("Dome", Vector3.new(11, 11, 11), rgb(150, 240, 255), Enum.Material.Glass, 0.35)
+	local dome = part("Dome", Vector3.new(11, 11, 11), tone:Lerp(Color3.new(1, 1, 1), 0.4), Enum.Material.Glass, 0.35)
 	dome.Shape = Enum.PartType.Ball
 	local lights: { Part } = {}
 	for i = 1, 10 do
@@ -1172,17 +1215,17 @@ local function ufo(seconds: number)
 		l.Shape = Enum.PartType.Ball
 		table.insert(lights, l)
 	end
-	local beam = part("TractorBeam", Vector3.new(34, 14, 14), rgb(140, 255, 160), Enum.Material.Neon, 0.75)
+	local beam = part("TractorBeam", Vector3.new(34, 14, 14), tone, Enum.Material.Neon, 0.75)
 	beam.Shape = Enum.PartType.Cylinder
 	local glow = Instance.new("PointLight")
-	glow.Color = rgb(140, 255, 160)
+	glow.Color = tone
 	glow.Range = 40
 	glow.Brightness = 3
 	glow.Parent = beam
 	-- Motes of light rising up the beam.
 	local lift = Instance.new("Attachment")
 	lift.Parent = beam
-	local motes = emitter(lift, SPARK, ColorSequence.new(rgb(180, 255, 190), Color3.new(1, 1, 1)), { Rate = 0, Lifetime = NumberRange.new(1.2, 2), Speed = NumberRange.new(10, 18), SpreadAngle = Vector2.new(8, 8), Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.9), NumberSequenceKeypoint.new(1, 0) }), LightEmission = 1, EmissionDirection = Enum.NormalId.Right })
+	local motes = emitter(lift, SPARK, ColorSequence.new(tone:Lerp(Color3.new(1, 1, 1), 0.3), Color3.new(1, 1, 1)), { Rate = 0, Lifetime = NumberRange.new(1.2, 2), Speed = NumberRange.new(10, 18), SpreadAngle = Vector2.new(8, 8), Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.9), NumberSequenceKeypoint.new(1, 0) }), LightEmission = 1, EmissionDirection = Enum.NormalId.Right })
 	motes.Shape = Enum.ParticleEmitterShape.Cylinder
 	motes.ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume
 	sound("slideWhistle", 1, 1.2)
@@ -1260,18 +1303,19 @@ local function boxed(e: ParticleEmitter)
 end
 
 local function blizzard(seconds: number)
-	banner("BLIZZARD!", rgb(220, 240, 255), 2.5)
+	local V = looks("blizzard")
+	banner(V.banner, V.colour, 2.5)
 	sound("fireworkHiss", 1, 0.5)
 	local my = life()
 	local stopSnow = cloud("Blizzard", Vector3.new(120, 30, 120), Vector3.new(0, 18, 0), function(att)
-		boxed(emitter(att, SPARK, ColorSequence.new(Color3.new(1, 1, 1)), { Rate = 900, Lifetime = NumberRange.new(1.5, 2.5), Speed = NumberRange.new(4, 8), Acceleration = Vector3.new(60, -25, 10), Size = NumberSequence.new(0.35, 0.2), LightEmission = 0.4 }))
+		boxed(emitter(att, SPARK, sequence(V.colours), { Rate = 900, Lifetime = NumberRange.new(1.5, 2.5), Speed = NumberRange.new(4, 8), Acceleration = Vector3.new(60, -25, 10), Size = NumberSequence.new(0.35, 0.2), LightEmission = 0.4 }))
 		boxed(emitter(att, SMOKE, ColorSequence.new(rgb(240, 248, 255)), { Rate = 25, Lifetime = NumberRange.new(2, 3), Speed = NumberRange.new(2, 4), Acceleration = Vector3.new(30, -4, 0), Size = NumberSequence.new(10, 18), Transparency = NumberSequence.new(0.75, 1) }))
 	end)
 	local cc = Instance.new("ColorCorrectionEffect")
 	cc.Name = "Whiteout"
 	cc.Brightness = 0.12
 	cc.Saturation = -0.4
-	cc.TintColor = rgb(225, 240, 255)
+	cc.TintColor = if typeof(V.tint) == "Color3" then V.tint else rgb(225, 240, 255)
 	cc.Parent = Lighting
 	task.spawn(function()
 		local started = os.clock()
@@ -1284,13 +1328,14 @@ local function blizzard(seconds: number)
 end
 
 local function earthquake(seconds: number)
-	banner("EARTHQUAKE!", rgb(230, 170, 110), 2)
+	local V = looks("earthquake")
+	banner(V.banner, V.colour, 2)
 	sound("fireworkRumble", 1.2, 0.45)
 	task.delay(0.5, sound, "fireworkTaiko", 1, 0.6)
 	shake(seconds, 1.8)
 	local my = life()
 	local stopDust = cloud("Dust", Vector3.new(60, 2, 60), Vector3.new(0, -3, 0), function(att)
-		boxed(emitter(att, SMOKE, ColorSequence.new(rgb(170, 150, 120)), { Rate = 40, Lifetime = NumberRange.new(1.5, 2.5), Speed = NumberRange.new(2, 6), Size = NumberSequence.new(3, 8), Transparency = NumberSequence.new(0.5, 1) }))
+		boxed(emitter(att, SMOKE, sequence(V.colours), { Rate = 40, Lifetime = NumberRange.new(1.5, 2.5), Speed = NumberRange.new(2, 6), Size = NumberSequence.new(3, 8), Transparency = NumberSequence.new(0.5, 1) }))
 	end)
 	task.spawn(function()
 		local started = os.clock()
@@ -1305,7 +1350,9 @@ local function earthquake(seconds: number)
 end
 
 local function rainbowMode(seconds: number)
-	banner("RAINBOW MODE!", Color3.new(1, 1, 1), 2)
+	local V = looks("rainbow")
+	local C = V.colours
+	banner(V.banner, V.colour, 2)
 	sound("shimmer", 1)
 	local my = life()
 	local cc = Instance.new("ColorCorrectionEffect")
@@ -1326,21 +1373,19 @@ local function rainbowMode(seconds: number)
 		tr.Attachment1 = t1
 		tr.Lifetime = 1.2
 		tr.LightEmission = 1
-		tr.Color = ColorSequence.new({
-			ColorSequenceKeypoint.new(0, RAINBOW[1]),
-			ColorSequenceKeypoint.new(0.33, RAINBOW[4]),
-			ColorSequenceKeypoint.new(0.66, RAINBOW[3]),
-			ColorSequenceKeypoint.new(1, RAINBOW[5]),
-		})
+		tr.Color = sequence(C)
 		tr.Transparency = NumberSequence.new(0.2, 1)
 		tr.Parent = root
 		made = { tr, t0, t1 }
-		emitter(t1, SPARK, ColorSequence.new(RAINBOW[1], RAINBOW[5]), { Rate = 30, Lifetime = NumberRange.new(0.8, 1.4), Speed = NumberRange.new(2, 5), SpreadAngle = Vector2.new(180, 180), Size = NumberSequence.new(0.7, 0), LightEmission = 1 })
+		emitter(t1, SPARK, sequence(C), { Rate = 30, Lifetime = NumberRange.new(0.8, 1.4), Speed = NumberRange.new(2, 5), SpreadAngle = Vector2.new(180, 180), Size = NumberSequence.new(0.7, 0), LightEmission = 1 })
 	end
 	local started = os.clock()
 	local conn = RunService.RenderStepped:Connect(function()
 		local t = os.clock() - started
-		cc.TintColor = Color3.new(1, 1, 1):Lerp(Color3.fromHSV((t * 0.35) % 1, 0.8, 1), 0.3)
+		-- (Every colour of its own in turn, blending one into the next.)
+		local k = (t * 0.7) % #C
+		local i = math.floor(k)
+		cc.TintColor = Color3.new(1, 1, 1):Lerp(C[i + 1]:Lerp(C[(i + 1) % #C + 1], k - i), 0.3)
 	end)
 	task.spawn(function()
 		while alive(my) and os.clock() - started < seconds do
@@ -1355,13 +1400,14 @@ local function rainbowMode(seconds: number)
 end
 
 local function bubbles(seconds: number)
-	banner("BUBBLES!", rgb(160, 220, 255), 2)
+	local V = looks("bubbles")
+	banner(V.banner, V.colour, 2)
 	sound("shimmer", 0.8, 1.3)
 	local my = life()
 	local rng = Random.new()
 	local list: { { part: Part, speed: number, phase: number } } = {}
 	for _ = 1, 45 do
-		local b = part("Bubble", Vector3.new(1, 1, 1) * rng:NextNumber(0.8, 2.6), rgb(200, 235, 255), Enum.Material.Glass, 0.55)
+		local b = part("Bubble", Vector3.new(1, 1, 1) * rng:NextNumber(0.8, 2.6), V.colours[rng:NextInteger(1, #V.colours)]:Lerp(Color3.new(1, 1, 1), 0.45), Enum.Material.Glass, 0.55)
 		b.Shape = Enum.PartType.Ball
 		b.Reflectance = 0.35
 		b.Position = Vector3.new(0, -1000, 0)
@@ -1402,6 +1448,7 @@ local function bubbles(seconds: number)
 end
 
 local function goldWave(seconds: number)
+	local V = looks("goldWave")
 	sound("coinDrop", 1)
 	task.delay(0.3, sound, "coinDrop", 1, 1.1)
 	task.delay(0.6, sound, "crowdCheer", 0.6)
@@ -1418,7 +1465,7 @@ local function goldWave(seconds: number)
 	local wave = Instance.new("Frame")
 	wave.Name = "Wave"
 	wave.BorderSizePixel = 0
-	wave.BackgroundColor3 = rgb(255, 200, 70)
+	wave.BackgroundColor3 = V.colours[1]
 	wave.Position = UDim2.fromScale(-1.2, 0)
 	wave.Size = UDim2.fromScale(1, 1)
 	wave.Parent = holderFrame
@@ -1430,7 +1477,7 @@ local function goldWave(seconds: number)
 	for i = 1, 110 do
 		local c = Instance.new("TextLabel")
 		c.BackgroundTransparency = 1
-		c.Text = "🪙"
+		c.Text = if type(V.glyph) == "string" then V.glyph else "🪙"
 		c.TextScaled = true
 		local s = rng:NextNumber(0.04, 0.09)
 		c.Size = UDim2.fromScale(s, s * 1.6)
@@ -1441,21 +1488,23 @@ local function goldWave(seconds: number)
 			TweenService:Create(c, TweenInfo.new(rng:NextNumber(1.6, 2.8), Enum.EasingStyle.Sine), { Position = UDim2.fromScale(rng:NextNumber(1.05, 1.4), c.Position.Y.Scale + rng:NextNumber(-0.2, 0.2)), Rotation = c.Rotation + rng:NextNumber(-360, 360) }):Play()
 		end)
 	end
-	banner("GOLD WAVE!", rgb(255, 214, 90), 2.2)
+	banner(V.banner, V.colour, 2.2)
 	task.delay(seconds, function()
 		holderFrame:Destroy()
 	end)
 end
 
 local function fireIce(seconds: number)
-	banner("FIRE & ICE", rgb(255, 160, 120), 2.2)
+	local V = looks("fireIce")
+	local warm, cool = V.colours[1], V.colours[2] or V.colours[1]
+	banner(V.banner, V.colour, 2.2)
 	sound("fireworkHiss", 0.9)
 	local my = life()
 	local stopFire = cloud("Embers", Vector3.new(50, 2, 50), Vector3.new(0, -3, 0), function(att)
-		boxed(emitter(att, FIRE, ColorSequence.new(rgb(255, 200, 90), rgb(255, 60, 30)), { Rate = 60, Lifetime = NumberRange.new(1.2, 2.2), Speed = NumberRange.new(4, 9), Size = NumberSequence.new(0.9, 0), LightEmission = 1, Acceleration = Vector3.new(0, 6, 0) }))
+		boxed(emitter(att, FIRE, ColorSequence.new(warm:Lerp(Color3.new(1, 1, 1), 0.3), warm), { Rate = 60, Lifetime = NumberRange.new(1.2, 2.2), Speed = NumberRange.new(4, 9), Size = NumberSequence.new(0.9, 0), LightEmission = 1, Acceleration = Vector3.new(0, 6, 0) }))
 	end)
 	local stopIce = cloud("Frost", Vector3.new(60, 2, 60), Vector3.new(0, 26, 0), function(att)
-		boxed(emitter(att, SPARK, ColorSequence.new(rgb(200, 235, 255), Color3.new(1, 1, 1)), { Rate = 120, Lifetime = NumberRange.new(2.5, 4), Speed = NumberRange.new(4, 7), Size = NumberSequence.new(0.5, 0.2), LightEmission = 0.6, Acceleration = Vector3.new(0, -6, 0), EmissionDirection = Enum.NormalId.Bottom }))
+		boxed(emitter(att, SPARK, ColorSequence.new(cool:Lerp(Color3.new(1, 1, 1), 0.4), Color3.new(1, 1, 1)), { Rate = 120, Lifetime = NumberRange.new(2.5, 4), Speed = NumberRange.new(4, 7), Size = NumberSequence.new(0.5, 0.2), LightEmission = 0.6, Acceleration = Vector3.new(0, -6, 0), EmissionDirection = Enum.NormalId.Bottom }))
 	end)
 	local gui = screen()
 	local sides = Instance.new("Frame")
@@ -1465,7 +1514,7 @@ local function fireIce(seconds: number)
 	sides.BackgroundTransparency = 1
 	sides.Size = UDim2.fromScale(1, 1)
 	sides.Parent = gui
-	for i, colour in { rgb(255, 80, 30), rgb(60, 160, 255) } do
+	for i, colour in { warm, cool } do
 		local f = Instance.new("Frame")
 		f.BorderSizePixel = 0
 		f.BackgroundColor3 = colour
@@ -1488,6 +1537,7 @@ local function fireIce(seconds: number)
 end
 
 local function blackout(seconds: number)
+	local V = looks("blackout")
 	sound("bellStrike", 0.9, 0.6)
 	local my = life()
 	local cc = Instance.new("ColorCorrectionEffect")
@@ -1495,7 +1545,7 @@ local function blackout(seconds: number)
 	cc.Brightness = 0
 	cc.Parent = Lighting
 	TweenService:Create(cc, TweenInfo.new(0.5), { Brightness = -0.55, Saturation = -0.5 }):Play()
-	banner("LIGHTS OUT", rgb(220, 220, 255), 2)
+	banner(V.banner, V.colour, 2)
 	local root = rootOf()
 	local beams: { Part } = {}
 	if root then
@@ -1505,7 +1555,7 @@ local function blackout(seconds: number)
 			light.Angle = 30
 			light.Range = 120
 			light.Brightness = 12
-			light.Color = RAINBOW[i * 2 % #RAINBOW + 1]
+			light.Color = V.colours[(i - 1) % #V.colours + 1]
 			light.Face = Enum.NormalId.Front
 			light.Shadows = false
 			light.Parent = p
@@ -1545,7 +1595,8 @@ local function blackout(seconds: number)
 end
 
 local function tornado(seconds: number)
-	banner("TORNADO!", rgb(200, 200, 210), 2.2)
+	local V = looks("tornado")
+	banner(V.banner, V.colour, 2.2)
 	sound("fireworkHiss", 1, 0.4)
 	task.delay(0.4, sound, "fireworkRumble", 0.8, 0.5)
 	local root = rootOf()
@@ -1558,7 +1609,9 @@ local function tornado(seconds: number)
 	local rings: { Part } = {}
 	for i = 1, 12 do
 		local w = 6 + i * 3.2
-		local ring = part("Funnel", Vector3.new(3, w, w), rgb(150, 150, 160), Enum.Material.SmoothPlastic, 0.55 + i * 0.02)
+		-- (A plain one is dust; one of colours glows: fire, a rainbow, water.)
+		local glowing = #V.colours > 1
+		local ring = part("Funnel", Vector3.new(3, w, w), V.colours[(i - 1) % #V.colours + 1], if glowing then Enum.Material.Neon else Enum.Material.SmoothPlastic, (if glowing then 0.62 else 0.55) + i * 0.02)
 		ring.Shape = Enum.PartType.Cylinder
 		table.insert(rings, ring)
 	end
@@ -1616,20 +1669,22 @@ local function tornado(seconds: number)
 end
 
 local function fireworksShow(seconds: number)
-	banner("FIREWORKS!", rgb(255, 214, 110), 2)
+	local V = looks("fireworks")
+	banner(V.banner, V.colour, 2)
 	pcall(function()
-		Fireworks.show(seconds, { scale = 1, watch = false, music = false })
+		Fireworks.show(seconds, { scale = 1, watch = false, music = false, act = if type(V.act) == "string" then V.act else nil })
 	end)
 end
 
 local function titan(seconds: number)
+	local V = looks("titan")
 	local glyphs = {}
 	for _, c in Curios.List do
 		if c.family == "meme" then
 			table.insert(glyphs, c.glyph)
 		end
 	end
-	local glyph = if #glyphs > 0 then glyphs[math.random(1, #glyphs)] else "🗿"
+	local glyph = if type(V.glyph) == "string" then V.glyph elseif #glyphs > 0 then glyphs[math.random(1, #glyphs)] else "🗿"
 	local camera = Workspace.CurrentCamera
 	local root = rootOf()
 	if not camera or not root then
@@ -1666,6 +1721,7 @@ local function titan(seconds: number)
 			sound("gong", 1.2, 0.6)
 			sound("airHorn", 1, 0.7)
 			flash(rgb(255, 220, 200), 0.3, 0.6)
+			banner(V.banner .. "!", V.colour, 2)
 		end
 	end)
 	task.delay(math.max(4, seconds - 3), function()
@@ -1683,7 +1739,7 @@ local function titan(seconds: number)
 end
 
 -- Zero gravity: this guest's own world goes light for a while (their screen moves them).
-local ZERO_G = 12
+local ZERO_G = 12 -- (the pull of the look that's on: set as it starts)
 local zeroing = 0
 local serverGravity: number? = nil
 Workspace:GetPropertyChangedSignal("Gravity"):Connect(function()
@@ -1695,7 +1751,11 @@ Workspace:GetPropertyChangedSignal("Gravity"):Connect(function()
 end)
 
 local function zeroG(seconds: number)
-	banner("ZERO GRAVITY", rgb(170, 200, 255), 2.2)
+	local V = looks("zeroG")
+	banner(V.banner, V.colour, 2.2)
+	if zeroing == 0 and type(V.gravity) == "number" then
+		ZERO_G = V.gravity
+	end
 	sound("shimmerFall", 0.9, 1.2)
 	if zeroing == 0 then
 		serverGravity = Workspace.Gravity
@@ -1703,7 +1763,7 @@ local function zeroG(seconds: number)
 	zeroing += 1
 	Workspace.Gravity = ZERO_G
 	if free() then
-		throw(Vector3.new(0, 28, 0))
+		throw(Vector3.new(0, if type(V.hop) == "number" then V.hop else 28, 0))
 	end
 	local my = life()
 	local done = false
@@ -1731,13 +1791,15 @@ end
 -- guest, land with a burst of gold, and dance round them, turning slowly, till it's over; then each
 -- vanishes in a puff of gold. (Without the owner's avatar yet: a dance party.)
 local function ownerArmy(seconds: number)
-	banner("THE OWNER'S ARMY!", GOLD, 2.5)
+	local V = looks("ownerArmy")
 	local template = OwnerCameo.template()
 	local root = rootOf()
 	if not template or not root then
-		dance(seconds)
+		-- (AJKR's avatar not here yet: a dance party, under the army's name.)
+		dance(seconds, V.banner, V.colour)
 		return
 	end
+	banner(V.banner, V.colour, 2.5)
 	local my = life()
 	sound("airHorn", 1)
 	task.delay(0.4, sound, "partyHorn", 1)
@@ -1765,7 +1827,7 @@ local function ownerArmy(seconds: number)
 		if pivot and pivot:IsA("BasePart") then
 			local att = Instance.new("Attachment")
 			att.Parent = pivot
-			emitter(att, SPARK, ColorSequence.new(GOLD, Color3.new(1, 1, 1)), { Rate = 25, Lifetime = NumberRange.new(0.6, 1.2), Speed = NumberRange.new(2, 5), SpreadAngle = Vector2.new(180, 180), Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.7), NumberSequenceKeypoint.new(1, 0) }), LightEmission = 1 })
+			emitter(att, SPARK, sequence(V.colours), { Rate = 25, Lifetime = NumberRange.new(0.6, 1.2), Speed = NumberRange.new(2, 5), SpreadAngle = Vector2.new(180, 180), Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.7), NumberSequenceKeypoint.new(1, 0) }), LightEmission = 1 })
 		end
 		table.insert(army, { m = m, a = a, land = 1 + i * 0.12, ground = ground })
 	end
@@ -1911,7 +1973,7 @@ local PLAYERS: { [string]: (number, Vector3?) -> () } = {
 
 -- Plays one effect (as the server said), or "stop". `lasting`: switched on (no time limit: it
 -- runs until its switch goes off).
-function AbuseFX.play(id: string, seconds: number?, origin: Vector3?, lasting: boolean?)
+function AbuseFX.play(id: string, seconds: number?, origin: Vector3?, lasting: boolean?, v: number?)
 	if id == "stop" then
 		token += 1
 		-- Put back what's held (a guest in the air, the camera, gravity), then clear the stage.
@@ -1939,6 +2001,7 @@ function AbuseFX.play(id: string, seconds: number?, origin: Vector3?, lasting: b
 		local s = seconds or (cfg().fxSeconds[id] or 6)
 		local was = starting
 		starting = id
+		looksNow[id] = if type(v) == "number" then v else 1
 		local ok, err = pcall(function()
 			fn(if lasting then math.max(1, s) else math.clamp(s, 1, 60), origin)
 		end)
@@ -1984,10 +2047,13 @@ function AbuseFX.sustain(id: string, on: boolean)
 		local first = true
 		while switched[id] == run do
 			repeating = not first
+			-- (Its looks: as the server switched it on, the same in every server.)
+			local v = Workspace:GetAttribute(HouseEvents.fxVariantAttribute(id))
+			local looksV = if type(v) == "number" then v else nil
 			if wave then
-				AbuseFX.play(id, wave.on)
+				AbuseFX.play(id, wave.on, nil, nil, looksV)
 			else
-				AbuseFX.play(id, LASTING, nil, true)
+				AbuseFX.play(id, LASTING, nil, true, looksV)
 			end
 			repeating = false
 			first = false
@@ -2018,7 +2084,7 @@ function AbuseFX.start()
 	Remotes.event("Salute").OnClientEvent:Connect(function(m: any)
 		if type(m) == "table" and m.op == "abuseFX" and type(m.id) == "string" then
 			local origin = if typeof(m.origin) == "Vector3" then m.origin else nil
-			AbuseFX.play(m.id, if type(m.seconds) == "number" then m.seconds else nil, origin)
+			AbuseFX.play(m.id, if type(m.seconds) == "number" then m.seconds else nil, origin, nil, if type(m.v) == "number" then m.v else nil)
 		end
 	end)
 	for _, e in HouseEvents.Effects do

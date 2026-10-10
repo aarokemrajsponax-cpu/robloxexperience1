@@ -129,13 +129,13 @@ def workflow():
     return step["run"], step["env"]
 
 
-def run_workflow(api, power, words="", style="rainbow", raw="", key="test-key", run_id="777"):
+def run_workflow(api, power, words="", style="rainbow", raw="", key="test-key", run_id="777", night=""):
     script, env = workflow()
     tmp = tempfile.mkdtemp()
     summary = os.path.join(tmp, "summary.md")
     e = dict(os.environ)
     e.update({k: str(v) for k, v in env.items() if not str(v).startswith("${{")})
-    e.update({"KEY": key, "POWER": power, "WORDS": words, "STYLE": style, "RAW": raw, "API": api, "GITHUB_STEP_SUMMARY": summary, "GITHUB_RUN_ID": run_id, "GITHUB_RUN_ATTEMPT": "1"})
+    e.update({"KEY": key, "POWER": power, "WORDS": words, "STYLE": style, "RAW": raw, "NIGHT": night, "API": api, "GITHUB_STEP_SUMMARY": summary, "GITHUB_RUN_ID": run_id, "GITHUB_RUN_ATTEMPT": "1"})
     p = subprocess.run(["bash", "-c", script], env=e, capture_output=True, text=True, timeout=120)
     out = p.stdout + p.stderr
     text = open(summary).read() if os.path.exists(summary) else ""
@@ -192,6 +192,19 @@ def test_workflow():
         check("the list keeps the last forty", len(log) == 40 and log[-1]["rid"] == "780-1", len(log))
         check("...and lets the day-old ones go", all(e["rid"] != "old" for e in log))
 
+        # Admin Abuse's night: chosen (sent with it), or a surprise (none sent: the id decides).
+        catalog = json.load(open(os.path.join(ROOT, "tools/remote/commands.json"), encoding="utf-8"))
+        midas = next(n for n in catalog["nights"] if n["id"] == "midasHeist")
+        code, out, _ = run_workflow(api, "💥 Admin Abuse Night · 15 min", night=midas["glyph"] + " " + midas["name"], run_id="790")
+        m = last_message(rb)
+        check("Admin Abuse with a night chosen sends that night", code == 0 and m.get("op") == "abuse" and m.get("night") == "midasHeist", m)
+        code, out, _ = run_workflow(api, "💥 Admin Abuse Night · 15 min", night=catalog["surprise"], run_id="791")
+        m = last_message(rb)
+        check("...and a surprise sends none (every server works the same one out of the command's id)", code == 0 and m.get("op") == "abuse" and "night" not in m, m)
+        code, out, _ = run_workflow(api, "☄️ Meteor shower ON", night=midas["glyph"] + " " + midas["name"], run_id="792")
+        check("...and a night never rides along on anything else", code == 0 and "night" not in last_message(rb), last_message(rb))
+        check("fifty-odd nights to choose from", len(catalog["nights"]) >= 50, len(catalog["nights"]))
+
         # Own words, filtered in the game.
         code, out, _ = run_workflow(api, "📣 Headline: my own words (type them in Words)", words="WELCOME TO ADMIN ABUSE", style="gold", run_id="781")
         m = last_message(rb)
@@ -247,6 +260,10 @@ def test_powershell(pwsh):
         p = subprocess.run([pwsh, "-NoProfile", "-NonInteractive", "-Command", '. "' + script + '"; Send-Command \'{"op":"token"}\''], env=env, capture_output=True, text=True, timeout=120)
         out = p.stdout + p.stderr
         check("...and without data store permission it still sends, and says what to add", last_message(rb).get("op") == "token" and "universe-datastores" in out, out)
+        rb.deny_store = False
+        p = subprocess.run([pwsh, "-NoProfile", "-NonInteractive", "-Command", '. "' + script + '"; Send-Command (Add-Night \'{"op":"mega","minutes":15}\' \'midas\'); Send-Command (Add-Night \'{"op":"token"}\' \'midas\')'], env=env, capture_output=True, text=True, timeout=120)
+        sent = [json.loads(x["message"]) for x in rb.messages[-2:]]
+        check("the PowerShell remote sends the night asked for with Mega Abuse (and never with anything else)", sent[0].get("op") == "mega" and sent[0].get("night") == "midasHeist" and "night" not in sent[1], p.stdout + p.stderr)
         shutil.rmtree(tmp, ignore_errors=True)
     finally:
         server.shutdown()

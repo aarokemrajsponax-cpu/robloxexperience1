@@ -19,6 +19,7 @@ local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local Curios = require(ReplicatedStorage.Shared.Curios)
+local AbuseNights = require(ReplicatedStorage.Shared.AbuseNights)
 local HouseEvents = require(ReplicatedStorage.Shared.HouseEvents)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
@@ -1104,6 +1105,14 @@ local REALM_THEMES: { [string]: string } = {
 	neon = "rainbow",
 	abyss = "bubbles",
 	frost = "blizzard",
+	inferno = "fireIce",
+	heaven = "aurora",
+	matrix = "ufo",
+	sakura = "bubbles",
+	synthwave = "rainbow",
+	jungle = "aurora",
+	thunder = "storm",
+	desert = "goldWave",
 }
 
 -- What's on now, newest first: switched-on effects (by when), Admin Abuse, and short surprises.
@@ -1154,7 +1163,11 @@ function ScreenFX.ribbonText(golden: boolean): string?
 		local where = if r then "  ·  " .. r.glyph .. " " .. r.name else ""
 		return "🌋 MEGA ABUSE  ·  ×" .. tostring(cfg.table.megaGilt) .. " GILT" .. where .. gold
 	elseif abusing then
-		return "💥 ADMIN ABUSE  ·  ×" .. tostring(cfg.goldenHourGilt) .. " GILT" .. gold
+		-- (Tonight's night, by name.)
+		local id = Workspace:GetAttribute("AbuseNight")
+		local night = if type(id) == "string" then AbuseNights.byId[id] else nil
+		local which = if night then "  ·  " .. night.glyph .. " " .. night.name else ""
+		return "💥 ADMIN ABUSE" .. which .. "  ·  ×" .. tostring(cfg.goldenHourGilt) .. " GILT" .. gold
 	end
 	local names = {}
 	local newest, newestAt = nil :: string?, -1

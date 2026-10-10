@@ -16,6 +16,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
+local Names = require(ReplicatedStorage.Shared.Names)
 local BarMenu = require(ReplicatedStorage.Shared.BarMenu)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Layout = require(ReplicatedStorage.Shared.Layout)
@@ -156,7 +157,7 @@ local function share(from: Player)
 		if other ~= from and r and not holding[other] and (r.Position - root.Position).Magnitude <= settings().shareRadius then
 			if Bar.serve(other, BarMenu.Shared) then
 				handed += 1
-				Perks.tell(other, { op = "notice", title = "The Terrace", line = string.format("%s handed you a macaron from their Grand Platter.", from.DisplayName) })
+				Perks.tell(other, { op = "notice", title = "The Terrace", line = string.format("%s handed you a macaron from their Grand Platter.", Names.of(from)) })
 			end
 		end
 	end

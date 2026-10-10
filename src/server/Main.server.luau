@@ -18,6 +18,7 @@ for _, name in { "Baseplate", "SpawnLocation" } do
 	end
 end
 
+local Names = require(ReplicatedStorage.Shared.Names)
 local Build = require(ReplicatedStorage.Shared.Build)
 print(string.format("[Maison] %s (server)", Build.label))
 
@@ -301,8 +302,8 @@ end
 Shop.goldenHour = function(buyer, seconds)
 	local ends = Workspace:GetAttribute(require(ReplicatedStorage.Shared.HouseEvents).attribute("goldenHour"))
 	local left = if type(ends) == "number" then math.max(0, ends - os.time()) else 0
-	AdminService.startEvent("goldenHour", left + seconds, buyer.DisplayName)
-	Remotes.event("Salute"):FireAllClients({ op = "salute", id = "goldenHourGift", by = buyer.DisplayName, effects = { "goldLeaf", "fireworks" }, seconds = 10, title = "Golden Hour", line = buyer.DisplayName .. " bought a Golden Hour for everyone: double Gilt for every guest!" })
+	AdminService.startEvent("goldenHour", left + seconds, Names.of(buyer))
+	Remotes.event("Salute"):FireAllClients({ op = "salute", id = "goldenHourGift", by = Names.of(buyer), effects = { "goldLeaf", "fireworks" }, seconds = 10, title = "Golden Hour", line = Names.of(buyer) .. " bought a Golden Hour for everyone: double Gilt for every guest!" })
 end
 boot("The Boutique", Shop.start)
 -- Every Robux purchase: receipts, the purchase ledger, prompts, and the five products. After the
@@ -329,7 +330,7 @@ require(script.Parent.Gilt).friends = Friends.giltBoost
 Friends.arrived = function(player: Player, friend: Player)
 	Achievements.award(player, "friendHere")
 	local more = math.floor((require(ReplicatedStorage.Shared.Config).data.Friends.giltBoost - 1) * 100 + 0.5)
-	Remotes.event("Shop"):FireClient(player, { op = "notice", title = "A friend is here", line = string.format("%s is in the house: friends together earn %d%% more Gilt, and you can visit each other's Suites.", friend.DisplayName, more) })
+	Remotes.event("Shop"):FireClient(player, { op = "notice", title = "A friend is here", line = string.format("%s is in the house: friends together earn %d%% more Gilt, and you can visit each other's Suites.", Names.of(friend), more) })
 end
 SuiteVisits.isSeated = AdminService.isSeated
 require(script.Parent.Seating).suiteData = SuiteVisits.dataFor
@@ -525,7 +526,7 @@ Progress.levelUp = function(player, level, gilt, gems)
 	Remotes.event("Shop"):FireClient(player, { op = "levelUp", level = level, title = LevelsShared.title(level), gilt = gilt, gems = gems })
 	Achievements.check(player)
 	if level % ConfigData.Levels.announceEvery == 0 then
-		Remotes.event("Salute"):FireAllClients({ op = "levelPublic", name = player.DisplayName, userId = player.UserId, level = level, title = LevelsShared.title(level) })
+		Remotes.event("Salute"):FireAllClients({ op = "levelPublic", name = Names.of(player), userId = player.UserId, level = level, title = LevelsShared.title(level) })
 	end
 end
 -- The Badge Book: a badge said on the guest's screen.

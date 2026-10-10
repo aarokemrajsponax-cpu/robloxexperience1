@@ -22,6 +22,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TextChatService = game:GetService("TextChatService")
 local TextService = game:GetService("TextService")
 
+local Names = require(ReplicatedStorage.Shared.Names)
 local ProductConfig = require(ReplicatedStorage.Shared.ProductConfig)
 local Profiles = require(script.Parent.Parent.Profiles)
 local Catalog = require(script.Parent.Catalog)
@@ -216,7 +217,7 @@ local function post(player: Player, data: Profiles.Data): boolean
 	end
 	pending[player] = nil
 	lastBy[player.UserId] = os.clock()
-	local q: Queued = { player = player, userId = player.UserId, name = player.DisplayName, user = player.Name, text = p.text }
+	local q: Queued = { player = player, userId = player.UserId, name = Names.of(player), user = player.Name, text = p.text }
 	table.insert(queue, q)
 	audit(q)
 	Perks.push(player)

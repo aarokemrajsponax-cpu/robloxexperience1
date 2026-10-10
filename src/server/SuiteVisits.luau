@@ -10,6 +10,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Names = require(ReplicatedStorage.Shared.Names)
 local Layout = require(ReplicatedStorage.Shared.Layout)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Friends = require(script.Parent.Friends)
@@ -64,7 +65,7 @@ local function tell(player: Player, host: Player?)
 	Remotes.event("Shop"):FireClient(player, {
 		op = "suiteHost",
 		host = if host then host.UserId else nil,
-		name = if host then host.DisplayName else nil,
+		name = if host then Names.of(host) else nil,
 		suite = if data then data.suite else nil,
 		goldKey = if data then data.goldKey == true else nil,
 	})
@@ -113,7 +114,7 @@ local function onAsk(player: Player, request: unknown): any
 	if r.op == "list" then
 		local friends = {}
 		for _, f in Friends.inServer(player) do
-			table.insert(friends, { userId = f.UserId, name = f.DisplayName })
+			table.insert(friends, { userId = f.UserId, name = Names.of(f) })
 		end
 		local host = SuiteVisits.hostOf(player)
 		return { ok = true, friends = friends, visiting = if host then host.UserId else nil }
@@ -141,7 +142,7 @@ local function onAsk(player: Player, request: unknown): any
 		end
 		setHost(player, host)
 		moveIn(player)
-		notice(host, "A visitor", player.DisplayName .. " is visiting your Suite.")
+		notice(host, "A visitor", Names.of(player) .. " is visiting your Suite.")
 		SuiteVisits.visited(player, host)
 		return { ok = true }
 	end

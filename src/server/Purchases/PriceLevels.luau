@@ -12,6 +12,9 @@
 
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Names = require(ReplicatedStorage.Shared.Names)
 
 local PriceLevels = {}
 
@@ -58,7 +61,7 @@ function PriceLevels.canGift(giver: Player, recipient: Player, ask: boolean?): (
 		return false, "Gifts can't be sent just now. Try again in a moment."
 	end
 	if from < to then
-		return false, "Gifts to " .. recipient.DisplayName .. " aren't available from your region."
+		return false, "Gifts to " .. Names.of(recipient) .. " aren't available from your region."
 	end
 	return true, nil
 end

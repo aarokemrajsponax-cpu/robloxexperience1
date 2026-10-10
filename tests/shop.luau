@@ -887,22 +887,34 @@ do
 	check("a Night of Curios makes finds likelier", CuriosS.chance(2, 0.8) > module("ReplicatedStorage", "Shared", "Curios").findChance(2, 0.8))
 	adminAs(owner, { op = "stop", id = "curioHour" })
 end
--- Admin Abuse Night: every event at once, and in every house when asked.
+-- Admin Abuse Night: one of the house's nights (here the one the owner chose, the classic: every
+-- event at once), and in every house when asked: the very same night (its seed goes with it).
+local AbuseNights = module("ReplicatedStorage", "Shared", "AbuseNights")
+local HouseEventsS = module("ReplicatedStorage", "Shared", "HouseEvents")
+local function stopEvents()
+	for _, e in HouseEventsS.List do
+		if AdminService.active(e.id) then
+			AdminService.stopEvent(e.id)
+		end
+	end
+end
 local publishedBefore = #published
-adminAs(owner, { op = "abuse", minutes = 15, everywhere = true })
+adminAs(owner, { op = "abuse", minutes = 15, everywhere = true, night = "classic" })
+local sentNight = published[#published].message
+local classicPlan = AbuseNights.plan(services.Workspace:GetAttribute("AbuseSeed"), false, 900, "classic")
 local allOn = true
-for _, id in Config.data.Admin.abuseEvents do
+for _, id in classicPlan.events do
 	if not AdminService.active(id) then
 		allOn = false
 	end
 end
-check("Admin Abuse Night starts every one of its events", allOn)
-check("and goes to every house", #published > publishedBefore and published[#published].message.op == "abuse")
+check("Admin Abuse Night starts every one of its night's events (the classic: all thirteen)", allOn and #classicPlan.events == 13, #classicPlan.events)
+check("and goes to every house", #published > publishedBefore and sentNight.op == "abuse")
+check("...with its seed and its night, so every house plays the very same night", sentNight.night == "classic" and sentNight.seed == services.Workspace:GetAttribute("AbuseSeed") and services.Workspace:GetAttribute("AbuseNight") == "classic")
 advance(Config.data.Admin.show.dropAt + 0.2) -- (the fireworks go up at the opening's drop)
 check("with fireworks for the whole house", string.find(lastBroadcast("salute").title or "", "Admin Abuse", 1, true) ~= nil)
-for _, id in Config.data.Admin.abuseEvents do
-	AdminService.stopEvent(id)
-end
+check("...naming tonight's night", string.find(lastBroadcast("salute").line or "", "THE CLASSIC", 1, true) ~= nil, lastBroadcast("salute").line)
+stopEvents()
 AdminService.stopAll("AJ")
 
 -- Admin Abuse Night, the second time: one great announcement (not one per event), the intro on
@@ -922,16 +934,19 @@ do
 	end
 	check("Admin Abuse Night announces itself once (never twelve at once)", salutes == 1 and intros == 1, salutes)
 	check("...and every screen knows it's on (one headline, not a wall of strips)", type(services.Workspace:GetAttribute("AbuseUntil")) == "number")
+	local nightId = services.Workspace:GetAttribute("AbuseNight")
+	check("a fresh night, not the one just played", type(nightId) == "string" and nightId ~= "classic" and AbuseNights.byId[nightId] ~= nil, nightId)
+	local thePlan = AbuseNights.plan(services.Workspace:GetAttribute("AbuseSeed"), false, 900, nightId)
 	local beforeSurprise = #broadcasts
-	advance(Config.data.Admin.abuseSurpriseSeconds + 1)
+	advance(thePlan.beats[1].at - Config.data.Admin.show.dropAt + 1)
 	local surprise = nil
 	for i = beforeSurprise + 1, #broadcasts do
 		local m = broadcasts[i].message
-		if m.op == "abuseFX" then
-			surprise = m.id
+		if m.op == "abuseFX" and surprise == nil then
+			surprise = m
 		end
 	end
-	check("a surprise for everyone every minute of the night", surprise ~= nil and table.find(Config.data.Admin.abuseSurprises, surprise) ~= nil, surprise)
+	check("the night's first surprise, at its moment, in its looks, with AJKR's line", surprise ~= nil and surprise.id == thePlan.beats[1].id and surprise.v == thePlan.beats[1].v and surprise.line == thePlan.beats[1].line, surprise and surprise.id)
 	adminAs(owner, { op = "freeze", on = true })
 	adminAs(owner, { op = "clock", id = "noon" })
 	check("the owner can set the time of day", services.Lighting.ClockTime == Config.data.Admin.clocks.noon and services.Workspace:GetAttribute("AdminClock") == "noon")
@@ -944,7 +959,7 @@ do
 	end
 	check("Stop everything: every event, the night, the freeze and the time of day", stopped.ok ~= false and not anyOn and services.Workspace:GetAttribute("AbuseUntil") == nil and nedRoot.Anchored == false and services.Lighting.ClockTime == Config.data.Admin.clocks.midnight and lastBroadcast("abuseFX").id == "stop")
 	local quiet = #broadcasts
-	advance(Config.data.Admin.abuseSurpriseSeconds + 1)
+	advance(90)
 	local after = false
 	for i = quiet + 1, #broadcasts do
 		if broadcasts[i].message.op == "abuseFX" then
@@ -963,7 +978,7 @@ check("every screen counts down to it", services.Workspace:GetAttribute("NextEve
 check("and it hasn't started early", not AdminService.active("goldenHour"))
 advance(21 * 60)
 run(AdminService.runSchedule)
-check("on time, it starts by itself", AdminService.active("goldenHour") and AdminService.active("goldRain"))
+check("on time, it starts by itself", AdminService.active("goldenHour") and AdminService.active("doubleXP"))
 check("and the countdown goes", services.Workspace:GetAttribute("NextEventAt") == nil)
 local cancel = adminAs(owner, { op = "schedule", what = "giants", at = fakeOs.time() + 3600, minutes = 15 })
 local giantsId
@@ -980,9 +995,7 @@ for _, p in after.schedule do
 	end
 end
 check("a scheduled event can be taken off", giantsId ~= nil and not stillThere)
-for _, id in Config.data.Admin.abuseEvents do
-	AdminService.stopEvent(id)
-end
+stopEvents()
 -- Guests. (Ned steps away from the coins first, so only the gifts count.)
 nedRoot.Position = Vector3.new(0, -500, 0)
 advance(0.5)
@@ -992,7 +1005,7 @@ check("only the offered amounts", adminAs(owner, { op = "gift", userId = ned.Use
 check("a gift to everyone", adminAs(owner, { op = "giftAll", amount = 100 }).ok and nd.gilt == giltBeforeGift + 600)
 check("crowning a guest makes them the Guest of Honour", adminAs(owner, { op = "crown", userId = ned.UserId }).ok ~= false and ned:GetAttribute("GuestOfHonour") == true and string.find(lastBroadcast("salute").line, "Guest of Honour", 1, true) ~= nil)
 check("the owner can't remove themselves", adminAs(owner, { op = "kick", userId = owner.UserId }).ok == false)
-check("free salutes from the house", adminAs(owner, { op = "salute", id = "fireworks" }).ok and salutesGiven[#salutesGiven].id == "fireworks" and salutesGiven[#salutesGiven].by == "AJ")
+check("free salutes from the house, given as AJKR (never the owner's Roblox name)", adminAs(owner, { op = "salute", id = "fireworks" }).ok and salutesGiven[#salutesGiven].id == "fireworks" and salutesGiven[#salutesGiven].by == "AJKR", salutesGiven[#salutesGiven].by)
 -- Announcements.
 check("a ready line is announced", adminAs(owner, { op = "announce", preset = 1 }).ok and lastBroadcast("announce").text == st.announcements[1])
 local typed = adminAs(owner, { op = "announce", text = "a rude line", everywhere = true })
@@ -1490,7 +1503,7 @@ do
 	run(function()
 		remote({ Data = '{"op":"headline","text":"rude remote words","style":"ice"}' })
 	end)
-	check("a remote headline is filtered by Roblox first", lastCast("headline") ~= nil and lastCast("headline").text == "#### remote words" and lastCast("headline").style == "ice" and lastCast("headline").by == "XxxXxxX_77797")
+	check("a remote headline is filtered by Roblox first", lastCast("headline") ~= nil and lastCast("headline").text == "#### remote words" and lastCast("headline").style == "ice" and lastCast("headline").by == "AJKR")
 	-- Nothing outside the lists does anything.
 	local giltBefore = {}
 	for _, g in guests do
@@ -1646,14 +1659,15 @@ do
 			fxBefore += 1
 		end
 	end
-	advance(Config.data.Admin.megaSurpriseSeconds * 2 + 2)
+	local megaPlan = module("ReplicatedStorage", "Shared", "AbuseNights").plan(services.Workspace:GetAttribute("AbuseSeed"), true, 300, services.Workspace:GetAttribute("AbuseNight"))
+	advance(megaPlan.beats[2].at + 2)
 	local fxAfter = 0
 	for _, b in broadcasts do
 		if b.message.op == "abuseFX" then
 			fxAfter += 1
 		end
 	end
-	check("surprises come twice as often", fxAfter - fxBefore >= 2)
+	check("surprises come thick and fast (two in the first minute or so)", fxAfter - fxBefore >= 2 and megaPlan.beats[2].at <= 75, megaPlan.beats[2].at)
 	adminAs(owner, { op = "stopAll" })
 	check("Stop everything ends Mega Abuse too", services.Workspace:GetAttribute("AbuseMega") == nil and services.Workspace:GetAttribute("AbuseUntil") == nil)
 
@@ -2143,7 +2157,7 @@ do
 	-- Admin Abuse: the opening, then the gilded night, and the owner's gifts.
 	local castBefore = #broadcasts
 	run(function()
-		AdminService.abuse(900, "XxxXxxX_77797", false)
+		AdminService.abuse(900, "AJKR", false, { night = "classic" })
 	end)
 	local intro, salute = nil, nil
 	for i = castBefore + 1, #broadcasts do
@@ -2206,13 +2220,14 @@ do
 	check("...and its gifts", more == 0)
 	-- Mega Abuse: realm after realm.
 	run(function()
-		AdminService.abuse(900, "XxxXxxX_77797", true)
+		AdminService.abuse(900, "AJKR", true, { night = "cosmicTakeover", seed = 4321 })
 	end)
-	check("Mega Abuse begins in the first realm", W:GetAttribute("AbuseRealm") == show.realms[1])
-	advance(show.realmSeconds + 2)
-	check("...and moves on to the next", W:GetAttribute("AbuseRealm") == show.realms[2])
-	advance(show.realmSeconds + 1)
-	check("...and the next", W:GetAttribute("AbuseRealm") == show.realms[3])
+	local realmsPlan = module("ReplicatedStorage", "Shared", "AbuseNights").plan(4321, true, 900, "cosmicTakeover", { realms = show.realms, giant = show.giant, giftEvery = show.giftEvery, realmSeconds = show.realmSeconds })
+	check("Mega Abuse begins in its night's realm", W:GetAttribute("AbuseRealm") == "cosmos" and realmsPlan.realms[1] == "cosmos")
+	advance(realmsPlan.realmSeconds + 2)
+	check("...and moves on to the next", W:GetAttribute("AbuseRealm") == realmsPlan.realms[2] and realmsPlan.realms[2] ~= "cosmos", W:GetAttribute("AbuseRealm"))
+	advance(realmsPlan.realmSeconds + 1)
+	check("...and the next", W:GetAttribute("AbuseRealm") == realmsPlan.realms[3], W:GetAttribute("AbuseRealm"))
 	-- A guest who already has the crown gets more Gilt for the third gift instead.
 	for i = 1, 3 do
 		run(function()
@@ -2231,6 +2246,323 @@ do
 	advance(1)
 	AdminService.showBegan = function() end
 	AdminService.showStopped = function() end
+end
+
+---------------------------------------------------------------------------------------------------
+-- Build 55: the owner is AJKR everywhere (and nobody else can be); Admin Abuse's nights (fifty-odd,
+-- no two the same) and every effect's looks, worked out from one seed: the same in every server
+---------------------------------------------------------------------------------------------------
+do
+	local AdminService = module("ServerScriptService", "Server", "AdminService")
+	local AbuseShowS = module("ServerScriptService", "Server", "AbuseShow")
+	local AbuseNights = module("ReplicatedStorage", "Shared", "AbuseNights")
+	local HouseEventsS = module("ReplicatedStorage", "Shared", "HouseEvents")
+	local Names = module("ReplicatedStorage", "Shared", "Names")
+	local W = services.Workspace
+	local remote = subscriptions[Config.data.Admin.remoteTopic]
+	local function now()
+		return W:GetServerTimeNow()
+	end
+	local function live()
+		return (dataStores.MaisonSchedule or {}).live or {}
+	end
+	local function count(t)
+		local n = 0
+		for _ in t do
+			n += 1
+		end
+		return n
+	end
+	local function fxSince(from)
+		local out = {}
+		for i = from + 1, #broadcasts do
+			local m = broadcasts[i].message
+			if type(m) == "table" and m.op == "abuseFX" then
+				table.insert(out, m)
+			end
+		end
+		return out
+	end
+	run(function()
+		AdminService.stopAll("test")
+	end)
+	advance(1)
+	local owner
+	for _, g in guests do
+		if g.UserId == Config.data.Admin.ownerUserId then
+			owner = g
+		end
+	end
+	local function adminAs(player, request)
+		advance(0.5)
+		local r
+		run(function()
+			r = AdminService.handle(player, request)
+		end)
+		return r
+	end
+
+	-- 1. AJKR, everywhere, and nobody else.
+	local function fakePlayer(id, display, user)
+		return { UserId = id, DisplayName = display, Name = user, GetAttribute = function()
+			return nil
+		end }
+	end
+	check("the owner shows as AJKR", owner ~= nil and Names.of(owner) == "AJKR")
+	check("...by their account too, out of the house (boards, notices)", Names.forUser(Config.data.Admin.ownerUserId, "XxxXxxX_77797", "XxxXxxX_77797") == "AJKR")
+	check("a guest whose display name reads AJKR is shown by their @username", Names.of(fakePlayer(555, "AJKR", "copycat_99")) == "@copycat_99" and Names.of(fakePlayer(556, "a.j.k.r", "dots")) == "@dots" and Names.of(fakePlayer(557, "AJKR_fan", "fan")) == "@fan")
+	check("...and everyone else is shown as Roblox has them", Names.of(fakePlayer(558, "Ben", "ben123")) == "Ben")
+	local before = #broadcasts
+	adminAs(owner, { op = "headline", preset = 1 })
+	adminAs(owner, { op = "token" })
+	local named, wrong = 0, 0
+	for i = before + 1, #broadcasts do
+		local m = broadcasts[i].message
+		if type(m) == "table" and m.by ~= nil then
+			if m.by == "AJKR" then
+				named += 1
+			else
+				wrong += 1
+			end
+		end
+		if type(m) == "table" and type(m.line) == "string" and string.find(m.line, "XxxXxxX", 1, true) then
+			wrong += 1
+		end
+	end
+	check("what the owner does goes out as AJKR (headlines, the Owner's Token)", named >= 2 and wrong == 0, wrong)
+
+	-- 2. The nights: fifty-odd, each made only of what the house has.
+	check("fifty-odd nights", #AbuseNights.List >= 50, #AbuseNights.List)
+	local bad = {}
+	local musicLists = (Config.data.Assets :: any).AbuseMusic
+	local giants = 0
+	for _, n in AbuseNights.List do
+		for _, id in n.pool do
+			if not HouseEventsS.effectById[id] then
+				table.insert(bad, n.id .. ": no effect " .. id)
+			end
+		end
+		if not HouseEventsS.realmById[n.realm] then
+			table.insert(bad, n.id .. ": no realm " .. n.realm)
+		end
+		for _, o in n.opening do
+			if not table.find(AbuseNights.Openings, o) then
+				table.insert(bad, n.id .. ": no opening " .. o)
+			end
+		end
+		for _, t in n.title do
+			if not table.find(AbuseNights.TitleStyles, t) then
+				table.insert(bad, n.id .. ": no title " .. t)
+			end
+		end
+		if not table.find(AbuseNights.Finales, n.finale) then
+			table.insert(bad, n.id .. ": no finale " .. n.finale)
+		end
+		if not AbuseNights.Palettes[n.palette] or not AbuseNights.Bodies[n.body] or not AbuseNights.Hunts[n.hunts] or not musicLists[n.music] then
+			table.insert(bad, n.id .. ": palette, body, hunts or music")
+		end
+		if table.find(n.pool, "ownerArmy") and not n.giant then
+			table.insert(bad, n.id .. ": AJKR's avatar on a night not made for it")
+		end
+		if n.giant then
+			giants += 1
+		end
+	end
+	for _, realm in Config.data.Admin.show.realms do
+		if not HouseEventsS.realmById[realm] then
+			table.insert(bad, "Mega's realm " .. realm)
+		end
+	end
+	check("every night is made of things the house has", #bad == 0, bad[1])
+	local used = {}
+	for _, n in AbuseNights.List do
+		for _, o in n.opening do
+			used["o:" .. o] = true
+		end
+		for _, t in n.title do
+			used["t:" .. t] = true
+		end
+		used["f:" .. n.finale] = true
+		used["r:" .. n.realm] = true
+	end
+	local unused = {}
+	for _, o in AbuseNights.Openings do
+		if not used["o:" .. o] then
+			table.insert(unused, o)
+		end
+	end
+	for _, t in AbuseNights.TitleStyles do
+		if not used["t:" .. t] then
+			table.insert(unused, t)
+		end
+	end
+	for _, f in AbuseNights.Finales do
+		if not used["f:" .. f] then
+			table.insert(unused, f)
+		end
+	end
+	check("every opening, every title and every finale belongs to some night", #unused == 0 and #AbuseNights.Openings >= 12 and #AbuseNights.Finales >= 6, unused[1])
+	local looks, thin = 0, {}
+	for _, e in HouseEventsS.Effects do
+		local c = AbuseNights.variantCount(e.id)
+		looks += c
+		if c < 2 then
+			table.insert(thin, e.id)
+		end
+	end
+	check("every effect has looks of its own (two or more each; about ninety in all)", #thin == 0 and looks >= 80, thin[1] or looks)
+	check("AJKR's own avatar only on a few nights", giants >= 1 and giants <= 4, giants)
+
+	-- 3. One seed, one night: the same beat for beat wherever it's worked out; and plenty of them.
+	local a = AbuseNights.plan(777, false, 1800)
+	local b = AbuseNights.plan(777, false, 1800)
+	local same = a.night.id == b.night.id and a.opening == b.opening and a.title == b.title and a.music == b.music and #a.beats == #b.beats and #a.beats > 10
+	for i, x in a.beats do
+		local y = b.beats[i]
+		if x.at ~= y.at or x.id ~= y.id or x.v ~= y.v or x.also ~= y.also or x.line ~= y.line then
+			same = false
+		end
+	end
+	check("the same seed is the same night, beat for beat (every server works it out alike)", same)
+	local nights, ways = {}, {}
+	for seed = 1, 400 do
+		local p = AbuseNights.plan(seed * 7919, false, 1800)
+		nights[p.night.id] = true
+		ways[p.night.id .. p.opening .. p.title .. p.beats[1].id .. p.beats[1].v] = true
+	end
+	check("four hundred nights: every one of the fifty-odd comes up, in hundreds of ways", count(nights) == #AbuseNights.List and count(ways) >= 300, count(nights) .. " / " .. count(ways))
+	local tidy = true
+	for seed = 1, 120 do
+		local p = AbuseNights.plan(seed, seed % 2 == 0, 3600)
+		for i, beat in p.beats do
+			if i > 1 and p.beats[i - 1].id == beat.id then
+				tidy = false
+			end
+			if beat.also and (beat.also == beat.id or (AbuseNights.MOVERS[beat.id] and AbuseNights.MOVERS[beat.also])) then
+				tidy = false
+			end
+			if beat.v < 1 or beat.v > AbuseNights.variantCount(beat.id) then
+				tidy = false
+			end
+		end
+	end
+	check("never the same surprise twice running, never two that move guests at once", tidy)
+	local m1 = AbuseNights.plan(1, false, 1800, "midasHeist")
+	local m2 = AbuseNights.plan(2, false, 1800, "midasHeist")
+	local differ = false
+	for i = 1, 3 do
+		if m1.beats[i].id ~= m2.beats[i].id or m1.beats[i].v ~= m2.beats[i].v then
+			differ = true
+		end
+	end
+	check("the same night chosen twice still goes differently (its order, its looks)", m1.night.id == "midasHeist" and m2.night.id == "midasHeist" and differ)
+	check("seeds are kept small enough to be exact anywhere", AbuseNights.seedOf("anything at all") <= 16000000 and AbuseNights.seedOf("abc") == AbuseNights.seedOf("abc") and AbuseNights.cleanSeed(0) == nil and AbuseNights.cleanSeed(2 ^ 30) == nil and AbuseNights.cleanSeed(12345) == 12345)
+	local never = AbuseNights.plan(5, false, 3600, "ajkrsArmy", { giant = "never" })
+	local army = false
+	for _, beat in never.beats do
+		if beat.id == "ownerArmy" or beat.also == "ownerArmy" then
+			army = true
+		end
+	end
+	check("the giant set to never: no avatar at all (no giant, no army)", never.giant == false and not army and AbuseNights.plan(5, false, 3600, "ajkrsArmy", { giant = "rare" }).giant == true)
+	check("a night not made for it never shows AJKR's avatar", AbuseNights.plan(5, false, 3600, "classic").giant == false)
+
+	-- 4. Every server the same night: from the owner's server (its seed sent), from the Owner
+	-- Remote (its seed from the command's id), and in a server opening later (written down).
+	local at = now() - 30
+	before = #broadcasts
+	run(function()
+		AdminService.apply({ op = "abuse", seconds = 900, liveId = "X-55", seed = 424242, night = "theGlitch" }, "AJKR", false, at)
+	end)
+	check("another server's Admin Abuse: the very same night here (its seed, its night)", W:GetAttribute("AbuseSeed") == 424242 and W:GetAttribute("AbuseNight") == "theGlitch")
+	check("...counted from when it was given there", math.abs(W:GetAttribute("AbuseSince") - math.floor(at)) <= 128, W:GetAttribute("AbuseSince"))
+	local glitch = AbuseNights.plan(424242, false, 900, "theGlitch")
+	local nextBeat
+	for _, beat in glitch.beats do
+		if math.floor(at) + beat.at >= fakeOs.time() + 1 then
+			nextBeat = beat
+			break
+		end
+	end
+	advance(math.floor(at) + nextBeat.at - fakeOs.time() + 1)
+	local landed = fxSince(before)
+	check("...its next surprise lands at the night's own moment, in its own looks", #landed >= 1 and landed[1].id == nextBeat.id and landed[1].v == nextBeat.v, landed[1] and landed[1].id)
+	run(function()
+		AdminService.stopAll("test")
+	end)
+	advance(1)
+	run(function()
+		remote({ Data = string.format('{"op":"abuse","minutes":15,"rid":"R55","at":%.3f}', now()) })
+	end)
+	check("the Owner Remote's Admin Abuse: its night from the command's own id (so every server has the same)", W:GetAttribute("AbuseSeed") == AbuseNights.seedOf("rid:R55"))
+	advance(6)
+	check("...written down with its seed and when it began", live().abuse ~= nil and live().abuse.seed == AbuseNights.seedOf("rid:R55") and type(live().abuse.since) == "number")
+	run(function()
+		AdminService.stopAll("test")
+	end)
+	advance(1)
+	local began = math.floor(now()) - 100
+	dataStores.MaisonSchedule.live = { abuse = { id = "late:55", since = began, ends = began + 900, mega = false, by = "AJKR", seed = 999, night = "volcanoNight" } }
+	before = #broadcasts
+	run(AdminService.syncLive)
+	check("a server opening later plays the same night, from the same moment", W:GetAttribute("AbuseSeed") == 999 and W:GetAttribute("AbuseNight") == "volcanoNight" and math.abs(W:GetAttribute("AbuseSince") - began) <= 128)
+	local volcano = AbuseNights.plan(999, false, 900, "volcanoNight")
+	advance(2)
+	local missed = 0
+	for _, m in fxSince(before) do
+		if m.id ~= "stop" then
+			missed += 1
+		end
+	end
+	check("...without replaying the surprises it missed", missed == 0 and volcano.beats[1].at < 100)
+	run(function()
+		AdminService.stopAll("test")
+	end)
+	advance(1)
+	dataStores.MaisonSchedule.live = nil
+
+	-- 5. Effects carry their looks: the owner's switch (sent with it), the remote's (from its id).
+	adminAs(owner, { op = "fx", id = "meteor", on = true, everywhere = true })
+	local sent = published[#published].message
+	check("an effect switched on everywhere carries its looks, the same here", sent.op == "fx" and type(sent.v) == "number" and sent.v == W:GetAttribute("FxV_meteor"), sent.v)
+	adminAs(owner, { op = "fxAllOff" })
+	check("...and its looks go with it when it's off", W:GetAttribute("FxV_meteor") == nil and W:GetAttribute("Fx_meteor") == nil)
+	run(function()
+		remote({ Data = string.format('{"op":"fx","id":"galaxy","on":true,"rid":"FX55","at":%.3f}', now()) })
+	end)
+	check("the remote's effect takes its looks from the command's id (the same in every server)", W:GetAttribute("FxV_galaxy") == 1 + AbuseNights.seedOf("rid:FX55") % AbuseNights.variantCount("galaxy"))
+	advance(6)
+	check("...and it's written down with them, for servers opening later", live().fx ~= nil and live().fx.galaxy ~= nil and live().fx.galaxy.v == W:GetAttribute("FxV_galaxy"))
+	run(function()
+		AdminService.stopAll("test")
+	end)
+	advance(1)
+
+	-- 6. AJKR's avatar: rebuilt from their look as it is now, never a stored picture.
+	local built = 0
+	local home = roblox.Instance.new("Folder")
+	local homeWas, makeWas = AbuseShowS.home, AbuseShowS.makeAvatar
+	AbuseShowS.home = function()
+		return home
+	end
+	AbuseShowS.makeAvatar = function()
+		built += 1
+		return roblox.Instance.new("Model")
+	end
+	run(function()
+		AbuseShowS.buildAvatar()
+	end)
+	check("AJKR's avatar is built for the nights that show it", built == 1 and home:FindFirstChild("MaisonOwnerAvatar") ~= nil)
+	advance(61)
+	run(function()
+		AbuseShowS.buildAvatar(true)
+	end)
+	check("...and built again from their look as it is now (one, replacing the last)", built == 2 and #home:GetChildren() == 1)
+	run(function()
+		AbuseShowS.buildAvatar(true)
+	end)
+	check("...not more than once a minute", built == 2)
+	AbuseShowS.home, AbuseShowS.makeAvatar = homeWas, makeWas
 end
 
 H.finish()

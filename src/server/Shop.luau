@@ -14,6 +14,7 @@ local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Names = require(ReplicatedStorage.Shared.Names)
 local Boutique = require(ReplicatedStorage.Shared.Boutique)
 local Config = require(ReplicatedStorage.Shared.Config)
 local ProductConfig = require(ReplicatedStorage.Shared.ProductConfig)
@@ -262,7 +263,7 @@ local function shelves(player: Player, data: Profiles.Data): { [string]: any }
 	local guests = {}
 	for _, other in Players:GetPlayers() do
 		if other ~= player and Profiles.get(other) then
-			table.insert(guests, { userId = other.UserId, name = other.DisplayName })
+			table.insert(guests, { userId = other.UserId, name = Names.of(other) })
 		end
 	end
 	local ledger = LedgerService.view(data)
@@ -373,13 +374,13 @@ local function giftTo(ctx: any, recipientId: number, item: Wardrobe.Item, key: s
 	end
 	local rdata = ctx:touch(recipient) :: Profiles.Data
 	own(recipient, rdata, item)
-	table.insert(rdata.gifts, { from = player.DisplayName, item = item.id, at = os.time() })
+	table.insert(rdata.gifts, { from = Names.of(player), item = item.id, at = os.time() })
 	while #rdata.gifts > 20 do
 		table.remove(rdata.gifts, 1)
 	end
 	ctx:after(function()
-		shopEvent:FireClient(recipient, { op = "gift", from = player.DisplayName, item = card(item, rdata) })
-		Shop.handOver(recipient, player.DisplayName, item.name)
+		shopEvent:FireClient(recipient, { op = "gift", from = Names.of(player), item = card(item, rdata) })
+		Shop.handOver(recipient, Names.of(player), item.name)
 		Shop.push(recipient)
 		Analytics.custom(player, "Boutique gift sent", nil, { item.id })
 	end)
@@ -429,13 +430,13 @@ local function registerHandlers()
 		if recipient and present and not present.goldKey and PriceLevels.canGift(player, recipient) then
 			local rdata = ctx:touch(recipient) :: Profiles.Data
 			rdata.goldKey = true
-			table.insert(rdata.gifts, { from = player.DisplayName, item = "goldKey", at = os.time() })
+			table.insert(rdata.gifts, { from = Names.of(player), item = "goldKey", at = os.time() })
 			while #rdata.gifts > 20 do
 				table.remove(rdata.gifts, 1)
 			end
 			ctx:after(function()
-				notice(recipient, "The Gold Key", player.DisplayName .. " gave you the Gold Key.")
-				Shop.handOver(recipient, player.DisplayName, "the Gold Key")
+				notice(recipient, "The Gold Key", Names.of(player) .. " gave you the Gold Key.")
+				Shop.handOver(recipient, Names.of(player), "the Gold Key")
 				Dressing.nameplate(recipient)
 				Shop.push(recipient)
 				Analytics.custom(player, "Gold Key gifted", nil, nil)
@@ -597,7 +598,7 @@ local function registerEligibility()
 		if not recipient or recipient == player or not rdata then
 			return false, "That guest isn't in the house just now."
 		elseif rdata.goldKey then
-			return false, recipient.DisplayName .. " already holds the Gold Key."
+			return false, Names.of(recipient) .. " already holds the Gold Key."
 		end
 		return PriceLevels.canGift(player, recipient, true)
 	end
@@ -775,7 +776,7 @@ onAsk = function(player: Player, request: unknown): any
 		elseif not recipient or recipient == player or not rdata then
 			return { ok = false, why = "That guest isn't in the house just now." }
 		elseif rdata.goldKey then
-			return { ok = false, why = recipient.DisplayName .. " already holds the Gold Key." }
+			return { ok = false, why = Names.of(recipient) .. " already holds the Gold Key." }
 		end
 		local allowed, why = PriceLevels.canGift(player, recipient, true)
 		if not allowed then

@@ -15,6 +15,7 @@ local MessagingService = game:GetService("MessagingService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Names = require(ReplicatedStorage.Shared.Names)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Analytics = require(script.Parent.Analytics)
 local Gilt = require(script.Parent.Gilt)
@@ -106,9 +107,9 @@ function Referral.arrived(player: Player, data: Profiles.Data)
 	end
 	local inviter = Players:GetPlayerByUserId(by)
 	if inviter then
-		Referral.thank(inviter, player.UserId, player.DisplayName)
+		Referral.thank(inviter, player.UserId, Names.of(player))
 	else
-		pcall(Referral.publish, { inviter = by, friend = player.UserId, name = string.sub(player.DisplayName, 1, 40) })
+		pcall(Referral.publish, { inviter = by, friend = player.UserId, name = string.sub(Names.of(player), 1, 40) })
 	end
 end
 
