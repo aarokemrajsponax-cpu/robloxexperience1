@@ -18,6 +18,7 @@ local HolidayGames = require(ReplicatedStorage.Shared.HolidayGames)
 local HolidayProps = require(ReplicatedStorage.Shared.HolidayProps)
 local Names = require(ReplicatedStorage.Shared.Names)
 local Kit = require(script.Parent.Parent.World.Kit)
+local Portal = require(script.Parent.Portal)
 local Types = require(script.Parent.Types)
 
 local Field = {}
@@ -336,19 +337,7 @@ local function build(ctx: Types.Ctx): Model
 		HolidayProps.ellipsoid(root, "Hill", Vector3.new(rng:NextNumber(260, 380), rng:NextNumber(70, 110), rng:NextNumber(160, 240)), CFrame.new(p) * CFrame.Angles(0, a, 0), rgb(48, 44, 30), Enum.Material.Grass)
 	end
 	-- The way home, by the gate.
-	local home = Kit.part(root, "WayHome", Vector3.new(10, 12, 1), CFrame.new(at(-26, 6, F.minZ - 26)), look(rgb(255, 214, 140), Enum.Material.Neon, 0, 0.55), { collide = false, shadow = false })
-	home.CanQuery = true
-	local prompt = Instance.new("ProximityPrompt")
-	prompt.Name = "WayHome"
-	prompt.ActionText = "Back to the Maison"
-	prompt.ObjectText = "The Harvest Field"
-	prompt.KeyboardKeyCode = Enum.KeyCode.E
-	prompt.HoldDuration = 0
-	prompt.MaxActivationDistance = 12
-	prompt.RequiresLineOfSight = false
-	prompt.Style = Enum.ProximityPromptStyle.Custom
-	prompt.Parent = home
-	prompt.Triggered:Connect(function(player: Player)
+	Portal.build(root, CFrame.lookAt(at(-26, 0, F.minZ - 26), at(-26, 0, F.minZ - 27)), "The Harvest Field", function(player: Player)
 		if ctx.inArea(player, "field") then
 			ctx.sendHome(player)
 		end

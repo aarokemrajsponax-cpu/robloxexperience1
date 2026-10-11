@@ -22,6 +22,7 @@ local Kit = require(script.Parent.Parent.World.Kit)
 local Profiles = require(script.Parent.Parent.Profiles)
 local Rig = require(script.Parent.Parent.Staff.Rig)
 local Dress = require(script.Parent.Dress)
+local Portal = require(script.Parent.Portal)
 local Types = require(script.Parent.Types)
 
 local Lane = {}
@@ -668,19 +669,7 @@ local function build(ctx: Types.Ctx): Model
 		}, { ppu = 60, lit = false, brightness = 1.6, maxDistance = 220 })
 	end
 	-- The way home: a lit archway behind the gate, back to the Maison.
-	local home = Kit.part(root, "WayHome", Vector3.new(1, 12, 10), CFrame.new(at(west + 6, 6.35, 0)), look(rgb(255, 214, 140), Enum.Material.Neon, 0, 0.55), { collide = false, shadow = false })
-	home.CanQuery = true
-	local homePrompt = Instance.new("ProximityPrompt")
-	homePrompt.Name = "WayHome"
-	homePrompt.ActionText = "Back to the Maison"
-	homePrompt.ObjectText = "Hallows Lane"
-	homePrompt.KeyboardKeyCode = Enum.KeyCode.E
-	homePrompt.HoldDuration = 0
-	homePrompt.MaxActivationDistance = 12
-	homePrompt.RequiresLineOfSight = false
-	homePrompt.Style = Enum.ProximityPromptStyle.Custom
-	homePrompt.Parent = home
-	homePrompt.Triggered:Connect(function(player: Player)
+	Portal.build(root, CFrame.lookAt(at(west + 6, 0.35, 0), at(west + 7, 0.35, 0)), "Hallows Lane", function(player: Player)
 		if ctx.inArea(player, "lane") then
 			ctx.sendHome(player)
 		end

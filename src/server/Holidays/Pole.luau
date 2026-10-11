@@ -145,7 +145,8 @@ local function buildSleigh(): Model
 			HolidayProps.rod(m, "Strut", local3(sx * 3.7, 0.5, z), local3(sx * 3.6, 2.3, z), 0.3, GOLD, Enum.Material.Metal)
 		end
 	end
-	-- The body: a floor, high sides with gold edges, a raked bow, a swan's-neck dash with a curl.
+	-- The body: a floor, high sides with gold edges, a raked bow, and a low dash (Father Christmas
+	-- is seen over it, and the runners' own curls rise either side of it).
 	box("Floor", -4.2, 2.2, -6.4, 4.2, 2.9, 10.8, deep)
 	for _, sx in { -1, 1 } do
 		box("Side", sx * 4.0, 2.2, -6.4, sx * 4.4, 5.6, 8.2, red)
@@ -161,21 +162,22 @@ local function buildSleigh(): Model
 		end
 	end
 	box("Back", -4.2, 2.2, 10.4, 4.2, 4.2, 10.8, red)
-	box("Dash", -4.2, 2.2, -6.8, 4.2, 6.6, -6.2, red)
+	box("Dash", -4.2, 2.2, -6.8, 4.2, 5.2, -6.2, red)
+	HolidayProps.rod(m, "DashEdge", local3(-4.3, 5.25, -6.5), local3(4.3, 5.25, -6.5), 0.36, GOLD, Enum.Material.Metal)
 	local bow = Instance.new("WedgePart")
 	bow.Name = "Bow"
 	bow.Anchored = true
 	bow.CanCollide = false
-	bow.Size = Vector3.new(8.4, 4.4, 2.6)
+	bow.Size = Vector3.new(8.4, 3, 2.6)
 	-- (A wedge is tall at its back: here at the dash, sloping down to the front.)
-	bow.CFrame = S * CFrame.new(0, 4.4, -8.1)
+	bow.CFrame = S * CFrame.new(0, 3.7, -8.1)
 	bow.Color = red.color
 	bow.Material = red.material
 	bow.Reflectance = 0.12
 	bow.Parent = m
-	Kit.part(m, "DashCurl", Vector3.new(8.8, 2.4, 2.4), S * CFrame.new(0, 7.2, -6.8), red, { shape = Enum.PartType.Cylinder, collide = false, query = false })
+	-- A gold medallion on the dash's face.
+	Kit.part(m, "DashMedal", Vector3.new(0.3, 1.5, 1.5), S * CFrame.new(0, 3.8, -6.85) * CFrame.Angles(0, math.pi / 2, 0), gold, { shape = Enum.PartType.Cylinder, collide = false, query = false, shadow = false })
 	for _, sx in { -1, 1 } do
-		Kit.part(m, "CurlCap", Vector3.new(0.3, 2.6, 2.6), S * CFrame.new(sx * 4.5, 7.2, -6.8), gold, { shape = Enum.PartType.Cylinder, collide = false, query = false, shadow = false })
 		-- Lanterns on gold posts at the front corners.
 		HolidayProps.rod(m, "LanternPost", local3(sx * 4.6, 5.6, -6.2), local3(sx * 4.9, 8.6, -6.4), 0.2, GOLD, Enum.Material.Metal)
 		local glass = Kit.part(m, "Lantern", Vector3.new(0.9, 1.3, 0.9), S * CFrame.new(sx * 4.9, 9.2, -6.4), L.glassWarm, TRIM)
