@@ -669,7 +669,13 @@ local prizes: (() -> ())? = nil
 local booted = false
 local clock = 0
 
+-- A holiday is on while its event is (the owner's, or the house's own on the day), and for all of
+-- its holiday game's days (shared/HolidayGames): the house stays dressed while there's trick or
+-- treating, a sleigh at the kerb, eggs to find.
 local function on(id: string): boolean
+	if Workspace:GetAttribute("HolidayGame") == id then
+		return true
+	end
 	local ends = Workspace:GetAttribute(HouseEvents.attribute(id))
 	return type(ends) == "number" and ends > Workspace:GetServerTimeNow()
 end
@@ -772,6 +778,9 @@ function HolidayFX.start()
 			pcall(update)
 		end)
 	end
+	Workspace:GetAttributeChangedSignal("HolidayGame"):Connect(function()
+		pcall(update)
+	end)
 	for _, tag in { "HuntPickup", "HuntJackpot" } do
 		CollectionService:GetInstanceAddedSignal(tag):Connect(function(p: Instance)
 			task.defer(function()

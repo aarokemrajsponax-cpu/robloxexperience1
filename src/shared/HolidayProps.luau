@@ -407,8 +407,8 @@ function HolidayProps.candyCane(parent: Instance, base: Vector3, height: number,
 end
 
 -- A reindeer standing at `cf`, harnessed in red with gold bells. Rudolph leads with his nose aglow.
--- Its parts are named for a screen to move: Leg1..4 (front left, front right, back left, back
--- right), Head.
+-- Its parts are named for a screen to move: Leg1..4 and Hoof1..4 (front left, front right, back
+-- left, back right), Head.
 function HolidayProps.reindeer(parent: Instance?, cf: CFrame, rudolph: boolean?): Model
 	local m = model(parent, if rudolph then "Rudolph" else "Reindeer", cf)
 	local coat = rgb(122, 82, 52)
@@ -423,7 +423,7 @@ function HolidayProps.reindeer(parent: Instance?, cf: CFrame, rudolph: boolean?)
 		local top = (cf * CFrame.new(l[1], 2.75, l[2])).Position
 		local foot = (cf * CFrame.new(l[1], 0.3, l[2])).Position
 		rod(m, "Leg" .. i, top, foot, 0.4, coat:Lerp(Color3.new(0, 0, 0), 0.15), Enum.Material.Fabric)
-		part(m, "Hoof", Vector3.new(0.3, 0.48, 0.48), CFrame.new(foot - Vector3.new(0, 0.15, 0)) * UPRIGHT, hoof, Enum.Material.SmoothPlastic, Enum.PartType.Cylinder)
+		part(m, "Hoof" .. i, Vector3.new(0.3, 0.48, 0.48), CFrame.new(foot - Vector3.new(0, 0.15, 0)) * UPRIGHT, hoof, Enum.Material.SmoothPlastic, Enum.PartType.Cylinder)
 	end
 	local neckFrom = (cf * CFrame.new(0, 3.9, -1.7)).Position
 	local headAt = (cf * CFrame.new(0, 5.55, -2.75)).Position

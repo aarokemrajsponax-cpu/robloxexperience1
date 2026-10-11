@@ -149,6 +149,13 @@ local ACCENTS: { [string]: { Color3 } } = {
 	Suites = { Color3.fromRGB(255, 140, 178), Color3.fromRGB(170, 40, 92) },
 	Invite = { Color3.fromRGB(140, 240, 140), Color3.fromRGB(30, 140, 64) },
 	Watch = { Color3.fromRGB(255, 120, 220), Color3.fromRGB(150, 30, 160) },
+	-- The holiday games' key (one at a time, in its holiday's colours).
+	Treats = { Color3.fromRGB(255, 160, 60), Color3.fromRGB(120, 40, 140) },
+	Turkeys = { Color3.fromRGB(240, 176, 80), Color3.fromRGB(140, 60, 24) },
+	Sleigh = { Color3.fromRGB(255, 96, 96), Color3.fromRGB(150, 16, 30) },
+	Gifts = { Color3.fromRGB(255, 120, 110), Color3.fromRGB(30, 110, 70) },
+	Eggs = { Color3.fromRGB(255, 180, 220), Color3.fromRGB(110, 150, 230) },
+	Home = { Color3.fromRGB(255, 222, 150), Color3.fromRGB(150, 110, 40) },
 }
 
 local function still(): boolean
@@ -391,12 +398,19 @@ end
 
 local watchTile: Frame? = nil
 local watchKey: TextButton? = nil
+local holidayTile: Frame? = nil
+local holidaySpec: string? = nil
 local COLUMNS = 2
 
 -- The dock's size for `n` keys, two by two.
 local function dockSize(n: number): UDim2
 	local rows = math.ceil(n / COLUMNS)
 	return UDim2.fromOffset(COLUMNS * SIZE + (COLUMNS - 1) * GAP, rows * SIZE + (rows - 1) * GAP)
+end
+
+-- The dock's keys now: the six, and Watch and the holiday key when they're there.
+local function keyCount(): number
+	return KEYS + (if watchTile then 1 else 0) + (if holidayTile then 1 else 0)
 end
 
 -- How far right the dock reaches, in the HUD's units (what stands beside it starts after this).
@@ -419,7 +433,7 @@ function QuickDock.setWatch(show: boolean, watching: boolean?)
 		if t then
 			t:Destroy()
 		end
-		f.Size = dockSize(KEYS)
+		f.Size = dockSize(keyCount())
 		return
 	end
 	if not watchKey then
@@ -428,7 +442,7 @@ function QuickDock.setWatch(show: boolean, watching: boolean?)
 		end)
 		watchKey = k
 		watchTile = k.Parent :: Frame
-		f.Size = dockSize(KEYS + 1)
+		f.Size = dockSize(keyCount())
 	end
 	local k = watchKey :: TextButton
 	local label = k:FindFirstChild("Label", true)
@@ -438,6 +452,70 @@ function QuickDock.setWatch(show: boolean, watching: boolean?)
 	local icon = k:FindFirstChild("Icon", true)
 	if icon and icon:IsA("TextLabel") then
 		icon.Text = if watching then "🏠" else "🎆"
+	end
+end
+
+-- The holiday game's key, at the foot of the dock while its game is on: Treats (to Hallows Lane),
+-- Turkeys (the Harvest Field), the Sleigh (aboard, from anywhere in the house), your Gifts to open,
+-- Eggs (how many are left), or Home (back to the Maison from a holiday place). `count`: a small
+-- number on its corner (the gifts waiting). Set by World/HolidayPlay; nil takes it away.
+QuickDock.holidayPressed = function() end
+function QuickDock.setHoliday(glyph: string?, label: string?, count: number?)
+	local f = dock
+	if not f then
+		return
+	end
+	if not glyph or not label then
+		local t = holidayTile
+		holidayTile, holidaySpec = nil, nil
+		if t then
+			t:Destroy()
+		end
+		f.Size = dockSize(keyCount())
+		return
+	end
+	local spec = glyph .. "|" .. label
+	if spec ~= holidaySpec then
+		local old = holidayTile
+		if old then
+			old:Destroy()
+		end
+		local k = tile(f, 8, glyph, label, nil, function()
+			QuickDock.holidayPressed()
+		end)
+		holidayTile = k.Parent :: Frame
+		holidaySpec = spec
+		f.Size = dockSize(keyCount())
+	end
+	local holder = holidayTile :: Frame
+	local bubble = holder:FindFirstChild("Count") :: TextLabel?
+	if count and count > 0 then
+		if not bubble then
+			local b = Instance.new("TextLabel")
+			b.Name = "Count"
+			b.AnchorPoint = Vector2.new(1, 0)
+			b.Position = UDim2.new(1, 6, 0, -6)
+			local px = math.max(22, math.floor(SIZE * 0.3))
+			b.Size = UDim2.fromOffset(px, px)
+			b.BackgroundColor3 = Color3.fromRGB(220, 36, 52)
+			b.TextColor3 = Color3.new(1, 1, 1)
+			b.FontFace = Brand.Fonts.heavy
+			b.TextSize = math.max(12, math.floor(px * 0.58))
+			b.ZIndex = 7
+			local bc = Instance.new("UICorner")
+			bc.CornerRadius = UDim.new(1, 0)
+			bc.Parent = b
+			local bs = Instance.new("UIStroke")
+			bs.Color = Color3.new(1, 1, 1)
+			bs.Thickness = 1.5
+			bs.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+			bs.Parent = b
+			b.Parent = holder
+			bubble = b
+		end
+		(bubble :: TextLabel).Text = if count > 99 then "99+" else tostring(count)
+	elseif bubble then
+		bubble:Destroy()
 	end
 end
 

@@ -572,6 +572,7 @@ local function build(ctx: Types.Ctx): Model
 		local house = mansion(root, cf, s, i, rng)
 		house:SetAttribute("Door", i)
 		house:SetAttribute("HouseName", s.name)
+		house:SetAttribute("Treat", Lane.Hosts[i].treat)
 		-- Its gate in the railings, and the knock.
 		local knocker = Kit.part(house, "Knock", Vector3.new(7, 11, 1), cf * CFrame.new(0, 5.5, -0.6), look(WHITE, Enum.Material.SmoothPlastic, 0, 1), { collide = false, shadow = false })
 		knocker.CanQuery = true
@@ -808,7 +809,7 @@ function Lane.knock(ctx: Types.Ctx, player: Player, i: number)
 		ctx.curio(player, "candyPail", "lane:full:" .. tostring(h.round))
 		ctx.salute("Hallows Lane", player.DisplayName .. " has knocked at every door. A full bag!", player)
 	end
-	ctx.broadcast({ op = "door", i = i, by = player.UserId })
+	ctx.broadcast({ op = "door", i = i, by = player.UserId, treat = host.treat })
 	ctx.send(player, message)
 end
 
