@@ -512,14 +512,15 @@ local function startHud()
 	ownerKey()
 	player:GetAttributeChangedSignal("MaisonAdmin"):Connect(ownerKey)
 	-- What to do next, under the keys while you walk (stepping aside while something bigger holds
-	-- the screen: the Meme Takeover, an effect's big words, Admin Abuse's arrival card and gifts, a
-	-- headline, a badge coming in).
+	-- the screen: the Meme Takeover, the Golden Transformation, an effect's big words, Admin
+	-- Abuse's arrival card and gifts, a headline, a badge coming in).
 	start("Objective", function()
 		local MemeTakeover = require(script.Parent.World.MemeTakeover)
 		local AbuseFX = require(script.Parent.World.AbuseFX)
 		local AbuseShow = require(script.Parent.World.AbuseShow)
+		local Midas = require(script.Parent.World.Midas)
 		Objective.isBusy = function(): boolean
-			return MemeTakeover.isRunning() or AbuseFX.bannerUp() or AbuseShow.cardUp() or Headline.showing() or Celebrate.badgeUp()
+			return MemeTakeover.isRunning() or Midas.isRunning() or AbuseFX.bannerUp() or AbuseShow.cardUp() or Headline.showing() or Celebrate.badgeUp()
 		end
 		Objective.start(function(mode: string)
 			quickSit(mode)

@@ -35,10 +35,11 @@ local Layout = require(ReplicatedStorage.Shared.Layout)
 local MemeTakeovers = require(ReplicatedStorage.Shared.MemeTakeovers)
 local CameraRig = require(script.Parent.Parent.Camera)
 local Sound = require(script.Parent.Parent.Sound)
+local Stagecraft = require(script.Parent.Stagecraft)
 
 local MemeTakeover = {}
 
-type Box = { minX: number, maxX: number, minZ: number, maxZ: number }
+type Box = Stagecraft.Box
 type Actor = { part: Part, gui: BillboardGui, glyph: TextLabel, size: number, v: Vector3, at: Vector3, spin: number, phase: number, home: number }
 
 -- (The big words: the house's sans at its heaviest, cut clean.)
@@ -53,17 +54,7 @@ local function cfg(): { [string]: any }
 	return (Config.data :: any).Spectacles
 end
 
--- The room of the Suite the guest stands in (the drawing room if we can't tell).
-local function roomOf(at: Vector3): Box
-	local S = Layout.Suite :: any
-	for _, key in { "main", "bedroom", "kitchen", "spa", "screening", "gym", "dressing", "study", "terrace" } do
-		local b = S[key]
-		if b and at.X >= b.minX and at.X <= b.maxX and at.Z >= b.minZ and at.Z <= b.maxZ then
-			return b
-		end
-	end
-	return S.main
-end
+local roomOf = Stagecraft.roomOf
 
 -- The cast: the edition's own memes, or every meme curio.
 local function castOf(V: MemeTakeovers.Variant): { any }
@@ -340,67 +331,8 @@ local function scoreSound(): Sound?
 	return nil
 end
 
--- Black bars closing in at the top and foot of the screen: a film's frame.
-local function letterbox(gui: ScreenGui, on: boolean)
-	for _, side in { "Top", "Bottom" } do
-		local bar = gui:FindFirstChild("Bar" .. side)
-		if not bar then
-			if not on then
-				continue
-			end
-			local f = Instance.new("Frame")
-			f.Name = "Bar" .. side
-			f.BorderSizePixel = 0
-			f.BackgroundColor3 = Color3.new(0, 0, 0)
-			f.AnchorPoint = Vector2.new(0, if side == "Top" then 1 else 0)
-			f.Position = UDim2.fromScale(0, if side == "Top" then 0 else 1)
-			f.Size = UDim2.fromScale(1, 0.1)
-			f.ZIndex = 20
-			f.Parent = gui
-			bar = f
-		end
-		local f = bar :: Frame
-		TweenService:Create(f, TweenInfo.new(0.7, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
-			AnchorPoint = Vector2.new(0, if side == "Top" then (if on then 0 else 1) else (if on then 1 else 0)),
-		}):Play()
-	end
-end
-
--- The camera quakes (while walking the camera is Roblox's own, so it's moved through the
--- humanoid's camera offset, and put back after).
-local quakeUntil, quakeSize, quakeConn = 0, 0, nil :: RBXScriptConnection?
-local function quake(size: number, seconds: number)
-	local ok, still = pcall(function()
-		return require(script.Parent.Parent.State).get("movement") == "Still"
-	end)
-	if ok and still then
-		return
-	end
-	quakeSize = math.max(if os.clock() < quakeUntil then quakeSize else 0, size)
-	quakeUntil = math.max(quakeUntil, os.clock() + seconds)
-	if quakeConn then
-		return
-	end
-	quakeConn = RunService.RenderStepped:Connect(function()
-		local me = Players.LocalPlayer.Character
-		local hum = me and me:FindFirstChildOfClass("Humanoid")
-		local left = quakeUntil - os.clock()
-		if left <= 0 or not hum then
-			if hum then
-				hum.CameraOffset = Vector3.zero
-			end
-			local c = quakeConn
-			quakeConn = nil
-			if c then
-				c:Disconnect()
-			end
-			return
-		end
-		local a = quakeSize * math.min(1, left / 0.35)
-		local t = os.clock() * 50
-		hum.CameraOffset = Vector3.new(math.sin(t * 1.3) * a, math.cos(t * 1.7) * a * 0.7, math.sin(t * 0.9) * a * 0.4)
-	end)
-end
+local letterbox = Stagecraft.letterbox
+local quake = Stagecraft.quake
 
 -- A confetti cannon: a burst of the edition's colours fired from `at` toward `aim`.
 local function cannon(parent: Instance, at: Vector3, aim: Vector3, palette: { Color3 }, n: number)
@@ -1416,12 +1348,7 @@ function MemeTakeover.play(seconds: number?, editionId: string?)
 		cc.TintColor = Color3.new(1, 1, 1)
 		cc.Enabled = false
 		bloom:Destroy()
-		quakeUntil = 0
-		local me = player.Character
-		local hum = me and me:FindFirstChildOfClass("Humanoid")
-		if hum then
-			hum.CameraOffset = Vector3.zero
-		end
+		Stagecraft.calm()
 		folder:Destroy()
 		gui:Destroy()
 		lastCaption = nil

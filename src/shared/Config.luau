@@ -436,12 +436,21 @@ local defaults = {
 	-- The Golden Transformation, the Midas touch (World/Midas).
 	Midas = {
 		speed = 14, -- studs a second the ring of gold runs through the Suite
+		wallReach = 46, -- studs the wall of golden light runs out before it fades
 		reflectance = 0.22, -- how much gold shines
-		confetti = 110, -- slips of gold confetti falling at once
-		coins = 110, -- gold coins that rain down
-		coinRadius = 16, -- studs round the guest they land
-		shafts = 4, -- shafts of light from the ceiling
-		choir = "rbxassetid://9114792221", -- a heavenly choir (Pro Sound Effects)
+		confetti = 150, -- slips of gold confetti falling at once
+		coins = 150, -- gold coins that rain down
+		coinRadius = 18, -- studs round the guest they land
+		shafts = 7, -- shafts of light from the ceiling, gold dust flowing down each
+		dust = 36, -- twinkles of gold dust in the air, a second
+		fountains = 4, -- fountains of gold sparks in the room's corners (up to 4)
+		sparkMachines = 8, -- cold-spark fountains in a ring round the guest at the crowning
+		statue = true, -- the guest's likeness cast in gold, rising on a plinth
+		statueScale = 1.25, -- how much bigger than life
+		cape = true, -- a royal cape with the crown
+		-- (Fewer sparks on slower graphics settings; the camera's two film shots and the quake
+		-- keep still with the movement setting turned down.)
+		choir = "rbxassetid://9114792221", -- a heavenly choir (Pro Sound Effects), 52 s long
 		choirVolume = 0.7,
 	},
 

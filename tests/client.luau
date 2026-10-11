@@ -1218,6 +1218,20 @@ local function snapshot(name: string)
 		end
 	end
 	fs.writeFile(SNAPSHOT .. "/" .. name .. ".json", serde.encode("json", out))
+	-- EXPORT_AT=<name> EXPORT=<file>: the world on this screen at that moment, for the 3D viewer
+	-- (tools/view): what a show has built round the guest, say.
+	if process.env.EXPORT_AT == name and process.env.EXPORT then
+		-- (The server sets the light of the evening; here, a night like the house's.)
+		local L = game:GetService("Lighting")
+		for prop, value in { ClockTime = 20.5, Brightness = 1, Ambient = roblox.Color3.fromRGB(70, 60, 55), OutdoorAmbient = roblox.Color3.fromRGB(90, 85, 100), ExposureCompensation = 0 } do
+			if not pcall(function()
+				return L[prop]
+			end) then
+				L[prop] = value
+			end
+		end
+		require("../tools/view/export")(workspace, L, process.env.EXPORT)
+	end
 	-- STOP_AFTER=<name>: end the run once that snapshot is written (for looking at one screen).
 	if process.env.STOP_AFTER == name then
 		print("stopped after " .. name)
@@ -3716,7 +3730,7 @@ end
 
 -- The Golden Transformation: the Midas touch turns the Suite to gold, crowns the guest, and puts
 -- everything back as it was.
-do
+;(function()
 	local maison = workspace:FindFirstChild("Maison")
 	if not maison then
 		maison = Instance.new("Folder")
@@ -3749,9 +3763,47 @@ do
 	flames.Name = "Flames"
 	flames.Rate = 70
 	flames.Parent = core
+	-- (A body for this show only: a torso for the cape to hang from, and limbs for the statue.)
+	local limbs = {}
+	for _, l in {
+		{ "UpperTorso", Vector3.new(2, 1.6, 1), Vector3.new(0, 0.6, 0) },
+		{ "LowerTorso", Vector3.new(2, 0.4, 1), Vector3.new(0, -0.4, 0) },
+		{ "LeftUpperArm", Vector3.new(1, 1.2, 1), Vector3.new(-1.5, 0.8, 0) },
+		{ "RightUpperArm", Vector3.new(1, 1.2, 1), Vector3.new(1.5, 0.8, 0) },
+		{ "LeftLowerArm", Vector3.new(1, 1.1, 1), Vector3.new(-1.5, -0.35, 0) },
+		{ "RightLowerArm", Vector3.new(1, 1.1, 1), Vector3.new(1.5, -0.35, 0) },
+		{ "LeftUpperLeg", Vector3.new(1, 1.2, 1), Vector3.new(-0.5, -1.2, 0) },
+		{ "RightUpperLeg", Vector3.new(1, 1.2, 1), Vector3.new(0.5, -1.2, 0) },
+		{ "LeftLowerLeg", Vector3.new(1, 1.4, 1), Vector3.new(-0.5, -2.5, 0) },
+		{ "RightLowerLeg", Vector3.new(1, 1.4, 1), Vector3.new(0.5, -2.5, 0) },
+	} do
+		local p = Instance.new("Part")
+		p.Name = l[1]
+		p.Size = l[2]
+		p.Color = roblox.Color3.fromRGB(64, 64, 72)
+		p.CFrame = root.CFrame * CFrame.new(l[3])
+		p.Parent = character
+		table.insert(limbs, p)
+	end
+	local function card()
+		return find(playerGui, function(d)
+			return d.Name == "Objective" and d:IsA("Frame") and d.Parent ~= nil and d.Parent.Name == "MaisonHud"
+		end)
+	end
+	local cardBefore = card() ~= nil
+	local function inTouch(name)
+		local touch = workspace.MaisonLocal:FindFirstChild("MidasTouch")
+		return touch ~= nil and touch:FindFirstChild(name, true) ~= nil
+	end
 	serverSays("Purchase", { op = "spectacle", key = "spectacleGolden", seconds = 40 })
-	advance(3)
+	advance(1)
+	local screen = playerGui:FindFirstChild("MidasTouch")
+	check("the Midas touch opens like a film: black bars close in, its title in gold", screen ~= nil and screen:FindFirstChild("BarTop") ~= nil and textOnScreen("THE MIDAS TOUCH") ~= nil)
+	check("...motes of gold gather into a small sun before the guest", inTouch("Sun") and inTouch("Mote"))
+	check("...and the card of what to do next steps aside for its words", cardBefore and card() == nil, cardBefore)
+	advance(2)
 	check("the Midas touch: the Suite turns to gold where the ring of gold has passed", wall.Material == roblox.Enum.Material.Metal and wall.Color ~= wallColour)
+	check("...a wall of golden light runs out across the floor", inTouch("LightEdge") and inTouch("LightVeil"))
 	check("...the fire burns gold", flames.Rate > 70)
 	advance(8)
 	local touch = workspace.MaisonLocal:FindFirstChild("MidasTouch")
@@ -3766,14 +3818,32 @@ do
 		end
 		return false
 	end)())
+	check("...shafts of light with gold dust in them, the air glittering, fountains of gold in the corners", inTouch("ShaftTop") and inTouch("GoldDust") and inTouch("GoldFountain"))
+	check("...and the guest's own likeness rises, cast in gold, on a plinth", (function()
+		local statue = touch and touch:FindFirstChild("MidasStatue")
+		local likeness = statue and statue:FindFirstChild("Likeness")
+		if not likeness or not statue:FindFirstChild("Plinth") then
+			return false
+		end
+		local head = likeness:FindFirstChild("Head")
+		return head ~= nil and head.Material == roblox.Enum.Material.Metal and likeness:FindFirstChildOfClass("Humanoid") == nil
+	end)())
 	advance(11)
 	check("...a jewelled crown settles on the guest's head", touch ~= nil and touch:FindFirstChild("MidasCrown") ~= nil)
+	check("...in a pillar of light, cold sparks firing in a ring round them", inTouch("Pillar") and inTouch("SparkMachine"))
+	advance(1.5)
+	check("...a royal cape on their shoulders, and ALL HAIL with their name", inTouch("Cape") and textOnScreen("ALL HAIL") ~= nil and textOnScreen("ADA") ~= nil)
 	snapshot("midas")
 	advance(22)
 	check("...and everything is put back as it was", wall.Color == wallColour and wall.Material == roblox.Enum.Material.Wood)
 	check("...the fire too", flames.Rate == 70)
 	check("...and the gold is gone", workspace.MaisonLocal:FindFirstChild("MidasTouch") == nil)
+	check("...the bars, the words and the golden light too", playerGui:FindFirstChild("MidasTouch") == nil and game:GetService("Lighting"):FindFirstChild("MidasGlow") == nil)
+	check("...and the card of what to do next is back", not cardBefore or card() ~= nil)
 	check("no errors in the Midas touch", #errors == 0, errors[1])
+	for _, p in limbs do
+		p:Destroy()
+	end
 	wall:Destroy()
 	if madeFire then
 		fireplace:Destroy()
@@ -3781,7 +3851,7 @@ do
 	if made then
 		suite:Destroy()
 	end
-end
+end)()
 
 -- The Meme Takeover: six acts in the Suite, then everything put back.
 do
