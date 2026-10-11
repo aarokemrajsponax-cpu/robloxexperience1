@@ -111,7 +111,8 @@ local function box(parent: GuiObject, p: Prim, px: number, area: Area)
 		stroke.LineJoinMode = Enum.LineJoinMode.Round
 		stroke.Thickness = math.max(1, s.th * px / 100)
 		stroke.Transparency = s.a or 0
-		fills(stroke, s.fill, s.g or 90, nil)
+		-- (A stroke may fade round the shape: the lit edge on a metal part.)
+		fills(stroke, s.fill, s.g or 90, s.ga)
 		stroke.Parent = f
 	end
 	f.Parent = holder

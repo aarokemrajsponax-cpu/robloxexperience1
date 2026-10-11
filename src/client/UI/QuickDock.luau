@@ -1,8 +1,8 @@
 --!strict
--- The quick dock: six round keys down the left side of the screen, always one tap away
+-- The quick dock: six big keys down the left side of the screen, two by two, always one tap away
 -- (and a key each on the keyboard): your Collection (C), Trade (T), your Wardrobe (V), Gems,
 -- Suites (your own, or a friend's: friends on Roblox may visit each other's), and Invite (Roblox's
--- invite prompt, to bring a friend).
+-- invite prompt, to bring a friend). Big enough to read at a glance on a phone.
 -- Trade opens a short list of everyone in the house, each with a Trade key, and your past trades.
 -- It steps aside while you sort at a table.
 
@@ -295,8 +295,8 @@ local function tile(parent: Instance, order: number, glyph: string, label: strin
 	name.Text = label
 	name.ZIndex = 5
 	local nameFit = Instance.new("UITextSizeConstraint")
-	nameFit.MaxTextSize = if SIZE >= 60 then 13 else 11
-	nameFit.MinTextSize = 8
+	nameFit.MaxTextSize = math.max(11, math.floor(SIZE * 0.2))
+	nameFit.MinTextSize = 9
 	nameFit.Parent = name
 	name.Parent = b
 	-- A band of light that sweeps across the key now and then (each key at its own moment).
@@ -338,11 +338,12 @@ local function tile(parent: Instance, order: number, glyph: string, label: strin
 		badge.Name = "Hotkey"
 		badge.AnchorPoint = Vector2.new(1, 0)
 		badge.Position = UDim2.new(1, 5, 0, -5)
-		badge.Size = UDim2.fromOffset(20, 20)
+		local bpx = math.max(20, math.floor(SIZE * 0.27))
+		badge.Size = UDim2.fromOffset(bpx, bpx)
 		badge.BackgroundColor3 = Color3.fromRGB(10, 10, 14)
 		badge.TextColor3 = Color3.new(1, 1, 1)
 		badge.FontFace = Brand.Fonts.heavy
-		badge.TextSize = 12
+		badge.TextSize = math.max(12, math.floor(bpx * 0.6))
 		badge.Text = hotkey
 		badge.ZIndex = 6
 		local bc = Instance.new("UICorner")
@@ -390,6 +391,18 @@ end
 
 local watchTile: Frame? = nil
 local watchKey: TextButton? = nil
+local COLUMNS = 2
+
+-- The dock's size for `n` keys, two by two.
+local function dockSize(n: number): UDim2
+	local rows = math.ceil(n / COLUMNS)
+	return UDim2.fromOffset(COLUMNS * SIZE + (COLUMNS - 1) * GAP, rows * SIZE + (rows - 1) * GAP)
+end
+
+-- How far right the dock reaches, in the HUD's units (what stands beside it starts after this).
+function QuickDock.right(): number
+	return 16 + COLUMNS * SIZE + (COLUMNS - 1) * GAP
+end
 
 -- The key to watch a fireworks show from across the street (and to come back), at the foot of the
 -- dock under Invite while a show is on: never in the middle of the screen. Set by Main from the
@@ -406,7 +419,7 @@ function QuickDock.setWatch(show: boolean, watching: boolean?)
 		if t then
 			t:Destroy()
 		end
-		f.Size = UDim2.fromOffset(SIZE, KEYS * SIZE + (KEYS - 1) * GAP)
+		f.Size = dockSize(KEYS)
 		return
 	end
 	if not watchKey then
@@ -415,7 +428,7 @@ function QuickDock.setWatch(show: boolean, watching: boolean?)
 		end)
 		watchKey = k
 		watchTile = k.Parent :: Frame
-		f.Size = UDim2.fromOffset(SIZE, (KEYS + 1) * SIZE + KEYS * GAP)
+		f.Size = dockSize(KEYS + 1)
 	end
 	local k = watchKey :: TextButton
 	local label = k:FindFirstChild("Label", true)
@@ -429,24 +442,29 @@ function QuickDock.setWatch(show: boolean, watching: boolean?)
 end
 
 function QuickDock.start()
-	-- Down the left, starting under the Gilt bar, with room for a seventh key (Watch, during a
-	-- fireworks show); smaller keys on a short screen (a phone), clear of the thumbstick.
+	-- Down the left, starting under the Gilt bar, two by two, big (bigger still on a phone, where
+	-- everything is drawn smaller), with room for a seventh key (Watch, during a fireworks show)
+	-- and clear of the thumbstick.
 	local h = Root.size().Y
 	local top = 74
 	local room = h - top - 24
-	SIZE = math.clamp(math.floor((room - 6 * 10) / 7), 40, 66)
-	GAP = if SIZE < 52 then 8 else 10
+	local most = if UserInputService.TouchEnabled then 100 else 88
+	GAP = 10
+	SIZE = math.clamp(math.floor((room - 3 * GAP) / 4), 56, most)
 	local f = Instance.new("Frame")
 	f.Name = "QuickDock"
 	f.BackgroundTransparency = 1
 	f.AnchorPoint = Vector2.new(0, 0)
 	f.Position = UDim2.new(0, 16, 0, top)
-	f.Size = UDim2.fromOffset(SIZE, KEYS * SIZE + (KEYS - 1) * GAP)
+	f.Size = dockSize(KEYS)
 	f.Parent = Root.hud
-	local list = Instance.new("UIListLayout")
-	list.Padding = UDim.new(0, GAP)
-	list.SortOrder = Enum.SortOrder.LayoutOrder
-	list.Parent = f
+	local grid = Instance.new("UIGridLayout")
+	grid.CellSize = UDim2.fromOffset(SIZE, SIZE)
+	grid.CellPadding = UDim2.fromOffset(GAP, GAP)
+	grid.FillDirection = Enum.FillDirection.Horizontal
+	grid.FillDirectionMaxCells = COLUMNS
+	grid.SortOrder = Enum.SortOrder.LayoutOrder
+	grid.Parent = f
 	tile(f, 1, "🏺", "Collection", "C", function()
 		QuickDock.openCollection()
 	end)
@@ -462,6 +480,11 @@ function QuickDock.start()
 		QuickDock.inviteFriend()
 	end)
 	dock = f
+	-- (What stands beside the dock, the perk chips, starts just right of it.)
+	local chips = Root.hud:FindFirstChild("PerkChips")
+	if chips and chips:IsA("Frame") then
+		chips.Position = UDim2.new(0, QuickDock.right() + 18, chips.Position.Y.Scale, chips.Position.Y.Offset)
+	end
 	UserInputService.InputBegan:Connect(function(input: InputObject, processed: boolean)
 		if processed or QuickDock.isSeated() then
 			return

@@ -1573,7 +1573,7 @@ function Fireworks.show(seconds: number, options: Options?)
 					task.spawn(fan, "salute", s * 1.2, { { WHITE }, { WHITE }, { WHITE } }, nil, alive)
 					pause(1)
 					if me == conductor then
-						pcall(Sound.play, "crowdCheer", 0.8)
+						pcall(Sound.play, "celebrate", 0.8)
 					end
 				end
 			end

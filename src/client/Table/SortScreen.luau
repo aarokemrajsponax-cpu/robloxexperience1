@@ -1,23 +1,27 @@
 --!strict
 -- The sorting screen. Sit down at a table and the house falls away: this is all there is. The
--- Jeweller's Desk: a mahogany desk with brass corner guards, its green leather top tooled in
--- gold, under lamplight, with the pieces set down on it, each one drawn and resting on its own
--- shadow; beneath, six jewellery drawers, each lined in its own velvet with an engraved brass
--- plate and a count on the shoulder of its plinth; above, the house's crest and the figures on
--- small brass-edged plaques. Point at a piece and its name shows; pick
--- it up and, in the rooms that help you, a line of light runs to the case it belongs in. Drag it
--- onto its case, or tap it and then the case, or keys 1 to 6, or a gamepad's D-pad and A. A right
--- case takes it in with a glint and its points; a wrong one flashes and shakes, and the piece
--- goes home. Everything is laid out by hand from the screen's size, so it fits a phone, a tablet
--- and a monitor alike, and every position is known without asking the engine (which keeps it
--- testable).
+-- Jeweller's Desk: a mahogany desk with brass corner guards, its leather top tooled in gold and
+-- shaded in its room's own colours (the Salon's emerald running to teal, the Velvet Room's wine,
+-- the Obsidian Room's graphite, the Midnight Room's navy), a pool of lamplight drifting slowly
+-- across it, with the pieces set down on it, each one drawn and resting on its own shadow;
+-- beneath, six jewel cases, each lacquered in its own jewel tone (sapphire, ruby, emerald,
+-- aquamarine, amethyst, topaz) with a gold edge, a glow about it, a lit plinth for its piece under
+-- a beam of light, its name in gold on dark glass and its count on a gold badge; above, the
+-- house's crest and the figures on small brass-edged plaques. Point at a piece and its name shows;
+-- pick it up and, in the rooms that help you, a line of light runs to the case it belongs in. Drag
+-- it onto its case, or tap it and then the case, or keys 1 to 6, or a gamepad's D-pad and A. A
+-- right case catches it: the piece rises off the cloth and sails down into it on a smooth arc,
+-- trailing light in the case's colour; the case lifts and brightens to meet it, a ring of light
+-- runs out from its plinth, its piece bows, its count ticks over. A wrong one flashes and shakes,
+-- and the piece goes home. Everything is laid out by hand from the screen's size, so it fits a
+-- phone, a tablet and a monitor alike, and every position is known without asking the engine
+-- (which keeps it testable).
 
 local ContextActionService = game:GetService("ContextActionService")
 local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 
@@ -59,6 +63,8 @@ type Card = {
 	order: number,
 	phase: number,
 	hover: boolean,
+	-- Until when a piece just set down glides (more slowly) onto its place.
+	arrive: number,
 }
 
 type Bin = {
@@ -81,9 +87,39 @@ type Bin = {
 	size: Vector2,
 	open: boolean,
 	filed: number,
+	-- The glow about the case (in its own layer, under the cases) and its rings, faintest last.
+	aura: Frame?,
+	rings: { Frame },
+	-- When the light next sweeps across its glass, and how much it's lit right now (0 to 1, eased).
+	shimmerAt: number,
+	glow: number,
+	glowGoal: number,
 }
 
 type Stat = { frame: Frame, key: TextLabel, value: TextLabel, scale: UIScale, width: number, shown: boolean }
+
+-- A piece on its way into a case: along a cubic curve from where it was let go (p0) up and over
+-- and down into the case's mouth (p3), over `dur` seconds.
+type Flight = {
+	c: Card,
+	bin: Bin,
+	p0: Vector2,
+	p1: Vector2,
+	p2: Vector2,
+	p3: Vector2,
+	t: number,
+	dur: number,
+	rot0: number,
+	swing: number,
+	scale0: number,
+	quiet: boolean,
+	met: boolean,
+	landed: boolean,
+	absorb: number,
+	glowEvery: number,
+	glowCarry: number,
+	last: Vector2,
+}
 
 type Mote = {
 	frame: Frame,
@@ -115,17 +151,54 @@ local CLOTH = ColorSequence.new({
 	ColorSequenceKeypoint.new(0.55, Color3.fromRGB(19, 42, 32)),
 	ColorSequenceKeypoint.new(1, Color3.fromRGB(10, 24, 18)),
 })
-local VELVET = { Color3.fromRGB(84, 26, 38), Color3.fromRGB(56, 15, 26), Color3.fromRGB(32, 8, 15) }
+-- The desk's mahogany.
 local WALNUT = { Color3.fromRGB(104, 46, 32), Color3.fromRGB(74, 30, 21), Color3.fromRGB(48, 18, 13), Color3.fromRGB(22, 8, 6) }
--- Each drawer's velvet (top, middle, bottom), so a case is known by its colour at a glance.
-local CASE_VELVET: { [string]: { Color3 } } = {
-	watches = { Color3.fromRGB(36, 52, 96), Color3.fromRGB(22, 32, 64), Color3.fromRGB(12, 17, 36) },
-	jewelry = { Color3.fromRGB(104, 28, 44), Color3.fromRGB(70, 16, 30), Color3.fromRGB(38, 8, 16) },
-	money = { Color3.fromRGB(30, 78, 54), Color3.fromRGB(18, 52, 36), Color3.fromRGB(9, 28, 19) },
-	keys = { Color3.fromRGB(24, 74, 80), Color3.fromRGB(14, 48, 54), Color3.fromRGB(7, 26, 30) },
-	accessories = { Color3.fromRGB(78, 36, 92), Color3.fromRGB(52, 22, 64), Color3.fromRGB(28, 11, 36) },
-	collectibles = { Color3.fromRGB(110, 70, 24), Color3.fromRGB(76, 46, 14), Color3.fromRGB(42, 24, 7) },
+-- Each room's leather, from where the lamp falls (top left) through its heart to its far corner,
+-- and a cooler tone that drifts slowly over it: one colour never, always a gradient.
+type Felt = { light: Color3, mid: Color3, deep: Color3, shift: Color3, pool: Color3 }
+local FELTS: { [string]: Felt } = {
+	salon = { light = Color3.fromRGB(46, 126, 94), mid = Color3.fromRGB(22, 74, 56), deep = Color3.fromRGB(8, 32, 30), shift = Color3.fromRGB(40, 120, 136), pool = Color3.fromRGB(255, 220, 150) },
+	velvet = { light = Color3.fromRGB(134, 40, 66), mid = Color3.fromRGB(78, 18, 40), deep = Color3.fromRGB(30, 6, 18), shift = Color3.fromRGB(150, 40, 110), pool = Color3.fromRGB(255, 200, 170) },
+	obsidian = { light = Color3.fromRGB(70, 70, 82), mid = Color3.fromRGB(32, 32, 40), deep = Color3.fromRGB(10, 10, 14), shift = Color3.fromRGB(120, 96, 50), pool = Color3.fromRGB(255, 214, 140) },
+	midnight = { light = Color3.fromRGB(48, 66, 140), mid = Color3.fromRGB(22, 30, 80), deep = Color3.fromRGB(8, 10, 34), shift = Color3.fromRGB(96, 60, 170), pool = Color3.fromRGB(200, 214, 255) },
+	library = { light = Color3.fromRGB(118, 66, 40), mid = Color3.fromRGB(68, 36, 22), deep = Color3.fromRGB(26, 12, 8), shift = Color3.fromRGB(150, 90, 40), pool = Color3.fromRGB(255, 214, 160) },
+	ballroom = { light = Color3.fromRGB(104, 58, 148), mid = Color3.fromRGB(56, 26, 88), deep = Color3.fromRGB(20, 8, 36), shift = Color3.fromRGB(190, 120, 70), pool = Color3.fromRGB(255, 220, 180) },
 }
+local function feltFor(roomName: string): Felt
+	local n = string.lower(roomName)
+	if string.find(n, "velvet", 1, true) then
+		return FELTS.velvet
+	elseif string.find(n, "obsidian", 1, true) then
+		return FELTS.obsidian
+	elseif string.find(n, "midnight", 1, true) then
+		return FELTS.midnight
+	elseif string.find(n, "library", 1, true) or string.find(n, "tête", 1, true) then
+		return FELTS.library
+	elseif string.find(n, "ballroom", 1, true) then
+		return FELTS.ballroom
+	end
+	return FELTS.salon
+end
+-- Each case's jewel: its bright light, its body, its depth.
+local CASE_JEWEL: { [string]: { Color3 } } = {
+	watches = { Color3.fromRGB(110, 156, 255), Color3.fromRGB(38, 66, 160), Color3.fromRGB(12, 20, 64) }, -- sapphire
+	jewelry = { Color3.fromRGB(255, 108, 140), Color3.fromRGB(150, 24, 60), Color3.fromRGB(50, 6, 22) }, -- ruby
+	money = { Color3.fromRGB(96, 226, 156), Color3.fromRGB(24, 112, 72), Color3.fromRGB(6, 40, 26) }, -- emerald
+	keys = { Color3.fromRGB(96, 226, 236), Color3.fromRGB(20, 108, 120), Color3.fromRGB(6, 38, 46) }, -- aquamarine
+	accessories = { Color3.fromRGB(206, 136, 255), Color3.fromRGB(98, 44, 150), Color3.fromRGB(34, 12, 58) }, -- amethyst
+	collectibles = { Color3.fromRGB(255, 206, 110), Color3.fromRGB(168, 102, 28), Color3.fromRGB(62, 32, 6) }, -- topaz
+}
+local DEFAULT_JEWEL = { Color3.fromRGB(240, 210, 150), Color3.fromRGB(110, 80, 40), Color3.fromRGB(40, 26, 10) }
+local GOLD_EDGE = ColorSequence.new({
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 244, 206)),
+	ColorSequenceKeypoint.new(0.45, Color3.fromRGB(226, 178, 88)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(128, 88, 30)),
+})
+local GOLD_TEXT = ColorSequence.new({
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 250, 228)),
+	ColorSequenceKeypoint.new(0.5, Color3.fromRGB(246, 208, 120)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(206, 150, 64)),
+})
 local BRASS = { Color3.fromRGB(240, 210, 140), Color3.fromRGB(206, 164, 84), Color3.fromRGB(150, 110, 48) }
 local ENGRAVED = Color3.fromRGB(42, 28, 10)
 local LAMP = Color3.fromRGB(214, 150, 72)
@@ -141,6 +214,8 @@ end
 SortScreen.onLift = function(_uid: number, _mode: string) end
 SortScreen.onFile = function(_uid: number, _caseId: string) end
 SortScreen.onCancel = function() end
+-- A piece has come down into its case (the moment to hear it settle).
+SortScreen.onLanded = function(_uid: number, _caseId: string) end
 -- How much of the top-right corner the HUD's keys (Leave, Settings) take, in pixels.
 SortScreen.keysWidth = function(): number
 	return 0
@@ -170,6 +245,9 @@ local tableFX: ScreenFX.FX? = nil
 local cards: { [number]: Card } = {}
 local bins: { [string]: Bin } = {}
 local binOrder: { Bin } = {}
+local flights: { Flight } = {}
+-- The cases' glows, under the cases; the sparks and rings of light a filing leaves.
+local glowLayer: Frame = nil :: any
 local isOpen = false
 local playing = false
 local names = true
@@ -494,13 +572,22 @@ local function build()
 	shine.Position = UDim2.fromOffset(12, 1)
 	shade(shine, 0, nil, alphas({ { 0, 1 }, { 0.25, 0.6 }, { 0.75, 0.6 }, { 1, 1 } }))
 	tray = sheet(root, "Tray", Color3.new(1, 1, 1), 2)
-	header.trayShade = shade(tray, 90, CLOTH)
+	-- The leather in its room's colours, corner to corner: lit where the lamp hangs (top left),
+	-- deep at the far corner.
+	header.trayShade = shade(tray, 32, CLOTH)
 	header.trayCorner = corner(tray, 4)
 	header.trayStroke = stroke(tray, Color3.new(0, 0, 0), 0.35, 2)
+	-- A second, cooler tone washing in from the far side and drifting very slowly, so the colour
+	-- moves the way light moves on real leather.
+	local shift = sheet(tray, "Shift", Color3.new(1, 1, 1), 1)
+	shift.Size = UDim2.fromScale(1, 1)
+	header.shiftGrad = shade(shift, 140, nil, alphas({ { 0, 1 }, { 0.45, 0.94 }, { 1, 0.62 } }))
+	header.shiftCorner = corner(shift, 4)
+	header.shift = shift
 	-- The leather's grain catching the lamp: a soft diagonal sheen.
 	local sheen = sheet(tray, "Sheen", Color3.fromRGB(255, 240, 210), 1)
 	sheen.Size = UDim2.fromScale(1, 1)
-	shade(sheen, 35, nil, alphas({ { 0, 0.93 }, { 0.45, 0.985 }, { 1, 1 } }))
+	shade(sheen, 35, nil, alphas({ { 0, 0.9 }, { 0.3, 0.965 }, { 0.5, 0.99 }, { 1, 1 } }))
 	header.sheenCorner = corner(sheen, 4)
 	header.edges = {}
 	for _, side in { 90, 270, 0, 180 } do
@@ -518,7 +605,7 @@ local function build()
 		pool.Position = UDim2.fromScale(0.5, 0.42)
 		local f = 1 - (k - 1) * 0.055
 		pool.Size = UDim2.fromScale(0.95 * f, 1.05 * f)
-		pool.BackgroundTransparency = 0.993
+		pool.BackgroundTransparency = 0.9895
 		corner(pool, 9999)
 	end
 	-- Brass guards on the desk's corners: an L of brass at each, a rivet where the legs meet.
@@ -646,6 +733,12 @@ local function build()
 	header.hint = label(root, "", 15, F.body, SMOKE, { Name = "Hint", TextTransparency = 1, TextWrapped = true, ZIndex = 3 })
 	header.rival = label(root, "", 13, F.bodyMedium, SMOKE, { Name = "Rival", TextTransparency = 1, ZIndex = 3 })
 
+	glowLayer = Instance.new("Frame")
+	glowLayer.Name = "CaseGlow"
+	glowLayer.BackgroundTransparency = 1
+	glowLayer.Size = UDim2.fromScale(1, 1)
+	glowLayer.ZIndex = 3
+	glowLayer.Parent = root
 	casesLayer = Instance.new("Frame")
 	casesLayer.Name = "Cases"
 	casesLayer.BackgroundTransparency = 1
@@ -888,6 +981,7 @@ end
 
 local function binFrame(case: Catalogue.Case, index: number): Bin
 	local s = L.s
+	local J = CASE_JEWEL[case.id] or DEFAULT_JEWEL
 	local f = Instance.new("Frame")
 	f.Name = "Case"
 	f:SetAttribute("CaseId", case.id)
@@ -895,36 +989,51 @@ local function binFrame(case: Catalogue.Case, index: number): Bin
 	f.BorderSizePixel = 0
 	f.BackgroundColor3 = Color3.new(1, 1, 1)
 	f.Active = true
-	-- Settings → Case style: walnut cases lined with velvet, lidded boxes, or round plates.
+	-- Settings → Case style: jewel cases (lacquered in the case's own jewel tone), lidded boxes,
+	-- or round plates.
 	local style = State.get("caseStyle")
 	local radius = math.max(3, math.floor(5 * s))
 	if style == "Boxes" then
 		radius = 0
-		shade(f, 90, colours({ { 0, Color3.fromRGB(44, 46, 52) }, { 0.2, Color3.fromRGB(34, 36, 42) }, { 0.21, Color3.fromRGB(16, 18, 22) }, { 1, Color3.fromRGB(10, 11, 14) } }))
+		shade(f, 90, colours({ { 0, J[2]:Lerp(Color3.fromRGB(44, 46, 52), 0.55) }, { 0.2, J[2]:Lerp(Color3.fromRGB(34, 36, 42), 0.7) }, { 0.21, J[3]:Lerp(Color3.fromRGB(16, 18, 22), 0.5) }, { 1, Color3.fromRGB(10, 11, 14) } }))
 		local seam = sheet(f, "Seam", LIGHT, 2)
 		seam.Size = UDim2.new(1, 0, 0, 1)
 		seam.Position = UDim2.fromScale(0, 0.21)
 		seam.BackgroundTransparency = 0.78
 	elseif style == "Plates" then
 		radius = math.floor(math.min(L.binH, L.binW) * 0.34)
-		shade(f, 90, colours({ { 0, Color3.fromRGB(40, 37, 33) }, { 0.6, Color3.fromRGB(24, 22, 20) }, { 1, Color3.fromRGB(15, 14, 13) } }))
+		shade(f, 90, colours({ { 0, J[2]:Lerp(Color3.fromRGB(40, 37, 33), 0.55) }, { 0.6, J[3]:Lerp(Color3.fromRGB(24, 22, 20), 0.5) }, { 1, Color3.fromRGB(15, 14, 13) } }))
 	else
-		-- A jewellery drawer: mahogany, lined in this case's own velvet.
-		radius = math.max(4, math.floor(8 * s))
-		shade(f, 90, colours({ { 0, WALNUT[1] }, { 0.1, WALNUT[2] }, { 0.6, WALNUT[3] }, { 1, WALNUT[4] } }))
+		-- A jewel case: lacquered in the case's jewel, lit from above, its well lined in the same
+		-- jewel, deeper.
+		radius = math.max(5, math.floor(10 * s))
+		shade(f, 100, colours({ { 0, J[1]:Lerp(J[2], 0.45) }, { 0.35, J[2] }, { 1, J[3] } }))
 		local velvet = sheet(f, "Velvet", Color3.new(1, 1, 1), 1)
-		local v = CASE_VELVET[case.id] or VELVET
-		shade(velvet, 90, colours({ { 0, v[1] }, { 0.55, v[2] }, { 1, v[3] } }))
-		corner(velvet, math.max(2, radius - 2))
-		stroke(velvet, GOLD, 0.5, 1)
-		-- The case's front edge throws a shadow onto the velvet.
+		shade(velvet, 90, colours({ { 0, J[3]:Lerp(Color3.new(0, 0, 0), 0.35) }, { 0.55, J[3]:Lerp(J[2], 0.35) }, { 1, J[2]:Lerp(J[3], 0.2) } }))
+		corner(velvet, math.max(3, radius - 3))
+		stroke(velvet, J[1], 0.72, 1)
+		-- The case's front edge throws a shadow onto the well.
 		local edge = sheet(velvet, "Edge", Color3.new(0, 0, 0), 1)
-		edge.Size = UDim2.fromScale(1, 0.4)
-		shade(edge, 90, nil, alphas({ { 0, 0.4 }, { 1, 1 } }))
+		edge.Size = UDim2.fromScale(1, 0.42)
+		shade(edge, 90, nil, alphas({ { 0, 0.45 }, { 1, 1 } }))
+		corner(edge, math.max(3, radius - 3))
+		-- Light gathering in the well round the plinth: soft rings of the jewel's own light.
+		for k = 1, 3 do
+			local g = sheet(velvet, "WellGlow", J[1], 1)
+			g.AnchorPoint = Vector2.new(0.5, 0.5)
+			g.BackgroundTransparency = 0.9 + k * 0.02
+			g:SetAttribute("Ring", k)
+			corner(g, 9999)
+		end
 	end
 	f:SetAttribute("Style", style)
 	corner(f, radius)
-	local st = stroke(f, rim, 0.75, 1)
+	-- A gold edge, bright along the top, darker at the foot.
+	local st = stroke(f, Color3.new(1, 1, 1), 0.25, math.max(1, 1.5 * s))
+	local edgeGrad = Instance.new("UIGradient")
+	edgeGrad.Rotation = 90
+	edgeGrad.Color = GOLD_EDGE
+	edgeGrad.Parent = st
 	local scale = Instance.new("UIScale")
 	scale.Parent = f
 	local flash = sheet(f, "Flash", GOLD, 2)
@@ -933,44 +1042,60 @@ local function binFrame(case: Catalogue.Case, index: number): Bin
 	corner(flash, radius)
 	-- A line of light along the top edge when the case is the one under your piece.
 	local lip = sheet(f, "Lip", LIGHT, 3)
-	lip.Size = UDim2.new(1, -2 * math.max(radius, 3), 0, 1)
+	lip.Size = UDim2.new(1, -2 * math.max(radius, 3), 0, math.max(1, math.floor(2 * s)))
 	lip.Position = UDim2.fromOffset(math.max(radius, 3), 0)
 	lip.BackgroundTransparency = 1
 	shade(lip, 0, nil, alphas({ { 0, 1 }, { 0.5, 0 }, { 1, 1 } }))
-	-- A round velvet plinth under the case's piece, ringed in gold (placed by layoutBinInside).
+	-- A beam of light from the top of the case down onto the plinth (placed by layoutBinInside).
+	local beam = sheet(f, "Beam", J[1]:Lerp(Color3.new(1, 1, 1), 0.55), 2)
+	beam.AnchorPoint = Vector2.new(0.5, 0)
+	beam.BackgroundTransparency = 0.55
+	shade(beam, 90, nil, alphas({ { 0, 0.55 }, { 0.6, 0.88 }, { 1, 1 } }))
+	corner(beam, 9999)
+	-- A round plinth under the case's piece, lit from above and ringed in gold.
 	local plinth = sheet(f, "Plinth", Color3.new(1, 1, 1), 2)
 	plinth.AnchorPoint = Vector2.new(0.5, 0.5)
-	local pv = CASE_VELVET[case.id] or VELVET
-	shade(plinth, 90, colours({ { 0, pv[1]:Lerp(Color3.new(1, 1, 1), 0.12) }, { 0.55, pv[2] }, { 1, pv[3]:Lerp(Color3.new(0, 0, 0), 0.4) } }))
+	shade(plinth, 90, colours({ { 0, J[1]:Lerp(Color3.new(1, 1, 1), 0.3) }, { 0.45, J[1]:Lerp(J[2], 0.5) }, { 1, J[3] } }))
 	corner(plinth, 999)
-	stroke(plinth, GOLD, 0.55, 1)
+	local ring = stroke(plinth, Color3.new(1, 1, 1), 0.3, math.max(1, 1.5 * s))
+	local ringGrad = Instance.new("UIGradient")
+	ringGrad.Rotation = 90
+	ringGrad.Color = GOLD_EDGE
+	ringGrad.Parent = ring
 	plinth.BackgroundTransparency = if style == "Boxes" or style == "Plates" then 1 else 0
-	-- Glass over the drawer: a soft sheen across its top.
+	-- Glass over the case: a soft sheen across its top, and a bright line where the lid meets it.
 	local glass = sheet(f, "Glass", Color3.new(1, 1, 1), 4)
-	glass.Size = UDim2.fromScale(1, 0.5)
+	glass.Size = UDim2.fromScale(1, 0.55)
 	glass.BackgroundTransparency = 0
-	shade(glass, 90, nil, alphas({ { 0, 0.9 }, { 0.6, 0.97 }, { 1, 1 } }))
+	shade(glass, 90, nil, alphas({ { 0, 0.84 }, { 0.35, 0.94 }, { 0.6, 0.985 }, { 1, 1 } }))
 	corner(glass, radius)
 	glass.Active = false
-	-- The piece that stands for the case, resting on the velvet.
+	-- The piece that stands for the case, resting on its plinth.
 	local mark = Instance.new("Frame")
 	mark.Name = "MarkHolder"
 	mark.BackgroundTransparency = 1
 	mark.AnchorPoint = Vector2.new(0.5, 0.5)
 	mark.ZIndex = 3
 	mark.Parent = f
-	-- How many are in it, on a small gold-rimmed badge.
-	local pill = sheet(f, "CountPill", Color3.fromRGB(14, 10, 10), 3)
+	local markScale = Instance.new("UIScale")
+	markScale.Name = "Bow"
+	markScale.Parent = mark
+	-- How many are in it, on a polished gold badge.
+	local pill = sheet(f, "CountPill", Color3.new(1, 1, 1), 3)
 	pill.AnchorPoint = Vector2.new(1, 0)
-	pill.BackgroundTransparency = 0.25
+	pill.BackgroundTransparency = 0
+	shade(pill, 90, GOLD_EDGE)
 	corner(pill, 999)
-	stroke(pill, GOLD, 0.45, 1)
-	local count = label(f, "0", 17, F.figures, LIGHT, {
+	stroke(pill, Color3.fromRGB(70, 46, 12), 0.2, 1)
+	local count = label(f, "0", 17, F.figures, Color3.fromRGB(36, 22, 4), {
 		Name = "Count",
 		AnchorPoint = Vector2.new(1, 0),
 		TextXAlignment = Enum.TextXAlignment.Center,
 		ZIndex = 4,
 	})
+	local countScale = Instance.new("UIScale")
+	countScale.Name = "Pop"
+	countScale.Parent = count
 	local key = label(f, tostring(index), 12, F.bodyMedium, SMOKE, {
 		Name = "KeyNum",
 		AnchorPoint = Vector2.new(1, 1),
@@ -978,15 +1103,35 @@ local function binFrame(case: Catalogue.Case, index: number): Bin
 		TextTransparency = 0.4,
 		ZIndex = 3,
 	})
-	-- An engraved brass plate for the case's name (sized by layoutBinInside).
-	local plate = sheet(f, "Plate", Color3.new(1, 1, 1), 3)
-	shade(plate, 90, colours({ { 0, BRASS[1] }, { 0.5, BRASS[2] }, { 1, BRASS[3] } }))
-	corner(plate, 3)
-	stroke(plate, Color3.fromRGB(90, 62, 24), 0.25, 1)
-	-- (Sized and placed by layoutBinInside, for the case's size.)
-	local name = label(f, case.name, 16, F.bodyBold, ENGRAVED, { Name = "Title", ZIndex = 4 })
-	local sub = label(f, case.subtitle, 13, F.body, SMOKE, { Name = "Sub", ZIndex = 3 })
+	-- The case's name in gold on a plate of dark glass (sized by layoutBinInside).
+	local plate = sheet(f, "Plate", Color3.fromRGB(8, 7, 6), 3)
+	plate.BackgroundTransparency = 0.3
+	corner(plate, 999)
+	stroke(plate, GOLD, 0.45, 1)
+	local name = label(f, case.name, 16, F.bodyBold, Color3.new(1, 1, 1), { Name = "Title", ZIndex = 4, TextStrokeTransparency = 0.75, TextStrokeColor3 = Color3.new(0, 0, 0) })
+	local nameGrad = Instance.new("UIGradient")
+	nameGrad.Rotation = 90
+	nameGrad.Color = GOLD_TEXT
+	nameGrad.Parent = name
+	local sub = label(f, case.subtitle, 13, F.body, Color3.fromRGB(236, 228, 214), { Name = "Sub", ZIndex = 3 })
 	f.Parent = casesLayer
+	-- The glow about the case: three soft rings of its jewel's light, under it.
+	local aura = Instance.new("Frame")
+	aura.Name = "Aura"
+	aura:SetAttribute("CaseId", case.id)
+	aura.BackgroundTransparency = 1
+	aura.AnchorPoint = Vector2.new(0.5, 0.5)
+	aura.ZIndex = 3
+	aura.Parent = glowLayer
+	local rings: { Frame } = {}
+	for k = 1, 3 do
+		local r = sheet(aura, "Ring", J[1], 3)
+		r.AnchorPoint = Vector2.new(0.5, 0.5)
+		r.Position = UDim2.fromScale(0.5, 0.5)
+		r.BackgroundTransparency = 1
+		corner(r, radius + k * math.floor(6 * s))
+		table.insert(rings, r)
+	end
 	return {
 		id = case.id,
 		face = case.face,
@@ -1007,6 +1152,11 @@ local function binFrame(case: Catalogue.Case, index: number): Bin
 		size = Vector2.zero,
 		open = true,
 		filed = 0,
+		aura = aura,
+		rings = rings,
+		shimmerAt = clock + 2 + index * 1.3,
+		glow = 0,
+		glowGoal = 0,
 	}
 end
 
@@ -1100,8 +1250,9 @@ local function layoutBinInside(bin: Bin)
 	-- On a wide drawer the count rides on the plinth's shoulder, leaving the plate room.
 	if wide then
 		local badgeW, badgeH = math.floor(30 * s), textSize(15 * s) + math.floor(4 * s)
-		local cx = bin.mark.Position.X.Offset + math.floor(markPx * 0.42)
-		local cy = math.floor(h / 2 - markPx * 0.42)
+		-- (On the plinth's shoulder, clear of the name's plate.)
+		local cx = bin.mark.Position.X.Offset + math.floor(markPx * 0.33)
+		local cy = math.floor(h / 2 - markPx * 0.47)
 		bin.count.AnchorPoint = Vector2.new(0.5, 0.5)
 		bin.count.Position = UDim2.fromOffset(cx, cy)
 		bin.count.Size = UDim2.fromOffset(badgeW, badgeH)
@@ -1123,6 +1274,27 @@ local function layoutBinInside(bin: Bin)
 		plinth.Position = bin.mark.Position
 		plinth.Size = UDim2.fromOffset(d, d)
 	end
+	-- Where the piece stands, in the case's own pixels.
+	local mp = bin.mark.Position
+	local markAt = Vector2.new(mp.X.Scale * w + mp.X.Offset, mp.Y.Scale * h + mp.Y.Offset)
+	-- The beam falls from the case's top edge onto the plinth.
+	local beam = f:FindFirstChild("Beam")
+	if beam and beam:IsA("Frame") then
+		beam.Position = UDim2.fromOffset(markAt.X, inset)
+		beam.Size = UDim2.fromOffset(math.floor(markPx * 0.95), math.max(4, math.floor(markAt.Y - inset + markPx * 0.15)))
+		beam.Visible = f:GetAttribute("Style") ~= "Boxes" and f:GetAttribute("Style") ~= "Plates"
+	end
+	-- The light gathered in the well round the plinth.
+	if velvet and velvet:IsA("Frame") then
+		for _, g in velvet:GetChildren() do
+			local k = g:GetAttribute("Ring")
+			if g:IsA("Frame") and type(k) == "number" then
+				local d = math.floor(markPx * (1.25 + k * 0.42))
+				g.Position = UDim2.fromOffset(markAt.X - inset, markAt.Y - inset)
+				g.Size = UDim2.fromOffset(d, math.floor(d * 0.82))
+			end
+		end
+	end
 	if math.abs(markPx - bin.markPx) > 1 then
 		bin.markPx = markPx
 		bin.mark:ClearAllChildren()
@@ -1140,6 +1312,15 @@ local function layoutBins()
 		bin.size = Vector2.new(L.binW, L.binH)
 		bin.frame.Position = UDim2.fromOffset(x, y)
 		bin.frame.Size = UDim2.fromOffset(L.binW, L.binH)
+		local aura = bin.aura
+		if aura then
+			aura.Position = UDim2.fromOffset(x, y)
+			aura.Size = UDim2.fromOffset(L.binW, L.binH)
+			for k, r in bin.rings do
+				local grow = math.floor((4 + k * 7) * L.s)
+				r.Size = UDim2.new(1, grow * 2, 1, grow * 2)
+			end
+		end
 		layoutBinInside(bin)
 	end
 end
@@ -1147,6 +1328,9 @@ end
 local function buildBins()
 	for _, bin in binOrder do
 		bin.frame:Destroy()
+		if bin.aura then
+			bin.aura:Destroy()
+		end
 	end
 	bins = {}
 	binOrder = {}
@@ -1164,50 +1348,97 @@ local function buildBins()
 	layoutBins()
 end
 
+-- The cases' edges: the house's gold, or the rim of the table style the guest wears (it tints the
+-- gold).
+local function edgeColour(): Color3
+	return if rim ~= LIGHT then rim else Color3.new(1, 1, 1)
+end
+
 local function paintBin(bin: Bin)
 	local over = hoverBin == bin.id
 	local selected = heldMode == "pad" and held ~= nil and binOrder[padCase] == bin
 	local lit = (over or selected) and bin.open
-	local quick = Ease.info(0.14, Enum.EasingStyle.Quad)
-	Ease.play(bin.stroke, quick, { Transparency = if lit then 0.2 elseif bin.open then 0.75 else 0.92, Thickness = if lit then 2 else 1 })
-	bin.stroke.Color = if lit then GOLD else rim
-	Ease.play(bin.flash, quick, { BackgroundTransparency = if lit then 0.9 else 1 })
+	local s = L.s
+	local quick = Ease.info(0.16, Enum.EasingStyle.Quad)
+	-- The gold edge (or the rim of the table style the guest wears): brighter and heavier on the
+	-- case under your piece.
+	bin.stroke.Color = edgeColour()
+	Ease.play(bin.stroke, quick, { Transparency = if lit then 0 elseif bin.open then 0.25 else 0.8, Thickness = if lit then math.max(2, 3 * s) else math.max(1, 1.5 * s) })
+	Ease.play(bin.flash, quick, { BackgroundTransparency = if lit then 0.86 else 1 })
 	Ease.play(bin.lip, quick, { BackgroundTransparency = if lit then 0 else 1 })
-	Ease.play(bin.scale, Ease.info(0.18, Enum.EasingStyle.Quad), { Scale = if lit then 1.03 else 1 })
+	-- It rises to meet the piece.
+	Ease.play(bin.scale, Ease.info(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = if lit then 1.05 else 1 })
+	bin.glowGoal = if lit then 1 elseif bin.open then 0.4 else 0
 	local dim = if bin.open then 0 else 0.55
 	local case = Catalogue.caseById[bin.id] :: Catalogue.Case
-	bin.frame.BackgroundTransparency = if bin.open then 0 else 0.45
+	bin.frame.BackgroundTransparency = if bin.open then 0 else 0.5
 	local velvet = bin.frame:FindFirstChild("Velvet")
 	if velvet and velvet:IsA("Frame") then
 		velvet.BackgroundTransparency = if bin.open then 0 else 0.55
+		for _, g in velvet:GetChildren() do
+			if g:IsA("Frame") and g:GetAttribute("Ring") then
+				local k = g:GetAttribute("Ring") :: number
+				g.BackgroundTransparency = if not bin.open then 1 elseif lit then 0.8 + k * 0.04 else 0.9 + k * 0.025
+			end
+		end
 	end
 	bin.name.TextTransparency = dim
-	bin.name.TextColor3 = ENGRAVED
-	bin.plate.BackgroundTransparency = if bin.open then 0 else 0.6
+	bin.plate.BackgroundTransparency = if bin.open then 0.3 else 0.7
 	local plateStroke = bin.plate:FindFirstChildOfClass("UIStroke")
 	if plateStroke then
-		plateStroke.Color = if lit then LIGHT else Color3.fromRGB(90, 62, 24)
-		plateStroke.Transparency = if lit then 0 else 0.25
+		plateStroke.Color = if lit then LIGHT else GOLD
+		plateStroke.Transparency = if lit then 0 elseif bin.open then 0.45 else 0.8
 	end
 	-- A narrow case has no line under its name, so a closed one says so in its name's place.
 	bin.name.Text = if not bin.open and not bin.sub.Visible then "Closed" else case.name
 	bin.count.TextTransparency = dim
-	bin.sub.TextTransparency = dim
+	bin.sub.TextTransparency = if bin.open then 0.1 else dim
 	bin.sub.Text = if bin.open then case.subtitle else "Closed this round"
 	bin.key.Visible = bin.open and State.inputKind() == "mouse"
 	bin.mark.Visible = bin.open
+	local style = bin.frame:GetAttribute("Style")
 	local plinth = bin.frame:FindFirstChild("Plinth")
-	if plinth and plinth:IsA("Frame") and bin.frame:GetAttribute("Style") ~= "Boxes" and bin.frame:GetAttribute("Style") ~= "Plates" then
+	if plinth and plinth:IsA("Frame") and style ~= "Boxes" and style ~= "Plates" then
 		plinth.BackgroundTransparency = if bin.open then 0 else 0.7
 		local ring = plinth:FindFirstChildOfClass("UIStroke")
 		if ring then
-			ring.Transparency = if lit then 0.1 elseif bin.open then 0.55 else 0.9
+			ring.Transparency = if lit then 0 elseif bin.open then 0.3 else 0.85
 		end
+	end
+	local beam = bin.frame:FindFirstChild("Beam")
+	if beam and beam:IsA("Frame") then
+		Ease.play(beam, quick, { BackgroundTransparency = if not bin.open then 1 elseif lit then 0.25 else 0.55 })
 	end
 	local pill = bin.frame:FindFirstChild("CountPill")
 	if pill and pill:IsA("Frame") then
-		pill.BackgroundTransparency = if bin.open then 0.25 else 0.75
+		pill.BackgroundTransparency = if bin.open then 0 else 0.7
 	end
+end
+
+-- A band of light sweeping across a case's glass (a filing, or now and then on its own).
+local function sweep(bin: Bin, strength: number)
+	if Ease.motionScale < 0.5 or not bin.frame.Parent then
+		return
+	end
+	-- (in a clipping frame of its own, so the light stays on the glass)
+	local clip = Instance.new("Frame")
+	clip.Name = "Sweep"
+	clip.BackgroundTransparency = 1
+	clip.Size = UDim2.fromScale(1, 1)
+	clip.ClipsDescendants = true
+	clip.ZIndex = 5
+	clip.Parent = bin.frame
+	local band = sheet(clip, "Band", Color3.new(1, 1, 1), 5)
+	band.AnchorPoint = Vector2.new(0.5, 0.5)
+	band.Position = UDim2.fromScale(-0.2, 0.5)
+	band.Size = UDim2.fromScale(0.2, 1.6)
+	band.Rotation = 18
+	band.BackgroundTransparency = 1 - 0.45 * strength
+	shade(band, 0, nil, alphas({ { 0, 1 }, { 0.5, 0.2 }, { 1, 1 } }))
+	local t = Ease.play(band, Ease.info(if strength >= 1 then 0.5 else 0.9, Enum.EasingStyle.Quad), { Position = UDim2.fromScale(1.2, 0.5) })
+	t.Completed:Once(function()
+		clip:Destroy()
+	end)
 end
 
 local function setHover(caseId: string?)
@@ -1438,9 +1669,9 @@ local function cardFrame(info: PieceInfo, icon: number): (Frame, UIScale, Frame,
 	art.ZIndex = 2
 	art.Parent = f
 	PieceIcon.piece(art, info.id, icon, info.case)
-	-- A glint that comes and goes on the gilded ones (and the golden ones).
+	-- A glint of the lamp that comes and goes on every piece (on the gilded and golden ones, often).
 	local twinkle: Frame? = nil
-	if info.rare or info.mythic or info.golden then
+	do
 		local tw = Instance.new("Frame")
 		tw.Name = "Twinkle"
 		tw.BackgroundTransparency = 1
@@ -1760,14 +1991,23 @@ local function popText(at: Vector2, lines: { { text: string, size: number, font:
 	scale.Parent = holder
 	local made: { TextLabel } = {}
 	for i, spec in lines do
-		local l = label(holder, spec.text, spec.size * s, spec.font, spec.colour, {
+		local l = label(holder, spec.text, spec.size * s, spec.font, Color3.new(1, 1, 1), {
 			LayoutOrder = i,
 			AnchorPoint = Vector2.new(0, 0),
 			Size = UDim2.new(1, 0, 0, math.floor(spec.size * s * 1.35)),
-			TextStrokeTransparency = 0.55,
-			TextStrokeColor3 = Color3.new(0, 0, 0),
+			TextStrokeTransparency = 0.35,
+			TextStrokeColor3 = Color3.fromRGB(10, 6, 2),
 			ZIndex = 8,
 		})
+		-- Lit from above: white at the top of the letters running into the word's own colour.
+		local g = Instance.new("UIGradient")
+		g.Rotation = 90
+		g.Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1):Lerp(spec.colour, 0.25)),
+			ColorSequenceKeypoint.new(0.6, spec.colour),
+			ColorSequenceKeypoint.new(1, spec.colour:Lerp(Color3.new(0, 0, 0), 0.25)),
+		})
+		g.Parent = l
 		table.insert(made, l)
 	end
 	local seconds = Config.data.Sorting.verdictSeconds
@@ -1819,38 +2059,135 @@ end
 
 local function flashBin(bin: Bin, colour: Color3)
 	bin.flash.BackgroundColor3 = colour
-	bin.flash.BackgroundTransparency = 0.68
+	bin.flash.BackgroundTransparency = 0.62
 	Ease.play(bin.flash, Ease.info(0.55, Enum.EasingStyle.Sine), { BackgroundTransparency = 1 })
 	bin.stroke.Color = colour
 	bin.stroke.Transparency = 0
-	local t = Ease.play(bin.stroke, Ease.info(0.6, Enum.EasingStyle.Sine), { Transparency = if bin.open then 0.9 else 0.95 })
+	local t = Ease.play(bin.stroke, Ease.info(0.6, Enum.EasingStyle.Sine), { Transparency = if bin.open then 0.25 else 0.8 })
 	t.Completed:Once(function()
-		bin.stroke.Color = rim
+		bin.stroke.Color = edgeColour()
 	end)
-	-- A band of light sweeps across the drawer's glass, as if its lid had just been closed.
-	if Ease.motionScale >= 0.5 then
-		-- (in a clipping frame of its own, so the light stays on the glass)
-		local clip = Instance.new("Frame")
-		clip.Name = "Sweep"
-		clip.BackgroundTransparency = 1
-		clip.Size = UDim2.fromScale(1, 1)
-		clip.ClipsDescendants = true
-		clip.ZIndex = 5
-		clip.Parent = bin.frame
-		local band = sheet(clip, "Band", Color3.new(1, 1, 1), 5)
-		band.AnchorPoint = Vector2.new(0.5, 0.5)
-		band.Position = UDim2.fromScale(-0.2, 0.5)
-		band.Size = UDim2.fromScale(0.22, 1)
-		band.BackgroundTransparency = 0.55
-		shade(band, 0, nil, alphas({ { 0, 1 }, { 0.5, 0.3 }, { 1, 1 } }))
-		local sweep = Ease.play(band, Ease.info(0.5, Enum.EasingStyle.Quad), { Position = UDim2.fromScale(1.2, 0.5) })
-		sweep.Completed:Once(function()
-			clip:Destroy()
+	-- A band of light sweeps across the case's glass, as if its lid had just been closed.
+	sweep(bin, 1)
+end
+
+-- A ring of light running out across the case from its plinth, in the case's jewel.
+local function ripple(bin: Bin)
+	if Ease.motionScale < 0.5 or not bin.frame.Parent then
+		return
+	end
+	local J = CASE_JEWEL[bin.id] or DEFAULT_JEWEL
+	local s = L.s
+	local at = bin.mark.Position
+	for k = 1, 2 do
+		local r = sheet(bin.frame, "Ripple", Color3.new(1, 1, 1), 5)
+		r.AnchorPoint = Vector2.new(0.5, 0.5)
+		r.Position = at
+		r.BackgroundTransparency = 1
+		local d = bin.markPx * 0.9
+		r.Size = UDim2.fromOffset(d, d)
+		corner(r, 9999)
+		local ring = stroke(r, J[1]:Lerp(Color3.new(1, 1, 1), 0.35), 0.05, math.max(1.5, 2.5 * s))
+		local grow = d * (if k == 1 then 2.6 else 1.9)
+		task.delay((k - 1) * 0.08, function()
+			if not r.Parent then
+				return
+			end
+			Ease.play(r, Ease.info(0.55, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), { Size = UDim2.fromOffset(grow, grow * 0.8) })
+			local fade = Ease.play(ring, Ease.info(0.55, Enum.EasingStyle.Quad), { Transparency = 1, Thickness = 0.5 })
+			fade.Completed:Once(function()
+				r:Destroy()
+			end)
 		end)
 	end
 end
 
--- Into its case: the piece flies down, shrinks into the case, and the case counts it.
+-- Into its case. The piece rises off the cloth and sails down into its case on a smooth curve
+-- (what it was doing when let go carries it on a little), growing as it lifts and shrinking as it
+-- sinks in, turning once gracefully, trailing light in the case's colour; the case rises and
+-- brightens to meet it; then in it goes, a ring of light runs out from the plinth, the case's piece
+-- bows and its count ticks over. Every frame is placed by hand (stepFlights), so it's smooth at
+-- any frame rate.
+local FLIGHT_GLOWS = 28
+type Glow = { frame: Frame, core: Frame, born: number, life: number, size: number, alive: boolean }
+local glows: { Glow } = {}
+
+local function glowAt(at: Vector2, colour: Color3, size: number, life: number)
+	local g: Glow? = nil
+	for _, it in glows do
+		if not it.alive and it.frame.Parent then
+			g = it
+			break
+		end
+	end
+	if not g then
+		if #glows >= FLIGHT_GLOWS or not fxLayer then
+			return
+		end
+		local f = sheet(fxLayer, "FlightGlow", Color3.new(1, 1, 1), 7)
+		f.AnchorPoint = Vector2.new(0.5, 0.5)
+		corner(f, 9999)
+		local core = sheet(f, "Core", Color3.new(1, 1, 1), 7)
+		core.AnchorPoint = Vector2.new(0.5, 0.5)
+		core.Position = UDim2.fromScale(0.5, 0.5)
+		core.Size = UDim2.fromScale(0.42, 0.42)
+		corner(core, 9999)
+		local made: Glow = { frame = f, core = core, born = 0, life = 0.3, size = 10, alive = false }
+		table.insert(glows, made)
+		g = made
+	end
+	local it = g :: Glow
+	it.alive = true
+	it.born = clock
+	it.life = life
+	it.size = size
+	it.frame.BackgroundColor3 = colour
+	it.frame.Position = UDim2.fromOffset(at.X, at.Y)
+	it.frame.Visible = true
+end
+
+local function stepGlows()
+	for _, g in glows do
+		if not g.alive then
+			continue
+		end
+		local k = (clock - g.born) / g.life
+		if k >= 1 or not g.frame.Parent then
+			g.alive = false
+			if g.frame.Parent then
+				g.frame.Visible = false
+			end
+			continue
+		end
+		local size = g.size * (1 - k * 0.65)
+		g.frame.Size = UDim2.fromOffset(size, size)
+		g.frame.BackgroundTransparency = 0.45 + 0.55 * k
+		g.core.BackgroundTransparency = 0.1 + 0.9 * k
+	end
+end
+
+-- Where a case's piece stands, on the screen.
+local function plinthAt(bin: Bin): Vector2
+	local mp = bin.mark.Position
+	local w, h = bin.size.X, bin.size.Y
+	return bin.centre - bin.size / 2 + Vector2.new(mp.X.Scale * w + mp.X.Offset, mp.Y.Scale * h + mp.Y.Offset)
+end
+
+local function bezier3(a: Vector2, b: Vector2, c: Vector2, d: Vector2, u: number): Vector2
+	local v = 1 - u
+	return a * (v * v * v) + b * (3 * v * v * u) + c * (3 * v * u * u) + d * (u * u * u)
+end
+
+local function smooth(u: number): number
+	u = math.clamp(u, 0, 1)
+	return u * u * (3 - 2 * u)
+end
+
+-- Along the curve: away gently, quicker through the middle, easing into the case.
+local function along(u: number): number
+	return if u < 0.5 then 4 * u * u * u else 1 - ((-2 * u + 2) ^ 3) / 2
+end
+
 local function flyIn(c: Card, bin: Bin, quiet: boolean)
 	c.state = "flying"
 	c.target = nil
@@ -1861,35 +2198,143 @@ local function flyIn(c: Card, bin: Bin, quiet: boolean)
 		heldMode = nil
 	end
 	updateRoom()
-	local goal = bin.centre - Vector2.new(0, bin.size.Y * 0.15)
-	local info = Ease.scaled(TweenInfo.new(0.26, Enum.EasingStyle.Quad, Enum.EasingDirection.In))
-	TweenService:Create(c.frame, info, { Position = UDim2.fromOffset(goal.X, goal.Y), Rotation = (c.info.uid % 2 == 0) and 14 or -14 }):Play()
-	local t = TweenService:Create(c.scale, info, { Scale = 0.42 })
-	t.Completed:Once(function()
-		local shrink = TweenService:Create(c.scale, Ease.scaled(TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.In)), { Scale = 0 })
-		shrink.Completed:Once(function()
-			-- Kept, hidden, in case the server turns the filing down and it has to come back.
-			if c.state == "filed" then
-				c.frame.Visible = false
-			end
-		end)
-		shrink:Play()
-		c.state = "filed"
-		c.inCase = bin.id
-		-- (The case as it is now: the cases are made afresh if the case style changes mid-flight.)
-		local into = bins[bin.id] or bin
-		into.filed += 1
-		into.count.Text = tostring(into.filed)
-		if not quiet then
-			into.scale.Scale = 1.08
-			Ease.play(into.scale, Ease.info(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = if hoverBin == into.id then 1.03 else 1 })
-			into.count.TextColor3 = LIGHT
-			Ease.play(into.count, Ease.info(0.8, Enum.EasingStyle.Sine), { TextColor3 = SMOKE })
-			flashBin(into, LIGHT)
-			burst(goal, if c.info.rare or c.info.mythic then 14 else 8, LIGHT)
+	local s = L.s
+	local p0 = c.pos
+	local p3 = plinthAt(bin)
+	local d = p3 - p0
+	local dist = d.Magnitude
+	local up = math.clamp(dist * 0.32, 46 * s, 190 * s)
+	-- (A toss, not a teleport: how it was moving when let go carries it on a little.)
+	local carry = c.vel * 0.07
+	if carry.Magnitude > 110 * s then
+		carry = carry.Unit * 110 * s
+	end
+	local base = math.clamp(0.36 + dist / (2800 * math.max(s, 0.5)), 0.38, 0.5)
+	local dur = base * math.max(Ease.motionScale, 0.02)
+	for i = #flights, 1, -1 do
+		if flights[i].c == c then
+			table.remove(flights, i)
 		end
-	end)
-	t:Play()
+	end
+	table.insert(flights, {
+		c = c,
+		bin = bin,
+		p0 = p0,
+		p1 = p0 + carry + Vector2.new(d.X * 0.18, -up),
+		p2 = p3 + Vector2.new(-d.X * 0.1, -up * 1.2),
+		p3 = p3,
+		t = 0,
+		dur = dur,
+		rot0 = c.frame.Rotation,
+		swing = (if d.X >= 0 then 1 else -1) * (14 + (c.info.uid % 3) * 5),
+		scale0 = c.scale.Scale,
+		quiet = quiet,
+		met = false,
+		landed = false,
+		absorb = 0,
+		glowEvery = 1 / 70,
+		glowCarry = 0,
+		last = p0,
+	})
+end
+
+-- The case takes the piece: it counts it, and (unless it's a quiet correction) it bows, rings with
+-- light and sparkles in its jewel's colour.
+local function land(fl: Flight)
+	local c = fl.c
+	fl.landed = true
+	c.state = "filed"
+	c.inCase = fl.bin.id
+	-- (The case as it is now: the cases are made afresh if the case style changes mid-flight.)
+	local into = bins[fl.bin.id] or fl.bin
+	into.filed += 1
+	into.count.Text = tostring(into.filed)
+	if fl.quiet then
+		return
+	end
+	local J = CASE_JEWEL[into.id] or DEFAULT_JEWEL
+	into.scale.Scale = 1.1
+	Ease.play(into.scale, Ease.info(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = if hoverBin == into.id then 1.05 else 1 })
+	local pop = into.count:FindFirstChild("Pop")
+	if pop and pop:IsA("UIScale") then
+		pop.Scale = 1.6
+		Ease.play(pop, Ease.info(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 })
+	end
+	local bow = into.mark:FindFirstChild("Bow")
+	if bow and bow:IsA("UIScale") then
+		bow.Scale = 1.3
+		Ease.play(bow, Ease.info(0.6, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out), { Scale = 1 })
+	end
+	into.glow = 1.8
+	flashBin(into, J[1]:Lerp(Color3.new(1, 1, 1), 0.45))
+	ripple(into)
+	local at = plinthAt(into)
+	burst(at, if c.info.rare or c.info.mythic then 16 else 10, J[1]:Lerp(LIGHT, 0.35))
+	SortScreen.onLanded(c.info.uid, into.id)
+end
+
+local function stepFlights(dt: number)
+	local s = L.s
+	for i = #flights, 1, -1 do
+		local fl = flights[i]
+		local c = fl.c
+		if cards[c.info.uid] ~= c or not c.frame or not c.frame.Parent or (c.state ~= "flying" and c.state ~= "filed") then
+			table.remove(flights, i)
+			continue
+		end
+		if not fl.landed then
+			fl.t += dt
+			local u = math.clamp(fl.t / math.max(fl.dur, 1e-3), 0, 1)
+			local e = along(u)
+			local p = bezier3(fl.p0, fl.p1, fl.p2, fl.p3, e)
+			local v = (p - fl.last) / math.max(dt, 1 / 240)
+			fl.last = p
+			c.pos = p
+			c.vel = v
+			placeCard(c)
+			-- Up it comes, a little larger as it lifts, then smaller as it sinks into the case.
+			local sc = if u < 0.38 then fl.scale0 + (1.26 - fl.scale0) * smooth(u / 0.38) else 1.26 + (0.46 - 1.26) * smooth((u - 0.38) / 0.62)
+			c.scale.Scale = sc
+			c.frame.Rotation = fl.rot0 * (1 - e) + fl.swing * math.sin(math.pi * e)
+			-- Its shadow stays on the cloth as it leaves it.
+			c.shadow.BackgroundTransparency = math.clamp(0.35 + u * 2.2, 0.35, 1)
+			-- Light trailing behind it in the case's colour (and the guest's own sparkles).
+			if Ease.motionScale >= 0.5 then
+				local J = CASE_JEWEL[fl.bin.id] or DEFAULT_JEWEL
+				fl.glowCarry += dt
+				while fl.glowCarry >= fl.glowEvery do
+					fl.glowCarry -= fl.glowEvery
+					local jitter = Vector2.new(math.random() - 0.5, math.random() - 0.5) * 10 * s
+					glowAt(p + jitter, J[1]:Lerp(Color3.new(1, 1, 1), 0.25 + math.random() * 0.3), (12 + math.random() * 12) * s * sc, 0.32)
+				end
+				GuideTrail.shed(p, v, s, dt)
+			end
+			-- The case rises and brightens to meet it.
+			if not fl.met and u >= 0.55 then
+				fl.met = true
+				local b = bins[fl.bin.id] or fl.bin
+				b.glow = math.max(b.glow, 1.1)
+				Ease.play(b.scale, Ease.info(0.18, Enum.EasingStyle.Quad), { Scale = 1.06 })
+			end
+			if u >= 1 then
+				land(fl)
+			end
+		else
+			-- Into the case: smaller and smaller, still turning, gone.
+			fl.absorb += dt
+			local k = math.clamp(fl.absorb / math.max(0.11 * math.max(Ease.motionScale, 0.02), 1e-3), 0, 1)
+			c.scale.Scale = 0.46 * (1 - k * k)
+			c.frame.Rotation = fl.swing * 0.15 * (1 - k)
+			if k >= 1 then
+				-- Kept, hidden, in case the server turns the filing down and it has to come back.
+				if c.state == "filed" then
+					c.frame.Visible = false
+				end
+				table.remove(flights, i)
+			end
+		end
+	end
+	stepGlows()
 end
 
 local function goHome(c: Card, shakeFirst: boolean)
@@ -1926,8 +2371,13 @@ function SortScreen.isOpen(): boolean
 	return isOpen
 end
 
+local paintCloth: () -> ()
 local function setRoundText(roomName: string, roundText: string)
+	local changed = roomName ~= roomText
 	roomText = roomName
+	if changed and paintCloth then
+		paintCloth()
+	end
 	local word, rest = string.match(roundText, "^(%S+)%s+(.+)$")
 	local round = stats.ROUND
 	if word == "Round" or word == "Hand" then
@@ -1945,22 +2395,29 @@ end
 
 -- The guest's own table style and lamp, if they wear them: the cloth takes the felt's colour
 -- (kept dark enough for the pieces to read), the edges take the rims', the lamplight the lamp's.
-local function paintCloth()
+function paintCloth()
 	local tableStyle = Closet.style("table")
 	local lampStyle = Closet.style("lamp")
 	local felt = if tableStyle and typeof(tableStyle.felt) == "Color3" then tableStyle.felt :: Color3 else nil
 	local rimColour = if tableStyle and typeof(tableStyle.rim) == "Color3" then tableStyle.rim :: Color3 else nil
 	local lampColour = if lampStyle and typeof(lampStyle.colour) == "Color3" then lampStyle.colour :: Color3 else nil
+	local room = feltFor(roomText)
 	if felt then
 		local h, sat, v = felt:ToHSV()
 		local base = Color3.fromHSV(h, sat, math.clamp(v, 0.06, 0.4))
 		header.trayShade.Color = ColorSequence.new({
-			ColorSequenceKeypoint.new(0, base:Lerp(Color3.new(1, 1, 1), 0.06)),
-			ColorSequenceKeypoint.new(0.5, base),
-			ColorSequenceKeypoint.new(1, base:Lerp(Color3.new(0, 0, 0), 0.45)),
+			ColorSequenceKeypoint.new(0, base:Lerp(Color3.new(1, 1, 1), 0.16)),
+			ColorSequenceKeypoint.new(0.45, base),
+			ColorSequenceKeypoint.new(1, base:Lerp(Color3.new(0, 0, 0), 0.6)),
 		})
+		header.shift.BackgroundColor3 = Color3.fromHSV((h + 0.06) % 1, math.clamp(sat * 1.1, 0, 1), math.clamp(v * 1.4, 0.2, 0.6))
 	else
-		header.trayShade.Color = CLOTH
+		header.trayShade.Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, room.light),
+			ColorSequenceKeypoint.new(0.42, room.mid),
+			ColorSequenceKeypoint.new(1, room.deep),
+		})
+		header.shift.BackgroundColor3 = room.shift
 	end
 	rim = rimColour or LIGHT
 	header.frameStroke.Color = rim
@@ -1968,7 +2425,7 @@ local function paintCloth()
 	header.innerStroke.Color = rimColour or GOLD
 	header.lamp.BackgroundColor3 = lampColour or LAMP
 	for _, pool in header.pools do
-		pool.BackgroundColor3 = if lampColour then lampColour:Lerp(Color3.new(1, 1, 1), 0.3) else POOL
+		pool.BackgroundColor3 = if lampColour then lampColour:Lerp(Color3.new(1, 1, 1), 0.3) else room.pool
 	end
 	for _, bin in binOrder do
 		paintBin(bin)
@@ -2102,6 +2559,7 @@ function SortScreen.add(list: { PieceInfo }, fromDeal: boolean?)
 			order = 100000 + info.uid,
 			phase = rng:NextNumber() * math.pi * 2,
 			hover = false,
+			arrive = 0,
 		}
 		cards[info.uid] = c
 		table.insert(fresh, c)
@@ -2116,17 +2574,22 @@ function SortScreen.add(list: { PieceInfo }, fromDeal: boolean?)
 	end
 	for i, c in fresh do
 		attach(c)
-		c.pos = c.home - Vector2.new(0, 36 * L.s)
+		-- Each piece comes down onto the cloth from a little above, turning as it settles, one
+		-- after another, as if set down by hand.
+		local rng = Random.new(c.info.uid * 7 + dealCount)
+		local drop = math.max(70 * L.s, L.tray.h * 0.18)
+		c.pos = c.home + Vector2.new(rng:NextNumber(-26, 26) * L.s, -drop)
 		placeCard(c)
-		c.scale.Scale = 0.55
-		c.frame.Rotation = (Random.new(c.info.uid):NextNumber() - 0.5) * 16
+		c.scale.Scale = 0.62
+		c.frame.Rotation = (rng:NextNumber() - 0.5) * 34
 		c.frame.Visible = false
-		task.delay((i - 1) * (if fromDeal then 0.05 else 0.06), function()
+		task.delay((i - 1) * (if fromDeal then 0.055 else 0.07), function()
 			if cards[c.info.uid] ~= c then
 				return
 			end
 			c.frame.Visible = true
-			Ease.play(c.scale, Ease.info(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 })
+			c.arrive = clock + 0.7
+			Ease.play(c.scale, Ease.info(0.55, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 })
 		end)
 	end
 	updateRoom()
@@ -2144,9 +2607,11 @@ function SortScreen.clear()
 	hoverBin = nil
 	showGuide(nil)
 	GuideTrail.clear()
+	flights = {}
 	if fxLayer then
 		fxLayer:ClearAllChildren()
 	end
+	glows = {}
 	for _, bin in binOrder do
 		paintBin(bin)
 	end
@@ -2278,6 +2743,12 @@ function SortScreen.home(uid: number)
 		heldMode = nil
 	end
 	if c.state == "filed" or c.state == "flying" then
+		for i = #flights, 1, -1 do
+			if flights[i].c == c then
+				table.remove(flights, i)
+			end
+		end
+		c.shadow.BackgroundTransparency = 0.35
 		local bin = if c.inCase then bins[c.inCase] else nil
 		if bin and c.state == "filed" then
 			bin.filed = math.max(0, bin.filed - 1)
@@ -2490,7 +2961,7 @@ function SortScreen.isOnFire(): boolean
 	return fever ~= nil
 end
 
--- (Set by TableClient: the house cheers a very long streak.)
+-- (Set by TableClient: a short flourish for a very long streak.)
 SortScreen.onBigStreak = function(_n: number) end
 
 -- A streak called out across the top of the cloth (and, the longer it is, the bigger: sparks of
@@ -2527,6 +2998,34 @@ function SortScreen.streak(n: number, multiplier: number)
 	local t1 = label(holder, Caps(title), 12 * s, F.bodyBold, ENGRAVED, { Position = UDim2.fromScale(0.5, 0.28), Size = UDim2.fromScale(1, 0.3), ZIndex = 10 })
 	local t2 = label(holder, line, 24 * s, F.displayItalic, ENGRAVED, { Position = UDim2.fromScale(0.5, 0.66), Size = UDim2.fromScale(1, 0.46), ZIndex = 10 })
 	Ease.play(scale, Ease.info(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 })
+	-- A warm glow behind the ribbon, and a gleam of light crossing it once.
+	local halo = sheet(fxLayer, "StreakGlow", Color3.fromRGB(255, 210, 120), 8)
+	halo.AnchorPoint = Vector2.new(0.5, 0.5)
+	halo.Position = holder.Position
+	halo.Size = UDim2.fromOffset(holder.Size.X.Offset + 70 * s, holder.Size.Y.Offset + 40 * s)
+	halo.BackgroundTransparency = 0.78
+	corner(halo, 9999)
+	table.insert(rules, halo)
+	if Ease.motionScale >= 0.5 then
+		local clip = Instance.new("Frame")
+		clip.Name = "Gleam"
+		clip.BackgroundTransparency = 1
+		clip.Size = UDim2.fromScale(1, 1)
+		clip.ClipsDescendants = true
+		clip.ZIndex = 10
+		clip.Parent = holder
+		local band = sheet(clip, "Band", Color3.new(1, 1, 1), 10)
+		band.AnchorPoint = Vector2.new(0.5, 0.5)
+		band.Position = UDim2.fromScale(-0.15, 0.5)
+		band.Size = UDim2.fromScale(0.14, 1.4)
+		band.BackgroundTransparency = 0.35
+		shade(band, 0, nil, alphas({ { 0, 1 }, { 0.5, 0.15 }, { 1, 1 } }))
+		task.delay(0.2, function()
+			if band.Parent then
+				Ease.play(band, Ease.info(0.6, Enum.EasingStyle.Quad), { Position = UDim2.fromScale(1.15, 0.5) })
+			end
+		end)
+	end
 	if n >= 8 then
 		local half = holder.Size.X.Offset / 2
 		sparks(Vector2.new(at.X - half, at.Y), 14, 360, LIGHT)
@@ -2559,6 +3058,7 @@ function SortScreen.streak(n: number, multiplier: number)
 		end
 		task.delay(0.45, function()
 			holder:Destroy()
+			halo:Destroy()
 		end)
 	end)
 end
@@ -2824,28 +3324,39 @@ local function step(dt: number)
 	end
 	clock += dt
 	local S = Config.data.Sorting
-	local k = 1 - math.exp(-S.dragFollow * math.max(dt, 1 / 240))
-	local settle = 1 - math.exp(-14 * math.max(dt, 1 / 240))
+	local step = math.max(dt, 1 / 240)
+	local settle = 1 - math.exp(-14 * step)
+	local glide = 1 - math.exp(-7.5 * step)
+	local turn = 1 - math.exp(-12 * step)
 	local motion = Ease.motionScale
+	-- A held piece follows on a spring, critically damped: it moves off smoothly, keeps a little of
+	-- its way, never overshoots (in small sub-steps, so it's the same at any frame rate).
+	local w = S.dragFollow
+	local sub = math.max(1, math.ceil(step / (1 / 240)))
+	local h = step / sub
 	for _, c in cards do
 		if not c.frame then
 			continue
 		end
 		if c.state == "held" then
 			local goal = c.target or (c.home - Vector2.new(0, 10 * L.s))
-			local nextPos = c.pos:Lerp(goal, k)
-			local v = (nextPos - c.pos) / math.max(dt, 1 / 240)
-			c.vel = c.vel:Lerp(v, 1 - math.exp(-12 * math.max(dt, 1 / 240)))
-			c.pos = nextPos
-			c.frame.Rotation = math.clamp(c.vel.X * 0.012, -S.dragTilt, S.dragTilt)
+			for _ = 1, sub do
+				local accel = (goal - c.pos) * (w * w) - c.vel * (2 * w)
+				c.vel += accel * h
+				c.pos += c.vel * h
+			end
+			-- It leans into its movement, easing in and out of the lean.
+			local lean = math.clamp(c.vel.X * 0.012, -S.dragTilt, S.dragTilt)
+			c.frame.Rotation += (lean - c.frame.Rotation) * turn
 			placeCard(c)
 		elseif c.state == "rest" then
-			if (c.pos - c.home).Magnitude > 0.5 then
-				c.pos = c.pos:Lerp(c.home, settle)
+			if c.frame.Visible and (c.pos - c.home).Magnitude > 0.5 then
+				c.pos = c.pos:Lerp(c.home, if clock < c.arrive then glide else settle)
 				placeCard(c)
 			end
+			c.vel *= 1 - settle
 			if math.abs(c.frame.Rotation) > 0.1 then
-				c.frame.Rotation *= 0.86
+				c.frame.Rotation *= math.exp(-(if clock < c.arrive then 6 else 10) * step)
 			end
 		end
 		-- Resting pieces breathe: a slow rise and fall over their shadows.
@@ -2855,12 +3366,43 @@ local function step(dt: number)
 		end
 		local tw = c.twinkle
 		if tw then
-			local glint = math.max(0, math.sin(clock * 1.9 + c.phase)) ^ 6
-			tw.Size = UDim2.fromOffset(L.icon * (0.08 + 0.16 * glint), L.icon * (0.08 + 0.16 * glint))
+			-- The gilded catch the light often; the rest now and then.
+			local precious = c.info.rare or c.info.mythic or c.info.golden == true
+			local glint = if precious then math.max(0, math.sin(clock * 1.9 + c.phase)) ^ 6 else math.max(0, math.sin(clock * 0.7 + c.phase * 3)) ^ 24
+			local size = L.icon * (if precious then 0.08 + 0.16 * glint else 0.2 * glint)
+			tw.Size = UDim2.fromOffset(size, size)
+			tw.Visible = size > 0.5
 			tw.Rotation = clock * 40 % 360
 		end
 	end
+	stepFlights(dt)
 	stepTrail(dt)
+	-- The felt's cooler tone drifts slowly across it, and the lamp's pool sways a little.
+	if motion >= 0.5 and header.shiftGrad then
+		header.shiftGrad.Offset = Vector2.new(math.sin(clock * 0.11) * 0.22, math.cos(clock * 0.083) * 0.16)
+		local px, py = 0.5 + math.sin(clock * 0.07) * 0.035, 0.42 + math.cos(clock * 0.052) * 0.025
+		for _, pool in header.pools do
+			pool.Position = UDim2.fromScale(px, py)
+		end
+	end
+	-- Each case's glow eases toward how lit it should be; now and then light runs across its glass.
+	local ease = 1 - math.exp(-5 * step)
+	for _, bin in binOrder do
+		local before = bin.glow
+		bin.glow += (bin.glowGoal - bin.glow) * ease
+		if math.abs(bin.glow - before) > 0.002 or clock < 0.5 then
+			local g = math.clamp(bin.glow, 0, 2)
+			for k, r in bin.rings do
+				r.BackgroundTransparency = math.clamp(1 - g * ({ 0.17, 0.1, 0.055 })[k], 0, 1)
+			end
+		end
+		if clock >= bin.shimmerAt then
+			bin.shimmerAt = clock + 6 + math.random() * 6
+			if bin.open and playing and motion >= 0.5 then
+				sweep(bin, 0.5)
+			end
+		end
+	end
 	local vp = L.vp
 	for _, m in motes do
 		m.y += m.fall * dt

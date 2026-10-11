@@ -283,9 +283,6 @@ local function file(uid: number, caseId: string)
 		if p.rare or p.mythic then
 			Sound.shimmer()
 		end
-		task.delay(0.28, function()
-			Sound.play("place", 0.4)
-		end)
 		if not counting() and table.find(Config.data.Sorting.streakMoments, local_.streak) then
 			local n, m = local_.streak, local_.multiplier
 			task.delay(0.15, function()
@@ -902,13 +899,17 @@ end
 function TableClient.start()
 	SortScreen.canLift = canLift
 	SortScreen.onLift = onLift
-	-- A very long streak (twenty, thirty, fifty): the house cheers.
+	-- A very long streak (twenty, thirty, fifty): a short, bright flourish of chimes (two seconds,
+	-- no crowd).
 	SortScreen.onBigStreak = function(n: number)
-		Sound.play("crowdCheer", if n >= 50 then 0.9 else 0.6)
-		Sound.play("shimmerFall", 0.6)
+		Sound.play("celebrate", if n >= 50 then 0.9 else 0.7)
 	end
 	SortScreen.onFile = file
 	SortScreen.onCancel = TableClient.leave
+	-- The piece settling into its case, the moment it lands there.
+	SortScreen.onLanded = function()
+		Sound.play("place", 0.4)
+	end
 	SortScreen.keysWidth = Hud.width
 	safely("starting the sorting screen", SortScreen.start)
 	local handle: (message: any) -> ()

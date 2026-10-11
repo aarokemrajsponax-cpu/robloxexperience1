@@ -380,7 +380,7 @@ function Headline.giveaway(names: { string }, winner: string, winnerId: number?,
 		reel.Text = if mine then "YOU WON!" else winner
 		reel.TextColor3 = rgb(255, 214, 110)
 		foot.Text = if mine then string.format("+%s Gilt, from %s", tostring(amount), by) else winner .. " wins " .. tostring(amount) .. " Gilt!"
-		sound("crowdCheer", 0.9)
+		sound("celebrate", 0.9)
 		sound("regalFanfare", 0.7)
 		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 		if root and root:IsA("BasePart") and mine then

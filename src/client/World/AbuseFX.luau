@@ -1453,7 +1453,7 @@ local function goldWave(seconds: number)
 	local V = looks("goldWave")
 	sound("coinDrop", 1)
 	task.delay(0.3, sound, "coinDrop", 1, 1.1)
-	task.delay(0.6, sound, "crowdCheer", 0.6)
+	task.delay(0.6, sound, "celebrate", 0.6)
 	if AbuseFX.isBusy() then
 		-- (At a table the sorting screen draws its own wave of gold.)
 		return
@@ -1590,7 +1590,7 @@ local function blackout(seconds: number)
 		if alive(my) then
 			flash(Color3.new(1, 1, 1), 0.8, 1.2)
 			sound("fireworkBoom", 1, 0.9)
-			sound("crowdCheer", 0.6)
+			sound("celebrate", 0.6)
 			banner("LIGHTS ON!", GOLD, 1.5)
 		end
 	end)
@@ -1861,7 +1861,7 @@ local function ownerArmy(seconds: number)
 		if allDown and not landedAll then
 			landedAll = true
 			sound("subHit", 0.9)
-			sound("crowdCheer", 0.8)
+			sound("celebrate", 0.8)
 			shake(0.4, 0.6)
 		end
 	end)

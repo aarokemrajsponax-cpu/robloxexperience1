@@ -407,6 +407,26 @@ function GuideTrail.tick(dt: number, at: Vector2?, velocity: Vector2?, s: number
 	stepStars()
 end
 
+-- Sparkles shed by a piece flying into its case (`at`, moving at `velocity` pixels a second):
+-- a brighter wake than a carried piece leaves. Call every frame of the flight, before tick.
+local flightCarry = 0
+function GuideTrail.shed(at: Vector2, velocity: Vector2, s: number, dt: number)
+	if look.glow <= 0 or look.motion < 0.3 then
+		return
+	end
+	local speed = velocity.Magnitude
+	if speed < 60 * s then
+		return
+	end
+	flightCarry += math.min(40, speed / (24 * s)) * look.glow * dt
+	local back = -velocity.Unit
+	while flightCarry >= 1 do
+		flightCarry -= 1
+		local p = at + back * rng:NextNumber(4, 16) * s + Vector2.new(rng:NextNumber(-10, 10), rng:NextNumber(-10, 10)) * s
+		spawnStar(p, back * rng:NextNumber(8, 22) * s + Vector2.new(0, rng:NextNumber(-8, 6) * s), rng:NextNumber(9, 16) * s, rng:NextNumber(0.3, 0.5))
+	end
+end
+
 -- How many sparkles are out (for tests).
 function GuideTrail.sparkles(): number
 	local n = 0

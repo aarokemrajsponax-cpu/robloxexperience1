@@ -843,7 +843,7 @@ local defaults = {
 			fireworkCrackle = { { id = "rbxassetid://9114447505", pitch = 1, volume = 1.8 }, { id = "rbxassetid://9114447096", pitch = 1, volume = 1.6 }, { id = "rbxassetid://9114447104", pitch = 1, volume = 1.6 } },
 			fireworkBarrage = { { id = "rbxassetid://9114447178", pitch = 1, volume = 1.8 }, { id = "rbxassetid://9112780898", pitch = 1, volume = 1.8 } },
 			-- The lift charge's thump, a salute's sharp report and its rumble, a rocket's whistle,
-			-- glitter fizzing as it hangs, the hiss of fountains, the opening taiko and the crowd.
+			-- glitter fizzing as it hangs, the hiss of fountains, the opening taiko.
 			fireworkLaunch = { { id = "rbxassetid://9116973350", pitch = 1, volume = 1.2 }, { id = "rbxassetid://9116973611", pitch = 1, volume = 1.2 }, { id = "rbxassetid://9116973607", pitch = 1, volume = 1.2 } },
 			fireworkReport = { { id = "rbxassetid://9116973348", pitch = 1, volume = 2.8 }, { id = "rbxassetid://9116973593", pitch = 1, volume = 2.8 }, { id = "rbxassetid://9116973852", pitch = 1, volume = 2.8 } },
 			fireworkRumble = { { id = "rbxassetid://9120018172", pitch = 1, volume = 2.2 }, { id = "rbxassetid://9113169432", pitch = 1, volume = 2.2 } },
@@ -851,18 +851,25 @@ local defaults = {
 			fireworkGlitter = { { id = "rbxassetid://9119380593", pitch = 1, volume = 1.2, from = 0, to = 5 }, { id = "rbxassetid://9119380767", pitch = 1, volume = 1.2, from = 2, to = 7 } },
 			fireworkHiss = { { id = "rbxassetid://9112780680", pitch = 1, volume = 1.4, from = 0, to = 9 } },
 			fireworkTaiko = { { id = "rbxassetid://9046413546", pitch = 1, volume = 2 } },
-			crowdCheer = { { id = "rbxassetid://9112766176", pitch = 1, volume = 1.6, from = 0, to = 12 } },
 			-- Salutes and the Golden Transformation: a shimmer as gold falls, crystal ringing as the
-			-- chandeliers flare, applause for an encore, the countdown's bell and midnight's chimes,
-			-- a temple gong, coins landing, a regal fanfare, a bell tree.
-			shimmerFall = { { id = "rbxassetid://9116418234", pitch = 1, volume = 1.4 }, { id = "rbxassetid://9116418291", pitch = 1, volume = 1.4 } },
+			-- chandeliers flare, the countdown's bell and midnight's chimes, a temple gong, coins
+			-- landing, a regal fanfare, a bell tree. (`fade`: seconds the end of a slice fades over,
+			-- so a cut never sounds cut.)
+			shimmerFall = { { id = "rbxassetid://9116418234", pitch = 1, volume = 1.4, from = 0.2, to = 3.4, fade = 1.0 }, { id = "rbxassetid://9116418291", pitch = 1, volume = 1.4, from = 0.4, to = 3.6, fade = 1.0 } },
 			crystal = { { id = "rbxassetid://9125741828", pitch = 1, volume = 1.6 }, { id = "rbxassetid://9125740740", pitch = 1, volume = 1.6 } },
-			applause = { { id = "rbxassetid://9112766176", pitch = 1, volume = 1.4, from = 0, to = 9 } },
+			-- A celebration, short and bright (a streak, a gift, a finale): a cluster of chimes, a
+			-- bell tree, a sparkling pass; about two seconds, fading (Pro Sound Effects). It took the
+			-- place of a crowd cheering for twelve seconds.
+			celebrate = {
+				{ id = "rbxassetid://9116395085", pitch = 1, volume = 3.2, from = 0, to = 2.6, fade = 0.9 }, -- Magic Glows Soft Clusters Of Chiming Hits 5
+				{ id = "rbxassetid://9119447936", pitch = 1.04, volume = 1.7, from = 0.1, to = 2.8, fade = 1.0 }, -- Sparkle Bell Tree Wind Chimes 1
+				{ id = "rbxassetid://9125635667", pitch = 1, volume = 0.9, from = 0.1, to = 2.4, fade = 0.8 }, -- Magical Exit Sparkling Pass Bys
+			},
 			bellStrike = { { id = "rbxassetid://9125440445", pitch = 1, volume = 1.8, from = 0.85, to = 2.75 } },
 			midnightChime = { { id = "rbxassetid://9113816347", pitch = 1, volume = 2, from = 0.25, to = 5 } },
-			gong = { { id = "rbxassetid://9125585534", pitch = 1, volume = 2, from = 0, to = 6 } },
+			gong = { { id = "rbxassetid://9125585534", pitch = 1, volume = 2, from = 0, to = 4.5, fade = 1.5 } },
 			coinDrop = { { id = "rbxassetid://9113704038", pitch = 1, volume = 1.4 }, { id = "rbxassetid://9113704199", pitch = 1, volume = 1.4 }, { id = "rbxassetid://9113849445", pitch = 1, volume = 1.4 } },
-			regalFanfare = { { id = "rbxassetid://1845463480", pitch = 1, volume = 1.4, from = 0, to = 14 } },
+			regalFanfare = { { id = "rbxassetid://1845463480", pitch = 1, volume = 1.4, from = 0, to = 3.4, fade = 1.1 } }, -- its opening flourish only
 			bellTree = { { id = "rbxassetid://9119447936", pitch = 1, volume = 1.6 }, { id = "rbxassetid://9119448154", pitch = 1, volume = 1.6 } },
 			-- The Meme Takeover: the air horn, a record scratch, a slide whistle, a kazoo fanfare and
 			-- party horns (Pro Sound Effects).
@@ -907,7 +914,7 @@ local defaults = {
 			magicZoom = { { id = "rbxassetid://9125648149", pitch = 1, volume = 1.6 } },
 			subHit = { { id = "rbxassetid://9126009571", pitch = 1, volume = 0.9 } },
 			glitch = { { id = "rbxassetid://9126160908", pitch = 1, volume = 2.4, from = 0, to = 1.2 }, { id = "rbxassetid://9126160908", pitch = 1.1, volume = 2.4, from = 6, to = 7 } },
-			heavenly = { { id = "rbxassetid://9114791989", pitch = 1, volume = 1.6, from = 0, to = 10 } }, -- Heavenly Presence choir pad
+			heavenly = { { id = "rbxassetid://9114791989", pitch = 1, volume = 1.6, from = 0, to = 6, fade = 2 } }, -- Heavenly Presence choir pad
 			sparklePass = { { id = "rbxassetid://9125635650", pitch = 1, volume = 1.3 } },
 			fairyDust = { { id = "rbxassetid://9114369623", pitch = 1, volume = 4.5 } },
 			stinger = { { id = "rbxassetid://9125641284", pitch = 1, volume = 5 } }, -- Magic Synth Stinger

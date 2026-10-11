@@ -273,7 +273,7 @@ local function cueName(name: string): string
 	return (string.gsub(name, ":", "_"))
 end
 
-type Source = { id: string, region: { number }?, soften: boolean, pitch: number, volume: number }
+type Source = { id: string, region: { number }?, soften: boolean, pitch: number, volume: number, fade: number? }
 
 local function source(name: string): Source?
 	local own = idFor(name)
@@ -304,7 +304,9 @@ local function source(name: string): Source?
 		if type(t) == "table" and type(t.id) == "string" and t.id ~= "" then
 			-- (`from` and `to`: only that part of the recording, in seconds.)
 			local region = if type(t.from) == "number" and type(t.to) == "number" then { t.from, t.to } else nil
-			return { id = t.id, region = region, soften = false, pitch = tonumber(t.pitch) or 1, volume = tonumber(t.volume) or 1 }
+			-- (`fade`: the slice's last seconds fade away, so a cut never sounds cut.)
+			local fade = if region and type(t.fade) == "number" and t.fade > 0 then t.fade else nil
+			return { id = t.id, region = region, soften = false, pitch = tonumber(t.pitch) or 1, volume = tonumber(t.volume) or 1, fade = fade }
 		end
 	end
 	local fallback = BUILT_IN[name]
@@ -388,6 +390,23 @@ function Sound.play(name: string, volume: number?, pitch: number?)
 	end
 	soften(s, src.soften)
 	s:Play()
+	-- A slice that fades: its volume eases to nothing over its last seconds (only this play's: a
+	-- sound taken again for another play keeps its own volume).
+	local fade = src.fade
+	if region and fade then
+		local token = (tonumber(s:GetAttribute("PlayToken")) or 0) + 1
+		s:SetAttribute("PlayToken", token)
+		local speed = math.max(0.05, s.PlaybackSpeed)
+		local length = math.max(0, region[2] - region[1])
+		local startAt = math.max(0, length - fade) / speed
+		task.delay(startAt, function()
+			if s:GetAttribute("PlayToken") == token and s.IsPlaying then
+				TweenService:Create(s, TweenInfo.new(math.min(fade, length) / speed, Enum.EasingStyle.Sine), { Volume = 0 }):Play()
+			end
+		end)
+	elseif s:GetAttribute("PlayToken") ~= nil then
+		s:SetAttribute("PlayToken", (tonumber(s:GetAttribute("PlayToken")) or 0) + 1)
+	end
 end
 
 -- A sound that goes on where it is (the crackle of a fire), heard as you come near, at the guest's

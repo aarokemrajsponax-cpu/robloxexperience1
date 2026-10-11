@@ -851,7 +851,7 @@ OPENINGS.curtain = function(c: Ctx)
 		words.Text = string.upper(ownerName()) .. " PRESENTS..."
 		sound("bellStrike", 0.7)
 	end)
-	sound("applause", 0.4)
+	sound("celebrate", 0.4)
 	-- The drumroll: quicker and quicker.
 	local beats = 0
 	local nextBeat = 0.2
@@ -866,7 +866,7 @@ OPENINGS.curtain = function(c: Ctx)
 	c.atDrop = function()
 		words:Destroy()
 		spot:Destroy()
-		sound("applause", 0.9)
+		sound("celebrate", 0.8)
 		tween(halves[1], 0.9, { Position = UDim2.fromScale(-0.52, 0) }, Enum.EasingStyle.Quint)
 		tween(halves[2], 0.9, { Position = UDim2.fromScale(1.02, 0) }, Enum.EasingStyle.Quint)
 		task.delay(1, function()
@@ -1416,7 +1416,7 @@ function AbuseShow.opening(mega: boolean, seed: number?, nightId: string?)
 				sound("airHorn", 1, 1 + i * 0.06)
 			end)
 		end
-		task.delay(0.5, sound, "crowdCheer", 0.8)
+		task.delay(0.5, sound, "celebrate", 0.8)
 		pcall(AbuseShow.cameraShake, 1.4, 0.9)
 		-- The title, landing the night's own way.
 		local words = if mega then "MEGA ABUSE" else "ADMIN ABUSE"
@@ -2348,7 +2348,7 @@ local function haulCard(n: Night, stopped: boolean, P: AbuseNights.Palette, dela
 		card.Visible = true
 		tween(scale, 0.55, { Scale = 1 }, Enum.EasingStyle.Back)
 		sound("regalFanfare", 0.8)
-		task.delay(0.3, sound, "crowdCheer", 0.7)
+		task.delay(0.3, sound, "celebrate", 0.7)
 		confettiBurst(gui, Vector2.new(v.X / 2, v.Y * 0.4), 110, 1000 * u)
 	end)
 	local seconds = (cfg().finaleSeconds or 9) + delayIn
@@ -2570,7 +2570,7 @@ FINALES.curtainCall = function(n: Night, stopped: boolean, P: AbuseNights.Palett
 	thanks.TextTransparency = 1
 	task.delay(0.8, function()
 		tween(thanks, 0.3, { TextTransparency = 0 })
-		sound("applause", 1)
+		sound("celebrate", 0.9)
 	end)
 	task.delay(2.6, function()
 		thanks:Destroy()

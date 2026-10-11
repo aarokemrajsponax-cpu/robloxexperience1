@@ -37,13 +37,13 @@ def stops(*pairs):
     return [(t, tuple(c)) for t, c in pairs]
 
 
-GOLD = stops((0, (120, 82, 28)), (0.32, (226, 182, 96)), (0.5, (255, 238, 178)), (0.72, (214, 164, 72)), (1, (128, 88, 32)))
-GOLD_SOFT = stops((0, (176, 128, 52)), (0.5, (246, 214, 140)), (1, (168, 120, 46)))
-GOLD_DARK = stops((0, (92, 62, 22)), (0.5, (170, 124, 52)), (1, (84, 56, 20)))
-ROSE = stops((0, (150, 92, 72)), (0.45, (238, 186, 160)), (1, (150, 90, 70)))
-STEEL = stops((0, (104, 110, 122)), (0.38, (214, 220, 228)), (0.55, (246, 248, 252)), (0.78, (170, 176, 188)), (1, (96, 102, 114)))
-PLATINUM = stops((0, (150, 156, 166)), (0.45, (238, 242, 246)), (0.6, (255, 255, 255)), (1, (160, 166, 176)))
-COPPER = stops((0, (110, 52, 26)), (0.45, (222, 138, 88)), (0.6, (248, 186, 140)), (1, (116, 56, 28)))
+GOLD = stops((0, (104, 64, 16)), (0.18, (198, 140, 48)), (0.36, (255, 222, 136)), (0.48, (255, 248, 214)), (0.62, (232, 178, 76)), (0.84, (146, 96, 28)), (1, (214, 162, 74)))
+GOLD_SOFT = stops((0, (164, 114, 40)), (0.42, (250, 220, 146)), (0.56, (255, 244, 204)), (0.8, (190, 136, 52)), (1, (226, 180, 96)))
+GOLD_DARK = stops((0, (80, 52, 16)), (0.45, (176, 128, 52)), (0.6, (214, 168, 84)), (1, (76, 50, 16)))
+ROSE = stops((0, (128, 72, 54)), (0.3, (222, 160, 132)), (0.48, (255, 222, 204)), (0.66, (214, 146, 116)), (0.86, (130, 74, 56)), (1, (206, 150, 124)))
+STEEL = stops((0, (78, 86, 102)), (0.22, (176, 186, 202)), (0.42, (236, 242, 250)), (0.52, (255, 255, 255)), (0.66, (156, 166, 182)), (0.86, (92, 100, 118)), (1, (186, 194, 210)))
+PLATINUM = stops((0, (132, 140, 152)), (0.3, (220, 226, 234)), (0.5, (255, 255, 255)), (0.66, (200, 206, 216)), (0.86, (128, 134, 146)), (1, (214, 220, 230)))
+COPPER = stops((0, (96, 42, 18)), (0.3, (204, 116, 64)), (0.48, (255, 196, 150)), (0.64, (214, 124, 72)), (0.86, (104, 46, 20)), (1, (196, 112, 64)))
 BLACK = stops((0, (8, 8, 11)), (0.55, (40, 40, 48)), (1, (14, 14, 18)))
 LACQUER = stops((0, (24, 24, 30)), (0.3, (62, 62, 72)), (0.42, (20, 20, 26)), (1, (6, 6, 8)))
 IVORY = stops((0, (250, 246, 236)), (1, (214, 204, 182)))
@@ -52,10 +52,10 @@ NAVY = stops((0, (20, 32, 72)), (1, (8, 14, 36)))
 LEATHER = stops((0, (88, 52, 30)), (0.5, (120, 74, 44)), (1, (64, 36, 20)))
 LEATHER_DARK = stops((0, (46, 28, 18)), (1, (24, 14, 10)))
 BURGUNDY = stops((0, (110, 30, 52)), (0.55, (76, 18, 36)), (1, (44, 10, 22)))
-DIAMOND = stops((0, (182, 214, 244)), (0.35, (255, 255, 255)), (0.6, (206, 232, 252)), (1, (150, 186, 226)))
-EMERALD = stops((0, (6, 92, 58)), (0.45, (40, 196, 130)), (0.6, (120, 236, 184)), (1, (4, 70, 44)))
-RUBY = stops((0, (110, 6, 22)), (0.45, (226, 40, 70)), (0.6, (255, 120, 140)), (1, (96, 4, 18)))
-SAPPHIRE = stops((0, (10, 26, 96)), (0.45, (40, 90, 210)), (0.6, (120, 170, 255)), (1, (8, 20, 80)))
+DIAMOND = stops((0, (168, 206, 246)), (0.22, (255, 255, 255)), (0.38, (214, 238, 255)), (0.52, (255, 238, 250)), (0.66, (206, 230, 255)), (0.82, (236, 252, 255)), (1, (138, 176, 226)))
+EMERALD = stops((0, (4, 80, 50)), (0.36, (28, 186, 120)), (0.52, (150, 250, 204)), (0.68, (24, 150, 96)), (1, (2, 56, 34)))
+RUBY = stops((0, (96, 4, 20)), (0.36, (222, 30, 64)), (0.52, (255, 150, 168)), (0.68, (190, 18, 48)), (1, (80, 2, 14)))
+SAPPHIRE = stops((0, (8, 22, 90)), (0.36, (36, 84, 210)), (0.52, (150, 196, 255)), (0.68, (30, 70, 180)), (1, (6, 16, 70)))
 AMBER = stops((0, (150, 70, 6)), (0.45, (246, 164, 40)), (0.6, (255, 214, 120)), (1, (140, 60, 4)))
 PEARL = stops((0, (255, 255, 252)), (0.5, (240, 232, 222)), (1, (196, 184, 176)))
 BLUE_PEARL = stops((0, (226, 238, 255)), (0.45, (150, 176, 226)), (1, (54, 72, 130)))
@@ -181,7 +181,102 @@ def draw_all():
     for fn in _PIECES:
         a = Art()
         fn(a)
+        finish(a.prims)
         ART[fn.__name__] = a.prims
+
+
+# ---------------------------------------------------------------------------------------------
+# The finish: what makes a drawing sit on the cloth like a real thing under a lamp.
+#   - Ink: behind each large shape that shows at the silhouette, the same shape a little larger,
+#     dark and half clear, nudged down and right: a crisp dark rim all round and a contact shadow
+#     below, so every piece stands off the felt and reads at any size.
+#   - Rim light: a fine bright edge on the lamp side (top left) of every metal part, fading away
+#     round the shape: polished metal catching the light.
+# ---------------------------------------------------------------------------------------------
+
+INK = (16, 10, 6)
+RIM = (255, 248, 226)
+
+
+def _sig(st):
+    return tuple((round(t, 3), tuple(int(v) for v in c)) for t, c in st) if st else None
+
+
+def _metals():
+    return {_sig(m) for m in (GOLD, GOLD_SOFT, GOLD_DARK, ROSE, STEEL, PLATINUM, COPPER, IRON, BRONZE, LACQUER)}
+
+
+def _bbox(p):
+    """The shape's box on the canvas, ignoring rotation unless it's square-ish."""
+    w, h = p["w"], p["h"]
+    if p.get("r") and abs(w - h) > 0.5:
+        # A rotated bar: its extent is its diagonal either way.
+        d = math.hypot(w, h)
+        w = h = d
+    return (p["x"] - w / 2, p["y"] - h / 2, p["x"] + w / 2, p["y"] + h / 2)
+
+
+def _covers(big, small_box, margin):
+    """Whether shape `big` (solid) covers `small_box` grown by `margin` all round."""
+    x0, y0, x1, y1 = small_box
+    x0, y0, x1, y1 = x0 - margin, y0 - margin, x1 + margin, y1 + margin
+    if big.get("cr", 0) >= 0.45 and abs(big["w"] - big["h"]) < 0.5 and not big.get("clip"):
+        r = big["w"] / 2
+        for cx, cy in ((x0, y0), (x1, y0), (x0, y1), (x1, y1)):
+            if math.hypot(cx - big["x"], cy - big["y"]) > r:
+                return False
+        return True
+    if big.get("r") or big.get("clip"):
+        return False
+    bx0, by0, bx1, by1 = _bbox(big)
+    inset = big.get("cr", 0) * min(big["w"], big["h"]) * 0.3
+    return x0 >= bx0 + inset and y0 >= by0 + inset and x1 <= bx1 - inset and y1 <= by1 - inset
+
+
+def finish(prims):
+    metals = _metals()
+    solid_shapes = [p for p in prims if p["t"] == "box" and "fill" in p and p.get("a", 0) < 0.3]
+    backs = []
+    for p in prims:
+        if p["t"] == "group":
+            finish(p["kids"])
+            continue
+        if p["t"] != "box":
+            continue
+        a = p.get("a", 0)
+        filled = "fill" in p and a < 0.45
+        ringish = "fill" not in p and "s" in p and p["s"]["a"] < 0.45 and min(p["w"], p["h"]) >= 10
+        area = p["w"] * p["h"]
+        # Ink behind shapes that reach the silhouette (not hidden inside a bigger solid one).
+        if (filled and area >= 60) or ringish:
+            box = _bbox(p)
+            hidden = any(q is not p and q["w"] * q["h"] > area * 1.15 and _covers(q, box, 1.6) for q in solid_shapes)
+            if not hidden:
+                q = {k: v for k, v in p.items() if k not in ("s", "ga", "fill")}
+                q["x"] = p["x"] + 0.6
+                q["y"] = p["y"] + 1.4
+                q["a"] = 0.5
+                q["g"] = 90
+                if filled:
+                    q["w"] = p["w"] + 2.6
+                    q["h"] = p["h"] + 2.6
+                    q["fill"] = solid(INK)
+                else:
+                    th = p["s"]["th"]
+                    q["s"] = {"th": th + 2.4, "fill": solid(INK), "a": 0.5, "g": 90}
+                    q["w"] = p["w"] - 1.2
+                    q["h"] = p["h"] - 1.2
+                if "clip" in p:
+                    c = p["clip"]
+                    q["clip"] = [c[0] - 1.4 + 0.6, c[1] - 1.4 + 1.4, c[2] + 1.4 + 0.6, c[3] + 1.4 + 1.4]
+                backs.append(q)
+        # Rim light on the lamp side of metal parts.
+        if filled and "s" not in p and area >= 24 and _sig(p.get("fill")) in metals:
+            p["s"] = {"th": 0.7 if area < 400 else 0.9, "fill": solid(RIM), "a": 0.0, "g": 45, "ga": [(0, 0.15), (0.38, 0.72), (0.62, 1), (1, 1)]}
+        elif ringish and _sig(p["s"]["fill"]) in metals and "ga" not in p["s"]:
+            # A metal ring: its own stroke keeps its colour; a fine bright inner edge is added.
+            pass
+    prims[0:0] = backs
 
 
 def indices(a, cx, cy, radius, n, w, h, colour, every=1, big=None):
@@ -1078,7 +1173,10 @@ def lua_prim(p, indent):
         parts.append("ga = { " + ", ".join(f"{{ {num(t)}, {num(v)} }}" for t, v in p["ga"]) + " }")
     if "s" in p:
         s = p["s"]
-        parts.append(f"s = {{ th = {num(s['th'])}, a = {num(s['a'])}, g = {num(s['g'])}, fill = {lua_stops(s['fill'])} }}")
+        sga = ""
+        if s.get("ga"):
+            sga = ", ga = { " + ", ".join(f"{{ {num(t)}, {num(v)} }}" for t, v in s["ga"]) + " }"
+        parts.append(f"s = {{ th = {num(s['th'])}, a = {num(s['a'])}, g = {num(s['g'])}, fill = {lua_stops(s['fill'])}{sga} }}")
     if "clip" in p:
         parts.append("clip = { " + ", ".join(num(v) for v in p["clip"]) + " }")
     return pad + "{ " + ", ".join(parts) + " }"
@@ -1162,7 +1260,7 @@ def draw_box(p, S):
         om = rounded_mask((cw, ch), outer, radius + T)
         im = rounded_mask((cw, ch), inner, radius)
         ring = Image.fromarray(np.clip(np.array(om, dtype=np.int16) - np.array(im, dtype=np.int16), 0, 255).astype(np.uint8), "L")
-        g = gradient(W + 2 * T, H + 2 * T, s["fill"], s["g"], base_a=s["a"])
+        g = gradient(W + 2 * T, H + 2 * T, s["fill"], s["g"], ga=s.get("ga"), base_a=s["a"])
         gl = Image.new("RGBA", (cw, ch), (0, 0, 0, 0))
         gl.paste(g, (int(pad - T), int(pad - T)))
         a = np.array(gl)[..., 3].astype(np.float32) * (np.array(ring).astype(np.float32) / 255)

@@ -134,7 +134,7 @@ MemeTakeovers.List = {
 		chaos = "rainbow",
 		finale = "rockets",
 		music = "party",
-		sounds = { open = { "partyHorn", "recordScratch" }, boss = { "stinger", "partyHorn" }, finale = { "fireworkBoom", "crowdCheer" } },
+		sounds = { open = { "partyHorn", "recordScratch" }, boss = { "stinger", "partyHorn" }, finale = { "fireworkBoom", "celebrate" } },
 	},
 	{
 		id = "frostbite",
@@ -170,7 +170,7 @@ MemeTakeovers.List = {
 		chaos = "frenzy",
 		finale = "bow",
 		music = "hero",
-		sounds = { open = { "subHit", "partyHorn" }, boss = { "lowHit", "regalFanfare" }, finale = { "applause", "crowdCheer" } },
+		sounds = { open = { "subHit", "partyHorn" }, boss = { "lowHit", "regalFanfare" }, finale = { "fireworkBoom", "celebrate" } },
 	},
 	{
 		id = "sugarRush",
@@ -188,7 +188,7 @@ MemeTakeovers.List = {
 		chaos = "frenzy",
 		finale = "burst",
 		music = "party",
-		sounds = { open = { "partyHorn", "slideWhistle" }, boss = { "bellTree", "kazoo" }, finale = { "partyHorn", "applause" } },
+		sounds = { open = { "partyHorn", "slideWhistle" }, boss = { "bellTree", "kazoo" }, finale = { "partyHorn", "celebrate" } },
 	},
 	{
 		id = "arcade",
@@ -206,7 +206,7 @@ MemeTakeovers.List = {
 		chaos = "rainbow",
 		finale = "rockets",
 		music = "mega",
-		sounds = { open = { "tick", "stinger" }, boss = { "glitch", "stinger" }, finale = { "fireworkBoom", "applause" } },
+		sounds = { open = { "tick", "stinger" }, boss = { "glitch", "stinger" }, finale = { "fireworkBoom", "celebrate" } },
 	},
 	{
 		id = "royalCourt",
@@ -224,7 +224,7 @@ MemeTakeovers.List = {
 		chaos = "slowmo",
 		finale = "bow",
 		music = "hero",
-		sounds = { open = { "regalFanfare", "gong" }, boss = { "heavenly", "regalFanfare" }, finale = { "applause", "bellTree" } },
+		sounds = { open = { "regalFanfare", "gong" }, boss = { "heavenly", "regalFanfare" }, finale = { "celebrate", "bellTree" } },
 	},
 	{
 		id = "deepSea",
@@ -261,7 +261,7 @@ MemeTakeovers.List = {
 		chaos = "frenzy",
 		finale = "burst",
 		music = "party",
-		sounds = { open = { "airHorn", "kazoo" }, boss = { "lowHit", "kazoo" }, finale = { "partyHorn", "crowdCheer" } },
+		sounds = { open = { "airHorn", "kazoo" }, boss = { "lowHit", "kazoo" }, finale = { "partyHorn", "celebrate" } },
 	},
 	{
 		id = "midnight",
@@ -297,7 +297,7 @@ MemeTakeovers.List = {
 		chaos = "frenzy",
 		finale = "rockets",
 		music = "party",
-		sounds = { open = { "bellTree", "partyHorn" }, boss = { "riseWhoosh", "kazoo" }, finale = { "fireworkBoom", "applause" } },
+		sounds = { open = { "bellTree", "partyHorn" }, boss = { "riseWhoosh", "kazoo" }, finale = { "fireworkBoom", "celebrate" } },
 	},
 	{
 		id = "pandaPiano",
@@ -315,7 +315,7 @@ MemeTakeovers.List = {
 		chaos = "rainbow",
 		finale = "bow",
 		music = "spy",
-		sounds = { open = { "bellTree", "stinger" }, boss = { "lowHit", "bellTree" }, finale = { "applause", "crowdCheer" } },
+		sounds = { open = { "bellTree", "stinger" }, boss = { "lowHit", "bellTree" }, finale = { "fireworkBoom", "celebrate" } },
 	},
 } :: { Variant }
 

@@ -1765,7 +1765,7 @@ function Sort.drag(uid, caseId)
 	local justMoved = Sort.centre(card)
 	advance(0.4)
 	local settled = Sort.centre(card)
-	local lit = Sort.bin(caseId):FindFirstChildOfClass("UIStroke").Thickness == 2
+	local lit = Sort.bin(caseId):FindFirstChildOfClass("UIStroke").Thickness >= 2
 	UserInputService.InputEnded:Fire(Sort.pointer(roblox.Enum.UserInputType.MouseButton1, to), false)
 	return justMoved, settled, lit, to
 end
@@ -2097,7 +2097,7 @@ do
 	serverSays("Table", { op = "filed", uid = 5, case = wrongCase, correct = false, points = 0, setBonus = 0, penalty = 0, score = 360, streak = 0, multiplier = 1, runLength = 0 })
 	advance(1)
 	check("the piece goes back to its place on the tray", (Sort.centre(Sort.card(5)) - home).Magnitude < 3, (Sort.centre(Sort.card(5)) - home).Magnitude)
-	check("the case goes dark again when you let go", Sort.bin(wrongCase):FindFirstChildOfClass("UIStroke").Thickness == 1)
+	check("the case goes dark again when you let go", Sort.bin(wrongCase):FindFirstChildOfClass("UIStroke").Thickness < 2)
 	clearVerdicts()
 	check("the message goes again", textOnScreen("WRONG CASE") == nil)
 
@@ -2112,7 +2112,7 @@ do
 		check(string.format("with the points it earned (%d)", n), find(playerGui, function(d)
 			return d:IsA("TextLabel") and string.sub(d.Text, 1, 1) == "+"
 		end) ~= nil)
-		advance(0.6)
+		advance(0.8)
 		check(string.format("the piece goes into its case and off the tray (%d)", n), Sort.card(uid) ~= nil and Sort.card(uid).Visible == false)
 		check(string.format("the case counts it (%d)", n), tonumber(Sort.bin(p.case).Count.Text) == count + 1, Sort.bin(p.case).Count.Text)
 		score += 20
@@ -2125,6 +2125,43 @@ do
 				return d:IsA("TextLabel") and d.Name == "Hint" and d.TextTransparency < 1
 			end) == nil)
 		end
+		clearVerdicts()
+	end
+	-- Into its case on a curve: a piece filed from the cloth (by key, tap or pad) rises off it,
+	-- sails over and comes down into its case trailing light, and the case counts it as it lands.
+	do
+		local SortScreenModule = module("StarterPlayer", "StarterPlayerScripts", "Client", "Table", "SortScreen")
+		local p = round2[10]
+		local card = Sort.card(10)
+		local from = Sort.centre(card)
+		local count = tonumber(Sort.bin(p.case).Count.Text)
+		local landed = 0
+		local was = SortScreenModule.onLanded
+		SortScreenModule.onLanded = function(...)
+			landed += 1
+			return was(...)
+		end
+		SortScreenModule.correct(10, p.case, 20, 1)
+		local highest, trailSeen, rising = from.Y, false, false
+		for i = 1, 8 do
+			advance(0.04)
+			local at = Sort.centre(card)
+			highest = math.min(highest, at.Y)
+			trailSeen = trailSeen or find(sortGui.Root.Effects, function(d)
+				return d.Name == "FlightGlow" and d.Visible
+			end) ~= nil
+			if i == 2 then
+				rising = at.Y < from.Y
+			end
+			if i == 4 then
+				snapshot("sort-flight")
+			end
+		end
+		check("a filed piece rises off the cloth first (a toss, not a slide)", rising and highest < from.Y - 10, from.Y - highest)
+		check("and trails light in its case's colour as it flies", trailSeen)
+		advance(0.6)
+		check("then lands in its case, which counts it", card.Visible == false and tonumber(Sort.bin(p.case).Count.Text) == count + 1 and landed == 1, Sort.bin(p.case).Count.Text)
+		SortScreenModule.onLanded = was
 		clearVerdicts()
 	end
 	check("the header shows the score", textOnScreen(tostring(score)) ~= nil)

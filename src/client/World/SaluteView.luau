@@ -356,7 +356,7 @@ local function encore(seconds: number, userId: number)
 		height = 13,
 		fall = 2,
 	})
-	pcall(Sound.play, "applause", 0.6)
+	pcall(Sound.play, "celebrate", 0.6)
 	local started = os.clock()
 	task.spawn(function()
 		while os.clock() - started < seconds and lamp.Parent do
