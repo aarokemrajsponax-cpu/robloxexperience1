@@ -10,12 +10,18 @@
 -- street, wide beside it over the house, high behind above the clouds, ahead of it coming in to
 -- land), between black bars, with the place's name as it nears. With the movement setting turned
 -- down, the camera is left alone. The sleigh itself and its riders are the server's to move.
+--
+-- Santa's Flyover (a salute, World/SaluteView): the sleigh lifts off from the kerb, sweeps round
+-- the house high over every guest ringing its bells and trailing gold, the giver's name in gold
+-- beside it, and lands where it was. If it's away (at the Pole, or loaded with guests), a second
+-- sleigh comes in from the north instead, circles and leaves.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
+local Brand = require(ReplicatedStorage.Shared.Brand)
 local HolidayGames = require(ReplicatedStorage.Shared.HolidayGames)
 local Quality = require(script.Parent.Parent.Quality)
 local Sound = require(script.Parent.Parent.Sound)
@@ -54,9 +60,12 @@ type Flight = {
 	titled: boolean,
 	bells: number,
 	clouds: Folder?,
+	flyover: boolean, -- Santa's Flyover (a salute), not a ride
+	fromKerb: boolean, -- (a flyover from the kerb and back: the parked sleigh hides meanwhile)
 }
 
 local flight: Flight? = nil
+local flyer: Flight? = nil
 local camera: () -> ()
 local parked: Model? = nil
 local gui: ScreenGui? = nil
@@ -135,29 +144,31 @@ local function takePassengers(f: Flight, from: Model, rootCF: CFrame)
 	end
 end
 
-local function build(m: Model, state: string, t0: number, seconds: number): Flight?
+local function build(m: Model, points: { Vector3 }, t0: number, seconds: number, toPole: boolean, flyover: boolean, fromKerb: boolean): Flight?
 	local root = m.PrimaryPart
 	if not root then
 		return nil
 	end
 	local rootCF = root.CFrame
 	local copy = Instance.new("Model")
-	copy.Name = "SleighInFlight"
+	copy.Name = if flyover then "SantasFlyover" else "SleighInFlight"
 	local f: Flight = {
 		copy = copy,
 		parts = {},
 		offsets = {},
 		deer = {},
-		path = HolidayGames.path(HolidayGames.flightPoints(state == "toPole")),
+		path = HolidayGames.path(points),
 		t0 = t0,
 		seconds = math.max(2, seconds),
-		toPole = state == "toPole",
+		toPole = toPole,
 		riders = {},
 		forward = rootCF.LookVector,
-		rider = Players.LocalPlayer:GetAttribute("SleighRide") ~= nil,
+		rider = not flyover and Players.LocalPlayer:GetAttribute("SleighRide") ~= nil,
 		titled = false,
 		bells = 0,
 		clouds = nil,
+		flyover = flyover,
+		fromKerb = fromKerb,
 	}
 	for _, child in m:GetChildren() do
 		if child:IsA("Seat") or child.Name == "BoardHere" or child.Name == "Passenger" or child:IsA("BillboardGui") then
@@ -215,7 +226,9 @@ local function build(m: Model, state: string, t0: number, seconds: number): Flig
 			table.insert(f.offsets, rootCF:ToObjectSpace(d.CFrame))
 		end
 	end
-	takePassengers(f, m, rootCF)
+	if not flyover then
+		takePassengers(f, m, rootCF)
+	end
 	-- Gold dust behind it, and a trail from each runner.
 	local copyRoot = copy:FindFirstChild("SleighRoot")
 	if copyRoot and copyRoot:IsA("BasePart") then
@@ -254,8 +267,18 @@ local function build(m: Model, state: string, t0: number, seconds: number): Flig
 			trail.Parent = copyRoot
 		end
 	end
-	copy.Parent = HolidayKit.folder("HolidaySleigh")
+	copy.Parent = HolidayKit.folder(if flyover then "HolidayFlyover" else "HolidaySleigh")
 	return f
+end
+
+-- The parked sleigh hides while it's flying (a ride, or a flyover from the kerb), and shows again
+-- when it's back.
+local function syncParked()
+	local m = parked
+	if m then
+		local fl = flyer
+		hideParked(m, flight ~= nil or (fl ~= nil and fl.fromKerb))
+	end
 end
 
 -- Clouds along the way (for a rider: the sleigh flies through them).
@@ -337,9 +360,16 @@ local function finish()
 			task.spawn(CameraRig.handoff, 1.2)
 		end
 	end
-	if parked then
-		hideParked(parked, false)
+	syncParked()
+end
+
+local function finishFlyover()
+	local f = flyer
+	flyer = nil
+	if f then
+		f.copy:Destroy()
 	end
+	syncParked()
 end
 
 local function frameAt(f: Flight, u: number): (CFrame, CFrame)
@@ -358,16 +388,20 @@ end
 local function stepFlight(f: Flight, dt: number, t: number)
 	local u = (serverNow() - f.t0) / f.seconds
 	if u >= 1.02 then
-		finish()
+		if f.flyover then
+			finishFlyover()
+		else
+			finish()
+		end
 		return
 	end
 	u = math.clamp(u, 0, 1)
-	if parked and u < 0.5 then
+	if parked and u < 0.5 and not f.flyover then
 		takePassengers(f, parked, (parked.PrimaryPart :: BasePart).CFrame)
 	end
 	local cf = frameAt(f, u)
 	-- (Aboard after all: the server's word on who rides can reach this screen a moment late.)
-	if not f.rider and u < 0.3 and Players.LocalPlayer:GetAttribute("SleighRide") ~= nil then
+	if not f.flyover and not f.rider and u < 0.3 and Players.LocalPlayer:GetAttribute("SleighRide") ~= nil then
 		f.rider = true
 		clouds(f)
 		if not Stagecraft.still() then
@@ -449,10 +483,17 @@ function SleighRide.update(m: Model?)
 			hideParked(parked, false)
 		end
 		parked = m
+		syncParked()
 	end
 	local state = Workspace:GetAttribute("SleighState")
 	local t0 = Workspace:GetAttribute("SleighT0")
 	local seconds = Workspace:GetAttribute("SleighFlight")
+	-- (A guest boarding mid-flyover: the parked sleigh shows again at once, for them to sit in.)
+	local fo = flyer
+	if fo and fo.fromKerb and state ~= "home" then
+		fo.fromKerb = false
+		syncParked()
+	end
 	local flying = (state == "toPole" or state == "toHome") and type(t0) == "number" and type(seconds) == "number"
 	if not flying or not m then
 		if flight then
@@ -466,12 +507,12 @@ function SleighRide.update(m: Model?)
 	if flight then
 		finish()
 	end
-	local f = build(m, state :: string, t0 :: number, seconds :: number)
+	local f = build(m, HolidayGames.flightPoints(state == "toPole"), t0 :: number, seconds :: number, state == "toPole", false, false)
 	if not f then
 		return
 	end
 	flight = f
-	hideParked(m, true)
+	syncParked()
 	Sound.play("bellTree", 0.6)
 	Sound.play("bellStrike", 0.35, 1.3)
 	if f.rider then
@@ -493,6 +534,102 @@ function SleighRide.step(dt: number, t: number)
 	if f then
 		stepFlight(f, dt, t)
 	end
+	local fo = flyer
+	if fo then
+		stepFlight(fo, dt, t)
+	end
+end
+
+-- The way a flyover goes: from the kerb, round the house high (clear of every roof), and back to
+-- the kerb; or, with the sleigh away, in from the north, round, and off north again.
+local function flyoverPoints(fromKerb: boolean): { Vector3 }
+	local H = HolidayGames.HOME_SLEIGH.Position
+	if fromKerb then
+		return {
+			H,
+			H + Vector3.new(36, 0.5, 0),
+			Vector3.new(66, 26, -84),
+			Vector3.new(170, 84, -40),
+			Vector3.new(196, 118, 130),
+			Vector3.new(80, 150, 330),
+			Vector3.new(-120, 140, 310),
+			Vector3.new(-200, 104, 110),
+			Vector3.new(-186, 58, -50),
+			Vector3.new(-110, 14, -72),
+			H + Vector3.new(-30, 0.5, 0),
+			H,
+		}
+	end
+	return {
+		Vector3.new(420, 230, 640),
+		Vector3.new(220, 140, 200),
+		Vector3.new(170, 96, -30),
+		Vector3.new(60, 64, -112),
+		Vector3.new(-110, 80, -96),
+		Vector3.new(-200, 112, 90),
+		Vector3.new(-120, 150, 310),
+		Vector3.new(80, 190, 460),
+		Vector3.new(320, 260, 760),
+	}
+end
+SleighRide.flyoverPoints = flyoverPoints
+
+-- Santa's Flyover, for `by` (a salute): `seconds` long. False when there's no sleigh at the house
+-- (it isn't Christmas): the salute's gold confetti still falls.
+function SleighRide.flyover(by: string, seconds: number): boolean
+	local m = parked
+	if not m or not m.PrimaryPart or flyer then
+		return false
+	end
+	local fromKerb = Workspace:GetAttribute("SleighState") == "home" and flight == nil
+	local f = build(m, flyoverPoints(fromKerb), serverNow(), math.max(12, seconds - 2), false, true, fromKerb)
+	if not f then
+		return false
+	end
+	flyer = f
+	syncParked()
+	-- The giver's name in gold, flying beside it.
+	local root = f.copy.PrimaryPart
+	if root then
+		local g = Instance.new("BillboardGui")
+		g.Name = "Banner"
+		g.Size = UDim2.fromOffset(440, 76)
+		g.StudsOffset = Vector3.new(0, 12, 0)
+		g.LightInfluence = 0
+		g.MaxDistance = 900
+		g.Parent = root
+		local name = Instance.new("TextLabel")
+		name.Name = "Name"
+		name.BackgroundTransparency = 1
+		name.Size = UDim2.new(1, 0, 0.62, 0)
+		name.FontFace = Brand.Fonts.display
+		name.TextScaled = true
+		name.TextColor3 = rgb(255, 222, 140)
+		name.TextStrokeColor3 = rgb(60, 30, 6)
+		name.TextStrokeTransparency = 0.2
+		name.Text = "🎄 " .. by .. " 🎄"
+		name.Parent = g
+		local line = Instance.new("TextLabel")
+		line.Name = "Line"
+		line.BackgroundTransparency = 1
+		line.Position = UDim2.fromScale(0, 0.64)
+		line.Size = UDim2.new(1, 0, 0.34, 0)
+		line.FontFace = Brand.Fonts.heavy
+		line.TextScaled = true
+		line.TextColor3 = rgb(255, 255, 255)
+		line.TextStrokeTransparency = 0.3
+		line.Text = "SANTA'S FLYOVER"
+		line.Parent = g
+	end
+	Sound.play("bellStrike", 0.45, 1.2)
+	Sound.play("bellTree", 0.6)
+	return true
+end
+
+-- For tests: the flyover's sleigh in the air.
+function SleighRide.flyoverCopy(): Model?
+	local f = flyer
+	return if f then f.copy else nil
 end
 
 -- Whether the sleigh is in the air on this screen, and whether this guest is aboard.

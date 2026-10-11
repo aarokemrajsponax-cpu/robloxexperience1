@@ -708,6 +708,39 @@ check("in Studio, a salute not yet on sale can be previewed (it plays, nothing i
 advance(60)
 Config.data.Products.salute_goldLeaf = 0
 Config.data.Products.salute_grand = 0
+-- Santa's Flyover: a holiday's own salute, offered at Christmas only (never a countdown), and once
+-- bought it always plays.
+;(function()
+	local function listed(): boolean
+		for _, s in askAs(mo, { op = "shelves" }).salutes do
+			if s.id == "sleigh" then
+				return true
+			end
+		end
+		return false
+	end
+	Config.data.Products.salute_sleigh = 7010
+	services.Workspace:SetAttribute("HolidayGame", nil)
+	check("Santa's Flyover isn't on the shelves out of season", not listed())
+	check("...nor sold (asked for anyway)", askAs(mo, { op = "salute", id = "sleigh" }).ok == false)
+	services.Workspace:SetAttribute("HolidayGame", "christmas")
+	check("at Christmas it's on the shelves, at its price", listed())
+	local before = #prompts
+	check("...and sold", askAs(mo, { op = "salute", id = "sleigh" }).ok and #prompts == before + 1 and prompts[#prompts].id == 7010)
+	local seen = #broadcasts
+	services.Workspace:SetAttribute("HolidayGame", nil)
+	receipt(mo, 7010, "SAL-SLEIGH")
+	advance(0.5)
+	local played
+	for i = seen + 1, #broadcasts do
+		if broadcasts[i].remote == "Salute" then
+			played = broadcasts[i].message
+		end
+	end
+	check("bought just as Christmas ends, it still plays: the sleigh round the house and gold confetti", played ~= nil and played.id == "sleigh" and played.effects[1] == "sleigh" and table.find(played.effects, "goldLeaf") ~= nil)
+	advance(40)
+	Config.data.Products.salute_sleigh = 0
+end)()
 end
 
 ---------------------------------------------------------------------------------------------------
@@ -819,7 +852,7 @@ do
 	end
 end
 local st = adminAs(owner, { op = "state" })
-check("the panel lists the events, the seasons, the salutes and the guests", #st.events == 21 and #st.seasons == 10 and #st.salutes == 6 and #st.guests >= 2)
+check("the panel lists the events, the seasons, the salutes and the guests", #st.events == 21 and #st.seasons == 10 and #st.salutes == 7 and #st.guests >= 2)
 do
 	-- The Suite shows: the owner tries one on their own screen, free. Nobody else sees it, and
 	-- nobody else may ask for one.
@@ -1932,6 +1965,30 @@ do
 	check("a guide trail, worn too", trail.ok and gemmy:GetAttribute("GemTrail") == "gtrail_prism")
 	check("you can't wear a felt you don't own", gemAs({ op = "equip", kind = "felt", id = "felt_inferno" }).ok == false and gemmy:GetAttribute("GemFelt") == "felt_aurora")
 	check("nor wear something as the wrong kind", gemAs({ op = "equip", kind = "companion", id = "felt_aurora" }).ok == false)
+	-- In season: a holiday's own things, sold only while its game is open, kept for good after.
+	gd.gems = 5000
+	services.Workspace:SetAttribute("HolidayGame", nil)
+	local early = gemAs({ op = "buy", id = "comp_jack" })
+	check("a holiday's own companion isn't sold out of season, and says it comes back with the holiday", early.ok == false and string.find(early.why, "All Hallows'", 1, true) ~= nil and gd.gems == 5000)
+	services.Workspace:SetAttribute("HolidayGame", "christmas")
+	check("...nor in another holiday", gemAs({ op = "buy", id = "comp_jack" }).ok == false and gd.gems == 5000)
+	services.Workspace:SetAttribute("HolidayGame", "halloween")
+	local jack = gemAs({ op = "buy", id = "comp_jack" })
+	check("...in season it's sold at its one price and worn at once", jack.ok and gd.gems == 5000 - GemList.byId.comp_jack.gems and gemmy:GetAttribute("Companion") == "comp_jack")
+	services.Workspace:SetAttribute("HolidayGame", nil)
+	check("...and it's kept and worn all year", gemAs({ op = "equip", kind = "companion", id = "" }).ok and gemAs({ op = "equip", kind = "companion", id = "comp_jack" }).ok and gemmy:GetAttribute("Companion") == "comp_jack")
+	check("every holiday has its own things, each with a fixed price and a season the house knows", (function()
+		local seen = {}
+		for _, item in GemList.List do
+			if item.season then
+				if not GemList.Seasons[item.season] or item.gems <= 0 then
+					return false
+				end
+				seen[item.season] = true
+			end
+		end
+		return seen.halloween and seen.thanksgiving and seen.christmas and seen.easter and seen.stPatrick
+	end)() == true)
 	check("every Gem-only price lands on 250, 500, 1,000 or 2,500 (a pack buys something whole)", (function()
 		for _, item in GemList.List do
 			if item.kind == "companion" or item.kind == "felt" or item.kind == "trail" then

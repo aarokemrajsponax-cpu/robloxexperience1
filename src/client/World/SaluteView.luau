@@ -24,6 +24,7 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Salutes = require(ReplicatedStorage.Shared.Salutes)
 local Fireworks = require(script.Parent.Fireworks)
 local Flakes = require(script.Parent.Flakes)
+local SleighRide = require(script.Parent.SleighRide)
 local Toast = require(script.Parent.Parent.UI.Toast)
 local Sound = require(script.Parent.Parent.Sound)
 
@@ -392,6 +393,10 @@ SaluteView.effects = {
 	end,
 	encore = function(m: { [string]: any })
 		encore(m.seconds or 25, tonumber(m.userId) or 0)
+	end,
+	-- Santa's Flyover: the sleigh round the house with the giver's name (World/SleighRide).
+	sleigh = function(m: { [string]: any })
+		SleighRide.flyover(if type(m.by) == "string" and m.by ~= "" then m.by else "The house", tonumber(m.seconds) or 30)
 	end,
 }
 

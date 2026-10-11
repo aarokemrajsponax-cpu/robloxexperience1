@@ -13,6 +13,12 @@
 -- Wearable things (companions, felts, trails, auras, titles) are kept for good and worn one of a
 -- kind at a time. All style or convenience, never a score: nothing here wins a game.
 --
+-- In season: a few things belong to a holiday (`season`, a holiday game's id) and are sold only
+-- while that holiday's game is open (Shared/HolidayGames), on the shop's own In Season shelf and
+-- on their kind's shelf, marked as such: "on sale while the holiday is on". Once bought they're
+-- kept and worn all year like anything else. Out of season they're shown as coming back with
+-- their holiday, never as running out. Nothing in season is random either.
+--
 -- Prices sit at 250, 500, 1,000 and 2,500 Gems, so each Gem pack buys something whole: a Pouch
 -- (250) a companion or a trail, a Case (1,100) a thousand-Gem piece, a Trunk (3,000) the finest.
 -- Gems are also earned by playing (levels, badges), more slowly.
@@ -28,12 +34,22 @@ export type Item = {
 	line: string,
 	glyph: string,
 	style: { [string]: any },
+	season: string?, -- a holiday game's id: on sale only while it's open
 }
 
 local rgb = Color3.fromRGB
 
 GemShop.Kinds = { "companion", "felt", "trail", "aura", "title", "boost", "exchange", "curio" }
-GemShop.KindNames = { companion = "Companions", felt = "Table Felts", trail = "Guide Trails", aura = "Auras", title = "Titles", boost = "Surges", exchange = "Gilt", curio = "Curios" }
+GemShop.KindNames = { companion = "Companions", felt = "Table Felts", trail = "Guide Trails", aura = "Auras", title = "Titles", boost = "Surges", exchange = "Gilt", curio = "Curios", season = "In Season" }
+
+-- The holidays things can be in season for: what each is called on the shop's cards.
+GemShop.Seasons = {
+	halloween = { name = "All Hallows'", glyph = "🎃", colour = rgb(255, 150, 60) },
+	thanksgiving = { name = "Thanksgiving", glyph = "🦃", colour = rgb(236, 170, 80) },
+	christmas = { name = "Christmas", glyph = "🎄", colour = rgb(255, 96, 96) },
+	easter = { name = "Easter", glyph = "🐣", colour = rgb(250, 180, 220) },
+	stPatrick = { name = "St Patrick's", glyph = "🍀", colour = rgb(90, 220, 120) },
+} :: { [string]: { name: string, glyph: string, colour: Color3 } }
 -- What's worn (one of each kind at a time), and the attribute everyone's screens read it from.
 GemShop.Wearable = { companion = "Companion", felt = "GemFelt", trail = "GemTrail", aura = "Aura", title = "Title" } :: { [string]: string }
 
@@ -91,6 +107,22 @@ GemShop.List = {
 	-- Surges: for half an hour from the moment you buy one.
 	{ id = "boost_gilt", name = "Gilt Surge", kind = "boost", gems = 60, glyph = "🪙", line = "Half again as much Gilt from everything you play, for 30 minutes.", style = { boost = "gilt", seconds = 1800 } },
 	{ id = "boost_xp", name = "XP Surge", kind = "boost", gems = 60, glyph = "⭐", line = "Double XP from everything you play, for 30 minutes.", style = { boost = "xp", seconds = 1800 } },
+	-- In season: each holiday's own, sold while its game is open, kept for good.
+	{ id = "comp_jack", name = "Jack the Lantern", kind = "companion", gems = 250, glyph = "🎃", season = "halloween", line = "A little jack-o'-lantern with a kind grin, glowing at your shoulder.", style = { glyph = "🎃", glow = rgb(255, 150, 50), colours = { rgb(255, 190, 90), rgb(255, 240, 200) }, fire = true, rate = 10 } },
+	{ id = "aura_bats", name = "Moonlit Bats", kind = "aura", gems = 250, glyph = "🦇", season = "halloween", line = "Little cartoon bats circling you, as friendly as bats get.", style = { glyph = "🦇", orbit = 5 } },
+	{ id = "title_treat", name = "Trick-or-Treater", kind = "title", gems = 150, glyph = "🍬", season = "halloween", line = "Every door on the Lane, every treat.", style = { colour = rgb(255, 170, 80) } },
+	{ id = "comp_gobbles", name = "Sir Gobbles", kind = "companion", gems = 250, glyph = "🦃", season = "thanksgiving", line = "A very proud little turkey who follows you everywhere.", style = { glyph = "🦃", glow = rgb(236, 170, 80), colours = { rgb(255, 214, 140), rgb(200, 120, 60) } } },
+	{ id = "aura_leaves", name = "Autumn Leaves", kind = "aura", gems = 250, glyph = "🍂", season = "thanksgiving", line = "Red and gold leaves drifting round you.", style = { glyph = "🍂", orbit = 5 } },
+	{ id = "title_harvest", name = "Harvest Royalty", kind = "title", gems = 150, glyph = "🌾", season = "thanksgiving", line = "Queen or king of the Harvest Field.", style = { colour = rgb(236, 190, 110) } },
+	{ id = "comp_reindeer", name = "Little Reindeer", kind = "companion", gems = 500, glyph = "🦌", season = "christmas", line = "A little reindeer whose nose glows red, sparkling as it trots on air.", style = { glyph = "🦌", glow = rgb(255, 90, 90), colours = { rgb(255, 210, 210), rgb(255, 255, 255) }, rate = 12 } },
+	{ id = "comp_snowy", name = "Snowy", kind = "companion", gems = 250, glyph = "⛄", season = "christmas", line = "A snowman small enough to sit on your shoulder.", style = { glyph = "⛄", glow = rgb(210, 230, 255), colours = { rgb(255, 255, 255), rgb(200, 226, 255) } } },
+	{ id = "aura_tinsel", name = "Tinsel", kind = "aura", gems = 250, glyph = "🎄", season = "christmas", line = "Red, green and gold sparkle, all round you.", style = { particle = "sparkles", colours = { rgb(255, 80, 80), rgb(90, 220, 120), rgb(255, 214, 110) }, rate = 22 } },
+	{ id = "title_helper", name = "Santa's Helper", kind = "title", gems = 150, glyph = "🎁", season = "christmas", line = "Every gift loaded before the sleigh flew.", style = { colour = rgb(255, 120, 120) } },
+	{ id = "comp_chick", name = "Easter Chick", kind = "companion", gems = 250, glyph = "🐣", season = "easter", line = "A fluffy chick, just out of its egg.", style = { glyph = "🐣", glow = rgb(255, 230, 120), colours = { rgb(255, 240, 170), rgb(255, 255, 255) } } },
+	{ id = "aura_blossom", name = "Spring Blossom", kind = "aura", gems = 250, glyph = "🌷", season = "easter", line = "Tulips turning round you, slowly.", style = { glyph = "🌷", orbit = 5 } },
+	{ id = "title_egghunter", name = "Egg Hunter", kind = "title", gems = 150, glyph = "🥚", season = "easter", line = "No egg stays hidden for long.", style = { colour = rgb(250, 190, 220) } },
+	{ id = "comp_rainbow", name = "Little Rainbow", kind = "companion", gems = 500, glyph = "🌈", season = "stPatrick", line = "A tiny rainbow with a pot of gold at its end.", style = { glyph = "🌈", glow = rgb(255, 220, 120), rainbow = true, rate = 16 } },
+	{ id = "title_lucky", name = "Lucky Charm", kind = "title", gems = 150, glyph = "☘️", season = "stPatrick", line = "Luck follows you round the house.", style = { colour = rgb(120, 230, 140) } },
 	-- Gilt for Gems, at a set rate (better for more).
 	{ id = "swap_small", name = "A Purse of Gilt", kind = "exchange", gems = 25, glyph = "👛", line = "1,000 Gilt for 25 Gems.", style = { gilt = 1000 } },
 	{ id = "swap_medium", name = "A Bag of Gilt", kind = "exchange", gems = 100, glyph = "💰", line = "4,500 Gilt for 100 Gems.", style = { gilt = 4500 } },
@@ -103,5 +135,11 @@ for _, item in GemShop.List do
 end
 
 GemShop.SURGE_CAP = 3 * 3600 -- a Surge never runs more than three hours ahead
+
+-- Whether an item may be bought while `open` (the holiday game open now, or nil) is on: anything
+-- not in season always; a seasonal thing only in its own season.
+function GemShop.onSale(item: Item, open: string?): boolean
+	return item.season == nil or item.season == open
+end
 
 return GemShop

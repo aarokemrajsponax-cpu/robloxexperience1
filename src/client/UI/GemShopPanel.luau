@@ -6,8 +6,12 @@
 -- XP for half an hour), Gilt (Gems changed for Gilt at a set rate) and Curios (the Cabinet).
 -- Buying takes two taps: the price, then "Confirm", so nothing is ever bought by accident.
 -- Nothing is random. The server decides everything; this screen only asks.
+-- While a holiday's game is open, its own things stand first on an In Season shelf (and on their
+-- kind's shelf), each marked "in season": on sale while the holiday is on, kept for good once
+-- bought. Out of season they say when they come back.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local CurioList = require(ReplicatedStorage.Shared.Curios)
@@ -26,6 +30,13 @@ local HEAVY = Font.fromEnum(Enum.Font.GothamBlack)
 local BODY = Font.fromEnum(Enum.Font.GothamMedium)
 local GEM = rgb(150, 220, 255)
 local shelf = "companion"
+local chosen = false -- (the guest picked a shelf themselves this visit)
+
+-- The holiday whose things are on sale now (the house's own word, on the Workspace), or nil.
+local function season(): string?
+	local open = Workspace:GetAttribute("HolidayGame")
+	return if type(open) == "string" and GemList.Seasons[open] ~= nil then open else nil
+end
 
 -- Set by Main: the Gem packs (Robux), in the Collection's Gems page.
 GemShopPanel.getGems = function() end
@@ -52,6 +63,13 @@ end
 function GemShopPanel.open(start: string?)
 	if start then
 		shelf = start
+		chosen = true
+	elseif not chosen and season() then
+		-- (A holiday's on: its own things first.)
+		shelf = "season"
+	end
+	if shelf == "season" and not season() then
+		shelf = "companion"
 	end
 	if Root.isOpen(NAME) then
 		if start then
@@ -68,10 +86,17 @@ function GemShopPanel.open(start: string?)
 	Theme.text(content, "The Gem Shop", 26, "display", { LayoutOrder = 1 })
 	local balance = Theme.text(content, "💎 …", 16, "bodyBold", { LayoutOrder = 2, TextColor3 = GEM })
 	balance.Text = "💎 …   ·   Only Gems buy these"
-	local tabs = Instance.new("Frame")
+	-- (The shelves scroll sideways when there are more than fit: a holiday's own shelf makes nine.)
+	local tabs = Instance.new("ScrollingFrame")
 	tabs.Name = "Shelves"
 	tabs.BackgroundTransparency = 1
+	tabs.BorderSizePixel = 0
 	tabs.Size = UDim2.new(1, 0, 0, 34)
+	tabs.CanvasSize = UDim2.new()
+	tabs.AutomaticCanvasSize = Enum.AutomaticSize.X
+	tabs.ScrollingDirection = Enum.ScrollingDirection.X
+	tabs.ScrollBarThickness = 0
+	tabs.ElasticBehavior = Enum.ElasticBehavior.WhenScrollable
 	tabs.LayoutOrder = 3
 	tabs.Parent = content
 	local tl = Instance.new("UIListLayout")
@@ -138,19 +163,26 @@ function GemShopPanel.open(start: string?)
 				c:Destroy()
 			end
 		end
-		for i, kind in GemList.Kinds do
+		local kinds = table.clone(GemList.Kinds)
+		local open = season()
+		if open then
+			table.insert(kinds, 1, "season")
+		end
+		for i, kind in kinds do
 			local lit = kind == shelf
+			local seasonal = kind == "season" and open ~= nil
 			local b = Instance.new("TextButton")
 			b.Name = "Shelf_" .. kind
 			b.LayoutOrder = i
 			b.AutoButtonColor = false
 			b.AutomaticSize = Enum.AutomaticSize.X
 			b.Size = UDim2.fromOffset(0, 32)
-			b.BackgroundColor3 = if lit then GEM else rgb(28, 26, 30)
+			local tint = if seasonal then GemList.Seasons[open :: string].colour else GEM
+			b.BackgroundColor3 = if lit then tint elseif seasonal then tint:Lerp(rgb(28, 26, 30), 0.7) else rgb(28, 26, 30)
 			b.FontFace = HEAVY
 			b.TextSize = 12
-			b.TextColor3 = if lit then rgb(10, 20, 30) else Brand.Colours.lightGold
-			b.Text = string.upper((GemList.KindNames :: any)[kind] or kind)
+			b.TextColor3 = if lit then rgb(10, 20, 30) elseif seasonal then tint:Lerp(rgb(255, 255, 255), 0.4) else Brand.Colours.lightGold
+			b.Text = (if seasonal then GemList.Seasons[open :: string].glyph .. " " else "") .. string.upper((GemList.KindNames :: any)[kind] or kind)
 			b.Parent = tabs
 			corner(b, 16)
 			local p = Instance.new("UIPadding")
@@ -159,6 +191,7 @@ function GemShopPanel.open(start: string?)
 			p.Parent = b
 			b.Activated:Connect(function()
 				shelf = kind
+				chosen = true
 				confirming = nil
 				drawTabs()
 				render()
@@ -181,6 +214,29 @@ function GemShopPanel.open(start: string?)
 		edge.Thickness = if keyLit then 2 else 1
 		edge.Parent = c
 		local item = GemList.byId[id]
+		-- A holiday's own: marked, in its colours.
+		local itemSeason = if item and item.season then GemList.Seasons[item.season] else nil
+		if itemSeason then
+			local onNow = item ~= nil and item.season == season()
+			local tag = Instance.new("TextLabel")
+			tag.Name = "Season"
+			tag.AnchorPoint = Vector2.new(0, 0)
+			tag.Position = UDim2.fromOffset(6, 6)
+			tag.AutomaticSize = Enum.AutomaticSize.X
+			tag.Size = UDim2.fromOffset(0, 18)
+			tag.BackgroundColor3 = itemSeason.colour:Lerp(rgb(0, 0, 0), if onNow then 0.1 else 0.6)
+			tag.FontFace = HEAVY
+			tag.TextSize = 10
+			tag.TextColor3 = if onNow then rgb(16, 12, 10) else itemSeason.colour
+			tag.Text = itemSeason.glyph .. " " .. (if onNow then "IN SEASON" else string.upper(itemSeason.name))
+			tag.ZIndex = 3
+			tag.Parent = c
+			corner(tag, 9)
+			local tp = Instance.new("UIPadding")
+			tp.PaddingLeft = UDim.new(0, 7)
+			tp.PaddingRight = UDim.new(0, 7)
+			tp.Parent = tag
+		end
 		if curioId then
 			local holder = Instance.new("Frame")
 			holder.BackgroundTransparency = 1
@@ -329,20 +385,31 @@ function GemShopPanel.open(start: string?)
 			return
 		end
 		local order = 0
+		local open = season()
 		for _, item in GemList.List do
-			if item.kind == shelf then
+			local here = if shelf == "season" then item.season ~= nil and item.season == open else item.kind == shelf
+			if here then
 				order += 1
 				local has = owned[item.id] == true
 				local sure = confirming == item.id
 				local keyText: string
 				local lit = false
 				local onKey: () -> ()
+				local away = not GemList.onSale(item, open)
 				if GemList.Wearable[item.kind] ~= nil and has then
 					local wearing = v[item.kind] == item.id
 					keyText = if wearing then "WEARING · TAKE OFF" else "WEAR"
 					lit = wearing
 					onKey = function()
 						equip(item.kind, if wearing then "" else item.id)
+					end
+				elseif away then
+					-- (Out of season: shown, priced, and coming back with its holiday.)
+					local s = GemList.Seasons[item.season or ""]
+					local when = if s then s.name else "its holiday"
+					keyText = "BACK FOR " .. string.upper(when)
+					onKey = function()
+						Toast.show("The Gem Shop", string.format("%s is on sale for %s (💎 %s), and comes back with it.", item.name, when, format(item.gems)), 4)
 					end
 				else
 					keyText = if sure then "CONFIRM · 💎 " .. format(item.gems) else "💎 " .. format(item.gems)
@@ -352,6 +419,9 @@ function GemShopPanel.open(start: string?)
 					end
 				end
 				local line = item.line
+				if item.season and not away and not has then
+					line = line .. " On sale while the holiday is on; yours for good."
+				end
 				if item.kind == "boost" then
 					local untilAt = if item.style.boost == "xp" then v.xpUntil else v.giltUntil
 					if type(untilAt) == "number" and untilAt > now then

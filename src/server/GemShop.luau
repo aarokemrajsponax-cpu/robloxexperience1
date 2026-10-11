@@ -4,6 +4,8 @@
 -- Gems are only taken when the guest holds enough. Auras and titles are kept for good and worn one
 -- at a time; Surges run for half an hour from when they're bought; Gilt is changed at the set rate;
 -- the Cabinet's curios are bought through Curios (one fixed price each). Nothing is random.
+-- A holiday's own things (`season`) are sold only while its holiday game is open (the Workspace's
+-- HolidayGame, set by server/Holidays); once bought they're kept and worn all year.
 -- Companions, table felts and guide trails are kept for good and worn one of each at a time, like
 -- auras and titles.
 --
@@ -14,6 +16,7 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
 
 local GemList = require(ReplicatedStorage.Shared.GemShop)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
@@ -109,6 +112,12 @@ function GemShop.buy(player: Player, data: Profiles.Data, id: string): { [string
 	local wearable = GemList.Wearable[item.kind] ~= nil
 	if wearable and s.owned[id] then
 		return { ok = false, why = "You already have it: wear it from here." }
+	end
+	-- In season only (the holiday game the house has open, the server's own word).
+	local open = Workspace:GetAttribute("HolidayGame")
+	if not GemList.onSale(item, if type(open) == "string" then open else nil) then
+		local season = GemList.Seasons[item.season or ""]
+		return { ok = false, why = string.format("%s is on sale for %s: it comes back with the holiday.", item.name, if season then season.name else "its holiday") }
 	end
 	if data.gems < item.gems then
 		return { ok = false, why = string.format("Not enough Gems yet: %d more.", item.gems - data.gems) }

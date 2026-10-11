@@ -4,6 +4,6 @@
 -- see whether Studio has the latest code from GitHub.
 
 return {
-	number = 59,
-	label = "Build 59 · 11 Oct · the sorting, the shows and the holidays, as grand as each screen can take",
+	number = 60,
+	label = "Build 60 · 11 Oct · the holiday games: trick or treat, the turkeys, Santa's sleigh, the eggs",
 }

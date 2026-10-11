@@ -13,6 +13,7 @@
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
 
 local Names = require(ReplicatedStorage.Shared.Names)
 local Boutique = require(ReplicatedStorage.Shared.Boutique)
@@ -275,7 +276,12 @@ local function shelves(player: Player, data: Profiles.Data): { [string]: any }
 		always = cards(Boutique.always()),
 		salutes = (function()
 			local out = {}
+			local open = Workspace:GetAttribute("HolidayGame")
 			for _, s in Salutes.List do
+				-- (A holiday's own salute is offered in its season only.)
+				if not Salutes.offered(s, if type(open) == "string" then open else nil) then
+					continue
+				end
 				local key = "salute_" .. s.id
 				local ready = Catalog.enabled(key)
 				-- The price is Roblox's own once the product exists; until then, the price to
@@ -627,6 +633,10 @@ local function registerEligibility()
 	end
 	for _, salute in Salutes.List do
 		Store.eligibility["salute_" .. salute.id] = function(_player: Player, _data: Profiles.Data): (boolean, string?)
+			local open = Workspace:GetAttribute("HolidayGame")
+			if not Salutes.offered(salute, if type(open) == "string" then open else nil) then
+				return false, salute.name .. " comes with its holiday."
+			end
 			if SaluteService.full() then
 				return false, "A few salutes are already waiting their turn. Try again in a minute."
 			end

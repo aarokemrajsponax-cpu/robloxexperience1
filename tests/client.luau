@@ -5872,6 +5872,21 @@ end
 	advance(6)
 	check("Trick or Treat: its key stands at the foot of the dock", dockTile("Treats") ~= nil and holidayKeys() == 1)
 	check("...and the card says what's on", string.find(norm(card()), norm("Trick or Treat"), 1, true) ~= nil, card())
+	-- The Gem Shop puts the holiday's own things first, marked in season.
+	local GemShopPanel = client("UI", "GemShopPanel")
+	GemShopPanel.open()
+	advance(0.6)
+	local seasonShelf = find(playerGui, function(d)
+		return d:IsA("TextButton") and d.Name == "Shelf_season"
+	end)
+	if seasonShelf and not textOnScreen("Jack the Lantern") then
+		signalOf(seasonShelf, "Activated"):Fire()
+		advance(0.3)
+	end
+	check("the Gem Shop shows the holiday's own things on a shelf of their own, marked in season", seasonShelf ~= nil and textOnScreen("IN SEASON") ~= nil and textOnScreen("Jack the Lantern") ~= nil and textOnScreen("Moonlit Bats") ~= nil and textOnScreen("Trick-or-Treater") ~= nil)
+	snapshot("gemshop-season")
+	client("UI", "Root").close()
+	advance(0.6)
 	answers.go = function()
 		moveTo(Lane.arrival(ctx, LocalPlayer))
 		return { ok = true }
@@ -6082,15 +6097,21 @@ end
 		local hit = nil
 		local reach = 5
 		local kerb = HolidayGames.HOME_SLEIGH.Position
-		for _, toPole in { true, false } do
-			local path = HolidayGames.path(HolidayGames.flightPoints(toPole))
+		local ways = {
+			{ "out", HolidayGames.flightPoints(true) },
+			{ "home", HolidayGames.flightPoints(false) },
+			{ "flyover from the kerb", SleighRide.flyoverPoints(true) },
+			{ "flyover from the north", SleighRide.flyoverPoints(false) },
+		}
+		for _, way in ways do
+			local path = HolidayGames.path(way[2])
 			for i = 0, 900 do
 				local p = HolidayGames.travel(path, i / 900)
 				if (p - kerb).Magnitude > 46 and Vector3.new(p.X, 0, p.Z).Magnitude < 900 then
 					for _, b in boxes do
 						local d = p - b.at
 						if math.abs(d.X) < b.ext.X + reach and math.abs(d.Y) < b.ext.Y + reach and math.abs(d.Z) < b.ext.Z + reach then
-							hit = string.format("%s at %.0f, %.0f, %.0f (%s)", b.name, p.X, p.Y, p.Z, if toPole then "out" else "home")
+							hit = string.format("%s at %.0f, %.0f, %.0f (%s)", b.name, p.X, p.Y, p.Z, way[1])
 							break
 						end
 					end
@@ -6100,8 +6121,23 @@ end
 				end
 			end
 		end
-		check("the sleigh's flight clears the house, the street and its dressing, both ways", hit == nil, hit)
+		check("the sleigh's flight clears the house, the street and its dressing, both ways (and Santa's Flyover's, both ways)", hit == nil, hit)
 	end
+	-- Santa's Flyover (a salute): the sleigh lifts off from the kerb, circles the house with the
+	-- giver's name in gold beside it, and lands where it was.
+	serverSays("Salute", { op = "salute", id = "sleigh", by = "Ada", userId = 2, seconds = 30, effects = { "sleigh", "goldLeaf" }, line = "Ada called Santa's sleigh over the house." })
+	advance(1)
+	local flyCopy = SleighRide.flyoverCopy()
+	local banner = flyCopy and flyCopy.PrimaryPart and flyCopy.PrimaryPart:FindFirstChild("Banner")
+	local parkedBody = sleigh and sleigh:FindFirstChild("Floor", true)
+	check("Santa's Flyover: the sleigh takes off from the kerb, the giver's name in gold beside it", flyCopy ~= nil and banner ~= nil and string.find(banner.Name.Text, "Ada", 1, true) ~= nil and parkedBody ~= nil and parkedBody.LocalTransparencyModifier == 1)
+	advance(13)
+	local flyAt = flyCopy and flyCopy.PrimaryPart and flyCopy.PrimaryPart.CFrame.Position
+	check("...high round the house", flyAt ~= nil and flyAt.Y > 60, flyAt)
+	pose(flyCopy)
+	snapshot("sleigh-flyover")
+	advance(18)
+	check("...and lands where it was, and the parked sleigh is back", SleighRide.flyoverCopy() == nil and parkedBody ~= nil and parkedBody.LocalTransparencyModifier == 0)
 	answers.board = function()
 		return { ok = true }
 	end
