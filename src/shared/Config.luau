@@ -448,12 +448,19 @@ local defaults = {
 	-- Suite spectacles drawn on the buyer's screen (World/MemeTakeover).
 	Spectacles = {
 		memeSeconds = 90, -- the Meme Takeover's length
-		memeCast = 40, -- memes the portal spews
-		memeRain = 140, -- little memes raining from the ceiling, at most
-		bossSize = 11, -- studs across, the giant boss meme
-		-- Its score from the portal on: Swing With Me, an electro swing (APM Music).
+		memeCast = 48, -- memes the portal spews
+		memeRain = 160, -- little memes raining from the ceiling, at most
+		bossSize = 15, -- studs across, the giant boss meme
+		-- Its score from the portal on, in every edition: Swing With Me, an electro swing (APM
+		-- Music). The lights, the floor and the beams keep its beat: 130 to the minute, the first
+		-- beat 0.44 s in (measured from the recording).
 		memeMusic = "rbxassetid://1838645022",
-		memeMusicVolume = 0.75,
+		memeMusicVolume = 0.8,
+		memeBpm = 130,
+		memeBeatOffset = 0.44,
+		memeFloor = true, -- a dance floor of light under the show
+		memeBeams = 6, -- beams of light sweeping the room from the ceiling
+		memeBloom = 0.9, -- how much the lights bloom (0 = off)
 	},
 
 	-- Commissions (Appendix I1): Gilt for the Evening's and the Week's.

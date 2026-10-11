@@ -3772,12 +3772,36 @@ do
 		end)
 	end
 	local cardBefore = objectiveCard() ~= nil
+	local memeMusic = Config.data.Spectacles.memeMusic
+	local function scorePlaying(): boolean
+		for _, d in game:GetService("SoundService"):GetChildren() do
+			if d:IsA("Sound") and d.Name == "Score" and d.SoundId == memeMusic then
+				return true
+			end
+		end
+		return false
+	end
 	serverSays("Purchase", { op = "spectacle", key = "spectacleMemes", seconds = 20 })
 	advance(1)
 	check("the Meme Takeover starts with its warning", textOnScreen("MEME TAKEOVER") ~= nil)
+	local showGui = playerGui:FindFirstChild("MemeTakeover")
+	check("...black bars close in at the top and foot of the screen, like a film", showGui ~= nil and showGui:FindFirstChild("BarTop") ~= nil and showGui:FindFirstChild("BarBottom") ~= nil)
 	advance(3)
 	local takeover = workspace.MaisonLocal:FindFirstChild("MemeTakeover")
 	check("...the portal spews memes into the room", takeover ~= nil and #takeover:GetChildren() > 10, takeover and #takeover:GetChildren())
+	check("...to the show's own score (Swing With Me), as it always was", scorePlaying())
+	local litTiles, beamsOn = 0, 0
+	if takeover then
+		for _, d in takeover:GetDescendants() do
+			if d.Name == "FloorLight" and d:IsA("BasePart") and d.Transparency < 0.95 then
+				litTiles += 1
+			elseif d:IsA("Beam") and d.Parent and d.Parent.Name == "BeamTop" and d.Enabled then
+				beamsOn += 1
+			end
+		end
+	end
+	check("...a dance floor of light lit on the beat, and beams sweeping the room from the ceiling", litTiles > 0 and beamsOn >= 4, string.format("%d tiles, %d beams", litTiles, beamsOn))
+	check("...the lights blooming", game:GetService("Lighting"):FindFirstChild("MemeBloom") ~= nil)
 	check("...and the card of what to do next steps aside for it (its big words never land on the card)", cardBefore and objectiveCard() == nil, cardBefore)
 	local caption = find(playerGui, function(d)
 		return d.Name == "Caption" and d:IsA("Frame") and d.Parent ~= nil and d.Parent.Name == "MemeTakeover"
@@ -3792,6 +3816,7 @@ do
 	end) == nil)
 	advance(0.5)
 	check("...and the card of what to do next is back", objectiveCard() ~= nil)
+	check("...and the lights are the room's own again (no bloom left behind)", game:GetService("Lighting"):FindFirstChild("MemeBloom") == nil)
 	check("no errors in the spectacles", #errors == 0, errors[1])
 end
 do
@@ -3808,6 +3833,15 @@ do
 		local folder = workspace.MaisonLocal:FindFirstChild("MemeTakeover")
 		if not (folder and folder:GetAttribute("Edition") == V.id and MemeTakeover.lastEdition() == V.id) then
 			table.insert(problems, V.id .. ": didn't start as itself")
+		end
+		local ownScore = false
+		for _, d in game:GetService("SoundService"):GetChildren() do
+			if d:IsA("Sound") and d.Name == "Score" and d.SoundId == Config.data.Spectacles.memeMusic then
+				ownScore = true
+			end
+		end
+		if not ownScore then
+			table.insert(problems, V.id .. ": not the show's own score")
 		end
 		advance(8.5)
 		if textOnScreen(V.captions[5]) == nil then

@@ -10,6 +10,12 @@
 --   5. The boss       a giant meme: laser eyes, a stomp, a spin, a split, a halo
 --   6. The chaos      a frenzy, zero gravity, a rainbow, slow motion and the drop
 --   7. The finale     a burst, an implosion, a freeze that shatters, rockets, a bow, gold
+-- Every edition plays to the show's own score (Swing With Me) and is staged like a film: black
+-- bars close in for the opening and the finale, a dance floor of light covers the room and beams
+-- sweep it from the ceiling, all on the music's own beat (read off the score as it plays), the
+-- lights bloom, confetti cannons fire from the corners at every act, the room quakes on the big
+-- hits, the boss comes down a pillar of light with the camera looking up at it, and the finale ends
+-- in a supernova and a curtain call.
 -- Drawn on this screen only (a Suite is its owner's alone); the server only says when, and which
 -- edition. Nothing in it is a prize. Every number that shapes it is in Config.Spectacles.
 
@@ -17,11 +23,13 @@ local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local SoundService = game:GetService("SoundService")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local Config = require(ReplicatedStorage.Shared.Config)
+local Ease = require(ReplicatedStorage.Shared.Ease)
 local Curios = require(ReplicatedStorage.Shared.Curios)
 local Layout = require(ReplicatedStorage.Shared.Layout)
 local MemeTakeovers = require(ReplicatedStorage.Shared.MemeTakeovers)
@@ -316,20 +324,172 @@ local function shockwave(parent: Instance, at: Vector3, colour: Color3, reach: n
 	end
 end
 
--- The music for an edition: a track of its list in Config.Assets.AbuseMusic, or the show's own.
-local function musicOf(V: MemeTakeovers.Variant): (string, number)
-	local base = cfg().memeMusicVolume or 0.75
-	if V.music ~= "" then
-		local lists = (Config.data.Assets :: any).AbuseMusic
-		local list = if type(lists) == "table" then lists[V.music] else nil
-		if type(list) == "table" and #list > 0 then
-			local track = list[math.random(1, #list)]
-			if type(track) == "table" and type(track.id) == "string" then
-				return track.id, base * (tonumber(track.gain) or 1)
-			end
+-- The music, in every edition: the show's own score (Swing With Me), the one it always had.
+local function musicOf(_V: MemeTakeovers.Variant): (string, number)
+	return cfg().memeMusic or "", cfg().memeMusicVolume or 0.8
+end
+
+-- The score as it plays (to read the beat off it), once it has started.
+local function scoreSound(): Sound?
+	local id = cfg().memeMusic
+	for _, d in SoundService:GetChildren() do
+		if d:IsA("Sound") and d.Name == "Score" and d.SoundId == id and d.IsPlaying then
+			return d
 		end
 	end
-	return cfg().memeMusic or "", base
+	return nil
+end
+
+-- Black bars closing in at the top and foot of the screen: a film's frame.
+local function letterbox(gui: ScreenGui, on: boolean)
+	for _, side in { "Top", "Bottom" } do
+		local bar = gui:FindFirstChild("Bar" .. side)
+		if not bar then
+			if not on then
+				continue
+			end
+			local f = Instance.new("Frame")
+			f.Name = "Bar" .. side
+			f.BorderSizePixel = 0
+			f.BackgroundColor3 = Color3.new(0, 0, 0)
+			f.AnchorPoint = Vector2.new(0, if side == "Top" then 1 else 0)
+			f.Position = UDim2.fromScale(0, if side == "Top" then 0 else 1)
+			f.Size = UDim2.fromScale(1, 0.1)
+			f.ZIndex = 20
+			f.Parent = gui
+			bar = f
+		end
+		local f = bar :: Frame
+		TweenService:Create(f, TweenInfo.new(0.7, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+			AnchorPoint = Vector2.new(0, if side == "Top" then (if on then 0 else 1) else (if on then 1 else 0)),
+		}):Play()
+	end
+end
+
+-- The camera quakes (while walking the camera is Roblox's own, so it's moved through the
+-- humanoid's camera offset, and put back after).
+local quakeUntil, quakeSize, quakeConn = 0, 0, nil :: RBXScriptConnection?
+local function quake(size: number, seconds: number)
+	local ok, still = pcall(function()
+		return require(script.Parent.Parent.State).get("movement") == "Still"
+	end)
+	if ok and still then
+		return
+	end
+	quakeSize = math.max(if os.clock() < quakeUntil then quakeSize else 0, size)
+	quakeUntil = math.max(quakeUntil, os.clock() + seconds)
+	if quakeConn then
+		return
+	end
+	quakeConn = RunService.RenderStepped:Connect(function()
+		local me = Players.LocalPlayer.Character
+		local hum = me and me:FindFirstChildOfClass("Humanoid")
+		local left = quakeUntil - os.clock()
+		if left <= 0 or not hum then
+			if hum then
+				hum.CameraOffset = Vector3.zero
+			end
+			local c = quakeConn
+			quakeConn = nil
+			if c then
+				c:Disconnect()
+			end
+			return
+		end
+		local a = quakeSize * math.min(1, left / 0.35)
+		local t = os.clock() * 50
+		hum.CameraOffset = Vector3.new(math.sin(t * 1.3) * a, math.cos(t * 1.7) * a * 0.7, math.sin(t * 0.9) * a * 0.4)
+	end)
+end
+
+-- A confetti cannon: a burst of the edition's colours fired from `at` toward `aim`.
+local function cannon(parent: Instance, at: Vector3, aim: Vector3, palette: { Color3 }, n: number)
+	if parent.Parent == nil then
+		return
+	end
+	local p = newPart(parent, at)
+	p.CFrame = CFrame.lookAt(at, aim)
+	local e = Instance.new("ParticleEmitter")
+	e.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	e.Rate = 0
+	e.EmissionDirection = Enum.NormalId.Front
+	e.Lifetime = NumberRange.new(1.6, 2.6)
+	e.Speed = NumberRange.new(28, 46)
+	e.SpreadAngle = Vector2.new(18, 18)
+	e.Drag = 2.4
+	e.Acceleration = Vector3.new(0, -9, 0)
+	e.Rotation = NumberRange.new(0, 360)
+	e.RotSpeed = NumberRange.new(-400, 400)
+	e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.55), NumberSequenceKeypoint.new(0.8, 0.45), NumberSequenceKeypoint.new(1, 0) })
+	e.LightEmission = 0.8
+	pcall(function()
+		e.Color = sequenceOf(palette)
+	end)
+	e.Parent = p
+	e:Emit(n)
+	task.delay(3, function()
+		p:Destroy()
+	end)
+end
+
+-- The dance floor: tiles of light over the room's floor, lit on the beat in a pattern.
+type Floor = { tiles: { { part: Part, col: number, row: number } }, cols: number, rows: number }
+local function danceFloor(parent: Instance, room: Box, floorY: number): Floor
+	local w, d = room.maxX - room.minX - 2, room.maxZ - room.minZ - 2
+	local cols = math.clamp(math.floor(w / 3.2), 5, 12)
+	local rows = math.clamp(math.floor(d / 3.2), 4, 10)
+	local tw, td = w / cols, d / rows
+	local out: Floor = { tiles = {}, cols = cols, rows = rows }
+	for c = 1, cols do
+		for r = 1, rows do
+			local t = Instance.new("Part")
+			t.Name = "FloorLight"
+			t.Anchored = true
+			t.CanCollide = false
+			t.CanQuery = false
+			t.CanTouch = false
+			t.CastShadow = false
+			t.Material = Enum.Material.Neon
+			t.Transparency = 1
+			t.Size = Vector3.new(tw - 0.25, 0.06, td - 0.25)
+			t.CFrame = CFrame.new(room.minX + 1 + (c - 0.5) * tw, floorY + 0.05, room.minZ + 1 + (r - 0.5) * td)
+			t.Parent = parent
+			table.insert(out.tiles, { part = t, col = c, row = r })
+		end
+	end
+	return out
+end
+
+-- Beams of light from the ceiling to points sweeping the floor.
+type Sweep = { beam: Beam, hit: Part, from: Attachment, phase: number, speed: number }
+local function sweepBeams(parent: Instance, room: Box, ceiling: number, floorY: number, palette: { Color3 }, n: number): { Sweep }
+	local out: { Sweep } = {}
+	local mid = Vector3.new((room.minX + room.maxX) / 2, ceiling - 0.2, (room.minZ + room.maxZ) / 2)
+	for i = 1, n do
+		local a = (i / n) * math.pi * 2
+		local top = newPart(parent, mid + Vector3.new(math.cos(a) * 4, 0, math.sin(a) * 4))
+		top.Name = "BeamTop"
+		local from = Instance.new("Attachment")
+		from.Parent = top
+		local hit = newPart(parent, Vector3.new(mid.X, floorY + 0.1, mid.Z))
+		hit.Name = "BeamHit"
+		local to = Instance.new("Attachment")
+		to.Parent = hit
+		local b = Instance.new("Beam")
+		b.Attachment0 = from
+		b.Attachment1 = to
+		b.Width0 = 0.4
+		b.Width1 = 3.2
+		b.FaceCamera = true
+		b.LightEmission = 1
+		b.LightInfluence = 0
+		b.Color = ColorSequence.new(palette[(i - 1) % #palette + 1])
+		b.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.25), NumberSequenceKeypoint.new(1, 0.75) })
+		b.Enabled = false
+		b.Parent = top
+		table.insert(out, { beam = b, hit = hit, from = from, phase = a, speed = 0.6 + (i % 3) * 0.25 })
+	end
+	return out
 end
 
 -- Plays the Takeover in the room around the guest, for `seconds`, in edition `editionId` (the
@@ -401,6 +561,22 @@ function MemeTakeover.play(seconds: number?, editionId: string?)
 	local cc = siren :: ColorCorrectionEffect
 	cc.Enabled = true
 	cc.TintColor = Color3.new(1, 1, 1)
+	-- The stage: a dance floor of light, beams from the ceiling, the lights blooming.
+	local floor: Floor? = if cfg().memeFloor ~= false then danceFloor(folder, room, floorY) else nil
+	local tileLit: { number } = {}
+	local tileColour: { Color3 } = {}
+	local beams = sweepBeams(folder, room, ceiling, floorY, P, math.max(0, cfg().memeBeams or 6))
+	local bloom = Instance.new("BloomEffect")
+	bloom.Name = "MemeBloom"
+	bloom.Intensity = 0
+	bloom.Size = 28
+	bloom.Threshold = 0.85
+	bloom.Parent = Lighting
+	local bloomPeak = cfg().memeBloom or 0.9
+	-- The beat: read off the score as it plays (so the lights land on the music), else a clock
+	-- of the same tempo.
+	local period = 60 / (cfg().memeBpm or 130)
+	local offset = cfg().memeBeatOffset or 0.44
 
 	-- (Lines and directions laid out from where the guest is looking as the dance begins.)
 	local camera = Workspace.CurrentCamera
@@ -477,6 +653,12 @@ function MemeTakeover.play(seconds: number?, editionId: string?)
 
 	-- The opening, by the edition's way in.
 	local function opening()
+		letterbox(gui, true)
+		task.delay(5, function()
+			if gui.Parent then
+				letterbox(gui, false)
+			end
+		end)
 		if V.opening == "countdown" then
 			for i, n in { "3", "2", "1" } do
 				task.delay((i - 1) * 1.2, function()
@@ -525,12 +707,68 @@ function MemeTakeover.play(seconds: number?, editionId: string?)
 		boss = a
 		pcall(Sound.play, "fireworkBoom", 1, 0.45)
 		sounds(V.sounds.boss, 0.9)
+		-- A pillar of light from the ceiling to the floor where it lands, fading as it arrives.
+		local pillar = Instance.new("Part")
+		pillar.Name = "Pillar"
+		pillar.Shape = Enum.PartType.Cylinder
+		pillar.Anchored = true
+		pillar.CanCollide = false
+		pillar.CanQuery = false
+		pillar.CanTouch = false
+		pillar.CastShadow = false
+		pillar.Material = Enum.Material.Neon
+		pillar.Color = P[1]:Lerp(Color3.new(1, 1, 1), 0.45)
+		pillar.Transparency = 1
+		pillar.Size = Vector3.new(Layout.Suite.height, cfg().bossSize * 0.9, cfg().bossSize * 0.9)
+		pillar.CFrame = CFrame.new(mid.X, floorY + Layout.Suite.height / 2, mid.Z) * CFrame.Angles(0, 0, math.rad(90))
+		pillar.Parent = folder
+		TweenService:Create(pillar, TweenInfo.new(0.5, Enum.EasingStyle.Quad), { Transparency = 0.35 }):Play()
+		task.delay(1.6, function()
+			if pillar.Parent then
+				TweenService:Create(pillar, TweenInfo.new(1.6, Enum.EasingStyle.Sine), { Transparency = 1, Size = Vector3.new(Layout.Suite.height, 0.5, 0.5) }):Play()
+			end
+		end)
+		task.delay(3.4, function()
+			pillar:Destroy()
+		end)
+		-- Its aura of the edition's colours, always about it.
+		local aura = Instance.new("ParticleEmitter")
+		aura.Name = "Aura"
+		aura.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+		aura.Rate = 45
+		aura.Lifetime = NumberRange.new(1, 1.8)
+		aura.Speed = NumberRange.new(3, 7)
+		aura.SpreadAngle = Vector2.new(180, 180)
+		aura.LightEmission = 1
+		aura.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1.2), NumberSequenceKeypoint.new(1, 0) })
+		pcall(function()
+			aura.Color = sequenceOf(P)
+		end)
+		aura.Parent = a.part
+		-- The camera looks up at it coming down (then goes back to the guest), and the room quakes
+		-- as it lands.
+		local me = player.Character
+		local myRoot = me and me:FindFirstChild("HumanoidRootPart")
+		if myRoot and myRoot:IsA("BasePart") and Ease.motionScale >= 0.5 then
+			local here = myRoot.CFrame.Position
+			local away = Vector3.new(here.X - mid.X, 0, here.Z - mid.Z)
+			away = if away.Magnitude > 0.5 then away.Unit else -front
+			local eye = Vector3.new(mid.X, floorY + 3, mid.Z) + away * math.max(9, cfg().bossSize * 1.1)
+			pcall(CameraRig.moment, CFrame.lookAt(eye, Vector3.new(mid.X, floorY + cfg().bossSize * 0.9, mid.Z)), 2.2)
+		end
+		task.delay(1.2, function()
+			if folder.Parent then
+				quake(0.35, 0.9)
+				shockwave(folder, Vector3.new(mid.X, floorY + 0.4, mid.Z), P[1], math.min(room.maxX - room.minX, room.maxZ - room.minZ) * 0.55)
+				burst(folder, Vector3.new(mid.X, floorY + 1, mid.Z), 80, P)
+			end
+		end)
 		if V.bossMove == "lasers" then
 			-- Laser eyes: two beams from the boss to points sweeping the floor.
-			for i = 1, 2 do
+			for i = 1, 4 do
 				local from = Instance.new("Attachment")
 				from.Parent = a.part
-				from.Position = Vector3.new(if i == 1 then -1.2 else 1.2, 1, 0)
+				from.Position = Vector3.new(if i % 2 == 1 then -1.6 else 1.6, if i <= 2 then 1.4 else 0.6, 0)
 				local hit = newPart(folder, mid)
 				hit.Name = "LaserHit" .. i
 				local to = Instance.new("Attachment")
@@ -538,8 +776,8 @@ function MemeTakeover.play(seconds: number?, editionId: string?)
 				local b = Instance.new("Beam")
 				b.Attachment0 = from
 				b.Attachment1 = to
-				b.Width0 = 0.6
-				b.Width1 = 1.4
+				b.Width0 = 0.8
+				b.Width1 = 2
 				b.LightEmission = 1
 				b.FaceCamera = true
 				b.Color = ColorSequence.new(P[1], P[math.min(3, #P)])
@@ -550,7 +788,7 @@ function MemeTakeover.play(seconds: number?, editionId: string?)
 			end
 		elseif V.bossMove == "halo" then
 			-- A ring of light over its head, turning, and beams of light turning round it.
-			for i = 1, 16 do
+			for i = 1, 24 do
 				local h = Instance.new("Part")
 				h.Name = "Halo"
 				h.Shape = Enum.PartType.Ball
@@ -583,7 +821,32 @@ function MemeTakeover.play(seconds: number?, editionId: string?)
 	end
 
 	-- The finale, by the edition's way out. (Those that move finish within the act's few seconds.)
+	-- The end of every finale: a supernova of the edition's colours, every cannon at once, a ring
+	-- of light across the floor, the room quaking, white light; then the bars draw back.
+	local function curtainCall()
+		finaleDone = true
+		if not folder.Parent then
+			return
+		end
+		local at = Vector3.new(mid.X, floorY + 6, mid.Z)
+		burst(folder, at, 320, P)
+		shockwave(folder, Vector3.new(mid.X, floorY + 0.4, mid.Z), Color3.new(1, 1, 1), math.min(room.maxX - room.minX, room.maxZ - room.minZ) * 0.6)
+		for _, corner in { Vector3.new(room.minX + 1, floorY + 1, room.minZ + 1), Vector3.new(room.maxX - 1, floorY + 1, room.minZ + 1), Vector3.new(room.minX + 1, floorY + 1, room.maxZ - 1), Vector3.new(room.maxX - 1, floorY + 1, room.maxZ - 1) } do
+			cannon(folder, corner, at + Vector3.new(0, 4, 0), P, 140)
+		end
+		quake(0.45, 1.1)
+		bloom.Intensity = bloomPeak * 1.6
+		pcall(Sound.play, "fireworkBoom", 1, 0.7)
+		pcall(Sound.play, "celebrate", 0.9)
+		task.delay(1.6, function()
+			if gui.Parent then
+				letterbox(gui, false)
+			end
+		end)
+	end
+
 	local function finale()
+		letterbox(gui, true)
 		pace = if V.finale == "freeze" then 0 else 1
 		caption(gui, V.captions[7], P, 3.5)
 		sounds(V.sounds.finale, 0.95)
@@ -606,7 +869,7 @@ function MemeTakeover.play(seconds: number?, editionId: string?)
 			end
 			clearActors()
 			flash(Color3.new(1, 1, 1), 0.2, 1.2)
-			finaleDone = true
+			curtainCall()
 		elseif V.finale == "freeze" then
 			-- Everything stops, the room goes icy, then it all shatters, one after another.
 			pace = 0
@@ -640,7 +903,7 @@ function MemeTakeover.play(seconds: number?, editionId: string?)
 					clearActors()
 					flash(Color3.new(1, 1, 1), 0.25, 1)
 					cc.TintColor = Color3.new(1, 1, 1)
-					finaleDone = true
+					curtainCall()
 				end)
 			end)
 		elseif V.finale == "gold" then
@@ -665,7 +928,7 @@ function MemeTakeover.play(seconds: number?, editionId: string?)
 				clearActors()
 				flash(rgb(255, 230, 160), 0.2, 1.2)
 				cc.TintColor = Color3.new(1, 1, 1)
-				finaleDone = true
+				curtainCall()
 			end)
 		elseif V.finale == "rockets" then
 			for _, a in cast do
@@ -678,7 +941,7 @@ function MemeTakeover.play(seconds: number?, editionId: string?)
 				end
 				clearActors()
 				flash(Color3.new(1, 1, 1), 0.3, 1)
-				finaleDone = true
+				curtainCall()
 			end)
 		else
 			-- implode and bow move in the frame loop, then end here.
@@ -698,7 +961,7 @@ function MemeTakeover.play(seconds: number?, editionId: string?)
 				end
 				clearActors()
 				flash(Color3.new(1, 1, 1), 0.2, 1.2)
-				finaleDone = true
+				curtainCall()
 			end)
 		end
 		tint.BackgroundTransparency = 1
@@ -710,6 +973,16 @@ function MemeTakeover.play(seconds: number?, editionId: string?)
 		end
 		act = n
 		actAt = os.clock() - t0
+		-- Each act opens with the cannons in the corners firing over the room.
+		if n >= 2 and n <= 6 and Ease.motionScale >= 0.5 then
+			local over = Vector3.new(mid.X, floorY + Layout.Suite.height * 0.6, mid.Z)
+			for i, corner in { Vector3.new(room.minX + 1, floorY + 1, room.minZ + 1), Vector3.new(room.maxX - 1, floorY + 1, room.maxZ - 1), Vector3.new(room.maxX - 1, floorY + 1, room.minZ + 1), Vector3.new(room.minX + 1, floorY + 1, room.maxZ - 1) } do
+				if i <= (if n == 5 then 4 else 2) then
+					cannon(folder, corner, over, P, 70)
+				end
+			end
+			pcall(Sound.play, "fireworkLaunch", 0.6)
+		end
 		if n == 1 then
 			opening()
 		elseif n == 2 then
@@ -745,7 +1018,7 @@ function MemeTakeover.play(seconds: number?, editionId: string?)
 	-- When each act begins, as a share of the whole.
 	local ACTS = { 0, 0.06, 0.22, 0.42, 0.58, 0.8, 0.95 }
 	local spawned = 0
-	local lastBeat = 0
+	local lastBeat = -1
 	local conn: RBXScriptConnection? = nil
 	conn = RunService.RenderStepped:Connect(function(rawDt: number)
 		local t = os.clock() - t0
@@ -779,15 +1052,48 @@ function MemeTakeover.play(seconds: number?, editionId: string?)
 		local me = player.Character
 		local myRoot = me and me:FindFirstChild("HumanoidRootPart")
 		local you: Vector3 = if myRoot and myRoot:IsA("BasePart") then myRoot.CFrame.Position else centre
-		-- The beat: twice a second (four times in the chaos).
-		local every = if act == 6 and V.chaos ~= "slowmo" then 0.25 else 0.5
-		if t - lastBeat >= every then
-			lastBeat = t
+		-- The beat: the music's own (read off the score as it plays), twice as fast in the chaos.
+		local double = act == 6 and V.chaos ~= "slowmo"
+		local step = if double then period / 2 else period
+		local sc = scoreSound()
+		local pos = if sc then sc.TimePosition - offset else t
+		local beatNow = math.floor(pos / step)
+		local every = step
+		if beatNow ~= lastBeat then
+			lastBeat = beatNow
 			beat += 1
-			if act >= 2 and act <= 6 then
-				pcall(Sound.play, "tick", 0.5, if beat % 4 == 0 then 0.7 else 1.1)
-			end
 			local c = P[beat % #P + 1]
+			-- The dance floor lights in the edition's pattern; the bloom swells with the beat.
+			local fl = floor
+			if fl and act >= 2 and act <= 6 then
+				local pattern = (#V.id + act) % 5
+				for ti, tile in fl.tiles do
+					local on: boolean
+					if pattern == 0 then
+						on = (tile.col + tile.row + beat) % 2 == 0
+					elseif pattern == 1 then
+						local dc, dr = tile.col - (fl.cols + 1) / 2, tile.row - (fl.rows + 1) / 2
+						on = math.floor(math.sqrt(dc * dc + dr * dr)) % 4 == beat % 4
+					elseif pattern == 2 then
+						on = (tile.col + beat) % 4 == 0
+					elseif pattern == 3 then
+						on = math.random() < 0.35
+					else
+						on = tile.col == (beat % fl.cols) + 1 or tile.row == (beat % fl.rows) + 1
+					end
+					if on then
+						tileLit[ti] = t
+						tileColour[ti] = P[(tile.col + tile.row + beat) % #P + 1]
+						tile.part.Color = tileColour[ti]
+					end
+				end
+			end
+			if act >= 2 and act <= 6 then
+				bloom.Intensity = bloomPeak * (if beat % 4 == 0 then 1.25 else 0.8)
+				if beat % 8 == 0 and act >= 5 then
+					quake(0.12, 0.25)
+				end
+			end
 			for i, l in discos do
 				l.Color = P[(beat + i) % #P + 1]
 				l.Brightness = if act >= 2 and act <= 6 then 3 else 0
@@ -806,6 +1112,28 @@ function MemeTakeover.play(seconds: number?, editionId: string?)
 				pcall(CameraRig.shake, if act == 6 then 0.4 else 0.25, every)
 			end
 		end
+		-- The stage, every frame: lit tiles fade, the beams sweep, the bloom settles.
+		local live = act >= 2 and act <= 6
+		local fl = floor
+		if fl then
+			for ti, tile in fl.tiles do
+				local litAt = tileLit[ti]
+				local glow = if litAt and (live or act == 7) then math.exp(-(t - litAt) * 4.5) else 0
+				tile.part.Transparency = 1 - (0.12 + 0.6 * glow) * (if live then 1 else math.max(0, 1 - (t - actAt)))
+			end
+		end
+		for i, sw in beams do
+			sw.beam.Enabled = live
+			if live then
+				local ang = sw.phase + t * sw.speed
+				local rx, rz = (room.maxX - room.minX) * 0.42, (room.maxZ - room.minZ) * 0.42
+				sw.hit.CFrame = CFrame.new(mid.X + math.cos(ang) * rx * math.sin(t * 0.37 + i), floorY + 0.1, mid.Z + math.sin(ang * 1.3) * rz)
+				if beat % 4 == i % 4 then
+					sw.beam.Color = ColorSequence.new(P[(beat + i) % #P + 1])
+				end
+			end
+		end
+		bloom.Intensity += ((if live then bloomPeak * 0.45 else 0) - bloom.Intensity) * math.min(1, rawDt * 3)
 		-- A glitch opening jitters; a rainbow chaos turns every colour through.
 		if act == 1 and V.opening == "glitch" then
 			local cap = lastCaption
@@ -1050,8 +1378,8 @@ function MemeTakeover.play(seconds: number?, editionId: string?)
 				if apart and #clones == 0 then
 					local byId = (Curios :: any).byId
 					local c = (if byId then byId[V.boss] else nil) or list[#list]
-					for _ = 1, 5 do
-						local copy = actor(folder, c, cfg().bossSize * 0.4, b.at)
+					for _ = 1, 7 do
+						local copy = actor(folder, c, cfg().bossSize * 0.38, b.at)
 						table.insert(clones, copy)
 					end
 					pcall(Sound.play, "warpBurst", 0.8)
@@ -1087,6 +1415,13 @@ function MemeTakeover.play(seconds: number?, editionId: string?)
 		cc.Saturation = 0
 		cc.TintColor = Color3.new(1, 1, 1)
 		cc.Enabled = false
+		bloom:Destroy()
+		quakeUntil = 0
+		local me = player.Character
+		local hum = me and me:FindFirstChildOfClass("Humanoid")
+		if hum then
+			hum.CameraOffset = Vector3.zero
+		end
 		folder:Destroy()
 		gui:Destroy()
 		lastCaption = nil
