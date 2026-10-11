@@ -3727,20 +3727,36 @@ do
 end
 
 -- The Meme Takeover: six acts in the Suite, then everything put back.
-serverSays("Purchase", { op = "spectacle", key = "spectacleMemes", seconds = 20 })
-advance(1)
-check("the Meme Takeover starts with its warning", textOnScreen("MEME TAKEOVER") ~= nil)
-advance(3)
-local takeover = workspace.MaisonLocal:FindFirstChild("MemeTakeover")
-check("...the portal spews memes into the room", takeover ~= nil and #takeover:GetChildren() > 10, takeover and #takeover:GetChildren())
-snapshot("meme-takeover")
-advance(8)
-check("...then the boss arrives", textOnScreen("THE BIG CHEESE") ~= nil or textOnScreen("MAXIMUM BRAINROT") ~= nil or textOnScreen("RAINING MEMES") ~= nil)
-advance(14)
-check("...and when it's over, the room is put back", workspace.MaisonLocal:FindFirstChild("MemeTakeover") == nil and find(playerGui, function(d)
-	return d.Name == "MemeTakeover"
-end) == nil)
-check("no errors in the spectacles", #errors == 0, errors[1])
+do
+	-- (The card of what to do next, at the top right, steps aside while the show's words are up.)
+	local function objectiveCard()
+		return find(playerGui, function(d)
+			return d.Name == "Objective" and d:IsA("Frame") and d.Parent ~= nil and d.Parent.Name == "MaisonHud"
+		end)
+	end
+	local cardBefore = objectiveCard() ~= nil
+	serverSays("Purchase", { op = "spectacle", key = "spectacleMemes", seconds = 20 })
+	advance(1)
+	check("the Meme Takeover starts with its warning", textOnScreen("MEME TAKEOVER") ~= nil)
+	advance(3)
+	local takeover = workspace.MaisonLocal:FindFirstChild("MemeTakeover")
+	check("...the portal spews memes into the room", takeover ~= nil and #takeover:GetChildren() > 10, takeover and #takeover:GetChildren())
+	check("...and the card of what to do next steps aside for it (its big words never land on the card)", cardBefore and objectiveCard() == nil, cardBefore)
+	local caption = find(playerGui, function(d)
+		return d.Name == "Caption" and d:IsA("Frame") and d.Parent ~= nil and d.Parent.Name == "MemeTakeover"
+	end)
+	check("...its words stand under the bar at the top and clear of the keys down the left", caption ~= nil and caption.Position.Y.Scale > 0.25 and caption.Size.X.Scale < 0.81, if caption then tostring(caption.Position) .. " " .. tostring(caption.Size) .. " in " .. caption.Parent:GetFullName() else "no caption")
+	snapshot("meme-takeover")
+	advance(8)
+	check("...then the boss arrives", textOnScreen("THE BIG CHEESE") ~= nil or textOnScreen("MAXIMUM BRAINROT") ~= nil or textOnScreen("RAINING MEMES") ~= nil)
+	advance(14)
+	check("...and when it's over, the room is put back", workspace.MaisonLocal:FindFirstChild("MemeTakeover") == nil and find(playerGui, function(d)
+		return d.Name == "MemeTakeover"
+	end) == nil)
+	advance(0.5)
+	check("...and the card of what to do next is back", objectiveCard() ~= nil)
+	check("no errors in the spectacles", #errors == 0, errors[1])
+end
 do
 	-- Every edition of the Meme Takeover plays through: its own words, its own boss, its own
 	-- finale, and the room put back after.
@@ -4486,6 +4502,9 @@ serverSays("Shop", { op = "badge", key = "metOwner", name = "Met the Owner", lin
 serverSays("Shop", { op = "badge", key = "firstRound", name = "First Round", line = "Clear your first round at the tables.", glyph = "🃏", tier = "bronze" })
 advance(0.8)
 check("a badge earned slides in", textOnScreen("Met the Owner") ~= nil and textOnScreen("BADGE EARNED") ~= nil)
+check("...where the card of what to do next was (it steps aside for it)", find(playerGui, function(d)
+	return d.Name == "Objective" and d:IsA("Frame") and d.Parent ~= nil and d.Parent.Name == "MaisonHud"
+end) == nil)
 snapshot("badge")
 advance(4.5)
 check("and the next waits its turn", textOnScreen("First Round") ~= nil)
@@ -4600,6 +4619,9 @@ do
 	advance(1.5)
 	check("an effect switched on plays at once", textOnScreen("METEOR SHOWER") ~= nil)
 	check("...and shows on the screen as well (indoors too)", busy(walk))
+	check("...the card of what to do next steps aside for its big words", find(playerGui, function(d)
+		return d.Name == "Objective" and d:IsA("Frame") and d.Parent ~= nil and d.Parent.Name == "MaisonHud"
+	end) == nil)
 	snapshot("walk-meteor")
 	advance(45)
 	check("and it's still going long after: it stays on until it's switched off", busy(walk))

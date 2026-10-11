@@ -251,6 +251,11 @@ local function nextBadge()
 	end)
 end
 
+-- Whether a badge is coming in at the side (the objective card steps aside for it).
+function Celebrate.badgeUp(): boolean
+	return showing
+end
+
 function Celebrate.badge(b: { [string]: any })
 	table.insert(queue, b)
 	nextBadge()

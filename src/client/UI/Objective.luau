@@ -3,6 +3,7 @@
 -- to take a seat; then tonight's table, if it's waiting (with a key that takes you there); then the
 -- next room to open; then your best run to beat. It is never shown at a table. It comes up bright
 -- when it changes and settles back after a few seconds, so it's there whenever you look for it.
+-- It steps aside while something bigger holds the screen, and comes back quietly after.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -28,6 +29,14 @@ local card: Frame? = nil
 local shownKey: string? = nil
 local takeMe: ((mode: string) -> ())? = nil
 local started = false
+-- (The card that stepped aside for a moment: the same card comes back quietly, as it was.)
+local quietKey: string? = nil
+
+-- Something bigger holding the screen for a moment (a show's big words, Admin Abuse's cards, a
+-- headline, a badge coming in): the card steps aside, and comes back when it's gone.
+Objective.isBusy = function(): boolean
+	return false
+end
 
 local function byInput(t: { [string]: string }): string
 	return t[State.inputKind()] or t.mouse
@@ -105,6 +114,8 @@ local function show(goal: Goal)
 	if card and shownKey == goal.key then
 		return
 	end
+	local quiet = quietKey == goal.key
+	quietKey = nil
 	hide()
 	local group, content = Theme.glass(Root.hud, "Objective", UDim2.fromOffset(WIDTH, 0), where(), Vector2.new(1, 0))
 	group.AutomaticSize = Enum.AutomaticSize.Y
@@ -136,6 +147,11 @@ local function show(goal: Goal)
 	card = group
 	shownKey = goal.key
 	Fade.set(group, 1)
+	if quiet then
+		-- (Back after stepping aside: no slide, no brightness, just there again, settled.)
+		Fade.to(group, Ease.info(0.5, Enum.EasingStyle.Sine), 0.35)
+		return
+	end
 	local startPos = group.Position
 	group.Position = startPos + UDim2.fromOffset(12, 0)
 	Fade.to(group, Ease.scaled(Ease.settle), 0, { Position = startPos })
@@ -147,14 +163,25 @@ local function show(goal: Goal)
 	end)
 end
 
+local function busy(): boolean
+	local ok, yes = pcall(Objective.isBusy)
+	return ok and yes == true
+end
+
 function Objective.refresh()
 	if not started then
 		return
 	end
 	local goal = if seated or State.phase ~= "play" or Root.isOpen() then nil else Objective.current()
-	if goal then
+	if goal and busy() then
+		if card and shownKey == goal.key then
+			quietKey = goal.key
+		end
+		hide()
+	elseif goal then
 		show(goal)
 	else
+		quietKey = nil
 		hide()
 	end
 end
@@ -192,6 +219,18 @@ function Objective.start(go: (mode: string) -> ())
 		task.defer(Objective.refresh)
 	end)
 	Objective.refresh()
+	-- (Steps aside while something bigger holds the screen; back when it's gone.)
+	task.spawn(function()
+		local was = false
+		while true do
+			task.wait(0.2)
+			local now = busy()
+			if now ~= was then
+				was = now
+				Objective.refresh()
+			end
+		end
+	end)
 end
 
 return Objective

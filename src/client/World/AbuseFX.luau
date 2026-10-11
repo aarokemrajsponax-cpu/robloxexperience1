@@ -181,7 +181,8 @@ local function banner(text: string, colour: Color3, seconds: number)
 	holder.BackgroundTransparency = 1
 	holder.AnchorPoint = Vector2.new(0.5, 0.5)
 	holder.Position = UDim2.fromScale(0.5, 0.3)
-	holder.Size = UDim2.fromScale(0.9, 0.16)
+	-- (Clear of the keys down the left; the card of what to do next steps aside for it.)
+	holder.Size = UDim2.fromScale(0.8, 0.16)
 	holder.Parent = gui
 	local shadow = Instance.new("TextLabel")
 	shadow.Name = "Shadow"
@@ -1974,6 +1975,13 @@ local PLAYERS: { [string]: (number, Vector3?) -> () } = {
 
 -- Plays one effect (as the server said), or "stop". `lasting`: switched on (no time limit: it
 -- runs until its switch goes off).
+-- Whether big words are on the screen right now (the objective card steps aside for them).
+function AbuseFX.bannerUp(): boolean
+	local gui = player:FindFirstChild("PlayerGui")
+	local s = gui and gui:FindFirstChild("AbuseFX")
+	return s ~= nil and s:FindFirstChild("Banner") ~= nil
+end
+
 function AbuseFX.play(id: string, seconds: number?, origin: Vector3?, lasting: boolean?, v: number?)
 	if id == "stop" then
 		token += 1

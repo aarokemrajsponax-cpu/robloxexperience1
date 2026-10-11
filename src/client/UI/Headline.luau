@@ -93,6 +93,12 @@ local function wordsHeight(text: string, size: number, width: number): number
 	return lines * math.ceil(size * 1.2) + 4
 end
 
+-- Whether a headline is across the top (the objective card steps aside for it).
+function Headline.showing(): boolean
+	local bar = current
+	return bar ~= nil and bar.Parent ~= nil
+end
+
 function Headline.show(text: string, by: string, style: string?, seconds: number?)
 	local look = Headline.Styles[style or "gold"] or Headline.Styles.gold
 	local old = current

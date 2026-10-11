@@ -136,7 +136,9 @@ local lastCaption: Frame? = nil
 
 -- A caption across the upper screen: the edition's colours through big heavy letters, a dark
 -- edge round them, a soft shadow; it punches in and wobbles while it holds. The first carries the
--- edition's name above it.
+-- edition's name above it. (Under the bar at the top and clear of the keys down the left; the
+-- card of what to do next steps aside while the show is on.)
+local CAPTION_Y = 0.29
 local function caption(gui: ScreenGui, text: string, palette: { Color3 }, hold: number, kicker: string?)
 	if gui.Parent == nil then
 		return
@@ -150,8 +152,8 @@ local function caption(gui: ScreenGui, text: string, palette: { Color3 }, hold: 
 	holder.Name = "Caption"
 	holder.BackgroundTransparency = 1
 	holder.AnchorPoint = Vector2.new(0.5, 0.5)
-	holder.Position = UDim2.fromScale(0.5, 0.22)
-	holder.Size = UDim2.fromScale(0.86, 0.14)
+	holder.Position = UDim2.fromScale(0.5, CAPTION_Y)
+	holder.Size = UDim2.fromScale(0.8, 0.14)
 	holder.Parent = gui
 	lastCaption = holder
 	local shadow = Instance.new("TextLabel")
@@ -808,7 +810,7 @@ function MemeTakeover.play(seconds: number?, editionId: string?)
 		if act == 1 and V.opening == "glitch" then
 			local cap = lastCaption
 			if cap and cap.Parent then
-				cap.Position = UDim2.new(0.5, math.random(-8, 8), 0.22, math.random(-5, 5))
+				cap.Position = UDim2.new(0.5, math.random(-8, 8), CAPTION_Y, math.random(-5, 5))
 			end
 			if math.random() < 0.12 then
 				tint.BackgroundColor3 = P[math.random(1, #P)]

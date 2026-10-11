@@ -454,6 +454,11 @@ a Nightly attempt or a Mythic's odds.
   Tornado*, *Panda Piano Party*. The captions are big heavy letters in the edition's colours with
   a dark edge, the first with the edition's name over it. Same price whichever comes; nothing in
   it is a prize.
+- **Big words never land on the HUD** (Build 58; `UI/Objective`): the card of what to do next
+  (top right) steps aside while something bigger holds the screen (the Meme Takeover, an
+  effect's big words, Admin Abuse's arrival card and gifts, a headline, a badge coming in) and
+  comes back quietly after. The Meme Takeover's captions and the effects' big words stand under
+  the bar at the top and clear of the keys down the left.
 - **A welcome for every guest, on their own screen** (Build 56; `UI/Welcome`, `Config.Welcome`):
   as they arrive, **WELCOME** lights up letter by letter in gold, with their name under it, on a
   band of dark glass between two lines of light; a sweep of light crosses it, gold sparks burst

@@ -2672,6 +2672,13 @@ local function check()
 end
 AbuseShow.check = check
 
+-- Whether the arrival card or a gift is on the screen (the objective card steps aside for them).
+function AbuseShow.cardUp(): boolean
+	local gui = player:FindFirstChild("PlayerGui")
+	local s = gui and gui:FindFirstChild("MaisonAbuseShow")
+	return s ~= nil and (s:FindFirstChild("Arrival") ~= nil or s:FindFirstChild("Gift") ~= nil)
+end
+
 function AbuseShow.start()
 	Remotes.event("Salute").OnClientEvent:Connect(function(m: any)
 		if type(m) ~= "table" then
