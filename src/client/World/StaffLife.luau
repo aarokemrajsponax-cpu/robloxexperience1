@@ -19,7 +19,7 @@ type Watcher = { neck: Motor6D, base: CFrame, head: BasePart, yaw: number, pitch
 local watchers: { [Model]: Watcher } = {}
 
 -- The Pianist sways at the keys until the Pianist animation is published.
-type PianistState = { model: Model, joints: { { motor: Motor6D, base: CFrame, phase: number } } }
+type PianistState = { model: Model, joints: { { motor: Motor6D, base: CFrame, phase: number } }, resumeAt: number }
 local pianists: { [Model]: PianistState } = {}
 local clock = 0
 
@@ -46,7 +46,14 @@ local function find()
 						table.insert(joints, { motor = m, base = m.C0, phase = i * 1.7 })
 					end
 				end
-				pianists[model] = { model = model, joints = joints }
+				local state: PianistState = { model = model, joints = joints, resumeAt = 0 }
+				pianists[model] = state
+				-- Standing by the piano while a guest plays, they aren't swayed at all; back on the
+				-- bench, the sway starts again from the seated pose the house has given them (read
+				-- once it has arrived, so a pose from before is never forced back on).
+				model:GetAttributeChangedSignal("Aside"):Connect(function()
+					state.resumeAt = clock + 0.4
+				end)
 			end
 		end
 	end
@@ -58,6 +65,16 @@ local function play(dt: number)
 		if not model.Parent or model:GetAttribute("Playing") then
 			pianists[model] = nil
 			continue
+		end
+		if model:GetAttribute("Aside") or clock < p.resumeAt then
+			continue
+		end
+		if p.resumeAt > 0 then
+			-- Back on the bench: the seated pose, as it is now.
+			p.resumeAt = 0
+			for _, j in p.joints do
+				j.base = j.motor.C0
+			end
 		end
 		for i, j in p.joints do
 			if i == 1 then

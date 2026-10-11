@@ -56,6 +56,12 @@ local guideRoot: BasePart? = nil
 local hipHeight = 3
 local walkTrack: AnimationTrack? = nil
 local idleTrack: AnimationTrack? = nil
+-- The guide's joints, for a walk drawn by hand when the walk animation can't load, and the gait's
+-- own sway either way.
+local gaitJoints: { [string]: { motor: Motor6D, base: CFrame } } = {}
+local gaitPhase = 0
+local gaitAmount = 0 -- 0 standing, 1 in full stride (eased)
+local gaitAnimated = false -- the walk animation is playing (it has its own rise and fall)
 local hidden: { { inst: Instance, prop: string, value: any } } = {}
 local connection: RBXScriptConnection? = nil
 local rayParams: RaycastParams? = nil
@@ -166,6 +172,16 @@ local function buildGuide(from: Model): Model?
 	local humanoid = m:FindFirstChildOfClass("Humanoid")
 	hipHeight = root.Size.Y / 2 + 2
 	walkTrack, idleTrack = nil, nil
+	-- (Into the world first: Roblox only loads animations onto a rig that's in the world. Loaded
+	-- before, they failed, and the guide glided along in its standing pose.)
+	m.Parent = Workspace
+	gaitJoints = {}
+	for _, name in { "LeftHip", "RightHip", "LeftKnee", "RightKnee", "LeftShoulder", "RightShoulder", "LeftElbow", "RightElbow", "Waist", "Neck" } do
+		local joint = m:FindFirstChild(name, true)
+		if joint and joint:IsA("Motor6D") then
+			gaitJoints[name] = { motor = joint, base = joint.C0 }
+		end
+	end
 	if humanoid then
 		pcall(function()
 			humanoid.EvaluateStateMachine = false
@@ -200,7 +216,6 @@ local function buildGuide(from: Model): Model?
 			idleTrack:Play(0.2)
 		end
 	end
-	m.Parent = Workspace
 	return m
 end
 
@@ -232,7 +247,7 @@ local function walking(on: boolean)
 	if walk then
 		if on and not walk.IsPlaying then
 			walk:Play(0.2)
-			walk:AdjustSpeed(Config.data.Tour.speed / 12)
+			walk:AdjustSpeed(math.clamp(Config.data.Tour.speed / 14, 0.6, 1.3))
 		elseif not on and walk.IsPlaying then
 			walk:Stop(0.25)
 		end
@@ -286,14 +301,50 @@ local function refreshRays()
 	end)
 end
 
+-- The gait: a walker's rise and fall and a little sway from foot to foot, eased in as the guide
+-- sets off and out as they stop; and, if the walk animation didn't load, the legs and arms swung
+-- by hand so the guide never glides.
+local function gait(dt: number, moving: boolean)
+	gaitAmount += ((if moving then 1 else 0) - gaitAmount) * (1 - math.exp(-6 * dt))
+	-- Two steps a stride; a stride of about two and a half studs.
+	gaitPhase = (gaitPhase + dt * (if moving then Config.data.Tour.speed / 2.6 else 0) * math.pi) % (math.pi * 2)
+	local animated = walkTrack ~= nil and (walkTrack :: AnimationTrack).IsPlaying
+	gaitAnimated = animated
+	if animated then
+		return
+	end
+	local a = gaitAmount
+	local swing = math.sin(gaitPhase)
+	local function pose(name: string, rx: number, ry: number, rz: number)
+		local j = gaitJoints[name]
+		if j and j.motor.Parent then
+			j.motor.C0 = j.base * CFrame.Angles(rx * a, ry * a, rz * a)
+		end
+	end
+	pose("LeftHip", math.rad(28) * swing, 0, 0)
+	pose("RightHip", -math.rad(28) * swing, 0, 0)
+	pose("LeftKnee", -math.rad(22) * math.max(0, -swing), 0, 0)
+	pose("RightKnee", -math.rad(22) * math.max(0, swing), 0, 0)
+	pose("LeftShoulder", -math.rad(20) * swing, 0, 0)
+	pose("RightShoulder", math.rad(20) * swing, 0, 0)
+	pose("LeftElbow", math.rad(12), 0, 0)
+	pose("RightElbow", math.rad(12), 0, 0)
+	pose("Waist", 0, math.rad(6) * swing, 0)
+end
+
 local function place(dt: number)
 	local root = guideRoot
 	feetY += (floorAt(pos) - feetY) * (1 - math.exp(-14 * dt))
 	if not root then
 		return
 	end
-	local at = Vector3.new(pos.X, feetY + hipHeight, pos.Z)
-	root.CFrame = CFrame.lookAt(at, at + facing)
+	-- The rise and fall of each step, and a sway from foot to foot (a breath while standing).
+	local a = gaitAmount * (if gaitAnimated then 0.35 else 1)
+	local bob = math.abs(math.sin(gaitPhase)) * 0.12 * a + math.sin(os.clock() * 1.6) * 0.02 * (1 - gaitAmount)
+	local sway = math.sin(gaitPhase) * 0.07 * a
+	local at = Vector3.new(pos.X, feetY + hipHeight + bob, pos.Z)
+	local side = facing:Cross(Vector3.new(0, 1, 0))
+	root.CFrame = CFrame.lookAt(at + side * sway, at + side * sway + facing) * CFrame.Angles(0, 0, math.rad(2.2) * math.sin(gaitPhase) * a)
 end
 
 local function turnTo(dir: Vector3, dt: number)
@@ -426,9 +477,11 @@ local function step(dt: number)
 		end
 		if paused and guest then
 			walking(false)
+			gait(dt, false)
 			turnTo(guest - feet, dt)
 		else
 			walking(true)
+			gait(dt, true)
 			local left = T.speed * dt
 			while left > 0 and pathIndex <= #path do
 				local target = path[pathIndex]
@@ -450,6 +503,7 @@ local function step(dt: number)
 			end
 		end
 	elseif state == "arriving" then
+		gait(dt, false)
 		-- At the stop: face the guest until they're close, then the card.
 		if guest then
 			turnTo(guest - feet, dt)
@@ -458,6 +512,7 @@ local function step(dt: number)
 			end
 		end
 	elseif state == "card" then
+		gait(dt, false)
 		-- Explaining: half to the guest, half to the thing on the card.
 		local toGuest = if guest then flat(guest - feet) else Vector3.zero
 		local toThing = flat(stop.face - feet)

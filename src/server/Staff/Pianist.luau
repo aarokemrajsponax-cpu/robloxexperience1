@@ -5,6 +5,7 @@
 -- Until then each guest's screen sways them gently at the keys (StaffLife).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Layout = require(ReplicatedStorage.Shared.Layout)
@@ -24,6 +25,40 @@ local function bend(model: Model, part: string, joint: string, angle: number)
 		m.C0 = m.C0 * CFrame.Angles(math.rad(angle), 0, 0)
 		sittingC0[m] = m.C0
 	end
+end
+
+-- Seated, the Pianist's thighs rest on the bench: measured on the rig as it sits (a frame after the
+-- pose is set, once the joints have moved the limbs), so it's never sunk into the bench nor
+-- floating over it, whatever the rig's proportions.
+local function settle(s: Rig.Staff)
+	task.spawn(function()
+		RunService.Heartbeat:Wait()
+		if not s.model.Parent or s.model:GetAttribute("Aside") then
+			return
+		end
+		local top = Layout.Foyer.pianist.Position.Y + Layout.Foyer.pianoBenchTop
+		local low = math.huge
+		for _, name in { "LeftUpperLeg", "RightUpperLeg", "LowerTorso" } do
+			local part = s.model:FindFirstChild(name)
+			if part and part:IsA("BasePart") then
+				local half = part.Size / 2
+				for _, sx in { -1, 1 } do
+					for _, sy in { -1, 1 } do
+						for _, sz in { -1, 1 } do
+							low = math.min(low, (part.CFrame * Vector3.new(sx * half.X, sy * half.Y, sz * half.Z)).Y)
+						end
+					end
+				end
+			end
+		end
+		if low < math.huge then
+			local lift = top + 0.03 - low
+			-- (Only a sensible correction: never a leap if the rig hasn't moved yet.)
+			if math.abs(lift) > 0.01 and math.abs(lift) < 1.6 then
+				s.root.CFrame += Vector3.new(0, lift, 0)
+			end
+		end
+	end)
 end
 
 -- While a guest plays the piano the Pianist gets up and stands by it, turned to listen; when they
@@ -46,6 +81,9 @@ function Pianist.stepAside(aside: boolean)
 		s.root.CFrame = home + Vector3.new(0, Layout.Foyer.pianoBenchTop + 0.45 + s.root.Size.Y / 2, 0)
 	end
 	s.model:SetAttribute("Aside", aside)
+	if not aside then
+		settle(s)
+	end
 end
 
 function Pianist.spawn(parent: Instance)
@@ -69,6 +107,7 @@ function Pianist.spawn(parent: Instance)
 	s.root.CFrame = home + Vector3.new(0, Layout.Foyer.pianoBenchTop + 0.45 + s.root.Size.Y / 2, 0)
 	s.busy = true
 	seated = s
+	settle(s)
 
 	local id = Config.data.Assets.Animations.pianist
 	if id ~= "" then

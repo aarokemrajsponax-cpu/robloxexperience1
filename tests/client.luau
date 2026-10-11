@@ -1578,6 +1578,18 @@ do
 	local speak = Instance.new("ProximityPrompt")
 	speak.Name = "SpeakPrompt"
 	speak.Parent = chead
+	-- (A hip joint, as the server's R15 rig has, to see the walk.)
+	local cleg = Instance.new("Part")
+	cleg.Name = "LeftUpperLeg"
+	cleg.Size = Vector3.new(0.8, 1.6, 0.8)
+	cleg.CFrame = CFrame.new(home + Vector3.new(-0.5, 1.6, 0))
+	cleg.Parent = concierge
+	local chip = Instance.new("Motor6D")
+	chip.Name = "LeftHip"
+	chip.Part0 = croot
+	chip.Part1 = cleg
+	chip.C0 = CFrame.new(-0.5, -0.6, 0)
+	chip.Parent = cleg
 	local chum = Instance.new("Humanoid")
 	chum.HipHeight = 2
 	chum.Parent = concierge
@@ -1606,6 +1618,7 @@ do
 	local visited = {}
 	local climbed = false
 	local guideTop = 0
+	local stride = 0
 	local cardsSeen = 1
 	local pinned, placed = 0, 0
 	local i = 2
@@ -1623,6 +1636,12 @@ do
 			local gr = guide and guide:FindFirstChild("HumanoidRootPart")
 			if gr then
 				guideTop = math.max(guideTop, gr.CFrame.Position.Y)
+			end
+			local hip = guide and guide:FindFirstChild("LeftHip", true)
+			if hip and state == "walking" then
+				local _, _, rz = hip.C0:ToEulerAnglesXYZ()
+				local rx = select(1, hip.C0:ToEulerAnglesXYZ())
+				stride = math.max(stride, math.abs(rx) + math.abs(rz))
 			end
 		end
 		local stopId, cardAt, state = Tour.where()
@@ -1656,6 +1675,7 @@ do
 	check("the tour walks the whole house: the Salon, Tonight's board, the Vault, the Boutique", visited.salon and visited.tonight and visited.vault and visited.boutique)
 	check("and upstairs: the Library, the Ballroom, the Terrace, your Suite", visited.library and visited.ballroom and visited.terrace and visited.suite)
 	check("the Concierge climbs the Grand Stair to the Club Floor", climbed and guideTop > 20, guideTop)
+	check("walking, not gliding: the Concierge's legs swing with every step", stride > math.rad(10), math.deg(stride))
 	check("each card points at its place: a gold pin with its name", placed >= 10 and pinned == placed, pinned .. " of " .. placed)
 	advance(1)
 	snapshot("tour")
