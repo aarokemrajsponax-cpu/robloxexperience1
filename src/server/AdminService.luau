@@ -70,6 +70,13 @@ AdminService.note = function(_text: string, _everywhere: boolean) end
 -- events (Achievements.tally).
 AdminService.award = function(_player: Player, _key: string) end
 AdminService.tally = function(_player: Player, _stat: string, _n: number, _once: string?) end
+-- A house event started or stopped (set by Main: the holiday games open with their holiday's).
+AdminService.eventChanged = function(_id: string, _on: boolean) end
+-- Whether the holiday games run a holiday's hunt themselves (the eggs, the turkeys in the field):
+-- then the event scatters none of its own (set by Main).
+AdminService.huntOwned = function(_id: string): boolean
+	return false
+end
 -- Admin Abuse's show (set by Main: AbuseShow): it began (the realms, the gifts), or was stopped.
 AdminService.showBegan = function(_mega: boolean, _plan: AbuseNights.Plan?, _since: number?) end
 AdminService.showStopped = function() end
@@ -462,7 +469,9 @@ function AdminService.startEvent(id: string, seconds: number, byName: string, qu
 		clearPickups("meme")
 		scatter("meme", cfg().memes, cfg().memeGilt, nil)
 	elseif (cfg().hunts :: any)[id] then
-		scatterHunt(id)
+		if not AdminService.huntOwned(id) then
+			scatterHunt(id)
+		end
 	elseif id == "newYear" then
 		AdminService.newYear(ends, byName)
 	elseif id == "disco" then
@@ -490,6 +499,7 @@ function AdminService.startEvent(id: string, seconds: number, byName: string, qu
 			AdminService.stopEvent(id)
 		end
 	end)
+	task.defer(AdminService.eventChanged, id, true)
 end
 
 function AdminService.stopEvent(id: string)
@@ -510,6 +520,7 @@ function AdminService.stopEvent(id: string)
 	elseif (cfg().hunts :: any)[id] then
 		clearPickups("hunt", id)
 	end
+	task.defer(AdminService.eventChanged, id, false)
 end
 
 -- A guest found one of a holiday hunt's pickups (or its golden prize).

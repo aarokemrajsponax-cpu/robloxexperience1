@@ -112,6 +112,11 @@ Curios.List = {
 	{ id = "potOfGold", name = "The Pot of Gold", line = "At the end of the rainbow, exactly where they said.", rarity = "Legendary", family = "relic", glyph = "🪙", accent = "🌈", colour = rgb(240, 190, 60), source = "event", tradeable = true, how = "The Lucky Clover: the pot at the rainbow's end" },
 	{ id = "paintedEgg", name = "A Painted Egg", line = "Hand-painted, from the Egg Hunt.", rarity = "Rare", family = "relic", glyph = "🥚", accent = "🌷", colour = rgb(170, 200, 240), source = "event", tradeable = true, how = "The Egg Hunt" },
 	{ id = "goldenEgg", name = "The Golden Egg", line = "Hidden best of all. Found by you.", rarity = "Legendary", family = "relic", glyph = "🥚", accent = "👑", colour = rgb(240, 190, 60), source = "event", tradeable = true, how = "The Egg Hunt: the golden one" },
+	-- The holiday games (shared/HolidayGames).
+	{ id = "candyPail", name = "The Candy Pail", line = "Every door on Hallows Lane in one night. Heavy with treats, light on manners.", rarity = "Epic", family = "relic", glyph = "🍬", accent = "🎃", colour = rgb(120, 50, 150), source = "event", tradeable = true, how = "Trick or Treat: every door on Hallows Lane in one round" },
+	{ id = "sleighBell", name = "Santa's Sleigh Bell", line = "It rang all the way to the North Pole and back.", rarity = "Rare", family = "relic", glyph = "🔔", accent = "🛷", colour = rgb(190, 40, 50), source = "event", tradeable = true, how = "Santa's Sleigh: a ride to the North Pole" },
+	{ id = "snowGlobe", name = "The North Pole Snow Globe", line = "The whole North Pole in a globe of glass. Shake it gently.", rarity = "Epic", family = "relic", glyph = "🔮", accent = "❄️", colour = rgb(150, 200, 240), source = "event", tradeable = true, how = "Santa's Sleigh: load ten gifts in one trip" },
+	{ id = "shamrockBrooch", name = "The Shamrock Brooch", line = "A gold shamrock for your lapel, from St Patrick's week. Lucky, and it knows it.", rarity = "Rare", family = "relic", glyph = "☘️", accent = "✨", colour = rgb(60, 150, 80), source = "event", tradeable = true, how = "The Luck of the Irish: bank a run while it's on" },
 	-- The owner's own.
 	{ id = "ownerToken", name = "The Owner's Token", line = "Handed out by the owner, in person, to everyone in the house.", rarity = "Epic", family = "relic", glyph = "👑", accent = "🪙", colour = rgb(30, 24, 14), source = "event", tradeable = false, how = "From the owner (once a day, when they hand them out)" },
 	{ id = "adminCrown", name = "The Admin's Crown", line = "Three gifts from the owner in one Admin Abuse. You were there for all of it.", rarity = "Legendary", family = "relic", glyph = "👑", accent = "💥", colour = rgb(250, 200, 70), source = "event", tradeable = false, how = "Open three of the owner's gifts in one Admin Abuse" },
@@ -195,15 +200,24 @@ end
 
 -- Picks a find at the tables from two numbers in [0, 1) (the server rolls them): the rarity by
 -- FindWeights, then one curio of it.
-function Curios.pick(a: number, b: number): Curio
+-- (`luck`, the luck of the Irish: the Rare curios and rarer this much likelier among the finds.)
+function Curios.pick(a: number, b: number, luck: number?): Curio
+	local boost = math.max(1, luck or 1)
+	local function weight(r: string): number?
+		local w = Curios.FindWeights[r]
+		if w and (Curios.RarityRank[r] or 0) >= (Curios.RarityRank.Rare or 3) then
+			return w * boost
+		end
+		return w
+	end
 	local total = 0
-	for _, w in Curios.FindWeights do
-		total += w
+	for r in Curios.FindWeights do
+		total += weight(r) or 0
 	end
 	local x = a * total
 	local chosen: string = "Common"
 	for _, r in Curios.Rarities do
-		local w = Curios.FindWeights[r]
+		local w = weight(r)
 		if w then
 			if x < w then
 				chosen = r

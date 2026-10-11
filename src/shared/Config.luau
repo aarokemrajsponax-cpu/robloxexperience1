@@ -283,6 +283,7 @@ local defaults = {
 		gemAsk = { rate = 3, burst = 8 },
 		badgeAsk = { rate = 1, burst = 4 },
 		abuseGift = { rate = 1, burst = 3 },
+		holidayAsk = { rate = 4, burst = 10 },
 	},
 
 	-- Levels (Shared/Levels has the curve): XP for each thing the server sees happen.
@@ -468,6 +469,89 @@ local defaults = {
 		burstEvery = 9,
 		-- Easter: butterflies about the front.
 		butterflies = 14,
+	},
+
+	-- The holiday games (server/Holidays, World/HolidayGames, shared/HolidayGames): what guests
+	-- do on the holidays. Free to play, open for each holiday's days and whenever its holiday event
+	-- is on. The server decides and pays every reward; the Gems are always small, with a ceiling
+	-- each day.
+	HolidayGames = {
+		-- How many days before and after its day each is open (UTC).
+		windows = {
+			halloween = { lead = 7, linger = 1 }, -- 24 October to 1 November
+			thanksgiving = { lead = 3, linger = 3 }, -- the Monday to the Sunday of Thanksgiving week
+			christmas = { lead = 7, linger = 4 }, -- 18 to 29 December
+			easter = { lead = 2, linger = 1 }, -- Good Friday to Easter Monday
+			stPatrick = { lead = 3, linger = 1 }, -- 14 to 18 March
+		},
+		gemsPerDay = 25, -- the most Gems the holiday games give one guest in a day, all together
+		travelGap = 2.5, -- seconds between one trip (out to a game, or home) and the next
+		-- Hallows Lane (All Hallows'): a street of grand houses away from the Maison; a host in
+		-- costume at every door gives a treat.
+		lane = {
+			origin = { -3000, 0, 0 },
+			gilt = 45, -- each door's treat
+			gemChance = 0.15, -- and a sugared Gem (1) this often
+			minuitGilt = 150, -- the great house at the end of the Lane gives more
+			fullBagGilt = 300, -- every door on the Lane in one round
+			fullBagGems = 3,
+			roundMinutes = 20, -- every door opens to a guest again after this long
+			reach = 16, -- studs from a door a guest may knock
+			knockGap = 1.5, -- seconds between knocks
+		},
+		-- The Harvest Field (Thanksgiving): turkeys loose in a fenced field away from the Maison.
+		field = {
+			origin = { 3000, 0, 0 },
+			turkeys = 12, -- in the field at once
+			gilt = 40,
+			gemChance = 0.12,
+			goldenGilt = 400, -- the golden turkey
+			goldenGems = 4,
+			goldenEvery = 90, -- seconds before a new golden turkey walks out after one is caught
+			speed = 19, -- studs a second a turkey runs (guests walk at 17 and run at 28)
+			goldenSpeed = 23,
+			fear = 22, -- a turkey runs from a guest this close
+			catch = 5.5, -- close enough to catch one
+			back = 6, -- seconds before a caught turkey's place is filled
+			catchGap = 1, -- seconds between catches
+		},
+		-- The North Pole (Christmas): Santa's sleigh from the kerb, gifts in the snow.
+		pole = {
+			origin = { 0, 0, 3200 },
+			seats = 8,
+			boarding = 15, -- seconds the sleigh waits for more riders once someone sits down
+			flight = 16, -- seconds a flight takes
+			stay = 90, -- seconds at the North Pole before it flies home
+			gifts = 40, -- gifts lying in the snow at once
+			carry = 5, -- the most a guest carries at once
+			tripMost = 15, -- the most one guest loads in one trip
+			dayMost = 45, -- the most one guest loads in a day
+			reach = 5, -- close enough to pick up a gift
+			loadReach = 18, -- close enough to the sleigh to load
+			-- What a gift holds (the server chooses; the odds are shown when it's opened): weights,
+			-- and the amounts (from, to).
+			odds = { gilt = 60, moreGilt = 28, gems = 10, moreGems = 2 },
+			gilt = { 40, 90 },
+			moreGilt = { 160, 320 },
+			gems = { 2, 3 },
+			moreGems = { 12, 18 },
+		},
+		-- The Great Egg Hunt (Easter): painted eggs hidden all over the house.
+		eggs = {
+			count = 30,
+			gilt = 35,
+			gemChance = 0.12,
+			goldenGilt = 600, -- the golden egg
+			goldenGems = 5,
+			again = 60, -- seconds after the last egg is found before more are hidden
+			reach = 5,
+		},
+		-- The luck of the Irish (St Patrick's): never a score, only the odds of finding things.
+		luck = {
+			mythic = 5, -- Mythics this much likelier at the tables (with Lucky Hour too, the greater)
+			curioFind = 1.5, -- a curio among the pieces this much more often
+			curioRare = 3, -- and the rarer curios this much likelier among them
+		},
 	},
 
 	-- The Golden Transformation, the Midas touch (World/Midas).

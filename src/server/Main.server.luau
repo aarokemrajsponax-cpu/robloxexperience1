@@ -289,6 +289,28 @@ AdminService.showBegan = AbuseShow.began
 AdminService.showStopped = AbuseShow.stopped
 boot("House controls", AdminService.start)
 boot("Admin Abuse's show", AbuseShow.start)
+-- The holiday games: trick or treat on Hallows Lane, the turkeys in the Harvest Field, Santa's
+-- sleigh to the North Pole, the Great Egg Hunt, and the luck of the Irish at the tables. Each opens
+-- for its holiday's days and with its holiday's event.
+local Holidays = require(script.Parent.Holidays)
+Holidays.eventOn = AdminService.active
+Holidays.isSeated = AdminService.isSeated
+Holidays.award = Achievements.award
+Holidays.tally = function(player, stat, n, once)
+	AdminService.tally(player, stat, n, once)
+end
+AdminService.eventChanged = function(_id, _on)
+	Holidays.refresh()
+end
+AdminService.huntOwned = Holidays.ownsHunt
+TableService.mythicLuck = function()
+	return math.max(AdminService.mythicLuck(), Holidays.mythicLuck())
+end
+CuriosService.luck = Holidays.curioLuck
+CuriosService.lucky = function(player)
+	Achievements.award(player, "luckOfTheIrish")
+end
+boot("The holiday games", Holidays.start)
 CircleService.changed = function(player)
 	Dressing.nameplate(player)
 	Shop.push(player)

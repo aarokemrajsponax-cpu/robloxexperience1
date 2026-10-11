@@ -23,6 +23,7 @@ Remotes.Events = {
 	"Tour", -- server -> client: the Concierge's tour starts; client -> server: it started, it ended
 	"Purchase", -- server -> client: perks and credits, decrees, rains, revive results
 	"PianoNote", -- client -> server: a note played at the Foyer's piano; server -> clients: play it
+	"Holiday", -- server -> client: the holiday games (a door answered, a turkey caught, a gift loaded...)
 }
 
 Remotes.Functions = {
@@ -41,6 +42,7 @@ Remotes.Functions = {
 	"GemAsk", -- client -> server: the Gem Shop (auras, titles, Surges, Gilt for Gems, the Cabinet)
 	"BadgeAsk", -- client -> server: your Badge Book
 	"AbuseGiftAsk", -- client -> server: open the owner's gift during Admin Abuse
+	"HolidayAsk", -- client -> server: the holiday games (go there, go home, board the sleigh, open a gift)
 }
 
 local folder: Folder? = nil

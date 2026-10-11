@@ -16,6 +16,7 @@ python3 tests/bundle.py > "$TOOLS/bundle.luau"
 "$TOOLS/lune" run tests/ballroom.luau
 "$TOOLS/lune" run tests/shop.luau
 "$TOOLS/lune" run tests/purchases.luau
+"$TOOLS/lune" run tests/holidays.luau
 "$TOOLS/lune" run tests/client.luau
 "$TOOLS/lune" run tests/client.luau studio
 "$TOOLS/lune" run tests/client.luau live

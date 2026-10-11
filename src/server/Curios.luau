@@ -32,6 +32,8 @@ local IS_GEM_KEY: { [string]: boolean } = { gems1 = true, gems2 = true, gems3 = 
 
 -- The Midnight Owl was found (set by Main: its badge).
 Curios.secret = function(_player: Player) end
+-- A run banked under the luck of the Irish (set by Main: its badge).
+Curios.lucky = function(_player: Player) end
 
 -- The random numbers for finds (a test can make them fixed).
 Curios.random = Random.new()
@@ -125,13 +127,24 @@ function Curios.announce(player: Player, id: string, line: string, gilt: number?
 	end
 end
 
--- The chance of a find after a run (twice as likely in A Night of Curios, the owner's event).
+-- The luck of the Irish (set by Main: the holiday games, while St Patrick's is on): how much more
+-- often a curio is found among the pieces, and how much likelier the rarer ones are.
+Curios.luck = function(): (number, number)
+	return 1, 1
+end
+
+-- The chance of a find after a run (twice as likely in A Night of Curios, the owner's event, and
+-- likelier still with the luck of the Irish).
 function Curios.chance(rounds: number, accuracy: number): number
 	local base = CurioList.findChance(rounds, accuracy)
-	if base > 0 and Workspace:GetAttribute("Event_curioHour") ~= nil then
-		return math.min(0.95, base * (Config.data.Admin.curioHourFind or 2))
+	if base <= 0 then
+		return 0
 	end
-	return base
+	local find = math.max(1, (Curios.luck()))
+	if Workspace:GetAttribute("Event_curioHour") ~= nil then
+		find *= Config.data.Admin.curioHourFind or 2
+	end
+	return if find > 1 then math.min(0.95, base * find) else base
 end
 
 -- After a banked run: maybe a curio among the pieces, the season's Limited, the achievements.
@@ -145,7 +158,8 @@ function Curios.afterRun(player: Player, data: Profiles.Data, rounds: number, ac
 		found = { id = "midnightOwl" }
 		Curios.secret(player)
 	elseif Curios.random:NextNumber() < Curios.chance(rounds, accuracy) then
-		local c = CurioList.pick(Curios.random:NextNumber(), Curios.random:NextNumber())
+		local _, rare = Curios.luck()
+		local c = CurioList.pick(Curios.random:NextNumber(), Curios.random:NextNumber(), rare)
 		Curios.give(player, data, c.id, 1, "tables")
 		found = { id = c.id }
 	end
@@ -163,6 +177,16 @@ function Curios.afterRun(player: Player, data: Profiles.Data, rounds: number, ac
 			b.given[id] = true
 			Curios.give(player, data, id, 1, "season")
 			task.defer(Curios.announce, player, id, "This season's own curio, for playing this season.")
+		end
+	end
+	-- The luck of the Irish: the Shamrock Brooch, once a year, for a banked run while it's on.
+	if rounds > 0 and (Curios.luck()) > 1 then
+		local key = "irish:" .. os.date("!%Y")
+		if not b.given[key] then
+			b.given[key] = true
+			Curios.give(player, data, "shamrockBrooch", 1, "event")
+			task.defer(Curios.announce, player, "shamrockBrooch", "The luck of the Irish: a run banked on St Patrick's.")
+			Curios.lucky(player)
 		end
 	end
 	-- Achievements.

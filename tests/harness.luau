@@ -189,7 +189,17 @@ local function newGuest(name: string, userId: number)
 end
 
 roblox.implementMethod("Seat", "Sit", function(self, h)
-	h.SeatPart = self
+	if type(h) == "table" then
+		h.SeatPart = self
+		return
+	end
+	-- (A real Humanoid in a character: its root goes to the seat, as Roblox's would.)
+	self:SetAttribute("TestSat", true)
+	local character = h.Parent
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if root then
+		root.CFrame = self.CFrame * CFrame.new(0, 2, 0)
+	end
 end)
 
 ---------------------------------------------------------------------------------------------------
@@ -594,6 +604,20 @@ local services = {
 		GetTagged = function(_, tag)
 			return H.tagged[tag] or {}
 		end,
+		AddTag = function(_, inst, tag)
+			H.tagged[tag] = H.tagged[tag] or {}
+			table.insert(H.tagged[tag], inst)
+		end,
+		HasTag = function(_, inst, tag)
+			return table.find(H.tagged[tag] or {}, inst) ~= nil
+		end,
+		RemoveTag = function(_, inst, tag)
+			local list = H.tagged[tag]
+			local i = list and table.find(list, inst)
+			if i then
+				table.remove(list, i)
+			end
+		end,
 	},
 	RunService = {
 		Heartbeat = heartbeat,
@@ -683,6 +707,18 @@ local globals = {
 		end,
 	},
 	Random = Random,
+	ColorSequence = roblox.ColorSequence,
+	ColorSequenceKeypoint = roblox.ColorSequenceKeypoint,
+	NumberSequence = roblox.NumberSequence,
+	NumberSequenceKeypoint = roblox.NumberSequenceKeypoint,
+	NumberRange = roblox.NumberRange,
+	BrickColor = roblox.BrickColor,
+	-- (Nothing here casts rays: a ray finds nothing.)
+	RaycastParams = {
+		new = function()
+			return {}
+		end,
+	},
 	TweenInfo = {
 		new = function(t)
 			return { Time = t }

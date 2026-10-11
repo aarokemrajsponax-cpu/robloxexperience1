@@ -216,13 +216,20 @@ moment("events", "fx_meteor", "Impact", "Live through a meteor shower.", "☄️
 moment("events", "fx_titan", "Something Big", "See the Titan meme rise over the house.", "🗿", "silver")
 
 -- Holidays
-moment("holidays", "holiday_halloween", "All Hallows' Hunter", "Find a pumpkin in the All Hallows' Hunt.", "🎃", "silver")
-moment("holidays", "holiday_thanksgiving", "Turkey Catcher", "Catch a turkey in the Turkey Trot.", "🦃", "silver")
-moment("holidays", "holiday_christmas", "Present Opener", "Open a present in the Gift Drop.", "🎁", "silver")
+moment("holidays", "holiday_halloween", "All Hallows' Hunter", "Find a pumpkin in the All Hallows' Hunt, or a treat on Hallows Lane.", "🎃", "silver")
+moment("holidays", "holiday_thanksgiving", "Turkey Catcher", "Catch a turkey in the Harvest Field (or the Turkey Trot).", "🦃", "silver")
+moment("holidays", "holiday_christmas", "Present Opener", "Open a present: the Gift Drop's, or a gift from the North Pole.", "🎁", "silver")
 moment("holidays", "holiday_newYear", "Happy New Year", "Be in the house when the New Year arrives.", "🎆", "silver")
 moment("holidays", "holiday_valentine", "Sweetheart", "Find a love letter on Valentine's Day.", "💌", "silver")
 moment("holidays", "holiday_stPatrick", "Lucky Clover", "Find a four-leaf clover on St Patrick's Day.", "🍀", "silver")
 moment("holidays", "holiday_easter", "Egg Hunter", "Find a painted egg in the Egg Hunt.", "🥚", "silver")
+-- The holiday games (shared/HolidayGames).
+moment("holidays", "fullBag", "A Full Bag", "Knock at every door on Hallows Lane in one round.", "🍬", "gold")
+moment("holidays", "northPole", "To the North Pole", "Ride Santa's sleigh to the North Pole.", "🛷", "silver")
+moment("holidays", "santasHelper", "Santa's Helper", "Load ten gifts on Santa's sleigh in one trip.", "🎅", "gold")
+moment("holidays", "goldenTurkeyCaught", "Fastest Bird Alive", "Catch the golden turkey in the Harvest Field.", "🏃", "gold")
+moment("holidays", "goldenEggFound", "Hidden Best of All", "Find the golden egg in the Great Egg Hunt.", "🌟", "gold")
+moment("holidays", "luckOfTheIrish", "Luck of the Irish", "Bank a run while the luck of the Irish is on.", "☘️", "silver")
 
 -- Friends
 ladder("social", "trades", "🤝", "Make %d trades.", {
