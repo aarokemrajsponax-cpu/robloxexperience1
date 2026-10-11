@@ -1260,6 +1260,9 @@ run(function()
 end)
 advance(1)
 check("the client boots without an error", #errors == 0, errors[1])
+-- (This harness runs at 20 frames a second, which Quality takes for a struggling screen: the
+-- shows are tested at full strength, and its stepping down is tested on its own, below.)
+module("StarterPlayer", "StarterPlayerScripts", "Client", "Quality").pin(1)
 
 if MODE ~= "full" then
 	local where = if MODE == "live" then "the live game" else "Studio"
@@ -4777,6 +4780,120 @@ workspace:SetAttribute("Event_valentine", nil)
 signalOf(workspace, "attr:Event_valentine"):Fire()
 advance(1.5)
 check("and back when it's over", game:GetService("Lighting"):FindFirstChild("HolidayTint") == nil)
+-- Every holiday dresses the house on this screen: its title in its own colours with what to do,
+-- its pieces on the street front, in the Foyer and in the sky, its light, its music and its hunt
+-- glowing; and when it's over, all of it goes.
+;(function()
+	local HolidayFX = module("StarterPlayer", "StarterPlayerScripts", "Client", "World", "HolidayFX")
+	local AbuseMusic = module("StarterPlayer", "StarterPlayerScripts", "Client", "World", "AbuseMusic")
+	local HouseEvents = module("ReplicatedStorage", "Shared", "HouseEvents")
+	local lighting = game:GetService("Lighting")
+	local pieces = {
+		halloween = { "Pumpkin", "Eye", "Moon", "Bat", "Candle", "Wrap" },
+		thanksgiving = { "Leaves", "HayBale", "Corn", "Lantern", "Moon", "Wrap" },
+		christmas = { "Boughs", "Bauble", "TreeStar", "Present", "Cane", "SnowCover", "Aurora", "Sleigh", "Wrap" },
+		newYear = { "Balloon", "GlitterBall", "Mirror", "Searchlight", "Wrap" },
+		valentine = { "HeartPost", "Lantern", "Floater", "Wrap" },
+		stPatrick = { "Leaf", "Pennant", "Floater", "Wrap" },
+		easter = { "Egg", "Leaves", "Tulip", "Butterfly", "Pennant", "Wrap" },
+	}
+	local problems = {}
+	local errorsBefore = #errors
+	for _, id in HouseEvents.Holidays do
+		local e = HouseEvents.byId[id]
+		-- (One of its hunt's pickups, as the server hides them.)
+		local pickup = nil
+		if id ~= "newYear" then
+			pickup = Instance.new("Part")
+			pickup.Name = "HuntPickup"
+			pickup.CFrame = root.CFrame * CFrame.new(8, 0, 0)
+			pickup:SetAttribute("Hunt", id)
+			Instance.new("BillboardGui").Parent = pickup
+			pickup.Parent = workspace
+			CollectionService:AddTag(pickup, "HuntPickup")
+		end
+		workspace:SetAttribute("Event_" .. id, workspace:GetServerTimeNow() + 600)
+		signalOf(workspace, "attr:Event_" .. id):Fire()
+		advance(1.6)
+		local folder = HolidayFX.setOf(id)
+		if not folder or folder.Parent == nil then
+			table.insert(problems, id .. ": the house isn't dressed")
+		end
+		for _, name in pieces[id] do
+			if not (folder and folder:FindFirstChild(name, true)) then
+				table.insert(problems, id .. ": no " .. name)
+			end
+		end
+		if id ~= "newYear" then
+			-- (Its own title card, in the holiday's colours: not just its name in the strip.)
+			local card = find(playerGui, function(d)
+				return d.Name == "Caption" and d:IsA("Frame") and d.Parent ~= nil and d.Parent.Name == "HolidayFX"
+			end)
+			local words = card and card:FindFirstChild("Words")
+			if not (words and words.Text == string.upper(e.name) and card:FindFirstChild("Line") and card.Line.Text == e.line) then
+				table.insert(problems, id .. ": no title card")
+			end
+		end
+		if lighting:FindFirstChild("HolidayTint") == nil then
+			table.insert(problems, id .. ": no tint")
+		end
+		if AbuseMusic.choose() ~= "holiday:" .. id then
+			table.insert(problems, id .. ": not its own music (" .. tostring(AbuseMusic.choose()) .. ")")
+		end
+		if pickup and not (pickup:FindFirstChild("HolidaySparkle") and pickup:FindFirstChild("HolidayGlow", true)) then
+			table.insert(problems, id .. ": its pickups don't glow")
+		end
+		if id == "stPatrick" and not (workspace.MaisonLocal:FindFirstChild("Rainbow") and workspace.MaisonLocal.Rainbow:FindFirstChild("Band", true)) then
+			table.insert(problems, id .. ": no rainbow")
+		end
+		advance(2)
+		snapshot("holiday-" .. id)
+		workspace:SetAttribute("Event_" .. id, nil)
+		signalOf(workspace, "attr:Event_" .. id):Fire()
+		advance(1.5)
+		if HolidayFX.running(id) or workspace.MaisonLocal:FindFirstChild("HolidaySet_" .. id) or lighting:FindFirstChild("HolidayTint") then
+			table.insert(problems, id .. ": still there after")
+		end
+		if id == "stPatrick" and workspace.MaisonLocal:FindFirstChild("Rainbow") then
+			table.insert(problems, id .. ": the rainbow stays")
+		end
+		if pickup then
+			pickup:Destroy()
+		end
+	end
+	check("every holiday dresses the house (the street, the Foyer, the sky), with its title, light, music and hunt, and puts it all away after", #problems == 0, problems[1])
+	check("...without a fault", #errors == errorsBefore, errors[errorsBefore + 1])
+	advance(1.5)
+	check("...and the music is the house's own again", AbuseMusic.choose() == "")
+end)()
+-- As grand as each screen can take: on a screen that's struggling (this harness's 20 frames a
+-- second) every show draws less, and the holidays leave their extras out; full again once it's
+-- smooth.
+;(function()
+	local Quality = module("StarterPlayer", "StarterPlayerScripts", "Client", "Quality")
+	local HolidayFX = module("StarterPlayer", "StarterPlayerScripts", "Client", "World", "HolidayFX")
+	local full = Quality.level()
+	Quality.pin(nil)
+	advance(7)
+	local struggling = Quality.level()
+	check("Quality: frames dropping (20 a second here), every show draws less", Quality.measured() <= 0.5 and struggling < full * 0.6, string.format("%.2f of %.2f", struggling, full))
+	workspace:SetAttribute("Event_christmas", workspace:GetServerTimeNow() + 600)
+	signalOf(workspace, "attr:Event_christmas"):Fire()
+	advance(1.6)
+	local set = HolidayFX.setOf("christmas")
+	local bulbs = 0
+	for _, d in (set and set:GetDescendants() or {}) do
+		if d.Name == "Bulb" then
+			bulbs += 1
+		end
+	end
+	check("...a lighter Christmas: the trees and the lights, not the garlands wound up the columns", set ~= nil and set:FindFirstChild("Boughs", true) ~= nil and set:FindFirstChild("Wrap", true) == nil and bulbs > 0, bulbs)
+	workspace:SetAttribute("Event_christmas", nil)
+	signalOf(workspace, "attr:Event_christmas"):Fire()
+	advance(1.5)
+	Quality.pin(1)
+	check("...and full again on a smooth screen", Quality.level() >= full * 0.99)
+end)()
 LocalPlayer:SetAttribute("Aura", "aura_golddust")
 advance(1)
 check("an aura glows round whoever wears it", root:FindFirstChild("MaisonAura") ~= nil)

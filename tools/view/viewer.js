@@ -60,6 +60,7 @@ const geometries = {
 	})(),
 };
 geometries.CornerWedge = geometries.Wedge;
+geometries.Ellipsoid = geometries.Ball; // (stretched to the part's own size, below)
 
 const materials = new Map();
 function srgb(c) {

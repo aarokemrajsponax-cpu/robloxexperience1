@@ -433,6 +433,43 @@ local defaults = {
 		scoreVolume = 0.8,
 	},
 
+	-- The holidays on every screen (World/HolidayFX, World/HolidaySets): where their great pieces
+	-- stand (in the grown house's studs, as { x, y, z }), and how many of the things that move.
+	Holidays = {
+		street = 0.06, -- the pavement's top
+		swags = { 32, 57.6, 83.2 }, -- lights hung under the street front's three cornices (heights)
+		frontZ = -18.8, -- just clear of the window frames on the street front
+		frontHalf = 30, -- how far either side of the door the lights run
+		-- The Foyer's four columns (lights, leaves or flowers wound up them), their radius and how
+		-- high the winding goes.
+		columns = { { -35.2, 0, 12.8 }, { 35.2, 0, 12.8 }, { -35.2, 0, 44.8 }, { 35.2, 0, 44.8 } },
+		columnRadius = 1.9,
+		columnFrom = 7,
+		columnTo = 45,
+		-- Christmas: the great tree on the pavement and the Foyer's own (clear of the carpet, the
+		-- columns and the stair), and how often the sleigh crosses the sky (seconds).
+		streetTree = { -54, 0.06, -34 },
+		streetTreeHeight = 46,
+		foyerTree = { -22, 4.8, 28 },
+		foyerTreeHeight = 26,
+		sleighEvery = 50,
+		-- All Hallows': candles floating under the Foyer's ceiling, in this box.
+		candles = 28,
+		candlesFrom = { -40, 28, -6 },
+		candlesTo = { 40, 40, 62 },
+		-- Valentine's: heart lanterns rising from the street (from this box, into the night); hearts
+		-- and clovers floating in the Foyer.
+		lanterns = 36,
+		lanternsFrom = { -70, 2, -100 },
+		lanternsTo = { 70, 2, -20 },
+		floaters = 22,
+		-- New Year: the glitter ball over the street, and a burst of gold in the sky this often.
+		glitterBall = { 0, 44, -50 },
+		burstEvery = 9,
+		-- Easter: butterflies about the front.
+		butterflies = 14,
+	},
+
 	-- The Golden Transformation, the Midas touch (World/Midas).
 	Midas = {
 		speed = 14, -- studs a second the ring of gold runs through the Suite
@@ -1055,6 +1092,47 @@ local defaults = {
 			blizzard = "winter", goldWave = "gold", blackout = "spy", fireworks = "fireworks",
 		},
 		AbuseMusicVolume = 0.85,
+		-- Each holiday's own music while it's on (World/AbuseMusic; Admin Abuse and the owner's
+		-- effects take over while they're on), from the same licensed library (APM Music). `gain`
+		-- evens their loudness the same way (to about -17 dBFS, the quietest held under their peaks).
+		HolidayMusic = {
+			halloween = {
+				{ id = "rbxassetid://1841601281", gain = 1.02 }, -- Waltz in a Graveyard (Kids' Horror), 2:30
+				{ id = "rbxassetid://1836009626", gain = 1.45 }, -- Halloween Horrors Waltz, 1:54
+			},
+			thanksgiving = {
+				{ id = "rbxassetid://1837523379", gain = 0.86 }, -- Sir Henry's Barn Dance, 2:41
+				{ id = "rbxassetid://1842158095", gain = 2.5 }, -- Vivaldi: The Four Seasons, Autumn (3rd mvt), 3:37
+			},
+			christmas = {
+				{ id = "rbxassetid://1839287871", gain = 1.09 }, -- Jingle Bells (soft piano), 1:34
+				{ id = "rbxassetid://9041733206", gain = 1.84 }, -- O Christmas Tree (string quartet), 1:48
+				{ id = "rbxassetid://85297174440725", gain = 2.43 }, -- Dance of the Sugar Plum Fairy, 1:44
+				{ id = "rbxassetid://1841545380", gain = 1.1 }, -- Snowman Waltz, 2:00
+				{ id = "rbxassetid://1836686862", gain = 1.04 }, -- Xmas Winter (swing), 2:00
+			},
+			newYear = {
+				{ id = "rbxassetid://1842447444", gain = 1.39 }, -- Gala Premiere, 2:49
+				{ id = "rbxassetid://1840279456", gain = 2.89 }, -- Midnight Waltz, 3:51
+				{ id = "rbxassetid://9041733512", gain = 1.92 }, -- Auld Lang Syne (string quartet), 2:32
+			},
+			valentine = {
+				{ id = "rbxassetid://1837379560", gain = 0.72 }, -- Fall in Love, 2:37
+				{ id = "rbxassetid://106851772803412", gain = 0.92 }, -- Moonlight Romance, 2:48
+				{ id = "rbxassetid://1847187714", gain = 1.22 }, -- Sweet First Love (string quartet), 2:02
+			},
+			stPatrick = {
+				{ id = "rbxassetid://1840254519", gain = 1.24 }, -- Irish Jig, 1:03
+				{ id = "rbxassetid://1840355838", gain = 2.26 }, -- Celtic Reel (A), 1:42
+				{ id = "rbxassetid://1840355872", gain = 2.89 }, -- Celtic Reel (B), 1:41
+			},
+			easter = {
+				{ id = "rbxassetid://9045766074", gain = 2.25 }, -- Vivaldi: Spring (piano), 2:24
+				{ id = "rbxassetid://9048201494", gain = 1.25 }, -- In Spring (harp), 2:21
+				{ id = "rbxassetid://9042454553", gain = 1.06 }, -- Meadow Sweet, 3:18
+			},
+		},
+		HolidayMusicVolume = 0.72,
 		-- One track of your own in place of a playlist ("rbxassetid://<id>"), e.g. the house's own
 		-- composed loops in assets/audio. "" plays the playlist. (A track named maison-lounge,
 		-- maison-table or maison-ballroom in SoundService is used if a playlist is emptied.)

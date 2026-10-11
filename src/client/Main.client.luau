@@ -163,6 +163,8 @@ local function start(name: string, fn: () -> ()): boolean
 	end
 	return ok
 end
+-- How much the shows may draw on this screen (the graphics level, Glow and sparks, the frame rate).
+start("Quality", require(script.Parent.Quality).start)
 start("Dialogue", Dialogue.start)
 if not start("Prompts", Prompts.start) then
 	-- Without the house's own prompts, Roblox's standard ones: every Sit and Speak still works.
@@ -512,15 +514,16 @@ local function startHud()
 	ownerKey()
 	player:GetAttributeChangedSignal("MaisonAdmin"):Connect(ownerKey)
 	-- What to do next, under the keys while you walk (stepping aside while something bigger holds
-	-- the screen: the Meme Takeover, the Golden Transformation, an effect's big words, Admin
-	-- Abuse's arrival card and gifts, a headline, a badge coming in).
+	-- the screen: the Meme Takeover, the Golden Transformation, a holiday's title, an effect's big
+	-- words, Admin Abuse's arrival card and gifts, a headline, a badge coming in).
 	start("Objective", function()
 		local MemeTakeover = require(script.Parent.World.MemeTakeover)
 		local AbuseFX = require(script.Parent.World.AbuseFX)
 		local AbuseShow = require(script.Parent.World.AbuseShow)
 		local Midas = require(script.Parent.World.Midas)
+		local Stagecraft = require(script.Parent.World.Stagecraft)
 		Objective.isBusy = function(): boolean
-			return MemeTakeover.isRunning() or Midas.isRunning() or AbuseFX.bannerUp() or AbuseShow.cardUp() or Headline.showing() or Celebrate.badgeUp()
+			return MemeTakeover.isRunning() or Midas.isRunning() or Stagecraft.titleUp() or AbuseFX.bannerUp() or AbuseShow.cardUp() or Headline.showing() or Celebrate.badgeUp()
 		end
 		Objective.start(function(mode: string)
 			quickSit(mode)

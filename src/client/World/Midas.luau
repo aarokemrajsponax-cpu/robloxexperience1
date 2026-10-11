@@ -34,11 +34,11 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
-local Brand = require(ReplicatedStorage.Shared.Brand)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Layout = require(ReplicatedStorage.Shared.Layout)
 local Flakes = require(script.Parent.Flakes)
 local Stagecraft = require(script.Parent.Stagecraft)
+local Quality = require(script.Parent.Parent.Quality)
 local Sound = require(script.Parent.Parent.Sound)
 
 local Midas = {}
@@ -57,6 +57,7 @@ local CONFETTI = { rgb(246, 206, 112), rgb(255, 226, 150), rgb(214, 166, 72), rg
 local SPARK = "rbxasset://textures/particles/sparkles_main.dds"
 local RING = "rbxasset://textures/particles/forcefield_vortex_main.dds"
 local FLARE = 0.6 -- seconds a part shines white-gold as the light passes, before it settles into gold
+local GOLD_TITLE: Stagecraft.TitleLook = { deep = GOLD_RICH, mid = GOLD, light = GOLD_WHITE, ink = rgb(46, 30, 8), kicker = GOLD_LIGHT }
 
 local function cfg(): { [string]: any }
 	return (Config.data :: any).Midas
@@ -89,15 +90,10 @@ local function flatLook(root: BasePart): Vector3
 	return if look.Magnitude > 0.01 then look.Unit else Vector3.new(0, 0, -1)
 end
 
--- How many sparks: fewer on slower graphics settings.
+-- How many sparks: as many as this screen can take (Quality: the graphics level, Glow and
+-- sparks, the frame rate).
 local function density(): number
-	local ok, level = pcall(function(): any
-		return (UserSettings():GetService("UserGameSettings") :: any).SavedQualityLevel.Value
-	end)
-	if ok and type(level) == "number" and level > 0 then
-		return math.clamp(0.4 + level * 0.06, 0.5, 1)
-	end
-	return 0.85
+	return Quality.level()
 end
 
 local function anchor(parent: Instance, name: string, at: Vector3, size: Vector3?): Part
@@ -1247,141 +1243,6 @@ local function goldenFire(seconds: number)
 	end)
 end
 
--- Words across the upper screen in gold: a line in the house's display letters (a shine running
--- through them) under a smaller italic line between two fine rules. They settle in, hold and fade.
--- (Under the bar at the top and clear of the keys down the left; the card of what to do next steps
--- aside while the show is on.)
-local lastTitle: Frame? = nil
-local function title(gui: ScreenGui, kicker: string?, words: string, hold: number)
-	if gui.Parent == nil then
-		return
-	end
-	local prev = lastTitle
-	if prev and prev.Parent then
-		prev:Destroy()
-	end
-	local frame = Instance.new("Frame")
-	frame.Name = "Caption"
-	frame.BackgroundTransparency = 1
-	frame.AnchorPoint = Vector2.new(0.5, 0.5)
-	frame.Position = UDim2.fromScale(0.5, 0.3)
-	frame.Size = UDim2.fromScale(0.8, 0.11)
-	frame.Parent = gui
-	lastTitle = frame
-	local texts: { TextLabel } = {}
-	local strokes: { UIStroke } = {}
-	local function line(name: string, font: Font, text: string): TextLabel
-		local l = Instance.new("TextLabel")
-		l.Name = name
-		l.BackgroundTransparency = 1
-		l.FontFace = font
-		l.TextScaled = true
-		l.Text = text
-		l.TextTransparency = 1
-		l.Parent = frame
-		table.insert(texts, l)
-		return l
-	end
-	local shadow = line("Shadow", Brand.Fonts.display, words)
-	shadow.Position = UDim2.new(0, 0, 0, 3)
-	shadow.Size = UDim2.fromScale(1, 1)
-	shadow.TextColor3 = Color3.new(0, 0, 0)
-	local label = line("Words", Brand.Fonts.display, words)
-	label.Size = UDim2.fromScale(1, 1)
-	label.TextColor3 = Color3.new(1, 1, 1)
-	local cap = Instance.new("UITextSizeConstraint")
-	cap.MaxTextSize = 64
-	cap.Parent = label
-	local capShadow = cap:Clone()
-	capShadow.Parent = shadow
-	local fill = Instance.new("UIGradient")
-	fill.Rotation = 12
-	fill.Color = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, GOLD_RICH),
-		ColorSequenceKeypoint.new(0.42, GOLD),
-		ColorSequenceKeypoint.new(0.5, GOLD_WHITE),
-		ColorSequenceKeypoint.new(0.58, GOLD),
-		ColorSequenceKeypoint.new(1, GOLD_RICH),
-	})
-	fill.Offset = Vector2.new(-0.6, 0)
-	fill.Parent = label
-	local edge = Instance.new("UIStroke")
-	edge.Color = rgb(46, 30, 8)
-	edge.Thickness = 2
-	edge.Transparency = 1
-	edge.Parent = label
-	table.insert(strokes, edge)
-	if kicker then
-		local k = line("Kicker", Brand.Fonts.displayItalic, kicker)
-		k.AnchorPoint = Vector2.new(0.5, 1)
-		k.Position = UDim2.new(0.5, 0, 0, -12)
-		k.Size = UDim2.new(0.5, 0, 0.42, 0)
-		k.TextColor3 = GOLD_LIGHT
-		local kEdge = Instance.new("UIStroke")
-		kEdge.Color = rgb(30, 20, 6)
-		kEdge.Thickness = 1.5
-		kEdge.Transparency = 1
-		kEdge.Parent = k
-		table.insert(strokes, kEdge)
-		-- A fine rule between the two lines, fading at its ends, with a small diamond at its middle.
-		local rule = Instance.new("Frame")
-		rule.Name = "Rule"
-		rule.BorderSizePixel = 0
-		rule.BackgroundColor3 = GOLD
-		rule.BackgroundTransparency = 1
-		rule.AnchorPoint = Vector2.new(0.5, 0.5)
-		rule.Position = UDim2.new(0.5, 0, 0, -6)
-		rule.Size = UDim2.new(0.34, 0, 0, 2)
-		rule.Parent = frame
-		local fade = Instance.new("UIGradient")
-		fade.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0), NumberSequenceKeypoint.new(1, 1) })
-		fade.Parent = rule
-		local gem = Instance.new("Frame")
-		gem.Name = "Diamond"
-		gem.BorderSizePixel = 0
-		gem.BackgroundColor3 = GOLD_LIGHT
-		gem.BackgroundTransparency = 1
-		gem.AnchorPoint = Vector2.new(0.5, 0.5)
-		gem.Position = UDim2.new(0.5, 0, 0, -6)
-		gem.Size = UDim2.fromOffset(8, 8)
-		gem.Rotation = 45
-		gem.Parent = frame
-		for _, f in { rule, gem } do
-			TweenService:Create(f, TweenInfo.new(0.7), { BackgroundTransparency = 0.05 }):Play()
-		end
-	end
-	local scale = Instance.new("UIScale")
-	scale.Scale = 1.18
-	scale.Parent = frame
-	TweenService:Create(scale, TweenInfo.new(1.1, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { Scale = 1 }):Play()
-	for _, l in texts do
-		TweenService:Create(l, TweenInfo.new(0.7), { TextTransparency = if l.Name == "Shadow" then 0.6 else 0 }):Play()
-	end
-	for _, s in strokes do
-		TweenService:Create(s, TweenInfo.new(0.7), { Transparency = 0.15 }):Play()
-	end
-	TweenService:Create(fill, TweenInfo.new(1.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { Offset = Vector2.new(0.6, 0) }):Play()
-	task.delay(hold, function()
-		if frame.Parent == nil then
-			return
-		end
-		for _, d in frame:GetDescendants() do
-			if d:IsA("TextLabel") then
-				TweenService:Create(d, TweenInfo.new(0.6), { TextTransparency = 1 }):Play()
-			elseif d:IsA("UIStroke") then
-				TweenService:Create(d, TweenInfo.new(0.6), { Transparency = 1 }):Play()
-			elseif d:IsA("Frame") then
-				TweenService:Create(d, TweenInfo.new(0.6), { BackgroundTransparency = 1 }):Play()
-			end
-		end
-		task.wait(0.65)
-		if lastTitle == frame then
-			lastTitle = nil
-		end
-		frame:Destroy()
-	end)
-end
-
 local busyUntil = 0
 local live = 0
 
@@ -1457,7 +1318,7 @@ function Midas.play(seconds: number)
 		end)
 		local sun = gathering(stage, HUSH)
 		task.delay(0.35, function()
-			title(gui, "The Golden Transformation", "THE MIDAS TOUCH", 3.4)
+			Stagecraft.title(gui, "The Golden Transformation", "THE MIDAS TOUCH", 3.4, GOLD_TITLE)
 		end)
 		task.delay(HUSH + 3.6, function()
 			if gui.Parent then
@@ -1598,7 +1459,7 @@ function Midas.play(seconds: number)
 				if head then
 					burst(stage, head.CFrame.Position + Vector3.new(0, 1, 0), 60, 12)
 				end
-				title(gui, "All hail", string.upper(player.DisplayName), 3.4)
+				Stagecraft.title(gui, "All hail", string.upper(player.DisplayName), 3.4, GOLD_TITLE)
 			end)
 			-- The camera looks up at them, from the side away from the statue.
 			local root, head = rootOf(), headOf()
@@ -1675,7 +1536,7 @@ function Midas.play(seconds: number)
 			end
 			stopScore()
 			task.delay(1.2, function()
-				title(gui, nil, "LONG MAY YOU SHINE", 3)
+				Stagecraft.title(gui, nil, "LONG MAY YOU SHINE", 3, GOLD_TITLE)
 			end)
 		end)
 		task.delay(S - 2, function()

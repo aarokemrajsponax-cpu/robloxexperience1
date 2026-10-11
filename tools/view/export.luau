@@ -89,6 +89,11 @@ return function(workspace, lighting, path)
 		if d:IsA("BasePart") then
 			if d.Transparency < 0.99 then
 				local shape = if d:IsA("WedgePart") then "Wedge" elseif d:IsA("CornerWedgePart") then "CornerWedge" elseif d:IsA("Part") then d.Shape.Name else "Block"
+				-- (A block with a sphere mesh is drawn as the stretched sphere it is: an egg, a lobe.)
+				local mesh = d:FindFirstChildOfClass("SpecialMesh")
+				if mesh and mesh.MeshType == Enum.MeshType.Sphere then
+					shape = "Ellipsoid"
+				end
 				table.insert(out.parts, { d.Name, shape, v3(d.Size), { d.CFrame:GetComponents() }, rgb(d.Color), d.Material.Name, d.Transparency, d.Reflectance, d.CastShadow })
 			end
 		elseif d:IsA("Light") then

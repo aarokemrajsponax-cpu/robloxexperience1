@@ -19,6 +19,7 @@ local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
+local HouseEvents = require(ReplicatedStorage.Shared.HouseEvents)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Salutes = require(ReplicatedStorage.Shared.Salutes)
 local Fireworks = require(script.Parent.Fireworks)
@@ -395,7 +396,11 @@ SaluteView.effects = {
 }
 
 function SaluteView.play(m: { [string]: any })
-	if type(m.line) == "string" and m.line ~= "" then
+	-- (A holiday beginning brings its own title card, with its line: World/HolidayFX. Not New
+	-- Year's: its countdown is the moment.)
+	local event = if type(m.id) == "string" then HouseEvents.byId[m.id] else nil
+	local holidayTitle = event ~= nil and event.holiday == true and m.id ~= "newYear" and m.title == event.name
+	if type(m.line) == "string" and m.line ~= "" and not holidayTitle then
 		Toast.show(if type(m.title) == "string" then m.title else "A Salute", m.line, 5)
 	end
 	local effects = (if type(m.effects) == "table" then m.effects else {}) :: { any }

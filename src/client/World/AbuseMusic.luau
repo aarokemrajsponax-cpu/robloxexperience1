@@ -3,8 +3,10 @@
 -- (Mega Abuse: harder ones, dubstep and drum and bass); while an effect is switched on, its own
 -- (the galaxy: something cosmic; a meteor shower or a black hole: something epic; the dance
 -- party: disco; the blizzard: winter; the gold wave: a brass fanfare; the blackout: spy jazz).
--- Whichever was started last plays; when they're all over, the house's own music comes back.
--- Every track is a real recording from Roblox's licensed library (Config.Assets.AbuseMusic).
+-- Whichever was started last plays. With neither on, a holiday plays its own (Config.Assets.
+-- HolidayMusic: a waltz for All Hallows', carols for Christmas, a jig for St Patrick's...); when
+-- they're all over, the house's own music comes back. Every track is a real recording from
+-- Roblox's licensed library (Config.Assets.AbuseMusic).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
@@ -44,7 +46,25 @@ function AbuseMusic.choose(): string
 			best, bestAt = theme, since
 		end
 	end
+	-- (Nothing of the owner's on: a holiday's own music while one is on.)
+	if best == "" then
+		local holidays = assets().HolidayMusic or {}
+		for _, id in HouseEvents.Holidays do
+			local ends = Workspace:GetAttribute(HouseEvents.attribute(id))
+			if type(ends) == "number" and ends > Workspace:GetServerTimeNow() and type(holidays[id]) == "table" then
+				return "holiday:" .. id
+			end
+		end
+	end
 	return best
+end
+
+-- A playlist by name: Admin Abuse's and the effects' (AbuseMusic), or a holiday's ("holiday:id").
+local function songsOf(want: string): (any, number)
+	if string.sub(want, 1, 8) == "holiday:" then
+		return (assets().HolidayMusic or {})[string.sub(want, 9)], assets().HolidayMusicVolume or 0.72
+	end
+	return (assets().AbuseMusic or {})[want], assets().AbuseMusicVolume or 0.85
 end
 
 function AbuseMusic.current(): string
@@ -65,8 +85,7 @@ local function apply()
 	if stop then
 		stop()
 	end
-	local lists = assets().AbuseMusic or {}
-	local songs = lists[want]
+	local songs, volume = songsOf(want)
 	if want ~= "" and type(songs) == "table" and #songs > 0 then
 		-- (Admin Abuse's night starts its playlist at a track of its own: not the same song first
 		-- every night.)
@@ -78,7 +97,7 @@ local function apply()
 				table.insert(order, songs[((math.floor(first) - 1 + i - 1) % #songs) + 1])
 			end
 		end
-		stopCurrent = Sound.scoreList(order, assets().AbuseMusicVolume or 0.85)
+		stopCurrent = Sound.scoreList(order, volume)
 	end
 end
 
@@ -94,6 +113,9 @@ function AbuseMusic.start()
 	end
 	for _, e in HouseEvents.Effects do
 		Workspace:GetAttributeChangedSignal(HouseEvents.fxAttribute(e.id)):Connect(apply)
+	end
+	for _, id in HouseEvents.Holidays do
+		Workspace:GetAttributeChangedSignal(HouseEvents.attribute(id)):Connect(apply)
 	end
 	apply()
 	-- (Admin Abuse ends at a time, not with a change: look now and then.)
