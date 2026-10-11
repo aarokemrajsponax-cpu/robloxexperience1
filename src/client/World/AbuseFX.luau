@@ -46,6 +46,7 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Fireworks = require(script.Parent.Fireworks)
 local Flakes = require(script.Parent.Flakes)
 local OwnerCameo = require(script.Parent.OwnerCameo)
+local Quality = require(script.Parent.Parent.Quality)
 local Sound = require(script.Parent.Parent.Sound)
 
 local AbuseFX = {}
@@ -661,12 +662,16 @@ local function part(name: string, size: Vector3, colour: Color3, material: Enum.
 	return p
 end
 
+-- (Every effect's particles come at the rate this screen can take: Quality.)
 local function emitter(parent: Instance, texture: string, colour: ColorSequence, props: { [string]: any }): ParticleEmitter
 	local e = Instance.new("ParticleEmitter")
 	e.Texture = texture
 	e.Color = colour
 	for k, v in props do
 		(e :: any)[k] = v
+	end
+	if type(props.Rate) == "number" and props.Rate > 0 then
+		e.Rate = props.Rate * Quality.level()
 	end
 	e.Parent = parent
 	return e
@@ -1140,7 +1145,7 @@ local function galaxy(seconds: number)
 	folder.Name = "Galaxy"
 	folder.Parent = stage()
 	local stars: { Part } = {}
-	for _ = 1, 260 do
+	for _ = 1, Quality.count(260, 90) do
 		local dir = Vector3.new(rng:NextNumber(-1, 1), rng:NextNumber(0.12, 1), rng:NextNumber(-1, 1)).Unit
 		local s = part("Star", Vector3.new(1, 1, 1) * rng:NextNumber(0.8, 2.2), Color3.new(1, 1, 1):Lerp(rgb(170, 200, 255), rng:NextNumber()))
 		s.Shape = Enum.PartType.Ball

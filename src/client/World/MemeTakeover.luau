@@ -34,6 +34,7 @@ local Curios = require(ReplicatedStorage.Shared.Curios)
 local Layout = require(ReplicatedStorage.Shared.Layout)
 local MemeTakeovers = require(ReplicatedStorage.Shared.MemeTakeovers)
 local CameraRig = require(script.Parent.Parent.Camera)
+local Quality = require(script.Parent.Parent.Quality)
 local Sound = require(script.Parent.Parent.Sound)
 local Stagecraft = require(script.Parent.Stagecraft)
 
@@ -443,6 +444,9 @@ function MemeTakeover.play(seconds: number?, editionId: string?)
 	local mid = Vector3.new((room.minX + room.maxX) / 2, floorY, (room.minZ + room.maxZ) / 2)
 	local T = seconds or cfg().memeSeconds
 	running = true
+	-- (As many memes as this screen can take: Quality.)
+	local castCount = Quality.count(cfg().memeCast, 16)
+	local rainCount = Quality.count(cfg().memeRain, 50)
 
 	local folder = Instance.new("Folder")
 	folder.Name = "MemeTakeover"
@@ -1089,7 +1093,7 @@ function MemeTakeover.play(seconds: number?, editionId: string?)
 		end
 		cc.Saturation = if act >= 2 and act <= 6 then 0.5 else (if act == 7 then cc.Saturation else 0)
 		-- Act 2: the memes arrive, a few each frame, until the cast is full.
-		if act == 2 and spawned < cfg().memeCast then
+		if act == 2 and spawned < castCount then
 			spawned += 1
 			local size = math.random(25, 55) / 10
 			if V.entrance == "drop" then
@@ -1100,7 +1104,7 @@ function MemeTakeover.play(seconds: number?, editionId: string?)
 				local z = room.minZ + 1.5 + ((spawned * 1.7) % math.max(1, room.maxZ - room.minZ - 3))
 				spawnMeme(size, Vector3.new(room.minX + 1.5, floorY + size / 2, z), Vector3.new(8 + math.random() * 3, 3, 0))
 			elseif V.entrance == "swirl" then
-				local a = (spawned / cfg().memeCast) * math.pi * 4
+				local a = (spawned / castCount) * math.pi * 4
 				local r = math.min(room.maxX - room.minX, room.maxZ - room.minZ) * 0.45
 				spawnMeme(size, mid + Vector3.new(math.cos(a) * r, 3, math.sin(a) * r), Vector3.new(-math.sin(a) * 14, 6, math.cos(a) * 14))
 			else
@@ -1115,7 +1119,7 @@ function MemeTakeover.play(seconds: number?, editionId: string?)
 			end
 		end
 		-- Act 4: the rain (or the bubbles rising).
-		if act == 4 and #minis < cfg().memeRain and math.random() < 0.8 then
+		if act == 4 and #minis < rainCount and math.random() < 0.8 then
 			local glyphs = V.rain
 			local c = if glyphs then { glyph = glyphs[math.random(1, #glyphs)], accent = "" } else list[math.random(1, #list)]
 			local y = if V.rainUp then floorY + 0.5 else ceiling

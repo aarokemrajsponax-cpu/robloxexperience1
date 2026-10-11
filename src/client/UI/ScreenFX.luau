@@ -1093,6 +1093,10 @@ export type FX = {
 	golden: boolean,
 	shakeLeft: number,
 	shakeTarget: GuiObject?,
+	-- (What's wanted, worked out four times a second, or at once when something new starts: not
+	-- every frame.)
+	want: { string }?,
+	wantAt: number?,
 }
 
 local all: { FX } = {}
@@ -1301,6 +1305,7 @@ end
 function ScreenFX.pulse(id: string, seconds: number)
 	for _, fx in all do
 		fx.pulses[id] = os.clock() + seconds
+		fx.wantAt = nil
 	end
 end
 
@@ -1309,7 +1314,13 @@ local function stepFX(fx: FX, dt: number)
 		return
 	end
 	fx.t += dt
-	local want = wanted(fx)
+	local cached, at = fx.want, fx.wantAt
+	local want: { string } = cached or {}
+	if cached == nil or at == nil or fx.t - at >= 0.25 then
+		want = wanted(fx)
+		fx.want = want
+		fx.wantAt = fx.t
+	end
 	local keep: { [string]: boolean } = {}
 	for _, id in want do
 		keep[id] = true
@@ -1366,6 +1377,7 @@ function ScreenFX.start()
 	end)
 	local function ribbons()
 		for _, fx in all do
+			fx.wantAt = nil -- (an effect switched on or off: worked out again at once)
 			refreshRibbon(fx)
 		end
 	end

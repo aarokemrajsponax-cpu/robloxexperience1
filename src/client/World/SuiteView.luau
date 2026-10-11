@@ -601,11 +601,17 @@ function SuiteView.start()
 	Players.PlayerRemoving:Connect(function(other: Player)
 		hidden[other] = nil
 	end)
-	RunService.Heartbeat:Connect(function()
+	local privacyClock = 0
+	RunService.Heartbeat:Connect(function(dt: number)
 		if inside then
 			animate()
 		end
-		privacyNow()
+		-- (Four times a second is soon enough to keep another guest's Suite out of sight.)
+		privacyClock += dt
+		if privacyClock >= 0.25 then
+			privacyClock = 0
+			privacyNow()
+		end
 	end)
 	task.spawn(function()
 		while true do

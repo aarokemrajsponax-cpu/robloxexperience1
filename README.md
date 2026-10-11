@@ -267,13 +267,24 @@ a Nightly attempt or a Mythic's odds.
   over the whole estate; your camera goes out across the street to watch it, and comes back with
   the key or any step), the **Meme Takeover** (ninety seconds in six acts and a finale, in one of
   **fifteen editions**, Build 57: never the same twice in a row; see below), or the **Golden
-  Transformation**, the Midas touch (forty seconds,
-  `World/Midas`): a temple gong, the lights sink, and a ring of gold runs out across the floor
-  from where you stand, turning everything it passes to gold (floors, walls, ceilings, every
-  piece of furniture, the fireplace); a heavenly choir, gold confetti fluttering through the
-  rooms, gold coins raining from the ceiling and ringing as they land round you, shafts of light
-  from above, the fire burning gold; a regal fanfare as a jewelled crown settles on your head;
-  then the gold ebbs back and everything is exactly as it was. Only you see it.
+  Transformation**, the Midas touch (forty seconds, `World/Midas`, Build 59: staged like a film
+  in five acts). *The hush*: black bars close in, the lights sink, a gong, and motes of gold
+  spiral in round you and gather into a small sun in front of you (THE MIDAS TOUCH, in gold).
+  *The touch*: the sun bursts, a wall of golden light runs out across the rooms, and everything
+  it passes flares white-gold and settles into gold (floors, walls, ceilings, every piece of
+  furniture, the fireplace) while the camera rises behind you to watch it go. *The splendour*: a
+  heavenly choir, gold confetti, gold coins raining from the ceiling that glint and ring as they
+  land, seven shafts of light with gold dust flowing down them, the air itself glittering,
+  fountains of gold sparks in the room's corners, the fire burning gold, and your own likeness,
+  cast in gold, rising out of the floor on a plinth of black marble. *The crowning*: a fanfare, a
+  shimmering pillar of light with a follow spot, cold sparks firing in a ring round you, a cape
+  of red velvet edged in gold with an ermine collar on your shoulders and a jewelled crown
+  (velvet cap, arches, an orb and a diamond that glints) settling on your head, the camera
+  looking up at you: ALL HAIL, and your name. *The finale*: a golden supernova; the gold ebbs
+  back across the rooms, the coins rise as light, the statue crumbles into gold dust and sinks
+  away, the crown rises and is gone (LONG MAY YOU SHINE), and everything is exactly as it was.
+  Only you see it. (The two camera shots and the quake keep still with Settings → Movement:
+  Still, and never at a table.)
 - **The fireworks: a pyromusical** (`World/Fireworks`), the same for every show (Suite
   Fireworks, the Fireworks salute, the Grand Salute, the Midnight Finale), in three acts, each to
   its own score from Roblox's licensed library: **Hanabi** to taiko drums (Japanese
@@ -459,6 +470,80 @@ a Nightly attempt or a Mythic's odds.
   effect's big words, Admin Abuse's arrival card and gifts, a headline, a badge coming in) and
   comes back quietly after. The Meme Takeover's captions and the effects' big words stand under
   the bar at the top and clear of the keys down the left.
+- **The holidays** (Build 59; `World/HolidayFX`, `World/HolidaySets`, `Config.Holidays`): when
+  one begins, black bars close in on every screen and its title comes up in its own colours
+  (*Happy Halloween*, THE ALL HALLOWS' HUNT, and what to do), a chime sounds, its colours burst
+  round you, and the house dresses itself from the ground up: the street front, the Foyer and the
+  sky. Its own music plays (`Assets.HolidayMusic`), the light takes its tint, and the air fills:
+  - **All Hallows'**: giant jack-o'-lanterns with friendly glowing faces at the steps and on every
+    step, a row of them along the kerb, orange and violet lights under the three cornices, a great
+    harvest moon in the sky with cartoon bats crossing it, a violet mist along the street; candles
+    floating under the Foyer's ceiling, lights wound up its columns, fireflies. Waltzes from the
+    Kids' Horror album. Nothing frightening.
+  - **Thanksgiving**: autumn trees in red and gold either side of the door, hay bales, pumpkins,
+    gourds and sheaves of corn at the steps, garlands of autumn leaves with warm lanterns under
+    the cornices, the harvest moon; leaves wound up the Foyer's columns, harvest at their feet,
+    leaves falling. A barn dance and Vivaldi's *Autumn*.
+  - **Christmas**: a great tree on the pavement and another in the Foyer, hung with baubles and a
+    winding string of lights under a golden star, presents underneath; candy canes at the steps,
+    the street under snow, pine garlands and lights under the cornices, the northern lights over
+    the house and a sleigh crossing the sky now and then; pine and lights wound up the Foyer's
+    columns, snow falling. *Jingle Bells*, *O Christmas Tree*, the *Sugar Plum Fairy*...
+  - **New Year**: balloons in gold, silver and black at the steps and in the Foyer, a glitter ball
+    turning over the street and throwing beams, searchlights sweeping the sky, bursts of gold up
+    there, champagne bubbles rising round you and gold confetti now and then. *Gala Premiere*,
+    *Midnight Waltz*, *Auld Lang Syne*. (The countdown itself is still the moment: no title over it.)
+  - **Valentine's**: two great hearts of light at the steps, rose and red lights under the
+    cornices, heart lanterns rising from the street into the night, hearts floating under the
+    Foyer's ceiling, roses wound up its columns, rose petals falling.
+  - **St Patrick's**: the rainbow (down to the pot of gold while it's hidden, over the street
+    after), giant shamrocks at the steps, green and gold bunting and lights under the cornices,
+    clovers floating in the Foyer. An Irish jig and two Celtic reels.
+  - **Easter**: giant painted eggs on the pavement, blossom trees either side of the door, tulips
+    along the front, pastel bunting, butterflies, blossom falling, balloons and eggs in the
+    Foyer. Vivaldi's *Spring*.
+  - **The hunt**: every pickup glows in its holiday's colours and sparkles; the golden prize stands
+    in a column of golden light with sparks rising up it, seen from across the house.
+  Where the great pieces stand is in `Config.Holidays`; everything is built on each screen
+  alone, untouchable, and cleared when the holiday ends.
+- **Build 59: the sorting, the sounds, the dock, the shows, and every frame**:
+  - **The sorting table** (`Table/SortScreen`): each room's leather in its own gradient (the
+    Salon's emerald running to teal, the Velvet Room's wine, the Obsidian Room's graphite, the
+    Midnight Room's navy, the Library's leather, the Ballroom's violet) with a cooler tone drifting
+    slowly over it. The six cases are jewel cases, each lacquered in its own jewel (sapphire, ruby,
+    emerald, aquamarine, amethyst, topaz) with a gold edge and a glow, on a lit plinth under a
+    beam, the name in gold on dark glass and the count on a gold badge, light running across them
+    now and then. A filed piece rises off the cloth and sails into its case on a smooth curve,
+    trailing light in the case's colour; the case rises to meet it, a ring of light runs out from
+    its plinth and its count ticks over. A held piece follows on a smooth spring; dealt pieces
+    glide down onto the cloth. The 62 illustrations are glossier, with a rim of light and a
+    contact shadow under every silhouette (`tools/art/pieces.py`).
+  - **Sounds**: the twelve-second crowd cheer is gone everywhere; a two-second flourish of chimes
+    takes its place, and the fanfares, shimmers, the choir and the gong are trimmed and fade out.
+  - **The dock**: big keys, two by two, readable on a phone.
+  - **The Meme Takeover**: its own score in every edition again (*Swing With Me*), staged like a
+    film: black bars for the opening and the finale, a dance floor of light and six beams lit on
+    the music's own beat, confetti cannons at every act, the room quaking on the big hits, the
+    boss coming down a pillar of light with the camera looking up at it, a supernova to end.
+  - **Things only Gems buy** (the Gem Shop opens on them): **companions** floating at your
+    shoulder for everyone to see (Fox Kit, Snow Owl, Panda, Velvet Bunny 250; Golden Swan, Royal
+    Corgi, Moon Butterfly 500; Unicorn, Little Dragon 1,000; The Crown Jewel 2,500), **table felts**
+    for your own sorting table (Aurora Silk, Sakura, Ice Palace 500; Liquid Gold, Galaxy Velvet
+    1,000; Obsidian Fire 2,500) and **guide trails** (Diamond Dust 250; Phoenix, Nebula 500;
+    Prism 1,000). Prices sit at 250, 500, 1,000 and 2,500, so every Gem pack buys something whole
+    with nothing stranded, and Gems are earned by playing too. Kept for good, one of each worn at
+    a time; the server checks every purchase and every wear.
+  - **The Concierge walks** on the tour (its walk plays in step, with a sway from foot to foot)
+    and **the Pianist sits on the bench**, never sunk into it.
+  - **The Golden Transformation** (see *Suite spectacles*) and **the holidays** (above), rebuilt.
+  - **As grand as each screen can take** (`Quality`): every show asks how much to draw (sparks,
+    flakes, lights, pieces) from the guest's graphics level, their Glow and sparks setting and the
+    frame rate as they play: down quickly when frames drop, back up slowly as they recover. The
+    house's always-on work is lighter too: the lamps flicker fifteen times a second rather than
+    every frame, the case clock's hands move twice a second, one system turns the staff's heads
+    (two were both setting every neck every frame), the street's weather is shown or hidden only
+    as you pass the door, another guest's Suite is checked four times a second, and the screen's
+    effects are worked out four times a second (at once when one is switched on).
 - **A welcome for every guest, on their own screen** (Build 56; `UI/Welcome`, `Config.Welcome`):
   as they arrive, **WELCOME** lights up letter by letter in gold, with their name under it, on a
   band of dark glass between two lines of light; a sweep of light crosses it, gold sparks burst
@@ -679,7 +764,8 @@ a Nightly attempt or a Mythic's odds.
     you), the Gift Drop (presents and snow), the New Year Countdown (ten seconds, the year's
     biggest fireworks and 200 Gilt for everyone), Sweethearts (love letters, hearts), the Lucky
     Clover (clovers, and a rainbow down to the pot of gold) and the Egg Hunt. Each find pays Gilt
-    and a curio to keep; one golden prize per hunt, with a beam of light over it. On the real day
+    and a curio to keep; one golden prize per hunt, in a column of golden light. Each dresses the
+    whole house on every screen (see *The holidays* below). On the real day
     (Halloween, Thanksgiving, Christmas, New Year, Valentine's Day, St Patrick's Day, Easter; the
     day in UTC, like the Nightly) the house runs its own for the first ten minutes of every hour
     (`Config.Admin.holidayAuto`).
@@ -860,6 +946,14 @@ recordings from Roblox's own licensed libraries, free to use in any experience.
   *Next Level*, *Night Run*...) for Mega Abuse; and a set for the effects (cosmic, sci-fi, epic,
   heroic, disco, winter, a brass fanfare, spy jazz). `Assets.AbuseThemes` says which set each
   effect plays, and `Assets.AbuseMusicVolume` how loud.
+- **Holiday music** (`Assets.HolidayMusic`, Build 59): each holiday's own, from the same library
+  and levelled the same way, playing while it's on (Admin Abuse and the owner's effects take over
+  while they're on): Kids' Horror waltzes for All Hallows', a barn dance and Vivaldi's *Autumn*
+  for Thanksgiving, *Jingle Bells*, *O Christmas Tree*, the *Sugar Plum Fairy*, *Snowman Waltz*
+  and *Xmas Winter* for Christmas, *Gala Premiere*, *Midnight Waltz* and *Auld Lang Syne* for New
+  Year, *Fall in Love*, *Moonlight Romance* and *Sweet First Love* for Valentine's, an Irish jig
+  and two Celtic reels for St Patrick's, and Vivaldi's *Spring*, *In Spring* and *Meadow Sweet*
+  for Easter. `Assets.HolidayMusicVolume` sets how loud.
 
 ### Optional: the house's own composed audio (`assets/audio`)
 

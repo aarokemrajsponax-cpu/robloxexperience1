@@ -4,6 +4,6 @@
 -- see whether Studio has the latest code from GitHub.
 
 return {
-	number = 58,
-	label = "Build 58 · 11 Oct · big words never land on the HUD: the card of what to do next steps aside for shows",
+	number = 59,
+	label = "Build 59 · 11 Oct · the sorting, the shows and the holidays, as grand as each screen can take",
 }

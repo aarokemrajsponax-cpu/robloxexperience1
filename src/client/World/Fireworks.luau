@@ -32,6 +32,7 @@ local Brand = require(ReplicatedStorage.Shared.Brand)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Layout = require(ReplicatedStorage.Shared.Layout)
 local CameraRig = require(script.Parent.Parent.Camera)
+local Quality = require(script.Parent.Parent.Quality)
 local Sound = require(script.Parent.Parent.Sound)
 
 local Fireworks = {}
@@ -96,16 +97,10 @@ local function pick<T>(list: { T }): T
 	return list[math.random(1, #list)]
 end
 
--- The guest's graphics level: fewer stars on slower settings.
+-- Fewer stars on a screen that can't take them (Quality: the graphics level, Glow and sparks,
+-- the frame rate).
 local function quality(): number
-	local ok, level = pcall(function(): any
-		return (UserSettings():GetService("UserGameSettings") :: any).SavedQualityLevel.Value
-	end)
-	local density = tonumber(cfg().density) or 1
-	if ok and type(level) == "number" and level > 0 then
-		return density * math.clamp(0.4 + level * 0.06, 0.5, 1)
-	end
-	return density * 0.85
+	return (tonumber(cfg().density) or 1) * Quality.level()
 end
 
 -- How many of something a shell of size `s` throws.

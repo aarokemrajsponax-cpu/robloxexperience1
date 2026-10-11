@@ -105,6 +105,14 @@ local function step(dt: number)
 			wantYaw = math.clamp(math.atan2(-rel.X, -rel.Z), -MAX_YAW, MAX_YAW)
 			wantPitch = math.clamp(math.atan2(rel.Y - 1.5, math.sqrt(rel.X * rel.X + rel.Z * rel.Z)), -MAX_PITCH, MAX_PITCH)
 		end
+		-- (At rest and nobody near: the neck is left alone, not set again every frame.)
+		if wantYaw == 0 and wantPitch == 0 and math.abs(w.yaw) < 0.002 and math.abs(w.pitch) < 0.002 then
+			if w.yaw ~= 0 or w.pitch ~= 0 then
+				w.yaw, w.pitch = 0, 0
+				w.neck.C0 = w.base
+			end
+			continue
+		end
 		local k = math.min(1, dt * 4)
 		w.yaw += (wantYaw - w.yaw) * k
 		w.pitch += (wantPitch - w.pitch) * k

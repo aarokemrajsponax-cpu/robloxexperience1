@@ -149,7 +149,13 @@ end)
 
 -- The Velvet Room's case clock keeps the guest's own time; its pendulum swings.
 local clockModel: Model? = nil
+local clockAt = -math.huge
 local function stepCaseClock(t: number)
+	-- (The hands move once a second at most: no need to set them every frame.)
+	if t - clockAt < 0.5 then
+		return
+	end
+	clockAt = t
 	local model = clockModel
 	if not model or not model.Parent then
 		local maison = Workspace:FindFirstChild("Maison")
@@ -230,37 +236,6 @@ local function updateNames(pos: Vector3)
 					TweenService:Create(l, TweenInfo.new(if show then 0.9 else 1.4, Enum.EasingStyle.Sine), { TextTransparency = if show then 0 else 1 }):Play()
 				end
 			end
-		end
-	end
-end
-
--- Staff turn their heads to look at you when you come near.
-local function staffLook(pos: Vector3)
-	local folder = Workspace:FindFirstChild("Maison")
-	local staff = folder and folder:FindFirstChild("Staff")
-	if not staff then
-		return
-	end
-	for _, npc in staff:GetChildren() do
-		local head = npc:FindFirstChild("Head")
-		local neck = head and head:FindFirstChild("Neck")
-		local root = npc:FindFirstChild("HumanoidRootPart")
-		if neck and neck:IsA("Motor6D") and root and root:IsA("BasePart") then
-			local base = neck:GetAttribute("BaseC0")
-			if typeof(base) ~= "CFrame" then
-				neck:SetAttribute("BaseC0", neck.C0)
-				base = neck.C0
-			end
-			local toMe = pos - root.Position
-			local flat = Vector3.new(toMe.X, 0, toMe.Z)
-			local goal = base :: CFrame
-			if flat.Magnitude < 16 and flat.Magnitude > 0.5 then
-				local localDir = root.CFrame:VectorToObjectSpace(flat.Unit)
-				local yaw = math.atan2(-localDir.X, -localDir.Z)
-				yaw = math.clamp(yaw, math.rad(-60), math.rad(60))
-				goal = (base :: CFrame) * CFrame.Angles(0, yaw, 0)
-			end
-			neck.C0 = neck.C0:Lerp(goal, 0.08)
 		end
 	end
 end
@@ -374,6 +349,7 @@ local function setupWeather()
 end
 
 local weatherClock = 0
+local weatherShown: boolean? = nil
 local function stepWeather(dt: number, camPos: Vector3)
 	if #flakes == 0 then
 		return
@@ -388,8 +364,11 @@ local function stepWeather(dt: number, camPos: Vector3)
 		end
 	end
 	local inStreet = (camPos.Z < -4 and camPos.Z > -80) or terrace
-	for _, f in flakes do
-		f.part.LocalTransparencyModifier = if inStreet then 0 else 1
+	if inStreet ~= weatherShown then
+		weatherShown = inStreet
+		for _, f in flakes do
+			f.part.LocalTransparencyModifier = if inStreet then 0 else 1
+		end
 	end
 	if not inStreet then
 		return
@@ -417,9 +396,21 @@ local function stepWeather(dt: number, camPos: Vector3)
 end
 
 -- The fire's flicker.
+-- (Fifteen times a second is all a flame needs, and every change to a light costs the lighting:
+-- the flickering lamps are looked up every two seconds, not every frame.)
+local flickerAt, flickerFound = 0, -math.huge
+local flickering: { Instance } = {}
 local function stepFlicker(t: number)
-	for _, light in CollectionService:GetTagged("Flicker") do
-		if light:IsA("PointLight") then
+	if t - flickerAt < 1 / 15 then
+		return
+	end
+	flickerAt = t
+	if t - flickerFound > 2 then
+		flickerFound = t
+		flickering = CollectionService:GetTagged("Flicker")
+	end
+	for _, light in flickering do
+		if light:IsA("PointLight") and light.Parent then
 			local base = (light:GetAttribute("BaseBrightness") :: number?) or 2
 			light.Brightness = base * (0.85 + 0.15 * math.noise(t * 3.1, light.Range) + 0.08 * math.sin(t * 11))
 		end
@@ -444,7 +435,6 @@ function Ambient.start()
 		end
 		updateDoors(pos)
 		updateNames(pos)
-		staffLook(pos)
 		doorman(pos)
 		local zone = Layout.zoneAt(pos)
 		if zone ~= Ambient.zone then
