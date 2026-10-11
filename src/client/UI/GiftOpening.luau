@@ -8,8 +8,10 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local Workspace = game:GetService("Workspace")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
+local Config = require(ReplicatedStorage.Shared.Config)
 local HolidayGames = require(ReplicatedStorage.Shared.HolidayGames)
 local HolidayProps = require(ReplicatedStorage.Shared.HolidayProps)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
@@ -100,20 +102,64 @@ local function drawGift(parent: Instance, wrap: Color3, ribbon: Color3): (Frame,
 	return gift, lid
 end
 
+-- A soft fan of light turning slowly behind the gift (and behind what came out of it).
+local function halo(parent: Instance, colour: Color3, size: number)
+	local holder = frame(parent, "Halo", UDim2.fromOffset(size, size), UDim2.fromScale(0.5, 0.46), colour)
+	holder.BackgroundTransparency = 1
+	holder.ZIndex = 0
+	-- (Each ray a bar right across, centred: a frame turns about its own middle.)
+	for k = 1, 6 do
+		local ray = frame(holder, "Ray", UDim2.new(0, 24, 1, 0), UDim2.fromScale(0.5, 0.5), colour)
+		ray.Rotation = k * 30
+		ray.BackgroundTransparency = 0.8
+		ray.ZIndex = 0
+		local g = Instance.new("UIGradient")
+		g.Rotation = 90
+		g.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0), NumberSequenceKeypoint.new(1, 1) })
+		g.Parent = ray
+	end
+	local glow = frame(holder, "Glow", UDim2.fromScale(0.62, 0.62), UDim2.fromScale(0.5, 0.5), colour)
+	glow.BackgroundTransparency = 0.86
+	glow.ZIndex = 0
+	corner(glow, size)
+	TweenService:Create(holder, TweenInfo.new(36, Enum.EasingStyle.Linear, Enum.EasingDirection.In, -1), { Rotation = 360 }):Play()
+end
+
+-- Little stars twinkling round the gift.
+local function twinkles(parent: Instance, colour: Color3)
+	for k = 1, 7 do
+		local a = k / 7 * math.pi * 2 + 0.4
+		local star = Instance.new("TextLabel")
+		star.Name = "Twinkle"
+		star.BackgroundTransparency = 1
+		star.AnchorPoint = Vector2.new(0.5, 0.5)
+		star.Position = UDim2.new(0.5, math.cos(a) * (150 + (k % 3) * 18), 0.46, math.sin(a) * (110 + (k % 2) * 16))
+		star.Size = UDim2.fromOffset(22, 22)
+		star.FontFace = Brand.Fonts.heavy
+		star.TextScaled = true
+		star.Text = "✦"
+		star.TextColor3 = colour
+		star.TextTransparency = 0.2
+		star.ZIndex = 0
+		star.Parent = parent
+		TweenService:Create(star, TweenInfo.new(0.9 + (k % 4) * 0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true, k * 0.13), { TextTransparency = 0.9, Rotation = 45 }):Play()
+	end
+end
+
 -- A burst of light behind something: rays turning, and a flash.
 local function burst(parent: Instance, colour: Color3)
 	local holder = frame(parent, "Burst", UDim2.fromOffset(10, 10), UDim2.fromScale(0.5, 0.42), colour)
 	holder.BackgroundTransparency = 1
 	holder.ZIndex = 0
-	for k = 1, 10 do
-		local ray = frame(holder, "Ray", UDim2.fromOffset(18, 10), UDim2.fromScale(0.5, 0.5), colour, Vector2.new(0.5, 1))
+	for k = 1, 5 do
+		local ray = frame(holder, "Ray", UDim2.fromOffset(18, 20), UDim2.fromScale(0.5, 0.5), colour)
 		ray.Rotation = k * 36
 		ray.BackgroundTransparency = 0.25
 		local g = Instance.new("UIGradient")
 		g.Rotation = 90
-		g.Transparency = NumberSequence.new(1, 0)
+		g.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0), NumberSequenceKeypoint.new(1, 1) })
 		g.Parent = ray
-		TweenService:Create(ray, TweenInfo.new(0.7, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { Size = UDim2.fromOffset(26, 420), BackgroundTransparency = 1 }):Play()
+		TweenService:Create(ray, TweenInfo.new(0.7, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { Size = UDim2.fromOffset(26, 840), BackgroundTransparency = 1 }):Play()
 	end
 	TweenService:Create(holder, TweenInfo.new(1.4, Enum.EasingStyle.Linear), { Rotation = 60 }):Play()
 	local flash = frame(parent, "Flash", UDim2.fromScale(1, 1), UDim2.fromScale(0.5, 0.5), Color3.new(1, 1, 1))
@@ -140,7 +186,7 @@ local function confetti(parent: Instance, colours: { Color3 })
 	end
 end
 
-type Ui = { group: Frame, stage: Frame, count: TextLabel, keys: Frame, left: number, busy: boolean }
+type Ui = { group: Frame, stage: Frame, count: TextLabel, keys: Frame, left: number, busy: boolean, scale: number }
 local ui: Ui? = nil
 
 local function setCount(u: Ui)
@@ -151,7 +197,9 @@ local refreshKeys: (u: Ui) -> ()
 
 local function clearStage(u: Ui)
 	for _, d in u.stage:GetChildren() do
-		d:Destroy()
+		if not d:IsA("UIScale") then
+			d:Destroy()
+		end
 	end
 end
 
@@ -162,22 +210,24 @@ local function showGift(u: Ui)
 		done.BackgroundTransparency = 1
 		done.AnchorPoint = Vector2.new(0.5, 0.5)
 		done.Position = UDim2.fromScale(0.5, 0.45)
-		done.Size = UDim2.fromOffset(420, 120)
+		done.Size = UDim2.new(1, -40, 0, 120)
 		done.FontFace = Brand.Fonts.displayItalic
 		done.TextSize = 26
 		done.TextWrapped = true
 		done.TextColor3 = C.bone
-		done.Text = "That's every gift. Santa's sleigh brings more from the North Pole."
+		done.Text = if Workspace:GetAttribute(HolidayGames.ATTRIBUTE) == "christmas" then "That's every gift. Santa's sleigh brings more from the North Pole." else "That's every gift. Merry Christmas!"
 		done.Parent = u.stage
 		return
 	end
 	local w = HolidayProps.WRAPS[math.random(1, #HolidayProps.WRAPS)]
+	halo(u.stage, w[2]:Lerp(C.brightGold, 0.5), 420)
+	twinkles(u.stage, C.brightGold)
 	local gift = drawGift(u.stage, w[1], w[2])
-	gift.Position = UDim2.fromScale(0.5, 0.48)
+	gift.Position = UDim2.fromScale(0.5, 0.5)
 	local scale = Instance.new("UIScale")
-	scale.Scale = 0.6
+	scale.Scale = 0.6 * u.scale
 	scale.Parent = gift
-	TweenService:Create(scale, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+	TweenService:Create(scale, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = u.scale }):Play()
 	-- It breathes, waiting.
 	TweenService:Create(gift, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Rotation = 2 }):Play()
 end
@@ -189,13 +239,15 @@ local function reveal(u: Ui, r: { [string]: any })
 	local gems = if type(r.gems) == "number" then r.gems else 0
 	local gilt = if type(r.gilt) == "number" then r.gilt else 0
 	local colour = if gems > 0 then GEM else C.brightGold
+	halo(u.stage, colour, 380)
 	burst(u.stage, colour)
 	confetti(u.stage, if gems > 0 then { GEM, Color3.new(1, 1, 1), Color3.fromRGB(180, 140, 255) } else { C.brightGold, Color3.new(1, 1, 1), Color3.fromRGB(255, 120, 110) })
 	local glyph = Instance.new("TextLabel")
+	glyph.Name = "Prize"
 	glyph.BackgroundTransparency = 1
 	glyph.AnchorPoint = Vector2.new(0.5, 0.5)
-	glyph.Position = UDim2.fromScale(0.5, 0.36)
-	glyph.Size = UDim2.fromOffset(170, 170)
+	glyph.Position = UDim2.fromScale(0.5, 0.4)
+	glyph.Size = UDim2.fromOffset(150 * u.scale, 150 * u.scale)
 	glyph.TextScaled = true
 	glyph.Text = GLYPH[kind] or "🎁"
 	glyph.Parent = u.stage
@@ -204,20 +256,22 @@ local function reveal(u: Ui, r: { [string]: any })
 	gs.Parent = glyph
 	TweenService:Create(gs, TweenInfo.new(0.55, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
 	local says = Instance.new("TextLabel")
+	says.Name = "Says"
 	says.BackgroundTransparency = 1
 	says.AnchorPoint = Vector2.new(0.5, 0)
-	says.Position = UDim2.fromScale(0.5, 0.58)
-	says.Size = UDim2.fromOffset(520, 34)
+	says.Position = UDim2.fromScale(0.5, 0.64)
+	says.Size = UDim2.new(1, 0, 0, 34)
 	says.FontFace = Brand.Fonts.displayItalic
 	says.TextSize = 30
 	says.TextColor3 = C.bone
 	says.Text = SAYS[kind] or "A gift!"
 	says.Parent = u.stage
 	local amount = Instance.new("TextLabel")
+	amount.Name = "Amount"
 	amount.BackgroundTransparency = 1
 	amount.AnchorPoint = Vector2.new(0.5, 0)
-	amount.Position = UDim2.fromScale(0.5, 0.66)
-	amount.Size = UDim2.fromOffset(520, 52)
+	amount.Position = UDim2.new(0.5, 0, 0.64, 36)
+	amount.Size = UDim2.new(1, 0, 0, 52)
 	amount.FontFace = Brand.Fonts.figures
 	amount.TextSize = 46
 	amount.TextColor3 = colour
@@ -225,10 +279,11 @@ local function reveal(u: Ui, r: { [string]: any })
 	amount.Parent = u.stage
 	if r.converted == true then
 		local note = Instance.new("TextLabel")
+		note.Name = "Note"
 		note.BackgroundTransparency = 1
 		note.AnchorPoint = Vector2.new(0.5, 0)
-		note.Position = UDim2.fromScale(0.5, 0.77)
-		note.Size = UDim2.fromOffset(520, 20)
+		note.Position = UDim2.new(0.5, 0, 0.64, 92)
+		note.Size = UDim2.new(1, 0, 0, 20)
 		note.FontFace = Brand.Fonts.body
 		note.TextSize = 14
 		note.TextColor3 = C.smoke
@@ -281,7 +336,7 @@ local function openOne(u: Ui)
 		why.BackgroundTransparency = 1
 		why.AnchorPoint = Vector2.new(0.5, 0.5)
 		why.Position = UDim2.fromScale(0.5, 0.45)
-		why.Size = UDim2.fromOffset(420, 80)
+		why.Size = UDim2.new(1, -40, 0, 80)
 		why.FontFace = Brand.Fonts.body
 		why.TextSize = 18
 		why.TextWrapped = true
@@ -307,14 +362,17 @@ local function openAll(u: Ui)
 	local grid = Instance.new("Frame")
 	grid.Name = "All"
 	grid.BackgroundTransparency = 1
-	grid.AnchorPoint = Vector2.new(0.5, 0.5)
-	grid.Position = UDim2.fromScale(0.5, 0.42)
-	grid.Size = UDim2.fromOffset(560, 300)
+	grid.AnchorPoint = Vector2.new(0.5, 0)
+	grid.Position = UDim2.fromScale(0.5, 0.04)
+	grid.Size = UDim2.new(1, -20, 0.78, 0)
 	grid.Parent = u.stage
 	local layout = Instance.new("UIGridLayout")
-	layout.CellSize = UDim2.fromOffset(100, 66)
-	layout.CellPadding = UDim2.fromOffset(8, 8)
+	-- (Twenty to a screen at full size; smaller tiles when there are more, so they all fit.)
+	local many = u.left > 20
+	layout.CellSize = if many then UDim2.fromOffset(66, 44) else UDim2.fromOffset(100, 66)
+	layout.CellPadding = if many then UDim2.fromOffset(6, 6) else UDim2.fromOffset(8, 8)
 	layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	layout.VerticalAlignment = Enum.VerticalAlignment.Center
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
 	layout.Parent = grid
 	local totalGilt, totalGems, n = 0, 0, 0
@@ -331,6 +389,7 @@ local function openAll(u: Ui)
 			totalGilt += gilt
 			totalGems += gems
 			local tile = Instance.new("Frame")
+			tile.Name = "Tile"
 			tile.LayoutOrder = n
 			tile.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
 			tile.BackgroundTransparency = 0.05
@@ -365,10 +424,11 @@ local function openAll(u: Ui)
 		GiftOpening.changed(u.left)
 	end
 	local sum = Instance.new("TextLabel")
+	sum.Name = "Totals"
 	sum.BackgroundTransparency = 1
-	sum.AnchorPoint = Vector2.new(0.5, 0)
-	sum.Position = UDim2.fromScale(0.5, 0.8)
-	sum.Size = UDim2.fromOffset(560, 40)
+	sum.AnchorPoint = Vector2.new(0.5, 1)
+	sum.Position = UDim2.new(0.5, 0, 1, -6)
+	sum.Size = UDim2.new(1, 0, 0, 40)
 	sum.FontFace = Brand.Fonts.figures
 	sum.TextSize = 30
 	sum.TextColor3 = C.brightGold
@@ -406,11 +466,14 @@ function refreshKeys(u: Ui)
 			all.LayoutOrder = 2
 		end
 	else
-		local ride = Theme.key(u.keys, "Ride again", true, function()
-			Root.close(NAME)
-			GiftOpening.ride()
-		end, 200)
-		ride.LayoutOrder = 1
+		-- (While Santa's sleigh still comes: gifts keep after Christmas, the rides don't.)
+		if Workspace:GetAttribute(HolidayGames.ATTRIBUTE) == "christmas" then
+			local ride = Theme.key(u.keys, "Ride again", true, function()
+				Root.close(NAME)
+				GiftOpening.ride()
+			end, 200)
+			ride.LayoutOrder = 1
+		end
 	end
 	local close = Theme.key(u.keys, "Close", false, function()
 		Root.close(NAME)
@@ -418,11 +481,26 @@ function refreshKeys(u: Ui)
 	close.LayoutOrder = 3
 end
 
--- Opens the screen with `waiting` gifts to open.
+-- What a gift may hold, how much, and its chance (exact, from the house's own numbers).
+local function oddsLine(): string
+	local parts = {}
+	local pole = Config.data.HolidayGames.pole :: any
+	for _, o in HolidayGames.giftOdds() do
+		local range = pole[o.id]
+		local unit = if o.id == "gems" or o.id == "moreGems" then "Gems" else "Gilt"
+		local amount = if type(range) == "table" then string.format("%s–%s %s", number(range[1]), number(range[2]), unit) else o.name
+		table.insert(parts, o.glyph .. " " .. amount .. " " .. o.odds)
+	end
+	return "What a gift holds: " .. table.concat(parts, "  ·  ") .. ". Free from Santa's sleigh; never sold."
+end
+
+-- Opens the screen with `waiting` gifts to open: its heading, the stage, the keys and the odds,
+-- one under another (so nothing overlaps, on a phone or a wide screen).
 function GiftOpening.open(waiting: number)
 	if Root.isOpen(NAME) then
 		return
 	end
+	local room = Root.size()
 	local group = Instance.new("Frame")
 	group.Name = NAME
 	group.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -439,39 +517,48 @@ function GiftOpening.open(waiting: number)
 		ColorSequenceKeypoint.new(1, Color3.fromRGB(10, 26, 20)),
 	})
 	vignette.Parent = group
-	local title = Theme.text(group, "Gifts from the North Pole", 34, "display", { Position = UDim2.new(0.5, 0, 0, 70), AnchorPoint = Vector2.new(0.5, 0), Size = UDim2.new(0.9, 0, 0, 0) })
+	local column = Instance.new("Frame")
+	column.Name = "Column"
+	column.BackgroundTransparency = 1
+	column.AnchorPoint = Vector2.new(0.5, 0.5)
+	column.Position = UDim2.fromScale(0.5, 0.5)
+	column.Size = UDim2.new(1, -32, 1, -24)
+	column.Parent = group
+	local list = Theme.list(column, 12)
+	list.VerticalAlignment = Enum.VerticalAlignment.Center
+	local title = Theme.text(column, "Gifts from the North Pole", 34, "display", { LayoutOrder = 1, Size = UDim2.new(1, 0, 0, 0) })
 	title.Name = "Title"
-	local count = Theme.text(group, "", 18, "body", { Position = UDim2.new(0.5, 0, 0, 120), AnchorPoint = Vector2.new(0.5, 0), Size = UDim2.new(0.9, 0, 0, 0), TextColor3 = C.smoke })
+	local count = Theme.text(column, "", 18, "body", { LayoutOrder = 2, Size = UDim2.new(1, 0, 0, 0), TextColor3 = C.smoke })
 	count.Name = "Count"
+	-- The stage: as tall as the screen allows round the heading, keys and odds.
+	local stageW = math.clamp(room.X - 40, 300, 640)
+	local stageH = math.clamp(room.Y - 300, 230, 420)
 	local stage = Instance.new("Frame")
 	stage.Name = "Stage"
+	stage.LayoutOrder = 3
 	stage.BackgroundTransparency = 1
-	stage.AnchorPoint = Vector2.new(0.5, 0.5)
-	stage.Position = UDim2.fromScale(0.5, 0.5)
-	stage.Size = UDim2.fromOffset(640, 420)
-	stage.Parent = group
+	stage.Size = UDim2.fromOffset(stageW, stageH)
+	stage.ClipsDescendants = false
+	stage.Parent = column
 	local keys = Instance.new("Frame")
 	keys.Name = "Keys"
+	keys.LayoutOrder = 4
 	keys.BackgroundTransparency = 1
-	keys.AnchorPoint = Vector2.new(0.5, 1)
-	keys.Position = UDim2.new(0.5, 0, 1, -86)
-	keys.Size = UDim2.new(0.9, 0, 0, 48)
-	keys.Parent = group
+	keys.Size = UDim2.new(1, 0, 0, 48)
+	keys.Parent = column
 	local row = Theme.list(keys, 12, true)
 	row.HorizontalAlignment = Enum.HorizontalAlignment.Center
 	-- The odds, as they are, and that it's free.
-	local parts = {}
-	for _, o in HolidayGames.giftOdds() do
-		table.insert(parts, o.glyph .. " " .. o.name .. " " .. o.odds)
-	end
-	local odds = Theme.text(group, "What a gift holds: " .. table.concat(parts, "  ·  ") .. ". Free from Santa's sleigh; never sold.", 13, "body", {
-		Position = UDim2.new(0.5, 0, 1, -24),
-		AnchorPoint = Vector2.new(0.5, 1),
-		Size = UDim2.new(0.9, 0, 0, 0),
+	local odds = Theme.text(column, oddsLine(), 13, "body", {
+		LayoutOrder = 5,
+		Size = UDim2.new(1, 0, 0, 0),
 		TextColor3 = C.smoke,
 	})
 	odds.Name = "Odds"
-	local u: Ui = { group = group, stage = stage, count = count, keys = keys, left = math.max(0, waiting), busy = false }
+	local limit = Instance.new("UISizeConstraint")
+	limit.MaxSize = Vector2.new(760, math.huge)
+	limit.Parent = odds
+	local u: Ui = { group = group, stage = stage, count = count, keys = keys, left = math.max(0, waiting), busy = false, scale = math.clamp(stageH / 360, 0.66, 1) }
 	ui = u
 	setCount(u)
 	showGift(u)

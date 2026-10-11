@@ -31,6 +31,8 @@ export type Pop = {
 }
 
 local live: { Frame } = {}
+-- (Above the notices that come in at the foot of the screen while the events strip is up.)
+local BASE = 196
 
 local function corner(f: GuiObject, r: number)
 	local c = Instance.new("UICorner")
@@ -48,8 +50,8 @@ local function chip(parent: Instance, text: string, colour: Color3, order: numbe
 	local f = Instance.new("Frame")
 	f.Name = "Chip"
 	f.LayoutOrder = order
-	f.AutomaticSize = Enum.AutomaticSize.X
-	f.Size = UDim2.fromOffset(0, 26)
+	-- (Sized to its words: heavy capitals at 15 run about 10 wide each.)
+	f.Size = UDim2.fromOffset(math.ceil((utf8.len(text) or #text) * 10.2) + 24, 26)
 	f.BackgroundColor3 = colour:Lerp(Color3.new(0, 0, 0), 0.72)
 	f.BackgroundTransparency = 0.1
 	corner(f, 13)
@@ -59,15 +61,10 @@ local function chip(parent: Instance, text: string, colour: Color3, order: numbe
 	stroke.Transparency = 0.15
 	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 	stroke.Parent = f
-	local pad = Instance.new("UIPadding")
-	pad.PaddingLeft = UDim.new(0, 12)
-	pad.PaddingRight = UDim.new(0, 12)
-	pad.Parent = f
 	local t = Instance.new("TextLabel")
 	t.Name = "Text"
 	t.BackgroundTransparency = 1
-	t.AutomaticSize = Enum.AutomaticSize.X
-	t.Size = UDim2.fromScale(0, 1)
+	t.Size = UDim2.fromScale(1, 1)
 	t.FontFace = Brand.Fonts.heavy
 	t.TextSize = 15
 	t.TextColor3 = colour:Lerp(Color3.new(1, 1, 1), 0.35)
@@ -78,12 +75,13 @@ end
 
 local function restack()
 	-- The newest at the foot, the older ones above it.
+	-- (Measured by the size each was made at: one still popping in is drawn smaller for a moment.)
 	local y = 0
 	for i = #live, 1, -1 do
 		local f = live[i]
 		if f.Parent then
-			TweenService:Create(f, TweenInfo.new(0.35, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { Position = UDim2.new(0.5, 0, 1, -150 - y) }):Play()
-			y += f.AbsoluteSize.Y + 10
+			TweenService:Create(f, TweenInfo.new(0.35, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { Position = UDim2.new(0.5, 0, 1, -BASE - y) }):Play()
+			y += f.Size.Y.Offset + 10
 		end
 	end
 end
@@ -94,7 +92,7 @@ function HolidayPop.show(p: Pop)
 	local holder = Instance.new("Frame")
 	holder.Name = "HolidayPop"
 	holder.AnchorPoint = Vector2.new(0.5, 1)
-	holder.Position = UDim2.new(0.5, 0, 1, -150)
+	holder.Position = UDim2.new(0.5, 0, 1, -BASE)
 	holder.Size = UDim2.fromOffset(if p.big then 440 else 380, if p.big then 124 else 104)
 	holder.BackgroundColor3 = Color3.fromRGB(12, 13, 17)
 	holder.BackgroundTransparency = 0.08

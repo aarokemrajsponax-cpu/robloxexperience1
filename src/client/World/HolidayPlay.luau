@@ -54,6 +54,7 @@ local clock = 0
 local root: Folder? = nil
 local attached: { [string]: Instance? } = {}
 local keySpec = ""
+local rehere = false -- a place arrived or went: each module's dressing is decided afresh
 
 local function ask(request: { [string]: any }): any
 	local ok, r = pcall(function()
@@ -184,7 +185,20 @@ end
 ---------------------------------------------------------------------------------------------------
 -- What to do next (the objective card)
 ---------------------------------------------------------------------------------------------------
-export type Goal = { key: string, title: string, line: string, how: string? }
+-- `rank` says where it stands among the card's other goals: "here" (in a game's own place: first
+-- of all), "gifts" (gifts waiting to be opened: after a first visit's seat), "open" (a game is
+-- open: after tonight's table).
+export type Goal = { key: string, title: string, line: string, how: string?, rank: string }
+
+local function sleighLine(): (string, string, string)
+	local s = Workspace:GetAttribute("SleighState")
+	if s == "boarding" then
+		return "boarding", "The sleigh is boarding now, out front!", "The Sleigh key in the dock, or walk up to the sleigh at the kerb."
+	elseif s == "toPole" or s == "pole" or s == "toHome" then
+		return "away", "The sleigh is away at the North Pole. It'll be back.", "Board it when it lands at the kerb out front."
+	end
+	return "home", "Santa's sleigh is waiting at the kerb out front.", "The Sleigh key in the dock, or walk up to the sleigh."
+end
 
 function HolidayPlay.goal(): Goal?
 	if area == "lane" then
@@ -192,23 +206,31 @@ function HolidayPlay.goal(): Goal?
 		for _ in HolidayLane.visited() do
 			n += 1
 		end
-		return { key = "lane:" .. n, title = "Hallows Lane", line = string.format("Doors knocked at: %d of 9", n), how = "Walk up to a door and knock. Every host has a treat once a round; all nine fills your bag." }
+		return { key = "lane:" .. n, title = "Hallows Lane", line = string.format("Doors knocked at: %d of 9", n), how = "Walk up to a door and knock. Every host has a treat each round; all nine fills your bag.", rank = "here" }
 	elseif area == "field" then
-		return { key = "field:" .. caught, title = "The Harvest Field", line = if caught > 0 then string.format("Turkeys caught: %d", caught) else "The turkeys are loose", how = "Run at a turkey to catch it. They dodge. The golden one is fastest." }
+		return { key = "field:" .. caught, title = "The Harvest Field", line = if caught > 0 then string.format("Turkeys caught: %d", caught) else "The turkeys are loose!", how = "Run at a turkey to catch it. They dodge; the golden one is fastest.", rank = "here" }
 	elseif area == "pole" then
-		local held = HolidayPole.carrying()
-		return { key = "pole:" .. held .. ":" .. loadedTrip, title = "The North Pole", line = string.format("In your arms: %d · Loaded: %d", held, loadedTrip), how = "Walk into gifts to pick them up; carry them to the back of the sleigh to load them before it leaves." }
+		local carried = Players.LocalPlayer:GetAttribute("GiftsCarried")
+		local held = if type(carried) == "number" then carried else 0
+		return { key = "pole:" .. held .. ":" .. loadedTrip, title = "The North Pole", line = string.format("In your arms: %d · On the sleigh: %d", held, loadedTrip), how = "Walk into gifts to pick them up, then carry them to the gold ring behind the sleigh before it leaves.", rank = "here" }
 	end
 	if pending > 0 then
-		return { key = "gifts:" .. pending, title = "Your gifts", line = if pending == 1 then "A gift to open" else string.format("%d gifts to open", pending), how = "The Gifts key in the dock opens them." }
+		return { key = "gifts:" .. pending, title = "Your gifts", line = if pending == 1 then "A gift from the North Pole to open" else string.format("%d gifts from the North Pole to open", pending), how = "The Gifts key in the dock opens them.", rank = "gifts" }
 	end
-	if open then
-		local g = HolidayGames.byId[open]
-		if g then
-			return { key = "open:" .. open, title = g.name, line = g.line, how = if g.area then "The " .. g.key .. " key in the dock takes you there." else nil }
-		end
+	local g = if open then HolidayGames.byId[open] else nil
+	if not g then
+		return nil
 	end
-	return nil
+	if g.id == "christmas" then
+		local state, line, how = sleighLine()
+		return { key = "open:christmas:" .. state, title = g.name, line = line, how = how, rank = "open" }
+	elseif g.id == "easter" then
+		local left = HolidayEggs.left()
+		return { key = "open:easter:" .. left, title = g.name, line = if left == 1 then "One painted egg still hidden round the house." elseif left > 0 then string.format("%d painted eggs hidden round the house.", left) else "Fresh eggs are being hidden round the house.", how = "Look on shelves, in corners and under things in every room. One is golden.", rank = "open" }
+	elseif g.id == "stPatrick" then
+		return { key = "open:stPatrick", title = g.name, line = g.line, how = "Play any table: the luck is in every round.", rank = "open" }
+	end
+	return { key = "open:" .. g.id, title = g.name, line = g.line, how = "The " .. g.key .. " key in the dock takes you there.", rank = "open" }
 end
 
 ---------------------------------------------------------------------------------------------------
@@ -243,6 +265,7 @@ local function reattach()
 		attached.eggs = eggs
 		HolidayEggs.attach(eggs)
 	end
+	rehere = true
 end
 
 local function watchRoot(folder: Folder)
@@ -383,11 +406,12 @@ local function step(dt: number)
 	area = if r then HolidayGames.areaAt(r.CFrame.Position) else nil
 	local cam = Workspace.CurrentCamera
 	local here = if cam then HolidayGames.areaAt(cam.CFrame.Position) else area
-	if here ~= lastHere then
+	if here ~= lastHere or rehere then
 		HolidayLane.here(here == "lane" and attached.lane ~= nil)
 		HolidayField.here(here == "field" and attached.field ~= nil)
 		HolidayPole.here(here == "pole" and attached.pole ~= nil)
 		lastHere = here
+		rehere = false
 	end
 	if area ~= lastArea then
 		lastArea = area
@@ -416,10 +440,16 @@ function HolidayPlay.start()
 		end
 	end)
 	Workspace:GetAttributeChangedSignal(HolidayGames.ATTRIBUTE):Connect(refresh)
+	Players.LocalPlayer:GetAttributeChangedSignal("GiftsCarried"):Connect(function()
+		HolidayPlay.goalChanged()
+	end)
 	for _, key in { "SleighState", "SleighT0", "SleighFlight" } do
 		Workspace:GetAttributeChangedSignal(key):Connect(function()
 			local s = attached.sleigh
 			SleighRide.update(if s and s:IsA("Model") then s else nil)
+			if key == "SleighState" then
+				HolidayPlay.goalChanged()
+			end
 		end)
 	end
 	local folder = Workspace:FindFirstChild("HolidayGames")

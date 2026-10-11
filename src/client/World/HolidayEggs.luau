@@ -13,13 +13,20 @@ local HolidayEggs = {}
 
 local rgb = Color3.fromRGB
 
-local eggs: { [BasePart]: Model } = {}
+-- (By each egg's Id: the part the server removes is known by its Id.)
+local eggs: { [number]: Model } = {}
 local connections: { RBXScriptConnection } = {}
 local folder: Folder? = nil
 local left = 0
 
+local function idOf(part: BasePart): number?
+	local id = part:GetAttribute("Id")
+	return if type(id) == "number" then id else nil
+end
+
 local function add(part: BasePart)
-	if eggs[part] then
+	local id = idOf(part)
+	if not id or eggs[id] then
 		return
 	end
 	local scheme = part:GetAttribute("Scheme")
@@ -32,14 +39,14 @@ local function add(part: BasePart)
 	if not golden then
 		HolidayKit.glint(m.PrimaryPart :: BasePart, colours[2], 0.35)
 	end
-	eggs[part] = m
+	eggs[id] = m
 	left += 1
 end
 
-local function remove(part: BasePart)
-	local m = eggs[part]
+local function remove(id: number)
+	local m = eggs[id]
 	if m then
-		eggs[part] = nil
+		eggs[id] = nil
 		m:Destroy()
 		left = math.max(0, left - 1)
 	end
@@ -51,8 +58,8 @@ function HolidayEggs.attach(f: Instance?)
 		c:Disconnect()
 	end
 	connections = {}
-	for part in eggs do
-		remove(part)
+	for id in eggs do
+		remove(id)
 	end
 	left = 0
 	folder = if f and f:IsA("Folder") then f else nil
@@ -71,8 +78,9 @@ function HolidayEggs.attach(f: Instance?)
 		end
 	end))
 	table.insert(connections, ff.ChildRemoved:Connect(function(p)
-		if p:IsA("BasePart") then
-			remove(p)
+		local id = if p:IsA("BasePart") then idOf(p) else nil
+		if id then
+			remove(id)
 		end
 	end))
 end

@@ -217,7 +217,7 @@ moment("events", "fx_titan", "Something Big", "See the Titan meme rise over the 
 
 -- Holidays
 moment("holidays", "holiday_halloween", "All Hallows' Hunter", "Find a pumpkin in the All Hallows' Hunt, or a treat on Hallows Lane.", "🎃", "silver")
-moment("holidays", "holiday_thanksgiving", "Turkey Catcher", "Catch a turkey in the Harvest Field (or the Turkey Trot).", "🦃", "silver")
+moment("holidays", "holiday_thanksgiving", "Turkey Catcher", "Catch a turkey in the Harvest Field.", "🦃", "silver")
 moment("holidays", "holiday_christmas", "Present Opener", "Open a present: the Gift Drop's, or a gift from the North Pole.", "🎁", "silver")
 moment("holidays", "holiday_newYear", "Happy New Year", "Be in the house when the New Year arrives.", "🎆", "silver")
 moment("holidays", "holiday_valentine", "Sweetheart", "Find a love letter on Valentine's Day.", "💌", "silver")

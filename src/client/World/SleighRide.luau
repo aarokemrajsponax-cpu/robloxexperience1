@@ -44,7 +44,7 @@ type Flight = {
 	parts: { BasePart }, -- everything but the reindeer
 	offsets: { CFrame },
 	deer: { Deer },
-	points: { Vector3 },
+	path: HolidayGames.Path,
 	t0: number,
 	seconds: number,
 	toPole: boolean,
@@ -59,7 +59,6 @@ type Flight = {
 local flight: Flight? = nil
 local camera: () -> ()
 local parked: Model? = nil
-local hiddenOn: { [Instance]: boolean } = {}
 local gui: ScreenGui? = nil
 
 local function serverNow(): number
@@ -88,21 +87,24 @@ local function screen(): ScreenGui?
 	return ng
 end
 
--- The parked sleigh out of sight (or back) on this screen.
+-- The parked sleigh out of sight (or back) on this screen. (What each light was is kept on it, on
+-- this screen only, to be put back.)
+local WAS = "SleighWasOn"
 local function hideParked(m: Model, on: boolean)
 	for _, d in m:GetDescendants() do
 		if d:IsA("BasePart") then
 			d.LocalTransparencyModifier = if on then 1 else 0
 		elseif d:IsA("Light") or d:IsA("ParticleEmitter") or d:IsA("Trail") or d:IsA("Beam") or d:IsA("BillboardGui") then
 			local e = d :: any -- each of these has Enabled
+			local was = d:GetAttribute(WAS)
 			if on then
-				if hiddenOn[d] == nil then
-					hiddenOn[d] = e.Enabled
+				if was == nil then
+					d:SetAttribute(WAS, e.Enabled == true)
 				end
 				e.Enabled = false
-			elseif hiddenOn[d] ~= nil then
-				e.Enabled = hiddenOn[d]
-				hiddenOn[d] = nil
+			elseif type(was) == "boolean" then
+				e.Enabled = was
+				d:SetAttribute(WAS, nil)
 			end
 		end
 	end
@@ -146,7 +148,7 @@ local function build(m: Model, state: string, t0: number, seconds: number): Flig
 		parts = {},
 		offsets = {},
 		deer = {},
-		points = HolidayGames.flightPoints(state == "toPole"),
+		path = HolidayGames.path(HolidayGames.flightPoints(state == "toPole")),
 		t0 = t0,
 		seconds = math.max(2, seconds),
 		toPole = state == "toPole",
@@ -265,7 +267,7 @@ local function clouds(f: Flight)
 	local rng = Random.new(31)
 	for k = 1, Quality.count(16, 6) do
 		local u = 0.3 + (k - 0.5) / 16 * 0.45
-		local at, way = HolidayGames.along(f.points, HolidayGames.ease(u))
+		local at, way = HolidayGames.travel(f.path, HolidayGames.ease(u))
 		local side = Vector3.new(-way.Z, 0, way.X)
 		side = if side.Magnitude > 0.01 then side.Unit else Vector3.new(1, 0, 0)
 		local centre = at + side * rng:NextNumber(-120, 120) + Vector3.new(0, rng:NextNumber(-30, 10), 0)
@@ -342,11 +344,11 @@ end
 
 local function frameAt(f: Flight, u: number): (CFrame, CFrame)
 	local e = HolidayGames.ease(u)
-	local at, way = HolidayGames.along(f.points, e)
+	local at, way = HolidayGames.travel(f.path, e)
 	if way.Magnitude > 0.05 then
 		f.forward = way.Unit
 	end
-	local _, ahead = HolidayGames.along(f.points, math.min(1, e + 0.012))
+	local _, ahead = HolidayGames.travel(f.path, math.min(1, e + 0.012))
 	local turn = if ahead.Magnitude > 0.05 then f.forward:Cross(ahead.Unit).Y else 0
 	local flat = CFrame.lookAt(at, at + f.forward)
 	local roll = math.clamp(-turn * 22, -0.55, 0.55)

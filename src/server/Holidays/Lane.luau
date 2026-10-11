@@ -17,6 +17,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local HolidayGames = require(ReplicatedStorage.Shared.HolidayGames)
 local HolidayProps = require(ReplicatedStorage.Shared.HolidayProps)
+local Names = require(ReplicatedStorage.Shared.Names)
 local Kit = require(script.Parent.Parent.World.Kit)
 local Profiles = require(script.Parent.Parent.Profiles)
 local Rig = require(script.Parent.Parent.Staff.Rig)
@@ -706,6 +707,8 @@ local function build(ctx: Types.Ctx): Model
 			end
 		end
 	end
+	-- (Dark ground on out under the night, so the Lane never ends at a cliff.)
+	Kit.part(root, "Beyond", Vector3.new(1600, 1, 1600), CFrame.new(at(0, -2.7, 0)), look(rgb(16, 20, 16), Enum.Material.Grass), { collide = false, shadow = false, query = false })
 	local barrier = look(Color3.new(0, 0, 0), Enum.Material.SmoothPlastic, 0, 1)
 	span("EdgeWest", Vector3.new(west - 1, -2, -back), Vector3.new(west, 40, back), barrier, { shadow = false, query = false })
 	span("EdgeEast", Vector3.new(east, -2, -back), Vector3.new(east + 1, 40, back), barrier, { shadow = false, query = false })
@@ -807,7 +810,7 @@ function Lane.knock(ctx: Types.Ctx, player: Player, i: number)
 		message.bonusGems = bonusGems
 		ctx.award(player, "fullBag")
 		ctx.curio(player, "candyPail", "lane:full:" .. tostring(h.round))
-		ctx.salute("Hallows Lane", player.DisplayName .. " has knocked at every door. A full bag!", player)
+		ctx.salute("Hallows Lane", Names.of(player) .. " has knocked at every door. A full bag!", player)
 	end
 	ctx.broadcast({ op = "door", i = i, by = player.UserId, treat = host.treat })
 	ctx.send(player, message)

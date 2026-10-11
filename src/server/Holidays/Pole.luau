@@ -23,6 +23,7 @@ local Workspace = game:GetService("Workspace")
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local HolidayGames = require(ReplicatedStorage.Shared.HolidayGames)
 local HolidayProps = require(ReplicatedStorage.Shared.HolidayProps)
+local Names = require(ReplicatedStorage.Shared.Names)
 local Kit = require(script.Parent.Parent.World.Kit)
 local Profiles = require(script.Parent.Parent.Profiles)
 local Rig = require(script.Parent.Parent.Staff.Rig)
@@ -241,20 +242,6 @@ end
 -- The North Pole
 ---------------------------------------------------------------------------------------------------
 
--- A fir for the distance: stacked rounds of dark green, snow on every tier.
-local function stackFir(parent: Instance, base: Vector3, height: number)
-	local tiers = 4
-	for i = 0, tiers - 1 do
-		local f = i / tiers
-		local d = height * 0.42 * (1 - f * 0.78)
-		local h = height * 0.24
-		local y = base.Y + height * 0.12 + i * height * 0.2
-		Kit.part(parent, "Fir", Vector3.new(h, d, d), CFrame.new(base.X, y + h / 2, base.Z) * CFrame.Angles(0, 0, math.pi / 2), look(rgb(24, 66, 46), Enum.Material.Grass), { shape = Enum.PartType.Cylinder, collide = false, shadow = false })
-		Kit.part(parent, "FirSnow", Vector3.new(h * 0.18, d * 0.86, d * 0.86), CFrame.new(base.X, y + h + 0.02, base.Z) * CFrame.Angles(0, 0, math.pi / 2), look(rgb(226, 232, 244), Enum.Material.Snow), { shape = Enum.PartType.Cylinder, collide = false, shadow = false })
-	end
-	Kit.post(parent, "FirTrunk", height * 0.14, height * 0.06, base, look(rgb(70, 48, 34), Enum.Material.Wood), { shadow = false })
-end
-
 -- A lamp post striped like a candy cane, a lantern on its crook.
 local function caneLamp(parent: Instance, base: Vector3, facing: Vector3, lit: boolean)
 	HolidayProps.candyCane(parent, base, 10, facing)
@@ -432,25 +419,51 @@ local function buildPole(): Model
 	for _, s in { { 40, -20 }, { -40, -60 }, { 70, 50 }, { -150, 140 } } do
 		HolidayProps.snowman(root, at(s[1], 0, s[2]), 7, Vector3.new(-s[1], 0, -s[2]))
 	end
-	-- Firs all round, and the mountains beyond.
+	-- Pines all round, and the mountains beyond: eight great peaks, each with a lesser one at either
+	-- shoulder, every foot well outside the snowfield's edge.
 	for k = 1, 30 do
 		local a = k / 30 * math.pi * 2 + rng:NextNumber(-0.05, 0.05)
-		local r = rng:NextNumber(212, 250)
-		stackFir(root, at(math.cos(a) * r, 0, math.sin(a) * r), rng:NextNumber(26, 44))
+		local r = rng:NextNumber(214, 250)
+		HolidayProps.pine(root, at(math.cos(a) * r, 0, math.sin(a) * r), rng:NextNumber(26, 44), true)
+	end
+	local snowCap = rgb(236, 242, 252)
+	-- (The sleigh comes in low over the mountains, and leaves low: no peak may stand in its way,
+	-- either way, with room to spare.)
+	local ways = { HolidayGames.flightPoints(true), HolidayGames.flightPoints(false) }
+	local function inTheWay(foot: Vector3, size: number): boolean
+		local reach = size * 0.82 + 70
+		local top = foot.Y + size * 0.62 + 90
+		for _, way in ways do
+			for i = 1, #way - 1 do
+				local a, b = way[i], way[i + 1]
+				local ab = Vector3.new(b.X - a.X, 0, b.Z - a.Z)
+				local t = if ab.Magnitude > 0 then math.clamp(Vector3.new(foot.X - a.X, 0, foot.Z - a.Z):Dot(ab) / (ab.Magnitude * ab.Magnitude), 0, 1) else 0
+				local near = a:Lerp(b, t)
+				if Vector3.new(near.X - foot.X, 0, near.Z - foot.Z).Magnitude < reach and near.Y < top then
+					return true
+				end
+			end
+		end
+		return false
+	end
+	local function peak(foot: Vector3, size: number, rock: Color3)
+		if not inTheWay(foot, size) then
+			HolidayProps.peak(root, foot, size, rng:NextNumber(0, math.pi * 2), rock, snowCap)
+		end
 	end
 	for k = 1, 8 do
 		local a = k / 8 * math.pi * 2 + 0.3
-		local r = rng:NextNumber(650, 820)
-		local base = at(math.cos(a) * r, -10, math.sin(a) * r)
-		local height = rng:NextNumber(280, 460)
-		local d = height * 1.4
-		for i = 0, 5 do
-			local f = i / 6
-			local h = height / 6
-			local snowy = i >= 3
-			Kit.part(root, "Mountain", Vector3.new(h + 1, d * (1 - f * 0.92), d * (1 - f * 0.92)), CFrame.new(base + Vector3.new(0, h * (i + 0.5), 0)) * CFrame.Angles(0, 0, math.pi / 2), if snowy then look(rgb(220, 228, 242), Enum.Material.Snow) else look(rgb(84, 92, 110), Enum.Material.Rock), { shape = Enum.PartType.Cylinder, collide = false, shadow = false, query = false })
+		local out = Vector3.new(math.cos(a), 0, math.sin(a))
+		local side = Vector3.new(-out.Z, 0, out.X)
+		local s = rng:NextNumber(380, 500)
+		local base = at(0, -4, 0) + out * rng:NextNumber(780, 880)
+		peak(base, s, rgb(84, 94, 114))
+		for _, sgn in { -1, 1 } do
+			peak(base + side * sgn * s * rng:NextNumber(0.55, 0.75) + out * rng:NextNumber(-40, 60), s * rng:NextNumber(0.5, 0.66), rgb(70, 80, 100))
 		end
 	end
+	-- (Snow on out to the mountains, under the snowfield.)
+	Kit.part(root, "Beyond", Vector3.new(2400, 1, 2400), CFrame.new(at(0, -2.7, 0)), snow, { collide = false, shadow = false, query = false })
 	-- Elves at the workshop doors (they wave the guests in).
 	for _, sx in { -1, 1 } do
 		local home = CFrame.lookAt(at(P.workshop.X + sx * 13, 0, P.workshop.Z - 24), at(P.workshop.X + sx * 13, 0, P.workshop.Z - 60))
@@ -931,7 +944,7 @@ function Pole.openGifts(ctx: Types.Ctx, player: Player, n: number): { [string]: 
 		local paidGilt, paidGems = ctx.reward(player, gilt + converted, gems, "A gift from the North Pole")
 		table.insert(results, { kind = kind, gilt = paidGilt, gems = paidGems, converted = converted > 0 })
 		if kind == "moreGems" and paidGems > 0 then
-			ctx.salute("A gift from the North Pole", player.DisplayName .. " found a trove of " .. paidGems .. " Gems in a gift!", player)
+			ctx.salute("A gift from the North Pole", Names.of(player) .. " found a trove of " .. paidGems .. " Gems in a gift!", player)
 		end
 	end
 	ctx.award(player, "holiday_christmas")

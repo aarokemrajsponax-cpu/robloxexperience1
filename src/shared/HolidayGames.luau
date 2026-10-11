@@ -1,6 +1,6 @@
 --!strict
 -- The holiday games: what guests do on the holidays besides the hunts round the house. The
--- server runs them (server/Holidays) and every screen draws them (World/HolidayGames); this says
+-- server runs them (server/Holidays) and every screen draws them (World/HolidayPlay); this says
 -- what each is, when it's open and where it is, so the two always agree. All free; every reward is
 -- decided and paid on the server (Config.HolidayGames has the numbers).
 --
@@ -272,9 +272,56 @@ function HolidayGames.along(points: { Vector3 }, u: number): (Vector3, Vector3)
 	local p2 = points[i + 1]
 	local p3 = points[math.min(n, i + 2)]
 	local t2, t3 = t * t, t * t * t
-	local at = 0.5 * ((2 * p1) + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 + (-p0 + 3 * p1 - 3 * p2 + p3) * t3)
-	local way = 0.5 * ((-p0 + p2) + 2 * (2 * p0 - 5 * p1 + 4 * p2 - p3) * t + 3 * (-p0 + 3 * p1 - 3 * p2 + p3) * t2)
+	-- (The curve's three terms, each a Vector3 times a number.)
+	local a = p2 - p0
+	local b = p0 * 2 - p1 * 5 + p2 * 4 - p3
+	local c = p1 * 3 - p0 - p2 * 3 + p3
+	local at = (p1 * 2 + a * t + b * t2 + c * t3) * 0.5
+	local way = (a + b * (2 * t) + c * (3 * t2)) * 0.5
 	return at, way
+end
+
+-- The flight's way, measured: `marks[i]` is how far along it (0 to 1, by distance) the curve's
+-- parameter (i - 1) / SAMPLES lies. The points are close together on the street and far apart in
+-- the sky, so the sleigh is moved by distance (HolidayGames.travel), never by point: its speed
+-- then follows the ease alone, with no lurch where the points thin out.
+export type Path = { points: { Vector3 }, marks: { number } }
+local SAMPLES = 480
+
+function HolidayGames.path(points: { Vector3 }): Path
+	local marks = table.create(SAMPLES + 1, 0)
+	local last = HolidayGames.along(points, 0)
+	local total = 0
+	for i = 1, SAMPLES do
+		local p = HolidayGames.along(points, i / SAMPLES)
+		total += (p - last).Magnitude
+		marks[i + 1] = total
+		last = p
+	end
+	if total > 0 then
+		for i = 2, SAMPLES + 1 do
+			marks[i] /= total
+		end
+	end
+	return { points = points, marks = marks }
+end
+
+-- The point and the way `s` of the distance along `path` (0 to 1).
+function HolidayGames.travel(path: Path, s: number): (Vector3, Vector3)
+	local marks = path.marks
+	local x = math.clamp(s, 0, 1)
+	local lo, hi = 1, #marks
+	while hi - lo > 1 do
+		local mid = (lo + hi) // 2
+		if marks[mid] <= x then
+			lo = mid
+		else
+			hi = mid
+		end
+	end
+	local a, b = marks[lo], marks[hi]
+	local f = if b > a then (x - a) / (b - a) else 0
+	return HolidayGames.along(path.points, ((lo - 1) + f) / (#marks - 1))
 end
 
 -- How far along the flight the sleigh is after `k` of its time (0 to 1): gentle off the ground,
@@ -294,17 +341,19 @@ HolidayGames.GiftKinds = {
 	{ id = "moreGems", name = "A trove of Gems", glyph = "👑" },
 }
 
--- "1 in 10" for each kind, from the weights (for the opening screen).
+-- Each kind's exact chance, as a percentage worked out from the weights (for the opening screen):
+-- "60%", "2%" (to a tenth when it isn't whole), never rounded to something friendlier.
 function HolidayGames.giftOdds(): { { id: string, name: string, glyph: string, odds: string } }
 	local w = Config.data.HolidayGames.pole.odds :: { [string]: number }
 	local total = 0
 	for _, v in w do
-		total += v
+		total += math.max(0, v)
 	end
 	local out = {}
 	for _, k in HolidayGames.GiftKinds do
-		local share = (w[k.id] or 0) / math.max(1, total)
-		local text = if share >= 0.5 then string.format("%d in 100", math.floor(share * 100 + 0.5)) else string.format("1 in %d", math.max(1, math.floor(1 / math.max(share, 1e-6) + 0.5)))
+		local pct = math.max(0, w[k.id] or 0) / math.max(1e-9, total) * 100
+		local whole = math.abs(pct - math.floor(pct + 0.5)) < 0.05
+		local text = if whole then string.format("%d%%", math.floor(pct + 0.5)) else string.format("%.1f%%", pct)
 		table.insert(out, { id = k.id, name = k.name, glyph = k.glyph, odds = text })
 	end
 	return out

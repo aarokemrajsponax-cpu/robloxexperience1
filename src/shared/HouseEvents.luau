@@ -29,13 +29,13 @@ HouseEvents.List = {
 	{ id = "discoHouse", name = "The House Party", line = "Every lamp in the house turns disco, colours chasing round every room.", glyph = "🕺" },
 	{ id = "curioHour", name = "A Night of Curios", line = "Curios turn up among the pieces twice as often.", glyph = "🏺" },
 	-- The holidays.
-	{ id = "halloween", name = "The All Hallows' Hunt", line = "Pumpkins are hidden all over the house. Find them for Gilt; one is solid gold.", glyph = "🎃", holiday = true },
-	{ id = "thanksgiving", name = "The Turkey Trot", line = "Turkeys are loose in the house and they run. Catch one for Gilt; one is golden.", glyph = "🦃", holiday = true },
-	{ id = "christmas", name = "The Gift Drop", line = "Presents are under every tree, and snow is falling. Open them for Gilt; one rings gold.", glyph = "🎁", holiday = true },
+	{ id = "halloween", name = "The All Hallows' Hunt", line = "Pumpkins hidden all over the house, and Hallows Lane's doors open for trick or treat.", glyph = "🎃", holiday = true },
+	{ id = "thanksgiving", name = "The Turkey Round-Up", line = "Turkeys are loose in the Harvest Field and they run. Catch one for Gilt; one is golden.", glyph = "🦃", holiday = true },
+	{ id = "christmas", name = "The Gift Drop", line = "Presents under every tree, snow falling, and Santa's sleigh at the kerb for the North Pole.", glyph = "🎁", holiday = true },
 	{ id = "newYear", name = "The New Year Countdown", line = "Ten seconds, then the biggest fireworks of the year and a present for everyone here.", glyph = "🎆", holiday = true },
 	{ id = "valentine", name = "Sweethearts", line = "Love letters are hidden round the house. Find them for Gilt; one is a heart of gold.", glyph = "💌", holiday = true },
-	{ id = "stPatrick", name = "The Lucky Clover", line = "Four-leaf clovers are everywhere, and a pot of gold waits at the rainbow's end.", glyph = "🍀", holiday = true },
-	{ id = "easter", name = "The Egg Hunt", line = "Painted eggs are hidden all over the house. Find them for Gilt; one is golden.", glyph = "🥚", holiday = true },
+	{ id = "stPatrick", name = "The Lucky Clover", line = "Four-leaf clovers everywhere, a pot of gold at the rainbow's end, and rare finds far likelier.", glyph = "🍀", holiday = true },
+	{ id = "easter", name = "The Great Egg Hunt", line = "Painted eggs are hidden all over the house. Find them for Gilt; one is golden.", glyph = "🥚", holiday = true },
 } :: { Event }
 
 HouseEvents.byId = {} :: { [string]: Event }

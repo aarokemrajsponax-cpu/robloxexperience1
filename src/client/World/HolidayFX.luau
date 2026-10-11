@@ -23,6 +23,7 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
+local HolidayGames = require(ReplicatedStorage.Shared.HolidayGames)
 local HouseEvents = require(ReplicatedStorage.Shared.HouseEvents)
 local Layout = require(ReplicatedStorage.Shared.Layout)
 local Flakes = require(script.Parent.Flakes)
@@ -606,12 +607,19 @@ local function reveal(set: HolidaySets.Set, instant: boolean)
 end
 
 -- A holiday begins on this screen: the bars, its title in its colours with what to do, its chime,
--- a burst of its colours round the guest.
+-- a burst of its colours round the guest. (Its event's name and line while its event is on; on its
+-- holiday game's other days, the game's: there's no hunt round the house then.)
 local function arrive(id: string, look: Look)
 	local e = HouseEvents.byId[id]
 	local g = gui()
 	if not e or not g then
 		return
+	end
+	local name, line = e.name, e.line
+	local ends = Workspace:GetAttribute(HouseEvents.attribute(id))
+	local game = HolidayGames.byId[id]
+	if game and not (type(ends) == "number" and ends > Workspace:GetServerTimeNow()) then
+		name, line = game.name, game.line
 	end
 	Stagecraft.letterbox(g, true, 0.08)
 	task.delay(4.6, function()
@@ -619,7 +627,7 @@ local function arrive(id: string, look: Look)
 			Stagecraft.letterbox(g, false)
 		end
 	end)
-	Stagecraft.title(g, look.greeting, string.upper(e.name), 4.2, look.title, e.line)
+	Stagecraft.title(g, look.greeting, string.upper(name), 4.2, look.title, line)
 	for i, s in look.sting do
 		task.delay((i - 1) * 0.35, function()
 			pcall(Sound.play, s, 0.8)

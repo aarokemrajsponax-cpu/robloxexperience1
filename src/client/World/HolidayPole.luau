@@ -31,7 +31,7 @@ type Gift = { id: number, part: BasePart, model: Model }
 
 local area: Model? = nil
 local sleigh: Model? = nil
-local giftModels: { [BasePart]: Gift } = {}
+local giftModels: { [number]: Gift } = {} -- by each gift's Id
 local limbo: { Gift } = {} -- gifts just taken from the snow, waiting to be thrown to who took them
 local stacks: { [Player]: { n: number, model: Model? } } = {}
 local connections: { RBXScriptConnection } = {}
@@ -68,8 +68,14 @@ end
 ---------------------------------------------------------------------------------------------------
 -- Gifts in the snow
 ---------------------------------------------------------------------------------------------------
+local function giftId(part: Instance): number?
+	local id = part:GetAttribute("Id")
+	return if part:IsA("BasePart") and type(id) == "number" then id else nil
+end
+
 local function addGift(part: BasePart)
-	if giftModels[part] then
+	local id = giftId(part)
+	if not id or giftModels[id] then
 		return
 	end
 	local wrapIndex = part:GetAttribute("Wrap")
@@ -81,16 +87,15 @@ local function addGift(part: BasePart)
 	if math.random() < 0.4 then
 		HolidayKit.glint(m.PrimaryPart :: BasePart, wrap[2], 0.5)
 	end
-	local id = part:GetAttribute("Id")
-	giftModels[part] = { id = if type(id) == "number" then id else 0, part = part, model = m }
+	giftModels[id] = { id = id, part = part, model = m }
 end
 
-local function removeGift(part: BasePart)
-	local g = giftModels[part]
+local function removeGift(id: number)
+	local g = giftModels[id]
 	if not g then
 		return
 	end
-	giftModels[part] = nil
+	giftModels[id] = nil
 	-- (Held a moment: "picked" says who took it, and it flies to them.)
 	table.insert(limbo, g)
 	task.delay(0.6, function()
@@ -500,8 +505,7 @@ end
 function HolidayPole.attach(poleModel: Model?, sleighModel: Model?)
 	if poleModel ~= area then
 		undress()
-		for part in giftModels do
-			local g = giftModels[part]
+		for _, g in giftModels do
 			g.model:Destroy()
 		end
 		giftModels = {}
@@ -524,8 +528,9 @@ function HolidayPole.attach(poleModel: Model?, sleighModel: Model?)
 					end
 				end))
 				table.insert(connections, gifts.ChildRemoved:Connect(function(p)
-					if p:IsA("BasePart") then
-						removeGift(p)
+					local id = giftId(p)
+					if id then
+						removeGift(id)
 					end
 				end))
 			end
@@ -533,6 +538,13 @@ function HolidayPole.attach(poleModel: Model?, sleighModel: Model?)
 				watchPlayer(player)
 			end
 			table.insert(connections, Players.PlayerAdded:Connect(watchPlayer))
+			table.insert(connections, Players.PlayerRemoving:Connect(function(player: Player)
+				local s = stacks[player]
+				if s and s.model then
+					s.model:Destroy()
+				end
+				stacks[player] = nil
+			end))
 		else
 			for _, s in stacks do
 				if s.model then

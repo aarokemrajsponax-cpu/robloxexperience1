@@ -16,6 +16,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local HolidayGames = require(ReplicatedStorage.Shared.HolidayGames)
 local HolidayProps = require(ReplicatedStorage.Shared.HolidayProps)
+local Names = require(ReplicatedStorage.Shared.Names)
 local Kit = require(script.Parent.Parent.World.Kit)
 local Types = require(script.Parent.Types)
 
@@ -237,6 +238,8 @@ local function build(ctx: Types.Ctx): Model
 	obstacles = {}
 	-- The ground: autumn grass all round, a dirt track from the gate to the barn.
 	Kit.span(root, "Ground", at(-320, -2, -260), at(320, 0, 320), look(rgb(92, 82, 44), Enum.Material.Grass))
+	-- (The fields go on past the hills, under the ground's edge.)
+	Kit.part(root, "Beyond", Vector3.new(1800, 1, 1800), CFrame.new(at(0, -2.7, 30)), look(rgb(60, 56, 32), Enum.Material.Grass), { collide = false, shadow = false, query = false })
 	Kit.span(root, "Track", at(-6, -1.9, F.minZ - 30), at(6, 0.05, F.barnDoors.Z), look(rgb(106, 80, 54), Enum.Material.Ground))
 	-- The fence: split rails on posts, the gate in the south side.
 	local wood = look(rgb(104, 76, 52), Enum.Material.Wood)
@@ -505,7 +508,7 @@ local function catch(ctx: Types.Ctx, player: Player, t: Turkey)
 	if t.golden then
 		ctx.award(player, "goldenTurkeyCaught")
 		ctx.curio(player, "goldenTurkey", "field:gold:" .. os.date("!%Y-%j"))
-		ctx.salute("The Turkey Round-Up", player.DisplayName .. " caught the golden turkey!", player)
+		ctx.salute("The Turkey Round-Up", Names.of(player) .. " caught the golden turkey!", player)
 		nextGolden = os.clock() + c.goldenEvery
 	end
 	-- Another walks out of the barn in a moment.

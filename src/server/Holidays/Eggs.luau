@@ -14,6 +14,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
 local HolidayProps = require(ReplicatedStorage.Shared.HolidayProps)
+local Names = require(ReplicatedStorage.Shared.Names)
 local Layout = require(ReplicatedStorage.Shared.Layout)
 local Types = require(script.Parent.Types)
 
@@ -172,7 +173,7 @@ local function find(ctx: Types.Ctx, player: Player, e: Egg)
 	if e.golden then
 		ctx.award(player, "goldenEggFound")
 		ctx.curio(player, "goldenEgg", "eggs:gold:" .. os.date("!%Y-%j"))
-		ctx.salute("The Great Egg Hunt", player.DisplayName .. " found the golden egg!", player)
+		ctx.salute("The Great Egg Hunt", Names.of(player) .. " found the golden egg!", player)
 	end
 	if #eggs == 0 then
 		rehideAt = os.clock() + c.again

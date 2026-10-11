@@ -370,6 +370,11 @@ end)
 roblox.implementMethod("WorldRoot", "Raycast", function()
 	return nil -- no physics here: the table falls back to the nearest piece under the pointer
 end)
+roblox.implementMethod("WorldRoot", "BulkMoveTo", function(_, parts, cfs)
+	for i, p in parts do
+		p.CFrame = cfs[i]
+	end
+end)
 local function toScreen(cam, p)
 	local vp, tx, ty = lens(cam)
 	local rel = cam.CFrame:PointToObjectSpace(p)
@@ -753,7 +758,12 @@ local RemotesStub = {
 		return {
 			InvokeServer = function(_, ...)
 				table.insert(sent, { remote = name, message = table.pack(...) })
-				return invokeResults[name]
+				-- (A check that wants the server to answer each ask on its own sets a function.)
+				local r = invokeResults[name]
+				if type(r) == "function" then
+					return r(...)
+				end
+				return r
 			end,
 		}
 	end,
@@ -966,8 +976,86 @@ local globals = {
 	end,
 }
 
+-- The staff's rigs are Roblox's own R15 bodies, which Lune can't make: here they stand in as blocks
+-- of the same proportions, jointed the same way (the holiday games' hosts, Santa and his elves).
+local function standInRig(name, spec, floor, parent)
+	-- (Stood on `floor`, as Rig.build stands its rigs: the root at hip height plus half its own; at
+	-- the guests' scale, as Rig.build scales them.)
+	local k = requireModule(rootProxy.ReplicatedStorage.Shared.Config).data.Movement.guestScale * (spec.heightScale or 1)
+	local home = floor + Vector3.new(0, 3 * k, 0)
+	local m = Instance.new("Model")
+	m.Name = name
+	local skin = spec.skin or roblox.Color3.fromRGB(232, 196, 170)
+	local coat = spec.coat or roblox.Color3.fromRGB(20, 20, 24)
+	local trousers = coat:Lerp(roblox.Color3.new(0, 0, 0), 0.35)
+	local parts = {}
+	local function part(pname, size, y, x, colour)
+		local p = Instance.new("Part")
+		p.Name = pname
+		p.Size = size * k
+		p.CFrame = home * CFrame.new((x or 0) * k, y * k, 0)
+		p.Position = p.CFrame.Position
+		p.Color = colour
+		p.Material = roblox.Enum.Material.SmoothPlastic
+		p.Parent = m
+		parts[pname] = p
+		return p
+	end
+	local root = part("HumanoidRootPart", Vector3.new(2, 2, 1), 0, 0, coat)
+	root.Transparency = 1
+	root.Anchored = true
+	part("LowerTorso", Vector3.new(2, 0.4, 1), -0.8, 0, coat)
+	part("UpperTorso", Vector3.new(2, 1.6, 1), 0.2, 0, coat)
+	part("Head", Vector3.new(1.2, 1.2, 1.2), 1.6, 0, skin)
+	for _, s in { { "Left", -1 }, { "Right", 1 } } do
+		part(s[1] .. "UpperArm", Vector3.new(1, 1, 1), 0.5, s[2] * 1.5, coat)
+		part(s[1] .. "LowerArm", Vector3.new(1, 0.8, 1), -0.4, s[2] * 1.5, coat)
+		part(s[1] .. "Hand", Vector3.new(1, 0.3, 1), -0.95, s[2] * 1.5, spec.gloves or skin)
+		part(s[1] .. "UpperLeg", Vector3.new(1, 1, 1), -1.5, s[2] * 0.5, trousers)
+		part(s[1] .. "LowerLeg", Vector3.new(1, 0.8, 1), -2.4, s[2] * 0.5, trousers)
+		part(s[1] .. "Foot", Vector3.new(1, 0.2, 1), -2.9, s[2] * 0.5, roblox.Color3.fromRGB(14, 12, 12))
+	end
+	-- Each joint where the two parts meet (as an R15 rig's are).
+	local function joint(jname, p0name, p1name, top)
+		local p0, p1 = parts[p0name], parts[p1name]
+		local at = p1.CFrame * CFrame.new(0, (if top then 1 else -1) * p1.Size.Y / 2, 0)
+		local j = Instance.new("Motor6D")
+		j.Name = jname
+		j.Part0 = p0
+		j.Part1 = p1
+		j.C0 = p0.CFrame:ToObjectSpace(at)
+		j.C1 = p1.CFrame:ToObjectSpace(at)
+		j.Parent = p1
+	end
+	joint("Root", "HumanoidRootPart", "LowerTorso", true)
+	joint("Waist", "LowerTorso", "UpperTorso", false)
+	joint("Neck", "UpperTorso", "Head", false)
+	for _, s in { "Left", "Right" } do
+		joint(s .. "Shoulder", "UpperTorso", s .. "UpperArm", true)
+		joint(s .. "Elbow", s .. "UpperArm", s .. "LowerArm", true)
+		joint(s .. "Wrist", s .. "LowerArm", s .. "Hand", true)
+		joint(s .. "Hip", "LowerTorso", s .. "UpperLeg", true)
+		joint(s .. "Knee", s .. "UpperLeg", s .. "LowerLeg", true)
+		joint(s .. "Ankle", s .. "LowerLeg", s .. "Foot", true)
+	end
+	local humanoid = Instance.new("Humanoid")
+	humanoid.HipHeight = 2 * k
+	humanoid.Parent = m
+	Instance.new("Animator").Parent = humanoid
+	m.PrimaryPart = root
+	m.Parent = parent
+	return { model = m, root = root, humanoid = humanoid }
+end
+
 local stubs = {
 	["ReplicatedStorage.Shared.Remotes"] = RemotesStub,
+	["ServerScriptService.Server.Staff.Rig"] = { build = standInRig },
+	-- (The holiday games read a guest's saved record from here; this screen has none.)
+	["ServerScriptService.Server.Profiles"] = {
+		get = function()
+			return nil
+		end,
+	},
 }
 
 function requireModule(proxy)
@@ -982,7 +1070,8 @@ function requireModule(proxy)
 	if cache[node] ~= nil then
 		return cache[node]
 	end
-	local stub = stubs[rawget(proxy, "__path")]
+	-- (A module's path starts at game when it was first reached from game, else at its service.)
+	local stub = stubs[(string.gsub(rawget(proxy, "__path"), "^game%.", ""))]
 	if stub then
 		cache[node] = stub
 		return stub
@@ -5545,6 +5634,686 @@ do
 	advance(0.5)
 	check("...until it's hidden", panel == nil or panel.Visible == false)
 end
+
+---------------------------------------------------------------------------------------------------
+-- 7z. The holiday games on this screen: Trick or Treat on Hallows Lane, the Turkey Round-Up in the
+-- Harvest Field, Santa's sleigh to the North Pole and the gifts it brings home, the Great Egg Hunt,
+-- the Luck of the Irish. Each place is built by the server's own modules (as the server builds
+-- it); what the server would say and do is said and done here, and the screen is checked.
+---------------------------------------------------------------------------------------------------
+;(function()
+	local errorsBefore = #errors
+	local function client(...)
+		return module("StarterPlayer", "StarterPlayerScripts", "Client", ...)
+	end
+	local HolidayGames = module("ReplicatedStorage", "Shared", "HolidayGames")
+	local Layout = module("ReplicatedStorage", "Shared", "Layout")
+	local HolidayPlay = client("World", "HolidayPlay")
+	local HolidayLane = client("World", "HolidayLane")
+	local HolidayField = client("World", "HolidayField")
+	local HolidayPole = client("World", "HolidayPole")
+	local HolidayEggs = client("World", "HolidayEggs")
+	local HolidayKit = client("World", "HolidayKit")
+	local SleighRide = client("World", "SleighRide")
+	local HolidayPop = client("UI", "HolidayPop")
+	local GiftOpening = client("UI", "GiftOpening")
+	local function server(name)
+		return module("ServerScriptService", "Server", "Holidays", name)
+	end
+	local Lane, Field, Pole, Eggs = server("Lane"), server("Field"), server("Pole"), server("Eggs")
+	local cfg = Config.data.HolidayGames
+
+	-- What the server works through, as the server's own games see it.
+	local folder = Instance.new("Folder")
+	folder.Name = "HolidayGames"
+	folder.Parent = workspace
+	signalOf(workspace, "ChildAdded"):Fire(folder)
+	local ctx = {
+		cfg = function()
+			return cfg
+		end,
+		rng = Random.new(1225),
+		folder = function()
+			return folder
+		end,
+		rootOf = function(p)
+			local c = p.Character
+			return c and c:FindFirstChild("HumanoidRootPart")
+		end,
+		trusted = function()
+			return true
+		end,
+		moved = function() end,
+		saved = function(d)
+			return d
+		end,
+		reward = function(_, gilt, gems)
+			return gilt, gems
+		end,
+		gemsLeft = function()
+			return cfg.gemsPerDay
+		end,
+		send = function() end,
+		broadcast = function() end,
+		teleport = function()
+			return true
+		end,
+		sendHome = function() end,
+		inArea = function()
+			return false
+		end,
+		isSeated = function()
+			return false
+		end,
+		award = function() end,
+		tally = function() end,
+		curio = function()
+			return false
+		end,
+		salute = function() end,
+	}
+	local function arrived(inst)
+		signalOf(folder, "ChildAdded"):Fire(inst)
+	end
+	local function left(inst)
+		signalOf(folder, "ChildRemoved"):Fire(inst)
+	end
+	local function setWs(key, value)
+		workspace:SetAttribute(key, value)
+		signalOf(workspace, "attr:" .. key):Fire()
+	end
+	local function openGame(id)
+		setWs(HolidayGames.ATTRIBUTE, id)
+	end
+	-- The guest, moved as the server moves them (and the camera with them).
+	local function moveTo(cf)
+		local at = cf * CFrame.new(0, 3, 0)
+		root.CFrame = at
+		root.Position = at.Position
+		camera.CFrame = at * CFrame.new(0, 7, 16)
+	end
+	local homeSpot = Layout.Street.spawn
+	-- The dock's holiday key, and pressing it.
+	local function dockTile(label)
+		local dockFrame = find(playerGui, function(d)
+			return d.Name == "QuickDock" and d:IsA("Frame")
+		end)
+		return dockFrame and dockFrame:FindFirstChild(label)
+	end
+	local function pressTile(label)
+		local t = dockTile(label)
+		local k = t and t:FindFirstChild("Key")
+		if not k then
+			return false
+		end
+		signalOf(k, "Activated"):Fire()
+		return true
+	end
+	local function holidayKeys()
+		local n = 0
+		for _, label in { "Treats", "Turkeys", "Sleigh", "Gifts", "Eggs", "Home" } do
+			if dockTile(label) then
+				n += 1
+			end
+		end
+		return n
+	end
+	-- The objective card's words.
+	local function card()
+		local c = find(playerGui, function(d)
+			return d.Name == "Objective" and d:IsA("Frame") and d.Parent ~= nil and d.Parent.Name == "MaisonHud"
+		end)
+		if not c then
+			return ""
+		end
+		local words = {}
+		for _, d in c:GetDescendants() do
+			if d:IsA("TextLabel") then
+				table.insert(words, d.Text)
+			end
+		end
+		return table.concat(words, " | ")
+	end
+	local localFolder = workspace:FindFirstChild("MaisonLocal") or workspace
+	local function mine(name)
+		return localFolder:FindFirstChild(name)
+	end
+	local function count(container, name)
+		local n = 0
+		for _, d in (container and container:GetDescendants() or {}) do
+			if d.Name == name then
+				n += 1
+			end
+		end
+		return n
+	end
+	-- (For the 3D viewer: Lune doesn't move what's jointed to a part when the part moves, so the
+	-- rigs, the turkeys and what's welded on are put where their joints hold them.)
+	local function pose(container)
+		if not process.env.EXPORT_AT then
+			return
+		end
+		local held = {}
+		for _, w in container:GetDescendants() do
+			if w:IsA("WeldConstraint") and w.Part0 and w.Part1 then
+				table.insert(held, { w.Part0, w.Part1, w.Part0.CFrame:ToObjectSpace(w.Part1.CFrame) })
+			end
+		end
+		local joints = {}
+		for _, j in container:GetDescendants() do
+			if j:IsA("JointInstance") and j.Part0 and j.Part1 then
+				table.insert(joints, j)
+			end
+		end
+		for _ = 1, 6 do
+			for _, j in joints do
+				j.Part1.CFrame = j.Part0.CFrame * j.C0 * j.C1:Inverse()
+			end
+		end
+		for _ = 1, 3 do
+			for _, h in held do
+				h[2].CFrame = h[1].CFrame * h[3]
+			end
+		end
+	end
+	-- The server's answers to the guest's asks.
+	local asks = {}
+	local answers = {}
+	invokeResults.HolidayAsk = function(req)
+		table.insert(asks, req)
+		local f = answers[req.op]
+		if f then
+			return f(req)
+		end
+		return { ok = true }
+	end
+	local function lastAsk(op)
+		for i = #asks, 1, -1 do
+			if asks[i].op == op then
+				return asks[i]
+			end
+		end
+		return nil
+	end
+	answers.state = function()
+		return { ok = true, gifts = 0 }
+	end
+	answers.home = function()
+		moveTo(homeSpot)
+		return { ok = true }
+	end
+	moveTo(homeSpot)
+	advance(1)
+
+	-------------------------------------------------------------------------------------------
+	-- All Hallows': Trick or Treat on Hallows Lane
+	-------------------------------------------------------------------------------------------
+	Lane.open(ctx)
+	advance(0.2)
+	local lane = folder:FindFirstChild("HallowsLane")
+	local houses, hosts = {}, 0
+	for _, h in (lane and lane:GetChildren() or {}) do
+		local i = h:GetAttribute("Door")
+		if type(i) == "number" then
+			houses[i] = h
+			for _, d in h:GetChildren() do
+				if d:IsA("Model") and d:GetAttribute("Host") then
+					hosts += 1
+				end
+			end
+		end
+	end
+	check("Hallows Lane: nine grand houses down a lamplit street, a host in costume behind every door", lane ~= nil and #houses == 9 and hosts == 9, hosts)
+	arrived(lane)
+	openGame("halloween")
+	-- (The holiday's title comes first; the card steps aside for it.)
+	advance(0.6)
+	check("the house is dressed for it, its title naming the game (no hunt round the house today)", textOnScreen("TRICK OR TREAT") ~= nil and textOnScreen("Knock at every door on Hallows Lane") ~= nil)
+	advance(6)
+	check("Trick or Treat: its key stands at the foot of the dock", dockTile("Treats") ~= nil and holidayKeys() == 1)
+	check("...and the card says what's on", string.find(norm(card()), norm("Trick or Treat"), 1, true) ~= nil, card())
+	answers.go = function()
+		moveTo(Lane.arrival(ctx, LocalPlayer))
+		return { ok = true }
+	end
+	check("the key takes the guest to the Lane", pressTile("Treats"))
+	advance(0.15)
+	local fader = playerGui:FindFirstChild("HolidayTravel")
+	check("...through a fade to black and back", fader ~= nil and fader:FindFirstChildWhichIsA("Frame") ~= nil)
+	advance(1.6)
+	check("...and asks the house to go", lastAsk("go") ~= nil)
+	check("there: the key reads Home", HolidayPlay.area() == "lane" and dockTile("Home") ~= nil and dockTile("Treats") == nil, HolidayPlay.area())
+	check("...the card counts the doors knocked at", string.find(card(), "Doors knocked at: 0 of 9", 1, true) ~= nil, card())
+	local dressing = mine("HolidayLane")
+	check("...and the Lane is dressed on this screen: mist on the cobbles, candles in the air, bats, a pumpkin over every door", dressing ~= nil and count(dressing, "Mist") >= 4 and count(dressing, "Candle") >= 6 and count(dressing, "Bat") >= 2 and count(dressing, "DoorMarker") == 9)
+	pose(folder)
+	snapshot("holiday-lane")
+	-- A knock at the first door.
+	local house = houses[1]
+	local leaf = house and house:FindFirstChild("DoorL")
+	local leafPart = leaf and leaf:FindFirstChildWhichIsA("BasePart", true)
+	local leafWas = leafPart and leafPart.CFrame
+	local host
+	for _, d in (house and house:GetChildren() or {}) do
+		if d:IsA("Model") and d:GetAttribute("Host") then
+			host = d
+		end
+	end
+	local hostRoot = host and host:FindFirstChild("HumanoidRootPart")
+	local hostWas = hostRoot and hostRoot.CFrame
+	serverSays("Holiday", { op = "door", i = 1, by = LocalPlayer.UserId, treat = "truffle" })
+	advance(0.9)
+	check("a knock: the door swings open on its lit hall", leafPart ~= nil and leafWas ~= nil and (leafPart.CFrame.Position - leafWas.Position).Magnitude > 1)
+	check("...its host steps out onto the threshold", hostRoot ~= nil and hostWas ~= nil and (hostRoot.CFrame.Position - hostWas.Position).Magnitude > 1.5)
+	pose(folder)
+	snapshot("lane-door")
+	advance(0.4)
+	check("...and throws the treat to whoever knocked", HolidayKit.inFlight() > 0, HolidayKit.inFlight())
+	serverSays("Holiday", { op = "treat", i = 1, host = "Lady Belladonna", line = "A gold-leaf truffle for you, darling.", treat = "truffle", treatName = "a gold-leaf truffle", gilt = 45, gems = 1, visited = { 1 }, total = 9 })
+	advance(0.3)
+	local says = host and host:FindFirstChild("Head") and host.Head:FindFirstChild("HostSays")
+	local saysText = says and says:FindFirstChildWhichIsA("TextLabel")
+	check("the host says their line", saysText ~= nil and saysText.Text == "A gold-leaf truffle for you, darling.")
+	advance(1.9)
+	check("what it paid pops up: the treat, who gave it, +45 Gilt and +1 Gem", HolidayPop.count() >= 1 and textOnScreen("Lady Belladonna") ~= nil and textOnScreen("+45 GILT") ~= nil and textOnScreen("+1 GEM") ~= nil)
+	check("...the treat landed", HolidayKit.inFlight() == 0)
+	snapshot("lane-treat")
+	advance(3)
+	check("the door closes behind its host", leafPart ~= nil and leafWas ~= nil and (leafPart.CFrame.Position - leafWas.Position).Magnitude < 0.05 and hostRoot ~= nil and (hostRoot.CFrame.Position - hostWas.Position).Magnitude < 0.05)
+	local markers = {}
+	for _, d in (mine("HolidayLane") or folder):GetDescendants() do
+		if d.Name == "Glyph" and d:IsA("TextLabel") then
+			table.insert(markers, d.Text)
+		end
+	end
+	local ticks = 0
+	for _, t in markers do
+		if t == "✓" then
+			ticks += 1
+		end
+	end
+	check("a gold tick over the door knocked at; a pumpkin over the rest", #markers == 9 and ticks == 1, table.concat(markers, " "))
+	check("...and the card counts it", string.find(card(), "Doors knocked at: 1 of 9", 1, true) ~= nil, card())
+	-- A knock at a door already visited this round: the door opens, no treat.
+	serverSays("Holiday", { op = "door", i = 1, by = LocalPlayer.UserId, empty = true })
+	advance(1.4)
+	check("back at the same door: the host waves, no treat thrown", HolidayKit.inFlight() == 0)
+	advance(4)
+	-- The ninth door: a full bag.
+	local all = {}
+	for i = 1, 9 do
+		table.insert(all, i)
+	end
+	serverSays("Holiday", { op = "treat", i = 9, host = "The Midnight Hostess", line = "The finest treat on the Lane.", treat = "truffle", treatName = "a midnight truffle", gilt = 150, gems = 0, visited = all, total = 9, full = true, bonusGilt = 300, bonusGems = 3 })
+	advance(2.8)
+	check("every door: a full bag, and its bonus", textOnScreen("A full bag!") ~= nil and textOnScreen("+300 GILT") ~= nil and textOnScreen("+3 GEMS") ~= nil)
+	snapshot("lane-fullbag")
+	advance(5)
+	check("the reward cards go by themselves", HolidayPop.count() == 0, HolidayPop.count())
+	-- Home, with the same key.
+	check("Home takes the guest back to the Maison", pressTile("Home"))
+	advance(2)
+	check("...and asks the house", lastAsk("home") ~= nil)
+	check("back at the Maison: the Treats key again, and the Lane's dressing put away", HolidayPlay.area() == nil and dockTile("Treats") ~= nil and dockTile("Home") == nil and count(mine("HolidayLane"), "Mist") == 0, HolidayPlay.area())
+	Lane.close(ctx)
+	left(lane)
+	openGame(nil)
+	advance(0.8)
+	check("All Hallows' over: the key leaves the dock", holidayKeys() == 0)
+
+	-------------------------------------------------------------------------------------------
+	-- Thanksgiving: the Turkey Round-Up
+	-------------------------------------------------------------------------------------------
+	Field.open(ctx)
+	local field = folder:FindFirstChild("HarvestField")
+	arrived(field)
+	openGame("thanksgiving")
+	advance(6.6)
+	check("the Turkey Round-Up: its key in the dock", dockTile("Turkeys") ~= nil and holidayKeys() == 1)
+	answers.go = function()
+		moveTo(Field.arrival(ctx, LocalPlayer))
+		return { ok = true }
+	end
+	pressTile("Turkeys")
+	advance(2)
+	check("in the Harvest Field: every turkey drawn, bronze and fanned", HolidayPlay.area() == "field" and HolidayField.count() == cfg.field.turkeys, HolidayField.count())
+	check("...festoon lights from the barn, leaves falling", count(mine("HolidayField"), "Bulb") >= 10 and count(mine("HolidayField"), "Leaf") >= 4)
+	check("...and the card says what to do", string.find(card(), "Run at a turkey", 1, true) ~= nil, card())
+	-- The turkeys run (the server moves them); each drawn bird follows its own.
+	local birds = mine("HolidayTurkeys")
+	for _ = 1, 30 do
+		Field.step(ctx, 0.1)
+		advance(0.1)
+	end
+	local list = Field.turkeys()
+	local worst = 0
+	for _, t in list do
+		local nearest = math.huge
+		for _, m in (birds and birds:GetChildren() or {}) do
+			if m.PrimaryPart then
+				nearest = math.min(nearest, (m.PrimaryPart.CFrame.Position - (t.part.CFrame.Position - Vector3.new(0, 1.5, 0))).Magnitude)
+			end
+		end
+		worst = math.max(worst, nearest)
+	end
+	check("the turkeys run and every one drawn keeps with its own", #list > 0 and worst < 2, worst)
+	pose(birds)
+	pose(folder)
+	if process.env.EXPORT_AT == "holiday-field" then
+		for k = 1, math.min(4, #list) do
+			print("TURKEY", list[k].part.CFrame.Position)
+		end
+	end
+	snapshot("holiday-field")
+	local t1 = list[1]
+	serverSays("Holiday", { op = "caught", id = t1.id, by = LocalPlayer.UserId, golden = false, at = t1.part.CFrame.Position })
+	serverSays("Holiday", { op = "turkey", golden = false, gilt = 40, gems = 1 })
+	advance(0.3)
+	check("a catch: feathers and a GOBBLE!", textOnScreen("GOBBLE!") ~= nil or find(workspace, function(d)
+		return d:IsA("TextLabel") and d.Text == "GOBBLE!"
+	end) ~= nil)
+	check("...and what it paid", textOnScreen("Caught one!") ~= nil and textOnScreen("+40 GILT") ~= nil)
+	check("...the card counts the catch", string.find(card(), "Turkeys caught: 1", 1, true) ~= nil, card())
+	serverSays("Holiday", { op = "goldenTurkey" })
+	advance(0.3)
+	check("a golden turkey out of the barn is called out", textOnScreen("A golden turkey has walked out of the barn!") ~= nil)
+	serverSays("Holiday", { op = "turkey", golden = true, gilt = 400, gems = 4 })
+	advance(0.5)
+	check("the golden one: a bigger card", textOnScreen("The golden turkey!") ~= nil and textOnScreen("+4 GEMS") ~= nil)
+	snapshot("field-golden")
+	advance(6)
+	pressTile("Home")
+	advance(2)
+	check("home from the field: the turkeys rest (nothing drawn moves while no one's there)", HolidayPlay.area() == nil and count(mine("HolidayField"), "Bulb") == 0)
+	Field.close(ctx)
+	left(field)
+	openGame(nil)
+	advance(0.8)
+	check("...and with Thanksgiving over, every turkey drawn here is gone", HolidayField.count() == 0 and holidayKeys() == 0)
+
+	-------------------------------------------------------------------------------------------
+	-- Christmas: Santa's sleigh to the North Pole
+	-------------------------------------------------------------------------------------------
+	Pole.open(ctx)
+	advance(0.2)
+	local pole = folder:FindFirstChild("NorthPole")
+	local sleigh = folder:FindFirstChild("SantasSleigh")
+	arrived(pole)
+	arrived(sleigh)
+	signalOf(workspace, "attr:SleighState"):Fire()
+	openGame("christmas")
+	advance(6.8)
+	check("Christmas: Santa's sleigh at the kerb, its key in the dock", sleigh ~= nil and dockTile("Sleigh") ~= nil and holidayKeys() == 1)
+	check("...Santa at the reins", sleigh ~= nil and sleigh:FindFirstChild("Santa") ~= nil)
+	local signGui = sleigh and sleigh.PrimaryPart and sleigh.PrimaryPart:FindFirstChild("SleighSign")
+	check("...its sign: To the North Pole! Board now", signGui ~= nil and signGui.Line.Text == "To the North Pole! Board now")
+	check("...and the card says where it is", string.find(card(), "waiting at the kerb", 1, true) ~= nil, card())
+	check("the gifts in the snow at the Pole are drawn on this screen", HolidayPole.count() == cfg.pole.gifts, HolidayPole.count())
+	pose(folder)
+	snapshot("holiday-sleigh")
+	-- The sleigh's way over the house is clear of it, both ways: no part of the house, the street or
+	-- its Christmas dressing within the sleigh's reach of any point along the flight (away from the
+	-- kerb it starts and ends at).
+	do
+		local boxes = {}
+		local skip = { folder, mine("HolidaySleigh") }
+		for _, d in workspace:GetDescendants() do
+			if d:IsA("BasePart") and d.Transparency < 0.95 and math.max(d.Size.X, d.Size.Y, d.Size.Z) >= 1.5 and d.Name ~= "Terrain" then
+				local inSkip = false
+				for _, s in skip do
+					if s and d:IsDescendantOf(s) then
+						inSkip = true
+					end
+				end
+				if not inSkip and d.Parent ~= character then
+					local cf, s = d.CFrame, d.Size / 2
+					local ext = Vector3.new(
+						math.abs(cf.RightVector.X) * s.X + math.abs(cf.UpVector.X) * s.Y + math.abs(cf.LookVector.X) * s.Z,
+						math.abs(cf.RightVector.Y) * s.X + math.abs(cf.UpVector.Y) * s.Y + math.abs(cf.LookVector.Y) * s.Z,
+						math.abs(cf.RightVector.Z) * s.X + math.abs(cf.UpVector.Z) * s.Y + math.abs(cf.LookVector.Z) * s.Z
+					)
+					-- (The road, the kerbs and the snow on them are what it runs on, not in its way.)
+					if cf.Position.Y + ext.Y > 2 then
+						table.insert(boxes, { at = cf.Position, ext = ext, name = d:GetFullName() })
+					end
+				end
+			end
+		end
+		local hit = nil
+		local reach = 5
+		local kerb = HolidayGames.HOME_SLEIGH.Position
+		for _, toPole in { true, false } do
+			local path = HolidayGames.path(HolidayGames.flightPoints(toPole))
+			for i = 0, 900 do
+				local p = HolidayGames.travel(path, i / 900)
+				if (p - kerb).Magnitude > 46 and Vector3.new(p.X, 0, p.Z).Magnitude < 900 then
+					for _, b in boxes do
+						local d = p - b.at
+						if math.abs(d.X) < b.ext.X + reach and math.abs(d.Y) < b.ext.Y + reach and math.abs(d.Z) < b.ext.Z + reach then
+							hit = string.format("%s at %.0f, %.0f, %.0f (%s)", b.name, p.X, p.Y, p.Z, if toPole then "out" else "home")
+							break
+						end
+					end
+				end
+				if hit then
+					break
+				end
+			end
+		end
+		check("the sleigh's flight clears the house, the street and its dressing, both ways", hit == nil, hit)
+	end
+	answers.board = function()
+		return { ok = true }
+	end
+	pressTile("Sleigh")
+	advance(0.3)
+	check("the Sleigh key asks to board", lastAsk("board") ~= nil)
+	-- Off it goes (the server takes off with the guest aboard).
+	local body = sleigh and sleigh:FindFirstChild("Floor", true)
+	local flight = cfg.pole.flight
+	LocalPlayer:SetAttribute("SleighRide", "toPole")
+	setWs("SleighT0", workspace:GetServerTimeNow())
+	setWs("SleighFlight", flight)
+	setWs("SleighState", "toPole")
+	moveTo(HolidayGames.poleSleigh() * CFrame.new(0, 320, 0))
+	advance(0.5)
+	local copy = SleighRide.copy()
+	check("take-off: the sleigh flies on every screen (a copy of it, reindeer and all)", SleighRide.flying() and copy ~= nil and copy:FindFirstChild("Reindeer") ~= nil)
+	check("...the parked one hidden meanwhile", body ~= nil and body.LocalTransparencyModifier == 1)
+	local rideGui = playerGui:FindFirstChild("SleighRide")
+	check("aboard: a film, between black bars, the camera riding with the sleigh", SleighRide.riding() and rideGui ~= nil and rideGui:FindFirstChild("BarTop") ~= nil and camera.CameraType == roblox.Enum.CameraType.Scriptable)
+	check("...the card steps aside for it", card() == "")
+	local copyRoot = copy and copy.PrimaryPart
+	local startAt = copyRoot and copyRoot.CFrame.Position
+	advance(flight * 0.25)
+	local quarter = copyRoot and copyRoot.CFrame.Position
+	check("...off along the street and up over the house", startAt ~= nil and quarter ~= nil and quarter.Y > startAt.Y + 20, quarter)
+	advance(flight * 0.27)
+	local high = copyRoot and copyRoot.CFrame.Position
+	check("...high over the clouds", high ~= nil and high.Y > 200, high)
+	check("...the place's name as it nears", textOnScreen("THE NORTH POLE") ~= nil)
+	pose(copy)
+	if process.env.EXPORT_AT == "sleigh-flight" and copyRoot then
+		print("SLEIGH", copyRoot.CFrame.Position, copyRoot.CFrame.LookVector)
+	end
+	snapshot("sleigh-flight")
+	advance(flight * 0.46)
+	local landing = copyRoot and copyRoot.CFrame.Position
+	check("...and down on the North Pole's pad", landing ~= nil and (landing - HolidayGames.poleSleigh().Position).Magnitude < 12, landing and (landing - HolidayGames.poleSleigh().Position).Magnitude)
+	-- Landed (as the server lands it).
+	if sleigh then
+		sleigh:PivotTo(HolidayGames.poleSleigh())
+	end
+	moveTo(HolidayGames.poleSleigh() * CFrame.new(8, 0, -2))
+	LocalPlayer:SetAttribute("SleighRide", nil)
+	setWs("SleighLeaves", workspace:GetServerTimeNow() + cfg.pole.stay)
+	setWs("SleighState", "pole")
+	serverSays("Holiday", { op = "arrived", place = "pole" })
+	advance(1.5)
+	check("landed: the film ends and the camera is the guest's again", not SleighRide.flying() and body ~= nil and body.LocalTransparencyModifier == 0 and camera.CameraType == roblox.Enum.CameraType.Custom)
+	check("at the North Pole: no key (the sleigh is the way home)", HolidayPlay.area() == "pole" and holidayKeys() == 0)
+	check("...snow falling, the great tree lit with its star, lights along the workshop", count(mine("HolidayPole"), "TreeBulb") >= 30 and count(mine("HolidayPole"), "TreeStar") == 1 and count(mine("HolidayPole"), "EaveBulb") >= 10)
+	local pillNow = find(playerGui, function(d)
+		return d.Name == "SleighClock"
+	end)
+	check("...the time before the sleigh leaves, at the top of the screen", pillNow ~= nil and textOnScreen("THE SLEIGH LEAVES FOR HOME IN") ~= nil and string.match(pillNow.Digits.Text, "^1:2%d$") ~= nil, pillNow and pillNow.Digits.Text)
+	check("...and the card says what to do", string.find(card(), "In your arms: 0", 1, true) ~= nil, card())
+	-- A gift picked up (the server takes it from the snow and says who).
+	local gifts = Pole.gifts()
+	local g1 = gifts[1]
+	local giftsFolder = pole and pole:FindFirstChild("Gifts")
+	local id1 = g1 and g1:GetAttribute("Id")
+	if g1 then
+		g1.Parent = nil
+		signalOf(giftsFolder, "ChildRemoved"):Fire(g1)
+	end
+	serverSays("Holiday", { op = "picked", id = id1, by = LocalPlayer.UserId })
+	LocalPlayer:SetAttribute("GiftsCarried", 3)
+	signalOf(LocalPlayer, "attr:GiftsCarried"):Fire()
+	advance(0.1)
+	check("a gift picked up flies into the guest's arms", HolidayKit.inFlight() > 0)
+	advance(0.6)
+	local stack = mine("HolidayStacks")
+	check("...the gifts carried are stacked in front of them", stack ~= nil and count(stack, "GiftStack") == 1 and #(stack:FindFirstChild("GiftStack"):GetChildren()) == 3)
+	check("...a ring of gold light where to load them", mine("HolidayGifts") ~= nil and mine("HolidayGifts"):FindFirstChild("LoadRing") ~= nil)
+	check("...and the card counts them", string.find(card(), "In your arms: 3", 1, true) ~= nil, card())
+	pose(folder)
+	pose(stack)
+	snapshot("holiday-pole")
+	serverSays("Holiday", { op = "loaded", by = LocalPlayer.UserId, n = 3 })
+	LocalPlayer:SetAttribute("GiftsCarried", nil)
+	signalOf(LocalPlayer, "attr:GiftsCarried"):Fire()
+	serverSays("Holiday", { op = "gifts", carrying = 0, loaded = 3, gifts = 3 })
+	advance(0.5)
+	check("loaded: the gifts fly into Santa's sack", HolidayKit.inFlight() > 0)
+	check("...and the card says so", textOnScreen("Loaded on the sleigh") ~= nil and textOnScreen("3 gifts, safe in Santa's sack.") ~= nil)
+	advance(1)
+	check("...the ring goes with nothing in their arms", mine("HolidayGifts"):FindFirstChild("LoadRing") == nil)
+	snapshot("pole-loaded")
+	-- Fifteen seconds left: the clock turns red.
+	setWs("SleighLeaves", workspace:GetServerTimeNow() + 12)
+	advance(0.5)
+	local clockPill = find(playerGui, function(d)
+		return d.Name == "SleighClock"
+	end)
+	check("the last seconds: the clock turns red", clockPill ~= nil and clockPill.Digits.TextColor3.R > 0.9 and clockPill.Digits.TextColor3.G < 0.6)
+	snapshot("pole-clock")
+	-- Home (the server takes everyone at the Pole home with the sleigh).
+	LocalPlayer:SetAttribute("SleighRide", "toHome")
+	setWs("SleighLeaves", nil)
+	setWs("SleighT0", workspace:GetServerTimeNow())
+	setWs("SleighState", "toHome")
+	moveTo(HolidayGames.HOME_SLEIGH * CFrame.new(0, 320, 0))
+	advance(flight * 0.6)
+	check("homeward: the title says where", textOnScreen("HOME FOR CHRISTMAS") ~= nil)
+	advance(flight * 0.45)
+	if sleigh then
+		sleigh:PivotTo(HolidayGames.HOME_SLEIGH)
+	end
+	moveTo(CFrame.new(-11, 0.1, -48))
+	LocalPlayer:SetAttribute("SleighRide", nil)
+	setWs("SleighState", "home")
+	serverSays("Holiday", { op = "arrived", place = "home", gifts = 3 })
+	advance(0.5)
+	check("home: the Gifts key, with how many are waiting", dockTile("Gifts") ~= nil and dockTile("Gifts"):FindFirstChild("Count") ~= nil and dockTile("Gifts").Count.Text == "3")
+	-- The gifts open at home: a screen of their own, the odds written at the foot.
+	local opened = {
+		{ { kind = "gems", gilt = 0, gems = 3 } },
+		{ { kind = "gilt", gilt = 60, gems = 0 }, { kind = "moreGilt", gilt = 240, gems = 0 } },
+	}
+	local giftsLeft = 3
+	answers.open = function(req)
+		local r = table.remove(opened, 1)
+		if not r then
+			return { ok = false, why = "No gifts to open." }
+		end
+		giftsLeft -= #r
+		return { ok = true, results = r, gifts = giftsLeft, n = req.n }
+	end
+	advance(2.2)
+	check("...and the gift screen opens by itself", GiftOpening.isOpen() and textOnScreen("Gifts from the North Pole") ~= nil and textOnScreen("3 gifts to open") ~= nil)
+	check("...with what a gift holds, and its odds, written at the foot (and that it's free)", textOnScreen("40–90 Gilt 60%") ~= nil and textOnScreen("12–18 Gems 2%") ~= nil and textOnScreen("never sold") ~= nil)
+	snapshot("gifts")
+	check("OPEN", press("Open"))
+	advance(2.6)
+	check("...it shakes, the lid flies off and what was in it rises out: +3 Gems", textOnScreen("+3 GEMS") ~= nil and textOnScreen("Gems!") ~= nil and lastAsk("open") ~= nil and lastAsk("open").n == 1)
+	snapshot("gift-reveal")
+	check("...and the dock's count goes down", dockTile("Gifts") ~= nil and dockTile("Gifts").Count.Text == "2")
+	advance(1)
+	check("OPEN ALL", press("Open all"))
+	advance(3)
+	check("...the rest, each in turn, and the totals", textOnScreen("+300 GILT") ~= nil and textOnScreen("Every gift opened") ~= nil)
+	check("...with the sleigh still coming: Ride again", textOnScreen("Ride again") ~= nil)
+	snapshot("gifts-all")
+	camera.ViewportSize = Vector2.new(390, 844)
+	signalOf(camera, "prop:ViewportSize"):Fire()
+	advance(0.5)
+	snapshot("gifts-phone")
+	camera.ViewportSize = Vector2.new(1280, 720)
+	signalOf(camera, "prop:ViewportSize"):Fire()
+	advance(0.5)
+	press("Close")
+	advance(0.8)
+	check("closed: every gift opened, the Sleigh key is back", not GiftOpening.isOpen() and dockTile("Sleigh") ~= nil and dockTile("Gifts") == nil)
+	Pole.close(ctx)
+	left(pole)
+	left(sleigh)
+	openGame(nil)
+	advance(0.8)
+	check("Christmas over: no gifts drawn, no key", HolidayPole.count() == 0 and holidayKeys() == 0)
+
+	-------------------------------------------------------------------------------------------
+	-- Easter: the Great Egg Hunt (in the house)
+	-------------------------------------------------------------------------------------------
+	Eggs.open(ctx)
+	local eggs = folder:FindFirstChild("Eggs")
+	arrived(eggs)
+	openGame("easter")
+	advance(6.8)
+	check("the Great Egg Hunt: painted eggs hidden round the house, drawn on this screen", HolidayEggs.left() == cfg.eggs.count and count(mine("HolidayEggs"), "Root") >= cfg.eggs.count, HolidayEggs.left())
+	check("...its key shows how many are left", dockTile("Eggs") ~= nil and dockTile("Eggs").Count.Text == tostring(cfg.eggs.count))
+	check("...and the card says where to look", string.find(card(), "painted eggs hidden round the house", 1, true) ~= nil, card())
+	pose(eggs)
+	if process.env.EXPORT_AT == "holiday-eggs" then
+		for k, e in Eggs.list() do
+			if k <= 6 then
+				print("EGG", e.CFrame.Position, e:GetAttribute("Golden"))
+			end
+		end
+	end
+	snapshot("holiday-eggs")
+	local e1 = Eggs.list()[1]
+	local at = e1 and e1.CFrame.Position
+	if e1 then
+		e1.Parent = nil
+		signalOf(eggs, "ChildRemoved"):Fire(e1)
+	end
+	serverSays("Holiday", { op = "egg", id = 1, by = LocalPlayer.UserId, golden = false, at = at })
+	serverSays("Holiday", { op = "eggFound", golden = false, gilt = 35, gems = 0, left = cfg.eggs.count - 1 })
+	advance(0.6)
+	check("an egg found: confetti, and what it paid", textOnScreen("A painted egg") ~= nil and textOnScreen("+35 GILT") ~= nil)
+	check("...one fewer on the key", dockTile("Eggs").Count.Text == tostring(cfg.eggs.count - 1))
+	advance(5)
+	Eggs.close(ctx)
+	left(eggs)
+	openGame(nil)
+	advance(0.8)
+	check("Easter over: the eggs are gone from this screen", HolidayEggs.left() == 0 and holidayKeys() == 0)
+
+	-------------------------------------------------------------------------------------------
+	-- St Patrick's: the luck of the Irish (no key: it's at every table)
+	-------------------------------------------------------------------------------------------
+	openGame("stPatrick")
+	advance(6.8)
+	check("St Patrick's: no key, and the card says the luck is at every table", holidayKeys() == 0 and string.find(norm(card()), norm("Luck of the Irish"), 1, true) ~= nil, card())
+	openGame(nil)
+	advance(0.8)
+	folder:Destroy()
+	invokeResults.HolidayAsk = nil
+	moveTo(homeSpot)
+	advance(1)
+	check("no errors in the holiday games", #errors == errorsBefore, errors[errorsBefore + 1])
+end)()
 
 ---------------------------------------------------------------------------------------------------
 -- 8. A respawn hands straight back to the follow camera

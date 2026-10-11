@@ -518,6 +518,46 @@ function HolidayProps.fir(parent: Instance, base: Vector3, height: number, snowy
 	return m
 end
 
+-- A pine in the snow, lighter than a fir (for a ring of them round a place): three tiers, each a
+-- low cone of six boughs, the top one white with snow, on a short trunk. Twenty parts.
+function HolidayProps.pine(parent: Instance, base: Vector3, height: number, snowy: boolean?): Model
+	local m = model(parent, "Pine", CFrame.new(base))
+	post(m, "Trunk", height * 0.16, height * 0.07, base, rgb(70, 48, 34), Enum.Material.Wood)
+	local greens = { rgb(24, 70, 48), rgb(19, 58, 40) }
+	local tiers = 3
+	for i = 0, tiers - 1 do
+		local r = height * 0.3 * (1 - i * 0.27)
+		local h = height * (0.38 - i * 0.05)
+		local y = base.Y + height * (0.12 + i * 0.26)
+		local slices = 6
+		local w = 2 * r * math.tan(math.pi / slices) * 1.15
+		local cap = snowy == true and i == tiers - 1
+		for k = 0, slices - 1 do
+			local a = k / slices * math.pi * 2 + i * 0.5
+			local out = Vector3.new(math.cos(a), 0, math.sin(a))
+			local centre = Vector3.new(base.X, y + h / 2, base.Z) + out * (r / 2)
+			wedge(m, "Boughs", Vector3.new(w, h, r), CFrame.lookAt(centre, centre + out), if cap then rgb(232, 238, 248) else greens[(k % 2) + 1], if cap then Enum.Material.Snow else Enum.Material.Grass)
+		end
+	end
+	return m
+end
+
+-- A mountain far off, in the low-poly style: a great cube of rock stood on one corner and sunk in
+-- the ground (a three-sided peak), its top under snow (a smaller cube on the same corner, standing
+-- a little proud of the rock). `size` is the cube's edge: the peak stands about 0.62 of it above `base`, and
+-- its foot reaches about 0.82 of it out from the middle.
+local CORNER_UP = CFrame.fromAxisAngle(Vector3.new(-1, 0, 1).Unit, math.acos(1 / math.sqrt(3)))
+function HolidayProps.peak(parent: Instance, base: Vector3, size: number, yaw: number, rock: Color3, snow: Color3?)
+	local turn = CFrame.Angles(0, yaw, 0) * CORNER_UP
+	local top = base + Vector3.new(0, size * 0.62, 0)
+	part(parent, "Mountain", Vector3.new(size, size, size), CFrame.new(top - Vector3.new(0, size * math.sqrt(3) / 2, 0)) * turn, rock, Enum.Material.Rock)
+	if snow then
+		local cap = size * 0.36
+		-- (Proud of the rock by a few studs: seen from far off, faces closer than that shimmer.)
+		part(parent, "MountainSnow", Vector3.new(cap, cap, cap), CFrame.new(top + Vector3.new(0, size * 0.02, 0) - Vector3.new(0, cap * math.sqrt(3) / 2, 0)) * turn, snow, Enum.Material.Snow)
+	end
+end
+
 ---------------------------------------------------------------------------------------------------
 -- Easter
 ---------------------------------------------------------------------------------------------------

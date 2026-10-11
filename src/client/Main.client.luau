@@ -311,6 +311,27 @@ start("Curios", function()
 		MenuPanel.add(tile :: any)
 	end
 end)
+-- The holiday games: Trick or Treat on Hallows Lane, the Turkey Round-Up in the Harvest Field,
+-- Santa's sleigh to the North Pole (and the gifts it brings home), the Great Egg Hunt. Their key
+-- stands at the foot of the dock while one is on; the objective card says what to do next.
+start("The holiday games", function()
+	local HolidayPlay = require(script.Parent.World.HolidayPlay)
+	local GiftOpening = require(script.Parent.UI.GiftOpening)
+	local QuickDock = require(script.Parent.UI.QuickDock)
+	HolidayPlay.dockKey = QuickDock.setHoliday
+	QuickDock.holidayPressed = HolidayPlay.press
+	HolidayPlay.say = function(title: string, line: string)
+		Toast.show(title, line, 4)
+	end
+	HolidayPlay.openGifts = GiftOpening.open
+	GiftOpening.changed = HolidayPlay.setPending
+	GiftOpening.ride = HolidayPlay.ride
+	HolidayPlay.goalChanged = function()
+		Objective.refresh()
+	end
+	Objective.holiday = HolidayPlay.goal
+	HolidayPlay.start()
+end)
 start("Event effects", require(script.Parent.World.EventFX).start)
 start("The Terrace Bar", function()
 	require(script.Parent.UI.BarPanel).start()
@@ -515,15 +536,16 @@ local function startHud()
 	player:GetAttributeChangedSignal("MaisonAdmin"):Connect(ownerKey)
 	-- What to do next, under the keys while you walk (stepping aside while something bigger holds
 	-- the screen: the Meme Takeover, the Golden Transformation, a holiday's title, an effect's big
-	-- words, Admin Abuse's arrival card and gifts, a headline, a badge coming in).
+	-- words, Admin Abuse's arrival card and gifts, a headline, a badge coming in, the sleigh ride).
 	start("Objective", function()
 		local MemeTakeover = require(script.Parent.World.MemeTakeover)
 		local AbuseFX = require(script.Parent.World.AbuseFX)
 		local AbuseShow = require(script.Parent.World.AbuseShow)
 		local Midas = require(script.Parent.World.Midas)
 		local Stagecraft = require(script.Parent.World.Stagecraft)
+		local SleighRide = require(script.Parent.World.SleighRide)
 		Objective.isBusy = function(): boolean
-			return MemeTakeover.isRunning() or Midas.isRunning() or Stagecraft.titleUp() or AbuseFX.bannerUp() or AbuseShow.cardUp() or Headline.showing() or Celebrate.badgeUp()
+			return MemeTakeover.isRunning() or Midas.isRunning() or Stagecraft.titleUp() or AbuseFX.bannerUp() or AbuseShow.cardUp() or Headline.showing() or Celebrate.badgeUp() or SleighRide.riding()
 		end
 		Objective.start(function(mode: string)
 			quickSit(mode)

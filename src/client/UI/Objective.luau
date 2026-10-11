@@ -1,7 +1,8 @@
 --!strict
 -- One quiet card under the keys while you walk: what to do next, and how. A first visit is told
--- to take a seat; then tonight's table, if it's waiting (with a key that takes you there); then the
--- next room to open; then your best run to beat. It is never shown at a table. It comes up bright
+-- to take a seat; then tonight's table, if it's waiting (with a key that takes you there); then a
+-- holiday game, while one is open (and first of all while you're playing it); then the next room
+-- to open; then your best run to beat. It is never shown at a table. It comes up bright
 -- when it changes and settles back after a few seconds, so it's there whenever you look for it.
 -- It steps aside while something bigger holds the screen, and comes back quietly after.
 
@@ -38,6 +39,13 @@ Objective.isBusy = function(): boolean
 	return false
 end
 
+-- The holiday game's goal (set by Main: World/HolidayPlay.goal). Its rank places it: "here" (in a
+-- game's own place) before everything, "gifts" (gifts waiting) after a first visit's seat, "open"
+-- (a game open) after tonight's table.
+Objective.holiday = function(): { key: string, title: string, line: string, how: string?, rank: string }?
+	return nil
+end
+
 local function byInput(t: { [string]: string }): string
 	return t[State.inputKind()] or t.mouse
 end
@@ -54,12 +62,24 @@ function Objective.current(): Goal?
 	if guest == nil then
 		return nil
 	end
+	local ok, h = pcall(Objective.holiday)
+	local holiday: Goal? = if ok and h then { key = "holiday:" .. h.key, title = h.title, line = h.line, how = h.how } else nil
+	local rank = if ok and h then h.rank else nil
+	if holiday and rank == "here" then
+		return holiday
+	end
 	if guest.firstVisit == true and not seatedOnce then
 		return { key = "sit", title = V.next, line = V.sit, how = byInput(V.sitHow) }
+	end
+	if holiday and rank == "gifts" then
+		return holiday
 	end
 	local nightly = guest.nightly
 	if type(nightly) == "table" and nightly.played ~= true then
 		return { key = "nightly", title = V.tonight, line = V.nightly, how = byInput(V.nightlyHow), go = "nightly" }
+	end
+	if holiday then
+		return holiday
 	end
 	if not State.unlocked.midnight then
 		return { key = "midnight", title = V.next, line = V.midnight, how = V.midnightHow }

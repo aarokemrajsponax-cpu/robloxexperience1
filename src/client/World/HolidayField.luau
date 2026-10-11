@@ -29,10 +29,11 @@ type Bird = {
 }
 
 local field: Model? = nil
-local birds: { [BasePart]: Bird } = {}
+local birds: { [number]: Bird } = {} -- by each turkey's Id
 local folder: Folder? = nil
 local connections: { RBXScriptConnection } = {}
 local dressing: Folder? = nil
+local seen = false -- the camera is in the field (the turkeys only move while someone's there to see)
 local leaves: { { part: BasePart, label: TextLabel, phase: number, fall: number, at: Vector3 } } = {}
 
 local function rigTurkey(m: Model): { { weld: Weld, base: CFrame, hip: CFrame, side: number } }
@@ -58,22 +59,27 @@ local function rigTurkey(m: Model): { { weld: Weld, base: CFrame, hip: CFrame, s
 	return legs
 end
 
+local function idOf(part: Instance): number?
+	local id = part:GetAttribute("Id")
+	return if part:IsA("BasePart") and type(id) == "number" then id else nil
+end
+
 local function add(part: BasePart)
-	if birds[part] or not folder then
+	local id = idOf(part)
+	if not id or birds[id] or not folder then
 		return
 	end
-	local id = part:GetAttribute("Id")
 	local golden = part:GetAttribute("Golden") == true
 	local ground = part.CFrame * CFrame.new(0, -1.5, 0)
 	local m = HolidayProps.turkey(folder, ground, golden)
 	local legs = rigTurkey(m)
-	birds[part] = { id = if type(id) == "number" then id else 0, part = part, model = m, root = m.PrimaryPart :: BasePart, legs = legs, at = ground, phase = math.random() * 6 }
+	birds[id] = { id = id, part = part, model = m, root = m.PrimaryPart :: BasePart, legs = legs, at = ground, phase = math.random() * 6 }
 end
 
-local function remove(part: BasePart)
-	local b = birds[part]
+local function remove(id: number)
+	local b = birds[id]
 	if b then
-		birds[part] = nil
+		birds[id] = nil
 		b.model:Destroy()
 	end
 end
@@ -94,8 +100,9 @@ local function watchBirds(model: Model)
 		end
 	end))
 	table.insert(connections, f.ChildRemoved:Connect(function(p)
-		if p:IsA("BasePart") then
-			remove(p)
+		local id = idOf(p)
+		if id then
+			remove(id)
 		end
 	end))
 end
@@ -191,8 +198,8 @@ function HolidayField.attach(model: Model?)
 		c:Disconnect()
 	end
 	connections = {}
-	for part in birds do
-		remove(part)
+	for id in birds do
+		remove(id)
 	end
 	field = model
 	if folder then
@@ -222,16 +229,26 @@ function HolidayField.caught(id: number, golden: boolean, at: Vector3?)
 end
 
 function HolidayField.here(on: boolean)
+	seen = on
 	if on then
 		dress()
+		-- (Each turkey where it is now, not where it was when last seen.)
+		for _, b in birds do
+			b.at = b.part.CFrame * CFrame.new(0, -1.5, 0)
+			b.root.CFrame = b.at
+		end
 	else
 		undress()
 	end
 end
 
 function HolidayField.step(dt: number, t: number)
+	if not seen then
+		return
+	end
 	local alpha = 1 - math.exp(-12 * dt)
-	for part, b in birds do
+	for _, b in birds do
+		local part = b.part
 		if not part.Parent then
 			continue
 		end

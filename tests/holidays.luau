@@ -357,6 +357,36 @@ local sleigh = Pole.sleigh()
 check("Christmas brings Santa's sleigh to the kerb, and builds the North Pole", sleigh ~= nil and services.Workspace:GetAttribute("SleighState") == "home" and services.Workspace.HolidayGames:FindFirstChild("NorthPole") ~= nil)
 check("its reindeer, Rudolph leading (his nose aglow)", sleigh and sleigh:FindFirstChild("Rudolph", true) ~= nil and #sleigh.Reindeer:GetChildren() == 9 and sleigh:FindFirstChild("Rudolph", true).Nose:FindFirstChildOfClass("PointLight") ~= nil)
 check("gifts lie in the snow at the Pole", #Pole.gifts() == C.pole.gifts)
+-- The mountains round the Pole: never in the sleigh's way, either way (each peak taken as the cone
+-- round it, which is bigger than the peak itself).
+check("the sleigh flies clear of every mountain round the Pole, both ways", (function()
+	local pole = services.Workspace.HolidayGames:FindFirstChild("NorthPole")
+	local peaks = {}
+	for _, d in (pole and pole:GetChildren() or {}) do
+		if d:IsA("BasePart") and d.Name == "Mountain" then
+			local s = d.Size.X
+			local apex = d.CFrame.Position + Vector3.new(0, s * math.sqrt(3) / 2, 0)
+			table.insert(peaks, { apex = apex, foot = s * 0.82, height = s * 0.62 })
+		end
+	end
+	if #peaks < 12 then
+		return false
+	end
+	for _, toPole in { true, false } do
+		local path = HolidayGames.path(HolidayGames.flightPoints(toPole))
+		for i = 0, 1200 do
+			local p = HolidayGames.travel(path, i / 1200)
+			for _, k in peaks do
+				local d = Vector3.new(p.X - k.apex.X, 0, p.Z - k.apex.Z).Magnitude
+				local surface = k.apex.Y - k.height * math.min(1, d / k.foot)
+				if d < k.foot + 8 and p.Y < surface + 12 then
+					return false
+				end
+			end
+		end
+	end
+	return true
+end)())
 local noel = H.guest("Noel", 403)
 body(noel, Layout.Foyer.spawn.Position)
 check("opening gifts with none is refused, and says how to get some", (function()
@@ -472,7 +502,7 @@ check("Gems past the day's ceiling come as Gilt instead (and say so)", (function
 end)())
 check("the opening screen's odds add up", (function()
 	local list = HolidayGames.giftOdds()
-	return #list == 4 and list[1].odds == "60 in 100" and list[4].odds == "1 in 50"
+	return #list == 4 and list[1].odds == "60%" and list[2].odds == "28%" and list[3].odds == "10%" and list[4].odds == "2%"
 end)())
 -- Gifts are opened at home, never at the Pole.
 local was = at(noel)

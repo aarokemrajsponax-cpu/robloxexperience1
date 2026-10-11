@@ -45,6 +45,9 @@ local visited: { [number]: boolean } = {}
 local dressing: Folder? = nil
 local candles: { { part: BasePart, flame: BasePart, base: Vector3, phase: number } } = {}
 local bats: { { part: BasePart, label: TextLabel, centre: Vector3, r: number, phase: number, speed: number } } = {}
+-- (The candles and the bats move together, in one move a frame.)
+local moving: { BasePart } = {}
+local movingTo: { CFrame } = {}
 
 local OPEN_FOR = 4.2 -- seconds a door stays open
 local SWING = math.rad(102)
@@ -321,6 +324,17 @@ local function dress()
 	for _, d in doors do
 		mark(d)
 	end
+	moving, movingTo = {}, {}
+	for _, c in candles do
+		table.insert(moving, c.part)
+		table.insert(moving, c.flame)
+	end
+	for _, b in bats do
+		table.insert(moving, b.part)
+	end
+	for i, p in moving do
+		movingTo[i] = p.CFrame
+	end
 end
 
 local function undress()
@@ -350,6 +364,7 @@ local function undress()
 	f:Destroy()
 	candles = {}
 	bats = {}
+	moving, movingTo = {}, {}
 end
 
 ---------------------------------------------------------------------------------------------------
@@ -473,16 +488,25 @@ function HolidayLane.step(_dt: number, t: number)
 			m.StudsOffset = Vector3.new(0, math.sin(t * 2 + d.i) * 0.35, 0)
 		end
 	end
+	if #moving == 0 then
+		return
+	end
+	local n = 0
 	for _, c in candles do
 		local bob = Vector3.new(0, math.sin(t * 0.9 + c.phase) * 0.6, 0)
-		c.part.CFrame = CFrame.new(c.base + bob)
-		c.flame.CFrame = CFrame.new(c.base + bob + Vector3.new(0, 1.1, 0)) * CFrame.Angles(math.sin(t * 6 + c.phase) * 0.12, 0, math.cos(t * 5 + c.phase) * 0.12)
+		movingTo[n + 1] = CFrame.new(c.base + bob)
+		movingTo[n + 2] = CFrame.new(c.base + bob + Vector3.new(0, 1.1, 0)) * CFrame.Angles(math.sin(t * 6 + c.phase) * 0.12, 0, math.cos(t * 5 + c.phase) * 0.12)
+		n += 2
 	end
 	for _, b in bats do
 		local a = t * b.speed + b.phase
-		b.part.CFrame = CFrame.new(b.centre + Vector3.new(math.cos(a) * b.r, math.sin(a * 2.3) * 4, math.sin(a) * b.r * 0.6))
+		n += 1
+		movingTo[n] = CFrame.new(b.centre + Vector3.new(math.cos(a) * b.r, math.sin(a * 2.3) * 4, math.sin(a) * b.r * 0.6))
 		b.label.Rotation = math.sin(t * 9 + b.phase) * 14
 	end
+	pcall(function()
+		Workspace:BulkMoveTo(moving, movingTo, Enum.BulkMoveMode.FireCFrameChanged)
+	end)
 end
 
 return HolidayLane
