@@ -196,6 +196,7 @@ ladder("wealth", "auras", "✨", "Own %d auras.", {
 moment("wealth", "firstTitle", "Say My Name", "Wear a title under your name.", "🏷️", "bronze")
 moment("wealth", "surge", "Surging", "Use a Gilt Surge or an XP Surge.", "⚡", "bronze")
 moment("wealth", "exchange", "Change, Please", "Change Gems for Gilt.", "💱", "bronze")
+moment("wealth", "gemWear", "Gems Only", "Wear a companion, a felt or a trail only Gems can buy.", "💎", "silver")
 
 -- Events and Admin Abuse
 ladder("events", "abuseNights", "💥", "Be in the house for %d Admin Abuse Nights.", {

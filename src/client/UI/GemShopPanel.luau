@@ -1,9 +1,11 @@
 --!strict
--- The Gem Shop: what Gems buy, each at one fixed price, shown on its card before you choose. Five
--- shelves: Auras (a glow round you everyone sees), Titles (a line above your name), Surges (more
--- Gilt or XP for half an hour), Gilt (Gems changed for Gilt at a set rate) and Curios (the
--- Cabinet). Buying takes two taps: the price, then "Confirm", so nothing is ever bought by
--- accident. Nothing is random. The server decides everything; this screen only asks.
+-- The Gem Shop: what Gems buy (and nothing else can), each at one fixed price, shown on its card
+-- before you choose. Shelves: Companions (a little friend at your shoulder everyone sees), Table
+-- Felts (your sorting table's leather), Guide Trails (the thread of light to the right case),
+-- Auras (a glow round you everyone sees), Titles (a line above your name), Surges (more Gilt or
+-- XP for half an hour), Gilt (Gems changed for Gilt at a set rate) and Curios (the Cabinet).
+-- Buying takes two taps: the price, then "Confirm", so nothing is ever bought by accident.
+-- Nothing is random. The server decides everything; this screen only asks.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -23,7 +25,7 @@ local rgb = Color3.fromRGB
 local HEAVY = Font.fromEnum(Enum.Font.GothamBlack)
 local BODY = Font.fromEnum(Enum.Font.GothamMedium)
 local GEM = rgb(150, 220, 255)
-local shelf = "aura"
+local shelf = "companion"
 
 -- Set by Main: the Gem packs (Robux), in the Collection's Gems page.
 GemShopPanel.getGems = function() end
@@ -65,6 +67,7 @@ function GemShopPanel.open(start: string?)
 	Theme.list(content, 8).VerticalAlignment = Enum.VerticalAlignment.Top
 	Theme.text(content, "The Gem Shop", 26, "display", { LayoutOrder = 1 })
 	local balance = Theme.text(content, "💎 …", 16, "bodyBold", { LayoutOrder = 2, TextColor3 = GEM })
+	balance.Text = "💎 …   ·   Only Gems buy these"
 	local tabs = Instance.new("Frame")
 	tabs.Name = "Shelves"
 	tabs.BackgroundTransparency = 1
@@ -177,6 +180,7 @@ function GemShopPanel.open(start: string?)
 		edge.Color = if keyLit then GEM else rgb(70, 80, 96)
 		edge.Thickness = if keyLit then 2 else 1
 		edge.Parent = c
+		local item = GemList.byId[id]
 		if curioId then
 			local holder = Instance.new("Frame")
 			holder.BackgroundTransparency = 1
@@ -185,6 +189,41 @@ function GemShopPanel.open(start: string?)
 			holder.Size = UDim2.fromOffset(56, 56)
 			holder.Parent = c
 			CurioArt.medallion(holder, curioId, 56, false)
+		elseif item and item.kind == "felt" then
+			-- A swatch of the leather, corner to corner, its rim round it.
+			local sw = Instance.new("Frame")
+			sw.Name = "Swatch"
+			sw.AnchorPoint = Vector2.new(0.5, 0)
+			sw.Position = UDim2.new(0.5, 0, 0, 10)
+			sw.Size = UDim2.new(1, -24, 0, 52)
+			sw.BackgroundColor3 = Color3.new(1, 1, 1)
+			sw.Parent = c
+			corner(sw, 8)
+			local g = Instance.new("UIGradient")
+			g.Rotation = 32
+			g.Color = ColorSequence.new({
+				ColorSequenceKeypoint.new(0, item.style.light),
+				ColorSequenceKeypoint.new(0.42, item.style.mid),
+				ColorSequenceKeypoint.new(1, item.style.deep),
+			})
+			g.Parent = sw
+			local rimLine = Instance.new("UIStroke")
+			rimLine.Color = item.style.rim or GEM
+			rimLine.Thickness = 2
+			rimLine.Parent = sw
+		elseif item and item.kind == "trail" then
+			-- The thread itself: a line of beads in its colour (every colour, for the Prism).
+			for k = 1, 9 do
+				local b = Instance.new("Frame")
+				b.Name = "Bead"
+				b.AnchorPoint = Vector2.new(0.5, 0.5)
+				b.Position = UDim2.new(0.12 + (k - 1) * 0.095, 0, 0, 36 - math.sin((k - 1) / 8 * math.pi) * 18)
+				local px = 7 + math.sin((k - 1) / 8 * math.pi) * 6
+				b.Size = UDim2.fromOffset(px, px)
+				b.BackgroundColor3 = if item.style.rainbow then Color3.fromHSV((k - 1) / 9, 0.6, 1) else item.style.colour
+				b.Parent = c
+				corner(b, 999)
+			end
 		else
 			local g = Instance.new("TextLabel")
 			g.BackgroundTransparency = 1
@@ -241,7 +280,7 @@ function GemShopPanel.open(start: string?)
 		end
 		local v = view
 		local gems = if v and type(v.gems) == "number" then v.gems else 0
-		balance.Text = "💎 " .. format(gems) .. " Gems"
+		balance.Text = "💎 " .. format(gems) .. " Gems   ·   Only Gems buy these"
 		if not v then
 			return
 		end
@@ -298,8 +337,8 @@ function GemShopPanel.open(start: string?)
 				local keyText: string
 				local lit = false
 				local onKey: () -> ()
-				if (item.kind == "aura" or item.kind == "title") and has then
-					local wearing = (item.kind == "aura" and v.aura == item.id) or (item.kind == "title" and v.title == item.id)
+				if GemList.Wearable[item.kind] ~= nil and has then
+					local wearing = v[item.kind] == item.id
 					keyText = if wearing then "WEARING · TAKE OFF" else "WEAR"
 					lit = wearing
 					onKey = function()

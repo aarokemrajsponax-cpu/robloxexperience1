@@ -4,9 +4,13 @@
 -- Gems are only taken when the guest holds enough. Auras and titles are kept for good and worn one
 -- at a time; Surges run for half an hour from when they're bought; Gilt is changed at the set rate;
 -- the Cabinet's curios are bought through Curios (one fixed price each). Nothing is random.
+-- Companions, table felts and guide trails are kept for good and worn one of each at a time, like
+-- auras and titles.
 --
--- What everyone sees: the aura worn ("Aura", drawn round the guest on every screen) and the title
--- (under the name on the nameplate).
+-- What everyone sees: the companion ("Companion", floating at the guest's shoulder on every
+-- screen), the aura worn ("Aura", drawn round the guest on every screen) and the title (under the
+-- name on the nameplate). The felt ("GemFelt") and trail ("GemTrail") show at the guest's own
+-- table.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -26,17 +30,20 @@ GemShop.award = function(_player: Player, _key: string) end
 GemShop.tally = function(_player: Player, _stat: string, _n: number) end
 GemShop.changed = function(_player: Player) end -- the nameplate (a title worn)
 
-type Shop = { owned: { [string]: boolean }, aura: string, title: string, giltUntil: number, xpUntil: number }
+type Shop = { owned: { [string]: boolean }, aura: string, title: string, companion: string, felt: string, trail: string, giltUntil: number, xpUntil: number }
 
 local function shop(data: Profiles.Data): Shop
 	local d = data :: any
 	if type(d.gemShop) ~= "table" then
-		d.gemShop = { owned = {}, aura = "", title = "", giltUntil = 0, xpUntil = 0 }
+		d.gemShop = { owned = {}, aura = "", title = "", companion = "", felt = "", trail = "", giltUntil = 0, xpUntil = 0 }
 	end
 	local s = d.gemShop
 	s.owned = if type(s.owned) == "table" then s.owned else {}
 	s.aura = if type(s.aura) == "string" then s.aura else ""
 	s.title = if type(s.title) == "string" then s.title else ""
+	s.companion = if type(s.companion) == "string" then s.companion else ""
+	s.felt = if type(s.felt) == "string" then s.felt else ""
+	s.trail = if type(s.trail) == "string" then s.trail else ""
 	s.giltUntil = if type(s.giltUntil) == "number" then s.giltUntil else 0
 	s.xpUntil = if type(s.xpUntil) == "number" then s.xpUntil else 0
 	if type(d.gems) ~= "number" then
@@ -57,6 +64,12 @@ function GemShop.apply(player: Player)
 	player:SetAttribute("Aura", if aura and aura.kind == "aura" and s.owned[s.aura] then s.aura else nil)
 	local title = GemList.byId[s.title]
 	player:SetAttribute("Title", if title and title.kind == "title" and s.owned[s.title] then title.name else nil)
+	-- The companion, the felt and the trail (by id; every screen looks them up in the list).
+	for _, kind in { "companion", "felt", "trail" } do
+		local id = (s :: any)[kind] :: string
+		local item = GemList.byId[id]
+		player:SetAttribute(GemList.Wearable[kind], if item and item.kind == kind and s.owned[id] then id else nil)
+	end
 	player:SetAttribute("Gems", data.gems)
 	player:SetAttribute("GiltSurgeUntil", if s.giltUntil > os.time() then s.giltUntil else nil)
 	player:SetAttribute("XPSurgeUntil", if s.xpUntil > os.time() then s.xpUntil else nil)
@@ -74,7 +87,7 @@ end
 
 function GemShop.state(data: Profiles.Data): { [string]: any }
 	local s = shop(data)
-	return { ok = true, gems = data.gems, owned = table.clone(s.owned), aura = s.aura, title = s.title, giltUntil = s.giltUntil, xpUntil = s.xpUntil, now = os.time(), cabinet = Curios.cabinet() }
+	return { ok = true, gems = data.gems, owned = table.clone(s.owned), aura = s.aura, title = s.title, companion = s.companion, felt = s.felt, trail = s.trail, giltUntil = s.giltUntil, xpUntil = s.xpUntil, now = os.time(), cabinet = Curios.cabinet() }
 end
 
 local function spend(player: Player, data: Profiles.Data, price: number, what: string): boolean
@@ -93,14 +106,20 @@ function GemShop.buy(player: Player, data: Profiles.Data, id: string): { [string
 		return { ok = false, why = "That isn't in the Gem Shop." }
 	end
 	local s = shop(data)
-	if (item.kind == "aura" or item.kind == "title") and s.owned[id] then
+	local wearable = GemList.Wearable[item.kind] ~= nil
+	if wearable and s.owned[id] then
 		return { ok = false, why = "You already have it: wear it from here." }
 	end
 	if data.gems < item.gems then
 		return { ok = false, why = string.format("Not enough Gems yet: %d more.", item.gems - data.gems) }
 	end
 	spend(player, data, item.gems, "gemShop_" .. id)
-	if item.kind == "aura" then
+	if item.kind == "companion" or item.kind == "felt" or item.kind == "trail" then
+		-- Kept for good, and worn at once.
+		s.owned[id] = true
+		;(s :: any)[item.kind] = id
+		GemShop.award(player, "gemWear")
+	elseif item.kind == "aura" then
 		s.owned[id] = true
 		s.aura = id
 	elseif item.kind == "title" then
@@ -142,6 +161,9 @@ function GemShop.equip(player: Player, data: Profiles.Data, kind: string, id: st
 		if id ~= "" then
 			GemShop.award(player, "firstTitle")
 		end
+	elseif kind == "companion" or kind == "felt" or kind == "trail" then
+		local worn = s :: any
+		worn[kind] = id
 	else
 		return { ok = false, why = "That can't be worn." }
 	end
@@ -189,7 +211,7 @@ local function onAsk(player: Player, request: unknown): any
 		end
 		return result
 	elseif r.op == "equip" then
-		local kind = RemoteGuard.oneOf(r.kind, { aura = true, title = true })
+		local kind = RemoteGuard.oneOf(r.kind, { aura = true, title = true, companion = true, felt = true, trail = true })
 		local id = if r.id == "" then "" else RemoteGuard.string(r.id, 40)
 		if not kind or id == nil then
 			return { ok = false, why = "That can't be worn." }

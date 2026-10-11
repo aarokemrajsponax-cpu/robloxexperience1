@@ -203,6 +203,7 @@ end)
 start("Headlines", Headline.start)
 start("Holidays", require(script.Parent.World.HolidayFX).start)
 start("Auras", require(script.Parent.World.Auras).start)
+start("Companions", require(script.Parent.World.Companions).start)
 -- Admin Abuse and the owner's effects drawn on the screen too (over the house as you walk; the
 -- sorting screen has its own), and their music.
 local walkFX: ScreenFX.FX? = nil

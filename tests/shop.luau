@@ -1913,6 +1913,36 @@ do
 	local cur = gemAs({ op = "curio", id = "saffronJar" })
 	check("the Cabinet's curios are bought here too, at their price", cur.ok and CuriosS.count(gd, "saffronJar") == 1 and gd.gems == 40)
 	check("and Gems spent are counted for the Badge Book", (gd.tally.gemsSpent or 0) >= 60)
+	-- Gem-only things to have in the house: companions, table felts, guide trails. (In a function of
+	-- its own: this block has run out of room for more locals.)
+	;(function()
+	gd.gems = 5000
+	local fox = gemAs({ op = "buy", id = "comp_fox" })
+	check("a companion costs exactly its price (a Gem Pouch's worth), and is worn at once", fox.ok and gd.gems == 5000 - GemList.byId.comp_fox.gems and GemList.byId.comp_fox.gems == 250 and fox.companion == "comp_fox")
+	check("...and everyone sees it floating by you", gemmy:GetAttribute("Companion") == "comp_fox")
+	check("...and wearing a Gem-only thing earns its badge", gd.badges.gemWear == true)
+	check("a companion can't be bought twice", gemAs({ op = "buy", id = "comp_fox" }).ok == false and gd.gems == 4750)
+	local dragon = gemAs({ op = "buy", id = "comp_dragon" })
+	check("a second companion takes the first one's place at your shoulder", dragon.ok and gemmy:GetAttribute("Companion") == "comp_dragon" and gd.gemShop.owned.comp_fox == true)
+	check("...and the first can be worn again, free (it's yours for good)", gemAs({ op = "equip", kind = "companion", id = "comp_fox" }).ok and gemmy:GetAttribute("Companion") == "comp_fox" and gd.gems == 4750 - GemList.byId.comp_dragon.gems)
+	check("...or none at all", gemAs({ op = "equip", kind = "companion", id = "" }).ok and gemmy:GetAttribute("Companion") == nil)
+	local felt = gemAs({ op = "buy", id = "felt_aurora" })
+	check("a table felt, worn at your own table", felt.ok and gemmy:GetAttribute("GemFelt") == "felt_aurora")
+	local trail = gemAs({ op = "buy", id = "gtrail_prism" })
+	check("a guide trail, worn too", trail.ok and gemmy:GetAttribute("GemTrail") == "gtrail_prism")
+	check("you can't wear a felt you don't own", gemAs({ op = "equip", kind = "felt", id = "felt_inferno" }).ok == false and gemmy:GetAttribute("GemFelt") == "felt_aurora")
+	check("nor wear something as the wrong kind", gemAs({ op = "equip", kind = "companion", id = "felt_aurora" }).ok == false)
+	check("every Gem-only price lands on 250, 500, 1,000 or 2,500 (a pack buys something whole)", (function()
+		for _, item in GemList.List do
+			if item.kind == "companion" or item.kind == "felt" or item.kind == "trail" then
+				if item.gems ~= 250 and item.gems ~= 500 and item.gems ~= 1000 and item.gems ~= 2500 then
+					return false
+				end
+			end
+		end
+		return true
+	end)())
+	end)()
 	GiltModule.surge = function()
 		return 1
 	end

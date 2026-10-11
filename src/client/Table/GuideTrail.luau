@@ -16,6 +16,7 @@ export type Look = {
 	pace: number, -- 1 normal, 1.6 lively, 0.55 calm
 	glow: number, -- sparkles: 1 full, 0.5 subtle, 0 off
 	motion: number, -- 1 full, 0.6 calm, 0 still
+	rainbow: boolean?, -- every colour, turning along the thread (the Prism trail)
 }
 
 type Star = {
@@ -371,6 +372,9 @@ function GuideTrail.draw(dt: number, from: Vector2, to: Vector2, appear: number,
 		b.Position = UDim2.fromOffset(p.X, p.Y)
 		b.Size = UDim2.fromOffset(size, size)
 		b.BackgroundTransparency = 1 - alpha
+		if look.rainbow then
+			b.BackgroundColor3 = Color3.fromHSV((t0 * 0.35 + math.clamp(u, 0, 1) * 0.8) % 1, 0.5, 1)
+		end
 	end
 	-- Sparkles along the way (the Sparkles trail), or flung off the Comet's head.
 	if moving and glow > 0 and appear > 0.5 and (kind == "Sparkles" or kind == "Comet") then

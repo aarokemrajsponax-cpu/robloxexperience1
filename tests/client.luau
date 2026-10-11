@@ -4630,6 +4630,41 @@ end)() and press("CURIOS") and (function()
 end)())
 Root2.close()
 advance(0.5)
+do
+	-- Gem-only things: its Companions (the shelf it opens on, the first time), then the table
+	-- felts and guide trails.
+	GemShopPanel.open("companion")
+	advance(1)
+	check("the Gem Shop opens on its Gem-only companions, each with its price", textOnScreen("Fox Kit") ~= nil and textOnScreen("The Crown Jewel") ~= nil and textOnScreen("💎 250") ~= nil and textOnScreen("Only Gems buy these") ~= nil)
+	snapshot("gem-companions")
+	check("table felts, each drawn as a swatch of its leather", press("TABLE FELTS") and (function()
+		advance(0.3)
+		local swatch = find(playerGui, function(d)
+			return d.Name == "Swatch" and d:FindFirstChildOfClass("UIGradient") ~= nil
+		end)
+		return textOnScreen("Aurora Silk") ~= nil and swatch ~= nil
+	end)())
+	snapshot("gem-felts")
+	check("guide trails, each drawn as its thread", press("GUIDE TRAILS") and (function()
+		advance(0.3)
+		return textOnScreen("Prism") ~= nil and find(playerGui, function(d)
+			return d.Name == "Bead"
+		end) ~= nil
+	end)())
+	Root2.close()
+	advance(0.5)
+	-- A companion floats at the shoulder of whoever wears one, on every screen.
+	local Companions = module("StarterPlayer", "StarterPlayerScripts", "Client", "World", "Companions")
+	LocalPlayer:SetAttribute("Companion", "comp_dragon")
+	advance(0.5)
+	local pet = Companions.of(LocalPlayer)
+	local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+	check("wear a companion and it floats at your shoulder", pet ~= nil and pet.Parent ~= nil and myRoot ~= nil and (pet.CFrame.Position - myRoot.CFrame.Position).Magnitude < 5, pet and myRoot and (pet.CFrame.Position - myRoot.CFrame.Position).Magnitude)
+	check("...the little dragon, breathing embers", pet ~= nil and pet:FindFirstChild("Face", true) ~= nil and pet:FindFirstChildOfClass("Attachment") ~= nil)
+	LocalPlayer:SetAttribute("Companion", nil)
+	advance(0.3)
+	check("...and it goes when you take it off", Companions.of(LocalPlayer) == nil)
+end
 -- The Badge Book.
 invokeResults.BadgeAsk = { ok = true, earned = { firstRound = 1790000000, metOwner = 1790000100 }, stats = { rounds = 7, level = 12 }, count = 2, total = 151 }
 local BadgeBookPanel = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "BadgeBookPanel")

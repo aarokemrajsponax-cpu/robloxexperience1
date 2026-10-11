@@ -30,6 +30,7 @@ local Caps = require(ReplicatedStorage.Shared.Caps)
 local Catalogue = require(ReplicatedStorage.Shared.Catalogue)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Ease = require(ReplicatedStorage.Shared.Ease)
+local GemList = require(ReplicatedStorage.Shared.GemShop)
 local Seasons = require(ReplicatedStorage.Shared.Seasons)
 local Settings = require(ReplicatedStorage.Shared.Settings)
 local Voice = require(ReplicatedStorage.Shared.Voice)
@@ -1806,6 +1807,12 @@ end
 -- Glow and sparks, and Movement.
 function SortScreen.guideLook(): GuideTrail.Look
 	local worn = Closet.style("trail")
+	-- A trail bought with Gems is worn over the Boutique's.
+	local gemId = player:GetAttribute("GemTrail")
+	local gem = if type(gemId) == "string" then GemList.byId[gemId] else nil
+	if gem and gem.kind == "trail" then
+		worn = gem.style
+	end
 	local colour = if worn and typeof(worn.colour) == "Color3" then worn.colour else (Brand.TrailColours[State.get("trailColour")] or Brand.TrailColours.House)
 	local pace = State.get("trailPace")
 	local glow = State.get("glow")
@@ -1815,6 +1822,7 @@ function SortScreen.guideLook(): GuideTrail.Look
 		pace = if pace == "Lively" then 1.6 elseif pace == "Calm" then 0.55 else 1,
 		glow = if glow == "Off" then 0 elseif glow == "Subtle" then 0.5 else 1,
 		motion = Ease.motionScale,
+		rainbow = worn ~= nil and worn.rainbow == true,
 	}
 end
 
@@ -2402,6 +2410,21 @@ function paintCloth()
 	local rimColour = if tableStyle and typeof(tableStyle.rim) == "Color3" then tableStyle.rim :: Color3 else nil
 	local lampColour = if lampStyle and typeof(lampStyle.colour) == "Color3" then lampStyle.colour :: Color3 else nil
 	local room = feltFor(roomText)
+	-- A felt bought with Gems is worn over everything else.
+	local gemId = player:GetAttribute("GemFelt")
+	local gem = if type(gemId) == "string" then GemList.byId[gemId] else nil
+	local gemFelt = if gem and gem.kind == "felt" then gem.style else nil
+	if gemFelt then
+		room = {
+			light = gemFelt.light :: Color3,
+			mid = gemFelt.mid :: Color3,
+			deep = gemFelt.deep :: Color3,
+			shift = gemFelt.shift :: Color3,
+			pool = gemFelt.pool :: Color3,
+		}
+		felt = nil
+		rimColour = if typeof(gemFelt.rim) == "Color3" then gemFelt.rim :: Color3 else rimColour
+	end
 	if felt then
 		local h, sat, v = felt:ToHSV()
 		local base = Color3.fromHSV(h, sat, math.clamp(v, 0.06, 0.4))
