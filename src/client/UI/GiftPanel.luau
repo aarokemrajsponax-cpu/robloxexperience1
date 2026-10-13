@@ -10,6 +10,7 @@ local Root = require(script.Parent.Root)
 local Theme = require(script.Parent.Theme)
 local Toast = require(script.Parent.Toast)
 local BoutiquePanel = require(script.Parent.BoutiquePanel)
+local ProductArt = require(script.Parent.ProductArt)
 local Closet = require(script.Parent.Parent.Closet)
 local Sound = require(script.Parent.Parent.Sound)
 
@@ -59,6 +60,9 @@ function GiftPanel.show(from: string, item: { [string]: any })
 		end
 		box.BackgroundColor3 = BoutiquePanel.swatch(item.style)
 		Ease.play(box, Ease.settle, { Size = UDim2.fromOffset(96, 96) })
+		-- (The piece itself, drawn, inside the opened box.)
+		local art = ProductArt.draw(box, item.kind, item.style, 96)
+		art.Size = UDim2.fromScale(1, 1)
 		reveal.Text = tostring(item.name)
 		reveal.Visible = true
 		if wear then

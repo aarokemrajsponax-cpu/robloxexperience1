@@ -787,6 +787,16 @@ local BALLROOM_OPS = {
 	arrive = true,
 	flicker = true,
 	out = true,
+	-- The Ballroom's hours, its winner and sabotage (heard anywhere in the house).
+	ballroomOpen = true,
+	ballroomCountdown = true,
+	ballroomClosed = true,
+	ballroomRefused = true,
+	ballroomWinner = true,
+	sabotage = true,
+	sabotaged = true,
+	sabotageInfo = true,
+	sabotageRefused = true,
 }
 local function isBallroom(message: { [string]: any }): boolean
 	local op = message.op

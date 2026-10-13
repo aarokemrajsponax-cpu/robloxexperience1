@@ -316,7 +316,7 @@ Voice.Library = {
 
 Voice.Ballroom = {
 	title = "Lights Out",
-	gathering = "The evening begins in {seconds} seconds. Twenty tables, one lamp at the end.",
+	gathering = "Lights Out begins in {seconds} seconds. Last call: nobody joins once it starts.",
 	counted = "Twenty tables. One lamp at the end of the night.",
 	notCounted = "Fewer than eight guests tonight: this evening doesn't count for records.",
 	key = "A Key",
@@ -324,7 +324,7 @@ Voice.Ballroom = {
 	closingTime = "Closing Time",
 	closingLine = "The pace tightens until someone breaks.",
 	sixthCase = "The sixth case opens.",
-	queued = "You'll have a chair at the next evening.",
+	queued = "You'll be told the moment the Ballroom opens again.",
 	outTitle = "Your lamp is out",
 	outBy = "{place} of {of} · a parcel from {name}",
 	outPlace = "{place} of {of}",
@@ -335,9 +335,11 @@ Voice.Ballroom = {
 	points = "Points this week",
 	gilt = "Gilt",
 	notCountedNote = "Fewer than eight guests: not counted for records.",
-	nextEvening = "Next evening",
+	nextEvening = "Remind me when it opens",
 	gallery = "Watch from the Gallery",
-	stay = "Stay for the next evening",
+	stay = "Remind me when it opens",
+	pot = "The pot",
+	potWent = "The pot went to {name}",
 }
 
 Voice.Foyer = {

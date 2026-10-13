@@ -3,9 +3,16 @@
 -- autumn grass under the harvest moon: a great red barn with its doors open on lantern light, hay
 -- bales, a pumpkin patch, corn tied in shocks, a friendly scarecrow, a long table laid for the
 -- feast, trees in red and gold. The turkeys wander and peck, and run (and dodge) when a guest
--- comes near; catch one by running it down: Gilt, now and then a Gem. Every so often a golden
--- turkey walks out of the barn, faster than the rest and worth far more. A caught turkey goes back
--- to the barn and another comes out (nobody is hurt: they're very pleased with themselves).
+-- comes near, slower than a guest walks and tiring after a sprint; catch one by running into it,
+-- or with its Catch key (E, or a tap) when it's close: Gilt, now and then a Gem. Every so often a
+-- golden turkey walks out of the barn, faster than the rest and worth far more. A caught turkey
+-- goes back to the barn and another comes out (nobody is hurt: they're very pleased with
+-- themselves).
+--
+-- Five catches are free on each visit (Config freeCatches; back within `visitGap` is the same
+-- visit); after them, more are bought, at a fixed price, from the offer on the guest's screen:
+-- Turkey Round-Up: 10 More, or the Turkey Hunter Pass (as many as you like, the rest of the
+-- holiday). The count is the server's, and so is every catch.
 --
 -- The server moves each turkey (one small invisible part each, ten times a second) and decides
 -- every catch; every screen draws the birds round those parts, smoothly, legs going.
@@ -17,6 +24,7 @@ local Brand = require(ReplicatedStorage.Shared.Brand)
 local HolidayGames = require(ReplicatedStorage.Shared.HolidayGames)
 local HolidayProps = require(ReplicatedStorage.Shared.HolidayProps)
 local Names = require(ReplicatedStorage.Shared.Names)
+local Profiles = require(script.Parent.Parent.Profiles)
 local Kit = require(script.Parent.Parent.World.Kit)
 local Portal = require(script.Parent.Portal)
 local Types = require(script.Parent.Types)
@@ -43,7 +51,13 @@ type Turkey = {
 	jukeAt: number,
 	juke: number, -- the angle it's dodging by
 	out: number, -- walking out of the barn until (os.clock)
+	running: number, -- seconds it's been running from someone
+	puffed: number, -- out of puff until (os.clock)
 }
+
+-- Each guest's visit on this server: free catches used (a copy of the saved record's), catches
+-- made, when they were last in the field (os.clock) and when they were last told they'd run out.
+type Visit = { used: number, caught: number, seen: number, told: number }
 
 local built: Model? = nil
 local birds: Folder? = nil
@@ -53,7 +67,9 @@ local nextId = 0
 local nextSpawn = 0
 local nextGolden = 0
 local lastCatch: { [Player]: number } = {}
+local visits: { [Player]: Visit } = {}
 local opened = false
+local tryCatch: (ctx: Types.Ctx, player: Player, t: Turkey) -> boolean
 
 local function origin(): Vector3
 	return HolidayGames.origin("field")
@@ -374,6 +390,27 @@ local function spawnTurkey(ctx: Types.Ctx, golden: boolean)
 	p:SetAttribute("Id", nextId)
 	p:SetAttribute("Golden", golden)
 	p.CFrame = CFrame.lookAt(origin() + from, origin() + from - Vector3.new(0, 0, 1))
+	-- Its Catch key: E (or a tap) when it's close enough. The server checks the distance itself.
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.Name = "Catch"
+	prompt.ActionText = "Catch!"
+	prompt.ObjectText = if golden then "Golden turkey" else "Turkey"
+	prompt.KeyboardKeyCode = Enum.KeyCode.E
+	prompt.GamepadKeyCode = Enum.KeyCode.ButtonX
+	prompt.HoldDuration = 0
+	prompt.MaxActivationDistance = ctx.cfg().field.reach
+	prompt.RequiresLineOfSight = false
+	prompt.Style = Enum.ProximityPromptStyle.Custom
+	prompt.Parent = p
+	local id = nextId
+	prompt.Triggered:Connect(function(player: Player)
+		for _, t in turkeys do
+			if t.id == id then
+				tryCatch(ctx, player, t)
+				return
+			end
+		end
+	end)
 	p.Parent = f
 	local now = os.clock()
 	table.insert(turkeys, {
@@ -388,6 +425,8 @@ local function spawnTurkey(ctx: Types.Ctx, golden: boolean)
 		jukeAt = now,
 		juke = 0,
 		out = now + 3,
+		running = 0,
+		puffed = 0,
 	})
 end
 
@@ -435,9 +474,19 @@ local function moveTurkeys(ctx: Types.Ctx, dt: number, guests: { { player: Playe
 			end
 			dir = CFrame.Angles(0, t.juke, 0):VectorToWorldSpace(flee)
 			speed = if t.golden then c.goldenSpeed else c.speed
+			-- Out of puff after a sprint: half speed for a moment (the moment to catch it).
+			t.running += dt
+			if now < t.puffed then
+				speed *= 0.5
+			elseif t.running >= c.tireAfter then
+				t.running = 0
+				t.puffed = now + c.tired
+				speed *= 0.5
+			end
 			t.rest = 0
 			t.target = nil
 		elseif now < t.rest then
+			t.running = math.max(0, t.running - dt)
 			dir = t.face
 			speed = 0
 		else
@@ -479,6 +528,84 @@ local function moveTurkeys(ctx: Types.Ctx, dt: number, guests: { { player: Playe
 	end
 end
 
+---------------------------------------------------------------------------------------------------
+-- How many a guest may catch
+---------------------------------------------------------------------------------------------------
+-- A guest's visit. The free catches used on it are kept in their saved record (with when they
+-- were last in the field), so a reset or a rejoin is the same visit; away longer than
+-- `visitGap` is a new one, with its free catches again.
+local function visitOf(ctx: Types.Ctx, player: Player, here: boolean?): Visit
+	local v = visits[player]
+	if not v then
+		v = { used = 0, caught = 0, seen = 0, told = -math.huge }
+		visits[player] = v
+	end
+	local data = Profiles.get(player)
+	if data then
+		local h = ctx.saved(data) :: any
+		local now = os.time()
+		if type(h.fieldSeen) ~= "number" or now - h.fieldSeen > ctx.cfg().field.visitGap then
+			h.fieldUsed = 0
+			h.fieldSeen = now
+			v.caught = 0
+		end
+		-- (Only time in the field keeps a visit going.)
+		if here then
+			h.fieldSeen = now
+		end
+		v.used = if type(h.fieldUsed) == "number" then h.fieldUsed else 0
+	end
+	return v
+end
+
+-- What's left: free catches this visit, catches bought and held, and whether there's no limit
+-- (the Turkey Hunter Pass, this year).
+local function allowance(ctx: Types.Ctx, player: Player): (number, number, boolean)
+	local v = visitOf(ctx, player)
+	local data = Profiles.get(player)
+	local h = if data then ctx.saved(data) else nil
+	local free = math.max(0, ctx.cfg().field.freeCatches - v.used)
+	local held = if h then h.catches else 0
+	local unlimited = h ~= nil and h.hunterYear == ctx.year()
+	return free, held, unlimited
+end
+
+-- What the guest's screen shows (the meter, and the offer once the free ones are gone).
+local function meter(ctx: Types.Ctx, player: Player): { [string]: any }
+	local free, held, unlimited = allowance(ctx, player)
+	return {
+		op = "turkeyMeter",
+		free = free,
+		of = ctx.cfg().field.freeCatches,
+		held = held,
+		unlimited = unlimited,
+		caught = (visits[player] :: Visit).caught,
+		more = ctx.cfg().field.moreCatches,
+		prices = { turkeyMore = ctx.price("turkeyMore"), turkeyHunter = ctx.price("turkeyHunter") },
+	}
+end
+
+-- Takes one catch from what's left (free first, then the pass, then bought). False if there's
+-- none.
+local function spend(ctx: Types.Ctx, player: Player): boolean
+	local free, held, unlimited = allowance(ctx, player)
+	local data = Profiles.get(player)
+	if not data then
+		return false
+	end
+	local h = ctx.saved(data) :: any
+	if free > 0 then
+		h.fieldUsed = (if type(h.fieldUsed) == "number" then h.fieldUsed else 0) + 1
+		return true
+	elseif unlimited then
+		return true
+	elseif held > 0 then
+		h.catches -= 1
+		return true
+	end
+	return false
+end
+
 local function catch(ctx: Types.Ctx, player: Player, t: Turkey)
 	local c = ctx.cfg().field
 	local index = table.find(turkeys, t)
@@ -493,7 +620,9 @@ local function catch(ctx: Types.Ctx, player: Player, t: Turkey)
 	ctx.award(player, "holiday_thanksgiving")
 	ctx.curio(player, "goldenWishbone", "field:" .. os.date("!%Y"))
 	ctx.broadcast({ op = "caught", id = t.id, by = player.UserId, golden = t.golden, at = where })
+	visitOf(ctx, player).caught += 1
 	ctx.send(player, { op = "turkey", golden = t.golden, gilt = paid, gems = given })
+	ctx.send(player, meter(ctx, player))
 	if t.golden then
 		ctx.award(player, "goldenTurkeyCaught")
 		ctx.curio(player, "goldenTurkey", "field:gold:" .. os.date("!%Y-%j"))
@@ -502,6 +631,40 @@ local function catch(ctx: Types.Ctx, player: Player, t: Turkey)
 	end
 	-- Another walks out of the barn in a moment.
 	nextSpawn = math.max(nextSpawn, os.clock() + c.back)
+end
+
+-- A guest reaches a turkey (by running into it, or its Catch key): caught, if they may catch one
+-- now; if their free catches are gone, the offer comes up instead (not too often).
+tryCatch = function(ctx: Types.Ctx, player: Player, t: Turkey): boolean
+	local c = ctx.cfg().field
+	local now = os.clock()
+	if not opened or not table.find(turkeys, t) or not ctx.trusted(player) then
+		return false
+	end
+	if (lastCatch[player] or -math.huge) + c.catchGap > now or now < t.out - 1 then
+		return false
+	end
+	local root = ctx.rootOf(player)
+	if not root or HolidayGames.areaAt(root.CFrame.Position) ~= "field" then
+		return false
+	end
+	local p = root.CFrame.Position - origin()
+	if Vector3.new(t.at.X - p.X, 0, t.at.Z - p.Z).Magnitude > c.reach + 4 or math.abs(p.Y - 1.5) > 10 then
+		return false
+	end
+	if not spend(ctx, player) then
+		local v = visitOf(ctx, player)
+		if now - v.told > 6 then
+			v.told = now
+			local m = meter(ctx, player)
+			m.op = "turkeyOut"
+			ctx.send(player, m)
+		end
+		return false
+	end
+	lastCatch[player] = now
+	catch(ctx, player, t)
+	return true
 end
 
 ---------------------------------------------------------------------------------------------------
@@ -542,6 +705,7 @@ function Field.close(_ctx: Types.Ctx)
 	birds = nil
 	turkeys = {}
 	table.clear(lastCatch)
+	table.clear(visits)
 end
 
 function Field.step(ctx: Types.Ctx, dt: number)
@@ -563,16 +727,24 @@ function Field.step(ctx: Types.Ctx, dt: number)
 		end
 	end
 	moveTurkeys(ctx, dt, guests)
-	-- Catches.
+	-- Each guest's visit kept fresh while they're here; a guest just arrived is told their count.
+	for _, g in guests do
+		local v = visits[g.player]
+		local fresh = v == nil or now - v.seen > 2
+		visitOf(ctx, g.player, true).seen = now
+		if fresh then
+			ctx.send(g.player, meter(ctx, g.player))
+		end
+	end
+	-- Catches: running into one.
 	for _, g in guests do
 		if (lastCatch[g.player] or -math.huge) + c.catchGap > now or not ctx.trusted(g.player) then
 			continue
 		end
 		for _, t in turkeys do
 			local d = Vector3.new(t.at.X - g.at.X, 0, t.at.Z - g.at.Z).Magnitude
-			if d <= c.catch and math.abs(g.at.Y - 1.5) < 8 and now >= t.out - 1 then
-				lastCatch[g.player] = now
-				catch(ctx, g.player, t)
+			if d <= c.catch and math.abs(g.at.Y - 1.5) < 10 and now >= t.out - 1 then
+				tryCatch(ctx, g.player, t)
 				break
 			end
 		end
@@ -602,18 +774,37 @@ function Field.arrival(_ctx: Types.Ctx, _player: Player): CFrame?
 	return CFrame.lookAt(at, at + Vector3.new(0, 0, 1))
 end
 
-function Field.state(_ctx: Types.Ctx, _player: Player): { [string]: any }
+function Field.state(ctx: Types.Ctx, player: Player): { [string]: any }
 	local golden = false
 	for _, t in turkeys do
 		if t.golden then
 			golden = true
 		end
 	end
-	return { turkeys = #turkeys, golden = golden }
+	local free, held, unlimited = allowance(ctx, player)
+	return { turkeys = #turkeys, golden = golden, freeCatches = free, heldCatches = held, unlimited = unlimited }
 end
 
 function Field.leave(_ctx: Types.Ctx, player: Player)
 	lastCatch[player] = nil
+	-- (The visit's free catches used stay in the saved record: a respawn is the same visit.)
+	if player.Parent == nil then
+		visits[player] = nil
+	end
+end
+
+-- More catches were bought: the guest's meter says so at once.
+function Field.bought(ctx: Types.Ctx, player: Player)
+	if opened then
+		local v = visitOf(ctx, player)
+		v.told = -math.huge
+		ctx.send(player, meter(ctx, player))
+	end
+end
+
+-- For tests: a guest's visit (free catches used, caught).
+function Field.visit(player: Player): Visit?
+	return visits[player]
 end
 
 -- For tests: the turkeys (id, where, golden).

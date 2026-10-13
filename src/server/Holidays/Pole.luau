@@ -697,6 +697,55 @@ local function landAt(ctx: Types.Ctx, player: Player, cf: CFrame)
 	player:SetAttribute("SleighRide", nil)
 end
 
+-- A guest's rides to the North Pole: Santa's Season Pass (this year: every ride free), the free
+-- ride(s) each Christmas, then the rides they've bought. Home is always free.
+local function rides(ctx: Types.Ctx, player: Player): (boolean, number, number)
+	local data = Profiles.get(player)
+	if not data then
+		return false, 0, 0
+	end
+	local h = ctx.saved(data)
+	return h.seasonYear == ctx.year(), math.max(0, cfgPole(ctx).freeRides - h.freeTaken), h.rides
+end
+
+local function mayRide(ctx: Types.Ctx, player: Player): boolean
+	local pass, free, held = rides(ctx, player)
+	return pass or free > 0 or held > 0
+end
+
+-- Takes a ride as the sleigh leaves for the Pole: nothing with the pass, else the free one, else
+-- a bought one. False if there's none (they stay at the kerb).
+local function spendRide(ctx: Types.Ctx, player: Player): boolean
+	local pass, free, held = rides(ctx, player)
+	local data = Profiles.get(player)
+	if not data then
+		return false
+	end
+	local h = ctx.saved(data)
+	if pass then
+		return true
+	elseif free > 0 then
+		h.freeTaken += 1
+		return true
+	elseif held > 0 then
+		h.rides -= 1
+		return true
+	end
+	return false
+end
+
+-- What the guest's screen shows about their rides (and the offer when there are none).
+local function rideInfo(ctx: Types.Ctx, player: Player): { [string]: any }
+	local pass, free, held = rides(ctx, player)
+	return {
+		op = "rides",
+		pass = pass,
+		free = free,
+		held = held,
+		prices = { sleighRide = ctx.price("sleighRide"), sleighSeason = ctx.price("sleighSeason") },
+	}
+end
+
 -- Takes off with everyone aboard (and, at the Pole, everyone there).
 local function depart(ctx: Types.Ctx, toPole: boolean)
 	local list: { Player } = {}
@@ -704,6 +753,12 @@ local function depart(ctx: Types.Ctx, toPole: boolean)
 	for i = 1, #Pole.SEATS do
 		local s = seats[i]
 		if s and s.player.Parent == Players then
+			-- (To the Pole, each rider's ride is taken now; one with none left stays at the kerb.)
+			if toPole and not spendRide(ctx, s.player) then
+				release(i)
+				ctx.send(s.player, rideInfo(ctx, s.player))
+				continue
+			end
 			table.insert(list, s.player)
 			seatIndex[s.player] = i
 		end
@@ -781,7 +836,7 @@ local function arrive(ctx: Types.Ctx, atPole: boolean)
 			if data then
 				ctx.saved(data).trips += 1
 			end
-			ctx.send(player, { op = "arrived", place = "pole" })
+			ctx.send(player, { op = "arrived", place = "pole", carry = cfgPole(ctx).carry, tripMost = cfgPole(ctx).tripMost })
 		else
 			loadedTrip[player] = nil
 			ctx.send(player, { op = "arrived", place = "home", gifts = if data then ctx.saved(data).gifts else 0 })
@@ -826,6 +881,14 @@ function Pole.board(ctx: Types.Ctx, player: Player): { [string]: any }
 	end
 	if (state == "home" or state == "boarding") and atPole then
 		return { ok = false, why = "Not just now." }
+	end
+	-- To the Pole: a ride of theirs (the free one, one bought, or the pass).
+	if not atPole and not mayRide(ctx, player) then
+		local info = rideInfo(ctx, player)
+		info.ok = false
+		info.offer = "sleigh"
+		info.why = "Your free sleigh ride this Christmas is used. Ride again, or ride as often as you like with Santa's Season Pass."
+		return info
 	end
 	local free: number? = nil
 	for i = 1, math.min(#Pole.SEATS, cfgPole(ctx).seats) do
@@ -888,7 +951,7 @@ local function load(ctx: Types.Ctx, player: Player)
 	h.gifts += n
 	setCarrying(player, held - n)
 	ctx.broadcast({ op = "loaded", by = player.UserId, n = n })
-	ctx.send(player, { op = "gifts", carrying = held - n, loaded = trip + n, gifts = h.gifts })
+	ctx.send(player, { op = "gifts", carrying = held - n, loaded = trip + n, gifts = h.gifts, tripMost = c.tripMost, carry = c.carry })
 	ctx.award(player, "holiday_christmas")
 	if trip + n >= 10 and trip < 10 then
 		ctx.award(player, "santasHelper")
@@ -991,7 +1054,10 @@ function Pole.open(ctx: Types.Ctx)
 	prompt.Parent = side
 	prompt.Triggered:Connect(function(player: Player)
 		local r = Pole.board(ctx, player)
-		if not r.ok and r.why then
+		if not r.ok and r.offer then
+			-- (No ride left: the offer comes up on their screen.)
+			ctx.send(player, r)
+		elseif not r.ok and r.why then
 			ctx.send(player, { op = "say", text = r.why })
 		end
 	end)
@@ -1152,7 +1218,17 @@ function Pole.state(ctx: Types.Ctx, player: Player): { [string]: any }
 		loaded = loadedTrip[player] or 0,
 		seated = seatOf(player) ~= nil,
 		carry = cfgPole(ctx).carry,
+		tripMost = cfgPole(ctx).tripMost,
+		rides = rideInfo(ctx, player),
 	}
+end
+
+-- A ride (or the pass) was bought: the guest's screen says so; if they're at the kerb, they board.
+function Pole.bought(ctx: Types.Ctx, player: Player)
+	ctx.send(player, rideInfo(ctx, player))
+	if opened and (state == "home" or state == "boarding") and not seatOf(player) then
+		Pole.board(ctx, player)
+	end
 end
 
 function Pole.leave(_ctx: Types.Ctx, player: Player)

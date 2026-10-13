@@ -23,6 +23,8 @@ function Duel.room(hand: number): Rooms.Room
 		id = "library",
 		name = "The Library",
 		line = "",
+		tag = "",
+		level = 2,
 		timed = false,
 		tuning = {
 			firstDeal = spec.pieces,

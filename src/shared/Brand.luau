@@ -27,21 +27,21 @@ Brand.Colours = {
 	glow = Color3.fromRGB(255, 196, 92),
 }
 
--- The house type (Build 56, "2070"): Michroma, a wide engineered face in the line of the space-age
--- display letters, for titles and headings (set in capitals); and Gotham SSm, a sans drawn for
--- screens, for everything else, crisp and even at any size on any screen. Both are Roblox's own
--- built-in faces: nothing to fetch, nothing thin, never a stand-in while they load. Playfair
--- Display's italic stays for the house's few quoted lines; the Lettering setting can swap the
--- display face back to a serif.
+-- The house type (Build 61): Gotham SSm all the way, heavy and round for titles and headings (set in
+-- capitals), the same face lighter for everything else: the chunky, friendly letters of the dock's
+-- keys, read at a glance on any screen. Both are Roblox's own built-in faces: nothing to fetch,
+-- nothing thin, never a stand-in while they load. Michroma (the old wide "space" face) is still a
+-- choice in the Lettering setting, as are the serifs; Playfair Display's italic stays for the
+-- house's few quoted lines.
 local GOTHAM = "rbxasset://fonts/families/GothamSSm.json"
 local MICHROMA = "rbxasset://fonts/families/Michroma.json"
 local PLAYFAIR = "rbxassetid://12187374765"
 local BASKERVILLE = "rbxassetid://12187365769"
 
-Brand.FontAssets = { display = MICHROMA, ui = GOTHAM, book = BASKERVILLE, serif = PLAYFAIR }
+Brand.FontAssets = { display = GOTHAM, space = MICHROMA, ui = GOTHAM, book = BASKERVILLE, serif = PLAYFAIR }
 
 Brand.Fonts = {
-	display = Font.new(MICHROMA, Enum.FontWeight.Regular),
+	display = Font.new(GOTHAM, Enum.FontWeight.Heavy),
 	displayItalic = Font.new(PLAYFAIR, Enum.FontWeight.Regular, Enum.FontStyle.Italic),
 	-- Scores, clocks and prices: full-height figures, heavy enough to read at a glance.
 	figures = Font.new(GOTHAM, Enum.FontWeight.Bold),
@@ -55,7 +55,8 @@ Brand.Fonts = {
 }
 
 Brand.Lettering = {
-	Future = Brand.Fonts.display,
+	Bold = Brand.Fonts.display,
+	Space = Font.new(MICHROMA, Enum.FontWeight.Regular),
 	Editorial = Font.new(PLAYFAIR, Enum.FontWeight.Regular),
 	Book = Font.new(BASKERVILLE, Enum.FontWeight.Regular),
 	Ledger = Font.fromEnum(Enum.Font.Merriweather),

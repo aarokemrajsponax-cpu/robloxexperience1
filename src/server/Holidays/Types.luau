@@ -31,8 +31,14 @@ export type Cfg = {
 		goldenSpeed: number,
 		fear: number,
 		catch: number,
+		reach: number,
+		tireAfter: number,
+		tired: number,
 		back: number,
 		catchGap: number,
+		freeCatches: number,
+		visitGap: number,
+		moreCatches: number,
 	},
 	pole: {
 		origin: { number },
@@ -41,6 +47,7 @@ export type Cfg = {
 		flight: number,
 		stay: number,
 		gifts: number,
+		freeRides: number,
 		carry: number,
 		tripMost: number,
 		dayMost: number,
@@ -66,7 +73,9 @@ export type Cfg = {
 
 -- A guest's holiday page in their saved record: today's Gems from the games (the ceiling), the
 -- North Pole's gifts waiting to be opened and those loaded today, the Lane's round and the doors
--- knocked at in it, and how many sleigh rides there have been.
+-- knocked at in it, and how many sleigh rides there have been. What's been bought: turkey catches
+-- held, the Turkey Hunter Pass's year, sleigh rides held and Santa's Season Pass's year; and the
+-- free sleigh rides taken this year (`rideYear`, `freeTaken`).
 export type Saved = {
 	day: number,
 	gems: number,
@@ -75,6 +84,12 @@ export type Saved = {
 	round: number,
 	doors: { [string]: boolean },
 	trips: number,
+	catches: number,
+	hunterYear: number,
+	rides: number,
+	seasonYear: number,
+	rideYear: number,
+	freeTaken: number,
 }
 
 -- What every game works through (server/Holidays makes it).
@@ -98,6 +113,9 @@ export type Ctx = {
 	tally: (player: Player, stat: string, n: number, once: string?) -> (),
 	curio: (player: Player, id: string, key: string) -> boolean,
 	salute: (title: string, line: string, by: Player?) -> (),
+	-- The live Robux price of a holiday product (nil until Roblox says).
+	price: (key: string) -> number?,
+	year: () -> number,
 }
 
 -- A game: built when it opens, taken down when it closes, a beat ten times a second.

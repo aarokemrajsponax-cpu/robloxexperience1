@@ -10,6 +10,7 @@ local Brand = require(ReplicatedStorage.Shared.Brand)
 local Caps = require(ReplicatedStorage.Shared.Caps)
 local Ease = require(ReplicatedStorage.Shared.Ease)
 local Root = require(script.Parent.Root)
+local Theme = require(script.Parent.Theme)
 local Sound = require(script.Parent.Parent.Sound)
 local State = require(script.Parent.Parent.State)
 
@@ -95,6 +96,21 @@ local function build(prompt: ProximityPrompt): BillboardGui
 	object.TextColor3 = Brand.Colours.smoke
 	object.Text = prompt.ObjectText
 	object.Parent = button
+	-- The pill exactly as wide as its longer line (the key, then the words, then a margin).
+	local function fit()
+		local words = math.max(Theme.measure(action.Text, 15, Brand.Fonts.bodyMedium).X, Theme.measure(object.Text, 13, Brand.Fonts.bodyMedium).X)
+		gui.Size = UDim2.fromOffset(math.max(120, 54 + words + 16), if object.Text == "" then 40 else 46)
+		action.Size = if object.Text == "" then UDim2.new(1, -60, 1, -10) else UDim2.new(1, -60, 0.55, -2)
+	end
+	fit()
+	prompt:GetPropertyChangedSignal("ActionText"):Connect(function()
+		action.Text = Caps(prompt.ActionText)
+		fit()
+	end)
+	prompt:GetPropertyChangedSignal("ObjectText"):Connect(function()
+		object.Text = prompt.ObjectText
+		fit()
+	end)
 
 	button.Activated:Connect(function()
 		prompt:InputHoldBegin()

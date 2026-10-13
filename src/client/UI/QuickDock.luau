@@ -135,6 +135,12 @@ end
 QuickDock.say = function(_title: string, _line: string) end
 
 local SIZE = 64
+-- Each key a little wider than it is tall, so the longest names (Collection, Wardrobe) sit whole
+-- on the foot of the key at a size you can read.
+local WIDE = 1.22
+local function keyWidth(): number
+	return math.floor(SIZE * WIDE + 0.5)
+end
 local KEYS = 6
 local GAP = 10
 
@@ -176,7 +182,7 @@ local function tile(parent: Instance, order: number, glyph: string, label: strin
 	holder.Name = label
 	holder.LayoutOrder = order
 	holder.BackgroundTransparency = 1
-	holder.Size = UDim2.fromOffset(SIZE, SIZE)
+	holder.Size = UDim2.fromOffset(keyWidth(), SIZE)
 	holder.Parent = parent
 	local glow = Theme.glow(holder, accent[1], radius, 1.35)
 	-- The dark rim, just outside the tile.
@@ -293,9 +299,12 @@ local function tile(parent: Instance, order: number, glyph: string, label: strin
 	name.BackgroundTransparency = 1
 	name.AnchorPoint = Vector2.new(0.5, 1)
 	name.Position = UDim2.new(0.5, 0, 1, -math.floor(SIZE * 0.06))
-	name.Size = UDim2.new(1, -4, 0, math.floor(SIZE * 0.24))
+	name.Size = UDim2.new(1, -8, 0, math.floor(SIZE * 0.24))
 	name.FontFace = Brand.Fonts.heavy
+	-- (Scaled to fit the key's foot, and never cut short: no floor that would leave a word wider
+	-- than the key.)
 	name.TextScaled = true
+	name.TextWrapped = false
 	name.TextColor3 = Color3.new(1, 1, 1)
 	name.TextStrokeColor3 = Color3.new(0, 0, 0)
 	name.TextStrokeTransparency = 0.25
@@ -303,7 +312,7 @@ local function tile(parent: Instance, order: number, glyph: string, label: strin
 	name.ZIndex = 5
 	local nameFit = Instance.new("UITextSizeConstraint")
 	nameFit.MaxTextSize = math.max(11, math.floor(SIZE * 0.2))
-	nameFit.MinTextSize = 9
+	nameFit.MinTextSize = 1
 	nameFit.Parent = name
 	name.Parent = b
 	-- A band of light that sweeps across the key now and then (each key at its own moment).
@@ -405,7 +414,7 @@ local COLUMNS = 2
 -- The dock's size for `n` keys, two by two.
 local function dockSize(n: number): UDim2
 	local rows = math.ceil(n / COLUMNS)
-	return UDim2.fromOffset(COLUMNS * SIZE + (COLUMNS - 1) * GAP, rows * SIZE + (rows - 1) * GAP)
+	return UDim2.fromOffset(COLUMNS * keyWidth() + (COLUMNS - 1) * GAP, rows * SIZE + (rows - 1) * GAP)
 end
 
 -- The dock's keys now: the six, and Watch and the holiday key when they're there.
@@ -415,7 +424,7 @@ end
 
 -- How far right the dock reaches, in the HUD's units (what stands beside it starts after this).
 function QuickDock.right(): number
-	return 16 + COLUMNS * SIZE + (COLUMNS - 1) * GAP
+	return 16 + COLUMNS * keyWidth() + (COLUMNS - 1) * GAP
 end
 
 -- The key to watch a fireworks show from across the street (and to come back), at the foot of the
@@ -537,7 +546,7 @@ function QuickDock.start()
 	f.Size = dockSize(KEYS)
 	f.Parent = Root.hud
 	local grid = Instance.new("UIGridLayout")
-	grid.CellSize = UDim2.fromOffset(SIZE, SIZE)
+	grid.CellSize = UDim2.fromOffset(keyWidth(), SIZE)
 	grid.CellPadding = UDim2.fromOffset(GAP, GAP)
 	grid.FillDirection = Enum.FillDirection.Horizontal
 	grid.FillDirectionMaxCells = COLUMNS

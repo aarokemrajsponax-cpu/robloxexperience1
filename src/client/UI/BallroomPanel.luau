@@ -134,10 +134,13 @@ function BallroomPanel.result(message: { [string]: any }, actions: Actions)
 	if message.counted then
 		table.insert(rows, { Voice.Ballroom.points, "+" .. RoundPanel.number(message.points or 0) })
 	end
+	-- One winner takes the whole pot: yours, or what it was.
 	if (message.gilt or 0) > 0 then
-		table.insert(rows, { Voice.Ballroom.gilt, "+" .. RoundPanel.number(message.gilt) })
+		table.insert(rows, { Voice.Ballroom.pot, "+" .. RoundPanel.number(message.gilt) .. " Gilt" })
+	elseif type(message.pot) == "number" then
+		table.insert(rows, { Voice.Ballroom.pot, RoundPanel.number(message.pot) .. " Gilt · the last lamp's" })
 	end
-	card(Voice.Ballroom.title, heading, nil, rows, if message.counted then nil elseif game:GetService("Workspace"):GetAttribute("PrivateEvening") == true then Voice.Private.line else Voice.Ballroom.notCountedNote, actions, "stay")
+	card(Voice.Ballroom.title, heading, if message.won then nil else "Only the last lamp is paid. Next time, it could be you.", rows, if message.counted then nil elseif game:GetService("Workspace"):GetAttribute("PrivateEvening") == true then Voice.Private.line else Voice.Ballroom.notCountedNote, actions, "stay")
 end
 
 function BallroomPanel.close()

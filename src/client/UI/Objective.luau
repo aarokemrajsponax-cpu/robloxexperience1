@@ -4,9 +4,12 @@
 -- holiday game, while one is open (and first of all while you're playing it); then the next room
 -- to open; then your best run to beat. It is never shown at a table. It comes up bright
 -- when it changes and settles back after a few seconds, so it's there whenever you look for it.
--- It steps aside while something bigger holds the screen, and comes back quietly after.
+-- It steps aside while something bigger holds the screen, and comes back quietly after. Its –
+-- key folds it away into a small NEXT tab (and the tab brings it back); the choice is kept, like
+-- a setting (The room → What-to-do-next card).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local Ease = require(ReplicatedStorage.Shared.Ease)
@@ -81,6 +84,16 @@ function Objective.current(): Goal?
 	if holiday then
 		return holiday
 	end
+	-- The Ballroom, while it's open (or counting down to an evening): a chair, and a pot to win.
+	local ballroom = Workspace:GetAttribute("BallroomState")
+	if ballroom == "open" or ballroom == "gathering" then
+		local pot = Workspace:GetAttribute("BallroomPot")
+		local potText = if type(pot) == "number" then number(pot) else "a pot of"
+		if ballroom == "gathering" then
+			return { key = "ballroom:gathering", title = "Lights Out · last call", line = "An evening in the Ballroom is about to begin", how = string.format("Take any chair before it starts: the last lamp wins %s Gilt.", potText), go = "ballroom" }
+		end
+		return { key = "ballroom:open", title = "The Ballroom is open", line = "Lights Out: sit, sort, keep your lamp lit", how = string.format("The last lamp wins %s Gilt or more. It closes soon.", potText), go = "ballroom" }
+	end
 	if not State.unlocked.midnight then
 		return { key = "midnight", title = V.next, line = V.midnight, how = V.midnightHow }
 	end
@@ -115,6 +128,19 @@ local function hide()
 	end)
 end
 
+-- Folded away: a small tab where the card was (NEXT ▾), and tapping it brings the card back.
+local tab: TextButton? = nil
+local function folded(): boolean
+	return State.get("goalCard") == "Hidden"
+end
+local function dropTab()
+	local t = tab
+	if t then
+		tab = nil
+		t:Destroy()
+	end
+end
+
 -- Under the keys at the top right; a touch lower while the events strip reaches across to it (a
 -- narrow screen), never over it.
 local WIDTH = 300
@@ -128,9 +154,45 @@ Root.TopChanged:Connect(function()
 	if group then
 		Ease.play(group, Ease.scaled(Ease.settle), { Position = where() })
 	end
+	local t = tab
+	if t then
+		t.Position = where()
+	end
 end)
 
+local function showTab()
+	if tab then
+		return
+	end
+	local b = Instance.new("TextButton")
+	b.Name = "ObjectiveTab"
+	b.AutoButtonColor = false
+	b.AnchorPoint = Vector2.new(1, 0)
+	b.Position = where()
+	b.BackgroundColor3 = Color3.fromRGB(14, 14, 18)
+	b.BackgroundTransparency = 0.08
+	b.FontFace = Brand.Fonts.bodyBold
+	b.TextSize = 13
+	b.TextColor3 = Brand.Colours.lightGold
+	b.Text = "NEXT  ▾"
+	b.Size = UDim2.fromOffset(Theme.measure(b.Text, 13, Brand.Fonts.bodyBold).X + 28, 30)
+	local c = Instance.new("UICorner")
+	c.CornerRadius = UDim.new(1, 0)
+	c.Parent = b
+	local st = Instance.new("UIStroke")
+	st.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	st.Color = Brand.Colours.gold
+	st.Transparency = 0.25
+	st.Parent = b
+	b.Activated:Connect(function()
+		State.set("goalCard", "Shown")
+	end)
+	b.Parent = Root.hud
+	tab = b
+end
+
 local function show(goal: Goal)
+	dropTab()
 	if card and shownKey == goal.key then
 		return
 	end
@@ -146,8 +208,34 @@ local function show(goal: Goal)
 		pad.PaddingTop = UDim.new(0, 12)
 		pad.PaddingBottom = UDim.new(0, 12)
 		pad.PaddingLeft = UDim.new(0, 16)
-		pad.PaddingRight = UDim.new(0, 16)
+		pad.PaddingRight = UDim.new(0, 40)
 	end
+	-- The – key in its top corner: folds the card away (to the small NEXT tab).
+	local fold = Instance.new("TextButton")
+	fold.Name = "Fold"
+	fold.AutoButtonColor = false
+	fold.AnchorPoint = Vector2.new(1, 0)
+	fold.Position = UDim2.new(1, -10, 0, 10)
+	fold.Size = UDim2.fromOffset(26, 26)
+	fold.BackgroundColor3 = Color3.fromRGB(34, 32, 30)
+	fold.BackgroundTransparency = 0.05
+	fold.FontFace = Brand.Fonts.heavy
+	fold.TextSize = 18
+	fold.TextColor3 = Brand.Colours.lightGold
+	fold.Text = "–"
+	fold.ZIndex = 8
+	local fc = Instance.new("UICorner")
+	fc.CornerRadius = UDim.new(1, 0)
+	fc.Parent = fold
+	local fs = Instance.new("UIStroke")
+	fs.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	fs.Color = Brand.Colours.gold
+	fs.Transparency = 0.4
+	fs.Parent = fold
+	fold.Activated:Connect(function()
+		State.set("goalCard", "Hidden")
+	end)
+	fold.Parent = group
 	local list = Theme.list(content, 3)
 	list.HorizontalAlignment = Enum.HorizontalAlignment.Left
 	Theme.text(content, goal.title, 11, "caps", { LayoutOrder = 1, TextXAlignment = Enum.TextXAlignment.Left })
@@ -193,6 +281,13 @@ function Objective.refresh()
 		return
 	end
 	local goal = if seated or State.phase ~= "play" or Root.isOpen() then nil else Objective.current()
+	if goal and folded() and not busy() then
+		quietKey = nil
+		hide()
+		showTab()
+		return
+	end
+	dropTab()
 	if goal and busy() then
 		if card and shownKey == goal.key then
 			quietKey = goal.key
@@ -217,6 +312,12 @@ function Objective.start(go: (mode: string) -> ())
 	State.Unlocked:Connect(Objective.refresh)
 	State.PhaseChanged:Connect(Objective.refresh)
 	Root.PanelsChanged:Connect(Objective.refresh)
+	State.watch("goalCard", function()
+		task.defer(Objective.refresh)
+	end)
+	Workspace:GetAttributeChangedSignal("BallroomState"):Connect(function()
+		task.defer(Objective.refresh)
+	end)
 	Remotes.event("Table").OnClientEvent:Connect(function(message: any)
 		if type(message) ~= "table" then
 			return

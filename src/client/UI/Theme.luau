@@ -1,7 +1,7 @@
 --!strict
 -- The look of every panel (Build 56, "2070"): black glass with rounded corners and a gold edge that
--- catches the light as it turns, a soft glow round it; headings in Michroma capitals with a metal
--- sheen, everything else in Gotham SSm; gold keys that light up and press in. Text follows the Text
+-- catches the light as it turns, a soft glow round it; headings in heavy Gotham capitals with a metal
+-- sheen, everything else in lighter Gotham SSm; gold keys that light up and press in. Text follows the Text
 -- size and Lettering settings live.
 --
 -- Typography: every size is set on one scale (Theme.Scale), with line spacing by kind; keys set
@@ -56,7 +56,7 @@ function Theme.snap(size: number): number
 	return if size > Theme.Scale[#Theme.Scale] then size else best
 end
 
--- Line spacing by kind: running text opens up a little, display type sits tight (Michroma's capitals
+-- Line spacing by kind: running text opens up a little, display type sits tight (its heavy capitals
 -- stand tall: a touch more room between their lines).
 local LINE_HEIGHT: { [string]: number } = { display = 1.12, italic = 1.04, caps = 1.1 }
 type Registered = { label: TextLabel | TextButton, size: number, kind: TextKind }
@@ -206,6 +206,53 @@ function Theme.text(parent: Instance, text: string, size: number, kind: TextKind
 	end
 	label.Parent = parent
 	return label
+end
+
+-- How wide (and tall) `text` is set at `size` in `font` (the house's Gotham faces by default),
+-- in the HUD's own units, wrapped at `width` if given: measured by the engine (Gotham, the face
+-- Gotham SSm is drawn from, a touch narrower: allowed for), or a fair guess if it can't. For boxes
+-- that should be exactly as wide as their words.
+local TextService = game:GetService("TextService")
+local function enumFor(font: Font): Enum.Font
+	local w = font.Weight.Value
+	if w >= Enum.FontWeight.Heavy.Value then
+		return Enum.Font.GothamBlack
+	elseif w >= Enum.FontWeight.SemiBold.Value then
+		return Enum.Font.GothamBold
+	elseif w >= Enum.FontWeight.Medium.Value then
+		return Enum.Font.GothamMedium
+	end
+	return Enum.Font.Gotham
+end
+function Theme.measure(text: string, size: number, font: Font?, width: number?): Vector2
+	local f = font or Brand.Fonts.body
+	local wide = 1.06
+	if not string.find(f.Family, "Gotham", 1, true) then
+		-- (Another face: wider for Michroma's capitals, about the same for the serifs.)
+		wide = if string.find(f.Family, "Michroma", 1, true) then 1.45 else 1
+	end
+	local limit = width or 100000
+	local ok, v = pcall(function()
+		return TextService:GetTextSize(text, size, enumFor(f), Vector2.new(limit / wide, 100000))
+	end)
+	if ok and typeof(v) == "Vector2" and v.X > 0 then
+		return Vector2.new(math.ceil(v.X * wide) + 2, math.ceil(v.Y))
+	end
+	-- (A fair guess: Gotham's letters run about 0.6 of their size wide, a little more when heavy.)
+	local per = (if f.Weight.Value >= Enum.FontWeight.Heavy.Value then 0.7 elseif f.Weight.Value >= Enum.FontWeight.SemiBold.Value then 0.64 else 0.58) * wide
+	local longest, lines = 0, 0
+	for _, line in string.split(text, "\n") do
+		local w = (utf8.len(line) or #line) * size * per
+		local rows = math.max(1, math.ceil(w / limit))
+		lines += rows
+		longest = math.max(longest, math.min(w, limit))
+	end
+	return Vector2.new(math.ceil(longest) + 2, math.ceil(lines * size * 1.2))
+end
+
+-- How wide a label's own words are, as it's set now (its face, its size).
+function Theme.wordsWidth(label: TextLabel | TextButton): number
+	return Theme.measure(label.Text, label.TextSize, label.FontFace).X
 end
 
 -- A gold sheen on text or a fill: bright at the top through the house's gold to a deeper gold.

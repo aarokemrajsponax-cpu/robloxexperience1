@@ -20,7 +20,7 @@ local PerkChips = {}
 PerkChips.openDecree = function() end
 PerkChips.openPiano = function() end
 
-local CHIP_WIDTH = 260
+local CHIP_WIDTH = 340 -- (the longest a capsule may run)
 local stack = Instance.new("Frame")
 stack.Name = "PerkChips"
 stack.BackgroundTransparency = 1
@@ -112,7 +112,12 @@ local function chip(id: string, order: number, text: string?, onPress: (() -> ()
 		chips[id] = b
 		c = b
 	end
-	(c :: TextButton).Text = text
+	local b = c :: TextButton
+	b.Text = text
+	-- Each capsule exactly as long as its words (its light and margins either side), never a row
+	-- of equal bars with words rattling about in them.
+	local w = Theme.measure(text, b.TextSize, b.FontFace).X
+	b.Size = UDim2.fromOffset(math.min(CHIP_WIDTH, w + 26 + 14), 30)
 end
 
 local function refresh()

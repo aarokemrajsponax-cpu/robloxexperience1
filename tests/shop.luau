@@ -1878,6 +1878,22 @@ do
 	advance(0.5)
 	check("...when it's earned", #awarded == awardedBefore + 1 and awarded[#awarded].id == 5550001)
 	Config.data.Badges.rounds_10 = nil
+	-- A Roblox badge made after it was earned: given on the guest's next arrival, once.
+	Config.data.Badges.firstRound = 5550002
+	do
+		local beforeSync = #awarded
+		run(function()
+			Achievements.syncRoblox(bb)
+		end)
+		advance(0.5)
+		check("a badge earned before its Roblox badge existed is put on the profile on arrival", #awarded == beforeSync + 1 and awarded[#awarded].id == 5550002)
+		run(function()
+			Achievements.syncRoblox(bb)
+		end)
+		advance(0.5)
+		check("...and only once", #awarded == beforeSync + 1)
+	end
+	Config.data.Badges.firstRound = 0
 	run(function()
 		Achievements.tally(bb, "abuseNights", 1, "night:1")
 		Achievements.tally(bb, "abuseNights", 1, "night:1")

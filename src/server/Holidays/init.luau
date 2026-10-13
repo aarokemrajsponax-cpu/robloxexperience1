@@ -26,6 +26,10 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Analytics = require(script.Parent.Analytics)
 local Curios = require(script.Parent.Curios)
 local Gilt = require(script.Parent.Gilt)
+local ProductConfig = require(ReplicatedStorage.Shared.ProductConfig)
+local Catalog = require(script.Parent.Purchases.Catalog)
+local HolidayGrant = require(script.Parent.Purchases.HolidayGrant)
+local Store = require(script.Parent.Purchases.Store)
 local Profiles = require(script.Parent.Profiles)
 local RemoteGuard = require(script.Parent.RemoteGuard)
 
@@ -135,6 +139,11 @@ local function today(): number
 	return math.floor(os.time() / 86400)
 end
 
+-- The year by the calendar (UTC): a holiday pass lasts its holiday, this year.
+local function year(): number
+	return tonumber(os.date("!%Y")) or 0
+end
+
 local function saved(data: Profiles.Data): Types.Saved
 	local d = data :: any
 	if type(d.holiday) ~= "table" then
@@ -148,6 +157,20 @@ local function saved(data: Profiles.Data): Types.Saved
 	h.round = if type(h.round) == "number" then h.round else -1
 	h.doors = if type(h.doors) == "table" then h.doors else {}
 	h.trips = if type(h.trips) == "number" then h.trips else 0
+	-- What's been bought (and the free sleigh rides taken this year).
+	local function count(v: any): number
+		return if type(v) == "number" and v == v then math.max(0, math.floor(v)) else 0
+	end
+	h.catches = count(h.catches)
+	h.hunterYear = count(h.hunterYear)
+	h.rides = count(h.rides)
+	h.seasonYear = count(h.seasonYear)
+	h.rideYear = count(h.rideYear)
+	h.freeTaken = count(h.freeTaken)
+	if h.rideYear ~= year() then
+		h.rideYear = year()
+		h.freeTaken = 0
+	end
 	if h.day ~= today() then
 		h.day = today()
 		h.gems = 0
@@ -278,6 +301,11 @@ ctx = {
 	salute = function(title: string, line: string, by: Player?)
 		Remotes.event("Salute"):FireAllClients({ op = "salute", id = "holidayGame", by = if by then Names.of(by) else "", effects = { "fireworks" }, seconds = 7, title = title, line = line })
 	end,
+	price = function(key: string): number?
+		local ok, p = pcall(Catalog.price, key)
+		return if ok and type(p) == "number" then p else nil
+	end,
+	year = year,
 }
 
 ---------------------------------------------------------------------------------------------------
@@ -380,6 +408,61 @@ end
 ---------------------------------------------------------------------------------------------------
 local ASK_KEYS = { op = true, n = true }
 
+-- Which holiday products may be asked for now, and why not: the turkeys' only while the field is
+-- open (and not already unlimited), the sleigh's only at Christmas.
+local function buyable(player: Player, key: string): (boolean, string?)
+	local data = Profiles.get(player)
+	if not data then
+		return false, "Your ledger is still being opened."
+	end
+	local h = saved(data)
+	if key == "turkeyMore" or key == "turkeyHunter" then
+		if current ~= "thanksgiving" then
+			return false, "The turkeys are out at Thanksgiving."
+		end
+		if h.hunterYear == year() then
+			return false, "Your Turkey Hunter Pass already catches as many as you like."
+		end
+	elseif key == "sleighRide" or key == "sleighSeason" then
+		if current ~= "christmas" then
+			return false, "Santa's sleigh comes at Christmas."
+		end
+		if h.seasonYear == year() then
+			return false, "Your Season Pass already rides free."
+		end
+	end
+	return true, nil
+end
+
+local function buy(player: Player, n: number): { [string]: any }
+	local key = ProductConfig.Holiday[n]
+	if not key then
+		return { ok = false, why = "That isn't sold here." }
+	end
+	local fine, why = buyable(player, key)
+	if not fine then
+		return { ok = false, why = why }
+	end
+	local sell = Store.sellable(key)
+	if not sell then
+		return { ok = false, why = "That isn't on sale yet." }
+	end
+	local ok, reason = Store.prompt(player, sell, "holiday")
+	return { ok = ok, why = reason, prompted = ok }
+end
+
+-- The holiday products' prices now, for the offer on a guest's screen (Roblox's own, or the
+-- catalog's reference price until Roblox says).
+local function prices(): { [string]: number }
+	local out = {}
+	for _, key in ProductConfig.Holiday do
+		local live = ctx.price(key)
+		local e = ProductConfig.byKey[key]
+		out[key] = live or (if e then e.Pricing.ReferencePrice else 0)
+	end
+	return out
+end
+
 -- Takes a guest to the open game's place (the Lane, the Field, or the kerb by Santa's sleigh).
 local function go(player: Player): { [string]: any }
 	local id = current
@@ -431,7 +514,7 @@ end
 
 local function state(player: Player): { [string]: any }
 	local data = Profiles.get(player)
-	local s: { [string]: any } = { ok = true, game = current, gemsLeft = gemsLeft(player) }
+	local s: { [string]: any } = { ok = true, game = current, gemsLeft = gemsLeft(player), prices = prices() }
 	if data then
 		local h = saved(data)
 		s.gifts = h.gifts
@@ -474,6 +557,12 @@ local function onAsk(player: Player, request: unknown): any
 		-- Opening gifts from the North Pole: they keep after Christmas, until they're opened.
 		local n = RemoteGuard.number(r.n, 1, 10, true) or 1
 		return Pole.openGifts(ctx, player, n)
+	elseif op == "buy" then
+		local n = RemoteGuard.number(r.n, 1, #ProductConfig.Holiday, true)
+		if not n then
+			return { ok = false, why = "That isn't sold here." }
+		end
+		return buy(player, n)
 	end
 	return { ok = false, why = "That isn't something the house does." }
 end
@@ -494,6 +583,20 @@ function Holidays.step(dt: number)
 end
 
 function Holidays.start()
+	-- A holiday product bought (Purchases/HolidayGrant wrote it down): the game is told at once.
+	HolidayGrant.after = function(player: Player, key: string)
+		send(player, { op = "bought", key = key })
+		if key == "turkeyMore" or key == "turkeyHunter" then
+			Field.bought(ctx, player)
+		else
+			Pole.bought(ctx, player)
+		end
+	end
+	for _, key in ProductConfig.Holiday do
+		Store.eligibility[key] = function(player: Player): (boolean, string?)
+			return buyable(player, key)
+		end
+	end
 	RemoteGuard.invoke(Remotes.func("HolidayAsk"), "holidayAsk", onAsk)
 	Players.PlayerRemoving:Connect(function(player)
 		local id = current

@@ -548,6 +548,11 @@ local function startHud()
 			return MemeTakeover.isRunning() or Midas.isRunning() or Stagecraft.titleUp() or AbuseFX.bannerUp() or AbuseShow.cardUp() or Headline.showing() or Celebrate.badgeUp() or SleighRide.riding()
 		end
 		Objective.start(function(mode: string)
+			if mode == "ballroom" then
+				-- (To the Ballroom's door, while it's open.)
+				Remotes.event("Table"):FireServer({ op = "goBallroom" })
+				return
+			end
 			quickSit(mode)
 		end)
 	end)

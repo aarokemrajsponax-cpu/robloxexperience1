@@ -9,6 +9,8 @@ export type Room = {
 	id: string,
 	name: string,
 	line: string,
+	tag: string, -- a few words for the sign by its door ("TIMED · HARD")
+	level: number, -- how hard, 1 (the Salon) to 4 (the Midnight Room)
 	timed: boolean,
 	tuning: Config.RoomTuning,
 }
@@ -29,6 +31,15 @@ local lines = {
 	midnight = "The house is closing. Nothing is named and nothing is pointed out.",
 }
 
+-- For the signs by the doors: a few words, and how hard (a pip each).
+local tags = {
+	salon = "No clock · Learn here",
+	velvet = "Timed · Gentle",
+	obsidian = "Timed · Hard",
+	midnight = "Timed · Hardest",
+}
+local levels = { salon = 1, velvet = 2, obsidian = 3, midnight = 4 }
+
 function Rooms.get(id: string): Room?
 	local tuning = Config.data.Rooms[id]
 	if tuning == nil then
@@ -38,6 +49,8 @@ function Rooms.get(id: string): Room?
 		id = id,
 		name = names[id],
 		line = lines[id],
+		tag = tags[id] or "",
+		level = levels[id] or 1,
 		timed = tuning.clockBase ~= nil,
 		tuning = tuning,
 	}

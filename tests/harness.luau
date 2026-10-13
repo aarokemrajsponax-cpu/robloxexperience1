@@ -599,6 +599,14 @@ local services = {
 		AwardBadge = function(_, userId, id)
 			table.insert(awarded, { userId = userId, id = id })
 		end,
+		UserHasBadgeAsync = function(_, userId, id)
+			for _, a in awarded do
+				if a.userId == userId and a.id == id then
+					return true
+				end
+			end
+			return false
+		end,
 	},
 	CollectionService = {
 		GetTagged = function(_, tag)

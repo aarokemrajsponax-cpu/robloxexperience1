@@ -136,6 +136,38 @@ add({
 	},
 	UX = { DisplayName = "Chronos Defiance", Category = "Survival", Line = "When the clock runs out in a timed room: +15 seconds and your run goes on.", Offer = true, Order = 60, Action = "prompt" },
 })
+-- A revive priced by the room: the harder the room, the more its revive costs (and each is spent
+-- only in its own room). Until a room's product exists in Creator Hub, Chronos Defiance stands in.
+ProductConfig.RoomRevives = { velvet = "reviveVelvet", obsidian = "reviveObsidian", midnight = "reviveMidnight" } :: { [string]: string }
+local roomRevives: { { room: string, name: string, price: number, why: string } } = {
+	{ room = "velvet", name = "Revive: Velvet Room", price = 29, why = "The gentlest room: the cheapest second chance." },
+	{ room = "obsidian", name = "Revive: Obsidian Room", price = 59, why = "A harder room, a dearer second chance." },
+	{ room = "midnight", name = "Revive: Midnight Room", price = 99, why = "The hardest room, the dearest second chance: a deep run is worth it." },
+}
+for _, r in roomRevives do
+	local room, name, price, why = r.room, r.name, r.price, r.why
+	add({
+		Key = ProductConfig.RoomRevives[room],
+		Name = name,
+		ProductType = "DeveloperProduct",
+		Id = 0,
+		Handler = "revive",
+		Pricing = { ReferencePrice = price, Tier = if price <= 99 then "Entry" else "Medium", Rationale = why },
+		Reward = { Type = "Revive", Seconds = 15, Room = room },
+		Rules = {
+			WindowSeconds = 10,
+			PromptWaitSeconds = 60,
+			ReceiptWaitSeconds = 25,
+			MaxUsesPerRound = 1,
+			MaxUsesPerRun = 3,
+			MaxHeld = 5,
+			BoardsCountRevivedPoints = false,
+			Stackable = true,
+			CooldownSeconds = 0,
+		},
+		UX = { DisplayName = name, Category = "Survival", Line = "When the clock runs out in this room: +15 seconds and your run goes on.", Offer = false, Order = 61, Action = "prompt" },
+	})
+end
 add({
 	Key = "emperorsDecree",
 	Name = "Emperor's Decree",
@@ -374,6 +406,76 @@ add({
 	Reward = { Type = "SeasonCollection" },
 	Rules = { Stackable = false, CooldownSeconds = 0, DuplicateCredit = "tier399" },
 	UX = { DisplayName = "Season Collection", Category = "Style", Line = "The season's pieces, sold only in their season.", Offer = false, Order = 81, Action = "prompt" },
+})
+-- The Ballroom (BallroomService, Purchases/Sabotage): sabotage during an evening, aimed at a table
+-- and announced to the room with who sent it; and opening the Ballroom between its hours.
+ProductConfig.Ballroom = { "ballroomBomb", "ballroomBlackout", "ballroomFreeze", "ballroomShield", "ballroomOpen" } :: { string }
+local function ballroom(key: string, name: string, price: number, kind: string?, display: string, line: string, order: number)
+	add({
+		Key = key,
+		Name = name,
+		ProductType = "DeveloperProduct",
+		Id = 0,
+		Handler = "ballroom",
+		Pricing = { ReferencePrice = price, Tier = if price <= 99 then "Entry" else "Medium", Rationale = "A moment of drama in a race for a pot: cheap, instant, visible to the whole room." },
+		Reward = if kind then { Type = "Sabotage", Kind = kind } else { Type = "BallroomOpen" },
+		Rules = { Stackable = true, CooldownSeconds = 0, MaxHeld = 20 },
+		UX = { DisplayName = display, Category = "Ballroom", Line = line, Offer = false, Order = order, Action = "prompt" },
+	})
+end
+ballroom("ballroomBomb", "Ballroom: Parcel Bomb", 19, "bomb", "Parcel Bomb", "Six lookalike pieces land on a rival's felt in two seconds.", 85)
+ballroom("ballroomBlackout", "Ballroom: Blackout", 29, "blackout", "Blackout", "A rival's felt goes dark for six seconds.", 86)
+ballroom("ballroomFreeze", "Ballroom: Butterfingers", 25, "freeze", "Butterfingers", "A rival can't file a piece for four seconds.", 87)
+ballroom("ballroomShield", "Ballroom: Shield", 15, "shield", "Shield", "Stops the next sabotage sent at your table this evening.", 88)
+ballroom("ballroomOpen", "Open the Ballroom Now", 49, nil, "Open the Ballroom Now", "Opens the Ballroom for everyone in the house, right now.", 89)
+
+-- The holiday games (server/Holidays): more of the same fun, at a fixed price, never a chance.
+-- Turkeys: five free catches each visit to the Harvest Field, then more. The sleigh: one ride to
+-- the North Pole free each Christmas, then more.
+ProductConfig.Holiday = { "turkeyMore", "turkeyHunter", "sleighRide", "sleighSeason" } :: { string }
+add({
+	Key = "turkeyMore",
+	Name = "Turkey Round-Up: 10 More",
+	ProductType = "DeveloperProduct",
+	Id = 0,
+	Handler = "holiday",
+	Pricing = { ReferencePrice = 25, Tier = "Entry", Rationale = "An impulse top-up the moment the free catches run out, while the chase is hot." },
+	Reward = { Type = "HolidayCatches", Amount = 10 },
+	Rules = { Stackable = true, CooldownSeconds = 0, MaxHeld = 200 },
+	UX = { DisplayName = "10 More Turkeys", Category = "Holiday", Line = "Catch ten more turkeys in the Harvest Field. Each pays its Gilt as usual.", Offer = false, Order = 95, Action = "prompt" },
+})
+add({
+	Key = "turkeyHunter",
+	Name = "Turkey Hunter Pass",
+	ProductType = "DeveloperProduct",
+	Id = 0,
+	Handler = "holiday",
+	Pricing = { ReferencePrice = 99, Tier = "Entry", Rationale = "Unlimited catching for the rest of the holiday: the obvious buy for anyone back more than twice." },
+	Reward = { Type = "HolidayPass", Game = "thanksgiving" },
+	Rules = { Stackable = false, CooldownSeconds = 0 },
+	UX = { DisplayName = "Turkey Hunter Pass", Category = "Holiday", Line = "Catch as many turkeys as you like until Thanksgiving's games close, on every visit.", Offer = false, Order = 96, Action = "prompt" },
+})
+add({
+	Key = "sleighRide",
+	Name = "Another Sleigh Ride",
+	ProductType = "DeveloperProduct",
+	Id = 0,
+	Handler = "holiday",
+	Pricing = { ReferencePrice = 29, Tier = "Entry", Rationale = "One more trip to the North Pole: up to 15 gifts to bring home." },
+	Reward = { Type = "HolidayRide", Amount = 1 },
+	Rules = { Stackable = true, CooldownSeconds = 0, MaxHeld = 50 },
+	UX = { DisplayName = "Another Sleigh Ride", Category = "Holiday", Line = "One more ride on Santa's sleigh to the North Pole, with room for 15 gifts.", Offer = false, Order = 97, Action = "prompt" },
+})
+add({
+	Key = "sleighSeason",
+	Name = "Santa's Season Pass",
+	ProductType = "DeveloperProduct",
+	Id = 0,
+	Handler = "holiday",
+	Pricing = { ReferencePrice = 149, Tier = "Medium", Rationale = "Every ride free for the rest of Christmas: the best value for anyone who loves the gift run." },
+	Reward = { Type = "HolidayPass", Game = "christmas" },
+	Rules = { Stackable = false, CooldownSeconds = 0 },
+	UX = { DisplayName = "Santa's Season Pass", Category = "Holiday", Line = "Ride Santa's sleigh to the North Pole as often as you like until Christmas's games close.", Offer = false, Order = 98, Action = "prompt" },
 })
 for _, s in Salutes.List do
 	add({

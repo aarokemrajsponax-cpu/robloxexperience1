@@ -3,13 +3,22 @@
 -- every felt from the dumbwaiters, identical for everyone, steadily and then faster. A felt holds
 -- sixteen: go over and the lamp flickers; three seconds later it goes out. Parcels of lookalikes
 -- go where your tab points; putting a lamp out takes a Key and every Key they held. The last lamp
--- burning wins. The server owns the dumbwaiter, every felt, every parcel and every lamp.
+-- burning wins, and takes the whole pot (more for every real guest who sat down); nobody else is
+-- paid Gilt. The server owns the dumbwaiter, every felt, every parcel and every lamp.
+--
+-- The Ballroom keeps hours (Config.Ballroom): open for five minutes; the first guest to sit starts
+-- a 100-second countdown (others may sit until it ends, never after); then closed for twenty
+-- minutes, after an evening or when nobody came. It opens early for everyone when a guest buys
+-- "Open the Ballroom Now", or the owner says so. And during an evening, any guest in the room may
+-- sabotage a table (Robux, through Purchases/Sabotage): a Parcel Bomb, a Blackout, Butterfingers,
+-- or a Shield against them; every one is announced to the room, with who sent it.
 
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local Workspace = game:GetService("Workspace")
 
 local Names = require(ReplicatedStorage.Shared.Names)
 local Catalogue = require(ReplicatedStorage.Shared.Catalogue)
@@ -63,6 +72,8 @@ type SeatState = {
 	place: number?,
 	filings: number,
 	correct: number,
+	shield: number, -- sabotages it will stop
+	hitAt: number, -- when it was last sabotaged (os.clock)
 }
 
 type Evening = {
@@ -84,6 +95,8 @@ type Evening = {
 	nextUid: number,
 	nextParcel: number,
 	winner: number?,
+	sabotages: { [Player]: number }, -- sent this evening, by guest
+	pot: number,
 }
 
 local tableEvent = Remotes.event("Table")
@@ -99,6 +112,23 @@ local board: BasePart? = nil
 BallroomService.say = function(_player: Player, _line: string) end
 BallroomService.onFinished = function(_player: Player, _place: number, _keys: number, _counted: boolean) end
 BallroomService.onResult = function(_tableNumber: number, _name: string, _keys: number) end
+-- A guest asked to sabotage a table (Main: Purchases/Sabotage.request, which spends a credit or
+-- asks Roblox for the purchase window). The default applies it at once (tests, and before Main).
+BallroomService.requestSabotage = function(player: Player, kind: string, seat: number): (boolean, string?)
+	return (BallroomService :: any).sabotage(player, kind, seat)
+end
+-- A guest asked to open the Ballroom early (Main: Purchases/Sabotage.openNow, the purchase).
+BallroomService.requestOpen = function(_player: Player): (boolean, string?)
+	return false, "Not just now."
+end
+-- The prices and credits a guest's screen shows for sabotage (Main: Purchases/Sabotage.info).
+BallroomService.sabotageInfo = function(_player: Player): { [string]: any }
+	return { prices = {}, credits = {} }
+end
+
+-- The Ballroom's hours: open (an evening may start) or closed, and until when (os.clock).
+local doorState: "open" | "closed" = "open"
+local doorUntil = 0
 
 local function cfg()
 	return Config.data.Ballroom
@@ -199,6 +229,71 @@ local function realAlive(): number
 	return n
 end
 
+local function serverNow(): number
+	local ok, t = pcall(function()
+		return Workspace:GetServerTimeNow()
+	end)
+	return if ok and type(t) == "number" then t else os.clock()
+end
+
+-- Everyone in the house: the Ballroom opening is news for all of them.
+local function broadcastAll(message: { [string]: any })
+	for _, player in Players:GetPlayers() do
+		send(player, message)
+	end
+end
+
+local function realSeated(): number
+	local n = 0
+	for _, s in seats do
+		if s.player then
+			n += 1
+		end
+	end
+	return n
+end
+
+-- The winner's pot for an evening with `real` guests.
+local function potFor(real: number): number
+	return cfg().potBase + cfg().potPerGuest * math.max(1, real)
+end
+
+local function clockText(seconds: number): string
+	local t = math.max(0, math.ceil(seconds))
+	return string.format("%d:%02d", t // 60, t % 60)
+end
+
+-- What every screen reads (Workspace attributes): the Ballroom's state ("closed", "open",
+-- "gathering", "playing", "after"), when it next changes (server time), and the pot.
+local function publish()
+	local e = evening
+	local state: string = doorState
+	local untilClock = doorUntil
+	if e then
+		state = e.state
+		untilClock = if e.state == "gathering" then e.gatherEndsAt else 0
+	end
+	Workspace:SetAttribute("BallroomState", state)
+	Workspace:SetAttribute("BallroomAt", if untilClock > 0 then serverNow() + (untilClock - os.clock()) else nil)
+	Workspace:SetAttribute("BallroomPot", if e and e.state ~= "gathering" then e.pot else potFor(realSeated()))
+end
+
+local function openDoor(now: number, by: string?)
+	doorState = "open"
+	doorUntil = now + cfg().openSeconds
+	publish()
+	writeBoard({ track("LIGHTS OUT"), "Open now · take any chair", string.format("The last lamp wins %d Gilt or more", potFor(1)) })
+	broadcastAll({ op = "ballroomOpen", by = by, closesIn = cfg().openSeconds, pot = potFor(1), perGuest = cfg().potPerGuest, countdown = cfg().countdown })
+end
+
+local function closeDoor(now: number)
+	doorState = "closed"
+	doorUntil = now + cfg().closedSeconds
+	publish()
+	writeBoard({ track("CLOSED"), "Opens in " .. clockText(cfg().closedSeconds), "Or open it now from any chair" })
+	broadcast({ op = "ballroomClosed", opensIn = cfg().closedSeconds })
+end
+
 local function resetSeat(s: SeatState)
 	s.alive = false
 	s.pieces = {}
@@ -219,7 +314,10 @@ local function resetSeat(s: SeatState)
 	s.place = nil
 	s.filings = 0
 	s.correct = 0
+	s.shield = 0
+	s.hitAt = -math.huge
 	s.model:SetAttribute("Score", 0)
+	s.model:SetAttribute("Shield", false)
 	s.model:SetAttribute("Flicker", false)
 	s.model:SetAttribute("Out", false)
 	s.model:SetAttribute("Keys", 0)
@@ -518,6 +616,7 @@ local function results(): { { index: number, name: string, place: number, keys: 
 end
 
 local gather: (now: number) -> ()
+local unseatFn: (player: Player, reason: string) -> ()
 
 finish = function(e: Evening)
 	if e.state ~= "playing" then
@@ -574,8 +673,9 @@ finish = function(e: Evening)
 			local place = s.place or e.of
 			local data = Profiles.get(player)
 			local gilt = 0
-			if data then
-				gilt = Gilt.pay(player, data, LightsOut.gilt(place), "Lights Out")
+			-- One winner takes the whole pot; nobody else is paid Gilt.
+			if data and place == 1 then
+				gilt = Gilt.pay(player, data, e.pot, "Lights Out")
 			end
 			send(player, {
 				op = "eveningResult",
@@ -584,6 +684,7 @@ finish = function(e: Evening)
 				keys = s.keys,
 				points = LightsOut.points(place, s.keys),
 				gilt = gilt,
+				pot = e.pot,
 				counted = e.counts,
 				won = place == 1,
 			})
@@ -597,11 +698,19 @@ finish = function(e: Evening)
 	if winner then
 		BallroomService.onResult(winner.index, winner.name, winner.keys)
 	end
+	broadcastAll({ op = "ballroomWinner", name = if winner then winner.name else nil, standIn = winner ~= nil and winner.player == nil, pot = e.pot })
+	publish()
 	task.delay(cfg().afterEvening, function()
 		if evening ~= e then
 			return
 		end
 		evening = nil
+		-- Everyone stands; the lamps come back up; the Ballroom closes until its next hour.
+		for _, s in seats do
+			if s.player then
+				unseatFn(s.player, "closed")
+			end
+		end
 		for _, s in seats do
 			clearBot(s)
 			s.model:SetAttribute("LastLamp", false)
@@ -609,8 +718,7 @@ finish = function(e: Evening)
 			setLamp(s, 1.8, 1.5)
 		end
 		dimRoom(1)
-		-- The winner (and anyone still seated) and everyone who asked for the next evening.
-		gather(os.clock())
+		closeDoor(os.clock())
 	end)
 end
 
@@ -657,6 +765,8 @@ local function eveningStart(e: Evening, now: number)
 	e.real = real
 	e.alive = lit
 	e.of = lit
+	e.pot = potFor(real)
+	e.sabotages = {}
 	e.counts = real >= cfg().minRealForRecords and Private.records()
 	-- The opening deal: the same six pieces on every felt.
 	local opening: { Deal.DealtPiece } = {}
@@ -675,12 +785,13 @@ local function eveningStart(e: Evening, now: number)
 		setLamp(s, 2.4, 1)
 		local player = s.player
 		if player then
-			send(player, { op = "eveningStart", seat = s.index, names = names, capacity = cfg().capacity, tab = s.tab, counted = e.counts, real = real })
+			send(player, { op = "eveningStart", seat = s.index, names = names, capacity = cfg().capacity, tab = s.tab, counted = e.counts, real = real, pot = potFor(real) })
 			send(player, { op = "deal", mode = "ballroom", room = "ballroom", round = 1, cases = e.cases, pieces = list, score = s.count })
 			Analytics.custom(player, "Ballroom evening started", real, nil)
 		end
 	end
-	broadcast({ op = "eveningBegins", alive = e.alive, real = real, counted = e.counts })
+	broadcast({ op = "eveningBegins", alive = e.alive, real = real, counted = e.counts, pot = e.pot })
+	publish()
 	writeBoard({ track("LIGHTS OUT"), string.format("%d lamps lit · %d guests", e.alive, real), LAST_LAMP })
 end
 
@@ -689,7 +800,7 @@ gather = function(now: number)
 	local e: Evening = {
 		id = id,
 		state = "gathering",
-		gatherEndsAt = now + cfg().gatherSeconds,
+		gatherEndsAt = now + cfg().countdown,
 		startedAt = 0,
 		nextArrivalAt = 0,
 		batch = 0,
@@ -705,44 +816,16 @@ gather = function(now: number)
 		nextUid = 0,
 		nextParcel = 0,
 		winner = nil,
+		sabotages = {},
+		pot = 0,
 	}
 	evening = e
-	-- Seat the guests who asked for a chair at the next evening.
-	local queued = {}
-	for player in nextEvening do
-		if player.Parent == Players and not seatOf[player] then
-			table.insert(queued, player)
-		end
-	end
-	nextEvening = {}
-	for _, player in queued do
-		for i, s in seats do
-			if not s.player and not s.bot then
-				local character = player.Character
-				if character and humanoidOf(player) then
-					character:PivotTo(s.chair.CFrame * CFrame.new(0, 3, 2.5))
-					BallroomService.seatGuest(player, i)
-				end
-				break
-			end
-		end
-	end
-	local anyone = false
+	publish()
 	for _, s in seats do
-		if s.player then
-			anyone = true
-		end
+		send(s.player, { op = "gathering", startsIn = math.max(0, e.gatherEndsAt - os.clock()), pot = potFor(realSeated()) })
 	end
-	if not anyone then
-		if evening == e then
-			evening = nil
-		end
-		writeBoard({ track("LIGHTS OUT"), IDLE_LINES[1], IDLE_LINES[2] })
-		return
-	end
-	for _, s in seats do
-		send(s.player, { op = "gathering", startsIn = math.max(0, e.gatherEndsAt - os.clock()) })
-	end
+	-- The room hears the countdown has begun (anyone may still take a chair until it ends).
+	broadcastAll({ op = "ballroomCountdown", startsIn = cfg().countdown, pot = potFor(realSeated()) })
 end
 
 local function unseat(player: Player, reason: string)
@@ -768,7 +851,7 @@ local function unseat(player: Player, reason: string)
 	s.player = nil
 	s.name = ""
 	send(player, { op = "left" })
-	-- A gathering with nobody left in it stops.
+	-- A countdown with nobody left in it stops; the Ballroom stays open a little longer.
 	if e and e.state == "gathering" then
 		local anyone = false
 		for _, other in seats do
@@ -778,10 +861,14 @@ local function unseat(player: Player, reason: string)
 		end
 		if not anyone then
 			evening = nil
+			doorState = "open"
+			doorUntil = math.max(doorUntil, os.clock() + 60)
 			writeBoard({ track("LIGHTS OUT"), IDLE_LINES[1], IDLE_LINES[2] })
 		end
 	end
+	publish()
 end
+unseatFn = unseat
 
 -- Seats a guest who is already beside chair `index`. Yields briefly.
 function BallroomService.seatGuest(player: Player, index: number): boolean
@@ -827,7 +914,8 @@ function BallroomService.seatGuest(player: Player, index: number): boolean
 	if not e then
 		gather(os.clock())
 	elseif e.state == "gathering" then
-		send(player, { op = "gathering", startsIn = math.max(0, e.gatherEndsAt - os.clock()) })
+		publish()
+		send(player, { op = "gathering", startsIn = math.max(0, e.gatherEndsAt - os.clock()), pot = potFor(realSeated()) })
 		local full = true
 		for _, other in seats do
 			if not other.player then
@@ -856,10 +944,21 @@ function BallroomService.sit(player: Player, model: Model, isSeatedElsewhere: (P
 	local s = seats[index]
 	local e = evening
 	if e and e.state ~= "gathering" then
-		-- Mid-evening: a chair at the next one.
+		-- Mid-evening: nobody joins late. They're told when it next opens.
 		nextEvening[player] = true
-		send(player, { op = "queued" })
+		send(player, { op = "queued", opensIn = cfg().closedSeconds })
 		return false, "underway"
+	end
+	if not e and doorState == "closed" then
+		local info = BallroomService.sabotageInfo(player)
+		send(player, {
+			op = "ballroomClosed",
+			opensIn = math.max(0, doorUntil - os.clock()),
+			canOpen = true,
+			price = if type(info.prices) == "table" then info.prices.open else nil,
+			held = if type(info.credits) == "table" then info.credits.open else nil,
+		})
+		return false, "closed"
 	end
 	if s.player or s.bot then
 		return false, "taken"
@@ -882,7 +981,7 @@ function BallroomService.nextEvening(player: Player)
 		return
 	end
 	local e = evening
-	if not e or e.state == "gathering" then
+	if (not e and doorState == "open") or (e and e.state == "gathering") then
 		for i, s in seats do
 			if not s.player and not s.bot then
 				local character = player.Character
@@ -895,7 +994,7 @@ function BallroomService.nextEvening(player: Player)
 		end
 	end
 	nextEvening[player] = true
-	send(player, { op = "queued" })
+	send(player, { op = "queued", opensIn = if not e and doorState == "closed" then math.max(0, doorUntil - os.clock()) else cfg().closedSeconds })
 end
 
 -- Up to the Gallery to watch.
@@ -910,6 +1009,149 @@ function BallroomService.toGallery(player: Player)
 	end
 end
 
+---------------------------------------------------------------------------------------------------
+-- Sabotage, and opening early
+---------------------------------------------------------------------------------------------------
+local SABOTAGE = { bomb = true, blackout = true, freeze = true, shield = true }
+BallroomService.SABOTAGE = SABOTAGE
+
+local function inBallroom(player: Player): boolean
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	return root ~= nil and root:IsA("BasePart") and Layout.zoneAt(root.Position) == "ballroom"
+end
+
+-- Whether `player` may send `kind` at table `seat` now, and why not: an evening in play, the
+-- guest in the Ballroom (a chair or the Gallery), the table lit and not their own, not hit within
+-- the last few seconds, and their own count for the evening not used up. A Shield is for their
+-- own lit table. Checked before any purchase window opens, and again when it's applied.
+function BallroomService.canSabotage(player: Player, kind: string, seat: number): (boolean, string?)
+	local e = evening
+	if not SABOTAGE[kind] then
+		return false, "That isn't something the Ballroom does."
+	end
+	if not e or e.state ~= "playing" then
+		return false, "Sabotage is only for an evening in play."
+	end
+	local mine = seatOf[player]
+	if kind == "shield" then
+		local s = if mine then seats[mine] else nil
+		if not s or not s.alive then
+			return false, "A Shield is for a guest whose lamp is still lit."
+		end
+		if s.shield > 0 then
+			return false, "Your Shield is already up."
+		end
+		return true, nil
+	end
+	if not mine and not inBallroom(player) then
+		return false, "Come up to the Ballroom to send one."
+	end
+	local target = seats[seat]
+	if not target or not target.alive then
+		return false, "That lamp is already out."
+	end
+	if mine == seat then
+		return false, "Not at your own table!"
+	end
+	if os.clock() - target.hitAt < cfg().sabotage.gap then
+		return false, "That table was hit a moment ago. Try another, or wait a few seconds."
+	end
+	if (e.sabotages[player] or 0) >= cfg().sabotage.perEvening then
+		return false, "That's all the sabotage one guest may send in an evening."
+	end
+	return true, nil
+end
+
+-- Sends it (the purchase is already made, or a credit spent): the effect on the table, and the
+-- whole room told who sent what to whom. A Shield on the table stops it (and is used up).
+function BallroomService.sabotage(player: Player, kind: string, seat: number): (boolean, string?)
+	local ok, why = BallroomService.canSabotage(player, kind, seat)
+	if not ok then
+		return false, why
+	end
+	local e = evening :: Evening
+	local now = os.clock()
+	local from = Names.of(player)
+	local c = cfg().sabotage
+	if kind == "shield" then
+		local s = seats[seatOf[player] :: number]
+		s.shield += 1
+		s.model:SetAttribute("Shield", true)
+		broadcast({ op = "sabotage", kind = "shield", by = from, seat = s.index, toName = s.name })
+		return true, nil
+	end
+	e.sabotages[player] = (e.sabotages[player] or 0) + 1
+	local target = seats[seat]
+	target.hitAt = now
+	if target.shield > 0 then
+		target.shield -= 1
+		target.model:SetAttribute("Shield", target.shield > 0)
+		broadcast({ op = "sabotage", kind = kind, by = from, seat = seat, toName = target.name, blocked = true })
+		send(target.player, { op = "sabotaged", kind = kind, by = from, blocked = true })
+		return true, nil
+	end
+	local fromSeat = seatOf[player] or 0
+	if kind == "bomb" then
+		e.nextParcel += 1
+		local parcel: Parcel = { id = e.nextParcel, from = fromSeat, count = c.bombPieces, opensAt = now + c.bombFuse }
+		table.insert(target.waiting, parcel)
+		broadcast({ op = "parcel", from = fromSeat, to = seat, id = parcel.id, count = c.bombPieces, fuse = c.bombFuse, bomb = true })
+	elseif kind == "freeze" then
+		target.fumbleUntil = math.max(target.fumbleUntil, now + c.freeze)
+	elseif kind == "blackout" and target.bot then
+		-- (A Stand-in can't be blinded: it slows instead.)
+		target.fumbleUntil = math.max(target.fumbleUntil, now + c.blackout * 0.5)
+	end
+	broadcast({ op = "sabotage", kind = kind, by = from, seat = seat, toName = target.name })
+	send(target.player, { op = "sabotaged", kind = kind, by = from, seconds = if kind == "blackout" then c.blackout elseif kind == "freeze" then c.freeze else c.bombFuse })
+	return true, nil
+end
+
+-- What a guest's sabotage panel lists: the tables still lit (name, felt, Shield), their own, and
+-- how many more they may send.
+local function sabotageTargets(player: Player): { [string]: any }
+	local list = {}
+	for i, s in seats do
+		if s.alive then
+			table.insert(list, { seat = i, name = s.name, felt = s.count, shield = s.shield > 0, standIn = s.player == nil })
+		end
+	end
+	table.sort(list, function(a, b)
+		return a.seat < b.seat
+	end)
+	local e = evening
+	local used = if e then e.sabotages[player] or 0 else 0
+	return { op = "sabotageInfo", targets = list, mine = seatOf[player], left = math.max(0, cfg().sabotage.perEvening - used), playing = e ~= nil and e.state == "playing" }
+end
+
+-- Opens the Ballroom now, for everyone (bought, or the owner's word). False if it's already
+-- open or an evening is on.
+function BallroomService.openNow(by: string?): (boolean, string?)
+	if evening then
+		return false, "An evening is already on."
+	end
+	if doorState == "open" then
+		return false, "The Ballroom is already open."
+	end
+	openDoor(os.clock(), by)
+	return true, nil
+end
+
+-- Whether the Ballroom is shut just now (no evening, between its hours).
+function BallroomService.isClosed(): boolean
+	return evening == nil and doorState == "closed"
+end
+
+-- The Ballroom's state, for the owner's tools and tests.
+function BallroomService.door(): (string, number)
+	return doorState, doorUntil
+end
+
+local seatedElsewhere: (Player) -> boolean = function()
+	return false
+end
+
 local function onMessage(player: Player, message: unknown)
 	if type(message) ~= "table" then
 		return
@@ -920,6 +1162,43 @@ local function onMessage(player: Player, message: unknown)
 		return
 	elseif m.op == "gallery" then
 		BallroomService.toGallery(player)
+		return
+	elseif m.op == "sabotage" then
+		local kind = if type(m.kind) == "string" and SABOTAGE[m.kind :: string] then m.kind :: string else nil
+		local seat = if type(m.seat) == "number" and m.seat == math.floor(m.seat :: number) and seats[m.seat :: number] then m.seat :: number else 0
+		if not kind then
+			return
+		end
+		local ok, why = BallroomService.requestSabotage(player, kind, seat)
+		if not ok then
+			send(player, { op = "sabotageRefused", why = why or "Not just now." })
+		end
+		return
+	elseif m.op == "sabotageInfo" then
+		local info = sabotageTargets(player)
+		local extra = BallroomService.sabotageInfo(player)
+		info.prices = extra.prices
+		info.credits = extra.credits
+		send(player, info)
+		return
+	elseif m.op == "openNow" then
+		local ok, why = BallroomService.requestOpen(player)
+		if not ok then
+			send(player, { op = "ballroomRefused", why = why or "Not just now." })
+		end
+		return
+	elseif m.op == "goBallroom" then
+		-- From anywhere in the house to the Ballroom's door, while it's open or counting down.
+		local e = evening
+		local character = player.Character
+		if seatOf[player] or seatedElsewhere(player) or not character then
+			return
+		end
+		if (e and e.state ~= "gathering") or (not e and doorState ~= "open") then
+			send(player, { op = "ballroomRefused", why = if e then "The evening is under way: no late joins." else "The Ballroom is closed just now." })
+			return
+		end
+		character:PivotTo(CFrame.lookAt(Layout.Ballroom.arrival + Vector3.new(0, 3, 0), Vector3.new(Layout.Ballroom.centre.X, Layout.Ballroom.arrival.Y + 3, Layout.Ballroom.centre.Z)))
 		return
 	end
 	local index = seatOf[player]
@@ -945,6 +1224,12 @@ end
 local function tick(now: number)
 	local e = evening
 	if not e then
+		-- The Ballroom's hours: open for a while, then closed for a while.
+		if doorState == "open" and now >= doorUntil then
+			closeDoor(now)
+		elseif doorState == "closed" and now >= doorUntil then
+			openDoor(now)
+		end
 		return
 	end
 	if e.state == "gathering" then
@@ -1008,6 +1293,7 @@ local function tick(now: number)
 end
 
 function BallroomService.start(isSeatedElsewhere: (Player) -> boolean)
+	seatedElsewhere = isSeatedElsewhere
 	for _, model in CollectionService:GetTagged("BallroomTable") do
 		if model:IsA("Model") then
 			local index = model:GetAttribute("Seat")
@@ -1040,6 +1326,8 @@ function BallroomService.start(isSeatedElsewhere: (Player) -> boolean)
 					place = nil,
 					filings = 0,
 					correct = 0,
+					shield = 0,
+					hitAt = -math.huge,
 				}
 				seats[index] = s
 				resetSeat(s)
@@ -1048,7 +1336,9 @@ function BallroomService.start(isSeatedElsewhere: (Player) -> boolean)
 					prompt.Triggered:Connect(function(player: Player)
 						local ok, why = BallroomService.sit(player, model, isSeatedElsewhere)
 						if not ok and why == "underway" then
-							BallroomService.say(player, Voice.Concierge.ballroomUnderway)
+							BallroomService.say(player, "The evening is under way: nobody joins late. The Ballroom opens again after it.")
+						elseif not ok and why == "closed" then
+							BallroomService.say(player, string.format("The Ballroom is closed. It opens in %s.", clockText(doorUntil - os.clock())))
 						elseif not ok and why == "taken" then
 							BallroomService.say(player, "That chair is taken. Another is free.")
 						end
@@ -1077,21 +1367,38 @@ function BallroomService.start(isSeatedElsewhere: (Player) -> boolean)
 	RunService.Heartbeat:Connect(function()
 		tick(os.clock())
 	end)
-	-- Chairs show their prompt only while an evening is gathering or the room is quiet.
+	-- The chairs and the board keep the Ballroom's hours: open (sit to begin), the countdown (last
+	-- call), the evening (no late joins), closed (when it opens, or open it now).
+	openDoor(os.clock())
 	task.spawn(function()
 		while true do
 			local e = evening
+			local now = os.clock()
 			for _, s in seats do
 				local prompt = s.chair:FindFirstChild("SitPrompt")
 				if prompt and prompt:IsA("ProximityPrompt") then
-					prompt.Enabled = s.player == nil and s.bot == nil
-					prompt.ObjectText = if e and e.state ~= "gathering" then "The next evening" else "Lights Out"
+					local free = s.player == nil and s.bot == nil
+					if e and e.state ~= "gathering" then
+						prompt.Enabled = false
+					elseif not e and doorState == "closed" then
+						prompt.Enabled = free
+						prompt.ActionText = "Ballroom closed"
+						prompt.ObjectText = "Opens in " .. clockText(doorUntil - now)
+					else
+						prompt.Enabled = free
+						prompt.ActionText = "Sit"
+						prompt.ObjectText = if e then string.format("Begins in %s", clockText(e.gatherEndsAt - now)) else "Lights Out"
+					end
 				end
 			end
 			if e and e.state == "gathering" then
-				writeBoard({ track("LIGHTS OUT"), string.format("The evening begins in %d s", math.max(0, math.ceil(e.gatherEndsAt - os.clock()))), "Take any chair." })
+				writeBoard({ track("LIGHTS OUT"), string.format("Begins in %s · last call", clockText(e.gatherEndsAt - now)), string.format("The last lamp wins %d Gilt", potFor(realSeated())) })
 			elseif e and e.state == "playing" then
-				writeBoard({ track(if e.closing then "CLOSING TIME" else "LIGHTS OUT"), string.format("%d of %d lamps lit", e.alive, cfg().tables), LAST_LAMP })
+				writeBoard({ track(if e.closing then "CLOSING TIME" else "LIGHTS OUT"), string.format("%d of %d lamps lit · no late joins", e.alive, e.of), string.format("The last lamp wins %d Gilt", e.pot) })
+			elseif not e and doorState == "open" then
+				writeBoard({ track("LIGHTS OUT"), string.format("Open · closes in %s", clockText(doorUntil - now)), string.format("Sit to begin · the last lamp wins %d+ Gilt", potFor(1)) })
+			elseif not e then
+				writeBoard({ track("CLOSED"), "Opens in " .. clockText(doorUntil - now), "Or open it now from any chair" })
 			end
 			task.wait(0.5)
 		end

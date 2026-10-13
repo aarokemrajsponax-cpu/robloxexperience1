@@ -1,6 +1,6 @@
 --!strict
--- The house around you, on your screen: doors that swing open as you approach, room names that
--- fade in and out in each doorway, the Doorman's "Evening.", staff who turn to look at you,
+-- The house around you, on your screen: doors that swing open as you approach, room names in
+-- every doorway (over the door, and a tag at eye level readable from across the Foyer), the Doorman's "Evening.", staff who turn to look at you,
 -- the fire's flicker, weather in the street air, and the acoustics of each space.
 
 local CollectionService = game:GetService("CollectionService")
@@ -10,7 +10,9 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
+local Brand = require(ReplicatedStorage.Shared.Brand)
 local Layout = require(ReplicatedStorage.Shared.Layout)
+local Rooms = require(ReplicatedStorage.Shared.Rooms)
 local Seasons = require(ReplicatedStorage.Shared.Seasons)
 local Voice = require(ReplicatedStorage.Shared.Voice)
 local Sound = require(script.Parent.Parent.Sound)
@@ -25,7 +27,83 @@ local player = Players.LocalPlayer
 type Door = { leaves: { BasePart }, hinges: { CFrame }, open: boolean, centre: Vector3, radius: number, value: NumberValue }
 
 local doors: { Door } = {}
-local names: { { gui: SurfaceGui, position: Vector3 } } = {}
+local names: { { gui: SurfaceGui, position: Vector3, tag: BillboardGui? } } = {}
+
+-- A room's name where everyone sees it: a tag hung in its doorway at eye level (always the same
+-- size on screen, readable from across the Foyer), the room's name in heavy gold, how hard it is
+-- and a pip a step; the Midnight Room says how it opens until it's yours. Hidden as you walk
+-- through.
+local function doorTag(plate: BasePart): BillboardGui?
+	local door = plate.Parent
+	local roomId = door and door:GetAttribute("Room")
+	local room = if type(roomId) == "string" then Rooms.get(roomId) else nil
+	local leaf = door and door:FindFirstChild("LeafL")
+	if not room or not leaf or not leaf:IsA("BasePart") then
+		return nil
+	end
+	local g = Instance.new("BillboardGui")
+	g.Name = "DoorTag"
+	g.Adornee = plate
+	g.Size = UDim2.fromOffset(250, 66)
+	-- (Down from the plate over the door to just above eye level, a little out into the Foyer.)
+	g.StudsOffsetWorldSpace = Vector3.new(0, leaf.Position.Y + leaf.Size.Y * 0.18 - plate.Position.Y, 0) + plate.CFrame.LookVector * 2.5
+	g.LightInfluence = 0
+	g.MaxDistance = 150
+	g.AlwaysOnTop = false
+	g.ResetOnSpawn = false
+	local bg = Instance.new("Frame")
+	bg.Name = "Plate"
+	bg.AnchorPoint = Vector2.new(0.5, 0.5)
+	bg.Position = UDim2.fromScale(0.5, 0.5)
+	bg.Size = UDim2.fromScale(1, 1)
+	bg.BackgroundColor3 = Color3.fromRGB(10, 10, 14)
+	bg.BackgroundTransparency = 0.15
+	bg.Parent = g
+	local c = Instance.new("UICorner")
+	c.CornerRadius = UDim.new(0, 14)
+	c.Parent = bg
+	local st = Instance.new("UIStroke")
+	st.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	st.Color = Brand.Colours.gold
+	st.Thickness = 2
+	st.Parent = bg
+	local name = Instance.new("TextLabel")
+	name.Name = "RoomName"
+	name.BackgroundTransparency = 1
+	name.Position = UDim2.fromOffset(10, 6)
+	name.Size = UDim2.new(1, -20, 0, 30)
+	name.FontFace = Brand.Fonts.heavy
+	name.TextScaled = true
+	name.TextColor3 = Brand.Colours.brightGold
+	name.Text = string.upper(room.name)
+	name.Parent = bg
+	local fit = Instance.new("UITextSizeConstraint")
+	fit.MaxTextSize = 24
+	fit.Parent = name
+	local line = Instance.new("TextLabel")
+	line.Name = "Tag"
+	line.BackgroundTransparency = 1
+	line.Position = UDim2.fromOffset(10, 37)
+	line.Size = UDim2.new(1, -20, 0, 20)
+	line.FontFace = Brand.Fonts.bodyBold
+	line.TextScaled = true
+	line.TextColor3 = Brand.Colours.bone
+	local pips = string.rep("●", room.level) .. string.rep("○", 4 - room.level)
+	line.Text = string.upper(room.tag) .. "   " .. pips
+	line.Parent = bg
+	local lfit = Instance.new("UITextSizeConstraint")
+	lfit.MaxTextSize = 15
+	lfit.Parent = line
+	if room.id == "midnight" then
+		local function locked()
+			line.Text = if State.unlocked.midnight then string.upper(room.tag) .. "   " .. pips else "🔒  OPENS AT ROUND IV IN OBSIDIAN"
+		end
+		locked()
+		State.Unlocked:Connect(locked)
+	end
+	g.Parent = plate
+	return g
+end
 local zoneChanged = Instance.new("BindableEvent")
 Ambient.ZoneChanged = zoneChanged.Event
 Ambient.zone = "none"
@@ -129,12 +207,7 @@ local function wire(tag: string, instance: Instance)
 	elseif tag == "RoomName" and instance:IsA("BasePart") then
 		local gui = instance:FindFirstChildOfClass("SurfaceGui") or instance:WaitForChild("SurfaceGui", 5)
 		if gui and gui:IsA("SurfaceGui") then
-			for _, l in gui:GetDescendants() do
-				if l:IsA("TextLabel") then
-					l.TextTransparency = 1
-				end
-			end
-			table.insert(names, { gui = gui, position = instance.Position })
+			table.insert(names, { gui = gui, position = instance.Position, tag = doorTag(instance) })
 		end
 	end
 end
@@ -227,8 +300,13 @@ local nameShown: { [SurfaceGui]: boolean } = {}
 local function updateNames(pos: Vector3)
 	for _, n in names do
 		local d = (pos - n.position).Magnitude
-		-- Shown as you approach, faded once you're through.
-		local show = d < 20 and d > 3.5
+		-- The tag in the doorway steps aside as you walk through it.
+		local t = n.tag
+		if t then
+			t.Enabled = d > 9
+		end
+		-- The name over the door: shown from across the Foyer, faded once you're through.
+		local show = d < 150 and d > 3.5
 		if nameShown[n.gui] ~= show then
 			nameShown[n.gui] = show
 			for _, l in n.gui:GetDescendants() do

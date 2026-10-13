@@ -50,6 +50,11 @@ local Spectacles = require(script.Parent.Purchases.Spectacles)
 
 local AdminService = {}
 
+-- Opens the Ballroom now, skipping its wait (set by Main: BallroomService.openNow).
+AdminService.openBallroom = function(_by: string): (boolean, string?)
+	return false, "The Ballroom isn't ready."
+end
+
 local TOPIC = "MaisonAdmin"
 local DEFAULT_GRAVITY = 196.2
 
@@ -2251,6 +2256,14 @@ local function handle(player: Player, request: unknown): any
 			return { ok = false, why = "Nowhere to go just now." }
 		end
 		character:PivotTo(CFrame.new(at + Vector3.new(0, 3, 0)))
+		return { ok = true }
+	elseif op == "ballroomOpen" then
+		-- Skips the Ballroom's wait: open for everyone, now (Main sets AdminService.openBallroom).
+		local ok, why = AdminService.openBallroom(byName)
+		if not ok then
+			return { ok = false, why = why or "Not just now." }
+		end
+		broadcast({ op = "salute", id = "ballroomOpened", by = byName, effects = { "fireworks" }, seconds = 6, title = "The Ballroom is open", line = byName .. " opened the Ballroom. Lights Out: sit in any chair!" })
 		return { ok = true }
 	elseif op == "bringAll" then
 		local mine = player.Character

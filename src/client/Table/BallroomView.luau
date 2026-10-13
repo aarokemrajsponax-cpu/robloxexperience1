@@ -3,7 +3,9 @@
 -- parcels go, the line that says how many lamps are lit, parcels flying between tables and
 -- burning on your felt, other lamps flickering when a felt is over sixteen, the Key leader's
 -- glint, and the last lamp found from the Gallery. Watching from the Gallery drifts the camera
--- between the tables still lit. Local decoration; the server decides all of it.
+-- between the tables still lit. The Ballroom's hours (open, the countdown, closed, and opening
+-- it now), the winner's pot, and sabotage (the panel, and what lands on you). Local decoration;
+-- the server decides all of it.
 
 local CollectionService = game:GetService("CollectionService")
 local ContextActionService = game:GetService("ContextActionService")
@@ -31,6 +33,8 @@ local Hud = require(script.Parent.Parent.UI.Hud)
 local Parcels = require(script.Parent.Parcels)
 local Flourish = require(script.Parent.Flourish)
 local Invite = require(script.Parent.Parent.UI.Invite)
+local SabotagePanel = require(script.Parent.Parent.UI.SabotagePanel)
+local HolidayMeter = require(script.Parent.Parent.UI.HolidayMeter)
 
 local BallroomView = {}
 
@@ -124,7 +128,7 @@ local function status()
 	end
 	local parts = {}
 	if lit > 0 then
-		table.insert(parts, string.format("%d lamps lit", lit))
+		table.insert(parts, if lit == 1 then "1 lamp lit" else string.format("%d lamps lit", lit))
 	end
 	if mySeat and playing then
 		table.insert(parts, string.format("felt %d of %d", felt, capacity()))
@@ -188,6 +192,61 @@ local function buildUi()
 	end
 	tabsFrame = f
 	highlightTabs()
+end
+
+-- The Sabotage key: during an evening in play, for a guest at a lit table or watching in the room.
+local sabotageKey: TextButton? = nil
+local function ballroomState(): string
+	local v = Workspace:GetAttribute("BallroomState")
+	return if type(v) == "string" then v else "open"
+end
+local function updateSabotageKey()
+	local want = ballroomState() == "playing" and ((mySeat ~= nil and playing) or (mySeat == nil and inRoom))
+	if want and not sabotageKey then
+		local k = Theme.key(Root.hud, "💣  Sabotage", true, function()
+			tableEvent:FireServer({ op = "sabotageInfo" })
+		end, 170)
+		k.Name = "SabotageKey"
+		k.AnchorPoint = Vector2.new(0, 0.5)
+		k.Position = UDim2.new(0, 12, 0.5, 150)
+		k.Size = UDim2.fromOffset(170, 46)
+		sabotageKey = k
+	elseif not want and sabotageKey then
+		sabotageKey:Destroy()
+		sabotageKey = nil
+		SabotagePanel.close()
+	end
+end
+
+local function money(n: number): string
+	local s = tostring(math.floor(n + 0.5))
+	local out = s:reverse():gsub("(%d%d%d)", "%1,"):reverse()
+	return if out:sub(1, 1) == "," then out:sub(2) else out
+end
+
+local function clockText(seconds: number): string
+	local t = math.max(0, math.ceil(seconds))
+	return string.format("%d:%02d", t // 60, t % 60)
+end
+
+-- The Ballroom is shut: when it opens, and opening it now for everyone (Robux).
+local function closedOffer(message: { [string]: any })
+	local price = if type(message.price) == "number" then message.price else nil
+	HolidayMeter.offer(
+		"The Ballroom is closed",
+		string.format("It opens again in %s. Or open it now, for everyone in the house, and take the first chair.", clockText(tonumber(message.opensIn) or 0)),
+		{
+			{
+				label = "Open the Ballroom now",
+				price = price,
+				held = if type(message.held) == "number" then message.held else nil,
+				press = function()
+					tableEvent:FireServer({ op = "openNow" })
+				end,
+			},
+		},
+		"It opens by itself every 20 minutes."
+	)
 end
 
 local function showTabs(on: boolean)
@@ -265,7 +324,9 @@ local function onParcel(message: { [string]: any })
 	end)
 	if to == mySeat then
 		Sound.play("low", 0.35, 0.8)
-		Toast.show(Voice.Library.parcelIn, string.format("%d from Table %d", message.count, from), 1.6)
+		if message.bomb ~= true then
+			Toast.show(Voice.Library.parcelIn, if from > 0 then string.format("%d from Table %d", message.count, from) else string.format("%d from the Gallery", message.count), 1.6)
+		end
 	else
 		Sound.play("round", 0.25, 1.4)
 	end
@@ -384,15 +445,28 @@ local function zoneKeys()
 		status()
 	end
 	local want = inBallroom and mySeat == nil and not State.seated
+	updateSabotageKey()
 	if want then
+		local state = ballroomState()
+		local first = if state == "closed" then {
+			text = "Open it now",
+			onPress = function()
+				tableEvent:FireServer({ op = "openNow" })
+			end,
+		} elseif state == "open" or state == "gathering" then {
+			text = "Take a chair",
+			onPress = function()
+				tableEvent:FireServer({ op = "nextEvening" })
+				stopWatching()
+			end,
+		} else {
+			text = "Remind me",
+			onPress = function()
+				tableEvent:FireServer({ op = "nextEvening" })
+			end,
+		}
 		Hud.setExtraKeys({
-			{
-				text = "Next evening",
-				onPress = function()
-					tableEvent:FireServer({ op = "nextEvening" })
-					stopWatching()
-				end,
-			},
+			first,
 			{ text = if watching then "Stop watching" else "Watch", onPress = watch },
 			{ text = "Invite", onPress = Invite.ballroom },
 		})
@@ -495,8 +569,36 @@ function BallroomView.handle(message: { [string]: any }): Vector3?
 		end
 		lastLamp(message)
 	elseif op == "queued" then
-		Toast.show(Voice.Ballroom.title, Voice.Ballroom.queued, 3.5)
+		Toast.show(Voice.Ballroom.title, string.format("No late joins: the evening is under way. The Ballroom opens again in about %s; you'll be told.", clockText(tonumber(message.opensIn) or 1200)), 4)
+	elseif op == "ballroomOpen" then
+		Sound.play("chime", 0.4, 1.1)
+		Toast.show("The Ballroom is open", string.format("Lights Out: sit in any chair. The last lamp wins %s Gilt or more.", money(tonumber(message.pot) or 0)), 5)
+	elseif op == "ballroomCountdown" then
+		if mySeat == nil then
+			Toast.show("Lights Out · last call", string.format("Begins in %s. Take a chair in the Ballroom now: no late joins.", clockText(tonumber(message.startsIn) or 0)), 4)
+		end
+	elseif op == "ballroomClosed" then
+		if message.canOpen == true then
+			closedOffer(message)
+		end
+	elseif op == "ballroomRefused" or op == "sabotageRefused" then
+		Toast.show(if op == "sabotageRefused" then "Sabotage" else Voice.Ballroom.title, tostring(message.why or "Not just now."), 3)
+	elseif op == "sabotageInfo" then
+		SabotagePanel.show(message)
+	elseif op == "sabotage" then
+		SabotagePanel.heard(message, mySeat)
+		if message.kind == "bomb" and message.seat == mySeat then
+			Sound.play("low", 0.5, 0.6)
+		end
+	elseif op == "sabotaged" then
+		SabotagePanel.hit(message)
+		Sound.play("low", 0.5, 0.7)
+	elseif op == "ballroomWinner" then
+		if type(message.name) == "string" and message.standIn ~= true and (mySeat == nil or not inRoom) then
+			Toast.show("The last lamp", string.format("%s won Lights Out and %s Gilt.", message.name, money(tonumber(message.pot) or 0)), 4)
+		end
 	end
+	updateSabotageKey()
 	status()
 	return nil
 end
@@ -545,6 +647,10 @@ function BallroomView.clear()
 end
 
 function BallroomView.start()
+	SabotagePanel.send = function(m: { [string]: any })
+		tableEvent:FireServer(m)
+	end
+	Workspace:GetAttributeChangedSignal("BallroomState"):Connect(updateSabotageKey)
 	RunService.Heartbeat:Connect(roomStep)
 	task.spawn(function()
 		while true do

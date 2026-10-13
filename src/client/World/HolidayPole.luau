@@ -334,6 +334,7 @@ local function updatePill()
 		if pill then
 			pill:Destroy()
 			pill = nil
+			Root.setTop("SleighClock", nil)
 		end
 		return
 	end
@@ -376,7 +377,11 @@ local function updatePill()
 		p = f
 	end
 	local f = p :: Frame
-	f.Position = UDim2.new(0.5, 0, 0, math.max(14, Root.topClear() + 10))
+	-- Under the row of keys along the top (never over Shop or the Gilt bar), and said to stand
+	-- there, so notices come in below it and the card at the side steps aside if it meets it.
+	local below = 66
+	f.Position = UDim2.new(0.5, 0, 0, below)
+	Root.setTop("SleighClock", below + 64 + 6, 160)
 	local cap = f:FindFirstChild("Caption") :: TextLabel
 	local digits = f:FindFirstChild("Digits") :: TextLabel
 	local edge = f:FindFirstChild("Edge") :: UIStroke

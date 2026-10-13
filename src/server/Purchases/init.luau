@@ -52,6 +52,7 @@ Purchases.Rain = Rain
 Purchases.Store = Store
 Purchases.Piano = Piano
 Purchases.Bar = Bar
+Purchases.Sabotage = require(script.Sabotage)
 
 -- How the purchase system started (for the owner's tools and tests).
 Purchases.binding = ""
@@ -121,6 +122,8 @@ function Purchases.start()
 	Bar.start()
 	require(script.Parent.Curios).start() -- Gem packs (and the Cabinet)
 	require(script.Spectacles).start() -- Suite spectacles
+	require(script.HolidayGrant).start() -- the holiday games' turkeys and sleigh rides
+	require(script.Sabotage).start() -- the Ballroom: sabotage, and opening it early
 	Gilt.personal = function(player: Player): number
 		return Luck.multiplier(player, "gilt")
 	end

@@ -470,6 +470,24 @@ local function roomDoor(m: Model, roomId: string)
 	local roomName = if room then room.name else roomId
 	Kit.engrave(namePlate, Enum.NormalId.Front, { { text = roomName, size = 0.8, font = Brand.Fonts.display, color = Brand.Colours.lightGold } }, { ppu = 60, lit = false, brightness = 1.2 })
 	CollectionService:AddTag(namePlate, "RoomName")
+	-- And at eye level, beside the door, where a guest walking across the Foyer reads it: a black
+	-- lacquer board on a brass easel, the room's name in gold, how hard it is, a pip a step.
+	if room then
+		local stand = base * CFrame.new(w / 2 + 2.9, 0, -3.4)
+		for _, sx in { -0.9, 0.9 } do
+			Kit.post(model, "EaselLeg", 4.4, 0.22, (stand * CFrame.new(sx, 0, 0.35)).Position, L.brass, { collide = false, query = false })
+		end
+		Kit.part(model, "EaselFoot", Vector3.new(2.6, 0.2, 1.2), stand * CFrame.new(0, 0.1, 0.35), L.brass, { collide = false, query = false })
+		local board = Kit.part(model, "RoomSign", Vector3.new(4.6, 2.9, 0.18), stand * CFrame.new(0, 4.3, 0) * CFrame.Angles(math.rad(6), 0, 0), L.blackLacquer, { collide = false, query = false })
+		Kit.part(model, "RoomSignEdge", Vector3.new(4.8, 3.1, 0.12), board.CFrame * CFrame.new(0, 0, 0.06), L.brass, { collide = false, query = false, shadow = false })
+		local pips = string.rep("●", room.level) .. string.rep("○", 4 - room.level)
+		Kit.engrave(board, Enum.NormalId.Front, {
+			{ text = string.upper(room.name), size = 0.62, font = Brand.Fonts.display, color = Brand.Colours.brightGold },
+			{ text = string.upper(room.tag), size = 0.34, font = Brand.Fonts.bodyBold, color = Brand.Colours.bone },
+			{ text = pips, size = 0.34, font = Brand.Fonts.bodyBold, color = Brand.Colours.gold },
+		}, { ppu = 90, lit = false, brightness = 1.5, maxDistance = 160 })
+		CollectionService:AddTag(board, "RoomSign")
+	end
 	-- The Midnight Room is roped until earned.
 	if roomId == "midnight" then
 		local p = { -w / 2 + 0.6, w / 2 - 0.6 }

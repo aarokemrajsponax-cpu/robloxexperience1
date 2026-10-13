@@ -2508,10 +2508,10 @@ end
 -- shows what it's told). The card counts down the server's own window.
 do
 	local robux = utf8.char(0xE002)
-	local offer = { op = "reviveOffer", left = 10, prompting = false, held = 0, price = 49, onSale = true, add = 15, boardsCount = false, score = 1240, boardScore = 1240, used = 0, usesLeft = 3 }
+	local offer = { op = "reviveOffer", left = 10, prompting = false, held = 0, price = 49, onSale = true, add = 15, boardsCount = false, score = 1240, boardScore = 1240, used = 0, usesLeft = 3, room = "The Obsidian Room", level = 3 }
 	serverSays("Table", offer)
 	advance(1)
-	check("the revive card opens with the real countdown", textOnScreen("Chronos Defiance") ~= nil and (textOnScreen("0:09") ~= nil or textOnScreen("0:10") ~= nil))
+	check("the revive card opens with the real countdown, naming its room (priced by the room)", textOnScreen("The Obsidian Room") ~= nil and (textOnScreen("0:09") ~= nil or textOnScreen("0:10") ~= nil))
 	check("it says what it gives, what it costs and what the boards keep", textOnScreen("+15 seconds, and your run goes on") ~= nil and textOnScreen("Revive " .. robux .. " 49") ~= nil and textOnScreen("The boards keep your score from before the revive (1,240)") ~= nil)
 	check("banking stays one press away", textOnScreen("Bank the run") ~= nil)
 	snapshot("revive")
@@ -2747,7 +2747,7 @@ serverSays("Table", { op = "seated", table = ballroomTable:GetAttribute("TableId
 serverSays("Table", { op = "gathering", startsIn = 30 })
 advance(2)
 check("Ballroom: seated at the table", controls.enabled == false and camera.CameraType == roblox.Enum.CameraType.Scriptable)
-check("Ballroom: the gathering is announced", textOnScreen("The evening begins in 30 seconds") ~= nil)
+check("Ballroom: the countdown is announced (last call: no late joins)", textOnScreen("Lights Out begins in 30 seconds") ~= nil)
 local names = {}
 for i = 1, 20 do
 	names[tostring(i)] = { name = if i == 3 then "Ada" else "Stand-in", standIn = i ~= 3 }
@@ -2854,20 +2854,49 @@ serverSays("Table", { op = "left" })
 advance(2)
 check("Ballroom: leaving gives the controls back", controls.enabled == true)
 check("no errors through a Lights Out evening", #errors == 0, errors[1])
--- Standing in the Ballroom without a chair: Next evening and Watch.
+-- Standing in the Ballroom without a chair while it's open: Take a chair and Watch.
+workspace:SetAttribute("BallroomState", "open")
 root.Position = Vector3.new(61, 21, 90) * GRAND()
 root.CFrame = CFrame.new(root.Position)
 advance(1)
-check("in the Ballroom without a chair: Next evening is offered", textOnScreen("Next evening") ~= nil)
+check("in the Ballroom without a chair, while it's open: Take a chair is offered", textOnScreen("Take a chair") ~= nil)
 check("and Watch", press("Watch"))
 advance(7)
 check("watching drifts the camera", camera.CameraType == roblox.Enum.CameraType.Scriptable)
-press("Next evening")
-check("Next evening is sent", sentOps("Table", "nextEvening") == 1)
+press("Take a chair")
+check("Take a chair is sent", sentOps("Table", "nextEvening") == 1)
+-- Closed: the key opens it (the purchase window, through the server).
+workspace:SetAttribute("BallroomState", "closed")
+advance(1)
+check("closed: Open it now is offered", textOnScreen("Open it now") ~= nil)
+press("Open it now")
+check("Open it now asks the server (never opens it itself)", sentOps("Table", "openNow") == 1)
+serverSays("Table", { op = "ballroomClosed", opensIn = 754, canOpen = true, price = 49 })
+advance(1)
+check("pressing a chair while closed: the offer, its price and when it opens", textOnScreen("The Ballroom is closed") ~= nil or textOnScreen("THE BALLROOM IS CLOSED") ~= nil)
+snapshot("ballroom-closed")
+press("Not now")
+advance(1)
+-- An evening in play: the Sabotage key, the panel, and what lands on you.
+workspace:SetAttribute("BallroomState", "playing")
+advance(1)
+check("an evening in play: the Sabotage key, for a guest watching in the room", press("💣  Sabotage"))
+check("...which asks the server for the tables", sentOps("Table", "sabotageInfo") == 1)
+serverSays("Table", { op = "sabotageInfo", playing = true, left = 6, targets = { { seat = 4, name = "Ben", felt = 14, shield = false }, { seat = 9, name = "Stand-in", felt = 6, standIn = true }, { seat = 12, name = "Cleo", felt = 9, shield = true } }, prices = { bomb = 19, blackout = 29, freeze = 25, shield = 15, open = 49 }, credits = { bomb = 1 } })
+advance(1)
+check("the panel: the tables still lit, and each sabotage with its price (or held)", textOnScreen("felt 14 / 16") ~= nil and textOnScreen("1 held") ~= nil)
+snapshot("sabotage")
+press("Close")
+serverSays("Table", { op = "sabotaged", kind = "blackout", by = "Ben", seconds = 6 })
+advance(0.5)
+check("a Blackout lands: the screen goes dark, saying who sent it", textOnScreen("from Ben") ~= nil)
+snapshot("sabotaged")
+advance(7)
+workspace:SetAttribute("BallroomState", "closed")
 root.Position = Vector3.new(0, 5, -40)
 root.CFrame = CFrame.new(0, 5, -40)
 advance(1)
-check("leaving the Ballroom drops its keys and the camera", textOnScreen("Next evening") == nil and camera.CameraType == roblox.Enum.CameraType.Custom)
+check("leaving the Ballroom drops its keys and the camera", textOnScreen("Open it now") == nil and textOnScreen("Take a chair") == nil and camera.CameraType == roblox.Enum.CameraType.Custom)
 check("no errors in the Ballroom", #errors == 0, errors[1])
 
 ---------------------------------------------------------------------------------------------------
@@ -2909,10 +2938,18 @@ check("no errors in the panels", #errors == 0, errors[1])
 ---------------------------------------------------------------------------------------------------
 -- 7b. The Boutique, the Wardrobe, the Ledger and a gift
 ---------------------------------------------------------------------------------------------------
-local oxblood = { id = "table_oxblood", name = "Oxblood Felt", kind = "table", kindName = "Table styles", line = "Deep red felt.", robux = 249, owned = false, style = {} }
+local oxblood = { id = "table_oxblood", name = "Oxblood Felt", kind = "table", kindName = "Table styles", line = "Deep red felt.", robux = 249, owned = false, style = { felt = roblox.Color3.fromRGB(74, 18, 26), rim = roblox.Color3.fromRGB(198, 160, 82) } }
 local ledgerView = { term = "2026-autumn", points = 2100, page = 2, pages = 50, progress = 0.1, leather = false, nextFree = { "100 Gilt" }, nextLeather = { "x", "y" }, nextPage = 3 }
 invokeResults.ShopAsk = {
-	today = { oxblood }, featured = {}, season = { id = "harvest", name = "Harvest Nights", price = 599, pieces = {} },
+	-- (A shelf of every kind, each drawn as itself.)
+	today = {
+		oxblood,
+		{ id = "lamp_rose", name = "Rose Glass", kind = "lamp", kindName = "Lamps", line = "A lamp with a blush in it.", robux = 149, owned = false, style = { colour = roblox.Color3.fromRGB(255, 196, 196) } },
+		{ id = "trail_ruby", name = "Ruby", kind = "trail", kindName = "Trails", line = "A red thread, bright as a stone.", robux = 99, owned = false, style = { colour = roblox.Color3.fromRGB(224, 64, 84) } },
+		{ id = "card_damask", name = "Damask", kind = "card", kindName = "Card backs", line = "A woven pattern in burgundy.", robux = 99, owned = false, style = { back = roblox.Color3.fromRGB(62, 18, 28), pattern = "damask" } },
+		{ id = "look_gown", name = "Silk Evening Gown", kind = "look", kindName = "Looks", line = "Midnight silk to the floor.", robux = 299, owned = false, style = { outfit = "gown" } },
+		{ id = "plate_filigree", name = "Gold Filigree", kind = "nameplate", kindName = "Nameplates", line = "Fine gold wire on black.", robux = 149, owned = false, style = { frame = roblox.Color3.fromRGB(198, 160, 82), fill = roblox.Color3.fromRGB(26, 20, 12), line = roblox.Color3.fromRGB(250, 230, 170) } },
+	}, featured = {}, season = { id = "harvest", name = "Harvest Nights", price = 599, pieces = {} },
 	gilt = {}, goldKey = { owned = false, price = 499 }, ledger = { view = ledgerView, price = 399 },
 	introduction = nil, guests = { { userId = 2, name = "Ben" } }, standing = "Guest", balance = 0, credits = {},
 	ok = true, prompted = true,
@@ -5711,6 +5748,12 @@ end
 			return false
 		end,
 		salute = function() end,
+		price = function()
+			return nil
+		end,
+		year = function()
+			return 2026
+		end,
 	}
 	local function arrived(inst)
 		signalOf(folder, "ChildAdded"):Fire(inst)
@@ -5993,7 +6036,31 @@ end
 	advance(2)
 	check("in the Harvest Field: every turkey drawn, bronze and fanned", HolidayPlay.area() == "field" and HolidayField.count() == cfg.field.turkeys, HolidayField.count())
 	check("...festoon lights from the barn, leaves falling", count(mine("HolidayField"), "Bulb") >= 10 and count(mine("HolidayField"), "Leaf") >= 4)
-	check("...and the card says what to do", string.find(card(), "Run at a turkey", 1, true) ~= nil, card())
+	check("...and the card says what to do", string.find(card(), "Run into a turkey", 1, true) ~= nil, card())
+	-- The count at the foot of the screen, and the offer once the free catches are used.
+	serverSays("Holiday", { op = "turkeyMeter", free = 3, of = 5, held = 0, unlimited = false, caught = 2, more = 10, prices = { turkeyMore = 25, turkeyHunter = 99 } })
+	advance(0.5)
+	check("the turkey meter: free catches left of five, and how many caught", textOnScreen("3 / 5") ~= nil and textOnScreen("FREE CATCHES") ~= nil)
+	snapshot("turkey-meter")
+	serverSays("Holiday", { op = "turkeyOut", free = 0, of = 5, held = 0, unlimited = false, caught = 5, more = 10, prices = { turkeyMore = 25, turkeyHunter = 99 } })
+	advance(0.5)
+	check("free catches used: the offer, each choice with its price, and the free way said plainly", textOnScreen("Unlimited all holiday") ~= nil and textOnScreen("+10 turkeys") ~= nil and textOnScreen("quarter of an hour") ~= nil)
+	snapshot("turkey-offer")
+	press("Unlimited all holiday  ·  " .. utf8.char(0xE002) .. " 99")
+	advance(0.2)
+	check("pressing a choice asks the server for that product (never a price)", (function()
+		for _, r in sent do
+			local m = r.message
+			if r.remote == "HolidayAsk" and type(m) == "table" and type(m[1]) == "table" and m[1].op == "buy" and m[1].n == 2 then
+				return true
+			end
+		end
+		return false
+	end)())
+	press("Not now")
+	-- (Back to a fresh visit's count for what follows.)
+	serverSays("Holiday", { op = "turkeyMeter", free = 5, of = 5, held = 0, unlimited = false, caught = 0, more = 10, prices = { turkeyMore = 25, turkeyHunter = 99 } })
+	advance(0.5)
 	-- The turkeys run (the server moves them); each drawn bird follows its own.
 	local birds = mine("HolidayTurkeys")
 	for _ = 1, 30 do
@@ -6130,7 +6197,9 @@ end
 	local flyCopy = SleighRide.flyoverCopy()
 	local banner = flyCopy and flyCopy.PrimaryPart and flyCopy.PrimaryPart:FindFirstChild("Banner")
 	local parkedBody = sleigh and sleigh:FindFirstChild("Floor", true)
-	check("Santa's Flyover: the sleigh takes off from the kerb, the giver's name in gold beside it", flyCopy ~= nil and banner ~= nil and string.find(banner.Name.Text, "Ada", 1, true) ~= nil and parkedBody ~= nil and parkedBody.LocalTransparencyModifier == 1)
+	-- (The banner's label is a child called "Name": found as a child, not the banner's own Name.)
+	local giver = banner and banner:FindFirstChild("Name")
+	check("Santa's Flyover: the sleigh takes off from the kerb, the giver's name in gold beside it", flyCopy ~= nil and giver ~= nil and string.find(tostring(giver.Text), "Ada", 1, true) ~= nil and parkedBody ~= nil and parkedBody.LocalTransparencyModifier == 1, giver and giver.Text)
 	advance(13)
 	local flyAt = flyCopy and flyCopy.PrimaryPart and flyCopy.PrimaryPart.CFrame.Position
 	check("...high round the house", flyAt ~= nil and flyAt.Y > 60, flyAt)
@@ -6213,6 +6282,8 @@ end
 	check("...the gifts carried are stacked in front of them", stack ~= nil and count(stack, "GiftStack") == 1 and #(stack:FindFirstChild("GiftStack"):GetChildren()) == 3)
 	check("...a ring of gold light where to load them", mine("HolidayGifts") ~= nil and mine("HolidayGifts"):FindFirstChild("LoadRing") ~= nil)
 	check("...and the card counts them", string.find(card(), "In your arms: 3", 1, true) ~= nil, card())
+	check("the gift meter at the foot of the screen: in your arms of five, on the sleigh of fifteen", textOnScreen("IN YOUR ARMS") ~= nil and textOnScreen("3 / 5") ~= nil and textOnScreen("/ 15") ~= nil)
+	snapshot("pole-meter")
 	pose(folder)
 	pose(stack)
 	snapshot("holiday-pole")

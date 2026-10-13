@@ -642,6 +642,26 @@ do
 	advance(deal.clock.budget + 1)
 	send({ op = "noRevive" })
 	check("declining banks the run at once", newest("banked", mark) ~= nil)
+	-- Priced by the room: once the Obsidian Room's own revive is in Creator Hub, it's the one sold
+	-- here (dearer than the Velvet Room's), its credit spent only here.
+	table.insert(MarketplaceService.devProducts, { Name = "Revive: Obsidian Room", ProductId = 7201, PriceInRobux = 59 })
+	table.insert(MarketplaceService.devProducts, { Name = "Revive: Velvet Room", ProductId = 7202, PriceInRobux = 29 })
+	run(Catalog.discover)
+	Perks.add(data, "revive_velvet", 1)
+	mark = #ana.inbox
+	send({ op = "again" })
+	advance(1)
+	deal = newest("deal", mark)
+	advance(deal.clock.budget + 1)
+	offer = newest("reviveOffer", mark)
+	check("in the Obsidian Room, its own revive at its own price, the room named", offer ~= nil and offer.price == 59 and offer.room == "The Obsidian Room" and offer.level == 3, offer and offer.price)
+	check("a Velvet Room revive held doesn't count here", offer ~= nil and offer.held == 0)
+	send({ op = "revive" })
+	check("asking opens the Obsidian Room's revive", prompts[#prompts].id == 7201)
+	MarketplaceService.PromptProductPurchaseFinished:Fire(160, 7201, true)
+	mark = #ana.inbox
+	receipt(ana, 7201, "REV-OBS-1", 59)
+	check("its receipt revives the run, the Obsidian credit spent and the Velvet one kept", newest("revived", mark) ~= nil and Perks.credits(data, "revive_obsidian") == 0 and Perks.credits(data, "revive_velvet") == 1)
 	tableEvent.OnServerEvent:Fire(ana, { op = "leave" })
 end
 
@@ -1939,6 +1959,81 @@ do
 	TableService.twist = function()
 		return nil
 	end
+end
+
+---------------------------------------------------------------------------------------------------
+-- The Ballroom's Robux (Purchases/Sabotage): checked before the purchase window, the receipt's
+-- credit spent on what was aimed at, kept when the moment has passed, a held credit spent at once
+---------------------------------------------------------------------------------------------------
+do
+	local Sab = H.Purchases.Sabotage
+	local sabGuest = H.guest("Saboteur", 7300)
+	local sd = H.profiles[sabGuest].Data
+	local allowed, applied, opened, closedNow = true, {}, 0, false
+	Sab.can = function(_p, kind, seat)
+		if not allowed then
+			return false, "That lamp is already out."
+		end
+		return true, nil
+	end
+	Sab.apply = function(_p, kind, seat)
+		table.insert(applied, { kind = kind, seat = seat })
+		return true, nil
+	end
+	Sab.isClosed = function()
+		return closedNow
+	end
+	Sab.open = function()
+		opened += 1
+		closedNow = false
+		return true, nil
+	end
+	local told = {}
+	Sab.say = function(_p, _t, line)
+		table.insert(told, line)
+	end
+	local okNo, whyNo = Sab.request(sabGuest, "bomb", 4)
+	check("Ballroom: not in Creator Hub yet, so not on sale", okNo == false and string.find(tostring(whyNo), "on sale", 1, true) ~= nil, whyNo)
+	table.insert(MarketplaceService.devProducts, { Name = "Ballroom: Parcel Bomb", ProductId = 7101, PriceInRobux = 19 })
+	table.insert(MarketplaceService.devProducts, { Name = "Open the Ballroom Now", ProductId = 7105, PriceInRobux = 49 })
+	run(Catalog.discover)
+	allowed = false
+	local before = #prompts
+	local okOut = Sab.request(sabGuest, "bomb", 4)
+	check("Ballroom: a sabotage that can't happen never opens a purchase window", okOut == false and #prompts == before)
+	allowed = true
+	advance(1.2)
+	local okP = Sab.request(sabGuest, "bomb", 4)
+	check("Ballroom: a Parcel Bomb aimed at table 4 opens Roblox's purchase window for it", okP == true and #prompts == before + 1 and prompts[#prompts].id == 7101)
+	local gctx = Grants.newContext(sabGuest, sd, "ballroomBomb", "sab-1", 19, "Normal")
+	check("Ballroom: its receipt grants", Grants.run(gctx) == true)
+	Grants.runAfter(gctx)
+	check("Ballroom: ...and it's sent at the table aimed at, the credit spent", #applied == 1 and applied[1].kind == "bomb" and applied[1].seat == 4 and Perks.credits(sd, "ballroom_bomb") == 0)
+	-- The moment passed (the lamp went out before the receipt came): kept, and said so.
+	advance(1.2)
+	Sab.request(sabGuest, "bomb", 6)
+	allowed = false
+	local g2 = Grants.newContext(sabGuest, sd, "ballroomBomb", "sab-2", 19, "Normal")
+	Grants.run(g2)
+	Grants.runAfter(g2)
+	check("Ballroom: a moment passed: the credit is kept, and the guest is told", #applied == 1 and Perks.credits(sd, "ballroom_bomb") == 1 and #told == 1)
+	allowed = true
+	advance(1.2)
+	local promptsHeld = #prompts
+	local okHeld = Sab.request(sabGuest, "bomb", 8)
+	check("Ballroom: a credit held is spent at once, with no purchase window", okHeld == true and #prompts == promptsHeld and #applied == 2 and applied[2].seat == 8 and Perks.credits(sd, "ballroom_bomb") == 0)
+	-- Opening the Ballroom early.
+	check("Ballroom: Open Now while it's open is refused before any window", Sab.openNow(sabGuest) == false and opened == 0)
+	closedNow = true
+	advance(1.2)
+	local okOpen = Sab.openNow(sabGuest)
+	check("Ballroom: closed, Open Now opens Roblox's purchase window", okOpen == true and prompts[#prompts].id == 7105)
+	local g3 = Grants.newContext(sabGuest, sd, "ballroomOpen", "sab-3", 49, "Normal")
+	Grants.run(g3)
+	Grants.runAfter(g3)
+	check("Ballroom: its receipt opens the Ballroom for everyone", opened == 1 and Perks.credits(sd, "ballroom_open") == 0)
+	local info = Sab.info(sabGuest)
+	check("Ballroom: the panel's prices are Roblox's own", info.prices.bomb == 19 and info.prices.open == 49 and info.prices.shield == 15)
 end
 
 H.finish()

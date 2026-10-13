@@ -344,6 +344,89 @@ if golden then
 	check("the golden turkey pays far more, with Gems", g.golden == true and g.gilt >= C.field.goldenGilt and (data(hunter).gems or 0) - gemsWas == C.field.goldenGems)
 	check("and its own curio and badge", CuriosS.count(data(hunter), "goldenTurkey") == 1 and awards["402:goldenTurkeyCaught"] == true)
 end
+-- Catchable on foot: slower than a guest walks; they tire after a sprint.
+check("a turkey runs slower than a guest walks, the golden one slower than a guest runs", C.field.speed < Config.data.Movement.walkSpeed and C.field.goldenSpeed < Config.data.Movement.runSpeed and C.field.catch >= 6)
+-- Five free catches a visit: two caught so far (one, and the golden one).
+local Grants = module("ServerScriptService", "Server", "Purchases", "Grants")
+local function nearest(g)
+	local best, bd = nil, math.huge
+	for _, t in Field.turkeys() do
+		local d = (t.at - at(g)).Magnitude
+		if d < bd and not t.golden then
+			best, bd = t, d
+		end
+	end
+	return best
+end
+local function chase(g)
+	advance(C.field.catchGap + 0.1)
+	local t = nearest(g)
+	if t then
+		place(g, t.at + Vector3.new(0, 2.5, 0))
+		advance(0.2)
+	end
+	return t
+end
+local made = count(hunter, "turkey")
+for _ = 1, 3 do
+	chase(hunter)
+end
+local meter = last(hunter, "turkeyMeter")
+check("five free catches a visit, counted on the guest's screen", count(hunter, "turkey") - made == 3 and meter ~= nil and meter.free == 0 and meter.of == C.field.freeCatches and meter.unlimited == false, meter and meter.free)
+local outBefore, caughtBefore = count(hunter, "turkeyOut"), count(hunter, "turkey")
+chase(hunter)
+local out = last(hunter, "turkeyOut")
+check("a sixth: no catch, and the offer comes up (more catches, the Hunter Pass, their prices)", count(hunter, "turkey") == caughtBefore and count(hunter, "turkeyOut") == outBefore + 1 and out ~= nil and out.more == C.field.moreCatches and type(out.prices) == "table")
+-- A respawn (or a trip home and back) is the same visit: the free catches don't come back.
+Holidays.GAMES.thanksgiving.leave(Holidays.ctx, hunter)
+advance(C.field.catchGap + 0.1)
+chase(hunter)
+check("a respawn doesn't bring the free catches back", count(hunter, "turkey") == caughtBefore)
+-- The offer, asked for: only the holiday's own products, and only while their game is on.
+local refusedSleigh = askAs(hunter, { op = "buy", n = 3 })
+check("the sleigh's products aren't sold at Thanksgiving", refusedSleigh.ok == false and string.find(tostring(refusedSleigh.why), "Christmas", 1, true) ~= nil)
+check("a holiday product that isn't one isn't sold", askAs(hunter, { op = "buy", n = 9 }).ok == false)
+-- 10 More, bought (its receipt): ten more catches, each spent as it's made.
+local function receipt(g, key)
+	local gctx = Grants.newContext(g, data(g), key, "test-" .. key .. "-" .. tostring(os.clock()), 0, "Normal")
+	local ok, err = Grants.run(gctx)
+	Grants.runAfter(gctx)
+	return ok, err
+end
+local okMore = receipt(hunter, "turkeyMore")
+local afterBuy = last(hunter, "turkeyMeter")
+check("10 More: ten catches held, and the screen is told at once", okMore and Holidays.saved(data(hunter)).catches == C.field.moreCatches and afterBuy ~= nil and afterBuy.held == C.field.moreCatches and last(hunter, "bought").key == "turkeyMore")
+chase(hunter)
+check("...and one is spent on the next catch", count(hunter, "turkey") == caughtBefore + 1 and Holidays.saved(data(hunter)).catches == C.field.moreCatches - 1)
+-- The Turkey Hunter Pass: as many as you like, nothing spent.
+receipt(hunter, "turkeyHunter")
+local held = Holidays.saved(data(hunter)).catches
+chase(hunter)
+check("the Turkey Hunter Pass: no limit, and the catches held are kept", last(hunter, "turkeyMeter").unlimited == true and count(hunter, "turkey") == caughtBefore + 2 and Holidays.saved(data(hunter)).catches == held)
+check("and with the pass, more aren't offered", askAs(hunter, { op = "buy", n = 1 }).ok == false)
+-- The Catch key: a turkey close enough is caught with E (or a tap), checked by the server.
+advance(C.field.catchGap + 0.1)
+local tp = nearest(hunter)
+place(hunter, tp.at + Vector3.new(C.field.reach - 3, 2.5, 0))
+local caughtNow = count(hunter, "turkey")
+local prompt = tp.part:FindFirstChild("Catch")
+local promptReach = prompt and prompt.MaxActivationDistance
+if prompt then
+	run(function()
+		prompt.Triggered:Fire(hunter)
+	end)
+end
+check("each turkey has a Catch key, and pressing it close by catches it", prompt ~= nil and promptReach == C.field.reach and count(hunter, "turkey") == caughtNow + 1)
+advance(C.field.catchGap + 0.1)
+local far = nearest(hunter)
+place(hunter, far.at + Vector3.new(C.field.reach + 12, 2.5, 0))
+local caughtFar = count(hunter, "turkey")
+if far.part:FindFirstChild("Catch") then
+	run(function()
+		far.part:FindFirstChild("Catch").Triggered:Fire(hunter)
+	end)
+end
+check("...but not from across the field", count(hunter, "turkey") == caughtFar)
 eventsOn.thanksgiving = false
 refresh()
 check("the field is taken down after", services.Workspace.HolidayGames:FindFirstChild("HarvestField") == nil and HolidayGames.areaAt(at(hunter)) == nil)
@@ -509,10 +592,19 @@ local was = at(noel)
 place(noel, HolidayGames.origin("pole") + Vector3.new(0, 2.5, 0))
 check("not at the Pole: they're for the fireside", askAs(noel, { op = "open" }).ok == false)
 place(noel, was)
+-- One ride a Christmas is free: the second is bought (or the Season Pass).
+check("the first ride was the free one", Holidays.saved(data(noel)).freeTaken == C.pole.freeRides and Holidays.saved(data(noel)).rides == 0)
+local again = askAs(noel, { op = "board" })
+check("a second ride: not boarded, the offer comes up with its prices", again.ok == false and again.offer == "sleigh" and type(again.prices) == "table" and services.Workspace:GetAttribute("SleighState") == "home")
+local GrantsP = module("ServerScriptService", "Server", "Purchases", "Grants")
+local gctx = GrantsP.newContext(noel, data(noel), "sleighRide", "test-sleighRide", 0, "Normal")
+GrantsP.run(gctx)
+GrantsP.runAfter(gctx)
+check("Another Sleigh Ride bought: a ride held (spent only as it takes off), and aboard at once", Holidays.saved(data(noel)).rides == 1 and Pole.sleigh():FindFirstChild("SleighSeat") ~= nil and last(noel, "bought") ~= nil and last(noel, "bought").key == "sleighRide")
 -- A rider in the air when Christmas ends comes down at home.
 askAs(noel, { op = "board" })
 advance(C.pole.boarding + 0.3)
-check("aboard again, in the air", noel:GetAttribute("SleighRide") == "toPole")
+check("aboard again, in the air (the bought ride spent as it took off)", noel:GetAttribute("SleighRide") == "toPole" and Holidays.saved(data(noel)).rides == 0)
 eventsOn.christmas = false
 refresh()
 check("Christmas over mid-flight: the rider lands at home, the sleigh and the Pole gone", noel:GetAttribute("SleighRide") == nil and rootOf(noel).Anchored == false and HolidayGames.areaAt(at(noel)) == nil and Pole.sleigh() == nil and services.Workspace:GetAttribute("SleighState") == nil)

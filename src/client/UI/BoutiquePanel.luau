@@ -15,6 +15,7 @@ local Toast = require(script.Parent.Toast)
 local RoundPanel = require(script.Parent.RoundPanel)
 local DecreePanel = require(script.Parent.DecreePanel)
 local Closet = require(script.Parent.Parent.Closet)
+local ProductArt = require(script.Parent.ProductArt)
 
 local BoutiquePanel = {}
 
@@ -101,20 +102,14 @@ local function row(parent: Instance, card: Card, order: number, mode: "robux" | 
 	local corner = Instance.new("UICorner")
 	corner.CornerRadius = UDim.new(0, 2)
 	corner.Parent = r
-	local swatch = Instance.new("Frame")
-	swatch.Name = "Swatch"
-	swatch.BackgroundColor3 = BoutiquePanel.swatch(card.style)
-	swatch.Position = UDim2.fromOffset(12, 18)
-	swatch.Size = UDim2.fromOffset(48, 48)
-	swatch.Parent = r
-	local ring = Instance.new("UIStroke")
-	ring.Color = Brand.Colours.gold
-	ring.Transparency = 0.3
-	ring.Parent = swatch
+	-- Its picture: the piece itself, drawn in its own colours (ProductArt).
+	local art = ProductArt.draw(r, card.kind, card.style, 66)
+	art.Name = "Swatch"
+	art.Position = UDim2.fromOffset(10, 10)
 	local texts = Instance.new("Frame")
 	texts.BackgroundTransparency = 1
-	texts.Position = UDim2.fromOffset(72, 8)
-	texts.Size = UDim2.new(1, -72 - 170, 1, -16)
+	texts.Position = UDim2.fromOffset(88, 8)
+	texts.Size = UDim2.new(1, -88 - 170, 1, -16)
 	texts.Parent = r
 	Theme.list(texts, 2).HorizontalAlignment = Enum.HorizontalAlignment.Left
 	Theme.text(texts, card.kindName or "", 10, "caps", { LayoutOrder = 1, TextXAlignment = Enum.TextXAlignment.Left })

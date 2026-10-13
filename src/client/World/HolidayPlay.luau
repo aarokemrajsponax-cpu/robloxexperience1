@@ -22,6 +22,7 @@ local HolidayPole = require(script.Parent.HolidayPole)
 local HolidayEggs = require(script.Parent.HolidayEggs)
 local SleighRide = require(script.Parent.SleighRide)
 local HolidayPop = require(script.Parent.Parent.UI.HolidayPop)
+local HolidayMeter = require(script.Parent.Parent.UI.HolidayMeter)
 
 local HolidayPlay = {}
 
@@ -55,6 +56,11 @@ local root: Folder? = nil
 local attached: { [string]: Instance? } = {}
 local keySpec = ""
 local rehere = false -- a place arrived or went: each module's dressing is decided afresh
+-- The Harvest Field's count (the server's): free catches left of how many, bought catches held,
+-- the Hunter Pass. The North Pole's: how many you can carry, and load in a trip.
+local field = { free = 5, of = 5, held = 0, unlimited = false, more = 10 }
+local pole = { carry = 5, tripMost = 15 }
+local prices: { [string]: number? } = {}
 
 local function ask(request: { [string]: any }): any
 	local ok, r = pcall(function()
@@ -107,6 +113,79 @@ local function travel(request: { [string]: any })
 	fade(0, 0.5)
 	if not r.ok and r.why then
 		HolidayPlay.say("Not just now", tostring(r.why))
+	end
+end
+
+---------------------------------------------------------------------------------------------------
+-- The count at the foot of the screen, and the offers
+---------------------------------------------------------------------------------------------------
+local TURKEY = rgb(240, 160, 60)
+local GIFT = rgb(230, 70, 70)
+
+local function updateMeter()
+	if area == "field" then
+		local sections: { HolidayMeter.Section } = {}
+		if field.unlimited then
+			table.insert(sections, { label = "Turkey Hunter Pass", value = "UNLIMITED", colour = TURKEY })
+		elseif field.free > 0 or field.held == 0 then
+			table.insert(sections, { label = "Free catches", value = string.format("%d / %d", field.free, field.of), pips = field.of, lit = field.free, colour = TURKEY })
+		end
+		if not field.unlimited and field.held > 0 then
+			table.insert(sections, { label = "Bought catches", value = tostring(field.held), colour = rgb(255, 214, 110) })
+		end
+		table.insert(sections, { label = "Caught", value = tostring(caught), colour = TURKEY })
+		HolidayMeter.show("🦃", TURKEY, sections)
+	elseif area == "pole" then
+		local carried = Players.LocalPlayer:GetAttribute("GiftsCarried")
+		local held = if type(carried) == "number" then carried else 0
+		HolidayMeter.show("🎁", GIFT, {
+			{ label = "In your arms", value = string.format("%d / %d", held, pole.carry), pips = pole.carry, lit = held, colour = GIFT },
+			{ label = "On the sleigh", value = string.format("%d / %d", loadedTrip, pole.tripMost), bar = loadedTrip / math.max(1, pole.tripMost), colour = rgb(255, 214, 110) },
+		})
+	else
+		HolidayMeter.hide()
+	end
+end
+
+local function turkeyOffer()
+	HolidayMeter.offer(
+		string.format("Your %d free catches are used", field.of),
+		"Keep the chase going right now. Every turkey pays its Gilt as usual; the golden one too.",
+		{
+			{ label = string.format("+%d turkeys", field.more), price = prices.turkeyMore, press = function()
+				HolidayMeter.buy(1)
+			end },
+			{ label = "Unlimited all holiday", price = prices.turkeyHunter, best = true, press = function()
+				HolidayMeter.buy(2)
+			end },
+		},
+		"Or come back in a quarter of an hour: your next visit has free catches again."
+	)
+end
+
+local function sleighOffer()
+	HolidayMeter.offer(
+		"Your free sleigh ride is used",
+		"Fly to the North Pole again and bring home up to 15 more gifts.",
+		{
+			{ label = "One more ride", price = prices.sleighRide, press = function()
+				HolidayMeter.buy(3)
+			end },
+			{ label = "Every ride this Christmas", price = prices.sleighSeason, best = true, press = function()
+				HolidayMeter.buy(4)
+			end },
+		},
+		"One ride a Christmas is always free."
+	)
+end
+
+local function takePrices(p: any)
+	if type(p) == "table" then
+		for k, v in p do
+			if type(k) == "string" and type(v) == "number" then
+				prices[k] = v
+			end
+		end
 	end
 end
 
@@ -176,7 +255,10 @@ end
 function HolidayPlay.ride()
 	task.spawn(function()
 		local r = ask({ op = "board" })
-		if not r.ok and r.why then
+		if not r.ok and r.offer == "sleigh" then
+			takePrices(r.prices)
+			sleighOffer()
+		elseif not r.ok and r.why then
 			HolidayPlay.say("Santa's Sleigh", tostring(r.why))
 		end
 	end)
@@ -208,11 +290,11 @@ function HolidayPlay.goal(): Goal?
 		end
 		return { key = "lane:" .. n, title = "Hallows Lane", line = string.format("Doors knocked at: %d of 9", n), how = "Walk up to a door and knock. Every host has a treat each round; all nine fills your bag.", rank = "here" }
 	elseif area == "field" then
-		return { key = "field:" .. caught, title = "The Harvest Field", line = if caught > 0 then string.format("Turkeys caught: %d", caught) else "The turkeys are loose!", how = "Run at a turkey to catch it. They dodge; the golden one is fastest.", rank = "here" }
+		return { key = "field:" .. caught, title = "The Harvest Field", line = if caught > 0 then string.format("Turkeys caught: %d", caught) else "The turkeys are loose!", how = "Run into a turkey, or press E when it's close. They tire after a sprint; the golden one is fastest (hold Shift to run).", rank = "here" }
 	elseif area == "pole" then
 		local carried = Players.LocalPlayer:GetAttribute("GiftsCarried")
 		local held = if type(carried) == "number" then carried else 0
-		return { key = "pole:" .. held .. ":" .. loadedTrip, title = "The North Pole", line = string.format("In your arms: %d · On the sleigh: %d", held, loadedTrip), how = "Walk into gifts to pick them up, then carry them to the gold ring behind the sleigh before it leaves.", rank = "here" }
+		return { key = "pole:" .. held .. ":" .. loadedTrip, title = "The North Pole", line = string.format("In your arms: %d / %d · On the sleigh: %d / %d", held, pole.carry, loadedTrip, pole.tripMost), how = string.format("Pick up gifts (%d at a time), then carry them to the gold ring behind the sleigh. It takes %d of yours a trip.", pole.carry, pole.tripMost), rank = "here" }
 	end
 	if pending > 0 then
 		return { key = "gifts:" .. pending, title = "Your gifts", line = if pending == 1 then "A gift from the North Pole to open" else string.format("%d gifts from the North Pole to open", pending), how = "The Gifts key in the dock opens them.", rank = "gifts" }
@@ -311,9 +393,34 @@ local function onMessage(m: any)
 		HolidayPlay.goalChanged()
 	elseif op == "caught" and type(m.id) == "number" then
 		HolidayField.caught(m.id, m.golden == true, if typeof(m.at) == "Vector3" then m.at else nil)
+	elseif op == "turkeyMeter" or op == "turkeyOut" then
+		field.free = if type(m.free) == "number" then m.free else field.free
+		field.of = if type(m.of) == "number" then m.of else field.of
+		field.held = if type(m.held) == "number" then m.held else field.held
+		field.unlimited = m.unlimited == true
+		field.more = if type(m.more) == "number" then m.more else field.more
+		if type(m.caught) == "number" then
+			caught = m.caught
+		end
+		takePrices(m.prices)
+		updateMeter()
+		if op == "turkeyOut" then
+			turkeyOffer()
+		end
+	elseif op == "rides" then
+		takePrices(m.prices)
+		if m.offer == "sleigh" or (m.pass ~= true and m.free == 0 and m.held == 0 and m.ok == false) then
+			sleighOffer()
+		end
+	elseif op == "bought" then
+		HolidayMeter.closeOffer()
+		local what = if m.key == "turkeyHunter" then "The Turkey Hunter Pass is yours: catch as many as you like." elseif m.key == "turkeyMore" then "More turkeys to catch. Go get them!" elseif m.key == "sleighSeason" then "Santa's Season Pass is yours: every ride is free this Christmas." else "Another ride on Santa's sleigh. All aboard!"
+		HolidayPlay.say("Thank you", what)
 	elseif op == "turkey" then
+		-- Counted at once; the meter that follows from the server says the true number.
 		caught += 1
 		HolidayPop.show({ glyph = "🦃", title = if m.golden == true then "The golden turkey!" else "Caught one!", line = if m.golden == true then "The fastest bird alive, and you caught it." else "Gobble gobble. Off it goes, back to the barn.", gilt = m.gilt, gems = m.gems, colour = if m.golden == true then rgb(255, 214, 110) else rgb(236, 170, 80), big = m.golden == true })
+		updateMeter()
 		HolidayPlay.goalChanged()
 	elseif op == "goldenTurkey" then
 		if open == "thanksgiving" then
@@ -327,6 +434,8 @@ local function onMessage(m: any)
 		if type(m.gifts) == "number" then
 			pending = m.gifts
 		end
+		pole.carry = if type(m.carry) == "number" then m.carry else pole.carry
+		pole.tripMost = if type(m.tripMost) == "number" then m.tripMost else pole.tripMost
 		if type(m.loaded) == "number" then
 			local n = m.loaded - loadedTrip
 			loadedTrip = m.loaded
@@ -342,6 +451,8 @@ local function onMessage(m: any)
 	elseif op == "arrived" then
 		if m.place == "pole" then
 			loadedTrip = 0
+			pole.carry = if type(m.carry) == "number" then m.carry else pole.carry
+			pole.tripMost = if type(m.tripMost) == "number" then m.tripMost else pole.tripMost
 		elseif m.place == "home" then
 			loadedTrip = 0
 			if type(m.gifts) == "number" then
@@ -441,8 +552,17 @@ function HolidayPlay.start()
 	end)
 	Workspace:GetAttributeChangedSignal(HolidayGames.ATTRIBUTE):Connect(refresh)
 	Players.LocalPlayer:GetAttributeChangedSignal("GiftsCarried"):Connect(function()
+		updateMeter()
 		HolidayPlay.goalChanged()
 	end)
+	HolidayMeter.buy = function(n: number)
+		task.spawn(function()
+			local r = ask({ op = "buy", n = n })
+			if not r.ok and r.why then
+				HolidayPlay.say("Not just now", tostring(r.why))
+			end
+		end)
+	end
 	for _, key in { "SleighState", "SleighT0", "SleighFlight" } do
 		Workspace:GetAttributeChangedSignal(key):Connect(function()
 			local s = attached.sleigh
@@ -473,6 +593,7 @@ function HolidayPlay.start()
 	-- Gifts waiting from an earlier visit.
 	task.spawn(function()
 		local s = ask({ op = "state" })
+		takePrices(s.prices)
 		if s.ok and type(s.gifts) == "number" then
 			pending = s.gifts
 			updateKey()

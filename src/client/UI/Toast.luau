@@ -15,6 +15,18 @@ local Toast = {}
 
 local current: Frame? = nil
 
+local PAD_X, PAD_Y = 20, 12
+local LEAST = 150
+
+-- Sizes a notice to its words: as wide as its longest line plus its margins, at least LEAST.
+local function fit(group: Frame, labels: { TextLabel })
+	local w = 0
+	for _, l in labels do
+		w = math.max(w, Theme.wordsWidth(l))
+	end
+	group.Size = UDim2.fromOffset(math.max(LEAST, w + PAD_X * 2), 0)
+end
+
 -- How wide a notice may be: at the top, up to 420; with a panel open, as wide as the room beside
 -- the panel allows (and no wider than 250), so it never sits over the panel itself. (On a screen
 -- the panel fills, there is no room beside it: 250, over the panel's foot.)
@@ -55,14 +67,24 @@ function Toast.show(title: string, line: string?, seconds: number?)
 	group.AutomaticSize = Enum.AutomaticSize.Y
 	content.AutomaticSize = Enum.AutomaticSize.Y
 	content.Size = UDim2.new(1, 0, 0, 0)
+	-- A notice is a slip, not a panel: snug round its words.
+	local pad = content:FindFirstChildOfClass("UIPadding")
+	if pad then
+		pad.PaddingTop = UDim.new(0, PAD_Y)
+		pad.PaddingBottom = UDim.new(0, PAD_Y)
+		pad.PaddingLeft = UDim.new(0, PAD_X)
+		pad.PaddingRight = UDim.new(0, PAD_X)
+	end
 	local limit = Instance.new("UISizeConstraint")
 	limit.MaxSize = Vector2.new(widest(low), math.huge)
 	limit.Parent = group
-	Theme.list(content, 4)
-	Theme.text(content, title, 12, "caps", { LayoutOrder = 1 })
+	Theme.list(content, 2)
+	local labels = { Theme.text(content, title, 12, "caps", { LayoutOrder = 1 }) }
 	if line then
-		Theme.text(content, line, 16, "display", { LayoutOrder = 2 })
+		table.insert(labels, Theme.text(content, line, 16, "display", { LayoutOrder = 2 }))
 	end
+	-- Exactly as wide as its longest line (and never wider than the room it has, where it wraps).
+	fit(group, labels)
 	current = group
 	Fade.set(group, 1)
 	Fade.to(group, Ease.scaled(Ease.settle), 0)

@@ -742,13 +742,16 @@ local function reviveMessage(s: Session, op: string): { [string]: any }
 	local data = Profiles.get(s.player)
 	local r = s.revive
 	local e = Revive.entry()
+	local key = Revive.keyFor(s.room.id)
 	return {
 		op = op,
 		left = if r then math.max(0, r.deadline - os.clock()) else 0,
 		prompting = if r then r.prompting else false,
-		held = if data then Revive.credits(data) else 0,
-		price = Catalog.price(Revive.KEY),
-		onSale = Catalog.enabled(Revive.KEY),
+		held = if data then Revive.creditsFor(data, s.room.id) else 0,
+		price = Catalog.price(key),
+		onSale = Catalog.enabled(key),
+		room = s.room.name,
+		level = s.room.level,
 		add = e.Reward.Seconds,
 		boardsCount = e.Rules.BoardsCountRevivedPoints == true,
 		score = s.score,
@@ -769,7 +772,7 @@ local function canOfferRevive(s: Session): boolean
 	if not data then
 		return false
 	end
-	return Revive.credits(data) > 0 or Catalog.enabled(Revive.KEY)
+	return Revive.creditsFor(data, s.room.id) > 0 or Catalog.enabled(Revive.keyFor(s.room.id))
 end
 
 local function clockRanOut(s: Session)
@@ -799,7 +802,7 @@ local function applyRevive(s: Session): boolean
 		return false
 	end
 	local data = Profiles.get(s.player)
-	if not data or not Perks.use(s.player, data, Revive.CREDIT, Revive.KEY) then
+	if not data or not Revive.spend(s.player, data, s.room.id) then
 		return false
 	end
 	if not reviveRules().BoardsCountRevivedPoints and s.boardCap == nil then
@@ -812,7 +815,7 @@ local function applyRevive(s: Session): boolean
 	s.clock.left = Revive.entry().Reward.Seconds
 	s.clock.running = true
 	table.insert(s.log, { "revive", s.round, s.score, os.clock() } :: { any })
-	send(s.player, { op = "revived", clock = clockState(s), held = Revive.credits(data), used = s.revivesUsed, boardScore = s.boardCap })
+	send(s.player, { op = "revived", clock = clockState(s), held = Revive.creditsFor(data, s.room.id), used = s.revivesUsed, boardScore = s.boardCap })
 	Perks.push(s.player)
 	return true
 end
@@ -824,11 +827,11 @@ local function askRevive(s: Session)
 		return
 	end
 	local data = Profiles.get(s.player)
-	if data and Revive.credits(data) > 0 then
+	if data and Revive.creditsFor(data, s.room.id) > 0 then
 		applyRevive(s)
 		return
 	end
-	local ok, why = Store.prompt(s.player, Revive.KEY, "revive")
+	local ok, why = Store.prompt(s.player, Revive.keyFor(s.room.id), "revive")
 	if s.revive ~= r or s.state ~= "reviveOffer" then
 		return -- the moment passed while asking (a revive bought now is kept for the next run)
 	end

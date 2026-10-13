@@ -332,6 +332,26 @@ boot("The Boutique", Shop.start)
 -- Boutique (whose handlers it validates), before Profiles (it listens for arrivals).
 local Purchases = require(script.Parent.Purchases)
 boot("Purchases", Purchases.start)
+-- The Ballroom's Robux (sabotage, opening it early): the Ballroom checks and does each one.
+Purchases.Sabotage.can = BallroomService.canSabotage
+Purchases.Sabotage.apply = BallroomService.sabotage
+Purchases.Sabotage.isClosed = BallroomService.isClosed
+Purchases.Sabotage.open = function(by: string?)
+	local ok, why = BallroomService.openNow(by)
+	if ok and by then
+		Remotes.event("Salute"):FireAllClients({ op = "salute", id = "ballroomOpened", by = by, effects = { "fireworks" }, seconds = 6, title = "The Ballroom is open", line = by .. " opened the Ballroom for everyone. Lights Out: sit in any chair!" })
+	end
+	return ok, why
+end
+Purchases.Sabotage.say = function(player: Player, title: string, line: string)
+	require(script.Parent.Purchases.Perks).tell(player, { op = "notice", title = title, line = line })
+end
+AdminService.openBallroom = function(by: string)
+	return BallroomService.openNow(by)
+end
+BallroomService.requestSabotage = Purchases.Sabotage.request
+BallroomService.requestOpen = Purchases.Sabotage.openNow
+BallroomService.sabotageInfo = Purchases.Sabotage.info
 -- A guest at the Foyer's piano: the Pianist gets up for them, and sits back down after.
 Purchases.Piano.onSession = function(playing: boolean)
 	Pianist.stepAside(playing)
@@ -517,6 +537,8 @@ require(script.Parent.Profiles).Loaded:Connect(function(player)
 		player:SetAttribute("Gems", data.gems)
 	end
 	Achievements.check(player, true)
+	-- Badges earned before their Roblox badge was made: on the guest's profile now.
+	Achievements.syncRoblox(player)
 	GemShop.apply(player)
 end)
 

@@ -34,12 +34,13 @@ Settings.Groups = { "The room", "The table", "The guide", "The Club", "Your perk
 Settings.Definitions = {
 	-- The room
 	choice("houseStyle", "The room", "House style", { "Luxury Black", "Luxury Gold", "Emerald Club", "Bordeaux", "Platinum", "Ivory Suite" }, true),
-	choice("lettering", "The room", "Lettering", { "Future", "Editorial", "Book", "Ledger" }, true),
+	choice("lettering", "The room", "Lettering", { "Bold", "Space", "Editorial", "Book", "Ledger" }, true),
 	choice("textSize", "The room", "Text size", { "Normal", "Large", "Largest", "Small" }, true),
 	choice("roundNumbers", "The room", "Round numbers", { "IV", "4", "Four" }, true),
 	choice("atmosphere", "The room", "Atmosphere", { "Full", "Light", "Off" }, true, "dust in the lamplight, the city beyond the glass, weather density"),
 	choice("movement", "The room", "Movement", { "Full", "Calm", "Still" }, true),
 	choice("glow", "The room", "Glow and sparks", { "Full", "Subtle", "Off" }, true),
+	choice("goalCard", "The room", "What-to-do-next card", { "Shown", "Hidden" }, true, "the card under Settings; its – key hides it too"),
 	-- The table
 	choice("caseStyle", "The table", "Case style", { "Trays", "Boxes", "Plates" }, true),
 	choice("pieceSize", "The table", "Piece size", { "Normal", "Large", "Largest", "Small" }, true),

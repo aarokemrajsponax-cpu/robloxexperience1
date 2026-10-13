@@ -78,6 +78,8 @@ function LightsOut.room(t: number): Rooms.Room
 		id = "ballroom",
 		name = "The Ballroom",
 		line = "",
+		tag = "",
+		level = 2,
 		timed = false,
 		tuning = {
 			firstDeal = 12,

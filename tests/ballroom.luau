@@ -622,12 +622,14 @@ check("a guest sits at a Ballroom table", ok == true)
 local seated = last(ada, "seated")
 check("seated says ballroom", seated and seated.mode == "ballroom" and seated.room == "ballroom" and seated.table == "ballroom-1")
 local gathering = last(ada, "gathering")
-check("the evening gathers for 30 s", gathering and math.abs(gathering.startsIn - C.gatherSeconds) < 0.5, gathering and gathering.startsIn)
+check("the Ballroom opens with the server", BallroomService.door() == "open" or BallroomService.evening() ~= nil)
+check("the first guest to sit starts a 100-second countdown", gathering and math.abs(gathering.startsIn - C.countdown) < 0.5, gathering and gathering.startsIn)
+check("the room hears it: last call", last(ada, "ballroomCountdown") ~= nil and last(ada, "ballroomCountdown").startsIn == C.countdown)
 advance(1)
-check("the board counts down", string.find(boardLines[2].Text, "begins in", 1, true) ~= nil, boardLines[2].Text)
+check("the board counts down", string.find(boardLines[2].Text, "Begins in", 1, true) ~= nil, boardLines[2].Text)
 local ben = guest("Ben", 2)
 sit(ben, 2)
-check("a second guest joins the gathering", last(ben, "gathering") ~= nil and last(ben, "gathering").startsIn < C.gatherSeconds)
+check("a second guest joins the countdown", last(ben, "gathering") ~= nil and last(ben, "gathering").startsIn < C.countdown)
 local okTaken, whyTaken = sit(guest("Cleo", 3), 1)
 check("a taken chair is refused", okTaken == false and whyTaken == "taken", whyTaken)
 check("a far guest can't sit", (function()
@@ -644,10 +646,13 @@ end)())
 ---------------------------------------------------------------------------------------------------
 -- 2. The evening begins: Stand-ins fill the chairs; the same six pieces on every felt
 ---------------------------------------------------------------------------------------------------
-advance(C.gatherSeconds)
+advance(C.countdown)
 local start = last(ada, "eveningStart")
 check("the evening begins", start ~= nil)
-check("eveningStart has the fields the client reads", fieldsPresent(start or {}, { "seat", "names", "capacity", "tab", "counted", "real" }))
+check("eveningStart has the fields the client reads", fieldsPresent(start or {}, { "seat", "names", "capacity", "tab", "counted", "real", "pot" }))
+check("the pot: the base and a share for each real guest (Stand-ins add nothing)", start and start.pot == C.potBase + C.potPerGuest * 2, start and start.pot)
+local late, lateWhy = sit(guest("Late", 95), 9)
+check("nobody joins late: a chair once it's begun is refused", late == false and lateWhy == "underway", lateWhy)
 check("two real guests: not counted for records", start and start.counted == false and start.real == 2)
 local standIns = 0
 for _, m in tagged.BallroomTable do
@@ -754,6 +759,76 @@ check("everyone hears which lamp went out", out ~= nil and fieldsPresent(out, { 
 check("the room grows darker", chandelierLight.Brightness < 1.3)
 
 ---------------------------------------------------------------------------------------------------
+-- 4b. Sabotage (bought with Robux; under test, sent at once): a Parcel Bomb, Butterfingers, a
+-- Blackout, a Shield; never at your own table, never twice at a table within seconds, at most a
+-- few an evening; and the whole room hears who sent what.
+---------------------------------------------------------------------------------------------------
+local Sab = C.sabotage
+-- (Ada keeps sorting while the seconds pass.)
+local function busy(seconds)
+	local t = 0
+	while t < seconds do
+		play(ada, 0.25)
+		t += 0.25
+	end
+end
+local function lit(except)
+	for i = 3, 20 do
+		local m = tagged.BallroomTable[i]
+		if i ~= except and m:GetAttribute("Out") ~= true then
+			return i
+		end
+	end
+	return nil
+end
+send(ada, { op = "sabotage", kind = "bomb", seat = 1 })
+check("not at your own table", last(ada, "sabotageRefused") ~= nil and string.find(last(ada, "sabotageRefused").why, "own", 1, true) ~= nil)
+local victim = lit()
+local mB = mark(ada)
+send(ada, { op = "sabotage", kind = "bomb", seat = victim })
+local heard = take(ada, "sabotage", mB)
+local bomb = take(ada, "parcel", mB)
+check("a Parcel Bomb: six lookalikes on its way to the table, and the room hears who sent it", #heard == 1 and heard[1].kind == "bomb" and heard[1].by == "Ada" and heard[1].seat == victim and #bomb == 1 and bomb[1].bomb == true and bomb[1].count == Sab.bombPieces)
+send(ada, { op = "sabotage", kind = "freeze", seat = victim })
+check("the same table can't be hit again straight away", last(ada, "sabotageRefused") ~= nil and string.find(last(ada, "sabotageRefused").why, "moment", 1, true) ~= nil)
+local cleoW = guest("Watcher", 96)
+cleoW.root.Position = Vector3.new(61, 32, 72) * G
+local farW = guest("Faraway", 97)
+send(farW, { op = "sabotage", kind = "bomb", seat = lit(victim) })
+check("only a guest in the Ballroom may send one", last(farW, "sabotageRefused") ~= nil)
+local info
+send(cleoW, { op = "sabotageInfo" })
+info = last(cleoW, "sabotageInfo")
+check("the panel lists the tables still lit, and how many are left to send", info ~= nil and #info.targets >= 2 and info.left == Sab.perEvening and info.playing == true)
+local other = lit(victim)
+send(cleoW, { op = "sabotage", kind = "blackout", seat = other })
+check("a guest watching from the Gallery can send one too", last(cleoW, "sabotageRefused") == nil and last(ada, "sabotage").by == "Watcher" and last(ada, "sabotage").kind == "blackout")
+-- A Shield stops the next one; Butterfingers stops filing.
+send(ada, { op = "sabotage", kind = "shield", seat = 1 })
+check("a Shield goes up on your own table", tagged.BallroomTable[1]:GetAttribute("Shield") == true and last(ben, "sabotage") == nil or tagged.BallroomTable[1]:GetAttribute("Shield") == true)
+send(cleoW, { op = "sabotage", kind = "freeze", seat = 1 })
+check("the Shield stops it (and is used up), and Ada is told it held", last(ada, "sabotaged") ~= nil and last(ada, "sabotaged").blocked == true and tagged.BallroomTable[1]:GetAttribute("Shield") == false)
+busy(Sab.gap + 0.1)
+send(cleoW, { op = "sabotage", kind = "freeze", seat = 1 })
+local hitA = last(ada, "sabotaged")
+check("Butterfingers lands: Ada is told who sent it and for how long", hitA ~= nil and hitA.kind == "freeze" and hitA.by == "Watcher" and hitA.seconds == Sab.freeze and hitA.blocked == nil)
+local pf = oldest(felt(ada))
+if pf then
+	send(ada, { op = "file", uid = pf.uid, case = pf.case })
+end
+check("...and her filings are refused until it wears off", last(ada, "rejected") ~= nil)
+advance(Sab.freeze + 0.1)
+-- At most a few an evening.
+for _ = 1, Sab.perEvening + 2 do
+	busy(Sab.gap + 0.1)
+	local t = lit()
+	if t then
+		send(cleoW, { op = "sabotage", kind = "bomb", seat = t })
+	end
+end
+check("each guest may send only so many an evening", last(cleoW, "sabotageRefused") ~= nil and string.find(last(cleoW, "sabotageRefused").why, "evening", 1, true) ~= nil)
+
+---------------------------------------------------------------------------------------------------
 -- 5. Ada plays on to the last lamp
 ---------------------------------------------------------------------------------------------------
 local ended
@@ -774,7 +849,9 @@ print(string.format("  (the evening lasted %d s, %d Keys to the winner)", ended 
 local result = last(ada, "eveningResult")
 check("the result card says first", result and result.place == 1 and result.won == true)
 check("eveningResult has the fields the client reads", fieldsPresent(result or {}, { "place", "of", "keys", "points", "gilt", "counted", "won" }))
-check("the winner is paid 100 Gilt", result and result.gilt == 100, result and result.gilt)
+check("one winner takes the whole pot", result and result.gilt == C.potBase + C.potPerGuest * 2 and result.pot == result.gilt, result and result.gilt)
+check("nobody else is paid Gilt", last(ben, "eveningResult") ~= nil and last(ben, "eveningResult").gilt == 0 and last(ben, "eveningResult").pot == C.potBase + C.potPerGuest * 2)
+check("the whole house hears who won", last(ben, "ballroomWinner") ~= nil and last(ben, "ballroomWinner").name == "Ada")
 check("the Concierge says the last lamp is yours", (function()
 	for _, s in said do
 		if s.player == ada and string.find(s.line, "last lamp") then
@@ -793,13 +870,13 @@ end
 check("twenty places, one each", count(placeSet) == 20)
 
 ---------------------------------------------------------------------------------------------------
--- 6. The next evening: the winner stays; a guest who asked is seated
+-- 6. After an evening the Ballroom closes for twenty minutes; it opens early when bought or when
+-- the owner says so; and it keeps its hours (open five minutes, closed twenty)
 ---------------------------------------------------------------------------------------------------
 local cleo = guest("Cleo", 4)
 cleo.root.Position = Vector3.new(61, 32, 72) * G
 send(cleo, { op = "nextEvening" })
-check("mid-evening, a guest is queued for the next", last(cleo, "queued") ~= nil)
-local m6 = mark(ada)
+check("mid-evening, a guest is told they'll hear when it opens", last(cleo, "queued") ~= nil and type(last(cleo, "queued").opensIn) == "number")
 advance(C.afterEvening + 0.5)
 check("the room lights come back", chandelierLight.Brightness > 1)
 check("the Stand-ins leave", (function()
@@ -810,41 +887,56 @@ check("the Stand-ins leave", (function()
 	end
 	return true
 end)())
-check("the winner's next evening gathers", #take(ada, "gathering", m6) >= 1)
-check("the queued guest is seated", last(cleo, "seated") ~= nil and BallroomService.isSeated(cleo))
-local okMid, whyMid = sit(guest("Dora", 5), 7)
-check("during a gathering, anyone can take a chair", okMid == true, whyMid)
+check("everyone stands, and the Ballroom closes for twenty minutes", not BallroomService.isSeated(ada) and BallroomService.evening() == nil and BallroomService.door() == "closed" and BallroomService.isClosed())
+check("the board says when it opens", string.find(boardLines[1].Text, "C L O S E D", 1, true) ~= nil or string.find(boardLines[2].Text, "Opens in", 1, true) ~= nil, boardLines[2].Text)
+local dora = guest("Dora", 5)
+local okClosed, whyClosed = sit(dora, 7)
+check("a chair while it's closed is refused, with the offer to open it now", okClosed == false and whyClosed == "closed" and last(dora, "ballroomClosed") ~= nil and last(dora, "ballroomClosed").canOpen == true)
+check("the guest's screen can't open it for free (the purchase decides)", (function()
+	send(dora, { op = "openNow" })
+	return BallroomService.isClosed() and last(dora, "ballroomRefused") ~= nil
+end)())
+local opened = BallroomService.openNow("AJKR")
+check("opened early (bought, or the owner): open for everyone, and every guest is told", opened == true and BallroomService.door() == "open" and last(dora, "ballroomOpen") ~= nil and last(ben, "ballroomOpen") ~= nil)
+check("it can't be opened twice", BallroomService.openNow("AJKR") == false)
+local okNow = sit(dora, 7)
+check("now a chair can be taken", okNow == true)
+send(dora, { op = "leave" })
+advance(0.2)
+check("an empty countdown stops, and the Ballroom stays open a little longer", BallroomService.evening() == nil and BallroomService.door() == "open")
+advance(C.openSeconds + 1)
+check("nobody sat while it was open: it closes", BallroomService.door() == "closed")
+advance(C.closedSeconds + 1)
+check("and opens again by itself twenty minutes later", BallroomService.door() == "open")
 
 ---------------------------------------------------------------------------------------------------
 -- 7. With no real guest left lit, the evening ends at once (fast re-entry)
 ---------------------------------------------------------------------------------------------------
-advance(C.gatherSeconds + 0.5)
-check("the second evening begins", last(cleo, "eveningStart") ~= nil)
+sit(ada, 1)
+sit(cleo, 2)
 local m7 = mark(ada)
+advance(C.countdown + 0.5)
+check("the second evening begins", last(cleo, "eveningStart") ~= nil)
 send(ada, { op = "leave" })
 send(cleo, { op = "leave" })
-local dora = guests[#guests]
-send(dora, { op = "leave" })
--- Ben went out in the first evening but stayed in his chair, so he's in this one too.
-check("a guest whose lamp went out stays seated for the next evening", last(ben, "eveningStart") ~= nil and #take(ben, "eveningStart") == 2)
-send(ben, { op = "leave" })
 check("leaving mid-evening puts your lamp out", last(ada, "out") ~= nil and last(ada, "out").reason == "left")
 advance(0.5)
 check("with nobody real left lit, the evening ends", #take(ada, "eveningEnd", m7) >= 1 or BallroomService.evening() == nil or BallroomService.evening().state ~= "playing")
 advance(C.afterEvening + 1)
-check("an empty room goes quiet", BallroomService.evening() == nil)
-check("the board says to take any chair", string.find(boardLines[2].Text, "Take any chair", 1, true) ~= nil, boardLines[2].Text)
+check("an empty room goes quiet, and closes", BallroomService.evening() == nil and BallroomService.door() == "closed")
+check("the board says when it opens", string.find(boardLines[2].Text, "Opens in", 1, true) ~= nil, boardLines[2].Text)
 
 ---------------------------------------------------------------------------------------------------
 -- 8. A full house counts for records
 ---------------------------------------------------------------------------------------------------
+BallroomService.openNow()
 local house = {}
 for i = 1, 8 do
 	local g = guest("Guest" .. i, 100 + i)
 	sit(g, i)
 	table.insert(house, g)
 end
-advance(C.gatherSeconds + 0.5)
+advance(C.countdown + 0.5)
 check("eight real guests: the evening counts", last(house[1], "eveningStart") and last(house[1], "eveningStart").counted == true)
 for _, g in house do
 	send(g, { op = "leave" })
@@ -865,10 +957,11 @@ for i = 1, 8 do
 end
 check("the host can arrange the evening", Private.set(friends[1], "standIns", "none") and Private.set(friends[1], "pace", "brisk"))
 check("nonsense isn't arranged", not Private.set(friends[1], "pace", "ludicrous") and not Private.set(friends[1], "tables", "3"))
+BallroomService.openNow()
 for i, g in friends do
 	sit(g, i)
 end
-advance(C.gatherSeconds + 0.5)
+advance(C.countdown + 0.5)
 local start9 = last(friends[1], "eveningStart")
 check("a Private Evening never counts, even with eight guests", start9 ~= nil and start9.counted == false)
 local standIns9 = 0

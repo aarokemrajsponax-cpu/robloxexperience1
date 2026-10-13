@@ -1,8 +1,8 @@
 --!strict
--- The Friend Booster, in the bottom-right corner. Friends on Roblox in the house together both earn
+-- The Friend Booster, in the bottom-right corner, in the bright green of the dock's Invite key. Friends on Roblox in the house together both earn
 -- more Gilt (+25% with one friend here, +10% more for each further friend, up to +55%) and more XP;
 -- the server counts them and pays it (server/Friends), and tells this screen alone who's here.
---   The card: FRIEND BOOSTER and a live light, the boost in big gold figures (and the XP), the
+--   The card: FRIEND BOOST on a glossy green band with a live light, the boost in big figures (and the XP), the
 --   faces of the friends here (AJKR's crest for the owner, never their avatar), the four steps of
 --   the boost with this one lit, what one more friend would bring, and a key to invite a friend
 --   (Roblox's own invite; a friend's first visit is thanked in Gilt too).
@@ -40,7 +40,7 @@ type Friend = { userId: number, name: string, owner: boolean }
 local C = Brand.Colours
 local rgb = Color3.fromRGB
 local HEAVY = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Heavy)
-local W = 284 -- the card's width
+local W = 300 -- the card's width
 local OPEN_SECONDS = 10 -- open this long, then it folds to the pill
 local FACE = 30
 local SHOWN = 4 -- faces shown (then "+2")
@@ -110,19 +110,6 @@ local function frame(parent: Instance, name: string, colour: Color3, transparenc
 	f.BackgroundTransparency = transparency
 	f.Parent = parent
 	return f
-end
-
--- Gold metal, bright to deep, on text or a fill.
-local function metal(target: GuiObject)
-	local g = Instance.new("UIGradient")
-	g.Name = "Metal"
-	g.Rotation = 90
-	g.Color = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, rgb(255, 250, 228)),
-		ColorSequenceKeypoint.new(0.5, C.brightGold),
-		ColorSequenceKeypoint.new(1, C.gold),
-	})
-	g.Parent = target
 end
 
 -- A friend's face in a gold ring (AJKR's crest for the owner).
@@ -195,27 +182,69 @@ end
 -- The card and the pill
 ---------------------------------------------------------------------------------------------------
 
+-- The Friend Boost's own colour (the dock's Invite key's): a fresh green, light and deep.
+local GREEN = rgb(110, 235, 140)
+local DEEP = rgb(18, 104, 56)
+local CARD_BG = rgb(14, 16, 18)
+
+-- A glossy fill in the boost's green: light at the top, deep at the foot, a sheen across the top.
+local function gloss(target: GuiObject, radius: number)
+	local g = Instance.new("UIGradient")
+	g.Rotation = 90
+	g.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, GREEN:Lerp(Color3.new(1, 1, 1), 0.2)),
+		ColorSequenceKeypoint.new(0.55, GREEN:Lerp(DEEP, 0.5)),
+		ColorSequenceKeypoint.new(1, DEEP),
+	})
+	g.Parent = target
+	local sheen = frame(target, "Sheen", Color3.new(1, 1, 1), 0)
+	sheen.Position = UDim2.fromOffset(3, 2)
+	sheen.Size = UDim2.new(1, -6, 0.46, 0)
+	sheen.ZIndex = target.ZIndex + 1
+	corner(sheen, math.max(4, radius - 3))
+	local sg = Instance.new("UIGradient")
+	sg.Rotation = 90
+	sg.Transparency = NumberSequence.new(0.65, 1)
+	sg.Parent = sheen
+end
+
+-- White heavy words with a dark edge, as on the dock's keys.
+local function bold(parent: Instance, name: string, text: string, size: number, props: { [string]: any }?): TextLabel
+	local l = label(parent, name, text, HEAVY, size, Color3.new(1, 1, 1), props)
+	l.TextStrokeColor3 = rgb(6, 30, 14)
+	l.TextStrokeTransparency = 0.35
+	return l
+end
+
+-- The four steps of the boost: chunky bars, lit green up to where it is now, the boost under each.
 local function steps(parent: Instance, y: number, n: number)
 	local row = frame(parent, "Steps", Color3.new(0, 0, 0), 1)
 	row.Position = UDim2.fromOffset(0, y)
-	row.Size = UDim2.new(1, 0, 0, 24)
-	local gap = 5
+	row.Size = UDim2.new(1, 0, 0, 30)
+	local gap = 6
 	for i = 1, 4 do
 		local lit = n >= i
 		local here = n == i or (i == 4 and n > 4)
-		local seg = frame(row, "Step" .. i, if lit then Color3.new(1, 1, 1) else rgb(46, 46, 54), 0)
+		local seg = frame(row, "Step" .. i, if lit then Color3.new(1, 1, 1) else rgb(40, 44, 48), 0)
 		seg.Position = UDim2.new((i - 1) / 4, if i == 1 then 0 else gap / 2, 0, 0)
-		seg.Size = UDim2.new(0.25, -gap + (if i == 1 or i == 4 then gap / 2 else 0), 0, 5)
-		corner(seg, 3)
+		seg.Size = UDim2.new(0.25, -gap + (if i == 1 or i == 4 then gap / 2 else 0), 0, 10)
+		corner(seg, 5)
 		if lit then
-			metal(seg)
+			gloss(seg, 5)
 		end
-		local tag = label(row, "Tag" .. i, percent(boostFor(i)), Brand.Fonts.bodyBold, 10, if here then C.brightGold elseif lit then C.lightGold else C.dim, {
-			Position = UDim2.new((i - 1) / 4, 0, 0, 9),
-			Size = UDim2.new(0.25, 0, 0, 12),
+		if here then
+			local st = Instance.new("UIStroke")
+			st.Color = Color3.new(1, 1, 1)
+			st.Thickness = 1.5
+			st.Transparency = 0.2
+			st.Parent = seg
+		end
+		local tag = label(row, "Tag" .. i, percent(boostFor(i)), Brand.Fonts.heavy, 12, if here then GREEN elseif lit then rgb(200, 240, 210) else C.dim, {
+			Position = UDim2.new((i - 1) / 4, 0, 0, 14),
+			Size = UDim2.new(0.25, 0, 0, 14),
 			TextXAlignment = Enum.TextXAlignment.Center,
 		})
-		tag.TextTransparency = if lit or n == 0 then 0 else 0.25
+		tag.TextTransparency = if lit or n == 0 then 0 else 0.2
 	end
 	return row
 end
@@ -230,6 +259,52 @@ local function nextLine(n: number): string
 	return "The biggest boost there is. Enjoy it together."
 end
 
+-- The green key that invites a friend (Roblox's own invite).
+local function inviteKey(parent: Instance): TextButton
+	local k = Instance.new("TextButton")
+	k.Name = "Invite"
+	k.AutoButtonColor = false
+	k.Text = ""
+	k.AnchorPoint = Vector2.new(0, 1)
+	k.Position = UDim2.fromScale(0, 1)
+	k.Size = UDim2.new(1, 0, 0, 40)
+	k.BackgroundColor3 = Color3.new(1, 1, 1)
+	k.ZIndex = 4
+	corner(k, 12)
+	gloss(k, 12)
+	local st = Instance.new("UIStroke")
+	st.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	st.Color = GREEN:Lerp(Color3.new(1, 1, 1), 0.6)
+	st.Thickness = 1.5
+	st.Parent = k
+	-- (The words are the key's own, so a screen reader and a gamepad find them.)
+	k.Text = "INVITE FRIENDS"
+	k.FontFace = HEAVY
+	k.TextSize = 17
+	k.TextColor3 = Color3.new(1, 1, 1)
+	k.TextStrokeColor3 = rgb(6, 30, 14)
+	k.TextStrokeTransparency = 0.35
+	label(k, "Icon", "✉️", HEAVY, 16, Color3.new(1, 1, 1), {
+		Position = UDim2.fromOffset(14, 0),
+		Size = UDim2.new(0, 24, 1, 0),
+		ZIndex = 6,
+	})
+	local scale = Instance.new("UIScale")
+	scale.Parent = k
+	k.MouseEnter:Connect(function()
+		tween(scale, 0.15, { Scale = 1.03 })
+	end)
+	k.MouseLeave:Connect(function()
+		tween(scale, 0.15, { Scale = 1 })
+	end)
+	k.Activated:Connect(function()
+		Theme.haptic()
+		Invite.house()
+	end)
+	k.Parent = parent
+	return k
+end
+
 -- Draws the card for what's known now (the friends here, the boost).
 local function drawCard(arrived: Friend?)
 	local h = holder
@@ -241,61 +316,61 @@ local function drawCard(arrived: Friend?)
 		old:Destroy()
 	end
 	local n = #friends
-	local height = if n > 0 then 228 else 184
+	local height = if n > 0 then 262 else 214
 	local c = frame(h, "Card", Color3.new(0, 0, 0), 1)
 	c.AnchorPoint = Vector2.new(1, 1)
 	c.Position = UDim2.fromScale(1, 1)
 	c.Size = UDim2.fromOffset(W, height)
 	card = c
-	Theme.glow(c, C.glow, 18, if n > 0 then 1 else 0.6)
-	local fill = frame(c, "Fill", C.nearBlack, 0.04)
+	Theme.glow(c, GREEN, 18, if n > 0 then 1.1 else 0.6)
+	local fill = frame(c, "Fill", CARD_BG, 0.02)
 	fill.Size = UDim2.fromScale(1, 1)
 	fill.ZIndex = 2
 	corner(fill, 18)
 	local edge = Instance.new("UIStroke")
 	edge.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	edge.Color = C.gold
-	edge.Thickness = 1.2
-	edge.Transparency = 0.1
+	edge.Color = GREEN
+	edge.Thickness = 2
+	edge.Transparency = 0.15
 	edge.Parent = fill
-	Theme.edge(edge, 0.8)
-	-- (A breath of gold through the glass from its top.)
-	local warm = Instance.new("UIGradient")
-	warm.Rotation = 90
-	warm.Color = ColorSequence.new(rgb(46, 36, 18), C.nearBlack)
-	warm.Parent = fill
-	local body = frame(fill, "Body", Color3.new(0, 0, 0), 1)
-	body.Position = UDim2.fromOffset(16, 14)
-	body.Size = UDim2.new(1, -32, 1, -28)
-	-- FRIEND BOOSTER, and a live light while it's on.
-	local mark = frame(body, "Mark", C.brightGold, 0)
-	mark.AnchorPoint = Vector2.new(0.5, 0.5)
-	mark.Position = UDim2.fromOffset(4, 8)
-	mark.Size = UDim2.fromOffset(7, 7)
-	mark.Rotation = 45
-	label(body, "Title", "FRIEND BOOSTER", Brand.Fonts.display, 12, C.lightGold, {
-		Position = UDim2.fromOffset(16, 0),
-		Size = UDim2.new(1, -96, 0, 16),
+	-- The header: a glossy green band, the boost's name in white, and a live light while it's on.
+	local head = frame(fill, "Header", Color3.new(1, 1, 1), 0)
+	head.Size = UDim2.new(1, 0, 0, 42)
+	head.ZIndex = 3
+	corner(head, 18)
+	gloss(head, 18)
+	-- (Squares off the band's lower corners, carrying on its gloss: a gradient tints a white frame.)
+	local square = frame(head, "Square", Color3.new(1, 1, 1), 0)
+	square.AnchorPoint = Vector2.new(0, 1)
+	square.Position = UDim2.fromScale(0, 1)
+	square.Size = UDim2.new(1, 0, 0, 14)
+	square.ZIndex = 3
+	local sqg = Instance.new("UIGradient")
+	sqg.Rotation = 90
+	sqg.Color = ColorSequence.new(GREEN:Lerp(DEEP, 0.5):Lerp(DEEP, 0.26), DEEP)
+	sqg.Parent = square
+	bold(head, "Title", "👥  FRIEND BOOST", 17, {
+		Position = UDim2.fromOffset(14, 0),
+		Size = UDim2.new(1, -110, 1, 0),
+		ZIndex = 5,
 	})
 	if n > 0 then
-		local live = frame(body, "Live", rgb(24, 46, 30), 0)
-		live.AnchorPoint = Vector2.new(1, 0)
-		live.Position = UDim2.new(1, 0, 0, -1)
-		live.Size = UDim2.fromOffset(70, 18)
-		corner(live, 9)
-		local liveEdge = Instance.new("UIStroke")
-		liveEdge.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-		liveEdge.Color = rgb(120, 230, 150)
-		liveEdge.Transparency = 0.45
-		liveEdge.Parent = live
-		local dot = frame(live, "Dot", rgb(130, 255, 160), 0)
+		local live = frame(head, "Live", rgb(8, 40, 20), 0.15)
+		live.AnchorPoint = Vector2.new(1, 0.5)
+		live.Position = UDim2.new(1, -12, 0.5, 0)
+		live.Size = UDim2.fromOffset(76, 22)
+		live.ZIndex = 5
+		corner(live, 11)
+		local dot = frame(live, "Dot", rgb(150, 255, 170), 0)
 		dot.AnchorPoint = Vector2.new(0, 0.5)
-		dot.Position = UDim2.new(0, 9, 0.5, 0)
-		dot.Size = UDim2.fromOffset(6, 6)
-		corner(dot, 3)
-		label(live, "Word", "ACTIVE", Brand.Fonts.bodyBold, 10, rgb(170, 255, 190), {
-			Position = UDim2.fromOffset(20, 0),
-			Size = UDim2.new(1, -24, 1, 0),
+		dot.Position = UDim2.new(0, 10, 0.5, 0)
+		dot.Size = UDim2.fromOffset(8, 8)
+		dot.ZIndex = 6
+		corner(dot, 4)
+		label(live, "Word", "ACTIVE", Brand.Fonts.heavy, 11, rgb(200, 255, 210), {
+			Position = UDim2.fromOffset(24, 0),
+			Size = UDim2.new(1, -28, 1, 0),
+			ZIndex = 6,
 		})
 		-- (The light breathes.)
 		task.spawn(function()
@@ -307,34 +382,39 @@ local function drawCard(arrived: Friend?)
 			end
 		end)
 	end
+	local body = frame(fill, "Body", Color3.new(0, 0, 0), 1)
+	body.Position = UDim2.fromOffset(16, 52)
+	body.Size = UDim2.new(1, -32, 1, -66)
+	body.ZIndex = 3
 	if n > 0 then
-		-- The boost, in big gold figures, and the XP beside it.
-		local big = label(body, "Boost", percent(boost), HEAVY, 36, Color3.new(1, 1, 1), {
-			Position = UDim2.fromOffset(0, 22),
-			Size = UDim2.fromOffset(112, 40),
+		-- The boost, big, and the XP beside it.
+		local big = bold(body, "Boost", percent(boost), 40, {
+			Position = UDim2.fromOffset(0, -2),
+			Size = UDim2.fromOffset(Theme.measure(percent(boost), 40, HEAVY).X, 44),
 		})
-		metal(big)
-		label(body, "Gilt", "GILT", Brand.Fonts.display, 13, C.bone, {
-			Position = UDim2.fromOffset(112, 40),
-			Size = UDim2.fromOffset(60, 16),
+		big.TextColor3 = rgb(210, 255, 220)
+		label(body, "Gilt", "GILT", Brand.Fonts.heavy, 17, C.brightGold, {
+			Position = UDim2.fromOffset(big.Size.X.Offset + 2, 19),
+			Size = UDim2.fromOffset(Theme.measure("GILT", 17, Brand.Fonts.heavy).X, 20),
 		})
-		local xpCap = frame(body, "XP", rgb(30, 26, 44), 0)
+		local xpText = percent(xpBoost) .. " XP"
+		local xpCap = frame(body, "XP", rgb(44, 30, 76), 0)
 		xpCap.AnchorPoint = Vector2.new(1, 0)
-		xpCap.Position = UDim2.new(1, 0, 0, 34)
-		xpCap.Size = UDim2.fromOffset(74, 22)
-		corner(xpCap, 11)
+		xpCap.Position = UDim2.new(1, 0, 0, 12)
+		xpCap.Size = UDim2.fromOffset(Theme.measure(xpText, 13, Brand.Fonts.heavy).X + 22, 26)
+		corner(xpCap, 13)
 		local xpEdge = Instance.new("UIStroke")
 		xpEdge.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-		xpEdge.Color = rgb(180, 150, 255)
-		xpEdge.Transparency = 0.4
+		xpEdge.Color = rgb(190, 160, 255)
+		xpEdge.Thickness = 1.5
 		xpEdge.Parent = xpCap
-		label(xpCap, "Word", percent(xpBoost) .. " XP", Brand.Fonts.bodyBold, 12, rgb(214, 198, 255), {
+		label(xpCap, "Word", xpText, Brand.Fonts.heavy, 13, rgb(226, 212, 255), {
 			Size = UDim2.fromScale(1, 1),
 			TextXAlignment = Enum.TextXAlignment.Center,
 		})
-		-- Their faces, overlapping a little, and how many.
+		-- Their faces, overlapping a little, and who.
 		local faces = frame(body, "Faces", Color3.new(0, 0, 0), 1)
-		faces.Position = UDim2.fromOffset(0, 72)
+		faces.Position = UDim2.fromOffset(0, 50)
 		faces.Size = UDim2.new(1, 0, 0, FACE)
 		local list = Instance.new("UIListLayout")
 		list.FillDirection = Enum.FillDirection.Horizontal
@@ -346,6 +426,10 @@ local function drawCard(arrived: Friend?)
 		for i = 1, shown do
 			local f = friends[i]
 			local ring = face(faces, f, FACE, i)
+			local ringEdge = ring:FindFirstChildOfClass("UIStroke")
+			if ringEdge then
+				ringEdge.Color = GREEN
+			end
 			if arrived and f.userId == arrived.userId then
 				local pop = Instance.new("UIScale")
 				pop.Scale = 0.2
@@ -356,64 +440,61 @@ local function drawCard(arrived: Friend?)
 		local more = n - shown
 		local facesWide = shown * FACE - (shown - 1) * 7
 		if more > 0 then
-			local extra = frame(faces, "More", rgb(40, 36, 30), 0)
+			local extra = frame(faces, "More", rgb(30, 50, 36), 0)
 			extra.LayoutOrder = SHOWN + 1
 			extra.Size = UDim2.fromOffset(FACE, FACE)
 			corner(extra, FACE)
-			label(extra, "Count", "+" .. more, Brand.Fonts.bodyBold, 12, C.lightGold, {
+			label(extra, "Count", "+" .. more, Brand.Fonts.heavy, 12, GREEN, {
 				Size = UDim2.fromScale(1, 1),
 				TextXAlignment = Enum.TextXAlignment.Center,
 			})
 			facesWide += FACE - 7
 		end
 		local who = if n == 1 then friends[1].name .. " is here" else string.format("%d friends here", n)
-		label(body, "Who", who, Brand.Fonts.bodyBold, 13, C.bone, {
-			Position = UDim2.fromOffset(facesWide + 10, 72),
+		label(body, "Who", who, Brand.Fonts.heavy, 14, C.bone, {
+			Position = UDim2.fromOffset(facesWide + 10, 50),
 			Size = UDim2.new(1, -(facesWide + 10), 0, FACE),
 			TextTruncate = Enum.TextTruncate.AtEnd,
 		})
-		steps(body, 112, n)
-		label(body, "Next", if arrived then string.format("%s arrived: %s Gilt now", arrived.name, percent(boost)) else nextLine(n), Brand.Fonts.body, 12, if arrived then C.brightGold else C.smoke, {
-			Position = UDim2.fromOffset(0, 140),
-			Size = UDim2.new(1, 0, 0, 14),
+		steps(body, 92, n)
+		label(body, "Next", if arrived then string.format("%s arrived: %s Gilt now", arrived.name, percent(boost)) else nextLine(n), Brand.Fonts.bodyBold, 13, if arrived then GREEN else C.smoke, {
+			Position = UDim2.fromOffset(0, 128),
+			Size = UDim2.new(1, 0, 0, 16),
 			TextTruncate = Enum.TextTruncate.AtEnd,
 		})
 	else
-		label(body, "Lead", "Play with a friend", Brand.Fonts.bodyBold, 15, C.bone, {
-			Position = UDim2.fromOffset(0, 24),
-			Size = UDim2.new(1, 0, 0, 18),
+		label(body, "Lead", "Play with a friend", Brand.Fonts.heavy, 16, C.bone, {
+			Position = UDim2.fromOffset(0, 0),
+			Size = UDim2.new(1, 0, 0, 20),
 		})
-		local offer = label(body, "Offer", string.format("%s GILT  ·  %s XP", percent(boostFor(1)), percent(cfg().xpBoost)), HEAVY, 18, Color3.new(1, 1, 1), {
-			Position = UDim2.fromOffset(0, 44),
-			Size = UDim2.new(1, 0, 0, 22),
+		local offer = bold(body, "Offer", string.format("%s GILT  ·  %s XP", percent(boostFor(1)), percent(cfg().xpBoost)), 20, {
+			Position = UDim2.fromOffset(0, 22),
+			Size = UDim2.new(1, 0, 0, 26),
 		})
-		metal(offer)
-		label(body, "Both", "For you both, more with each friend", Brand.Fonts.body, 12, C.smoke, {
-			Position = UDim2.fromOffset(0, 68),
+		offer.TextColor3 = rgb(210, 255, 220)
+		label(body, "Both", "For you both, more with each friend", Brand.Fonts.bodyBold, 12, C.smoke, {
+			Position = UDim2.fromOffset(0, 50),
 			Size = UDim2.new(1, 0, 0, 14),
 			TextTruncate = Enum.TextTruncate.AtEnd,
 		})
-		steps(body, 92, 0)
+		steps(body, 74, 0)
 	end
-	local key = Theme.key(body, "Invite friends", true, function()
-		Invite.house()
-	end, W - 32)
-	key.Name = "Invite"
-	key.AnchorPoint = Vector2.new(0, 1)
-	key.Position = UDim2.fromScale(0, 1)
-	key.Size = UDim2.new(1, 0, 0, 36)
+	inviteKey(body)
 	-- A tap on the card's heading folds it now.
 	local fold = Instance.new("TextButton")
 	fold.Name = "Fold"
 	fold.BackgroundTransparency = 1
 	fold.Text = ""
-	fold.Size = UDim2.new(1, 0, 0, 20)
-	fold.Parent = body
+	fold.Size = UDim2.new(1, 0, 0, 42)
+	fold.ZIndex = 7
+	fold.Parent = fill
 	fold.Activated:Connect(function()
 		FriendBooster.fold()
 	end)
 end
 
+-- Folded: a glossy green capsule like a key on the dock: the boost (and the faces), or, with nobody
+-- here, an invitation.
 local function drawPill()
 	local h = holder
 	if not h then
@@ -425,60 +506,55 @@ local function drawPill()
 	end
 	local n = #friends
 	local shown = math.min(n, 3)
-	local width = if n > 0 then 156 + shown * 16 else 214
+	local text = if n > 0 then percent(boost) .. " GILT" else "FRIEND BOOST  " .. percent(boostFor(1))
+	local wordsW = Theme.measure(text, 16, HEAVY).X
+	local facesW = if n > 0 then shown * 24 - (shown - 1) * 6 + 10 else 0
+	local width = 14 + 26 + 8 + wordsW + 14 + facesW
 	local p = Instance.new("TextButton")
 	p.Name = "Pill"
 	p.AutoButtonColor = false
 	p.Text = ""
 	p.AnchorPoint = Vector2.new(1, 1)
 	p.Position = UDim2.fromScale(1, 1)
-	p.Size = UDim2.fromOffset(width, 38)
-	p.BackgroundColor3 = C.nearBlack
-	p.BackgroundTransparency = 0.06
+	p.Size = UDim2.fromOffset(width, 42)
+	p.BackgroundColor3 = Color3.new(1, 1, 1)
 	p.BorderSizePixel = 0
-	corner(p, 19)
+	corner(p, 21)
+	gloss(p, 21)
 	local edge = Instance.new("UIStroke")
 	edge.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	edge.Color = C.gold
-	edge.Thickness = 1.2
-	edge.Transparency = 0.15
+	edge.Color = GREEN:Lerp(Color3.new(1, 1, 1), 0.6)
+	edge.Thickness = 1.5
 	edge.Parent = p
-	Theme.edge(edge, 0.8)
-	local mark = frame(p, "Mark", C.brightGold, 0)
-	mark.AnchorPoint = Vector2.new(0.5, 0.5)
-	mark.Position = UDim2.new(0, 18, 0.5, 0)
-	mark.Size = UDim2.fromOffset(6, 6)
-	mark.Rotation = 45
+	label(p, "Icon", "👥", Brand.Fonts.heavy, 20, Color3.new(1, 1, 1), {
+		Position = UDim2.fromOffset(12, 0),
+		Size = UDim2.new(0, 28, 1, 0),
+		TextXAlignment = Enum.TextXAlignment.Center,
+		ZIndex = 4,
+	})
+	bold(p, if n > 0 then "Boost" else "Word", text, 16, {
+		Position = UDim2.fromOffset(46, 0),
+		Size = UDim2.new(0, wordsW + 4, 1, 0),
+		ZIndex = 4,
+	})
 	if n > 0 then
-		local big = label(p, "Boost", percent(boost) .. " GILT", HEAVY, 15, Color3.new(1, 1, 1), {
-			Position = UDim2.fromOffset(30, 0),
-			Size = UDim2.new(0, 96, 1, 0),
-		})
-		metal(big)
 		local faces = frame(p, "Faces", Color3.new(0, 0, 0), 1)
 		faces.AnchorPoint = Vector2.new(1, 0.5)
 		faces.Position = UDim2.new(1, -10, 0.5, 0)
-		faces.Size = UDim2.fromOffset(shown * 22 - (shown - 1) * 6, 22)
+		faces.Size = UDim2.fromOffset(shown * 24 - (shown - 1) * 6, 24)
+		faces.ZIndex = 4
 		local list = Instance.new("UIListLayout")
 		list.FillDirection = Enum.FillDirection.Horizontal
 		list.SortOrder = Enum.SortOrder.LayoutOrder
 		list.Padding = UDim.new(0, -6)
 		list.Parent = faces
 		for i = 1, shown do
-			face(faces, friends[i], 22, i)
+			local ring = face(faces, friends[i], 24, i)
+			local ringEdge = ring:FindFirstChildOfClass("UIStroke")
+			if ringEdge then
+				ringEdge.Color = Color3.new(1, 1, 1)
+			end
 		end
-	else
-		label(p, "Word", "FRIEND BOOSTER", Brand.Fonts.display, 10, C.lightGold, {
-			Position = UDim2.fromOffset(30, 0),
-			Size = UDim2.new(0, 120, 1, 0),
-		})
-		local offer = label(p, "Offer", percent(boostFor(1)), HEAVY, 15, Color3.new(1, 1, 1), {
-			AnchorPoint = Vector2.new(1, 0),
-			Position = UDim2.new(1, -14, 0, 0),
-			Size = UDim2.new(0, 56, 1, 0),
-			TextXAlignment = Enum.TextXAlignment.Right,
-		})
-		metal(offer)
 	end
 	p.Activated:Connect(function()
 		FriendBooster.unfold()

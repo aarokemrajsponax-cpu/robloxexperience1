@@ -129,7 +129,23 @@ local defaults = {
 	-- Lights Out in the Ballroom (Appendix H3). Seconds unless noted.
 	Ballroom = {
 		tables = 20,
-		gatherSeconds = 30, -- after the first guest sits, Stand-ins fill the empty chairs
+		-- The Ballroom keeps hours: it opens for `openSeconds`, and an evening starts `countdown`
+		-- seconds after the first guest sits (others may join until then, never after). If nobody
+		-- sits while it's open, or once an evening ends, it closes for `closedSeconds`. (Open it now:
+		-- the Robux product, or the owner's power.)
+		openSeconds = 300,
+		closedSeconds = 1200,
+		countdown = 100,
+		gatherSeconds = 100, -- (the countdown's old name, still read by older tools)
+		-- One winner, the last lamp lit, takes the pot: `potBase` and `potPerGuest` for every real
+		-- guest who sat down (Stand-ins add nothing). Nobody else is paid Gilt.
+		potBase = 300,
+		potPerGuest = 250,
+		-- Sabotage, bought with Robux during an evening (from a chair or the Gallery), aimed at a
+		-- table: a Parcel Bomb (`bombPieces` lookalikes after `bombFuse` s), a Blackout (`blackout`
+		-- s of a dark felt), Butterfingers (no filing for `freeze` s); a Shield stops the next one
+		-- aimed at you. A table can't be hit again within `gap` s; each guest at most `perEvening`.
+		sabotage = { gap = 8, perEvening = 6, bombPieces = 6, bombFuse = 2, blackout = 6, freeze = 4 },
 		minRealForRecords = 8, -- an evening counts for records only with this many real guests
 		capacity = 16, -- pieces a felt holds
 		overSeconds = 3.0, -- over capacity this long and the lamp goes out
@@ -158,7 +174,7 @@ local defaults = {
 		pointsPerKey = 8,
 		giltBase = 20, -- Gilt for an evening: 20 + 4 × (21 − your place), 100 for the last lamp
 		giltPerPlace = 4,
-		afterEvening = 8, -- the winner's moment before the next evening gathers
+		afterEvening = 20, -- the winner's moment (and everyone's result) before the Ballroom closes
 		standInSlow = 1.35, -- a Stand-in's seconds per filing, slowest and fastest
 		standInFast = 0.62,
 		standInLowAccuracy = 0.82,
@@ -508,12 +524,23 @@ local defaults = {
 			goldenGilt = 400, -- the golden turkey
 			goldenGems = 4,
 			goldenEvery = 90, -- seconds before a new golden turkey walks out after one is caught
-			speed = 19, -- studs a second a turkey runs (guests walk at 17 and run at 28)
-			goldenSpeed = 23,
-			fear = 22, -- a turkey runs from a guest this close
-			catch = 5.5, -- close enough to catch one
+			-- (Slower than a guest walks, 17, so a turkey can always be run down: they dodge, and tire
+			-- after a sprint. The golden one is quicker: hold Shift to run, 28.)
+			speed = 12, -- studs a second a turkey runs
+			goldenSpeed = 16,
+			fear = 16, -- a turkey runs from a guest this close
+			catch = 7, -- close enough to catch one by running into it
+			reach = 13, -- close enough to catch one with its Catch key (E, or tap it)
+			tireAfter = 2.5, -- seconds of running before a turkey is out of puff
+			tired = 1.8, -- seconds it runs at half speed then
 			back = 6, -- seconds before a caught turkey's place is filled
-			catchGap = 1, -- seconds between catches
+			catchGap = 0.6, -- seconds between catches
+			-- Free catches on each visit to the field; after them, more for Robux (Turkey Round-Up:
+			-- 10 More, or the Turkey Hunter Pass for the rest of the holiday). Coming back to the
+			-- field within `visitGap` seconds is the same visit.
+			freeCatches = 5,
+			visitGap = 900,
+			moreCatches = 10, -- what one "10 More" gives
 		},
 		-- The North Pole (Christmas): Santa's sleigh from the kerb, gifts in the snow.
 		pole = {
@@ -523,6 +550,9 @@ local defaults = {
 			flight = 16, -- seconds a flight takes
 			stay = 90, -- seconds at the North Pole before it flies home
 			gifts = 40, -- gifts lying in the snow at once
+			-- One ride to the North Pole free each Christmas; after that a ride is bought (Another
+			-- Sleigh Ride), or every ride is free with Santa's Season Pass. Home is always free.
+			freeRides = 1,
 			carry = 5, -- the most a guest carries at once
 			tripMost = 15, -- the most one guest loads in one trip
 			dayMost = 45, -- the most one guest loads in a day
@@ -599,21 +629,47 @@ local defaults = {
 		weekGilt = 600,
 	},
 
-	-- Badges (§11): create each in the Creator Dashboard and put its id here; 0 = not awarded.
+	-- Badges on guests' Roblox profiles: each key is a Badge Book badge (shared/BadgeBook). Make
+	-- the badge in Creator Hub (Monetization → Badges, with its picture from marketing/badges and
+	-- its name and description from README "Roblox badges"), then paste its id here, or set it
+	-- live in Roblox Configs. 0 = not on Roblox yet (still earned in the game). Guests who earned
+	-- one before its id was set are given it the next time they come in.
 	Badges = {
+		-- The first five (free to make: Roblox lets a game make a few each day at no cost).
+		nights_1 = 0, -- First Night: welcome to the house
 		firstRound = 0,
 		firstFlawless = 0,
 		midnight = 0,
-		seasonSet = 0,
-		register10 = 0,
-		register25 = 0,
-		register50 = 0,
+		metOwner = 0,
+		-- Then these.
 		firstNightly = 0,
 		firstLibraryWin = 0,
 		firstLastLamp = 0,
-		mark = 0,
 		mythic = 0,
+		level_10 = 0,
+		level_25 = 0,
+		level_50 = 0,
+		level_100 = 0,
+		nights_7 = 0,
+		nights_30 = 0,
+		rounds_1000 = 0,
+		flawless_midnight = 0,
+		abuseNight = 0,
+		giveawayWinner = 0,
+		friendHere = 0,
+		holiday_halloween = 0,
+		holiday_thanksgiving = 0,
+		holiday_christmas = 0,
+		holiday_easter = 0,
+		goldenTurkeyCaught = 0,
+		santasHelper = 0,
+		register50 = 0,
+		seasonSet = 0,
 		foundingTerm = 0,
+		-- (Older keys, kept so a pasted id still works.)
+		register10 = 0,
+		register25 = 0,
+		mark = 0,
 	},
 
 	Rivals = {

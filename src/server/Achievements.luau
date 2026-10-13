@@ -88,6 +88,47 @@ function Achievements.stats(data: Profiles.Data): { [string]: number }
 	}
 end
 
+-- The Roblox badge for a Badge Book key (its id in Config.Badges), or nil.
+local function robloxId(key: string): number?
+	local id = (Config.data.Badges :: any)[key]
+	return if type(id) == "number" and id > 0 and id == math.floor(id) then id else nil
+end
+
+-- Awards the Roblox badge for `key`, once (marked in the guest's record when Roblox has it).
+local function toRoblox(player: Player, data: Profiles.Data, key: string)
+	local id = robloxId(key)
+	local d = record(data)
+	d.onRoblox = d.onRoblox or {}
+	if not id or d.onRoblox[key] == id then
+		return
+	end
+	task.spawn(function()
+		local ok = pcall(function()
+			local has = BadgeService:UserHasBadgeAsync(player.UserId, id)
+			if not has then
+				BadgeService:AwardBadge(player.UserId, id)
+			end
+		end)
+		if ok then
+			d.onRoblox[key] = id
+		end
+	end)
+end
+
+-- On arrival: every badge earned whose Roblox badge has an id now (made after it was earned).
+function Achievements.syncRoblox(player: Player)
+	local data = Profiles.get(player)
+	if not data then
+		return
+	end
+	local d = record(data)
+	for key in d.badges do
+		if robloxId(key) then
+			toRoblox(player, data, key)
+		end
+	end
+end
+
 local function give(player: Player, data: Profiles.Data, badge: BadgeBook.Badge, quiet: boolean?)
 	local d = record(data)
 	if d.badges[badge.key] then
@@ -95,14 +136,7 @@ local function give(player: Player, data: Profiles.Data, badge: BadgeBook.Badge,
 	end
 	d.badges[badge.key] = true
 	d.badgeAt[badge.key] = os.time()
-	local id = (Config.data.Badges :: any)[badge.key]
-	if type(id) == "number" and id ~= 0 then
-		task.spawn(function()
-			pcall(function()
-				BadgeService:AwardBadge(player.UserId, id)
-			end)
-		end)
-	end
+	toRoblox(player, data, badge.key)
 	Analytics.custom(player, "Badge", nil, { key = badge.key })
 	if not quiet then
 		Achievements.notify(player, badge)
