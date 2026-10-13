@@ -21,9 +21,11 @@ function WardrobePanel.open()
 		return
 	end
 	local size = Root.size()
-	local w = math.min(560, size.X - 24)
+	local w = Root.panelWidth(560)
 	local h = math.min(620, size.Y - 40)
 	local group, content = Theme.glass(Root.panels, NAME, UDim2.fromOffset(w, h))
+	-- (As tall as what's in it, up to what the screen allows: then the list scrolls.)
+	Theme.fitHeight(group, content)
 	Theme.list(content, 8).VerticalAlignment = Enum.VerticalAlignment.Top
 	Theme.text(content, "The Wardrobe", 26, "display", { LayoutOrder = 1 })
 	Theme.hairline(content, UDim.new(0, 90), 2)
@@ -31,7 +33,12 @@ function WardrobePanel.open()
 	scroll.BackgroundTransparency = 1
 	scroll.BorderSizePixel = 0
 	scroll.LayoutOrder = 3
-	scroll.Size = UDim2.new(1, 0, 1, -(26 + 12 + 44 + 30))
+	scroll.Size = UDim2.new(1, 0, 0, 0)
+	scroll.AutomaticSize = Enum.AutomaticSize.Y
+	local most = Instance.new("UISizeConstraint")
+	most.MinSize = Vector2.new(0, 40)
+	most.MaxSize = Vector2.new(math.huge, math.max(120, h - (44 + 26 + 12 + 44 + 3 * 8 + 10)))
+	most.Parent = scroll
 	scroll.CanvasSize = UDim2.new()
 	scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
 	scroll.ScrollBarThickness = 3

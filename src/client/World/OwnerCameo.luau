@@ -20,6 +20,8 @@ local Workspace = game:GetService("Workspace")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Layout = require(ReplicatedStorage.Shared.Layout)
 local Sound = require(script.Parent.Parent.Sound)
+local Theme = require(script.Parent.Parent.UI.Theme)
+local Root = require(script.Parent.Parent.UI.Root)
 
 local OwnerCameo = {}
 
@@ -197,12 +199,15 @@ function OwnerCameo.say(line: string, pose: string?, seconds: number?, accent: C
 	local camera = Workspace.CurrentCamera
 	local view = if camera then camera.ViewportSize else Vector2.new(1280, 720)
 	local width = math.min(430, view.X - 24)
+	-- (As tall as its words need: two lines fit the crest's height, more make it taller.)
+	local wordsHigh = math.max(54, math.ceil(Theme.measure(line, 20, BOLD, width - 144).Y) + 4)
+	local height = math.max(128, 62 + wordsHigh + 12)
 	local card = Instance.new("Frame")
 	card.Name = "Cameo"
 	-- (At the foot of the screen, in the middle: clear of the keys down the left.)
 	card.AnchorPoint = Vector2.new(0.5, 1)
-	card.Position = UDim2.new(0.5, 0, 1, 160)
-	card.Size = UDim2.fromOffset(width, 128)
+	card.Position = UDim2.new(0.5, 0, 1, height + 32)
+	card.Size = UDim2.fromOffset(width, height)
 	card.BackgroundColor3 = Color3.new(1, 1, 1)
 	card.BorderSizePixel = 0
 	card.Parent = gui
@@ -268,7 +273,7 @@ function OwnerCameo.say(line: string, pose: string?, seconds: number?, accent: C
 	words.Name = "Line"
 	words.BackgroundTransparency = 1
 	words.Position = UDim2.fromOffset(130, 62)
-	words.Size = UDim2.new(1, -144, 0, 54)
+	words.Size = UDim2.new(1, -144, 0, wordsHigh)
 	words.FontFace = BOLD
 	words.TextSize = 20
 	words.TextWrapped = true
@@ -282,7 +287,7 @@ function OwnerCameo.say(line: string, pose: string?, seconds: number?, accent: C
 	task.delay(0.15, function()
 		pcall(Sound.play, "sparklePass", 0.6)
 	end)
-	TweenService:Create(card, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Position = UDim2.new(0.5, 0, 1, -18) }):Play()
+	TweenService:Create(card, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Position = UDim2.new(0.5, 0, 1, -18 - Root.bottomClear()) }):Play()
 	-- The words type themselves out; the scan of light runs down the window.
 	task.spawn(function()
 		local count = utf8.len(line) or #line
@@ -316,7 +321,7 @@ function OwnerCameo.say(line: string, pose: string?, seconds: number?, accent: C
 		if cardToken ~= my or not card.Parent then
 			return
 		end
-		local out = TweenService:Create(card, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Position = UDim2.new(0.5, 0, 1, 160) })
+		local out = TweenService:Create(card, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Position = UDim2.new(0.5, 0, 1, height + 32) })
 		out:Play()
 		out.Completed:Wait()
 		if card.Parent then

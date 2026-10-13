@@ -134,8 +134,7 @@ local function render(info: { [string]: any })
 	if Root.isOpen(NAME) then
 		Root.close(NAME)
 	end
-	local size = Root.size()
-	local w = math.min(440, size.X - 24)
+	local w = Root.panelWidth(440)
 	local group, content = Theme.glass(Root.panels, NAME, UDim2.fromOffset(w, 0))
 	Theme.fitHeight(group, content)
 	Theme.list(content, 8).VerticalAlignment = Enum.VerticalAlignment.Top
@@ -261,8 +260,7 @@ local function press(index: number)
 end
 
 local function build(): Frame
-	local size = Root.size()
-	local w = math.min(1040, size.X - 24)
+	local w = Root.panelWidth(1040)
 	local keysH = math.clamp(math.floor(w * 0.16), 120, 170)
 	local h = keysH + 58
 	local group, content = Theme.glass(Root.hud, "PianoKeys", UDim2.fromOffset(w, h), UDim2.new(0.5, 0, 1, -12), Vector2.new(0.5, 1))
@@ -415,12 +413,16 @@ local function setTouchControls(on: boolean)
 	end)
 end
 
+-- The keyboard came up or went away (set by Main: the dock down the left steps aside for it).
+PianoPanel.onPlaying = function(_on: boolean) end
+
 -- Shows the keyboard while this guest plays, and puts it away when they get up.
 local function setPlaying(on: boolean)
 	if on == playing then
 		return
 	end
 	playing = on
+	PianoPanel.onPlaying(on)
 	if on then
 		if Root.isOpen(NAME) then
 			Root.close(NAME)

@@ -27,7 +27,7 @@ function MenuPanel.open()
 		return
 	end
 	local size = Root.size()
-	local w = math.min(720, size.X - 24)
+	local w = Root.panelWidth(720)
 	local h = math.min(560, size.Y - 40)
 	local group, content = Theme.glass(Root.panels, NAME, UDim2.fromOffset(w, h))
 	Theme.list(content, 10).VerticalAlignment = Enum.VerticalAlignment.Top
@@ -90,6 +90,7 @@ function MenuPanel.open()
 		l.Size = UDim2.new(1, -72, 0, 52)
 		l.Text = tile.line
 		l.TextWrapped = true
+		l.TextTruncate = Enum.TextTruncate.AtEnd
 		l.TextXAlignment = Enum.TextXAlignment.Left
 		l.TextYAlignment = Enum.TextYAlignment.Top
 		l.FontFace = Brand.Fonts.body

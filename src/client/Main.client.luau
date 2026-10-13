@@ -293,27 +293,27 @@ start("Curios", function()
 		QuickDock.setSeated(false)
 	end)
 	for _, tile in {
-		{ id = "collection", title = "Your Collection", line = "Your brainrot squad and its tip jar, every curio, and the Cabinet.", glyph = "🏺", open = function()
+		{ id = "collection", title = "Your Collection", line = "Your brainrots, their tip jar, every curio.", glyph = "🏺", open = function()
 			CuriosPanel.open("squad")
 		end },
-		{ id = "trading", title = "Trading", line = "Trade curios with another guest, and your past trades.", glyph = "🤝", open = function()
+		{ id = "trading", title = "Trading", line = "Trade curios with other guests.", glyph = "🤝", open = function()
 			CuriosPanel.open("trades")
 		end },
-		{ id = "gems", title = "Gems", line = "Gem packs, and what Gems buy in the Cabinet.", glyph = "💎", open = function()
+		{ id = "gems", title = "Gems", line = "Gem packs, and what Gems buy.", glyph = "💎", open = function()
 			CuriosPanel.open("gems")
 		end },
-		{ id = "gemShop", title = "The Gem Shop", line = "Auras, titles, Surges and Gilt, for Gems. Fixed prices, never random.", glyph = "✨", open = function()
+		{ id = "gemShop", title = "The Gem Shop", line = "Auras, titles and Surges, for Gems.", glyph = "✨", open = function()
 			GemShopPanel.open()
 		end },
-		{ id = "badges", title = "The Badge Book", line = "Every badge in the house, and how far along you are.", glyph = "🏅", open = function()
+		{ id = "badges", title = "The Badge Book", line = "Every badge, and how far along you are.", glyph = "🏅", open = function()
 			BadgeBookPanel.open()
 		end },
-		{ id = "boutique", title = "The Boutique", line = "Looks, table styles, lamps and more. Style, never score.", glyph = "🛍️", open = function()
+		{ id = "boutique", title = "The Boutique", line = "Looks, table styles and lamps.", glyph = "🛍️", open = function()
 			BoutiquePanel.open()
 		end },
 		{ id = "wardrobe", title = "Your Wardrobe", line = "Wear what you own.", glyph = "👔", open = WardrobePanel.open },
 		{ id = "ledger", title = "The Ledger", line = "This term's rewards, page by page.", glyph = "📖", open = LedgerPanel.open },
-		{ id = "register", title = "The Register", line = "Achievements: the house's badges and your records.", glyph = "🏅", open = RegisterPanel.open },
+		{ id = "register", title = "The Register", line = "The house's badges and your records.", glyph = "🏅", open = RegisterPanel.open },
 		{ id = "guestbook", title = "The Livre d'Or", line = "Sign the guest book, and read who came.", glyph = "✒️", open = GuestBookPanel.open },
 		{ id = "circle", title = "Your Circle", line = "Your club of friends in the house.", glyph = "⭕", open = CirclePanel.open },
 		{ id = "help", title = "How to play", line = "The tables, the cases, and the house.", glyph = "❔", open = function()
@@ -379,6 +379,10 @@ start("Perks", function()
 		return Ambient.zone
 	end
 	PianoPanel.start()
+	-- (The keys run the width of the screen: the dock steps aside while they're up.)
+	PianoPanel.onPlaying = function(on: boolean)
+		require(script.Parent.UI.QuickDock).setSeated(on)
+	end
 	PerkChips.start()
 end)
 -- At a table the sorting screen is the whole picture: the strip of events, the Gilt bar and the
@@ -558,7 +562,7 @@ local function startHud()
 		local Stagecraft = require(script.Parent.World.Stagecraft)
 		local SleighRide = require(script.Parent.World.SleighRide)
 		Objective.isBusy = function(): boolean
-			return MemeTakeover.isRunning() or Midas.isRunning() or Stagecraft.titleUp() or AbuseFX.bannerUp() or AbuseShow.cardUp() or Headline.showing() or Celebrate.badgeUp() or SleighRide.riding()
+			return MemeTakeover.isRunning() or Midas.isRunning() or Stagecraft.titleUp() or AbuseFX.bannerUp() or AbuseShow.cardUp() or AbuseShow.openingUp() or Headline.showing() or Celebrate.badgeUp() or SleighRide.riding()
 		end
 		Objective.start(function(mode: string)
 			if mode == "ballroom" then

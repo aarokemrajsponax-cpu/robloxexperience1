@@ -38,6 +38,7 @@ local PieceIcon = require(script.Parent.Parent.UI.PieceIcon)
 local Closet = require(script.Parent.Parent.Closet)
 local GuideTrail = require(script.Parent.GuideTrail)
 local ScreenFX = require(script.Parent.Parent.UI.ScreenFX)
+local Root = require(script.Parent.Parent.UI.Root)
 local State = require(script.Parent.Parent.State)
 
 local SortScreen = {}
@@ -2468,6 +2469,8 @@ function SortScreen.open(roomName: string, roundText: string)
 		return
 	end
 	isOpen = true
+	-- (Notices in the corner stand above the row of cases.)
+	Root.setBottom("SortScreen", (L.vp.Y - L.binsTop) / math.max(0.1, Root.scale) - 20)
 	if tableFX then
 		ScreenFX.setEnabled(tableFX, true)
 	end
@@ -2492,6 +2495,7 @@ function SortScreen.close()
 	end
 	SortScreen.setFever(false)
 	isOpen = false
+	Root.setBottom("SortScreen", nil)
 	playing = false
 	if tableFX then
 		ScreenFX.setEnabled(tableFX, false)

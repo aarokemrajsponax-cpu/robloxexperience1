@@ -25,28 +25,28 @@ Suite.Spots = {
 	{ id = "coffeeTable", name = "The coffee table", room = "main", kind = "coffeeTable", house = { model = "marble" } },
 	{ id = "lamp", name = "The floor lamp", room = "main", kind = "lamp", house = { model = "brass", colour = rgb(236, 214, 170), accent = GOLD } },
 	{ id = "chandelier", name = "The chandelier", room = "main", kind = "chandelier", house = { model = "ring", accent = GOLD } },
-	{ id = "painting", name = "Over the fireplace", room = "main", kind = "painting" },
+	{ id = "painting", name = "Over the fireplace", room = "main", kind = "painting", house = { art = "landscape", colour = rgb(176, 136, 98) } },
 	{ id = "bar", name = "The drinks cabinet", room = "main", kind = "bar" },
 	{ id = "shelf", name = "The bookcase", room = "main", kind = "shelf", house = { model = "library", colour = rgb(40, 24, 16) } },
 	{ id = "plant", name = "The plant", room = "main", kind = "plant", house = { model = "palm" } },
 	{ id = "display", name = "The display case", room = "main", kind = "display" },
 	{ id = "piano", name = "The baby grand", room = "main", kind = "piano" },
 	-- The gallery
-	{ id = "galleryArtS", name = "The gallery: the south wall", room = "gallery", kind = "painting" },
-	{ id = "galleryArtN", name = "The gallery: the north wall", room = "gallery", kind = "painting" },
+	{ id = "galleryArtS", name = "The gallery: the south wall", room = "gallery", kind = "painting", house = { art = "night", colour = rgb(30, 36, 62), accent = GOLD } },
+	{ id = "galleryArtN", name = "The gallery: the north wall", room = "gallery", kind = "painting", house = { art = "still", colour = rgb(46, 32, 24), accent = GOLD } },
 	-- The bedroom
 	{ id = "bed", name = "The bed", room = "bedroom", kind = "bed", house = { model = "classic", headboard = rgb(70, 30, 34), colour = rgb(236, 230, 218), throw = GOLD } },
 	{ id = "nightstands", name = "The nightstands", room = "bedroom", kind = "nightstands", house = { colour = rgb(40, 24, 16) } },
 	{ id = "bedRug", name = "The bedroom rug", room = "bedroom", kind = "rug", house = { model = "plain", colour = rgb(60, 52, 48), accent = GOLD, width = 11, depth = 9 } },
-	{ id = "bedBench", name = "The end of the bed", room = "bedroom", kind = "bench" },
+	{ id = "bedBench", name = "The end of the bed", room = "bedroom", kind = "bench", house = { colour = rgb(120, 92, 66) } },
 	{ id = "bedTv", name = "The bedroom wall", room = "bedroom", kind = "tv" },
-	{ id = "dresser", name = "The dresser", room = "bedroom", kind = "dresser" },
+	{ id = "dresser", name = "The dresser", room = "bedroom", kind = "dresser", house = { colour = rgb(48, 30, 20), material = "Wood" } },
 	-- The bath and spa
 	{ id = "bathtub", name = "The bath", room = "spa", kind = "bathtub", house = { model = "clawfoot", outside = rgb(240, 238, 232) } },
 	{ id = "shower", name = "The shower", room = "spa", kind = "shower", house = { colour = rgb(226, 220, 210) } },
 	{ id = "vanity", name = "The vanity", room = "spa", kind = "vanity", house = { colour = rgb(40, 26, 20) } },
 	{ id = "sauna", name = "The sauna", room = "spa", kind = "sauna" },
-	{ id = "spaPlant", name = "The spa's green", room = "spa", kind = "plant" },
+	{ id = "spaPlant", name = "The spa's green", room = "spa", kind = "plant", house = { model = "palm" } },
 	-- The kitchen
 	{ id = "kitchen", name = "The kitchen", room = "kitchen", kind = "kitchen", house = { model = "marble", width = 10, colour = rgb(30, 30, 34) } },
 	-- The screening room
@@ -58,7 +58,7 @@ Suite.Spots = {
 	{ id = "popcorn", name = "The popcorn", room = "screening", kind = "popcorn" },
 	-- The gym
 	{ id = "treadmill", name = "The treadmill", room = "gym", kind = "treadmill", house = {} },
-	{ id = "bike", name = "The bike", room = "gym", kind = "bike" },
+	{ id = "bike", name = "The bike", room = "gym", kind = "bike", house = { colour = rgb(56, 56, 60) } },
 	{ id = "weights", name = "The weights", room = "gym", kind = "weights", house = {} },
 	{ id = "massage", name = "The recovery corner", room = "gym", kind = "massage" },
 	{ id = "punchbag", name = "The punchbag", room = "gym", kind = "punchbag" },

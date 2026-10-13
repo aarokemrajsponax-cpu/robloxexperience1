@@ -82,8 +82,7 @@ function HowToPlay.open(club: boolean?)
 		return
 	end
 	local STEPS = if club then CLUB_STEPS else STEPS
-	local size = Root.size()
-	local w = math.min(480, size.X - 24)
+	local w = Root.panelWidth(480)
 	local group, content = Theme.glass(Root.panels, NAME, UDim2.fromOffset(w, 470))
 	Theme.fitHeight(group, content)
 	Theme.list(content, 10).VerticalAlignment = Enum.VerticalAlignment.Top

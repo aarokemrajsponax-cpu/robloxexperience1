@@ -1,6 +1,10 @@
 --!strict
--- A restyled ProximityPrompt: a small glass pill with the action in small capitals and the key
--- to press (or "Tap" on phones). Tapping or clicking the pill triggers it.
+-- The world's prompts (ProximityPrompts), restyled and kept tidy: one neat column of glass cards
+-- just right of the guest's own figure, each with the key to press (or "Tap" on phones), the
+-- action in small capitals and what it's for underneath. Tapping or clicking a card triggers it.
+-- In a column on the screen rather than a card floating over each thing, two things side by
+-- side (the piano and the salute beside it) never pile their cards on each other, nor on anyone's
+-- name. Every card in the column is the same width, so their edges line up.
 
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -9,6 +13,7 @@ local UserInputService = game:GetService("UserInputService")
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local Caps = require(ReplicatedStorage.Shared.Caps)
 local Ease = require(ReplicatedStorage.Shared.Ease)
+local Fade = require(script.Parent.Fade)
 local Root = require(script.Parent.Root)
 local Theme = require(script.Parent.Theme)
 local Sound = require(script.Parent.Parent.Sound)
@@ -16,7 +21,14 @@ local State = require(script.Parent.Parent.State)
 
 local Prompts = {}
 
-local shown: { [ProximityPrompt]: BillboardGui } = {}
+local shown: { [ProximityPrompt]: TextButton } = {}
+local column: Frame? = nil
+local serial = 0
+
+-- (Four at most at once: the nearest.)
+local MOST = 4
+local LEAST_W = 190
+local ACTION, OBJECT = 15, 13
 
 local function keyLabel(prompt: ProximityPrompt): string
 	local kind = State.inputKind()
@@ -29,28 +41,58 @@ local function keyLabel(prompt: ProximityPrompt): string
 	return prompt.KeyboardKeyCode.Name
 end
 
-local function build(prompt: ProximityPrompt): BillboardGui
-	local gui = Instance.new("BillboardGui")
-	gui.Name = "Prompt"
-	gui.AlwaysOnTop = true
-	gui.Size = UDim2.fromOffset(210, 46)
-	local offset = prompt:GetAttribute("Offset")
-	gui.StudsOffset = Vector3.new(0, if type(offset) == "number" then offset else 2.2, 0)
-	gui.LightInfluence = 0
-	gui.ResetOnSpawn = false
-	gui.Active = true
-	gui.Adornee = prompt.Parent :: any
+-- The column: right of the middle of the screen, where the guest's figure stands, a little below
+-- their name.
+local function stack(): Frame
+	local c = column
+	if c and c.Parent then
+		return c
+	end
+	local f = Instance.new("Frame")
+	f.Name = "PromptColumn"
+	f.BackgroundTransparency = 1
+	f.AnchorPoint = Vector2.new(0, 0)
+	f.Position = UDim2.new(0.5, 64, 0.5, -16)
+	f.Size = UDim2.fromOffset(LEAST_W, 0)
+	f.AutomaticSize = Enum.AutomaticSize.Y
+	f.Parent = Root.prompts
+	local list = Instance.new("UIListLayout")
+	list.FillDirection = Enum.FillDirection.Vertical
+	list.SortOrder = Enum.SortOrder.LayoutOrder
+	list.Padding = UDim.new(0, 8)
+	list.Parent = f
+	column = f
+	return f
+end
 
+-- Every card as wide as the widest of them (its key, its longer line, its margins).
+local function align()
+	local widest = LEAST_W
+	for _, card in shown do
+		widest = math.max(widest, card:GetAttribute("Wants") :: number? or LEAST_W)
+	end
+	widest = math.min(widest, math.max(LEAST_W, Root.size().X / 2 - 64 - 16))
+	for _, card in shown do
+		card.Size = UDim2.fromOffset(widest, card.Size.Y.Offset)
+	end
+	local c = column
+	if c then
+		c.Size = UDim2.fromOffset(widest, 0)
+	end
+end
+
+local function build(prompt: ProximityPrompt): TextButton
+	serial += 1
 	local button = Instance.new("TextButton")
 	button.Name = "Pill"
+	button.LayoutOrder = serial
 	button.AutoButtonColor = false
 	button.Text = ""
-	button.Size = UDim2.fromScale(1, 1)
 	button.BackgroundColor3 = Color3.fromRGB(12, 13, 16)
-	button.BackgroundTransparency = 0.2
-	button.Parent = gui
+	button.BackgroundTransparency = 0.12
+	button.ClipsDescendants = true
 	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 3)
+	corner.CornerRadius = UDim.new(0, 10)
 	corner.Parent = button
 	local stroke = Instance.new("UIStroke")
 	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
@@ -61,64 +103,73 @@ local function build(prompt: ProximityPrompt): BillboardGui
 	local key = Instance.new("TextLabel")
 	key.Name = "Key"
 	key.BackgroundColor3 = Brand.Colours.gold
-	key.BackgroundTransparency = 0.1
-	key.Size = UDim2.new(0, 38, 1, -14)
-	key.Position = UDim2.fromOffset(7, 7)
+	key.BackgroundTransparency = 0.05
+	key.AnchorPoint = Vector2.new(0, 0.5)
+	key.Position = UDim2.new(0, 8, 0.5, 0)
 	key.FontFace = Brand.Fonts.bodyBold
-	key.TextSize = 13
+	key.TextSize = 14
 	key.TextColor3 = Color3.fromRGB(24, 18, 8)
-	key.Text = keyLabel(prompt)
 	key.Parent = button
 	local keyCorner = Instance.new("UICorner")
-	keyCorner.CornerRadius = UDim.new(0, 2)
+	keyCorner.CornerRadius = UDim.new(0, 6)
 	keyCorner.Parent = key
 
 	local action = Instance.new("TextLabel")
 	action.Name = "Action"
 	action.BackgroundTransparency = 1
-	action.Position = UDim2.fromOffset(54, 5)
-	action.Size = UDim2.new(1, -60, 0.55, -2)
 	action.FontFace = Brand.Fonts.bodyMedium
-	action.TextSize = 15
+	action.TextSize = ACTION
 	action.TextXAlignment = Enum.TextXAlignment.Left
+	action.TextYAlignment = Enum.TextYAlignment.Center
+	action.TextTruncate = Enum.TextTruncate.AtEnd
 	action.TextColor3 = Brand.Colours.lightGold
-	action.Text = Caps(prompt.ActionText)
 	action.Parent = button
 
 	local object = Instance.new("TextLabel")
 	object.Name = "Object"
 	object.BackgroundTransparency = 1
-	object.Position = UDim2.new(0, 54, 0.55, 0)
-	object.Size = UDim2.new(1, -60, 0.4, -4)
-	object.FontFace = Brand.Fonts.bodyMedium
-	object.TextSize = 13
+	object.FontFace = Brand.Fonts.body
+	object.TextSize = OBJECT
 	object.TextXAlignment = Enum.TextXAlignment.Left
+	object.TextYAlignment = Enum.TextYAlignment.Center
+	object.TextTruncate = Enum.TextTruncate.AtEnd
 	object.TextColor3 = Brand.Colours.smoke
-	object.Text = prompt.ObjectText
 	object.Parent = button
-	-- The pill exactly as wide as its longer line (the key, then the words, then a margin).
+
+	-- The card laid out round its words: the key square (wider for "TAP"), then the words.
 	local function fit()
-		local words = math.max(Theme.measure(action.Text, 15, Brand.Fonts.bodyMedium).X, Theme.measure(object.Text, 13, Brand.Fonts.bodyMedium).X)
-		gui.Size = UDim2.fromOffset(math.max(120, 54 + words + 16), if object.Text == "" then 40 else 46)
-		action.Size = if object.Text == "" then UDim2.new(1, -60, 1, -10) else UDim2.new(1, -60, 0.55, -2)
-	end
-	fit()
-	prompt:GetPropertyChangedSignal("ActionText"):Connect(function()
+		key.Text = keyLabel(prompt)
 		action.Text = Caps(prompt.ActionText)
-		fit()
-	end)
-	prompt:GetPropertyChangedSignal("ObjectText"):Connect(function()
 		object.Text = prompt.ObjectText
-		fit()
-	end)
+		local keyW = math.max(30, Theme.measure(key.Text, 14, Brand.Fonts.bodyBold).X + 12)
+		key.Size = UDim2.fromOffset(keyW, 30)
+		local left = 8 + keyW + 12
+		local alone = object.Text == ""
+		local high = if alone then 44 else 50
+		action.Position = UDim2.fromOffset(left, if alone then 0 else 6)
+		action.Size = UDim2.new(1, -(left + 12), if alone then 1 else 0, if alone then 0 else 20)
+		object.Position = UDim2.fromOffset(left, 26)
+		object.Size = UDim2.new(1, -(left + 12), 0, 17)
+		object.Visible = not alone
+		local words = math.max(Theme.measure(action.Text, ACTION, Brand.Fonts.bodyMedium).X, if alone then 0 else Theme.measure(object.Text, OBJECT, Brand.Fonts.body).X)
+		button:SetAttribute("Wants", math.ceil(left + words + 16))
+		button.Size = UDim2.fromOffset(button.Size.X.Offset, high)
+		align()
+	end
+	button:SetAttribute("Wants", LEAST_W)
+	button.Size = UDim2.fromOffset(LEAST_W, 50)
+	prompt:GetPropertyChangedSignal("ActionText"):Connect(fit)
+	prompt:GetPropertyChangedSignal("ObjectText"):Connect(fit)
 
 	button.Activated:Connect(function()
 		prompt:InputHoldBegin()
 		task.wait()
 		prompt:InputHoldEnd()
 	end)
-	gui.Parent = Root.prompts
-	return gui
+	button.Parent = stack()
+	shown[prompt] = button
+	fit()
+	return button
 end
 
 -- Anything else that puts the world's prompts aside for a while (the piano's keyboard), by name.
@@ -131,8 +182,9 @@ end
 local function refresh()
 	local hide = hidden()
 	ProximityPromptService.Enabled = not hide
-	for _, gui in shown do
-		gui.Enabled = not hide
+	local c = column
+	if c then
+		c.Visible = not hide
 	end
 end
 
@@ -145,7 +197,19 @@ function Prompts.hold(name: string, on: boolean)
 	refresh()
 end
 
+local function drop(prompt: ProximityPrompt)
+	local card = shown[prompt]
+	if card then
+		shown[prompt] = nil
+		card:Destroy()
+		align()
+	end
+end
+
 function Prompts.start()
+	pcall(function()
+		ProximityPromptService.MaxPromptsVisible = MOST
+	end)
 	ProximityPromptService.PromptShown:Connect(function(prompt: ProximityPrompt, _inputType)
 		if prompt.Style ~= Enum.ProximityPromptStyle.Custom then
 			return
@@ -153,16 +217,12 @@ function Prompts.start()
 		if State.seated then
 			return
 		end
-		local gui = shown[prompt]
-		if gui then
-			gui:Destroy()
-		end
-		gui = build(prompt)
-		gui.Enabled = not hidden()
-		shown[prompt] = gui
-		local pill = gui:FindFirstChild("Pill") :: TextButton
-		pill.BackgroundTransparency = 1
-		Ease.play(pill, Ease.panel, { BackgroundTransparency = 0.2 })
+		drop(prompt)
+		local card = build(prompt)
+		refresh()
+		-- (In softly.)
+		Fade.set(card, 1)
+		Fade.to(card, Ease.panel, 0)
 	end)
 	-- Every interaction answers with a sound the moment it's pressed (the object's own sound,
 	-- where it has one, plays on top when the server answers).
@@ -173,9 +233,8 @@ function Prompts.start()
 		else
 			Sound.ui()
 		end
-		local gui = shown[prompt]
-		local pill = gui and gui:FindFirstChild("Pill")
-		if pill and pill:IsA("GuiObject") then
+		local pill = shown[prompt]
+		if pill then
 			-- A press: the pill dips and brightens for a beat.
 			local stroke = pill:FindFirstChildOfClass("UIStroke")
 			if stroke then
@@ -184,20 +243,13 @@ function Prompts.start()
 			end
 		end
 	end)
-	ProximityPromptService.PromptHidden:Connect(function(prompt: ProximityPrompt)
-		local gui = shown[prompt]
-		if gui then
-			shown[prompt] = nil
-			gui:Destroy()
-		end
-	end)
+	ProximityPromptService.PromptHidden:Connect(drop)
 	-- While a panel is open the guest is in a menu: the prompts in the world step aside, and
 	-- can't be set off behind it.
 	Root.PanelsChanged:Connect(refresh)
 	UserInputService.LastInputTypeChanged:Connect(function()
-		for prompt, gui in shown do
-			local pill = gui:FindFirstChild("Pill")
-			local key = pill and pill:FindFirstChild("Key")
+		for prompt, card in shown do
+			local key = card:FindFirstChild("Key")
 			if key and key:IsA("TextLabel") then
 				key.Text = keyLabel(prompt)
 			end
@@ -206,10 +258,20 @@ function Prompts.start()
 end
 
 function Prompts.clear()
-	for prompt, gui in shown do
-		gui:Destroy()
+	for prompt, card in shown do
+		card:Destroy()
 		shown[prompt] = nil
 	end
+	align()
+end
+
+-- The cards showing now, for the tests.
+function Prompts.cards(): { TextButton }
+	local out = {}
+	for _, card in shown do
+		table.insert(out, card)
+	end
+	return out
 end
 
 return Prompts

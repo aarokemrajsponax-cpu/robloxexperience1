@@ -34,11 +34,13 @@ local function look(c: Color3, m: Enum.Material, refl: number?, transp: number?)
 end
 
 -- The finishes.
-local PANEL = look(rgb(34, 26, 22), Enum.Material.Wood)
+local PANEL = look(rgb(72, 50, 38), Enum.Material.Wood)
 local WALNUT = look(rgb(56, 34, 22), Enum.Material.Wood)
 local PARQUET = look(rgb(70, 44, 28), Enum.Material.WoodPlanks)
 local PARQUET2 = look(rgb(58, 36, 22), Enum.Material.WoodPlanks)
-local SILK = look(rgb(54, 22, 30), Enum.Material.Fabric) -- the bedroom's walls
+local SILK = look(rgb(88, 36, 50), Enum.Material.Fabric) -- the bedroom's walls
+local GALLERY_SILK = look(rgb(104, 32, 42), Enum.Material.Fabric) -- the gallery's walls: a picture-gallery claret
+local VELVET = look(rgb(96, 24, 36), Enum.Material.Fabric) -- the curtains
 local CARPET = look(rgb(64, 54, 50), Enum.Material.Carpet)
 local CINEMA = look(rgb(20, 18, 22), Enum.Material.Fabric)
 local CINEMA_CARPET = look(rgb(46, 14, 22), Enum.Material.Carpet)
@@ -48,7 +50,7 @@ local TILE = look(rgb(214, 208, 198), Enum.Material.Marble, 0.05)
 local RUBBER = look(rgb(30, 30, 33), Enum.Material.Rubber)
 local DECK = look(rgb(196, 180, 152), Enum.Material.Limestone)
 local DECK2 = look(rgb(184, 168, 140), Enum.Material.Limestone)
-local CEILING = look(rgb(28, 26, 28), Enum.Material.Plaster)
+local CEILING = look(rgb(46, 40, 38), Enum.Material.Plaster)
 local LACQUER = L.blackLacquer
 local BRASS = L.brass
 local GLASS = look(rgb(170, 196, 210), Enum.Material.Glass, 0.18, 0.62)
@@ -147,15 +149,23 @@ local function gallery(m: Model)
 	Kit.span(m, "GalleryFloor", Vector3.new(-30, CLUB - 1, dz0), Vector3.new(-24, Y, dz1), BLACK_MARBLE)
 	Kit.span(m, "GalleryFloorW", Vector3.new(-36, Y - 1, dz0), Vector3.new(-30, Y, dz1), BLACK_MARBLE)
 	Kit.span(m, "GalleryRunner", Vector3.new(-36, Y, dz0 + 0.9), Vector3.new(-24, Y + 0.05, dz1 - 0.9), L.carpet, TRIM)
-	Kit.span(m, "GalleryWallS", Vector3.new(-36, CLUB, dz0 - 0.6), Vector3.new(-22, TOP, dz0), LACQUER)
-	Kit.span(m, "GalleryWallN", Vector3.new(-36, CLUB, dz1), Vector3.new(-22, TOP, dz1 + 0.6), LACQUER)
+	Kit.span(m, "GalleryWallS", Vector3.new(-36, CLUB, dz0 - 0.6), Vector3.new(-22, TOP, dz0), GALLERY_SILK)
+	Kit.span(m, "GalleryWallN", Vector3.new(-36, CLUB, dz1), Vector3.new(-22, TOP, dz1 + 0.6), GALLERY_SILK)
+	-- (A black lacquer dado under the silk, as in a picture gallery.)
+	Kit.span(m, "GalleryDadoS", Vector3.new(-36, Y, dz0 - 0.02), Vector3.new(-22, Y + 3.2, dz0 + 0.06), LACQUER, TRIM)
+	Kit.span(m, "GalleryDadoN", Vector3.new(-36, Y, dz1 - 0.06), Vector3.new(-22, Y + 3.2, dz1 + 0.02), LACQUER, TRIM)
 	Kit.span(m, "GalleryCeiling", Vector3.new(-36, TOP, dz0 - 0.6), Vector3.new(-22, TOP + 1, dz1 + 0.6), CEILING)
 	-- A brass rail at picture height, and a light above where each picture hangs.
 	for _, z in { dz0 + 0.02, dz1 - 0.02 } do
 		Kit.span(m, "PictureRail", Vector3.new(-35.8, TOP - 1.2, z - 0.04), Vector3.new(-22.2, TOP - 1.1, z + 0.04), BRASS, TRIM)
 	end
 	local lamp = Kit.part(m, "GalleryLight", Vector3.new(6, 0.12, 0.5), CFrame.new(-29, TOP - 0.06, S.door.Z), SCONCE, TRIM)
-	Kit.spotLight(lamp, Enum.NormalId.Bottom, 0.9, 14, 110, nil, false)
+	Kit.spotLight(lamp, Enum.NormalId.Bottom, 1.5, 16, 120, nil, false)
+	-- A brass picture light over each wall's picture.
+	for _, at in { Vector2.new(-29, dz0 + 0.25), Vector2.new(-26.6, dz1 - 0.25) } do
+		local bar = Kit.part(m, "PictureLight", Vector3.new(1.6, 0.14, 0.24), CFrame.new(at.X, TOP - 1.5, at.Y), BRASS, TRIM)
+		Kit.spotLight(bar, Enum.NormalId.Bottom, 1.1, 8, 70, rgb(255, 222, 180), false)
+	end
 end
 
 ---------------------------------------------------------------------------------------------------
@@ -218,8 +228,16 @@ local function drawingRoom(m: Model)
 
 	-- (The fire on the north wall is built at the house's true size: see SuiteRoom.finish.)
 	-- The room's own light: a cove of warm light round the coffers (the fire has its own lamps).
-	ceilingLight(m, Vector3.new(-55.5, 0, 52.5), 1.0, 26)
-	ceilingLight(m, Vector3.new(-42.5, 0, 47.5), 0.6, 18)
+	ceilingLight(m, Vector3.new(-55.5, 0, 52.5), 1.5, 34)
+	ceilingLight(m, Vector3.new(-42.5, 0, 47.5), 1.0, 24)
+	-- Velvet curtains either side of the window, on a brass pole with a gold-fringed pelmet.
+	for _, x in { -42.3, -36.7 } do
+		Kit.part(m, "Curtain", Vector3.new(1.4, 9.6, 0.3), CFrame.new(x, Y + 4.8, main.maxZ - 0.35), VELVET, TRIM)
+		Kit.part(m, "Tieback", Vector3.new(1.5, 0.18, 0.4), CFrame.new(x, Y + 3.6, main.maxZ - 0.38), BRASS, TRIM)
+	end
+	Kit.part(m, "CurtainPole", Vector3.new(7.4, 0.16, 0.16), CFrame.new(-39.5, Y + 9.75, main.maxZ - 0.4), BRASS, TRIM)
+	Kit.part(m, "Pelmet", Vector3.new(7.2, 0.7, 0.24), CFrame.new(-39.5, Y + 9.35, main.maxZ - 0.5), VELVET, TRIM)
+	Kit.part(m, "PelmetFringe", Vector3.new(7.2, 0.1, 0.26), CFrame.new(-39.5, Y + 8.98, main.maxZ - 0.5), BRASS, TRIM)
 
 	-- The Gold Key rooms' doors: shut, until the guest's own screen opens them.
 	local alcoves: { { room: string, at: Vector3 } } = { { room = "dressing", at = dressing.door }, { room = "study", at = study.door } }
@@ -394,7 +412,7 @@ local function roof(m: Model)
 		Kit.span(m, "GlassFin", Vector3.new(x - 0.06, Y + 0.6, gym.minZ - 0.7), Vector3.new(x + 0.06, TOP, gym.minZ - 0.3), BRASS, TRIM)
 	end
 	casing(m, Vector3.new(gym.maxX + 0.5, Y, gym.door.Z), "x", 4, S.innerDoorHeight, 1, BRASS)
-	ceilingLight(m, Vector3.new(-70, 0, 0.5), 0.8, 20, rgb(240, 240, 255))
+	ceilingLight(m, Vector3.new(-70, 0, 0.5), 1.3, 24, rgb(240, 240, 255))
 end
 
 function SuiteRoom.build(parent: Instance): Model

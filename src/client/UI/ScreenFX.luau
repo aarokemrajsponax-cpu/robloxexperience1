@@ -75,6 +75,95 @@ local function glyph(parent: Instance, text: string, px: number): TextLabel
 	return l
 end
 
+-- A gold coin, drawn (not a picture from the emoji font, which some screens don't have): a disc
+-- of gold lit from the top left, a darker rim and a raised inner ring.
+local function coin(parent: Instance, px: number): Frame
+	local c = Instance.new("Frame")
+	c.BorderSizePixel = 0
+	c.AnchorPoint = Vector2.new(0.5, 0.5)
+	c.Size = UDim2.fromOffset(px, px)
+	c.BackgroundColor3 = Color3.new(1, 1, 1)
+	local round = Instance.new("UICorner")
+	round.CornerRadius = UDim.new(1, 0)
+	round.Parent = c
+	local lit = Instance.new("UIGradient")
+	lit.Rotation = 45
+	lit.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, rgb(255, 240, 170)),
+		ColorSequenceKeypoint.new(0.5, rgb(240, 186, 64)),
+		ColorSequenceKeypoint.new(1, rgb(176, 112, 26)),
+	})
+	lit.Parent = c
+	local rim = Instance.new("UIStroke")
+	rim.Color = rgb(150, 92, 18)
+	rim.Thickness = math.max(1, px * 0.06)
+	rim.Parent = c
+	local inner = Instance.new("Frame")
+	inner.BackgroundTransparency = 1
+	inner.AnchorPoint = Vector2.new(0.5, 0.5)
+	inner.Position = UDim2.fromScale(0.5, 0.5)
+	inner.Size = UDim2.fromScale(0.62, 0.62)
+	local ir = Instance.new("UICorner")
+	ir.CornerRadius = UDim.new(1, 0)
+	ir.Parent = inner
+	local is = Instance.new("UIStroke")
+	is.Color = rgb(255, 236, 160)
+	is.Transparency = 0.25
+	is.Thickness = math.max(1, px * 0.05)
+	is.Parent = inner
+	inner.Parent = c
+	c.Parent = parent
+	return c
+end
+
+-- A mirror ball, drawn: silver, lit from the top left, a grid of facets and two glints.
+local function discoBall(parent: Instance, px: number): Frame
+	local ball = Instance.new("Frame")
+	ball.BorderSizePixel = 0
+	ball.AnchorPoint = Vector2.new(0.5, 0.5)
+	ball.Size = UDim2.fromOffset(px, px)
+	ball.BackgroundColor3 = Color3.new(1, 1, 1)
+	ball.ClipsDescendants = true
+	local round = Instance.new("UICorner")
+	round.CornerRadius = UDim.new(1, 0)
+	round.Parent = ball
+	local lit = Instance.new("UIGradient")
+	lit.Rotation = 40
+	lit.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, rgb(250, 252, 255)),
+		ColorSequenceKeypoint.new(0.45, rgb(176, 186, 204)),
+		ColorSequenceKeypoint.new(1, rgb(70, 76, 96)),
+	})
+	lit.Parent = ball
+	local edge = Instance.new("UIStroke")
+	edge.Color = rgb(40, 44, 58)
+	edge.Thickness = 1.5
+	edge.Parent = ball
+	for i = 1, 4 do
+		for _, across in { true, false } do
+			local line = Instance.new("Frame")
+			line.BorderSizePixel = 0
+			line.BackgroundColor3 = rgb(60, 66, 86)
+			line.BackgroundTransparency = 0.45
+			line.Size = if across then UDim2.new(1, 0, 0, 1) else UDim2.new(0, 1, 1, 0)
+			line.Position = if across then UDim2.fromScale(0, i / 5) else UDim2.fromScale(i / 5, 0)
+			line.Parent = ball
+		end
+	end
+	for i, at in { Vector2.new(0.3, 0.28), Vector2.new(0.66, 0.6) } do
+		local glint = Instance.new("Frame")
+		glint.BorderSizePixel = 0
+		glint.AnchorPoint = Vector2.new(0.5, 0.5)
+		glint.Position = UDim2.fromScale(at.X, at.Y)
+		glint.Size = UDim2.fromOffset(px * (if i == 1 then 0.16 else 0.1), px * (if i == 1 then 0.16 else 0.1))
+		glint.Rotation = 45
+		glint.BackgroundColor3 = Color3.new(1, 1, 1)
+		glint.Parent = ball
+	end
+	ball.Parent = parent
+	return ball
+end
+
 local function gradient(parent: Instance, colours: ColorSequence?, alphas: NumberSequence?, rotation: number?): UIGradient
 	local g = Instance.new("UIGradient")
 	if colours then
@@ -244,7 +333,7 @@ THEMES.goldWave = function(ctx)
 	sheen.Size = UDim2.fromScale(0.35, 1)
 	gradient(sheen, nil, NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0.8), NumberSequenceKeypoint.new(1, 1) }), 0)
 	local coins = fall(ctx, ctx.front, 14, function(_p)
-		return glyph(ctx.front, "🪙", ctx.rng:NextNumber(20, 34))
+		return coin(ctx.front, ctx.rng:NextNumber(18, 30))
 	end, NumberRange.new(0.25, 0.42), 60, 300)
 	return {
 		step = function(dt, t)
@@ -804,7 +893,7 @@ end
 
 THEMES.zeroG = function(ctx)
 	return fall(ctx, ctx.back, 6, function(p)
-		local l = glyph(ctx.back, if ctx.rng:NextNumber() < 0.5 then "🪶" else "✨", ctx.rng:NextNumber(18, 30))
+		local l = glyph(ctx.back, if ctx.rng:NextNumber() < 0.5 then "🍃" else "✨", ctx.rng:NextNumber(18, 30))
 		p.vx = ctx.rng:NextNumber(-20, 20)
 		p.y = ctx.size().Y + 30
 		return l
@@ -845,7 +934,7 @@ THEMES.ownerArmy = function(ctx)
 end
 
 THEMES.dance = function(ctx)
-	local ball = glyph(ctx.front, "🪩", 60)
+	local ball = discoBall(ctx.front, 56)
 	local beams: { Frame } = {}
 	for i = 1, 4 do
 		local b = frame(ctx.back, RAINBOW[i + 1], 0)

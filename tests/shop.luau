@@ -2742,6 +2742,14 @@ do
 	check("an effect switched on everywhere carries its looks, the same here", sent.op == "fx" and type(sent.v) == "number" and sent.v == W:GetAttribute("FxV_meteor"), sent.v)
 	adminAs(owner, { op = "fxAllOff" })
 	check("...and its looks go with it when it's off", W:GetAttribute("FxV_meteor") == nil and W:GetAttribute("Fx_meteor") == nil)
+	-- The time of day follows the owner's choice too: every server's sky, or just this one's.
+	local pubClock = #published
+	local clocked = adminAs(owner, { op = "clock", id = "noon", everywhere = true })
+	check("the time of day, in every server: set here and sent to the rest", clocked.ok ~= false and #published == pubClock + 1 and published[#published].message.op == "clock" and published[#published].message.id == "noon")
+	adminAs(owner, { op = "clock", id = "midnight" })
+	check("...or just in this one, sending nothing", #published == pubClock + 1)
+	local stranger = fakePlayer(4242, "AJKR", "not_the_owner")
+	check("a guest can't change any server's sky", adminAs(stranger, { op = "clock", id = "noon", everywhere = true }).ok == false and #published == pubClock + 1)
 	run(function()
 		remote({ Data = string.format('{"op":"fx","id":"galaxy","on":true,"rid":"FX55","at":%.3f}', now()) })
 	end)

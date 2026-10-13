@@ -120,7 +120,7 @@ function CuriosPanel.open(start: string?)
 	end
 	tab = start or tab
 	local size = Root.size()
-	local w = math.min(760, size.X - 24)
+	local w = Root.panelWidth(760)
 	local h = math.min(690, size.Y - 40)
 	local group, content = Theme.glass(Root.panels, NAME, UDim2.fromOffset(w, h))
 	Theme.list(content, 8).VerticalAlignment = Enum.VerticalAlignment.Top

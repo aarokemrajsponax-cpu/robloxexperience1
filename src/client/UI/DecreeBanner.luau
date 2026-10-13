@@ -30,9 +30,7 @@ function DecreeBanner.show(heading: string, line: string, seconds: number?)
 	local w = if between >= 360 then math.min(620, between) else math.min(620, screenW - 24)
 	local top = if between >= 360 then 96 else 220
 	local group, content = Theme.glass(Root.hud, "Decree", UDim2.fromOffset(w, 0), UDim2.new(0.5, 0, 0, top), Vector2.new(0.5, 0))
-	group.AutomaticSize = Enum.AutomaticSize.Y
-	content.AutomaticSize = Enum.AutomaticSize.Y
-	content.Size = UDim2.new(1, 0, 0, 0)
+	Theme.fitHeight(group, content)
 	local fill = group:FindFirstChild("Fill")
 	local stroke = fill and fill:FindFirstChildOfClass("UIStroke")
 	if stroke then

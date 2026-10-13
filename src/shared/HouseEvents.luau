@@ -14,18 +14,18 @@ local HouseEvents = {}
 export type Event = { id: string, name: string, line: string, glyph: string?, holiday: boolean? }
 
 HouseEvents.List = {
-	{ id = "goldenHour", name = "Golden Hour", line = "Gilt counts double.", glyph = "🪙" },
+	{ id = "goldenHour", name = "Golden Hour", line = "Gilt counts double.", glyph = "💰" },
 	{ id = "luckyHour", name = "Lucky Hour", line = "Mythics are ten times as likely in the four rooms.", glyph = "🍀" },
 	{ id = "doubleXP", name = "Double XP", line = "Every level comes twice as fast.", glyph = "⭐" },
 	{ id = "pageTurner", name = "The Page-Turner", line = "The Ledger's pages turn twice as fast.", glyph = "📖" },
 	{ id = "giants", name = "A Night of Giants", line = "Every guest walking the house stands tall.", glyph = "🦒" },
 	{ id = "tiny", name = "A Night of Small Things", line = "Every guest walking the house shrinks to half size.", glyph = "🐜" },
 	{ id = "quickstep", name = "The Quickstep", line = "Everyone walks and runs faster.", glyph = "👟" },
-	{ id = "featherlight", name = "Featherlight", line = "The house's gravity is gentle. Jump.", glyph = "🪶" },
+	{ id = "featherlight", name = "Featherlight", line = "The house's gravity is gentle. Jump.", glyph = "🍃" },
 	{ id = "goldRain", name = "Gold Rain", line = "Gold coins are scattered through the house. Walk over them for Gilt.", glyph = "💰" },
 	{ id = "treasure", name = "The Treasure Hunt", line = "Golden keys are hidden around the house. The finder of each wins Gilt.", glyph = "🗝️" },
 	{ id = "parade", name = "The Brainrot Parade", line = "The meme curios are loose in the house. Catch them for Gilt, and a Parade Balloon to keep.", glyph = "🎈" },
-	{ id = "disco", name = "Disco Night", line = "The Ballroom turns disco. Everyone in it gets the Disco Ball curio.", glyph = "🪩" },
+	{ id = "disco", name = "Disco Night", line = "The Ballroom turns disco. Everyone in it gets the Disco Ball curio.", glyph = "🕺" },
 	{ id = "discoHouse", name = "The House Party", line = "Every lamp in the house turns disco, colours chasing round every room.", glyph = "🕺" },
 	{ id = "curioHour", name = "A Night of Curios", line = "Curios turn up among the pieces twice as often.", glyph = "🏺" },
 	-- The holidays.
@@ -60,7 +60,7 @@ HouseEvents.Effects = {
 	{ id = "meteor", name = "Meteor shower", line = "Blazing meteors streak down and slam round every guest.", glyph = "☄️" },
 	{ id = "blackHole", name = "Black hole", line = "A black hole opens overhead and pulls everyone up into its swirl.", glyph = "🕳️" },
 	{ id = "aurora", name = "Aurora", line = "Ribbons of green and violet light ripple across the sky.", glyph = "🌌" },
-	{ id = "galaxy", name = "Galaxy sky", line = "The sky turns to deep space: stars, nebulae and a ringed planet.", glyph = "🪐" },
+	{ id = "galaxy", name = "Galaxy sky", line = "The sky turns to deep space: stars, nebulae and a ringed planet.", glyph = "🌌" },
 	{ id = "ufo", name = "UFO abduction", line = "A flying saucer hovers over each guest and beams them up.", glyph = "🛸" },
 	{ id = "blizzard", name = "Blizzard", line = "A whiteout: snow sweeps sideways through the house.", glyph = "🌨️" },
 	{ id = "earthquake", name = "Earthquake", line = "The ground rumbles and every screen shakes.", glyph = "🌋" },
@@ -123,9 +123,9 @@ HouseEvents.Countdowns = {
 export type Realm = { id: string, name: string, glyph: string, line: string }
 HouseEvents.Realms = {
 	{ id = "gilded", name = "THE GILDED NIGHT", glyph = "👑", line = "Double Gilt. Golden pieces. Gifts from the owner." },
-	{ id = "cosmos", name = "THE COSMOS", glyph = "🪐", line = "The house is floating in deep space." },
+	{ id = "cosmos", name = "THE COSMOS", glyph = "🌌", line = "The house is floating in deep space." },
 	{ id = "candy", name = "SUGAR RUSH", glyph = "🍭", line = "Everything is sweet. Everything is pink." },
-	{ id = "midas", name = "THE MIDAS REALM", glyph = "🪙", line = "Everything you can see is made of gold." },
+	{ id = "midas", name = "THE MIDAS REALM", glyph = "👑", line = "Everything you can see is made of gold." },
 	{ id = "neon", name = "NEON CITY", glyph = "🌃", line = "The lights are too bright. Good." },
 	{ id = "abyss", name = "THE ABYSS", glyph = "🐙", line = "The whole house is underwater. Hold your breath." },
 	{ id = "frost", name = "FROSTBITE", glyph = "❄️", line = "Snow in the hallways. Ice on the chandeliers." },

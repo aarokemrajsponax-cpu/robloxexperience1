@@ -335,7 +335,7 @@ end
 -- What a Christmas gift may hold (shown, with its odds, on the screen that opens them)
 ---------------------------------------------------------------------------------------------------
 HolidayGames.GiftKinds = {
-	{ id = "gilt", name = "Gilt", glyph = "🪙" },
+	{ id = "gilt", name = "Gilt", glyph = "💰" },
 	{ id = "moreGilt", name = "A heap of Gilt", glyph = "💰" },
 	{ id = "gems", name = "Gems", glyph = "💎" },
 	{ id = "moreGems", name = "A trove of Gems", glyph = "👑" },

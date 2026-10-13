@@ -27,6 +27,10 @@ local STRIP_W = 500
 local TOP = 62
 local GAP = 6
 local HEIGHT = { head = 42, line = 30, soon = 32 }
+-- The room the words leave at the capsule's ends (the live light beside the headline), and the
+-- least a capsule is ever made (so a short line still reads as a capsule, not a button).
+local ENDS = { head = 84, line = 40, soon = 40 }
+local LEAST = { head = 240, line = 180, soon = 220 }
 type Kind = "head" | "line" | "soon"
 
 local TweenService = game:GetService("TweenService")
@@ -61,7 +65,8 @@ end
 local function reportTop()
 	local bottom = 0
 	for key in rows do
-		bottom += HEIGHT[kinds[key] or "line"] + GAP
+		local h = holders[key]
+		bottom += (if h then h.Size.Y.Offset else HEIGHT[kinds[key] or "line"]) + GAP
 	end
 	Root.setTop("events", if bottom > 0 and strip.Visible then TOP + bottom else nil, STRIP_W / 2)
 end
@@ -130,7 +135,8 @@ local function pill(key: string, order: number, kind: Kind): TextLabel
 	holder.Name = key
 	holder.BackgroundTransparency = 1
 	holder.LayoutOrder = order
-	holder.Size = UDim2.new(if kind == "head" then 1 else 0.9, 0, 0, height)
+	-- (As wide as its words, set in say(); this until then.)
+	holder.Size = UDim2.fromOffset(LEAST[kind], height)
 	holder.Parent = strip
 	if kind ~= "line" then
 		Theme.glow(holder, Brand.Colours.glow, height // 2, if kind == "head" then 0.75 else 0.45)
@@ -187,18 +193,19 @@ local function pill(key: string, order: number, kind: Kind): TextLabel
 	label.BackgroundTransparency = 1
 	label.AnchorPoint = Vector2.new(0.5, 0.5)
 	label.Position = UDim2.new(0.5, if kind == "head" then 10 else 0, 0.5, 0)
-	label.Size = UDim2.new(1, if kind == "head" then -84 else -40, 1, -10)
+	label.Size = UDim2.new(1, -ENDS[kind], 1, -10)
 	label.FontFace = if kind == "head" then Brand.Fonts.display elseif kind == "soon" then Brand.Fonts.bodyBold else Brand.Fonts.body
 	label.TextColor3 = if kind == "head" then Color3.new(1, 1, 1) elseif kind == "soon" then Brand.Colours.brightGold else Color3.fromRGB(226, 229, 235)
-	label.TextScaled = true
+	-- (Sized to its words in say(): the capsule's own size where they fit, a step smaller for a
+	-- long line, never below 11, and an ellipsis rather than words running off the capsule.)
+	label.TextScaled = false
 	label.TextWrapped = false
+	label.LineHeight = 1.08
+	label.TextTruncate = Enum.TextTruncate.AtEnd
+	label.TextSize = fitSize(kind)
 	label.Text = ""
 	label.ZIndex = 3
-	local fit = Instance.new("UITextSizeConstraint")
-	fit.Name = "Fit"
-	fit.MinTextSize = 9
-	fit.MaxTextSize = fitSize(kind)
-	fit.Parent = label
+	label:SetAttribute("Kind", kind)
 	if kind == "head" then
 		Theme.metal(label, true)
 		liveLight(holder)
@@ -210,12 +217,78 @@ local function pill(key: string, order: number, kind: Kind): TextLabel
 	return label
 end
 
--- New words in a capsule come in softly.
+-- The widest the strip may be on this screen.
+local function stripWidth(): number
+	return math.min(STRIP_W, Root.size().X - 24)
+end
+
+-- New words in a capsule: the capsule made exactly as wide as its words (with its ends), on one
+-- line at its own size where they fit, a step smaller where that's all it takes, and otherwise
+-- on two lines (three at the very most) in a taller capsule, never run off its edge or cut
+-- short. They come in softly.
 local function say(label: TextLabel, text: string)
 	if label.Text == text then
 		return
 	end
 	label.Text = text
+	local k = label:GetAttribute("Kind")
+	local kind: Kind = if k == "head" then "head" elseif k == "soon" then "soon" else "line"
+	local holder = label.Parent
+	local room = math.floor(stripWidth() * (if kind == "head" then 1 else 0.94)) - ENDS[kind]
+	local size = fitSize(kind)
+	local font = label.FontFace
+	-- (Measured with every figure at its widest, so a clock ticking down never twitches the
+	-- capsule's width from one second to the next.)
+	local steady = string.gsub(text, "%d", "8")
+	local wide = Theme.measure(steady, size, font).X
+	local high = HEIGHT[kind]
+	label.TextWrapped = false
+	if wide > room then
+		local smaller = math.max(12, math.floor(size * 0.88))
+		local narrower = Theme.measure(steady, smaller, font).X
+		if narrower <= room then
+			size, wide = smaller, narrower
+		else
+			-- (Wrapped at the room there is: as tall as its lines, as wide as its longest.)
+			local set = Theme.measure(steady, size, font, room)
+			local lines = math.max(1, math.floor(set.Y / size + 0.5))
+			if lines > 3 then
+				size = smaller
+				set = Theme.measure(steady, size, font, room)
+				lines = math.min(3, math.max(1, math.floor(set.Y / size + 0.5)))
+			end
+			-- (Even lines, not one long and a word left over: as narrow as the words can be set
+			-- without taking another line.)
+			local lo, hi = math.floor(room / lines), room
+			for _ = 1, 8 do
+				local mid = math.floor((lo + hi) / 2)
+				local tried = Theme.measure(steady, size, font, mid)
+				if math.floor(tried.Y / size + 0.5) <= lines then
+					hi = mid
+				else
+					lo = mid + 1
+				end
+			end
+			set = Theme.measure(steady, size, font, hi)
+			wide = math.min(room, math.max(set.X, hi))
+			label.TextWrapped = true
+			high = math.max(high, math.ceil(lines * size * 1.08) + 14)
+		end
+	end
+	label.TextSize = size
+	if holder and holder:IsA("Frame") then
+		holder.Size = UDim2.fromOffset(math.max(LEAST[kind], math.ceil(wide) + 8 + ENDS[kind]), high)
+		local fill = holder:FindFirstChild("Fill")
+		local corner = fill and fill:FindFirstChildOfClass("UICorner")
+		if corner then
+			corner.CornerRadius = UDim.new(0, HEIGHT[kind] // 2)
+		end
+		local shine = holder:FindFirstChild("Shine")
+		if shine and shine:IsA("Frame") then
+			shine.Size = UDim2.new(1, -HEIGHT[kind], 0, 1)
+		end
+		reportTop()
+	end
 	if not still() then
 		label.TextTransparency = 1
 		TweenService:Create(label, TweenInfo.new(0.35, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), { TextTransparency = 0 }):Play()
@@ -234,11 +307,10 @@ end
 
 -- (On a bigger or smaller screen, the words keep to a readable size.)
 table.insert(Root.rescaled, function()
-	for key, l in rows do
-		local fit = l:FindFirstChild("Fit")
-		if fit and fit:IsA("UITextSizeConstraint") then
-			fit.MaxTextSize = fitSize(kinds[key] or "line")
-		end
+	for _, l in rows do
+		local text = l.Text
+		l.Text = ""
+		say(l, text)
 	end
 end)
 
@@ -298,14 +370,14 @@ local function refresh()
 		drop("__head")
 		drop("__cycle")
 		for _, a in on do
-			pill(a.e.id, 2 + a.i, "line").Text = string.format("%s  ·  %s  ·  %s", Caps(a.e.name), a.e.line, clock(a.ends - now()))
+			say(pill(a.e.id, 2 + a.i, "line"), string.format("%s  ·  %s  ·  %s", Caps(a.e.name), a.e.line, clock(a.ends - now())))
 		end
 	end
 	-- A scheduled event coming up: every screen counts down to it for the hour before.
 	local at = Workspace:GetAttribute("NextEventAt")
 	local name = Workspace:GetAttribute("NextEventName")
 	if type(at) == "number" and type(name) == "string" and at > now() then
-		pill("__next", 0, "soon").Text = string.format("%s STARTS IN %s  ·  stay in the house", Caps(name), clock(at - now()))
+		say(pill("__next", 0, "soon"), string.format("%s STARTS IN %s  ·  stay in the house", Caps(name), clock(at - now())))
 	elseif rows.__next then
 		drop("__next")
 	end

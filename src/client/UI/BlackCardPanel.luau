@@ -30,7 +30,7 @@ function BlackCardPanel.open()
 		return
 	end
 	local size = Root.size()
-	local w = math.min(440, size.X - 24)
+	local w = Root.panelWidth(440)
 	local group, content = Theme.glass(Root.panels, NAME, UDim2.fromOffset(w, math.min(430, size.Y - 40)))
 	Theme.list(content, 8).VerticalAlignment = Enum.VerticalAlignment.Top
 	Theme.text(content, "The Black Card", 26, "display", { LayoutOrder = 1 })

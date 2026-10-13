@@ -874,7 +874,7 @@ function MemeTakeover.play(seconds: number?, editionId: string?)
 		elseif V.finale == "gold" then
 			cc.TintColor = rgb(255, 225, 150)
 			for _, a in cast do
-				a.glyph.Text = "🪙"
+				a.glyph.Text = "💰"
 				local accent = a.glyph:FindFirstChildOfClass("TextLabel")
 				if accent then
 					accent.Text = ""

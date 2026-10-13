@@ -41,6 +41,7 @@ local AbuseMusic = require(script.Parent.AbuseMusic)
 local Fireworks = require(script.Parent.Fireworks)
 local OwnerCameo = require(script.Parent.OwnerCameo)
 local Sound = require(script.Parent.Parent.Sound)
+local Root = require(script.Parent.Parent.UI.Root)
 
 local AbuseShow = {}
 
@@ -1420,8 +1421,12 @@ function AbuseShow.opening(mega: boolean, seed: number?, nightId: string?)
 		pcall(AbuseShow.cameraShake, 1.4, 0.9)
 		-- The title, landing the night's own way.
 		local words = if mega then "MEGA ABUSE" else "ADMIN ABUSE"
-		local titleSize = UDim2.fromOffset(math.min(v.X - 30, 980 * u), 150 * u)
-		local titleAt = UDim2.fromOffset(centre.X, centre.Y)
+		-- (The words sit in the room right of the keys down the left, so nothing lands on them.)
+		local dock = Root.left * Root.scale
+		local room = v.X - dock
+		local wordsX = dock + room / 2
+		local titleSize = UDim2.fromOffset(math.min(room - 30, 980 * u), 150 * u)
+		local titleAt = UDim2.fromOffset(wordsX, centre.Y)
 		local title = label(root, "Title", words, IMPACT, Color3.new(1, 1, 1))
 		title.AnchorPoint = Vector2.new(0.5, 0.5)
 		title.Position = titleAt
@@ -1440,8 +1445,8 @@ function AbuseShow.opening(mega: boolean, seed: number?, nightId: string?)
 		if plan then
 			local kicker = label(root, "Night", plan.night.glyph .. "  TONIGHT:  " .. plan.night.name .. "  " .. plan.night.glyph, HEAVY, P.light)
 			kicker.AnchorPoint = Vector2.new(0.5, 1)
-			kicker.Position = UDim2.fromOffset(centre.X, centre.Y - 80 * u)
-			kicker.Size = UDim2.fromOffset(math.min(v.X - 40, 760 * u), 30 * u)
+			kicker.Position = UDim2.fromOffset(wordsX, centre.Y - 80 * u)
+			kicker.Size = UDim2.fromOffset(math.min(room - 40, 760 * u), 30 * u)
 			kicker.ZIndex = 17
 			stroke(kicker, rgb(20, 12, 4), 2)
 			kicker.TextTransparency = 1
@@ -1451,8 +1456,8 @@ function AbuseShow.opening(mega: boolean, seed: number?, nightId: string?)
 		end
 		local sub = label(root, "Sub", if mega then "TRIPLE GILT  ·  A NEW REALM EVERY FEW MINUTES  ·  GIFTS FROM " .. string.upper(ownerName()) .. "  ·  GIVEAWAYS" else "DOUBLE GILT  ·  GOLDEN PIECES  ·  GIFTS FROM " .. string.upper(ownerName()) .. "  ·  SURPRISES ALL NIGHT", HEAVY, P.light)
 		sub.AnchorPoint = Vector2.new(0.5, 0)
-		sub.Position = UDim2.fromOffset(centre.X, centre.Y + 82 * u)
-		sub.Size = UDim2.fromOffset(math.min(v.X - 40, 860 * u), 26 * u)
+		sub.Position = UDim2.fromOffset(wordsX, centre.Y + 82 * u)
+		sub.Size = UDim2.fromOffset(math.min(room - 40, 860 * u), 26 * u)
 		sub.ZIndex = 17
 		sub.TextTransparency = 1
 		task.delay(0.35, function()
@@ -1469,7 +1474,7 @@ function AbuseShow.opening(mega: boolean, seed: number?, nightId: string?)
 		end
 		local title = root:FindFirstChild("Title")
 		if title and title:IsA("TextLabel") then
-			tween(title, 0.7, { Position = UDim2.fromOffset(centre.X, -80 * u), TextTransparency = 1 }, Enum.EasingStyle.Back, Enum.EasingDirection.In)
+			tween(title, 0.7, { Position = UDim2.new(0, title.Position.X.Offset, 0, -80 * u), TextTransparency = 1 }, Enum.EasingStyle.Back, Enum.EasingDirection.In)
 			local s2 = title:FindFirstChildOfClass("UIStroke")
 			if s2 then
 				tween(s2, 0.5, { Transparency = 1 })
@@ -2206,7 +2211,7 @@ function AbuseShow.gift(m: { [string]: any })
 			reward.Text = "+" .. tostring(r.gilt or gilt) .. " GILT" .. (if r.crown then "  +  👑 THE CROWN!" else "")
 			reward.TextColor3 = GOLD_LIGHT
 			local scale = Instance.new("UIScale")
-			scale.Scale = 1.6
+			scale.Scale = 1.25
 			scale.Parent = reward
 			tween(scale, 0.4, { Scale = 1 }, Enum.EasingStyle.Back)
 			-- (From the middle of the card: right-hand side, just below half way down.)
@@ -2278,7 +2283,7 @@ local function haulCard(n: Night, stopped: boolean, P: AbuseNights.Palette, dela
 	local gained = math.max(0, giltNow() - n.gilt)
 	local rows: { { glyph: string, text: string } } = {}
 	if gained > 0 then
-		table.insert(rows, { glyph = "🪙", text = "+" .. thousands(gained) .. " GILT" })
+		table.insert(rows, { glyph = "💰", text = "+" .. thousands(gained) .. " GILT" })
 	end
 	if n.gifts > 0 then
 		table.insert(rows, { glyph = "🎁", text = tostring(n.gifts) .. (if n.gifts == 1 then " GIFT OPENED" else " GIFTS OPENED") })
@@ -2391,7 +2396,7 @@ end
 -- Gold raining down the screen, coins chiming, and the haul.
 FINALES.goldShower = function(n: Night, stopped: boolean, P: AbuseNights.Palette)
 	local layer = finaleLayer(7)
-	rainDown(layer, { "🪙", "🪙", "🪙", "💰", "✨" }, 70, 4)
+	rainDown(layer, { "💰", "💰", "💵", "🏅", "✨" }, 70, 4)
 	for i = 0, 5 do
 		task.delay(i * 0.35, sound, "coinDrop", 0.7, 1 + i * 0.05)
 	end
@@ -2673,6 +2678,13 @@ end
 AbuseShow.check = check
 
 -- Whether the arrival card or a gift is on the screen (the objective card steps aside for them).
+-- Whether the opening is playing on this screen (the card of what to do next steps aside for it).
+function AbuseShow.openingUp(): boolean
+	local gui = player:FindFirstChild("PlayerGui")
+	local s = gui and gui:FindFirstChild("MaisonAbuseShow")
+	return s ~= nil and s:FindFirstChild("Opening") ~= nil
+end
+
 function AbuseShow.cardUp(): boolean
 	local gui = player:FindFirstChild("PlayerGui")
 	local s = gui and gui:FindFirstChild("MaisonAbuseShow")

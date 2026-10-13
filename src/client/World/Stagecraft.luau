@@ -15,6 +15,7 @@ local Brand = require(ReplicatedStorage.Shared.Brand)
 local Ease = require(ReplicatedStorage.Shared.Ease)
 local Layout = require(ReplicatedStorage.Shared.Layout)
 local CameraRig = require(script.Parent.Parent.Camera)
+local Root = require(script.Parent.Parent.UI.Root)
 
 local Stagecraft = {}
 
@@ -91,8 +92,12 @@ function Stagecraft.title(gui: ScreenGui, kicker: string?, words: string, hold: 
 	frame.Name = "Caption"
 	frame.BackgroundTransparency = 1
 	frame.AnchorPoint = Vector2.new(0.5, 0.5)
-	frame.Position = UDim2.fromScale(0.5, 0.3)
-	frame.Size = UDim2.fromScale(0.8, 0.11)
+	-- (In the room beside the keys down the left, never over them; and when the events strip
+	-- stands along the top, a step lower, so the italic line above never touches it.)
+	local h = Root.size().Y
+	local drop = math.max(0, Root.topClear() + 10 - h * 0.2)
+	frame.Position = UDim2.new(0.58, 0, 0.3, drop)
+	frame.Size = UDim2.fromScale(0.66, 0.11)
 	frame.Parent = gui
 	lastTitle = frame
 	local texts: { TextLabel } = {}

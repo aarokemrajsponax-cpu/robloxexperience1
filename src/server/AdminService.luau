@@ -2314,6 +2314,9 @@ local function handle(player: Player, request: unknown): any
 		if not setClock(r.id) then
 			return { ok = false, why = "Choose a time of day." }
 		end
+		if r.everywhere == true then
+			everywhere({ op = "clock", id = r.id }, byName)
+		end
 		return state(player)
 	elseif op == "headline" then
 		local text: string? = nil

@@ -16,13 +16,13 @@
   {
    "id": "midasHeist",
    "name": "THE MIDAS HEIST",
-   "glyph": "🪙",
+   "glyph": "👑",
    "line": "AJKR cracked the vault. Everything is gold."
   },
   {
    "id": "cosmicTakeover",
    "name": "COSMIC TAKEOVER",
-   "glyph": "🪐",
+   "glyph": "🚀",
    "line": "The house has left the planet."
   },
   {
@@ -34,7 +34,7 @@
   {
    "id": "hotDisco",
    "name": "HOT HOT DISCO",
-   "glyph": "🪩",
+   "glyph": "🕺",
    "line": "The dance floor is on fire. Keep dancing."
   },
   {
@@ -184,7 +184,7 @@
   {
    "id": "bubbleMania",
    "name": "BUBBLE MANIA",
-   "glyph": "🫧",
+   "glyph": "💧",
    "line": "Pop them all. There are millions."
   },
   {
@@ -543,7 +543,7 @@
   },
   {
    "group": "Effects",
-   "label": "🪐 Galaxy sky ON",
+   "label": "🌌 Galaxy sky ON",
    "line": "The sky turns to deep space: stars, nebulae and a ringed planet. Stays on until it's switched off.",
    "command": {
     "op": "fx",
@@ -692,7 +692,7 @@
   {
    "group": "Holidays",
    "label": "🎃 The All Hallows' Hunt · 15 min",
-   "line": "Pumpkins are hidden all over the house. Find them for Gilt; one is solid gold.",
+   "line": "Pumpkins hidden all over the house, and Hallows Lane's doors open for trick or treat.",
    "command": {
     "op": "event",
     "id": "halloween",
@@ -701,8 +701,8 @@
   },
   {
    "group": "Holidays",
-   "label": "🦃 The Turkey Trot · 15 min",
-   "line": "Turkeys are loose in the house and they run. Catch one for Gilt; one is golden.",
+   "label": "🦃 The Turkey Round-Up · 15 min",
+   "line": "Turkeys are loose in the Harvest Field and they run. Catch one for Gilt; one is golden.",
    "command": {
     "op": "event",
     "id": "thanksgiving",
@@ -712,7 +712,7 @@
   {
    "group": "Holidays",
    "label": "🎁 The Gift Drop · 15 min",
-   "line": "Presents are under every tree, and snow is falling. Open them for Gilt; one rings gold.",
+   "line": "Presents under every tree, snow falling, and Santa's sleigh at the kerb for the North Pole.",
    "command": {
     "op": "event",
     "id": "christmas",
@@ -742,7 +742,7 @@
   {
    "group": "Holidays",
    "label": "🍀 The Lucky Clover · 15 min",
-   "line": "Four-leaf clovers are everywhere, and a pot of gold waits at the rainbow's end.",
+   "line": "Four-leaf clovers everywhere, a pot of gold at the rainbow's end, and rare finds far likelier.",
    "command": {
     "op": "event",
     "id": "stPatrick",
@@ -751,7 +751,7 @@
   },
   {
    "group": "Holidays",
-   "label": "🥚 The Egg Hunt · 15 min",
+   "label": "🥚 The Great Egg Hunt · 15 min",
    "line": "Painted eggs are hidden all over the house. Find them for Gilt; one is golden.",
    "command": {
     "op": "event",
@@ -761,7 +761,7 @@
   },
   {
    "group": "Events",
-   "label": "🪙 Golden Hour · 15 min",
+   "label": "💰 Golden Hour · 15 min",
    "line": "Gilt counts double.",
    "command": {
     "op": "event",
@@ -831,7 +831,7 @@
   },
   {
    "group": "Events",
-   "label": "🪶 Featherlight · 15 min",
+   "label": "🍃 Featherlight · 15 min",
    "line": "The house's gravity is gentle. Jump.",
    "command": {
     "op": "event",
@@ -871,7 +871,7 @@
   },
   {
    "group": "Events",
-   "label": "🪩 Disco Night · 15 min",
+   "label": "🕺 Disco Night · 15 min",
    "line": "The Ballroom turns disco. Everyone in it gets the Disco Ball curio.",
    "command": {
     "op": "event",

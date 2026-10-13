@@ -36,7 +36,7 @@ on:
           - "☄️ Meteor shower ON"
           - "🕳️ Black hole ON"
           - "🌌 Aurora ON"
-          - "🪐 Galaxy sky ON"
+          - "🌌 Galaxy sky ON"
           - "🛸 UFO abduction ON"
           - "🌨️ Blizzard ON"
           - "🌋 Earthquake ON"
@@ -52,24 +52,24 @@ on:
           - "🕺 The owner's army ON"
           - "🧹 Every effect OFF"
           - "🎃 The All Hallows' Hunt · 15 min"
-          - "🦃 The Turkey Trot · 15 min"
+          - "🦃 The Turkey Round-Up · 15 min"
           - "🎁 The Gift Drop · 15 min"
           - "🎆 The New Year Countdown · 15 min"
           - "💌 Sweethearts · 15 min"
           - "🍀 The Lucky Clover · 15 min"
-          - "🥚 The Egg Hunt · 15 min"
-          - "🪙 Golden Hour · 15 min"
+          - "🥚 The Great Egg Hunt · 15 min"
+          - "💰 Golden Hour · 15 min"
           - "🍀 Lucky Hour · 15 min"
           - "⭐ Double XP · 15 min"
           - "📖 The Page-Turner · 15 min"
           - "🦒 A Night of Giants · 15 min"
           - "🐜 A Night of Small Things · 15 min"
           - "👟 The Quickstep · 15 min"
-          - "🪶 Featherlight · 15 min"
+          - "🍃 Featherlight · 15 min"
           - "💰 Gold Rain · 15 min"
           - "🗝️ The Treasure Hunt · 15 min"
           - "🎈 The Brainrot Parade · 15 min"
-          - "🪩 Disco Night · 15 min"
+          - "🕺 Disco Night · 15 min"
           - "🕺 The House Party · 15 min"
           - "🏺 A Night of Curios · 15 min"
           - "🎁 Giveaway · 250 Gilt"
@@ -104,10 +104,10 @@ on:
         options:
           - "🎲 Surprise me (a different night every time)"
           - "👑 THE CLASSIC"
-          - "🪙 THE MIDAS HEIST"
-          - "🪐 COSMIC TAKEOVER"
+          - "👑 THE MIDAS HEIST"
+          - "🚀 COSMIC TAKEOVER"
           - "🗿 BRAINROT APOCALYPSE"
-          - "🪩 HOT HOT DISCO"
+          - "🕺 HOT HOT DISCO"
           - "❄️ FROSTBITE FRENZY"
           - "🍭 CANDY CHAOS"
           - "🌃 NEON OVERDRIVE"
@@ -132,7 +132,7 @@ on:
           - "🌪️ TORNADO ALLEY"
           - "💰 GOLD RUSH HOUR"
           - "🔥 FIRE & ICE"
-          - "🫧 BUBBLE MANIA"
+          - "💧 BUBBLE MANIA"
           - "🌈 RAINBOW RIOT"
           - "🤡 RISE OF THE MEME LORDS"
           - "💥 SUPERNOVA"
@@ -172,6 +172,10 @@ on:
         description: "Advanced: one command as JSON, for the command box"
         type: string
         required: false
+      label:
+        description: "(Filled in by the Owner Remote page: the power's name, for this run's summary)"
+        type: string
+        required: false
 permissions: {}
 concurrency:
   group: owner-remote
@@ -189,6 +193,7 @@ jobs:
           WORDS: ${{ inputs.words }}
           STYLE: ${{ inputs.style }}
           RAW: ${{ inputs.command }}
+          LABEL: ${{ inputs.label }}
           UNIVERSE: "10768398256"
           TOPIC: "MaisonRemote"
           STORE: "MaisonSchedule"
@@ -223,7 +228,7 @@ jobs:
             "☄️ Meteor shower ON") CMD='{"op":"fx","id":"meteor","on":true}' ;;
             "🕳️ Black hole ON") CMD='{"op":"fx","id":"blackHole","on":true}' ;;
             "🌌 Aurora ON") CMD='{"op":"fx","id":"aurora","on":true}' ;;
-            "🪐 Galaxy sky ON") CMD='{"op":"fx","id":"galaxy","on":true}' ;;
+            "🌌 Galaxy sky ON") CMD='{"op":"fx","id":"galaxy","on":true}' ;;
             "🛸 UFO abduction ON") CMD='{"op":"fx","id":"ufo","on":true}' ;;
             "🌨️ Blizzard ON") CMD='{"op":"fx","id":"blizzard","on":true}' ;;
             "🌋 Earthquake ON") CMD='{"op":"fx","id":"earthquake","on":true}' ;;
@@ -239,24 +244,24 @@ jobs:
             "🕺 The owner's army ON") CMD='{"op":"fx","id":"ownerArmy","on":true}' ;;
             "🧹 Every effect OFF") CMD='{"op":"fxAllOff"}' ;;
             "🎃 The All Hallows' Hunt · 15 min") CMD='{"op":"event","id":"halloween","minutes":15}' ;;
-            "🦃 The Turkey Trot · 15 min") CMD='{"op":"event","id":"thanksgiving","minutes":15}' ;;
+            "🦃 The Turkey Round-Up · 15 min") CMD='{"op":"event","id":"thanksgiving","minutes":15}' ;;
             "🎁 The Gift Drop · 15 min") CMD='{"op":"event","id":"christmas","minutes":15}' ;;
             "🎆 The New Year Countdown · 15 min") CMD='{"op":"event","id":"newYear","minutes":15}' ;;
             "💌 Sweethearts · 15 min") CMD='{"op":"event","id":"valentine","minutes":15}' ;;
             "🍀 The Lucky Clover · 15 min") CMD='{"op":"event","id":"stPatrick","minutes":15}' ;;
-            "🥚 The Egg Hunt · 15 min") CMD='{"op":"event","id":"easter","minutes":15}' ;;
-            "🪙 Golden Hour · 15 min") CMD='{"op":"event","id":"goldenHour","minutes":15}' ;;
+            "🥚 The Great Egg Hunt · 15 min") CMD='{"op":"event","id":"easter","minutes":15}' ;;
+            "💰 Golden Hour · 15 min") CMD='{"op":"event","id":"goldenHour","minutes":15}' ;;
             "🍀 Lucky Hour · 15 min") CMD='{"op":"event","id":"luckyHour","minutes":15}' ;;
             "⭐ Double XP · 15 min") CMD='{"op":"event","id":"doubleXP","minutes":15}' ;;
             "📖 The Page-Turner · 15 min") CMD='{"op":"event","id":"pageTurner","minutes":15}' ;;
             "🦒 A Night of Giants · 15 min") CMD='{"op":"event","id":"giants","minutes":15}' ;;
             "🐜 A Night of Small Things · 15 min") CMD='{"op":"event","id":"tiny","minutes":15}' ;;
             "👟 The Quickstep · 15 min") CMD='{"op":"event","id":"quickstep","minutes":15}' ;;
-            "🪶 Featherlight · 15 min") CMD='{"op":"event","id":"featherlight","minutes":15}' ;;
+            "🍃 Featherlight · 15 min") CMD='{"op":"event","id":"featherlight","minutes":15}' ;;
             "💰 Gold Rain · 15 min") CMD='{"op":"event","id":"goldRain","minutes":15}' ;;
             "🗝️ The Treasure Hunt · 15 min") CMD='{"op":"event","id":"treasure","minutes":15}' ;;
             "🎈 The Brainrot Parade · 15 min") CMD='{"op":"event","id":"parade","minutes":15}' ;;
-            "🪩 Disco Night · 15 min") CMD='{"op":"event","id":"disco","minutes":15}' ;;
+            "🕺 Disco Night · 15 min") CMD='{"op":"event","id":"disco","minutes":15}' ;;
             "🕺 The House Party · 15 min") CMD='{"op":"event","id":"discoHouse","minutes":15}' ;;
             "🏺 A Night of Curios · 15 min") CMD='{"op":"event","id":"curioHour","minutes":15}' ;;
             "🎁 Giveaway · 250 Gilt") CMD='{"op":"giveaway","amount":250}' ;;
@@ -292,10 +297,10 @@ jobs:
           # The night chosen, for Admin Abuse or Mega Abuse (a surprise: none, the command's id decides).
           case "${NIGHT:-}" in
             "👑 THE CLASSIC") NIGHT_ID="classic" ;;
-            "🪙 THE MIDAS HEIST") NIGHT_ID="midasHeist" ;;
-            "🪐 COSMIC TAKEOVER") NIGHT_ID="cosmicTakeover" ;;
+            "👑 THE MIDAS HEIST") NIGHT_ID="midasHeist" ;;
+            "🚀 COSMIC TAKEOVER") NIGHT_ID="cosmicTakeover" ;;
             "🗿 BRAINROT APOCALYPSE") NIGHT_ID="brainrotApocalypse" ;;
-            "🪩 HOT HOT DISCO") NIGHT_ID="hotDisco" ;;
+            "🕺 HOT HOT DISCO") NIGHT_ID="hotDisco" ;;
             "❄️ FROSTBITE FRENZY") NIGHT_ID="frostbiteFrenzy" ;;
             "🍭 CANDY CHAOS") NIGHT_ID="candyChaos" ;;
             "🌃 NEON OVERDRIVE") NIGHT_ID="neonOverdrive" ;;
@@ -320,7 +325,7 @@ jobs:
             "🌪️ TORNADO ALLEY") NIGHT_ID="tornadoAlley" ;;
             "💰 GOLD RUSH HOUR") NIGHT_ID="goldRushHour" ;;
             "🔥 FIRE & ICE") NIGHT_ID="fireAndIce" ;;
-            "🫧 BUBBLE MANIA") NIGHT_ID="bubbleMania" ;;
+            "💧 BUBBLE MANIA") NIGHT_ID="bubbleMania" ;;
             "🌈 RAINBOW RIOT") NIGHT_ID="rainbowRiot" ;;
             "🤡 RISE OF THE MEME LORDS") NIGHT_ID="memeLords" ;;
             "💥 SUPERNOVA") NIGHT_ID="supernova" ;;
@@ -365,7 +370,7 @@ jobs:
           fi
           echo "Sent to every open server: ${CMD}"
           echo "### Sent to every server" >> "$GITHUB_STEP_SUMMARY"
-          echo "${POWER}" >> "$GITHUB_STEP_SUMMARY"
+          echo "${LABEL:-$POWER}" >> "$GITHUB_STEP_SUMMARY"
           # Written down too, in the game's own record, for the servers that weren't open to hear it
           # (they carry it out when they open). Read, add to the list, write back only if nobody wrote
           # in between (else again).

@@ -78,7 +78,7 @@ function CirclePanel.open()
 		return
 	end
 	local size = Root.size()
-	local w = math.min(520, size.X - 24)
+	local w = Root.panelWidth(520)
 	local h = math.min(600, size.Y - 40)
 	local group, content = Theme.glass(Root.panels, NAME, UDim2.fromOffset(w, h))
 	Theme.list(content, 8).VerticalAlignment = Enum.VerticalAlignment.Top
@@ -224,8 +224,7 @@ function CirclePanel.offer(m: { [string]: any })
 	if Root.isOpen(OFFER) then
 		Root.close(OFFER)
 	end
-	local size = Root.size()
-	local w = math.min(400, size.X - 24)
+	local w = Root.panelWidth(400)
 	local group, content = Theme.glass(Root.panels, OFFER, UDim2.fromOffset(w, 230))
 	Theme.list(content, 8).VerticalAlignment = Enum.VerticalAlignment.Top
 	local glyph, colour = crestText(tonumber(m.emblem) or 1, tonumber(m.colour) or 1)

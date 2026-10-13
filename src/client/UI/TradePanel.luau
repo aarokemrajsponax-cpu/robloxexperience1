@@ -101,7 +101,7 @@ function TradePanel.open()
 		return
 	end
 	local size = Root.size()
-	local w = math.min(760, size.X - 24)
+	local w = Root.panelWidth(760)
 	local h = math.min(680, size.Y - 40)
 	local group, content = Theme.glass(Root.panels, NAME, UDim2.fromOffset(w, h))
 	Theme.list(content, 8).VerticalAlignment = Enum.VerticalAlignment.Top
@@ -145,21 +145,31 @@ function TradePanel.open()
 			return
 		end
 		title.Text = "A trade with " .. tostring(s.with)
+		-- Each side: its heading along the top, and under it the curios on offer (in a frame of
+		-- their own, so the grid lays out the curios only, never the heading among them).
+		local items: { [Frame]: Frame } = {}
 		for _, b in { mineBox, theirsBox } do
 			for _, c in b:GetChildren() do
-				c:Destroy()
+				if not c:IsA("UICorner") then
+					c:Destroy()
+				end
 			end
-			local pad = Instance.new("UIPadding")
-			pad.PaddingTop = UDim.new(0, 30)
-			pad.PaddingLeft = UDim.new(0, 8)
-			pad.PaddingRight = UDim.new(0, 8)
-			pad.Parent = b
+			local list = Instance.new("Frame")
+			list.Name = "Items"
+			list.BackgroundTransparency = 1
+			list.Position = UDim2.fromOffset(8, 34)
+			list.Size = UDim2.new(1, -16, 1, -40)
+			list.ClipsDescendants = true
+			list.Parent = b
+			items[b] = list
 		end
 		local function head(b: Frame, text: string, ok: boolean)
 			local t = Instance.new("TextLabel")
+			t.Name = "Heading"
 			t.BackgroundTransparency = 1
-			t.Position = UDim2.fromOffset(0, -24)
-			t.Size = UDim2.new(1, 0, 0, 20)
+			t.Position = UDim2.fromOffset(10, 8)
+			t.Size = UDim2.new(1, -20, 0, 20)
+			t.TextTruncate = Enum.TextTruncate.AtEnd
 			t.Text = text
 			t.TextXAlignment = Enum.TextXAlignment.Left
 			t.FontFace = Brand.Fonts.bodyBold
@@ -170,13 +180,13 @@ function TradePanel.open()
 		head(mineBox, "You offer" .. (if s.confirmed then "  ·  confirmed" elseif s.ready then "  ·  locked in" else ""), s.ready == true)
 		head(theirsBox, tostring(s.with) .. " offers" .. (if s.theyConfirmed then "  ·  confirmed" elseif s.theyReady then "  ·  locked in" else ""), s.theyReady == true)
 		local mine = s.mine :: { [string]: number }
-		offerRow(mineBox, mine, function(id: string)
+		offerRow(items[mineBox], mine, function(id: string)
 			local o = table.clone(mine) :: { [string]: number? }
 			local n = o[id] or 0
 			o[id] = if n > 1 then n - 1 else nil
 			setOffer(o)
 		end)
-		offerRow(theirsBox, s.theirs)
+		offerRow(items[theirsBox], s.theirs)
 		-- Your tradeable curios, less what's already offered.
 		for _, c in shelf:GetChildren() do
 			c:Destroy()

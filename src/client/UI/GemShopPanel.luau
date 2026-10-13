@@ -79,7 +79,7 @@ function GemShopPanel.open(start: string?)
 		return
 	end
 	local size = Root.size()
-	local w = math.min(800, size.X - 24)
+	local w = Root.panelWidth(800)
 	local h = math.min(640, size.Y - 40)
 	local panel, content = Theme.glass(Root.panels, NAME, UDim2.fromOffset(w, h))
 	Theme.list(content, 8).VerticalAlignment = Enum.VerticalAlignment.Top

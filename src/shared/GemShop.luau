@@ -71,8 +71,8 @@ GemShop.List = {
 	{ id = "felt_aurora", name = "Aurora Silk", kind = "felt", gems = 500, glyph = "🌌", line = "Northern lights on your table: green running into violet, drifting.", style = { light = rgb(40, 168, 136), mid = rgb(26, 70, 112), deep = rgb(18, 10, 48), shift = rgb(170, 80, 255), pool = rgb(200, 255, 230), rim = rgb(170, 255, 220) } },
 	{ id = "felt_sakura", name = "Sakura", kind = "felt", gems = 500, glyph = "🌸", line = "Cherry blossom pink into deep plum.", style = { light = rgb(214, 120, 160), mid = rgb(120, 44, 84), deep = rgb(44, 12, 30), shift = rgb(255, 190, 220), pool = rgb(255, 220, 236), rim = rgb(255, 196, 220) } },
 	{ id = "felt_ice", name = "Ice Palace", kind = "felt", gems = 500, glyph = "❄️", line = "Ice blue into the deep of a winter night.", style = { light = rgb(110, 180, 236), mid = rgb(30, 70, 128), deep = rgb(8, 16, 44), shift = rgb(210, 240, 255), pool = rgb(230, 246, 255), rim = rgb(220, 240, 255) } },
-	{ id = "felt_gold", name = "Liquid Gold", kind = "felt", gems = 1000, glyph = "🪙", line = "Molten gold into bronze and shadow. Every piece looks expensive on it.", style = { light = rgb(226, 170, 70), mid = rgb(120, 76, 20), deep = rgb(40, 22, 6), shift = rgb(255, 230, 160), pool = rgb(255, 236, 180), rim = rgb(255, 222, 140) } },
-	{ id = "felt_galaxy", name = "Galaxy Velvet", kind = "felt", gems = 1000, glyph = "🪐", line = "Violet nebula into the black of space, a blue tide over it.", style = { light = rgb(118, 76, 214), mid = rgb(40, 24, 100), deep = rgb(6, 4, 24), shift = rgb(60, 160, 255), pool = rgb(220, 210, 255), rim = rgb(200, 180, 255) } },
+	{ id = "felt_gold", name = "Liquid Gold", kind = "felt", gems = 1000, glyph = "✨", line = "Molten gold into bronze and shadow. Every piece looks expensive on it.", style = { light = rgb(226, 170, 70), mid = rgb(120, 76, 20), deep = rgb(40, 22, 6), shift = rgb(255, 230, 160), pool = rgb(255, 236, 180), rim = rgb(255, 222, 140) } },
+	{ id = "felt_galaxy", name = "Galaxy Velvet", kind = "felt", gems = 1000, glyph = "🌌", line = "Violet nebula into the black of space, a blue tide over it.", style = { light = rgb(118, 76, 214), mid = rgb(40, 24, 100), deep = rgb(6, 4, 24), shift = rgb(60, 160, 255), pool = rgb(220, 210, 255), rim = rgb(200, 180, 255) } },
 	{ id = "felt_inferno", name = "Obsidian Fire", kind = "felt", gems = 2500, glyph = "🔥", line = "Black glass with fire moving under it. The rarest table in the house.", style = { light = rgb(220, 96, 30), mid = rgb(80, 18, 10), deep = rgb(10, 6, 6), shift = rgb(255, 190, 70), pool = rgb(255, 200, 140), rim = rgb(255, 170, 80) } },
 	-- Guide trails: the thread of light from a held piece to its case.
 	{ id = "gtrail_diamond", name = "Diamond Dust", kind = "trail", gems = 250, glyph = "💠", line = "A thread of ice-white light, glittering.", style = { colour = rgb(214, 240, 255) } },
@@ -97,7 +97,7 @@ GemShop.List = {
 	{ id = "title_collector", name = "The Collector", kind = "title", gems = 100, glyph = "🏺", line = "For the one with every shelf full.", style = { colour = rgb(236, 216, 166) } },
 	{ id = "title_nightowl", name = "Night Owl", kind = "title", gems = 100, glyph = "🦉", line = "Always here after midnight.", style = { colour = rgb(170, 190, 255) } },
 	{ id = "title_highsociety", name = "High Society", kind = "title", gems = 150, glyph = "🎩", line = "Very important, very well dressed.", style = { colour = rgb(255, 230, 180) } },
-	{ id = "title_goldentouch", name = "Golden Touch", kind = "title", gems = 200, glyph = "🪙", line = "Everything you touch turns to Gilt.", style = { colour = rgb(255, 210, 90) } },
+	{ id = "title_goldentouch", name = "Golden Touch", kind = "title", gems = 200, glyph = "👑", line = "Everything you touch turns to Gilt.", style = { colour = rgb(255, 210, 90) } },
 	{ id = "title_brainrot", name = "Brainrot Royalty", kind = "title", gems = 200, glyph = "🗿", line = "Ruler of the memes.", style = { colour = rgb(140, 255, 140) } },
 	{ id = "title_chaos", name = "Agent of Chaos", kind = "title", gems = 250, glyph = "💥", line = "Wherever Admin Abuse is, so are you.", style = { colour = rgb(255, 110, 90) } },
 	{ id = "title_untouchable", name = "The Untouchable", kind = "title", gems = 250, glyph = "🛡️", line = "Flawless, every time.", style = { colour = rgb(200, 240, 255) } },
@@ -105,7 +105,7 @@ GemShop.List = {
 	{ id = "title_main", name = "Main Character", kind = "title", gems = 300, glyph = "🎬", line = "The story is about you, obviously.", style = { colour = rgb(255, 180, 240) } },
 	{ id = "title_legend", name = "Certified Legend", kind = "title", gems = 400, glyph = "🏆", line = "The house has checked. It's official.", style = { colour = rgb(255, 200, 60) } },
 	-- Surges: for half an hour from the moment you buy one.
-	{ id = "boost_gilt", name = "Gilt Surge", kind = "boost", gems = 60, glyph = "🪙", line = "Half again as much Gilt from everything you play, for 30 minutes.", style = { boost = "gilt", seconds = 1800 } },
+	{ id = "boost_gilt", name = "Gilt Surge", kind = "boost", gems = 60, glyph = "💰", line = "Half again as much Gilt from everything you play, for 30 minutes.", style = { boost = "gilt", seconds = 1800 } },
 	{ id = "boost_xp", name = "XP Surge", kind = "boost", gems = 60, glyph = "⭐", line = "Double XP from everything you play, for 30 minutes.", style = { boost = "xp", seconds = 1800 } },
 	-- In season: each holiday's own, sold while its game is open, kept for good.
 	{ id = "comp_jack", name = "Jack the Lantern", kind = "companion", gems = 250, glyph = "🎃", season = "halloween", line = "A little jack-o'-lantern with a kind grin, glowing at your shoulder.", style = { glyph = "🎃", glow = rgb(255, 150, 50), colours = { rgb(255, 190, 90), rgb(255, 240, 200) }, fire = true, rate = 10 } },

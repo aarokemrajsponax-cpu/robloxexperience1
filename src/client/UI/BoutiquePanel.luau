@@ -219,12 +219,22 @@ local function render()
 		if #offers == 0 then
 			note(frame, "Nothing on offer just now.", add())
 		end
+		-- (Each row as tall as its words: the words' width is the shelf's, less the price key.)
+		-- (AbsoluteSize is in screen pixels: back to the panel's own units, as the words are.)
+		local laid, absW = pcall(function()
+			return (frame :: GuiObject).AbsoluteSize.X
+		end)
+		local shelfW = if laid and type(absW) == "number" then absW / math.max(0.1, Root.scale) else 0
+		local textW = (if shelfW > 0 then shelfW else Root.panelWidth(620) - 56) - 14 - 170
 		for _, o in offers do
 			local r = Instance.new("Frame")
 			r.Name = "Offer_" .. tostring(o.key)
 			r.BackgroundColor3 = if o.best then Color3.fromRGB(34, 26, 12) else Color3.fromRGB(16, 16, 20)
 			r.BackgroundTransparency = 0.15
-			r.Size = UDim2.new(1, 0, 0, 86)
+			local asideText = if o.disabled and type(o.why) == "string" then o.why elseif type(o.status) == "string" then o.status else nil
+			local high = 20 + (if o.best then 15 else 0) + 30 + 3 + Theme.measure(o.line or "", 12, Brand.Fonts.body, textW).Y
+				+ (if asideText then 3 + Theme.measure(asideText, 11, Brand.Fonts.bodyMedium, textW).Y else 0) + 6
+			r.Size = UDim2.new(1, 0, 0, math.max(86, math.ceil(high)))
 			r.LayoutOrder = add()
 			r.Parent = frame
 			local corner = Instance.new("UICorner")
@@ -250,7 +260,6 @@ local function render()
 			-- can't be bought just now.
 			local aside = if o.disabled and type(o.why) == "string" then o.why elseif type(o.status) == "string" then o.status else nil
 			if aside then
-				r.Size = UDim2.new(1, 0, 0, 104)
 				Theme.text(texts, aside, 11, "bodyMedium", { LayoutOrder = 3, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Brand.Colours.lightGold, TextWrapped = true })
 			end
 			local compose = o.action == "compose"
@@ -421,7 +430,7 @@ function BoutiquePanel.open(tab: string?, forGuest: { userId: number, name: stri
 	currentTab = tab or (if forGuest then "today" else "offers")
 	giftFor = forGuest
 	local size = Root.size()
-	local w = math.min(620, size.X - 24)
+	local w = Root.panelWidth(620)
 	local h = math.min(640, size.Y - 40)
 	local group, content = Theme.glass(Root.panels, NAME, UDim2.fromOffset(w, h))
 	Theme.list(content, 8).VerticalAlignment = Enum.VerticalAlignment.Top

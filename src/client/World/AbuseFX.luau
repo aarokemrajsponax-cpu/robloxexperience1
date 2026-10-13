@@ -181,9 +181,10 @@ local function banner(text: string, colour: Color3, seconds: number)
 	holder.Name = "Banner"
 	holder.BackgroundTransparency = 1
 	holder.AnchorPoint = Vector2.new(0.5, 0.5)
-	holder.Position = UDim2.fromScale(0.5, 0.3)
-	-- (Clear of the keys down the left; the card of what to do next steps aside for it.)
-	holder.Size = UDim2.fromScale(0.8, 0.16)
+	-- (Clear of the keys down the left, in the room beside them; the card of what to do next
+	-- steps aside for it.)
+	holder.Position = UDim2.fromScale(0.58, 0.3)
+	holder.Size = UDim2.fromScale(0.66, 0.16)
 	holder.Parent = gui
 	local shadow = Instance.new("TextLabel")
 	shadow.Name = "Shadow"
@@ -1484,7 +1485,7 @@ local function goldWave(seconds: number)
 	for i = 1, 110 do
 		local c = Instance.new("TextLabel")
 		c.BackgroundTransparency = 1
-		c.Text = if type(V.glyph) == "string" then V.glyph else "🪙"
+		c.Text = if type(V.glyph) == "string" then V.glyph else "💰"
 		c.TextScaled = true
 		local s = rng:NextNumber(0.04, 0.09)
 		c.Size = UDim2.fromScale(s, s * 1.6)

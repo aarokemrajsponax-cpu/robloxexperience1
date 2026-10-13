@@ -30,7 +30,7 @@ function GuestBookPanel.open()
 		return
 	end
 	local size = Root.size()
-	local w = math.min(520, size.X - 24)
+	local w = Root.panelWidth(520)
 	local h = math.min(600, size.Y - 40)
 	local group, content = Theme.glass(Root.panels, NAME, UDim2.fromOffset(w, h))
 	Theme.list(content, 8).VerticalAlignment = Enum.VerticalAlignment.Top

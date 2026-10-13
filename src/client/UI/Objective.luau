@@ -200,9 +200,7 @@ local function show(goal: Goal)
 	quietKey = nil
 	hide()
 	local group, content = Theme.glass(Root.hud, "Objective", UDim2.fromOffset(WIDTH, 0), where(), Vector2.new(1, 0))
-	group.AutomaticSize = Enum.AutomaticSize.Y
-	content.AutomaticSize = Enum.AutomaticSize.Y
-	content.Size = UDim2.new(1, 0, 0, 0)
+	Theme.fitHeight(group, content)
 	local pad = content:FindFirstChildOfClass("UIPadding")
 	if pad then
 		pad.PaddingTop = UDim.new(0, 12)

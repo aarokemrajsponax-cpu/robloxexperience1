@@ -12,6 +12,7 @@ local Brand = require(ReplicatedStorage.Shared.Brand)
 local Caps = require(ReplicatedStorage.Shared.Caps)
 local Ease = require(ReplicatedStorage.Shared.Ease)
 local Root = require(script.Parent.Root)
+local Theme = require(script.Parent.Theme)
 local Sound = require(script.Parent.Parent.Sound)
 
 local HolidayPop = {}
@@ -93,7 +94,14 @@ function HolidayPop.show(p: Pop)
 	holder.Name = "HolidayPop"
 	holder.AnchorPoint = Vector2.new(0.5, 1)
 	holder.Position = UDim2.new(0.5, 0, 1, -BASE)
-	holder.Size = UDim2.fromOffset(if p.big then 440 else 380, if p.big then 124 else 104)
+	-- As tall as its words need: a line that wraps makes the card taller, never spills out of it.
+	local cardW = if p.big then 440 else 380
+	local medalSize = if p.big then 96 else 80
+	local wordsW = cardW - (medalSize + 38)
+	local lineH = if p.line then math.max(22, Theme.measure(p.line, 19, Brand.Fonts.displayItalic, wordsW).Y + 2) else 0
+	local extraH = if p.extra then math.max(16, Theme.measure(p.extra, 13, Brand.Fonts.body, wordsW).Y) else 0
+	local need = 16 + (if p.line then 4 + lineH else 0) + 4 + 26 + (if p.extra then 4 + extraH else 0) + 22
+	holder.Size = UDim2.fromOffset(cardW, math.max(if p.big then 124 else 104, need))
 	holder.BackgroundColor3 = Color3.fromRGB(12, 13, 17)
 	holder.BackgroundTransparency = 0.08
 	corner(holder, 18)
@@ -167,13 +175,13 @@ function HolidayPop.show(p: Pop)
 		line.Name = "Line"
 		line.LayoutOrder = 2
 		line.BackgroundTransparency = 1
-		line.Size = UDim2.new(1, 0, 0, 22)
+		line.Size = UDim2.new(1, 0, 0, lineH)
 		line.FontFace = Brand.Fonts.displayItalic
 		line.TextSize = 19
 		line.TextXAlignment = Enum.TextXAlignment.Left
 		line.TextColor3 = C.bone
 		line.TextWrapped = true
-		line.AutomaticSize = Enum.AutomaticSize.Y
+		line.TextYAlignment = Enum.TextYAlignment.Top
 		line.Text = p.line
 		line.Parent = text
 	end
@@ -201,13 +209,12 @@ function HolidayPop.show(p: Pop)
 		extra.Name = "Extra"
 		extra.LayoutOrder = 4
 		extra.BackgroundTransparency = 1
-		extra.Size = UDim2.new(1, 0, 0, 16)
+		extra.Size = UDim2.new(1, 0, 0, extraH)
 		extra.FontFace = Brand.Fonts.body
 		extra.TextSize = 13
 		extra.TextXAlignment = Enum.TextXAlignment.Left
 		extra.TextColor3 = C.smoke
 		extra.TextWrapped = true
-		extra.AutomaticSize = Enum.AutomaticSize.Y
 		extra.Text = p.extra
 		extra.Parent = text
 	end

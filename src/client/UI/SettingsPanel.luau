@@ -102,7 +102,7 @@ function SettingsPanel.open()
 		return
 	end
 	local size = Root.size()
-	local w = math.min(560, size.X - 24)
+	local w = Root.panelWidth(560)
 	local h = math.min(620, size.Y - 40)
 	local group, content = Theme.glass(Root.panels, NAME, UDim2.fromOffset(w, h))
 	Theme.list(content, 10).VerticalAlignment = Enum.VerticalAlignment.Top

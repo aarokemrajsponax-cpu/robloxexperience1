@@ -55,9 +55,7 @@ function Dialogue.show(speaker: string, line: string, choices: { Choice }?, onCh
 	local wide = x.title ~= nil
 	local panelWidth = if wide then 540 else 460
 	local group, content = Theme.glass(Root.dialogue, "Dialogue", UDim2.fromOffset(panelWidth, 0), UDim2.new(0.5, 0, 1, -34), Vector2.new(0.5, 1))
-	group.AutomaticSize = Enum.AutomaticSize.Y
-	content.AutomaticSize = Enum.AutomaticSize.Y
-	content.Size = UDim2.new(1, 0, 0, 0)
+	Theme.fitHeight(group, content)
 	local fill = group:FindFirstChild("Fill") :: Frame
 	fill.Size = UDim2.fromScale(1, 1)
 	local limit = Instance.new("UISizeConstraint")

@@ -529,6 +529,8 @@ local function step(dt: number)
 		if area == "field" and was ~= "field" then
 			caught = 0
 		end
+		-- (The meter is the field's or the Pole's: it goes when you leave, comes when you arrive.)
+		updateMeter()
 		HolidayPlay.goalChanged()
 	end
 	updateKey()
@@ -538,6 +540,7 @@ local function refresh()
 	local id = Workspace:GetAttribute(HolidayGames.ATTRIBUTE)
 	open = if type(id) == "string" then id else nil
 	updateKey()
+	updateMeter()
 	HolidayPlay.goalChanged()
 end
 

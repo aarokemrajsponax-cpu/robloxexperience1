@@ -80,15 +80,53 @@ local function part(parent: Instance, order: number, icon: string, colour: Color
 	b.Text = ""
 	b.Size = UDim2.fromOffset(width, 32)
 	b.Parent = parent
-	local i = Instance.new("TextLabel")
-	i.Name = "Icon"
-	i.BackgroundTransparency = 1
-	i.AnchorPoint = Vector2.new(0, 0.5)
-	i.Position = UDim2.fromScale(0, 0.5)
-	i.Size = UDim2.fromOffset(22, 22)
-	i.TextScaled = true
-	i.Text = icon
-	i.Parent = b
+	if icon == "coin" then
+		-- Gilt's coin, drawn (the coin in the emoji font is missing on some screens): a gold disc
+		-- lit from the top left, a darker rim, a raised inner ring.
+		local c = Instance.new("Frame")
+		c.Name = "Icon"
+		c.BorderSizePixel = 0
+		c.AnchorPoint = Vector2.new(0, 0.5)
+		c.Position = UDim2.new(0, 1, 0.5, 0)
+		c.Size = UDim2.fromOffset(20, 20)
+		c.BackgroundColor3 = Color3.new(1, 1, 1)
+		corner(c, 10)
+		local lit = Instance.new("UIGradient")
+		lit.Rotation = 45
+		lit.Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, rgb(255, 242, 176)),
+			ColorSequenceKeypoint.new(0.5, rgb(242, 188, 66)),
+			ColorSequenceKeypoint.new(1, rgb(170, 108, 24)),
+		})
+		lit.Parent = c
+		local rim = Instance.new("UIStroke")
+		rim.Color = rgb(120, 74, 14)
+		rim.Thickness = 1.5
+		rim.Parent = c
+		local inner = Instance.new("Frame")
+		inner.BackgroundTransparency = 1
+		inner.AnchorPoint = Vector2.new(0.5, 0.5)
+		inner.Position = UDim2.fromScale(0.5, 0.5)
+		inner.Size = UDim2.fromOffset(12, 12)
+		corner(inner, 6)
+		local ring = Instance.new("UIStroke")
+		ring.Color = rgb(255, 238, 170)
+		ring.Transparency = 0.2
+		ring.Thickness = 1.2
+		ring.Parent = inner
+		inner.Parent = c
+		c.Parent = b
+	else
+		local i = Instance.new("TextLabel")
+		i.Name = "Icon"
+		i.BackgroundTransparency = 1
+		i.AnchorPoint = Vector2.new(0, 0.5)
+		i.Position = UDim2.fromScale(0, 0.5)
+		i.Size = UDim2.fromOffset(22, 22)
+		i.TextScaled = true
+		i.Text = icon
+		i.Parent = b
+	end
 	local n = Instance.new("TextLabel")
 	n.Name = "Value"
 	n.BackgroundTransparency = 1
@@ -165,7 +203,7 @@ function GiltBar.start()
 	list.Parent = frame
 	bar = frame
 
-	local _giltKey, giltValue = part(frame, 1, "🪙", rgb(255, 214, 110), "Gilt", 132)
+	local _giltKey, giltValue = part(frame, 1, "coin", rgb(255, 214, 110), "Gilt", 132)
 	local gemsKey, gemsValue = part(frame, 2, "💎", rgb(150, 220, 255), "Gems", 96)
 	gemsKey.Activated:Connect(function()
 		GiltBar.openGems()
@@ -337,7 +375,7 @@ function GiltBar.start()
 			giltSurge.Visible = type(g) == "number" and g > now
 			if giltSurge.Visible then
 				local left = math.floor((g :: number) - now)
-				giltSurge.Text = string.format("🪙 ×1.5 GILT  %d:%02d", left // 60, left % 60)
+				giltSurge.Text = string.format("💰 ×1.5 GILT  %d:%02d", left // 60, left % 60)
 			end
 			xpSurge.Visible = type(x) == "number" and x > now
 			if xpSurge.Visible then

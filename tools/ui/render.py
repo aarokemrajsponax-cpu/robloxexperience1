@@ -72,6 +72,15 @@ def house_font(family, weight, style, px):
         path = os.path.join(FONT_DIR, "Michroma-Regular.ttf")
         if os.path.exists(path):
             return ImageFont.truetype(path, px)
+    if "RobotoMono" in family:
+        path = os.path.join(FONT_DIR, "RobotoMono[wght].ttf")
+        if os.path.exists(path):
+            f = ImageFont.truetype(path, px)
+            try:
+                f.set_variation_by_axes([max(100, min(700, w))])
+            except Exception:
+                pass
+            return f
     if "LuckiestGuy" in family:
         path = os.path.join(FONT_DIR, "LuckiestGuy-Regular.ttf")
         if os.path.exists(path):

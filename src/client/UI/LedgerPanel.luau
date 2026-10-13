@@ -20,8 +20,10 @@ function LedgerPanel.open()
 		return
 	end
 	local size = Root.size()
-	local w = math.min(460, size.X - 24)
+	local w = Root.panelWidth(460)
 	local group, content = Theme.glass(Root.panels, NAME, UDim2.fromOffset(w, math.min(520, size.Y - 40)))
+	-- (As tall as what's on it: no empty glass under Close.)
+	Theme.fitHeight(group, content)
 	Theme.list(content, 8).VerticalAlignment = Enum.VerticalAlignment.Top
 	local title = Theme.text(content, "The Ledger", 26, "display", { LayoutOrder = 1 })
 	Theme.hairline(content, UDim.new(0, 90), 2)

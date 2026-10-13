@@ -30,7 +30,7 @@ export type Kind = { id: string, glyph: string, name: string, line: string, colo
 SabotagePanel.Kinds = {
 	{ id = "bomb", glyph = "💣", name = "Parcel Bomb", line = "Six lookalikes on their felt in 2 s", colour = rgb(255, 120, 70) },
 	{ id = "blackout", glyph = "🌑", name = "Blackout", line = "Their felt goes dark for 6 s", colour = rgb(150, 120, 255) },
-	{ id = "freeze", glyph = "🧊", name = "Butterfingers", line = "They can't file a piece for 4 s", colour = rgb(120, 210, 255) },
+	{ id = "freeze", glyph = "❄️", name = "Butterfingers", line = "They can't file a piece for 4 s", colour = rgb(120, 210, 255) },
 } :: { Kind }
 local SHIELD: Kind = { id = "shield", glyph = "🛡️", name = "Shield", line = "Stops the next one sent at you", colour = rgb(255, 214, 110) }
 local byId: { [string]: Kind } = { shield = SHIELD }
@@ -96,8 +96,7 @@ function SabotagePanel.show(info: { [string]: any })
 	end)() then
 		chosen = if others[1] then others[1].seat else nil
 	end
-	local size = Root.size()
-	local w = math.min(460, size.X - 24)
+	local w = Root.panelWidth(460)
 	local group, content = Theme.glass(Root.panels, NAME, UDim2.fromOffset(w, 0), UDim2.new(0.5, 0, 0.5, 10), Vector2.new(0.5, 0.5))
 	Theme.fitHeight(group, content)
 	local pad = content:FindFirstChildOfClass("UIPadding")
@@ -291,7 +290,7 @@ function SabotagePanel.hit(m: { [string]: any })
 	if k.id == "blackout" then
 		cover(rgb(4, 4, 8), 0.06, "🌑 BLACKOUT", "from " .. by, seconds)
 	elseif k.id == "freeze" then
-		cover(rgb(150, 210, 255), 0.55, "🧊 BUTTERFINGERS", string.format("from %s · no filing for %d s", by, seconds), seconds)
+		cover(rgb(150, 210, 255), 0.55, "❄️ BUTTERFINGERS", string.format("from %s · no filing for %d s", by, seconds), seconds)
 	elseif k.id == "bomb" then
 		Toast.show("💣 Parcel Bomb", string.format("%s sent six lookalikes your way. Brace!", by), 2.5)
 	end

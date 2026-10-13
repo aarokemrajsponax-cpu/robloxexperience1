@@ -18,13 +18,15 @@ local current: Frame? = nil
 local PAD_X, PAD_Y = 20, 12
 local LEAST = 150
 
--- Sizes a notice to its words: as wide as its longest line plus its margins, at least LEAST.
+-- Sizes a notice to its words: as wide as its longest line plus its margins (and a breath more,
+-- so a line measured a hair short never drops its last word onto a line of its own), at least
+-- LEAST. Its height follows its words (Theme.fitHeight).
 local function fit(group: Frame, labels: { TextLabel })
 	local w = 0
 	for _, l in labels do
 		w = math.max(w, Theme.wordsWidth(l))
 	end
-	group.Size = UDim2.fromOffset(math.max(LEAST, w + PAD_X * 2), 0)
+	group.Size = UDim2.new(0, math.max(LEAST, math.ceil(w * 1.03) + 6 + PAD_X * 2), group.Size.Y.Scale, group.Size.Y.Offset)
 end
 
 -- How wide a notice may be: at the top, up to 420; with a panel open, as wide as the room beside
@@ -61,12 +63,10 @@ function Toast.show(title: string, line: string?, seconds: number?)
 		Root.toasts,
 		"Toast",
 		UDim2.fromOffset(420, 0),
-		if low then UDim2.new(1, -14, 1, -34) else at,
+		if low then UDim2.new(1, -14, 1, -34 - Root.bottomClear()) else at,
 		if low then Vector2.new(1, 1) else anchor
 	)
-	group.AutomaticSize = Enum.AutomaticSize.Y
-	content.AutomaticSize = Enum.AutomaticSize.Y
-	content.Size = UDim2.new(1, 0, 0, 0)
+	Theme.fitHeight(group, content)
 	-- A notice is a slip, not a panel: snug round its words.
 	local pad = content:FindFirstChildOfClass("UIPadding")
 	if pad then
@@ -108,7 +108,7 @@ Root.PanelsChanged:Connect(function()
 	local low = Root.isOpen()
 	local at, anchor = shown()
 	g.AnchorPoint = if low then Vector2.new(1, 1) else anchor
-	g.Position = if low then UDim2.new(1, -14, 1, -34) else at
+	g.Position = if low then UDim2.new(1, -14, 1, -34 - Root.bottomClear()) else at
 	local limit = g:FindFirstChildOfClass("UISizeConstraint")
 	if limit then
 		limit.MaxSize = Vector2.new(widest(low), math.huge)

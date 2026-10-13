@@ -65,10 +65,9 @@ function DuelPanel.show(message: { [string]: any }, actions: Actions)
 		table.insert(rows, { Voice.Library.gilt, "+" .. RoundPanel.number(message.gilt) })
 	end
 
-	local size = Root.size()
-	local w = math.min(420, size.X - 24)
+	local w = Root.panelWidth(420)
 	local h = 300 + #rows * 26 + (if (message.placementLeft or 0) > 0 then 24 else 0)
-	local group, content = Theme.glass(Root.panels, NAME, UDim2.fromOffset(w, h), UDim2.new(0.5, 0, 0.5, 20))
+	local group, content = Theme.glass(Root.panels, NAME, UDim2.fromOffset(w, h), UDim2.new(0.5, 0, 0.5, -14))
 	Theme.fitHeight(group, content)
 	Theme.list(content, 8).VerticalAlignment = Enum.VerticalAlignment.Top
 	Theme.text(content, Voice.Library.title .. "  ·  " .. kind, 11, "caps", { LayoutOrder = 1 })

@@ -141,13 +141,13 @@ def workflow():
     return step["run"], step["env"]
 
 
-def run_workflow(api, power, words="", style="rainbow", raw="", key="test-key", run_id="777", night="", ping_wait="0.05"):
+def run_workflow(api, power, words="", style="rainbow", raw="", key="test-key", run_id="777", night="", ping_wait="0.05", label=""):
     script, env = workflow()
     tmp = tempfile.mkdtemp()
     summary = os.path.join(tmp, "summary.md")
     e = dict(os.environ)
     e.update({k: str(v) for k, v in env.items() if not str(v).startswith("${{")})
-    e.update({"KEY": key, "POWER": power, "WORDS": words, "STYLE": style, "RAW": raw, "NIGHT": night, "API": api, "GITHUB_STEP_SUMMARY": summary, "GITHUB_RUN_ID": run_id, "GITHUB_RUN_ATTEMPT": "1", "PING_WAIT": ping_wait})
+    e.update({"KEY": key, "POWER": power, "WORDS": words, "STYLE": style, "RAW": raw, "NIGHT": night, "API": api, "GITHUB_STEP_SUMMARY": summary, "GITHUB_RUN_ID": run_id, "GITHUB_RUN_ATTEMPT": "1", "PING_WAIT": ping_wait, "LABEL": label})
     p = subprocess.run(["bash", "-c", script], env=e, capture_output=True, text=True, timeout=120)
     out = p.stdout + p.stderr
     text = open(summary).read() if os.path.exists(summary) else ""
@@ -225,14 +225,14 @@ def test_workflow():
         # A key that can't use the data stores: still sent, and says how to fix it.
         rb.deny_store = True
         n = len(rb.messages)
-        code, out, summary = run_workflow(api, "🪐 Galaxy sky ON", run_id="782")
+        code, out, summary = run_workflow(api, "🌌 Galaxy sky ON", run_id="782")
         check("a key without data store permission still sends to every open server", code == 0 and len(rb.messages) == n + 1 and last_message(rb).get("id") == "galaxy", out)
         check("...and says what to add to the key", "universe-datastores" in out and "::warning::" in out, out)
         rb.deny_store = False
 
         # A key that can't publish: it fails, plainly.
         rb.deny_publish = True
-        code, out, _ = run_workflow(api, "🪐 Galaxy sky ON", run_id="783")
+        code, out, _ = run_workflow(api, "🌌 Galaxy sky ON", run_id="783")
         check("a key that can't publish fails, saying so", code != 0 and "::error::" in out and "403" in out, out)
         rb.deny_publish = False
 
@@ -258,6 +258,17 @@ def test_workflow():
             if code != 0 or sent.get("op") != c["command"]["op"]:
                 bad.append(c["label"])
         check("each power on the list sends its own command", not bad, bad)
+
+        # The Owner Remote page's way: the command itself in the command box (so the page never
+        # depends on the workflow's list of names), its name along for the run's summary.
+        n = len(rb.messages)
+        code, out, summary = run_workflow(api, catalog["advanced"], raw='{"op":"abuse","minutes":15,"night":"hyperdrive"}', label="💥 Admin Abuse Night · 15 min", run_id="990")
+        m = last_message(rb)
+        check("the page's command reaches every server exactly as sent", code == 0 and len(rb.messages) == n + 1 and m.get("op") == "abuse" and m.get("minutes") == 15 and m.get("night") == "hyperdrive", out)
+        check("...written down for servers that open later", any(e.get("rid") == "990-1" for e in record(rb).get("log", [])), record(rb))
+        check("...and the run's summary names it", "Admin Abuse Night" in summary, summary)
+        code, out, _ = run_workflow(api, catalog["advanced"], raw="not a command", run_id="991")
+        check("a command box that isn't one command fails, saying so", code != 0 and "::error::" in out, out)
     finally:
         server.shutdown()
 

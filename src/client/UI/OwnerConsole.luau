@@ -639,7 +639,7 @@ function OwnerConsole.open(startPage: string?)
 			local s2 = section("GIFTS FOR EVERYONE" .. scopeText())
 			local g2 = grid(s2)
 			for i, amount in (v.giftGilt or { 100, 500, 1000 }) :: { number } do
-				tile(g2, i, rgb(255, 214, 90), { id = "gift" .. amount, glyph = "🪙", name = "Gilt for all · " .. amount, line = amount .. " Gilt to every guest." }, function()
+				tile(g2, i, rgb(255, 214, 90), { id = "gift" .. amount, glyph = "💰", name = "Gilt for all · " .. amount, line = amount .. " Gilt to every guest." }, function()
 					send({ op = "giftAll", amount = amount, everywhere = everywhere }, string.format("Every guest got %d Gilt%s.", amount, scopeText()))
 				end)
 			end
@@ -652,7 +652,7 @@ function OwnerConsole.open(startPage: string?)
 			tile(g3, 1, accent, { id = "bringAll", glyph = "🧲", name = "Bring everyone", line = "Every guest, round you." }, function()
 				send({ op = "bringAll" }, "Every guest is with you.")
 			end)
-			tile(g3, 2, rgb(150, 220, 255), { id = "freeze", glyph = "🧊", name = if powers.frozen then "Thaw" else "Freeze", line = if powers.frozen then "Let them move again." else "Nobody moves.", lit = powers.frozen == true }, function()
+			tile(g3, 2, rgb(150, 220, 255), { id = "freeze", glyph = "❄️", name = if powers.frozen then "Thaw" else "Freeze", line = if powers.frozen then "Let them move again." else "Nobody moves.", lit = powers.frozen == true }, function()
 				send({ op = "freeze", on = not powers.frozen }, if powers.frozen then "The house moves again." else "Frozen!")
 			end)
 			tile(g3, 4, rgb(255, 200, 120), { id = "ballroomOpen", glyph = "🕯️", name = "Open the Ballroom", line = "Skip its 20-minute wait: open now." }, function()
@@ -666,11 +666,11 @@ function OwnerConsole.open(startPage: string?)
 			local powers = v.powers or {}
 			local NAMES: { [string]: string } = { midnight = "Midnight", dawn = "Dawn", noon = "Noon", sunset = "Sunset" }
 			local GLYPHS: { [string]: string } = { midnight = "🌙", dawn = "🌄", noon = "☀️", sunset = "🌇" }
-			local s = section("TIME OF DAY", "This server's sky.")
+			local s = section("TIME OF DAY", if everywhere then "Every server's sky." else "This server's sky.")
 			local g = grid(s)
 			for i, c in (powers.clocks or {}) :: { string } do
 				tile(g, i, accent, { id = "clock_" .. c, glyph = GLYPHS[c] or "🕰️", name = NAMES[c] or c, lit = powers.clock == c }, function()
-					send({ op = "clock", id = c })
+					send({ op = "clock", id = c, everywhere = everywhere }, (NAMES[c] or c) .. scopeText() .. ".")
 				end)
 			end
 			minutesRow()

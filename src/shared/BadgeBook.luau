@@ -156,7 +156,7 @@ moment("library", "mark", "A Mark of Your Own", "Finish your placement evenings 
 ladder("ballroom", "ballroomEvenings", "💃", "Play %d evenings in the Ballroom.", {
 	{ 1, "First Dance" }, { 10, "Ballroom Regular" }, { 50, "Fifty Evenings" }, { 100, "Belle of the Ball" },
 }, "Play your first evening in the Ballroom.")
-ladder("ballroom", "lastLamps", "🪔", "Keep the last lamp %d times.", {
+ladder("ballroom", "lastLamps", "🕯️", "Keep the last lamp %d times.", {
 	{ 1, "The Last Lamp", "firstLastLamp" }, { 5, "Lamplighter" }, { 25, "Keeper of the Light" },
 }, "Keep the last lamp for the first time.")
 ladder("ballroom", "topFive", "🏅", "Finish in the top five %d times.", {
@@ -180,7 +180,7 @@ ladder("collection", "curioKinds", "🗃️", "Hold %d different curios.", {
 moment("collection", "seasonSet", "The Full Season", "Collect every piece of a season's collection.", "🍂", "gold")
 
 -- Gilt and Gems
-ladder("wealth", "gilt", "🪙", "Hold %d Gilt at once.", {
+ladder("wealth", "gilt", "💰", "Hold %d Gilt at once.", {
 	{ 1000, "Pocket Money" }, { 10000, "Comfortable" }, { 50000, "Well Off" }, { 100000, "Six Figures" },
 	{ 500000, "Gilded" }, { 1000000, "Millionaire" },
 })
@@ -207,7 +207,7 @@ ladder("events", "pickups", "🎯", "Pick up %d things at the house's events.", 
 }, "Pick up something at one of the house's events.")
 moment("events", "goldenKey", "The Golden Key", "Find a golden key in a Treasure Hunt.", "🗝️", "silver")
 moment("events", "paradeCatch", "Caught One!", "Catch a meme in the Brainrot Parade.", "🎈", "bronze")
-moment("events", "discoNight", "Disco Fever", "Be in the Ballroom on Disco Night.", "🪩", "bronze")
+moment("events", "discoNight", "Disco Fever", "Be in the Ballroom on Disco Night.", "🕺", "bronze")
 moment("events", "giveawayWinner", "Winner!", "Win one of the owner's giveaways.", "🎁", "gold")
 moment("events", "headline", "Breaking News", "Be in the house for one of the owner's headlines.", "📣", "bronze")
 moment("events", "fx_blackHole", "Event Horizon", "Be pulled up into a black hole.", "🕳️", "silver")

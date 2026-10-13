@@ -73,12 +73,9 @@ end
 
 function RevivePanel.open(m: { [string]: any }, actions: Actions)
 	RevivePanel.close()
-	local size = Root.size()
-	local w = math.min(400, size.X - 24)
+	local w = Root.panelWidth(400)
 	local group, content = Theme.glass(Root.panels, NAME, UDim2.fromOffset(w, 0), UDim2.new(0.5, 0, 0.5, 10))
-	group.AutomaticSize = Enum.AutomaticSize.Y
-	content.AutomaticSize = Enum.AutomaticSize.Y
-	content.Size = UDim2.new(1, 0, 0, 0)
+	Theme.fitHeight(group, content)
 	Theme.list(content, 8).VerticalAlignment = Enum.VerticalAlignment.Top
 	-- (The harder the room, the dearer its revive: the card says which room it's for.)
 	Theme.text(content, if type(m.room) == "string" then "The clock ran out · " .. m.room else "The clock ran out", 11, "caps", { LayoutOrder = 1 })

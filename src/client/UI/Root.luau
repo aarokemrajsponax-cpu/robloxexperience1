@@ -44,7 +44,7 @@ Root.prompts = screen("MaisonPrompts", 15, Enum.ScreenInsets.CoreUISafeInsets)
 
 -- One UIScale per layer so everything fits the smallest phone.
 local scales: { UIScale } = {}
-for _, gui in { Root.intro, Root.toasts, Root.panels, Root.dialogue, Root.hud } do
+for _, gui in { Root.intro, Root.toasts, Root.panels, Root.dialogue, Root.hud, Root.prompts } do
 	local s = Instance.new("UIScale")
 	s.Parent = gui
 	table.insert(scales, s)
@@ -188,6 +188,34 @@ function Root.setTop(key: string, bottom: number?, halfWidth: number?)
 		topEdges[key] = { bottom = bottom, half = half }
 	end
 	topChanged:Fire()
+end
+
+-- How far right the dock down the left reaches (set by QuickDock), in the UI's own units.
+Root.left = 0
+
+-- How wide a centred panel may be: what it wants, no wider than the screen, and (when there's
+-- room for a proper panel beside it) clear of the dock down the left, so the two never overlap.
+function Root.panelWidth(want: number): number
+	local s = Root.size()
+	local room = s.X - 24
+	local beside = math.floor((s.X / 2 - Root.left - 12) * 2)
+	return math.min(want, room, if beside >= 380 then beside else room)
+end
+
+-- What stands along the foot of the screen (the sorting screen's row of cases), as how far up
+-- from the bottom it reaches in the UI's own units: notices in the corner sit above it.
+local bottomEdges: { [string]: number? } = {}
+
+function Root.setBottom(key: string, height: number?)
+	bottomEdges[key] = height
+end
+
+function Root.bottomClear(): number
+	local high = 0
+	for _, h in bottomEdges do
+		high = math.max(high, h :: number)
+	end
+	return high
 end
 
 -- The lowest edge of what stands along the top (0: nothing there).

@@ -134,7 +134,7 @@ $Commands = @(
     @{ Label = '☄️ Meteor shower ON'; Json = '{"op":"fx","id":"meteor","on":true}' }
     @{ Label = '🕳️ Black hole ON'; Json = '{"op":"fx","id":"blackHole","on":true}' }
     @{ Label = '🌌 Aurora ON'; Json = '{"op":"fx","id":"aurora","on":true}' }
-    @{ Label = '🪐 Galaxy sky ON'; Json = '{"op":"fx","id":"galaxy","on":true}' }
+    @{ Label = '🌌 Galaxy sky ON'; Json = '{"op":"fx","id":"galaxy","on":true}' }
     @{ Label = '🛸 UFO abduction ON'; Json = '{"op":"fx","id":"ufo","on":true}' }
     @{ Label = '🌨️ Blizzard ON'; Json = '{"op":"fx","id":"blizzard","on":true}' }
     @{ Label = '🌋 Earthquake ON'; Json = '{"op":"fx","id":"earthquake","on":true}' }
@@ -150,24 +150,24 @@ $Commands = @(
     @{ Label = '🕺 The owner''s army ON'; Json = '{"op":"fx","id":"ownerArmy","on":true}' }
     @{ Label = '🧹 Every effect OFF'; Json = '{"op":"fxAllOff"}' }
     @{ Label = '🎃 The All Hallows'' Hunt · 15 min'; Json = '{"op":"event","id":"halloween","minutes":15}' }
-    @{ Label = '🦃 The Turkey Trot · 15 min'; Json = '{"op":"event","id":"thanksgiving","minutes":15}' }
+    @{ Label = '🦃 The Turkey Round-Up · 15 min'; Json = '{"op":"event","id":"thanksgiving","minutes":15}' }
     @{ Label = '🎁 The Gift Drop · 15 min'; Json = '{"op":"event","id":"christmas","minutes":15}' }
     @{ Label = '🎆 The New Year Countdown · 15 min'; Json = '{"op":"event","id":"newYear","minutes":15}' }
     @{ Label = '💌 Sweethearts · 15 min'; Json = '{"op":"event","id":"valentine","minutes":15}' }
     @{ Label = '🍀 The Lucky Clover · 15 min'; Json = '{"op":"event","id":"stPatrick","minutes":15}' }
-    @{ Label = '🥚 The Egg Hunt · 15 min'; Json = '{"op":"event","id":"easter","minutes":15}' }
-    @{ Label = '🪙 Golden Hour · 15 min'; Json = '{"op":"event","id":"goldenHour","minutes":15}' }
+    @{ Label = '🥚 The Great Egg Hunt · 15 min'; Json = '{"op":"event","id":"easter","minutes":15}' }
+    @{ Label = '💰 Golden Hour · 15 min'; Json = '{"op":"event","id":"goldenHour","minutes":15}' }
     @{ Label = '🍀 Lucky Hour · 15 min'; Json = '{"op":"event","id":"luckyHour","minutes":15}' }
     @{ Label = '⭐ Double XP · 15 min'; Json = '{"op":"event","id":"doubleXP","minutes":15}' }
     @{ Label = '📖 The Page-Turner · 15 min'; Json = '{"op":"event","id":"pageTurner","minutes":15}' }
     @{ Label = '🦒 A Night of Giants · 15 min'; Json = '{"op":"event","id":"giants","minutes":15}' }
     @{ Label = '🐜 A Night of Small Things · 15 min'; Json = '{"op":"event","id":"tiny","minutes":15}' }
     @{ Label = '👟 The Quickstep · 15 min'; Json = '{"op":"event","id":"quickstep","minutes":15}' }
-    @{ Label = '🪶 Featherlight · 15 min'; Json = '{"op":"event","id":"featherlight","minutes":15}' }
+    @{ Label = '🍃 Featherlight · 15 min'; Json = '{"op":"event","id":"featherlight","minutes":15}' }
     @{ Label = '💰 Gold Rain · 15 min'; Json = '{"op":"event","id":"goldRain","minutes":15}' }
     @{ Label = '🗝️ The Treasure Hunt · 15 min'; Json = '{"op":"event","id":"treasure","minutes":15}' }
     @{ Label = '🎈 The Brainrot Parade · 15 min'; Json = '{"op":"event","id":"parade","minutes":15}' }
-    @{ Label = '🪩 Disco Night · 15 min'; Json = '{"op":"event","id":"disco","minutes":15}' }
+    @{ Label = '🕺 Disco Night · 15 min'; Json = '{"op":"event","id":"disco","minutes":15}' }
     @{ Label = '🕺 The House Party · 15 min'; Json = '{"op":"event","id":"discoHouse","minutes":15}' }
     @{ Label = '🏺 A Night of Curios · 15 min'; Json = '{"op":"event","id":"curioHour","minutes":15}' }
     @{ Label = '🎁 Giveaway · 250 Gilt'; Json = '{"op":"giveaway","amount":250}' }

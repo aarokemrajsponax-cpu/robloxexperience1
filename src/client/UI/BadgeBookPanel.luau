@@ -45,7 +45,7 @@ function BadgeBookPanel.open()
 		return
 	end
 	local size = Root.size()
-	local w = math.min(820, size.X - 24)
+	local w = Root.panelWidth(820)
 	local h = math.min(660, size.Y - 40)
 	local panel, content = Theme.glass(Root.panels, NAME, UDim2.fromOffset(w, h))
 	Theme.list(content, 8).VerticalAlignment = Enum.VerticalAlignment.Top

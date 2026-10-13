@@ -45,10 +45,11 @@ function DecreePanel.open()
 	end
 	local maxLength = tonumber(info.maxLength) or 80
 	local size = Root.size()
-	local w = math.min(460, size.X - 24)
+	local w = Root.panelWidth(460)
 	-- As tall as the screen allows; the body scrolls on a short (phone) screen.
 	local h = math.min(600, size.Y - 24)
-	local group, content = Theme.glass(Root.panels, NAME, UDim2.fromOffset(w, h), UDim2.new(0.5, 0, 0.5, 0))
+	-- (Centred under the keys at the top, never over them: Theme.glass places it.)
+	local group, content = Theme.glass(Root.panels, NAME, UDim2.fromOffset(w, h))
 	Theme.list(content, 8).VerticalAlignment = Enum.VerticalAlignment.Top
 	Theme.text(content, "For the whole house", 11, "caps", { LayoutOrder = 1 })
 	Theme.text(content, "Emperor's Decree", 24, "display", { LayoutOrder = 2 })
@@ -139,7 +140,8 @@ function DecreePanel.open()
 	keys.Size = UDim2.new(1, 0, 0, 0)
 	keys.LayoutOrder = 9
 	keys.Parent = body
-	Theme.list(keys, 8)
+	-- (Side by side: Check my words, then Proclaim once the words are read.)
+	Theme.list(keys, 8, true)
 	local proclaim: TextButton
 	local ready = false
 	local function composed(result: any)
@@ -166,7 +168,7 @@ function DecreePanel.open()
 	end
 	Theme.key(keys, "Check my words", false, function()
 		composed(Perks.ask({ op = "decreeCompose", text = box.Text }))
-	end, 300).LayoutOrder = 1
+	end, 190).LayoutOrder = 1
 	proclaim = Theme.key(keys, proclaimText(info), true, function()
 		if not ready then
 			return
@@ -181,7 +183,7 @@ function DecreePanel.open()
 			status.Text = if type(r) == "table" and type(r.why) == "string" then r.why else "The house couldn't do that just now."
 			shown()
 		end
-	end, 300)
+	end, 200)
 	proclaim.LayoutOrder = 2
 	proclaim.Visible = false
 

@@ -529,6 +529,7 @@ function QuickDock.setHoliday(glyph: string?, label: string?, count: number?)
 end
 
 function QuickDock.start()
+	Root.left = QuickDock.right()
 	-- Down the left, starting under the Gilt bar, two by two, big (bigger still on a phone, where
 	-- everything is drawn smaller), with room for a seventh key (Watch, during a fireworks show)
 	-- and clear of the thumbstick.

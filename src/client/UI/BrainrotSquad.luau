@@ -141,7 +141,7 @@ local function jarCard(parent: Instance, width: number, order: number)
 	pad.PaddingTop = UDim.new(0, 12)
 	pad.Parent = card
 	local right = 210
-	label(card, "Title", "🫙  TIP JAR", 14, Brand.Fonts.heavy, GREEN, { Size = UDim2.new(1, -right, 0, 18) })
+	label(card, "Title", "💰  TIP JAR", 14, Brand.Fonts.heavy, GREEN, { Size = UDim2.new(1, -right, 0, 18) })
 	local amount = label(card, "Amount", "0 Gilt", 30, Brand.Fonts.heavy, rgb(236, 255, 240), { Position = UDim2.fromOffset(0, 20), Size = UDim2.new(1, -right, 0, 36) })
 	local track = box(card, "Track", 0, UDim2.new(1, -right, 0, 12), rgb(10, 14, 12), 0)
 	track.Position = UDim2.fromOffset(0, 62)

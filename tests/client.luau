@@ -2659,6 +2659,7 @@ advance(2)
 check("the hand is on your felt", #piecesFolder:GetChildren() == 14, #piecesFolder:GetChildren())
 local duelFolder = workspace.MaisonLocal:FindFirstChild("Duel")
 check("the rival's felt is shown", duelFolder ~= nil and #duelFolder:GetChildren() >= 14, duelFolder and #duelFolder:GetChildren())
+snapshot("duel-play")
 -- A wrong case: the fumble stops the next lift for a moment.
 pad(roblox.Enum.KeyCode.ButtonA)
 advance(0.2)
@@ -4530,7 +4531,7 @@ end
 invokeResults.AdminAsk = {
 	ok = true, minutes = { 5, 15, 30 }, giftGilt = { 100, 500, 1000 }, now = 0,
 	events = {
-		{ id = "goldenHour", name = "Golden Hour", line = "Gilt counts double.", glyph = "🪙" },
+		{ id = "goldenHour", name = "Golden Hour", line = "Gilt counts double.", glyph = "💰" },
 		{ id = "doubleXP", name = "Double XP", line = "Every level comes twice as fast.", glyph = "⭐" },
 		{ id = "halloween", name = "The All Hallows' Hunt", line = "Pumpkins are hidden all over the house.", glyph = "🎃", holiday = true },
 		{ id = "newYear", name = "The New Year Countdown", line = "Ten seconds, then fireworks.", glyph = "🎆", holiday = true },
@@ -4631,13 +4632,13 @@ check("the owner has their own key (gold, with a crown)", find(playerGui, functi
 end) ~= nil)
 check("Stop everything sits at the top of the Events page", textOnScreen("Stop everything") ~= nil and textOnScreen("Admin Abuse Night is on") ~= nil)
 snapshot("admin")
-check("Start begins an event", press("Start") and (function()
+check("Start begins an event (in every server, unless the owner chooses this house)", press("Start") and (function()
 	advance(0.5)
 	for i = #sent, 1, -1 do
 		local sm = sent[i]
 		if sm.remote == "AdminAsk" and sm.message[1] and sm.message[1].op == "event" then
 			local id = sm.message[1].id
-			return (id == "goldenHour" or id == "doubleXP" or id == "halloween" or id == "newYear") and sm.message[1].minutes == 15
+			return (id == "goldenHour" or id == "doubleXP" or id == "halloween" or id == "newYear") and sm.message[1].minutes == 15 and sm.message[1].everywhere == true
 		end
 	end
 	return false
@@ -6495,6 +6496,131 @@ end
 	moveTo(homeSpot)
 	advance(1)
 	check("no errors in the holiday games", #errors == errorsBefore, errors[errorsBefore + 1])
+end)()
+
+---------------------------------------------------------------------------------------------------
+-- 7b. Things side by side, long lines, and pictures every screen can draw
+---------------------------------------------------------------------------------------------------
+;(function()
+	local errorsBefore = #errors
+	-- Two things close together (the piano and the salute beside it): their cards stand in one
+	-- tidy column beside the guest, the same width, never on top of each other.
+	local Prompts = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "Prompts")
+	local made = {}
+	for i, spec in { { "Play the piano", "The grand piano", "E" }, { "Salute the house", "An encore, gold confetti, fireworks", "F" } } do
+		local part = Instance.new("Part")
+		part.Name = "PromptThing" .. i
+		part.Parent = workspace
+		local p = Instance.new("ProximityPrompt")
+		p.Style = roblox.Enum.ProximityPromptStyle.Custom
+		p.ActionText = spec[1]
+		p.ObjectText = spec[2]
+		p.KeyboardKeyCode = roblox.Enum.KeyCode[spec[3]]
+		p.Parent = part
+		table.insert(made, p)
+		services.ProximityPromptService.PromptShown:Fire(p, roblox.Enum.ProximityPromptInputType.Keyboard)
+	end
+	advance(0.6)
+	local cards = Prompts.cards()
+	local column = cards[1] and cards[1].Parent
+	local sameWidth = #cards == 2 and cards[1].Size.X.Offset == cards[2].Size.X.Offset
+	check("two things side by side: one column of cards, the same width, in a list (never piled up)", #cards == 2 and sameWidth and column ~= nil and column:FindFirstChildOfClass("UIListLayout") ~= nil and cards[1].Parent == cards[2].Parent, #cards)
+	check("...in the screen's own layer, not floating over the things (or anyone's name)", column ~= nil and column:FindFirstAncestorOfClass("BillboardGui") == nil and column:FindFirstAncestorWhichIsA("ScreenGui") ~= nil)
+	local fits = true
+	for _, card in cards do
+		local action = card:FindFirstChild("Action") :: any
+		local object = card:FindFirstChild("Object") :: any
+		local Theme = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "Theme")
+		local room = card.Size.X.Offset - action.Position.X.Offset - 12
+		if Theme.measure(action.Text, action.TextSize, action.FontFace).X > room or Theme.measure(object.Text, object.TextSize, object.FontFace).X > room then
+			fits = false
+		end
+	end
+	check("...each card wide enough for its words", fits)
+	snapshot("prompts")
+	for _, p in made do
+		services.ProximityPromptService.PromptHidden:Fire(p)
+		p.Parent.Parent = nil
+	end
+	advance(0.3)
+	check("walking away: the cards go", #Prompts.cards() == 0)
+
+	-- The strip's lines: each capsule as wide as its words; a long line wraps to a second line in
+	-- a taller capsule, never running off its edge.
+	local HouseEvents = module("ReplicatedStorage", "Shared", "HouseEvents")
+	local longest = {}
+	for _, e in HouseEvents.List do
+		if not e.holiday then
+			table.insert(longest, e)
+		end
+	end
+	table.sort(longest, function(a, b)
+		return #a.line > #b.line
+	end)
+	local soon = workspace:GetServerTimeNow() + 900
+	local ids = { longest[1].id, "goldenHour" }
+	for _, id in ids do
+		workspace:SetAttribute("Event_" .. id, soon)
+		signalOf(workspace, "attr:Event_" .. id):Fire()
+	end
+	advance(1.2)
+	local strip = find(playerGui, function(d)
+		return d.Name == "HouseEvents" and d:IsA("Frame")
+	end)
+	local Theme = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "Theme")
+	local problems = {}
+	local widths = {}
+	for _, id in ids do
+		local holder = strip and strip:FindFirstChild(id)
+		local words = holder and holder:FindFirstChild("Words") :: any
+		if not words then
+			table.insert(problems, id .. ": no capsule")
+			continue
+		end
+		local room = holder.Size.X.Offset + words.Size.X.Offset
+		local wide = Theme.measure(words.Text, words.TextSize, words.FontFace).X
+		if not words.TextWrapped and wide > room then
+			table.insert(problems, string.format("%s: %d wide in %d", id, wide, room))
+		end
+		if words.TextWrapped and holder.Size.Y.Offset <= 30 then
+			table.insert(problems, id .. ": wrapped in a one-line capsule")
+		end
+		if holder.Size.X.Offset > 500 then
+			table.insert(problems, id .. ": wider than the strip")
+		end
+		widths[id] = holder.Size.X.Offset
+	end
+	check("the strip: every line whole inside its capsule (a long one on two lines)", #problems == 0, table.concat(problems, "; "))
+	check("...and each capsule as wide as its words (a short line, a short capsule)", (widths.goldenHour or 999) < (widths[longest[1].id] or 0), widths.goldenHour)
+	snapshot("strip-long-line")
+	for _, id in ids do
+		workspace:SetAttribute("Event_" .. id, nil)
+		signalOf(workspace, "attr:Event_" .. id):Fire()
+	end
+	advance(1.2)
+
+	-- Pictures from the emoji font only from the ones every screen has had for years (the newer
+	-- ones, like the coin, come out as an empty box on some screens).
+	local newer = {}
+	local function scan(dir: string)
+		for _, name in fs.readDir(dir) do
+			local path = dir .. "/" .. name
+			if fs.isDir(path) then
+				scan(path)
+			elseif string.sub(name, -5) == ".luau" then
+				local text = fs.readFile(path)
+				for _, cp in utf8.codes(text) do
+					if (cp >= 0x1FA70 and cp <= 0x1FAFF) or (cp >= 0x1F7E0 and cp <= 0x1F7F0) or (cp >= 0x1F9A3 and cp <= 0x1F9AE) or (cp >= 0x1F9BA and cp <= 0x1F9BF) or (cp >= 0x1F9C3 and cp <= 0x1F9CF) or cp == 0x1F971 or cp == 0x1F972 or cp == 0x1F978 or cp == 0x1F979 or cp == 0x1F97B or cp == 0x1F93F or cp == 0x1F90C or cp == 0x1F90D or cp == 0x1F90E or cp == 0x1F90F or (cp >= 0x1F6D5 and cp <= 0x1F6DF) or (cp >= 0x1F6FA and cp <= 0x1F6FC) then
+						table.insert(newer, path .. ": " .. utf8.char(cp))
+						break
+					end
+				end
+			end
+		end
+	end
+	scan("src")
+	check("no picture from the emoji font that some screens can't draw", #newer == 0, table.concat(newer, "; "))
+	check("no errors with things side by side or long lines", #errors == errorsBefore, errors[errorsBefore + 1])
 end)()
 
 ---------------------------------------------------------------------------------------------------

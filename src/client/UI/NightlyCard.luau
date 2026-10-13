@@ -65,8 +65,7 @@ function NightlyCard.show(card: { [string]: any }, actions: Actions)
 	if Root.isOpen(NAME) then
 		Root.close(NAME)
 	end
-	local size = Root.size()
-	local w = math.min(460, size.X - 24)
+	local w = Root.panelWidth(460)
 	local group, content = Theme.glass(Root.panels, NAME, UDim2.fromOffset(w, 540))
 	Theme.fitHeight(group, content)
 	Theme.list(content, 8).VerticalAlignment = Enum.VerticalAlignment.Top
@@ -125,14 +124,21 @@ function NightlyCard.show(card: { [string]: any }, actions: Actions)
 		Theme.key(row, "Share", true, share, 150).LayoutOrder = 1
 	end
 	Theme.key(row, "Invite", false, invite, 150).LayoutOrder = 2
-	Theme.key(keys, "Rehearse it", false, function()
+	-- (Rehearse and Leave side by side: the card stays short enough to clear the cases below.)
+	local row2 = Instance.new("Frame")
+	row2.BackgroundTransparency = 1
+	row2.Size = UDim2.new(1, 0, 0, 44)
+	row2.LayoutOrder = 2
+	row2.Parent = keys
+	Theme.list(row2, 8, true)
+	Theme.key(row2, "Rehearse it", false, function()
 		Root.close(NAME)
 		actions.rehearse()
-	end, 308).LayoutOrder = 2
-	Theme.key(keys, "Leave", false, function()
+	end, 150).LayoutOrder = 1
+	Theme.key(row2, "Leave", false, function()
 		Root.close(NAME)
 		actions.leave()
-	end, 308).LayoutOrder = 3
+	end, 150).LayoutOrder = 2
 	Root.sticky[NAME] = true
 	Root.open(NAME, group, nil, false)
 end

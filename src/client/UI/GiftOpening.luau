@@ -17,6 +17,7 @@ local HolidayProps = require(ReplicatedStorage.Shared.HolidayProps)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Root = require(script.Parent.Root)
 local Theme = require(script.Parent.Theme)
+local HolidayMeter = require(script.Parent.HolidayMeter)
 local Sound = require(script.Parent.Parent.Sound)
 
 local GiftOpening = {}
@@ -30,7 +31,7 @@ local GEM = Color3.fromRGB(120, 210, 255)
 GiftOpening.changed = function(_left: number) end
 GiftOpening.ride = function() end
 
-local GLYPH = { gilt = "🪙", moreGilt = "💰", gems = "💎", moreGems = "👑" }
+local GLYPH = { gilt = "💰", moreGilt = "🏆", gems = "💎", moreGems = "👑" }
 local SAYS = { gilt = "Gilt!", moreGilt = "A heap of Gilt!", gems = "Gems!", moreGems = "A trove of Gems!" }
 
 local function ask(request: { [string]: any }): any
@@ -500,6 +501,8 @@ function GiftOpening.open(waiting: number)
 	if Root.isOpen(NAME) then
 		return
 	end
+	-- (The sleigh's meter has done its job: the gifts have the screen to themselves.)
+	HolidayMeter.hide()
 	local room = Root.size()
 	local group = Instance.new("Frame")
 	group.Name = NAME

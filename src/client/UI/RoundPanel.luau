@@ -290,14 +290,11 @@ local function panel(heading: string, sub: string?, grade: string, rows: { { str
 	if Root.isOpen(NAME) then
 		Root.close(NAME)
 	end
-	local size = Root.size()
-	local w = math.min(480, size.X - 24)
+	local w = Root.panelWidth(480)
 	local tier = tierOf(grade)
 	-- The card grows to fit what's on it, so nothing is ever cut off at the bottom.
-	local group, content = Theme.glass(Root.panels, NAME, UDim2.fromOffset(w, 0), UDim2.new(0.5, 0, 0.5, 16))
-	group.AutomaticSize = Enum.AutomaticSize.Y
-	content.AutomaticSize = Enum.AutomaticSize.Y
-	content.Size = UDim2.new(1, 0, 0, 0)
+	local group, content = Theme.glass(Root.panels, NAME, UDim2.fromOffset(w, 0), UDim2.new(0.5, 0, 0.5, -10))
+	Theme.fitHeight(group, content)
 	-- (The card's own glow takes the grade's light.)
 	local glow = group:FindFirstChild("Glow")
 	if glow then

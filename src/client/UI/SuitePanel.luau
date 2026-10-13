@@ -172,7 +172,7 @@ function SuitePanel.open(start: string?)
 	end
 	room = start or room
 	local size = Root.size()
-	local w = math.min(640, size.X - 24)
+	local w = Root.panelWidth(640)
 	local h = math.min(680, size.Y - 40)
 	local group, content = Theme.glass(Root.panels, NAME, UDim2.fromOffset(w, h))
 	Theme.list(content, 8).VerticalAlignment = Enum.VerticalAlignment.Top

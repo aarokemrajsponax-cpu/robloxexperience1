@@ -113,9 +113,11 @@ function BoardPanel.open()
 		end
 	end)
 	local size = Root.size()
-	local w = math.min(540, size.X - 24)
+	local w = Root.panelWidth(540)
 	local h = math.min(600, size.Y - 40)
 	local group, content = Theme.glass(Root.panels, NAME, UDim2.fromOffset(w, h))
+	-- (As tall as its rows: a short board is a short panel, with no gap above Close.)
+	Theme.fitHeight(group, content)
 	Theme.list(content, 8).VerticalAlignment = Enum.VerticalAlignment.Top
 	local title = Theme.text(content, "Tonight's table", 24, "display", { LayoutOrder = 1 })
 	Theme.hairline(content, UDim.new(0, 90), 2)
@@ -131,9 +133,14 @@ function BoardPanel.open()
 
 	local list = Instance.new("Frame")
 	list.BackgroundTransparency = 1
-	list.Size = UDim2.new(1, 0, 1, -(24 + 12 + 46 + 40 + 44 + 60))
+	list.Size = UDim2.new(1, 0, 0, 0)
+	list.AutomaticSize = Enum.AutomaticSize.Y
 	list.LayoutOrder = 5
 	list.Parent = content
+	local least = Instance.new("UISizeConstraint")
+	least.MinSize = Vector2.new(0, 80)
+	least.MaxSize = Vector2.new(math.huge, h - 230)
+	least.Parent = list
 	Theme.list(list, 2).VerticalAlignment = Enum.VerticalAlignment.Top
 
 	local board = "nightly"

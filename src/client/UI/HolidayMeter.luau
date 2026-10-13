@@ -219,8 +219,7 @@ function HolidayMeter.offer(title: string, line: string, choices: { Choice }, fr
 	if Root.isOpen(OFFER) then
 		Root.close(OFFER)
 	end
-	local size = Root.size()
-	local w = math.min(420, size.X - 24)
+	local w = Root.panelWidth(420)
 	local group, content = Theme.glass(Root.panels, OFFER, UDim2.fromOffset(w, 0), UDim2.new(0.5, 0, 1, -92), Vector2.new(0.5, 1))
 	Theme.fitHeight(group, content)
 	local pad = content:FindFirstChildOfClass("UIPadding")

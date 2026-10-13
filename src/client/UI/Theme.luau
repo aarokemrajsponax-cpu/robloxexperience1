@@ -433,12 +433,51 @@ function Theme.glass(parent: Instance, name: string, size: UDim2, position: UDim
 	return group, content
 end
 
--- A glass panel that grows to fit what's on it (so nothing is ever cut off at the bottom).
+-- How many screen pixels make one of a panel's own units just now (the screen's scale, and the
+-- panel's own opening scale while it opens), read off the panel's width.
+local function pxPerUnit(group: GuiObject): number
+	local units = group.Size.X.Offset
+	local limit = group:FindFirstChildOfClass("UISizeConstraint")
+	if limit then
+		units = math.clamp(units, limit.MinSize.X, limit.MaxSize.X)
+	end
+	local ok, px = pcall(function()
+		return group.AbsoluteSize.X
+	end)
+	if ok and group.Size.X.Scale == 0 and units > 0 and type(px) == "number" and px > 0 then
+		return px / units
+	end
+	return math.max(0.05, Root.scale)
+end
+
+-- A glass panel exactly as tall as what's on it, grown or shrunk as that changes (so nothing is
+-- ever cut off at the bottom, and there's never a stretch of empty glass under the words). The
+-- panel's height is set from its content's: the engine's automatic sizing isn't asked to size
+-- the glass itself, because the glass's fill and glow are sized to it and would hold it at the
+-- tallest it had ever been. (Where the engine can't report sizes, it sizes the glass itself.)
 function Theme.fitHeight(group: Frame, content: Frame)
 	group.Size = UDim2.new(group.Size.X, UDim.new(0, 0))
-	group.AutomaticSize = Enum.AutomaticSize.Y
 	content.AutomaticSize = Enum.AutomaticSize.Y
 	content.Size = UDim2.new(1, 0, 0, 0)
+	local readable = pcall(function()
+		return content.AbsoluteSize
+	end)
+	if not readable then
+		group.AutomaticSize = Enum.AutomaticSize.Y
+		return
+	end
+	local function sync()
+		if not group.Parent then
+			return
+		end
+		local high = math.ceil(content.AbsoluteSize.Y / pxPerUnit(group) - 0.01)
+		if high > 0 and group.Size.Y.Offset ~= high then
+			group.Size = UDim2.new(group.Size.X, UDim.new(0, high))
+		end
+	end
+	content:GetPropertyChangedSignal("AbsoluteSize"):Connect(sync)
+	group:GetPropertyChangedSignal("AbsoluteSize"):Connect(sync)
+	sync()
 end
 
 function Theme.list(parent: Instance, padding: number?, horizontal: boolean?): UIListLayout

@@ -21,7 +21,8 @@ local AdminPanel = {}
 local NAME = "HouseControls"
 local page = "events"
 local minutes = 15
-local everywhere = false
+-- (Every server first: the owner's word is for the whole game unless they choose this house.)
+local everywhere = true
 -- What the Schedule page is setting up.
 local plan = { what = "abuse", day = 0, hour = 18, minute = 0, minutes = 30 }
 
@@ -107,7 +108,7 @@ function AdminPanel.open(startPage: string?)
 		return
 	end
 	local size = Root.size()
-	local w = math.min(640, size.X - 24)
+	local w = Root.panelWidth(640)
 	local h = math.min(640, size.Y - 40)
 	local group, content = Theme.glass(Root.panels, NAME, UDim2.fromOffset(w, h))
 	Theme.list(content, 8).VerticalAlignment = Enum.VerticalAlignment.Top
