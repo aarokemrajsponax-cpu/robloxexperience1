@@ -29,6 +29,7 @@ local Profiles = require(script.Parent.Parent.Profiles)
 local Rig = require(script.Parent.Parent.Staff.Rig)
 local Dress = require(script.Parent.Dress)
 local Types = require(script.Parent.Types)
+local Integrity = require(script.Parent.Parent.Integrity)
 
 local Pole = {}
 
@@ -683,7 +684,7 @@ local function hold(ctx: Types.Ctx, player: Player, over: CFrame, k: number)
 		return
 	end
 	ctx.moved(player)
-	character:PivotTo(over * CFrame.new(k * 3, 320, 0))
+	Integrity.teleport(player, character, over * CFrame.new(k * 3, 320, 0))
 	root.Anchored = true
 end
 

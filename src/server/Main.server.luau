@@ -293,6 +293,16 @@ AdminService.showBegan = AbuseShow.began
 AdminService.showStopped = AbuseShow.stopped
 boot("House controls", AdminService.start)
 boot("Admin Abuse's show", AbuseShow.start)
+-- How guests move, watched by the house (server/Integrity): a teleport, a run faster than anyone
+-- can, a flight: put back where they were, and nothing found for a moment. Every teleport the
+-- house makes itself goes through it; the owner moves however they like.
+local Integrity = require(script.Parent.Integrity)
+Integrity.isOwner = AdminService.isAdmin
+Integrity.onCaught = function(player: Player, why: string, _distance: number)
+	-- (Noted with refused remote traffic: at most once a minute a guest, for each kind.)
+	require(script.Parent.RemoteGuard).reject(player, "movement", why)
+end
+boot("Movement watch", Integrity.start)
 -- The holiday games: trick or treat on Hallows Lane, the turkeys in the Harvest Field, Santa's
 -- sleigh to the North Pole, the Great Egg Hunt, and the luck of the Irish at the tables. Each opens
 -- for its holiday's days and with its holiday's event.
@@ -579,8 +589,22 @@ Progress.levelUp = function(player, level, gilt, gems)
 	end
 end
 -- The Badge Book: a badge said on the guest's screen.
-Achievements.notify = function(player, badge)
-	Remotes.event("Shop"):FireClient(player, { op = "badge", key = badge.key, name = badge.name, line = badge.line, glyph = badge.glyph, tier = badge.tier })
+Achievements.notify = function(player, badge, extra)
+	local e: { [string]: any } = extra or {}
+	local nextUp = e.nextUp
+	Remotes.event("Shop"):FireClient(player, {
+		op = "badge",
+		key = badge.key,
+		name = badge.name,
+		line = badge.line,
+		glyph = badge.glyph,
+		tier = badge.tier,
+		count = e.count,
+		total = e.total,
+		nextName = nextUp and nextUp.name,
+		nextHave = nextUp and nextUp.have,
+		nextTarget = nextUp and nextUp.target,
+	})
 end
 -- Gilt: a Gilt Surge counts, every payment is counted, and the number on screen follows.
 GiltService.surge = GemShop.giltBoost
@@ -619,6 +643,16 @@ GemShop.tally = function(player, stat, n)
 	end
 end
 boot("The Gem Shop", GemShop.start)
+-- The Evening Calendar: a present a day for coming back, seven to a week, none ever lost to a
+-- missed day (server/Calendar). Its XP and the Badge Book's count follow each present opened.
+local Calendar = require(script.Parent.Calendar)
+Calendar.xp = function(player: Player, amount: number)
+	Progress.add(player, amount, "calendar")
+end
+Calendar.opened = function(player: Player)
+	Achievements.check(player)
+end
+boot("The Evening Calendar", Calendar.start)
 -- Moments the Badge Book counts.
 require(script.Parent.TradeService).traded = function(player)
 	Achievements.tally(player, "trades", 1)

@@ -13,6 +13,7 @@ local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
 local Levels = require(ReplicatedStorage.Shared.Levels)
+local Icons = require(script.Parent.Icons)
 local Root = require(script.Parent.Root)
 
 local GiltBar = {}
@@ -116,6 +117,16 @@ local function part(parent: Instance, order: number, icon: string, colour: Color
 		ring.Parent = inner
 		inner.Parent = c
 		c.Parent = b
+	elseif Icons.has(icon) then
+		-- (Drawn in light, like the dock's keys.)
+		local box = Instance.new("Frame")
+		box.Name = "IconBox"
+		box.BackgroundTransparency = 1
+		box.AnchorPoint = Vector2.new(0, 0.5)
+		box.Position = UDim2.fromScale(0, 0.5)
+		box.Size = UDim2.fromOffset(22, 22)
+		box.Parent = b
+		Icons.draw(box, icon, colour, 22)
 	else
 		local i = Instance.new("TextLabel")
 		i.Name = "Icon"
@@ -204,7 +215,7 @@ function GiltBar.start()
 	bar = frame
 
 	local _giltKey, giltValue = part(frame, 1, "coin", rgb(255, 214, 110), "Gilt", 132)
-	local gemsKey, gemsValue = part(frame, 2, "💎", rgb(150, 220, 255), "Gems", 96)
+	local gemsKey, gemsValue = part(frame, 2, "gems", rgb(150, 220, 255), "Gems", 96)
 	gemsKey.Activated:Connect(function()
 		GiltBar.openGems()
 	end)

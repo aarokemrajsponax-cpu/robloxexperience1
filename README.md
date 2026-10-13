@@ -377,6 +377,30 @@ a Nightly attempt or a Mythic's odds.
 - **The launch kit**: page text, icon, thumbnails and the gameplay video's shot list are in
   [`LAUNCH.md`](LAUNCH.md).
 
+## Build 62 — what's new
+
+- **Admin and Mega Abuse, bigger and cleaner.** Heavy bold titles with a gold and hot-pink shine
+  and a glowing outline, punch-in pops, a soft shadow, rays of light turning behind the words,
+  confetti cannons from both corners, shockwaves, light bursts and lens streaks at the drop. The
+  realm shift warps in with light from the edges; the end-of-night card counts each number up;
+  the curtain call is velvet and gold. Nothing scrambles, nothing reads like a terminal.
+- **The Evening Calendar** (Menu → The Evening Calendar, and offered by itself on arrival): one
+  free present a day, seven to a week, the seventh the best (its first time, the curio *The
+  Seventh Evening*). A missed day loses nothing. Every present is shown exactly before it's
+  opened; nothing is random and nothing is sold. Its own Badge Book ladder (1, 7, 30, 100).
+- **Badges point the way.** Every badge card says how many you have of how many, and the next
+  badge on the same ladder with a bar of how far along you are.
+- **Curios show your set.** Every find says *New to your collection* (or *One more for your
+  shelf*) and how many of its set you hold, with a bar filling to it.
+- **Anti-cheat** (`server/Integrity`, `Config.Integrity`): the server watches how every guest
+  moves. A teleport, a run faster than anyone can, or a flight is put back where it was at once,
+  and finds nothing for a few seconds (holiday finds, Gold Rain coins, treasure keys). Never
+  caught: the house's own teleports (seats, trips, the sleigh, the Suite, the Vault lift), anyone
+  seated or held still, everyone while one of your effects is on, and **you, the owner**. Someone
+  else's screen asking for the owner's controls is refused and noted.
+- **Faster:** the street's weather, companions, brainrot walkers and auras move in one call to
+  the engine, and only near the camera; 252 fewer book parts on the shelves.
+
 ## Play it, sell it, host it, feel at home in it
 
 - **Playing, in Studio and live.** Press **Play** and you're your own character at once: Roblox's

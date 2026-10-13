@@ -24,6 +24,8 @@ local showing = false
 
 -- How big each rarity's moment is: 1 (a card) to 4 (the lot).
 local TIER = { Common = 1, Uncommon = 1, Rare = 2, Epic = 3, Limited = 3, Legendary = 3, Mythic = 4, Secret = 4 }
+-- Each family's name, as its line on a find says it.
+local SETS: { [string]: string } = { meme = "THE MEME SET", delicacy = "THE DELICACIES", relic = "THE RELICS" }
 
 local function sparks(parent: Instance, colour: Color3, count: number)
 	for i = 1, count do
@@ -145,6 +147,50 @@ local function showNext()
 		-- What it earns in the squad (with the copies held now, and its mutation).
 		local n = math.max(1, CurioState.count(c.id))
 		line(string.format("Earns +%d Gilt an hour in your squad%s", Brainrots.rate(c.id, n, item.mut), if mutInfo then string.format("  ·  ×%d %s", mutInfo.mult, mutInfo.name) else ""), 15, Brand.Fonts.bodyBold, 182, Color3.fromRGB(110, 235, 140))
+	end
+	-- Where it puts the guest in its set: new to their collection (or one more of one they hold),
+	-- and how many of the set they hold now, with a thin bar of the rarity's light filling to it.
+	local kinds, all = 0, 0
+	for _, other in Curios.List do
+		if other.family == c.family then
+			all += 1
+			if other.id == c.id or CurioState.count(other.id) > 0 then
+				kinds += 1
+			end
+		end
+	end
+	if all > 0 then
+		local fresh = CurioState.count(c.id) <= 1
+		local y = if Brainrots.is(c.id) then 210 else 186
+		line(string.format("%s  ·  %d OF %d IN %s", if fresh then "NEW TO YOUR COLLECTION" else "ONE MORE FOR YOUR SHELF", kinds, all, SETS[c.family] or "THE COLLECTION"), 12, Brand.Fonts.bodyBold, y, C.lightGold)
+		local track = Instance.new("Frame")
+		track.Name = "SetTrack"
+		track.AnchorPoint = Vector2.new(0.5, 0)
+		track.Position = UDim2.new(0.5, 0, 0.42, y + 24)
+		track.Size = UDim2.fromOffset(240, 4)
+		track.BackgroundColor3 = Color3.new(1, 1, 1)
+		track.BackgroundTransparency = 0.85
+		track.BorderSizePixel = 0
+		track.ZIndex = 55
+		track.Parent = layer
+		local tc = Instance.new("UICorner")
+		tc.CornerRadius = UDim.new(1, 0)
+		tc.Parent = track
+		local fill = Instance.new("Frame")
+		fill.Name = "SetFill"
+		fill.Size = UDim2.fromScale(math.max(0.02, (kinds - 1) / all), 1)
+		fill.BackgroundColor3 = colour
+		fill.BorderSizePixel = 0
+		fill.ZIndex = 56
+		fill.Parent = track
+		local fc = Instance.new("UICorner")
+		fc.CornerRadius = UDim.new(1, 0)
+		fc.Parent = fill
+		task.delay(0.45, function()
+			if fill.Parent then
+				Ease.play(fill, Ease.info(0.7, Enum.EasingStyle.Quart), { Size = UDim2.fromScale(math.max(0.02, kinds / all), 1) })
+			end
+		end)
 	end
 	if tier >= 2 then
 		sparks(layer, colour, 10 + tier * 6)

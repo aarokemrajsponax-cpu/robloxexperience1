@@ -17,6 +17,7 @@ local Root = require(script.Parent.Root)
 local State = require(script.Parent.Parent.State)
 local Theme = require(script.Parent.Theme)
 local Toast = require(script.Parent.Toast)
+local NeoFX = require(script.Parent.Parent.World.NeoFX)
 
 local EventBanner = {}
 
@@ -217,6 +218,67 @@ local function pill(key: string, order: number, kind: Kind): TextLabel
 	return label
 end
 
+-- While Admin or Mega Abuse is on, the headline is in the house's 2077 look: darker glass, its
+-- edge and words in the night's neon (cyan and magenta for Mega Abuse). Back to gold glass when
+-- it's over. (The type stays the house's, so the capsule is measured to its words exactly.) (Only when it changes: the gradients are swapped, not
+-- rebuilt every second.)
+local function neon(key: string, on: boolean, mega: boolean, night: AbuseNights.Night?)
+	local holder = holders[key]
+	local label = rows[key]
+	if not holder or not label then
+		return
+	end
+	local look = if on then (if mega then "mega" else "abuse:" .. (if night then night.id else "")) else "gold"
+	if holder:GetAttribute("Look") == look then
+		return
+	end
+	holder:SetAttribute("Look", look)
+	local fill = holder:FindFirstChild("Fill")
+	local sheen = fill and fill:FindFirstChildOfClass("UIGradient")
+	local stroke = fill and fill:FindFirstChildOfClass("UIStroke")
+	local shine = holder:FindFirstChild("Shine")
+	for _, old in { label:FindFirstChild("Metal"), label:FindFirstChild("Neon"), stroke and stroke:FindFirstChild("Edge"), stroke and stroke:FindFirstChild("NeonEdge") } do
+		if old then
+			old:Destroy()
+		end
+	end
+	if on then
+		local P = if night then AbuseNights.Palettes[night.palette] else nil
+		local neo = NeoFX.colours(mega, P and P.light, P and P.main)
+		if sheen then
+			sheen.Color = ColorSequence.new({
+				ColorSequenceKeypoint.new(0, neo.b:Lerp(Color3.fromRGB(10, 11, 16), 0.78)),
+				ColorSequenceKeypoint.new(0.5, Color3.fromRGB(11, 12, 18)),
+				ColorSequenceKeypoint.new(1, Color3.fromRGB(5, 6, 9)),
+			})
+		end
+		if stroke then
+			local g = NeoFX.shimmer(stroke, neo, 20)
+			g.Name = "NeonEdge"
+		end
+		local words = NeoFX.shimmer(label, neo, 0)
+		words.Name = "Neon"
+		if shine and shine:IsA("Frame") then
+			shine.BackgroundColor3 = neo.a
+		end
+	else
+		if sheen then
+			sheen.Color = ColorSequence.new({
+				ColorSequenceKeypoint.new(0, Color3.fromRGB(44, 37, 24)),
+				ColorSequenceKeypoint.new(0.5, Color3.fromRGB(14, 13, 15)),
+				ColorSequenceKeypoint.new(1, Color3.fromRGB(7, 7, 9)),
+			})
+		end
+		if stroke then
+			Theme.edge(stroke, 0.6)
+		end
+		Theme.metal(label, true)
+		if shine and shine:IsA("Frame") then
+			shine.BackgroundColor3 = Brand.Colours.brightGold
+		end
+	end
+end
+
 -- The widest the strip may be on this screen.
 local function stripWidth(): number
 	return math.min(STRIP_W, Root.size().X - 24)
@@ -358,6 +420,7 @@ local function refresh()
 		local nightId = Workspace:GetAttribute("AbuseNight")
 		local night = if type(nightId) == "string" then AbuseNights.byId[nightId] else nil
 		local mega = Workspace:GetAttribute("AbuseMega") == true
+		neon("__head", abusing, mega, night)
 		say(head, if abusing and night
 			then string.format("%s  ·  %s", if mega then "MEGA ABUSE" else "ADMIN ABUSE", string.upper(night.name))
 			elseif abusing then string.format("%s  ·  %d EVENTS ON", if mega then "MEGA ABUSE" else "ADMIN ABUSE NIGHT", #on)

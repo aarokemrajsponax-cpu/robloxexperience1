@@ -4,6 +4,6 @@
 -- see whether Studio has the latest code from GitHub.
 
 return {
-	number = 61,
-	label = "Build 61 · 13 Oct · the brainrot squad, fitted notices and cards, tidy prompts, the Remote sends exact commands",
+	number = 62,
+	label = "Build 62 · 13 Oct · hype Admin Abuse, the Evening Calendar, anti-cheat, badges that point the way",
 }

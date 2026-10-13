@@ -18,6 +18,9 @@ local Curios = require(ReplicatedStorage.Shared.Curios)
 
 local BrainrotWalkers = {}
 
+-- (Further than this from the camera, a walker is out of sight: it waits, and catches up.)
+local FAR = 220
+
 local rgb = Color3.fromRGB
 local SPARKLES = "rbxasset://textures/particles/sparkles_main.dds"
 local RAINBOW = ColorSequence.new({
@@ -288,9 +291,18 @@ function BrainrotWalkers.start()
 	RunService.RenderStepped:Connect(function(dt: number)
 		local t = os.clock()
 		local k = 1 - math.exp(-4 * math.min(dt, 0.1))
+		-- (Only the walkers near enough to be seen move; the rest catch up as their guest comes
+		-- into view. Every part moved in one call to the engine.)
+		local camera = Workspace.CurrentCamera
+		local eye = if camera then camera.CFrame.Position else nil
+		local parts: { BasePart } = {}
+		local frames: { CFrame } = {}
 		for p, w in walkers do
 			if not w.root.Parent or not w.part.Parent then
 				clear(p)
+				continue
+			end
+			if eye and (w.root.Position - eye).Magnitude > FAR then
 				continue
 			end
 			local h = w.height
@@ -306,18 +318,24 @@ function BrainrotWalkers.start()
 			local hop = math.abs(math.sin(t * 9 + w.phase)) * 0.55 * moving * (h / 4)
 			local bob = math.sin(t * 2 + w.phase) * 0.1 * (1 - moving)
 			local squash = math.sin(t * 18 + w.phase * 2) * 0.05 * moving + math.sin(t * 2 + w.phase) * 0.025
-			w.part.CFrame = CFrame.new(w.at + Vector3.new(0, h * 0.5 + hop + bob, 0))
+			table.insert(parts, w.part)
+			table.insert(frames, CFrame.new(w.at + Vector3.new(0, h * 0.5 + hop + bob, 0)))
 			w.body.Size = UDim2.fromScale(h * (1 + squash), h * (1 - squash))
 			w.glyph.Rotation = math.sin(t * 1.6 + w.phase) * 4 + math.sin(t * 9 + w.phase) * 7 * moving
 			w.aura.BackgroundTransparency = 0.55 + 0.12 * math.sin(t * 2.6 + w.phase)
 			local disc = CFrame.new(w.at + Vector3.new(0, 0.06, 0)) * CFrame.Angles(0, 0, math.pi / 2)
-			w.shadow.CFrame = disc
-			w.ring.CFrame = disc * CFrame.new(-0.02, 0, 0)
+			table.insert(parts, w.shadow)
+			table.insert(frames, disc)
+			table.insert(parts, w.ring)
+			table.insert(frames, disc * CFrame.new(-0.02, 0, 0))
 			w.ring.Transparency = 0.62 + 0.12 * math.sin(t * 3 + w.phase)
 			local rainbow = w.rainbow
 			if rainbow then
 				rainbow.Rotation = (t * 90) % 360
 			end
+		end
+		if #parts > 0 then
+			Workspace:BulkMoveTo(parts, frames, Enum.BulkMoveMode.FireCFrameChanged)
 		end
 	end)
 end

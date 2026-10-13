@@ -11,6 +11,7 @@ local TweenService = game:GetService("TweenService")
 
 local Levels = require(ReplicatedStorage.Shared.Levels)
 local Flakes = require(script.Parent.Parent.World.Flakes)
+local NeoFX = require(script.Parent.Parent.World.NeoFX)
 local Sound = require(script.Parent.Parent.Sound)
 
 local Celebrate = {}
@@ -181,55 +182,99 @@ local function nextBadge()
 	showing = true
 	local b = table.remove(queue, 1) :: { [string]: any }
 	local colour = TIER[tostring(b.tier)] or rgb(246, 200, 92)
+	local neo = { a = colour:Lerp(Color3.new(1, 1, 1), 0.25), b = colour, core = Color3.new(1, 1, 1) }
+	local hasNext = type(b.nextName) == "string" and type(b.nextTarget) == "number"
 	local gui = screen()
+	-- A pane of dark glass at the side: the medal in a turning ring of its tier's light, the
+	-- badge resolving in, how many the guest has now, and the next on the same ladder.
 	local card = Instance.new("Frame")
 	card.Name = "Badge"
 	card.AnchorPoint = Vector2.new(1, 0)
-	card.Position = UDim2.new(1, 360, 0.3, 0)
-	card.Size = UDim2.fromOffset(330, 84)
-	card.BackgroundColor3 = rgb(20, 18, 14)
+	card.Position = UDim2.new(1, 380, 0.3, 0)
+	card.Size = UDim2.fromOffset(350, if hasNext then 122 else 96)
+	card.BackgroundColor3 = Color3.new(1, 1, 1)
 	card.BackgroundTransparency = 0.04
 	card.Parent = gui
-	corner(card, 12)
+	corner(card, 14)
+	local fill = Instance.new("UIGradient")
+	fill.Rotation = 90
+	fill.Color = ColorSequence.new(rgb(24, 24, 32):Lerp(colour, 0.12), rgb(8, 8, 12))
+	fill.Parent = card
 	local edge = Instance.new("UIStroke")
 	edge.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	edge.Thickness = 2
-	edge.Color = colour
+	edge.Thickness = 1.5
+	edge.Color = Color3.new(1, 1, 1)
 	edge.Parent = card
+	NeoFX.shimmer(edge, neo, 30)
+	-- The medal.
+	local medal = Instance.new("Frame")
+	medal.Name = "Medal"
+	medal.BackgroundColor3 = colour
+	medal.BackgroundTransparency = 0.82
+	medal.Position = UDim2.fromOffset(14, 16)
+	medal.Size = UDim2.fromOffset(64, 64)
+	medal.Parent = card
+	corner(medal, 32)
+	local ring = Instance.new("UIStroke")
+	ring.Color = Color3.new(1, 1, 1)
+	ring.Thickness = 2
+	ring.Parent = medal
+	local sweep = Instance.new("UIGradient")
+	sweep.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, colour), ColorSequenceKeypoint.new(0.5, Color3.new(1, 1, 1)), ColorSequenceKeypoint.new(1, colour) })
+	sweep.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.6, 0.35), NumberSequenceKeypoint.new(1, 0.9) })
+	sweep.Parent = ring
+	TweenService:Create(sweep, TweenInfo.new(2.2, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), { Rotation = 360 }):Play()
 	local glyph = Instance.new("TextLabel")
-	glyph.BackgroundColor3 = colour
-	glyph.BackgroundTransparency = 0.15
-	glyph.Position = UDim2.fromOffset(10, 12)
-	glyph.Size = UDim2.fromOffset(60, 60)
+	glyph.Name = "Glyph"
+	glyph.BackgroundTransparency = 1
+	glyph.AnchorPoint = Vector2.new(0.5, 0.5)
+	glyph.Position = UDim2.fromScale(0.5, 0.5)
+	glyph.Size = UDim2.fromScale(0.66, 0.66)
 	glyph.TextScaled = true
 	glyph.Text = tostring(b.glyph or "🏅")
-	glyph.Parent = card
-	corner(glyph, 30)
+	glyph.Parent = medal
 	local top = Instance.new("TextLabel")
 	top.BackgroundTransparency = 1
-	top.Position = UDim2.fromOffset(80, 8)
-	top.Size = UDim2.new(1, -90, 0, 16)
-	top.FontFace = HEAVY
+	top.Position = UDim2.fromOffset(92, 12)
+	top.Size = UDim2.new(1, -104, 0, 14)
+	top.FontFace = NeoFX.MONO_BOLD
 	top.TextSize = 11
 	top.TextXAlignment = Enum.TextXAlignment.Left
-	top.TextColor3 = colour
-	top.Text = "BADGE EARNED · " .. string.upper(tostring(b.tier or ""))
+	top.TextColor3 = neo.a
+	top.Text = "BADGE EARNED  ·  " .. string.upper(tostring(b.tier or ""))
 	top.Parent = card
+	if type(b.count) == "number" and type(b.total) == "number" then
+		-- (How many now, of how many.)
+		local tally = Instance.new("TextLabel")
+		tally.Name = "Tally"
+		tally.BackgroundTransparency = 1
+		tally.AnchorPoint = Vector2.new(1, 0)
+		tally.Position = UDim2.new(1, -12, 0, 12)
+		tally.Size = UDim2.fromOffset(90, 14)
+		tally.FontFace = NeoFX.MONO
+		tally.TextSize = 11
+		tally.TextXAlignment = Enum.TextXAlignment.Right
+		tally.TextColor3 = rgb(200, 196, 188)
+		tally.Text = string.format("%d / %d", b.count, b.total)
+		tally.Parent = card
+		top.Size = UDim2.new(1, -200, 0, 14)
+	end
 	local name = Instance.new("TextLabel")
+	name.Name = "Name"
 	name.BackgroundTransparency = 1
-	name.Position = UDim2.fromOffset(80, 24)
-	name.Size = UDim2.new(1, -90, 0, 24)
+	name.Position = UDim2.fromOffset(92, 28)
+	name.Size = UDim2.new(1, -104, 0, 24)
 	name.FontFace = HEAVY
-	name.TextSize = 18
+	name.TextSize = 19
 	name.TextXAlignment = Enum.TextXAlignment.Left
-	name.TextColor3 = rgb(250, 240, 220)
+	name.TextColor3 = rgb(250, 244, 230)
 	name.TextTruncate = Enum.TextTruncate.AtEnd
 	name.Text = tostring(b.name)
 	name.Parent = card
 	local line = Instance.new("TextLabel")
 	line.BackgroundTransparency = 1
-	line.Position = UDim2.fromOffset(80, 50)
-	line.Size = UDim2.new(1, -90, 0, 28)
+	line.Position = UDim2.fromOffset(92, 54)
+	line.Size = UDim2.new(1, -104, 0, 28)
 	line.FontFace = BODY
 	line.TextSize = 11
 	line.TextWrapped = true
@@ -238,10 +283,53 @@ local function nextBadge()
 	line.TextColor3 = rgb(190, 184, 172)
 	line.Text = tostring(b.line or "")
 	line.Parent = card
-	TweenService:Create(card, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Position = UDim2.new(1, -14, 0.3, 0) }):Play()
+	if hasNext then
+		-- The next on the ladder, and how far along: a thin bar of the tier's light.
+		local have = math.max(0, tonumber(b.nextHave) or 0)
+		local target = math.max(1, tonumber(b.nextTarget) or 1)
+		local nextLine = Instance.new("TextLabel")
+		nextLine.Name = "Next"
+		nextLine.BackgroundTransparency = 1
+		nextLine.Position = UDim2.fromOffset(14, 88)
+		nextLine.Size = UDim2.new(1, -28, 0, 14)
+		nextLine.FontFace = NeoFX.MONO
+		nextLine.TextSize = 11
+		nextLine.TextXAlignment = Enum.TextXAlignment.Left
+		nextLine.TextTruncate = Enum.TextTruncate.AtEnd
+		nextLine.TextColor3 = rgb(214, 208, 198)
+		nextLine.Text = string.format("NEXT:  %s  ·  %s / %s", string.upper(tostring(b.nextName)), format(math.min(have, target)), format(target))
+		nextLine.Parent = card
+		local track = Instance.new("Frame")
+		track.Name = "Track"
+		track.BorderSizePixel = 0
+		track.BackgroundColor3 = Color3.new(1, 1, 1)
+		track.BackgroundTransparency = 0.88
+		track.Position = UDim2.fromOffset(14, 106)
+		track.Size = UDim2.new(1, -28, 0, 4)
+		track.Parent = card
+		corner(track, 2)
+		local bar = Instance.new("Frame")
+		bar.Name = "Bar"
+		bar.BorderSizePixel = 0
+		bar.BackgroundColor3 = colour
+		bar.Size = UDim2.fromScale(0, 1)
+		bar.Parent = track
+		corner(bar, 2)
+		task.delay(0.5, function()
+			if bar.Parent then
+				TweenService:Create(bar, TweenInfo.new(0.8, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), { Size = UDim2.fromScale(math.clamp(have / target, 0.02, 1), 1) }):Play()
+			end
+		end)
+	end
+	TweenService:Create(card, TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { Position = UDim2.new(1, -14, 0.3, 0) }):Play()
+	task.delay(0.12, function()
+		if card.Parent and name.Parent then
+			NeoFX.decode(name, name.Text, 0.35)
+		end
+	end)
 	sound(if b.tier == "gold" or b.tier == "platinum" then "regalFanfare" else "shimmer", 0.7)
-	task.delay(3.6, function()
-		local out = TweenService:Create(card, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Position = UDim2.new(1, 360, 0.3, 0) })
+	task.delay(4.2, function()
+		local out = TweenService:Create(card, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Position = UDim2.new(1, 380, 0.3, 0) })
 		out:Play()
 		out.Completed:Once(function()
 			card:Destroy()

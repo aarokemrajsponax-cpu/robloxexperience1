@@ -6,6 +6,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
+local Icons = require(script.Parent.Icons)
 local Root = require(script.Parent.Root)
 local Theme = require(script.Parent.Theme)
 
@@ -15,6 +16,13 @@ local NAME = "Menu"
 local C = Brand.Colours
 
 export type Tile = { id: string, title: string, line: string, glyph: string, open: () -> () }
+
+-- Each tile's drawn icon, by its id (a tile not here keeps its glyph).
+local ICONS: { [string]: string } = {
+	collection = "collection", trading = "trade", gems = "gems", gemShop = "spark", badges = "badge", boutique = "bag",
+	wardrobe = "wardrobe", ledger = "book", register = "crown", guestbook = "pen", circle = "circle", help = "help",
+	settings = "gear", daily = "daily",
+}
 MenuPanel.tiles = {} :: { Tile }
 
 function MenuPanel.add(tile: Tile)
@@ -65,14 +73,33 @@ function MenuPanel.open()
 		stroke.Transparency = 0.7
 		stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 		stroke.Parent = b
-		local g = Instance.new("TextLabel")
-		g.BackgroundTransparency = 1
-		g.Position = UDim2.fromOffset(12, 0)
-		g.Size = UDim2.new(0, 44, 1, 0)
-		g.Text = tile.glyph
-		g.TextSize = 30
-		g.TextColor3 = C.lightGold
-		g.Parent = b
+		-- The tile's icon, drawn in light in a small glass chip (its glyph, where there isn't one).
+		local chip = Instance.new("Frame")
+		chip.Name = "Chip"
+		chip.AnchorPoint = Vector2.new(0, 0.5)
+		chip.Position = UDim2.new(0, 12, 0.5, 0)
+		chip.Size = UDim2.fromOffset(42, 42)
+		chip.BackgroundColor3 = Color3.fromRGB(12, 13, 18)
+		chip.BackgroundTransparency = 0.1
+		chip.Parent = b
+		local cc = Instance.new("UICorner")
+		cc.CornerRadius = UDim.new(0, 10)
+		cc.Parent = chip
+		local cs = Instance.new("UIStroke")
+		cs.Color = C.gold
+		cs.Transparency = 0.55
+		cs.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		cs.Parent = chip
+		local drawn = if ICONS[tile.id] then Icons.draw(chip, ICONS[tile.id], C.lightGold, 26) else nil
+		if not drawn then
+			local g = Instance.new("TextLabel")
+			g.BackgroundTransparency = 1
+			g.Size = UDim2.fromScale(1, 1)
+			g.Text = tile.glyph
+			g.TextSize = 24
+			g.TextColor3 = C.lightGold
+			g.Parent = chip
+		end
 		local t = Instance.new("TextLabel")
 		t.Name = "Title"
 		t.BackgroundTransparency = 1
@@ -99,9 +126,11 @@ function MenuPanel.open()
 		l.Parent = b
 		b.MouseEnter:Connect(function()
 			stroke.Transparency = 0.15
+			cs.Transparency = 0.1
 		end)
 		b.MouseLeave:Connect(function()
 			stroke.Transparency = 0.7
+			cs.Transparency = 0.55
 		end)
 		b.Activated:Connect(function()
 			Root.close(NAME)

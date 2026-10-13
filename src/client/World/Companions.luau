@@ -14,6 +14,9 @@ local GemList = require(ReplicatedStorage.Shared.GemShop)
 
 local Companions = {}
 
+-- (Further than this from the camera, a companion is out of sight: it waits, and catches up.)
+local FAR = 220
+
 local rgb = Color3.fromRGB
 local SPARKLES = "rbxasset://textures/particles/sparkles_main.dds"
 local FIRE = "rbxasset://textures/particles/fire_main.dds"
@@ -215,23 +218,37 @@ function Companions.start()
 	RunService.RenderStepped:Connect(function(dt: number)
 		local t = os.clock()
 		local k = 1 - math.exp(-5 * math.min(dt, 0.1))
+		-- (Only the companions near enough to be seen move; the rest catch up as their guest comes
+		-- into view. Every part moved in one call to the engine.)
+		local camera = Workspace.CurrentCamera
+		local eye = if camera then camera.CFrame.Position else nil
+		local parts: { BasePart } = {}
+		local frames: { CFrame } = {}
 		for p, pet in pets do
 			if not pet.root.Parent or not pet.part.Parent then
 				clear(p)
+				continue
+			end
+			if eye and (pet.root.Position - eye).Magnitude > FAR then
 				continue
 			end
 			local bob = math.sin(t * 2.2 + pet.phase) * 0.35
 			local goal = (pet.root.CFrame * CFrame.new(if pet.big then 2.6 else 2.2, (if pet.big then 2.2 else 1.6) + bob, 0.7)).Position
 			local before = pet.at
 			pet.at = before:Lerp(goal, k)
-			pet.part.CFrame = CFrame.new(pet.at)
+			table.insert(parts, pet.part)
+			table.insert(frames, CFrame.new(pet.at))
 			local lean = math.clamp((pet.at - before).Magnitude * 18, 0, 14)
 			pet.glyph.Rotation = math.sin(t * 1.7 + pet.phase) * 6 + lean * (if math.sin(t + pet.phase) > 0 then 1 else -1) * 0.4
 			pet.halo.BackgroundTransparency = 0.5 + 0.15 * math.sin(t * 3 + pet.phase)
 			for i, s in pet.stars do
 				local a = t * 1.5 + i / #pet.stars * math.pi * 2
-				s.CFrame = CFrame.new(pet.at + Vector3.new(math.cos(a) * 0.7, 1.1, math.sin(a) * 0.7))
+				table.insert(parts, s)
+				table.insert(frames, CFrame.new(pet.at + Vector3.new(math.cos(a) * 0.7, 1.1, math.sin(a) * 0.7)))
 			end
+		end
+		if #parts > 0 then
+			Workspace:BulkMoveTo(parts, frames, Enum.BulkMoveMode.FireCFrameChanged)
 		end
 	end)
 end

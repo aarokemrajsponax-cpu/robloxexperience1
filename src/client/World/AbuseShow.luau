@@ -42,6 +42,8 @@ local Fireworks = require(script.Parent.Fireworks)
 local OwnerCameo = require(script.Parent.OwnerCameo)
 local Sound = require(script.Parent.Parent.Sound)
 local Root = require(script.Parent.Parent.UI.Root)
+local Icons = require(script.Parent.Parent.UI.Icons)
+local NeoFX = require(script.Parent.NeoFX)
 
 local AbuseShow = {}
 
@@ -57,12 +59,13 @@ local rgb = Color3.fromRGB
 local GOLD = rgb(255, 204, 110)
 local GOLD_LIGHT = rgb(255, 238, 190)
 local GOLD_DEEP = rgb(196, 140, 48)
--- (The big words: the house's sans at its heaviest, cut clean.)
-local IMPACT = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Heavy)
+-- (The big words: wide, engineered letters (the house's 2077 type), never a meme-thumbnail slab.)
+local IMPACT = NeoFX.TITLE
 local HEAVY = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Heavy)
 local BOLD = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold)
 local SPARK = "rbxasset://textures/particles/sparkles_main.dds"
-local CONFETTI = { rgb(255, 60, 140), rgb(80, 140, 255), rgb(90, 255, 170), rgb(255, 214, 80), rgb(246, 206, 112), rgb(255, 240, 200), rgb(190, 90, 255) }
+-- (Confetti in the house's lights: neon cyan and magenta, violet, gold and white; no rainbow.)
+local CONFETTI = { rgb(255, 214, 96), rgb(255, 58, 150), rgb(170, 110, 255), rgb(255, 140, 60), rgb(110, 220, 255), Color3.new(1, 1, 1) }
 
 local function cfg(): { [string]: any }
 	return (Config.data.Admin :: any).show
@@ -147,7 +150,14 @@ end
 local function stroke(parent: Instance, colour: Color3, thickness: number): UIStroke
 	local s = Instance.new("UIStroke")
 	s.Color = colour
-	s.Thickness = thickness
+	-- (2077: no thick black outlines round words. A dark edge on words is kept fine and soft,
+	-- enough to read over a bright sky; lines of colour keep their weight.)
+	if parent:IsA("TextLabel") and thickness > 2 and colour.R + colour.G + colour.B < 0.6 then
+		s.Thickness = 2
+		s.Transparency = 0.35
+	else
+		s.Thickness = thickness
+	end
 	s.Parent = parent
 	return s
 end
@@ -204,19 +214,10 @@ local function confettiBurst(parent: Instance, at: Vector2, count: number, power
 	end)
 end
 
--- A ring of light racing out from a point on the screen.
+-- A ring of light racing out from a point on the screen: a thin double ring, its colour and a
+-- white-hot line inside it (the old thick shockwave, refined).
 local function shockwave(parent: Instance, at: Vector2, colour: Color3, reach: number, seconds: number)
-	local ring = frame(parent, "Shockwave", Color3.new(1, 1, 1), 1)
-	ring.AnchorPoint = Vector2.new(0.5, 0.5)
-	ring.Position = UDim2.fromOffset(at.X, at.Y)
-	ring.Size = UDim2.fromOffset(20, 20)
-	corner(ring, UDim.new(1, 0))
-	local s = stroke(ring, colour, 16)
-	tween(ring, seconds, { Size = UDim2.fromOffset(reach, reach) })
-	tween(s, seconds, { Thickness = 2, Transparency = 1 })
-	task.delay(seconds + 0.05, function()
-		ring:Destroy()
-	end)
+	NeoFX.ring(parent, at, colour, reach, seconds)
 end
 
 ---------------------------------------------------------------------------------------------------
@@ -281,10 +282,11 @@ end
 -- A gradient in the night's colours (Mega Abuse, or a rainbow night: every colour).
 local function painted(parent: Instance, P: AbuseNights.Palette, mega: boolean, rotation: number?): UIGradient
 	local g = Instance.new("UIGradient")
+	-- (Neon, with a white-hot core: Mega Abuse cyan to magenta, a night in its own two lights.)
 	if mega or P.rainbow then
-		g.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, rgb(255, 80, 200)), ColorSequenceKeypoint.new(0.35, rgb(255, 214, 80)), ColorSequenceKeypoint.new(0.7, rgb(90, 255, 200)), ColorSequenceKeypoint.new(1, rgb(150, 110, 255)) })
+		g.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, NeoFX.CYAN), ColorSequenceKeypoint.new(0.45, NeoFX.WHITE), ColorSequenceKeypoint.new(0.75, NeoFX.MAGENTA), ColorSequenceKeypoint.new(1, NeoFX.VIOLET) })
 	else
-		g.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, P.light), ColorSequenceKeypoint.new(0.5, P.main), ColorSequenceKeypoint.new(1, P.deep) })
+		g.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, P.light), ColorSequenceKeypoint.new(0.45, NeoFX.WHITE:Lerp(P.light, 0.35)), ColorSequenceKeypoint.new(1, P.main) })
 	end
 	g.Rotation = rotation or 90
 	g.Parent = parent
@@ -1412,72 +1414,148 @@ function AbuseShow.opening(mega: boolean, seed: number?, nightId: string?)
 		sound("showDrop", 1.1)
 		sound("sonicBoom", 1)
 		sound("subHit", 1)
-		for i = 0, 2 do
-			task.delay(i * 0.32, function()
-				sound("airHorn", 1, 1 + i * 0.06)
-			end)
-		end
-		task.delay(0.5, sound, "celebrate", 0.8)
+		-- (The drop: the boom, a rush of air, the bass, then the sparkle; no air horns.)
+		task.delay(0.05, sound, "warpBurst", 0.9)
+		task.delay(0.32, sound, "subHit", 0.8, 0.8)
+		task.delay(0.6, sound, "sparklePass", 0.7)
+		task.delay(0.5, sound, "celebrate", 0.6)
 		pcall(AbuseShow.cameraShake, 1.4, 0.9)
-		-- The title, landing the night's own way.
+		-- The title, landing the night's own way, in the house's 2077 type: wide, engineered
+		-- letters resolving out of noise, a red and a cyan ghost torn off them and pulled back in,
+		-- a targeting frame opening round them, a lens streak through them, a thin double ring and
+		-- a burst of sparks racing out, a scan line sweeping the screen, the grid behind it all.
+		local neo = NeoFX.colours(mega, P.light, P.main)
 		local words = if mega then "MEGA ABUSE" else "ADMIN ABUSE"
 		-- (The words sit in the room right of the keys down the left, so nothing lands on them.)
 		local dock = Root.left * Root.scale
 		local room = v.X - dock
 		local wordsX = dock + room / 2
-		local titleSize = UDim2.fromOffset(math.min(room - 30, 980 * u), 150 * u)
+		local at = Vector2.new(wordsX, centre.Y)
+		local titleSize = UDim2.fromOffset(math.min(room - 30, 1000 * u), 120 * u)
 		local titleAt = UDim2.fromOffset(wordsX, centre.Y)
-		local title = label(root, "Title", words, IMPACT, Color3.new(1, 1, 1))
+		local title = label(root, "Title", words, NeoFX.TITLE, Color3.new(1, 1, 1))
 		title.AnchorPoint = Vector2.new(0.5, 0.5)
 		title.Position = titleAt
 		title.Size = titleSize
 		-- (Over the flash: the words land on the white, then the picture comes back round them.)
 		title.ZIndex = 17
-		painted(title, P, mega)
-		stroke(title, rgb(30, 16, 4), 5)
+		NeoFX.shimmer(title, neo, 0)
+		-- (A glowing outline in the night's colour, a soft shadow beneath: big, bold, clean.)
+		local edge = stroke(title, neo.b, 3)
+		edge.Transparency = 0.25
 		local landed, landErr = pcall(function()
 			TITLES[titleStyle](ctx, title, titleAt)
 		end)
 		if not landed then
 			warn("[Maison] title " .. titleStyle .. ": " .. tostring(landErr))
 		end
-		-- Above it, tonight's night by name; below it, what it brings.
+		local chroma = NeoFX.chroma(title, math.max(1, total - dropAt))
+		chroma.jitter(0.32, 10 * u)
+		task.delay(0.32, function()
+			chroma.merge(0.45)
+		end)
+		NeoFX.streak(root, at, neo.a, room * 0.95, 18)
+		NeoFX.ring(root, at, neo.a, math.max(v.X, v.Y) * 1.25, 0.85, 16)
+		NeoFX.sparks(root, at, 48, 950 * u, { neo.a, neo.b, neo.core }, 16)
+		-- Rays of light fanning out behind the words, turning slowly while they're up, and
+		-- confetti cannons going off from both corners.
+		local rays = frame(root, "Rays", Color3.new(0, 0, 0), 1)
+		rays.Size = UDim2.fromScale(1, 1)
+		rays.ZIndex = 4
+		local reach = math.max(v.X, v.Y) * 1.3
+		for i = 0, 11 do
+			local ray = frame(rays, "Ray", if i % 2 == 0 then neo.a else neo.b, 1)
+			ray.AnchorPoint = Vector2.new(0.5, 0.5)
+			ray.Position = UDim2.fromOffset(at.X, at.Y)
+			ray.Size = UDim2.fromOffset(reach, (if i % 2 == 0 then 70 else 38) * u)
+			ray.Rotation = i * 15
+			ray.ZIndex = 4
+			local fade = Instance.new("UIGradient")
+			fade.Transparency = NumberSequence.new({
+				NumberSequenceKeypoint.new(0, 1),
+				NumberSequenceKeypoint.new(0.36, 0.8),
+				NumberSequenceKeypoint.new(0.5, 0.45),
+				NumberSequenceKeypoint.new(0.64, 0.8),
+				NumberSequenceKeypoint.new(1, 1),
+			})
+			fade.Parent = ray
+			tween(ray, 0.5, { BackgroundTransparency = 0.35 })
+			tween(ray, math.max(2, total - dropAt), { Rotation = i * 15 + 50 }, Enum.EasingStyle.Linear)
+		end
+		confettiBurst(root, Vector2.new(0, v.Y), 40, 1300 * u)
+		confettiBurst(root, Vector2.new(v.X, v.Y), 40, 1300 * u)
+		-- Above it, tonight's night by name; below it, what it brings: in the terminal's type,
+		-- decoded and typed out, with no emoji.
 		if plan then
-			local kicker = label(root, "Night", plan.night.glyph .. "  TONIGHT:  " .. plan.night.name .. "  " .. plan.night.glyph, HEAVY, P.light)
+			local kicker = label(root, "Night", "TONIGHT:  " .. plan.night.name, NeoFX.MONO_BOLD, neo.a:Lerp(Color3.new(1, 1, 1), 0.3))
 			kicker.AnchorPoint = Vector2.new(0.5, 1)
-			kicker.Position = UDim2.fromOffset(wordsX, centre.Y - 80 * u)
-			kicker.Size = UDim2.fromOffset(math.min(room - 40, 760 * u), 30 * u)
+			kicker.Position = UDim2.fromOffset(wordsX, centre.Y - 74 * u)
+			kicker.Size = UDim2.fromOffset(math.min(room - 40, 720 * u), 26 * u)
 			kicker.ZIndex = 17
-			stroke(kicker, rgb(20, 12, 4), 2)
 			kicker.TextTransparency = 1
-			task.delay(0.2, function()
-				tween(kicker, 0.35, { TextTransparency = 0 })
+			task.delay(0.05, function()
+				if kicker.Parent then
+					kicker.TextTransparency = 0
+					NeoFX.decode(kicker, kicker.Text, 0.3)
+				end
 			end)
 		end
-		local sub = label(root, "Sub", if mega then "TRIPLE GILT  ·  A NEW REALM EVERY FEW MINUTES  ·  GIFTS FROM " .. string.upper(ownerName()) .. "  ·  GIVEAWAYS" else "DOUBLE GILT  ·  GOLDEN PIECES  ·  GIFTS FROM " .. string.upper(ownerName()) .. "  ·  SURPRISES ALL NIGHT", HEAVY, P.light)
+		local subText = if mega then "TRIPLE GILT  ·  A NEW REALM EVERY FEW MINUTES  ·  GIFTS FROM " .. string.upper(ownerName()) .. "  ·  GIVEAWAYS" else "DOUBLE GILT  ·  GOLDEN PIECES  ·  GIFTS FROM " .. string.upper(ownerName()) .. "  ·  SURPRISES ALL NIGHT"
+		local sub = label(root, "Sub", subText, NeoFX.MONO, Color3.new(1, 1, 1):Lerp(neo.a, 0.25))
 		sub.AnchorPoint = Vector2.new(0.5, 0)
-		sub.Position = UDim2.fromOffset(wordsX, centre.Y + 82 * u)
-		sub.Size = UDim2.fromOffset(math.min(room - 40, 860 * u), 26 * u)
+		sub.Position = UDim2.fromOffset(wordsX, centre.Y + 74 * u)
+		sub.Size = UDim2.fromOffset(math.min(room - 40, 880 * u), 22 * u)
 		sub.ZIndex = 17
-		sub.TextTransparency = 1
-		task.delay(0.35, function()
-			tween(sub, 0.4, { TextTransparency = 0 })
+		sub.TextScaled = true
+		task.delay(0.4, function()
+			if sub.Parent then
+				NeoFX.typeOut(sub, subText, 90)
+			end
 		end)
-		shockwave(root, centre, if mega then rgb(220, 140, 255) else P.main, math.max(v.X, v.Y) * 1.8, 0.8)
-		task.delay(0.12, shockwave, root, centre, Color3.new(1, 1, 1), math.max(v.X, v.Y) * 1.2, 0.7)
-		confettiBurst(root, centre, 90, 1100 * u)
+		sub.Text = ""
 	end)
 	-- The way out: the title lifts away, the bars open.
 	task.delay(total - 1.2, function()
 		if openingToken ~= my or not root.Parent then
 			return
 		end
+		-- (The title punches out at the camera: bigger, brighter, gone.)
 		local title = root:FindFirstChild("Title")
 		if title and title:IsA("TextLabel") then
-			tween(title, 0.7, { Position = UDim2.new(0, title.Position.X.Offset, 0, -80 * u), TextTransparency = 1 }, Enum.EasingStyle.Back, Enum.EasingDirection.In)
+			local w, h = title.Size.X.Offset, title.Size.Y.Offset
+			sound("sparklePass", 0.5, 1.15)
+			tween(title, 0.45, { Size = UDim2.fromOffset(w * 1.25, h * 1.25), TextTransparency = 1 }, Enum.EasingStyle.Quint, Enum.EasingDirection.In)
 			local s2 = title:FindFirstChildOfClass("UIStroke")
 			if s2 then
-				tween(s2, 0.5, { Transparency = 1 })
+				tween(s2, 0.4, { Transparency = 1 })
+			end
+			for _, ghost in root:GetChildren() do
+				if ghost:IsA("TextLabel") and ghost.Name == "Shadow" then
+					tween(ghost, 0.3, { TextTransparency = 1 })
+				end
+			end
+		end
+		local rays = root:FindFirstChild("Rays")
+		if rays then
+			for _, ray in rays:GetChildren() do
+				if ray:IsA("Frame") then
+					tween(ray, 0.5, { BackgroundTransparency = 1 })
+				end
+			end
+		end
+		for _, name in { "Brackets", "Readout" } do
+			for _, f in root:GetChildren() do
+				if f.Name == name then
+					for _, d in f:GetDescendants() do
+						if d:IsA("Frame") then
+							tween(d, 0.4, { BackgroundTransparency = 1 })
+						elseif d:IsA("TextLabel") then
+							tween(d, 0.4, { TextTransparency = 1 })
+						elseif d:IsA("UIStroke") then
+							tween(d, 0.4, { Transparency = 1 })
+						end
+					end
+				end
 			end
 		end
 		for _, name in { "Sub", "Night" } do
@@ -1525,31 +1603,43 @@ function AbuseShow.arrived(mega: boolean)
 	if old then
 		old:Destroy()
 	end
+	local neo = NeoFX.colours(mega, P.light, P.main)
 	local card = frame(gui, "Arrival", Color3.new(1, 1, 1), 0)
 	card.AnchorPoint = Vector2.new(0.5, 0)
 	card.Position = UDim2.new(0.5, 0, 0, -140 * u)
-	card.Size = UDim2.fromOffset(math.min(v.X - 24, 640 * u), 122 * u)
-	corner(card, UDim.new(0, 18 * u))
-	-- (Black glass, a breath of the night's colour at its top, its edge in the night's light.)
+	card.Size = UDim2.fromOffset(math.min(v.X - 24, 640 * u), 126 * u)
+	card.ClipsDescendants = false
+	corner(card, UDim.new(0, 12 * u))
+	-- (Dark glass, a breath of the night's light at its top, a fine neon edge running round it,
+	-- the corner marks of a targeting frame: in 2077 the house tells you, it doesn't shout.)
 	local fill = Instance.new("UIGradient")
 	fill.Color = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, P.deep:Lerp(rgb(20, 20, 26), 0.6)),
-		ColorSequenceKeypoint.new(0.5, rgb(14, 14, 18)),
-		ColorSequenceKeypoint.new(1, rgb(7, 7, 9)),
+		ColorSequenceKeypoint.new(0, neo.a:Lerp(rgb(14, 15, 22), 0.82)),
+		ColorSequenceKeypoint.new(0.45, rgb(11, 12, 17)),
+		ColorSequenceKeypoint.new(1, rgb(5, 6, 9)),
 	})
 	fill.Rotation = 90
 	fill.Parent = card
-	stroke(card, if mega then rgb(210, 130, 255) else P.main, 2)
-	local big = label(card, "Title", if mega then "YOU ARRIVED DURING MEGA ABUSE!" else "YOU ARRIVED DURING ADMIN ABUSE!", IMPACT, Color3.new(1, 1, 1))
-	big.Position = UDim2.new(0, 16 * u, 0, 10 * u)
-	big.Size = UDim2.new(1, -32 * u, 0, 44 * u)
-	painted(big, P, mega)
-	local which = label(card, "Night", if plan then plan.night.glyph .. "  TONIGHT: " .. plan.night.name else "TONIGHT: ADMIN ABUSE", HEAVY, P.light)
-	which.Position = UDim2.new(0, 16 * u, 0, 58 * u)
-	which.Size = UDim2.new(1, -32 * u, 0, 22 * u)
-	local small = label(card, "Line", if mega then "Triple Gilt, a new realm every few minutes, gifts from " .. ownerName() .. "." else "Double Gilt, golden pieces at every table, gifts from " .. ownerName() .. ".", BOLD, rgb(240, 230, 210))
-	small.Position = UDim2.new(0, 16 * u, 0, 86 * u)
-	small.Size = UDim2.new(1, -32 * u, 0, 22 * u)
+	local edge = stroke(card, Color3.new(1, 1, 1), 1.5)
+	NeoFX.shimmer(edge :: any, neo, 0)
+	local kicker = label(card, "Kicker", if mega then "YOU ARRIVED DURING MEGA ABUSE" else "YOU ARRIVED DURING ADMIN ABUSE", NeoFX.MONO_BOLD, neo.a:Lerp(Color3.new(1, 1, 1), 0.25))
+	kicker.Position = UDim2.new(0, 18 * u, 0, 12 * u)
+	kicker.Size = UDim2.new(1, -36 * u, 0, 16 * u)
+	kicker.TextXAlignment = Enum.TextXAlignment.Left
+	local big = label(card, "Title", if mega then "MEGA ABUSE IS LIVE" else "ADMIN ABUSE IS LIVE", IMPACT, Color3.new(1, 1, 1))
+	big.Position = UDim2.new(0, 18 * u, 0, 32 * u)
+	big.Size = UDim2.new(1, -36 * u, 0, 40 * u)
+	big.TextXAlignment = Enum.TextXAlignment.Left
+	NeoFX.shimmer(big, neo, 0)
+	NeoFX.decode(big, big.Text, 0.6)
+	local which = label(card, "Night", if plan then "TONIGHT:  " .. plan.night.name else "TONIGHT:  ADMIN ABUSE", NeoFX.MONO, neo.a:Lerp(Color3.new(1, 1, 1), 0.45))
+	which.Position = UDim2.new(0, 18 * u, 0, 78 * u)
+	which.Size = UDim2.new(1, -36 * u, 0, 16 * u)
+	which.TextXAlignment = Enum.TextXAlignment.Left
+	local small = label(card, "Line", if mega then "Triple Gilt, a new realm every few minutes, gifts from " .. ownerName() .. "." else "Double Gilt, golden pieces at every table, gifts from " .. ownerName() .. ".", BOLD, rgb(226, 230, 238))
+	small.Position = UDim2.new(0, 18 * u, 0, 98 * u)
+	small.Size = UDim2.new(1, -36 * u, 0, 18 * u)
+	small.TextXAlignment = Enum.TextXAlignment.Left
 	sound("stinger", 0.8)
 	-- (It comes to rest a third of the way down: under the keys and the strip at the top, never
 	-- over them.)
@@ -1782,97 +1872,165 @@ local function shiftCard(r: Realm)
 	root.Size = UDim2.fromScale(1, 1)
 	root.ZIndex = 30
 	sound("warpBurst", 0.9)
-	sound("glitch", 0.7)
-	-- The glitch: bars of colour tearing across the picture.
-	local bars: { Frame } = {}
-	for _ = 1, 12 do
-		local b = frame(root, "Tear", Color3.new(1, 1, 1), 0.5)
+	-- The realm's two lights: its own colour, lifted, against a deeper partner.
+	local neo = NeoFX.colours(false, r.colour, r.colour:Lerp(NeoFX.VIOLET, 0.45))
+	-- (The words sit in the room right of the keys down the left, so nothing lands on them.)
+	local dock = Root.left * Root.scale
+	local room = v.X - dock
+	local cx = dock + room / 2
+	local cy = v.Y * 0.4
+	local at = Vector2.new(cx, cy)
+	-- The warp: light rushing in from top and bottom, REALM SHIFT slamming in and shaking.
+	-- (Light rushing in from the edges as the house warps.)
+	for i = 1, 2 do
+		local b = frame(root, "Rush", r.colour:Lerp(Color3.new(1, 1, 1), 0.5), 0.55)
 		b.ZIndex = 31
-		table.insert(bars, b)
+		b.Size = UDim2.fromScale(1, 0.5)
+		b.Position = UDim2.fromScale(0, if i == 1 then -0.5 else 1)
+		local g = Instance.new("UIGradient")
+		g.Rotation = if i == 1 then 90 else -90
+		g.Transparency = NumberSequence.new(1, 0)
+		g.Parent = b
+		tween(b, 0.42, { Position = UDim2.fromScale(0, if i == 1 then 0 else 0.5), BackgroundTransparency = 0.2 }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
 	end
-	local colours = { r.colour, Color3.new(1, 1, 1), rgb(255, 40, 120), rgb(40, 220, 255) }
-	local word = label(root, "Word", "REALM SHIFT", IMPACT, Color3.new(1, 1, 1))
+	local word = label(root, "Word", "REALM SHIFT", NeoFX.TITLE, NeoFX.WHITE)
 	word.AnchorPoint = Vector2.new(0.5, 0.5)
-	word.Position = UDim2.fromScale(0.5, 0.45)
-	word.Size = UDim2.fromOffset(math.min(v.X - 40, 760 * u), 110 * u)
+	word.Position = UDim2.fromOffset(cx, cy)
+	word.Size = UDim2.fromOffset(math.min(room - 40, 700 * u), 64 * u)
 	word.ZIndex = 33
-	stroke(word, rgb(20, 10, 30), 4)
+	local ghosts = NeoFX.chroma(word, 0.5)
+	ghosts.jitter(0.45, 14 * u)
 	local conn: RBXScriptConnection? = nil
 	conn = RunService.RenderStepped:Connect(function()
-		if not root.Parent then
+		if not root.Parent or not word.Parent then
 			if conn then
 				conn:Disconnect()
 			end
 			return
 		end
-		for _, b in bars do
-			b.BackgroundColor3 = colours[math.random(1, #colours)]
-			b.BackgroundTransparency = 0.25 + math.random() * 0.6
-			b.Position = UDim2.fromScale(math.random() * 0.2 - 0.1, math.random())
-			b.Size = UDim2.new(1.2, 0, 0, math.random(4, 46) * u)
-		end
-		word.Position = UDim2.new(0.5, (math.random() - 0.5) * 30 * u, 0.45, (math.random() - 0.5) * 12 * u)
-		word.TextColor3 = colours[math.random(1, #colours)]
+		word.Position = UDim2.fromOffset(cx + (math.random() - 0.5) * 26 * u, cy + (math.random() - 0.5) * 8 * u)
 	end)
-	task.delay(0.6, function()
+	task.delay(0.45, function()
 		if conn then
 			conn:Disconnect()
 		end
 		if not root.Parent then
 			return
 		end
-		for _, b in bars do
-			b:Destroy()
+		for _, b in root:GetChildren() do
+			if b.Name == "Rush" then
+				b:Destroy()
+			end
 		end
+		ghosts.destroy()
 		word:Destroy()
-		local flash = frame(root, "Flash", Color3.new(1, 1, 1), 0)
+		-- The lock: a wash of the realm's light, a lens streak, a ring and sparks racing out, a
+		-- scan line down the screen, and the targeting frame opening round its name.
+		local flash = frame(root, "Flash", r.colour:Lerp(Color3.new(1, 1, 1), 0.55), 0.35)
 		flash.Size = UDim2.fromScale(1, 1)
-		flash.ZIndex = 32
-		tween(flash, 0.6, { BackgroundTransparency = 1 })
+		flash.ZIndex = 31
+		tween(flash, 0.55, { BackgroundTransparency = 1 })
 		sound("stinger", 0.9)
 		sound("subHit", 0.8)
+		NeoFX.streak(root, at, neo.a, room * 0.9, 33)
+		NeoFX.ring(root, at, neo.a, math.max(v.X, v.Y) * 1.1, 0.8, 31)
+		NeoFX.sparks(root, at, 28, 700 * u, { neo.a, neo.b, neo.core }, 32)
+		local cardW = math.min(room - 30, 820 * u)
 		local card = frame(root, "Card", Color3.new(0, 0, 0), 1)
 		card.AnchorPoint = Vector2.new(0.5, 0.5)
-		card.Position = UDim2.fromScale(0.5, 0.4)
-		card.Size = UDim2.fromOffset(math.min(v.X - 30, 820 * u), 230 * u)
+		card.Position = UDim2.fromOffset(cx, cy)
+		card.Size = UDim2.fromOffset(cardW, 196 * u)
 		card.ZIndex = 33
-		local glyph = label(card, "Glyph", r.glyph, HEAVY, Color3.new(1, 1, 1))
-		glyph.AnchorPoint = Vector2.new(0.5, 0)
-		glyph.Position = UDim2.fromScale(0.5, 0)
-		glyph.Size = UDim2.fromOffset(84 * u, 84 * u)
-		glyph.ZIndex = 34
-		local entering = label(card, "Entering", "E N T E R I N G", HEAVY, Color3.new(1, 1, 1))
+		-- A portal: two thin rings of the realm's light turning round a white-hot core.
+		local portal = frame(card, "Portal", Color3.new(0, 0, 0), 1)
+		portal.AnchorPoint = Vector2.new(0.5, 0)
+		portal.Position = UDim2.fromScale(0.5, 0)
+		portal.Size = UDim2.fromOffset(44 * u, 44 * u)
+		portal.ZIndex = 34
+		for i, spec in { { 1, 2 }, { 0.62, 1.5 } } do
+			local ring = frame(portal, "Ring" .. i, Color3.new(0, 0, 0), 1)
+			ring.AnchorPoint = Vector2.new(0.5, 0.5)
+			ring.Position = UDim2.fromScale(0.5, 0.5)
+			ring.Size = UDim2.fromScale(spec[1], spec[1])
+			ring.ZIndex = 34
+			corner(ring, UDim.new(1, 0))
+			local edge = Instance.new("UIStroke")
+			edge.Color = Color3.new(1, 1, 1)
+			edge.Thickness = spec[2] * math.max(1, u)
+			edge.Parent = ring
+			local g = Instance.new("UIGradient")
+			g.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, neo.a), ColorSequenceKeypoint.new(0.5, neo.core), ColorSequenceKeypoint.new(1, neo.b) })
+			g.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.7, 0.2), NumberSequenceKeypoint.new(1, 0.95) })
+			g.Parent = edge
+			TweenService:Create(g, TweenInfo.new(if i == 1 then 1.6 else 1.1, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), { Rotation = if i == 1 then 360 else -360 }):Play()
+		end
+		local core = frame(portal, "Core", neo.core, 0)
+		core.AnchorPoint = Vector2.new(0.5, 0.5)
+		core.Position = UDim2.fromScale(0.5, 0.5)
+		core.Size = UDim2.fromOffset(8 * u, 8 * u)
+		core.ZIndex = 35
+		corner(core, UDim.new(1, 0))
+		local entering = label(card, "Entering", "NOW ENTERING", NeoFX.MONO_BOLD, neo.a:Lerp(Color3.new(1, 1, 1), 0.3))
 		entering.AnchorPoint = Vector2.new(0.5, 0)
-		entering.Position = UDim2.new(0.5, 0, 0, 86 * u)
-		entering.Size = UDim2.fromOffset(300 * u, 20 * u)
+		entering.Position = UDim2.new(0.5, 0, 0, 54 * u)
+		entering.Size = UDim2.new(0.9, 0, 0, 18 * u)
 		entering.ZIndex = 34
-		local name = label(card, "Realm", r.name, IMPACT, r.colour)
+		NeoFX.decode(entering, entering.Text, 0.3)
+		local name = label(card, "Realm", r.name, NeoFX.TITLE, Color3.new(1, 1, 1))
 		name.AnchorPoint = Vector2.new(0.5, 0)
-		name.Position = UDim2.new(0.5, 0, 0, 108 * u)
-		name.Size = UDim2.new(1, 0, 0, 80 * u)
+		name.Position = UDim2.new(0.5, 0, 0, 78 * u)
+		name.Size = UDim2.new(1, 0, 0, 66 * u)
 		name.ZIndex = 34
-		stroke(name, rgb(16, 10, 24), 4)
-		local line = label(card, "Line", r.line, BOLD, rgb(245, 240, 230))
+		NeoFX.shimmer(name, neo, 0)
+		local edge = stroke(name, neo.b:Lerp(Color3.new(0, 0, 0), 0.55), 1.5)
+		edge.Transparency = 0.35
+		NeoFX.decode(name, r.name, 0.35)
+		local chroma = NeoFX.chroma(name, 3.4)
+		chroma.jitter(0.25, 9 * u)
+		task.delay(0.25, function()
+			chroma.merge(0.4)
+		end)
+		local lineText = r.line
+		local line = label(card, "Line", lineText, NeoFX.MONO, rgb(236, 240, 250))
 		line.AnchorPoint = Vector2.new(0.5, 0)
-		line.Position = UDim2.new(0.5, 0, 0, 192 * u)
-		line.Size = UDim2.new(0.9, 0, 0, 26 * u)
+		line.Position = UDim2.new(0.5, 0, 0, 156 * u)
+		line.Size = UDim2.new(0.9, 0, 0, 22 * u)
 		line.ZIndex = 34
+		task.delay(0.3, function()
+			if line.Parent then
+				NeoFX.typeOut(line, lineText, 80)
+			end
+		end)
+		line.Text = ""
 		local scale = Instance.new("UIScale")
-		scale.Scale = 0.4
+		scale.Scale = 0.92
 		scale.Parent = card
-		tween(scale, 0.5, { Scale = 1 }, Enum.EasingStyle.Back)
+		tween(scale, 0.45, { Scale = 1 }, Enum.EasingStyle.Quint)
+		-- The way out: the name powers off like a screen, the rest fades with the frame.
 		task.delay(3, function()
 			if card.Parent then
-				tween(scale, 0.35, { Scale = 0.6 }, Enum.EasingStyle.Back, Enum.EasingDirection.In)
-				for _, l in { glyph, entering, name, line } do
-					tween(l, 0.35, { TextTransparency = 1 })
+				sound("sparklePass", 0.4, 1.2)
+				local h = name.Size.Y.Offset
+				tween(name, 0.16, { Size = UDim2.new(1, 0, 0, h * 0.12) }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+				task.delay(0.16, function()
+					if name.Parent then
+						tween(name, 0.26, { Size = UDim2.new(0, 2, 0, h * 0.12), TextTransparency = 1 }, Enum.EasingStyle.Quint, Enum.EasingDirection.In)
+					end
+				end)
+				chroma.out(0.35)
+				for _, l in { entering, line } do
+					tween(l, 0.3, { TextTransparency = 1 })
 				end
-				local s = name:FindFirstChildOfClass("UIStroke")
-				if s then
-					tween(s, 0.3, { Transparency = 1 })
+				tween(edge, 0.3, { Transparency = 1 })
+				for _, d in root:GetDescendants() do
+					if (d.Name == "Arm" or d.Name == "Core") and d:IsA("Frame") then
+						tween(d, 0.3, { BackgroundTransparency = 1 })
+					elseif d:IsA("UIStroke") and d.Parent and (d.Parent.Name == "Arm" or d.Parent.Name == "Ring1" or d.Parent.Name == "Ring2") then
+						tween(d, 0.3, { Transparency = 1 })
+					end
 				end
 			end
-			task.delay(0.4, function()
+			task.delay(0.45, function()
 				root:Destroy()
 			end)
 		end)
@@ -2245,8 +2403,9 @@ local function thousands(n: number): string
 	return (out:gsub("^,", ""))
 end
 
--- Coins (or anything) raining down the whole screen for a while.
-local function rainDown(parent: Instance, glyphs: { string }, count: number, seconds: number)
+-- Coins raining down the whole screen for a while: drawn, not emoji (a disc of gold with its
+-- raised ring and a glint), each one turning over as it falls.
+local function coinRain(parent: Instance, count: number, seconds: number)
 	local v = view()
 	local u = unit()
 	for i = 1, count do
@@ -2254,23 +2413,44 @@ local function rainDown(parent: Instance, glyphs: { string }, count: number, sec
 			if not parent.Parent then
 				return
 			end
-			local size = (26 + math.random() * 30) * u
-			local l = label(parent, "Rain", glyphs[math.random(1, #glyphs)], HEAVY, Color3.new(1, 1, 1))
-			l.AnchorPoint = Vector2.new(0.5, 0.5)
-			l.Size = UDim2.fromOffset(size, size)
-			l.Position = UDim2.fromOffset(math.random() * v.X, -size)
-			l.ZIndex = 49
-			l.Rotation = math.random(-40, 40)
+			local size = (22 + math.random() * 26) * u
+			local coin = frame(parent, "Rain", Color3.new(1, 1, 1), 0)
+			coin.AnchorPoint = Vector2.new(0.5, 0.5)
+			coin.Size = UDim2.fromOffset(size, size)
+			coin.Position = UDim2.fromOffset(math.random() * v.X, -size)
+			coin.ZIndex = 49
+			coin.Rotation = math.random(-30, 30)
+			corner(coin, UDim.new(1, 0))
+			golden(coin, 45)
+			local rim = frame(coin, "Rim", Color3.new(1, 1, 1), 1)
+			rim.AnchorPoint = Vector2.new(0.5, 0.5)
+			rim.Position = UDim2.fromScale(0.5, 0.5)
+			rim.Size = UDim2.fromScale(0.62, 0.62)
+			corner(rim, UDim.new(1, 0))
+			local ring = Instance.new("UIStroke")
+			ring.Color = GOLD_LIGHT
+			ring.Thickness = math.max(1, 1.5 * u)
+			ring.Transparency = 0.15
+			ring.Parent = rim
+			local glint = frame(coin, "Glint", Color3.new(1, 1, 1), 0.25)
+			glint.AnchorPoint = Vector2.new(0.5, 0.5)
+			glint.Position = UDim2.fromScale(0.32, 0.3)
+			glint.Size = UDim2.fromScale(0.18, 0.18)
+			corner(glint, UDim.new(1, 0))
+			-- (Turning over: its width swinging to an edge and back.)
+			TweenService:Create(coin, TweenInfo.new(0.22 + math.random() * 0.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Size = UDim2.fromOffset(size * 0.14, size) }):Play()
 			local fall = 1.4 + math.random() * 1.3
-			tween(l, fall, { Position = UDim2.fromOffset(math.random() * v.X, v.Y + size), Rotation = l.Rotation + math.random(-220, 220) }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+			tween(coin, fall, { Position = UDim2.fromOffset(math.random() * v.X, v.Y + size), Rotation = coin.Rotation + math.random(-90, 90) }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
 			task.delay(fall + 0.05, function()
-				l:Destroy()
+				coin:Destroy()
 			end)
 		end)
 	end
 end
 
--- The haul card: thank you, and what this guest got tonight.
+-- The haul card: thank you, and what this guest got tonight. In the house's 2077 look: a pane of
+-- dark glass with a live edge of light, the words resolving out of noise, and the night's take
+-- reported like a terminal's readout, each number counting up as its line comes in.
 local function haulCard(n: Night, stopped: boolean, P: AbuseNights.Palette, delayIn: number)
 	local gui = screen()
 	local u = unit()
@@ -2279,89 +2459,207 @@ local function haulCard(n: Night, stopped: boolean, P: AbuseNights.Palette, dela
 	if old then
 		old:Destroy()
 	end
+	local neo = NeoFX.colours(n.mega, P.light, P.main)
 	-- (Only what there is to tell: no "+0 GILT" for a guest, or AJKR, who didn't sort tonight.)
 	local gained = math.max(0, giltNow() - n.gilt)
-	local rows: { { glyph: string, text: string } } = {}
+	type Row = { icon: string, value: number, prefix: string, what: string }
+	local rows: { Row } = {}
 	if gained > 0 then
-		table.insert(rows, { glyph = "💰", text = "+" .. thousands(gained) .. " GILT" })
+		table.insert(rows, { icon = "gilt", value = gained, prefix = "+", what = "GILT" })
 	end
 	if n.gifts > 0 then
-		table.insert(rows, { glyph = "🎁", text = tostring(n.gifts) .. (if n.gifts == 1 then " GIFT OPENED" else " GIFTS OPENED") })
+		table.insert(rows, { icon = "gift", value = n.gifts, prefix = "", what = if n.gifts == 1 then "GIFT OPENED" else "GIFTS OPENED" })
 	end
 	if n.golden > 0 then
-		table.insert(rows, { glyph = "✨", text = tostring(n.golden) .. (if n.golden == 1 then " GOLDEN PIECE" else " GOLDEN PIECES") })
+		table.insert(rows, { icon = "spark", value = n.golden, prefix = "", what = if n.golden == 1 then "GOLDEN PIECE" else "GOLDEN PIECES" })
 	end
 	local realms = 0
 	for _ in n.realms do
 		realms += 1
 	end
 	if n.mega and realms > 0 then
-		table.insert(rows, { glyph = "🌌", text = tostring(realms) .. (if realms == 1 then " REALM VISITED" else " REALMS VISITED") })
+		table.insert(rows, { icon = "planet", value = realms, prefix = "", what = if realms == 1 then "REALM VISITED" else "REALMS VISITED" })
 	end
 	local seen = 0
 	for _ in n.seen do
 		seen += 1
 	end
 	if seen > 0 then
-		table.insert(rows, { glyph = "🎆", text = tostring(seen) .. (if seen == 1 then " EFFECT WITNESSED" else " EFFECTS WITNESSED") })
+		table.insert(rows, { icon = "eye", value = seen, prefix = "", what = if seen == 1 then "EFFECT WITNESSED" else "EFFECTS WITNESSED" })
 	end
-	local height = (if #rows > 0 then 176 + #rows * 40 else 146) * u
-	local card = frame(gui, "Finale", Color3.new(1, 1, 1), 0)
+	local ROW = 38
+	local HEAD = 128
+	local height = (if #rows > 0 then HEAD + 6 + #rows * ROW + 14 else HEAD - 4) * u
+	local width = math.min(v.X - 24, 560 * u)
+	-- (In the room right of the keys down the left where it fits there; else in the middle.)
+	local dock = Root.left * Root.scale
+	local cx = if v.X - dock - 24 >= width then dock + (v.X - dock) / 2 else v.X / 2
+	local cy = v.Y * 0.45
+	local card = frame(gui, "Finale", Color3.new(1, 1, 1), 0.06)
 	card.AnchorPoint = Vector2.new(0.5, 0.5)
-	card.Position = UDim2.fromScale(0.5, 0.45)
-	card.Size = UDim2.fromOffset(math.min(v.X - 24, 560 * u), height)
+	card.Position = UDim2.fromOffset(cx, cy)
+	card.Size = UDim2.fromOffset(width, height)
 	card.ZIndex = 50
 	card.Visible = false
-	corner(card, UDim.new(0, 22 * u))
+	corner(card, UDim.new(0, 14 * u))
 	local fill = Instance.new("UIGradient")
-	fill.Color = ColorSequence.new(P.deep:Lerp(Color3.new(0, 0, 0), 0.6), rgb(12, 9, 6))
+	fill.Color = ColorSequence.new(rgb(18, 20, 30):Lerp(neo.b, 0.1), rgb(6, 7, 11))
 	fill.Rotation = 90
 	fill.Parent = card
-	stroke(card, P.main, 3)
-	local title = label(card, "Title", if stopped then "ADMIN ABUSE IS OVER" else "THAT'S A WRAP!", IMPACT, Color3.new(1, 1, 1))
-	title.Position = UDim2.new(0, 18 * u, 0, 16 * u)
-	title.Size = UDim2.new(1, -36 * u, 0, 58 * u)
-	title.ZIndex = 51
-	painted(title, P, n.mega)
-	stroke(title, rgb(30, 16, 4), 3)
-	local which = label(card, "Night", n.glyph .. "  " .. n.name, HEAVY, P.light)
-	which.Position = UDim2.new(0, 18 * u, 0, 78 * u)
-	which.Size = UDim2.new(1, -36 * u, 0, 22 * u)
-	which.ZIndex = 51
-	local thanks = label(card, "Thanks", if #rows > 0 then "THANK YOU FOR COMING  ·  YOUR HAUL" else "THANK YOU FOR COMING", HEAVY, rgb(245, 236, 220))
-	thanks.Position = UDim2.new(0, 18 * u, 0, 106 * u)
-	thanks.Size = UDim2.new(1, -36 * u, 0, 18 * u)
-	thanks.ZIndex = 51
+	local edge = Instance.new("UIStroke")
+	edge.Color = Color3.new(1, 1, 1)
+	edge.Thickness = math.max(1.5, 1.5 * u)
+	edge.Transparency = 0.05
+	edge.Parent = card
+	NeoFX.shimmer(edge, neo, 25)
+	-- (A hairline of light along its top, as on glass.)
+	local gloss = frame(card, "Gloss", Color3.new(1, 1, 1), 0.8)
+	gloss.Position = UDim2.fromOffset(16 * u, 1)
+	gloss.Size = UDim2.new(1, -32 * u, 0, 1)
+	gloss.ZIndex = 51
+	local INSET = 24 * u
+	local function textRow(name: string, text: string, font: Font, colour: Color3, y: number, h: number): TextLabel
+		local l = label(card, name, text, font, colour)
+		l.Position = UDim2.new(0, INSET, 0, y * u)
+		l.Size = UDim2.new(1, -INSET * 2, 0, h * u)
+		l.TextXAlignment = Enum.TextXAlignment.Left
+		l.ZIndex = 51
+		return l
+	end
+	local kicker = textRow("Night", "TONIGHT:  " .. string.upper(n.name), NeoFX.MONO_BOLD, neo.a:Lerp(Color3.new(1, 1, 1), 0.25), 18, 15)
+	local words = if stopped then "ADMIN ABUSE IS OVER" else "THAT'S A WRAP"
+	local title = textRow("Title", words, NeoFX.TITLE, Color3.new(1, 1, 1), 40, 42)
+	NeoFX.shimmer(title, neo, 0)
+	textRow("Thanks", if #rows > 0 then "THANK YOU FOR COMING  ·  YOUR HAUL" else "THANK YOU FOR COMING", NeoFX.MONO, rgb(206, 214, 232), 92, 15)
+	if #rows > 0 then
+		local rule = frame(card, "Rule", neo.a, 0.35)
+		rule.Position = UDim2.new(0, INSET, 0, (HEAD - 8) * u)
+		rule.Size = UDim2.new(1, -INSET * 2, 0, 1)
+		rule.ZIndex = 51
+		local fade = Instance.new("UIGradient")
+		fade.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(1, 1) })
+		fade.Parent = rule
+	end
 	for i, r in rows do
-		local row = label(card, "Row", r.glyph .. "  " .. r.text, HEAVY, if i == 1 then P.light else Color3.new(1, 1, 1))
-		row.Position = UDim2.new(0, 18 * u, 0, (138 + (i - 1) * 40) * u)
-		row.Size = UDim2.new(1, -36 * u, 0, 30 * u)
+		local row = frame(card, "Row", Color3.new(0, 0, 0), 1)
+		row.Position = UDim2.new(0, INSET, 0, (HEAD + (i - 1) * ROW) * u)
+		row.Size = UDim2.new(1, -INSET * 2, 0, ROW * u)
 		row.ZIndex = 51
-		row.TextTransparency = 1
-		task.delay(delayIn + 0.5 + i * 0.45, function()
-			tween(row, 0.3, { TextTransparency = 0 })
+		local chip = frame(row, "Chip", neo.a, 0.88)
+		chip.AnchorPoint = Vector2.new(0, 0.5)
+		chip.Position = UDim2.fromScale(0, 0.5)
+		chip.Size = UDim2.fromOffset(28 * u, 28 * u)
+		chip.ZIndex = 52
+		corner(chip, UDim.new(0, 8 * u))
+		local chipEdge = Instance.new("UIStroke")
+		chipEdge.Color = neo.a
+		chipEdge.Thickness = 1
+		chipEdge.Transparency = 0.55
+		chipEdge.Parent = chip
+		local icon = Icons.draw(chip, r.icon, if i == 1 then neo.a else neo.a:Lerp(neo.b, 0.5), 18 * u)
+		local what = label(row, "What", r.what, NeoFX.MONO_BOLD, rgb(196, 204, 224))
+		what.AnchorPoint = Vector2.new(0, 0.5)
+		what.Position = UDim2.new(0, 40 * u, 0.5, 0)
+		what.Size = UDim2.new(0.6, -40 * u, 0, 15 * u)
+		what.TextXAlignment = Enum.TextXAlignment.Left
+		what.ZIndex = 52
+		local value = label(row, "Value", r.prefix .. thousands(r.value), NeoFX.TITLE, if i == 1 then neo.a:Lerp(Color3.new(1, 1, 1), 0.45) else Color3.new(1, 1, 1))
+		value.AnchorPoint = Vector2.new(1, 0.5)
+		value.Position = UDim2.fromScale(1, 0.5)
+		value.Size = UDim2.new(0.4, 0, 0, 22 * u)
+		value.TextXAlignment = Enum.TextXAlignment.Right
+		value.ZIndex = 52
+		if i < #rows then
+			local hair = frame(row, "Hairline", Color3.new(1, 1, 1), 0.92)
+			hair.AnchorPoint = Vector2.new(0, 1)
+			hair.Position = UDim2.new(0, 40 * u, 1, 0)
+			hair.Size = UDim2.new(1, -40 * u, 0, 1)
+			hair.ZIndex = 52
+		end
+		-- (Each line in, one after another: its words, its icon, its number counting up.)
+		for _, l in { what, value } do
+			l.TextTransparency = 1
+		end
+		chip.Visible = false
+		task.delay(delayIn + 0.55 + i * 0.4, function()
+			if not row.Parent then
+				return
+			end
+			chip.Visible = true
+			tween(what, 0.25, { TextTransparency = 0 })
+			tween(value, 0.25, { TextTransparency = 0 })
+			if icon then
+				local grow = Instance.new("UIScale")
+				grow.Scale = 0.4
+				grow.Parent = icon
+				tween(grow, 0.35, { Scale = 1 }, Enum.EasingStyle.Back)
+			end
+			local count = Instance.new("NumberValue")
+			count.Value = 0
+			count.Changed:Connect(function(x: number)
+				if value.Parent then
+					value.Text = r.prefix .. thousands(x)
+				end
+			end)
+			local run = tween(count, math.min(0.9, 0.35 + r.value / 4000), { Value = r.value }, Enum.EasingStyle.Quart)
+			run.Completed:Once(function()
+				if value.Parent then
+					value.Text = r.prefix .. thousands(r.value)
+				end
+				count:Destroy()
+			end)
 			sound("tick", 0.8, 1 + i * 0.08)
 		end)
 	end
 	local scale = Instance.new("UIScale")
-	scale.Scale = 0.3
+	scale.Scale = 0.94
 	scale.Parent = card
 	task.delay(delayIn, function()
 		if not card.Parent then
 			return
 		end
 		card.Visible = true
-		tween(scale, 0.55, { Scale = 1 }, Enum.EasingStyle.Back)
-		sound("regalFanfare", 0.8)
+		card.BackgroundTransparency = 1
+		tween(card, 0.35, { BackgroundTransparency = 0.06 })
+		tween(scale, 0.45, { Scale = 1 }, Enum.EasingStyle.Quint)
+		NeoFX.decode(title, words, 0.45)
+		NeoFX.decode(kicker, kicker.Text, 0.35)
+		local at = Vector2.new(cx, cy)
+		NeoFX.ring(gui, at, neo.a, math.max(v.X, v.Y) * 1.1, 0.9, 49)
+		NeoFX.sparks(gui, at, 36, 900 * u, { neo.a, neo.b, neo.core }, 49)
+		sound("stinger", 0.8)
+		task.delay(0.15, sound, "sparklePass", 0.7)
 		task.delay(0.3, sound, "celebrate", 0.7)
-		confettiBurst(gui, Vector2.new(v.X / 2, v.Y * 0.4), 110, 1000 * u)
+		confettiBurst(gui, Vector2.new(cx, v.Y * 0.4), 70, 1000 * u)
 	end)
 	local seconds = (cfg().finaleSeconds or 9) + delayIn
 	task.delay(seconds, function()
 		if card.Parent then
-			tween(scale, 0.35, { Scale = 0.5 }, Enum.EasingStyle.Back, Enum.EasingDirection.In)
+			-- (Out: a little smaller, fading.)
+			tween(scale, 0.3, { Scale = 0.85 }, Enum.EasingStyle.Back, Enum.EasingDirection.In)
+			tween(card, 0.3, { BackgroundTransparency = 1 })
+			for _, d in card:GetDescendants() do
+				if d:IsA("TextLabel") then
+					tween(d, 0.15, { TextTransparency = 1 })
+				elseif d:IsA("Frame") then
+					tween(d, 0.15, { BackgroundTransparency = 1 })
+				end
+			end
+			local marks = gui:FindFirstChild("FinaleBrackets")
+			if marks then
+				for _, d in marks:GetDescendants() do
+					if d:IsA("Frame") then
+						tween(d, 0.25, { BackgroundTransparency = 1 })
+					elseif d:IsA("UIStroke") then
+						tween(d, 0.25, { Transparency = 1 })
+					end
+				end
+			end
 			task.delay(0.38, function()
 				card:Destroy()
+				if marks then
+					marks:Destroy()
+				end
 			end)
 		end
 	end)
@@ -2396,7 +2694,7 @@ end
 -- Gold raining down the screen, coins chiming, and the haul.
 FINALES.goldShower = function(n: Night, stopped: boolean, P: AbuseNights.Palette)
 	local layer = finaleLayer(7)
-	rainDown(layer, { "💰", "💰", "💵", "🏅", "✨" }, 70, 4)
+	coinRain(layer, 54, 4)
 	for i = 0, 5 do
 		task.delay(i * 0.35, sound, "coinDrop", 0.7, 1 + i * 0.05)
 	end
@@ -2446,13 +2744,13 @@ FINALES.credits = function(n: Night, stopped: boolean, P: AbuseNights.Palette)
 	for id in n.seen do
 		local e = HouseEvents.effectById[id]
 		if e then
-			table.insert(seen, tostring(e.glyph) .. " " .. string.upper(tostring(e.name)))
+			table.insert(seen, string.upper(tostring(e.name)))
 		end
 	end
 	table.sort(seen)
 	local lines: { { text: string, big: boolean? } } = {
 		{ text = "MAISON NOIR PRESENTS", big = false },
-		{ text = n.glyph .. "  " .. n.name, big = true },
+		{ text = string.upper(n.name), big = true },
 		{ text = " " },
 		{ text = "STARRING" },
 	}
@@ -2481,13 +2779,17 @@ FINALES.credits = function(n: Night, stopped: boolean, P: AbuseNights.Palette)
 	for _, extra in tail do
 		table.insert(lines, { text = extra, big = extra == "THANK YOU FOR COMING" })
 	end
+	local neo = NeoFX.colours(n.mega, P.light, P.main)
 	local height = 0
 	for i, l in lines do
-		local h = (if l.big then 40 else 24) * u
-		local t = label(roll, "Line", l.text, if l.big then IMPACT else HEAVY, if l.big then P.light else rgb(236, 230, 220))
+		local h = (if l.big then 34 else 20) * u
+		local t = label(roll, "Line", l.text, if l.big then NeoFX.TITLE else NeoFX.MONO, if l.big then Color3.new(1, 1, 1) else rgb(214, 222, 240))
 		t.Size = UDim2.new(1, 0, 0, h)
 		t.LayoutOrder = i
 		t.ZIndex = 47
+		if l.big then
+			NeoFX.shimmer(t, neo, 0)
+		end
 		height += h + 10 * u
 	end
 	roll.Size = UDim2.fromOffset(roll.Size.X.Offset, height)
@@ -2504,7 +2806,8 @@ FINALES.credits = function(n: Night, stopped: boolean, P: AbuseNights.Palette)
 		local k = math.clamp((os.clock() - started) / seconds, 0, 1)
 		roll.Position = UDim2.new(0.5, 0, 1, -k * (v.Y - clear - top + height))
 	end)
-	sound("regalFanfare", 0.6)
+	sound("stinger", 0.6)
+	task.delay(0.2, sound, "sparklePass", 0.6)
 	haulCard(n, stopped, P, seconds - 1)
 end
 
@@ -2521,9 +2824,12 @@ FINALES.supernova = function(n: Night, stopped: boolean, P: AbuseNights.Palette)
 	corner(ball, UDim.new(1, 0))
 	local big = math.max(v.X, v.Y) * 2.4
 	tween(ball, 0.9, { Size = UDim2.fromOffset(big, big), BackgroundTransparency = 1 }, Enum.EasingStyle.Quint)
-	for i, colour in { P.main, P.light, P.accent } do
+	local neo = NeoFX.colours(n.mega, P.light, P.main)
+	for i, colour in { neo.a, neo.b, neo.core } do
 		task.delay(i * 0.15, shockwave, layer, centre, colour, big, 1)
 	end
+	NeoFX.streak(layer, centre, neo.a, v.X * 1.1, 47)
+	NeoFX.sparks(layer, centre, 40, 1100 * unit(), { neo.a, neo.b, neo.core }, 47)
 	sound("sonicBoom", 1)
 	sound("heavenly", 0.8)
 	haulCard(n, stopped, P, 0.7)
@@ -2537,48 +2843,95 @@ FINALES.confettiStorm = function(n: Night, stopped: boolean, P: AbuseNights.Pale
 	for round = 0, 4 do
 		task.delay(round * 0.6, function()
 			for _, corner2 in { Vector2.new(0, v.Y), Vector2.new(v.X, v.Y), Vector2.new(0, 0), Vector2.new(v.X, 0) } do
-				confettiBurst(layer, corner2, 30, 1200 * u)
+				confettiBurst(layer, corner2, 18, 1200 * u)
 			end
-			sound("partyHorn", 0.8, 1 + round * 0.05)
+			sound("subHit", 0.5, 1 + round * 0.06)
+			sound("sparklePass", 0.45, 1 + round * 0.05)
 		end)
 	end
 	haulCard(n, stopped, P, 0.5)
 end
 
--- The curtains close, THANK YOU on them, a bow; then they part on the haul.
+-- Two doors of dark glass slide shut across the screen, a seam of light where they meet, THANK
+-- YOU resolving on them; then they part on the haul.
 FINALES.curtainCall = function(n: Night, stopped: boolean, P: AbuseNights.Palette)
 	local u = unit()
+	local v = view()
+	local neo = NeoFX.colours(n.mega, P.light, P.main)
 	local layer = finaleLayer(5)
 	local halves: { Frame } = {}
 	for i = 0, 1 do
-		local h = frame(layer, "Curtain", Color3.new(1, 1, 1), 0)
+		local h = frame(layer, "Curtain", Color3.new(1, 1, 1), 0.04)
 		h.Size = UDim2.new(0.5, 2, 1, 0)
 		h.Position = UDim2.fromScale(if i == 0 then -0.5 else 1, 0)
 		h.ZIndex = 46
+		-- (Deep velvet in heavy folds, its leading edge trimmed in gold.)
 		local folds = Instance.new("UIGradient")
 		local keys = {}
 		for k = 0, 8 do
-			table.insert(keys, ColorSequenceKeypoint.new(k / 8, if k % 2 == 0 then rgb(150, 18, 34) else rgb(84, 6, 18)))
+			table.insert(keys, ColorSequenceKeypoint.new(k / 8, if k % 2 == 0 then rgb(150, 18, 34) else rgb(78, 6, 18)))
 		end
 		folds.Color = ColorSequence.new(keys)
 		folds.Parent = h
-		tween(h, 0.8, { Position = UDim2.fromScale(i * 0.5, 0) }, Enum.EasingStyle.Quint)
+		local lit = frame(h, "Edge", GOLD, 0)
+		lit.AnchorPoint = Vector2.new(if i == 0 then 1 else 0, 0)
+		lit.Position = UDim2.fromScale(if i == 0 then 1 else 0, 0)
+		lit.Size = UDim2.new(0, math.max(2, 2 * u), 1, 0)
+		lit.ZIndex = 47
+		local glow = frame(h, "Glow", GOLD_LIGHT, 0.6)
+		glow.AnchorPoint = lit.AnchorPoint
+		glow.Position = lit.Position
+		glow.Size = UDim2.new(0, 26 * u, 1, 0)
+		glow.ZIndex = 47
+		local soft = Instance.new("UIGradient")
+		soft.Transparency = NumberSequence.new(if i == 0 then 1 else 0, if i == 0 then 0 else 1)
+		soft.Parent = glow
+		tween(h, 0.7, { Position = UDim2.fromScale(i * 0.5, 0) }, Enum.EasingStyle.Quint)
 		table.insert(halves, h)
 	end
-	local thanks = label(layer, "Thanks", "THANK YOU!", IMPACT, Color3.new(1, 1, 1))
+	sound("warpBurst", 0.5)
+	task.delay(0.62, sound, "subHit", 0.9)
+	local words = "THANK YOU"
+	local thanks = label(layer, "Thanks", words, NeoFX.TITLE, Color3.new(1, 1, 1))
 	thanks.AnchorPoint = Vector2.new(0.5, 0.5)
 	thanks.Position = UDim2.fromScale(0.5, 0.45)
-	thanks.Size = UDim2.fromOffset(700 * u, 130 * u)
-	thanks.ZIndex = 47
-	painted(thanks, P, n.mega)
-	stroke(thanks, rgb(40, 6, 12), 4)
+	thanks.Size = UDim2.fromOffset(math.min(v.X - 40, 700 * u), 96 * u)
+	thanks.ZIndex = 48
+	NeoFX.shimmer(thanks, neo, 0)
 	thanks.TextTransparency = 1
-	task.delay(0.8, function()
-		tween(thanks, 0.3, { TextTransparency = 0 })
-		sound("celebrate", 0.9)
+	local sub = label(layer, "Sub", "FOR COMING  ·  " .. string.upper(n.name), NeoFX.MONO_BOLD, neo.a:Lerp(Color3.new(1, 1, 1), 0.3))
+	sub.AnchorPoint = Vector2.new(0.5, 0)
+	sub.Position = UDim2.new(0.5, 0, 0.45, 58 * u)
+	sub.Size = UDim2.fromOffset(math.min(v.X - 40, 560 * u), 18 * u)
+	sub.ZIndex = 48
+	sub.TextTransparency = 1
+	task.delay(0.7, function()
+		if not thanks.Parent then
+			return
+		end
+		thanks.TextTransparency = 0
+		NeoFX.decode(thanks, words, 0.45)
+		local ghosts = NeoFX.chroma(thanks, 1.9)
+		ghosts.jitter(0.3, 10 * u)
+		task.delay(0.3, function()
+			ghosts.merge(0.4)
+		end)
+		NeoFX.streak(layer, Vector2.new(v.X / 2, v.Y * 0.45), neo.a, v.X * 0.9, 48)
+		sound("celebrate", 0.8)
+		task.delay(0.25, function()
+			if sub.Parent then
+				sub.TextTransparency = 0
+				NeoFX.decode(sub, sub.Text, 0.35)
+			end
+		end)
 	end)
 	task.delay(2.6, function()
-		thanks:Destroy()
+		for _, d in layer:GetChildren() do
+			if d.Name == "Brackets" or d.Name == "Thanks" or d.Name == "Sub" or d.Name == "ChromaRed" or d.Name == "ChromaCyan" then
+				d:Destroy()
+			end
+		end
+		sound("warpBurst", 0.4, 1.2)
 		for i, h in halves do
 			tween(h, 0.8, { Position = UDim2.fromScale(if i == 1 then -0.52 else 1.02, 0) }, Enum.EasingStyle.Quint)
 		end
@@ -2688,7 +3041,17 @@ end
 function AbuseShow.cardUp(): boolean
 	local gui = player:FindFirstChild("PlayerGui")
 	local s = gui and gui:FindFirstChild("MaisonAbuseShow")
-	return s ~= nil and (s:FindFirstChild("Arrival") ~= nil or s:FindFirstChild("Gift") ~= nil)
+	if not s then
+		return false
+	end
+	-- (The welcome, a gift, a realm's name, the finale and its haul: the objective card steps
+	-- aside for each, so nothing lands on top of it.)
+	for _, name in { "Arrival", "Gift", "Shift", "Finale", "FinaleShow" } do
+		if s:FindFirstChild(name) then
+			return true
+		end
+	end
+	return false
 end
 
 function AbuseShow.start()

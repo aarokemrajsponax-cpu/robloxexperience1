@@ -229,12 +229,16 @@ check("knocking from the Lane's gate does nothing: come up to the door", last(wr
 local function atDoor(g, i)
 	place(g, (doors[i] * CFrame.new(0, 0, -5)).Position + Vector3.new(0, 2.5, 0))
 end
--- A jump nobody could make (a character teleported by its own screen): nothing for a moment.
+-- A jump nobody could make (a character teleported by its own screen): put back where it was,
+-- and nothing for a moment.
+local gate = at(wren)
 rootOf(wren).CFrame = CFrame.new((doors[1] * CFrame.new(0, 0, -5)).Position + Vector3.new(0, 2.5, 0))
 advance(0.3)
+check("a character that jumped further than anyone can is put back where it was", (at(wren) - gate).Magnitude < 2, (at(wren) - gate).Magnitude)
 knock(wren, 1)
-check("a character that jumped further than anyone can finds nothing for a moment", last(wren, "treat") == nil)
+check("...and finds nothing", last(wren, "treat") == nil)
 advance(3.2)
+atDoor(wren, 1)
 knock(wren, 1)
 local treat = last(wren, "treat")
 check("at the door: the host answers with a treat", treat ~= nil and treat.i == 1 and treat.empty == nil and treat.gilt >= C.lane.gilt and treat.host == Lane.Hosts[1].name)

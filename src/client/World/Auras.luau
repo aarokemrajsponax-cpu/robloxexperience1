@@ -12,6 +12,9 @@ local GemList = require(ReplicatedStorage.Shared.GemShop)
 
 local Auras = {}
 
+-- (Further than this from the camera, an aura is out of sight and holds still.)
+local FAR = 220
+
 local rgb = Color3.fromRGB
 local TEXTURES = {
 	sparkles = "rbxasset://textures/particles/sparkles_main.dds",
@@ -151,6 +154,11 @@ function Auras.start()
 	-- The circling glyphs go round.
 	RunService.RenderStepped:Connect(function()
 		local t = os.clock()
+		-- (Only the auras near enough to be seen turn, every piece moved in one call.)
+		local camera = Workspace.CurrentCamera
+		local eye = if camera then camera.CFrame.Position else nil
+		local parts: { BasePart } = {}
+		local frames: { CFrame } = {}
 		for p, w in worn do
 			if #w.orbit > 0 then
 				if not w.root.Parent then
@@ -158,14 +166,21 @@ function Auras.start()
 					continue
 				end
 				local centre = w.root.Position
+				if eye and (centre - eye).Magnitude > FAR then
+					continue
+				end
 				local n = #w.orbit
 				for i, part in w.orbit do
 					local a = t * (if w.crown then 1.2 else 1.6) + i / n * math.pi * 2
 					local r = if w.crown then 1.1 else 2.6
 					local y = if w.crown then 3.3 else math.sin(t * 2 + i) * 0.8
-					part.CFrame = CFrame.new(centre + Vector3.new(math.cos(a) * r, y, math.sin(a) * r))
+					table.insert(parts, part)
+					table.insert(frames, CFrame.new(centre + Vector3.new(math.cos(a) * r, y, math.sin(a) * r)))
 				end
 			end
+		end
+		if #parts > 0 then
+			Workspace:BulkMoveTo(parts, frames, Enum.BulkMoveMode.FireCFrameChanged)
 		end
 	end)
 end

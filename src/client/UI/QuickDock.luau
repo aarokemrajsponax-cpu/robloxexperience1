@@ -13,6 +13,7 @@ local UserInputService = game:GetService("UserInputService")
 local Names = require(ReplicatedStorage.Shared.Names)
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Icons = require(script.Parent.Icons)
 local Root = require(script.Parent.Root)
 local Theme = require(script.Parent.Theme)
 
@@ -171,32 +172,35 @@ local function still(): boolean
 	return ok and value == "Still"
 end
 
--- A key on the dock, made to be seen: a glossy tile in the key's own colour (lit from above, a
--- sheen across its top, deeper at its foot where its name sits), a bright edge, a dark rim
--- round it so it stands out over any room, a large icon, and a soft glow of its colour that
--- breathes. Under the pointer it lifts and glows brighter; pressed, it sinks.
+-- A key on the dock, made to be seen and to look like the house: a tile of dark glass, lit from
+-- above, with a fine edge and a wash of the key's own colour; its icon drawn in light (a neon tube
+-- in glass, not a cartoon); its name clean beneath; a bar of its colour along its foot that runs
+-- wider under the pointer. A soft glow of its colour breathes round it. Pressed, it sinks.
+local ICONS: { [string]: string } = { Collection = "collection", Trade = "trade", Wardrobe = "wardrobe", Gems = "gems", Suites = "suites", Invite = "invite", Watch = "watch", Back = "home", Home = "home" }
+
 local function tile(parent: Instance, order: number, glyph: string, label: string, hotkey: string?, onPress: () -> ()): TextButton
 	local accent = ACCENTS[label] or ACCENTS.Collection
-	local radius = math.floor(SIZE * 0.28)
+	local light = accent[1]
+	local radius = math.floor(SIZE * 0.22)
 	local holder = Instance.new("Frame")
 	holder.Name = label
 	holder.LayoutOrder = order
 	holder.BackgroundTransparency = 1
 	holder.Size = UDim2.fromOffset(keyWidth(), SIZE)
 	holder.Parent = parent
-	local glow = Theme.glow(holder, accent[1], radius, 1.35)
-	-- The dark rim, just outside the tile.
+	local glow = Theme.glow(holder, light, radius, 0.75)
+	-- The dark rim, just outside the tile, so it reads over any room.
 	local rim = Instance.new("Frame")
 	rim.Name = "Rim"
 	rim.AnchorPoint = Vector2.new(0.5, 0.5)
 	rim.Position = UDim2.fromScale(0.5, 0.5)
-	rim.Size = UDim2.new(1, 6, 1, 6)
-	rim.BackgroundColor3 = Color3.fromRGB(6, 6, 9)
-	rim.BackgroundTransparency = 0.25
+	rim.Size = UDim2.new(1, 4, 1, 4)
+	rim.BackgroundColor3 = Color3.fromRGB(4, 5, 8)
+	rim.BackgroundTransparency = 0.35
 	rim.BorderSizePixel = 0
 	rim.ZIndex = 1
 	local rc = Instance.new("UICorner")
-	rc.CornerRadius = UDim.new(0, radius + 3)
+	rc.CornerRadius = UDim.new(0, radius + 2)
 	rc.Parent = rim
 	rim.Parent = holder
 	local b = Instance.new("TextButton")
@@ -204,117 +208,138 @@ local function tile(parent: Instance, order: number, glyph: string, label: strin
 	b.AutoButtonColor = false
 	b.Size = UDim2.fromScale(1, 1)
 	b.BackgroundColor3 = Color3.new(1, 1, 1)
-	b.BackgroundTransparency = 0
+	b.BackgroundTransparency = 0.04
 	b.Text = ""
 	b.ZIndex = 2
+	b.ClipsDescendants = true
 	b.Parent = holder
+	-- Dark glass, lit from above.
 	local fill = Instance.new("UIGradient")
 	fill.Rotation = 90
 	fill.Color = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, accent[1]:Lerp(Color3.new(1, 1, 1), 0.18)),
-		ColorSequenceKeypoint.new(0.55, accent[1]:Lerp(accent[2], 0.45)),
-		ColorSequenceKeypoint.new(1, accent[2]:Lerp(Color3.new(0, 0, 0), 0.25)),
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(34, 37, 48)),
+		ColorSequenceKeypoint.new(0.5, Color3.fromRGB(17, 19, 26)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(9, 10, 14)),
 	})
 	fill.Parent = b
 	local corner = Instance.new("UICorner")
 	corner.CornerRadius = UDim.new(0, radius)
 	corner.Parent = b
+	-- The fine edge: the key's colour, brightest along the top, fading down the sides.
 	local stroke = Instance.new("UIStroke")
 	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	stroke.Color = accent[1]:Lerp(Color3.new(1, 1, 1), 0.65)
-	stroke.Thickness = 2
-	stroke.Transparency = 0.05
+	stroke.Color = light
+	stroke.Thickness = 1.5
+	stroke.Transparency = 0.15
 	stroke.Parent = b
 	local strokeLight = Instance.new("UIGradient")
 	strokeLight.Rotation = 90
 	strokeLight.Transparency = NumberSequence.new({
 		NumberSequenceKeypoint.new(0, 0),
-		NumberSequenceKeypoint.new(0.6, 0.35),
-		NumberSequenceKeypoint.new(1, 0.7),
+		NumberSequenceKeypoint.new(0.55, 0.55),
+		NumberSequenceKeypoint.new(1, 0.25),
 	})
 	strokeLight.Parent = stroke
 	local scale = Instance.new("UIScale")
 	scale.Parent = holder
-	-- The sheen across the top half, like light on lacquer.
+	-- A wash of the key's colour, from the top: the glass holds its light.
+	local wash = Instance.new("Frame")
+	wash.Name = "Wash"
+	wash.BorderSizePixel = 0
+	wash.BackgroundColor3 = light
+	wash.Size = UDim2.fromScale(1, 0.75)
+	wash.ZIndex = 2
+	local wg = Instance.new("UIGradient")
+	wg.Rotation = 90
+	wg.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.72),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	wg.Parent = wash
+	-- (Rounded like the tile: a frame's clipping keeps square corners, so the wash has its own.)
+	local wc = Instance.new("UICorner")
+	wc.CornerRadius = UDim.new(0, radius)
+	wc.Parent = wash
+	wash.Parent = b
+	-- A hairline of white light along the top edge.
 	local gloss = Instance.new("Frame")
 	gloss.Name = "Gloss"
 	gloss.BorderSizePixel = 0
 	gloss.BackgroundColor3 = Color3.new(1, 1, 1)
-	gloss.Position = UDim2.fromOffset(3, 3)
-	gloss.Size = UDim2.new(1, -6, 0.48, 0)
+	gloss.AnchorPoint = Vector2.new(0.5, 0)
+	gloss.Position = UDim2.new(0.5, 0, 0, 1)
+	gloss.Size = UDim2.new(1, -radius * 2, 0, 1)
 	gloss.ZIndex = 3
-	local gc = Instance.new("UICorner")
-	gc.CornerRadius = UDim.new(0, math.max(4, radius - 3))
-	gc.Parent = gloss
 	local gg = Instance.new("UIGradient")
-	gg.Rotation = 90
 	gg.Transparency = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 0.62),
+		NumberSequenceKeypoint.new(0, 1),
+		NumberSequenceKeypoint.new(0.5, 0.35),
 		NumberSequenceKeypoint.new(1, 1),
 	})
 	gg.Parent = gloss
 	gloss.Parent = b
-	-- The foot, deeper, where the name sits.
-	local foot = Instance.new("Frame")
-	foot.Name = "Foot"
-	foot.BorderSizePixel = 0
-	foot.BackgroundColor3 = Color3.new(0, 0, 0)
-	foot.AnchorPoint = Vector2.new(0, 1)
-	foot.Position = UDim2.fromScale(0, 1)
-	foot.Size = UDim2.new(1, 0, 0.42, 0)
-	foot.ZIndex = 3
-	local fc = Instance.new("UICorner")
-	fc.CornerRadius = UDim.new(0, radius)
-	fc.Parent = foot
-	local fg = Instance.new("UIGradient")
-	fg.Rotation = 90
-	fg.Transparency = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 1),
-		NumberSequenceKeypoint.new(1, 0.5),
-	})
-	fg.Parent = foot
-	foot.Parent = b
-	-- The icon, large; it stands in for the old orb (kept by name for the checks).
+	-- The icon: drawn in light where the house has one, the glyph otherwise (the holiday keys).
 	local orb = Instance.new("Frame")
 	orb.Name = "Orb"
 	orb.AnchorPoint = Vector2.new(0.5, 0)
-	orb.Position = UDim2.new(0.5, 0, 0, math.floor(SIZE * 0.08))
-	orb.Size = UDim2.fromOffset(math.floor(SIZE * 0.58), math.floor(SIZE * 0.58))
+	orb.Position = UDim2.new(0.5, 0, 0, math.floor(SIZE * 0.13))
+	orb.Size = UDim2.fromOffset(math.floor(SIZE * 0.46), math.floor(SIZE * 0.46))
 	orb.BackgroundTransparency = 1
 	orb.ZIndex = 4
 	orb.Parent = b
-	local icon = Instance.new("TextLabel")
-	icon.Name = "Icon"
-	icon.BackgroundTransparency = 1
-	icon.AnchorPoint = Vector2.new(0.5, 0.5)
-	icon.Position = UDim2.fromScale(0.5, 0.5)
-	icon.Size = UDim2.fromScale(1, 1)
-	icon.Text = glyph
-	icon.TextScaled = true
-	icon.TextColor3 = Color3.new(1, 1, 1)
-	icon.ZIndex = 4
-	icon.Parent = orb
+	local iconName = ICONS[label]
+	local drawn = if iconName then Icons.draw(orb, iconName, light, math.floor(SIZE * 0.42)) else nil
+	if drawn then
+		for _, f in drawn:GetDescendants() do
+			if f:IsA("GuiObject") then
+				f.ZIndex = 4
+			end
+		end
+	else
+		local icon = Instance.new("TextLabel")
+		icon.Name = "Icon"
+		icon.BackgroundTransparency = 1
+		icon.AnchorPoint = Vector2.new(0.5, 0.5)
+		icon.Position = UDim2.fromScale(0.5, 0.5)
+		icon.Size = UDim2.fromScale(1, 1)
+		icon.Text = glyph
+		icon.TextScaled = true
+		icon.TextColor3 = Color3.new(1, 1, 1)
+		icon.ZIndex = 4
+		icon.Parent = orb
+	end
 	local name = Instance.new("TextLabel")
 	name.Name = "Label"
 	name.BackgroundTransparency = 1
 	name.AnchorPoint = Vector2.new(0.5, 1)
-	name.Position = UDim2.new(0.5, 0, 1, -math.floor(SIZE * 0.06))
-	name.Size = UDim2.new(1, -8, 0, math.floor(SIZE * 0.24))
-	name.FontFace = Brand.Fonts.heavy
-	-- (Scaled to fit the key's foot, and never cut short: no floor that would leave a word wider
-	-- than the key.)
+	name.Position = UDim2.new(0.5, 0, 1, -math.floor(SIZE * 0.1))
+	name.Size = UDim2.new(1, -10, 0, math.floor(SIZE * 0.22))
+	name.FontFace = Brand.Fonts.bodyBold
+	-- (Scaled to fit the key's foot, and never cut short.)
 	name.TextScaled = true
 	name.TextWrapped = false
-	name.TextColor3 = Color3.new(1, 1, 1)
-	name.TextStrokeColor3 = Color3.new(0, 0, 0)
-	name.TextStrokeTransparency = 0.25
+	name.TextColor3 = Color3.fromRGB(238, 240, 246)
+	name.TextStrokeTransparency = 1
 	name.Text = label
 	name.ZIndex = 5
 	local nameFit = Instance.new("UITextSizeConstraint")
-	nameFit.MaxTextSize = math.max(11, math.floor(SIZE * 0.2))
+	nameFit.MaxTextSize = math.max(11, math.floor(SIZE * 0.19))
 	nameFit.MinTextSize = 1
 	nameFit.Parent = name
 	name.Parent = b
+	-- The bar of the key's colour along its foot.
+	local underline = Instance.new("Frame")
+	underline.Name = "Underline"
+	underline.BorderSizePixel = 0
+	underline.BackgroundColor3 = light
+	underline.AnchorPoint = Vector2.new(0.5, 1)
+	underline.Position = UDim2.new(0.5, 0, 1, -3)
+	underline.Size = UDim2.new(0.3, 0, 0, 2)
+	underline.ZIndex = 5
+	local uc = Instance.new("UICorner")
+	uc.CornerRadius = UDim.new(1, 0)
+	uc.Parent = underline
+	underline.Parent = b
 	-- A band of light that sweeps across the key now and then (each key at its own moment).
 	local sweep = Instance.new("Frame")
 	sweep.Name = "Sweep"
@@ -331,9 +356,9 @@ local function tile(parent: Instance, order: number, glyph: string, label: strin
 	sg.Rotation = 25
 	sg.Transparency = NumberSequence.new({
 		NumberSequenceKeypoint.new(0, 1),
-		NumberSequenceKeypoint.new(0.42, 1),
-		NumberSequenceKeypoint.new(0.5, 0.72),
-		NumberSequenceKeypoint.new(0.58, 1),
+		NumberSequenceKeypoint.new(0.44, 1),
+		NumberSequenceKeypoint.new(0.5, 0.86),
+		NumberSequenceKeypoint.new(0.56, 1),
 		NumberSequenceKeypoint.new(1, 1),
 	})
 	sg.Offset = Vector2.new(-1, 0)
@@ -343,12 +368,12 @@ local function tile(parent: Instance, order: number, glyph: string, label: strin
 		for i, h in glow:GetChildren() do
 			if h:IsA("Frame") then
 				local from = h.BackgroundTransparency
-				TweenService:Create(h, TweenInfo.new(1.8 + i * 0.3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { BackgroundTransparency = math.min(1, from + 0.08) }):Play()
+				TweenService:Create(h, TweenInfo.new(1.8 + i * 0.3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { BackgroundTransparency = math.min(1, from + 0.06) }):Play()
 			end
 		end
 		TweenService:Create(sg, TweenInfo.new(1.1, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut, -1, false, 5 + order * 0.7), { Offset = Vector2.new(1, 0) }):Play()
 	end
-	-- The keyboard key, a small gold badge on the corner (not on phones).
+	-- The keyboard key, a small chip on the corner in the key's colour (not on phones).
 	if hotkey and not UserInputService.TouchEnabled then
 		local badge = Instance.new("TextLabel")
 		badge.Name = "Hotkey"
@@ -356,18 +381,19 @@ local function tile(parent: Instance, order: number, glyph: string, label: strin
 		badge.Position = UDim2.new(1, 5, 0, -5)
 		local bpx = math.max(20, math.floor(SIZE * 0.27))
 		badge.Size = UDim2.fromOffset(bpx, bpx)
-		badge.BackgroundColor3 = Color3.fromRGB(10, 10, 14)
-		badge.TextColor3 = Color3.new(1, 1, 1)
+		badge.BackgroundColor3 = Color3.fromRGB(8, 9, 13)
+		badge.TextColor3 = light:Lerp(Color3.new(1, 1, 1), 0.4)
 		badge.FontFace = Brand.Fonts.heavy
-		badge.TextSize = math.max(12, math.floor(bpx * 0.6))
+		badge.TextSize = math.max(12, math.floor(bpx * 0.56))
 		badge.Text = hotkey
 		badge.ZIndex = 6
 		local bc = Instance.new("UICorner")
-		bc.CornerRadius = UDim.new(1, 0)
+		bc.CornerRadius = UDim.new(0, math.floor(bpx * 0.3))
 		bc.Parent = badge
 		local bs = Instance.new("UIStroke")
-		bs.Color = accent[1]
-		bs.Thickness = 1.5
+		bs.Color = light
+		bs.Thickness = 1.25
+		bs.Transparency = 0.1
 		bs.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 		bs.Parent = badge
 		badge.Parent = holder
@@ -375,8 +401,9 @@ local function tile(parent: Instance, order: number, glyph: string, label: strin
 	local over = false
 	local function lit(on: boolean)
 		over = on
-		TweenService:Create(scale, TweenInfo.new(0.16, Enum.EasingStyle.Quad), { Scale = if on then 1.08 else 1 }):Play()
-		TweenService:Create(stroke, TweenInfo.new(0.16), { Transparency = if on then 0 else 0.1 }):Play()
+		TweenService:Create(scale, TweenInfo.new(0.16, Enum.EasingStyle.Quad), { Scale = if on then 1.06 else 1 }):Play()
+		TweenService:Create(stroke, TweenInfo.new(0.16), { Transparency = if on then 0 else 0.15 }):Play()
+		TweenService:Create(underline, TweenInfo.new(0.2, Enum.EasingStyle.Quint), { Size = UDim2.new(if on then 0.62 else 0.3, 0, 0, 2) }):Play()
 		-- (The glow reaches further while lit: each halo by half its own spread again.)
 		for _, h in glow:GetChildren() do
 			if h:IsA("Frame") then
@@ -393,10 +420,10 @@ local function tile(parent: Instance, order: number, glyph: string, label: strin
 		lit(false)
 	end)
 	b.MouseButton1Down:Connect(function()
-		TweenService:Create(scale, TweenInfo.new(0.08, Enum.EasingStyle.Quad), { Scale = 0.93 }):Play()
+		TweenService:Create(scale, TweenInfo.new(0.08, Enum.EasingStyle.Quad), { Scale = 0.94 }):Play()
 	end)
 	b.MouseButton1Up:Connect(function()
-		TweenService:Create(scale, TweenInfo.new(0.26, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = if over then 1.08 else 1 }):Play()
+		TweenService:Create(scale, TweenInfo.new(0.26, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = if over then 1.06 else 1 }):Play()
 	end)
 	b.Activated:Connect(function()
 		Theme.haptic()
@@ -458,9 +485,20 @@ function QuickDock.setWatch(show: boolean, watching: boolean?)
 	if label and label:IsA("TextLabel") then
 		label.Text = if watching then "Back" else "Watch"
 	end
+	-- (Its icon: the burst of fireworks to go and watch, the house to come back.)
 	local icon = k:FindFirstChild("Icon", true)
-	if icon and icon:IsA("TextLabel") then
-		icon.Text = if watching then "🏠" else "🎆"
+	local want = if watching then "home" else "watch"
+	if icon and icon:GetAttribute("Icon") ~= want then
+		local orb = icon.Parent
+		icon:Destroy()
+		local drawn = if orb then Icons.draw(orb, want, (ACCENTS.Watch)[1], math.floor(SIZE * 0.42)) else nil
+		if drawn then
+			for _, part in drawn:GetDescendants() do
+				if part:IsA("GuiObject") then
+					part.ZIndex = 4
+				end
+			end
+		end
 	end
 end
 
@@ -528,8 +566,22 @@ function QuickDock.setHoliday(glyph: string?, label: string?, count: number?)
 	end
 end
 
+-- Out of the way while sorting, and while a panel is open (a panel is the whole of what the guest
+-- is doing then: the keys come back the moment it closes, and never sit under its glass).
+local seatedNow = false
+local function refreshVisible()
+	local f = dock
+	if f then
+		f.Visible = not seatedNow and not Root.isOpen()
+	end
+end
+
+function QuickDock.setSeated(seated: boolean)
+	seatedNow = seated
+	refreshVisible()
+end
+
 function QuickDock.start()
-	Root.left = QuickDock.right()
 	-- Down the left, starting under the Gilt bar, two by two, big (bigger still on a phone, where
 	-- everything is drawn smaller), with room for a seventh key (Watch, during a fireworks show)
 	-- and clear of the thumbstick.
@@ -539,6 +591,9 @@ function QuickDock.start()
 	local most = if UserInputService.TouchEnabled then 100 else 88
 	GAP = 10
 	SIZE = math.clamp(math.floor((room - 3 * GAP) / 4), 56, most)
+	-- (How far right the dock reaches, once its keys have their size: centred panels and the
+	-- big moments keep clear of it.)
+	Root.left = QuickDock.right()
 	local f = Instance.new("Frame")
 	f.Name = "QuickDock"
 	f.BackgroundTransparency = 1
@@ -568,6 +623,7 @@ function QuickDock.start()
 		QuickDock.inviteFriend()
 	end)
 	dock = f
+	Root.PanelsChanged:Connect(refreshVisible)
 	-- (What stands beside the dock, the perk chips, starts just right of it.)
 	local chips = Root.hud:FindFirstChild("PerkChips")
 	if chips and chips:IsA("Frame") then
@@ -587,12 +643,6 @@ function QuickDock.start()
 	end)
 end
 
--- Out of the way while sorting.
-function QuickDock.setSeated(seated: boolean)
-	local f = dock
-	if f then
-		f.Visible = not seated
-	end
-end
+
 
 return QuickDock

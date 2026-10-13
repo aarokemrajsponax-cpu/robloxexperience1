@@ -32,6 +32,7 @@ local HolidayGrant = require(script.Parent.Purchases.HolidayGrant)
 local Store = require(script.Parent.Purchases.Store)
 local Profiles = require(script.Parent.Profiles)
 local RemoteGuard = require(script.Parent.RemoteGuard)
+local Integrity = require(script.Parent.Integrity)
 
 local Types = require(script.Types)
 local Lane = require(script.Lane)
@@ -79,8 +80,8 @@ local rng = Random.new()
 ---------------------------------------------------------------------------------------------------
 -- Guests: where they are, and how fast they've moved
 ---------------------------------------------------------------------------------------------------
-type Track = { at: Vector3, t: number, suspect: number, moved: number }
-local tracks: { [Player]: Track } = {}
+-- (How each guest moves is watched by the house itself: server/Integrity. A guest who moved as
+-- nobody can is put back, and finds nothing for a moment.)
 local lastTravel: { [Player]: number } = {}
 
 local function rootOf(player: Player): BasePart?
@@ -94,42 +95,12 @@ end
 
 -- The server moved this guest (a trip, a ride): their next step isn't a teleport of their own.
 local function moved(player: Player)
-	local t = tracks[player]
-	if t then
-		t.moved = os.clock()
-	end
-end
-
--- Watches each guest's steps (ten times a second): one faster than anyone can move, that the
--- server didn't make, means they find nothing for three seconds.
-local function watch()
-	local now = os.clock()
-	local fastest = math.max(Config.data.Movement.maxSpeed, 60) * 1.6 + 30
-	for _, player in Players:GetPlayers() do
-		local root = rootOf(player)
-		if not root then
-			continue
-		end
-		local at = root.CFrame.Position
-		local t = tracks[player]
-		if not t then
-			tracks[player] = { at = at, t = now, suspect = 0, moved = 0 }
-			continue
-		end
-		local dt = now - t.t
-		local flat = Vector3.new(at.X - t.at.X, 0, at.Z - t.at.Z).Magnitude
-		if dt > 0 and now - t.moved > 1.5 and flat > fastest * dt + 6 then
-			t.suspect = now + 3
-		end
-		t.at = at
-		t.t = now
-	end
+	Integrity.moved(player)
 end
 
 -- Whether a guest may find things now (not just after a jump nobody could make).
 local function trusted(player: Player): boolean
-	local t = tracks[player]
-	return t == nil or os.clock() >= t.suspect
+	return Integrity.trusted(player)
 end
 
 ---------------------------------------------------------------------------------------------------
@@ -237,9 +208,7 @@ local function teleport(player: Player, cf: CFrame): boolean
 	if player.Character ~= character then
 		return false
 	end
-	moved(player)
-	character:PivotTo(cf + Vector3.new(0, 3, 0))
-	moved(player)
+	Integrity.teleport(player, character, cf + Vector3.new(0, 3, 0))
 	return true
 end
 
@@ -574,7 +543,6 @@ end
 -- One beat of every game (ten a second): the turkeys run, the gifts are picked up, the sleigh
 -- keeps its time.
 function Holidays.step(dt: number)
-	watch()
 	local id = current
 	local g = id and GAMES[id]
 	if g and g.step then
@@ -583,6 +551,7 @@ function Holidays.step(dt: number)
 end
 
 function Holidays.start()
+	Integrity.start()
 	-- A holiday product bought (Purchases/HolidayGrant wrote it down): the game is told at once.
 	HolidayGrant.after = function(player: Player, key: string)
 		send(player, { op = "bought", key = key })
@@ -604,7 +573,6 @@ function Holidays.start()
 		if g and g.leave then
 			pcall(g.leave, ctx, player)
 		end
-		tracks[player] = nil
 		lastTravel[player] = nil
 	end)
 	-- A guest whose character comes back (a respawn) is home again: nothing is carried.
@@ -644,6 +612,6 @@ end
 Holidays.ctx = ctx
 Holidays.GAMES = GAMES
 Holidays.saved = saved
-Holidays.watch = watch
+Holidays.watch = Integrity.step
 
 return Holidays

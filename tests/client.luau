@@ -4847,16 +4847,19 @@ advance(0.6)
 check("LEVEL UP! with the new level, its name and its reward", textOnScreen("LEVEL UP!") ~= nil and textOnScreen("ADEPT") ~= nil and textOnScreen("+350 Gilt") ~= nil)
 snapshot("level-up")
 advance(4)
-serverSays("Shop", { op = "badge", key = "metOwner", name = "Met the Owner", line = "Be in the house with the owner.", glyph = "👑", tier = "gold" })
-serverSays("Shop", { op = "badge", key = "firstRound", name = "First Round", line = "Clear your first round at the tables.", glyph = "🃏", tier = "bronze" })
+serverSays("Shop", { op = "badge", key = "metOwner", name = "Met the Owner", line = "Be in the house with the owner.", glyph = "👑", tier = "gold", count = 12, total = 155 })
+serverSays("Shop", { op = "badge", key = "firstRound", name = "First Round", line = "Clear your first round at the tables.", glyph = "🃏", tier = "bronze", count = 13, total = 155, nextName = "Warming Up", nextHave = 1, nextTarget = 10 })
 advance(0.8)
 check("a badge earned slides in", textOnScreen("Met the Owner") ~= nil and textOnScreen("BADGE EARNED") ~= nil)
+check("...with how many the guest has now, of how many", textOnScreen("12 / 155") ~= nil)
 check("...where the card of what to do next was (it steps aside for it)", find(playerGui, function(d)
 	return d.Name == "Objective" and d:IsA("Frame") and d.Parent ~= nil and d.Parent.Name == "MaisonHud"
 end) == nil)
 snapshot("badge")
 advance(4.5)
 check("and the next waits its turn", textOnScreen("First Round") ~= nil)
+check("...pointing at the next badge on its ladder, and how far along", textOnScreen("NEXT:  WARMING UP") ~= nil and textOnScreen("1 / 10") ~= nil)
+snapshot("badge-next")
 advance(5)
 -- The Gem Shop: every price on its card; two taps to buy; the screen never sends a price.
 invokeResults.GemAsk = { ok = true, gems = 500, owned = {}, aura = "", title = "", giltUntil = 0, xpUntil = 0, now = 0, cabinet = { items = { { id = "saffronJar", gems = 60 } } } }
@@ -4973,6 +4976,55 @@ check("its groups", press("HOLIDAYS") and (function()
 end)())
 Root2.close()
 advance(0.5)
+-- The Evening Calendar: seven evenings, those opened ticked off, tonight's waiting; opening it
+-- (the server says what it was); and on arrival it's offered by itself only when nothing else is up.
+;(function()
+	local CalendarPanel = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "CalendarPanel")
+	local state = { ok = true, op = "calendar", step = 2, weeks = 0, total = 2, ready = true, nextIn = 5 * 3600 }
+	invokeResults.CalendarAsk = function(req)
+		if type(req) == "table" and req.op == "open" then
+			state = { ok = true, op = "calendar", step = 3, weeks = 0, total = 3, ready = false, nextIn = 5 * 3600 + 60, opened = 3, gilt = 0, gems = 5, xp = 0 }
+		end
+		return state
+	end
+	local function evening(i)
+		return find(playerGui, function(d)
+			return d.Name == "Evening" .. i and d:GetAttribute("State") ~= nil
+		end)
+	end
+	CalendarPanel.open()
+	advance(1)
+	local states = {}
+	for i = 1, 7 do
+		local e = evening(i)
+		states[i] = e and e:GetAttribute("State") or "none"
+	end
+	check("the Evening Calendar: seven evenings, two opened, tonight's waiting", textOnScreen("The Evening Calendar") ~= nil and textOnScreen("Tonight's present is waiting") ~= nil and table.concat(states, " ") == "opened opened today later later later later", table.concat(states, " "))
+	check("...every present shown as it is (the third: 5 Gems)", textOnScreen("5 GEMS") ~= nil and textOnScreen("Miss a day and nothing is lost") ~= nil)
+	snapshot("calendar")
+	check("opening tonight's", press("Open tonight's present"))
+	advance(1)
+	check("...the third evening ticked off, and when the next one comes", textOnScreen("Tonight's present is open") ~= nil and textOnScreen("ready in 5h 01m") ~= nil and evening(3) ~= nil and evening(3):GetAttribute("State") == "opened")
+	check("...and what it was, said plainly", textOnScreen("Evening 3: 5 Gems.") ~= nil)
+	snapshot("calendar-opened")
+	Root2.close()
+	advance(0.5)
+	-- On arrival: offered by itself when tonight's is waiting and nothing else is up...
+	state = { ok = true, op = "calendar", step = 3, weeks = 0, total = 3, ready = true, nextIn = 3600 }
+	CalendarPanel.offer()
+	advance(0.5)
+	check("on arrival, tonight's present is offered by itself", textOnScreen("Tonight's present is waiting") ~= nil)
+	Root2.close()
+	advance(0.5)
+	-- ...but not over anything else, and not when it's been opened.
+	state = { ok = true, op = "calendar", step = 4, weeks = 0, total = 4, ready = false, nextIn = 3600 }
+	CalendarPanel.offer()
+	advance(0.5)
+	check("...and not when tonight's is already open", find(playerGui, function(d)
+		return d.Name == "Calendar" and d:IsA("Frame")
+	end) == nil)
+	invokeResults.CalendarAsk = nil
+end)()
 -- Holidays and auras on this screen.
 workspace:SetAttribute("Event_valentine", workspace:GetServerTimeNow() + 600)
 signalOf(workspace, "attr:Event_valentine"):Fire()
@@ -5274,10 +5326,11 @@ end
 	snapshot("abuse-opening")
 	advance(Config.data.Admin.show.dropAt - 1.2 + 0.6)
 	local title = part("Opening") and part("Opening"):FindFirstChild("Title")
-	check("the drop: ADMIN ABUSE slammed onto the screen, and what it brings", title ~= nil and title.Text == "ADMIN ABUSE" and textOnScreen("GIFTS FROM AJKR") ~= nil)
+	check("the drop: ADMIN ABUSE resolves onto the screen", title ~= nil and title.Text == "ADMIN ABUSE")
 	check("...and tonight's night by name over it", textOnScreen("TONIGHT:  THE CLASSIC") ~= nil)
 	check("...the transmission gone", textOnScreen("INCOMING TRANSMISSION") == nil)
 	advance(0.8)
+	check("...and what it brings, typed out under it", textOnScreen("GIFTS FROM AJKR") ~= nil)
 	snapshot("abuse-drop")
 	advance(Config.data.Admin.show.seconds)
 	check("after the opening the screen is the house's again", part("Opening") == nil)
@@ -5360,7 +5413,7 @@ end
 	-- Arriving while it's on (no opening heard): a welcome.
 	abuse(true, false)
 	advance(2.5)
-	check("arriving during Admin Abuse: a welcome, saying what's on", textOnScreen("YOU ARRIVED DURING ADMIN ABUSE") ~= nil)
+	check("arriving during Admin Abuse: a welcome, saying what's on", textOnScreen("YOU ARRIVED DURING ADMIN ABUSE") ~= nil and textOnScreen("ADMIN ABUSE IS LIVE") ~= nil)
 	snapshot("abuse-arrived")
 	abuse(false)
 	advance(12)

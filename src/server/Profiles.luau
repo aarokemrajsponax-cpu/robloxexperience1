@@ -86,6 +86,9 @@ export type Data = {
 	tallyOnce: { [string]: string },
 	-- The Gem Shop: what's owned, the aura and title worn, and when each Surge runs out.
 	gemShop: { owned: { [string]: boolean }, aura: string, title: string, giltUntil: number, xpUntil: number },
+	-- The Evening Calendar (server/Calendar): the day the last present was opened, how many this
+	-- week (0 to 6), the weeks finished, and every present ever opened.
+	calendar: { day: number, step: number, weeks: number, total: number },
 }
 
 local TEMPLATE: Data = {
@@ -136,6 +139,7 @@ local TEMPLATE: Data = {
 	tally = {},
 	tallyOnce = {},
 	gemShop = { owned = {}, aura = "", title = "", giltUntil = 0, xpUntil = 0 },
+	calendar = { day = -1, step = 0, weeks = 0, total = 0 },
 }
 
 -- Each migration moves data from schema n to n + 1. Add new ones at the end.

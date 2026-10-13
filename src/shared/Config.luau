@@ -300,6 +300,7 @@ local defaults = {
 		badgeAsk = { rate = 1, burst = 4 },
 		abuseGift = { rate = 1, burst = 3 },
 		holidayAsk = { rate = 4, burst = 10 },
+		calendarAsk = { rate = 1, burst = 4 },
 	},
 
 	-- Levels (Shared/Levels has the curve): XP for each thing the server sees happen.
@@ -952,6 +953,25 @@ local defaults = {
 		-- Where guests appear: "foyer" (lit, in the middle of everything) or "street" (a first
 		-- visit starts outside the doors at night).
 		firstArrival = "foyer",
+	},
+
+	-- The server's watch on how guests move (server/Integrity): a step further than anyone could
+	-- go, a run faster than anyone can, a rise higher than any jump. The margins are wide (lag,
+	-- slopes, a shove): only an exploit tool's moves are caught.
+	Integrity = {
+		slack = 1.5, -- a step may seem this much faster than their fastest...
+		extra = 10, -- ...plus this many studs a second
+		teleport = 30, -- studs past that in one step: a teleport (put back at once)
+		window = 1.5, -- seconds a run is measured over
+		windowSlack = 1.3, -- how much further than their fastest a run may go over the window...
+		windowExtra = 8, -- ...plus these studs
+		rise = 30, -- studs a guest may rise over the window at the least (stairs, a jump)
+		suspectFor = 3, -- seconds a guest caught finds nothing
+		grace = 1.5, -- seconds a guest the house moved moves freely
+		spawnGrace = 2, -- seconds a new character moves freely
+		effectGrace = 3, -- seconds after an effect's own length that everyone moves freely
+		lowGravity = 150, -- below this gravity (zero-G, Featherlight) everyone moves freely
+		rubberBand = true, -- a guest caught is put back where they were
 	},
 
 	-- How sorting feels at the table: the camera, the hand, and what a filing says back.

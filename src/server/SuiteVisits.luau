@@ -16,6 +16,7 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Friends = require(script.Parent.Friends)
 local Profiles = require(script.Parent.Profiles)
 local RemoteGuard = require(script.Parent.RemoteGuard)
+local Integrity = require(script.Parent.Integrity)
 
 local SuiteVisits = {}
 
@@ -85,7 +86,7 @@ local function moveIn(player: Player)
 	local character = player.Character
 	if character then
 		local at = Layout.Suite.arrival + Vector3.new(0, 3, 0)
-		character:PivotTo(CFrame.new(at))
+		Integrity.teleport(player, character, CFrame.new(at))
 	end
 end
 

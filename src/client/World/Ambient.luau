@@ -302,8 +302,9 @@ local function updateNames(pos: Vector3)
 		local d = (pos - n.position).Magnitude
 		-- The tag in the doorway steps aside as you walk through it.
 		local t = n.tag
-		if t then
-			t.Enabled = d > 9
+		local on = d > 9
+		if t and t.Enabled ~= on then
+			t.Enabled = on
 		end
 		-- The name over the door: shown from across the Foyer, faded once you're through.
 		local show = d < 150 and d > 3.5
@@ -454,22 +455,27 @@ local function stepWeather(dt: number, camPos: Vector3)
 	weatherClock += dt
 	local season = Seasons.byId[tostring(Workspace:GetAttribute("Season") or "")]
 	local colours = if season then season.weatherColours else { Color3.new(1, 1, 1) }
+	local tumble = weatherKind == "leaves" or weatherKind == "petals" or weatherKind == "confetti" or weatherKind == "clover"
+	local T = Layout.Terrace
+	-- (Every flake moved in one call to the engine, not one by one: the street's weather costs
+	-- next to nothing however much of it there is.)
+	local parts: { BasePart } = table.create(#flakes)
+	local frames: { CFrame } = table.create(#flakes)
 	for _, f in flakes do
 		local swayX = math.sin(weatherClock * f.sway + f.phase) * 0.6
 		local p = f.part.Position + (f.velocity + Vector3.new(swayX, 0, 0)) * dt
-		local T = Layout.Terrace
 		local gone = if onTerrace
 			then p.Y < T.floorY + 0.1 or p.Y > T.floorY + 30 or p.X < T.minX or p.X > T.maxX or p.Z < T.minZ or p.Z > T.maxZ
 			else p.Y < 0.1 or p.Y > 40 or p.Z > -10.5
 		if gone then
 			resetFlake(f, camPos, colours, weatherKind)
 		else
-			if weatherKind == "leaves" or weatherKind == "petals" or weatherKind == "confetti" or weatherKind == "clover" then
-				f.part.CFrame = CFrame.new(p) * CFrame.Angles(weatherClock * f.sway + f.phase, f.phase, weatherClock * 0.7)
-			else
-				f.part.Position = p
-			end
+			table.insert(parts, f.part)
+			table.insert(frames, if tumble then CFrame.new(p) * CFrame.Angles(weatherClock * f.sway + f.phase, f.phase, weatherClock * 0.7) else CFrame.new(p))
 		end
+	end
+	if #parts > 0 then
+		Workspace:BulkMoveTo(parts, frames, Enum.BulkMoveMode.FireCFrameChanged)
 	end
 end
 

@@ -30,6 +30,7 @@ local Profiles = require(script.Parent.Profiles)
 local RemoteGuard = require(script.Parent.RemoteGuard)
 local Season = require(script.Parent.Season)
 local Rig = require(script.Parent.Staff.Rig)
+local Integrity = require(script.Parent.Integrity)
 
 local DuelService = {}
 
@@ -812,7 +813,7 @@ local function showTo(player: Player, tbl: DuelTable, key: string): boolean
 	if not seat or not seat:IsA("Seat") or not character then
 		return false
 	end
-	character:PivotTo(seat.CFrame * CFrame.new(0, 3, 2.5))
+	Integrity.teleport(player, character, seat.CFrame * CFrame.new(0, 3, 2.5))
 	return seatAt(player, tbl, key)
 end
 

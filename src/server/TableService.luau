@@ -31,6 +31,7 @@ local Catalog = require(script.Parent.Purchases.Catalog)
 local Perks = require(script.Parent.Purchases.Perks)
 local Revive = require(script.Parent.Purchases.Revive)
 local Store = require(script.Parent.Purchases.Store)
+local Integrity = require(script.Parent.Integrity)
 
 local TableService = {}
 
@@ -889,7 +890,7 @@ function TableService.seat(player: Player, model: Model, teleport: boolean?, wan
 		return false, "unavailable"
 	end
 	if teleport then
-		character:PivotTo(seat.CFrame * CFrame.new(0, 3, 1.5))
+		Integrity.teleport(player, character, seat.CFrame * CFrame.new(0, 3, 1.5))
 	elseif (root.Position - seat.Position).Magnitude > 12 then
 		return false, "far"
 	end

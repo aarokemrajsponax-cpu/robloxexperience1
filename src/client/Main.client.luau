@@ -74,6 +74,7 @@ local FriendBooster = require(script.Parent.UI.FriendBooster)
 local ConciergeGuide = require(script.Parent.World.ConciergeGuide)
 local Names = require(ReplicatedStorage.Shared.Names)
 local BadgeBookPanel = require(script.Parent.UI.BadgeBookPanel)
+local CalendarPanel = require(script.Parent.UI.CalendarPanel)
 local GemShopPanel = require(script.Parent.UI.GemShopPanel)
 local Celebrate = require(script.Parent.UI.Celebrate)
 local ScreenFX = require(script.Parent.UI.ScreenFX)
@@ -293,6 +294,7 @@ start("Curios", function()
 		QuickDock.setSeated(false)
 	end)
 	for _, tile in {
+		{ id = "daily", title = "The Evening Calendar", line = "A present every day you come: seven to a week.", glyph = "🗓️", open = CalendarPanel.open },
 		{ id = "collection", title = "Your Collection", line = "Your brainrots, their tip jar, every curio.", glyph = "🏺", open = function()
 			CuriosPanel.open("squad")
 		end },
@@ -610,6 +612,14 @@ local function welcome()
 	end
 	start("The welcome", function()
 		Welcome.show(Names.of(player), first)
+	end)
+	-- The Evening Calendar: tonight's present, offered once the welcome has had its moment (after
+	-- the Concierge's walk, for a first visit). It waits if anything else is on the screen.
+	CalendarPanel.isBusy = function(): boolean
+		return TableClient.isSeated() or Tour.active() or Welcome.showing()
+	end
+	task.delay(if first then 150 else 5, function()
+		start("The Evening Calendar", CalendarPanel.offer)
 	end)
 	if first then
 		task.delay(1.6, function()

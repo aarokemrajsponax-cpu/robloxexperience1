@@ -47,6 +47,7 @@ local Gilt = require(script.Parent.Gilt)
 local Profiles = require(script.Parent.Profiles)
 local RemoteGuard = require(script.Parent.RemoteGuard)
 local Spectacles = require(script.Parent.Purchases.Spectacles)
+local Integrity = require(script.Parent.Integrity)
 
 local AdminService = {}
 
@@ -578,7 +579,8 @@ local function collect()
 	for _, player in Players:GetPlayers() do
 		local character = player.Character
 		local root = character and character:FindFirstChild("HumanoidRootPart")
-		if root and root:IsA("BasePart") then
+		-- (Not a guest who just moved as nobody can: an exploit tool's teleport finds nothing.)
+		if root and root:IsA("BasePart") and Integrity.trusted(player) then
 			for _, item in items do
 				if item.Parent and item:IsA("BasePart") and (item.CFrame.Position - root.Position).Magnitude < 4.5 then
 					local gilt = (item:GetAttribute("Gilt") :: number?) or 0
@@ -849,7 +851,11 @@ function AdminService.fx(id: string, byName: string, origin: Vector3?, v: number
 	if not HouseEvents.effectById[id] and id ~= "intro" and id ~= "stop" then
 		return
 	end
-	broadcast({ op = "abuseFX", id = id, by = byName, origin = origin, seconds = cfg().fxSeconds[id] or 6, v = v, line = line })
+	local seconds = cfg().fxSeconds[id] or 6
+	-- (Every screen throws its own guest about for the effect's length: nobody is held back for
+	-- moving as the effect moves them.)
+	Integrity.excuseAll(seconds)
+	broadcast({ op = "abuseFX", id = id, by = byName, origin = origin, seconds = seconds, v = v, line = line })
 	if WITNESSED[id] then
 		for _, p in Players:GetPlayers() do
 			AdminService.award(p, "fx_" .. id)
@@ -2076,6 +2082,8 @@ end
 
 local function handle(player: Player, request: unknown): any
 	if not AdminService.isAdmin(player) then
+		-- (Someone else's screen asking for the owner's controls: refused, and noted.)
+		RemoteGuard.reject(player, "adminAsk", "not the owner")
 		return { ok = false, why = "House controls are for the owner." }
 	end
 	if type(request) ~= "table" then
@@ -2184,7 +2192,7 @@ local function handle(player: Player, request: unknown): any
 			local mine = player.Character
 			local theirs = target.Character
 			if mine and theirs and not AdminService.isSeated(target) then
-				theirs:PivotTo(mine:GetPivot() * CFrame.new(3, 0, 0))
+				Integrity.teleport(target, theirs, mine:GetPivot() * CFrame.new(3, 0, 0))
 			end
 		elseif op == "kick" then
 			if target == player then
@@ -2255,7 +2263,7 @@ local function handle(player: Player, request: unknown): any
 		if not at or not character then
 			return { ok = false, why = "Nowhere to go just now." }
 		end
-		character:PivotTo(CFrame.new(at + Vector3.new(0, 3, 0)))
+		Integrity.teleport(player, character, CFrame.new(at + Vector3.new(0, 3, 0)))
 		return { ok = true }
 	elseif op == "ballroomOpen" then
 		-- Skips the Ballroom's wait: open for everyone, now (Main sets AdminService.openBallroom).
@@ -2283,7 +2291,7 @@ local function handle(player: Player, request: unknown): any
 		for i, p in others do
 			local a = i / #others * math.pi * 2
 			local character = p.Character :: Model
-			character:PivotTo(base * CFrame.new(math.cos(a) * 7, 0, math.sin(a) * 7))
+			Integrity.teleport(p, character, base * CFrame.new(math.cos(a) * 7, 0, math.sin(a) * 7))
 		end
 		broadcast({ op = "salute", id = "bringAll", by = byName, effects = { "goldLeaf" }, seconds = 6, title = "Everyone, gather round", line = byName .. " has called every guest together." })
 		return { ok = true, brought = #others }

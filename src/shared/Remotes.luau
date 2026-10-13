@@ -43,6 +43,7 @@ Remotes.Functions = {
 	"BadgeAsk", -- client -> server: your Badge Book
 	"AbuseGiftAsk", -- client -> server: open the owner's gift during Admin Abuse
 	"HolidayAsk", -- client -> server: the holiday games (go there, go home, board the sleigh, open a gift)
+	"CalendarAsk", -- client -> server: the Evening Calendar (what's waiting, open today's present)
 }
 
 local folder: Folder? = nil

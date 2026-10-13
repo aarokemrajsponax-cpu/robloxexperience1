@@ -38,6 +38,7 @@ local Profiles = require(script.Parent.Profiles)
 local RemoteGuard = require(script.Parent.RemoteGuard)
 local Season = require(script.Parent.Season)
 local Rig = require(script.Parent.Staff.Rig)
+local Integrity = require(script.Parent.Integrity)
 
 local BallroomService = {}
 
@@ -992,7 +993,7 @@ function BallroomService.nextEvening(player: Player)
 			if not s.player and not s.bot then
 				local character = player.Character
 				if character then
-					character:PivotTo(s.chair.CFrame * CFrame.new(0, 3, 2.5))
+					Integrity.teleport(player, character, s.chair.CFrame * CFrame.new(0, 3, 2.5))
 					task.spawn(BallroomService.seatGuest, player, i)
 				end
 				return
@@ -1011,7 +1012,7 @@ function BallroomService.toGallery(player: Player)
 	local character = player.Character
 	if character then
 		local B = Layout.Ballroom
-		character:PivotTo(CFrame.lookAt(B.galleryArrival + Vector3.new(0, 3, 0), Vector3.new(B.centre.X, B.galleryArrival.Y + 3, B.centre.Z)))
+		Integrity.teleport(player, character, CFrame.lookAt(B.galleryArrival + Vector3.new(0, 3, 0), Vector3.new(B.centre.X, B.galleryArrival.Y + 3, B.centre.Z)))
 	end
 end
 
@@ -1204,7 +1205,7 @@ local function onMessage(player: Player, message: unknown)
 			send(player, { op = "ballroomRefused", why = if e then "The evening is under way: no late joins." else "The Ballroom is closed just now." })
 			return
 		end
-		character:PivotTo(CFrame.lookAt(Layout.Ballroom.arrival + Vector3.new(0, 3, 0), Vector3.new(Layout.Ballroom.centre.X, Layout.Ballroom.arrival.Y + 3, Layout.Ballroom.centre.Z)))
+		Integrity.teleport(player, character, CFrame.lookAt(Layout.Ballroom.arrival + Vector3.new(0, 3, 0), Vector3.new(Layout.Ballroom.centre.X, Layout.Ballroom.arrival.Y + 3, Layout.Ballroom.centre.Z)))
 		return
 	end
 	local index = seatOf[player]

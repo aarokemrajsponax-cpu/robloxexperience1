@@ -23,6 +23,7 @@ local RemoteGuard = require(script.Parent.RemoteGuard)
 local TableService = require(script.Parent.TableService)
 local Concierge = require(script.Parent.Staff.Concierge)
 local Voice = require(ReplicatedStorage.Shared.Voice)
+local Integrity = require(script.Parent.Integrity)
 
 local Guests = {}
 
@@ -118,7 +119,7 @@ local function place(player: Player, character: Model, visit: Visit)
 		end)
 	end
 	local target = if toStreet then Layout.Street.spawn else Layout.Foyer.spawn
-	character:PivotTo(target + Vector3.new(0, 1, 0))
+	Integrity.teleport(player, character, target + Vector3.new(0, 1, 0))
 	player:SetAttribute("Arrived", if toStreet then "street" else "foyer")
 	-- Drawn a little smaller than Roblox's default, so the house is roomier around everyone
 	-- (once their look has loaded, so hats and hair scale with them).
@@ -337,7 +338,7 @@ function Guests.start()
 			local character = player.Character
 			if character then
 				local B = Layout.Ballroom
-				character:PivotTo(CFrame.lookAt(B.galleryArrival + Vector3.new(0, 3, 0), Vector3.new(B.centre.X, B.galleryArrival.Y + 3, B.centre.Z)))
+				Integrity.teleport(player, character, CFrame.lookAt(B.galleryArrival + Vector3.new(0, 3, 0), Vector3.new(B.centre.X, B.galleryArrival.Y + 3, B.centre.Z)))
 			end
 			return true
 		end
@@ -345,7 +346,7 @@ function Guests.start()
 		if type(wanted) == "string" and string.sub(wanted, 1, 7) == "library" then
 			local character = player.Character
 			if character then
-				character:PivotTo(CFrame.new(Layout.Library.arrival + Vector3.new(0, 2, 0)))
+				Integrity.teleport(player, character, CFrame.new(Layout.Library.arrival + Vector3.new(0, 2, 0)))
 			end
 			local inviter = tonumber(string.match(wanted, "^library:(%d+)$"))
 			if inviter and Guests.joinLibrary(player, inviter) then

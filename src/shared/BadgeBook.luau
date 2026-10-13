@@ -59,6 +59,7 @@ BadgeBook.Stats = {
 	gemsSpent = "Gems spent",
 	auras = "Auras owned",
 	referrals = "Friends invited",
+	evenings = "Presents opened from the Evening Calendar",
 }
 
 BadgeBook.List = {} :: { Badge }
@@ -141,6 +142,9 @@ ladder("nights", "nights", "🌙", "Spend %d nights at the house.", {
 ladder("nights", "nightlies", "📜", "Play the Nightly %d times.", {
 	{ 1, "Tonight's Table", "firstNightly" }, { 7, "Nightly Habit" }, { 30, "Every Night" }, { 100, "The Hundredth Night" },
 }, "Play the Nightly for the first time.")
+ladder("nights", "evenings", "🗓️", "Open %d presents from the Evening Calendar.", {
+	{ 1, "The First Present", "evenings_1" }, { 7, "The Seventh Evening" }, { 30, "A Month of Presents" }, { 100, "The House Regular" },
+}, "Open your first present from the Evening Calendar.")
 
 -- The Library
 ladder("library", "libraryWins", "📚", "Win %d matches in the Library.", {

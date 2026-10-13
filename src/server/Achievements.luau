@@ -18,7 +18,7 @@ local Profiles = require(script.Parent.Profiles)
 local Achievements = {}
 
 -- Tells the guest's screen (set by Main).
-Achievements.notify = function(_player: Player, _badge: BadgeBook.Badge) end
+Achievements.notify = function(_player: Player, _badge: BadgeBook.Badge, _extra: { [string]: any }?) end
 
 local function record(data: Profiles.Data): any
 	local d = data :: any
@@ -85,6 +85,7 @@ function Achievements.stats(data: Profiles.Data): { [string]: number }
 		gemsSpent = t.gemsSpent or 0,
 		auras = auras,
 		referrals = referral.total or 0,
+		evenings = if type(d.calendar) == "table" and type(d.calendar.total) == "number" then d.calendar.total else 0,
 	}
 end
 
@@ -139,7 +140,24 @@ local function give(player: Player, data: Profiles.Data, badge: BadgeBook.Badge,
 	toRoblox(player, data, badge.key)
 	Analytics.custom(player, "Badge", nil, { key = badge.key })
 	if not quiet then
-		Achievements.notify(player, badge)
+		-- (With it: how many the guest has now, of how many, and the next on the same ladder with
+		-- how far along they are, so every badge points at the one after.)
+		local count = 0
+		for _ in d.badges do
+			count += 1
+		end
+		local nextUp: { [string]: any }? = nil
+		if badge.stat and badge.target then
+			local stats = Achievements.stats(data)
+			local stat = badge.stat :: string
+			for _, b in BadgeBook.List do
+				if b.stat == stat and b.target and b.target > badge.target and not d.badges[b.key] then
+					nextUp = { name = b.name, line = b.line, have = stats[stat] or 0, target = b.target }
+					break
+				end
+			end
+		end
+		Achievements.notify(player, badge, { count = count, total = #BadgeBook.List, nextUp = nextUp })
 	end
 end
 

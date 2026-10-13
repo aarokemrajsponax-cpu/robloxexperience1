@@ -12,6 +12,7 @@ local TweenService = game:GetService("TweenService")
 
 local Layout = require(ReplicatedStorage.Shared.Layout)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Integrity = require(script.Parent.Integrity)
 
 local VaultAccess = {}
 
@@ -167,7 +168,7 @@ function VaultAccess.ride(player: Player, from: string): boolean
 		-- Behind the dimmed screen: down (or up) to the other floor.
 		local c = player.Character
 		if c and c.Parent and player.Parent == Players then
-			c:PivotTo(VaultAccess.arrival(to))
+			Integrity.teleport(player, c, VaultAccess.arrival(to))
 		end
 		task.wait(0.35)
 		VaultAccess.liftDoors(from, false)
