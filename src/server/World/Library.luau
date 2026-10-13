@@ -150,11 +150,15 @@ local function shelvesAlong(m: Model, a: Vector3, b: Vector3, facing: Vector3, r
 		Kit.part(m, "Shelf", Vector3.new(length, 0.15, 1.8), CFrame.lookAt(mid, mid + facing), L.walnut, { collide = false })
 		local t = 0.3
 		while t < length - 0.4 do
-			local w = rng:NextNumber(0.35, 0.7)
+			local w = rng:NextNumber(0.38, 0.75)
 			local h = rng:NextNumber(1.4, 2.0)
 			local p = a + dir * (t + w / 2) + Vector3.new(0, y + 0.08 + h / 2, 0) - facing * 0.95
 			Kit.part(m, "Book", Vector3.new(w, h, 1.3), CFrame.lookAt(p, p + facing), { color = spines[rng:NextInteger(1, #spines)], material = Enum.Material.Leather }, { collide = false, query = false, shadow = false })
 			t += w + 0.03
+			-- (Now and then a gap, as on any shelf that's read from: and fewer parts to draw.)
+			if rng:NextNumber() < 0.13 then
+				t += rng:NextNumber(0.6, 1.5)
+			end
 		end
 	end
 end

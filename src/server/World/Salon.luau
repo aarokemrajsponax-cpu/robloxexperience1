@@ -32,7 +32,7 @@ local function bookshelves(m: Model)
 			Kit.span(model, "Shelf", Vector3.new(S.minX + 0.2, y, z0 + 0.3), Vector3.new(S.minX + 2, y + 0.15, z0 + 5.3), L.walnut, { collide = false })
 			local z = z0 + 0.4
 			while z < z0 + 5.1 do
-				local w = rng:NextNumber(0.26, 0.5)
+				local w = rng:NextNumber(0.3, 0.55)
 				local h = rng:NextNumber(1.2, 1.75)
 				if z + w > z0 + 5.2 then
 					break
@@ -40,6 +40,10 @@ local function bookshelves(m: Model)
 				local tilt = if rng:NextNumber() < 0.06 then math.rad(12) else 0
 				Kit.part(model, "Book", Vector3.new(1.3, h, w), CFrame.new(x + 0.2, y + 0.15 + h / 2, z + w / 2) * CFrame.Angles(tilt, 0, 0), { color = spines[rng:NextInteger(1, #spines)], material = Enum.Material.Fabric }, { collide = false, query = false, shadow = false })
 				z += w + 0.02
+				-- (Now and then a gap where a book's been taken down.)
+				if rng:NextNumber() < 0.1 then
+					z += rng:NextNumber(0.5, 1.1)
+				end
 			end
 		end
 	end
