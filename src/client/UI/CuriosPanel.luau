@@ -15,6 +15,7 @@ local Root = require(script.Parent.Root)
 local Theme = require(script.Parent.Theme)
 local Toast = require(script.Parent.Toast)
 local CurioArt = require(script.Parent.CurioArt)
+local BrainrotSquad = require(script.Parent.BrainrotSquad)
 local CurioState = require(script.Parent.Parent.CurioState)
 
 local CuriosPanel = {}
@@ -24,6 +25,7 @@ local C = Brand.Colours
 local ROBUX = utf8.char(0xE002)
 
 local TABS = {
+	{ "squad", "Brainrots" },
 	{ "yours", "Yours" },
 	{ "recent", "Recent" },
 	{ "starred", "Starred" },
@@ -34,7 +36,7 @@ local TABS = {
 }
 local SORTS = { "Rarity", "Name", "How many" }
 
-local tab = "yours"
+local tab = "squad"
 local sortBy = "Rarity"
 local rarityFilter: string? = nil
 local query = ""
@@ -359,8 +361,16 @@ function CuriosPanel.open(start: string?)
 		summary.Text = string.format("%d curios, %d of %d kinds  ·  %d Gems  ·  curios change no score", total, kinds, known, CurioState.gems)
 		sortKey.Text = string.upper("Sort: " .. sortBy)
 		rarityKey.Text = string.upper("Rarity: " .. (rarityFilter or "All"))
-		tools.Visible = tab ~= "gems" and tab ~= "trades"
-		if tab == "gems" then
+		tools.Visible = tab ~= "gems" and tab ~= "trades" and tab ~= "squad"
+		-- (The shelf takes the tools' row too when they're hidden.)
+		body.Size = UDim2.new(1, 0, 1, -(if tools.Visible then 222 else 180))
+		shelf.Size = if wide and tab ~= "squad" then UDim2.new(1, -250, 1, 0) else UDim2.fromScale(1, 1)
+		if tab == "squad" then
+			-- The brainrot squad: the jar, the places, every one held (the whole width).
+			detail.Visible = false
+			BrainrotSquad.draw(shelf, w - 48 - 10)
+			return
+		elseif tab == "gems" then
 			Theme.list(shelf, 8).VerticalAlignment = Enum.VerticalAlignment.Top
 			Theme.text(shelf, "Gems buy curios in the Cabinet, the exact one you choose, at the price on it. Bigger packs give more Gems for each Robux.", 14, "body", { LayoutOrder = 1, TextColor3 = C.smoke })
 			for i, p in (if cabinet then cabinet.packs else {}) :: { any } do

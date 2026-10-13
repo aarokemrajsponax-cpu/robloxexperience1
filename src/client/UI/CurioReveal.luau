@@ -7,17 +7,19 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Brainrots = require(ReplicatedStorage.Shared.Brainrots)
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local Curios = require(ReplicatedStorage.Shared.Curios)
 local Ease = require(ReplicatedStorage.Shared.Ease)
 local Root = require(script.Parent.Root)
 local CurioArt = require(script.Parent.CurioArt)
 local Sound = require(script.Parent.Parent.Sound)
+local CurioState = require(script.Parent.Parent.CurioState)
 
 local CurioReveal = {}
 
 local C = Brand.Colours
-local queue: { { id: string, line: string, gilt: number } } = {}
+local queue: { { id: string, line: string, gilt: number, mut: string? } } = {}
 local showing = false
 
 -- How big each rarity's moment is: 1 (a card) to 4 (the lot).
@@ -62,6 +64,12 @@ local function showNext()
 	if c.rarity == "Secret" then
 		colour = Color3.fromRGB(200, 196, 230)
 	end
+	-- A brainrot that came Gold, Diamond or Rainbow: a bigger moment, in its mutation's colour.
+	local mutInfo = if item.mut then Brainrots.Mutations[item.mut] else nil
+	if mutInfo then
+		tier = math.min(4, tier + mutInfo.rank)
+		colour = mutInfo.colour
+	end
 	local layer = Instance.new("TextButton")
 	layer.Name = "CurioReveal"
 	layer.Text = ""
@@ -104,6 +112,7 @@ local function showNext()
 	medal.AnchorPoint = Vector2.new(0.5, 0.5)
 	medal.Position = UDim2.fromScale(0.5, 0.42)
 	medal.ZIndex = 53
+	CurioArt.mutate(medal, item.mut)
 	for _, d in medal:GetDescendants() do
 		if d:IsA("GuiObject") then
 			d.ZIndex = 54
@@ -129,9 +138,14 @@ local function showNext()
 		t.Parent = layer
 		Ease.play(t, Ease.info(0.4), { TextTransparency = 0 })
 	end
-	line(string.upper(c.rarity), 15, Brand.Fonts.bodyBold, 92, colour)
+	line((if mutInfo then string.upper(mutInfo.name) .. "  ·  " else "") .. string.upper(c.rarity) .. (if Brainrots.is(c.id) then "  ·  BRAINROT" else ""), 15, Brand.Fonts.bodyBold, 92, colour)
 	line(c.name, 30, Brand.Fonts.display, 114, C.bone)
 	line(item.line .. (if item.gilt > 0 then string.format("  +%d Gilt", item.gilt) else ""), 15, Brand.Fonts.body, 156, C.smoke)
+	if Brainrots.is(c.id) then
+		-- What it earns in the squad (with the copies held now, and its mutation).
+		local n = math.max(1, CurioState.count(c.id))
+		line(string.format("Earns +%d Gilt an hour in your squad%s", Brainrots.rate(c.id, n, item.mut), if mutInfo then string.format("  ·  ×%d %s", mutInfo.mult, mutInfo.name) else ""), 15, Brand.Fonts.bodyBold, 182, Color3.fromRGB(110, 235, 140))
+	end
 	if tier >= 2 then
 		sparks(layer, colour, 10 + tier * 6)
 	end
@@ -178,8 +192,8 @@ local function showNext()
 end
 
 -- Shows (or queues) a curio coming to this guest.
-function CurioReveal.show(id: string, line: string?, gilt: number?)
-	table.insert(queue, { id = id, line = line or "", gilt = gilt or 0 })
+function CurioReveal.show(id: string, line: string?, gilt: number?, mut: string?)
+	table.insert(queue, { id = id, line = line or "", gilt = gilt or 0, mut = mut })
 	if not showing then
 		showNext()
 	end

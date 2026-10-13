@@ -65,6 +65,9 @@ function Spectacles.memeEdition(player: Player): string
 	return id
 end
 
+-- A show someone bought has just played (set by Purchases: the Meme Takeover's Meme Frenzy).
+Spectacles.played = function(_player: Player, _key: string) end
+
 -- Tells the guest's own screen to play a show (the Meme Takeover with its edition).
 local function tellShow(player: Player, key: string)
 	Perks.tell(player, {
@@ -152,6 +155,7 @@ local function onAsk(player: Player, request: unknown): any
 		end
 		showing(player, key)
 		tellShow(player, key)
+		Spectacles.played(player, key)
 		Perks.push(player)
 		return { ok = true }
 	end
@@ -170,6 +174,7 @@ local function playNow(player: Player, key: string): boolean
 	end
 	showing(player, key)
 	tellShow(player, key)
+	Spectacles.played(player, key)
 	Perks.push(player)
 	return true
 end

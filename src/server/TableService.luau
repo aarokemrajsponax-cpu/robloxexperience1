@@ -22,6 +22,7 @@ local Analytics = require(script.Parent.Analytics)
 local Private = require(script.Parent.Private)
 local Boards = require(script.Parent.Boards)
 local Curios = require(script.Parent.Curios)
+local Brainrots = require(script.Parent.Brainrots)
 local Gilt = require(script.Parent.Gilt)
 local Profiles = require(script.Parent.Profiles)
 local RemoteGuard = require(script.Parent.RemoteGuard)
@@ -411,6 +412,12 @@ local function bank(s: Session, reason: string?): { [string]: any }
 		summary.best = data.best[roomId]
 		local paid = Gilt.pay(player, data, Scoring.giltForRun(s.score), "Banked run: " .. roomId)
 		summary.gilt = paid
+		-- The brainrot walking beside them adds its bonus on top.
+		local okBonus, bonus = pcall(Brainrots.runBonus, player, data, Scoring.giltForRun(s.score))
+		if okBonus and bonus then
+			summary.brainrot = bonus
+			summary.gilt += bonus.gilt
+		end
 		-- Maybe a curio among the pieces (it pays a little Gilt too), and the season's own.
 		local ok, found = pcall(Curios.afterRun, player, data, s.roundsCleared, accuracy, roomId, s.runFilings > 0 and s.runCorrect == s.runFilings)
 		if ok and found then

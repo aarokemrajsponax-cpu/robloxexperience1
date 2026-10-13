@@ -284,7 +284,7 @@ end
 -- show, kept until you play it). Cosmetic only; nothing random.
 for _, show in {
 	{ key = "spectacleFireworks", name = "Suite Fireworks", price = 199, tier = "Medium" :: Tier, line = "A forty-five-second pyromusical over the whole estate, best from your Suite's terrace: chrysanthemums to taiko drums, then a golden finale to Handel." },
-	{ key = "spectacleMemes", name = "Meme Takeover", price = 299, tier = "Medium" :: Tier, line = "Ninety seconds of brainrot to an electro swing: a meme portal, a conga line round you, meme rain, and a giant laser-eyed boss meme takes over your Suite." },
+	{ key = "spectacleMemes", name = "Meme Takeover", price = 299, tier = "Medium" :: Tier, line = "Ninety seconds of brainrot: your own squad drops in, leads the dance and fights a giant boss meme to a K.O. Then a Meme Frenzy: your squad earns double for 15 minutes." },
 	{ key = "spectacleGolden", name = "Golden Transformation", price = 499, tier = "Premium" :: Tier, line = "The Midas touch: a ring of gold turns your whole Suite to gold, gold confetti and coins fall, a choir sings and a crown settles on your head. Then all is as it was." },
 } do
 	add({
@@ -476,6 +476,31 @@ add({
 	Reward = { Type = "HolidayPass", Game = "christmas" },
 	Rules = { Stackable = false, CooldownSeconds = 0 },
 	UX = { DisplayName = "Santa's Season Pass", Category = "Holiday", Line = "Ride Santa's sleigh to the North Pole as often as you like until Christmas's games close.", Offer = false, Order = 98, Action = "prompt" },
+})
+-- The brainrot squad (shared/Brainrots): three more places for good, or eight hours of what the
+-- squad earns, at once. Both at a fixed price, with the amount shown before buying.
+ProductConfig.Brainrot = { "brainrotPenthouse", "brainrotFeast" } :: { string }
+add({
+	Key = "brainrotPenthouse",
+	Name = "Brainrot Penthouse",
+	ProductType = "DeveloperProduct",
+	Id = 0,
+	Handler = "brainrot",
+	Pricing = { ReferencePrice = 199, Tier = "Medium", Rationale = "Twice the squad, for good: every brainrot placed earns every hour from then on." },
+	Reward = { Type = "BrainrotSlots", Amount = 3 },
+	Rules = { OneTime = true, Stackable = false, CooldownSeconds = 0 },
+	UX = { DisplayName = "Brainrot Penthouse", Category = "Brainrots", Line = "Three more places in your squad, for good: six brainrots earning Gilt every hour.", Offer = false, Order = 92, Action = "prompt" },
+})
+add({
+	Key = "brainrotFeast",
+	Name = "Brainrot Feast",
+	ProductType = "DeveloperProduct",
+	Id = 0,
+	Handler = "brainrot",
+	Pricing = { ReferencePrice = 39, Tier = "Entry", Rationale = "Eight hours of the squad's earnings at once; the amount is shown before buying." },
+	Reward = { Type = "BrainrotFeast", Hours = 8 },
+	Rules = { Stackable = true, CooldownSeconds = 0, MaxHeld = 20 },
+	UX = { DisplayName = "Brainrot Feast", Category = "Brainrots", Line = "Eight hours of everything your squad earns, paid at once.", Offer = false, Order = 93, Action = "prompt" },
 })
 for _, s in Salutes.List do
 	add({

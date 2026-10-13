@@ -16,8 +16,11 @@
 -- lights bloom, confetti cannons fire from the corners at every act, the room quakes on the big
 -- hits, the boss comes down a pillar of light with the camera looking up at it, and the finale ends
 -- in a supernova and a curtain call.
+-- Your own brainrot squad stars in every edition (MemeSquad): it drops in, leads the dance, guards
+-- you from the boss and, in the chaos, your champion fights it to a K.O., with meme words popping
+-- on the beat and an AURA count climbing. Afterwards the server gives the squad a Meme Frenzy.
 -- Drawn on this screen only (a Suite is its owner's alone); the server only says when, and which
--- edition. Nothing in it is a prize. Every number that shapes it is in Config.Spectacles.
+-- edition. Nothing in the show itself is a prize. Every number that shapes it is in Config.Spectacles.
 
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
@@ -37,6 +40,7 @@ local CameraRig = require(script.Parent.Parent.Camera)
 local Quality = require(script.Parent.Parent.Quality)
 local Sound = require(script.Parent.Parent.Sound)
 local Stagecraft = require(script.Parent.Stagecraft)
+local MemeSquad = require(script.Parent.MemeSquad)
 
 local MemeTakeover = {}
 
@@ -152,8 +156,8 @@ local function caption(gui: ScreenGui, text: string, palette: { Color3 }, hold: 
 	holder.Name = "Caption"
 	holder.BackgroundTransparency = 1
 	holder.AnchorPoint = Vector2.new(0.5, 0.5)
-	holder.Position = UDim2.fromScale(0.5, CAPTION_Y)
-	holder.Size = UDim2.fromScale(0.8, 0.14)
+	holder.Position = UDim2.fromScale(0.58, CAPTION_Y)
+	holder.Size = UDim2.fromScale(0.66, 0.14)
 	holder.Parent = gui
 	lastCaption = holder
 	local shadow = Instance.new("TextLabel")
@@ -555,6 +559,31 @@ function MemeTakeover.play(seconds: number?, editionId: string?)
 			sound(n, volume, (i - 1) * 0.45)
 		end
 	end
+	-- Your brainrot squad stars in it (MemeSquad): it drops in, leads the dance and fights the boss.
+	local squad = MemeSquad.start({
+		folder = folder,
+		gui = gui,
+		palette = P,
+		floorY = floorY,
+		ceiling = ceiling,
+		front = front,
+		right = right,
+		bossName = (((Curios :: any).byId or {})[V.boss] or list[#list] or { name = "The Boss" }).name,
+		bossSize = cfg().bossSize,
+		burst = function(at: Vector3, n: number)
+			burst(folder, at, n, P)
+		end,
+		shockwave = function(at: Vector3, colour: Color3, reach: number)
+			shockwave(folder, at, colour, reach)
+		end,
+		caption = function(text: string, hold: number, kicker: string?)
+			caption(gui, text, P, hold, kicker)
+		end,
+		sound = sound,
+		shake = function(strength: number, secs: number)
+			pcall(CameraRig.shake, strength, secs)
+		end,
+	})
 
 	local function clearActors()
 		for _, a in cast do
@@ -909,6 +938,7 @@ function MemeTakeover.play(seconds: number?, editionId: string?)
 		end
 		act = n
 		actAt = os.clock() - t0
+		squad:act(n, actAt)
 		-- Each act opens with the cannons in the corners firing over the room.
 		if n >= 2 and n <= 6 and Ease.motionScale >= 0.5 then
 			local over = Vector3.new(mid.X, floorY + Layout.Suite.height * 0.6, mid.Z)
@@ -998,6 +1028,7 @@ function MemeTakeover.play(seconds: number?, editionId: string?)
 		if beatNow ~= lastBeat then
 			lastBeat = beatNow
 			beat += 1
+			squad:beat(beat, act)
 			local c = P[beat % #P + 1]
 			-- The dance floor lights in the edition's pattern; the bloom swells with the beat.
 			local fl = floor
@@ -1335,6 +1366,7 @@ function MemeTakeover.play(seconds: number?, editionId: string?)
 				end
 			end
 		end
+		squad:step(t, dt, you, if b and b.part.Parent then b.at else nil, act, inAct)
 	end)
 	task.delay(T + 3, function()
 		running = false
@@ -1353,6 +1385,7 @@ function MemeTakeover.play(seconds: number?, editionId: string?)
 		cc.Enabled = false
 		bloom:Destroy()
 		Stagecraft.calm()
+		squad:finish()
 		folder:Destroy()
 		gui:Destroy()
 		lastCaption = nil

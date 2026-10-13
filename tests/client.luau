@@ -1232,6 +1232,12 @@ local function snapshot(name: string)
 			if inst:IsA("CanvasGroup") then
 				n.groupT = inst.GroupTransparency
 			end
+			if inst:IsA("ScrollingFrame") then
+				local cp = get(inst, "CanvasPosition")
+				if cp and (cp.X ~= 0 or cp.Y ~= 0) then
+					n.canvas = { cp.X, cp.Y }
+				end
+			end
 			if inst:IsA("TextLabel") or inst:IsA("TextButton") or inst:IsA("TextBox") then
 				n.text = inst.Text
 				n.textSize = inst.TextSize
@@ -3431,6 +3437,7 @@ do
 		recent = { "truffle", "croissantino" },
 		gems = 90,
 		found = 4,
+		squad = { ids = { "croissantino" }, walk = "croissantino", mut = { croissantino = "gold" }, held = 240, rate = 120, cap = 960, slots = 3, wing = false, feast = 960, prices = { brainrotFeast = 39, brainrotPenthouse = 199 } },
 		cabinet = {
 			items = { { id = "truffle", gems = 60 }, { id = "caviarTin", gems = 150 } },
 			packs = { { key = "gems1", name = "Gem Pouch", gems = 120, robux = 99, ready = true }, { key = "gems2", name = "Gem Case", gems = 650, robux = 449, ready = false } },
@@ -3447,6 +3454,47 @@ do
 		signalOf(tile, "Activated"):Fire()
 	end
 	advance(1)
+	-- It opens on the brainrot squad: the tip jar, the places, and the ones to put in.
+	check("the Collection opens on your brainrot squad: the tip jar filling, what it earns", textOnScreen("TIP JAR") ~= nil and textOnScreen("240 Gilt") ~= nil and textOnScreen("Your squad earns 120 Gilt an hour") ~= nil)
+	check("...the squad's places: the one walking with you, empty places, three more in the Penthouse at its price", textOnScreen("YOUR SQUAD  ·  1 / 3") ~= nil and textOnScreen("WALKING ✓") ~= nil and textOnScreen("AN EMPTY PLACE") ~= nil and textOnScreen("PENTHOUSE +3  ·  " .. utf8.char(0xE002) .. " 199") ~= nil)
+	check("...a Gold one says so, with its stars and Gilt an hour", textOnScreen("GOLD  ·  COMMON") ~= nil and textOnScreen("★★☆☆☆") ~= nil and textOnScreen("+120 Gilt/hr") ~= nil)
+	check("...the Feast says what it pays and its price", textOnScreen("FEAST  +960  ·  " .. utf8.char(0xE002) .. " 39") ~= nil)
+	check("...and every brainrot you hold that isn't placed, to add", textOnScreen("Le Roi Grenouille") ~= nil and (function()
+		for _, d in playerGui:GetDescendants() do
+			if d:IsA("TextButton") and d.Name == "Add_frogKing" then
+				return true
+			end
+		end
+		return false
+	end)())
+	snapshot("brainrots")
+	do
+		local shelf = find(playerGui, function(d)
+			return d.Name == "Shelf" and d:IsA("ScrollingFrame")
+		end)
+		if shelf then
+			shelf.CanvasPosition = Vector2.new(0, 190)
+			snapshot("brainrots-squad")
+			shelf.CanvasPosition = Vector2.new(0, 0)
+		end
+	end
+	local fullState = invokeResults.CurioAsk
+	invokeResults.CurioAsk = { ok = true, gilt = 240 }
+	check("Collect asks the server (never says an amount)", press("COLLECT"))
+	advance(0.5)
+	invokeResults.CurioAsk = fullState
+	check("...the request names nothing but the action", (function()
+		for i = #sent, 1, -1 do
+			local m = if type(sent[i].message) == "table" then sent[i].message[1] else nil
+			if sent[i].remote == "CurioAsk" and type(m) == "table" and m.op == "collect" then
+				return m.gilt == nil and m.amount == nil
+			end
+		end
+		return false
+	end)())
+	check("...and the Gilt is said", textOnScreen("+240 Gilt from your brainrots") ~= nil)
+	press("Yours")
+	advance(0.4)
 	check("your curios, with how many you hold", textOnScreen("Croissantino Furioso") ~= nil and textOnScreen("×3") ~= nil and textOnScreen("5 curios, 3 of") ~= nil)
 	snapshot("collection")
 	local frog
@@ -4009,6 +4057,8 @@ do
 	local takeover = workspace.MaisonLocal:FindFirstChild("MemeTakeover")
 	check("...the portal spews memes into the room", takeover ~= nil and #takeover:GetChildren() > 10, takeover and #takeover:GetChildren())
 	check("...to the show's own score (Swing With Me), as it always was", scorePlaying())
+	local MemeSquad = module("StarterPlayer", "StarterPlayerScripts", "Client", "World", "MemeSquad")
+	check("...your own brainrot squad drops in and stars in it, your best one its champion", takeover ~= nil and takeover:FindFirstChild("SquadChampion") ~= nil and takeover.SquadChampion:GetAttribute("Curio") == "croissantino" and textOnScreen("YOUR SQUAD HAS ARRIVED") ~= nil)
 	local litTiles, beamsOn = 0, 0
 	if takeover then
 		for _, d in takeover:GetDescendants() do
@@ -4025,11 +4075,19 @@ do
 	local caption = find(playerGui, function(d)
 		return d.Name == "Caption" and d:IsA("Frame") and d.Parent ~= nil and d.Parent.Name == "MemeTakeover"
 	end)
-	check("...its words stand under the bar at the top and clear of the keys down the left", caption ~= nil and caption.Position.Y.Scale > 0.25 and caption.Size.X.Scale < 0.81, if caption then tostring(caption.Position) .. " " .. tostring(caption.Size) .. " in " .. caption.Parent:GetFullName() else "no caption")
+	check("...its words stand under the bar at the top and clear of the keys down the left", caption ~= nil and caption.Position.Y.Scale > 0.25 and caption.Position.X.Scale - caption.Size.X.Scale / 2 >= 0.24, if caption then tostring(caption.Position) .. " " .. tostring(caption.Size) .. " in " .. caption.Parent:GetFullName() else "no caption")
 	snapshot("meme-takeover")
 	advance(8)
 	check("...then the boss arrives", textOnScreen("THE BIG CHEESE") ~= nil or textOnScreen("MAXIMUM BRAINROT") ~= nil or textOnScreen("RAINING MEMES") ~= nil)
-	advance(14)
+	check("...with its bar across the top, the meme words popping on the beat and the AURA climbing", find(playerGui, function(d)
+		return d.Name == "BossBar" and d.Visible == true
+	end) ~= nil and (MemeSquad.last() or {}).words > 0 and textOnScreen("AURA") ~= nil)
+	snapshot("meme-squad")
+	advance(7.6)
+	local fight = MemeSquad.last() or {}
+	check("...in the chaos your champion fights the boss, hit after hit, to a K.O.", (fight.hits or 0) >= 2 and fight.hp == 0 and textOnScreen("WINS!") ~= nil, string.format("%s hits, hp %s", tostring(fight.hits), tostring(fight.hp)))
+	snapshot("meme-ko")
+	advance(6.4)
 	check("...and when it's over, the room is put back", workspace.MaisonLocal:FindFirstChild("MemeTakeover") == nil and find(playerGui, function(d)
 		return d.Name == "MemeTakeover"
 	end) == nil)
@@ -4883,6 +4941,23 @@ do
 	LocalPlayer:SetAttribute("Companion", nil)
 	advance(0.3)
 	check("...and it goes when you take it off", Companions.of(LocalPlayer) == nil)
+	-- The brainrot out of your squad walks beside you, big, with its name and what it earns.
+	local Walkers = module("StarterPlayer", "StarterPlayerScripts", "Client", "World", "BrainrotWalkers")
+	LocalPlayer:SetAttribute("BrainrotMut", "gold")
+	LocalPlayer:SetAttribute("BrainrotStars", 2)
+	LocalPlayer:SetAttribute("BrainrotRate", 2250)
+	LocalPlayer:SetAttribute("Brainrot", "frogKing")
+	advance(1)
+	local walker = Walkers.of(LocalPlayer)
+	check("your brainrot walks beside you", walker ~= nil and walker.Parent ~= nil and myRoot ~= nil and (walker.CFrame.Position - myRoot.CFrame.Position).Magnitude < 12, walker and myRoot and (walker.CFrame.Position - myRoot.CFrame.Position).Magnitude)
+	check("...as tall as its rarity, with its name, stars, mutation and Gilt an hour over its head", walker ~= nil and (function()
+		local body = walker:FindFirstChild("Body")
+		local line = walker:FindFirstChild("Line", true)
+		return body ~= nil and body.Size.X.Scale >= 6.5 and line ~= nil and string.find(line.Text, "GOLD", 1, true) ~= nil and string.find(line.Text, "2.2K Gilt/hr", 1, true) ~= nil
+	end)())
+	LocalPlayer:SetAttribute("Brainrot", nil)
+	advance(0.3)
+	check("...and goes back to the squad when it stops walking", Walkers.of(LocalPlayer) == nil)
 end
 -- The Badge Book.
 invokeResults.BadgeAsk = { ok = true, earned = { firstRound = 1790000000, metOwner = 1790000100 }, stats = { rounds = 7, level = 12 }, count = 2, total = 151 }

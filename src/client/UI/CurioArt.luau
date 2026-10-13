@@ -4,6 +4,7 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Brainrots = require(ReplicatedStorage.Shared.Brainrots)
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local Curios = require(ReplicatedStorage.Shared.Curios)
 
@@ -57,6 +58,45 @@ function CurioArt.medallion(parent: Instance, id: string, px: number, locked: bo
 		rim.Transparency = 0.5
 	end
 	return f
+end
+
+local RAINBOW = ColorSequence.new({
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 80, 120)),
+	ColorSequenceKeypoint.new(0.25, Color3.fromRGB(255, 210, 70)),
+	ColorSequenceKeypoint.new(0.5, Color3.fromRGB(90, 240, 140)),
+	ColorSequenceKeypoint.new(0.75, Color3.fromRGB(80, 170, 255)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 100, 255)),
+})
+CurioArt.RAINBOW = RAINBOW
+
+-- A brainrot's mutation on its medallion: a thicker rim in Gold or Diamond (every colour for
+-- Rainbow), the medallion washed in it, and a sparkle at its foot.
+function CurioArt.mutate(medal: Frame, mut: string?)
+	local info = if mut then Brainrots.Mutations[mut] else nil
+	if not info then
+		return
+	end
+	local rim = medal:FindFirstChildOfClass("UIStroke")
+	if rim then
+		rim.Thickness += 2
+		rim.Color = if mut == "rainbow" then Color3.new(1, 1, 1) else info.colour
+		if mut == "rainbow" then
+			local g = Instance.new("UIGradient")
+			g.Color = RAINBOW
+			g.Parent = rim
+		end
+	end
+	medal.BackgroundColor3 = medal.BackgroundColor3:Lerp(info.colour, 0.5)
+	local spark = Instance.new("TextLabel")
+	spark.Name = "Mutation"
+	spark.BackgroundTransparency = 1
+	spark.AnchorPoint = Vector2.new(0.5, 0.5)
+	spark.Position = UDim2.fromScale(0.16, 0.82)
+	spark.Size = UDim2.fromScale(0.34, 0.34)
+	spark.Text = if mut == "diamond" then "💎" elseif mut == "rainbow" then "🌈" else "✨"
+	spark.TextScaled = true
+	spark.ZIndex = medal.ZIndex + 1
+	spark.Parent = medal
 end
 
 -- The rarity's small ribbon (text in the rarity's colour).

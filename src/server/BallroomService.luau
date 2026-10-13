@@ -112,6 +112,8 @@ local board: BasePart? = nil
 BallroomService.say = function(_player: Player, _line: string) end
 BallroomService.onFinished = function(_player: Player, _place: number, _keys: number, _counted: boolean) end
 BallroomService.onResult = function(_tableNumber: number, _name: string, _keys: number) end
+-- A win against three or more real guests: the Ballroom's Secret brainrot (set by Main).
+BallroomService.secret = function(_player: Player) end
 -- A guest asked to sabotage a table (Main: Purchases/Sabotage.request, which spends a credit or
 -- asks Roblox for the purchase window). The default applies it at once (tests, and before Main).
 BallroomService.requestSabotage = function(player: Player, kind: string, seat: number): (boolean, string?)
@@ -690,6 +692,10 @@ finish = function(e: Evening)
 			})
 			if place == 1 then
 				BallroomService.say(player, Voice.Concierge.lastLamp)
+				-- The Ballroom's own Secret brainrot, for a win against three or more guests.
+				if (e.real or 0) >= 4 then
+					BallroomService.secret(player)
+				end
 			end
 			BallroomService.onFinished(player, place, s.keys, e.counts)
 			Analytics.custom(player, "Ballroom evening finished", place, { keys = s.keys, counted = e.counts, seconds = seconds })

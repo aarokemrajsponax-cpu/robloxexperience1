@@ -1629,6 +1629,174 @@ do
 end
 
 ---------------------------------------------------------------------------------------------------
+-- M2. The brainrot squad: it earns by the hour, levels up with copies, walks beside you
+---------------------------------------------------------------------------------------------------
+do
+	local CuriosS = module("ServerScriptService", "Server", "Curios")
+	local BrainrotsS = module("ServerScriptService", "Server", "Brainrots")
+	local BrainrotList = module("ReplicatedStorage", "Shared", "Brainrots")
+	local CurioList = module("ReplicatedStorage", "Shared", "Curios")
+	local curioAsk = Remotes.funcs.CurioAsk.OnServerInvoke
+	local function curio(player, request)
+		advance(0.5)
+		local r
+		run(function()
+			r = curioAsk(player, request)
+		end)
+		return r
+	end
+	local clock = 1800000000
+	BrainrotsS.now = function()
+		return clock
+	end
+	local function squad(player)
+		return curio(player, { op = "state" }).squad
+	end
+
+	-- The numbers.
+	check("every brainrot has a rate, a run bonus and a size by its rarity", (function()
+		local n = 0
+		for _, c in CurioList.List do
+			if c.family == "meme" then
+				n += 1
+				if not BrainrotList.Rate[c.rarity] or not BrainrotList.RunBonus[c.rarity] or not BrainrotList.Height[c.rarity] then
+					return false
+				end
+			end
+		end
+		return n >= 28
+	end)())
+	check("stars by copies held: 1, 3, 6, 12, 25", BrainrotList.stars(1) == 1 and BrainrotList.stars(2) == 1 and BrainrotList.stars(3) == 2 and BrainrotList.stars(12) == 4 and BrainrotList.stars(25) == 5 and BrainrotList.nextStar(4) == 6 and BrainrotList.nextStar(30) == nil)
+	check("each star half again as much", BrainrotList.rate("croissantino", 1) == 40 and BrainrotList.rate("croissantino", 3) == 60 and BrainrotList.rate("croissantino", 6) == 90)
+	check("Gold twice, Diamond three times, Rainbow five times", BrainrotList.rate("croissantino", 1, "gold") == 80 and BrainrotList.rate("croissantino", 1, "diamond") == 120 and BrainrotList.rate("croissantino", 1, "rainbow") == 200)
+	check("mutations are rare, the rarest rarest", BrainrotList.roll(0.001) == "rainbow" and BrainrotList.roll(0.01) == "diamond" and BrainrotList.roll(0.05) == "gold" and BrainrotList.roll(0.5) == nil)
+	check("a relic or a delicacy is no brainrot", BrainrotList.is("truffle") == false and BrainrotList.rate("truffle", 5) == 0 and BrainrotList.is("dragoDorato") == true)
+	check("nothing random is sold: the squad's two products are a fixed number of places and a fixed number of hours", ProductConfig.byKey.brainrotPenthouse.Reward.Type == "BrainrotSlots" and ProductConfig.byKey.brainrotFeast.Reward.Type == "BrainrotFeast")
+
+	-- A first brainrot goes straight into the squad, and walks.
+	local zed = guest("Zed", 9650)
+	local zData = profiles[zed].Data
+	CuriosS.give(zed, zData, "croissantino", 1, "tables")
+	local st = squad(zed)
+	check("a first brainrot goes straight into the squad and walks beside you", st.ids[1] == "croissantino" and st.walk == "croissantino" and zed:GetAttribute("Brainrot") == "croissantino")
+	check("three places, and it earns by the hour", st.slots == 3 and st.rate == 40 and st.held == 0)
+	clock += 3600
+	check("an hour later, an hour's Gilt in the jar", squad(zed).held == 40)
+	clock += 3600 * 20
+	st = squad(zed)
+	check("the jar holds eight hours, no more (even while away)", st.held == 320 and st.cap == 320)
+	local g0 = zData.gilt
+	local r = curio(zed, { op = "collect" })
+	check("collecting pays the whole jar, as it is", r.ok == true and r.gilt == 320 and zData.gilt == g0 + 320)
+	r = curio(zed, { op = "collect" })
+	check("an empty jar pays nothing and says why", r.ok == false and r.why ~= nil and zData.gilt == g0 + 320)
+	r = curio(zed, { op = "collect", gilt = 99999 })
+	check("an amount from the screen is refused outright", r.ok == false and zData.gilt == g0 + 320)
+
+	-- Stars: the jar is settled at the old rate first.
+	clock += 3600
+	CuriosS.give(zed, zData, "croissantino", 2, "tables")
+	clock += 3600
+	st = squad(zed)
+	check("a third copy: two stars, and the hour before it earned at the old rate", st.rate == 60 and st.held == 100)
+
+	-- Places in the squad.
+	for _, id in { "baguettone", "pigeonetto", "fromaggio" } do
+		CuriosS.give(zed, zData, id, 1, "tables")
+	end
+	st = squad(zed)
+	check("the squad fills to three, then stops", #st.ids == 3 and table.find(st.ids, "fromaggio") == nil)
+	r = curio(zed, { op = "squadAdd", id = "fromaggio" })
+	check("a full squad says so", r.ok == false and r.full == true)
+	r = curio(zed, { op = "squadAdd", id = "moonCheese" })
+	check("only a brainrot you hold", r.ok == false)
+	r = curio(zed, { op = "squadRemove", id = "pigeonetto" })
+	local r2 = curio(zed, { op = "squadAdd", id = "fromaggio" })
+	st = squad(zed)
+	check("take one out, put another in", r.ok == true and r2.ok == true and table.find(st.ids, "fromaggio") ~= nil and table.find(st.ids, "pigeonetto") == nil)
+	r = curio(zed, { op = "walk", id = "fromaggio" })
+	check("choose who walks with you (every screen draws it)", r.ok == true and zed:GetAttribute("Brainrot") == "fromaggio" and zed:GetAttribute("BrainrotStars") == 1 and zed:GetAttribute("BrainrotRate") == 40)
+	r = curio(zed, { op = "walk", id = "pigeonetto" })
+	check("only one from your squad", r.ok == false and zed:GetAttribute("Brainrot") == "fromaggio")
+
+	-- Mutations: from finds at the tables only.
+	CuriosS.random = { NextNumber = function()
+		return 0.001
+	end }
+	local found = CuriosS.afterRun(zed, zData, 3, 0.9, "salon", false)
+	advance(0.2)
+	check("a find can come Rainbow, kept with that brainrot", found ~= nil and found.mut == "rainbow" and zData.curios.squad.mut[found.id] == "rainbow")
+	check("...and the reveal says so", (function()
+		for _, m in zed.inbox do
+			if m.op == "found" and m.id == found.id and m.mut == "rainbow" then
+				return true
+			end
+		end
+		return false
+	end)())
+	CuriosS.random = { NextNumber = function()
+		return 0.5
+	end }
+
+	-- The walking one's bonus at the table.
+	local bonus = BrainrotsS.runBonus(zed, zData, 200)
+	check("the one walking with you adds its bonus to a banked run's Gilt", bonus ~= nil and bonus.id == "fromaggio" and bonus.gilt > 0 and math.abs(bonus.share - 0.05) < 1e-9)
+
+	-- A trade that takes one away.
+	clock += 1800
+	CuriosS.take(zData, "fromaggio", 1)
+	st = squad(zed)
+	check("a brainrot traded away leaves the squad, and another walks", table.find(st.ids, "fromaggio") == nil and st.walk ~= "fromaggio" and st.walk ~= nil)
+
+	-- The two products.
+	for _, p in {
+		{ Name = "Brainrot Penthouse", ProductId = 5601, PriceInRobux = 199 },
+		{ Name = "Brainrot Feast", ProductId = 5602, PriceInRobux = 39 },
+	} do
+		table.insert(MarketplaceService.devProducts, p)
+	end
+	run(Catalog.discover)
+	local problems = ProductConfig.validate(Grants.names())
+	check("both are valid products", problems.brainrotPenthouse == nil and problems.brainrotFeast == nil)
+	st = squad(zed)
+	check("the screen is told both prices and what a Feast pays now", st.prices.brainrotPenthouse == 199 and st.prices.brainrotFeast == 39 and st.feast == st.rate * 8)
+	local uma = guest("Uma", 9651)
+	r = curio(uma, { op = "brainrotBuy", key = "brainrotFeast" })
+	check("a Feast needs a squad first", r.ok == false)
+	local before = #prompts
+	r = curio(zed, { op = "brainrotBuy", key = "brainrotFeast" })
+	check("a Feast opens Roblox's purchase window", r.ok == true and #prompts == before + 1)
+	local rate = BrainrotsS.rate(zData)
+	local g1 = zData.gilt
+	local result = receipt(zed, 5602, "feast-1", 39)
+	check("the Feast pays eight hours of the squad's Gilt at once", result == GRANTED and rate > 0 and zData.gilt == g1 + rate * 8)
+	receipt(zed, 5602, "feast-1", 39)
+	check("the same receipt twice pays nothing more", zData.gilt == g1 + rate * 8)
+	result = receipt(zed, 5601, "penthouse-1", 199)
+	st = squad(zed)
+	check("the Penthouse: six places, for good", result == GRANTED and st.slots == 6 and st.wing == true)
+	r = curio(zed, { op = "brainrotBuy", key = "brainrotPenthouse" })
+	check("and it isn't sold twice", r.ok == false)
+	r = curio(zed, { op = "brainrotBuy", key = "gems1" })
+	check("the squad sells only its own two", r.ok == false)
+	r = curio(zed, { op = "squadAdd", id = "pigeonetto" })
+	CuriosS.give(zed, zData, "bananino", 1, "tables")
+	check("with the Penthouse, a fourth goes in", r.ok == true and #squad(zed).ids == 4)
+	-- The Meme Frenzy: double for a quarter of an hour, then back as it was.
+	st = squad(zed)
+	local held0, rate0 = st.held, st.rate
+	BrainrotsS.frenzy(zed)
+	st = squad(zed)
+	check("a Meme Takeover's Meme Frenzy: the squad earns double for 15 minutes", st.frenzy == 900 and st.frenzyMult == 2 and lastOp(zed, "frenzy") ~= nil)
+	clock += 1800
+	st = squad(zed)
+	check("...a quarter hour at double, then a quarter hour as usual", math.abs(st.held - (held0 + rate0 * 2 * 0.25 + rate0 * 0.25)) <= 1 and st.frenzy == nil, string.format("%s vs %s", tostring(st.held), tostring(held0 + rate0 * 0.75)))
+	BrainrotsS.now = function()
+		return os.time()
+	end
+end
+
+---------------------------------------------------------------------------------------------------
 -- N. Suite spectacles: kept safe as a show first, then played at once in your own Suite
 ---------------------------------------------------------------------------------------------------
 do
@@ -1707,6 +1875,7 @@ do
 			end
 		end
 		check("the Meme Takeover is sent with its edition, chosen by the server", memeShow ~= nil and type(memeShow.variant) == "string" and MemeTakeovers.byId[memeShow.variant] ~= nil, memeShow and memeShow.variant)
+		check("...and the Meme Takeover bought and played sets off the squad's Meme Frenzy", module("ServerScriptService", "Server", "Brainrots").squadOf(piaData).boostUntil ~= nil)
 		check("there are many editions, each its own show", #MemeTakeovers.List >= 12)
 		local picks = { memeShow and memeShow.variant or "" }
 		for _ = 1, 40 do

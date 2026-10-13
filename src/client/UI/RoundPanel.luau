@@ -6,6 +6,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
+local Curios = require(ReplicatedStorage.Shared.Curios)
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local Voice = require(ReplicatedStorage.Shared.Voice)
 local Root = require(script.Parent.Root)
@@ -411,6 +412,10 @@ function RoundPanel.banked(message: { [string]: any }, actions: Actions)
 	}
 	if (message.gilt or 0) > 0 then
 		table.insert(rows, { "Gilt", "+" .. number(message.gilt) })
+	end
+	if type(message.brainrot) == "table" and type(message.brainrot.gilt) == "number" and type(message.brainrot.id) == "string" then
+		local c = Curios.byId[message.brainrot.id]
+		table.insert(rows, { "Brainrot bonus", string.format("+%d Gilt · %s", message.brainrot.gilt, if c then c.name else "your brainrot") })
 	end
 	if type(message.curio) == "table" and type(message.curio.name) == "string" then
 		table.insert(rows, { "A curio turned up", tostring(message.curio.name) .. " · " .. tostring(message.curio.rarity) })

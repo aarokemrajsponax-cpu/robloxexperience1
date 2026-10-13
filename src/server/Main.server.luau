@@ -255,6 +255,10 @@ end
 BallroomService.onResult = function(tableNumber, name, keys)
 	Boards.ballroomResult(tableNumber, name, keys)
 end
+-- The Ballroom's Secret brainrot: La Regina del Ballo, once, for a win against three or more guests.
+BallroomService.secret = function(player)
+	CuriosService.forEvent(player, "reginaBallo", "reginaBallo")
+end
 
 local Dressing = require(script.Parent.Dressing)
 Dressing.crestOf = CircleService.crest

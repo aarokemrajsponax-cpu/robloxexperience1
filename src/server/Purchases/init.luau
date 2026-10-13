@@ -121,7 +121,14 @@ function Purchases.start()
 	Piano.start()
 	Bar.start()
 	require(script.Parent.Curios).start() -- Gem packs (and the Cabinet)
+	require(script.Parent.Brainrots).start() -- the brainrot squad: its jar, its walker, its two products
 	require(script.Spectacles).start() -- Suite spectacles
+	-- A Meme Takeover bought and played: the brainrot squad's Meme Frenzy (double, a quarter hour).
+	require(script.Spectacles).played = function(player: Player, key: string)
+		if key == "spectacleMemes" then
+			require(script.Parent.Brainrots).frenzy(player)
+		end
+	end
 	require(script.HolidayGrant).start() -- the holiday games' turkeys and sleigh rides
 	require(script.Sabotage).start() -- the Ballroom: sabotage, and opening it early
 	Gilt.personal = function(player: Player): number

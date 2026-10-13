@@ -35,6 +35,18 @@ Curios.secret = function(_player: Player) end
 -- A run banked under the luck of the Irish (set by Main: its badge).
 Curios.lucky = function(_player: Player) end
 
+-- The brainrot squad (set by server/Brainrots): its requests, its part of the state, the jar
+-- settled before a count changes, a new one placed, and a find's mutation.
+Curios.ops = {} :: { [string]: (player: Player, data: Profiles.Data, r: { [string]: any }) -> { [string]: any } }
+Curios.squadState = function(_data: Profiles.Data): { [string]: any }?
+	return nil
+end
+Curios.changing = function(_data: Profiles.Data) end
+Curios.arrived = function(_player: Player?, _data: Profiles.Data, _id: string) end
+Curios.mutate = function(_data: Profiles.Data, _id: string, _x: number): string?
+	return nil
+end
+
 -- The random numbers for finds (a test can make them fixed).
 Curios.random = Random.new()
 
@@ -67,7 +79,7 @@ end
 -- What the guest's screen shows: every curio they hold, their stars, the latest finds, and Gems.
 function Curios.state(data: Profiles.Data): { [string]: any }
 	local b = bag(data)
-	return { op = "curios", items = table.clone(b.items), favs = table.clone(b.favs), recent = table.clone(b.recent), gems = data.gems, found = b.found }
+	return { op = "curios", items = table.clone(b.items), favs = table.clone(b.favs), recent = table.clone(b.recent), gems = data.gems, found = b.found, squad = Curios.squadState(data) }
 end
 
 function Curios.push(player: Player)
@@ -84,6 +96,7 @@ function Curios.give(player: Player?, data: Profiles.Data, id: string, n: number
 		return false
 	end
 	local b = bag(data)
+	Curios.changing(data)
 	b.items[id] = (b.items[id] or 0) + (n or 1)
 	local i = table.find(b.recent, id)
 	if i then
@@ -96,6 +109,7 @@ function Curios.give(player: Player?, data: Profiles.Data, id: string, n: number
 	if player then
 		Analytics.custom(player, "Curio", n or 1, { curio = id, rarity = c.rarity, source = source or "" })
 	end
+	Curios.arrived(player, data, id)
 	return true
 end
 
@@ -107,6 +121,7 @@ function Curios.take(data: Profiles.Data, id: string, n: number?): boolean
 	if have < k then
 		return false
 	end
+	Curios.changing(data)
 	local items = b.items :: { [string]: number? }
 	items[id] = if have - k > 0 then have - k else nil
 	if not items[id] then
@@ -120,10 +135,10 @@ function Curios.take(data: Profiles.Data, id: string, n: number?): boolean
 end
 
 -- Tells a guest's screen about a curio that came to them (the big reveal).
-function Curios.announce(player: Player, id: string, line: string, gilt: number?)
+function Curios.announce(player: Player, id: string, line: string, gilt: number?, mut: string?)
 	local c = CurioList.byId[id]
 	if c then
-		curioEvent:FireClient(player, { op = "found", id = id, line = line, gilt = gilt or 0 })
+		curioEvent:FireClient(player, { op = "found", id = id, line = line, gilt = gilt or 0, mut = mut })
 	end
 end
 
@@ -161,7 +176,8 @@ function Curios.afterRun(player: Player, data: Profiles.Data, rounds: number, ac
 		local _, rare = Curios.luck()
 		local c = CurioList.pick(Curios.random:NextNumber(), Curios.random:NextNumber(), rare)
 		Curios.give(player, data, c.id, 1, "tables")
-		found = { id = c.id }
+		-- A brainrot may come Gold, Diamond or Rainbow (earned by playing; never sold).
+		found = { id = c.id, mut = Curios.mutate(data, c.id, Curios.random:NextNumber()) }
 	end
 	if found then
 		local c = CurioList.byId[found.id]
@@ -204,7 +220,7 @@ function Curios.afterRun(player: Player, data: Profiles.Data, rounds: number, ac
 	if found then
 		local f = found
 		task.defer(function()
-			Curios.announce(player, f.id, "Among the pieces, a curio.", f.gilt)
+			Curios.announce(player, f.id, "Among the pieces, a curio.", f.gilt, f.mut)
 			Curios.push(player)
 		end)
 	else
@@ -293,6 +309,10 @@ local function onAsk(player: Player, request: unknown): any
 	local data = Profiles.get(player)
 	if not data then
 		return { ok = false, why = "Your ledger is still being opened." }
+	end
+	local squadOp = if type(r.op) == "string" then Curios.ops[r.op] else nil
+	if squadOp then
+		return squadOp(player, data, r)
 	end
 	if r.op == "state" then
 		local s = Curios.state(data)

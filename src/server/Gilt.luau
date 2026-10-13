@@ -72,4 +72,18 @@ function Gilt.pay(player: Player, data: Profiles.Data, earned: number, source: s
 	return paid
 end
 
+-- Pays `amount` exactly, with no boost and outside the daily soft cap: what the brainrot squad
+-- earned on its own (server/Brainrots). Returns what was paid.
+function Gilt.give(player: Player, data: Profiles.Data, amount: number, source: string): number
+	local paid = math.max(0, math.floor(amount))
+	if paid <= 0 then
+		return 0
+	end
+	data.gilt += paid
+	Analytics.source(player, "Gilt", paid, data.gilt, source)
+	Gilt.changed(player)
+	Gilt.earned(player, paid)
+	return paid
+end
+
 return Gilt

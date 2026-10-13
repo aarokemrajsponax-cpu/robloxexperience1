@@ -236,6 +236,10 @@ def layout_children(node):
     s = node["_s"]
     pt, pb, pl, pr = pads(node, r.w / s if s else r.w, r.h / s if s else r.h)
     content = Box(r.x + pl * s, r.y + pt * s, r.w - (pl + pr) * s, r.h - (pt + pb) * s)
+    # A scrolled ScrollingFrame: its children move up (and left) by where it's scrolled to.
+    cv = node.get("canvas")
+    if cv:
+        content = Box(content.x - cv[0] * s, content.y - cv[1] * s, content.w, content.h)
     # Children are laid out in the unscaled space, then scaled with the parent.
     inner = Box(content.x, content.y, content.w / s if s else content.w, content.h / s if s else content.h)
     lst = first(node, "UIListLayout")

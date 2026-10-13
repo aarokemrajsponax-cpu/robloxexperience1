@@ -60,6 +60,7 @@ local DecreePanel = require(script.Parent.UI.DecreePanel)
 local CurioState = require(script.Parent.CurioState)
 local CurioReveal = require(script.Parent.UI.CurioReveal)
 local CuriosPanel = require(script.Parent.UI.CuriosPanel)
+local BrainrotSquad = require(script.Parent.UI.BrainrotSquad)
 local MenuPanel = require(script.Parent.UI.MenuPanel)
 local TradePanel = require(script.Parent.UI.TradePanel)
 local PianoPanel = require(script.Parent.UI.PianoPanel)
@@ -206,6 +207,7 @@ start("Headlines", Headline.start)
 start("Holidays", require(script.Parent.World.HolidayFX).start)
 start("Auras", require(script.Parent.World.Auras).start)
 start("Companions", require(script.Parent.World.Companions).start)
+start("BrainrotWalkers", require(script.Parent.World.BrainrotWalkers).start)
 -- Admin Abuse and the owner's effects drawn on the screen too (over the house as you walk; the
 -- sorting screen has its own), and their music.
 local walkFX: ScreenFX.FX? = nil
@@ -240,16 +242,27 @@ start("Curios", function()
 	TradePanel.start()
 	CurioState.Message:Connect(function(op: string, m: any)
 		if op == "found" and type(m.id) == "string" then
-			CurioReveal.show(m.id, tostring(m.line or ""), if type(m.gilt) == "number" then m.gilt else 0)
+			CurioReveal.show(m.id, tostring(m.line or ""), if type(m.gilt) == "number" then m.gilt else 0, if type(m.mut) == "string" then m.mut else nil)
 		elseif op == "gems" and type(m.amount) == "number" then
 			Toast.show("Gems", string.format("+%d Gems. You hold %d.", m.amount, CurioState.gems), 4)
+		-- The brainrot squad: what it earned while you were away, a full jar, a Feast, the Penthouse.
+		elseif op == "away" and type(m.gilt) == "number" then
+			Toast.show("Your brainrots", string.format("Earned %s Gilt while you were away. Collection → Brainrots to collect it.", BrainrotSquad.commas(m.gilt)), 6)
+		elseif op == "jarFull" and type(m.gilt) == "number" then
+			Toast.show("Tip jar full", string.format("%s Gilt waiting. Collect it so your squad keeps earning.", BrainrotSquad.commas(m.gilt)), 6)
+		elseif op == "feast" and type(m.gilt) == "number" then
+			Toast.show("Brainrot Feast", string.format("+%s Gilt, eight hours of your squad at once.", BrainrotSquad.commas(m.gilt)), 5)
+		elseif op == "penthouse" then
+			Toast.show("Brainrot Penthouse", "Six places in your squad now, for good.", 5)
+		elseif op == "frenzy" and type(m.seconds) == "number" then
+			Toast.show("Meme Frenzy", string.format("Your squad earns ×%d for the next %d minutes.", if type(m.mult) == "number" then m.mult else 2, math.floor(m.seconds / 60 + 0.5)), 6)
 		end
 	end)
 	AdmireCard.trade = TradePanel.invite
 	-- The quick dock: Collection, Trade, Wardrobe, Gems and Invite, one tap away (C, T, V).
 	local QuickDock = require(script.Parent.UI.QuickDock)
 	QuickDock.openCollection = function()
-		CuriosPanel.open("yours")
+		CuriosPanel.open("squad")
 	end
 	QuickDock.openTrades = function()
 		CuriosPanel.open("trades")
@@ -280,8 +293,8 @@ start("Curios", function()
 		QuickDock.setSeated(false)
 	end)
 	for _, tile in {
-		{ id = "collection", title = "Your Collection", line = "Your curios, every one to find, and the Cabinet.", glyph = "🏺", open = function()
-			CuriosPanel.open("yours")
+		{ id = "collection", title = "Your Collection", line = "Your brainrot squad and its tip jar, every curio, and the Cabinet.", glyph = "🏺", open = function()
+			CuriosPanel.open("squad")
 		end },
 		{ id = "trading", title = "Trading", line = "Trade curios with another guest, and your past trades.", glyph = "🤝", open = function()
 			CuriosPanel.open("trades")
