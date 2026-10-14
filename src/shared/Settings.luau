@@ -41,6 +41,7 @@ Settings.Definitions = {
 	choice("movement", "The room", "Movement", { "Full", "Calm", "Still" }, true),
 	choice("glow", "The room", "Glow and sparks", { "Full", "Subtle", "Off" }, true),
 	choice("goalCard", "The room", "What-to-do-next card", { "Shown", "Hidden" }, true, "the card under Settings; its – key hides it too"),
+	choice("giltBar", "The room", "Gilt and Gems bar", { "Shown", "Hidden" }, true, "top left; the ‹ key beside it shrinks it to your Gilt alone"),
 	choice("sideKeys", "The room", "Keys down the left", { "Shown", "Hidden" }, true, "Collection, Trade, Wardrobe, Gems, Suites, Invite; the ‹ key beside them hides them too"),
 	-- The table
 	choice("caseStyle", "The table", "Case style", { "Trays", "Boxes", "Plates" }, true),

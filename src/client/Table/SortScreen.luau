@@ -219,6 +219,11 @@ SortScreen.onCancel = function() end
 -- A piece has come down into its case (the moment to hear it settle).
 SortScreen.onLanded = function(_uid: number, _caseId: string) end
 -- How much of the top-right corner the HUD's keys (Leave, Settings) take, in pixels.
+-- The whole screen's size where it's known for certain (for tests: a phone whose viewport is
+-- narrower than its screen); nil, and this screen measures itself.
+SortScreen.screen = function(): Vector2?
+	return nil
+end
 SortScreen.keysWidth = function(): number
 	return 0
 end
@@ -289,6 +294,7 @@ type Layout = {
 	tray: { x: number, y: number, w: number, h: number },
 	icon: number,
 	keys: number,
+	side: number, -- how far in the device's unsafe edge reaches, each side
 	stacked: boolean,
 }
 local L: Layout = {
@@ -310,6 +316,7 @@ local L: Layout = {
 	tray = { x = 0, y = 0, w = 0, h = 0 },
 	icon = 80,
 	keys = 0,
+	side = 0,
 	stacked = false,
 }
 
@@ -421,12 +428,36 @@ local function number(n: number): string
 	return if out:sub(1, 1) == "," then out:sub(2) else out
 end
 
--- The layout, in screen pixels, from the screen's size alone.
+-- The screen this draws on, in its own pixels. This screen covers the whole of the device's
+-- screen; on a phone with rounded corners or a camera cut-out the camera's viewport is only the
+-- safe middle of it, so laying out by the viewport alone pushed everything to the left (the
+-- table off centre). Its own size where Roblox has measured it, else the viewport.
+local function screenSize(): Vector2
+	local given = SortScreen.screen()
+	if given then
+		return given
+	end
+	local g = gui
+	if g then
+		local ok, size = pcall(function()
+			return g.AbsoluteSize
+		end)
+		if ok and typeof(size) == "Vector2" and size.X > 10 and size.Y > 10 then
+			return size
+		end
+	end
+	return viewport()
+end
+
+-- The layout, in screen pixels, from the screen's size alone: centred on the whole screen, and
+-- as far in from both sides as the device's unsafe edges reach on either.
 local function measure()
-	local vp = viewport()
+	local vp = screenSize()
+	local view = viewport()
+	local side = math.max(0, math.floor((vp.X - view.X) / 2))
 	local top = inset().Y
-	local s = math.clamp(math.min(vp.X, vp.Y) / 760, 0.62, 1.35)
-	local pad = math.floor(math.clamp(vp.X * 0.025, 12, 40))
+	local s = math.clamp(math.min(vp.X - 2 * side, vp.Y) / 760, 0.62, 1.35)
+	local pad = math.max(math.floor(math.clamp(vp.X * 0.025, 12, 40)), if side > 0 then side + 8 else 0)
 	local width = math.min(vp.X - 2 * pad, math.floor(1640 * s))
 	local left = math.floor((vp.X - width) / 2)
 	local portrait = vp.X / vp.Y < 1.05
@@ -462,6 +493,7 @@ local function measure()
 		tray = { x = left + rimPx, y = trayTop + rimPx, w = width - 2 * rimPx, h = math.max(120, trayBottom - trayTop) - 2 * rimPx },
 		icon = L.icon,
 		keys = SortScreen.keysWidth(),
+		side = side,
 		stacked = stacked,
 	}
 end
@@ -867,7 +899,8 @@ local function layoutStats()
 		line.Position = UDim2.fromOffset(0, math.floor(26 * s))
 		return
 	end
-	local right = math.min(L.width, L.vp.X - L.keys - L.left - 18 * s)
+	-- (The keys stand in the safe part of the screen: as far in from its right edge as `side`.)
+	local right = math.min(L.width, L.vp.X - L.side - L.keys - L.left - 18 * s)
 	local gap = 10 * s
 	local x = right
 	for i = #shown, 1, -1 do
@@ -3461,26 +3494,35 @@ function SortScreen.start()
 	UserInputService.InputChanged:Connect(pointerMoved)
 	UserInputService.InputEnded:Connect(pointerUp)
 	RunService.RenderStepped:Connect(step)
+	-- (Laid out again whenever the screen changes size: a phone turned, a window resized, or the
+	-- screen's own size measured by Roblox after the viewport's.)
+	local function relayout()
+		if not isOpen then
+			return
+		end
+		measure()
+		layoutChrome()
+		layoutBins()
+		for _, bin in binOrder do
+			paintBin(bin)
+		end
+		arrange(true)
+		for _, c in cards do
+			if c.state ~= "flying" and c.state ~= "filed" then
+				attach(c)
+				c.pos = c.home
+				placeCard(c)
+			end
+		end
+	end
 	local camera = Workspace.CurrentCamera
 	if camera then
-		camera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
-			if not isOpen then
-				return
-			end
-			measure()
-			layoutChrome()
-			layoutBins()
-			for _, bin in binOrder do
-				paintBin(bin)
-			end
-			arrange(true)
-			for _, c in cards do
-				if c.state ~= "flying" and c.state ~= "filed" then
-					attach(c)
-					c.pos = c.home
-					placeCard(c)
-				end
-			end
+		camera:GetPropertyChangedSignal("ViewportSize"):Connect(relayout)
+	end
+	local g = gui
+	if g then
+		pcall(function()
+			g:GetPropertyChangedSignal("AbsoluteSize"):Connect(relayout)
 		end)
 	end
 end

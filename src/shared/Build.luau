@@ -4,6 +4,6 @@
 -- see whether Studio has the latest code from GitHub.
 
 return {
-	number = 63,
-	label = "Build 63 · 14 Oct · phones first: a smaller dock that folds away and never covers the table, Friend Boost clear of jump",
+	number = 64,
+	label = "Build 64 · 14 Oct · the table in the middle of every screen, a Gilt bar that folds away",
 }

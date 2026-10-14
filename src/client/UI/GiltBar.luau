@@ -4,17 +4,21 @@
 -- has its bar of XP to the next one. Tap the Gems for the Gem Shop, the level for the Badge Book.
 -- A Gilt Surge or an XP Surge shows as a chip underneath with its time left.
 -- It steps aside while the guest sorts at a table or has a panel (or a selection screen) open.
+-- The ‹ key beside it (or Settings → Gilt and Gems bar) shrinks it to a small pill of your Gilt
+-- alone, out of the way on a small screen; tapping the pill brings the bar back.
 -- The numbers are the server's ("Gilt", "Gems", "Level", "LevelXP", "LevelNeed" on the player).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 
 local Levels = require(ReplicatedStorage.Shared.Levels)
 local Icons = require(script.Parent.Icons)
 local Root = require(script.Parent.Root)
+local State = require(script.Parent.Parent.State)
 
 local GiltBar = {}
 
@@ -33,6 +37,8 @@ end
 
 local bar: Frame? = nil
 local chips: Frame? = nil
+local foldKey: TextButton? = nil -- the ‹ beside the bar
+local mini: TextButton? = nil -- the Gilt alone, while the bar is folded away
 local seated = false
 
 local function format(n: number): string
@@ -57,8 +63,17 @@ end
 function GiltBar.refresh()
 	local b = bar
 	local show = not seated and not Root.isOpen() and not GiltBar.isBusy()
+	local fold = State.get("giltBar") == "Hidden"
 	if b then
-		b.Visible = show
+		b.Visible = show and not fold
+	end
+	local k = foldKey
+	if k then
+		k.Visible = show and not fold
+	end
+	local m = mini
+	if m then
+		m.Visible = show and fold
 	end
 	local c = chips
 	if c then
@@ -213,6 +228,68 @@ function GiltBar.start()
 	list.SortOrder = Enum.SortOrder.LayoutOrder
 	list.Parent = frame
 	bar = frame
+
+	-- The ‹ key just right of the bar, and the pill of Gilt alone for while it's folded away
+	-- (both bigger to the touch on a phone).
+	local touch = UserInputService.TouchEnabled
+	local function small(name: string, text: string, height: number): TextButton
+		local k = Instance.new("TextButton")
+		k.Name = name
+		k.AutoButtonColor = false
+		k.BackgroundColor3 = rgb(14, 12, 10)
+		k.BackgroundTransparency = 0.12
+		k.FontFace = HEAVY
+		k.TextColor3 = GOLD
+		k.Text = text
+		k.Size = UDim2.fromOffset(height, height)
+		corner(k, math.floor(height / 2))
+		local ks = Instance.new("UIStroke")
+		ks.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		ks.Color = GOLD
+		ks.Thickness = 1.25
+		ks.Transparency = 0.25
+		ks.Parent = k
+		k.Parent = Root.hud
+		return k
+	end
+	local side = if touch then 40 else 30
+	local fk = small("GiltFold", "‹", side)
+	fk.TextSize = math.floor(side * 0.5)
+	fk.Position = UDim2.fromOffset(12 + frame.Size.X.Offset + 8, 10 + math.floor((44 - side) / 2))
+	fk.Activated:Connect(function()
+		State.set("giltBar", "Hidden")
+		GiltBar.refresh()
+	end)
+	foldKey = fk
+	local pillH = if touch then 40 else 32
+	local pill = small("GiltMini", "", pillH)
+	pill.AutomaticSize = Enum.AutomaticSize.X
+	pill.Size = UDim2.fromOffset(0, pillH)
+	pill.Position = UDim2.fromOffset(12, 10 + math.floor((44 - pillH) / 2))
+	pill.TextSize = math.floor(pillH * 0.42)
+	pill.TextXAlignment = Enum.TextXAlignment.Left
+	local pp = Instance.new("UIPadding")
+	pp.PaddingLeft = UDim.new(0, math.floor(pillH * 0.85))
+	pp.PaddingRight = UDim.new(0, 12)
+	pp.Parent = pill
+	local dot = Instance.new("Frame")
+	dot.Name = "Coin"
+	dot.AnchorPoint = Vector2.new(0, 0.5)
+	dot.Position = UDim2.new(0, -math.floor(pillH * 0.62), 0.5, 0)
+	dot.Size = UDim2.fromOffset(math.floor(pillH * 0.45), math.floor(pillH * 0.45))
+	dot.BackgroundColor3 = rgb(255, 204, 90)
+	dot.BorderSizePixel = 0
+	corner(dot, 99)
+	dot.Parent = pill
+	pill.Text = format(attr("Gilt")) .. "  ›"
+	pill.Activated:Connect(function()
+		State.set("giltBar", "Shown")
+		GiltBar.refresh()
+	end)
+	mini = pill
+	State.watch("giltBar", function()
+		GiltBar.refresh()
+	end)
 
 	local _giltKey, giltValue = part(frame, 1, "coin", rgb(255, 214, 110), "Gilt", 132)
 	local gemsKey, gemsValue = part(frame, 2, "gems", rgb(150, 220, 255), "Gems", 96)
@@ -376,6 +453,7 @@ function GiltBar.start()
 				shownGilt += step
 			end
 			giltValue.Text = format(shownGilt)
+			pill.Text = format(shownGilt) .. "  ›"
 		end
 	end)
 	task.spawn(function()

@@ -2010,6 +2010,23 @@ do
 	check("every piece sits on the tray", inside)
 	check("no two pieces sit on top of each other", apart)
 	check("the pieces are a good size to pick up", icon >= 50, icon)
+	-- A phone whose camera viewport is only the safe middle of a wider screen (rounded corners,
+	-- a camera cut-out): the table stands in the middle of the whole screen, clear of both edges.
+	local SortM = module("StarterPlayer", "StarterPlayerScripts", "Client", "Table", "SortScreen")
+	SortM.screen = function()
+		return Vector2.new(DEVICE.size.X + 260, DEVICE.size.Y)
+	end
+	signalOf(camera, "prop:ViewportSize"):Fire()
+	advance(0.3)
+	local frameL = tray.Position.X.Offset
+	local frameR = DEVICE.size.X + 260 - (tray.Position.X.Offset + tray.Size.X.Offset)
+	check("on a phone wider than its viewport, the table stands in the middle, clear of both edges", math.abs(frameL - frameR) <= 2 and frameL >= 130, frameL .. " / " .. frameR)
+	SortM.screen = function()
+		return nil
+	end
+	signalOf(camera, "prop:ViewportSize"):Fire()
+	advance(0.3)
+	check("...and on a plain screen, in the middle as before", math.abs(tray.Position.X.Offset - (DEVICE.size.X - tray.Position.X.Offset - tray.Size.X.Offset)) <= 2)
 end
 check("no errors rendering the deal", #errors == 0, errors[1])
 check("the first deal says what to do", textOnScreen("Put every piece in the case where it belongs") ~= nil)
@@ -4916,6 +4933,31 @@ LocalPlayer:SetAttribute("LevelNeed", 940)
 advance(2)
 check("the Gilt bar shows Gilt, Gems and the level, live", textOnScreen("12,500") ~= nil and textOnScreen("340") ~= nil and textOnScreen("SORTER") ~= nil)
 snapshot("gilt-bar")
+do
+	-- Folding it away: the ‹ beside it shrinks it to a pill of Gilt alone, and the pill brings it back.
+	local StateG = module("StarterPlayer", "StarterPlayerScripts", "Client", "State")
+	local fold = find(playerGui, function(d)
+		return d.Name == "GiltFold" and d:IsA("TextButton")
+	end)
+	local pill = find(playerGui, function(d)
+		return d.Name == "GiltMini" and d:IsA("TextButton")
+	end)
+	local wholeBar = find(playerGui, function(d)
+		return d.Name == "GiltBar" and d:IsA("Frame")
+	end)
+	check("the Gilt bar has a ‹ key to fold it away", fold ~= nil and fold.Visible and pill ~= nil and not pill.Visible)
+	if fold then
+		signalOf(fold, "Activated"):Fire()
+	end
+	advance(0.5)
+	check("folded: only a small pill of Gilt is left, and it's remembered", wholeBar ~= nil and not wholeBar.Visible and pill ~= nil and pill.Visible and string.find(pill.Text, "12,500", 1, true) ~= nil and StateG.get("giltBar") == "Hidden")
+	snapshot("gilt-bar-folded")
+	if pill then
+		signalOf(pill, "Activated"):Fire()
+	end
+	advance(0.5)
+	check("...and the pill brings the whole bar back", wholeBar ~= nil and wholeBar.Visible and not pill.Visible and StateG.get("giltBar") == "Shown")
+end
 local giltBar = find(playerGui, function(d)
 	return d.Name == "GiltBar"
 end)

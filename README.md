@@ -377,6 +377,17 @@ a Nightly attempt or a Mythic's odds.
 - **The launch kit**: page text, icon, thumbnails and the gameplay video's shot list are in
   [`LAUNCH.md`](LAUNCH.md).
 
+## Build 64 — what's new
+
+- **The sorting table in the middle of every screen.** On phones with rounded corners or a camera
+  cut-out, Roblox's camera view is only the safe middle of the screen while the sorting screen
+  covers all of it, so laying it out by the camera's view pushed the table to the left. It now
+  measures the screen it draws on, stands in the middle of it, and keeps as far in from both
+  edges as the unsafe part reaches on either (a test stands in a phone like that).
+- **The Gilt bar folds away.** The **‹** key beside it (or **Settings → Gilt and Gems bar**)
+  shrinks it to a small pill of your Gilt alone; tap the pill for the whole bar again.
+  Remembered, like the keys down the left.
+
 ## Build 63 — what's new (phones, tablets and every screen)
 
 - **The keys down the left, smaller on a phone.** Collection, Trade, Wardrobe, Gems, Suites and
