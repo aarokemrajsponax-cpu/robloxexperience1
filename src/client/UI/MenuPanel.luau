@@ -50,7 +50,12 @@ function MenuPanel.open()
 	scroll.ScrollBarThickness = 3
 	scroll.LayoutOrder = 2
 	scroll.Parent = content
-	local cols = if w >= 560 then 3 elseif w >= 360 then 2 else 1
+	-- (As many columns as fit tiles at least 200 wide: two on a tablet, where the panel is narrower
+	-- beside the dock, so the words aren't squeezed into thin columns.)
+	local cols = math.clamp(math.floor((w - 48) / 200), 1, 3)
+	-- (Room for a tile's name beside its icon: a step smaller where it's long, on two lines where
+	-- it's longer still; never cut short, on any screen.)
+	local nameRoom = math.floor((w - 48 - 6) / cols) - 8 - 72
 	local grid = Instance.new("UIGridLayout")
 	grid.CellSize = UDim2.new(1 / cols, -8, 0, 100)
 	grid.CellPadding = UDim2.fromOffset(8, 8)
@@ -100,21 +105,28 @@ function MenuPanel.open()
 			g.TextColor3 = C.lightGold
 			g.Parent = chip
 		end
+		local titleSize = 16
+		while titleSize > 13 and Theme.measure(tile.title, titleSize, Brand.Fonts.bodyBold).X > nameRoom do
+			titleSize -= 1
+		end
+		local twoLines = Theme.measure(tile.title, titleSize, Brand.Fonts.bodyBold).X > nameRoom
 		local t = Instance.new("TextLabel")
 		t.Name = "Title"
 		t.BackgroundTransparency = 1
-		t.Position = UDim2.fromOffset(64, 16)
-		t.Size = UDim2.new(1, -72, 0, 22)
+		t.Position = UDim2.fromOffset(64, if twoLines then 8 else 16)
+		t.Size = UDim2.new(1, -72, 0, if twoLines then 36 else 22)
 		t.Text = tile.title
+		t.TextWrapped = twoLines
 		t.TextXAlignment = Enum.TextXAlignment.Left
+		t.TextYAlignment = Enum.TextYAlignment.Top
 		t.FontFace = Brand.Fonts.bodyBold
-		t.TextSize = 16
+		t.TextSize = titleSize
 		t.TextColor3 = C.bone
 		t.Parent = b
 		local l = Instance.new("TextLabel")
 		l.BackgroundTransparency = 1
-		l.Position = UDim2.fromOffset(64, 40)
-		l.Size = UDim2.new(1, -72, 0, 52)
+		l.Position = UDim2.fromOffset(64, if twoLines then 46 else 40)
+		l.Size = UDim2.new(1, -72, 0, if twoLines then 46 else 52)
 		l.Text = tile.line
 		l.TextWrapped = true
 		l.TextTruncate = Enum.TextTruncate.AtEnd

@@ -98,7 +98,12 @@ local function tile(parent: Instance, step: number, p: Evenings.Present, state: 
 	edge.Transparency = if state == "later" then 0.55 else 0.15
 	edge.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 	edge.Parent = f
-	local day = Theme.text(f, if state == "today" then "Tonight" else "Evening " .. step, 11, "caps", {
+	-- (Its name: "Evening 3", or "Day 3" where the tile is too narrow for it, as on a phone.)
+	local dayName = if state == "today" then "Tonight" else "Evening " .. step
+	if state ~= "today" and Theme.measure(string.upper(dayName), 11, Brand.Fonts.bodyBold).X * 1.15 > w - 6 then
+		dayName = "Day " .. step
+	end
+	local day = Theme.text(f, dayName, 11, "caps", {
 		Position = UDim2.fromOffset(0, 8),
 		Size = UDim2.new(1, 0, 0, 14),
 		AutomaticSize = Enum.AutomaticSize.None,

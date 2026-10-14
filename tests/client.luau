@@ -21,6 +21,21 @@ local process = require("@lune/process")
 local MODE = process.args[1] or "full"
 
 local Instance, Vector3, Vector2 = roblox.Instance, roblox.Vector3, roblox.Vector2
+-- The device to play as, for snapshots on every screen size: `lune run tests/client.luau full
+-- <folder> phone` (a touch screen of its size; the checks are written for the desktop, so expect
+-- a few to read as failed there).
+-- (A global, not a local: the test runs at Luau's limit of 200 locals in one function.)
+DEVICE = (function()
+	local devices = {
+		desktop = { size = Vector2.new(1280, 720), touch = false },
+		laptop = { size = Vector2.new(1366, 768), touch = false },
+		["phone-small"] = { size = Vector2.new(667, 375), touch = true },
+		phone = { size = Vector2.new(844, 390), touch = true },
+		["phone-big"] = { size = Vector2.new(932, 430), touch = true },
+		tablet = { size = Vector2.new(1180, 820), touch = true },
+	}
+	return devices[process.args[3] or "desktop"] or devices.desktop
+end)()
 
 -- Lune 0.10's CFrame.lookAt faces away from its target (see tests/smoke.luau).
 local function lookAt(at, target, up)
@@ -397,7 +412,7 @@ local workspace = game:GetService("Workspace")
 local camera = Instance.new("Camera")
 camera.Parent = workspace
 workspace.CurrentCamera = camera
-camera.ViewportSize = Vector2.new(1280, 720)
+camera.ViewportSize = DEVICE.size
 camera.FieldOfView = 70
 camera.CFrame = CFrame.new(0, 10, -60)
 
@@ -620,11 +635,11 @@ local Players = {
 
 local keysDown = {}
 local UserInputService = {
-	TouchEnabled = false,
-	KeyboardEnabled = true,
-	MouseEnabled = true,
+	TouchEnabled = DEVICE.touch,
+	KeyboardEnabled = not DEVICE.touch,
+	MouseEnabled = not DEVICE.touch,
 	GamepadEnabled = false,
-	PreferredInput = EnumShim.PreferredInput.KeyboardAndMouse,
+	PreferredInput = if DEVICE.touch then EnumShim.PreferredInput.Touch else EnumShim.PreferredInput.KeyboardAndMouse,
 	InputBegan = signal(),
 	InputChanged = signal(),
 	InputEnded = signal(),
@@ -1638,7 +1653,7 @@ do
 	snapshot("welcome-phone")
 	State.settings.movement = movement
 	advance(6)
-	camera.ViewportSize = Vector2.new(1280, 720)
+	camera.ViewportSize = DEVICE.size
 	signalOf(camera, "prop:ViewportSize"):Fire()
 	advance(0.5)
 	check("no errors in the welcome", #errors == 0, errors[1])
@@ -1886,7 +1901,7 @@ end
 -- Drags a piece to a case with the mouse and lets go. Returns where the piece was just after the
 -- pointer moved, where it was a moment later, whether the case lit up, and where the pointer was.
 function Sort.drag(uid, caseId)
-	UserInputService.PreferredInput = EnumShim.PreferredInput.KeyboardAndMouse
+	UserInputService.PreferredInput = if DEVICE.touch then EnumShim.PreferredInput.Touch else EnumShim.PreferredInput.KeyboardAndMouse
 	local card = Sort.card(uid)
 	local from = Sort.centre(card)
 	local to = Sort.centre(Sort.bin(caseId))
@@ -2040,7 +2055,7 @@ if MODE == "full" then
 	end
 	check("and no words on it are smaller than 12 pixels", smallest >= 12, smallest)
 	snapshot("sort-laptop")
-	camera.ViewportSize = Vector2.new(1280, 720)
+	camera.ViewportSize = DEVICE.size
 	signalOf(camera, "prop:ViewportSize"):Fire()
 	advance(0.1)
 end
@@ -2909,7 +2924,7 @@ check("no errors in the Ballroom", #errors == 0, errors[1])
 ---------------------------------------------------------------------------------------------------
 -- 7. The panels
 ---------------------------------------------------------------------------------------------------
-UserInputService.PreferredInput = EnumShim.PreferredInput.KeyboardAndMouse
+UserInputService.PreferredInput = if DEVICE.touch then EnumShim.PreferredInput.Touch else EnumShim.PreferredInput.KeyboardAndMouse
 check("Settings opens", press("Settings"))
 advance(1)
 snapshot("settings")
@@ -3328,7 +3343,7 @@ if MODE == "full" then
 	signalOf(camera, "prop:ViewportSize"):Fire()
 	advance(0.1)
 	snapshot("suite-laptop")
-	camera.ViewportSize = Vector2.new(1280, 720)
+	camera.ViewportSize = DEVICE.size
 	signalOf(camera, "prop:ViewportSize"):Fire()
 	advance(0.1)
 end
@@ -4209,6 +4224,25 @@ do
 	RootUI.close()
 	advance(0.5)
 	check("...and back when it's closed", booster.Visible == true)
+	-- On a phone it stands above Roblox's jump button, in screen pixels whatever the HUD's scale
+	-- (a small screen's button reaches 90 px up): never on it.
+	local preferred = UserInputService.PreferredInput
+	UserInputService.PreferredInput = EnumShim.PreferredInput.Touch
+	camera.ViewportSize = Vector2.new(844, 390)
+	signalOf(camera, "prop:ViewportSize"):Fire()
+	advance(0.5)
+	local liftPx = -booster.Position.Y.Offset * RootUI.scale
+	check("on a phone it stands clear above the jump button, not on it", liftPx >= 90 + 10, liftPx)
+	camera.ViewportSize = Vector2.new(2000, 921)
+	signalOf(camera, "prop:ViewportSize"):Fire()
+	advance(0.5)
+	liftPx = -booster.Position.Y.Offset * RootUI.scale
+	check("...and on a bigger phone, above its bigger button (210 px up)", liftPx >= 210 + 10, liftPx)
+	UserInputService.PreferredInput = preferred
+	camera.ViewportSize = DEVICE.size
+	signalOf(camera, "prop:ViewportSize"):Fire()
+	advance(0.5)
+	check("...and back in its corner with a mouse", booster.Position.Y.Offset == -18)
 	serverSays("Guest", { op = "friends", friends = {}, gilt = 1, xp = 1 })
 	advance(0.3)
 	check("when they've gone, it's the invitation again", FriendBooster.count() == 0 and textOnScreen("+35% GILT") == nil)
@@ -4498,6 +4532,58 @@ do
 	snapshot("dock-trade")
 	Root2.close()
 	advance(0.5)
+	local QuickDockM = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "QuickDock")
+	local StateM = module("StarterPlayer", "StarterPlayerScripts", "Client", "State")
+	local SortScreenM = module("StarterPlayer", "StarterPlayerScripts", "Client", "Table", "SortScreen")
+	local dockFrame = dockKeys.Gems and dockKeys.Gems.Parent.Parent
+	local booster = find(playerGui, function(d)
+		return d.Name == "FriendBooster" and d:IsA("Frame") and d.Parent and d.Parent.Name == "MaisonHud"
+	end)
+	-- The sorting screen up, though the table's word never reached the dock (a phone that sat down
+	-- before the keys were ready): it still steps aside, and so does the Friend Booster.
+	QuickDockM.setSeated(false)
+	SortScreenM.open("THE SALON", "")
+	advance(0.5)
+	check("the dock steps aside whenever the sorting screen is up, even without the table's word", dockFrame ~= nil and dockFrame.Visible == false)
+	check("...and so does the Friend Booster", booster ~= nil and booster.Visible == false)
+	SortScreenM.close()
+	advance(1.5)
+	check("...and both come back when it closes", dockFrame ~= nil and dockFrame.Visible == true and booster ~= nil and booster.Visible == true)
+	-- Folding it away: the ‹ key beside it, and the KEYS › tab to bring it back.
+	local foldKey = find(playerGui, function(d)
+		return d.Name == "DockFold" and d:IsA("TextButton")
+	end)
+	local unfoldTab = find(playerGui, function(d)
+		return d.Name == "DockUnfold" and d:IsA("TextButton")
+	end)
+	check("the dock has a ‹ key to fold it away", foldKey ~= nil and foldKey.Visible == true and unfoldTab ~= nil and unfoldTab.Visible == false)
+	if foldKey then
+		signalOf(foldKey, "Activated"):Fire()
+	end
+	advance(0.5)
+	check("folded: the keys go, a small KEYS › tab stays, and it's remembered", dockFrame ~= nil and dockFrame.Visible == false and unfoldTab ~= nil and unfoldTab.Visible == true and StateM.get("sideKeys") == "Hidden")
+	-- The event keys never fold away: Watch the fireworks, and the holiday's key.
+	QuickDockM.setWatch(true, false)
+	QuickDockM.setHoliday("🦃", "Turkeys", nil)
+	advance(0.5)
+	local events = find(playerGui, function(d)
+		return d.Name == "DockEvents" and d:IsA("Frame")
+	end)
+	check("folded: the event keys (Watch, the holiday's) still show, under the tab", events ~= nil and events.Visible == true and events:FindFirstChild("Watch") ~= nil and events:FindFirstChild("Turkeys") ~= nil)
+	snapshot("dock-folded")
+	SortScreenM.open("THE SALON", "")
+	advance(0.5)
+	check("...and step aside at the table like the rest", events ~= nil and events.Visible == false and unfoldTab ~= nil and unfoldTab.Visible == false)
+	SortScreenM.close()
+	advance(1.5)
+	if unfoldTab then
+		signalOf(unfoldTab, "Activated"):Fire()
+	end
+	advance(0.5)
+	check("KEYS › brings them all back, the event keys at the foot of the dock again", dockFrame ~= nil and dockFrame.Visible == true and unfoldTab ~= nil and unfoldTab.Visible == false and dockFrame:FindFirstChild("Watch") ~= nil and dockFrame:FindFirstChild("Turkeys") ~= nil and StateM.get("sideKeys") == "Shown")
+	QuickDockM.setWatch(false)
+	QuickDockM.setHoliday(nil, nil)
+	advance(0.3)
 	check("no errors at the dock", #errors == 0, errors[1])
 end
 
@@ -6485,7 +6571,7 @@ end
 	signalOf(camera, "prop:ViewportSize"):Fire()
 	advance(0.5)
 	snapshot("gifts-phone")
-	camera.ViewportSize = Vector2.new(1280, 720)
+	camera.ViewportSize = DEVICE.size
 	signalOf(camera, "prop:ViewportSize"):Fire()
 	advance(0.5)
 	press("Close")

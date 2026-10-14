@@ -10,8 +10,9 @@
 --   seconds (tap it to open it again), and opens by itself, lit up, when a friend arrives.
 -- It steps aside while the guest sorts at a table, has a panel open, is in photo mode or on the
 -- title, and while the Concierge is speaking on a narrow screen. On a touch screen it sits above
--- Roblox's jump button.
+-- Roblox's jump button (measured where it stands, never under the thumb that jumps).
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
@@ -141,17 +142,45 @@ local function face(parent: Instance, f: Friend, size: number, order: number): F
 	return ring
 end
 
--- Where it sits: the bottom-right corner, above Roblox's jump button on a touch screen.
+-- How far the top of Roblox's jump button stands above the foot of the screen, in screen pixels,
+-- measured where it is (nil where no jump button is showing).
+local function jumpTop(): number?
+	local ok, top = pcall(function(): number?
+		local player = Players.LocalPlayer
+		local gui = player and player:FindFirstChild("PlayerGui")
+		local touch = gui and gui:FindFirstChild("TouchGui")
+		if not touch or not touch:IsA("ScreenGui") or not touch.Enabled then
+			return nil
+		end
+		local button = touch:FindFirstChild("JumpButton", true)
+		if not button or not button:IsA("GuiObject") or not button.Visible then
+			return nil
+		end
+		local foot = touch.AbsolutePosition.Y + touch.AbsoluteSize.Y
+		local above = foot - button.AbsolutePosition.Y
+		if above <= 0 or above > touch.AbsoluteSize.Y then
+			return nil
+		end
+		return above
+	end)
+	return if ok then top else nil
+end
+
+-- Where it sits: the bottom-right corner; on a touch screen, above Roblox's jump button. (The
+-- button is measured in screen pixels and this card in the HUD's own units, which are smaller on a
+-- phone: turned into the HUD's units, with a little air between.) Where the button can't be
+-- measured, Roblox's own layout: a 70-pixel button 90 pixels up on a small screen, else a
+-- 120-pixel one 210 up.
 local function place()
 	local h = holder
 	if not h then
 		return
 	end
-	local camera = Workspace.CurrentCamera
-	local vp = if camera then camera.ViewportSize else Vector2.new(1280, 720)
 	local up = 18
 	if State.inputKind() == "touch" then
-		up = if math.min(vp.X, vp.Y) < 500 then 112 else 232
+		local vp = Root.viewport()
+		local px = jumpTop() or (if math.min(vp.X, vp.Y) <= 500 then 90 else 210)
+		up = math.max(18, math.ceil((px + 14) / math.max(0.1, Root.scale)))
 	end
 	h.Position = UDim2.new(1, -16, 1, -up)
 end
@@ -685,6 +714,8 @@ function FriendBooster.start()
 		acc += dt
 		if acc >= 0.25 then
 			acc = 0
+			-- (And where the jump button stands now: it comes and goes with the character.)
+			place()
 			refreshVisible()
 		end
 	end)

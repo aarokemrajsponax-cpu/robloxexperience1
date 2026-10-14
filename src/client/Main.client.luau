@@ -280,6 +280,9 @@ start("Curios", function()
 	QuickDock.isSeated = function(): boolean
 		return TableClient.isSeated() or Root.isOpen()
 	end
+	QuickDock.isSorting = function(): boolean
+		return TableClient.isSeated() or SortScreen.isOpen()
+	end
 	QuickDock.start()
 	-- The key to watch a fireworks show stands at the foot of the dock, under Invite.
 	local Fireworks = require(script.Parent.World.Fireworks)
@@ -383,7 +386,7 @@ start("Perks", function()
 	PianoPanel.start()
 	-- (The keys run the width of the screen: the dock steps aside while they're up.)
 	PianoPanel.onPlaying = function(on: boolean)
-		require(script.Parent.UI.QuickDock).setSeated(on)
+		require(script.Parent.UI.QuickDock).setPiano(on)
 	end
 	PerkChips.start()
 end)
@@ -763,7 +766,7 @@ PhotoMode.canEnter = function()
 end
 -- (The Friend Booster steps aside for the title and for photo mode too.)
 FriendBooster.isBusy = function(): boolean
-	return State.phase ~= "play" or PhotoMode.isActive()
+	return State.phase ~= "play" or PhotoMode.isActive() or TableClient.isSeated() or SortScreen.isOpen()
 end
 PhotoMode.onEnter = function()
 	setControls(false)

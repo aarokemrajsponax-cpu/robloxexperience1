@@ -4,6 +4,6 @@
 -- see whether Studio has the latest code from GitHub.
 
 return {
-	number = 62,
-	label = "Build 62 · 13 Oct · hype Admin Abuse, the Evening Calendar, anti-cheat, badges that point the way",
+	number = 63,
+	label = "Build 63 · 14 Oct · phones first: a smaller dock that folds away and never covers the table, Friend Boost clear of jump",
 }

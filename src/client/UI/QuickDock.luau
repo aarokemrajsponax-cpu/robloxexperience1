@@ -4,10 +4,13 @@
 -- Suites (your own, or a friend's: friends on Roblox may visit each other's), and Invite (Roblox's
 -- invite prompt, to bring a friend). Big enough to read at a glance on a phone.
 -- Trade opens a short list of everyone in the house, each with a Trade key, and your past trades.
--- It steps aside while you sort at a table.
+-- It steps aside while you sort at a table (looked at four times a second as well, so it's never
+-- left over the cloth), and folds away for good with the ‹ key at its corner or Settings → Keys
+-- down the left (a small KEYS › tab brings it back). On a phone its keys are smaller.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
 local Names = require(ReplicatedStorage.Shared.Names)
@@ -16,6 +19,7 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Icons = require(script.Parent.Icons)
 local Root = require(script.Parent.Root)
 local Theme = require(script.Parent.Theme)
+local State = require(script.Parent.Parent.State)
 
 local QuickDock = {}
 
@@ -31,6 +35,10 @@ QuickDock.openGems = function() end
 QuickDock.inviteFriend = function() end
 QuickDock.invite = function(_userId: number, _name: string) end
 QuickDock.isSeated = function(): boolean
+	return false
+end
+-- Set by Main: whether the guest is sorting (at a table, or the sorting screen is up).
+QuickDock.isSorting = function(): boolean
 	return false
 end
 
@@ -315,17 +323,28 @@ local function tile(parent: Instance, order: number, glyph: string, label: strin
 	name.Position = UDim2.new(0.5, 0, 1, -math.floor(SIZE * 0.1))
 	name.Size = UDim2.new(1, -10, 0, math.floor(SIZE * 0.22))
 	name.FontFace = Brand.Fonts.bodyBold
-	-- (Scaled to fit the key's foot, and never cut short.)
-	name.TextScaled = true
 	name.TextWrapped = false
 	name.TextColor3 = Color3.fromRGB(238, 240, 246)
 	name.TextStrokeTransparency = 1
 	name.Text = label
 	name.ZIndex = 5
-	local nameFit = Instance.new("UITextSizeConstraint")
-	nameFit.MaxTextSize = math.max(11, math.floor(SIZE * 0.19))
-	nameFit.MinTextSize = 1
-	nameFit.Parent = name
+	if UserInputService.TouchEnabled then
+		-- (On a phone the keys are small: the name at a set size you can read, a step smaller
+		-- only if it wouldn't fit the key.)
+		name.TextScaled = false
+		local px = math.max(10, math.floor(SIZE * 0.2))
+		while px > 8 and Theme.measure(label, px, Brand.Fonts.bodyBold).X > keyWidth() - 8 do
+			px -= 1
+		end
+		name.TextSize = px
+	else
+		-- (Scaled to fit the key's foot, and never cut short.)
+		name.TextScaled = true
+		local nameFit = Instance.new("UITextSizeConstraint")
+		nameFit.MaxTextSize = math.max(11, math.floor(SIZE * 0.19))
+		nameFit.MinTextSize = 1
+		nameFit.Parent = name
+	end
 	name.Parent = b
 	-- The bar of the key's colour along its foot.
 	local underline = Instance.new("Frame")
@@ -437,6 +456,8 @@ local watchKey: TextButton? = nil
 local holidayTile: Frame? = nil
 local holidaySpec: string? = nil
 local COLUMNS = 2
+-- (Defined below, with the dock's folding away: called whenever a key comes or goes.)
+local refreshVisible: () -> ()
 
 -- The dock's size for `n` keys, two by two.
 local function dockSize(n: number): UDim2
@@ -470,6 +491,7 @@ function QuickDock.setWatch(show: boolean, watching: boolean?)
 			t:Destroy()
 		end
 		f.Size = dockSize(keyCount())
+		refreshVisible()
 		return
 	end
 	if not watchKey then
@@ -479,6 +501,7 @@ function QuickDock.setWatch(show: boolean, watching: boolean?)
 		watchKey = k
 		watchTile = k.Parent :: Frame
 		f.Size = dockSize(keyCount())
+		refreshVisible()
 	end
 	local k = watchKey :: TextButton
 	local label = k:FindFirstChild("Label", true)
@@ -519,6 +542,7 @@ function QuickDock.setHoliday(glyph: string?, label: string?, count: number?)
 			t:Destroy()
 		end
 		f.Size = dockSize(keyCount())
+		refreshVisible()
 		return
 	end
 	local spec = glyph .. "|" .. label
@@ -533,6 +557,7 @@ function QuickDock.setHoliday(glyph: string?, label: string?, count: number?)
 		holidayTile = k.Parent :: Frame
 		holidaySpec = spec
 		f.Size = dockSize(keyCount())
+		refreshVisible()
 	end
 	local holder = holidayTile :: Frame
 	local bubble = holder:FindFirstChild("Count") :: TextLabel?
@@ -566,14 +591,88 @@ function QuickDock.setHoliday(glyph: string?, label: string?, count: number?)
 	end
 end
 
--- Out of the way while sorting, and while a panel is open (a panel is the whole of what the guest
--- is doing then: the keys come back the moment it closes, and never sit under its glass).
+-- Folded away (Settings → Keys down the left, or the ‹ key at the dock's corner): a small KEYS ›
+-- tab stands where the dock was, and brings it back. The event keys never fold away (Watch the
+-- fireworks, and the holiday's: the Sleigh, Turkeys, Treats, Gifts, Eggs, Home): while the rest is
+-- folded they stand under the tab, so what's on in the house is always one tap away.
+local foldKey: TextButton? = nil -- the ‹ beside the dock's top corner
+local unfoldTab: TextButton? = nil -- KEYS ›, while it's folded away
+local special: Frame? = nil -- the event keys' place under the tab, while the rest is folded
+local TOP = 74
+
+local function folded(): boolean
+	return State.get("sideKeys") == "Hidden"
+end
+
+-- A small round key in the house's dark glass and gold: `text` on it, `width` wide.
+local function smallKey(name: string, text: string, width: number, height: number, onPress: () -> ()): TextButton
+	local k = Instance.new("TextButton")
+	k.Name = name
+	k.AutoButtonColor = false
+	k.Size = UDim2.fromOffset(width, height)
+	k.BackgroundColor3 = Color3.fromRGB(14, 14, 18)
+	k.BackgroundTransparency = 0.08
+	k.FontFace = Brand.Fonts.heavy
+	k.TextSize = math.floor(height * 0.46)
+	k.TextColor3 = C.lightGold
+	k.Text = text
+	k.ZIndex = 6
+	local kc = Instance.new("UICorner")
+	kc.CornerRadius = UDim.new(1, 0)
+	kc.Parent = k
+	local ks = Instance.new("UIStroke")
+	ks.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	ks.Color = C.gold
+	ks.Transparency = 0.25
+	ks.Thickness = 1.25
+	ks.Parent = k
+	k.Activated:Connect(function()
+		Theme.haptic()
+		onPress()
+	end)
+	k.Parent = Root.hud
+	return k
+end
+
+-- Out of the way while sorting, while the piano's keys are up, and while a panel is open (a panel
+-- is the whole of what the guest is doing then: the keys come back the moment it closes, and
+-- never sit under its glass). And folded away, if the guest put it away.
 local seatedNow = false
-local function refreshVisible()
-	local f = dock
-	if f then
-		f.Visible = not seatedNow and not Root.isOpen()
+local pianoNow = false
+local function rehome(t: Frame?, home: Instance)
+	if t and t.Parent ~= home then
+		t.Parent = home
 	end
+end
+refreshVisible = function()
+	local f = dock
+	if not f then
+		return
+	end
+	local ok, sorting = pcall(QuickDock.isSorting)
+	local away = seatedNow or pianoNow or Root.isOpen() or (ok and sorting == true)
+	local fold = folded()
+	f.Visible = not away and not fold
+	local k = foldKey
+	if k then
+		k.Visible = not away and not fold
+	end
+	local t = unfoldTab
+	if t then
+		t.Visible = not away and fold
+	end
+	-- (The event keys: in the dock, or under the tab while the rest is folded away.)
+	local s = special
+	local home: Instance = if fold and s then s else f
+	rehome(watchTile, home)
+	rehome(holidayTile, home)
+	if s then
+		s.Visible = not away and fold
+	end
+	-- (Centred panels and the big moments keep clear of what's down the left: the whole dock, or
+	-- only the tab and the event keys while it's folded away.)
+	local events = watchTile ~= nil or holidayTile ~= nil
+	Root.left = if fold and t then 16 + math.max(t.Size.X.Offset, if events then keyWidth() else 0) else QuickDock.right()
 end
 
 function QuickDock.setSeated(seated: boolean)
@@ -581,16 +680,27 @@ function QuickDock.setSeated(seated: boolean)
 	refreshVisible()
 end
 
+-- The piano's keyboard runs the width of the screen: the dock steps aside while it's up.
+function QuickDock.setPiano(on: boolean)
+	pianoNow = on
+	refreshVisible()
+end
+
+function QuickDock.isFolded(): boolean
+	return folded()
+end
+
 function QuickDock.start()
-	-- Down the left, starting under the Gilt bar, two by two, big (bigger still on a phone, where
-	-- everything is drawn smaller), with room for a seventh key (Watch, during a fireworks show)
-	-- and clear of the thumbstick.
+	-- Down the left, starting under the Gilt bar, two by two, with room for a seventh key (Watch,
+	-- during a fireworks show) and clear of the thumbstick. On a phone the keys are smaller: the
+	-- screen is small, and the table and the room come first.
+	local touch = UserInputService.TouchEnabled
 	local h = Root.size().Y
-	local top = 74
+	local top = TOP
 	local room = h - top - 24
-	local most = if UserInputService.TouchEnabled then 100 else 88
-	GAP = 10
-	SIZE = math.clamp(math.floor((room - 3 * GAP) / 4), 56, most)
+	local most = if touch then 64 else 88
+	GAP = if touch then 8 else 10
+	SIZE = math.clamp(math.floor((room - 3 * GAP) / 4), if touch then 48 else 56, most)
 	-- (How far right the dock reaches, once its keys have their size: centred panels and the
 	-- big moments keep clear of it.)
 	Root.left = QuickDock.right()
@@ -623,7 +733,51 @@ function QuickDock.start()
 		QuickDock.inviteFriend()
 	end)
 	dock = f
+	-- The ‹ key just right of the dock's top corner (clear of the T key's chip), and the KEYS ›
+	-- tab where the dock begins, for while it's folded away. Bigger to the touch on a phone.
+	local side = if touch then 40 else 30
+	local fk = smallKey("DockFold", "‹", side, side, function()
+		State.set("sideKeys", "Hidden")
+		refreshVisible()
+	end)
+	fk.Position = UDim2.fromOffset(QuickDock.right() + 8, top)
+	foldKey = fk
+	local tabHeight = if touch then 40 else 32
+	local tabText = "KEYS  ›"
+	local tabSize = math.floor(tabHeight * 0.4)
+	local ut = smallKey("DockUnfold", tabText, Theme.measure(tabText, tabSize, Brand.Fonts.heavy).X + 28, tabHeight, function()
+		State.set("sideKeys", "Shown")
+		refreshVisible()
+	end)
+	ut.TextSize = tabSize
+	ut.Position = UDim2.fromOffset(16, top)
+	unfoldTab = ut
+	local sp = Instance.new("Frame")
+	sp.Name = "DockEvents"
+	sp.BackgroundTransparency = 1
+	sp.Position = UDim2.fromOffset(16, top + tabHeight + GAP)
+	sp.Size = UDim2.fromOffset(keyWidth(), 2 * SIZE + GAP)
+	sp.Visible = false
+	sp.Parent = Root.hud
+	local spList = Instance.new("UIListLayout")
+	spList.Padding = UDim.new(0, GAP)
+	spList.SortOrder = Enum.SortOrder.LayoutOrder
+	spList.Parent = sp
+	special = sp
 	Root.PanelsChanged:Connect(refreshVisible)
+	State.watch("sideKeys", function()
+		refreshVisible()
+	end)
+	-- (Sitting down, the sorting screen, a panel: the table says so, and a look four times a second
+	-- makes sure, so nothing that starts late or misses a word leaves the keys over the cloth.)
+	local acc = 0
+	RunService.Heartbeat:Connect(function(dt: number)
+		acc += dt
+		if acc >= 0.25 then
+			acc = 0
+			refreshVisible()
+		end
+	end)
 	-- (What stands beside the dock, the perk chips, starts just right of it.)
 	local chips = Root.hud:FindFirstChild("PerkChips")
 	if chips and chips:IsA("Frame") then

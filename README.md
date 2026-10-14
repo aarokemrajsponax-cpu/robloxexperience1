@@ -377,6 +377,27 @@ a Nightly attempt or a Mythic's odds.
 - **The launch kit**: page text, icon, thumbnails and the gameplay video's shot list are in
   [`LAUNCH.md`](LAUNCH.md).
 
+## Build 63 — what's new (phones, tablets and every screen)
+
+- **The keys down the left, smaller on a phone.** Collection, Trade, Wardrobe, Gems, Suites and
+  Invite take about half the room they did, with names you can read.
+- **Fold them away.** The small **‹** key beside them (or **Settings → Keys down the left**)
+  hides them, and it's remembered; a small **KEYS ›** tab brings them back. The event keys never
+  hide: **Watch** the fireworks, and the holiday's (the Sleigh, Turkeys, Treats, Gifts, Eggs,
+  Home) stay on screen under the tab.
+- **Never over the table.** The keys and the Friend Boost step aside whenever the sorting screen is
+  up: they now look for themselves four times a second, so nothing can leave them lying across
+  the cloth (they could on a phone that sat down before the keys were ready).
+- **Friend Boost clear of the jump button.** On a phone or tablet it stands above Roblox's jump
+  button, measured where the button really is (the old spot mixed up screen pixels and the UI's
+  own, smaller units, so it sat on the button).
+- **Every screen checked.** The client tests now run as a small phone, a phone, a big phone, a
+  tablet, a laptop and a desktop (`lune run tests/client.luau full <folder> phone`), and what they
+  showed is fixed: pieces on the sorting cloth never pile up on a small screen (they may sit over
+  the line of instructions rather than on each other), the Menu's names are never cut off (a step
+  smaller, or two lines; two columns on a tablet), and the Evening Calendar says *Day 3* where
+  *Evening 3* won't fit.
+
 ## Build 62 — what's new
 
 - **Admin and Mega Abuse, bigger and cleaner.** Heavy bold titles with a gold and hot-pink shine

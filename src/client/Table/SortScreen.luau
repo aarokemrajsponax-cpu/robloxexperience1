@@ -1555,18 +1555,22 @@ local function arrange(all: boolean): boolean
 		end
 		local rng = Random.new(dealCount * 7919 + c.info.uid * 104729)
 		local best, bestScore = Vector2.new((x0 + x1) / 2, (y0 + y1) / 2), -math.huge
-		for _ = 1, 48 do
+		for _ = 1, 120 do
 			local p = Vector2.new(rng:NextNumber(x0, x1), rng:NextNumber(y0, y1))
 			local d = 4 * t.w
 			for _, q in placed do
 				d = math.min(d, (p - q).Magnitude)
 			end
+			-- (Clear of the hint where there's room; over it rather than on another piece where there
+			-- isn't, as on a phone, where the hint takes most of the cloth: a spot over the hint counts
+			-- only for being clear of the others, never for being far from them.)
 			local o = p - hintCentre
+			local score = d + icon * 0.1
 			if math.abs(o.X) < hintHalf.X and math.abs(o.Y) < hintHalf.Y then
-				d *= 0.05
+				score = math.min(d, icon * 1.15)
 			end
-			if d > bestScore then
-				best, bestScore = p, d
+			if score > bestScore then
+				best, bestScore = p, score
 			end
 		end
 		c.home = best
