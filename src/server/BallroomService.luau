@@ -65,6 +65,8 @@ type SeatState = {
 	carry: number,
 	fumbleUntil: number,
 	lastFileAt: number,
+	fileQueue: number, -- filings that landed together, waiting their turn (FairPlay.minGap apart)
+	fileQueueAt: number,
 	waiting: { Parcel },
 	lastSender: number?,
 	lastHitBy: number?,
@@ -310,6 +312,8 @@ local function resetSeat(s: SeatState)
 	s.carry = 0
 	s.fumbleUntil = 0
 	s.lastFileAt = 0
+	s.fileQueue = 0
+	s.fileQueueAt = 0
 	s.waiting = {}
 	s.lastSender = nil
 	s.lastHitBy = nil
@@ -498,7 +502,10 @@ local function openParcels(e: Evening, s: SeatState, now: number)
 	end
 end
 
-local function file(e: Evening, s: SeatState, uid: number, caseId: string)
+-- At most this many filings wait their turn at once; a flood beyond it is turned away.
+local FILE_QUEUE = 6
+
+local function file(e: Evening, s: SeatState, uid: number, caseId: string, queued: boolean?)
 	if e.state ~= "playing" or not s.alive then
 		return
 	end
@@ -507,9 +514,28 @@ local function file(e: Evening, s: SeatState, uid: number, caseId: string)
 		return
 	end
 	local now = os.clock()
-	if now < s.fumbleUntil or (s.player and now - s.lastFileAt < Config.data.FairPlay.minGap) then
+	if now < s.fumbleUntil then
 		send(s.player, { op = "rejected", uid = uid })
 		return
+	end
+	if s.player and not queued then
+		-- Filings that land together are taken in turn, the minimum gap apart, rather than turned
+		-- away (a piece sorted right never jumps back out); a flood beyond a few is refused.
+		local gap = Config.data.FairPlay.minGap
+		local due = math.max(s.lastFileAt + gap, s.fileQueueAt)
+		if due > now then
+			if s.fileQueue >= FILE_QUEUE then
+				send(s.player, { op = "rejected", uid = uid })
+				return
+			end
+			s.fileQueue += 1
+			s.fileQueueAt = due + gap
+			task.delay(due - now, function()
+				s.fileQueue -= 1
+				file(e, s, uid, caseId, true)
+			end)
+			return
+		end
 	end
 	s.lastFileAt = now
 	s.filings += 1
@@ -1325,6 +1351,8 @@ function BallroomService.start(isSeatedElsewhere: (Player) -> boolean)
 					carry = 0,
 					fumbleUntil = 0,
 					lastFileAt = 0,
+					fileQueue = 0,
+					fileQueueAt = 0,
 					waiting = {},
 					lastSender = nil,
 					lastHitBy = nil,

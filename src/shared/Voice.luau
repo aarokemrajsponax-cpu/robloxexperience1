@@ -365,10 +365,28 @@ function Voice.fill(line: string, values: { [string]: string }): string
 end
 
 -- Roman numerals for round cards.
+-- Roman numerals as far as they go (MMMCMXCIX); a run that goes further counts in figures.
 function Voice.roman(n: number): string
-	local numerals: { { any } } = { { 10, "X" }, { 9, "IX" }, { 5, "V" }, { 4, "IV" }, { 1, "I" } }
+	local numerals: { { any } } = {
+		{ 1000, "M" },
+		{ 900, "CM" },
+		{ 500, "D" },
+		{ 400, "CD" },
+		{ 100, "C" },
+		{ 90, "XC" },
+		{ 50, "L" },
+		{ 40, "XL" },
+		{ 10, "X" },
+		{ 9, "IX" },
+		{ 5, "V" },
+		{ 4, "IV" },
+		{ 1, "I" },
+	}
 	local out = ""
 	local value = math.max(1, math.floor(n))
+	if value >= 4000 then
+		return tostring(value)
+	end
 	for _, pair in numerals do
 		while value >= pair[1] do
 			out ..= pair[2]

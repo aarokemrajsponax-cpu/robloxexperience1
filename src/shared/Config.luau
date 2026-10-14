@@ -729,6 +729,8 @@ local defaults = {
 	},
 
 	FairPlay = {
+		-- The least time between two filings the server takes. Filings that land closer together
+		-- (sorted quickly, or a burst after a lag spike) wait their turn rather than bounce back.
 		minGap = 0.12,
 		flagAverage = 0.30,
 		flagAverageAfter = 40,

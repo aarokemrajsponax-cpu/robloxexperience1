@@ -2555,6 +2555,100 @@ do
 	check("a mouse drag lifts the piece", sentOps("Table", "lift") > liftsBeforeDrag)
 	check("letting go over its case files it", sentOps("Table", "file") == filesBefore + 1 and dropped.uid == 1 and dropped.case == first.case, dropped and string.format("uid %s case %s want %s", tostring(dropped.uid), dropped.case, first.case))
 end
+-- A message that never lands never leaves a table stuck (AJKR's Salon froze after round XIX: the
+-- server never heard one filing, so its round never ended while the screen said 0 pieces left).
+do
+	local function caseCount(caseId)
+		return tonumber(Sort.bin(caseId).Count.Text) or 0
+	end
+	-- The drag above filed piece 1 and nobody answered: the table asks where things stand.
+	local syncs = sentOps("Table", "sync")
+	advance(3)
+	check("a filing with no answer: the table asks the server where things stand", sentOps("Table", "sync") == syncs + 1, sentOps("Table", "sync") - syncs)
+	-- A fresh round, every answer under the test's control: piece 1 answered, piece 2 never heard.
+	local hand = pieceList(4, cases)
+	serverSays("Table", { op = "deal", round = 3, room = "salon", mode = "room", cases = cases, pieces = hand, score = 500 })
+	advance(2)
+	Sort.drag(1, hand[1].case)
+	advance(0.3)
+	serverSays("Table", { op = "filed", uid = 1, case = hand[1].case, correct = true, points = 10, setBonus = 0, penalty = 0, score = 510, streak = 1, multiplier = 1, runLength = 1, remaining = 3 })
+	advance(0.5)
+	local before = caseCount(hand[2].case)
+	Sort.drag(2, hand[2].case)
+	advance(1)
+	check("piece 2 goes into its case (predicted)", caseCount(hand[2].case) == before + 1 and Sort.card(2).Visible == false)
+	syncs = sentOps("Table", "sync")
+	advance(2.5)
+	check("...no answer for it: the table asks", sentOps("Table", "sync") == syncs + 1, sentOps("Table", "sync") - syncs)
+	serverSays("Table", { op = "sync", state = "playing", round = 3, room = "salon", mode = "room", cases = cases, pieces = { hand[2], hand[3], hand[4] }, score = 510, streak = 1, runLength = 1, lastCase = hand[1].case, multiplier = 1, remaining = 3 })
+	advance(1)
+	check("...the server never filed it, so it comes back to the felt, and its case lets it go", Sort.card(2).Visible and caseCount(hand[2].case) == before, string.format("%s %d/%d", tostring(Sort.card(2).Visible), caseCount(hand[2].case), before))
+	check("...piece 1, which the server did file, stays in its case", Sort.card(1).Visible == false)
+	advance(3)
+	check("once it agrees with the server it stops asking", sentOps("Table", "sync") == syncs + 1, sentOps("Table", "sync") - syncs)
+	local filesBefore = sentOps("Table", "file")
+	Sort.drag(2, hand[2].case)
+	advance(0.3)
+	check("the piece can be sorted again", sentOps("Table", "file") == filesBefore + 1)
+	for i = 2, 4 do
+		serverSays("Table", { op = "filed", uid = i, case = hand[i].case, correct = true, points = 10, setBonus = 0, penalty = 0, score = 500 + i * 10, streak = i, multiplier = 1, runLength = 1, remaining = 4 - i })
+		advance(0.1)
+	end
+	local roundEnd = { op = "roundEnd", round = 3, room = "salon", mode = "room", score = 560, grade = "Polished", bestStreak = 4, bonus = { perfect = 0, streak = 20, time = 0 }, last = false }
+	serverSays("Table", roundEnd)
+	advance(3)
+	check("round III's card", textOnScreen("Next round") ~= nil)
+	-- Next round pressed, and the server never hears it: the screen asks, and sends it again.
+	local nexts = sentOps("Table", "next")
+	press("Next round")
+	advance(0.5)
+	check("Next round is sent", sentOps("Table", "next") == nexts + 1)
+	syncs = sentOps("Table", "sync")
+	advance(3)
+	check("no deal after Next round: the table asks where things stand", sentOps("Table", "sync") == syncs + 1, sentOps("Table", "sync") - syncs)
+	serverSays("Table", { op = "sync", state = "roundEnd", round = 3, score = 560, roundEnd = roundEnd })
+	advance(0.5)
+	check("...the server is still between rounds, so Next round goes again (no second press)", sentOps("Table", "next") == nexts + 2 and textOnScreen("Next round") == nil)
+	serverSays("Table", { op = "deal", round = 4, room = "salon", mode = "room", cases = cases, pieces = pieceList(10, cases), score = 560 })
+	advance(4)
+	check("round IV is dealt, and nothing more is asked", #piecesFolder:GetChildren() == 10 and sentOps("Table", "sync") == syncs + 1 and sortGui.Root.Header.Stat_ROUND.Value.Text == "IV", sortGui.Root.Header.Stat_ROUND.Value.Text)
+	-- A deal this screen never laid (the server is a round ahead): it lays the server's table.
+	serverSays("Table", { op = "sync", state = "playing", round = 5, room = "salon", mode = "room", cases = cases, pieces = pieceList(12, cases), score = 640, streak = 3, runLength = 1, multiplier = 1, remaining = 12 })
+	advance(2)
+	check("a round the screen missed is laid from the server's table", #piecesFolder:GetChildren() == 12 and sortGui.Root.Header.Stat_ROUND.Value.Text == "V", sortGui.Root.Header.Stat_ROUND.Value.Text)
+	-- Endless: long rounds and big scores fit their plaques.
+	local Theme = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "Theme")
+	local function fits(name)
+		local st = sortGui.Root.Header["Stat_" .. name]
+		local v = st.Value
+		return Theme.measure(v.Text, v.TextSize, v.FontFace).X <= st.Size.X.Offset, string.format("%s %q at %d in %d", name, v.Text, v.TextSize, st.Size.X.Offset)
+	end
+	-- (A numeral too long for its plaque at the smallest size shows in figures: XXXVIII on a phone
+	-- held sideways, where the plaques are small, reads 38; a small phone stacks them, wide enough
+	-- for CCCLXXXVIII.)
+	for _, r in { { 19, "XIX", "19" }, { 20, "XX", "20" }, { 38, "XXXVIII", "38" }, { 49, "XLIX", "49" }, { 99, "XCIX", "99" }, { 388, "CCCLXXXVIII", "388" } } do
+		serverSays("Table", { op = "deal", round = r[1], room = "salon", mode = "room", cases = cases, pieces = pieceList(17, cases), score = 12345678 })
+		advance(1)
+		local ok, why = fits("ROUND")
+		local okScore, whyScore = fits("SCORE")
+		local shown = sortGui.Root.Header.Stat_ROUND.Value.Text
+		local score = sortGui.Root.Header.Stat_SCORE.Value.Text
+		check("round " .. r[2] .. " is dealt and fits its plaque, as does a score in the millions (12,345,678, or 12.3M where it can't fit)", (shown == r[2] or shown == r[3]) and (score == "12,345,678" or score == "12.3M") and ok and okScore, why .. " · " .. whyScore)
+	end
+	-- Round 388's card, with a score in the millions: it opens, and Next round goes on.
+	serverSays("Table", { op = "roundEnd", round = 388, room = "salon", mode = "room", score = 12345678, grade = "Flawless", bestStreak = 17, bonus = { perfect = 500, streak = 300, time = 0 }, last = false })
+	advance(3)
+	check("round 388's card opens", textOnScreen("Next round") ~= nil and #errors == 0, errors[1])
+	nexts = sentOps("Table", "next")
+	press("Next round")
+	advance(0.5)
+	check("...and Next round goes on", sentOps("Table", "next") == nexts + 1)
+	serverSays("Table", { op = "deal", round = 389, room = "salon", mode = "room", cases = cases, pieces = pieceList(17, cases), score = 12345678 })
+	advance(1)
+	local shown389 = sortGui.Root.Header.Stat_ROUND.Value.Text
+	check("round 389 is dealt", #piecesFolder:GetChildren() == 17 and (shown389 == "389" or shown389 == "CCCLXXXIX"), shown389)
+	check("no errors when a message goes missing", #errors == 0, errors[1])
+end
 -- Chronos Defiance: the clock ran out (the server only says this in a timed room; the screen
 -- shows what it's told). The card counts down the server's own window.
 do
@@ -6060,6 +6154,11 @@ end
 		signalOf(folder, "ChildRemoved"):Fire(inst)
 	end
 	local function setWs(key, value)
+		-- (Lune keeps a whole-number attribute as a 32-bit float, so a server time such as
+		-- 1790003033 reads back as 1790003072; a quarter second keeps it exact, as Roblox does.)
+		if type(value) == "number" and value == math.floor(value) and math.abs(value) > 16777216 then
+			value += 0.25
+		end
 		workspace:SetAttribute(key, value)
 		signalOf(workspace, "attr:" .. key):Fire()
 	end

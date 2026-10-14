@@ -690,6 +690,19 @@ send(ada, { op = "file", uid = 99999, case = dealA.cases[1] })
 send(ada, { op = "file", uid = "x", case = 5 })
 advance(0.3)
 check("nonsense filings are ignored", #take(ada, "filed", m2) == 2)
+-- Two right filings landing together (sorted quickly, or a burst after a lag spike) are both
+-- taken, the minimum gap apart: neither bounces back out of its case.
+do
+	local m = mark(ada)
+	local pieces = felt(ada)
+	local uids = sortedUids(pieces)
+	local a, b = pieces[uids[1]], pieces[uids[2]]
+	send(ada, { op = "file", uid = a.uid, case = a.case })
+	send(ada, { op = "file", uid = b.uid, case = b.case })
+	advance(Config.data.FairPlay.minGap + 0.05)
+	local both = take(ada, "filed", m)
+	check("two right filings landing together are both taken, neither bounced back", #both == 2 and both[1].correct and both[2].correct and #take(ada, "rejected", m) == 0, #both)
+end
 
 ---------------------------------------------------------------------------------------------------
 -- 3. Parcels: a run of three sends one; defence cancels; the fuse opens the rest

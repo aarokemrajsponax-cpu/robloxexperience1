@@ -713,6 +713,23 @@ advance(0.2)
 send(ada, { op = "file", uid = p2.uid, case = p2.case })
 check("filing during the fumble is rejected", last(ada, "rejected") ~= nil)
 advance(0.6)
+-- Two right filings landing together (sorted quickly, or a burst after a lag spike) are both
+-- taken, the minimum gap apart: neither bounces back out of its case.
+do
+	local m = mark(ada)
+	local pieces = felt(ada)
+	local a = oldest(pieces)
+	local rest = table.clone(pieces)
+	if a then
+		rest[a.uid] = nil
+	end
+	local b = oldest(rest)
+	send(ada, { op = "file", uid = a.uid, case = a.case })
+	send(ada, { op = "file", uid = b.uid, case = b.case })
+	advance(Config.data.FairPlay.minGap + 0.05)
+	local both = take(ada, "filed", m)
+	check("two right filings landing together are both taken, neither bounced back", #both == 2 and both[1].correct and both[2].correct and #take(ada, "rejected", m) == 0, #both)
+end
 
 -- Ben idles and aims at the fullest felt; Ada aims at Ben's (the fullest, since he idles).
 send(ben, { op = "tab", tab = "nearlyOut" })

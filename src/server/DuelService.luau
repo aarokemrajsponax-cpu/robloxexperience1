@@ -55,6 +55,8 @@ type Side = {
 	correct: number,
 	lastFilingAt: number,
 	lastFileAt: number,
+	fileQueue: number, -- filings that landed together, waiting their turn (FairPlay.minGap apart)
+	fileQueueAt: number,
 	fumbleUntil: number,
 	waiting: { Parcel },
 	rating: Rating.Record,
@@ -183,6 +185,8 @@ local function newSide(key: string, model: Model, player: Player?, bot: Bot?, na
 		correct = 0,
 		lastFilingAt = 0,
 		lastFileAt = 0,
+		fileQueue = 0,
+		fileQueueAt = 0,
 		fumbleUntil = 0,
 		waiting = {},
 		rating = rating,
@@ -391,7 +395,10 @@ local function handEnd(match: Match, winner: string)
 	end
 end
 
-local function file(match: Match, side: Side, uid: number, caseId: string)
+-- At most this many filings wait their turn at once; a flood beyond it is turned away.
+local FILE_QUEUE = 6
+
+local function file(match: Match, side: Side, uid: number, caseId: string, queued: boolean?)
 	if match.state ~= "hand" then
 		return
 	end
@@ -400,9 +407,28 @@ local function file(match: Match, side: Side, uid: number, caseId: string)
 		return
 	end
 	local now = os.clock()
-	if now < side.fumbleUntil or now - side.lastFileAt < Config.data.FairPlay.minGap then
+	if now < side.fumbleUntil then
 		send(side.player, { op = "rejected", uid = uid })
 		return
+	end
+	if not queued then
+		-- Filings that land together are taken in turn, the minimum gap apart, rather than turned
+		-- away (a piece sorted right never jumps back out); a flood beyond a few is refused.
+		local gap = Config.data.FairPlay.minGap
+		local due = math.max(side.lastFileAt + gap, side.fileQueueAt)
+		if due > now then
+			if side.fileQueue >= FILE_QUEUE then
+				send(side.player, { op = "rejected", uid = uid })
+				return
+			end
+			side.fileQueue += 1
+			side.fileQueueAt = due + gap
+			task.delay(due - now, function()
+				side.fileQueue -= 1
+				file(match, side, uid, caseId, true)
+			end)
+			return
+		end
 	end
 	side.lastFileAt = now
 	side.filings += 1

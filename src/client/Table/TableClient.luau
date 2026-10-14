@@ -58,6 +58,7 @@ type Piece = {
 	mythic: boolean,
 	filed: boolean,
 	pending: boolean,
+	sentAt: number?, -- when its filing went to the server (pending until it answers)
 }
 
 type Snapshot = { score: number, streak: number, runLength: number, lastCase: string?, multiplier: number }
@@ -82,6 +83,13 @@ local controls: any = nil
 local toTableCallbacks: { () -> () } = {}
 local seatings = 0
 local hintPending = false
+
+-- Never stuck on a message that didn't land: when "next" or "again" went (until a deal comes),
+-- and when this screen last asked the server where the table stands.
+local awaitingOp: string? = nil
+local awaitingAt: number? = nil
+local syncAskedAt = 0
+local SYNC_AFTER = 2.5 -- seconds without an answer before asking
 
 -- The Library and the Ballroom count pieces, not points.
 local duelRemaining = 0
@@ -305,7 +313,22 @@ local function file(uid: number, caseId: string)
 		end
 	end
 	setScore(local_.score, local_.multiplier)
+	p.sentAt = os.clock()
 	tableEvent:FireServer({ op = "file", uid = uid, case = caseId })
+end
+
+-- A filing the server turned down, or never answered: the piece goes back to the felt and the
+-- prediction is undone (the Library's and the Ballroom's count of pieces left too).
+local function rollback(p: Piece)
+	if p.filed and counting() then
+		duelRemaining += 1
+	end
+	p.pending = false
+	p.filed = false
+	p.sentAt = nil
+	SortScreen.home(p.uid)
+	local_ = table.clone(server)
+	setScore(local_.score, local_.multiplier)
 end
 
 -- Whether a piece may be lifted now; a fumble in the Library or the Ballroom says no.
@@ -355,13 +378,14 @@ local function renderDeal(message: { [string]: any })
 		end
 	end
 	pieces = {}
+	awaitingOp, awaitingAt = nil, nil
 	round = message.round
 	roomId = message.room or roomId
 	tableMode = message.mode or "room"
 	Sound.setIntensity(Music.intensity(round))
 	openCases = message.cases
 	local r = room()
-	SortScreen.setRound(roomTitle(), roundTitle())
+	SortScreen.setRound(roomTitle(), roundTitle(), if counting() then nil else tostring(round))
 	SortScreen.setRules(namesAllowed(), r.tuning.guide, r.tuning.guideDelay)
 	SortScreen.setCases(openCases)
 	-- (Golden pieces come to the rooms' tables while the house is in uproar, not to the Nightly.)
@@ -496,7 +520,13 @@ local function clearTray()
 end
 
 local function sendNext()
+	awaitingOp, awaitingAt = "next", os.clock()
 	tableEvent:FireServer({ op = "next" })
+end
+
+local function sendAgain()
+	awaitingOp, awaitingAt = "again", os.clock()
+	tableEvent:FireServer({ op = "again" })
 end
 
 local function sendBank()
@@ -523,15 +553,118 @@ local function onRoundEnd(message: { [string]: any })
 			return
 		end
 		local inRoom = tableMode == "room"
-		RoundPanel.round(message, {
+		local shown = safely("the round's card", RoundPanel.round, message, {
 			primary = Voice.Table.nextRound,
 			onPrimary = sendNext,
 			secondary = if inRoom then Voice.Table.bank else nil,
 			onSecondary = if inRoom then sendBank else nil,
 			onLeave = TableClient.leave,
 		})
+		if not shown then
+			-- (The card couldn't open: never leave the table waiting on a key that isn't there.)
+			RoundPanel.close()
+			sendNext()
+		end
 	end)
 end
+
+-- The server's answer to "where does the table stand?": this screen corrects itself to it. In
+-- play: pieces it never filed go back to the felt, pieces it did go into their cases, and the
+-- score is the server's (a deal this screen never laid is laid now). Between rounds: the key
+-- already pressed is sent again, or the round's card is shown again.
+local function onSync(message: { [string]: any })
+	if counting() then
+		return
+	end
+	if message.state == "playing" then
+		if message.round ~= round or next(pieces) == nil then
+			RoundPanel.close()
+			renderDeal({ round = message.round, room = message.room, mode = message.mode, cases = message.cases, pieces = message.pieces, score = message.score, clock = message.clock })
+		else
+			local open: { [number]: boolean } = {}
+			for _, d in message.pieces :: { { [string]: any } } do
+				open[d.uid] = true
+			end
+			for uid, p in pieces do
+				if p.pending and p.sentAt and p.sentAt > syncAskedAt then
+					continue -- filed after the question: its own answer is on its way
+				end
+				if open[uid] then
+					if p.filed or p.pending then
+						p.pending = false
+						p.filed = false
+						p.sentAt = nil
+						SortScreen.home(uid)
+					end
+				elseif not p.filed then
+					p.filed = true
+					p.pending = false
+					SortScreen.intoCase(uid, p.case)
+				else
+					p.pending = false
+				end
+			end
+			if not playing then
+				RoundPanel.close()
+				playing = true
+				SortScreen.setPlaying(true)
+			end
+		end
+		awaitingOp, awaitingAt = nil, nil
+		server = {
+			score = tonumber(message.score) or server.score,
+			streak = tonumber(message.streak) or 0,
+			runLength = tonumber(message.runLength) or 0,
+			lastCase = message.lastCase,
+			multiplier = tonumber(message.multiplier) or 1,
+		}
+		local_ = table.clone(server)
+		if message.clock then
+			clockLeft = message.clock.left
+			clockRunning = message.clock.running
+			clockBudget = message.clock.budget
+		end
+		setScore(local_.score, local_.multiplier)
+	elseif message.state == "roundEnd" then
+		for _, p in pieces do
+			p.pending = false
+		end
+		if awaitingOp == "next" then
+			awaitingAt = os.clock()
+			tableEvent:FireServer({ op = "next" })
+		elseif type(message.roundEnd) == "table" and not Root.isOpen("Round") then
+			onRoundEnd(message.roundEnd)
+		end
+	elseif message.state == "banked" and awaitingOp == "again" then
+		awaitingAt = os.clock()
+		tableEvent:FireServer({ op = "again" })
+	end
+end
+
+-- Watches for a message that never landed: a filing with no answer, a "next" or "again" with no
+-- deal. In the rooms it asks the server where things stand (and onSync puts it right); in the
+-- Library and the Ballroom a filing with no answer goes back to the felt.
+local function watch()
+	if not seatedNow then
+		return
+	end
+	local now = os.clock()
+	local stuck = awaitingAt ~= nil and now - (awaitingAt :: number) > SYNC_AFTER
+	for _, p in pieces do
+		if p.pending and p.sentAt and now - p.sentAt > SYNC_AFTER then
+			if counting() then
+				rollback(p)
+			else
+				stuck = true
+			end
+		end
+	end
+	if stuck and not counting() and now - syncAskedAt > SYNC_AFTER then
+		syncAskedAt = now
+		tableEvent:FireServer({ op = "sync" })
+	end
+end
+TableClient.watch = watch -- (for tests)
 
 local function onBanked(message: { [string]: any })
 	RevivePanel.close()
@@ -548,9 +681,7 @@ local function onBanked(message: { [string]: any })
 		end
 		RoundPanel.banked(message, {
 			primary = "Another run",
-			onPrimary = function()
-				tableEvent:FireServer({ op = "again" })
-			end,
+			onPrimary = sendAgain,
 			onLeave = TableClient.leave,
 		})
 	end)
@@ -570,9 +701,7 @@ local function onNightlyCard(message: { [string]: any })
 			return
 		end
 		NightlyCard.show(message, {
-			rehearse = function()
-				tableEvent:FireServer({ op = "again" })
-			end,
+			rehearse = sendAgain,
 			leave = TableClient.leave,
 		})
 	end)
@@ -745,6 +874,7 @@ local function onLeft(message: { [string]: any })
 	Sound.setIntensity(nil)
 	tableMode = "room"
 	paused = false
+	awaitingOp, awaitingAt = nil, nil
 	clockLeft = nil
 	clockBudget = nil
 	if model then
@@ -944,13 +1074,14 @@ function TableClient.start()
 			onFiled(message)
 		elseif op == "rejected" then
 			local p = pieces[message.uid]
-			if p then
-				p.pending = false
-				p.filed = false
-				SortScreen.home(p.uid)
+			if p and (p.pending or p.filed) then
+				rollback(p)
+			else
+				local_ = table.clone(server)
+				setScore(local_.score, local_.multiplier)
 			end
-			local_ = table.clone(server)
-			setScore(local_.score, local_.multiplier)
+		elseif op == "sync" then
+			onSync(message)
 		elseif op == "roundEnd" then
 			onRoundEnd(message)
 		elseif op == "banked" then
@@ -1047,7 +1178,13 @@ function TableClient.start()
 			tableEvent:FireServer({ op = "pause", on = open })
 		end
 	end)
+	local watchedAt = 0
 	RunService.Heartbeat:Connect(function(dt)
+		local t = os.clock()
+		if t - watchedAt >= 0.5 then
+			watchedAt = t
+			safely("watching the table", watch)
+		end
 		if clockLeft and clockRunning and playing then
 			if not paused then
 				clockLeft = math.max(0, (clockLeft :: number) - dt)

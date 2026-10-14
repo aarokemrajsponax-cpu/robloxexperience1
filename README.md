@@ -377,6 +377,31 @@ a Nightly attempt or a Mythic's odds.
 - **The launch kit**: page text, icon, thumbnails and the gameplay video's shot list are in
   [`LAUNCH.md`](LAUNCH.md).
 
+## Build 67 — what's new
+
+- **The tables never freeze, and sorting is endless.** The freeze in the Salon after round XIX
+  (the table empty, *0 pieces left*, and no next round): the server threw away any table message
+  that landed within 30 ms of the one before it, and two often land together (a quick sort, or a
+  burst after a lag spike on a phone). A filing thrown away left the server waiting on a piece the
+  screen had already put in its case, so the round never ended. Now:
+  - every message is read (RemoteGuard's bucket still keeps floods out);
+  - filings that land together are taken in turn, the minimum gap apart, in the rooms, the
+    Library and the Ballroom alike, so a piece sorted right never jumps back out of its case (a
+    flood beyond six at once is still refused, and answered);
+  - a filing the table can't take (a shut case, the clock just run out) is always answered;
+  - the screen watches for an answer that never comes (a filing, *Next round*, *Another run*):
+    after 2.5 seconds it asks the server where the table stands (`sync`) and puts itself right —
+    pieces back on the felt or into their cases, the key pressed sent again, the round's card
+    shown again, a deal it missed laid. In the Library and the Ballroom a filing with no answer
+    goes back to the felt. And if a round's card ever fails to open, the next round is dealt
+    rather than leaving the table waiting on a key that isn't there.
+- **Endless rounds read right.** Roman numerals go on properly (XL, L, XC, C, CD … MMMCMXCIX), and
+  the header's figures shrink to fit their plaques (a score in the millions, round XXXVIII). Where
+  even the smallest size can't hold one (a phone held sideways), a round shows in figures (38)
+  and a score is shortened (12.3M).
+- Checked: every room played sixty rounds running with each lift and filing landing together
+  (`tests/tables.luau`, new); before the fix every room froze in its first round.
+
 ## Build 66 — what's new
 
 - **Every product you made is on sale.** Three of the products in Creator Hub weren't being found

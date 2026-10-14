@@ -40,6 +40,7 @@ local GuideTrail = require(script.Parent.GuideTrail)
 local ScreenFX = require(script.Parent.Parent.UI.ScreenFX)
 local Root = require(script.Parent.Parent.UI.Root)
 local State = require(script.Parent.Parent.State)
+local Theme = require(script.Parent.Parent.UI.Theme)
 
 local SortScreen = {}
 
@@ -427,6 +428,27 @@ local function number(n: number): string
 	local out = s:reverse():gsub("(%d%d%d)", "%1,"):reverse()
 	return if out:sub(1, 1) == "," then out:sub(2) else out
 end
+
+-- A score too long for its plaque even at the smallest size (a long run, on a phone): 12.3M, 438K.
+local SHORT_UNITS: { { size: number, mark: string } } = {
+	{ size = 1e12, mark = "T" },
+	{ size = 1e9, mark = "B" },
+	{ size = 1e6, mark = "M" },
+	{ size = 1e3, mark = "K" },
+}
+local function short(n: number): string
+	n = math.floor(math.abs(n))
+	for _, u in SHORT_UNITS do
+		if n >= u.size then
+			local v = n / u.size
+			local text = if v >= 100 then tostring(math.floor(v)) elseif v >= 10 then string.format("%.1f", math.floor(v * 10) / 10) else string.format("%.2f", math.floor(v * 100) / 100)
+			text = string.gsub(string.gsub(text, "(%.%d-)0+$", "%1"), "%.$", "")
+			return text .. u.mark
+		end
+	end
+	return tostring(n)
+end
+SortScreen.short = short -- (for tests)
 
 -- The screen this draws on, in its own pixels. This screen covers the whole of the device's
 -- screen; on a phone with rounded corners or a camera cut-out the camera's viewport is only the
@@ -869,6 +891,49 @@ local function makeMotes()
 	end
 end
 
+-- The size each header figure is meant to be, before it's fitted to its plaque.
+local figureSize: { [TextLabel]: number } = setmetatable({}, { __mode = "k" }) :: any
+-- The round in figures ("388"), for when its numeral (CCCLXXXVIII) can't fit at the smallest size;
+-- the score as a number, for when even its smallest size can't hold it (shortened: 12.3M).
+local roundFigures: string? = nil
+local scoreValue: number? = nil
+
+-- A figure shrinks to fit its plaque rather than spill off it (a score in the millions after a
+-- long run, a round in the hundreds): the size it was given, or the largest below it that fits.
+local function fitFigure(st: Stat)
+	local v = st.value
+	local want = figureSize[v] or v.TextSize
+	figureSize[v] = want
+	local width = st.frame.Size.X.Offset
+	if width <= 0 then
+		width = st.width * L.s
+	end
+	width -= math.floor(10 * L.s)
+	local size = want
+	while size > MIN_TEXT and Theme.measure(v.Text, size, v.FontFace).X > width do
+		size -= 1
+	end
+	if Theme.measure(v.Text, size, v.FontFace).X > width then
+		local shorter = if st == stats.ROUND then roundFigures elseif st == stats.SCORE and scoreValue then short(scoreValue :: number) else nil
+		if shorter and v.Text ~= shorter then
+			v.Text = shorter
+			size = want
+			while size > MIN_TEXT and Theme.measure(v.Text, size, v.FontFace).X > width do
+				size -= 1
+			end
+		end
+	end
+	v.TextSize = size
+end
+
+local function fitFigures()
+	for _, st in stats do
+		if st.shown then
+			fitFigure(st)
+		end
+	end
+end
+
 -- The figures on the right, laid out from the right edge (clear of the HUD's keys) leftwards;
 -- on a narrow screen, spread across a row of their own under the room's line.
 local function layoutStats()
@@ -897,6 +962,7 @@ local function layoutStats()
 		header.crest.Visible = false
 		line.Size = UDim2.fromOffset(math.max(60 * s, L.vp.X - L.keys - L.left - 44 * s), 18 * s)
 		line.Position = UDim2.fromOffset(0, math.floor(26 * s))
+		fitFigures()
 		return
 	end
 	-- (The keys stand in the safe part of the screen: as far in from its right edge as `side`.)
@@ -928,6 +994,7 @@ local function layoutStats()
 	mark.Position = UDim2.fromOffset(textX, mid - 9 * s)
 	line.Size = UDim2.fromOffset(room, 16 * s)
 	line.Position = UDim2.fromOffset(textX, if showMark then mid + 13 * s else mid)
+	fitFigures()
 end
 
 local function layoutChrome()
@@ -2418,7 +2485,8 @@ function SortScreen.isOpen(): boolean
 end
 
 local paintCloth: () -> ()
-local function setRoundText(roomName: string, roundText: string)
+local function setRoundText(roomName: string, roundText: string, figures: string?)
+	roundFigures = figures
 	local changed = roomName ~= roomText
 	roomText = roomName
 	if changed and paintCloth then
@@ -2557,11 +2625,12 @@ function SortScreen.close()
 	end)
 end
 
-function SortScreen.setRound(roomName: string, roundText: string)
+-- `figures`: the round as a number, shown instead when its numeral is too long for the header.
+function SortScreen.setRound(roomName: string, roundText: string, figures: string?)
 	if not gui then
 		return
 	end
-	setRoundText(roomName, roundText)
+	setRoundText(roomName, roundText, figures)
 end
 
 function SortScreen.setPlaying(on: boolean)
@@ -2843,8 +2912,10 @@ function SortScreen.setScore(score: number, multiplier: number)
 	local sc, combo = stats.SCORE, stats.COMBO
 	local layout = not sc.shown or not combo.shown or sc.width ~= 112
 	sc.key.Text = "SCORE"
+	scoreValue = score
 	sc.value.Text = number(score)
 	sc.value.TextSize = textSize(34 * L.s)
+	figureSize[sc.value] = sc.value.TextSize
 	sc.width = 112
 	sc.shown = true
 	local before = combo.value.Text
@@ -2857,6 +2928,8 @@ function SortScreen.setScore(score: number, multiplier: number)
 	end
 	if layout then
 		layoutStats()
+	else
+		fitFigure(sc)
 	end
 end
 
@@ -2867,8 +2940,10 @@ function SortScreen.setLine(text: string, caption: string)
 	end
 	local sc = stats.SCORE
 	sc.key.Text = Caps(caption)
+	scoreValue = nil
 	sc.value.Text = text
 	sc.value.TextSize = textSize(24 * L.s)
+	figureSize[sc.value] = sc.value.TextSize
 	sc.width = 176
 	sc.shown = true
 	stats.COMBO.shown = false

@@ -4,6 +4,6 @@
 -- see whether Studio has the latest code from GitHub.
 
 return {
-	number = 66,
-	label = "Build 66 · 14 Oct · every product made in Creator Hub on sale",
+	number = 67,
+	label = "Build 67 · 14 Oct · the tables never freeze, sorting is endless",
 }

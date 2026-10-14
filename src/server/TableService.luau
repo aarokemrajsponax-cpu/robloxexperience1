@@ -73,6 +73,10 @@ type Session = {
 	roundCorrect: number,
 	clock: { budget: number, left: number, running: boolean }?,
 	lastFileAt: number,
+	-- Filings that landed together, waiting their turn (FairPlay.minGap apart): how many, and
+	-- when the next one may be taken.
+	fileQueue: number,
+	fileQueueAt: number,
 	fileTimes: { number },
 	flagged: boolean,
 	lifted: boolean,
@@ -84,12 +88,13 @@ type Session = {
 	revivesUsed: number,
 	roundRevives: number,
 	boardCap: number?,
+	-- The last round's card, kept until the next deal: said again to a screen that lost track.
+	lastRoundEnd: { [string]: any }?,
 }
 
 local sessions: { [Player]: Session } = {}
 local occupants: { [Model]: Player } = {}
 local tableEvent = Remotes.event("Table")
-local lastMessage: { [Player]: number } = {}
 
 -- Hooks the rest of the server can set.
 TableService.onSeated = function(_player: Player) end
@@ -221,6 +226,7 @@ local function dealRound(s: Session)
 	end
 	s.cases = result.cases
 	s.pieces = {}
+	s.lastRoundEnd = nil
 	s.dealSize = #result.pieces
 	s.remaining = #result.pieces
 	s.roundMistakes = 0
@@ -300,6 +306,44 @@ local function dealRound(s: Session)
 	end
 end
 
+-- The table as the server has it, for a screen that lost track (a message that never landed): in
+-- play, the round, the pieces still to sort and the score; between rounds, the round's card again.
+-- Only ever what the server holds: the screen corrects itself to it.
+local function sendSync(s: Session)
+	if s.state == "playing" then
+		local left = {}
+		for _, p in s.pieces do
+			if not p.filed then
+				table.insert(left, publicPiece(p))
+			end
+		end
+		send(s.player, {
+			op = "sync",
+			state = "playing",
+			round = s.round,
+			room = s.room.id,
+			mode = s.mode,
+			cases = s.cases,
+			pieces = left,
+			score = s.score,
+			streak = s.streak,
+			runLength = s.runLength,
+			lastCase = s.lastCase,
+			multiplier = Scoring.multiplier(s.streak),
+			remaining = s.remaining,
+			clock = clockState(s),
+		})
+	else
+		send(s.player, {
+			op = "sync",
+			state = s.state,
+			round = s.round,
+			score = s.score,
+			roundEnd = if s.state == "roundEnd" then s.lastRoundEnd else nil,
+		})
+	end
+end
+
 local function newSession(player: Player, model: Model, seat: Seat, mode: Mode): Session
 	local night: Nightly.Night? = if mode ~= "room" then Nightly.at() else nil
 	local roomId = if night then night.room else tostring(model:GetAttribute("Room") or "salon")
@@ -337,6 +381,8 @@ local function newSession(player: Player, model: Model, seat: Seat, mode: Mode):
 		roundCorrect = 0,
 		clock = nil,
 		lastFileAt = 0,
+		fileQueue = 0,
+		fileQueueAt = 0,
 		fileTimes = {},
 		flagged = false,
 		lifted = false,
@@ -346,6 +392,7 @@ local function newSession(player: Player, model: Model, seat: Seat, mode: Mode):
 		revivesUsed = 0,
 		roundRevives = 0,
 		boardCap = nil,
+		lastRoundEnd = nil,
 	}
 end
 
@@ -370,6 +417,7 @@ local function resetRun(s: Session)
 	s.revivesUsed = 0
 	s.roundRevives = 0
 	s.boardCap = nil
+	s.lastRoundEnd = nil
 	s.model:SetAttribute("Score", 0)
 	s.model:SetAttribute("Multiplier", 1)
 end
@@ -568,7 +616,7 @@ local function roundComplete(s: Session)
 	elseif s.round == 3 then
 		Analytics.step(s.player, 9)
 	end
-	send(s.player, {
+	local card = {
 		op = "roundEnd",
 		round = s.round,
 		grade = grade,
@@ -581,7 +629,9 @@ local function roundComplete(s: Session)
 		mode = s.mode,
 		room = s.room.id,
 		last = last,
-	})
+	}
+	s.lastRoundEnd = card
+	send(s.player, card)
 	if last then
 		finishNightly(s, nil, true)
 	end
@@ -627,21 +677,48 @@ local function checkFairPlay(s: Session, now: number)
 	end
 end
 
-local function file(s: Session, uid: number, caseId: string)
+-- At most this many filings wait their turn at once; a flood beyond it is turned away.
+local FILE_QUEUE = 6
+
+local function file(s: Session, uid: number, caseId: string, queued: boolean?)
+	local piece = s.pieces[uid]
+	-- A filing the table can't take is always answered, so the screen puts the piece back rather
+	-- than waiting on it (the clock ran out a moment before it landed, or the case is shut).
 	if s.state ~= "playing" then
+		if piece and not piece.filed then
+			send(s.player, { op = "rejected", uid = uid })
+		end
 		return
 	end
-	local piece = s.pieces[uid]
 	if not piece or piece.filed then
 		return
 	end
 	if not table.find(s.cases, caseId) then
+		send(s.player, { op = "rejected", uid = uid })
 		return
 	end
 	local now = os.clock()
-	if now - s.lastFileAt < Config.data.FairPlay.minGap then
-		send(s.player, { op = "rejected", uid = uid })
-		return
+	if not queued then
+		-- Filings that land together (two sent quickly, or a burst after a lag spike) are taken in
+		-- turn, the minimum gap apart, rather than turned away: a piece sorted right never jumps
+		-- back out of its case. The pace is the server's; a flood beyond a few is still refused.
+		local gap = Config.data.FairPlay.minGap
+		local due = math.max(s.lastFileAt + gap, s.fileQueueAt)
+		if due > now then
+			if s.fileQueue >= FILE_QUEUE then
+				send(s.player, { op = "rejected", uid = uid })
+				return
+			end
+			s.fileQueue += 1
+			s.fileQueueAt = due + gap
+			task.delay(due - now, function()
+				s.fileQueue -= 1
+				if sessions[s.player] == s then
+					file(s, uid, caseId, true)
+				end
+			end)
+			return
+		end
 	end
 	s.lastFileAt = now
 	checkFairPlay(s, now)
@@ -970,11 +1047,9 @@ local function onMessage(player: Player, message: unknown)
 	if type(message) ~= "table" then
 		return
 	end
-	local now = os.clock()
-	if lastMessage[player] and now - lastMessage[player] < 0.03 then
-		return
-	end
-	lastMessage[player] = now
+	-- (Every message is read, however close behind the last: two can land together after a lag
+	-- spike, and a filing dropped here left the screen waiting on a round that never ended.
+	-- RemoteGuard's bucket keeps floods out; a filing too soon is answered "rejected".)
 	local m = message :: { [string]: unknown }
 	local op = m.op
 	local s = sessions[player]
@@ -1019,6 +1094,8 @@ local function onMessage(player: Player, message: unknown)
 			send(player, summary)
 			resetRun(s)
 		end
+	elseif op == "sync" then
+		sendSync(s)
 	elseif op == "revive" then
 		askRevive(s)
 	elseif op == "noRevive" then
@@ -1134,7 +1211,6 @@ function TableService.start()
 	end)
 	Players.PlayerRemoving:Connect(function(player)
 		endSession(player, "left")
-		lastMessage[player] = nil
 	end)
 	-- Every table starts with all cases open (lids hidden).
 	for _, m in tables() do
