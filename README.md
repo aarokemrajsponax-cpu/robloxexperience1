@@ -377,6 +377,15 @@ a Nightly attempt or a Mythic's odds.
 - **The launch kit**: page text, icon, thumbnails and the gameplay video's shot list are in
   [`LAUNCH.md`](LAUNCH.md).
 
+## Build 66 — what's new
+
+- **Every product you made is on sale.** Three of the products in Creator Hub weren't being found
+  by the game, so nobody could buy them: *Santa’s Season Pass* and *Salute: Santa’s Flyover* (typed
+  with a phone's curly apostrophe, ’) and *VIP Velocity Elite Pass* (the game looked for "VIP
+  Velocity Elite"). Names now match whatever marks a phone types (curly quotes, long dashes, a
+  hard space, a space at the end), and "VIP Velocity Elite Pass" is VIP Velocity Elite. Checked
+  against the game's live list of developer products: all 43 are found.
+
 ## Build 65 — what's new
 
 - **A natural look.** The keys down the left are tiles of warm dark leather with a fine brass edge

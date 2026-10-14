@@ -182,6 +182,31 @@ do
 	table.insert(MarketplaceService.devProducts, { Name = "Salute: Gold Leaf", ProductId = 7801, PriceInRobux = 75 })
 	run(Catalog.discover)
 	check("an old product name still sells the renamed salute", Catalog.idOf("salute_goldLeaf") == 7801 and Catalog.keyForProduct(7801) == "salute_goldLeaf", Catalog.idOf("salute_goldLeaf"))
+	-- Names as AJKR typed them on a phone in Creator Hub: a curly apostrophe, a space at the end,
+	-- and VIP Velocity Elite made as "VIP Velocity Elite Pass".
+	do
+		local saved = MarketplaceService.devProducts
+		MarketplaceService.devProducts = {
+			{ Name = "Santa\u{2019}s Season Pass", ProductId = 7802, PriceInRobux = 339 },
+			{ Name = "Salute: Santa\u{2019}s Flyover ", ProductId = 7803, PriceInRobux = 149 },
+			{ Name = "VIP Velocity Elite Pass", ProductId = 7804, PriceInRobux = 5999 },
+			{ Name = "Salute: Encore ", ProductId = 7805, PriceInRobux = 99 },
+		}
+		run(Catalog.discover)
+		check(
+			"a curly apostrophe and a space at the end are still the product",
+			Catalog.idOf("sleighSeason") == 7802 and Catalog.keyForProduct(7802) == "sleighSeason" and Catalog.idOf("salute_sleigh") == 7803 and Catalog.keyForProduct(7803) == "salute_sleigh" and Catalog.idOf("salute_encore") == 7805,
+			Catalog.idOf("sleighSeason") .. " " .. Catalog.idOf("salute_sleigh") .. " " .. Catalog.idOf("salute_encore")
+		)
+		check("\"VIP Velocity Elite Pass\" sells VIP Velocity Elite", Catalog.idOf("velocityEliteProduct") == 7804 and Catalog.keyForProduct(7804) == "velocityEliteProduct", Catalog.idOf("velocityEliteProduct"))
+		check(
+			"plain names are unchanged by it",
+			ProductConfig.normalName("Emperor's  Decree ") == "emperor's decree" and ProductConfig.normalName("Santa\u{2019}s\u{00A0}Season Pass") == "santa's season pass" and ProductConfig.normalName("Ballroom \u{2013} Shield") == "ballroom - shield"
+		)
+		MarketplaceService.devProducts = saved
+		run(Catalog.discover)
+		check("and the house's own list is back", Catalog.idOf("velocityEliteProduct") == 5005 and Catalog.idOf("sleighSeason") == 0)
+	end
 
 	r = deliver({ PlayerId = 555, ProductId = 5006, PurchaseId = "A-1", CurrencySpent = 49 })
 	check("a buyer who isn't in this server: unresolved (Roblox delivers it when they join)", r == LATER)

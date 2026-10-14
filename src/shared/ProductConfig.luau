@@ -107,6 +107,7 @@ add({
 add({
 	Key = "velocityEliteProduct",
 	Name = "VIP Velocity Elite", -- the same name as the pass: a pass and a product may share one
+	Aliases = { "VIP Velocity Elite Pass" }, -- the name it was made with in Creator Hub
 	ProductType = "DeveloperProduct",
 	Id = 0, -- only used when there's no game pass: the same perk, bought once
 	Handler = "velocity",
@@ -547,9 +548,25 @@ function ProductConfig.get(key: string): Entry?
 	return ProductConfig.byKey[key]
 end
 
--- Names compare ignoring case and repeated spaces ("Emperor's  decree" = "Emperor's Decree").
+-- What a phone keyboard types in place of the plain marks: curly quotes, long dashes, a hard space.
+local TYPED = {
+	["\u{2018}"] = "'",
+	["\u{2019}"] = "'",
+	["\u{02BC}"] = "'",
+	["\u{2032}"] = "'",
+	["`"] = "'",
+	["\u{201C}"] = '"',
+	["\u{201D}"] = '"',
+	["\u{2013}"] = "-",
+	["\u{2014}"] = "-",
+	["\u{00A0}"] = " ",
+}
+
+-- Names compare ignoring case, repeated spaces and the marks a phone types ("Emperor's  decree" =
+-- "Emperor's Decree", and "Santa’s Season Pass " = "Santa's Season Pass").
 function ProductConfig.normalName(name: string): string
-	return string.lower((string.gsub(name, "%s+", " ")):match("^%s*(.-)%s*$") or name)
+	local plain = string.gsub(name, utf8.charpattern, TYPED)
+	return string.lower((string.gsub(plain, "%s+", " ")):match("^%s*(.-)%s*$") or plain)
 end
 
 ---------------------------------------------------------------------------------------------------
