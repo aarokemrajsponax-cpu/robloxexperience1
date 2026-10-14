@@ -66,6 +66,18 @@ local function setupCollisionGroups()
 	end)
 end
 
+-- Whether a guest is still new to the house: they haven't had the Concierge's tour and have
+-- played fewer than two rounds. Until then the gold arrow leads them to the Concierge, and the
+-- Concierge offers the tour before anything else.
+function Guests.needsGuide(data: Profiles.Data): boolean
+	-- (Read with care: a page missing a part never stops the welcome going out.)
+	local d = data :: any
+	local flags = if type(d.flags) == "table" then d.flags else {}
+	local stats = if type(d.stats) == "table" then d.stats else {}
+	local rounds = if type(stats.rounds) == "number" then stats.rounds else 0
+	return flags.toured ~= true and rounds < 2
+end
+
 local function payload(player: Player, data: Profiles.Data, visit: Visit): { [string]: any }
 	local registered = 0
 	for _ in data.register do
@@ -74,6 +86,7 @@ local function payload(player: Player, data: Profiles.Data, visit: Visit): { [st
 	return {
 		op = "welcome",
 		firstVisit = visit.firstVisit,
+		guide = Guests.needsGuide(data),
 		displayName = Names.of(player),
 		settings = data.settings,
 		overrides = LiveConfig.overrides,

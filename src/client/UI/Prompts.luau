@@ -21,6 +21,12 @@ local State = require(script.Parent.Parent.State)
 
 local Prompts = {}
 
+-- Set by Main: other words for a prompt's action on this guest's screen (the Concierge's "Show me
+-- the house" for a guest still new to the house), or nil for its own.
+Prompts.actionFor = function(_prompt: ProximityPrompt): string?
+	return nil
+end
+
 local shown: { [ProximityPrompt]: TextButton } = {}
 local column: Frame? = nil
 local serial = 0
@@ -139,7 +145,7 @@ local function build(prompt: ProximityPrompt): TextButton
 	-- The card laid out round its words: the key square (wider for "TAP"), then the words.
 	local function fit()
 		key.Text = keyLabel(prompt)
-		action.Text = Caps(prompt.ActionText)
+		action.Text = Caps(Prompts.actionFor(prompt) or prompt.ActionText)
 		object.Text = prompt.ObjectText
 		local keyW = math.max(30, Theme.measure(key.Text, 14, Brand.Fonts.bodyBold).X + 12)
 		key.Size = UDim2.fromOffset(keyW, 30)

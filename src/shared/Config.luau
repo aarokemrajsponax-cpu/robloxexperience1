@@ -774,7 +774,7 @@ local defaults = {
 		returning = true, -- welcome a returning guest back too
 		heightAt = 0.42, -- where it sits down the screen (0 the top, 1 the bottom), clear of the keys along the top
 		guide = true, -- the gold arrow to the Concierge, on a first evening
-		guideMinutes = 3, -- the arrow goes by itself after this long
+		guideMinutes = 20, -- the arrow goes by itself after this long (it ends sooner: the tour, a seat)
 		guideNearStuds = 16, -- this close to the Concierge, the floor arrows go and "Press E to talk" shows
 	},
 

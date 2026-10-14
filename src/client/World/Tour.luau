@@ -26,6 +26,9 @@ local Waypoint = require(script.Parent.Waypoint)
 
 local Tour = {}
 
+-- Set by Main: a tour has ended (the guest has been shown the house).
+Tour.ended = function() end
+
 -- Set by Main: sit the guest at a Salon table (the last card's "Take me to a table"), and
 -- whether they're at a table now (the tour steps aside).
 Tour.toTable = function() end
@@ -596,6 +599,7 @@ function Tour.stop(reason: string?)
 	pcall(function()
 		Remotes.event("Tour"):FireServer({ op = "end" })
 	end)
+	pcall(Tour.ended)
 	if reason == "table" then
 		Tour.toTable()
 	elseif reason == "done" then

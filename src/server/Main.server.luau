@@ -178,6 +178,16 @@ Concierge.canEnter = function(player, room)
 	local data = require(script.Parent.Profiles).get(player)
 	return data ~= nil and data.flags.midnight == true
 end
+Concierge.needsTour = function(player)
+	local data = require(script.Parent.Profiles).get(player)
+	return data ~= nil and require(script.Parent.Guests).needsGuide(data)
+end
+Concierge.toured = function(player)
+	local data = require(script.Parent.Profiles).get(player)
+	if data and type(data.flags) == "table" then
+		data.flags.toured = true
+	end
+end
 Concierge.openHowTo = function(player)
 	Remotes.event("Guest"):FireClient(player, { op = "howto" })
 end

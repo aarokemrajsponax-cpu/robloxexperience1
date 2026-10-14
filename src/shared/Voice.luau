@@ -224,6 +224,30 @@ Voice.Table = {
 	clockRanOut = "The clock ran out in round {round}.",
 }
 
+-- A guest still new to the house: the arrow to the Concierge, his key, the card under the keys,
+-- and the three steps of the game, said plainly.
+Voice.StartHere = {
+	title = "Start here",
+	heading = "Welcome to Maison Noir",
+	arrowFar = "Follow the gold arrow to him",
+	arrowNear = {
+		mouse = "Press E: Show me the house",
+		touch = "Tap Show me the house",
+		gamepad = "Press X: Show me the house",
+	},
+	promptAction = "Show me the house",
+	goal = "Talk to the Concierge",
+	goalHow = "Follow the gold arrow. He shows you the house and how to play.",
+	steps = {
+		{ title = "Meet the Concierge", line = "Follow the gold arrow and pick Show me the house. He walks you round and teaches you the game." },
+		{ title = "Sit at a table", line = "Any table in the Salon. Walk up to a chair and take a seat." },
+		{ title = "Sort the treasures", line = "Put each piece in its case: watches in Watches, rings in Jewelry, gold in Money. Every right one earns Gilt." },
+	},
+	after = "Spend your Gilt on your Suite, your look and more.",
+	go = "Show me the way",
+	table = "Straight to a table",
+}
+
 -- The one line under the keys while you walk: what to do next.
 Voice.Objective = {
 	next = "Next",

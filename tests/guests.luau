@@ -450,6 +450,7 @@ profiles[owner] = profile(true)
 loaded:Fire(owner, profiles[owner])
 advance(5)
 check("the welcome reaches the owner's screen", owner.inbox[1] ~= nil and owner.inbox[1].op == "welcome")
+check("a guest new to the house (no tour yet, no rounds) is marked to be led to the Concierge", owner.inbox[1] ~= nil and owner.inbox[1].guide == true)
 check("a guest who already has a character isn't given another", owner.loads == 0 and owner.Character == early)
 
 ---------------------------------------------------------------------------------------------------

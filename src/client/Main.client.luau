@@ -599,6 +599,8 @@ end
 local function welcome()
 	local guest = State.waitForWelcome(10)
 	local first = guest ~= nil and State.isFirstVisit()
+	-- (Still new to the house: a first evening, or no tour yet and fewer than two rounds played.)
+	local new = guest ~= nil and (first or guest.guide == true)
 	local limit = os.clock() + 12
 	local function clear(): boolean
 		local gui = player:FindFirstChild("PlayerGui")
@@ -621,13 +623,29 @@ local function welcome()
 	CalendarPanel.isBusy = function(): boolean
 		return TableClient.isSeated() or Tour.active() or Welcome.showing()
 	end
-	task.delay(if first then 150 else 5, function()
+	task.delay(if new then 150 else 5, function()
 		start("The Evening Calendar", CalendarPanel.offer)
 	end)
-	if first then
+	if new then
 		task.delay(1.6, function()
 			start("The arrow to the Concierge", function()
 				ConciergeGuide.start()
+			end)
+		end)
+		-- Start here: the game in three plain steps, once the welcome has had its moment.
+		task.delay(4.5, function()
+			start("Start here", function()
+				local StartHere = require(script.Parent.UI.StartHere)
+				StartHere.isBusy = function(): boolean
+					return TableClient.isSeated() or Tour.active() or Welcome.showing()
+				end
+				StartHere.showWay = function()
+					ConciergeGuide.start()
+				end
+				StartHere.toTable = function()
+					quickSit("room")
+				end
+				StartHere.offer()
 			end)
 		end)
 	end
@@ -694,6 +712,25 @@ end
 Tour.toTable = function()
 	quickSit("room")
 end
+-- (A guest shown the house is new no longer: the Concierge's key says Speak again.)
+Tour.ended = function()
+	if State.guest then
+		State.guest.guide = false
+	end
+	Objective.refresh()
+end
+-- While the gold arrow leads a new guest, the card under the keys says so; the Concierge's key
+-- says what to pick ("Show me the house").
+Objective.guiding = ConciergeGuide.active
+ConciergeGuide.changed = function()
+	Objective.refresh()
+end
+Prompts.actionFor = function(prompt: ProximityPrompt): string?
+	if prompt.Name == "SpeakPrompt" and prompt.ObjectText == "The Concierge" and State.guest ~= nil and State.guest.guide == true then
+		return require(ReplicatedStorage.Shared.Voice).StartHere.promptAction
+	end
+	return nil
+end
 Tour.isSeated = function(): boolean
 	return TableClient.isSeated()
 end
@@ -715,7 +752,11 @@ TableClient.Seated.Event:Connect(function()
 end)
 TableClient.Banked.Event:Connect(function(gilt: number)
 	pcall(function()
-		require(script.Parent.UI.OfferCard).afterRun(gilt)
+		local Offer = require(script.Parent.UI.OfferCard)
+		Offer.openIntroduction = function()
+			BoutiquePanel.open("introduction")
+		end
+		Offer.afterRun(gilt)
 	end)
 end)
 

@@ -377,6 +377,30 @@ a Nightly attempt or a Mythic's odds.
 - **The launch kit**: page text, icon, thumbnails and the gameplay video's shot list are in
   [`LAUNCH.md`](LAUNCH.md).
 
+## Build 65 — what's new
+
+- **A natural look.** The keys down the left are tiles of warm dark leather with a fine brass edge
+  and a soft shadow, their icons drawn clean in each key's colour, softened, and their names in
+  ivory: no neon glass, no glow, no sweeping light. Every icon in the game is now a clean solid
+  line (no neon halo), never thinner than two pixels on any screen. Every panel sits on a soft
+  shadow instead of a gold glow, its gold edge is still (it no longer turns), and headings are
+  warm ivory-gold rather than chrome.
+- **New guests know what to do.** Until a guest has had the Concierge's tour or played two
+  rounds (`Guests.needsGuide`, saved as `flags.toured`), on every visit:
+  - the gold arrow leads them to the Concierge (for up to 20 minutes), and over him it says
+    *Follow the gold arrow to him*, then, close by, *Tap Show me the house* (or Press E / X);
+  - his key reads **Show me the house**, and speaking to him offers the tour first (not the whole
+    menu);
+  - the card under the keys says **Start here · Talk to the Concierge**;
+  - **Start here** opens once, just after the welcome: the game in three plain steps (meet the
+    Concierge, sit at a table, sort each treasure into its case for Gilt) with **Show me the
+    way** and **Straight to a table**.
+- **The Introduction, where a new guest sees it.** After a guest's first banked run in their first
+  week, once a session: its pieces, its price and its real limit (the first week only), with
+  **See it** (the Boutique, on its page) and **Not now**. The Double Gilt card then waits a couple
+  of runs more, so two offers never come one after the other.
+- **Suites stay private the moment someone steps in** (checked every frame again, as promised).
+
 ## Build 64 — what's new
 
 - **The sorting table in the middle of every screen.** On phones with rounded corners or a camera

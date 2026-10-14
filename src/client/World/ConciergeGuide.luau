@@ -1,11 +1,11 @@
 --!strict
 -- On a guest's first evening: a gold arrow to the Concierge, who shows new guests round the house
 -- and teaches them the game. Drawn on the guest's own screen only (nobody else sees any of it):
---   over the Concierge     THE CONCIERGE · "Talk to learn the game", with a gold chevron bobbing
+--   over the Concierge     THE CONCIERGE · "Follow the gold arrow to him", with a gold chevron bobbing
 --                          under it (seen through walls, from anywhere in the house)
 --   on the floor           three gold chevrons in front of the guest, pointing the way, lit in turn
 --   at the screen's edge   a gold arrow when the Concierge is out of view (behind the camera, say)
--- Close to the Concierge the floor arrows go and the line says how to talk ("Press E to talk").
+-- Close to the Concierge the floor arrows go and the line says what to pick ("Tap Show me the house").
 -- It's done when the guest speaks to the Concierge, starts the tour or sits at a table, and it goes
 -- by itself after a few minutes (Config.Welcome.guideMinutes).
 
@@ -18,10 +18,14 @@ local Workspace = game:GetService("Workspace")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local Config = require(ReplicatedStorage.Shared.Config)
+local Voice = require(ReplicatedStorage.Shared.Voice)
 local Sound = require(script.Parent.Parent.Sound)
 local State = require(script.Parent.Parent.State)
 
 local ConciergeGuide = {}
+
+-- Set by Main: told when the guide starts or ends (the card under the keys follows it).
+ConciergeGuide.changed = function() end
 
 -- Set by Main: whether the guest is busy (at a table, on the Concierge's tour): the guide is done.
 ConciergeGuide.isBusy = function(): boolean
@@ -90,14 +94,10 @@ local function conciergeAt(model: Model): Vector3?
 	return if ok then pivot.Position else nil
 end
 
+-- What to do once there, by the guest's own controls ("Tap Show me the house").
 local function talkLine(): string
-	local kind = State.inputKind()
-	if kind == "touch" then
-		return "Tap Speak to talk"
-	elseif kind == "gamepad" then
-		return "Press X to talk"
-	end
-	return "Press E to talk"
+	local near = Voice.StartHere.arrowNear
+	return near[State.inputKind()] or near.mouse
 end
 
 local function bar(parent: Instance, name: string, length: number, thickness: number, centre: Vector2, rotation: number): Frame
@@ -177,7 +177,7 @@ local function buildBillboard(model: Model): BillboardGui?
 	line.Size = UDim2.new(1, -24, 0, 17)
 	line.FontFace = Brand.Fonts.body
 	line.TextSize = 14
-	line.Text = "Talk to learn the game"
+	line.Text = Voice.StartHere.arrowFar
 	line.TextColor3 = C.bone
 	line.Parent = pill
 	-- The chevron under it, pointing down at the Concierge.
@@ -395,7 +395,7 @@ local function setNear(isNear: boolean)
 	local pill = b and b:FindFirstChild("Pill")
 	local line = pill and pill:FindFirstChild("Line")
 	if line and line:IsA("TextLabel") then
-		line.Text = if isNear then talkLine() else "Talk to learn the game"
+		line.Text = if isNear then talkLine() else Voice.StartHere.arrowFar
 	end
 	if isNear then
 		hideFloor()
@@ -506,6 +506,7 @@ function ConciergeGuide.start(): boolean
 	if ok and conn then
 		table.insert(connections, conn)
 	end
+	pcall(ConciergeGuide.changed)
 	return true
 end
 
@@ -558,6 +559,7 @@ function ConciergeGuide.stop(reason: string?)
 	end
 	concierge = nil
 	floorY = nil
+	pcall(ConciergeGuide.changed)
 end
 
 return ConciergeGuide

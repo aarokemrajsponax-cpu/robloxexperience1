@@ -155,7 +155,7 @@ local GAP = 10
 
 local TweenService = game:GetService("TweenService")
 
--- Each key's own colour (its tile and its glow, light and deep), so the dock reads at a glance.
+-- Each key's own colour (light and deep), softened on the key (tintOf) so the dock reads at a glance.
 local ACCENTS: { [string]: { Color3 } } = {
 	Collection = { Color3.fromRGB(255, 196, 92), Color3.fromRGB(166, 104, 22) },
 	Trade = { Color3.fromRGB(92, 232, 210), Color3.fromRGB(16, 120, 112) },
@@ -173,120 +173,71 @@ local ACCENTS: { [string]: { Color3 } } = {
 	Home = { Color3.fromRGB(255, 222, 150), Color3.fromRGB(150, 110, 40) },
 }
 
-local function still(): boolean
-	local ok, value = pcall(function()
-		return require(script.Parent.Parent.State).get("movement")
-	end)
-	return ok and value == "Still"
+-- A key on the dock, made to look like a thing in the house rather than a screen: a tile of warm
+-- dark leather with a fine brass edge and a soft shadow under it; its icon drawn clean in the
+-- key's own colour, softened; its name in ivory beneath, and a short stripe of its colour along
+-- its foot. No glow, no sweeping light. Pointed at, it lifts a little; pressed, it sinks.
+local ICONS: { [string]: string } = { Collection = "collection", Trade = "trade", Wardrobe = "wardrobe", Gems = "gems", Suites = "suites", Invite = "invite", Watch = "watch", Back = "home", Home = "home" }
+local IVORY = Color3.fromRGB(238, 232, 220)
+local BRASS = Color3.fromRGB(128, 106, 72)
+
+-- A key's colour, softened toward ivory: a natural tint, never neon.
+local function tintOf(label: string): Color3
+	local accent = ACCENTS[label] or ACCENTS.Collection
+	return accent[1]:Lerp(IVORY, 0.4)
 end
 
--- A key on the dock, made to be seen and to look like the house: a tile of dark glass, lit from
--- above, with a fine edge and a wash of the key's own colour; its icon drawn in light (a neon tube
--- in glass, not a cartoon); its name clean beneath; a bar of its colour along its foot that runs
--- wider under the pointer. A soft glow of its colour breathes round it. Pressed, it sinks.
-local ICONS: { [string]: string } = { Collection = "collection", Trade = "trade", Wardrobe = "wardrobe", Gems = "gems", Suites = "suites", Invite = "invite", Watch = "watch", Back = "home", Home = "home" }
-
 local function tile(parent: Instance, order: number, glyph: string, label: string, hotkey: string?, onPress: () -> ()): TextButton
-	local accent = ACCENTS[label] or ACCENTS.Collection
-	local light = accent[1]
-	local radius = math.floor(SIZE * 0.22)
+	local tint = tintOf(label)
+	local radius = math.floor(SIZE * 0.2)
 	local holder = Instance.new("Frame")
 	holder.Name = label
 	holder.LayoutOrder = order
 	holder.BackgroundTransparency = 1
 	holder.Size = UDim2.fromOffset(keyWidth(), SIZE)
 	holder.Parent = parent
-	local glow = Theme.glow(holder, light, radius, 0.75)
-	-- The dark rim, just outside the tile, so it reads over any room.
-	local rim = Instance.new("Frame")
-	rim.Name = "Rim"
-	rim.AnchorPoint = Vector2.new(0.5, 0.5)
-	rim.Position = UDim2.fromScale(0.5, 0.5)
-	rim.Size = UDim2.new(1, 4, 1, 4)
-	rim.BackgroundColor3 = Color3.fromRGB(4, 5, 8)
-	rim.BackgroundTransparency = 0.35
-	rim.BorderSizePixel = 0
-	rim.ZIndex = 1
-	local rc = Instance.new("UICorner")
-	rc.CornerRadius = UDim.new(0, radius + 2)
-	rc.Parent = rim
-	rim.Parent = holder
+	-- A soft shadow, a little below: the key sits on the screen, it doesn't shine.
+	local shadow = Instance.new("Frame")
+	shadow.Name = "Shadow"
+	shadow.AnchorPoint = Vector2.new(0.5, 0.5)
+	shadow.Position = UDim2.new(0.5, 0, 0.5, 3)
+	shadow.Size = UDim2.new(1, 2, 1, 2)
+	shadow.BackgroundColor3 = Color3.new(0, 0, 0)
+	shadow.BackgroundTransparency = 0.55
+	shadow.BorderSizePixel = 0
+	shadow.ZIndex = 1
+	local shc = Instance.new("UICorner")
+	shc.CornerRadius = UDim.new(0, radius + 1)
+	shc.Parent = shadow
+	shadow.Parent = holder
 	local b = Instance.new("TextButton")
 	b.Name = "Key"
 	b.AutoButtonColor = false
 	b.Size = UDim2.fromScale(1, 1)
 	b.BackgroundColor3 = Color3.new(1, 1, 1)
-	b.BackgroundTransparency = 0.04
+	b.BackgroundTransparency = 0.02
 	b.Text = ""
 	b.ZIndex = 2
 	b.ClipsDescendants = true
 	b.Parent = holder
-	-- Dark glass, lit from above.
+	-- Warm dark leather, a shade lighter at the top.
 	local fill = Instance.new("UIGradient")
 	fill.Rotation = 90
-	fill.Color = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, Color3.fromRGB(34, 37, 48)),
-		ColorSequenceKeypoint.new(0.5, Color3.fromRGB(17, 19, 26)),
-		ColorSequenceKeypoint.new(1, Color3.fromRGB(9, 10, 14)),
-	})
+	fill.Color = ColorSequence.new(Color3.fromRGB(50, 44, 38), Color3.fromRGB(29, 26, 23))
 	fill.Parent = b
 	local corner = Instance.new("UICorner")
 	corner.CornerRadius = UDim.new(0, radius)
 	corner.Parent = b
-	-- The fine edge: the key's colour, brightest along the top, fading down the sides.
+	-- The fine brass edge.
 	local stroke = Instance.new("UIStroke")
 	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	stroke.Color = light
-	stroke.Thickness = 1.5
-	stroke.Transparency = 0.15
+	stroke.Color = BRASS
+	stroke.Thickness = 1
+	stroke.Transparency = 0.2
 	stroke.Parent = b
-	local strokeLight = Instance.new("UIGradient")
-	strokeLight.Rotation = 90
-	strokeLight.Transparency = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 0),
-		NumberSequenceKeypoint.new(0.55, 0.55),
-		NumberSequenceKeypoint.new(1, 0.25),
-	})
-	strokeLight.Parent = stroke
 	local scale = Instance.new("UIScale")
 	scale.Parent = holder
-	-- A wash of the key's colour, from the top: the glass holds its light.
-	local wash = Instance.new("Frame")
-	wash.Name = "Wash"
-	wash.BorderSizePixel = 0
-	wash.BackgroundColor3 = light
-	wash.Size = UDim2.fromScale(1, 0.75)
-	wash.ZIndex = 2
-	local wg = Instance.new("UIGradient")
-	wg.Rotation = 90
-	wg.Transparency = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 0.72),
-		NumberSequenceKeypoint.new(1, 1),
-	})
-	wg.Parent = wash
-	-- (Rounded like the tile: a frame's clipping keeps square corners, so the wash has its own.)
-	local wc = Instance.new("UICorner")
-	wc.CornerRadius = UDim.new(0, radius)
-	wc.Parent = wash
-	wash.Parent = b
-	-- A hairline of white light along the top edge.
-	local gloss = Instance.new("Frame")
-	gloss.Name = "Gloss"
-	gloss.BorderSizePixel = 0
-	gloss.BackgroundColor3 = Color3.new(1, 1, 1)
-	gloss.AnchorPoint = Vector2.new(0.5, 0)
-	gloss.Position = UDim2.new(0.5, 0, 0, 1)
-	gloss.Size = UDim2.new(1, -radius * 2, 0, 1)
-	gloss.ZIndex = 3
-	local gg = Instance.new("UIGradient")
-	gg.Transparency = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 1),
-		NumberSequenceKeypoint.new(0.5, 0.35),
-		NumberSequenceKeypoint.new(1, 1),
-	})
-	gg.Parent = gloss
-	gloss.Parent = b
-	-- The icon: drawn in light where the house has one, the glyph otherwise (the holiday keys).
+	-- The icon: drawn where the house has one, the glyph otherwise (the holiday keys).
 	local orb = Instance.new("Frame")
 	orb.Name = "Orb"
 	orb.AnchorPoint = Vector2.new(0.5, 0)
@@ -296,7 +247,9 @@ local function tile(parent: Instance, order: number, glyph: string, label: strin
 	orb.ZIndex = 4
 	orb.Parent = b
 	local iconName = ICONS[label]
-	local drawn = if iconName then Icons.draw(orb, iconName, light, math.floor(SIZE * 0.42)) else nil
+	-- (Bolder on a phone, where the keys are small.)
+	local weight = if UserInputService.TouchEnabled then 2.7 else nil
+	local drawn = if iconName then Icons.draw(orb, iconName, tint, math.floor(SIZE * 0.42), weight) else nil
 	if drawn then
 		for _, f in drawn:GetDescendants() do
 			if f:IsA("GuiObject") then
@@ -324,7 +277,7 @@ local function tile(parent: Instance, order: number, glyph: string, label: strin
 	name.Size = UDim2.new(1, -10, 0, math.floor(SIZE * 0.22))
 	name.FontFace = Brand.Fonts.bodyBold
 	name.TextWrapped = false
-	name.TextColor3 = Color3.fromRGB(238, 240, 246)
+	name.TextColor3 = IVORY
 	name.TextStrokeTransparency = 1
 	name.Text = label
 	name.ZIndex = 5
@@ -346,53 +299,21 @@ local function tile(parent: Instance, order: number, glyph: string, label: strin
 		nameFit.Parent = name
 	end
 	name.Parent = b
-	-- The bar of the key's colour along its foot.
-	local underline = Instance.new("Frame")
-	underline.Name = "Underline"
-	underline.BorderSizePixel = 0
-	underline.BackgroundColor3 = light
-	underline.AnchorPoint = Vector2.new(0.5, 1)
-	underline.Position = UDim2.new(0.5, 0, 1, -3)
-	underline.Size = UDim2.new(0.3, 0, 0, 2)
-	underline.ZIndex = 5
-	local uc = Instance.new("UICorner")
-	uc.CornerRadius = UDim.new(1, 0)
-	uc.Parent = underline
-	underline.Parent = b
-	-- A band of light that sweeps across the key now and then (each key at its own moment).
-	local sweep = Instance.new("Frame")
-	sweep.Name = "Sweep"
-	sweep.BorderSizePixel = 0
-	sweep.BackgroundColor3 = Color3.new(1, 1, 1)
-	sweep.BackgroundTransparency = 0
-	sweep.Size = UDim2.fromScale(1, 1)
-	sweep.ZIndex = 5
-	sweep.Parent = b
+	-- A short stripe of the key's colour along its foot.
+	local stripe = Instance.new("Frame")
+	stripe.Name = "Underline"
+	stripe.BorderSizePixel = 0
+	stripe.BackgroundColor3 = tint
+	stripe.BackgroundTransparency = 0.25
+	stripe.AnchorPoint = Vector2.new(0.5, 1)
+	stripe.Position = UDim2.new(0.5, 0, 1, -3)
+	stripe.Size = UDim2.new(0.28, 0, 0, 2)
+	stripe.ZIndex = 5
 	local sc = Instance.new("UICorner")
-	sc.CornerRadius = corner.CornerRadius
-	sc.Parent = sweep
-	local sg = Instance.new("UIGradient")
-	sg.Rotation = 25
-	sg.Transparency = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 1),
-		NumberSequenceKeypoint.new(0.44, 1),
-		NumberSequenceKeypoint.new(0.5, 0.86),
-		NumberSequenceKeypoint.new(0.56, 1),
-		NumberSequenceKeypoint.new(1, 1),
-	})
-	sg.Offset = Vector2.new(-1, 0)
-	sg.Parent = sweep
-	if not still() then
-		-- The glow breathes; the light sweeps across every few seconds.
-		for i, h in glow:GetChildren() do
-			if h:IsA("Frame") then
-				local from = h.BackgroundTransparency
-				TweenService:Create(h, TweenInfo.new(1.8 + i * 0.3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { BackgroundTransparency = math.min(1, from + 0.06) }):Play()
-			end
-		end
-		TweenService:Create(sg, TweenInfo.new(1.1, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut, -1, false, 5 + order * 0.7), { Offset = Vector2.new(1, 0) }):Play()
-	end
-	-- The keyboard key, a small chip on the corner in the key's colour (not on phones).
+	sc.CornerRadius = UDim.new(1, 0)
+	sc.Parent = stripe
+	stripe.Parent = b
+	-- The keyboard key, a small chip on the corner (not on phones).
 	if hotkey and not UserInputService.TouchEnabled then
 		local badge = Instance.new("TextLabel")
 		badge.Name = "Hotkey"
@@ -400,8 +321,8 @@ local function tile(parent: Instance, order: number, glyph: string, label: strin
 		badge.Position = UDim2.new(1, 5, 0, -5)
 		local bpx = math.max(20, math.floor(SIZE * 0.27))
 		badge.Size = UDim2.fromOffset(bpx, bpx)
-		badge.BackgroundColor3 = Color3.fromRGB(8, 9, 13)
-		badge.TextColor3 = light:Lerp(Color3.new(1, 1, 1), 0.4)
+		badge.BackgroundColor3 = Color3.fromRGB(24, 21, 18)
+		badge.TextColor3 = IVORY
 		badge.FontFace = Brand.Fonts.heavy
 		badge.TextSize = math.max(12, math.floor(bpx * 0.56))
 		badge.Text = hotkey
@@ -410,9 +331,9 @@ local function tile(parent: Instance, order: number, glyph: string, label: strin
 		bc.CornerRadius = UDim.new(0, math.floor(bpx * 0.3))
 		bc.Parent = badge
 		local bs = Instance.new("UIStroke")
-		bs.Color = light
-		bs.Thickness = 1.25
-		bs.Transparency = 0.1
+		bs.Color = BRASS
+		bs.Thickness = 1
+		bs.Transparency = 0.15
 		bs.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 		bs.Parent = badge
 		badge.Parent = holder
@@ -420,17 +341,8 @@ local function tile(parent: Instance, order: number, glyph: string, label: strin
 	local over = false
 	local function lit(on: boolean)
 		over = on
-		TweenService:Create(scale, TweenInfo.new(0.16, Enum.EasingStyle.Quad), { Scale = if on then 1.06 else 1 }):Play()
-		TweenService:Create(stroke, TweenInfo.new(0.16), { Transparency = if on then 0 else 0.15 }):Play()
-		TweenService:Create(underline, TweenInfo.new(0.2, Enum.EasingStyle.Quint), { Size = UDim2.new(if on then 0.62 else 0.3, 0, 0, 2) }):Play()
-		-- (The glow reaches further while lit: each halo by half its own spread again.)
-		for _, h in glow:GetChildren() do
-			if h:IsA("Frame") then
-				local spread = if h.Name == "Halo2" then 28 else 12
-				local reach = if on then math.floor(spread * 1.5) else spread
-				h.Size = UDim2.new(1, reach, 1, reach)
-			end
-		end
+		TweenService:Create(scale, TweenInfo.new(0.14, Enum.EasingStyle.Quad), { Scale = if on then 1.04 else 1 }):Play()
+		TweenService:Create(stroke, TweenInfo.new(0.14), { Transparency = if on then 0 else 0.2, Color = if on then C.gold else BRASS }):Play()
 	end
 	b.MouseEnter:Connect(function()
 		lit(true)
@@ -439,10 +351,10 @@ local function tile(parent: Instance, order: number, glyph: string, label: strin
 		lit(false)
 	end)
 	b.MouseButton1Down:Connect(function()
-		TweenService:Create(scale, TweenInfo.new(0.08, Enum.EasingStyle.Quad), { Scale = 0.94 }):Play()
+		TweenService:Create(scale, TweenInfo.new(0.08, Enum.EasingStyle.Quad), { Scale = 0.95 }):Play()
 	end)
 	b.MouseButton1Up:Connect(function()
-		TweenService:Create(scale, TweenInfo.new(0.26, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = if over then 1.06 else 1 }):Play()
+		TweenService:Create(scale, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = if over then 1.04 else 1 }):Play()
 	end)
 	b.Activated:Connect(function()
 		Theme.haptic()
@@ -514,7 +426,7 @@ function QuickDock.setWatch(show: boolean, watching: boolean?)
 	if icon and icon:GetAttribute("Icon") ~= want then
 		local orb = icon.Parent
 		icon:Destroy()
-		local drawn = if orb then Icons.draw(orb, want, (ACCENTS.Watch)[1], math.floor(SIZE * 0.42)) else nil
+		local drawn = if orb then Icons.draw(orb, want, tintOf("Watch"), math.floor(SIZE * 0.42), if UserInputService.TouchEnabled then 2.7 else nil) else nil
 		if drawn then
 			for _, part in drawn:GetDescendants() do
 				if part:IsA("GuiObject") then

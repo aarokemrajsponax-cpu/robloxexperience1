@@ -41,6 +41,10 @@ local quietKey: string? = nil
 Objective.isBusy = function(): boolean
 	return false
 end
+-- Set by Main: whether the gold arrow is leading a new guest to the Concierge.
+Objective.guiding = function(): boolean
+	return false
+end
 
 -- The holiday game's goal (set by Main: World/HolidayPlay.goal). Its rank places it: "here" (in a
 -- game's own place) before everything, "gifts" (gifts waiting) after a first visit's seat, "open"
@@ -70,6 +74,12 @@ function Objective.current(): Goal?
 	local rank = if ok and h then h.rank else nil
 	if holiday and rank == "here" then
 		return holiday
+	end
+	-- (A guest still new to the house, while the arrow leads them: to the Concierge first.)
+	local ok2, guiding = pcall(Objective.guiding)
+	if ok2 and guiding == true and not seatedOnce then
+		local S = Voice.StartHere
+		return { key = "concierge", title = S.title, line = S.goal, how = S.goalHow }
 	end
 	if guest.firstVisit == true and not seatedOnce then
 		return { key = "sit", title = V.next, line = V.sit, how = byInput(V.sitHow) }

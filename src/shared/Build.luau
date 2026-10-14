@@ -4,6 +4,6 @@
 -- see whether Studio has the latest code from GitHub.
 
 return {
-	number = 64,
-	label = "Build 64 · 14 Oct · the table in the middle of every screen, a Gilt bar that folds away",
+	number = 65,
+	label = "Build 65 · 14 Oct · a natural look (no neon, no glow), and new guests led to the Concierge's tour",
 }

@@ -147,6 +147,13 @@ end
 local tourEvent = Remotes.event("Tour")
 local touring: { [Player]: number } = {}
 
+-- Set by Main: whether a guest is still new to the house (no tour yet, fewer than two rounds),
+-- and to note that they've had the tour.
+Concierge.needsTour = function(_player: Player): boolean
+	return false
+end
+Concierge.toured = function(_player: Player) end
+
 function Concierge.tour(player: Player)
 	touring[player] = os.clock()
 	tourEvent:FireClient(player, { op = "start" })
@@ -214,27 +221,33 @@ local function menu(player: Player)
 	end)
 end
 
--- Called once per visit when a guest first steps into the Foyer. Returning guests hear the one
--- thing that matters tonight.
+-- The tour, offered first: the tour, straight to a table, or left to look around.
+local function offerTour(player: Player)
+	Dialogue.say(player, V.speaker, V.tourOffer, {
+		{ id = "tour", text = V.tourYes },
+		{ id = "table", text = V.tourSkip },
+		{ id = "later", text = V.tourLater },
+	}, function(choice)
+		if player.Parent ~= Players or Concierge.isSeated(player) then
+			return
+		end
+		if choice == "tour" then
+			Concierge.tour(player)
+		elseif choice == "table" then
+			Concierge.lead(player, "salon")
+		else
+			Dialogue.say(player, V.speaker, V.tourLaterLine, nil, nil, 3)
+		end
+	end)
+end
+
+-- Called once per visit when a guest first steps into the Foyer. A guest still new to the house
+-- (a first evening, or no tour yet and fewer than two rounds) is offered the tour; returning
+-- guests hear the one thing that matters tonight.
 function Concierge.greet(player: Player, firstVisit: boolean, nightlyPending: boolean?, remembered: string?)
-	if firstVisit then
-		-- A first evening: the tour, straight to a table, or left to look around.
-		Dialogue.say(player, V.speaker, V.tourOffer, {
-			{ id = "tour", text = V.tourYes },
-			{ id = "table", text = V.tourSkip },
-			{ id = "later", text = V.tourLater },
-		}, function(choice)
-			if player.Parent ~= Players or Concierge.isSeated(player) then
-				return
-			end
-			if choice == "tour" then
-				Concierge.tour(player)
-			elseif choice == "table" then
-				Concierge.lead(player, "salon")
-			else
-				Dialogue.say(player, V.speaker, V.tourLaterLine, nil, nil, 3)
-			end
-		end)
+	local ok, new = pcall(Concierge.needsTour, player)
+	if firstVisit or (ok and new == true) then
+		offerTour(player)
 	else
 		Dialogue.say(player, V.speaker, (V.returning:gsub("{name}", Names.of(player))), nil, nil, 3.5)
 		-- One thing the house remembers (last time, a milestone, being missed).
@@ -314,7 +327,12 @@ function Concierge.spawn(parent: Instance)
 		if op == "start" then
 			touring[player] = os.clock()
 		elseif op == "end" then
+			-- (A tour that ran its course, or most of it: they've been shown the house.)
+			local since = touring[player]
 			touring[player] = nil
+			if since and os.clock() - since > 10 then
+				pcall(Concierge.toured, player)
+			end
 		end
 	end)
 	Players.PlayerRemoving:Connect(function(player)
@@ -342,7 +360,13 @@ function Concierge.spawn(parent: Instance)
 			return
 		end
 		Rig.face(s, (characterRoot(player) or s.root).Position)
-		menu(player)
+		-- (A guest still new to the house is offered the tour first, not the whole menu.)
+		local ok, new = pcall(Concierge.needsTour, player)
+		if ok and new == true then
+			offerTour(player)
+		else
+			menu(player)
+		end
 		task.delay(6, function()
 			if not s.busy then
 				Rig.face(s, s.home.Position + s.home.LookVector * 10)

@@ -1,6 +1,7 @@
 --!strict
--- The house's icons, drawn: thin lines of light on a 24-unit grid, scaled to any size, in any
--- colour, each line with a soft halo of its own colour beneath it (a neon tube in glass). Drawn
+-- The house's icons, drawn: clean lines on a 24-unit grid, scaled to any size, in any colour,
+-- flat and solid like a printed mark (Build 65: no neon halo; the "Halo" layer is still made, clear,
+-- so anything that tints an icon finds it where it always was). Drawn
 -- from frames rather than taken from the emoji font, so they look the same on every screen, sit
 -- crisp at any size, and match the house's own glass and gold instead of a phone's cartoon set.
 --
@@ -267,7 +268,8 @@ function Icons.draw(parent: Instance, name: string, colour: Color3, px: number, 
 		return nil
 	end
 	local k = px / 24
-	local thick = (weight or 1.7) * k
+	-- (A touch bolder since the halo went: the line alone carries the mark, on a phone too.)
+	local thick = (weight or 2.1) * k
 	local holder = Instance.new("Frame")
 	holder.Name = "Icon"
 	holder.BackgroundTransparency = 1
@@ -275,7 +277,7 @@ function Icons.draw(parent: Instance, name: string, colour: Color3, px: number, 
 	holder.AnchorPoint = Vector2.new(0.5, 0.5)
 	holder.Position = UDim2.fromScale(0.5, 0.5)
 	holder:SetAttribute("Icon", name)
-	local core = colour:Lerp(Color3.new(1, 1, 1), 0.35)
+	local core = colour:Lerp(Color3.new(1, 1, 1), 0.12)
 	local z = 1
 	-- One stroke of light: a soft wide halo of the colour under a bright core.
 	local function bar(cx: number, cy: number, len: number, w: number, angle: number)
@@ -289,7 +291,7 @@ function Icons.draw(parent: Instance, name: string, colour: Color3, px: number, 
 			f.Size = UDim2.fromOffset(len * k + width, width)
 			f.Rotation = angle
 			f.BackgroundColor3 = if layer == 1 then colour else core
-			f.BackgroundTransparency = if layer == 1 then 0.8 else 0
+			f.BackgroundTransparency = if layer == 1 then 1 else 0
 			f.ZIndex = z + layer
 			local c = Instance.new("UICorner")
 			c.CornerRadius = UDim.new(1, 0)
@@ -311,14 +313,21 @@ function Icons.draw(parent: Instance, name: string, colour: Color3, px: number, 
 			local s = Instance.new("UIStroke")
 			s.Color = if layer == 1 then colour else core
 			s.Thickness = if layer == 1 then stroke * 2.6 else stroke
-			s.Transparency = if layer == 1 then 0.8 else 0
+			s.Transparency = if layer == 1 then 1 else 0
 			s.Parent = f
 			f.Parent = holder
 		end
 	end
-	-- (A stroke's width in pixels: the icon's own weight, or a finer one where a shape asks.)
+	-- (A stroke's width in the UI's units: the icon's own weight, or a finer one where a shape asks;
+	-- never under two pixels on the screen, however small the UI is drawn, so a phone shows every
+	-- line as clearly as a monitor does.)
+	local okRoot, R = pcall(function()
+		return require(script.Parent.Root)
+	end)
+	local uiScale = if okRoot and type(R) == "table" and type((R :: any).scale) == "number" then (R :: any).scale else 1
+	local least = 2 / math.max(0.5, uiScale)
 	local function strokePx(w: number?): number
-		return (w or 1.7) / (weight or 1.7) * thick
+		return math.max(least, (w or 1.7) / (weight or 1.7) * thick)
 	end
 	local painter: Painter = {
 		line = function(x1: number, y1: number, x2: number, y2: number, w: number?)
@@ -342,7 +351,7 @@ function Icons.draw(parent: Instance, name: string, colour: Color3, px: number, 
 				local d = (if layer == 1 then r * 2.6 else r) * 2 * k
 				f.Size = UDim2.fromOffset(d, d)
 				f.BackgroundColor3 = if layer == 1 then colour else core
-				f.BackgroundTransparency = if layer == 1 then 0.8 else 0
+				f.BackgroundTransparency = if layer == 1 then 1 else 0
 				f.ZIndex = z + layer
 				local c = Instance.new("UICorner")
 				c.CornerRadius = UDim.new(1, 0)
@@ -358,7 +367,7 @@ end
 
 -- Sets every line of a drawn icon to a new colour (hover, a state change).
 function Icons.tint(icon: Instance, colour: Color3)
-	local core = colour:Lerp(Color3.new(1, 1, 1), 0.35)
+	local core = colour:Lerp(Color3.new(1, 1, 1), 0.12)
 	for _, f in icon:GetChildren() do
 		if f:IsA("Frame") then
 			local s = f:FindFirstChildOfClass("UIStroke")

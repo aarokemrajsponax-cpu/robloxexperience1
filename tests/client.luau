@@ -1441,6 +1441,7 @@ check("the camera drifts under the title", camera.CameraType == roblox.Enum.Came
 serverSays("Guest", {
 	op = "welcome",
 	firstVisit = true,
+	guide = true,
 	displayName = "Ada",
 	settings = {},
 	overrides = {},
@@ -1569,7 +1570,19 @@ do
 	advance(2.5)
 	check("a first evening: the gold arrow to the Concierge is up", Guide.active())
 	local bb = playerGui:FindFirstChild("MaisonConciergeGuide")
-	check("over the Concierge: THE CONCIERGE, Talk to learn the game, and a chevron", bb ~= nil and bb.Adornee == chead and bb.AlwaysOnTop == true and textOnScreen("Talk to learn the game") ~= nil and bb:FindFirstChild("Chevron") ~= nil)
+	check("over the Concierge: THE CONCIERGE, follow the gold arrow to him, and a chevron", bb ~= nil and bb.Adornee == chead and bb.AlwaysOnTop == true and textOnScreen("Follow the gold arrow to him") ~= nil and bb:FindFirstChild("Chevron") ~= nil)
+	-- Start here: the whole game in three plain steps, and Show me the way.
+	advance(3)
+	check("a new guest gets Start here: the game in three plain steps", textOnScreen("Meet the Concierge") ~= nil and textOnScreen("Sit at a table") ~= nil and textOnScreen("Sort the treasures") ~= nil and textOnScreen("Show me the way") ~= nil, textOnScreen("Meet the Concierge") ~= nil)
+	snapshot("start-here")
+	press("Show me the way")
+	advance(0.6)
+	check("...Show me the way closes it, and the arrow leads on", textOnScreen("Meet the Concierge") == nil and Guide.active())
+	check("the card under the keys says the same: talk to the Concierge", textOnScreen("Talk to the Concierge") ~= nil)
+	-- His key says what to pick, for a guest still new to the house.
+	local PromptsM = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "Prompts")
+	speak.ObjectText = "The Concierge"
+	check("the Concierge's key says Show me the house to a new guest", PromptsM.actionFor(speak) == "Show me the house")
 	local folder = camera:FindFirstChild("MaisonConciergeGuide")
 	local arrows = {}
 	for _, p in (folder and folder:GetChildren() or {}) do
@@ -1604,7 +1617,7 @@ do
 			lit += 1
 		end
 	end
-	check("close to the Concierge: how to talk, and the floor arrows go", textOnScreen("Press E to talk") ~= nil and lit == 0, lit)
+	check("close to the Concierge: what to pick, and the floor arrows go", textOnScreen("Press E: Show me the house") ~= nil and lit == 0, lit)
 	-- Speaking to the Concierge: done, for good.
 	services.ProximityPromptService.PromptTriggered:Fire(speak)
 	advance(1)
@@ -3041,6 +3054,33 @@ serverSays("Shop", { op = "pages", pages = { 3 } })
 advance(0.5)
 check("a page turning is announced", textOnScreen("Page 3 turned") ~= nil)
 check("no errors in the Boutique", #errors == 0, errors[1])
+
+-- The Introduction, offered once to a guest in their first week (after their first banked run):
+-- its pieces, its price, its real limit, See it and Not now.
+do
+	local Offer = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "OfferCard")
+	Root2.close()
+	advance(0.5)
+	invokeResults.ShopAsk.introduction = { price = 99, items = { { name = "The Velvet Jacket" }, { name = "A Silver Chime" }, { name = "A Painting for your Suite" } } }
+	local opened = false
+	Offer.openIntroduction = function()
+		opened = true
+	end
+	run(Offer.introduction)
+	advance(3.2)
+	check("a first-week guest is shown The Introduction: its pieces, its price and its real limit", textOnScreen("The Introduction") ~= nil and textOnScreen("The Velvet Jacket") ~= nil and textOnScreen("99, and only in your first week") ~= nil)
+	snapshot("introduction-offer")
+	local see = find(playerGui, function(d)
+		return d:IsA("TextButton") and string.sub(d.Name, 1, 10) == "Key_See it"
+	end)
+	check("...its key says the price too", see ~= nil and string.find(see.Text, "99", 1, true) ~= nil)
+	if see then
+		signalOf(see, "Activated"):Fire()
+	end
+	advance(0.6)
+	check("...and See it opens the Boutique on its page", opened and textOnScreen("99, and only in your first week") == nil)
+	invokeResults.ShopAsk.introduction = nil
+end
 
 ---------------------------------------------------------------------------------------------------
 -- 7c. The five new products: the Offers, a decree written and proclaimed, the banners, the rain,
@@ -4530,10 +4570,11 @@ do
 		end)
 	end
 	check("the dock: Collection, Trade, Wardrobe, Gems and Invite on screen", dockKeys.Collection ~= nil and dockKeys.Trade ~= nil and dockKeys.Wardrobe ~= nil and dockKeys.Gems ~= nil and dockKeys.Invite ~= nil)
-	-- (Each key glows in its own colour, its name under its icon: nobody misses the dock.)
-	local lit = dockKeys.Gems and dockKeys.Gems.Parent:FindFirstChild("Glow")
+	-- (Each key in its own colour, softened, its name under its icon, on a tile with a soft shadow:
+	-- natural, nothing glowing.)
+	local lit = dockKeys.Gems and dockKeys.Gems.Parent:FindFirstChild("Shadow")
 	local named = dockKeys.Gems and dockKeys.Gems:FindFirstChild("Label")
-	check("...each key glowing in its own colour, its name under its icon", lit ~= nil and #lit:GetChildren() >= 2 and named ~= nil and named.Text == "Gems")
+	check("...each key in its own colour on a tile with a soft shadow, its name under its icon, and nothing glowing", lit ~= nil and dockKeys.Gems.Parent:FindFirstChild("Glow") == nil and dockKeys.Gems:FindFirstChild("Sweep") == nil and named ~= nil and named.Text == "Gems")
 	snapshot("dock")
 	local invitesBefore = shared.invites
 	if dockKeys.Invite then

@@ -1,8 +1,8 @@
 --!strict
--- The look of every panel (Build 56, "2070"): black glass with rounded corners and a gold edge that
--- catches the light as it turns, a soft glow round it; headings in heavy Gotham capitals with a metal
--- sheen, everything else in lighter Gotham SSm; gold keys that light up and press in. Text follows the Text
--- size and Lettering settings live.
+-- The look of every panel (Build 65, natural): dark lacquer with rounded corners, a fine still edge
+-- of gold, and a soft shadow beneath (no glow, no turning light); headings in heavy Gotham capitals
+-- in warm ivory-gold, everything else in lighter Gotham SSm; gold keys that press in. Text follows
+-- the Text size and Lettering settings live.
 --
 -- Typography: every size is set on one scale (Theme.Scale), with line spacing by kind; keys set
 -- their words at a fixed size (never TextScaled, which squeezes letters), a step smaller only if
@@ -11,7 +11,6 @@
 
 local ContentProvider = game:GetService("ContentProvider")
 local HapticService = game:GetService("HapticService")
-local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
@@ -260,10 +259,10 @@ function Theme.metal(target: GuiObject, bright: boolean?): UIGradient
 	local g = Instance.new("UIGradient")
 	g.Name = "Metal"
 	g.Rotation = 90
+	-- (Build 65: a gentle warmth from ivory to light gold, not a chrome sheen.)
 	g.Color = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, if bright then Color3.fromRGB(255, 248, 222) else Color3.fromRGB(255, 240, 200)),
-		ColorSequenceKeypoint.new(0.45, if bright then C.brightGold else C.lightGold),
-		ColorSequenceKeypoint.new(1, if bright then C.gold else Color3.fromRGB(214, 172, 92)),
+		ColorSequenceKeypoint.new(0, if bright then Color3.fromRGB(250, 240, 214) else Color3.fromRGB(246, 238, 220)),
+		ColorSequenceKeypoint.new(1, if bright then C.lightGold else Color3.fromRGB(232, 214, 170)),
 	})
 	g.Parent = target
 	return g
@@ -277,23 +276,18 @@ function Theme.edge(stroke: UIStroke, strength: number?): UIGradient
 	local g = Instance.new("UIGradient")
 	g.Name = "Edge"
 	g.Rotation = 35
+	-- (Build 65: still, and quiet: a little lighter along the top, as if lit from above, and no
+	-- light turning round it.)
+	g.Rotation = 90
 	g.Color = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, C.brightGold),
-		ColorSequenceKeypoint.new(0.3, C.gold),
-		ColorSequenceKeypoint.new(0.5, C.deepGold),
-		ColorSequenceKeypoint.new(0.7, C.gold),
-		ColorSequenceKeypoint.new(1, C.brightGold),
+		ColorSequenceKeypoint.new(0, C.gold),
+		ColorSequenceKeypoint.new(1, C.deepGold),
 	})
 	g.Transparency = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 0),
-		NumberSequenceKeypoint.new(0.5, math.clamp(0.25 + 0.45 * k, 0, 0.9)),
-		NumberSequenceKeypoint.new(1, 0),
+		NumberSequenceKeypoint.new(0, 0.15),
+		NumberSequenceKeypoint.new(1, math.clamp(0.35 + 0.25 * k, 0, 0.9)),
 	})
 	g.Parent = stroke
-	if State.get("movement") ~= "Still" then
-		-- (A full turn every twelve seconds, run by the engine.)
-		TweenService:Create(g, TweenInfo.new(12, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), { Rotation = 395 }):Play()
-	end
 	return g
 end
 
@@ -307,17 +301,20 @@ function Theme.glow(target: GuiObject, colour: Color3?, radius: number?, strengt
 	holder.BackgroundTransparency = 1
 	holder.Size = UDim2.fromScale(1, 1)
 	holder.ZIndex = 0
-	local c = colour or C.glow
+	-- (Build 65: a soft shadow beneath, a little lower, rather than a halo of colour: things sit on
+	-- the screen, they don't shine. The colour asked for is no longer used.)
+	local _ = colour
+	local c = Color3.new(0, 0, 0)
 	local base = radius or 14
 	local k = strength or 1
-	for i, spread in { 6, 14 } do
+	for i, spread in { 4, 10 } do
 		local h = Instance.new("Frame")
 		h.Name = "Halo" .. i
 		h.BorderSizePixel = 0
 		h.BackgroundColor3 = c
-		h.BackgroundTransparency = 1 - (if i == 1 then 0.16 else 0.07) * k
+		h.BackgroundTransparency = 1 - (if i == 1 then 0.3 else 0.14) * math.max(0.6, k)
 		h.AnchorPoint = Vector2.new(0.5, 0.5)
-		h.Position = UDim2.fromScale(0.5, 0.5)
+		h.Position = UDim2.new(0.5, 0, 0.5, 4)
 		h.Size = UDim2.new(1, spread * 2, 1, spread * 2)
 		h.ZIndex = holder.ZIndex
 		local hc = Instance.new("UICorner")
@@ -370,8 +367,8 @@ function Theme.glass(parent: Instance, name: string, size: UDim2, position: UDim
 	end
 	group.Parent = parent
 
-	-- A faint gold glow round the glass.
-	Theme.glow(group, C.glow, 16, 0.45)
+	-- A soft shadow beneath the panel.
+	Theme.glow(group, nil, 16, 0.8)
 	local fill = Instance.new("Frame")
 	fill.Name = "Fill"
 	fill.Size = UDim2.fromScale(1, 1)
@@ -386,7 +383,7 @@ function Theme.glass(parent: Instance, name: string, size: UDim2, position: UDim
 	local stroke = Instance.new("UIStroke")
 	stroke.Color = Color3.new(1, 1, 1)
 	stroke.Transparency = 0.05
-	stroke.Thickness = 1.5
+	stroke.Thickness = 1.25
 	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 	stroke.Parent = fill
 	Theme.edge(stroke)
@@ -404,8 +401,8 @@ function Theme.glass(parent: Instance, name: string, size: UDim2, position: UDim
 	local highlight = Instance.new("Frame")
 	highlight.Name = "Highlight"
 	highlight.BorderSizePixel = 0
-	highlight.BackgroundColor3 = C.brightGold
-	highlight.BackgroundTransparency = 0
+	highlight.BackgroundColor3 = C.lightGold
+	highlight.BackgroundTransparency = 0.55
 	highlight.Size = UDim2.new(0.7, 0, 0, 1)
 	highlight.AnchorPoint = Vector2.new(0.5, 0)
 	highlight.Position = UDim2.new(0.5, 0, 0, 1)
