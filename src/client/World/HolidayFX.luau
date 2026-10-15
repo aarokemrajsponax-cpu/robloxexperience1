@@ -27,6 +27,8 @@ local HolidayGames = require(ReplicatedStorage.Shared.HolidayGames)
 local HouseEvents = require(ReplicatedStorage.Shared.HouseEvents)
 local Layout = require(ReplicatedStorage.Shared.Layout)
 local Flakes = require(script.Parent.Flakes)
+local HolidayKit = require(script.Parent.HolidayKit)
+local HolidayProps = require(ReplicatedStorage.Shared.HolidayProps)
 local HolidaySets = require(script.Parent.HolidaySets)
 local Quality = require(script.Parent.Parent.Quality)
 local Stagecraft = require(script.Parent.Stagecraft)
@@ -360,6 +362,88 @@ local AIR: { [string]: () -> { () -> () } } = {
 -- The hunt
 ---------------------------------------------------------------------------------------------------
 
+-- Each pickup drawn as the real thing, round the server's invisible part (on this screen only):
+-- a carved pumpkin, a wrapped present, a love letter sealed with a wax heart, a four-leaf clover,
+-- a painted egg, a turkey on the run; and the golden prizes their own (a golden pumpkin, a golden
+-- bell, the heart of gold with Cupid's arrow through it, the pot of gold, the golden egg, the
+-- golden turkey). What you'd find lies where it was hidden; love letters, the heart of gold and
+-- the golden bell float, turning. Found, it goes in a burst of its colours.
+type Prop = { model: Model, float: boolean, moves: boolean, home: Vector3, phase: number, colours: { Color3 } }
+local props: { [BasePart]: Prop } = {}
+local GOLDS = { rgb(255, 214, 110), rgb(236, 176, 60) }
+
+local function buildProp(p: BasePart): Prop?
+	local hunt = tostring(p:GetAttribute("Hunt"))
+	local jackpot = p:GetAttribute("Jackpot") == true
+	local moves = p:GetAttribute("Moves") == true
+	local base = p:GetAttribute("Base")
+	local cf = if typeof(base) == "CFrame" then base else p.CFrame
+	local at = cf.Position
+	local floorAt = at - Vector3.new(0, 3.2, 0)
+	local yaw = CFrame.Angles(0, math.random() * math.pi * 2, 0)
+	local floor = CFrame.new(floorAt) * yaw
+	local f = holder()
+	local m: Model? = nil
+	local float = false
+	local colours = GOLDS
+	if hunt == "valentine" then
+		float = true
+		m = if jackpot then HolidayProps.heartOfGold(f, CFrame.new(at), 2.6) else HolidayProps.loveLetter(f, CFrame.new(at), 1.8)
+		colours = if jackpot then GOLDS else { rgb(255, 120, 170), rgb(220, 30, 70), rgb(255, 230, 236) }
+	elseif hunt == "stPatrick" then
+		m = if jackpot then HolidayProps.potOfGold(f, floor, 3.2) else HolidayProps.clover(f, floor, 2.6, true)
+		colours = if jackpot then GOLDS else { rgb(46, 170, 70), rgb(120, 220, 120), rgb(255, 214, 110) }
+	elseif hunt == "easter" then
+		local scheme = HolidayProps.EGGS[math.random(1, #HolidayProps.EGGS)]
+		m = HolidayProps.egg(f, floor, if jackpot then 2.3 else 1.7, scheme, jackpot)
+		colours = if jackpot then GOLDS else scheme
+	elseif hunt == "halloween" then
+		m = HolidayProps.pumpkin(f, floorAt, if jackpot then 2.8 else 2.1, cf.LookVector, true, true, if jackpot then GOLDS else nil)
+		colours = if jackpot then GOLDS else { rgb(255, 140, 40), rgb(160, 96, 255) }
+	elseif hunt == "christmas" then
+		if jackpot then
+			float = true
+			m = HolidayProps.goldenBell(f, CFrame.new(at - Vector3.new(0, 1.1, 0)), 2.2)
+		else
+			local wrap = HolidayProps.WRAPS[math.random(1, #HolidayProps.WRAPS)]
+			m = HolidayProps.gift(f, floor, Vector3.new(1.9, 1.7, 1.9), wrap[1], wrap[2])
+			colours = { wrap[1], wrap[2] }
+		end
+	elseif hunt == "thanksgiving" then
+		m = HolidayProps.turkey(f, floor, jackpot)
+		colours = if jackpot then GOLDS else { rgb(236, 170, 80), rgb(150, 90, 40) }
+	end
+	if not m then
+		return nil
+	end
+	local bb = p:FindFirstChildOfClass("BillboardGui")
+	if bb then
+		bb.Enabled = false
+	end
+	return { model = m, float = float, moves = moves, home = if float then at else floorAt, phase = math.random() * math.pi * 2, colours = colours }
+end
+
+local function stepProps(t: number)
+	for p, prop in props do
+		if not p.Parent then
+			props[p] = nil
+			local pivot = prop.model:GetPivot().Position
+			prop.model:Destroy()
+			pcall(HolidayKit.burst, pivot + Vector3.new(0, 1.5, 0), prop.colours, 18, 0.5, true)
+		elseif prop.float then
+			local bob = math.sin(t * 2 + prop.phase) * 0.35
+			prop.model:PivotTo(CFrame.new(prop.home + Vector3.new(0, bob, 0)) * CFrame.Angles(0, t * 0.9 + prop.phase, math.sin(t * 1.3 + prop.phase) * 0.08))
+		elseif prop.moves then
+			local now = p.CFrame.Position - Vector3.new(0, 3.2, 0)
+			local last = prop.home
+			local dir = Vector3.new(now.X - last.X, 0, now.Z - last.Z)
+			local facing = if dir.Magnitude > 0.05 then CFrame.lookAt(now, now + dir) else CFrame.new(now) * (prop.model:GetPivot() - prop.model:GetPivot().Position)
+			prop.model:PivotTo(facing)
+			prop.home = now
+		end
+	end
+end
+
 -- Every pickup glows in its holiday's colours and sparkles (decorated on this screen only; the
 -- server's pickup carries it, so it goes when the pickup goes).
 local dressed: { [Instance]: boolean } = setmetatable({}, { __mode = "k" }) :: any
@@ -406,6 +490,12 @@ local function dress(p: Instance)
 	e.LightInfluence = 0
 	e.Color = ColorSequence.new(glowColour:Lerp(Color3.new(1, 1, 1), 0.4), glowColour)
 	e.Parent = p
+	if not props[p :: BasePart] then
+		local ok, prop = pcall(buildProp, p :: BasePart)
+		if ok and prop then
+			props[p :: BasePart] = prop
+		end
+	end
 end
 
 -- A column of golden light over each hunt's golden prize, sparks rising up it.
@@ -799,6 +889,7 @@ function HolidayFX.start()
 	-- Everything that moves in the holidays' pieces, on one clock.
 	RunService.RenderStepped:Connect(function(dt: number)
 		clock += dt
+		stepProps(clock)
 		for _, r in running do
 			local set = r.set
 			if set and set.folder.Parent then

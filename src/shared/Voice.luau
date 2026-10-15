@@ -276,6 +276,20 @@ Voice.Hints = {
 	} :: { Hint },
 }
 
+-- A holiday hunt on the event strip (UI/EventBanner): how many are still hidden, and whether its
+-- golden prize has been found.
+Voice.Hunts = {
+	left = "%d %s LEFT",
+	hidden = "%s still hidden",
+	found = "%s found",
+	halloween = { one = "PUMPKIN", many = "PUMPKINS", prize = "golden pumpkin" },
+	thanksgiving = { one = "TURKEY", many = "TURKEYS", prize = "golden turkey" },
+	christmas = { one = "PRESENT", many = "PRESENTS", prize = "golden bell" },
+	valentine = { one = "LOVE LETTER", many = "LOVE LETTERS", prize = "heart of gold" },
+	stPatrick = { one = "CLOVER", many = "CLOVERS", prize = "pot of gold" },
+	easter = { one = "EGG", many = "EGGS", prize = "golden egg" },
+} :: { [string]: any }
+
 Voice.Guide = {
 	key = "How to play",
 	title = "How to play",

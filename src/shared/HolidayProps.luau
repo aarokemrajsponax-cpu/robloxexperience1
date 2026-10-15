@@ -596,6 +596,157 @@ function HolidayProps.egg(parent: Instance?, cf: CFrame, height: number, scheme:
 end
 
 ---------------------------------------------------------------------------------------------------
+-- The holiday hunts round the house (the owner's hunts, and the house's own on the holiday): what
+-- a pickup is, drawn on every screen round the server's invisible part
+---------------------------------------------------------------------------------------------------
+
+-- A heart of `d` across, its point down, `depth` thick, centred on `cf`: two round lobes and the
+-- point between them.
+local function heart(m: Model, name: string, cf: CFrame, d: number, depth: number, colour: Color3, material: Enum.Material?)
+	local lobe = d * 0.56
+	for _, sx in { -1, 1 } do
+		ellipsoid(m, name, Vector3.new(lobe, lobe, depth), cf * CFrame.new(sx * d * 0.22, d * 0.12, 0), colour, material)
+	end
+	part(m, name, Vector3.new(lobe * 0.92, lobe * 0.92, depth * 0.92), cf * CFrame.new(0, -d * 0.12, 0) * CFrame.Angles(0, 0, math.rad(45)), colour, material)
+end
+HolidayProps.heart = heart
+
+-- A love letter (Valentine's), standing on `cf`'s point and facing its way: a cream envelope, the
+-- fold of its flap pressed in a darker line, sealed with a red wax heart.
+function HolidayProps.loveLetter(parent: Instance?, cf: CFrame, width: number): Model
+	local m = model(parent, "LoveLetter", cf)
+	local h = width * 0.66
+	local cream = rgb(250, 240, 226)
+	local fold = rgb(222, 200, 178)
+	local body = part(m, "Envelope", Vector3.new(width, h, 0.1), cf, cream, Enum.Material.SmoothPlastic)
+	body.Reflectance = 0.02
+	-- (The flap's two edges, from the top corners down to the seal.)
+	local tip = Vector3.new(0, -h * 0.08, -0.06)
+	for _, sx in { -1, 1 } do
+		local corner = Vector3.new(sx * width * 0.48, h * 0.48, -0.06)
+		rod(m, "Fold", (cf * CFrame.new(corner)).Position, (cf * CFrame.new(tip)).Position, 0.05, fold, Enum.Material.SmoothPlastic)
+	end
+	part(m, "Edge", Vector3.new(width + 0.04, 0.05, 0.12), cf * CFrame.new(0, h / 2, 0), fold, Enum.Material.SmoothPlastic)
+	heart(m, "Seal", cf * CFrame.new(0, -h * 0.1, -0.1), width * 0.26, 0.12, rgb(196, 22, 52), Enum.Material.SmoothPlastic)
+	-- (Its other face, the one the postman reads: a stamp with a little heart on it in the top
+	-- corner and three lines of a hand-written address.)
+	local stamp = cf * CFrame.new(width * 0.33, h * 0.22, 0.06)
+	part(m, "Stamp", Vector3.new(width * 0.18, width * 0.21, 0.03), stamp, rgb(236, 112, 136), Enum.Material.SmoothPlastic)
+	part(m, "StampEdge", Vector3.new(width * 0.21, width * 0.24, 0.02), stamp * CFrame.new(0, 0, -0.01), rgb(255, 252, 246), Enum.Material.SmoothPlastic)
+	heart(m, "StampHeart", stamp * CFrame.new(0, 0, 0.02) * CFrame.Angles(0, math.pi, 0), width * 0.09, 0.02, rgb(255, 244, 236), Enum.Material.SmoothPlastic)
+	for k, len in { 0.42, 0.5, 0.32 } do
+		part(m, "Address", Vector3.new(width * len, 0.035, 0.02), cf * CFrame.new(-width * 0.04 + width * len / 2 - width * 0.2, -h * (k * 0.13 - 0.02), 0.06), rgb(150, 120, 120), Enum.Material.SmoothPlastic)
+	end
+	return m
+end
+
+-- The heart of gold (Valentine's golden prize): a great golden heart, Cupid's arrow through it.
+function HolidayProps.heartOfGold(parent: Instance?, cf: CFrame, d: number): Model
+	local m = model(parent, "HeartOfGold", cf)
+	heart(m, "Heart", cf, d, d * 0.42, rgb(250, 200, 84), Enum.Material.SmoothPlastic)
+	-- The arrow: a shaft from upper left to lower right, its head and its fletching.
+	local a = (cf * CFrame.new(-d * 0.95, d * 0.32, -0.05)).Position
+	local b = (cf * CFrame.new(d * 0.95, -d * 0.22, -0.05)).Position
+	rod(m, "Shaft", a, b, d * 0.06, rgb(150, 98, 52), Enum.Material.Wood)
+	local dir = (b - a).Unit
+	part(m, "Head", Vector3.new(d * 0.2, d * 0.2, d * 0.06), CFrame.lookAt(b, b + dir) * CFrame.Angles(0, 0, math.rad(45)), rgb(236, 236, 240), Enum.Material.Metal)
+	for _, k in { -1, 1 } do
+		part(m, "Fletch", Vector3.new(d * 0.05, d * 0.18, d * 0.3), CFrame.lookAt(a, a + dir) * CFrame.new(0, k * d * 0.06, d * 0.08) * CFrame.Angles(k * math.rad(24), 0, 0), rgb(236, 64, 110), Enum.Material.Fabric)
+	end
+	-- (The heart polished gold; the arrow keeps its wood, steel and feathers.)
+	for _, p in m:GetDescendants() do
+		if p:IsA("BasePart") and p.Name == "Heart" then
+			p.Material = Enum.Material.Metal
+			p.Reflectance = 0.28
+		end
+	end
+	local core = m:FindFirstChild("Heart")
+	if core and core:IsA("BasePart") then
+		light(core, rgb(255, 170, 190), 2, 14)
+		sparkle(core, rgb(255, 214, 160), 8, 0.4)
+	end
+	return m
+end
+
+-- A clover (St Patrick's), `d` across, lying on `cf` and tipped up a little to be seen: four
+-- heart-shaped leaves (three on a common one), a vein of lighter green down each, and its stem.
+function HolidayProps.clover(parent: Instance?, cf: CFrame, d: number, four: boolean?): Model
+	local m = model(parent, if four == false then "Shamrock" else "Clover", cf)
+	local leaf = rgb(40, 158, 66)
+	local vein = rgb(120, 214, 120)
+	local n = if four == false then 3 else 4
+	local face = cf * CFrame.new(0, d * 0.45, 0) * CFrame.Angles(math.rad(-58), 0, 0)
+	for k = 1, n do
+		local a = (k - 1) / n * math.pi * 2 + (if n == 4 then math.pi / 4 else math.pi / 2)
+		local r = d * 0.27
+		-- (Each leaf cupped a little, its outer edge lifted, so the light falls on each its own way.)
+		local at = face * CFrame.Angles(0, 0, a) * CFrame.new(0, r, 0) * CFrame.Angles(math.rad(16), 0, 0)
+		heart(m, "Leaf", at, d * 0.46, 0.08, leaf:Lerp(rgb(28, 120, 50), (k % 2) * 0.35), Enum.Material.SmoothPlastic)
+		part(m, "Vein", Vector3.new(0.05, d * 0.3, 0.1), at * CFrame.new(0, -d * 0.02, -0.02), vein, Enum.Material.SmoothPlastic)
+	end
+	ball(m, "Heart", d * 0.12, face.Position, vein, Enum.Material.SmoothPlastic)
+	rod(m, "Stem", (cf * CFrame.new(0, 0.05, d * 0.15)).Position, face.Position, d * 0.06, rgb(60, 130, 60), Enum.Material.SmoothPlastic)
+	return m
+end
+
+-- The pot of gold at the rainbow's end (St Patrick's golden prize): a black iron pot on three
+-- feet, brimming over with gold coins.
+function HolidayProps.potOfGold(parent: Instance?, cf: CFrame, d: number): Model
+	local m = model(parent, "PotOfGold", cf)
+	local iron = rgb(26, 26, 30)
+	local h = d * 0.78
+	local body = ellipsoid(m, "Pot", Vector3.new(d, h, d), cf * CFrame.new(0, h * 0.5 + d * 0.08, 0), iron, Enum.Material.Metal)
+	body.Reflectance = 0.08
+	part(m, "Rim", Vector3.new(d * 0.1, d * 0.86, d * 0.86), cf * CFrame.new(0, h * 0.92, 0) * UPRIGHT, iron:Lerp(Color3.new(1, 1, 1), 0.08), Enum.Material.Metal, Enum.PartType.Cylinder)
+	for k = 1, 3 do
+		local a = k / 3 * math.pi * 2
+		ball(m, "Foot", d * 0.16, (cf * CFrame.new(math.cos(a) * d * 0.3, d * 0.06, math.sin(a) * d * 0.3)).Position, iron, Enum.Material.Metal)
+	end
+	local gold = rgb(255, 204, 70)
+	ellipsoid(m, "Gold", Vector3.new(d * 0.8, d * 0.34, d * 0.8), cf * CFrame.new(0, h * 0.98, 0), gold, Enum.Material.SmoothPlastic)
+	for k = 1, 7 do
+		local a = k / 7 * math.pi * 2
+		local r = d * (if k % 2 == 0 then 0.18 else 0.3)
+		part(m, "Coin", Vector3.new(d * 0.04, d * 0.2, d * 0.2), cf * CFrame.new(math.cos(a) * r, h * 1.06 + (k % 3) * d * 0.03, math.sin(a) * r) * CFrame.Angles(math.rad(10 + k * 9), a, math.rad(70)), gold:Lerp(Color3.new(1, 1, 1), 0.15), Enum.Material.SmoothPlastic, Enum.PartType.Cylinder)
+	end
+	for _, p in m:GetDescendants() do
+		if p:IsA("BasePart") and (p.Name == "Gold" or p.Name == "Coin") then
+			p.Reflectance = 0.2
+		end
+	end
+	light(body, rgb(255, 214, 110), 2.4, 16)
+	sparkle(body, rgb(255, 220, 120), 10, 0.45)
+	return m
+end
+
+-- A golden bell (Christmas's golden prize), `d` across, hanging from its red ribbon bow.
+function HolidayProps.goldenBell(parent: Instance?, cf: CFrame, d: number): Model
+	local m = model(parent, "GoldenBell", cf)
+	local gold = rgb(240, 192, 70)
+	local h = d * 1.05
+	ellipsoid(m, "Bell", Vector3.new(d * 0.82, h, d * 0.82), cf * CFrame.new(0, h * 0.55, 0), gold, Enum.Material.SmoothPlastic)
+	part(m, "Lip", Vector3.new(d * 0.12, d, d), cf * CFrame.new(0, h * 0.12, 0) * UPRIGHT, gold:Lerp(Color3.new(1, 1, 1), 0.1), Enum.Material.SmoothPlastic, Enum.PartType.Cylinder)
+	ball(m, "Clapper", d * 0.22, (cf * CFrame.new(0, 0, 0)).Position, gold:Lerp(Color3.new(0, 0, 0), 0.2), Enum.Material.SmoothPlastic)
+	local red = rgb(196, 26, 44)
+	local top = cf * CFrame.new(0, h * 1.02, 0)
+	for _, sx in { -1, 1 } do
+		ellipsoid(m, "Bow", Vector3.new(d * 0.42, d * 0.26, d * 0.16), top * CFrame.new(sx * d * 0.2, d * 0.08, 0) * CFrame.Angles(0, 0, sx * math.rad(-25)), red, Enum.Material.Fabric)
+	end
+	ball(m, "Knot", d * 0.14, top.Position + Vector3.new(0, d * 0.06, 0), red, Enum.Material.Fabric)
+	for _, p in m:GetDescendants() do
+		if p:IsA("BasePart") and p.Name ~= "Bow" and p.Name ~= "Knot" then
+			p.Reflectance = 0.22
+		end
+	end
+	local bell = m:FindFirstChild("Bell")
+	if bell and bell:IsA("BasePart") then
+		light(bell, rgb(255, 214, 120), 2, 14)
+		sparkle(bell, rgb(255, 220, 140), 8, 0.4)
+	end
+	return m
+end
+
+---------------------------------------------------------------------------------------------------
 -- Puppets: one part moves the whole thing, welds bend it
 ---------------------------------------------------------------------------------------------------
 

@@ -4,6 +4,7 @@
 -- from the owner land as a line; a summons from another house offers a key to join it. Gold coins
 -- and golden keys turn slowly so they catch the eye.
 
+local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
@@ -16,6 +17,7 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Root = require(script.Parent.Root)
 local State = require(script.Parent.Parent.State)
 local Theme = require(script.Parent.Theme)
+local Voice = require(ReplicatedStorage.Shared.Voice)
 local Toast = require(script.Parent.Toast)
 local NeoFX = require(script.Parent.Parent.World.NeoFX)
 
@@ -292,6 +294,8 @@ local function say(label: TextLabel, text: string)
 	if label.Text == text then
 		return
 	end
+	-- (Only new words come in softly: a clock ticking down just changes its figures.)
+	local fresh = string.gsub(label.Text, "%d", "8") ~= string.gsub(text, "%d", "8")
 	label.Text = text
 	local k = label:GetAttribute("Kind")
 	local kind: Kind = if k == "head" then "head" elseif k == "soon" then "soon" else "line"
@@ -351,7 +355,7 @@ local function say(label: TextLabel, text: string)
 		end
 		reportTop()
 	end
-	if not still() then
+	if fresh and not still() then
 		label.TextTransparency = 1
 		TweenService:Create(label, TweenInfo.new(0.35, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), { TextTransparency = 0 }):Play()
 	end
@@ -375,6 +379,10 @@ table.insert(Root.rescaled, function()
 		say(l, text)
 	end
 end)
+
+-- (When each holiday's hunt was first seen on, and how long after that its count joins the strip.)
+local huntSeen: { [string]: number } = {}
+local HUNT_AFTER = 6
 
 local function refresh()
 	-- (At a table the strip stays out of the way whatever told it so, or didn't.)
@@ -448,6 +456,41 @@ local function refresh()
 		say(pill("__party", 3, "soon"), string.format("PIÑATA  ·  in the Foyer  ·  %d%%", math.floor(math.clamp(hits / needed, 0, 1) * 100)))
 	elseif rows.__party then
 		drop("__party")
+	end
+	-- A holiday's hunt: how many are still hidden round the house, and whether its golden prize is
+	-- still out (turning through them if two hunts are on at once). It joins the strip once the
+	-- holiday's title card has gone, never under it.
+	local hunts: { string } = {}
+	for _, e in HouseEvents.List do
+		local words = Voice.Hunts[e.id]
+		local ends = Workspace:GetAttribute(HouseEvents.attribute(e.id))
+		if type(words) ~= "table" or type(ends) ~= "number" or ends <= now() then
+			huntSeen[e.id] = nil
+			continue
+		end
+		huntSeen[e.id] = huntSeen[e.id] or now()
+		if now() - huntSeen[e.id] >= HUNT_AFTER then
+			local left = 0
+			for _, p in CollectionService:GetTagged("HuntPickup") do
+				if p.Parent ~= nil and p:GetAttribute("Hunt") == e.id then
+					left += 1
+				end
+			end
+			local prizeOut = false
+			for _, p in CollectionService:GetTagged("HuntJackpot") do
+				if p.Parent ~= nil and p:GetAttribute("Hunt") == e.id then
+					prizeOut = true
+				end
+			end
+			if left > 0 or prizeOut then
+				table.insert(hunts, string.format(Voice.Hunts.left, left, if left == 1 then words.one else words.many) .. "  ·  " .. string.format(if prizeOut then Voice.Hunts.hidden else Voice.Hunts.found, words.prize))
+			end
+		end
+	end
+	if #hunts > 0 then
+		say(pill("__hunt", 90, "soon"), hunts[math.floor(now() / 4) % #hunts + 1])
+	elseif rows.__hunt then
+		drop("__hunt")
 	end
 	-- A scheduled event coming up: every screen counts down to it for the hour before.
 	local at = Workspace:GetAttribute("NextEventAt")

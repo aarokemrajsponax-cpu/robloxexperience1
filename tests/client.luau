@@ -5482,6 +5482,25 @@ check("and back when it's over", game:GetService("Lighting"):FindFirstChild("Hol
 		if pickup and not (pickup:FindFirstChild("HolidaySparkle") and pickup:FindFirstChild("HolidayGlow", true)) then
 			table.insert(problems, id .. ": its pickups don't glow")
 		end
+		-- (Each pickup drawn as the real thing: a pumpkin, a turkey, a present, a love letter, a
+		-- four-leaf clover, a painted egg; its emoji put away.)
+		local real = ({ halloween = "Pumpkin", thanksgiving = "Turkey", christmas = "Gift", valentine = "LoveLetter", stPatrick = "Clover", easter = "Egg" })[id]
+		if pickup and real then
+			local prop = workspace.MaisonLocal:FindFirstChild(real)
+			if not (prop and prop:IsA("Model")) then
+				table.insert(problems, id .. ": its pickup isn't a " .. real)
+			elseif pickup:FindFirstChildOfClass("BillboardGui").Enabled ~= false then
+				table.insert(problems, id .. ": its emoji still shows")
+			end
+		end
+		-- (The strip counts what's left to find once the title card has gone: one hidden here, and
+		-- no golden prize out.)
+		advance(6)
+		local Voice = module("ReplicatedStorage", "Shared", "Voice")
+		local words = Voice.Hunts[id]
+		if pickup and words and not textOnScreen(string.format(Voice.Hunts.left, 1, words.one) .. "  ·  " .. string.format(Voice.Hunts.found, words.prize)) then
+			table.insert(problems, id .. ": the strip doesn't count what's left")
+		end
 		if id == "stPatrick" and not (workspace.MaisonLocal:FindFirstChild("Rainbow") and workspace.MaisonLocal.Rainbow:FindFirstChild("Band", true)) then
 			table.insert(problems, id .. ": no rainbow")
 		end
