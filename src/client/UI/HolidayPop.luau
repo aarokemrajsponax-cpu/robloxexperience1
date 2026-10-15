@@ -102,8 +102,8 @@ function HolidayPop.show(p: Pop)
 	local extraH = if p.extra then math.max(16, Theme.measure(p.extra, 13, Brand.Fonts.body, wordsW).Y) else 0
 	local need = 16 + (if p.line then 4 + lineH else 0) + 4 + 26 + (if p.extra then 4 + extraH else 0) + 22
 	holder.Size = UDim2.fromOffset(cardW, math.max(if p.big then 124 else 104, need))
-	holder.BackgroundColor3 = Color3.fromRGB(12, 13, 17)
-	holder.BackgroundTransparency = 0.08
+	holder.BackgroundColor3 = Color3.new(1, 1, 1)
+	holder.BackgroundTransparency = 0.05
 	corner(holder, 18)
 	local stroke = Instance.new("UIStroke")
 	stroke.Color = colour
@@ -111,9 +111,10 @@ function HolidayPop.show(p: Pop)
 	stroke.Transparency = 0.1
 	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 	stroke.Parent = holder
+	-- (In the holiday's own colours.)
 	local sheen = Instance.new("UIGradient")
-	sheen.Rotation = 90
-	sheen.Color = ColorSequence.new(Color3.fromRGB(34, 32, 40), Color3.fromRGB(10, 10, 14))
+	sheen.Rotation = 62
+	sheen.Color = Theme.sequence(Theme.mood(Theme.holidayMood()).panel)
 	sheen.Parent = holder
 	local scale = Instance.new("UIScale")
 	scale.Scale = 0.6

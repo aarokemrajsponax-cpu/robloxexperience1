@@ -169,11 +169,13 @@ local function ground(parent: Instance)
 	for x = -110, 110, 14 do
 		Kit.part(m, "Marking", Vector3.new(6, 0.02, 0.3), CFrame.new(x, 0.01, (road[1] + road[2]) / 2), { color = Color3.fromRGB(120, 116, 104), material = Enum.Material.SmoothPlastic, transparency = 0.5 }, { collide = false, query = false, shadow = false })
 	end
-	-- Invisible walls keep guests on the street.
+	-- Invisible walls keep guests (and the Grand Prix's cars) on the street: round the whole road,
+	-- the circuit laid on it included (World/Circuit).
 	local barrier = { color = Color3.new(0, 0, 0), material = Enum.Material.SmoothPlastic, transparency = 1 }
-	Kit.span(m, "EdgeFar", Vector3.new(-80, 0, road[1] - 1), Vector3.new(80, 30, road[1]), barrier, { shadow = false, query = false })
-	Kit.span(m, "EdgeLeft", Vector3.new(-81, 0, road[1]), Vector3.new(-80, 30, S.facadeZ), barrier, { shadow = false, query = false })
-	Kit.span(m, "EdgeRight", Vector3.new(80, 0, road[1]), Vector3.new(81, 30, S.facadeZ), barrier, { shadow = false, query = false })
+	local far = road[1] - 60
+	Kit.span(m, "EdgeFar", Vector3.new(-121, 0, far), Vector3.new(121, 30, far + 1), barrier, { shadow = false, query = false })
+	Kit.span(m, "EdgeLeft", Vector3.new(-121, 0, far), Vector3.new(-120, 30, S.facadeZ), barrier, { shadow = false, query = false })
+	Kit.span(m, "EdgeRight", Vector3.new(120, 0, far), Vector3.new(121, 30, S.facadeZ), barrier, { shadow = false, query = false })
 end
 
 local function city(parent: Instance)

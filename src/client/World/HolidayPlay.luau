@@ -159,7 +159,8 @@ local function turkeyOffer()
 				HolidayMeter.buy(2)
 			end },
 		},
-		"Or come back in a quarter of an hour: your next visit has free catches again."
+		"Or come back in a quarter of an hour: your next visit has free catches again.",
+		"thanksgiving"
 	)
 end
 
@@ -175,7 +176,8 @@ local function sleighOffer()
 				HolidayMeter.buy(4)
 			end },
 		},
-		"One ride a Christmas is always free."
+		"One ride a Christmas is always free.",
+		"christmas"
 	)
 end
 

@@ -1203,11 +1203,7 @@ function TableClient.start()
 			SortScreen.refresh(namesAllowed())
 		end
 	end)
-	-- The rival's line, at the foot of the tray.
-	State.RivalChanged:Connect(function()
-		local r = State.rival
-		SortScreen.setRival(if r then r.name .. "  ·  " .. r.fact else nil, if r then r.ahead else false)
-	end)
+	-- (Build 68: no rival's line on the sorting screen: it only took the eye off the pieces.)
 end
 
 return TableClient

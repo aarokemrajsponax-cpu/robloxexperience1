@@ -94,6 +94,117 @@ function Hud.setShopKey(onPress: () -> ())
 	shopKey = key
 end
 
+-- The How to play key: the whole game in plain words, a Go key for every room (between Shop and
+-- Menu, where anyone lost looks first).
+local helpKey: TextButton? = nil
+local coach: TextButton? = nil
+function Hud.setHelpKey(onPress: () -> ())
+	if helpKey then
+		return
+	end
+	-- (Wide enough for its words on one line at a phone's larger lettering.)
+	local key = Theme.key(bar, Voice.Guide.key, false, function()
+		Hud.hideCoach()
+		onPress()
+	end, 176)
+	key.Name = "HowToPlayKey"
+	key.LayoutOrder = -15
+	helpKey = key
+end
+
+-- A small gold note under the How to play key, once, for someone new: where to look when lost.
+-- It goes when the key is pressed, when it's tapped, or after `seconds`.
+function Hud.coachHelp(text: string, seconds: number?)
+	local key = helpKey
+	if coach or not key or not key.Visible then
+		return
+	end
+	local note = Instance.new("TextButton")
+	note.Name = "HowToPlayCoach"
+	note.AutoButtonColor = false
+	note.AnchorPoint = Vector2.new(1, 0)
+	note.Position = UDim2.new(1, -12, 0, 10 + 44 + 12)
+	note.Size = UDim2.fromOffset(250, 0)
+	note.AutomaticSize = Enum.AutomaticSize.Y
+	note.BackgroundColor3 = Color3.fromRGB(22, 19, 14)
+	note.BackgroundTransparency = 0.04
+	note.Text = ""
+	note.ZIndex = 20
+	local c = Instance.new("UICorner")
+	c.CornerRadius = UDim.new(0, 10)
+	c.Parent = note
+	local st = Instance.new("UIStroke")
+	st.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	st.Color = Brand.Colours.gold
+	st.Transparency = 0.15
+	st.Thickness = 1.25
+	st.Parent = note
+	local pad = Instance.new("UIPadding")
+	pad.PaddingTop = UDim.new(0, 10)
+	pad.PaddingBottom = UDim.new(0, 10)
+	pad.PaddingLeft = UDim.new(0, 14)
+	pad.PaddingRight = UDim.new(0, 14)
+	pad.Parent = note
+	Theme.text(note, text, 14, "bodyMedium", {
+		Name = "Words",
+		AutomaticSize = Enum.AutomaticSize.Y,
+		Size = UDim2.new(1, 0, 0, 0),
+		TextWrapped = true,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextColor3 = Brand.Colours.bone,
+		ZIndex = 21,
+	})
+	-- (Its little point, up toward the key.)
+	local tip = Instance.new("Frame")
+	tip.Name = "Point"
+	tip.AnchorPoint = Vector2.new(0.5, 0.5)
+	tip.Size = UDim2.fromOffset(12, 12)
+	tip.Rotation = 45
+	tip.BorderSizePixel = 0
+	tip.BackgroundColor3 = Brand.Colours.gold
+	tip.ZIndex = 19
+	tip.Parent = note
+	note.Activated:Connect(function()
+		Hud.hideCoach()
+	end)
+	note.Parent = Root.hud
+	coach = note
+	-- Line the point up under the key's middle (the keys sit right to left from the corner).
+	task.defer(function()
+		if coach ~= note then
+			return
+		end
+		-- (Where the screen can't say where things are yet, the point sits under the key's
+		-- usual place: the second key from the corner.)
+		local ok, fromRight = pcall(function()
+			local keyMid = key.AbsolutePosition.X + key.AbsoluteSize.X / 2
+			local noteRight = note.AbsolutePosition.X + note.AbsoluteSize.X
+			return (noteRight - keyMid) / math.max(Root.scale, 0.01)
+		end)
+		if not ok or type(fromRight) ~= "number" then
+			fromRight = 200
+		end
+		-- (The note's padding moves its children in: 14 from the right, 10 from the top.)
+		tip.Position = UDim2.new(1, -(math.clamp(fromRight, 16, 234) - 14), 0, -8)
+	end)
+	note.BackgroundTransparency = 1
+	Ease.play(note, Ease.settle, { BackgroundTransparency = 0.04 })
+	task.delay(seconds or 14, function()
+		if coach == note then
+			Hud.hideCoach()
+		end
+	end)
+end
+
+function Hud.hideCoach()
+	local note = coach
+	if not note then
+		return
+	end
+	coach = nil
+	note:Destroy()
+end
+
 -- The Menu key: everything else in the house (Main fills it), just after Shop.
 local menuKey: TextButton? = nil
 function Hud.setMenuKey(onPress: () -> ())
@@ -150,6 +261,12 @@ function Hud.setSeated(seated: boolean)
 	end
 	if shopKey then
 		shopKey.Visible = not seated
+	end
+	if helpKey then
+		helpKey.Visible = not seated
+	end
+	if seated then
+		Hud.hideCoach()
 	end
 	-- At a table the sorting screen carries the score and the clock itself.
 	line.Visible = false

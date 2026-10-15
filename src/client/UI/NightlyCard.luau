@@ -124,17 +124,17 @@ function NightlyCard.show(card: { [string]: any }, actions: Actions)
 		Theme.key(row, "Share", true, share, 150).LayoutOrder = 1
 	end
 	Theme.key(row, "Invite", false, invite, 150).LayoutOrder = 2
-	-- (Rehearse and Leave side by side: the card stays short enough to clear the cases below.)
+	-- (Keep playing and Leave side by side: the card stays short enough to clear the cases below.)
 	local row2 = Instance.new("Frame")
 	row2.BackgroundTransparency = 1
 	row2.Size = UDim2.new(1, 0, 0, 44)
 	row2.LayoutOrder = 2
 	row2.Parent = keys
 	Theme.list(row2, 8, true)
-	Theme.key(row2, "Rehearse it", false, function()
+	Theme.key(row2, "Keep playing", true, function()
 		Root.close(NAME)
 		actions.rehearse()
-	end, 150).LayoutOrder = 1
+	end, 170).LayoutOrder = 1
 	Theme.key(row2, "Leave", false, function()
 		Root.close(NAME)
 		actions.leave()

@@ -47,7 +47,7 @@ local function newest(guest, op, after)
 end
 
 local nextId = 700
-local function seat(roomId)
+local function seat(roomId, mode, triedTonight)
 	nextId += 1
 	local model = H.Instance.new("Model")
 	model.Name = "Table-" .. roomId .. nextId
@@ -62,10 +62,13 @@ local function seat(roomId)
 	local data = H.profiles[g].Data
 	data.best, data.bestRound, data.nightly = {}, {}, { day = -1 }
 	data.flags.midnight = true
+	if triedTonight then
+		data.nightly.day = H.module("ReplicatedStorage", "Shared", "Nightly").at().day
+	end
 	H.loadedSignal:Fire(g, data)
 	local ok
 	run(function()
-		ok = TableService.seat(g, model, true, "room")
+		ok = TableService.seat(g, model, true, mode or "room")
 	end)
 	advance(1)
 	return g, ok, H.lastOp(g, "deal")
@@ -226,6 +229,29 @@ do
 	say(g2, { op = "file", uid = q.uid, case = q.case })
 	check("a filing that lands after the clock ran out is answered too", newest(g2, "rejected", mark) ~= nil and newest(g2, "rejected", mark).uid == q.uid)
 	leave(g2)
+end
+
+do
+	-- Tonight's table: one try a night, then the table carries on as its own room. Never a
+	-- rehearsal (Build 68: they only confused people).
+	local g, ok, deal = seat("obsidian", "nightly")
+	check("tonight's table: the first try is the Nightly", ok and deal ~= nil and deal.mode == "nightly", deal and deal.mode)
+	-- (Its clock starts with the first piece lifted.)
+	say(g, { op = "lift", uid = deal and deal.pieces[1].uid })
+	advance((deal and deal.clock and deal.clock.budget or 60) + 1)
+	if H.lastOp(g, "reviveOffer") then
+		say(g, { op = "noRevive" })
+		advance(1)
+	end
+	local mark = #g.inbox
+	say(g, { op = "again" })
+	advance(1)
+	local again = newest(g, "deal", mark)
+	check("Keep playing after the try: the room's own table, not a rehearsal", again ~= nil and again.mode == "room" and again.room == "obsidian", again and again.mode)
+	leave(g)
+	local g3, ok3, deal3 = seat("velvet", "nightly", true)
+	check("asking for tonight's table after the try: the room's own table, said plainly", ok3 and deal3 ~= nil and deal3.mode == "room" and deal3.room == "velvet", deal3 and deal3.mode)
+	leave(g3)
 end
 
 H.finish()

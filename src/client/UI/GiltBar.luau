@@ -18,6 +18,7 @@ local Workspace = game:GetService("Workspace")
 local Levels = require(ReplicatedStorage.Shared.Levels)
 local Icons = require(script.Parent.Icons)
 local Root = require(script.Parent.Root)
+local Theme = require(script.Parent.Theme)
 local State = require(script.Parent.Parent.State)
 
 local GiltBar = {}
@@ -204,9 +205,15 @@ end
 function GiltBar.start()
 	local frame = Instance.new("Frame")
 	frame.Name = "GiltBar"
-	frame.BackgroundColor3 = rgb(14, 12, 10)
-	frame.BackgroundTransparency = 0.12
+	frame.BackgroundColor3 = Color3.new(1, 1, 1)
+	frame.BackgroundTransparency = 0.08
 	frame.Position = UDim2.fromOffset(12, 10)
+	-- The house's black and gold: a warm glow at the left, deepening to black.
+	local sheen = Instance.new("UIGradient")
+	sheen.Name = "Sheen"
+	sheen.Rotation = 20
+	sheen.Color = Theme.sequence(Theme.moods.house.panel)
+	sheen.Parent = frame
 	-- (Set widths: Gilt to a million and more, Gems, then the level.)
 	frame.Size = UDim2.fromOffset(12 + 132 + 14 + 96 + 14 + 160 + 14, 44)
 	frame.Parent = Root.hud

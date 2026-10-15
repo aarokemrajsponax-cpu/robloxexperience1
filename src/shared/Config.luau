@@ -301,6 +301,8 @@ local defaults = {
 		abuseGift = { rate = 1, burst = 3 },
 		holidayAsk = { rate = 4, burst = 10 },
 		calendarAsk = { rate = 1, burst = 4 },
+		race = { rate = 3, burst = 8 },
+		travel = { rate = 1, burst = 3 },
 	},
 
 	-- Levels (Shared/Levels has the curve): XP for each thing the server sees happen.
@@ -319,9 +321,37 @@ local defaults = {
 		announceEvery = 10, -- every guest in the house hears when someone reaches a level this round
 	},
 
+	-- The Grand Prix (server/GrandPrixService, Shared/GrandPrix): races round the circuit on the
+	-- street, in the house's cars (any car may be driven at any time). Races keep hours, like the
+	-- Ballroom: open for `openSeconds`; the first driver to press Race starts a `gather`-second
+	-- countdown (others may join until it ends, never after); then closed for `closedSeconds`,
+	-- after a race or when nobody raced. (Open it now: the Robux product, or the owner's power.)
+	-- A race counts down, runs `laps` laps; the house's chauffeurs fill the grid up to `field`.
+	-- Prizes by place (Gilt, under the day's usual soft cap); the winner's Gems stop at
+	-- `gemsPerDay` a day.
+	GrandPrix = {
+		laps = 3,
+		openSeconds = 300,
+		closedSeconds = 600,
+		gather = 50,
+		ownerStart = 5, -- the owner's "Start now": the countdown cut to this
+		countdown = 4,
+		maxRace = 120, -- no race runs longer
+		afterFirst = 25, -- once the first driver is home, the rest have this long
+		field = 4,
+		maxDrivers = 6,
+		returnAfter = 8, -- a car left empty goes back to its bay after this long
+		resetEvery = 3,
+		results = 8,
+		prizes = { 150, 90, 60 }, -- Gilt for first, second, third
+		finishGilt = 30, -- every other driver who finishes
+		winGems = 2,
+		gemsPerDay = 10,
+	},
+
 	-- The Concierge's walking tour (each guest's own guide, drawn on their screen).
 	Tour = {
-		speed = 12, -- studs a second the Concierge walks
+		speed = 19, -- studs a second the Concierge walks (brisk: a guest walks at 24)
 		waitBeyond = 19, -- a guest further behind than this: the Concierge stops and waits
 		resumeWithin = 13, -- and walks on once they're this close
 		arriveWithin = 18, -- at a stop, the card shows once the guest is this close
@@ -527,8 +557,8 @@ local defaults = {
 			goldenEvery = 90, -- seconds before a new golden turkey walks out after one is caught
 			-- (Slower than a guest walks, 17, so a turkey can always be run down: they dodge, and tire
 			-- after a sprint. The golden one is quicker: hold Shift to run, 28.)
-			speed = 12, -- studs a second a turkey runs
-			goldenSpeed = 16,
+			speed = 17, -- studs a second a turkey runs (slower than a guest walks, 24)
+			goldenSpeed = 23,
 			fear = 16, -- a turkey runs from a guest this close
 			catch = 7, -- close enough to catch one by running into it
 			reach = 13, -- close enough to catch one with its Catch key (E, or tap it)
@@ -942,11 +972,12 @@ local defaults = {
 	},
 
 	Movement = {
-		-- (The Grand house is 1.6 times the size it was drawn, so guests walk a little quicker.)
-		walkSpeed = 17,
-		runSpeed = 28,
-		maxSpeed = 42, -- no combination of events and perks moves a guest faster than this
-		npcWalkSpeed = 13,
+		-- (The Grand house is 1.6 times the size it was drawn, so guests walk briskly: 17 felt like
+		-- a snail, and phones have no Shift key to run with. Build 68: everyone walks at 24.)
+		walkSpeed = 24,
+		runSpeed = 34,
+		maxSpeed = 51, -- no combination of events and perks moves a guest faster than this
+		npcWalkSpeed = 18,
 		-- Guests and staff are drawn at this size: a touch under Roblox's own, the size the
 		-- furniture was made for. (The rooms themselves are grand: Layout.SCALE.)
 		guestScale = 0.8,

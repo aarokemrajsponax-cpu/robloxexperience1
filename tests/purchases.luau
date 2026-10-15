@@ -2230,4 +2230,77 @@ do
 	check("Ballroom: the panel's prices are Roblox's own", info.prices.bomb == 19 and info.prices.open == 49 and info.prices.shield == 15)
 end
 
+---------------------------------------------------------------------------------------------------
+-- The Grand Prix's Robux (Purchases/Racing): opening it between its hours for everyone, and the
+-- Private Garage (bought once, kept for good, a second one never lost)
+---------------------------------------------------------------------------------------------------
+do
+	local Racing = H.Purchases.Racing
+	local racer = H.guest("Racer", 7400)
+	local rd = H.profiles[racer].Data
+	local closedNow, opened, told = false, {}, {}
+	Racing.isClosed = function()
+		return closedNow
+	end
+	Racing.open = function(by)
+		table.insert(opened, by)
+		closedNow = false
+		return true, nil
+	end
+	Racing.say = function(_p, _t, line)
+		table.insert(told, line)
+	end
+	check("Grand Prix: Open Now while it's open is refused before any window", Racing.openNow(racer) == false)
+	closedNow = true
+	local okNo, whyNo = Racing.openNow(racer)
+	check("Grand Prix: not in Creator Hub yet, so not on sale", okNo == false and string.find(tostring(whyNo), "on sale", 1, true) ~= nil, whyNo)
+	table.insert(MarketplaceService.devProducts, { Name = "Open the Grand Prix Now", ProductId = 7401, PriceInRobux = 39 })
+	table.insert(MarketplaceService.devProducts, { Name = "The Private Garage", ProductId = 7402, PriceInRobux = 199 })
+	run(Catalog.discover)
+	advance(1.2)
+	local before = #prompts
+	local okOpen = Racing.openNow(racer)
+	check("Grand Prix: closed, Open Now opens Roblox's purchase window for it", okOpen == true and #prompts == before + 1 and prompts[#prompts].id == 7401)
+	check("Grand Prix: the closed card's price is Roblox's own", Racing.info(racer).price == 39 and Racing.info(racer).held == 0)
+	local g1 = Grants.newContext(racer, rd, "grandPrixOpen", "gp-1", 39, "Normal")
+	check("Grand Prix: its receipt grants", Grants.run(g1) == true)
+	Grants.runAfter(g1)
+	check("Grand Prix: ...and opens it for everyone, in the buyer's name, the credit spent", #opened == 1 and opened[1] == "Racer" and Perks.credits(rd, "grandPrix_open") == 0, opened[1])
+	-- Opened by itself before the receipt came: kept for next time, and said so.
+	local g2 = Grants.newContext(racer, rd, "grandPrixOpen", "gp-2", 39, "Normal")
+	Grants.run(g2)
+	Grants.runAfter(g2)
+	check("Grand Prix: already open when the receipt came: the credit is kept, and the guest is told", #opened == 1 and Perks.credits(rd, "grandPrix_open") == 1 and #told == 1)
+	closedNow = true
+	advance(1.2)
+	local promptsHeld = #prompts
+	check("Grand Prix: a credit held opens it at once, with no purchase window", Racing.openNow(racer) == true and #prompts == promptsHeld and #opened == 2 and Perks.credits(rd, "grandPrix_open") == 0)
+
+	-- The Private Garage.
+	check("Grand Prix: the Private Garage isn't theirs to begin with", Racing.hasGarage(racer) == false)
+	advance(1.2)
+	local promptsG = #prompts
+	check("Grand Prix: Drive on a garage car opens Roblox's window for the Private Garage", Racing.offerGarage(racer) == true and #prompts == promptsG + 1 and prompts[#prompts].id == 7402)
+	local g3 = Grants.newContext(racer, rd, "grandPrixGarage", "gp-3", 199, "Normal")
+	check("Grand Prix: the Private Garage's receipt grants", Grants.run(g3) == true)
+	Grants.runAfter(g3)
+	check("Grand Prix: ...and it's theirs for good", Racing.hasGarage(racer) == true and rd.perks.garage == true)
+	advance(1.2)
+	local okAgain, whyAgain = Racing.offerGarage(racer)
+	check("Grand Prix: once theirs, it's never offered again", okAgain == false and whyAgain == "The Private Garage is already yours.", whyAgain)
+	local tierBefore = rd.credits.tier199 or 0
+	local g4 = Grants.newContext(racer, rd, "grandPrixGarage", "gp-4", 199, "Normal")
+	Grants.run(g4)
+	Grants.runAfter(g4)
+	check("Grand Prix: a second Private Garage becomes Boutique credit, never lost", (rd.credits.tier199 or 0) == tierBefore + 1)
+	local offers = H.Shop.offers(racer, rd)
+	local listed = false
+	for _, o in offers do
+		if o.key == "grandPrixGarage" then
+			listed = true
+		end
+	end
+	check("Grand Prix: once held, the Private Garage leaves the Shop's offers", listed == false)
+end
+
 H.finish()

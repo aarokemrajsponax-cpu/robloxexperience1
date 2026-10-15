@@ -12,6 +12,7 @@ local Grand = require(script.Parent.Grand)
 local Kit = require(script.Parent.Kit)
 
 local Street = require(script.Parent.Street)
+local Circuit = require(script.Parent.Circuit)
 local Foyer = require(script.Parent.Foyer)
 local Salon = require(script.Parent.Salon)
 local Velvet = require(script.Parent.Velvet)
@@ -96,6 +97,8 @@ function Build.run(options: Options?): Folder
 	step("the Grand Scale", function() Grand.apply(root, require(ReplicatedStorage.Shared.Layout).SCALE) end)
 	-- Built at the grown size: the Suite's fireplace and its front doors.
 	step("the Suite's fireplace and doors", function() SuiteFinish.build(root) end)
+	-- The Grand Prix's circuit, on the street (laid at the grown size).
+	step("the Grand Prix circuit", function() Circuit.build(root) end)
 	-- Surfaces laid flush in one plane flicker as the camera moves: lift each clear.
 	local function polish()
 		step("the flicker fix", function() Flush.settle(root) end)

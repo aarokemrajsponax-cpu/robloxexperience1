@@ -335,6 +335,26 @@ CuriosService.lucky = function(player)
 	Achievements.award(player, "luckOfTheIrish")
 end
 boot("The holiday games", Holidays.start)
+-- The Grand Prix: the house's cars on the street, and races round the circuit for Gilt and Gems.
+local GrandPrixService = require(script.Parent.GrandPrixService)
+GrandPrixService.isBusy = AdminService.isSeated
+GrandPrixService.gemsChanged = function(player)
+	CuriosService.push(player)
+end
+GrandPrixService.onFinish = function(player, place, field)
+	AdminService.tally(player, "races", 1)
+	if place == 1 then
+		AdminService.tally(player, "raceWins", 1)
+	end
+	Analytics.custom(player, "Grand Prix finished", place, { field = field })
+end
+-- Going straight to a place (How to play's Go keys): never from a table or a seat.
+local Travel = require(script.Parent.Travel)
+Travel.isBusy = AdminService.isSeated
+boot("Travel", Travel.start)
+boot("The Grand Prix", function()
+	GrandPrixService.start(Workspace:FindFirstChild("Maison") or Workspace)
+end)
 CircleService.changed = function(player)
 	Dressing.nameplate(player)
 	Shop.push(player)
@@ -374,6 +394,37 @@ AdminService.openBallroom = function(by: string)
 	return BallroomService.openNow(by)
 end
 BallroomService.requestSabotage = Purchases.Sabotage.request
+-- The Grand Prix's Robux (opening it early, the Private Garage): the Grand Prix keeps its hours.
+Purchases.Racing.isClosed = GrandPrixService.isClosed
+Purchases.Racing.open = function(by: string?)
+	local ok, why = GrandPrixService.openNow(by)
+	if ok and by then
+		Remotes.event("Salute"):FireAllClients({ op = "salute", id = "grandPrixOpened", by = by, effects = { "fireworks" }, seconds = 6, title = "The Grand Prix is open", line = by .. " opened the Grand Prix for everyone. Get in any car on the street and press Race." })
+	end
+	return ok, why
+end
+Purchases.Racing.say = function(player: Player, title: string, line: string)
+	require(script.Parent.Purchases.Perks).tell(player, { op = "notice", title = title, line = line })
+end
+GrandPrixService.hasGarage = Purchases.Racing.hasGarage
+GrandPrixService.offerGarage = Purchases.Racing.offerGarage
+GrandPrixService.requestOpen = Purchases.Racing.openNow
+GrandPrixService.openInfo = Purchases.Racing.info
+-- The owner's power: closed, it opens now; counting down, the race starts in a few seconds.
+AdminService.openGrandPrix = function(by: string): (boolean, string?, string?)
+	if GrandPrixService.isClosed() then
+		local ok, why = GrandPrixService.openNow(by)
+		return ok, why, "The Grand Prix is open."
+	end
+	local ok, why = GrandPrixService.startNow()
+	if ok then
+		return true, nil, "The race starts in a few seconds."
+	end
+	if why == "Nobody has pressed Race yet." then
+		return false, "It's open already: get in any car and press Race, then this starts it at once."
+	end
+	return false, why
+end
 BallroomService.requestOpen = Purchases.Sabotage.openNow
 BallroomService.sabotageInfo = Purchases.Sabotage.info
 -- A guest at the Foyer's piano: the Pianist gets up for them, and sits back down after.

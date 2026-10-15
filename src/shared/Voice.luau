@@ -96,7 +96,7 @@ Voice.Tour = {
 		stop = "tonight",
 		place = "tonightBoard",
 		title = "Tonight's table",
-		line = "Once a day, everyone plays the same table. Press F at a timed table for your one try; the best go up on this board.",
+		line = "Once a day, everyone plays the same table. The card at the top of your screen takes you to your one try; the best go up on this board.",
 	},
 	{
 		stop = "tonight",
@@ -248,6 +248,89 @@ Voice.StartHere = {
 	table = "Straight to a table",
 }
 
+-- How to play (the key at the top right): the whole game, explained step by step in plain words,
+-- on five pages: the basics, sorting (the six cases, pictured), the rooms (each with a Go key that
+-- takes you there), Gilt and the Shop, and the extras.
+export type GuideItem = { title: string, line: string, how: string?, win: string?, key: string?, action: string?, place: string? }
+Voice.Guide = {
+	key = "How to play",
+	title = "How to play",
+	tabs = {
+		{ "basics", "Basics" },
+		{ "sorting", "Sorting" },
+		{ "rooms", "Rooms" },
+		{ "gilt", "Gilt & Shop" },
+		{ "extras", "Extras" },
+	},
+	basics = {
+		lead = "Maison Noir is a sorting game in a grand house. You sort treasures into the right cases, earn Gilt (the house's gold coins), and spend it on things you like. That's the whole game. Everything else is a bonus.",
+		heading = "Your first five minutes",
+		steps = {
+			{ title = "Go to a table", line = "The tables are in the Salon, through the doors on your left as you come in. Walk up to any chair and press E. On a phone, tap Sit.", key = "Take me there", action = "sit" },
+			{ title = "Sort the treasures", line = "Treasures land on the table: watches, rings, gold, keys and more. Drag each one down into the case it belongs in. Every case says what goes inside.", key = "See how", action = "sorting" },
+			{ title = "Earn Gilt", line = "Every piece in the right case scores points. A few right in a row is a streak, and then each one scores more. When you bank the run (or stand up), your points become Gilt." },
+			{ title = "Spend it", line = "Press Shop at the top right for new looks, table styles and more. Upstairs, your own Suite is yours to furnish.", key = "Shop", action = "shop" },
+		} :: { GuideItem },
+		after = "Lost at any time? Press How to play at the top right, or ask the Concierge by the front door.",
+	},
+	sorting = {
+		lead = "Every treasure belongs in one of six cases along the bottom of the table. Each case shows a piece that goes in it.",
+		heading = "Good to know",
+		tips = {
+			{ title = "Moving a piece", line = "Drag it onto its case. On a phone you can also tap the piece, then tap the case. On a keyboard, keys 1 to 6 pick the cases." },
+			{ title = "A wrong case", line = "It only breaks your streak. Shrug it off and sort the next one." },
+			{ title = "Not sure where it goes?", line = "In the Salon, wait a moment and a thread of gold runs from the piece to its case." },
+			{ title = "Rounds", line = "Clear the table to finish a round. Then pick Next round (more pieces, more points) or Bank the run to take your Gilt now." },
+			{ title = "Clocks", line = "The Salon has no clock: take your time. The Velvet, Obsidian and Midnight Rooms do, and they pay more for it." },
+		} :: { GuideItem },
+		key = "Try it at a table",
+	},
+	rooms = {
+		lead = "Every place in the house: what it is, how it works, and what you get. Go takes you straight there.",
+		heading = "Where to sort",
+		sort = {
+			{ place = "salon", title = "The Salon", line = "The first tables, and the calmest: no clock at all.", how = "Sit at any table and sort at your own pace. The best place to learn.", win = "Gilt for every run you bank." },
+			{ place = "velvet", title = "The Velvet Room", line = "Your first timed room.", how = "A clock runs every round: clear the table before it runs out.", win = "More Gilt than the Salon." },
+			{ place = "obsidian", title = "The Obsidian Room", line = "Timed, and harder again.", how = "Fewer seconds and more pieces. Reach round IV here and the Midnight Room opens for you.", win = "More Gilt, and the way into Midnight." },
+			{ place = "midnight", title = "The Midnight Room", line = "The hardest tables in the house.", how = "It opens once you reach round IV in the Obsidian Room.", win = "The best pay of any table." },
+		} :: { GuideItem },
+		heading2 = "Around the house",
+		visit = {
+			{ place = "concierge", title = "The Concierge", line = "Stands by the front door, ready to help.", how = "Speak to him and pick Show me the house: he walks you round every room and explains it." },
+			{ place = "boutique", title = "The Boutique", line = "The house's shop for looks.", how = "Looks, table styles, lamps and trails for Gilt (a few for Robux, always with the price shown first). The Wardrobe beside it is where you wear what you own." },
+			{ place = "vault", title = "The Vault", line = "Your collection, kept for good.", how = "Every piece you've ever sorted is on its shelves. The Archivist at the desk keeps your badges and records." },
+			{ place = "terrace", title = "The Terrace", line = "A rooftop to relax on.", how = "A bar with treats, a fire pit and loungers under the stars. Sit anywhere, and watch the fireworks from here." },
+			{ place = "suite", title = "Your Suite", line = "Your own private rooms upstairs.", how = "Ring the bell inside to furnish them. Only you can go in, unless you invite friends with the Suites key." },
+		} :: { GuideItem },
+	},
+	gilt = {
+		lead = "Gilt is the house's money. You earn it by sorting, and spend it on things you keep.",
+		items = {
+			{ title = "Gilt", line = "Earned at every table: the better your run, the more you get.", how = "Your Gilt is shown at the top left of the screen." },
+			{ title = "Gems", line = "Rarer than Gilt.", how = "Won in races, the holiday games and the Evening Calendar's presents. Spend them in the Gems shop on auras, titles and more." },
+			{ title = "The Shop", line = "Everything for sale, in one place.", how = "Looks, table styles, lamps and more for Gilt. Some special things are for Robux, always with the price shown first.", key = "Shop", action = "shop" },
+			{ title = "Levels and badges", line = "Everything you do counts.", how = "Sorting, racing and playing earn XP and raise your level. Badges in the Badge Book mark what you've done." },
+			{ place = "tonight", title = "Tonight's table", line = "Optional: once a day, everyone plays the same table.", how = "You get one try a day. The best scores go up on the board in the hall.", key = "Play", action = "nightly" },
+		} :: { GuideItem },
+	},
+	extras = {
+		lead = "Big games and fun on the side. All optional, all worth a try.",
+		items = {
+			{ place = "grandPrix", title = "The Grand Prix", line = "Ultra-luxury cars on the street outside.", how = "Walk up to any car and press E to drive (or F to ride along with a friend). Every 10 minutes a race opens: press Race, line up on the grid, wait for the five lights, then three laps. Reset puts a stuck car right.", win = "Gilt for the top three, and Gems for the winner." },
+			{ place = "ballroom", title = "The Ballroom", line = "Lights Out: the big game, every 20 minutes.", how = "When it opens, sit in any chair before the countdown ends. Then everyone sorts at once. Your table holds 16 pieces: go over for 3 seconds and your lamp goes out.", win = "The last lamp still lit wins the whole pot of Gilt." },
+			{ place = "library", title = "The Library", line = "Tête-à-Tête: one on one.", how = "Sit at a Library table to face another player. You both get exactly the same pieces; three in a row sends a parcel of lookalikes across to them.", win = "First to win three hands wins the match." },
+			{ title = "Curios and brainrots", line = "Collectibles found as you play.", how = "They turn up at the tables. Open Collection (left of the screen) to see them, and Trade to swap with friends safely.", win = "Brainrots earn you Gilt every hour." },
+			{ title = "Holiday games", line = "In their season, the house throws a party.", how = "Trick or Treat on Hallows Lane, the Turkey Round-Up, Santa's Sleigh, the Great Egg Hunt and the Luck of the Irish.", win = "Gifts, Gilt and Gems." },
+			{ title = "Events", line = "Golden Hour and more.", how = "Watch the strip at the top of the screen: while an event is on, it pays extra.", win = "More Gilt while they last." },
+		} :: { GuideItem },
+	},
+	next = "Next: ",
+	go = "Go",
+	tour = "Show me the house",
+	arrived = "You're here",
+	coach = "New here? Everything is explained in How to play, with a Go key for every room.",
+}
+
 -- The one line under the keys while you walk: what to do next.
 Voice.Objective = {
 	next = "Next",
@@ -260,9 +343,9 @@ Voice.Objective = {
 	},
 	nightly = "Tonight's table is laid: one deal, everyone on Roblox",
 	nightlyHow = {
-		mouse = "Press F at a Velvet or Obsidian Room table",
-		touch = "Tap Tonight's table at a Velvet or Obsidian Room chair",
-		gamepad = "Press Y at a Velvet or Obsidian Room table",
+		mouse = "Optional: one try a day. Take me there seats you at it.",
+		touch = "Optional: one try a day. Take me there seats you at it.",
+		gamepad = "Optional: one try a day. Take me there seats you at it.",
 	},
 	midnight = "Reach round IV in the Obsidian Room to open the Midnight Room",
 	midnightHow = "The Concierge in the Foyer will walk you there",

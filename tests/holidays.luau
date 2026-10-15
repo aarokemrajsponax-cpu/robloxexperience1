@@ -493,8 +493,23 @@ check("it lands at the North Pole", services.Workspace:GetAttribute("SleighState
 check("the sleigh stands on the Pole's pad, the passengers' copies gone", (sleigh.PrimaryPart.CFrame.Position - HolidayGames.poleSleigh().Position).Magnitude < 0.5 and sleigh:FindFirstChild("Passenger") == nil)
 check("the first ride: the badge and Santa's Sleigh Bell", awards["403:northPole"] == true and CuriosS.count(data(noel), "sleighBell") == 1 and last(noel, "arrived").place == "pole")
 -- Gifts: picked up a few at a time.
+-- (A gift with no other gift in reach, so one walk picks up exactly one: where they fall is random.)
 local function pickNear()
-	local g = Pole.gifts()[1]
+	local all = Pole.gifts()
+	local g = all[1]
+	for _, a in all do
+		local alone = true
+		for _, b in all do
+			if b ~= a and ((b.CFrame.Position - a.CFrame.Position) * Vector3.new(1, 0, 1)).Magnitude <= C.pole.reach * 2 + 1 then
+				alone = false
+				break
+			end
+		end
+		if alone then
+			g = a
+			break
+		end
+	end
 	place(noel, g.CFrame.Position + Vector3.new(0, 1.3, 0))
 	advance(0.15)
 end

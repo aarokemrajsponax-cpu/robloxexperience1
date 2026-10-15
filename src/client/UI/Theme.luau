@@ -12,6 +12,7 @@
 local ContentProvider = game:GetService("ContentProvider")
 local HapticService = game:GetService("HapticService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local Caps = require(ReplicatedStorage.Shared.Caps)
@@ -23,6 +24,138 @@ local State = require(script.Parent.Parent.State)
 local Theme = {}
 
 local C = Brand.Colours
+
+---------------------------------------------------------------------------------------------------
+-- Moods: the colours a panel and its keys are painted in. Everyday, the house's black and gold (a
+-- warm glow of bronze down into deep black, edged in gold, with gold keys). Some places and every
+-- holiday have their own: the Grand Prix in racing red and carbon, Halloween in violet and
+-- pumpkin, Christmas in pine and crimson, the Harvest in amber, Easter in pastels, St Patrick's in
+-- emerald. A panel's own words stay as they are; only the glass and the keys change.
+---------------------------------------------------------------------------------------------------
+export type Mood = {
+	panel: { Color3 }, -- the glass, from its top corner down to its foot
+	edge: { Color3 }, -- its outline, round from the light
+	line: Color3, -- the line of light along its top
+	gold: { Color3 }, -- a bright key, top to foot (its words are dark)
+	goldText: Color3,
+	goldEdge: Color3,
+	plain: Color3, -- a plain key
+	plainGlow: Color3, -- the glow at its top, fading down into it
+	plainText: Color3,
+	accent: Color3, -- the small capitals over a heading
+}
+local function rgb(r: number, g: number, b: number): Color3
+	return Color3.fromRGB(r, g, b)
+end
+Theme.moods = {
+	house = {
+		panel = { rgb(62, 48, 28), rgb(26, 22, 20), rgb(13, 13, 16), rgb(24, 18, 11) },
+		edge = { rgb(255, 232, 168), rgb(206, 166, 86), rgb(120, 90, 38) },
+		line = C.lightGold,
+		gold = { rgb(255, 242, 200), rgb(240, 204, 120), rgb(198, 148, 64) },
+		goldText = rgb(28, 20, 6),
+		goldEdge = rgb(255, 226, 150),
+		plain = rgb(20, 18, 16),
+		plainGlow = rgb(206, 166, 86),
+		plainText = C.lightGold,
+		accent = C.gold,
+	},
+	grandPrix = {
+		panel = { rgb(104, 16, 26), rgb(40, 12, 18), rgb(13, 13, 15), rgb(30, 30, 34) },
+		edge = { rgb(255, 255, 255), rgb(232, 44, 54), rgb(120, 12, 22) },
+		line = rgb(255, 150, 150),
+		gold = { rgb(255, 140, 116), rgb(232, 58, 58), rgb(166, 22, 32) },
+		goldText = rgb(20, 6, 6),
+		goldEdge = rgb(255, 176, 166),
+		plain = rgb(22, 14, 16),
+		plainGlow = rgb(232, 44, 54),
+		plainText = rgb(255, 236, 234),
+		accent = rgb(255, 104, 100),
+	},
+	halloween = {
+		panel = { rgb(96, 36, 124), rgb(38, 16, 48), rgb(12, 10, 14), rgb(68, 30, 8) },
+		edge = { rgb(255, 180, 84), rgb(200, 112, 255), rgb(90, 30, 120) },
+		line = rgb(255, 186, 110),
+		gold = { rgb(255, 218, 146), rgb(255, 152, 52), rgb(214, 92, 20) },
+		goldText = rgb(24, 10, 4),
+		goldEdge = rgb(255, 204, 128),
+		plain = rgb(22, 14, 26),
+		plainGlow = rgb(255, 140, 40),
+		plainText = rgb(255, 222, 176),
+		accent = rgb(255, 164, 74),
+	},
+	thanksgiving = {
+		panel = { rgb(126, 62, 18), rgb(46, 28, 14), rgb(14, 11, 9), rgb(70, 42, 12) },
+		edge = { rgb(255, 220, 146), rgb(228, 142, 52), rgb(120, 60, 20) },
+		line = rgb(255, 214, 146),
+		gold = { rgb(255, 226, 156), rgb(242, 168, 72), rgb(192, 108, 36) },
+		goldText = rgb(28, 14, 4),
+		goldEdge = rgb(255, 222, 164),
+		plain = rgb(24, 16, 10),
+		plainGlow = rgb(236, 152, 60),
+		plainText = rgb(255, 232, 194),
+		accent = rgb(242, 172, 84),
+	},
+	christmas = {
+		panel = { rgb(20, 96, 58), rgb(14, 36, 26), rgb(12, 12, 14), rgb(92, 14, 28) },
+		edge = { rgb(255, 255, 255), rgb(234, 198, 112), rgb(204, 40, 54) },
+		line = rgb(255, 255, 255),
+		gold = { rgb(255, 156, 156), rgb(228, 62, 72), rgb(166, 22, 38) },
+		goldText = rgb(18, 6, 6),
+		goldEdge = rgb(255, 222, 222),
+		plain = rgb(14, 22, 18),
+		plainGlow = rgb(62, 204, 124),
+		plainText = rgb(242, 250, 244),
+		accent = rgb(242, 212, 142),
+	},
+	easter = {
+		panel = { rgb(110, 86, 148), rgb(42, 36, 58), rgb(16, 16, 22), rgb(38, 80, 70) },
+		edge = { rgb(255, 212, 238), rgb(202, 182, 255), rgb(152, 232, 204) },
+		line = rgb(255, 222, 242),
+		gold = { rgb(255, 238, 248), rgb(248, 194, 230), rgb(192, 168, 250) },
+		goldText = rgb(32, 18, 42),
+		goldEdge = rgb(255, 242, 250),
+		plain = rgb(24, 20, 32),
+		plainGlow = rgb(242, 172, 222),
+		plainText = rgb(255, 238, 250),
+		accent = rgb(248, 188, 228),
+	},
+	stPatrick = {
+		panel = { rgb(24, 116, 58), rgb(14, 42, 26), rgb(10, 14, 12), rgb(64, 54, 14) },
+		edge = { rgb(255, 232, 152), rgb(92, 222, 124), rgb(20, 90, 46) },
+		line = rgb(194, 255, 204),
+		gold = { rgb(206, 255, 206), rgb(94, 222, 124), rgb(32, 152, 72) },
+		goldText = rgb(6, 22, 10),
+		goldEdge = rgb(214, 255, 214),
+		plain = rgb(12, 24, 16),
+		plainGlow = rgb(92, 222, 124),
+		plainText = rgb(222, 255, 228),
+		accent = rgb(124, 232, 144),
+	},
+} :: { [string]: Mood }
+
+function Theme.mood(name: string?): Mood
+	return Theme.moods[name or "house"] or Theme.moods.house
+end
+
+-- The holiday whose game is on, if it has its own colours ("house" otherwise).
+function Theme.holidayMood(): string
+	local id = Workspace:GetAttribute("HolidayGame")
+	return if type(id) == "string" and Theme.moods[id] then id else "house"
+end
+
+-- Evenly spaced stops through `colours`.
+function Theme.sequence(colours: { Color3 }): ColorSequence
+	local n = #colours
+	if n == 1 then
+		return ColorSequence.new(colours[1])
+	end
+	local points = {}
+	for i, c in colours do
+		table.insert(points, ColorSequenceKeypoint.new((i - 1) / (n - 1), c))
+	end
+	return ColorSequence.new(points)
+end
 
 Theme.colours = {
 	glass = Color3.fromRGB(8, 9, 12),
@@ -260,10 +393,13 @@ function Theme.metal(target: GuiObject, bright: boolean?): UIGradient
 	g.Name = "Metal"
 	g.Rotation = 90
 	-- (Build 65: a gentle warmth from ivory to light gold, not a chrome sheen.)
-	g.Color = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, if bright then Color3.fromRGB(250, 240, 214) else Color3.fromRGB(246, 238, 220)),
-		ColorSequenceKeypoint.new(1, if bright then C.lightGold else Color3.fromRGB(232, 214, 170)),
-	})
+	-- (Build 68: a bright fill is real gold, light at the top through to a deep gold foot.)
+	g.Color = if bright
+		then Theme.sequence(Theme.moods.house.gold)
+		else ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.fromRGB(246, 238, 220)),
+			ColorSequenceKeypoint.new(1, Color3.fromRGB(232, 214, 170)),
+		})
 	g.Parent = target
 	return g
 end
@@ -278,11 +414,8 @@ function Theme.edge(stroke: UIStroke, strength: number?): UIGradient
 	g.Rotation = 35
 	-- (Build 65: still, and quiet: a little lighter along the top, as if lit from above, and no
 	-- light turning round it.)
-	g.Rotation = 90
-	g.Color = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, C.gold),
-		ColorSequenceKeypoint.new(1, C.deepGold),
-	})
+	g.Rotation = 62
+	g.Color = Theme.sequence(Theme.moods.house.edge)
 	g.Transparency = NumberSequence.new({
 		NumberSequenceKeypoint.new(0, 0.15),
 		NumberSequenceKeypoint.new(1, math.clamp(0.35 + 0.25 * k, 0, 0.9)),
@@ -348,7 +481,25 @@ end
 
 -- A smoked-glass panel. Returns the panel (a plain Frame, so its text is drawn crisp; fade it
 -- with Fade) and the content frame.
-function Theme.glass(parent: Instance, name: string, size: UDim2, position: UDim2?, anchor: Vector2?): (Frame, Frame)
+-- Paints a glass panel's fill, outline and line of light in `mood`.
+local function paintGlass(fill: Frame, mood: Mood)
+	local sheen = fill:FindFirstChild("Sheen")
+	if sheen and sheen:IsA("UIGradient") then
+		sheen.Color = Theme.sequence(mood.panel)
+	end
+	local stroke = fill:FindFirstChildOfClass("UIStroke")
+	local edge = stroke and stroke:FindFirstChild("Edge")
+	if edge and edge:IsA("UIGradient") then
+		edge.Color = Theme.sequence(mood.edge)
+	end
+	local group = fill.Parent
+	local highlight = group and group:FindFirstChild("Highlight")
+	if highlight and highlight:IsA("Frame") then
+		highlight.BackgroundColor3 = mood.line
+	end
+end
+
+function Theme.glass(parent: Instance, name: string, size: UDim2, position: UDim2?, anchor: Vector2?, mood: string?): (Frame, Frame)
 	local group = Instance.new("Frame")
 	group.Name = name
 	group.BackgroundTransparency = 1
@@ -387,16 +538,14 @@ function Theme.glass(parent: Instance, name: string, size: UDim2, position: UDim
 	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 	stroke.Parent = fill
 	Theme.edge(stroke)
-	-- Black glass, a little lighter at the top (as if lit from above), deepest at the foot; solid
-	-- all the way, so what's behind a panel never shows through its words.
+	-- The glass in its mood's colours: a warm glow at its top corner, deepest in the middle, a
+	-- touch of colour again at the foot. Solid all the way, so what's behind a panel never shows
+	-- through its words.
 	local sheen = Instance.new("UIGradient")
-	sheen.Rotation = 90
-	sheen.Color = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 30, 38)),
-		ColorSequenceKeypoint.new(0.22, Color3.fromRGB(16, 17, 22)),
-		ColorSequenceKeypoint.new(1, Theme.colours.glass),
-	})
+	sheen.Name = "Sheen"
+	sheen.Rotation = 62
 	sheen.Parent = fill
+	fill:SetAttribute("Glass", true)
 	-- A line of light along the top edge.
 	local highlight = Instance.new("Frame")
 	highlight.Name = "Highlight"
@@ -421,6 +570,7 @@ function Theme.glass(parent: Instance, name: string, size: UDim2, position: UDim
 	content.ClipsDescendants = true -- (nothing spills past the glass)
 	content.Size = UDim2.fromScale(1, 1)
 	content.Parent = group
+	paintGlass(fill, Theme.mood(mood))
 	local pad = Instance.new("UIPadding")
 	pad.PaddingTop = UDim.new(0, 22)
 	pad.PaddingBottom = UDim.new(0, 22)
@@ -537,21 +687,132 @@ end
 -- A brass key. Under the pointer (or a gamepad's selection) it lifts a touch and its edge
 -- brightens; pressed, it sinks; let go, it springs back with a soft click and a brief glint to
 -- say it was taken; a tiny vibration on phones.
-function Theme.key(parent: Instance, text: string, primary: boolean?, onPress: () -> (), width: number?): TextButton
+-- How each key is lit (its colour at rest and under the pointer, and how solid), by key.
+type KeyLook = { base: Color3, hover: Color3, fill: number }
+local keyLooks: { [Instance]: KeyLook } = setmetatable({}, { __mode = "k" }) :: any
+
+-- Paints a key in `mood`. Gold keys: a gradient of the mood's bright colour, top to foot, with dark
+-- words (a gradient tints a key's words too, and dark stays dark). Plain keys: the mood's dark
+-- colour with its glow at the top, fading down behind the words.
+local function paintKey(button: TextButton, primary: boolean, mood: Mood)
+	local stroke = button:FindFirstChildOfClass("UIStroke")
+	local look: KeyLook
+	if primary then
+		local g = button:FindFirstChild("Metal") :: UIGradient?
+		if not g then
+			local made = Instance.new("UIGradient")
+			made.Name = "Metal"
+			made.Rotation = 90
+			made.Parent = button
+			g = made
+		end
+		(g :: UIGradient).Color = Theme.sequence(mood.gold)
+		button.TextColor3 = mood.goldText
+		if stroke then
+			stroke.Color = mood.goldEdge
+		end
+		look = { base = Color3.fromRGB(238, 238, 238), hover = Color3.new(1, 1, 1), fill = 0 }
+	else
+		local glow = button:FindFirstChild("KeyGlow") :: Frame?
+		if not glow then
+			local f = Instance.new("Frame")
+			f.Name = "KeyGlow"
+			f.BorderSizePixel = 0
+			-- (Out past the key's own padding, whatever it's set to, so the glow is always the key's
+			-- whole shape.)
+			local function fit()
+				local pad = button:FindFirstChildOfClass("UIPadding")
+				local l = if pad then pad.PaddingLeft.Offset else 0
+				local r = if pad then pad.PaddingRight.Offset else 0
+				local t = if pad then pad.PaddingTop.Offset else 0
+				local b = if pad then pad.PaddingBottom.Offset else 0
+				f.Position = UDim2.fromOffset(-l, -t)
+				f.Size = UDim2.new(1, l + r, 1, t + b)
+			end
+			fit()
+			local pad = button:FindFirstChildOfClass("UIPadding")
+			if pad then
+				for _, prop in { "PaddingLeft", "PaddingRight", "PaddingTop", "PaddingBottom" } do
+					pad:GetPropertyChangedSignal(prop):Connect(fit)
+				end
+			end
+			f.ZIndex = button.ZIndex
+			local fc = Instance.new("UICorner")
+			fc.CornerRadius = UDim.new(0, 12)
+			fc.Parent = f
+			local fg = Instance.new("UIGradient")
+			fg.Rotation = 90
+			-- (The key's own shape, its glow fading out by two thirds of the way down: no edge.)
+			fg.Transparency = NumberSequence.new({
+				NumberSequenceKeypoint.new(0, 0.5),
+				NumberSequenceKeypoint.new(0.68, 1),
+				NumberSequenceKeypoint.new(1, 1),
+			})
+			fg.Parent = f
+			f.Parent = button
+			glow = f
+		end
+		(glow :: Frame).BackgroundColor3 = mood.plainGlow
+		button.TextColor3 = mood.plainText
+		local edge = stroke and stroke:FindFirstChild("Edge")
+		if edge and edge:IsA("UIGradient") then
+			edge.Color = Theme.sequence(mood.edge)
+		end
+		look = { base = mood.plain, hover = mood.plain:Lerp(mood.plainGlow, 0.24), fill = 0.03 }
+	end
+	keyLooks[button] = look
+	button:SetAttribute("KeyKind", if primary then "gold" else "plain")
+	button.BackgroundColor3 = look.base
+	button.BackgroundTransparency = look.fill
+end
+
+-- Sets a key's inner margins (room for a swatch or an icon beside its words), keeping its glow the
+-- key's whole shape.
+function Theme.keyPadding(button: TextButton, left: number, right: number)
+	local pad = button:FindFirstChildOfClass("UIPadding")
+	if pad then
+		pad.PaddingLeft = UDim.new(0, left)
+		pad.PaddingRight = UDim.new(0, right)
+	end
+	local glow = button:FindFirstChild("KeyGlow")
+	if glow and glow:IsA("Frame") then
+		local t = if pad then pad.PaddingTop.Offset else 0
+		local b = if pad then pad.PaddingBottom.Offset else 0
+		glow.Position = UDim2.fromOffset(-left, -t)
+		glow.Size = UDim2.new(1, left + right, 1, t + b)
+	end
+end
+
+-- Repaints a panel (or any holder) and every key and small heading on it in mood `name`.
+function Theme.paint(root: Instance, name: string)
+	local mood = Theme.mood(name)
+	local house = Theme.moods.house
+	local function one(d: Instance)
+		if d:IsA("Frame") and d:GetAttribute("Glass") == true then
+			paintGlass(d, mood)
+		elseif d:IsA("TextButton") and d:GetAttribute("KeyKind") ~= nil then
+			paintKey(d, d:GetAttribute("KeyKind") == "gold", mood)
+		elseif d:IsA("TextLabel") and (d.TextColor3 == house.accent or d:GetAttribute("Accent") == true) then
+			d:SetAttribute("Accent", true)
+			d.TextColor3 = mood.accent
+		end
+	end
+	one(root)
+	for _, d in root:GetDescendants() do
+		one(d)
+	end
+	root:SetAttribute("Mood", name)
+end
+
+function Theme.key(parent: Instance, text: string, primary: boolean?, onPress: () -> (), width: number?, mood: string?): TextButton
 	local button = Instance.new("TextButton")
 	button.Name = "Key_" .. text
 	button.AutoButtonColor = false
 	-- Gold keys are gold leaf (a sheen from light to deep gold, brightening under the pointer); the
-	-- others are black glass with the gold edge that catches the light.
-	local baseColour = if primary then Color3.fromRGB(232, 232, 232) else Color3.fromRGB(18, 19, 24)
-	local hoverColour = if primary then Color3.new(1, 1, 1) else Color3.fromRGB(36, 34, 30)
-	local baseFill = if primary then 0 else 0.08
-	button.BackgroundColor3 = baseColour
-	button.BackgroundTransparency = baseFill
+	-- others are black glass with a warm glow at the top and the gold edge that catches the light.
 	button.BorderSizePixel = 0
 	button.Size = UDim2.new(0, width or 200, 0, 44)
 	button.Text = Caps(text)
-	button.TextColor3 = if primary then Color3.fromRGB(24, 18, 8) else C.lightGold
 	button.Selectable = true
 	button.SelectionImageObject = selectionRing()
 	-- Never TextScaled (it squeezes letters to odd sizes, a different size on every key): the
@@ -603,11 +864,10 @@ function Theme.key(parent: Instance, text: string, primary: boolean?, onPress: (
 	stroke.Thickness = if primary then 1 else 1.5
 	stroke.Transparency = if primary then 0.2 else 0.35
 	stroke.Parent = button
-	if primary then
-		Theme.metal(button, true)
-	else
+	if not primary then
 		Theme.edge(stroke, 0.8)
 	end
+	paintKey(button, primary == true, Theme.mood(mood))
 	local scale = Instance.new("UIScale")
 	scale.Parent = button
 	-- The glint: a band of light across the key when it is taken.
@@ -628,10 +888,13 @@ function Theme.key(parent: Instance, text: string, primary: boolean?, onPress: (
 		over = on
 		Ease.play(stroke, Ease.quick, { Transparency = if on then 0 else (if primary then 0.2 else 0.35) })
 		Ease.play(scale, Ease.info(0.16, Enum.EasingStyle.Quad), { Scale = if on then 1.025 else 1 })
-		Ease.play(button, Ease.quick, {
-			BackgroundColor3 = if on then hoverColour else baseColour,
-			BackgroundTransparency = if on then math.max(0, baseFill - 0.1) else baseFill,
-		})
+		local look = keyLooks[button]
+		if look then
+			Ease.play(button, Ease.quick, {
+				BackgroundColor3 = if on then look.hover else look.base,
+				BackgroundTransparency = if on then math.max(0, look.fill - 0.1) else look.fill,
+			})
+		end
 	end
 	button.MouseEnter:Connect(function()
 		if not over and hoverSound then

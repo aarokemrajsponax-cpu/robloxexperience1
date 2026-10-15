@@ -480,6 +480,7 @@ function refreshKeys(u: Ui)
 		Root.close(NAME)
 	end, 150)
 	close.LayoutOrder = 3
+	Theme.paint(u.keys, "christmas")
 end
 
 -- What a gift may hold, how much, and its chance (exact, from the house's own numbers).
@@ -509,15 +510,16 @@ function GiftOpening.open(waiting: number)
 	group.AnchorPoint = Vector2.new(0.5, 0.5)
 	group.Position = UDim2.fromScale(0.5, 0.5)
 	group.Size = UDim2.fromScale(1, 1)
-	group.BackgroundColor3 = Color3.fromRGB(6, 6, 10)
-	group.BackgroundTransparency = 0.18
+	-- (White under the gradient, so its colours are its own: Christmas red, the night, pine.)
+	group.BackgroundColor3 = Color3.new(1, 1, 1)
+	group.BackgroundTransparency = 0.12
 	group.Parent = Root.panels
 	local vignette = Instance.new("UIGradient")
 	vignette.Rotation = 90
 	vignette.Color = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, Color3.fromRGB(40, 10, 16)),
-		ColorSequenceKeypoint.new(0.5, Color3.fromRGB(12, 10, 16)),
-		ColorSequenceKeypoint.new(1, Color3.fromRGB(10, 26, 20)),
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(86, 16, 30)),
+		ColorSequenceKeypoint.new(0.5, Color3.fromRGB(12, 11, 16)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(16, 64, 40)),
 	})
 	vignette.Parent = group
 	local column = Instance.new("Frame")

@@ -220,10 +220,14 @@ local function tile(parent: Instance, order: number, glyph: string, label: strin
 	b.ZIndex = 2
 	b.ClipsDescendants = true
 	b.Parent = holder
-	-- Warm dark leather, a shade lighter at the top.
+	-- Warm dark leather, lit gold at its top corner and deepening to the foot.
 	local fill = Instance.new("UIGradient")
-	fill.Rotation = 90
-	fill.Color = ColorSequence.new(Color3.fromRGB(50, 44, 38), Color3.fromRGB(29, 26, 23))
+	fill.Rotation = 62
+	fill.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(84, 66, 38)),
+		ColorSequenceKeypoint.new(0.45, Color3.fromRGB(42, 36, 30)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(20, 18, 16)),
+	})
 	fill.Parent = b
 	local corner = Instance.new("UICorner")
 	corner.CornerRadius = UDim.new(0, radius)

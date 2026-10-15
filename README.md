@@ -377,6 +377,37 @@ a Nightly attempt or a Mythic's odds.
 - **The launch kit**: page text, icon, thumbnails and the gameplay video's shot list are in
   [`LAUNCH.md`](LAUNCH.md).
 
+## Build 68 — what's new
+
+- **How to play, at the top right.** A key between Shop and Menu opens the whole game in plain
+  words, on five pages: *Basics* (your first five minutes, step by step), *Sorting* (the six
+  cases, pictured, and how a round works), *Rooms* (every place: what it is, how it works, what you
+  get, and a **Go** key that takes you straight there), *Gilt & Shop*, and *Extras* (the Grand
+  Prix, the Ballroom, the Library, curios and brainrots, holidays, events). A new guest is pointed
+  to it once. Go keys move you on the server, from a fixed list of places only, never from a table,
+  a seat or a car (`server/Travel.luau`).
+- **New guests appear right in front of the Concierge**, just inside the front door, facing the desk (Talk shows at once).
+- **Faster on foot, phones included** (walk 24, run 34: phones have no run key).
+- **The Grand Prix** (an add-on, like the brainrots): eight ultra-luxury cars on the street, free to
+  drive any time (E to drive, F to ride along). Races keep hours like the Ballroom: open five
+  minutes, a 50-second countdown from the first Race, closed ten minutes after. Three laps against
+  the house's chauffeurs; Gilt for the top three, Gems for the winner (10 a day at most). The
+  server checks every lap (sectors in order, no car faster than a car can go).
+  - Robux, prices always shown: **Open the Grand Prix Now** (39, opens it for everyone) and **The
+    Private Garage** (199, two cars only its holders drive; they drive exactly like the rest).
+  - The owner's **Open the Grand Prix** (Owner Console and House controls): closed, it opens now;
+    counting down, the race starts in a few seconds.
+- **Gradients everywhere.** Black and gold, richer: a warm glow into deep black on every panel,
+  real gold keys. The Grand Prix wears racing red and carbon; each holiday its own colours
+  (Halloween, Thanksgiving, Christmas, Easter, St Patrick's).
+- **Simpler sorting.** No rival's line under the cases. Tonight's table is no longer a second prompt
+  on every chair (where it was pressed by mistake): it's chosen on purpose, from its card or How to
+  play, one try a day, and after it the table simply carries on. No more rehearsals.
+- **The Wardrobe scrolls** on every screen, two to a row on phones, each colour dot beside its name.
+- Checked: `tests/races.luau` (new: driving, hours, the owner's skip, the garage, prizes and
+  cheats), the purchases, the tables (one try, then the room), and every screen on desktop, small
+  phone, phone and tablet.
+
 ## Build 67 — what's new
 
 - **The tables never freeze, and sorting is endless.** The freeze in the Salon after round XIX

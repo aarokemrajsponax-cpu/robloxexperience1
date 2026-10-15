@@ -357,6 +357,9 @@ function OwnerConsole.open(startPage: string?)
 			local r = ask(request)
 			if type(r) == "table" and r.ok == false then
 				notice(tostring(r.why), true)
+			elseif type(r) == "table" and type(r.said) == "string" then
+				-- (What the house says happened, where it depends on the moment.)
+				notice(r.said, false, 2.5)
 			elseif done then
 				notice(done, false, 2.5)
 			end
@@ -657,6 +660,9 @@ function OwnerConsole.open(startPage: string?)
 			end)
 			tile(g3, 4, rgb(255, 200, 120), { id = "ballroomOpen", glyph = "🕯️", name = "Open the Ballroom", line = "Skip its 20-minute wait: open now." }, function()
 				send({ op = "ballroomOpen" }, "The Ballroom is open.")
+			end)
+			tile(g3, 5, rgb(214, 182, 112), { id = "grandPrixOpen", glyph = "🏁", name = "Open the Grand Prix", line = "Skip its 10-minute wait, or start a countdown now." }, function()
+				send({ op = "grandPrixOpen" }, "The Grand Prix is open.")
 			end)
 			tile(g3, 3, accent, { id = "guests", glyph = "📋", name = "Guest list", line = "Crown, spotlight, gift, go to or remove one guest." }, function()
 				Root.close(NAME)

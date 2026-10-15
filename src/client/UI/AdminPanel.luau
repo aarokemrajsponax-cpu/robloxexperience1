@@ -153,6 +153,8 @@ function AdminPanel.open(startPage: string?)
 			local r = ask(request)
 			if type(r) == "table" and r.ok == false then
 				Toast.show("House controls", tostring(r.why), 3)
+			elseif type(r) == "table" and type(r.said) == "string" then
+				Toast.show("House controls", r.said, 2.5)
 			elseif done then
 				Toast.show("House controls", done, 2.5)
 			end
@@ -268,6 +270,10 @@ function AdminPanel.open(startPage: string?)
 			local ballroomRow = row(scroll, add(), "The Ballroom", "Skip its wait: open it for everyone now (it closes again after an evening).", true)
 			small(ballroomRow, "Open now", true, function()
 				send({ op = "ballroomOpen" }, "The Ballroom is open.")
+			end)
+			local raceRow = row(scroll, add(), "The Grand Prix", "Skip its wait: open it for everyone now, or start a countdown at once (it closes again after a race).", true)
+			small(raceRow, "Open or start now", true, function()
+				send({ op = "grandPrixOpen" }, "The Grand Prix is open.")
 			end)
 			small(everyone, if pw.frozen then "Thaw" else "Freeze", not pw.frozen, function()
 				send({ op = "freeze", on = not pw.frozen }, if pw.frozen then "The house moves again." else "Frozen!")

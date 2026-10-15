@@ -113,7 +113,7 @@ local function spot(ctx: Types.Ctx, taken: { Vector3 }): Vector3
 			end
 		end
 	end
-	return Layout.Foyer.spawn.Position + Vector3.new(rng:NextNumber(-12, 12), -1.5, rng:NextNumber(-12, 12))
+	return Layout.Foyer.hall + Vector3.new(rng:NextNumber(-12, 12), -1.5, rng:NextNumber(-12, 12))
 end
 
 local function hide(ctx: Types.Ctx)

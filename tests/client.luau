@@ -2703,6 +2703,7 @@ check("the rival's plate is on the table", rivalPlate ~= nil)
 serverSays("Guest", { op = "rival", rival = { name = "Ben", fact = "5 points behind you on tonight's table.", ahead = true } })
 advance(1.5)
 check("no errors turning the plate", #errors == 0, errors[1])
+check("the sorting screen stays clear: no rival's line under the cases", textOnScreen("points behind you") == nil and textOnScreen("points ahead of you") == nil and (sortGui.Root:FindFirstChild("Rival", true) == nil or sortGui.Root:FindFirstChild("Rival", true).TextTransparency >= 0.99))
 
 serverSays("Table", { op = "left", summary = { score = 360, grade = "Polished" } })
 local fovAtLeave = camera.FieldOfView
@@ -2749,6 +2750,7 @@ advance(2)
 check("the Nightly card shows the score", textOnScreen("4,210") ~= nil)
 snapshot("nightly")
 check("with Share and Invite", textOnScreen("Share") ~= nil and textOnScreen("Invite") ~= nil)
+check("after tonight's try: Keep playing (the room as it is), never a rehearsal", textOnScreen("Keep playing") ~= nil and textOnScreen("Rehearse") == nil)
 press("Invite")
 check("Invite opens Roblox's invite prompt", shared.invites == 1)
 press("Leave")
@@ -3071,12 +3073,88 @@ check("the Library board shows ratings", textOnScreen("1540") ~= nil)
 Root.close()
 advance(1)
 local HowToPlay = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "HowToPlay")
-HowToPlay.open()
-advance(1)
-check("how to play opens", textOnScreen("Pick one up") ~= nil)
-snapshot("howto")
-Root.close()
-advance(1)
+do
+	local helpKey = find(playerGui, function(d)
+		return d.Name == "HowToPlayKey"
+	end)
+	check("How to play: a key at the top right, beside Shop and Menu", helpKey ~= nil and helpKey.Visible == true and helpKey.Parent and helpKey.Parent.Name == "TopRight")
+	if helpKey then
+		signalOf(helpKey, "Activated"):Fire()
+	end
+	advance(1)
+	check("How to play: the game in plain words", textOnScreen("How to play") ~= nil and textOnScreen("a sorting game in a grand house") ~= nil)
+	check("...your first five minutes, step by step", textOnScreen("Go to a table") ~= nil and textOnScreen("Sort the treasures") ~= nil and textOnScreen("Earn Gilt") ~= nil and textOnScreen("Spend it") ~= nil)
+	check("...five pages, and a Next key to read on", textOnScreen("Basics") ~= nil and textOnScreen("Sorting") ~= nil and textOnScreen("Rooms") ~= nil and textOnScreen("Extras") ~= nil and textOnScreen("Next: Sorting") ~= nil)
+	snapshot("howto-basics")
+	press("Next: Sorting")
+	advance(0.6)
+	check("Sorting: the six cases, each with what it holds", textOnScreen("WATCHES") ~= nil and textOnScreen("JEWELRY") ~= nil and textOnScreen("MONEY") ~= nil and textOnScreen("KEYS") ~= nil and textOnScreen("ACCESSORIES") ~= nil and textOnScreen("COLLECTIBLES") ~= nil and textOnScreen("Bars, notes, coins") ~= nil)
+	check("...and how it works: moving a piece, a wrong case, the gold thread, rounds, clocks", textOnScreen("Moving a piece") ~= nil and textOnScreen("A wrong case") ~= nil and textOnScreen("thread of gold") ~= nil and textOnScreen("Bank the run") ~= nil and textOnScreen("Clocks") ~= nil)
+	snapshot("howto-sorting")
+	press("Rooms")
+	advance(0.6)
+	local places = { "The Salon", "The Velvet Room", "The Obsidian Room", "The Midnight Room", "The Concierge", "The Boutique", "The Vault", "The Terrace", "Your Suite" }
+	local missing = {}
+	for _, name in places do
+		if not textOnScreen(name) then
+			table.insert(missing, name)
+		end
+	end
+	check("The rooms: every place in a line", #missing == 0, table.concat(missing, ", "))
+	check("...the Suite, the Vault and the rest explained: what each is and how it works", textOnScreen("Ring the bell inside to furnish them") ~= nil and textOnScreen("The Archivist at the desk") ~= nil and textOnScreen("round IV") ~= nil)
+	local goKeys = 0
+	for _, d in playerGui:GetDescendants() do
+		if d:IsA("TextButton") and d.Name == "Key" and norm(d.Text) == "go" then
+			goKeys += 1
+		end
+	end
+	check("...each with a Go key", goKeys == #places, goKeys)
+	snapshot("howto-rooms")
+	local goes = sentOps("Travel", "go")
+	local salonGo
+	for _, d in playerGui:GetDescendants() do
+		if d:IsA("TextButton") and d.Name == "Key" and d.Parent and d.Parent:FindFirstChild("Words") and d.Parent.Words:FindFirstChild("Title") and d.Parent.Words.Title.Text == "The Salon" then
+			salonGo = d
+		end
+	end
+	if salonGo then
+		signalOf(salonGo, "Activated"):Fire()
+	end
+	advance(0.5)
+	local last = sent[#sent]
+	check("Go asks the house to take you there (the house moves you)", sentOps("Travel", "go") == goes + 1 and last.remote == "Travel" and last.message.place == "salon")
+	check("...and the guide steps aside", textOnScreen("Every place in the house") == nil)
+	serverSays("Travel", { op = "arrived", place = "salon", name = "The Salon" })
+	advance(0.3)
+	check("...you're told when you're there", textOnScreen("You're here") ~= nil)
+	serverSays("Travel", { op = "refused", why = "Stand up first." })
+	advance(0.3)
+	check("...or why not", textOnScreen("Stand up first.") ~= nil)
+	HowToPlay.open()
+	advance(1)
+	check("opened again: back on the page last read", textOnScreen("Every place in the house") ~= nil)
+	press("Extras")
+	advance(0.6)
+	check("Extras: the Grand Prix, the Ballroom, the Library, curios and brainrots, holidays, events", textOnScreen("The Grand Prix") ~= nil and textOnScreen("The Ballroom") ~= nil and textOnScreen("The Library") ~= nil and textOnScreen("Curios and brainrots") ~= nil and textOnScreen("Holiday games") ~= nil and textOnScreen("Events") ~= nil)
+	check("...each saying how it works and what you get", textOnScreen("press E to drive") ~= nil and textOnScreen("five lights") ~= nil and textOnScreen("lamp goes out") ~= nil and textOnScreen("You get: Gilt for the top three, and Gems for the winner.") ~= nil and textOnScreen("You get: The last lamp still lit wins the whole pot of Gilt.") ~= nil)
+	snapshot("howto-extras")
+	press("Gilt & Shop")
+	advance(0.6)
+	check("Gilt & the Shop: Gilt, Gems, the Shop (prices always shown first), levels, tonight's table (optional)", textOnScreen("Gems") ~= nil and textOnScreen("price shown first") ~= nil and textOnScreen("Optional") ~= nil)
+	press("Basics")
+	advance(0.6)
+	press("See how")
+	advance(0.6)
+	check("See how: the sorting page", textOnScreen("Moving a piece") ~= nil)
+	Root.close()
+	advance(0.5)
+	HowToPlay.sorting()
+	advance(1)
+	check("the sorting, step by step, with the pieces turning", textOnScreen("Pick one up") ~= nil)
+	snapshot("howto")
+	Root.close()
+	advance(1)
+end
 serverSays("Guest", { op = "inviteLibrary" })
 check("the Concierge's invite opens the prompt", shared.invites == 3)
 check("no errors in the panels", #errors == 0, errors[1])
@@ -3130,6 +3208,35 @@ check("the Wardrobe lists what you own", textOnScreen("The Wardrobe") ~= nil and
 snapshot("wardrobe")
 Root2.close()
 advance(1)
+-- A full Wardrobe: far more than fits, so it scrolls (on a phone too), and Close stays in the panel.
+do
+	local many = {}
+	for i = 1, 9 do
+		table.insert(many, { id = "table_" .. i, name = "Oxblood Felt " .. i, kind = "table", style = oxblood.style })
+	end
+	invokeResults.ShopAsk = { kinds = { table = many, lamp = many, trail = many, nameplate = many }, equipped = { table = "" }, names = {} }
+	serverSays("Shop", { op = "open", panel = "wardrobe" })
+	advance(1)
+	local panel = find(playerGui, function(d)
+		return d.Name == "Wardrobe" and d:IsA("Frame")
+	end)
+	local list = panel and panel:FindFirstChild("List", true)
+	check("a full Wardrobe scrolls: its list has a set height inside the panel, the rest scrolls", list ~= nil and list:IsA("ScrollingFrame") and list.AutomaticSize == roblox.Enum.AutomaticSize.None and list.Size.Y.Scale == 1 and list.Size.Y.Offset < 0 and list.AutomaticCanvasSize == roblox.Enum.AutomaticSize.Y)
+	check("...and Close is always there, under the list", panel ~= nil and textOnScreen("Close") ~= nil)
+	local overlapping = 0
+	for _, d in (list and list:GetDescendants() or {}) do
+		if d:IsA("TextButton") and d:FindFirstChild("Swatch") then
+			local padding = d:FindFirstChildOfClass("UIPadding")
+			if d.TextXAlignment ~= roblox.Enum.TextXAlignment.Left or not padding or padding.PaddingLeft.Offset < 28 then
+				overlapping += 1
+			end
+		end
+	end
+	check("...each colour dot in its own space, the name beside it (never over it)", overlapping == 0, overlapping)
+	snapshot("wardrobe-full")
+	Root2.close()
+	advance(1)
+end
 invokeResults.ShopAsk = ledgerView
 serverSays("Shop", { op = "open", panel = "ledger" })
 advance(1)
@@ -3917,15 +4024,21 @@ check("fireworks over the house: shells going up and bursting over the estate", 
 	local f = workspace.MaisonLocal:FindFirstChild("Fireworks")
 	return f ~= nil and #f:GetChildren() > 0
 end)())
-check("the shells fly high over the roofs", (function()
-	local f = workspace.MaisonLocal:FindFirstChild("Fireworks")
-	for _, p in (f and f:GetChildren() or {}) do
-		if (p.Name == "Shell" or p.Name == "Rocket" or p.Name == "Shape") and p.Position.Y > 60 then
-			return true
+-- (Watched over a few seconds, not one moment: which shells are in the air at any one instant
+-- depends on when the show began on the test's clock.)
+do
+	local highest = 0
+	for _ = 1, 30 do
+		local f = workspace.MaisonLocal:FindFirstChild("Fireworks")
+		for _, p in (f and f:GetChildren() or {}) do
+			if p.Name == "Shell" or p.Name == "Rocket" or p.Name == "Shape" then
+				highest = math.max(highest, p.Position.Y)
+			end
 		end
+		advance(0.1)
 	end
-	return false
-end)())
+	check("the shells fly high over the roofs", highest > 60, highest)
+end
 check("the spotlight finds the giver", workspace.MaisonLocal:FindFirstChild("Spotlight") ~= nil)
 check("...its beam seen in the air", (function()
 	local lamp = workspace.MaisonLocal:FindFirstChild("Spotlight")
@@ -6942,6 +7055,226 @@ end)()
 	scan("src")
 	check("no picture from the emoji font that some screens can't draw", #newer == 0, table.concat(newer, "; "))
 	check("no errors with things side by side or long lines", #errors == errorsBefore, errors[errorsBefore + 1])
+end)()
+
+---------------------------------------------------------------------------------------------------
+-- 7y. The Grand Prix on this screen: at the wheel of one of the house's cars (built by the
+-- server's own module), the dash and its keys, the race line, the lights, the chauffeurs, the
+-- count and the result card.
+---------------------------------------------------------------------------------------------------
+;(function()
+	local errorsBefore = #errors
+	local CarDrive = module("StarterPlayer", "StarterPlayerScripts", "Client", "World", "CarDrive")
+	local GrandPrix = module("ReplicatedStorage", "Shared", "GrandPrix")
+	local Motorcar = module("ServerScriptService", "Server", "World", "Motorcar")
+	local maison = workspace:FindFirstChild("Maison")
+	local circuit = maison and maison:FindFirstChild("GrandPrix")
+	local lights = circuit and circuit:FindFirstChild("Gantry") and circuit.Gantry:FindFirstChild("Lights")
+	check("the Grand Prix circuit is built with the house", circuit ~= nil)
+	check("...with five starting lights on the gantry", lights ~= nil and #lights:GetChildren() == 5)
+
+	local folder = Instance.new("Folder")
+	folder.Name = "GrandPrixCars"
+	folder.Parent = maison or workspace
+	local def = GrandPrix.CARS[2]
+	local car = Motorcar.build(folder, def, GrandPrix.bay(2))
+	syncPositions(car)
+	local chassis = car:FindFirstChild("Chassis")
+	local seat = car:FindFirstChild("DriverSeat")
+	local drive = chassis:FindFirstChild("Drive")
+	local steer = chassis:FindFirstChild("Steer")
+	local dash = find(playerGui, function(d)
+		return d.Name == "CarDash"
+	end)
+	local keys = find(playerGui, function(d)
+		return d.Name == "CarKeys"
+	end)
+	check("on foot: no dash, no car keys", dash ~= nil and dash.Visible == false and keys ~= nil and keys.Visible == false)
+
+	-- In at the wheel, parked in its bay.
+	local fovBefore = camera.FieldOfView
+	humanoid.SeatPart = seat
+	advance(0.5)
+	check("at the wheel: the dash comes up", dash.Visible == true and keys.Visible == true)
+	check("...with the car's name and the speed", textOnScreen(string.upper(def.name)) ~= nil and textOnScreen("MPH") ~= nil)
+	check("...and three keys: Race, Reset, Get out", textOnScreen("Race") ~= nil and textOnScreen("Reset") ~= nil and textOnScreen("Get out") ~= nil)
+	check("parked: it stays put until the house hands it over", drive.VectorVelocity.Magnitude == 0)
+
+	-- Handed over: the throttle pulls it away the way it faces.
+	chassis.Anchored = false
+	seat.ThrottleFloat = 1
+	advance(2.5)
+	local v = drive.VectorVelocity
+	check("throttle: it pulls away, forward", v.Magnitude > 30 and v.Unit:Dot(chassis.CFrame.LookVector) > 0.95, v)
+	check("...and the dash shows the speed", (tonumber(dash.Speed.Text) or 0) > 30, dash.Speed.Text)
+	check("...the view opens a little with the speed", camera.FieldOfView > fovBefore + 2, camera.FieldOfView)
+	local before = steer.CFrame.LookVector
+	seat.SteerFloat = 1
+	advance(0.8)
+	local after = steer.CFrame.LookVector
+	check("steering right turns it right", before:Cross(after).Y < -0.05, before:Cross(after))
+	seat.SteerFloat = 0
+
+	-- Off the throttle it rolls to a stop; the keys work too where the seat isn't fed.
+	seat.ThrottleFloat = 0
+	advance(12)
+	check("off the throttle: it rolls to a stop", drive.VectorVelocity.Magnitude < 1, drive.VectorVelocity.Magnitude)
+	keysDown.W = true
+	advance(2)
+	check("W drives it too", drive.VectorVelocity.Magnitude > 30, drive.VectorVelocity.Magnitude)
+	snapshot("car-dash")
+
+	-- Into a wall: the car really stopped, so the speed comes down with it (no pushing on).
+	local fast = drive.VectorVelocity.Magnitude
+	chassis.AssemblyLinearVelocity = Vector3.zero
+	CarDrive.step(1 / 60)
+	check("into a wall: the speed drops with the car", drive.VectorVelocity.Magnitude < fast - 20, drive.VectorVelocity.Magnitude)
+	keysDown.W = nil
+
+	-- Race: the key asks the house.
+	local asked = sentOps("Race", "race")
+	press("Race")
+	check("Race asks the house for a race", sentOps("Race", "race") == asked + 1)
+
+	-- The gathering.
+	serverSays("Race", { op = "race", state = "gathering", id = 1, laps = 3, entrants = { LocalPlayer.DisplayName }, gatherLeft = 12, goIn = 0, startAt = 0, grid = {}, ai = {} })
+	advance(0.3)
+	local line = find(playerGui, function(d)
+		return d.Name == "RaceLine"
+	end)
+	check("gathering: the race line says when it starts", line ~= nil and line.Visible == true and textOnScreen("starts in 12") ~= nil)
+	check("...and the key offers to leave", textOnScreen("Leave race") ~= nil)
+
+	-- The grid, the five lights, the count.
+	local startAt = workspace:GetServerTimeNow() + 4
+	local L = GrandPrix.length()
+	serverSays("Race", {
+		op = "race",
+		state = "countdown",
+		id = 1,
+		laps = 3,
+		entrants = { LocalPlayer.DisplayName },
+		gatherLeft = 0,
+		goIn = 4,
+		startAt = startAt,
+		grid = { { name = LocalPlayer.DisplayName, userId = LocalPlayer.UserId, carId = def.id, slot = 1 } },
+		ai = { { name = "Monsieur Laurent", carId = def.id, slot = 2, pace = 0.93, behind = 10 } },
+	})
+	advance(0.2)
+	check("countdown: on the grid, watch the lights", textOnScreen("watch the lights") ~= nil)
+	local chauffeurs = workspace:FindFirstChild("MaisonChauffeurs")
+	local ghost = chauffeurs and chauffeurs:FindFirstChild("Chauffeur")
+	check("a chauffeur's car takes its place on the grid", ghost ~= nil and ghost:FindFirstChildWhichIsA("ProximityPrompt", true) == nil)
+	advance(2.6)
+	local lit = 0
+	for _, l in lights:GetChildren() do
+		if l.Material == roblox.Enum.Material.Neon then
+			lit += 1
+		end
+	end
+	check("the lights come on one by one", lit >= 2 and lit < 5, lit)
+	local countLabel = find(playerGui, function(d)
+		return d.Name == "RaceCount"
+	end)
+	check("...with the count in the middle", countLabel ~= nil and countLabel.Visible == true and (countLabel.Text == "2" or countLabel.Text == "1"), countLabel and countLabel.Text)
+	snapshot("race-count")
+
+	-- Lights out: GO, the laps, the place.
+	serverSays("Race", { op = "race", state = "racing", id = 1, laps = 3, entrants = { LocalPlayer.DisplayName }, gatherLeft = 0, goIn = 0, startAt = startAt, grid = { { name = LocalPlayer.DisplayName, userId = LocalPlayer.UserId, carId = def.id, slot = 1 } }, ai = { { name = "Monsieur Laurent", carId = def.id, slot = 2, pace = 0.93, behind = 10 } } })
+	advance(0.3)
+	check("lights out: GO", countLabel.Visible == true and countLabel.Text == "GO")
+	lit = 0
+	for _, l in lights:GetChildren() do
+		if l.Material == roblox.Enum.Material.Neon then
+			lit += 1
+		end
+	end
+	check("...and every light off", lit == 0, lit)
+	serverSays("Race", { op = "standings", id = 1, list = { { name = "Monsieur Laurent", ai = true, place = 1, lap = 1 }, { name = LocalPlayer.DisplayName, userId = LocalPlayer.UserId, place = 2, lap = 1 } } })
+	advance(1.5)
+	check("racing: the lap and the place along the top", textOnScreen("LAP 1/3") ~= nil and textOnScreen("2nd of 2") ~= nil)
+	check("the count has gone", countLabel.Visible == false)
+	local p0 = ghost:FindFirstChild("Chassis").CFrame.Position
+	advance(2)
+	local p1 = ghost:FindFirstChild("Chassis").CFrame.Position
+	check("the chauffeur drives round", (p1 - p0).Magnitude > 20, (p1 - p0).Magnitude)
+	local s, off = GrandPrix.progress(p1)
+	check("...on the road", math.abs(off) < GrandPrix.TRACK.width / 2, off)
+	snapshot("race-line")
+	serverSays("Race", { op = "lap", lap = 3, laps = 3 })
+	advance(0.2)
+	check("last lap: said so", textOnScreen("Last lap") ~= nil)
+	serverSays("Race", { op = "home", time = 38.4 })
+	advance(0.4)
+	check("home: the time along the top", textOnScreen("HOME") ~= nil and textOnScreen("0:38.4") ~= nil)
+
+	-- The result.
+	serverSays("Race", { op = "yourResult", place = 1, field = 2, time = 38.4, gilt = 150, gems = 2 })
+	serverSays("Race", { op = "race", state = "results", id = 1, laps = 3, entrants = { LocalPlayer.DisplayName }, gatherLeft = 0, goIn = 0, startAt = startAt, grid = { { name = LocalPlayer.DisplayName, userId = LocalPlayer.UserId, carId = def.id, slot = 1 } }, ai = {} })
+	serverSays("Race", { op = "results", id = 1, list = { { name = LocalPlayer.DisplayName, userId = LocalPlayer.UserId, place = 1, time = 38.4 }, { name = "Monsieur Laurent", ai = true, place = 2, time = 39.3 } } })
+	advance(0.6)
+	check("the result: You won", textOnScreen("You won") ~= nil)
+	check("...the prize, Gilt and Gems", textOnScreen("+150 Gilt") ~= nil and textOnScreen("+2 Gems") ~= nil)
+	check("...every driver in order, with times", textOnScreen("1st") ~= nil and textOnScreen("Monsieur Laurent") ~= nil and textOnScreen("0:39.3") ~= nil)
+	check("...Race again and Close", textOnScreen("Race again") ~= nil and textOnScreen("Close") ~= nil)
+	snapshot("race-results")
+	press("Close")
+	advance(0.5)
+	check("Close puts the card away", textOnScreen("You won") == nil)
+	serverSays("Race", { op = "race", state = "idle", id = 1, laps = 3, entrants = {}, gatherLeft = 0, goIn = 0, startAt = 0, grid = {}, ai = {} })
+	advance(0.4)
+	check("idle: the chauffeurs go home", chauffeurs == nil or #chauffeurs:GetChildren() == 0)
+
+	-- A refusal is said plainly.
+	serverSays("Race", { op = "refused", why = "Someone is already driving that car." })
+	advance(0.2)
+	check("a refusal is said plainly", textOnScreen("Someone is already driving that car.") ~= nil)
+	check("open, at the wheel: the line says so", line.Visible == true and textOnScreen("open  ·  press Race") ~= nil)
+
+	-- Between races: when it opens, and opening it now for everyone (Robux, the price shown).
+	serverSays("Race", { op = "race", state = "idle", id = 1, laps = 3, entrants = {}, gatherLeft = 0, goIn = 0, startAt = 0, grid = {}, ai = {}, door = "closed", doorLeft = 540 })
+	advance(0.4)
+	check("closed: the line says when it opens", textOnScreen("opens in 9:00") ~= nil)
+	check("...and so does the Race key", textOnScreen("Opens 9:00") ~= nil)
+	local raceKeyButton = find(playerGui, function(d)
+		return d.Name == "RaceKey"
+	end)
+	local racesAsked = sentOps("Race", "race")
+	signalOf(raceKeyButton, "Activated"):Fire()
+	check("pressing it still asks the house (who says it's closed)", sentOps("Race", "race") == racesAsked + 1)
+	serverSays("Race", { op = "closed", why = "The Grand Prix opens in 9:00.", opensIn = 539.6, price = 39, held = 0 })
+	advance(0.6)
+	check("closed: a card says when it opens", textOnScreen("The Grand Prix is closed") ~= nil and textOnScreen("It opens again in 9:00") ~= nil)
+	local openKey = find(playerGui, function(d)
+		return d:IsA("TextButton") and string.find(norm(d.Text), "openthegrandprixnow", 1, true) ~= nil
+	end)
+	check("...and offers opening it now for everyone, its price on the key", openKey ~= nil and string.find(openKey.Text, "39", 1, true) ~= nil, openKey and openKey.Text)
+	check("...or not now", textOnScreen("Not now") ~= nil)
+	snapshot("race-closed")
+	local opensAsked = sentOps("Race", "openNow")
+	if openKey then
+		signalOf(openKey, "Activated"):Fire()
+	end
+	advance(0.4)
+	check("Open it now asks the house (the purchase window is Roblox's)", sentOps("Race", "openNow") == opensAsked + 1)
+	check("...and the card steps aside", textOnScreen("The Grand Prix is closed") == nil)
+	serverSays("Race", { op = "opened", closesIn = 300, gather = 50 })
+	advance(0.4)
+	check("opened by itself: a quiet word", textOnScreen("Get in any car on the street and press Race.") ~= nil)
+	check("...and the line and key are back to Race", textOnScreen("open  ·  press Race") ~= nil and textOnScreen("Opens 9") == nil)
+
+	-- Out of the car: the dash goes, the view comes back.
+	-- (Lune can't set a reference back to nil: a seat in no car stands in for none.)
+	local nowhere = Instance.new("Seat")
+	nowhere.Name = "Nowhere"
+	humanoid.SeatPart = nowhere
+	advance(0.5)
+	check("out of the car: the dash goes", dash.Visible == false and keys.Visible == false)
+	check("...and the view is as it was", math.abs(camera.FieldOfView - fovBefore) < 0.01, camera.FieldOfView)
+	check("...and the race line, now nothing is on", line.Visible == false)
+	folder:Destroy()
+	advance(4)
+	check("no errors at the wheel", #errors == errorsBefore, errors[errorsBefore + 1])
 end)()
 
 ---------------------------------------------------------------------------------------------------

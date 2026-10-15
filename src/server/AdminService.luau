@@ -56,6 +56,12 @@ AdminService.openBallroom = function(_by: string): (boolean, string?)
 	return false, "The Ballroom isn't ready."
 end
 
+-- Opens the Grand Prix now, or starts a race that's counting down (set by Main:
+-- GrandPrixService.openNow / startNow). The third value says what happened.
+AdminService.openGrandPrix = function(_by: string): (boolean, string?, string?)
+	return false, "The Grand Prix isn't ready.", nil
+end
+
 local TOPIC = "MaisonAdmin"
 local DEFAULT_GRAVITY = 196.2
 
@@ -2273,6 +2279,16 @@ local function handle(player: Player, request: unknown): any
 		end
 		broadcast({ op = "salute", id = "ballroomOpened", by = byName, effects = { "fireworks" }, seconds = 6, title = "The Ballroom is open", line = byName .. " opened the Ballroom. Lights Out: sit in any chair!" })
 		return { ok = true }
+	elseif op == "grandPrixOpen" then
+		-- Skips the Grand Prix's wait: open for everyone now, or a countdown cut to a few seconds.
+		local ok, why, said = AdminService.openGrandPrix(byName)
+		if not ok then
+			return { ok = false, why = why or "Not just now." }
+		end
+		if said == "The Grand Prix is open." then
+			broadcast({ op = "salute", id = "grandPrixOpened", by = byName, effects = { "fireworks" }, seconds = 6, title = "The Grand Prix is open", line = byName .. " opened the Grand Prix. Get in any car on the street and press Race." })
+		end
+		return { ok = true, said = said }
 	elseif op == "bringAll" then
 		local mine = player.Character
 		if not mine then

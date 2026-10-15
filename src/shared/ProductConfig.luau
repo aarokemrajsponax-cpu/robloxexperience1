@@ -430,6 +430,32 @@ ballroom("ballroomFreeze", "Ballroom: Butterfingers", 25, "freeze", "Butterfinge
 ballroom("ballroomShield", "Ballroom: Shield", 15, "shield", "Shield", "Stops the next sabotage sent at your table this evening.", 88)
 ballroom("ballroomOpen", "Open the Ballroom Now", 49, nil, "Open the Ballroom Now", "Opens the Ballroom for everyone in the house, right now.", 89)
 
+-- The Grand Prix (GrandPrixService, Purchases/Racing): opening it between its hours, for everyone;
+-- and the Private Garage, two more cars for its holders that drive exactly like the rest.
+ProductConfig.GrandPrix = { "grandPrixOpen", "grandPrixGarage" } :: { string }
+add({
+	Key = "grandPrixOpen",
+	Name = "Open the Grand Prix Now",
+	ProductType = "DeveloperProduct",
+	Id = 0,
+	Handler = "grandPrix",
+	Pricing = { ReferencePrice = 39, Tier = "Entry", Rationale = "Opens the races for the whole house: cheap, instant, shared." },
+	Reward = { Type = "GrandPrixOpen" },
+	Rules = { Stackable = true, CooldownSeconds = 0, MaxHeld = 20 },
+	UX = { DisplayName = "Open the Grand Prix Now", Category = "Grand Prix", Line = "Opens the Grand Prix for everyone in the house, right now.", Offer = false, Order = 92, Action = "prompt" },
+})
+add({
+	Key = "grandPrixGarage",
+	Name = "The Private Garage",
+	ProductType = "DeveloperProduct",
+	Id = 0,
+	Handler = "grandPrix",
+	Pricing = { ReferencePrice = 199, Tier = "Medium", Rationale = "Two cars that are only yours to drive, for good. A look, never an edge: they drive like every other car." },
+	Reward = { Type = "PrivateGarage" },
+	Rules = { OneTime = true, Stackable = false, CooldownSeconds = 0, DuplicateCredit = "tier199" },
+	UX = { DisplayName = "The Private Garage", Category = "Grand Prix", Line = "Two cars only you may drive, for good: the Gilded Phantom and the Imperial Violet. They drive like every other car.", Offer = true, Order = 55, Action = "prompt" },
+})
+
 -- The holiday games (server/Holidays): more of the same fun, at a fixed price, never a chance.
 -- Turkeys: five free catches each visit to the Harvest Field, then more. The sleigh: one ride to
 -- the North Pole free each Christmas, then more.

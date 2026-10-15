@@ -624,7 +624,7 @@ Studio purchases are free test purchases):
 2. **Create the developer products** (Creator Hub → your experience → Monetization → Developer
    Products), names exactly as below; the game finds them within five minutes:
    `Chronos Defiance` 49 · `Emperor's Decree` 149 · `God-Mode Luck` 199 · `Megalodon Rainmaker`
-   699 · `Gold-Leaf Spritz` 75 · `Macaron Tower` 149 · `Grand Platter` 299 (the Terrace Bar's
+   699 · `Open the Grand Prix Now` 39 · `The Private Garage` 199 · `Gold-Leaf Spritz` 75 · `Macaron Tower` 149 · `Grand Platter` 299 (the Terrace Bar's
    specials) · `Suite Fireworks` 199 · `Meme Takeover` 299 · `Golden Transformation` 499 · `Gem Pouch` 199 · `Gem Case` 799 · `Gem Trunk` 1999 · and, if you won't make the pass, `VIP Velocity Elite` 499. (The Boutique's
    products: see LAUNCH.md.)
 3. **The VIP Velocity Elite game pass** (recommended): Monetization → Passes → Create a Pass,

@@ -13,6 +13,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Ease = require(ReplicatedStorage.Shared.Ease)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Speed = require(ReplicatedStorage.Shared.Speed)
+local Voice = require(ReplicatedStorage.Shared.Voice)
 
 local State = require(script.Parent.State)
 local Root = require(script.Parent.UI.Root)
@@ -507,6 +508,7 @@ local function startHud()
 		Hud.setShopKey(function()
 			BoutiquePanel.open()
 		end)
+		Hud.setHelpKey(HowToPlay.open)
 		Hud.setMenuKey(MenuPanel.open)
 		ContextActionService:BindAction("MaisonMenu", function(_, state)
 			if state == Enum.UserInputState.Begin and not TableClient.isSeated() then
@@ -648,6 +650,17 @@ local function welcome()
 				StartHere.offer()
 			end)
 		end)
+		-- Where to look whenever lost: a note under the How to play key, once, when the screen
+		-- is clear (not at a table, on the tour, or behind a panel).
+		task.delay(40, function()
+			for _ = 1, 24 do
+				if not TableClient.isSeated() and not Tour.active() and not Root.isOpen() and not Welcome.showing() then
+					Hud.coachHelp(Voice.Guide.coach, 14)
+					return
+				end
+				task.wait(5)
+			end
+		end)
 	end
 end
 
@@ -735,6 +748,43 @@ Tour.isSeated = function(): boolean
 	return TableClient.isSeated()
 end
 start("Tour", Tour.listen)
+-- The Grand Prix: the house's cars out front, and races round the circuit (an extra, like the
+-- brainrots: the tables are the game).
+local CarDrive = require(script.Parent.World.CarDrive)
+CarDrive.isBusy = function()
+	return TableClient.isSeated()
+end
+start("The Grand Prix", CarDrive.start)
+
+-- How to play's Go keys: the server takes the guest there (never from a table or a seat).
+local travelEvent = Remotes.event("Travel")
+HowToPlay.go = function(place: string)
+	travelEvent:FireServer({ op = "go", place = place })
+end
+HowToPlay.tour = function()
+	HowToPlay.go("concierge")
+end
+HowToPlay.tonight = function()
+	quickSit("nightly")
+end
+HowToPlay.shop = function()
+	BoutiquePanel.open()
+end
+travelEvent.OnClientEvent:Connect(function(message: any)
+	if type(message) ~= "table" then
+		return
+	end
+	if message.op == "arrived" then
+		if message.place == "concierge" then
+			local S = Voice.StartHere
+			Toast.show(S.promptAction, S.arrowNear[State.inputKind()] or S.arrowNear.mouse, 4)
+		else
+			Toast.show(Voice.Guide.arrived, tostring(message.name or ""), 2.5)
+		end
+	elseif message.op == "refused" then
+		Toast.show(Voice.Guide.key, tostring(message.why or "Not just now."), 2.5)
+	end
+end)
 
 HowToPlay.onFinish = function()
 	if TableClient.isSeated() then

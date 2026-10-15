@@ -945,10 +945,12 @@ function TableService.seat(player: Player, model: Model, teleport: boolean?, wan
 		mode = "room"
 	end
 	if mode == "nightly" then
-		-- One scored attempt per UTC day; after that, unlimited unscored rehearsals.
+		-- One try a day (UTC). Once it's played (or where nothing is recorded, a private server)
+		-- the table simply plays as its own room: no rehearsals, nothing to explain.
 		local night = Nightly.at()
 		if (data and data.nightly.day == night.day) or not Private.records() then
-			mode = "rehearsal"
+			mode = "room"
+			TableService.say(player, "You've had tonight's try. A new table is laid at midnight (UTC); this one plays as its room.")
 		end
 	elseif model:GetAttribute("Room") == "midnight" and not (data and data.flags.midnight) then
 		return false, "locked"
@@ -1105,12 +1107,10 @@ local function onMessage(player: Player, message: unknown)
 	elseif op == "again" then
 		if s.state == "banked" then
 			if s.mode ~= "room" then
-				-- After the card: another go at tonight's table, scored only if it's a new night.
-				local night = Nightly.at()
-				local data = Profiles.get(player)
-				s.mode = if (data and data.nightly.day == night.day) or not Private.records() then "rehearsal" else "nightly"
-				s.night = night
-				s.room = Rooms.get(night.room) or s.room
+				-- After tonight's card: the table carries on as its own room (one try a night,
+				-- and no rehearsals).
+				s.mode = "room"
+				s.room = Rooms.get(tostring(s.model:GetAttribute("Room") or "salon")) or s.room
 			end
 			resetRun(s)
 			dealRound(s)

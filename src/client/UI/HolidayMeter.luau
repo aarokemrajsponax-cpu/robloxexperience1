@@ -133,8 +133,8 @@ function HolidayMeter.show(glyph: string, colour: Color3, sections: { Section })
 	f.Name = "HolidayMeter"
 	f.AnchorPoint = Vector2.new(0.5, 1)
 	f.Position = UDim2.new(0.5, 0, 1, -18)
-	f.BackgroundColor3 = rgb(12, 12, 16)
-	f.BackgroundTransparency = 0.06
+	f.BackgroundColor3 = Color3.new(1, 1, 1)
+	f.BackgroundTransparency = 0.04
 	f.BorderSizePixel = 0
 	corner(f, 29)
 	local stroke = Instance.new("UIStroke")
@@ -143,9 +143,10 @@ function HolidayMeter.show(glyph: string, colour: Color3, sections: { Section })
 	stroke.Thickness = 2
 	stroke.Transparency = 0.1
 	stroke.Parent = f
+	-- (In the holiday's own colours, from its glow at the top corner down to the foot.)
 	local g = Instance.new("UIGradient")
-	g.Rotation = 90
-	g.Color = ColorSequence.new(rgb(36, 34, 40), rgb(10, 10, 14))
+	g.Rotation = 62
+	g.Color = Theme.sequence(Theme.mood(Theme.holidayMood()).panel)
 	g.Parent = f
 	-- The badge.
 	local badge = Instance.new("Frame")
@@ -215,7 +216,9 @@ end
 -- The offer: a heading, a line, a key for each choice (its price on it, or how many are already
 -- held), and a quiet line about the free way (`free`, said honestly: waiting, or another day).
 -- Used by the holiday games and the Ballroom alike.
-function HolidayMeter.offer(title: string, line: string, choices: { Choice }, free: string?)
+-- `mood`: the colours it wears (Theme.moods: a holiday's own, the Grand Prix's; the house's by
+-- default).
+function HolidayMeter.offer(title: string, line: string, choices: { Choice }, free: string?, mood: string?)
 	if Root.isOpen(OFFER) then
 		Root.close(OFFER)
 	end
@@ -267,6 +270,7 @@ function HolidayMeter.offer(title: string, line: string, choices: { Choice }, fr
 	close.LayoutOrder = 60
 	close.Size = UDim2.fromOffset(160, 38)
 	offerCard = group
+	Theme.paint(group, mood or "house")
 	Root.open(OFFER, group)
 	Fade.set(group, 1)
 	Fade.to(group, Ease.scaled(Ease.settle), 0)

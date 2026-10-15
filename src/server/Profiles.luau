@@ -63,7 +63,7 @@ export type Data = {
 	-- Purchases (server/Purchases): what's bought and waiting to be used (credits: revives,
 	-- decrees, rains, salutes...), God-Mode Luck's time left (it only runs while you're here), VIP
 	-- Velocity Elite (velocityPass: verified as a game pass), and the rains already received.
-	perks: { credits: { [string]: number }, luck: { remaining: number }, velocity: boolean, velocityPass: boolean, rains: { string }, piano: { seconds: number, tasteDay: number? }, bar: { pourDay: number, served: number }, shows: { memes: { string } }? },
+	perks: { credits: { [string]: number }, luck: { remaining: number }, velocity: boolean, velocityPass: boolean, rains: { string }, piano: { seconds: number, tasteDay: number? }, bar: { pourDay: number, served: number }, shows: { memes: { string } }?, garage: boolean? },
 	-- The purchase risk check: countries seen, recent receipts and failures, and the state.
 	risk: { regions: { { code: string, at: number } }, purchases: { number }, failures: { number }, state: string, restrictedUntil: number },
 	-- Granted receipts whose ledger record is still to be marked Granted (retried until it is).
@@ -89,6 +89,8 @@ export type Data = {
 	-- The Evening Calendar (server/Calendar): the day the last present was opened, how many this
 	-- week (0 to 6), the weeks finished, and every present ever opened.
 	calendar: { day: number, step: number, weeks: number, total: number },
+	-- The Grand Prix: races run and won, the best three-lap time, and today's Gems from wins.
+	racing: { day: number, gems: number, races: number, wins: number, best: number },
 }
 
 local TEMPLATE: Data = {
@@ -140,6 +142,7 @@ local TEMPLATE: Data = {
 	tallyOnce = {},
 	gemShop = { owned = {}, aura = "", title = "", giltUntil = 0, xpUntil = 0 },
 	calendar = { day = -1, step = 0, weeks = 0, total = 0 },
+	racing = { day = -1, gems = 0, races = 0, wins = 0, best = 0 },
 }
 
 -- Each migration moves data from schema n to n + 1. Add new ones at the end.

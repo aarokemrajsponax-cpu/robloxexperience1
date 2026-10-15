@@ -24,6 +24,8 @@ Remotes.Events = {
 	"Purchase", -- server -> client: perks and credits, decrees, rains, revive results
 	"PianoNote", -- client -> server: a note played at the Foyer's piano; server -> clients: play it
 	"Holiday", -- server -> client: the holiday games (a door answered, a turkey caught, a gift loaded...)
+	"Race", -- the Grand Prix: client -> server (race, leave, reset, hello); server -> client (the race)
+	"Travel", -- client -> server: go to a place in the house; server -> client: arrived, or why not
 }
 
 Remotes.Functions = {

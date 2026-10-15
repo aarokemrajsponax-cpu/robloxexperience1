@@ -42,7 +42,11 @@ Layout.Door = {
 Layout.Foyer = {
 	zone = box(-30, 0, -8, 30, 32, 42),
 	minX = -30, maxX = 30, minZ = -8, maxZ = 42, height = 28,
-	spawn = CFrame.lookAt(Vector3.new(-20, 6, 12), Vector3.new(0, 6, 12)),
+	-- Where guests appear: inside the front door, right in front of the Concierge's desk and
+	-- facing the Concierge (close enough that Talk shows at once).
+	spawn = CFrame.lookAt(Vector3.new(9, 6, -1), Vector3.new(9, 6, 4.2)),
+	-- The open floor west of the stair (the Easter eggs are hidden round it).
+	hall = Vector3.new(-20, 6, 12),
 	lectern = CFrame.lookAt(Vector3.new(9, 3, 1.5), Vector3.new(9, 3, -10)),
 	conciergeHome = CFrame.lookAt(Vector3.new(9, 3, 4.2), Vector3.new(9, 3, -10)),
 	chandelier = Vector3.new(0, 27, 16),

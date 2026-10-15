@@ -66,7 +66,16 @@ function MenuPanel.open()
 		b.Name = "Tile_" .. tile.id
 		b.Text = ""
 		b.AutoButtonColor = false
-		b.BackgroundColor3 = Color3.fromRGB(28, 26, 28)
+		-- (Black and gold: a warm glow at the top corner, down into black.)
+		b.BackgroundColor3 = Color3.new(1, 1, 1)
+		local shade = Instance.new("UIGradient")
+		shade.Rotation = 62
+		shade.Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.fromRGB(72, 58, 36)),
+			ColorSequenceKeypoint.new(0.5, Color3.fromRGB(30, 27, 26)),
+			ColorSequenceKeypoint.new(1, Color3.fromRGB(16, 15, 18)),
+		})
+		shade.Parent = b
 		b.LayoutOrder = i
 		b.Selectable = true
 		b.Parent = scroll
@@ -74,10 +83,11 @@ function MenuPanel.open()
 		corner.CornerRadius = UDim.new(0, 8)
 		corner.Parent = b
 		local stroke = Instance.new("UIStroke")
-		stroke.Color = C.gold
-		stroke.Transparency = 0.7
+		stroke.Color = Color3.new(1, 1, 1)
+		stroke.Transparency = 0.35
 		stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 		stroke.Parent = b
+		Theme.edge(stroke, 0.6)
 		-- The tile's icon, drawn in light in a small glass chip (its glyph, where there isn't one).
 		local chip = Instance.new("Frame")
 		chip.Name = "Chip"

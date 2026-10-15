@@ -82,7 +82,7 @@ function Objective.current(): Goal?
 		return { key = "concierge", title = S.title, line = S.goal, how = S.goalHow }
 	end
 	if guest.firstVisit == true and not seatedOnce then
-		return { key = "sit", title = V.next, line = V.sit, how = byInput(V.sitHow) }
+		return { key = "sit", title = V.next, line = V.sit, how = byInput(V.sitHow), go = "room" }
 	end
 	if holiday and rank == "gifts" then
 		return holiday
@@ -259,6 +259,10 @@ local function show(goal: Goal)
 		end, 160)
 		key.LayoutOrder = 4
 		key.Size = UDim2.fromOffset(160, 34)
+	end
+	-- (A holiday's goal in the holiday's own colours.)
+	if string.sub(goal.key, 1, 8) == "holiday:" then
+		Theme.paint(group, Theme.holidayMood())
 	end
 	card = group
 	shownKey = goal.key

@@ -175,6 +175,8 @@ local function holds(data: Profiles.Data, entry: ProductConfig.Entry): boolean
 		return data.goldKey
 	elseif entry.Handler == "velocity" then
 		return data.perks.velocity
+	elseif entry.Key == "grandPrixGarage" then
+		return data.perks.garage == true
 	end
 	return false
 end

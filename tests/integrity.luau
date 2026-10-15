@@ -138,9 +138,9 @@ c = caughtSince(n0, "Ivy", "speed")
 check("running far faster than anyone can is caught", c ~= nil, #caughtLog - n0)
 check("...and they get nowhere by it", (at(ivy) - was).Magnitude < Config.data.Movement.runSpeed * 2, (at(ivy) - was).Magnitude)
 advance(4)
--- Flying: rising steadily, far above any jump or staircase.
+-- Flying: rising steadily, far above any jump or staircase (twice their run, straight up).
 n0 = #caughtLog
-walk(ivy, 45, 2.5, Vector3.new(0, 1, 0))
+walk(ivy, Config.data.Movement.runSpeed * 2, 2.5, Vector3.new(0, 1, 0))
 check("flying up is caught", caughtSince(n0, "Ivy", "flight") ~= nil)
 check("strikes are counted for the minute", Integrity.strikes(ivy) >= 3, Integrity.strikes(ivy))
 advance(4)

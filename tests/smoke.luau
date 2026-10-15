@@ -463,7 +463,7 @@ for _, t in tables do
 	elseif t:GetAttribute("Room") == "salon" then
 		check(id .. " (the Salon, no clock) has no Nightly prompt", chair ~= nil and chair:FindFirstChild("NightlyPrompt") == nil and chair:FindFirstChild("SitPrompt") ~= nil)
 	elseif t:GetAttribute("Duel") == nil then
-		check(id .. " has the Nightly prompt", chair ~= nil and chair:FindFirstChild("NightlyPrompt") ~= nil)
+		check(id .. " has one prompt, Sit (Tonight's table is chosen from its card, never by mistake)", chair ~= nil and chair:FindFirstChild("NightlyPrompt") == nil and chair:FindFirstChild("SitPrompt") ~= nil)
 	else
 		check(id .. " (a duel half) has no Nightly prompt", chair ~= nil and chair:FindFirstChild("NightlyPrompt") == nil)
 	end
