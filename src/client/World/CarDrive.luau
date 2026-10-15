@@ -12,11 +12,13 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local Caps = require(ReplicatedStorage.Shared.Caps)
+local Ease = require(ReplicatedStorage.Shared.Ease)
 local GrandPrix = require(ReplicatedStorage.Shared.GrandPrix)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Root = require(script.Parent.Parent.UI.Root)
@@ -24,6 +26,7 @@ local Theme = require(script.Parent.Parent.UI.Theme)
 local Toast = require(script.Parent.Parent.UI.Toast)
 local HolidayMeter = require(script.Parent.Parent.UI.HolidayMeter)
 local Sound = require(script.Parent.Parent.Sound)
+local CircuitDress = require(script.Parent.CircuitDress)
 
 local CarDrive = {}
 
@@ -43,6 +46,17 @@ local driving: Model? = nil
 local speed = 0
 local yaw = 0
 local fovBefore: number? = nil
+-- The rush of it: a boost pad's surge (until when, and the pad it came from), the view's punch
+-- (extra field of view, falling away), the camera's shake, and the tyres' last squeal.
+local boostUntil = 0
+local lastPad: number? = nil
+local punch = 0
+local kick = 0
+local hum = 0
+local skidAt = 0
+CircuitDress.drivingNow = function(): Model?
+	return driving
+end
 
 type Race = {
 	state: string,
@@ -154,6 +168,17 @@ Theme.text(dash, "MPH", 11, "caps", {
 	Position = UDim2.new(1, -14, 1, -10),
 	TextColor3 = RACING.plainText,
 })
+-- (On a boost pad's surge: the word in gold at the dash's other corner.)
+local dashBoost = Theme.text(dash, "BOOST", 11, "caps", {
+	Name = "Boost",
+	AutomaticSize = Enum.AutomaticSize.None,
+	Size = UDim2.fromOffset(60, 14),
+	AnchorPoint = Vector2.new(0, 1),
+	Position = UDim2.new(0, 14, 1, -10),
+	TextColor3 = RACING.gold[1],
+	TextXAlignment = Enum.TextXAlignment.Left,
+	Visible = false,
+})
 
 local keys = Instance.new("Frame")
 keys.Name = "CarKeys"
@@ -222,6 +247,100 @@ countStroke.Color = Color3.fromRGB(10, 8, 6)
 countStroke.Thickness = 2
 countStroke.Transparency = 0.2
 countStroke.Parent = count
+
+-- A callout under the race line: a place won or lost, the flag. Big, brief, then gone.
+local callout = Theme.text(Root.hud, "", 30, "display", {
+	Name = "RaceCallout",
+	AutomaticSize = Enum.AutomaticSize.None,
+	AnchorPoint = Vector2.new(0.5, 0),
+	Position = UDim2.new(0.5, 0, 0, 112),
+	Size = UDim2.fromOffset(420, 40),
+	TextColor3 = Color3.new(1, 1, 1),
+	Visible = false,
+})
+local calloutGradient = Instance.new("UIGradient")
+calloutGradient.Rotation = 90
+calloutGradient.Parent = callout
+local calloutStroke = Instance.new("UIStroke")
+calloutStroke.Color = Color3.fromRGB(10, 8, 6)
+calloutStroke.Thickness = 2
+calloutStroke.Transparency = 0.25
+calloutStroke.Parent = callout
+local calloutScale = Instance.new("UIScale")
+calloutScale.Parent = callout
+local calloutAt = 0
+
+local function say(text: string, good: boolean)
+	calloutAt = os.clock()
+	local stamp = calloutAt
+	callout.Text = text
+	calloutGradient.Color = if good
+		then Theme.sequence({ Color3.fromRGB(255, 255, 255), RACING.gold[2], RACING.gold[3] })
+		else Theme.sequence({ Color3.fromRGB(236, 236, 240), Color3.fromRGB(176, 176, 184) })
+	callout.TextTransparency = 0
+	calloutStroke.Transparency = 0.25
+	callout.Visible = not CarDrive.isBusy()
+	calloutScale.Scale = 1.35
+	TweenService:Create(calloutScale, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+	task.delay(1.5, function()
+		if calloutAt == stamp then
+			TweenService:Create(callout, TweenInfo.new(0.4), { TextTransparency = 1 }):Play()
+			TweenService:Create(calloutStroke, TweenInfo.new(0.4), { Transparency = 1 }):Play()
+			task.delay(0.45, function()
+				if calloutAt == stamp then
+					callout.Visible = false
+				end
+			end)
+		end
+	end)
+end
+CarDrive.callout = say
+
+-- Speed lines: thin streaks at the edges of the screen, rushing outward, only when it's quick.
+local streaks = Instance.new("Frame")
+streaks.Name = "SpeedLines"
+streaks.BackgroundTransparency = 1
+streaks.Size = UDim2.fromScale(1, 1)
+streaks.ZIndex = 0
+streaks.Visible = false
+streaks.Parent = Root.hud
+type Streak = { frame: Frame, angle: number, r: number, speed: number }
+local streakList: { Streak } = {}
+for i = 1, 16 do
+	local f = Instance.new("Frame")
+	f.Name = "Streak"
+	f.AnchorPoint = Vector2.new(0.5, 0.5)
+	f.BorderSizePixel = 0
+	f.BackgroundColor3 = Color3.fromRGB(255, 250, 236)
+	f.BackgroundTransparency = 1
+	f.ZIndex = 0
+	f.Parent = streaks
+	table.insert(streakList, { frame = f, angle = (i / 16) * math.pi * 2 + math.random() * 0.2, r = 0.75 + math.random() * 0.35, speed = 1.2 + math.random() * 0.8 })
+end
+
+local function drawStreaks(dt: number, rush: number)
+	local show = rush > 0.02 and driving ~= nil and not CarDrive.isBusy() and Ease.motionScale >= 0.5
+	streaks.Visible = show
+	if not show then
+		return
+	end
+	local size = Root.size()
+	local half = Vector2.new(size.X / 2, size.Y / 2)
+	for _, st in streakList do
+		st.r += dt * st.speed * (0.6 + rush)
+		if st.r > 1.15 then
+			st.r = 0.74 + math.random() * 0.08
+			st.angle = math.random() * math.pi * 2
+			st.speed = 1.2 + math.random() * 0.8
+		end
+		local dir = Vector2.new(math.cos(st.angle), math.sin(st.angle))
+		local at = half + Vector2.new(dir.X * half.X, dir.Y * half.Y) * st.r
+		st.frame.Position = UDim2.fromOffset(at.X, at.Y)
+		st.frame.Size = UDim2.fromOffset(40 + 90 * math.min(rush, 1), 2)
+		st.frame.Rotation = math.deg(math.atan2(dir.Y * half.Y, dir.X * half.X))
+		st.frame.BackgroundTransparency = 1 - math.clamp(rush, 0, 1) * 0.4 * math.clamp((st.r - 0.74) * 4, 0, 1)
+	end
+end
 
 local function setDashVisible()
 	local show = driving ~= nil and not CarDrive.isBusy()
@@ -579,10 +698,20 @@ local function onMessage(m: { [string]: any })
 		end
 	elseif op == "standings" then
 		race.field = #(m.list or {})
+		local was = race.place
 		for _, row in m.list or {} do
 			if row.userId == player.UserId then
 				race.place = row.place
 				race.lap = math.max(race.lap, row.lap or 1)
+			end
+		end
+		-- A place won or lost, called out (not the first reading of the race).
+		if race.state == "racing" and race.mine and not race.home and was > 0 and race.place > 0 and race.place ~= was then
+			if race.place < was then
+				say(if race.place == 1 then "INTO THE LEAD" else "UP TO " .. string.upper(ordinal(race.place)), true)
+				Sound.play("combo", 0.45, 1 + (5 - math.min(race.place, 5)) * 0.06)
+			else
+				say("DOWN TO " .. string.upper(ordinal(race.place)), false)
 			end
 		end
 	elseif op == "lap" then
@@ -593,6 +722,7 @@ local function onMessage(m: { [string]: any })
 		Sound.play("tick", 0.4)
 	elseif op == "home" then
 		race.home = m.time
+		say("CHEQUERED FLAG", true)
 		Sound.play("complete", 0.5)
 	elseif op == "out" then
 		Toast.show("The Grand Prix", tostring(m.why or "Out of the race"), 3)
@@ -680,8 +810,15 @@ local function enter(model: Model)
 end
 
 local function leave()
+	local was = driving
 	driving = nil
 	speed = 0
+	boostUntil, punch, kick, hum = 0, 0, 0, 0
+	dashBoost.Visible = false
+	streaks.Visible = false
+	if was then
+		pcall(CircuitDress.effects, was, 0, false)
+	end
 	local camera = Workspace.CurrentCamera
 	if camera and fovBefore then
 		camera.FieldOfView = fovBefore
@@ -750,18 +887,69 @@ function CarDrive.step(dt: number)
 	if math.abs(speed - actual) > 14 and math.abs(actual) < math.abs(speed) then
 		speed = actual + (if speed > actual then 6 else -6)
 	end
+	-- Over a boost pad (going forward): the surge, felt in the view and heard.
+	local now = os.clock()
+	local pad = GrandPrix.boostAt(chassis.Position)
+	if pad and pad ~= lastPad and speed > 10 then
+		boostUntil = now + GrandPrix.BOOST.seconds
+		punch = 10
+		kick = math.max(kick, 0.35)
+		Sound.play("boost", 0.7)
+	end
+	lastPad = pad
+	local boosting = now < boostUntil
 	local yawRate
-	speed, yawRate = GrandPrix.step(speed, throttle, steering, dt)
+	speed, yawRate = GrandPrix.step(speed, throttle, steering, dt, boosting)
 	yaw += yawRate * dt
 	local rot = CFrame.Angles(0, yaw, 0)
 	steer.CFrame = rot
 	drive.VectorVelocity = rot.LookVector * speed
-	-- The figures, and the view opening a little with the speed.
-	dashSpeed.Text = tostring(math.floor(math.abs(speed) * 1.1 + 0.5))
+	-- The tyres: smoke and a squeal when a bend is taken faster than they hold (the car runs
+	-- wide), a little smoke pulling away hard.
+	local car = GrandPrix.CAR
+	local v = math.abs(speed)
+	local frac = v / car.top
+	local sliding = math.abs(steering) > 0.5 and v > 45 and car.grip / v < car.turn * math.clamp(v / car.turnAt, 0, 1)
+	local smoke = 0
+	if sliding then
+		smoke = 0.4 + 0.6 * math.clamp((v - 45) / 45, 0, 1)
+		if now > skidAt then
+			skidAt = now + 1.4
+			Sound.play("skid", 0.45)
+		end
+	elseif throttle > 0.9 and v > 1 and v < 30 then
+		smoke = 0.5 * (1 - v / 30)
+	end
+	pcall(CircuitDress.effects, model, smoke, boosting)
+	-- The figures (gold on a surge), and the view opening with the speed.
+	dashSpeed.Text = tostring(math.floor(v * 1.1 + 0.5))
+	dashSpeed.TextColor3 = if boosting then RACING.gold[1] else C.bone
+	dashBoost.Visible = boosting
+	punch = math.max(0, punch - dt * 9)
+	hum = if frac > 0.82 then 0.05 * math.clamp((frac - 0.82) / 0.2, 0, 1) else 0
 	local camera = Workspace.CurrentCamera
 	if camera and fovBefore then
-		camera.FieldOfView = fovBefore + 12 * math.clamp(math.abs(speed) / GrandPrix.CAR.top, 0, 1)
+		camera.FieldOfView = fovBefore + 16 * math.clamp(frac, 0, 1.2) + punch
 	end
+	drawStreaks(dt, math.clamp((frac - 0.62) / 0.38, 0, 1.3) + (if boosting then 0.4 else 0))
+end
+
+-- (For tests: whether a boost pad's surge is on now.)
+function CarDrive.boosting(): boolean
+	return os.clock() < boostUntil
+end
+
+-- The camera's shake while driving: a kick (a boost, the start) falling away, and a fine hum at
+-- the top of the speed. Laid over wherever the camera has put itself this frame.
+local function shakeCamera(dt: number)
+	kick = math.max(0, kick - dt * 1.6)
+	local size = kick + hum
+	local camera = Workspace.CurrentCamera
+	if driving == nil or size <= 0.001 or not camera or Ease.motionScale < 0.5 then
+		return
+	end
+	local t = os.clock()
+	camera.CFrame *= CFrame.new(math.noise(t * 22, 0.3) * size, math.noise(0.7, t * 22) * size, 0) * CFrame.Angles(0, 0, math.noise(t * 18, 5.1) * size * 0.05)
 end
 
 function CarDrive.isDriving(): boolean
@@ -817,6 +1005,11 @@ function CarDrive.start()
 		elseif race.state == "racing" and os.clock() - race.goAt < 1.2 then
 			setLights(0)
 			if race.mine then
+				if count.Text ~= "GO" and driving then
+					-- Lights out: the start felt as well as seen.
+					kick = math.max(kick, 0.5)
+					punch = math.max(punch, 8)
+				end
 				count.Visible = true
 				count.Text = "GO"
 			end
@@ -830,6 +1023,9 @@ function CarDrive.start()
 			updateLine()
 			setDashVisible()
 		end
+	end)
+	pcall(function()
+		RunService:BindToRenderStep("MaisonCarShake", Enum.RenderPriority.Camera.Value + 1, shakeCamera)
 	end)
 	raceEvent:FireServer({ op = "hello" })
 end

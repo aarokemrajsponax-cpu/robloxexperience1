@@ -1135,6 +1135,10 @@ local defaults = {
 				{ id = "rbxassetid://9125635667", pitch = 1, volume = 0.9, from = 0.1, to = 2.4, fade = 0.8 }, -- Magical Exit Sparkling Pass Bys
 			},
 			bellStrike = { { id = "rbxassetid://9125440445", pitch = 1, volume = 1.8, from = 0.85, to = 2.75 } },
+			-- The Grand Prix: tyres squealing through a bend taken too fast, a boost pad's rush
+			-- (Pro Sound Effects).
+			skid = { { id = "rbxassetid://9120079044", pitch = 1, volume = 1.1 }, { id = "rbxassetid://9120079072", pitch = 1, volume = 1.1 } },
+			boost = { { id = "rbxassetid://9126229255", pitch = 1, volume = 1.5 } },
 			midnightChime = { { id = "rbxassetid://9113816347", pitch = 1, volume = 2, from = 0.25, to = 5 } },
 			gong = { { id = "rbxassetid://9125585534", pitch = 1, volume = 2, from = 0, to = 4.5, fade = 1.5 } },
 			coinDrop = { { id = "rbxassetid://9113704038", pitch = 1, volume = 1.4 }, { id = "rbxassetid://9113704199", pitch = 1, volume = 1.4 }, { id = "rbxassetid://9113849445", pitch = 1, volume = 1.4 } },
@@ -1365,7 +1369,9 @@ local defaults = {
 		Ambience = { street = "", foyer = "", salon = "", velvet = "", obsidian = "", midnight = "", club = "", library = "", ballroom = "", terrace = "" },
 		-- Sounds that go on where they are, from Roblox's licensed library (Pro Sound Effects): the
 		-- crackle of the Suite's fire.
-		Loops = { hearth = "rbxassetid://9112780193" },
+		-- (carEngine: a Formula One car held at speed, Pro Sound Effects; the Grand Prix's cars pitch
+		-- it up and down with their speed.)
+		Loops = { hearth = "rbxassetid://9112780193", carEngine = "rbxassetid://9112782186" },
 		-- A seasonal layer under the ambience, by season id: rain on glass, a fire, crickets.
 		SeasonAmbience = { frost = "", yule = "", summer = "", harvest = "", longtable = "", bloom = "" },
 		Animations = {

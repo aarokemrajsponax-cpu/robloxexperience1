@@ -57,6 +57,49 @@ GrandPrix.CAR = {
 	grip = 66, -- the most sideways pull the tyres hold: faster than sqrt(grip × r) a bend of radius r runs wide
 }
 
+-- Boost pads on the straights: a lane-wide plate of gold chevrons; drive over one and the car
+-- surges for a moment, past its usual top speed (still well under what the server's check
+-- allows: GrandPrix.limit). Each sits in one lane, so taking it is a choice of line.
+GrandPrix.BOOST = {
+	length = 12, -- along the road
+	width = 9, -- across it
+	seconds = 1.5, -- how long the surge lasts
+	top = 108, -- the top speed while it lasts
+	kick = 46, -- how hard it pulls (studs a second, each second)
+	-- Where they sit: how far round the lap (`s`, as GrandPrix.progress measures it) and which
+	-- lane (studs to the driver's left of the road's middle; negative to the right).
+	pads = {
+		{ s = 52, lane = -5 },
+		{ s = 304, lane = 5 },
+		{ s = 404, lane = -5 },
+		{ s = 738, lane = 5 },
+	},
+}
+
+-- The pads where they lie: each one's centre, the way the road runs there, and the way to the
+-- driver's left.
+function GrandPrix.boostPads(): { { at: Vector3, dir: Vector3, left: Vector3 } }
+	local out = {}
+	for _, pad in GrandPrix.BOOST.pads do
+		local p, dir = GrandPrix.point(pad.s)
+		local left = Vector3.new(dir.Z, 0, -dir.X)
+		table.insert(out, { at = p + left * pad.lane, dir = dir, left = left })
+	end
+	return out
+end
+
+-- Which pad (if any) a car at `pos` is on.
+function GrandPrix.boostAt(pos: Vector3): number?
+	local b = GrandPrix.BOOST
+	for i, pad in GrandPrix.boostPads() do
+		local d = Vector3.new(pos.X - pad.at.X, 0, pos.Z - pad.at.Z)
+		if math.abs(d:Dot(pad.dir)) <= b.length / 2 and math.abs(d:Dot(pad.left)) <= b.width / 2 then
+			return i
+		end
+	end
+	return nil
+end
+
 -- The house's chauffeurs, who fill the grid: their pace on the straights and in the hairpins, and
 -- how hard each of them drives (a good driver beats the quickest).
 GrandPrix.AI = {
@@ -138,16 +181,27 @@ function GrandPrix.progress(pos: Vector3): (number, number)
 end
 
 -- The car, one step on: its speed (forwards, studs a second) and how fast it turns (radians a
--- second, positive to the left), from the throttle and steering (-1 to 1 each).
-function GrandPrix.step(speed: number, throttle: number, steer: number, dt: number): (number, number)
+-- second, positive to the left), from the throttle and steering (-1 to 1 each). `boost`: on a
+-- boost pad's surge (GrandPrix.BOOST); after it, the car eases back to its own top speed.
+function GrandPrix.step(speed: number, throttle: number, steer: number, dt: number, boost: boolean?): (number, number)
 	local car = GrandPrix.CAR
 	throttle = math.clamp(throttle, -1, 1)
 	steer = math.clamp(steer, -1, 1)
-	if throttle > 0 then
+	local top = if boost then GrandPrix.BOOST.top else car.top
+	if boost and speed >= 0 and throttle >= 0 then
+		speed = math.min(top, speed + GrandPrix.BOOST.kick * dt)
+	end
+	if speed > top then
+		-- (Past the top speed after a surge: it settles back over a second or so.)
+		speed = math.max(top, speed - 14 * dt)
+		if throttle < 0 then
+			speed = math.max(0, speed + car.brake * throttle * dt)
+		end
+	elseif throttle > 0 then
 		if speed < 0 then
 			speed = math.min(0, speed + car.brake * throttle * dt)
 		else
-			speed = math.min(car.top, speed + car.accel * throttle * dt * (1 - 0.55 * speed / car.top))
+			speed = math.min(top, speed + car.accel * throttle * dt * (1 - 0.55 * speed / top))
 		end
 	elseif throttle < 0 then
 		if speed > 0 then

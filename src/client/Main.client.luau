@@ -782,6 +782,8 @@ CarDrive.isBusy = function()
 	return TableClient.isSeated()
 end
 start("The Grand Prix", CarDrive.start)
+-- Its night dressing: the cars' looks and engines, the circuit's lights, pads, boards and tower.
+start("The Grand Prix's dressing", require(script.Parent.World.CircuitDress).start)
 
 -- How to play's Go keys: the server takes the guest there (never from a table or a seat).
 local travelEvent = Remotes.event("Travel")

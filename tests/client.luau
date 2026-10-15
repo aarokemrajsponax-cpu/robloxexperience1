@@ -7150,6 +7150,63 @@ end)()
 	keysDown.W = true
 	advance(2)
 	check("W drives it too", drive.VectorVelocity.Magnitude > 30, drive.VectorVelocity.Magnitude)
+
+	-- Build 69: the car dressed as a race car (on this screen), the circuit dressed for the night.
+	local CircuitDress = module("StarterPlayer", "StarterPlayerScripts", "Client", "World", "CircuitDress")
+	local function count(root, name)
+		local n = 0
+		for _, d in root:GetDescendants() do
+			if d.Name == name then
+				n += 1
+			end
+		end
+		return n
+	end
+	local number = nil
+	for _, d in car:GetDescendants() do
+		if d:IsA("TextLabel") and d.Text == "02" then
+			number = d
+		end
+	end
+	check("the car is dressed: haunches, stripes, its number, tailpipes, five-spoke rims", count(car, "Haunch") == 4 and count(car, "Stripe") == 4 and number ~= nil and count(car, "Tailpipe") == 2 and count(car, "Spoke") == 12, count(car, "Haunch"))
+	check("...with its engine to hear, and smoke for its rear tyres", chassis:FindFirstChild("Engine") ~= nil and count(chassis, "TyreSmoke") == 2)
+	check("...and every piece of it weightless and out of the way", (function()
+		for _, d in car:GetDescendants() do
+			if (d.Name == "Haunch" or d.Name == "Spoke" or d.Name == "Flame") and (d.CanCollide or not d.Massless) then
+				return false
+			end
+		end
+		return true
+	end)())
+	local dress = (workspace:FindFirstChild("MaisonLocal") or workspace):FindFirstChild("GrandPrixDress")
+	check("the circuit is dressed: lights along the straights, four boost pads, barriers, boards", dress ~= nil and count(dress, "TrackLight") >= 100 and count(dress, "BoostPad") == 4 and count(dress, "Barrier") == 32 and count(dress, "Board") == 8)
+	check("...a podium, flags at the line, and the Timing Tower", dress ~= nil and count(dress, "Podium") == 3 and count(dress, "Flag") == 2 and count(dress, "TimingTower") == 1)
+
+	-- A boost pad: the surge past the car's usual top speed, felt and shown.
+	local pad = GrandPrix.boostPads()[1]
+	local onPad = CFrame.lookAt(pad.at + Vector3.new(0, GrandPrix.RIDE, 0), pad.at + Vector3.new(0, GrandPrix.RIDE, 0) + pad.dir)
+	chassis.CFrame = onPad
+	chassis.Position = onPad.Position
+	check("the shared rules find the pad under the car", GrandPrix.boostAt(onPad.Position) == 1)
+	local fovBeforeBoost = camera.FieldOfView
+	CarDrive.step(1 / 60)
+	check("over a pad: the surge", CarDrive.boosting())
+	check("...BOOST on the dash, the view thrown wider", find(dash, function(d)
+		return d.Name == "Boost" and d.Visible == true
+	end) ~= nil and camera.FieldOfView > fovBeforeBoost + 4, camera.FieldOfView - fovBeforeBoost)
+	local away = onPad * CFrame.new(0, 0, -60)
+	chassis.CFrame = away
+	chassis.Position = away.Position
+	for _ = 1, 60 do
+		CarDrive.step(1 / 60)
+	end
+	check("...past the car's usual top speed", drive.VectorVelocity.Magnitude > GrandPrix.CAR.top, drive.VectorVelocity.Magnitude)
+	check("...the speed lines rush", find(playerGui, function(d)
+		return d.Name == "SpeedLines" and d.Visible == true
+	end) ~= nil)
+	advance(3)
+	check("...then it settles back to its own top speed", not CarDrive.boosting() and drive.VectorVelocity.Magnitude <= GrandPrix.CAR.top + 0.5, drive.VectorVelocity.Magnitude)
+	check("the shared rules: a surge never outruns the server's check", GrandPrix.BOOST.top < GrandPrix.limit())
 	snapshot("car-dash")
 
 	-- Into a wall: the car really stopped, so the speed comes down with it (no pushing on).
@@ -7221,6 +7278,11 @@ end)()
 	serverSays("Race", { op = "standings", id = 1, list = { { name = "Monsieur Laurent", ai = true, place = 1, lap = 1 }, { name = LocalPlayer.DisplayName, userId = LocalPlayer.UserId, place = 2, lap = 1 } } })
 	advance(1.5)
 	check("racing: the lap and the place along the top", textOnScreen("LAP 1/3") ~= nil and textOnScreen("2nd of 2") ~= nil)
+	local tower = CircuitDress.towerText()
+	check("the Timing Tower shows the race live", tower[1] == "LIVE" and string.find(tower[2] or "", "Monsieur Laurent", 1, true) ~= nil and string.find(tower[2] or "", "LAP 1/3", 1, true) ~= nil, tower[1], tower[2])
+	serverSays("Race", { op = "standings", id = 1, list = { { name = LocalPlayer.DisplayName, userId = LocalPlayer.UserId, place = 1, lap = 1 }, { name = "Monsieur Laurent", ai = true, place = 2, lap = 1 } } })
+	advance(0.3)
+	check("a place won is called out", textOnScreen("INTO THE LEAD") ~= nil)
 	check("the count has gone", countLabel.Visible == false)
 	local p0 = ghost:FindFirstChild("Chassis").CFrame.Position
 	advance(2)
@@ -7245,6 +7307,15 @@ end)()
 	check("...the prize, Gilt and Gems", textOnScreen("+150 Gilt") ~= nil and textOnScreen("+2 Gems") ~= nil)
 	check("...every driver in order, with times", textOnScreen("1st") ~= nil and textOnScreen("Monsieur Laurent") ~= nil and textOnScreen("0:39.3") ~= nil)
 	check("...Race again and Close", textOnScreen("Race again") ~= nil and textOnScreen("Close") ~= nil)
+	tower = CircuitDress.towerText()
+	check("the Timing Tower shows the result", tower[1] == "RESULT" and string.find(tower[2] or "", "0:38.4", 1, true) ~= nil, tower[1], tower[2])
+	local podiumNames = {}
+	for _, d in dress:GetDescendants() do
+		if d:IsA("BillboardGui") and d.Name == "Name" and d.Enabled then
+			table.insert(podiumNames, d:FindFirstChildOfClass("TextLabel").Text)
+		end
+	end
+	check("...and the podium the first three home", #podiumNames == 2 and table.find(podiumNames, LocalPlayer.DisplayName) ~= nil, #podiumNames)
 	snapshot("race-results")
 	press("Close")
 	advance(0.5)
