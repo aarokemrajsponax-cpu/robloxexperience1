@@ -782,6 +782,11 @@ CarDrive.isBusy = function()
 	return TableClient.isSeated()
 end
 start("The Grand Prix", CarDrive.start)
+-- Its music: for a driver on the grid or racing.
+require(script.Parent.World.AbuseMusic).racing = function(): boolean
+	local r = CarDrive.race()
+	return CarDrive.isDriving() and r.mine and (r.state == "countdown" or r.state == "racing")
+end
 -- Its night dressing: the cars' looks and engines, the circuit's lights, pads, boards and tower.
 start("The Grand Prix's dressing", require(script.Parent.World.CircuitDress).start)
 

@@ -5,8 +5,9 @@
 -- party: disco; the blizzard: winter; the gold wave: a brass fanfare; the blackout: spy jazz).
 -- Whichever was started last plays. With neither on, a holiday plays its own (Config.Assets.
 -- HolidayMusic: a waltz for All Hallows', carols for Christmas, a jig for St Patrick's...); when
--- they're all over, the house's own music comes back. Every track is a real recording from
--- Roblox's licensed library (Config.Assets.AbuseMusic).
+-- they're all over, the house's own music comes back. A driver in a Grand Prix race hears driving
+-- music (Config.Assets.AbuseMusic.race) unless the owner has something on. Every track is a real
+-- recording from Roblox's licensed library (Config.Assets.AbuseMusic).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
@@ -23,6 +24,11 @@ local holdUntil = 0 -- (Admin Abuse's opening: its music waits for the drop)
 
 local function assets(): { [string]: any }
 	return Config.data.Assets :: any
+end
+
+-- Set by Main: whether this guest is in a Grand Prix race now (on the grid or racing).
+AbuseMusic.racing = function(): boolean
+	return false
 end
 
 -- Which music should play now ("" for the house's own).
@@ -46,7 +52,11 @@ function AbuseMusic.choose(): string
 			best, bestAt = theme, since
 		end
 	end
-	-- (Nothing of the owner's on: a holiday's own music while one is on.)
+	-- (Nothing of the owner's on: racing music for a driver in a race, else a holiday's own music
+	-- while one is on.)
+	if best == "" and type((assets().AbuseMusic or {}).race) == "table" and AbuseMusic.racing() then
+		return "race"
+	end
 	if best == "" then
 		local holidays = assets().HolidayMusic or {}
 		for _, id in HouseEvents.Holidays do

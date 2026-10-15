@@ -1251,6 +1251,15 @@ local defaults = {
 		-- Admin Abuse or a switched-on effect is on, and the house's music comes back after. `gain`
 		-- evens their loudness (measured, to about -17 dBFS: a little above the house's music).
 		AbuseMusic = {
+			-- A Grand Prix race, for the drivers in it: driving music, from the lights to the flag
+			-- (World/AbuseMusic). Swap in your own ids here.
+			race = {
+				{ id = "rbxassetid://1840612557", gain = 0.5 }, -- Speed Rush, 3:00
+				{ id = "rbxassetid://1846697990", gain = 0.74 }, -- Pole Position A, 3:02
+				{ id = "rbxassetid://9046228484", gain = 0.54 }, -- Auto Racing A, 2:50
+				{ id = "rbxassetid://1837773620", gain = 0.65 }, -- Drive and Conquer (a), 2:30
+				{ id = "rbxassetid://1842179803", gain = 1.0 }, -- Fast 'n' Furious, 2:29
+			},
 			abuse = {
 				{ id = "rbxassetid://1837110785", gain = 0.52, bpm = 125, beat = 0.39 }, -- Feeling (dance), 3:45
 				{ id = "rbxassetid://1837110694", gain = 0.70, bpm = 128, beat = 0.44 }, -- Skyhook (dance), 2:48

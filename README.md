@@ -377,6 +377,52 @@ a Nightly attempt or a Mythic's odds.
 - **The launch kit**: page text, icon, thumbnails and the gameplay video's shot list are in
   [`LAUNCH.md`](LAUNCH.md).
 
+## Build 69 — what's new
+
+- **Admin and Mega Abuse throw a party in the Foyer**, on the beat of the music (`World/AbuseParty`):
+  the chequered floor turns into a disco floor (six patterns, a new one every few bars), light runs
+  up the Grand Stair, the balusters bob, the ceiling's coffers lift off and turn, a mirror ball
+  throws beams, the brainrots dance in a conga, confetti cannons and sparks go off. Mega Abuse
+  does it all harder.
+  - **The Gold Tile:** every so often one tile in the Foyer turns gold, with a countdown. Stand on
+    it in time for Gilt.
+  - **The Piñata:** it hangs in the Foyer; everyone hits it together (a bar shows how close it
+    is). Everyone who helped gets Gilt when it bursts, the last hit a little more. The server
+    counts every hit (reach and rate checked), and pays.
+  - At a table, the table joins in without getting in the way: bulbs chase round its edge, the
+    lamp changes colour, the pieces waiting their turn hop and the case marks sway.
+- **Sorting is livelier:** every fifth right piece in a row sends a wave across the six cases
+  (bigger at ten and twenty), and a good round ends with one.
+- **Tips:** a slim line at the foot of the screen, one at a time and at most every 75 seconds,
+  never while sorting, seated or with a panel open: how to start, the 1 to 6 keys, what's on now
+  (Admin Abuse, the Grand Prix, the Ballroom, a holiday), the Shop, the Suite. A tap puts it away.
+- **The left dock shows what's live:** a small LIVE tag on Watch the fireworks and on a holiday's
+  key while it's on, and a one-time word beside it the first time.
+- **The holidays are the real thing.** The hidden pickups are now modelled: love letters with a wax
+  heart (and a stamp on the back), four-leaf clovers, painted eggs, presents, pumpkins, turkeys,
+  and the golden prizes (a heart of gold with Cupid's arrow, a pot of gold, a golden bell). The
+  Foyer's floating hearts and shamrocks and Easter's butterflies are 3D too. The event strip says
+  how many are left and whether the golden prize is still out.
+- **The Grand Prix is a night race** (`World/CircuitDress`, drawn on each screen, so it costs the
+  house's part budget nothing):
+  - the cars: wide haunches, twin stripes, racing numbers, tailpipes, diffusers, five-spoke rims
+    with red calipers, a glow under the sills; an engine you hear rise with the speed, and tyre
+    smoke and a squeal through a bend taken too fast;
+  - the circuit: edge lights that chase the cars during a race, four gold boost pads (a short
+    surge past top speed; the server's checks still hold), red-and-white barriers round the
+    hairpins, boards along the far wall, the infield mown in stripes with the name across it, a
+    podium that shows the first three after a race, chequered flags at the line, and the
+    **Timing Tower** on the building opposite with the live standings and the result;
+  - driving: the view widens with the speed, speed lines at pace, a shake at the start and on a
+    boost, and callouts when you gain or lose a place (*Up to 2nd*, *Into the lead*). Drivers in
+    a race hear driving music (`Config.Assets.AbuseMusic.race`).
+- Small fixes: the Gilt bar fits beside the keys on small phones; the event strip no longer blinks
+  every second as its clock ticks.
+- Checked: `tests/shop.luau` (the Gold Tile and the Piñata: reach, rate, payments), the client run
+  on desktop and small phone (the party, the table, the tips, the dock, every holiday's pickups and
+  count, the dressed cars and circuit, boost pads, the tower, the podium, race music), and 3D
+  renders of the Foyer party, the holiday pieces and the circuit.
+
 ## Build 68 — what's new
 
 - **How to play, at the top right.** A key between Shop and Menu opens the whole game in plain

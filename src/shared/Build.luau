@@ -4,6 +4,6 @@
 -- see whether Studio has the latest code from GitHub.
 
 return {
-	number = 68,
-	label = "Build 68 · 14 Oct · How to play, the Grand Prix, gradients",
+	number = 69,
+	label = "Build 69 · 15 Oct · The party, the night race, real holidays",
 }
