@@ -39,6 +39,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local HolidayProps = require(ReplicatedStorage.Shared.HolidayProps)
 local Layout = require(ReplicatedStorage.Shared.Layout)
 local Quality = require(script.Parent.Parent.Quality)
 local Sound = require(script.Parent.Parent.Sound)
@@ -787,20 +788,41 @@ local function pennants(set: Set, colours: { Color3 })
 	end
 end
 
--- Things drifting slowly in the air of the Foyer (hearts, clovers): each bobs and sways.
-local function floaters(set: Set, glyph: string, count: number, colours: { Color3 }, studs: number)
+-- Things drifting slowly in the air of the Foyer, made as the real thing: glossy hearts with a
+-- little depth to them, or three-leaved shamrocks, each bobbing, swaying and turning slowly so the
+-- light runs over it.
+local function floaters(set: Set, kind: "heart" | "shamrock", count: number, colours: { Color3 }, studs: number)
 	local c = cfg()
 	local lo, hi = at(c.candlesFrom, Vector3.new(-40, 28, -6)), at(c.candlesTo, Vector3.new(40, 40, 62))
-	type Floater = { part: Part, base: Vector3, phase: number }
+	type Floater = { model: Model, base: Vector3, phase: number, tilt: number }
 	local list: { Floater } = {}
-	for i = 1, Quality.count(count, 8) do
+	-- (Fewer than the glyphs were, and bigger: each is a handful of parts that move every frame.)
+	for i = 1, Quality.count(math.ceil(count * 0.65), 6) do
 		local colour = colours[(i % #colours) + 1]
-		local p = sprite(set.folder, "Floater", glyph, studs * set.rng:NextNumber(0.8, 1.3), colour, colour:Lerp(WHITE, 0.4))
-		table.insert(list, { part = p, base = Vector3.new(set.rng:NextNumber(lo.X, hi.X), set.rng:NextNumber(lo.Y - 8, hi.Y - 4), set.rng:NextNumber(lo.Z, hi.Z)), phase = set.rng:NextNumber(0, 10) })
+		local d = studs * set.rng:NextNumber(0.9, 1.35)
+		local m = Instance.new("Model")
+		m.Name = "Floater"
+		if kind == "heart" then
+			HolidayProps.heart(m, "Heart", CFrame.new(), d, d * 0.32, colour, Enum.Material.SmoothPlastic)
+		else
+			for k = 1, 3 do
+				local a = (k - 1) / 3 * math.pi * 2
+				HolidayProps.heart(m, "Leaf", CFrame.Angles(0, 0, a) * CFrame.new(0, d * 0.26, 0), d * 0.5, 0.12, colour:Lerp(rgb(20, 110, 50), (k % 2) * 0.25), Enum.Material.SmoothPlastic)
+			end
+			part(m, "Stem", Vector3.new(0.14, d * 0.55, 0.14), CFrame.Angles(0, 0, math.rad(-12)) * CFrame.new(0, -d * 0.36, 0), colour:Lerp(rgb(30, 90, 40), 0.4))
+		end
+		for _, b in m:GetDescendants() do
+			if b:IsA("BasePart") then
+				b.Reflectance = 0.12
+			end
+		end
+		m.Parent = set.folder
+		table.insert(list, { model = m, base = Vector3.new(set.rng:NextNumber(lo.X, hi.X), set.rng:NextNumber(lo.Y - 8, hi.Y - 4), set.rng:NextNumber(lo.Z, hi.Z)), phase = set.rng:NextNumber(0, 10), tilt = set.rng:NextNumber(-0.35, 0.35) })
 	end
 	table.insert(set.ticks, function(_dt: number, t: number)
 		for _, f in list do
-			f.part.CFrame = CFrame.new(f.base + Vector3.new(math.sin(t * 0.3 + f.phase) * 2, math.sin(t * 0.6 + f.phase) * 1.2, math.cos(t * 0.25 + f.phase) * 2))
+			local p = f.base + Vector3.new(math.sin(t * 0.3 + f.phase) * 2, math.sin(t * 0.6 + f.phase) * 1.2, math.cos(t * 0.25 + f.phase) * 2)
+			f.model:PivotTo(CFrame.new(p) * CFrame.Angles(f.tilt, t * 0.5 + f.phase, math.sin(t * 0.7 + f.phase) * 0.2))
 		end
 	end)
 end
@@ -828,20 +850,46 @@ local function risingLanterns(set: Set, glyph: string, count: number, colours: {
 	end)
 end
 
--- Butterflies fluttering about the street front, wings beating.
+-- Butterflies fluttering about the street front: a slim dark body and two pairs of pastel wings,
+-- a darker edge to each, beating as they go.
 local function butterflies(set: Set, count: number)
-	type Fly = { part: Part, glyph: TextLabel, centre: Vector3, phase: number, r: number }
+	local wings = { rgb(255, 182, 214), rgb(255, 226, 120), rgb(170, 214, 255), rgb(206, 180, 255), rgb(255, 196, 150) }
+	type Fly = { body: Part, wings: { { part: Part, side: number, offset: CFrame } }, centre: Vector3, phase: number, r: number }
 	local list: { Fly } = {}
-	for _ = 1, Quality.count(count, 5) do
-		local p, g = sprite(set.folder, "Butterfly", "🦋", set.rng:NextNumber(1.6, 2.6))
-		local centre = Vector3.new(set.rng:NextNumber(-34, 34), set.rng:NextNumber(4, 12), set.rng:NextNumber(-48, -22))
-		table.insert(list, { part = p, glyph = g, centre = centre, phase = set.rng:NextNumber(0, 10), r = set.rng:NextNumber(2, 6) })
+	for i = 1, Quality.count(count, 5) do
+		local size = set.rng:NextNumber(1.3, 2.1)
+		local colour = wings[(i % #wings) + 1]
+		local m = Instance.new("Model")
+		m.Name = "Butterfly"
+		local body = part(m, "Body", Vector3.new(size * 0.6, size * 0.09, size * 0.09), CFrame.new(), rgb(48, 38, 44), Enum.Material.SmoothPlastic, Enum.PartType.Cylinder)
+		local fly: Fly = { body = body, wings = {}, centre = Vector3.new(set.rng:NextNumber(-34, 34), set.rng:NextNumber(4, 12), set.rng:NextNumber(-48, -22)), phase = set.rng:NextNumber(0, 10), r = set.rng:NextNumber(2, 6) }
+		for _, side in { -1, 1 } do
+			-- (Fore wing and hind wing, each a thin oval reaching out from the body; the wing's
+			-- offset is from the body's line, so it turns about it when it beats.)
+			for k, w in { { x = 0.1, along = size * 0.62, out = size * 0.5 }, { x = -0.16, along = size * 0.42, out = size * 0.36 } } do
+				local offset = CFrame.new(w.x * size, 0, side * w.out * 0.5) * CFrame.Angles(0, if k == 1 then side * 0.35 else -side * 0.25, 0)
+				local wing = HolidayProps.ellipsoid(m, "Wing", Vector3.new(w.along, 0.05, w.out), CFrame.new(), if k == 1 then colour else colour:Lerp(WHITE, 0.25), Enum.Material.SmoothPlastic)
+				local rim = HolidayProps.ellipsoid(m, "WingEdge", Vector3.new(w.along * 1.08, 0.04, w.out * 1.08), CFrame.new(), colour:Lerp(rgb(40, 30, 40), 0.55), Enum.Material.SmoothPlastic)
+				table.insert(fly.wings, { part = wing, side = side, offset = offset })
+				table.insert(fly.wings, { part = rim, side = side, offset = offset * CFrame.new(0, -0.03, 0) })
+			end
+		end
+		m.Parent = set.folder
+		table.insert(list, fly)
 	end
 	table.insert(set.ticks, function(_dt: number, t: number)
 		for _, f in list do
 			local a = t * 0.6 + f.phase
-			f.part.CFrame = CFrame.new(f.centre + Vector3.new(math.cos(a) * f.r, math.sin(t * 1.7 + f.phase) * 1.2, math.sin(a * 1.3) * f.r))
-			f.glyph.Size = UDim2.fromScale(0.35 + 0.65 * math.abs(math.sin(t * 14 + f.phase)), 1)
+			local at = f.centre + Vector3.new(math.cos(a) * f.r, math.sin(t * 1.7 + f.phase) * 1.2, math.sin(a * 1.3) * f.r)
+			-- (Facing the way it flies: along the turn of its loop.)
+			local ahead = Vector3.new(-math.sin(a) * f.r, 0, math.cos(a * 1.3) * f.r * 1.3)
+			local frame = if ahead.Magnitude > 0.01 then CFrame.lookAt(at, at + ahead) * CFrame.Angles(0, math.pi / 2, 0) else CFrame.new(at)
+			f.body.CFrame = frame
+			-- (The wings beat upward, meeting over its back, and open out flat between beats.)
+			local beat = (math.sin(t * 16 + f.phase) + 1) * 0.6 - 0.15
+			for _, w in f.wings do
+				w.part.CFrame = frame * CFrame.Angles(-w.side * beat, 0, 0) * w.offset
+			end
 		end
 	end)
 end
@@ -1200,7 +1248,7 @@ BUILD.valentine = function(set: Set)
 	twinkle(set, 0.2, 0.05)
 	risingLanterns(set, "♥", c.lanterns or 36, { rose, red, rgb(255, 160, 120) }, 4)
 	-- In the Foyer: hearts floating under the ceiling, roses wound up the columns.
-	floaters(set, "♥", c.floaters or 22, { rose, red, blush }, 2.6)
+	floaters(set, "heart", c.floaters or 22, { rose, red, blush }, 3)
 	columnWraps(set, { red, rose }, 0.8, Enum.Material.SmoothPlastic, { gold })
 end
 
@@ -1213,7 +1261,7 @@ BUILD.stPatrick = function(set: Set)
 	pennants(set, { emerald, gold, green, rgb(240, 236, 228) })
 	frontLines(set, { gold, green }, 0.45, 18)
 	twinkle(set, 0.2, 0.05)
-	floaters(set, "☘", c.floaters or 22, { emerald, green }, 2.4)
+	floaters(set, "shamrock", c.floaters or 22, { emerald, green }, 3)
 	columnWraps(set, { emerald, gold }, 0.7)
 end
 
