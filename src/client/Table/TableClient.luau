@@ -545,6 +545,8 @@ local function onRoundEnd(message: { [string]: any })
 	setScore(local_.score, local_.multiplier)
 	Sound.play("round", 0.4)
 	Sound.briefDip(3)
+	-- A round put away: a wave along the cases.
+	SortScreen.wave(1.3)
 	if message.last then
 		return -- the Nightly card follows
 	end

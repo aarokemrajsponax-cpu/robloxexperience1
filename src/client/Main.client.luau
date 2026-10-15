@@ -232,6 +232,33 @@ start("Admin Abuse's show", function()
 	TableClient.onGolden = AbuseShow.noteGolden
 	AbuseShow.start()
 end)
+-- Tips at the foot of the screen, one at a time and never often (UI/Hints).
+start("Tips", function()
+	local Hints = require(script.Parent.UI.Hints)
+	local AbuseShow = require(script.Parent.World.AbuseShow)
+	Hints.isBusy = function(): boolean
+		return TableClient.isSeated() or AbuseShow.openingUp() or AbuseShow.cardUp()
+	end
+	TableClient.Seated.Event:Connect(Hints.noteSat)
+	Hints.start()
+end)
+-- And its party: the house dancing to the beat (the floor, the stair, the ceiling, the brainrots),
+-- the Gold Tile and the Piñata; at a table, the sorting screen dances instead.
+start("Admin Abuse's party", function()
+	local AbuseParty = require(script.Parent.World.AbuseParty)
+	AbuseParty.isBusy = function(): boolean
+		return TableClient.isSeated()
+	end
+	AbuseParty.tableBeat = function(b: number, colour: Color3, mega: boolean)
+		SortScreen.partyBeat(b, colour, mega)
+	end
+	AbuseParty.tableStop = SortScreen.partyStop
+	AbuseParty.toast = function(title: string, line: string)
+		Toast.show(title, line, 3.5)
+	end
+	AbuseParty.shake = CameraRig.shake
+	AbuseParty.start()
+end)
 GemShopPanel.getGems = function()
 	CuriosPanel.open("gems")
 end

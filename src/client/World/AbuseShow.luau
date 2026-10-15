@@ -1636,7 +1636,7 @@ function AbuseShow.arrived(mega: boolean)
 	which.Position = UDim2.new(0, 18 * u, 0, 78 * u)
 	which.Size = UDim2.new(1, -36 * u, 0, 16 * u)
 	which.TextXAlignment = Enum.TextXAlignment.Left
-	local small = label(card, "Line", if mega then "Triple Gilt, a new realm every few minutes, gifts from " .. ownerName() .. "." else "Double Gilt, golden pieces at every table, gifts from " .. ownerName() .. ".", BOLD, rgb(226, 230, 238))
+	local small = label(card, "Line", if mega then "Triple Gilt, a new realm every few minutes, the Gold Tile and the Piñata in the Foyer." else "Double Gilt, golden pieces, the Gold Tile and the Piñata in the Foyer.", BOLD, rgb(226, 230, 238))
 	small.Position = UDim2.new(0, 18 * u, 0, 98 * u)
 	small.Size = UDim2.new(1, -36 * u, 0, 18 * u)
 	small.TextXAlignment = Enum.TextXAlignment.Left

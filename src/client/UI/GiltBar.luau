@@ -17,6 +17,7 @@ local Workspace = game:GetService("Workspace")
 
 local Levels = require(ReplicatedStorage.Shared.Levels)
 local Icons = require(script.Parent.Icons)
+local Hud = require(script.Parent.Hud)
 local Root = require(script.Parent.Root)
 local Theme = require(script.Parent.Theme)
 local State = require(script.Parent.Parent.State)
@@ -60,8 +61,38 @@ local function attr(name: string): number
 	return if type(v) == "number" then v else 0
 end
 
+-- (Set widths: Gilt to a million and more, Gems, then the level.)
+local FULL_W = 12 + 132 + 14 + 96 + 14 + 160 + 14
+local SHORT_W = FULL_W - 160 - 14
+
+-- Where the keys at the top right leave too little room (a small phone, the owner's extra key),
+-- the level steps out of the bar so nothing runs under the keys.
+local function fit()
+	local b = bar
+	if not b then
+		return
+	end
+	local fk = foldKey
+	local fkW = if fk then fk.Size.X.Offset else 30
+	local keys = Hud.width()
+	local need = (12 + FULL_W + 8 + fkW + 10) * Root.scale
+	local compact = keys > 0 and need + keys > Root.viewport().X
+	local w = if compact then SHORT_W else FULL_W
+	local level = b:FindFirstChild("Level")
+	if level and level:IsA("GuiObject") then
+		level.Visible = not compact
+	end
+	if b.Size.X.Offset ~= w then
+		b.Size = UDim2.fromOffset(w, 44)
+	end
+	if fk then
+		fk.Position = UDim2.fromOffset(12 + w + 8, fk.Position.Y.Offset)
+	end
+end
+
 -- Whether it shows: walking the house, nothing open over it.
 function GiltBar.refresh()
+	fit()
 	local b = bar
 	local show = not seated and not Root.isOpen() and not GiltBar.isBusy()
 	local fold = State.get("giltBar") == "Hidden"
@@ -214,8 +245,7 @@ function GiltBar.start()
 	sheen.Rotation = 20
 	sheen.Color = Theme.sequence(Theme.moods.house.panel)
 	sheen.Parent = frame
-	-- (Set widths: Gilt to a million and more, Gems, then the level.)
-	frame.Size = UDim2.fromOffset(12 + 132 + 14 + 96 + 14 + 160 + 14, 44)
+	frame.Size = UDim2.fromOffset(FULL_W, 44)
 	frame.Parent = Root.hud
 	corner(frame, 22)
 	local edge = Instance.new("UIStroke")

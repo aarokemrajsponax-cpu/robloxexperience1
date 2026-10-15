@@ -2464,6 +2464,163 @@ do
 end
 
 ---------------------------------------------------------------------------------------------------
+-- Build 69: Admin Abuse's party games in the Foyer: the Gold Tile (stand on it when the time's up)
+-- and the Piñata (hit it till it bursts), checked and paid here
+---------------------------------------------------------------------------------------------------
+do
+	local AbuseParty = module("ServerScriptService", "Server", "AbuseParty")
+	local AdminService = module("ServerScriptService", "Server", "AdminService")
+	local Layout = module("ReplicatedStorage", "Shared", "Layout")
+	local W = services.Workspace
+	local P = Config.data.Admin.party
+	local function stand(g, at)
+		g.root.Position = at
+		g.Character = {
+			FindFirstChild = function(_, n)
+				return if n == "HumanoidRootPart" then g.root else nil
+			end,
+			PivotTo = function(_, cf)
+				g.root.Position = cf.Position
+			end,
+		}
+	end
+	local ned, other
+	for _, g in guests do
+		if g.UserId == 101 then
+			ned = g
+		elseif other == nil and g.Parent ~= nil and g.UserId ~= 100 then
+			other = g
+		end
+	end
+	run(function()
+		AdminService.stopAll("test")
+	end)
+	advance(1)
+	-- The tiles a Gold Tile may be: plenty, every one in the open.
+	local tiles = AbuseParty.tiles()
+	local S = Layout.SCALE
+	local function near(t, x, z, r)
+		local px = math.clamp(x * S, t.centre.X - t.size.X / 2, t.centre.X + t.size.X / 2)
+		local pz = math.clamp(z * S, t.centre.Z - t.size.Z / 2, t.centre.Z + t.size.Z / 2)
+		return (Vector3.new(px - x * S, 0, pz - z * S)).Magnitude < r * S
+	end
+	local clear = true
+	for _, t in tiles do
+		if near(t, 9, 1.5, 3) or near(t, 18, 20, 4) or near(t, 22, 8, 2) then
+			clear = false
+		end
+		local st = Layout.raw.Foyer.stair
+		if t.centre.X + t.size.X / 2 > (st.x - 5) * S and t.centre.X - t.size.X / 2 < (st.x + 5) * S and t.centre.Z + t.size.Z / 2 > st.fromZ * S then
+			clear = false
+		end
+	end
+	check("the Gold Tile is one of many open tiles of the Foyer's floor, none under the stair, the piano or the lectern", #tiles >= 30 and clear, #tiles)
+	AdminService.showBegan = function(mega, _plan, since)
+		AbuseParty.began(mega, since)
+	end
+	AdminService.showStopped = AbuseParty.stopped
+	run(function()
+		AdminService.abuse(900, "AJKR", false, { night = "classic" })
+	end)
+	advance(P.tileFirst + 0.6)
+	local at = W:GetAttribute("PartyTile")
+	local size = W:GetAttribute("PartyTileSize")
+	check("a Gold Tile lights up a little after Admin Abuse begins", typeof(at) == "Vector3" and typeof(size) == "Vector3" and type(W:GetAttribute("PartyTileUntil")) == "number")
+	stand(ned, at + Vector3.new(size.X * 0.3, 2.5, 0))
+	stand(other, at + Vector3.new(size.X * 1.6, 2.5, 0))
+	local nedData = profiles[ned].Data
+	-- (Gilt is read from what each screen is told: Gold Rain's coins may land by anyone.)
+	local function paidSince(g, n0)
+		local total, last = 0, nil
+		for i = n0 + 1, #g.inbox do
+			local m = g.inbox[i]
+			if m.op == "partyPaid" then
+				total += m.gilt
+				last = m
+			end
+		end
+		return total, last
+	end
+	local nedWas = nedData.gilt
+	local nedAt, otherAt = #ned.inbox, #other.inbox
+	advance(P.tileWindow + 0.6)
+	local got, paid = paidSince(ned, nedAt)
+	check("when the time's up, a guest standing on it is paid", got > 0 and paid.what == "tile" and nedData.gilt - nedWas >= got, got)
+	check("...a guest on the next tile isn't", (paidSince(other, otherAt)) == 0)
+	check("...and the tile goes dark", W:GetAttribute("PartyTile") == nil)
+	-- The next one, somewhere else; a guest high above it (flying) isn't on it.
+	advance(P.tileEvery.abuse - P.tileWindow + 0.6)
+	local at2 = W:GetAttribute("PartyTile")
+	check("the next Gold Tile comes in its time, on another tile", typeof(at2) == "Vector3" and at2 ~= at)
+	stand(ned, at2 + Vector3.new(0, 30, 0))
+	nedAt = #ned.inbox
+	advance(P.tileWindow + 0.6)
+	check("a guest in the air over it isn't paid", (paidSince(ned, nedAt)) == 0)
+	-- The Piñata.
+	local pinata = nil
+	for _ = 1, 40 do
+		pinata = W:FindFirstChild(AbuseParty.PINATA)
+		if pinata then
+			break
+		end
+		advance(1)
+	end
+	check("a piñata hangs under the chandelier", pinata ~= nil and pinata:GetAttribute("Needed") >= P.hits.base and pinata:FindFirstChild("Body") ~= nil)
+	local body = pinata.Body
+	stand(ned, body.CFrame.Position + Vector3.new(4, -6, 0))
+	stand(other, body.CFrame.Position + Vector3.new(P.reach + 20, -6, 0))
+	local ok
+	run(function()
+		ok = AbuseParty.hit(other)
+	end)
+	check("a guest out of reach can't hit it", ok == false and pinata:GetAttribute("Hits") == 0)
+	run(function()
+		ok = AbuseParty.hit(ned)
+	end)
+	local again
+	run(function()
+		again = AbuseParty.hit(ned)
+	end)
+	check("a guest in reach hits it, but no faster than a few times a second", ok == true and again == false and pinata:GetAttribute("Hits") == 1)
+	stand(other, body.CFrame.Position + Vector3.new(-4, -6, 0))
+	local needed = pinata:GetAttribute("Needed")
+	nedAt, otherAt = #ned.inbox, #other.inbox
+	run(function()
+		AbuseParty.hit(other)
+	end)
+	local turn = 0
+	while W:FindFirstChild(AbuseParty.PINATA) and turn < needed + 5 do
+		turn += 1
+		advance(1 / P.hitRate + 0.02)
+		run(function()
+			AbuseParty.hit(ned)
+		end)
+	end
+	check("enough hits and it bursts", W:FindFirstChild(AbuseParty.PINATA) == nil)
+	local nedGot, nedPaid = paidSince(ned, nedAt)
+	local otherGot, otherPaid = paidSince(other, otherAt)
+	-- (What each is paid depends on how much Gilt they've earned today: the soft cap.)
+	check("everyone who hit it is paid, the last hit a little more", nedPaid ~= nil and nedPaid.what == "pinata" and nedPaid.final == true and otherPaid ~= nil and otherPaid.what == "pinata" and otherPaid.final == false and nedGot > 0 and otherGot > 0, string.format("%d / %d", nedGot, otherGot))
+	local burst = nil
+	for i = #broadcasts, 1, -1 do
+		local m = broadcasts[i].message
+		if m.op == "pinata" and m.stage == "burst" then
+			burst = m
+			break
+		end
+	end
+	check("every screen sees it burst, and who broke it", burst ~= nil and burst.by == ned.Name and burst.count == 2)
+	-- Stopped: nothing left hanging, no tile lit.
+	run(function()
+		AdminService.stopAll("test")
+	end)
+	advance(1)
+	check("stopping Admin Abuse clears the party", W:GetAttribute("PartyTile") == nil and W:FindFirstChild(AbuseParty.PINATA) == nil)
+	AdminService.showBegan = function() end
+	AdminService.showStopped = function() end
+end
+
+---------------------------------------------------------------------------------------------------
 -- Build 55: the owner is AJKR everywhere (and nobody else can be); Admin Abuse's nights (fifty-odd,
 -- no two the same) and every effect's looks, worked out from one seed: the same in every server
 ---------------------------------------------------------------------------------------------------

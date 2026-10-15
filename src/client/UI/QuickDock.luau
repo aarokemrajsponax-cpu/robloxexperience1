@@ -391,6 +391,95 @@ function QuickDock.right(): number
 	return 16 + COLUMNS * keyWidth() + (COLUMNS - 1) * GAP
 end
 
+-- A small signal on an event key (Watch the fireworks, the holiday's game): a LIVE tag on its top
+-- corner, breathing, so the eye finds it; and the first time each comes on, a short word beside it
+-- saying what it does, pointing at it. (Never over the cloth: the dock steps aside at a table.)
+local hinted: { [string]: boolean } = {}
+local function liveTag(holder: Frame)
+	if holder:FindFirstChild("Live") then
+		return
+	end
+	local tag = Instance.new("TextLabel")
+	tag.Name = "Live"
+	tag.AnchorPoint = Vector2.new(0, 0)
+	tag.Position = UDim2.fromOffset(-6, -7)
+	local h = math.max(16, math.floor(SIZE * 0.26))
+	tag.Size = UDim2.fromOffset(math.floor(h * 2.4), h)
+	tag.BackgroundColor3 = Color3.fromRGB(222, 40, 58)
+	tag.TextColor3 = Color3.new(1, 1, 1)
+	tag.FontFace = Brand.Fonts.heavy
+	tag.TextSize = math.max(10, math.floor(h * 0.62))
+	tag.Text = "LIVE"
+	tag.ZIndex = 7
+	local tc = Instance.new("UICorner")
+	tc.CornerRadius = UDim.new(1, 0)
+	tc.Parent = tag
+	local ts = Instance.new("UIStroke")
+	ts.Color = Color3.new(1, 1, 1)
+	ts.Thickness = 1.2
+	ts.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	ts.Parent = tag
+	tag.Parent = holder
+	if State.get("movement") ~= "Still" then
+		TweenService:Create(tag, TweenInfo.new(0.9, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { BackgroundColor3 = Color3.fromRGB(150, 20, 36) }):Play()
+	end
+end
+
+-- The short word beside a key, once a visit for each: a slip of dark glass to its right, an arrow
+-- at its left end pointing at the key, gone after a few seconds (or a tap).
+function QuickDock.hintBeside(key: string, holder: Frame?, text: string)
+	if not holder or hinted[key] or QuickDock.isSorting() or QuickDock.isSeated() then
+		return
+	end
+	hinted[key] = true
+	local slip = Instance.new("TextButton")
+	slip.Name = "Hint"
+	slip.AutoButtonColor = false
+	slip.AnchorPoint = Vector2.new(0, 0.5)
+	slip.Position = UDim2.new(1, 14, 0.5, 0)
+	slip.AutomaticSize = Enum.AutomaticSize.X
+	slip.Size = UDim2.fromOffset(0, 34)
+	slip.BackgroundColor3 = Color3.fromRGB(22, 19, 16)
+	slip.BackgroundTransparency = 0.05
+	slip.FontFace = Brand.Fonts.bodyBold
+	slip.TextSize = 15
+	slip.TextColor3 = IVORY
+	slip.Text = text
+	slip.ZIndex = 8
+	local pad = Instance.new("UIPadding")
+	pad.PaddingLeft = UDim.new(0, 14)
+	pad.PaddingRight = UDim.new(0, 14)
+	pad.Parent = slip
+	local sc = Instance.new("UICorner")
+	sc.CornerRadius = UDim.new(0, 10)
+	sc.Parent = slip
+	local ss = Instance.new("UIStroke")
+	ss.Color = Color3.fromRGB(214, 176, 104)
+	ss.Thickness = 1
+	ss.Transparency = 0.15
+	ss.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	ss.Parent = slip
+	local arrow = Instance.new("Frame")
+	arrow.Name = "Arrow"
+	arrow.AnchorPoint = Vector2.new(0.5, 0.5)
+	arrow.Position = UDim2.new(0, -14, 0.5, 0)
+	arrow.Size = UDim2.fromOffset(10, 10)
+	arrow.Rotation = 45
+	arrow.BackgroundColor3 = Color3.fromRGB(22, 19, 16)
+	arrow.BorderSizePixel = 0
+	arrow.ZIndex = 7
+	arrow.Parent = slip
+	slip.Parent = holder
+	slip.Activated:Connect(function()
+		slip:Destroy()
+	end)
+	task.delay(7, function()
+		if slip.Parent then
+			slip:Destroy()
+		end
+	end)
+end
+
 -- The key to watch a fireworks show from across the street (and to come back), at the foot of the
 -- dock under Invite while a show is on: never in the middle of the screen. Set by Main from the
 -- fireworks' own offer.
@@ -418,6 +507,8 @@ function QuickDock.setWatch(show: boolean, watching: boolean?)
 		watchTile = k.Parent :: Frame
 		f.Size = dockSize(keyCount())
 		refreshVisible()
+		liveTag(watchTile :: Frame)
+		QuickDock.hintBeside("watch", watchTile, "Fireworks are on: tap to watch")
 	end
 	local k = watchKey :: TextButton
 	local label = k:FindFirstChild("Label", true)
@@ -474,6 +565,10 @@ function QuickDock.setHoliday(glyph: string?, label: string?, count: number?)
 		holidaySpec = spec
 		f.Size = dockSize(keyCount())
 		refreshVisible()
+		if label ~= "Home" then
+			liveTag(holidayTile :: Frame)
+			QuickDock.hintBeside("holiday:" .. label, holidayTile, "A holiday game is on: tap to play")
+		end
 	end
 	local holder = holidayTile :: Frame
 	local bubble = holder:FindFirstChild("Count") :: TextLabel?

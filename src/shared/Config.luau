@@ -886,6 +886,29 @@ local defaults = {
 		},
 		-- Servers that open while something is on everywhere join in: they look this often (s).
 		liveCheck = 30,
+		-- Admin Abuse's party games in the Foyer (server/AbuseParty, World/AbuseParty), while the
+		-- house dances. The Gold Tile: every `tileEvery` seconds one tile of the marble floor turns
+		-- gold for `tileWindow` seconds; everyone standing on it when the time's up gets `tileGilt`.
+		-- The Piñata: one hangs under the chandelier every `pinataEvery` seconds (the first
+		-- `pinataFirst` seconds in); it takes `hits.base` hits and `hits.perGuest` more for each
+		-- guest in the house (at most `hits.most`), at most `hitRate` a second from each guest
+		-- within `reach` studs; when it bursts, everyone who hit it gets `pinataGilt` (the last hit
+		-- `pinataFinal` more). Unbroken after `pinataSeconds`, it floats away. (All Gilt is
+		-- multiplied like any other: Admin Abuse's Golden Hour doubles it.)
+		party = {
+			tileFirst = 20,
+			tileEvery = { abuse = 40, mega = 25 },
+			tileWindow = 8,
+			tileGilt = 60,
+			pinataFirst = 50,
+			pinataEvery = { abuse = 150, mega = 90 },
+			pinataSeconds = 70,
+			hits = { base = 24, perGuest = 8, most = 200 },
+			hitRate = 6,
+			reach = 24,
+			pinataGilt = 120,
+			pinataFinal = 80,
+		},
 		-- Admin Abuse as a show (server/AbuseShow, World/AbuseShow, World/OwnerCameo).
 		show = {
 			-- The opening on every screen: letterbox, the transmission, the riser; at `dropAt`
@@ -1225,19 +1248,19 @@ local defaults = {
 		-- evens their loudness (measured, to about -17 dBFS: a little above the house's music).
 		AbuseMusic = {
 			abuse = {
-				{ id = "rbxassetid://1837110785", gain = 0.52 }, -- Feeling (dance), 3:45
-				{ id = "rbxassetid://1837110694", gain = 0.70 }, -- Skyhook (dance), 2:48
-				{ id = "rbxassetid://1846368080", gain = 0.79 }, -- Stadium Rave (A), 2:34
-				{ id = "rbxassetid://9038367768", gain = 0.48 }, -- Funky Disco Beats, 3:20
-				{ id = "rbxassetid://1837088784", gain = 0.72 }, -- Digital Dawn (dance), 2:20
-				{ id = "rbxassetid://1837088576", gain = 0.65 }, -- Bang On ! (electro pop), 3:01
+				{ id = "rbxassetid://1837110785", gain = 0.52, bpm = 125, beat = 0.39 }, -- Feeling (dance), 3:45
+				{ id = "rbxassetid://1837110694", gain = 0.70, bpm = 128, beat = 0.44 }, -- Skyhook (dance), 2:48
+				{ id = "rbxassetid://1846368080", gain = 0.79, bpm = 125.03, beat = 0.305 }, -- Stadium Rave (A), 2:34
+				{ id = "rbxassetid://9038367768", gain = 0.48, bpm = 125.51, beat = 0.235 }, -- Funky Disco Beats, 3:20
+				{ id = "rbxassetid://1837088784", gain = 0.72, bpm = 130, beat = 0.115 }, -- Digital Dawn (dance), 2:20
+				{ id = "rbxassetid://1837088576", gain = 0.65, bpm = 109.64, beat = 0.22 }, -- Bang On ! (electro pop), 3:01
 			},
 			mega = {
-				{ id = "rbxassetid://9038275152", gain = 0.59 }, -- Electric Shock (dubstep), 3:19
-				{ id = "rbxassetid://9038274387", gain = 0.60 }, -- Next Level (dubstep, electro), 3:15
-				{ id = "rbxassetid://1839931160", gain = 0.65 }, -- 8 Bit Dubstep, 2:25
-				{ id = "rbxassetid://9044545570", gain = 0.54 }, -- Night Run (drum and bass), 3:03
-				{ id = "rbxassetid://1837111002", gain = 0.59 }, -- Squad (dance), 3:12
+				{ id = "rbxassetid://9038275152", gain = 0.59, bpm = 140, beat = 0.175 }, -- Electric Shock (dubstep), 3:19
+				{ id = "rbxassetid://9038274387", gain = 0.60, bpm = 147.66, beat = 0.135 }, -- Next Level (dubstep, electro), 3:15
+				{ id = "rbxassetid://1839931160", gain = 0.65, bpm = 140, beat = 0.375 }, -- 8 Bit Dubstep, 2:25
+				{ id = "rbxassetid://9044545570", gain = 0.54, bpm = 173, beat = 0.175 }, -- Night Run (drum and bass), 3:03
+				{ id = "rbxassetid://1837111002", gain = 0.59, bpm = 120, beat = 0.47 }, -- Squad (dance), 3:12
 			},
 			cosmic = {
 				{ id = "rbxassetid://1841460294", gain = 1.17 }, -- Celestial Aurora, 3:02
@@ -1257,9 +1280,9 @@ local defaults = {
 				{ id = "rbxassetid://1839459610", gain = 1.16 }, -- Grand Overture, 1:22
 			},
 			party = {
-				{ id = "rbxassetid://1835725225", gain = 0.67 }, -- Disco Sapiens, 2:35
-				{ id = "rbxassetid://9038367768", gain = 0.48 }, -- Funky Disco Beats, 3:20
-				{ id = "rbxassetid://1837088576", gain = 0.65 }, -- Bang On !, 3:01
+				{ id = "rbxassetid://1835725225", gain = 0.67, bpm = 122, beat = 0.235 }, -- Disco Sapiens, 2:35
+				{ id = "rbxassetid://9038367768", gain = 0.48, bpm = 125.51, beat = 0.235 }, -- Funky Disco Beats, 3:20
+				{ id = "rbxassetid://1837088576", gain = 0.65, bpm = 109.64, beat = 0.22 }, -- Bang On !, 3:01
 			},
 			winter = {
 				{ id = "rbxassetid://1841460670", gain = 1.07 }, -- Frost Flowers, 1:01

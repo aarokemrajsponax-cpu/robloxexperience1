@@ -101,6 +101,27 @@ end
 -- another in a shuffled order, each at its own gain, round and round, at the music level while
 -- the house's music sinks under it. Returns a function that fades it out (and brings the house's
 -- music back once no score is playing).
+-- The show's playlist playing now (the last one started), so a show can dance to its beat.
+local nowPlaying: Sound? = nil
+
+-- What the show's playlist is playing: its SoundId and how far into it (seconds), or nil.
+function Sound.scoreNow(): (string?, number?)
+	local s = nowPlaying
+	if not s or not s.Parent then
+		return nil, nil
+	end
+	local ok, id, at = pcall(function(): (string?, number?)
+		if s.IsPlaying then
+			return s.SoundId, s.TimePosition
+		end
+		return nil, nil
+	end)
+	if ok then
+		return id, at
+	end
+	return nil, nil
+end
+
 function Sound.scoreList(songs: { { id: string, gain: number? } }, volume: number?): () -> ()
 	if #songs == 0 then
 		return function() end
@@ -120,6 +141,7 @@ function Sound.scoreList(songs: { { id: string, gain: number? } }, volume: numbe
 	s.Volume = 0
 	s.SoundGroup = show
 	s.Parent = SoundService
+	nowPlaying = s
 	local stopped = false
 	local index = 0
 	local base = volume or 0.8

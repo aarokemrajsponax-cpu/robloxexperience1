@@ -4835,6 +4835,15 @@ do
 		return d.Name == "DockEvents" and d:IsA("Frame")
 	end)
 	check("folded: the event keys (Watch, the holiday's) still show, under the tab", events ~= nil and events.Visible == true and events:FindFirstChild("Watch") ~= nil and events:FindFirstChild("Turkeys") ~= nil)
+	check("the event keys carry a LIVE tag, so the eye finds them", events.Watch:FindFirstChild("Live") ~= nil and events.Turkeys:FindFirstChild("Live") ~= nil)
+	-- (A word beside a key shows once a visit: these keys have been on before, so a fresh one.)
+	QuickDockM.hintBeside("dockTest", events.Watch, "Tap to watch the fireworks")
+	advance(0.2)
+	check("...and the first time a key comes on, a word beside it says what it does", textOnScreen("Tap to watch the fireworks") ~= nil)
+	advance(8)
+	QuickDockM.hintBeside("dockTest", events.Watch, "Tap to watch the fireworks")
+	advance(0.2)
+	check("...once a visit, gone after a few seconds", textOnScreen("Tap to watch the fireworks") == nil)
 	snapshot("dock-folded")
 	SortScreenM.open("THE SALON", "")
 	advance(0.5)
@@ -7275,6 +7284,199 @@ end)()
 	folder:Destroy()
 	advance(4)
 	check("no errors at the wheel", #errors == errorsBefore, errors[errorsBefore + 1])
+end)()
+
+---------------------------------------------------------------------------------------------------
+-- 7z. Admin Abuse's party: the Foyer dances to the beat (its floor, its stair, its lamps), a crew
+-- of brainrots dances round the guest, the Gold Tile and the Piñata are marked for everyone, and
+-- at a table the sorting screen dances; everything put back when it ends
+---------------------------------------------------------------------------------------------------
+;(function()
+	local errorsBefore = #errors
+	local Color3 = roblox.Color3
+	local Enum = roblox.Enum
+	-- (The house as built: its Foyer, its tiles, its stair, its lamps.)
+	local maison = workspace:FindFirstChild("Maison")
+	local foyer = maison and maison:FindFirstChild("Foyer")
+	local tiles = {}
+	local was = {}
+	local stair, lamp, ceiling = nil, nil, nil
+	if foyer then
+		for _, d in foyer:GetChildren() do
+			if d.Name == "Tile" then
+				table.insert(tiles, d)
+				was[d] = { d.Material, d.Color }
+			elseif d.Name == "Ceiling" and not ceiling then
+				ceiling = d
+			end
+		end
+		stair = foyer:FindFirstChild("GrandStair")
+		for _, d in foyer:GetDescendants() do
+			if d:IsA("PointLight") and not lamp then
+				lamp = d
+			end
+		end
+	end
+	check("the house's Foyer is here to dance in", foyer ~= nil and #tiles > 20 and stair ~= nil and lamp ~= nil and ceiling ~= nil, #tiles)
+	local lampWas = lamp.Color
+	local ceilingWas = ceiling.CFrame
+	local function lit()
+		local n = 0
+		for _, t in tiles do
+			if t.Material == Enum.Material.Neon then
+				n += 1
+			end
+		end
+		return n
+	end
+	local function stage()
+		return workspace:FindFirstChild("AbuseParty", true)
+	end
+	-- Admin Abuse begins.
+	workspace:SetAttribute("AbuseUntil", workspace:GetServerTimeNow() + 900)
+	workspace:SetAttribute("AbuseSince", os.time())
+	signalOf(workspace, "attr:AbuseUntil"):Fire()
+	advance(2)
+	check("Admin Abuse: the Foyer's marble lights up as a dance floor", lit() > 0 and lit() < #tiles, lit())
+	local firstLit = {}
+	for i, t in tiles do
+		firstLit[i] = t.Material == Enum.Material.Neon
+	end
+	advance(1.5)
+	local changed = false
+	for i, t in tiles do
+		if (t.Material == Enum.Material.Neon) ~= firstLit[i] or (firstLit[i] and t.Color ~= tiles[i].Color) then
+			changed = true
+		end
+	end
+	check("...and it changes with the beat", changed)
+	local nosingLit = false
+	for _, n in stair:GetChildren() do
+		if n.Name == "Nosing" and n.Material == Enum.Material.Neon then
+			nosingLit = true
+		end
+	end
+	check("the stair's nosings light up in a run", nosingLit)
+	check("the lamps turn party colours", lamp.Color ~= lampWas)
+	local dancers = 0
+	for _, d in stage():GetChildren() do
+		if d.Name == "Dancer" and d:FindFirstChildOfClass("BillboardGui") then
+			dancers += 1
+		end
+	end
+	check("brainrots dance: a crew round you and a conga line round the Foyer", dancers >= 4, dancers)
+	check("a mirror ball under the chandelier", stage():FindFirstChild("MirrorBall") ~= nil)
+	-- The Gold Tile.
+	local gold = tiles[math.floor(#tiles / 2)]
+	local goldAt = gold.CFrame.Position
+	workspace:SetAttribute("PartyTile", goldAt)
+	workspace:SetAttribute("PartyTileUntil", workspace:GetServerTimeNow() + 8)
+	signalOf(workspace, "attr:PartyTile"):Fire()
+	serverSays("Salute", { op = "partyTile", stage = "start", at = goldAt, seconds = 8 })
+	advance(1.2)
+	check("a Gold Tile: its tile turns gold", gold.Material == Enum.Material.Neon and gold.Color.R > 0.9 and gold.Color.G > 0.75)
+	local mark = stage():FindFirstChild("GoldTileMarker")
+	check("...with a marker over it seen through walls, counting down", mark ~= nil and mark:FindFirstChildOfClass("BillboardGui").AlwaysOnTop == true and textOnScreen("GOLD TILE") ~= nil)
+	check("...and the strip at the top says where", textOnScreen("GOLD TILE  ·  in the Foyer") ~= nil)
+	snapshot("party-gold-tile")
+	serverSays("Salute", { op = "partyPaid", what = "tile", gilt = 120 })
+	advance(0.4)
+	check("standing on it: what it paid", textOnScreen("+120 Gilt. You were on it in time.") ~= nil)
+	workspace:SetAttribute("PartyTile", nil)
+	workspace:SetAttribute("PartyTileUntil", nil)
+	signalOf(workspace, "attr:PartyTile"):Fire()
+	advance(1.2)
+	check("time's up: the marker goes", stage():FindFirstChild("GoldTileMarker") == nil)
+	-- The Piñata.
+	local pinata = Instance.new("Model")
+	pinata.Name = "PartyPinata"
+	local body = Instance.new("Part")
+	body.Name = "Body"
+	body.Anchored = true
+	body.CFrame = CFrame.new(10, 12, 10)
+	body.Parent = pinata
+	pinata:SetAttribute("Hits", 0)
+	pinata:SetAttribute("Needed", 40)
+	pinata.Parent = workspace
+	advance(1.2)
+	check("the Piñata: its bar over it, seen from anywhere", body:FindFirstChild("PinataBar") ~= nil and body.PinataBar.AlwaysOnTop == true and body.PinataBar.Title.Text == "THE PIÑATA")
+	pinata:SetAttribute("Hits", 10)
+	advance(1.2)
+	local fill = body.PinataBar.Track.Fill
+	check("...filling as it's hit", math.abs(fill.Size.X.Scale - 0.25) < 0.01, fill.Size.X.Scale)
+	check("...and the strip says how close it is", textOnScreen("PIÑATA  ·  in the Foyer  ·  25%") ~= nil)
+	snapshot("party-pinata")
+	pinata:Destroy()
+	serverSays("Salute", { op = "pinata", stage = "burst", at = Vector3.new(10, 12, 10), by = "Ada", count = 3 })
+	serverSays("Salute", { op = "partyPaid", what = "pinata", gilt = 200, final = true })
+	advance(0.5)
+	check("it bursts: the one who broke it is told", textOnScreen("+200 Gilt. You broke it open.") ~= nil)
+	-- At a table, the sorting screen dances.
+	serverSays("Table", { op = "seated", table = salonTable:GetAttribute("TableId"), room = "salon", mode = "room" })
+	advance(2)
+	local list = pieceList(6, cases)
+	serverSays("Table", { op = "deal", round = 1, room = "salon", mode = "room", cases = cases, pieces = list, score = 0 })
+	advance(2.5)
+	local party = find(sortGui, function(d)
+		return d.Name == "Party"
+	end)
+	local bulbs = 0
+	if party then
+		for _, b in party:GetChildren() do
+			if b.Name == "Bulb" then
+				bulbs += 1
+			end
+		end
+	end
+	check("at a table: bulbs chase round the desk like a marquee", party ~= nil and bulbs >= 12, bulbs)
+	local danced = false
+	for i = 1, 6 do
+		local card = Sort.card(i)
+		local art = card and card:FindFirstChild("Icon")
+		if art and math.abs(art.Rotation) > 0.5 then
+			danced = true
+		end
+	end
+	advance(0.15)
+	for i = 1, 6 do
+		local card = Sort.card(i)
+		local art = card and card:FindFirstChild("Icon")
+		if art and math.abs(art.Rotation) > 0.5 then
+			danced = true
+		end
+	end
+	check("...and the pieces dance where they lie", danced)
+	snapshot("table-party")
+	serverSays("Table", { op = "left" })
+	advance(2)
+	-- Tips at the foot of the screen: what's on comes first.
+	local Hints = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "Hints")
+	advance(8)
+	Hints.reset(0)
+	advance(6)
+	check("a tip at the foot of the screen says what's on (Admin Abuse's games)", textOnScreen("Admin Abuse: everything pays double. Find the Gold Tile and the Piñata in the Foyer.") ~= nil)
+	snapshot("tip")
+	advance(9)
+	check("...and goes after a few seconds", textOnScreen("Admin Abuse: everything pays double") == nil)
+	advance(30)
+	check("...and not another straight after it", find(playerGui, function(d)
+		return d.Name == "Tip"
+	end) == nil)
+	-- It ends: the house as it was.
+	workspace:SetAttribute("AbuseUntil", nil)
+	workspace:SetAttribute("AbuseSince", nil)
+	signalOf(workspace, "attr:AbuseUntil"):Fire()
+	advance(2)
+	local back = true
+	for _, t in tiles do
+		if t.Material ~= was[t][1] or t.Color ~= was[t][2] then
+			back = false
+		end
+	end
+	check("when it ends, every tile is marble again", back)
+	check("...the lamps their own colour, the ceiling in its place", lamp.Color == lampWas and (ceiling.CFrame.Position - ceilingWas.Position).Magnitude < 0.01)
+	check("...and the dancers and the mirror ball gone", stage() == nil)
+	check("no errors at the party", #errors == errorsBefore, errors[errorsBefore + 1])
 end)()
 
 ---------------------------------------------------------------------------------------------------

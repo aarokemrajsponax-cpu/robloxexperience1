@@ -1543,6 +1543,61 @@ local function sweep(bin: Bin, strength: number)
 	end)
 end
 
+-- A wave along the cases, for a good run: left to right, each case's piece pops up on its plinth
+-- and light runs over its glass, and a band of warm light crosses the leather with it. (Only
+-- what's drawn moves: a case's place, what a drop is measured against, never does.)
+local function wave(strength: number)
+	if Ease.motionScale < 0.5 or not gui then
+		return
+	end
+	for i, bin in binOrder do
+		task.delay((i - 1) * 0.075, function()
+			if not bin.open or not bin.mark.Parent then
+				return
+			end
+			sweep(bin, math.min(1.2, strength))
+			local pop = bin.mark:FindFirstChild("WavePop")
+			if not pop then
+				local u = Instance.new("UIScale")
+				u.Name = "WavePop"
+				u.Parent = bin.mark
+				pop = u
+			end
+			local scale = pop :: UIScale
+			scale.Scale = 1
+			local up = Ease.play(scale, Ease.info(0.13, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = 1 + 0.22 * strength })
+			up.Completed:Once(function()
+				Ease.play(scale, Ease.info(0.32, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 })
+			end)
+		end)
+	end
+	if tray and tray.Parent then
+		local clip = Instance.new("Frame")
+		clip.Name = "Wave"
+		clip.BackgroundTransparency = 1
+		clip.Size = UDim2.fromScale(1, 1)
+		clip.ClipsDescendants = true
+		clip.ZIndex = 1
+		clip.Parent = tray
+		local band = sheet(clip, "Band", Color3.fromRGB(255, 230, 170), 1)
+		band.AnchorPoint = Vector2.new(0.5, 0.5)
+		band.Position = UDim2.fromScale(-0.2, 0.5)
+		band.Size = UDim2.fromScale(0.28, 1.5)
+		band.Rotation = 14
+		band.BackgroundTransparency = 1 - math.min(0.5, 0.28 * strength)
+		shade(band, 0, nil, alphas({ { 0, 1 }, { 0.5, 0.25 }, { 1, 1 } }))
+		local t = Ease.play(band, Ease.info(0.75, Enum.EasingStyle.Sine), { Position = UDim2.fromScale(1.2, 0.5) })
+		t.Completed:Once(function()
+			clip:Destroy()
+		end)
+	end
+end
+
+-- (For a whole round put away, and the like: TableClient.)
+function SortScreen.wave(strength: number?)
+	wave(strength or 1)
+end
+
 local function setHover(caseId: string?)
 	if caseId == hoverBin then
 		return
@@ -2599,6 +2654,7 @@ function SortScreen.close()
 		return
 	end
 	SortScreen.setFever(false)
+	SortScreen.partyStop()
 	isOpen = false
 	Root.setBottom("SortScreen", nil)
 	playing = false
@@ -2789,6 +2845,12 @@ function SortScreen.correct(uid: number, caseId: string, points: number?, multip
 		table.insert(lines, { text = sub, size = 30, font = F.figures, colour = BONE })
 	end
 	popText(bin.centre - Vector2.new(0, bin.size.Y * 0.55), lines, false)
+	-- Every fifth in a row, a wave along the cases (bigger at ten, bigger again at twenty).
+	if runOfCorrect % 5 == 0 then
+		task.delay(0.25, function()
+			wave(if runOfCorrect >= 20 then 1.6 elseif runOfCorrect >= 10 then 1.25 else 0.9)
+		end)
+	end
 	select(padIndex)
 end
 
@@ -3098,6 +3160,115 @@ end
 
 function SortScreen.isOnFire(): boolean
 	return fever ~= nil
+end
+
+---------------------------------------------------------------------------------------------------
+-- Admin Abuse's party at the table (World/AbuseParty calls partyBeat on every beat of the music):
+-- bulbs chasing round the desk like a theatre's marquee, the pieces dancing where they lie, the
+-- cases' pieces wiggling on their plinths, the room's lamp turning party colours, confetti from
+-- the corners on the big beats. Only what's drawn moves: where a piece or a case is (what a drop
+-- is measured against) never does, so it never gets in the way of sorting.
+---------------------------------------------------------------------------------------------------
+local PARTY_LIGHTS = { Color3.fromRGB(255, 64, 150), Color3.fromRGB(70, 200, 255), Color3.fromRGB(255, 206, 70), Color3.fromRGB(160, 90, 255), Color3.fromRGB(90, 255, 170), Color3.fromRGB(255, 140, 60) }
+type Party = { layer: Frame, bulbs: { Frame }, beat: number, at: number, colour: Color3, mega: boolean, lampWas: Color3 }
+local party: Party? = nil
+
+local function partyLayer(): Party
+	local layer = sheet(fxLayer, "Party", Color3.new(1, 1, 1), 1)
+	layer.BackgroundTransparency = 1
+	layer.Size = UDim2.fromScale(1, 1)
+	local bulbs: { Frame } = {}
+	local fr = L.frame
+	local gap = math.max(18, 26 * L.s)
+	local size = math.max(6, math.floor(9 * L.s))
+	local inset = -math.floor(6 * L.s)
+	local x0, y0 = fr.x + inset, fr.y + inset
+	local x1, y1 = fr.x + fr.w - inset, fr.y + fr.h - inset
+	local function add(x: number, y: number)
+		local b = sheet(layer, "Bulb", Color3.new(1, 1, 1), 6)
+		b.AnchorPoint = Vector2.new(0.5, 0.5)
+		b.Position = UDim2.fromOffset(x, y)
+		b.Size = UDim2.fromOffset(size, size)
+		b.BackgroundTransparency = 0.6
+		corner(b, 9999)
+		table.insert(bulbs, b)
+	end
+	-- (Round the desk, clockwise from its top left corner.)
+	local nTop = math.max(2, math.floor((x1 - x0) / gap))
+	local nSide = math.max(2, math.floor((y1 - y0) / gap))
+	for i = 0, nTop - 1 do
+		add(x0 + (x1 - x0) * i / nTop, y0)
+	end
+	for i = 0, nSide - 1 do
+		add(x1, y0 + (y1 - y0) * i / nSide)
+	end
+	for i = 0, nTop - 1 do
+		add(x1 - (x1 - x0) * i / nTop, y1)
+	end
+	for i = 0, nSide - 1 do
+		add(x0, y1 - (y1 - y0) * i / nSide)
+	end
+	return { layer = layer, bulbs = bulbs, beat = 0, at = -math.huge, colour = LIGHT, mega = false, lampWas = if header.lamp then header.lamp.BackgroundColor3 else LAMP }
+end
+
+function SortScreen.partyBeat(b: number, colour: Color3, mega: boolean)
+	if not gui or not isOpen then
+		return
+	end
+	local p = party
+	if not p or not p.layer.Parent then
+		p = partyLayer()
+		party = p
+	end
+	local pp = p :: Party
+	pp.beat, pp.at, pp.colour, pp.mega = b, os.clock(), colour, mega
+	for i, bulb in pp.bulbs do
+		local on = (i + b) % 3 == 0
+		bulb.BackgroundColor3 = if mega then Color3.fromHSV((i * 0.035 + b * 0.05) % 1, 0.7, 1) else PARTY_LIGHTS[(i + b) % #PARTY_LIGHTS + 1]
+		bulb.BackgroundTransparency = if on then 0 else 0.55
+	end
+	if header.lamp then
+		header.lamp.BackgroundColor3 = LAMP:Lerp(colour, 0.55)
+	end
+	if header.frameStroke then
+		header.frameStroke.Color = colour
+		header.frameStroke.Transparency = 0.1
+	end
+	-- Confetti up from the bottom corners on the big beats (over the room, never over a case).
+	if b % 8 == 0 and Ease.motionScale >= 0.5 then
+		sparks(Vector2.new(L.vp.X * 0.04, L.vp.Y * 0.98), 16, 520, colour)
+		sparks(Vector2.new(L.vp.X * 0.96, L.vp.Y * 0.98), 16, 520, colour)
+	end
+end
+
+-- The party over: the desk as it was.
+function SortScreen.partyStop()
+	local p = party
+	party = nil
+	if not p then
+		return
+	end
+	p.layer:Destroy()
+	if header.lamp then
+		header.lamp.BackgroundColor3 = p.lampWas
+	end
+	if header.frameStroke then
+		header.frameStroke.Color = rim
+		header.frameStroke.Transparency = 0.45
+	end
+	for _, c in cards do
+		if c.art then
+			c.art.Rotation = 0
+		end
+	end
+	for _, bin in binOrder do
+		bin.mark.Rotation = 0
+	end
+end
+
+function SortScreen.partyOn(): boolean
+	local p = party
+	return p ~= nil and os.clock() - p.at < 2
 end
 
 -- (Set by TableClient: a short flourish for a very long streak.)
@@ -3498,10 +3669,22 @@ local function step(dt: number)
 				c.frame.Rotation *= math.exp(-(if clock < c.arrive then 6 else 10) * step)
 			end
 		end
-		-- Resting pieces breathe: a slow rise and fall over their shadows.
+		-- Resting pieces breathe: a slow rise and fall over their shadows. (At Admin Abuse's party
+		-- they dance: a hop on every beat and a wiggle, each a little after the last.)
 		if c.art and (c.state == "rest" or c.state == "shaking") then
-			local bob = math.sin(clock * (2 * math.pi / 4.8) + c.phase) * 2.2 * L.s * motion
-			c.art.Position = UDim2.new(0.5, 0, 0.5, bob)
+			local p = party
+			if p and os.clock() - p.at < 2 and motion >= 0.5 then
+				local since = os.clock() - p.at
+				local hop = math.max(0, 1 - since * 2.2) * math.sin(math.min(1, since * 2.2) * math.pi)
+				c.art.Position = UDim2.new(0.5, 0, 0.5, -hop * 9 * L.s)
+				c.art.Rotation = (if (p.beat + c.order) % 2 == 0 then 1 else -1) * 9 * math.max(0, 1 - since * 1.6)
+			else
+				local bob = math.sin(clock * (2 * math.pi / 4.8) + c.phase) * 2.2 * L.s * motion
+				c.art.Position = UDim2.new(0.5, 0, 0.5, bob)
+				if c.art.Rotation ~= 0 then
+					c.art.Rotation = 0
+				end
+			end
 		end
 		local tw = c.twinkle
 		if tw then
@@ -3525,8 +3708,18 @@ local function step(dt: number)
 		end
 	end
 	-- Each case's glow eases toward how lit it should be; now and then light runs across its glass.
+	-- (At Admin Abuse's party, each case's piece wiggles on its plinth to the beat.)
 	local ease = 1 - math.exp(-5 * step)
-	for _, bin in binOrder do
+	local p = party
+	local dancing = p ~= nil and os.clock() - p.at < 2 and motion >= 0.5
+	for i, bin in binOrder do
+		if dancing then
+			local pp = p :: Party
+			local since = os.clock() - pp.at
+			bin.mark.Rotation = (if (pp.beat + i) % 2 == 0 then 1 else -1) * 12 * math.max(0, 1 - since * 1.8)
+		elseif bin.mark.Rotation ~= 0 then
+			bin.mark.Rotation = 0
+		end
 		local before = bin.glow
 		bin.glow += (bin.glowGoal - bin.glow) * ease
 		if math.abs(bin.glow - before) > 0.002 or clock < 0.5 then

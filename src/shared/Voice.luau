@@ -252,6 +252,30 @@ Voice.StartHere = {
 -- on five pages: the basics, sorting (the six cases, pictured), the rooms (each with a Go key that
 -- takes you there), Gilt and the Shop, and the extras.
 export type GuideItem = { title: string, line: string, how: string?, win: string?, key: string?, action: string?, place: string? }
+-- Tips: short words at the foot of the screen, one at a time and never often (UI/Hints), for the
+-- new and the regular alike. `after`: seconds into the visit before it may show; `sat`: how many
+-- times the guest has sat at a table first; `every`: seconds before it may show again (0: once a
+-- visit). What decides each one is in UI/Hints.
+export type Hint = { id: string, line: string, after: number?, sat: number?, every: number? }
+Voice.Hints = {
+	label = "TIP",
+	list = {
+		{ id = "newcomer", line = "New here? Sit at any table in the Salon to start sorting. How to play, top right, explains it all.", after = 45 },
+		{ id = "keys", line = "When you're holding a piece, keys 1 to 6 drop it straight into a case.", sat = 1 },
+		{ id = "tap", line = "Tap a piece, then tap its case. No need to drag.", sat = 1 },
+		{ id = "streak", line = "Right pieces in a row raise your combo. One wrong case resets it.", sat = 2 },
+		{ id = "rooms", line = "The Velvet, Obsidian and Midnight Rooms pay more for every piece.", sat = 3 },
+		{ id = "abuse", line = "Admin Abuse: everything pays double. Find the Gold Tile and the Piñata in the Foyer.", every = 600 },
+		{ id = "grandPrix", line = "The Grand Prix is open: get in any car on the street and press Race.", every = 720 },
+		{ id = "ballroom", line = "The Ballroom is open: up the Grand Stair, one winner takes the pot.", every = 900 },
+		{ id = "holiday", line = "A holiday game is on. Its key is at the foot of the left dock.", every = 900 },
+		{ id = "shop", line = "You have Gilt to spend: Shop, top right, has table styles, auras and more.", after = 240, every = 1200 },
+		{ id = "suite", line = "Your Suite is yours to decorate. The Suites key on the left takes you there.", after = 420 },
+		{ id = "collection", line = "Brainrots you find earn Gilt every hour, even while you're away. See them in Collection.", after = 600 },
+		{ id = "tonight", line = "Tonight's table: one try a day at the night's best score. It's in the Foyer.", after = 900 },
+	} :: { Hint },
+}
+
 Voice.Guide = {
 	key = "How to play",
 	title = "How to play",

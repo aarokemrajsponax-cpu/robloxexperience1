@@ -299,14 +299,24 @@ TableService.mythicLuck = AdminService.mythicLuck
 TableService.twist = AdminService.tableTwist
 -- Admin Abuse as a show: the owner's avatar for every screen, the realms, the owner's gifts.
 local AbuseShow = require(script.Parent.AbuseShow)
-AdminService.showBegan = AbuseShow.began
-AdminService.showStopped = AbuseShow.stopped
+-- And its party games in the Foyer: the Gold Tile and the Piñata.
+local AbuseParty = require(script.Parent.AbuseParty)
+AdminService.showBegan = function(mega: boolean, plan: any, since: number?)
+	AbuseShow.began(mega, plan, since)
+	AbuseParty.began(mega, since)
+end
+AdminService.showStopped = function()
+	AbuseShow.stopped()
+	AbuseParty.stopped()
+end
 boot("House controls", AdminService.start)
 boot("Admin Abuse's show", AbuseShow.start)
+boot("Admin Abuse's party", AbuseParty.start)
 -- How guests move, watched by the house (server/Integrity): a teleport, a run faster than anyone
 -- can, a flight: put back where they were, and nothing found for a moment. Every teleport the
 -- house makes itself goes through it; the owner moves however they like.
 local Integrity = require(script.Parent.Integrity)
+AbuseParty.trusted = Integrity.trusted
 Integrity.isOwner = AdminService.isAdmin
 Integrity.onCaught = function(player: Player, why: string, _distance: number)
 	-- (Noted with refused remote traffic: at most once a minute a guest, for each kind.)

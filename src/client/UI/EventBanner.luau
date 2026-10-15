@@ -436,6 +436,19 @@ local function refresh()
 			say(pill(a.e.id, 2 + a.i, "line"), string.format("%s  ·  %s  ·  %s", Caps(a.e.name), a.e.line, clock(a.ends - now())))
 		end
 	end
+	-- Admin Abuse's party games in the Foyer: what's on, and what to do (World/AbuseParty marks
+	-- the tile and the piñata, seen from anywhere in the house).
+	local tileAt = Workspace:GetAttribute("PartyTileUntil")
+	local pinata = Workspace:FindFirstChild("PartyPinata")
+	if abusing and Workspace:GetAttribute("PartyTile") ~= nil and type(tileAt) == "number" then
+		say(pill("__party", 3, "soon"), string.format("GOLD TILE  ·  in the Foyer  ·  %d", math.max(0, math.ceil(tileAt - now()))))
+	elseif abusing and pinata then
+		local hits = tonumber(pinata:GetAttribute("Hits")) or 0
+		local needed = math.max(1, tonumber(pinata:GetAttribute("Needed")) or 1)
+		say(pill("__party", 3, "soon"), string.format("PIÑATA  ·  in the Foyer  ·  %d%%", math.floor(math.clamp(hits / needed, 0, 1) * 100)))
+	elseif rows.__party then
+		drop("__party")
+	end
 	-- A scheduled event coming up: every screen counts down to it for the hour before.
 	local at = Workspace:GetAttribute("NextEventAt")
 	local name = Workspace:GetAttribute("NextEventName")
@@ -497,6 +510,7 @@ function EventBanner.start()
 		Workspace:GetAttributeChangedSignal(HouseEvents.attribute(e.id)):Connect(refresh)
 	end
 	Workspace:GetAttributeChangedSignal("AbuseUntil"):Connect(refresh)
+	Workspace:GetAttributeChangedSignal("PartyTile"):Connect(refresh)
 	Remotes.event("Salute").OnClientEvent:Connect(function(m: any)
 		if type(m) ~= "table" then
 			return

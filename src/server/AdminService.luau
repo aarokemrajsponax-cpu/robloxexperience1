@@ -1019,7 +1019,7 @@ function AdminService.abuse(seconds: number, byName: string, mega: boolean?, opt
 			return
 		end
 		if mega then
-			broadcast({ op = "salute", id = "abuse", by = byName, effects = { "fireworks", "goldLeaf", "chandelier" }, seconds = 12, title = "MEGA ABUSE", line = string.format("MEGA ABUSE · %s: every event at once, a new realm every minute or so, triple Gilt, gifts from %s, giveaways all night. Don't leave!", night.name, byName) })
+			broadcast({ op = "salute", id = "abuse", by = byName, effects = { "fireworks", "goldLeaf", "chandelier" }, seconds = 12, title = "MEGA ABUSE", line = string.format("MEGA ABUSE · %s: every event at once, a new realm every minute or so, triple Gilt, the Gold Tile and the Piñata in the Foyer, gifts from %s, giveaways all night. Don't leave!", night.name, byName) })
 		else
 			local extras = {}
 			for _, words in { HUNT_WORDS[night.hunts], BODY_WORDS[night.body] } do
@@ -1027,7 +1027,7 @@ function AdminService.abuse(seconds: number, byName: string, mega: boolean?, opt
 					table.insert(extras, words)
 				end
 			end
-			broadcast({ op = "salute", id = "abuse", by = byName, effects = { "fireworks", "goldLeaf", "chandelier" }, seconds = 12, title = "Admin Abuse Night", line = string.format("ADMIN ABUSE · %s: double Gilt, double XP, Mythic luck, %s, gifts from %s and surprises all night. Go!", night.name, table.concat(extras, ", "), byName) })
+			broadcast({ op = "salute", id = "abuse", by = byName, effects = { "fireworks", "goldLeaf", "chandelier" }, seconds = 12, title = "Admin Abuse Night", line = string.format("ADMIN ABUSE · %s: double Gilt, double XP, Mythic luck, %s, the Gold Tile and the Piñata in the Foyer, gifts from %s and surprises all night. Go!", night.name, table.concat(extras, ", "), byName) })
 		end
 	end)
 	AdminService.note(string.format("%s has begun in the house: %s.", if mega then "Mega Abuse" else "Admin Abuse Night", night.name), false)
