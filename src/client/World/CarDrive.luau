@@ -25,6 +25,8 @@ local Root = require(script.Parent.Parent.UI.Root)
 local Theme = require(script.Parent.Parent.UI.Theme)
 local Toast = require(script.Parent.Parent.UI.Toast)
 local HolidayMeter = require(script.Parent.Parent.UI.HolidayMeter)
+local Invite = require(script.Parent.Parent.UI.Invite)
+local Share = require(script.Parent.Parent.UI.Share)
 local Sound = require(script.Parent.Parent.Sound)
 local CircuitDress = require(script.Parent.CircuitDress)
 
@@ -645,6 +647,24 @@ local function showResults(list: { { [string]: any } }, mine: { [string]: any }?
 	Theme.key(row, "Close", false, function()
 		Root.close(NAME)
 	end, 110).LayoutOrder = 2
+	-- A race is better against friends: ask one along, and share a win (where Roblox allows it).
+	local social = Instance.new("Frame")
+	social.Name = "Social"
+	social.BackgroundTransparency = 1
+	social.AutomaticSize = Enum.AutomaticSize.Y
+	social.Size = UDim2.new(1, 0, 0, 0)
+	social.LayoutOrder = 41
+	social.Parent = content
+	local socialList = Theme.list(social, 10, true)
+	socialList.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	Theme.key(social, "Invite a friend", false, function()
+		Invite.race()
+	end, 160).LayoutOrder = 1
+	if mine and (mine.place or 0) == 1 and Share.allowed() then
+		Theme.key(social, "Share", false, function()
+			Share.moment("grandPrix")
+		end, 110).LayoutOrder = 2
+	end
 	Theme.fitHeight(group, content)
 	Theme.paint(group, "grandPrix")
 	Root.open(NAME, group, nil, false)

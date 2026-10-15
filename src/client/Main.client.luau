@@ -76,6 +76,9 @@ local ConciergeGuide = require(script.Parent.World.ConciergeGuide)
 local Names = require(ReplicatedStorage.Shared.Names)
 local BadgeBookPanel = require(script.Parent.UI.BadgeBookPanel)
 local CalendarPanel = require(script.Parent.UI.CalendarPanel)
+local WelcomeBack = require(script.Parent.UI.WelcomeBack)
+-- (What the brainrots earned while the guest was away, as the server said on arrival.)
+local awayGilt = 0
 local GemShopPanel = require(script.Parent.UI.GemShopPanel)
 local Celebrate = require(script.Parent.UI.Celebrate)
 local ScreenFX = require(script.Parent.UI.ScreenFX)
@@ -276,7 +279,9 @@ start("Curios", function()
 			Toast.show("Gems", string.format("+%d Gems. You hold %d.", m.amount, CurioState.gems), 4)
 		-- The brainrot squad: what it earned while you were away, a full jar, a Feast, the Penthouse.
 		elseif op == "away" and type(m.gilt) == "number" then
-			Toast.show("Your brainrots", string.format("Earned %s Gilt while you were away. Collection → Brainrots to collect it.", BrainrotSquad.commas(m.gilt)), 6)
+			-- (Told on the Welcome back card, with its Collect key; a toast only if no card comes.)
+			awayGilt = math.max(awayGilt, math.floor(m.gilt))
+			WelcomeBack.noteAway(m.gilt)
 		elseif op == "jarFull" and type(m.gilt) == "number" then
 			Toast.show("Tip jar full", string.format("%s Gilt waiting. Collect it so your squad keeps earning.", BrainrotSquad.commas(m.gilt)), 6)
 		elseif op == "feast" and type(m.gilt) == "number" then
@@ -652,8 +657,30 @@ local function welcome()
 	CalendarPanel.isBusy = function(): boolean
 		return TableClient.isSeated() or Tour.active() or Welcome.showing()
 	end
+	-- (A returning guest: one Welcome back card instead, with tonight's present on it, what
+	-- their brainrots earned while they were away, and what's new in the house.)
 	task.delay(if new then 150 else 5, function()
-		start("The Evening Calendar", CalendarPanel.offer)
+		if new then
+			start("The Evening Calendar", CalendarPanel.offer)
+			if awayGilt > 0 then
+				Toast.show("Your brainrots", string.format("Earned %s Gilt while you were away. Collection → Brainrots to collect it.", BrainrotSquad.commas(awayGilt)), 6)
+			end
+			return
+		end
+		start("Welcome back", function()
+			WelcomeBack.isBusy = function(): boolean
+				return TableClient.isSeated() or Tour.active() or Welcome.showing()
+			end
+			WelcomeBack.openCalendar = CalendarPanel.open
+			WelcomeBack.calendar = CalendarPanel.state
+			WelcomeBack.offer(guest ~= nil and guest.news == true, if guest and type(guest.nights) == "number" then guest.nights else 0, function()
+				-- (No card: the calendar and the jar as before.)
+				CalendarPanel.offer()
+				if awayGilt > 0 then
+					Toast.show("Your brainrots", string.format("Earned %s Gilt while you were away. Collection → Brainrots to collect it.", BrainrotSquad.commas(awayGilt)), 6)
+				end
+			end)
+		end)
 	end)
 	if new then
 		task.delay(1.6, function()
@@ -735,6 +762,11 @@ local function onPlay(fromTitle: boolean?)
 	elseif launch == "ledger" then
 		-- The Term ends in three days: the Ledger, open.
 		task.delay(0.8, LedgerPanel.open)
+	elseif launch == "grandPrix" then
+		-- A friend's invite to race: out to the street, by the cars.
+		task.delay(0.8, function()
+			Remotes.event("Travel"):FireServer({ op = "go", place = "grandPrix" })
+		end)
 	elseif string.sub(launch, 1, 7) == "library" then
 		-- Arrived from an invite to the Library: shown up to the friend's table.
 		task.delay(0.6, quickSit, launch)

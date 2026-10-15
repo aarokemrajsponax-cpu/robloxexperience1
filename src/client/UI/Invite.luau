@@ -39,6 +39,11 @@ function Invite.house()
 	prompt("house", "Come to the Maison: a luxury house of sorting tables, a Ballroom, and your own Suite.")
 end
 
+-- "Invite a friend" after a Grand Prix: to the house, to race on the street out front.
+function Invite.race()
+	prompt("grandPrix", "Race me in the Maison Noir Grand Prix: ultra-luxury cars, three laps, the winner takes the purse.")
+end
+
 -- "Come and watch": a friend lands in the Ballroom's Gallery (§9.8).
 function Invite.ballroom()
 	prompt("ballroom", "Lights Out in the Ballroom. Come and watch from the Gallery, or take a chair.")

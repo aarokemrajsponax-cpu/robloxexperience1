@@ -28,6 +28,7 @@ local Brand = require(ReplicatedStorage.Shared.Brand)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Root = require(script.Parent.Root)
+local Theme = require(script.Parent.Theme)
 
 local OwnerConsole = {}
 
@@ -128,12 +129,13 @@ local function tile(parent: Instance, order: number, accent: Color3, spec: TileS
 	fill.Parent = b
 	local edge = stroke(b, if spec.lit then accent else accent:Lerp(INK, 0.55), if spec.lit then 2.5 else 1.5)
 	label(b, spec.glyph, 30, BOLD, Color3.new(1, 1, 1), { Name = "Glyph", Position = UDim2.fromOffset(0, 8), Size = UDim2.new(1, 0, 0, 34), TextScaled = true })
-	label(b, string.upper(spec.name), 13, HEAVY, if spec.danger then rgb(255, 200, 200) else rgb(250, 240, 220), {
+	local nameLabel = label(b, string.upper(spec.name), 13, HEAVY, if spec.danger then rgb(255, 200, 200) else rgb(250, 240, 220), {
 		Name = "Name",
 		Position = UDim2.fromOffset(6, 46),
 		Size = UDim2.new(1, -12, 0, 30),
 		TextYAlignment = Enum.TextYAlignment.Top,
 	})
+	Theme.fit(nameLabel, 13, 9)
 	if spec.line then
 		label(b, spec.line, 10, BODY, rgb(180, 176, 168), {
 			Name = "Line",

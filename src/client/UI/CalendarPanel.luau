@@ -110,6 +110,8 @@ local function tile(parent: Instance, step: number, p: Evenings.Present, state: 
 		TextColor3 = if state == "today" then C.brightGold elseif state == "opened" then rgb(150, 146, 138) else rgb(196, 190, 180),
 	})
 	day.Name = "Day"
+	day.TextWrapped = false
+	Theme.fit(day, 11, 8)
 	local icon, big, small = face(p, seventh)
 	local holder = Instance.new("Frame")
 	holder.Name = "IconBox"
@@ -128,6 +130,8 @@ local function tile(parent: Instance, step: number, p: Evenings.Present, state: 
 		TextTruncate = Enum.TextTruncate.AtEnd,
 	})
 	amount.Name = "Amount"
+	amount.TextWrapped = false
+	Theme.fit(amount, 14, 8)
 	if small then
 		local more = Theme.text(f, small, 11, "body", {
 			Position = UDim2.fromOffset(2, 86),
@@ -137,6 +141,8 @@ local function tile(parent: Instance, step: number, p: Evenings.Present, state: 
 			TextTruncate = Enum.TextTruncate.AtEnd,
 		})
 		more.Name = "More"
+		more.TextWrapped = false
+		Theme.fit(more, 11, 7)
 	end
 	if state == "opened" then
 		-- (Opened: ticked off in gold.)
@@ -255,6 +261,11 @@ function CalendarPanel.open()
 		return
 	end
 	draw(s)
+end
+
+-- What the calendar says now (for Welcome back), or nil if the house didn't answer.
+function CalendarPanel.state(): { [string]: any }?
+	return ask({ op = "state" }) :: any
 end
 
 -- On arrival: open by itself only if tonight's present is waiting and nothing else is up.

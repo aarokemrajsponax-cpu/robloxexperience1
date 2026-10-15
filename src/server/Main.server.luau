@@ -724,6 +724,10 @@ Calendar.opened = function(player: Player)
 	Achievements.check(player)
 end
 boot("The Evening Calendar", Calendar.start)
+-- A new guest's welcome: double Gilt for their first half hour of play.
+local Newcomer = require(script.Parent.Newcomer)
+GiltService.welcome = Newcomer.mult
+boot("The newcomer's welcome", Newcomer.start)
 -- Moments the Badge Book counts.
 require(script.Parent.TradeService).traded = function(player)
 	Achievements.tally(player, "trades", 1)

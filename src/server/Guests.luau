@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
 local Names = require(ReplicatedStorage.Shared.Names)
+local Build = require(ReplicatedStorage.Shared.Build)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Layout = require(ReplicatedStorage.Shared.Layout)
 local Nightly = require(ReplicatedStorage.Shared.Nightly)
@@ -98,6 +99,8 @@ local function payload(player: Player, data: Profiles.Data, visit: Visit): { [st
 		unlocked = { midnight = data.flags.midnight == true },
 		nightly = { played = data.nightly.day == Nightly.at().day, score = data.nightly.score, grade = data.nightly.grade },
 		launch = visit.launch,
+		-- (A returning guest who hasn't seen this build's news yet: Welcome back shows it, once.)
+		news = not visit.firstVisit and (tonumber((data :: any).seenBuild) or 0) < Build.number,
 	}
 end
 
@@ -238,6 +241,7 @@ local function welcome(player: Player, data: Profiles.Data)
 	end
 	player:SetAttribute("FirstVisit", visit.firstVisit)
 	guestEvent:FireClient(player, payload(player, data, visit))
+	;(data :: any).seenBuild = Build.number
 	spawnCharacter(player)
 end
 

@@ -377,6 +377,31 @@ a Nightly attempt or a Mythic's odds.
 - **The launch kit**: page text, icon, thumbnails and the gameplay video's shot list are in
   [`LAUNCH.md`](LAUNCH.md).
 
+## Build 70 — what's new
+
+The plan for growing the game, put into the game:
+
+- **Hook new players fast: a welcome bonus.** A brand-new guest earns **double Gilt for their first
+  30 minutes of play** (`server/Newcomer`, `Config.Newcomer`). A chip at the left counts it down,
+  and Start here says so. The clock only runs while they're in the house. Only guests whose first
+  visit is now get it; players from before it began don't. The server applies it like every other
+  boost, inside the usual cap.
+- **Bring players back: Welcome back.** A returning guest gets one tidy card a few seconds after
+  arriving (`UI/WelcomeBack`):
+  - tonight's present, with **Open**;
+  - what their brainrots earned while they were away, with **Collect** (paid there and then);
+  - **New in the house**: three short lines about this build, shown once per build
+    (`Voice.WhatsNew`; the server remembers which build each guest has seen).
+  It replaces the separate calendar pop-up and brainrot toast. On a phone on its side it keeps to
+  the essentials so it fits. With nothing to say, there's no card.
+- **More fun with friends, and something to show off.** After a Grand Prix race the results card
+  has **Invite a friend** (a friend who follows it lands by the cars) and, for a win, **Share**
+  (Roblox's own capture sharing, only where Roblox allows it).
+- Admin and Mega Abuse scheduling stays yours: plan them from the Owner Console as before.
+- Checked: `tests/shop.luau` (the welcome bonus: who gets it, double Gilt, the clock, the end),
+  `tests/guests.luau` (news told once per build, never on a first visit), and the client run
+  (the card on desktop and small phone, Collect and Open, the chip, the race card's keys).
+
 ## Build 69 — what's new
 
 - **Admin and Mega Abuse throw a party in the Foyer**, on the beat of the music (`World/AbuseParty`):

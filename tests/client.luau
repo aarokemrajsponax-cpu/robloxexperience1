@@ -5361,6 +5361,53 @@ check("its groups", press("HOLIDAYS") and (function()
 end)())
 Root2.close()
 advance(0.5)
+-- Build 70: Welcome back. A returning guest's one card: tonight's present (Open), what their
+-- brainrots earned while they were away (Collect, there and then), and what's new in the house.
+;(function()
+	local WelcomeBack = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "WelcomeBack")
+	local Voice = module("ReplicatedStorage", "Shared", "Voice")
+	local opened = 0
+	WelcomeBack.openCalendar = function()
+		opened += 1
+	end
+	local asked = nil
+	local curioWas = invokeResults.CurioAsk
+	invokeResults.CurioAsk = function(req)
+		asked = req
+		return { ok = true, gilt = 1240 }
+	end
+	check("Welcome back: nothing waiting and nothing new, no card", WelcomeBack.open("Ada", 12, false, false, 0) == false and not WelcomeBack.isOpen())
+	check("Welcome back: one card", WelcomeBack.open("Ada", 12, true, true, 1240) == true and WelcomeBack.isOpen())
+	advance(0.6)
+	local tall = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "Root").viewport().Y >= 600
+	check("...good to see you, and the guest's night at the house (a short screen keeps to the essentials)", textOnScreen("Good to see you, Ada") ~= nil and (textOnScreen("Your 12th night at the house.") ~= nil) == tall)
+	check("...tonight's present, with its key", textOnScreen(Voice.WelcomeBack.present.title) ~= nil and textOnScreen(Voice.WelcomeBack.present.key) ~= nil)
+	check("...what the brainrots earned while away, with Collect", textOnScreen("Your brainrots earned 1,240 Gilt") ~= nil and textOnScreen("Collect") ~= nil)
+	check("...and what's new in the house", textOnScreen(Voice.WelcomeBack.news) ~= nil and textOnScreen(Voice.WhatsNew.lines[1]) ~= nil)
+	snapshot("welcome-back")
+	press("Collect")
+	advance(0.3)
+	check("Collect: the house pays the jar there and then", asked ~= nil and asked.op == "collect" and textOnScreen("Collected") ~= nil)
+	press(Voice.WelcomeBack.present.key)
+	advance(0.4)
+	check("Open: the card steps aside for the Evening Calendar", opened == 1 and not WelcomeBack.isOpen())
+	check("old news never shows as new", WelcomeBack.open("Ada", 3, true, false, 0) == (Voice.WhatsNew.build == module("ReplicatedStorage", "Shared", "Build").number))
+	WelcomeBack.open("Ada", 3, false, true, 0)
+	press(Voice.WelcomeBack.go)
+	advance(0.4)
+	check("Let's go puts it away", not WelcomeBack.isOpen())
+	invokeResults.CurioAsk = curioWas
+	-- A new guest's welcome bonus, on its chip at the left.
+	LocalPlayer:SetAttribute("WelcomeBonusLeft", 1795)
+	signalOf(LocalPlayer, "attr:WelcomeBonusLeft"):Fire()
+	advance(1.2)
+	check("the newcomer's welcome bonus shows on its chip, counting down", textOnScreen("WELCOME BONUS") ~= nil and textOnScreen("29:5") ~= nil)
+	snapshot("welcome-bonus")
+	LocalPlayer:SetAttribute("WelcomeBonusLeft", nil)
+	signalOf(LocalPlayer, "attr:WelcomeBonusLeft"):Fire()
+	advance(1.2)
+	check("...and goes when it's over", textOnScreen("WELCOME BONUS") == nil)
+end)()
 -- The Evening Calendar: seven evenings, those opened ticked off, tonight's waiting; opening it
 -- (the server says what it was); and on arrival it's offered by itself only when nothing else is up.
 ;(function()
@@ -7309,6 +7356,7 @@ end)()
 	check("...the prize, Gilt and Gems", textOnScreen("+150 Gilt") ~= nil and textOnScreen("+2 Gems") ~= nil)
 	check("...every driver in order, with times", textOnScreen("1st") ~= nil and textOnScreen("Monsieur Laurent") ~= nil and textOnScreen("0:39.3") ~= nil)
 	check("...Race again and Close", textOnScreen("Race again") ~= nil and textOnScreen("Close") ~= nil)
+	check("...and Invite a friend to race next time", textOnScreen("Invite a friend") ~= nil)
 	tower = CircuitDress.towerText()
 	check("the Timing Tower shows the result", tower[1] == "RESULT" and string.find(tower[2] or "", "0:38.4", 1, true) ~= nil, tower[1], tower[2])
 	local podiumNames = {}

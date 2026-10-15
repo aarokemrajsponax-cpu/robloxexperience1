@@ -243,10 +243,37 @@ Voice.StartHere = {
 		{ title = "Sit at a table", line = "Any table in the Salon. Walk up to a chair and take a seat." },
 		{ title = "Sort the treasures", line = "Put each piece in its case: watches in Watches, rings in Jewelry, gold in Money. Every right one earns Gilt." },
 	},
-	after = "Spend your Gilt on your Suite, your look and more.",
+	after = "For your first half hour, every Gilt you earn counts double. Spend it on your Suite, your look and more.",
 	go = "Show me the way",
 	table = "Straight to a table",
 }
+
+-- Welcome back (UI/WelcomeBack): a returning guest's one card, once they've arrived: what's waiting
+-- for them (tonight's present, their brainrots' tip jar) and what's new in the house since they
+-- were last here.
+Voice.WelcomeBack = {
+	title = "Welcome back",
+	heading = "Good to see you, %s",
+	night = "Your %s night at the house.",
+	present = { title = "Tonight's present is waiting", line = "The Evening Calendar: a present every day you come.", key = "Open" },
+	jar = { title = "Your brainrots earned %s Gilt", line = "Their tip jar filled while you were away.", key = "Collect", done = "Collected" },
+	news = "New in the house",
+	go = "Let's go",
+}
+
+-- What's new in this build, told once to each returning guest (Welcome back). Only shown while
+-- `build` is the build that's playing, so old news never shows as new.
+Voice.WhatsNew = {
+	build = 70,
+	lines = {
+		"The Grand Prix races at night: boost pads, the Timing Tower and a podium.",
+		"Admin Abuse throws a party in the Foyer: find the Gold Tile and break the Piñata.",
+		"The holidays' hidden things are real now: love letters, clovers, painted eggs.",
+	},
+}
+
+-- A new guest's welcome bonus, on its chip at the left (UI/PerkChips).
+Voice.WelcomeBonus = { chip = "WELCOME BONUS  %d× GILT  ·  %s" }
 
 -- How to play (the key at the top right): the whole game, explained step by step in plain words,
 -- on five pages: the basics, sorting (the six cases, pictured), the rooms (each with a Go key that

@@ -91,6 +91,11 @@ export type Data = {
 	calendar: { day: number, step: number, weeks: number, total: number },
 	-- The Grand Prix: races run and won, the best three-lap time, and today's Gems from wins.
 	racing: { day: number, gems: number, races: number, wins: number, best: number },
+	-- The last build whose news the guest was shown (Welcome back: New in the house).
+	seenBuild: number,
+	-- A new guest's welcome bonus (server/Newcomer): seconds of double Gilt left to play (-1: never
+	-- had one: a guest from before it began).
+	welcomeBonus: { left: number },
 }
 
 local TEMPLATE: Data = {
@@ -143,6 +148,8 @@ local TEMPLATE: Data = {
 	gemShop = { owned = {}, aura = "", title = "", giltUntil = 0, xpUntil = 0 },
 	calendar = { day = -1, step = 0, weeks = 0, total = 0 },
 	racing = { day = -1, gems = 0, races = 0, wins = 0, best = 0 },
+	seenBuild = 0,
+	welcomeBonus = { left = -1 },
 }
 
 -- Each migration moves data from schema n to n + 1. Add new ones at the end.

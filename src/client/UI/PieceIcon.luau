@@ -6,6 +6,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
+local Theme = require(script.Parent.Theme)
 local PieceArt = require(ReplicatedStorage.Shared.PieceArt) :: any
 
 local PieceIcon = {}
@@ -130,6 +131,8 @@ local function text(parent: GuiObject, p: Prim, px: number, area: Area)
 	l.TextXAlignment = Enum.TextXAlignment.Center
 	l.TextYAlignment = Enum.TextYAlignment.Center
 	l.Parent = parent
+	-- (Small marks stay inside the piece on any screen.)
+	Theme.fit(l, l.TextSize, 5)
 end
 
 drawAll = function(parent: GuiObject, prims: { Prim }, px: number, area: Area)

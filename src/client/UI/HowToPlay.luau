@@ -535,6 +535,7 @@ function HowToPlay.guide(page: string?)
 	Theme.key(keys, "Close", false, function()
 		Root.close(GUIDE)
 	end, 130).LayoutOrder = 2
+	Theme.fillRest(scroll)
 	Root.open(GUIDE, group)
 end
 

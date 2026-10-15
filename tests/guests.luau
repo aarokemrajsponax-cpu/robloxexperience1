@@ -451,6 +451,8 @@ loaded:Fire(owner, profiles[owner])
 advance(5)
 check("the welcome reaches the owner's screen", owner.inbox[1] ~= nil and owner.inbox[1].op == "welcome")
 check("a guest new to the house (no tour yet, no rounds) is marked to be led to the Concierge", owner.inbox[1] ~= nil and owner.inbox[1].guide == true)
+local Build = module("ReplicatedStorage", "Shared", "Build")
+check("a first visit has no news to be told (and this build's is marked seen)", owner.inbox[1] ~= nil and owner.inbox[1].news == false and profiles[owner].seenBuild == Build.number)
 check("a guest who already has a character isn't given another", owner.loads == 0 and owner.Character == early)
 
 ---------------------------------------------------------------------------------------------------
@@ -467,6 +469,18 @@ profiles[ben] = profile(false)
 loaded:Fire(ben, profiles[ben])
 advance(1)
 check("the profile arriving later doesn't spawn a second one", ben.loads == 1)
+local function lastWelcome(p)
+	for i = #p.inbox, 1, -1 do
+		if p.inbox[i].op == "welcome" then
+			return p.inbox[i]
+		end
+	end
+	return nil
+end
+check("a returning guest who hasn't seen this build's news is told it (Welcome back)", lastWelcome(ben) ~= nil and lastWelcome(ben).news == true and profiles[ben].seenBuild == Build.number)
+loaded:Fire(ben, profiles[ben])
+advance(1)
+check("...once: the next visit, no news", lastWelcome(ben) ~= nil and lastWelcome(ben).news == false)
 
 -- Both asking at the same moment: still one.
 local cy = newPlayer("Cy", 3, nil)

@@ -300,6 +300,7 @@ function GemShopPanel.open(start: string?)
 		n.TextColor3 = rgb(250, 240, 220)
 		n.Text = name
 		n.Parent = c
+		Theme.fit(n, 14, 10)
 		local l = Instance.new("TextLabel")
 		l.BackgroundTransparency = 1
 		l.Position = UDim2.fromOffset(8, 102)
@@ -311,6 +312,7 @@ function GemShopPanel.open(start: string?)
 		l.TextColor3 = rgb(180, 176, 168)
 		l.Text = line
 		l.Parent = c
+		Theme.fit(l, 11, 8)
 		local key = Instance.new("TextButton")
 		key.Name = "Key"
 		key.AnchorPoint = Vector2.new(0.5, 1)

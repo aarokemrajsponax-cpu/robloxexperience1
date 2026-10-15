@@ -1,15 +1,19 @@
 --!strict
 -- A guest's perks at a glance, at the left edge while they walk the house (clear of the keys
 -- and the objective card at the top right, the chat at the top left and the thumbstick below):
--- God-Mode Luck's time left (it only runs while they're here), and anything bought and waiting
+-- a new guest's welcome bonus (double Gilt, its time left), God-Mode Luck's time left (both only
+-- run while they're here), and anything bought and waiting
 -- (a decree to write, revives kept for the next run, a rain waiting its turn). Nothing is shown
 -- when there's nothing to show, and it's hidden at the table. (Friends here: the Friend Booster
 -- card, bottom right.)
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
+local Config = require(ReplicatedStorage.Shared.Config)
+local Voice = require(ReplicatedStorage.Shared.Voice)
 local Root = require(script.Parent.Root)
 local Theme = require(script.Parent.Theme)
 local Perks = require(script.Parent.Parent.Perks)
@@ -41,6 +45,7 @@ local DOTS: { [string]: Color3 } = {
 	Revive = Color3.fromRGB(150, 200, 255),
 	Rain = Color3.fromRGB(255, 196, 92),
 	Piano = Color3.fromRGB(230, 180, 255),
+	Welcome = Color3.fromRGB(120, 230, 160),
 }
 local hidden = false
 
@@ -120,8 +125,17 @@ local function chip(id: string, order: number, text: string?, onPress: (() -> ()
 	b.Size = UDim2.fromOffset(math.min(CHIP_WIDTH, w + 26 + 14), 30)
 end
 
+-- A new guest's welcome bonus (server/Newcomer): the seconds left as the server last said, and
+-- when, so the clock counts down smoothly between its words.
+local bonusLeft, bonusAt = 0, 0
+local function welcomeLeft(): number
+	return math.max(0, bonusLeft - (os.clock() - bonusAt))
+end
+
 local function refresh()
 	stack.Visible = not hidden
+	local welcome = welcomeLeft()
+	chip("Welcome", 0, if welcome > 0 then string.format(Voice.WelcomeBonus.chip, (Config.data :: any).Newcomer.gilt, clock(welcome)) else nil)
 	-- (Friends in the house: the Friend Booster card in the bottom-right corner shows them.)
 	local luck = Perks.luckLeft()
 	local mult = if type(Perks.state.luck) == "table" then tonumber(Perks.state.luck.multiplier) else nil
@@ -151,12 +165,20 @@ end
 
 function PerkChips.start()
 	Perks.Changed:Connect(refresh)
+	local me = Players.LocalPlayer
+	local function readBonus()
+		local left = me:GetAttribute("WelcomeBonusLeft")
+		bonusLeft, bonusAt = if type(left) == "number" then left else 0, os.clock()
+		refresh()
+	end
+	me:GetAttributeChangedSignal("WelcomeBonusLeft"):Connect(readBonus)
+	readBonus()
 	local acc = 0
 	RunService.Heartbeat:Connect(function(dt)
 		acc += dt
 		if acc >= 1 then
 			acc = 0
-			if Perks.luckLeft() > 0 or chips.Luck then
+			if Perks.luckLeft() > 0 or chips.Luck or welcomeLeft() > 0 or chips.Welcome then
 				refresh()
 			end
 		end

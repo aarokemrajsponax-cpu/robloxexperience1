@@ -250,6 +250,29 @@ local paid = Gilt.pay(ben, profiles[ben].Data, 100, "test")
 check("the Gold Key pays 20% more Gilt", paid == 120, paid)
 check("Gold Key pieces can be worn", askAs(ben, { op = "equip", kind = "nameplate", id = "plate_goldkey" }).ok)
 check("the Gold Key can't be bought twice", askAs(ben, { op = "goldKey" }).ok == false)
+-- Build 70: a new guest's welcome, double Gilt for their first half hour of play.
+do
+	local Newcomer = module("ServerScriptService", "Server", "Newcomer")
+	local welcomeWas = Gilt.welcome
+	Gilt.welcome = Newcomer.mult
+	Newcomer.arrive(ben, profiles[ben].Data)
+	check("a guest from before the welcome began doesn't get it", ben:GetAttribute("WelcomeBonusLeft") == nil and Newcomer.mult(ben) == 1 and profiles[ben].Data.welcomeBonus.left == 0)
+	local eve = guest("Eve", 77)
+	local ed = profiles[eve].Data
+	ed.visits, ed.firstVisit, ed.welcomeBonus = 1, fakeOs.time(), nil
+	Newcomer.arrive(eve, ed)
+	local minutes = Config.data.Newcomer.minutes
+	check("a first visit starts the welcome: its time on the guest's screen", eve:GetAttribute("WelcomeBonusLeft") == minutes * 60)
+	local doubled = Gilt.pay(eve, ed, 100, "test")
+	check("...and every Gilt counts double", doubled == 100 * Config.data.Newcomer.gilt, doubled)
+	Newcomer.tick(60)
+	check("the time runs while they play", eve:GetAttribute("WelcomeBonusLeft") == minutes * 60 - 60)
+	Newcomer.arrive(eve, ed)
+	check("...and is kept between visits, never started again", ed.welcomeBonus.left == minutes * 60 - 60)
+	Newcomer.tick(minutes * 60)
+	check("when it's over: the chip goes and Gilt is as ever", eve:GetAttribute("WelcomeBonusLeft") == nil and Gilt.pay(eve, ed, 100, "test") == 100)
+	Gilt.welcome = welcomeWas
+end
 passOwners["4:3001"] = true
 local dora = guest("Dora", 4)
 advance(0.5)

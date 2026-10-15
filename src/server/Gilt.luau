@@ -36,6 +36,11 @@ Gilt.surge = function(_player: Player): number
 	return 1
 end
 
+-- A new guest's welcome bonus for their first minutes of play (server/Newcomer; set by Main).
+Gilt.welcome = function(_player: Player): number
+	return 1
+end
+
 -- Every payment, counted for the Badge Book (set by Main).
 Gilt.earned = function(_player: Player, _paid: number) end
 
@@ -52,7 +57,7 @@ function Gilt.pay(player: Player, data: Profiles.Data, earned: number, source: s
 	local double = if data.doubleGilt then ProductConfig.byKey.doubleGilt.Reward.Multiplier else 1
 	local key = if data.goldKey then 1 + g.goldKeyBonus else 1
 	local cap = ProductConfig.Settings.MaxGiltMultiplier
-	local boost = math.min(cap / key, math.max(1, Gilt.boost()) * double * math.max(1, Gilt.personal(player)) * math.max(1, Gilt.friends(player)) * math.max(1, Gilt.surge(player)))
+	local boost = math.min(cap / key, math.max(1, Gilt.boost()) * double * math.max(1, Gilt.personal(player)) * math.max(1, Gilt.friends(player)) * math.max(1, Gilt.surge(player)) * math.max(1, Gilt.welcome(player)))
 	earned = math.floor(earned * boost + 0.5)
 	if data.goldKey then
 		earned = math.floor(earned * key + 0.5)

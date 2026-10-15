@@ -214,6 +214,7 @@ function BadgeBookPanel.open()
 			line.TextColor3 = rgb(170, 166, 158)
 			line.Text = b.line
 			line.Parent = card
+			Theme.fit(line, 11, 8)
 			local footer = Instance.new("TextLabel")
 			footer.BackgroundTransparency = 1
 			footer.Position = UDim2.new(0, 8, 1, -20)

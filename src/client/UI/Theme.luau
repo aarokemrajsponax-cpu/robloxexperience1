@@ -191,9 +191,13 @@ end
 -- Line spacing by kind: running text opens up a little, display type sits tight (its heavy capitals
 -- stand tall: a touch more room between their lines).
 local LINE_HEIGHT: { [string]: number } = { display = 1.12, italic = 1.04, caps = 1.1 }
-type Registered = { label: TextLabel | TextButton, size: number, kind: TextKind }
+-- `box`: the words are kept inside their box (a key, a tile): set smaller, past the readable
+-- floor if need be (never below `least`), rather than spill over its edges.
+type Registered = { label: TextLabel | TextButton, size: number, kind: TextKind, box: boolean?, least: number? }
 
 local registry: { Registered } = {}
+-- (Set below: the largest size at which a label's words fit its box.)
+local sizeToFit: (label: TextLabel | TextButton, size: number, least: number) -> number
 local textScale = 1
 local displayFont = Brand.Fonts.display
 
@@ -240,6 +244,9 @@ local function applyText(r: Registered)
 	label.FontFace = if r.kind == "display" and r.size < 22 then Brand.Fonts.bodyBold else fontFor(r.kind)
 	local floor = math.max(FLOOR[r.kind] or FLOOR_TEXT, math.min(FLOOR_MAX, (MIN_PX[r.kind] or MIN_PX_TEXT) / uiScale))
 	local size = math.floor(math.max(Theme.snap(r.size), floor) * textScale + 0.5)
+	if r.box then
+		size = sizeToFit(label, size, r.least or 10)
+	end
 	label.TextSize = size
 	pcall(function()
 		label.LineHeight = LINE_HEIGHT[r.kind] or 1.18
@@ -515,6 +522,7 @@ function Theme.glass(parent: Instance, name: string, size: UDim2, position: UDim
 		local avail = math.max(160, Root.size().Y - top - 12)
 		group.Size = UDim2.new(size.X, UDim.new(0, math.min(size.Y.Offset, avail)))
 		group.Position = UDim2.new(0.5, 0, 0, top + avail / 2)
+		group:SetAttribute("Centred", true)
 	end
 	group.Parent = parent
 
@@ -602,6 +610,10 @@ end
 -- panel's height is set from its content's: the engine's automatic sizing isn't asked to size
 -- the glass itself, because the glass's fill and glow are sized to it and would hold it at the
 -- tallest it had ever been. (Where the engine can't report sizes, it sizes the glass itself.)
+--
+-- Never taller than the screen: a panel whose words would run off it keeps to the room there is
+-- (under the keys at the top, for a centred one) and what's on it scrolls, a fine gold bar at its
+-- side, so every key on it can always be reached.
 function Theme.fitHeight(group: Frame, content: Frame)
 	group.Size = UDim2.new(group.Size.X, UDim.new(0, 0))
 	content.AutomaticSize = Enum.AutomaticSize.Y
@@ -613,13 +625,40 @@ function Theme.fitHeight(group: Frame, content: Frame)
 		group.AutomaticSize = Enum.AutomaticSize.Y
 		return
 	end
+	local scroller: ScrollingFrame? = nil
+	local function room(): number
+		local top = if group:GetAttribute("Centred") then 66 + 12 else 24
+		return math.max(160, math.floor(Root.size().Y - top))
+	end
 	local function sync()
 		if not group.Parent then
 			return
 		end
 		local high = math.ceil(content.AbsoluteSize.Y / pxPerUnit(group) - 0.01)
-		if high > 0 and group.Size.Y.Offset ~= high then
-			group.Size = UDim2.new(group.Size.X, UDim.new(0, high))
+		if high <= 0 then
+			return
+		end
+		local most = room()
+		if high > most and not scroller then
+			local s = Instance.new("ScrollingFrame")
+			s.Name = "Scroll"
+			s.BackgroundTransparency = 1
+			s.BorderSizePixel = 0
+			s.Size = UDim2.fromScale(1, 1)
+			s.CanvasSize = UDim2.new()
+			s.AutomaticCanvasSize = Enum.AutomaticSize.Y
+			s.ScrollingDirection = Enum.ScrollingDirection.Y
+			s.ScrollBarThickness = 4
+			s.ScrollBarImageColor3 = C.gold
+			s.ScrollBarImageTransparency = 0.3
+			s.VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar
+			s.Parent = group
+			content.Parent = s
+			scroller = s
+		end
+		local want = math.min(high, most)
+		if group.Size.Y.Offset ~= want then
+			group.Size = UDim2.new(group.Size.X, UDim.new(0, want))
 		end
 	end
 	content:GetPropertyChangedSignal("AbsoluteSize"):Connect(sync)
@@ -665,6 +704,145 @@ local function measured(inst: Instance, prop: string): Vector2
 		return (inst :: any)[prop]
 	end)
 	return if ok and typeof(v) == "Vector2" then v else Vector2.zero
+end
+
+-- The room inside a label for its words, in the panel's own units: its size (as laid out, where
+-- it's sized by scale) less its padding. Zero where it isn't known yet.
+local function roomIn(label: GuiObject): (number, number)
+	local w, h = label.Size.X.Offset, label.Size.Y.Offset
+	if label.Size.X.Scale > 0 or label.Size.Y.Scale > 0 or label.AutomaticSize ~= Enum.AutomaticSize.None then
+		local laid = measured(label, "AbsoluteSize") / math.max(0.1, uiScale)
+		if laid.X > 0 then
+			w = if label.Size.X.Scale > 0 then laid.X else w
+			h = if label.Size.Y.Scale > 0 then laid.Y else h
+		end
+	end
+	local pad = label:FindFirstChildOfClass("UIPadding")
+	if pad then
+		w -= pad.PaddingLeft.Offset + pad.PaddingRight.Offset
+		h -= pad.PaddingTop.Offset + pad.PaddingBottom.Offset
+	end
+	return w, h
+end
+
+-- The largest size, from `size` down to `least`, at which a label's words fit its box (on as many
+-- lines as it's tall enough for, where it wraps).
+sizeToFit = function(label: TextLabel | TextButton, size: number, least: number): number
+	local w, h = roomIn(label)
+	if w <= 0 or h <= 0 or label.Text == "" then
+		return size
+	end
+	local grows = label.AutomaticSize == Enum.AutomaticSize.Y or label.AutomaticSize == Enum.AutomaticSize.XY
+	while size > least do
+		local set = Theme.measure(label.Text, size, label.FontFace, if label.TextWrapped then w else nil)
+		if set.X <= w + 1 and (grows or set.Y <= h + 2) then
+			break
+		end
+		size -= 1
+	end
+	return size
+end
+Theme.sizeToFit = sizeToFit
+
+-- A panel's scrolling middle takes exactly the height its other rows leave (its title, tabs and
+-- the keys at its foot), as they're really laid out on this screen, so its words never run under
+-- those keys: where the rows grow (a phone's larger text), the middle gives way and scrolls.
+function Theme.fillRest(middle: GuiObject)
+	local function ratio(): number
+		local node: Instance? = middle.Parent
+		while node and node:IsA("GuiObject") do
+			local g = node :: GuiObject
+			if g.Size.X.Scale == 0 and g.Size.X.Offset > 0 then
+				local px = measured(g, "AbsoluteSize").X
+				if px > 0 then
+					return px / g.Size.X.Offset
+				end
+			end
+			node = node.Parent
+		end
+		return math.max(0.05, uiScale)
+	end
+	local busy = false
+	local function sync()
+		local parent = middle.Parent
+		if busy or not (parent and parent:IsA("GuiObject")) then
+			return
+		end
+		local box = measured(parent, "AbsoluteSize")
+		if box.Y <= 0 then
+			return
+		end
+		local k = ratio()
+		local list = parent:FindFirstChildOfClass("UIListLayout")
+		local pad = parent:FindFirstChildOfClass("UIPadding")
+		local room = box.Y - (if pad then (pad.PaddingTop.Offset + pad.PaddingBottom.Offset) * k else 0)
+		local count = 0
+		for _, c in parent:GetChildren() do
+			if c ~= middle and c:IsA("GuiObject") and c.Visible then
+				room -= measured(c, "AbsoluteSize").Y
+				count += 1
+			end
+		end
+		room -= (if list then list.Padding.Offset * k else 0) * count
+		local want = math.max(60, math.floor(room / k))
+		if middle.Size.Y.Scale ~= 0 or math.abs(middle.Size.Y.Offset - want) >= 1 then
+			busy = true
+			middle.Size = UDim2.new(middle.Size.X, UDim.new(0, want))
+			busy = false
+		end
+	end
+	local function watch(c: Instance)
+		if c ~= middle and c:IsA("GuiObject") then
+			pcall(function()
+				c:GetPropertyChangedSignal("AbsoluteSize"):Connect(sync)
+			end)
+			c:GetPropertyChangedSignal("Visible"):Connect(sync)
+		end
+	end
+	local parent = middle.Parent
+	if parent then
+		pcall(function()
+			(parent :: any):GetPropertyChangedSignal("AbsoluteSize"):Connect(sync)
+		end)
+		for _, c in parent:GetChildren() do
+			watch(c)
+		end
+		parent.ChildAdded:Connect(function(c)
+			watch(c)
+			task.defer(sync)
+		end)
+	end
+	task.defer(sync)
+	sync()
+end
+
+-- Words kept inside their box from now on: as large as `most` (as Theme.text set them, if it
+-- did), smaller where they'd spill over (never below `least`), and an ellipsis if even that
+-- doesn't do. Kept as the words or the box change.
+function Theme.fit(label: TextLabel | TextButton, most: number?, least: number?)
+	for _, r in registry do
+		if r.label == label then
+			r.box = true
+			r.least = least
+			if most then
+				r.size = most
+			end
+			applyText(r)
+			return
+		end
+	end
+	local l = label :: any
+	local top = most or l.TextSize
+	local function refit()
+		l.TextSize = sizeToFit(label, top, least or 8)
+	end
+	l.TextTruncate = Enum.TextTruncate.AtEnd
+	refit()
+	l:GetPropertyChangedSignal("Text"):Connect(refit)
+	l:GetPropertyChangedSignal("Size"):Connect(refit)
+	pcall(function()
+		l:GetPropertyChangedSignal("AbsoluteSize"):Connect(refit)
+	end)
 end
 
 -- The gold outline a gamepad's selection draws around a key (instead of Roblox's default).
@@ -826,21 +1004,10 @@ function Theme.key(parent: Instance, text: string, primary: boolean?, onPress: (
 	inner.PaddingTop = UDim.new(0, 6)
 	inner.PaddingBottom = UDim.new(0, 6)
 	inner.Parent = button
-	local r = { label = button, size = 16, kind = "caps" :: TextKind }
+	-- (Its words kept inside it on every screen: a phone's larger text floor never pushes them
+	-- over the key's edges.)
+	local r = { label = button, size = 16, kind = "caps" :: TextKind, box = true, least = 10 }
 	local function fitWords()
-		-- The key's width: its offset, or (sized by scale) its laid-out width once known.
-		local width = button.Size.X.Offset - 20
-		if button.Size.X.Scale > 0 then
-			local laid = measured(button, "AbsoluteSize").X / math.max(0.1, uiScale)
-			width = if laid > 0 then laid - 20 else math.huge
-		end
-		local chars = utf8.len(button.Text) or #button.Text
-		local size = 16
-		-- Gotham SSm Bold capitals run about 0.74 of their size wide.
-		while size > 13 and chars * size * 0.74 > width do
-			size = if size == 16 then 14 else 13
-		end
-		r.size = size
 		applyText(r)
 	end
 	fitWords()

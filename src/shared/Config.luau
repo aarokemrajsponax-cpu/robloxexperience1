@@ -971,6 +971,13 @@ local defaults = {
 		scheduleMax = 20, -- events kept on the schedule at once
 	},
 
+	-- A new guest's welcome (server/Newcomer): every Gilt earned counts this many times over for
+	-- their first minutes of play (only while they're here; it waits if they leave).
+	Newcomer = {
+		minutes = 30,
+		gilt = 2,
+	},
+
 	-- Friends on Roblox in the house together (server Friends): they may visit each other's
 	-- Suites, and both earn more Gilt while together.
 	-- The Friend Booster: friends on Roblox in the house together both earn more, and more again

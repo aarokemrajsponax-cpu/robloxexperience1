@@ -786,7 +786,19 @@ local function build()
 
 	-- The hint across the middle of the cloth, the first times you sit; your rival's line at its
 	-- foot.
-	header.hint = label(root, "", 15, F.body, SMOKE, { Name = "Hint", TextTransparency = 1, TextWrapped = true, ZIndex = 3 })
+	-- (The first times you sit: a line of how to play, on a soft dark pill above the pieces so the
+	-- words never mix with them, kept inside its pill on any screen.)
+	header.hint = label(root, "", 15, F.body, LIGHT, { Name = "Hint", TextTransparency = 1, TextWrapped = true, ZIndex = 30, BackgroundColor3 = Color3.fromRGB(12, 12, 15) })
+	do
+		local hc = Instance.new("UICorner")
+		hc.CornerRadius = UDim.new(0, 12)
+		hc.Parent = header.hint
+		local hp = Instance.new("UIPadding")
+		hp.PaddingLeft = UDim.new(0, 14)
+		hp.PaddingRight = UDim.new(0, 14)
+		hp.Parent = header.hint
+		Theme.fit(header.hint :: TextLabel, textSize(15), 9)
+	end
 	header.rival = label(root, "", 13, F.bodyMedium, SMOKE, { Name = "Rival", TextTransparency = 1, ZIndex = 3 })
 
 	glowLayer = Instance.new("Frame")
@@ -1070,8 +1082,8 @@ local function layoutChrome()
 	rail.Position = UDim2.fromOffset(L.left, ruleY - 1)
 	rail.Size = UDim2.fromOffset(L.width, math.max(2, math.floor(2 * s)))
 	local hint = header.hint :: TextLabel
-	hint.Position = UDim2.fromOffset(L.vp.X / 2, t.y + t.h / 2)
-	hint.Size = UDim2.fromOffset(math.min(t.w - 40 * s, 760 * s), 44 * s)
+	hint.Position = UDim2.fromOffset(L.vp.X / 2, t.y + 34 * s)
+	hint.Size = UDim2.fromOffset(math.min(t.w - 40 * s, 760 * s), 52 * s)
 	local rival = header.rival :: TextLabel
 	rival.Position = UDim2.fromOffset(L.vp.X / 2, t.y + t.h - 18 * s)
 	rival.Size = UDim2.fromOffset(t.w - 40 * s, 20 * s)
@@ -1812,6 +1824,7 @@ local function cardFrame(info: PieceInfo, icon: number): (Frame, UIScale, Frame,
 			ZIndex = 3,
 		})
 		corner(chip, 9999)
+		Theme.fit(chip, chip.TextSize, 6)
 	end
 	local ring = sheet(f, "Selected", LIGHT, 1)
 	ring.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -3434,10 +3447,10 @@ function SortScreen.hint(on: boolean)
 		hintLeft = Config.data.Sorting.hintFilings
 		local how = (Voice.Sorting.hints :: any)[State.inputKind()] or Voice.Sorting.hints.mouse
 		l.Text = Voice.Sorting.objective .. "\n" .. how
-		Ease.play(l, Ease.info(0.6, Enum.EasingStyle.Sine), { TextTransparency = 0 })
+		Ease.play(l, Ease.info(0.6, Enum.EasingStyle.Sine), { TextTransparency = 0, BackgroundTransparency = 0.18 })
 	else
 		hintLeft = 0
-		Ease.play(l, Ease.info(0.5, Enum.EasingStyle.Sine), { TextTransparency = 1 })
+		Ease.play(l, Ease.info(0.5, Enum.EasingStyle.Sine), { TextTransparency = 1, BackgroundTransparency = 1 })
 	end
 end
 
