@@ -1216,16 +1216,17 @@ local function press(text)
 end
 -- Snapshots: `lune run tests/client.luau full <folder>` also writes the screen's UI at a few
 -- moments as JSON, for tools/ui/render.py to draw (a way to look at the UI without Studio).
-local SNAPSHOT = process.args[2]
-local snapshotsDue = {}
-local function writeSnapshots()
-	for _, due in snapshotsDue do
+-- (Written at the end, on the main thread: writing a file yields, and a section run in its own
+-- coroutine would otherwise be left waiting until after the run.)
+local SNAPSHOT = { dir = process.args[2], due = {} }
+function SNAPSHOT.write()
+	for _, due in SNAPSHOT.due do
 		fs.writeFile(due.file, due.json)
 	end
-	table.clear(snapshotsDue)
+	table.clear(SNAPSHOT.due)
 end
 local function snapshot(name: string)
-	if not SNAPSHOT then
+	if not SNAPSHOT.dir then
 		return
 	end
 	local function udim2(u)
@@ -1337,9 +1338,7 @@ local function snapshot(name: string)
 			table.insert(out.guis, dump(g))
 		end
 	end
-	-- (Written at the end, on the main thread: writing a file yields, and a section run in its
-	-- own coroutine would otherwise be left waiting until after the run.)
-	table.insert(snapshotsDue, { file = SNAPSHOT .. "/" .. name .. ".json", json = serde.encode("json", out) })
+	table.insert(SNAPSHOT.due, { file = SNAPSHOT.dir .. "/" .. name .. ".json", json = serde.encode("json", out) })
 	-- EXPORT_AT=<name> EXPORT=<file>: the world on this screen at that moment, for the 3D viewer
 	-- (tools/view): what a show has built round the guest, say.
 	if process.env.EXPORT_AT == name and process.env.EXPORT then
@@ -1443,7 +1442,7 @@ if MODE ~= "full" then
 	advance(3)
 	check(where .. ": leaving the table gives your character back", camera.CameraType == roblox.Enum.CameraType.Custom and controls.enabled == true)
 	check(where .. ": no errors", #errors == 0, errors[1])
-	writeSnapshots()
+	SNAPSHOT.write()
 	print(string.format("%s: %d passed, %d failed", MODE, passed, failed))
 	process.exit(if failed > 0 then 1 else 0)
 end
@@ -8105,7 +8104,7 @@ check("and the controls", controls.enabled == true)
 
 advance(10)
 check("no errors at all", #errors == 0, #errors)
-writeSnapshots()
+SNAPSHOT.write()
 print(string.format("%d passed, %d failed (%d tweens played, %d reads of destroyed instances)", passed, failed, tweens, destroyedReads))
 if failed > 0 then
 	process.exit(1)
