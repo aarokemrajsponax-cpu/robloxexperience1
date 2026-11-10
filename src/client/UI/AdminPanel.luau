@@ -425,6 +425,11 @@ function AdminPanel.open(startPage: string?)
 						send({ op = "gift", userId = g.userId, amount = amount }, string.format("%s received %d Gilt.", g.name, amount))
 					end)
 				end
+				for _, amount in (v.giftGems or {}) :: { number } do
+					small(gifts, amount .. " 💎", false, function()
+						send({ op = "gems", userId = g.userId, amount = amount }, string.format("%s received %d Gems.", g.name, amount))
+					end)
+				end
 				small(gifts, "Remove", false, function()
 					send({ op = "kick", userId = g.userId }, g.name .. " has been shown out.")
 				end)

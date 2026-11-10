@@ -2385,6 +2385,9 @@ local function flyIn(c: Card, bin: Bin, quiet: boolean)
 	local d = p3 - p0
 	local dist = d.Magnitude
 	local up = math.clamp(dist * 0.32, 46 * s, 190 * s)
+	-- (Up off the cloth first even into a case straight below: part of the drop goes into the
+	-- climb, or on a phone, where the cases sit just under the pieces, the toss was a slide.)
+	local lift = math.min(math.max(0, d.Y) * 0.35, 60 * s)
 	-- (A toss, not a teleport: how it was moving when let go carries it on a little.)
 	local carry = c.vel * 0.07
 	if carry.Magnitude > 110 * s then
@@ -2401,8 +2404,8 @@ local function flyIn(c: Card, bin: Bin, quiet: boolean)
 		c = c,
 		bin = bin,
 		p0 = p0,
-		p1 = p0 + carry + Vector2.new(d.X * 0.18, -up),
-		p2 = p3 + Vector2.new(-d.X * 0.1, -up * 1.2),
+		p1 = p0 + carry + Vector2.new(d.X * 0.18, -up - lift),
+		p2 = p3 + Vector2.new(-d.X * 0.1, -up * 1.2 - lift),
 		p3 = p3,
 		t = 0,
 		dur = dur,

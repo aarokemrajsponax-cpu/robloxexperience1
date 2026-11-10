@@ -5397,16 +5397,13 @@ advance(0.5)
 	advance(0.4)
 	check("Let's go puts it away", not WelcomeBack.isOpen())
 	invokeResults.CurioAsk = curioWas
-	-- A new guest's welcome bonus, on its chip at the left.
+	-- A new guest's welcome bonus has no capsule on the screen (Start Here says it).
 	LocalPlayer:SetAttribute("WelcomeBonusLeft", 1795)
 	signalOf(LocalPlayer, "attr:WelcomeBonusLeft"):Fire()
 	advance(1.2)
-	check("the newcomer's welcome bonus shows on its chip, counting down", textOnScreen("WELCOME BONUS") ~= nil and textOnScreen("29:5") ~= nil)
-	snapshot("welcome-bonus")
+	check("the newcomer's welcome bonus puts no capsule on the screen", textOnScreen("WELCOME BONUS") == nil)
 	LocalPlayer:SetAttribute("WelcomeBonusLeft", nil)
 	signalOf(LocalPlayer, "attr:WelcomeBonusLeft"):Fire()
-	advance(1.2)
-	check("...and goes when it's over", textOnScreen("WELCOME BONUS") == nil)
 end)()
 -- The Evening Calendar: seven evenings, those opened ticked off, tonight's waiting; opening it
 -- (the server says what it was); and on arrival it's offered by itself only when nothing else is up.

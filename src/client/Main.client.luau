@@ -737,9 +737,11 @@ local function onPlay(fromTitle: boolean?)
 			CameraRig.follow()
 		end
 	end)
-	start("Controls", function()
+	start("Speed", applySpeed)
+	-- (Roblox's controls on their own thread: on a slow phone the PlayerModule can take a while to
+	-- load, and the keys never wait on it.)
+	task.spawn(start, "Controls", function()
 		setControls(true)
-		applySpeed()
 	end)
 	State.setPhase("play")
 	pcall(State.funnel, 3)

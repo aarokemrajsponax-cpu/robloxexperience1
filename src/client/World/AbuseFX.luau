@@ -1294,11 +1294,13 @@ local function cloud(name: string, size: Vector3, offset: Vector3, configure: (A
 	end)
 	return function()
 		conn:Disconnect()
-		for _, e in att:GetChildren() do
-			if e:IsA("ParticleEmitter") then
-				e.Enabled = false
+		pcall(function()
+			for _, e in att:GetChildren() do
+				if e:IsA("ParticleEmitter") then
+					e.Enabled = false
+				end
 			end
-		end
+		end)
 		task.delay(3, function()
 			box:Destroy()
 		end)
@@ -1330,8 +1332,10 @@ local function blizzard(seconds: number)
 		while alive(my) and os.clock() - started < seconds do
 			task.wait(0.25)
 		end
-		stopSnow()
+		-- (The whiteout first: if the snow is already gone with its box, stopping it mustn't leave
+		-- every screen washed white.)
 		cc:Destroy()
+		pcall(stopSnow)
 	end)
 end
 

@@ -2,7 +2,8 @@
 -- Start here: for a guest still new to the house, once, just after the welcome. The whole game in
 -- three plain steps (meet the Concierge, sit at a table, sort the treasures), and two keys: Show
 -- me the way (the gold arrow leads to the Concierge, who shows them round) and Straight to a
--- table. It waits if anything else is on the screen, and never opens at a table.
+-- table. It waits if anything else is on the screen, and never opens at a table. (On a phone on its
+-- side the steps stand side by side on a wider card: it fits, keys and all, without scrolling.)
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -25,8 +26,12 @@ StartHere.toTable = function() end
 
 local shown = false
 
+-- A screen shorter than this (in the UI's own units: a phone on its side) has the three steps side
+-- by side on a wider card, so the card fits without scrolling and its keys are never out of sight.
+local SHORT = 560
+
 -- One step: its number in a gold ring, its title, its line.
-local function step(parent: Instance, n: number, title: string, line: string)
+local function step(parent: Instance, n: number, title: string, line: string): Frame
 	local row = Instance.new("Frame")
 	row.Name = "Step" .. n
 	row.BackgroundTransparency = 1
@@ -69,6 +74,7 @@ local function step(parent: Instance, n: number, title: string, line: string)
 		TextWrapped = true,
 		AutomaticSize = Enum.AutomaticSize.Y,
 	})
+	return row
 end
 
 function StartHere.open()
@@ -76,15 +82,33 @@ function StartHere.open()
 		return
 	end
 	local S = Voice.StartHere
-	local w = Root.panelWidth(520)
+	local short = Root.size().Y < SHORT
+	local w = Root.panelWidth(if short then 880 else 520)
 	local group, content = Theme.glass(Root.panels, NAME, UDim2.fromOffset(w, 420))
-	local list = Theme.list(content, 12)
+	local list = Theme.list(content, if short then 10 else 12)
 	list.VerticalAlignment = Enum.VerticalAlignment.Top
 	Theme.text(content, S.title, 11, "caps", { LayoutOrder = 1 })
 	Theme.text(content, S.heading, 24, "display", { LayoutOrder = 2 })
 	local inner = w - 48
+	-- (Side by side when the screen is short and the card wide enough for three columns.)
+	local across = short and inner >= 600
+	local steps: Instance = content
+	if across then
+		local row = Instance.new("Frame")
+		row.Name = "Steps"
+		row.BackgroundTransparency = 1
+		row.AutomaticSize = Enum.AutomaticSize.Y
+		row.Size = UDim2.new(1, 0, 0, 0)
+		row.LayoutOrder = 3
+		row.Parent = content
+		Theme.list(row, 16, true).VerticalAlignment = Enum.VerticalAlignment.Top
+		steps = row
+	end
 	for n, s in S.steps do
-		step(content, n, s.title, s.line)
+		local row = step(steps, n, s.title, if across then s.short or s.line else s.line)
+		if across then
+			row.Size = UDim2.new(0, math.floor((inner - 32) / 3), 0, 0)
+		end
 	end
 	Theme.text(content, S.after, 14, "body", { LayoutOrder = 10, TextColor3 = C.lightGold, TextWrapped = true })
 	local keys = Instance.new("Frame")

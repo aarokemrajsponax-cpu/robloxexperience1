@@ -1,19 +1,15 @@
 --!strict
 -- A guest's perks at a glance, at the left edge while they walk the house (clear of the keys
 -- and the objective card at the top right, the chat at the top left and the thumbstick below):
--- a new guest's welcome bonus (double Gilt, its time left), God-Mode Luck's time left (both only
--- run while they're here), and anything bought and waiting
+-- God-Mode Luck's time left (it only runs while they're here), and anything bought and waiting
 -- (a decree to write, revives kept for the next run, a rain waiting its turn). Nothing is shown
 -- when there's nothing to show, and it's hidden at the table. (Friends here: the Friend Booster
--- card, bottom right.)
+-- card, bottom right. A new guest's welcome bonus has no capsule: the Start Here card says it.)
 
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
-local Config = require(ReplicatedStorage.Shared.Config)
-local Voice = require(ReplicatedStorage.Shared.Voice)
 local Root = require(script.Parent.Root)
 local Theme = require(script.Parent.Theme)
 local Perks = require(script.Parent.Parent.Perks)
@@ -45,7 +41,6 @@ local DOTS: { [string]: Color3 } = {
 	Revive = Color3.fromRGB(150, 200, 255),
 	Rain = Color3.fromRGB(255, 196, 92),
 	Piano = Color3.fromRGB(230, 180, 255),
-	Welcome = Color3.fromRGB(120, 230, 160),
 }
 local hidden = false
 
@@ -68,11 +63,12 @@ local function chip(id: string, order: number, text: string?, onPress: (() -> ()
 	end
 	if not c then
 		-- A capsule of black glass with a fine turning gold edge and a point of the perk's own
-		-- light at its left; its words in bright gold.
+		-- light at its left; its words in bright gold. (One solid colour: a UIGradient on a text
+		-- button tints its words as well, and a dark one put them out.)
 		local b = Instance.new("TextButton")
 		b.Name = id
 		b.AutoButtonColor = false
-		b.BackgroundColor3 = Color3.new(1, 1, 1)
+		b.BackgroundColor3 = Color3.fromRGB(20, 19, 23)
 		b.BackgroundTransparency = 0.06
 		b.Size = UDim2.fromOffset(CHIP_WIDTH, 30)
 		b.LayoutOrder = order
@@ -82,10 +78,6 @@ local function chip(id: string, order: number, text: string?, onPress: (() -> ()
 		b.TextTruncate = Enum.TextTruncate.AtEnd
 		b.TextColor3 = Brand.Colours.brightGold
 		b.Active = onPress ~= nil
-		local fill = Instance.new("UIGradient")
-		fill.Rotation = 90
-		fill.Color = ColorSequence.new(Color3.fromRGB(30, 28, 32), Color3.fromRGB(9, 9, 12))
-		fill.Parent = b
 		local pad = Instance.new("UIPadding")
 		pad.PaddingLeft = UDim.new(0, 26)
 		pad.PaddingRight = UDim.new(0, 12)
@@ -125,17 +117,8 @@ local function chip(id: string, order: number, text: string?, onPress: (() -> ()
 	b.Size = UDim2.fromOffset(math.min(CHIP_WIDTH, w + 26 + 14), 30)
 end
 
--- A new guest's welcome bonus (server/Newcomer): the seconds left as the server last said, and
--- when, so the clock counts down smoothly between its words.
-local bonusLeft, bonusAt = 0, 0
-local function welcomeLeft(): number
-	return math.max(0, bonusLeft - (os.clock() - bonusAt))
-end
-
 local function refresh()
 	stack.Visible = not hidden
-	local welcome = welcomeLeft()
-	chip("Welcome", 0, if welcome > 0 then string.format(Voice.WelcomeBonus.chip, (Config.data :: any).Newcomer.gilt, clock(welcome)) else nil)
 	-- (Friends in the house: the Friend Booster card in the bottom-right corner shows them.)
 	local luck = Perks.luckLeft()
 	local mult = if type(Perks.state.luck) == "table" then tonumber(Perks.state.luck.multiplier) else nil
@@ -165,20 +148,12 @@ end
 
 function PerkChips.start()
 	Perks.Changed:Connect(refresh)
-	local me = Players.LocalPlayer
-	local function readBonus()
-		local left = me:GetAttribute("WelcomeBonusLeft")
-		bonusLeft, bonusAt = if type(left) == "number" then left else 0, os.clock()
-		refresh()
-	end
-	me:GetAttributeChangedSignal("WelcomeBonusLeft"):Connect(readBonus)
-	readBonus()
 	local acc = 0
 	RunService.Heartbeat:Connect(function(dt)
 		acc += dt
 		if acc >= 1 then
 			acc = 0
-			if Perks.luckLeft() > 0 or chips.Luck or welcomeLeft() > 0 or chips.Welcome then
+			if Perks.luckLeft() > 0 or chips.Luck then
 				refresh()
 			end
 		end

@@ -22,6 +22,8 @@ local NightlyCard = {}
 
 local NAME = "NightlyCard"
 local LAUNCH = "nightly"
+-- A screen shorter than this (in the UI's own units: a phone on its side) gets the card's short form.
+local SHORT = 560
 
 local MONTHS = { "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December" }
 
@@ -65,13 +67,21 @@ function NightlyCard.show(card: { [string]: any }, actions: Actions)
 	if Root.isOpen(NAME) then
 		Root.close(NAME)
 	end
-	local w = Root.panelWidth(460)
+	-- (A short screen, a phone on its side: a wider card, its standing on one line and its four
+	-- keys in one row, so it fits without scrolling and Keep playing is never out of sight.)
+	local short = Root.size().Y < SHORT
+	local w = Root.panelWidth(if short then 760 else 460)
+	-- (One row when the four keys fit across the card, a little narrower than in two rows.)
+	local across = (if Share.allowed() then 140 + 8 else 0) + 140 + 8 + 170 + 8 + 140
+	local oneRow = short and w - 48 >= across
 	local group, content = Theme.glass(Root.panels, NAME, UDim2.fromOffset(w, 540))
 	Theme.fitHeight(group, content)
 	Theme.list(content, 8).VerticalAlignment = Enum.VerticalAlignment.Top
 	local room = Rooms.get(card.room)
 
-	Theme.text(content, Brand.Name, 11, "caps", { LayoutOrder = 1 })
+	if not short then
+		Theme.text(content, Brand.Name, 11, "caps", { LayoutOrder = 1 })
+	end
 	Theme.text(content, if card.scored then "Tonight's Table" else "Tonight's Table · Rehearsal", 22, "display", { LayoutOrder = 2 })
 	Theme.text(content, dateText(card.key) .. "  ·  " .. (if room then room.name else "") .. " rules", 13, "body", { LayoutOrder = 3, TextColor3 = Brand.Colours.smoke })
 	Theme.hairline(content, UDim.new(0, 120), 4)
@@ -100,6 +110,9 @@ function NightlyCard.show(card: { [string]: any }, actions: Actions)
 	elseif type(card.reason) == "string" and card.reason ~= "" and card.reason ~= "left" then
 		table.insert(standing, card.reason)
 	end
+	if short and #standing > 1 then
+		standing = { table.concat(standing, "  ·  ") }
+	end
 	for i, text in standing do
 		Theme.text(content, text, 14, "body", { LayoutOrder = 7 + i, TextColor3 = Brand.Colours.lightGold })
 	end
@@ -120,17 +133,21 @@ function NightlyCard.show(card: { [string]: any }, actions: Actions)
 	row.LayoutOrder = 1
 	row.Parent = keys
 	Theme.list(row, 8, true)
+	-- (In one row, Keep playing leads and is the only gold key.)
 	if Share.allowed() then
-		Theme.key(row, "Share", true, share, 150).LayoutOrder = 1
+		Theme.key(row, "Share", not oneRow, share, if oneRow then 140 else 150).LayoutOrder = 2
 	end
-	Theme.key(row, "Invite", false, invite, 150).LayoutOrder = 2
+	Theme.key(row, "Invite", false, invite, if oneRow then 140 else 150).LayoutOrder = 3
 	-- (Keep playing and Leave side by side: the card stays short enough to clear the cases below.)
-	local row2 = Instance.new("Frame")
-	row2.BackgroundTransparency = 1
-	row2.Size = UDim2.new(1, 0, 0, 44)
-	row2.LayoutOrder = 2
-	row2.Parent = keys
-	Theme.list(row2, 8, true)
+	local row2 = row
+	if not oneRow then
+		row2 = Instance.new("Frame")
+		row2.BackgroundTransparency = 1
+		row2.Size = UDim2.new(1, 0, 0, 44)
+		row2.LayoutOrder = 2
+		row2.Parent = keys
+		Theme.list(row2, 8, true)
+	end
 	Theme.key(row2, "Keep playing", true, function()
 		Root.close(NAME)
 		actions.rehearse()
@@ -138,7 +155,7 @@ function NightlyCard.show(card: { [string]: any }, actions: Actions)
 	Theme.key(row2, "Leave", false, function()
 		Root.close(NAME)
 		actions.leave()
-	end, 150).LayoutOrder = 2
+	end, if oneRow then 140 else 150).LayoutOrder = 4
 	Root.sticky[NAME] = true
 	Root.open(NAME, group, nil, false)
 end

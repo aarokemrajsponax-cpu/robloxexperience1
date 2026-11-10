@@ -84,7 +84,9 @@ local function greenKey(parent: Instance, name: string, text: string, size: UDim
 	local b = Instance.new("TextButton")
 	b.Name = name
 	b.AutoButtonColor = false
-	b.BackgroundColor3 = Color3.new(1, 1, 1)
+	-- (One solid green with a gloss laid over its top: a UIGradient on a text key tints its words
+	-- too, and a dark one put them out.)
+	b.BackgroundColor3 = GREEN:Lerp(DEEP, 0.35)
 	b.BorderSizePixel = 0
 	b.Size = size
 	b.Text = text
@@ -95,14 +97,17 @@ local function greenKey(parent: Instance, name: string, text: string, size: UDim
 	b.TextStrokeTransparency = 0.4
 	b.Parent = parent
 	corner(b, 12)
+	local gl = Instance.new("Frame")
+	gl.Name = "Gloss"
+	gl.BackgroundColor3 = Color3.new(1, 1, 1)
+	gl.BorderSizePixel = 0
+	gl.Size = UDim2.fromScale(1, 0.6)
+	gl.Parent = b
+	corner(gl, 12)
 	local g = Instance.new("UIGradient")
 	g.Rotation = 90
-	g.Color = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, GREEN:Lerp(Color3.new(1, 1, 1), 0.25)),
-		ColorSequenceKeypoint.new(0.55, GREEN:Lerp(DEEP, 0.45)),
-		ColorSequenceKeypoint.new(1, DEEP),
-	})
-	g.Parent = b
+	g.Transparency = NumberSequence.new(0.62, 1)
+	g.Parent = gl
 	stroke(b, GREEN:Lerp(Color3.new(1, 1, 1), 0.4), 1.5, 0.2)
 	b.Activated:Connect(onPress)
 	return b

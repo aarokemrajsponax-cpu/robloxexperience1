@@ -217,15 +217,21 @@ local DEEP = rgb(18, 104, 56)
 local CARD_BG = rgb(14, 16, 18)
 
 -- A glossy fill in the boost's green: light at the top, deep at the foot, a sheen across the top.
-local function gloss(target: GuiObject, radius: number)
-	local g = Instance.new("UIGradient")
-	g.Rotation = 90
-	g.Color = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, GREEN:Lerp(Color3.new(1, 1, 1), 0.2)),
-		ColorSequenceKeypoint.new(0.55, GREEN:Lerp(DEEP, 0.5)),
-		ColorSequenceKeypoint.new(1, DEEP),
-	})
-	g.Parent = target
+-- (`words`: the target carries its own words, so one solid green: a UIGradient tints the words
+-- too, and a dark one put them out.)
+local function gloss(target: GuiObject, radius: number, words: boolean?)
+	if words then
+		target.BackgroundColor3 = GREEN:Lerp(DEEP, 0.4)
+	else
+		local g = Instance.new("UIGradient")
+		g.Rotation = 90
+		g.Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, GREEN:Lerp(Color3.new(1, 1, 1), 0.2)),
+			ColorSequenceKeypoint.new(0.55, GREEN:Lerp(DEEP, 0.5)),
+			ColorSequenceKeypoint.new(1, DEEP),
+		})
+		g.Parent = target
+	end
 	local sheen = frame(target, "Sheen", Color3.new(1, 1, 1), 0)
 	sheen.Position = UDim2.fromOffset(3, 2)
 	sheen.Size = UDim2.new(1, -6, 0.46, 0)
@@ -297,10 +303,9 @@ local function inviteKey(parent: Instance): TextButton
 	k.AnchorPoint = Vector2.new(0, 1)
 	k.Position = UDim2.fromScale(0, 1)
 	k.Size = UDim2.new(1, 0, 0, 40)
-	k.BackgroundColor3 = Color3.new(1, 1, 1)
 	k.ZIndex = 4
 	corner(k, 12)
-	gloss(k, 12)
+	gloss(k, 12, true)
 	local st = Instance.new("UIStroke")
 	st.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 	st.Color = GREEN:Lerp(Color3.new(1, 1, 1), 0.6)

@@ -689,6 +689,19 @@ local function crown(target: Player)
 	target:SetAttribute("GuestOfHonour", true)
 end
 
+-- Gems from the house (the owner's gift: to a guest, or to themselves to try the Gem Shop).
+local function giftGems(target: Player, amount: number, byName: string)
+	local data = Profiles.get(target)
+	if not data then
+		return
+	end
+	local d = data :: any
+	d.gems = (if type(d.gems) == "number" then d.gems else 0) + amount
+	Analytics.source(target, "Gems", amount, d.gems, "House gift")
+	target:SetAttribute("Gems", d.gems)
+	Remotes.event("Shop"):FireClient(target, { op = "notice", title = "A gift from the house", line = string.format("%s gave you %d Gems.", byName, amount) })
+end
+
 local function giftGilt(target: Player, amount: number, byName: string)
 	local data = Profiles.get(target)
 	if not data then
@@ -1836,6 +1849,7 @@ local function state(player: Player?): { [string]: any }
 		shows = Spectacles.names(),
 		minutes = cfg().minutes,
 		giftGilt = cfg().giftGilt,
+		giftGems = cfg().giftGems,
 		announcements = HouseEvents.Announcements,
 		abuseMinutes = cfg().abuseMinutes,
 		schedule = scheduleView(),
@@ -2174,7 +2188,7 @@ local function handle(player: Player, request: unknown): any
 	elseif op == "season" and type(r.id) == "string" then
 		local minutes = if type(r.minutes) == "number" then math.clamp(r.minutes, 1, 60) else 15
 		return { ok = AdminService.season(r.id, minutes * 60) }
-	elseif op == "crown" or op == "spotlight" or op == "gift" or op == "kick" or op == "bring" then
+	elseif op == "crown" or op == "spotlight" or op == "gift" or op == "gems" or op == "kick" or op == "bring" then
 		local target = if type(r.userId) == "number" then Players:GetPlayerByUserId(r.userId) else nil
 		if not target then
 			return { ok = false, why = "That guest has left." }
@@ -2191,6 +2205,12 @@ local function handle(player: Player, request: unknown): any
 				return { ok = false, why = "Choose an amount." }
 			end
 			giftGilt(target, amount, byName)
+		elseif op == "gems" then
+			local amount = if type(r.amount) == "number" and table.find(cfg().giftGems, r.amount) then r.amount else nil
+			if not amount then
+				return { ok = false, why = "Choose an amount." }
+			end
+			giftGems(target, amount, byName)
 		elseif op == "bring" then
 			if inSuites(player) then
 				return { ok = false, why = "Step out of your Suite first: Suites are private." }

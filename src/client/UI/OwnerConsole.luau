@@ -651,6 +651,20 @@ function OwnerConsole.open(startPage: string?)
 			tile(g2, 10, rgb(255, 214, 90), { id = "token", glyph = "👑", name = "The Owner's Token", line = "A curio from you for every guest (once a day each)." }, function()
 				send({ op = "token", everywhere = everywhere }, "Tokens handed out" .. scopeText() .. ".")
 			end)
+			-- For yourself, to try what guests buy: Gilt and Gems into your own purse (this server).
+			local s4 = section("FOR YOU", "Gilt and Gems for your own purse, to try the shops as a guest would.")
+			local g4 = grid(s4)
+			local myId = game:GetService("Players").LocalPlayer.UserId
+			for i, amount in (v.giftGilt or { 100, 500, 1000 }) :: { number } do
+				tile(g4, i, rgb(255, 214, 90), { id = "selfGilt" .. amount, glyph = "💰", name = "Gilt for me · " .. amount, line = amount .. " Gilt to your purse." }, function()
+					send({ op = "gift", userId = myId, amount = amount }, string.format("%d Gilt for you.", amount))
+				end)
+			end
+			for i, amount in (v.giftGems or { 10, 50, 250 }) :: { number } do
+				tile(g4, 10 + i, rgb(150, 220, 255), { id = "selfGems" .. amount, glyph = "💎", name = "Gems for me · " .. amount, line = amount .. " Gems to your purse." }, function()
+					send({ op = "gems", userId = myId, amount = amount }, string.format("%d Gems for you.", amount))
+				end)
+			end
 			local powers = v.powers or {}
 			local s3 = section("EVERYONE HERE", "Just this server: everyone to you, or everyone frozen (it thaws by itself).")
 			local g3 = grid(s3)

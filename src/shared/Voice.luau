@@ -239,9 +239,10 @@ Voice.StartHere = {
 	goal = "Talk to the Concierge",
 	goalHow = "Follow the gold arrow. He shows you the house and how to play.",
 	steps = {
-		{ title = "Meet the Concierge", line = "Follow the gold arrow and pick Show me the house. He walks you round and teaches you the game." },
-		{ title = "Sit at a table", line = "Any table in the Salon. Walk up to a chair and take a seat." },
-		{ title = "Sort the treasures", line = "Put each piece in its case: watches in Watches, rings in Jewelry, gold in Money. Every right one earns Gilt." },
+		-- (`short`: the same step in fewer words, for a phone on its side, where the three stand side by side.)
+		{ title = "Meet the Concierge", line = "Follow the gold arrow and pick Show me the house. He walks you round and teaches you the game.", short = "Follow the gold arrow. He shows you the house." },
+		{ title = "Sit at a table", line = "Any table in the Salon. Walk up to a chair and take a seat.", short = "Any table in the Salon. Walk up and sit." },
+		{ title = "Sort the treasures", line = "Put each piece in its case: watches in Watches, rings in Jewelry, gold in Money. Every right one earns Gilt.", short = "Each piece into its case. Every right one earns Gilt." },
 	},
 	after = "For your first half hour, every Gilt you earn counts double. Spend it on your Suite, your look and more.",
 	go = "Show me the way",
@@ -264,16 +265,13 @@ Voice.WelcomeBack = {
 -- What's new in this build, told once to each returning guest (Welcome back). Only shown while
 -- `build` is the build that's playing, so old news never shows as new.
 Voice.WhatsNew = {
-	build = 70,
+	build = 71,
 	lines = {
-		"The Grand Prix races at night: boost pads, the Timing Tower and a podium.",
-		"Admin Abuse throws a party in the Foyer: find the Gold Tile and break the Piñata.",
-		"The holidays' hidden things are real now: love letters, clovers, painted eggs.",
+		"Phones held sideways: Start here and Tonight's table now fit the screen, keys and all.",
+		"Every perk and key reads in clear words, never dark on dark.",
+		"Pieces are tossed up off the cloth and into their cases, on every screen.",
 	},
 }
-
--- A new guest's welcome bonus, on its chip at the left (UI/PerkChips).
-Voice.WelcomeBonus = { chip = "WELCOME BONUS  %d× GILT  ·  %s" }
 
 -- How to play (the key at the top right): the whole game, explained step by step in plain words,
 -- on five pages: the basics, sorting (the six cases, pictured), the rooms (each with a Go key that

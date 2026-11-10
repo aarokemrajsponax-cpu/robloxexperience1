@@ -962,6 +962,7 @@ local defaults = {
 		memeGilt = 40,
 		curioHourFind = 2, -- the Night of Curios: how much likelier a find is (never above 0.95)
 		giftGilt = { 100, 500, 1000 }, -- what the owner can give
+		giftGems = { 10, 50, 250 }, -- and in Gems (to a guest, or to themselves to try the Gem Shop)
 		summonMinutes = 5, -- how long a summons to the owner's house stays open
 		-- (Admin Abuse Night's events: its boosts, its night's twist and hunts: shared/AbuseNights.)
 		abuseMinutes = { 15, 30, 60 },
