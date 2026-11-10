@@ -1217,6 +1217,13 @@ end
 -- Snapshots: `lune run tests/client.luau full <folder>` also writes the screen's UI at a few
 -- moments as JSON, for tools/ui/render.py to draw (a way to look at the UI without Studio).
 local SNAPSHOT = process.args[2]
+local snapshotsDue = {}
+local function writeSnapshots()
+	for _, due in snapshotsDue do
+		fs.writeFile(due.file, due.json)
+	end
+	table.clear(snapshotsDue)
+end
 local function snapshot(name: string)
 	if not SNAPSHOT then
 		return
@@ -1330,7 +1337,9 @@ local function snapshot(name: string)
 			table.insert(out.guis, dump(g))
 		end
 	end
-	fs.writeFile(SNAPSHOT .. "/" .. name .. ".json", serde.encode("json", out))
+	-- (Written at the end, on the main thread: writing a file yields, and a section run in its
+	-- own coroutine would otherwise be left waiting until after the run.)
+	table.insert(snapshotsDue, { file = SNAPSHOT .. "/" .. name .. ".json", json = serde.encode("json", out) })
 	-- EXPORT_AT=<name> EXPORT=<file>: the world on this screen at that moment, for the 3D viewer
 	-- (tools/view): what a show has built round the guest, say.
 	if process.env.EXPORT_AT == name and process.env.EXPORT then
@@ -1434,6 +1443,7 @@ if MODE ~= "full" then
 	advance(3)
 	check(where .. ": leaving the table gives your character back", camera.CameraType == roblox.Enum.CameraType.Custom and controls.enabled == true)
 	check(where .. ": no errors", #errors == 0, errors[1])
+	writeSnapshots()
 	print(string.format("%s: %d passed, %d failed", MODE, passed, failed))
 	process.exit(if failed > 0 then 1 else 0)
 end
@@ -8095,6 +8105,7 @@ check("and the controls", controls.enabled == true)
 
 advance(10)
 check("no errors at all", #errors == 0, #errors)
+writeSnapshots()
 print(string.format("%d passed, %d failed (%d tweens played, %d reads of destroyed instances)", passed, failed, tweens, destroyedReads))
 if failed > 0 then
 	process.exit(1)
