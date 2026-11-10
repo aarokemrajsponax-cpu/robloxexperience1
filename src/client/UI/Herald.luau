@@ -12,6 +12,7 @@ local Brand = require(ReplicatedStorage.Shared.Brand)
 local Ease = require(ReplicatedStorage.Shared.Ease)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Rules = require(ReplicatedStorage.Shared.Fortune)
+local Prestige = require(ReplicatedStorage.Shared.Prestige)
 local Root = require(script.Parent.Root)
 local Theme = require(script.Parent.Theme)
 local Toast = require(script.Parent.Toast)
@@ -134,6 +135,14 @@ function Herald.start()
 		elseif m.op == "rank" and type(m.name) == "string" then
 			Toast.show("You are now: " .. m.name, tostring(m.line or ""), 6)
 			pcall(Herald.sound, true)
+		elseif m.op == "prestige" and type(m.level) == "number" then
+			local l = Prestige.get(m.level)
+			if l then
+				local gifts = if type(m.rewards) == "table" then m.rewards else l.rewards
+				require(script.Parent.Celebrate).prestige(l.level, l.name, l.numeral, l.colour, gifts[#gifts])
+			end
+		elseif m.op == "flourish" and type(m.userId) == "number" then
+			require(script.Parent.Parent.World.Laurels).flourish(m.userId, if type(m.level) == "number" then m.level else nil)
 		end
 	end)
 end

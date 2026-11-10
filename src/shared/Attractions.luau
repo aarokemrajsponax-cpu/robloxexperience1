@@ -8,6 +8,8 @@
 --                          by chamber, with a chest at each way out and the Treasury at the bottom.
 --   The Executive Suite   (through the Midnight Room): by invitation only. Security, puzzles, the
 --                          Executive himself, and the lift out with what you took.
+--   Luxury Island         (from the Jet Lounge on the Terrace): the private island, by the jet,
+--                          for guests who hold the Island Key.
 -- While a guest is in one, the server sets their "Attraction" attribute to its id: its screen (and
 -- only its screen) shows then, and goes when they leave.
 
@@ -61,6 +63,16 @@ Attractions.List = {
 		glyph = "🕴️",
 		colour = rgb(120, 200, 255),
 	},
+	{
+		id = "island",
+		name = "Luxury Island",
+		room = "terrace",
+		roomName = "The Jet Lounge",
+		tag = "THE PRIVATE JET · NOW BOARDING",
+		line = "Fly to the house's private island: the villas, the lagoon's pearls, the Sunset Lookout and your own jet.",
+		glyph = "🏝️",
+		colour = rgb(90, 210, 230),
+	},
 } :: { Def }
 
 Attractions.byId = {} :: { [string]: Def }
@@ -95,6 +107,7 @@ Attractions.BOUNDS = {
 	luxe = { min = Vector3.new(-260, -140, -260), max = Vector3.new(260, 140, 260) },
 	basement = { min = Vector3.new(-90, -140, -60), max = Vector3.new(90, 60, 820) },
 	executive = { min = Vector3.new(-320, -120, -160), max = Vector3.new(320, 120, 160) },
+	island = { min = Vector3.new(-520, -80, -420), max = Vector3.new(420, 260, 440) },
 } :: { [string]: { min: Vector3, max: Vector3 } }
 
 -- Which attraction's place a point is in, or nil (the Maison and everywhere else).

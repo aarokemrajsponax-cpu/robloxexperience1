@@ -136,10 +136,24 @@ function FortunePanel.open()
 	tabs.select(board)
 	fillBoard()
 
-	local close = Theme.key(content, "Close", true, function()
+	local keys = Instance.new("Frame")
+	keys.Name = "Keys"
+	keys.BackgroundTransparency = 1
+	keys.Size = UDim2.new(1, 0, 0, 44)
+	keys.LayoutOrder = 20
+	keys.Parent = content
+	local keyRow = Theme.list(keys, 10, true)
+	keyRow.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	keyRow.VerticalAlignment = Enum.VerticalAlignment.Center
+	local prestige = Theme.key(keys, "Maison Prestige", false, function()
 		Root.close(NAME)
-	end, 200)
-	close.LayoutOrder = 20
+		require(script.Parent.PrestigePanel).open()
+	end, 190)
+	prestige.LayoutOrder = 1
+	local close = Theme.key(keys, "Close", true, function()
+		Root.close(NAME)
+	end, 160)
+	close.LayoutOrder = 2
 	Root.open(NAME, group)
 	task.spawn(function()
 		local ok, got = pcall(function()

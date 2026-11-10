@@ -349,4 +349,130 @@ function Celebrate.badge(b: { [string]: any })
 	nextBadge()
 end
 
+-- A new laurel of Maison Prestige: MAISON PRESTIGE over a medallion with its numeral in the
+-- laurel's colour (a ring of light turning round it), the laurel's name in metal, what it brings
+-- first, and gold leaves falling round the guest.
+function Celebrate.prestige(level: number, name: string, numeral: string, colour: Color3, gift: string?)
+	local gui = screen()
+	local old = gui:FindFirstChild("Prestige")
+	if old then
+		old:Destroy()
+	end
+	local box = Instance.new("Frame")
+	box.Name = "Prestige"
+	box.BackgroundTransparency = 1
+	box.AnchorPoint = Vector2.new(0.5, 0.5)
+	box.Position = UDim2.fromScale(0.5, 0.38)
+	box.Size = UDim2.fromOffset(540, 300)
+	box.Parent = gui
+	local scale = Instance.new("UIScale")
+	scale.Scale = 0.3
+	scale.Parent = box
+	local head = Instance.new("TextLabel")
+	head.Name = "Head"
+	head.BackgroundTransparency = 1
+	head.Size = UDim2.new(1, 0, 0, 30)
+	head.FontFace = HEAVY
+	head.TextScaled = true
+	head.TextColor3 = rgb(255, 236, 190)
+	head.TextStrokeTransparency = 0.35
+	head.TextStrokeColor3 = rgb(36, 22, 4)
+	head.Text = "MAISON PRESTIGE"
+	head.Parent = box
+	local disc = Instance.new("TextLabel")
+	disc.Name = "Medallion"
+	disc.AnchorPoint = Vector2.new(0.5, 0)
+	disc.Position = UDim2.new(0.5, 0, 0, 40)
+	disc.Size = UDim2.fromOffset(132, 132)
+	disc.BackgroundColor3 = rgb(20, 16, 12)
+	disc.FontFace = HEAVY
+	disc.TextScaled = true
+	disc.TextColor3 = colour
+	disc.Text = numeral
+	disc.Parent = box
+	corner(disc, 66)
+	local ring = Instance.new("UIStroke")
+	ring.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	ring.Thickness = 6
+	ring.Color = Color3.new(1, 1, 1)
+	ring.Parent = disc
+	-- (The ring's light turns: a band of white running round the laurel's colour.)
+	local sheen = Instance.new("UIGradient")
+	sheen.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, colour),
+		ColorSequenceKeypoint.new(0.45, colour),
+		ColorSequenceKeypoint.new(0.5, rgb(255, 255, 255)),
+		ColorSequenceKeypoint.new(0.55, colour),
+		ColorSequenceKeypoint.new(1, colour),
+	})
+	sheen.Parent = ring
+	TweenService:Create(sheen, TweenInfo.new(2.4, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), { Rotation = 360 }):Play()
+	local dp = Instance.new("UIPadding")
+	dp.PaddingTop = UDim.new(0, 30)
+	dp.PaddingBottom = UDim.new(0, 30)
+	dp.PaddingLeft = UDim.new(0, 20)
+	dp.PaddingRight = UDim.new(0, 20)
+	dp.Parent = disc
+	local title = Instance.new("TextLabel")
+	title.Name = "Laurel"
+	title.BackgroundTransparency = 1
+	title.Position = UDim2.fromOffset(0, 184)
+	title.Size = UDim2.new(1, 0, 0, 46)
+	title.FontFace = IMPACT
+	title.TextScaled = true
+	title.TextColor3 = Color3.new(1, 1, 1)
+	title.TextStrokeTransparency = 0.3
+	title.TextStrokeColor3 = rgb(30, 20, 6)
+	title.Text = string.upper(name)
+	title.Parent = box
+	local metal = Instance.new("UIGradient")
+	metal.Rotation = 90
+	metal.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, colour:Lerp(Color3.new(1, 1, 1), 0.7)),
+		ColorSequenceKeypoint.new(0.5, colour),
+		ColorSequenceKeypoint.new(1, colour:Lerp(Color3.new(0, 0, 0), 0.25)),
+	})
+	metal.Parent = title
+	local line = Instance.new("TextLabel")
+	line.Name = "Gift"
+	line.BackgroundTransparency = 1
+	line.Position = UDim2.fromOffset(0, 238)
+	line.Size = UDim2.new(1, 0, 0, 24)
+	line.FontFace = BODY
+	line.TextScaled = true
+	line.TextColor3 = rgb(255, 230, 170)
+	line.TextStrokeTransparency = 0.45
+	line.Text = string.format("Laurel %s  ·  %s", numeral, gift or "Yours for good")
+	line.Parent = box
+	local _ = level
+	TweenService:Create(scale, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+	sound("regalFanfare", 0.9)
+	task.delay(0.2, sound, "shimmerFall", 0.85)
+	Flakes.fall({
+		seconds = 4.5,
+		centre = function(): Vector3?
+			local r = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+			return if r and r:IsA("BasePart") then r.Position else nil
+		end,
+		colours = { colour, rgb(255, 228, 150), rgb(214, 170, 70) },
+		material = Enum.Material.SmoothPlastic,
+		size = Vector3.new(0.5, 0.02, 0.24),
+		count = 80,
+		radius = 10,
+		height = 12,
+		fall = 2.6,
+		flutter = 3.4,
+		burst = true,
+	})
+	task.delay(4.6, function()
+		if box.Parent then
+			local t = TweenService:Create(scale, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Scale = 0.01 })
+			t:Play()
+			t.Completed:Once(function()
+				box:Destroy()
+			end)
+		end
+	end)
+end
+
 return Celebrate

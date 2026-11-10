@@ -3,6 +3,7 @@
 -- become the wealthiest), started together and wired to the rest of the house in one place.
 --   Fortune      what every guest owns, the wealth ranks and the Wealthiest boards
 --   Herald       feats told to the whole house
+--   Prestige     the ten laurels, earned for good from what a guest has done
 --   Attractions  Steal a Luxe, the Maison Basement and the Executive Suite (server/Attractions)
 -- Each part starts on its own: one that fails is reported in Output and the rest carry on.
 
@@ -13,6 +14,7 @@ local Rules = require(ReplicatedStorage.Shared.Fortune)
 local Attractions = require(script.Parent.Attractions)
 local Fortune = require(script.Parent.Fortune)
 local Herald = require(script.Parent.Herald)
+local Prestige = require(script.Parent.Prestige)
 local RemoteGuard = require(script.Parent.RemoteGuard)
 
 local Empire = {}
@@ -35,6 +37,7 @@ end
 Empire.Fortune = Fortune
 Empire.Herald = Herald
 Empire.Attractions = Attractions
+Empire.Prestige = Prestige
 
 local started: { string } = {}
 local function part(name: string, fn: () -> ())
@@ -64,6 +67,10 @@ local function onAsk(player: Player, request: unknown): any
 	end
 	if r.op == "fortune" then
 		return Fortune.view(player)
+	elseif r.op == "prestige" then
+		return Prestige.view(player)
+	elseif r.op == "flourish" then
+		return Prestige.flourish(player)
 	end
 	return { ok = false, why = "That isn't something the house does." }
 end
@@ -74,6 +81,7 @@ function Empire.start()
 		Fortune.ranked = function(player: Player, rank: Rules.Rank, number: number, public: boolean)
 			Remotes.event("Empire"):FireClient(player, { op = "rank", rank = number, name = rank.name, line = rank.line })
 			Empire.tally(player, "wealthRanks", 1, "rank" .. number)
+			Prestige.sync(player)
 			if public then
 				Herald.feat(player, { kind = "rank", title = "A NEW " .. string.upper(rank.name), line = "has built a fortune worthy of the name " .. rank.name, glyph = "👑", worth = rank.at })
 			end
@@ -81,6 +89,7 @@ function Empire.start()
 		Fortune.start()
 	end)
 	part("The herald", Herald.start)
+	part("Prestige", Prestige.start)
 	part("The attractions", function()
 		Attractions.isSeated = function(player: Player): boolean
 			return Empire.isSeated(player)

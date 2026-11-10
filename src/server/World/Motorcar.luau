@@ -95,6 +95,14 @@ function Motorcar.build(parent: Instance, def: { [string]: any }, at: CFrame): M
 	put("Bonnet", Vector3.new(WIDTH - 0.5, 0.5, 5.4), 0, 2.4, -4.7, paint, glossy, { reflectance = 0.16, rotate = CFrame.Angles(math.rad(-5), 0, 0) })
 	put("Tail", Vector3.new(WIDTH - 0.5, 0.6, 4.4), 0, 2.45, 5.1, paint, glossy, { reflectance = 0.16 })
 	put("Nose", Vector3.new(WIDTH - 0.8, 0.8, 0.6), 0, 1.45, -7.6, paint, glossy, { reflectance = 0.14 })
+	-- Racing stripes over the bonnet and the tail, unseen until a ranked racer takes the wheel
+	-- (GrandPrixService paints them in the racer's rank).
+	for _, x in { -0.75, 0.75 } do
+		local a = put("RacingStripe", Vector3.new(0.7, 0.04, 5.3), x, 2.67, -4.7, trim, glossy, { rotate = CFrame.Angles(math.rad(-5), 0, 0), transparency = 1 })
+		local b = put("RacingStripe", Vector3.new(0.7, 0.04, 4.3), x, 2.77, 5.1, trim, glossy, { transparency = 1 })
+		a.CastShadow = false
+		b.CastShadow = false
+	end
 	for _, side in { -1, 1 } do
 		put("Sill", Vector3.new(0.16, 0.22, LENGTH - 2), side * (WIDTH / 2 + 0.05), 1.05, 0, trim, Enum.Material.Metal, { reflectance = 0.35 })
 		put("Arch", Vector3.new(0.4, 0.9, 3.6), side * (WIDTH / 2 - 0.1), 2.0, -4.8, paint, glossy, { reflectance = 0.14 })

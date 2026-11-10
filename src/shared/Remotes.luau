@@ -52,6 +52,7 @@ Remotes.Functions = {
 	"EmpireAsk", -- client -> server: your Fortune and the Wealthiest boards, the objectives, the Concierge's answers
 	"AttractionAsk", -- client -> server: the attractions (go in, go home, pick up, bank, a checkpoint, train, upgrade)
 	"AuctionAsk", -- client -> server: the Grand Auction (the lots, a bid)
+	"RacingAsk", -- client -> server: the racing card (the boards, your bests and your friends'), join the next race
 }
 
 local folder: Folder? = nil

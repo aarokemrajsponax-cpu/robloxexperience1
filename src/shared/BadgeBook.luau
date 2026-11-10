@@ -32,6 +32,9 @@ BadgeBook.Groups = {
 	{ id = "holidays", name = "Holidays" },
 	{ id = "social", name = "Friends" },
 	{ id = "attractions", name = "The attractions" },
+	{ id = "island", name = "Luxury Island" },
+	{ id = "racing", name = "The Grand Prix" },
+	{ id = "pavilion", name = "The Pavilion" },
 	{ id = "secrets", name = "Secrets" },
 }
 
@@ -61,6 +64,16 @@ BadgeBook.Stats = {
 	auras = "Auras owned",
 	referrals = "Friends invited",
 	evenings = "Presents opened from the Evening Calendar",
+	flights = "Flights to Luxury Island",
+	pearls = "Pearls brought up from the lagoon",
+	sunsets = "Sunsets toasted on the Island",
+	races = "Grand Prix races finished",
+	raceWins = "Grand Prix races won",
+	podiums = "Grand Prix podiums",
+	trialLaps = "Timed laps driven",
+	runwayWins = "Runway rounds won",
+	triviaWins = "Trivia rounds won",
+	arenaWins = "Arena challenges won",
 }
 
 BadgeBook.List = {} :: { Badge }
@@ -255,6 +268,48 @@ moment("attractions", "basementClear", "The Treasury", "Reach the Treasury at th
 moment("attractions", "executiveBoss", "The Corner Office", "Beat the Executive in his own office.", "🕴️", "gold")
 moment("attractions", "auctionWin", "Sold to You", "Win a lot at the Grand Auction.", "🔨", "gold")
 moment("attractions", "basementQuick", "Under Four Minutes", "Run the Maison Basement in under four minutes, no stage skipped.", "⏱️", "gold")
+
+-- Luxury Island
+moment("island", "islandKey", "The Island Key", "Unlock Luxury Island at the Jet Lounge.", "🏝️", "gold")
+ladder("island", "flights", "✈️", "Fly to Luxury Island %d times.", {
+	{ 1, "Wheels Up", "firstFlight" }, { 10, "Jet Setter" }, { 50, "Frequent Flyer" },
+}, "Fly to Luxury Island.")
+ladder("island", "pearls", "🐚", "Bring up %d pearls from the lagoon.", {
+	{ 5, "Pearl Diver" }, { 25, "A String of Pearls" }, { 100, "The Pearl Necklace" }, { 300, "Ocean's Treasure" },
+})
+ladder("island", "sunsets", "🌅", "Toast %d sunsets on the Island.", {
+	{ 1, "Golden Hour", "firstSunset" }, { 7, "A Week of Sunsets" }, { 30, "Sunset Regular" },
+}, "Toast the sunset on the Island.")
+moment("island", "postcards", "Wish You Were Here", "Take a photograph at every postcard spot on the Island.", "📸", "gold")
+
+-- The Grand Prix
+ladder("racing", "races", "🏎️", "Finish %d Grand Prix races.", {
+	{ 1, "Lights Out and Away", "firstRace" }, { 10, "Regular on the Grid" }, { 50, "Fifty Starts" }, { 100, "The Hundred Club" },
+}, "Finish a Grand Prix race.")
+ladder("racing", "raceWins", "🏁", "Win %d Grand Prix races.", {
+	{ 1, "Chequered Flag", "gpWin" }, { 5, "Five Wins" }, { 25, "Champion" }, { 100, "Grand Prix Legend" },
+}, "Win a Grand Prix race.")
+ladder("racing", "podiums", "🥂", "Finish on the podium %d times.", {
+	{ 3, "On the Podium" }, { 10, "Champagne Showers" }, { 50, "Fixture on the Podium" },
+})
+ladder("racing", "trialLaps", "⏱️", "Drive %d timed laps.", {
+	{ 1, "Hot Lap", "firstTrial" }, { 25, "Lapping It Up" }, { 100, "The Hundred Laps" },
+}, "Drive a timed lap.")
+moment("racing", "lapAce", "Lap Ace", "Drive a timed lap of the Grand Boulevard in under 12 seconds.", "⚡", "gold")
+moment("racing", "coastAce", "Coast Ace", "Drive a timed lap of Luxury Island's Coastal Circuit in under 11 seconds.", "🌊", "gold")
+
+-- The Pavilion
+ladder("pavilion", "runwayWins", "👗", "Win %d rounds on the Runway.", {
+	{ 1, "Runway Star", "runwayWin" }, { 5, "Cover Look" }, { 25, "Icon of the Runway" },
+}, "Win a round on the Runway.")
+ladder("pavilion", "triviaWins", "🎓", "Win %d rounds of Luxury Trivia.", {
+	{ 1, "Bright Spark", "triviaWin" }, { 10, "Connoisseur" }, { 50, "The Oracle" },
+}, "Win a round of Luxury Trivia.")
+ladder("pavilion", "arenaWins", "🏆", "Win %d of the Arena's challenges.", {
+	{ 1, "Arena Champion", "arenaWin" }, { 10, "Ten Crowns" }, { 50, "The Arena's Own" },
+}, "Win one of the Arena's challenges.")
+moment("pavilion", "photoSets", "Picture Perfect", "Strike a pose at every photo set in the Pavilion.", "🖼️", "silver")
+moment("pavilion", "firstDance", "On the Floor", "Dance on the Pavilion's dance floor.", "💃", "bronze")
 
 -- Secrets
 moment("secrets", "metOwner", "Met the Owner", "Be in the house with the owner.", "👑", "gold")

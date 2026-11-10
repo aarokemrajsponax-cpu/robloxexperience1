@@ -84,6 +84,7 @@ Voice.Concierge = {
 		basement = "Try the Maison Basement, down the Basement Stair. The Treasury pays well, and brings an invitation upstairs.",
 		executive = "You hold an invitation. The Executive Suite: the lift is in the Midnight Room.",
 		quartermaster = "You've no invitation yet. Clear the Basement or bank a great haul, and the Executive Suite opens to you.",
+		island = "You've the Fortune for Luxury Island now. The Island Key is at the Jet Lounge, on the Terrace.",
 		climb = "{gap} more and you'll be {rank}. Every haul, purse and prize counts.",
 	},
 	-- Answers, from how the house really works (the numbers are filled in from its settings).
@@ -94,6 +95,7 @@ Voice.Concierge = {
 		{ id = "stride", q = "What does Stride do?", a = "It makes you faster in Steal a Luxe, and only there: {stride}% a level. Walk the treadmills in the Luxe Lounge to train it." },
 		{ id = "caught", q = "What if a guard catches me?", a = "Everything in your bag is lost and you're shown out to the courtyard. What you've already banked is safe." },
 		{ id = "skip", q = "Can I skip a Basement stage?", a = "For {skipGems} Gems, or a skip bought with Robux. A skipped run isn't timed for the boards, and the stage you skip pays nothing." },
+		{ id = "island", q = "How do I get to Luxury Island?", a = "By the private jet, from the Jet Lounge on the Terrace. The Island Key is for a Tycoon: {islandGilt} Gilt or {islandGems} Gems, yours for good. Five pearls lie in its lagoon every day." },
 		{ id = "boards", q = "Where are the boards?", a = "Tap your Fortune, under your Gilt: the Wealthiest in this house, this week and of all time. The Basement's best times are at the lectern on the Basement Stair." },
 		{ id = "gems", q = "What are Gems for?", a = "The Gem Shop, the golden treadmill, a Basement skip and the Cabinet's curios. The attractions' rarest finds pay a few each day." },
 	},
@@ -188,7 +190,7 @@ Voice.Tour = {
 		stop = "terrace",
 		place = "terraceDoor",
 		title = "The Terrace",
-		line = "A bar, a fire pit and loungers under the stars. Sit anywhere you like.",
+		line = "A bar, a fire pit and loungers under the stars, and the Jet Lounge: the private jet to Luxury Island.",
 	},
 	{
 		stop = "suite",
@@ -414,7 +416,7 @@ Voice.Guide = {
 			{ place = "concierge", title = "The Concierge", line = "Stands by the front door, ready to help.", how = "Speak to him and pick Show me the house: he walks you round every room and explains it." },
 			{ place = "boutique", title = "The Boutique", line = "The house's shop for looks.", how = "Looks, table styles, lamps and trails for Gilt (a few for Robux, always with the price shown first). The Wardrobe beside it is where you wear what you own." },
 			{ place = "vault", title = "The Vault", line = "Your collection, kept for good.", how = "Every piece you've ever sorted is on its shelves. The Archivist at the desk keeps your badges and records." },
-			{ place = "terrace", title = "The Terrace", line = "A rooftop to relax on.", how = "A bar with treats, a fire pit and loungers under the stars. Sit anywhere, and watch the fireworks from here." },
+			{ place = "terrace", title = "The Terrace", line = "A rooftop to relax on, and the jet to the island.", how = "A bar with treats, a fire pit and loungers under the stars. The Jet Lounge's arch flies Island Key holders to Luxury Island." },
 			{ place = "suite", title = "Your Suite", line = "Your own private rooms upstairs.", how = "Ring the bell inside to furnish them. Only you can go in, unless you invite friends with the Suites key." },
 		} :: { GuideItem },
 	},

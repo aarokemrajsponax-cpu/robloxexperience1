@@ -3,7 +3,8 @@
 -- and only while, the server says they're in it (the "Attraction" attribute), and goes the moment
 -- they're out. What the server tells them about it (the Attraction event) comes here first: going
 -- in and out, the house's notices, the board at the Luxe Lounge's lectern, and Stride while they
--- walk a treadmill in the Lounge (a small count at the foot of the screen).
+-- walk a treadmill in the Lounge (a small count at the foot of the screen). Luxury Island's jet
+-- flies them in and home (World/IslandView), and the Jet Lounge's card opens from its arch.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -16,6 +17,9 @@ local BasementHud = require(script.Parent.BasementHud)
 local BasementPanel = require(script.Parent.BasementPanel)
 local ExecutiveHud = require(script.Parent.ExecutiveHud)
 local ExecutivePanel = require(script.Parent.ExecutivePanel)
+local IslandHud = require(script.Parent.IslandHud)
+local IslandPanel = require(script.Parent.IslandPanel)
+local IslandView = require(script.Parent.Parent.World.IslandView)
 local LuxeHud = require(script.Parent.LuxeHud)
 local LuxePanel = require(script.Parent.LuxePanel)
 local Root = require(script.Parent.Root)
@@ -88,10 +92,40 @@ local function follow()
 	else
 		ExecutiveHud.unmount()
 	end
+	if id == "island" then
+		IslandHud.mount()
+		local st = IslandView.state()
+		if st then
+			IslandHud.update(st)
+		end
+	else
+		IslandHud.unmount()
+	end
 end
 
 function Attraction.start()
 	LuxeHud.openBoard = LuxePanel.open
+	-- Luxury Island: its board, photo mode at the postcards, and one state for the HUD and the world.
+	IslandHud.openBoard = IslandPanel.open
+	IslandHud.photo = function()
+		require(script.Parent.PhotoMode).enter()
+	end
+	IslandView.notice = Toast.show
+	local hudWas = true
+	IslandView.cinematic = function(on: boolean)
+		if on then
+			hudWas = Root.hud.Enabled
+			Root.close()
+			Root.hud.Enabled = false
+		else
+			Root.hud.Enabled = hudWas
+		end
+	end
+	IslandView.changed = IslandHud.update
+	IslandPanel.changed = function(st: { [string]: any })
+		IslandView.update(st)
+		IslandHud.update(st)
+	end
 	Remotes.event("Attraction").OnClientEvent:Connect(function(m: any)
 		if type(m) ~= "table" then
 			return
@@ -100,11 +134,22 @@ function Attraction.start()
 		if op == "entered" then
 			follow()
 			local def = AttractionList.byId[tostring(m.id)]
-			if def then
+			if m.id == "island" then
+				-- (The jet: a few seconds in its cabin while the island is made ready.)
+				IslandView.flight(true)
+				task.delay(6.4, function()
+					if def and player:GetAttribute(AttractionList.ATTRIBUTE) == "island" then
+						Toast.show(def.name, "Five pearls on the lagoon's floor today, the sunset toast at the Lookout, and your jet on the airstrip to fly home.", 6)
+					end
+				end)
+			elseif def then
 				Toast.show(def.name, def.line, 6)
 			end
 		elseif op == "left" then
 			follow()
+			if m.id == "island" and m.why == "home" then
+				IslandView.flight(false)
+			end
 		elseif op == "lostOnLeaving" then
 			Toast.show("Left behind", string.format("What you hadn't banked (%s) stays in the residence.", Rules.format(tonumber(m.lost) or 0)), 4)
 		elseif op == "notice" then
@@ -118,6 +163,8 @@ function Attraction.start()
 				ExecutivePanel.open()
 			elseif m.id == "auction" then
 				require(script.Parent.AuctionPanel).open()
+			elseif m.id == "island" then
+				IslandPanel.open(if type(m.which) == "string" then m.which else nil)
 			end
 		elseif op == "stride" then
 			strideChip(m)
@@ -131,6 +178,8 @@ function Attraction.start()
 			BasementHud.on(m)
 		elseif ExecutiveHud.mounted() then
 			ExecutiveHud.on(m)
+		elseif IslandHud.mounted() then
+			IslandHud.on(m)
 		end
 	end)
 	player:GetAttributeChangedSignal(AttractionList.ATTRIBUTE):Connect(follow)

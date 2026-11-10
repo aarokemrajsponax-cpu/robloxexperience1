@@ -304,6 +304,7 @@ local defaults = {
 		race = { rate = 3, burst = 8 },
 		travel = { rate = 1, burst = 3 },
 		empireAsk = { rate = 3, burst = 8 },
+		racingAsk = { rate = 1, burst = 4 }, -- the racing card reads the boards: never a flood
 		attractionAsk = { rate = 8, burst = 16 }, -- a pickup, a checkpoint, a shot: quick, never a flood
 		attraction = { rate = 12, burst = 24 },
 		attractionFire = { rate = 5, burst = 8 }, -- the sidearm: a few shots a second at most
@@ -874,6 +875,17 @@ local defaults = {
 			briefcase = 15,
 			shockwave = 20,
 			decoySeconds = 8,
+		},
+		-- Luxury Island (server/Attractions/Island): the private island, by the jet from the Jet
+		-- Lounge on the Terrace. The Island Key: a wealth rank reached, then Gilt or Gems.
+		island = {
+			origin = { 0, 0, 4200 },
+			keyRank = 6, -- Tycoon (shared/Fortune's ranks)
+			keyGilt = 25000,
+			keyGems = 250,
+			pearlGilt = 250, -- each of the day's five pearls
+			pearlSetGems = 2, -- all five in a day
+			dailyGems = 10, -- the most Gems a day from the island
 		},
 	},
 

@@ -519,6 +519,31 @@ add({
 	Rules = { Stackable = false, CooldownSeconds = 0 },
 	UX = { DisplayName = "Santa's Season Pass", Category = "Holiday", Line = "Ride Santa's sleigh to the North Pole as often as you like until Christmas's games close.", Offer = false, Order = 98, Action = "prompt" },
 })
+-- Luxury Island (shared/Island): two jet liveries that are only a look, for good. Every other
+-- livery and every island light is had for Gilt or Gems at the Jet Gallery's desk.
+ProductConfig.Island = { "jetAurora", "jetSovereign" } :: { string }
+add({
+	Key = "jetAurora",
+	Name = "Jet Livery: Midnight Aurora",
+	ProductType = "DeveloperProduct",
+	Id = 0,
+	Handler = "jetLivery",
+	Pricing = { ReferencePrice = 149, Tier = "Medium", Rationale = "A look for your jet, for good: navy, with violet light along its flanks. Nothing faster, nothing more." },
+	Reward = { Type = "JetLivery", Livery = "aurora" },
+	Rules = { OneTime = true, Stackable = false, CooldownSeconds = 0 },
+	UX = { DisplayName = "Midnight Aurora livery", Category = "Luxury Island", Line = "Your jet in navy, with violet light along its flanks: yours for good, worn whenever you like.", Offer = false, Order = 94, Action = "prompt" },
+})
+add({
+	Key = "jetSovereign",
+	Name = "Jet Livery: Sovereign Gold",
+	ProductType = "DeveloperProduct",
+	Id = 0,
+	Handler = "jetLivery",
+	Pricing = { ReferencePrice = 349, Tier = "Premium", Rationale = "The island's finest look for a jet, for good: gold leaf over black. A look only." },
+	Reward = { Type = "JetLivery", Livery = "sovereign" },
+	Rules = { OneTime = true, Stackable = false, CooldownSeconds = 0 },
+	UX = { DisplayName = "Sovereign Gold livery", Category = "Luxury Island", Line = "Your jet in gold leaf over black: yours for good, worn whenever you like.", Offer = false, Order = 95, Action = "prompt" },
+})
 -- The brainrot squad (shared/Brainrots): three more places for good, or eight hours of what the
 -- squad earns, at once. Both at a fixed price, with the amount shown before buying.
 ProductConfig.Brainrot = { "brainrotPenthouse", "brainrotFeast" } :: { string }

@@ -52,6 +52,8 @@ export type Game = {
 	state: ((ctx: Ctx, player: Player) -> { [string]: any })?,
 	-- A guest has just arrived in the house (their saved record is ready).
 	arrived: ((ctx: Ctx, player: Player) -> ())?,
+	-- Whether it's closed to a guest for now (its entrance then opens its board, to say how).
+	locked: ((ctx: Ctx, player: Player) -> boolean)?,
 }
 
 return Types

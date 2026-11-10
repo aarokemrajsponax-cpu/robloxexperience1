@@ -41,6 +41,14 @@ end
 local function standing(n: number, rank: string): { [string]: any }
 	return { source = "standing", gilt = n, standing = rank }
 end
+-- From the Pearl Exchange on Luxury Island, for pearls (shared/Island.Exchange has the prices).
+local function island(): { [string]: any }
+	return { source = "island" }
+end
+-- With a laurel of Maison Prestige (shared/Prestige.SuitePieces says which).
+local function prestige(level: number): { [string]: any }
+	return { source = "prestige", prestige = level }
+end
 
 ---------------------------------------------------------------------------------------------------
 -- The drawing room
@@ -225,6 +233,17 @@ add("garden", "suite_garden_white", "White Planter", "Olives and white roses.", 
 
 add("statue", "suite_statue_marble", "Marble Muse", "Holding up a gold torch.", {}, gilt(3600))
 add("statue", "suite_statue_gold", "The Gold Muse", "Gilded head to foot.", { metal = true, colour = rgb(214, 176, 92) }, robux(399))
+
+---------------------------------------------------------------------------------------------------
+-- Luxury Island's own pieces (the Pearl Exchange) and Maison Prestige's
+---------------------------------------------------------------------------------------------------
+add("lamp", "suite_shelllamp", "The Seashell Lamp", "Mother-of-pearl, a soft white glow. From the island.", { model = "brass", colour = rgb(250, 244, 236), accent = rgb(232, 210, 196) }, island())
+add("loungers", "suite_palmlounger", "The Palm Loungers", "White canvas and teak, straight from the South Beach.", { colour = rgb(246, 242, 232), accent = rgb(60, 150, 160) }, island())
+add("chair", "suite_coralthrone", "The Coral Throne", "Coral velvet on a gilt frame: the island's own seat.", { model = "wing", colour = rgb(232, 112, 104), accent = PALE_GOLD }, island())
+add("chandelier", "suite_pearlchandelier", "The Pearl Chandelier", "Three tiers of island pearls, catching every light.", { model = "crystal", accent = rgb(246, 238, 230) }, island())
+add("statue", "suite_laurelbust", "The Laurel Muse", "A white marble figure, a gold laurel raised. For the Silver Laurel.", { colour = rgb(240, 236, 228) }, prestige(3))
+add("statue", "suite_sapphirelaurel", "The Sapphire Laurel", "A figure in sapphire light. For the Sapphire Laurel.", { metal = true, colour = rgb(84, 140, 255) }, prestige(6))
+add("statue", "suite_diamondlaurel", "The Diamond Laurel", "Cut from light itself. For the Diamond Laurel.", { metal = true, colour = rgb(214, 244, 255) }, prestige(9))
 
 ---------------------------------------------------------------------------------------------------
 -- The Gold Key rooms

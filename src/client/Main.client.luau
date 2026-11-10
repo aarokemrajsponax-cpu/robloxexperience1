@@ -219,6 +219,10 @@ start("The herald", function()
 	end
 	Herald.start()
 end)
+-- Maison Prestige in the house: rings of light at the feet of the highest laurels.
+start("The laurels", require(script.Parent.World.Laurels).start)
+-- Luxury Island on this screen: its light, the day's pearls, the jets in their liveries.
+start("The island", require(script.Parent.World.IslandView).start)
 -- The attractions: each one's own screen while (and only while) a guest is in it.
 start("The attractions", require(script.Parent.UI.Attraction).start)
 start("The Basement's machinery", require(script.Parent.World.BasementMotion).start)
@@ -844,6 +848,9 @@ start("Tour", Tour.listen)
 local CarDrive = require(script.Parent.World.CarDrive)
 CarDrive.isBusy = function()
 	return TableClient.isSeated()
+end
+CarDrive.openCard = function()
+	require(script.Parent.UI.RacingPanel).open()
 end
 start("The Grand Prix", CarDrive.start)
 -- Its music: for a driver on the grid or racing.

@@ -353,6 +353,13 @@ GrandPrixService.onFinish = function(player, place, field)
 	if place == 1 then
 		AdminService.tally(player, "raceWins", 1)
 	end
+	if place <= 3 and field >= 2 then
+		AdminService.tally(player, "podiums", 1)
+	end
+	Collection.event(player, "race" :: any, nil, nil, 1)
+	if place == 1 then
+		Collection.event(player, "raceWin" :: any, nil, nil, 1)
+	end
 	Analytics.custom(player, "Grand Prix finished", place, { field = field })
 end
 -- Going straight to a place (How to play's Go keys): never from a table or a seat.
@@ -396,10 +403,38 @@ end
 boot("The Grand Prix", function()
 	GrandPrixService.start(Workspace:FindFirstChild("Maison") or Workspace)
 end)
+-- Timed laps on both circuits, the racing ranks, and joining the next race from anywhere.
+boot("Timed laps", function()
+	local TimeTrials = require(script.Parent.TimeTrials)
+	local Integrity = require(script.Parent.Integrity)
+	TimeTrials.award = Achievements.award
+	TimeTrials.tally = function(player, stat, n)
+		AdminService.tally(player, stat, n)
+	end
+	TimeTrials.progress = function(player, kind, n)
+		Collection.event(player, kind :: any, nil, nil, n)
+	end
+	TimeTrials.herald = function(player, feat)
+		require(script.Parent.Herald).feat(player, feat :: any)
+	end
+	TimeTrials.teleport = function(player, cf)
+		local character = player.Character
+		if not character then
+			return false
+		end
+		pcall(function()
+			player:RequestStreamAroundAsync(cf.Position, 4)
+		end)
+		Integrity.teleport(player, character, cf)
+		return true
+	end
+	TimeTrials.start()
+end)
 CircleService.changed = function(player)
 	Dressing.nameplate(player)
 	Shop.push(player)
 end
+require(script.Parent.Prestige).changed = Dressing.nameplate
 boot("Circles", CircleService.start)
 Shop.handOver = function(player, from, itemName)
 	Concierge.line(player, string.format("A gift for you, from %s: %s.", from, itemName), 4)
@@ -690,6 +725,15 @@ Progress.levelUp = function(player, level, gilt, gems)
 		Remotes.event("Salute"):FireAllClients({ op = "levelPublic", name = Names.of(player), userId = player.UserId, level = level, title = LevelsShared.title(level) })
 	end
 end
+-- Every badge counts toward Prestige (a badge given quietly, quietly).
+Achievements.given = function(player, _badge, quiet)
+	local ok, err = pcall(function()
+		require(script.Parent.Prestige).sync(player, quiet)
+	end)
+	if not ok then
+		warn("[Maison] Prestige: " .. tostring(err))
+	end
+end
 -- The Badge Book: a badge said on the guest's screen.
 Achievements.notify = function(player, badge, extra)
 	local e: { [string]: any } = extra or {}
@@ -832,6 +876,13 @@ boot("The Empire", function()
 	skips.useNow = function(player: Player): boolean
 		return Basement.useHeldSkip(Empire.Attractions.ctx, player)
 	end
+	-- Luxury Island: friends at the sunset toast, the Robux liveries, the Exchange's pieces.
+	local Island = require(script.Parent.Attractions.Island)
+	local Friends = require(script.Parent.Friends)
+	Island.friends = Friends.are
+	Island.liveryOnSale = Purchases.JetLivery.onSale
+	Island.offerLivery = Purchases.JetLivery.offer
+	Island.ownedChanged = Shop.push
 end)
 
 -- The Grand Auction, in the Library: the week's lots, bid for in every server at once.

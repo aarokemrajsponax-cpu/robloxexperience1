@@ -28,6 +28,7 @@ local HolidayMeter = require(script.Parent.Parent.UI.HolidayMeter)
 local Invite = require(script.Parent.Parent.UI.Invite)
 local Share = require(script.Parent.Parent.UI.Share)
 local Sound = require(script.Parent.Parent.Sound)
+local Tracks = require(ReplicatedStorage.Shared.Tracks)
 local CircuitDress = require(script.Parent.CircuitDress)
 
 local CarDrive = {}
@@ -37,6 +38,8 @@ local player = Players.LocalPlayer
 local raceEvent = Remotes.event("Race")
 
 -- Set by Main: hide the driving screens while something else owns the screen (a table).
+-- Set by Main: the racing card (records, ranks, the next race).
+CarDrive.openCard = function() end
 CarDrive.isBusy = function(): boolean
 	return false
 end
@@ -218,6 +221,24 @@ local outKey = Theme.key(keys, "Get out", false, function()
 end, 110)
 outKey.Name = "OutKey"
 outKey.LayoutOrder = 3
+-- Timed laps (server/TimeTrials): the lap running, the last lap's flash, the car's circuit, and a
+-- key for the records.
+local trial = {
+	running = false,
+	startAt = 0,
+	track = "boulevard",
+	carTrack = "boulevard",
+	pb = nil :: number?,
+	flash = nil :: string?,
+	flashUntil = 0,
+	key = nil :: TextButton?,
+}
+trial.key = Theme.key(keys, "Records", false, function()
+	CarDrive.openCard()
+end, 116)
+;(trial.key :: TextButton).Name = "RecordsKey"
+;(trial.key :: TextButton).LayoutOrder = 4
+keys.Size = UDim2.fromOffset(500, 44)
 Theme.paint(keys, "grandPrix")
 
 -- The race line along the top.
@@ -410,6 +431,19 @@ local function updateLine()
 		lineText.Text = "GRAND PRIX  ·  open  ·  press Race"
 		setRaceKey("Race")
 	end
+	-- A timed lap (never during the driver's own race): the clock running, or the lap just done.
+	if not (race.mine and (race.state == "countdown" or race.state == "racing")) and driving then
+		local name = if trial.carTrack == "coast" then "COASTAL CIRCUIT" else "GRAND BOULEVARD"
+		if trial.flash and t < trial.flashUntil then
+			lineText.Text = trial.flash
+		elseif trial.running then
+			local now = Workspace:GetServerTimeNow()
+			lineText.Text = string.format("%s  ·  TIMED LAP  ·  %s%s", name, Tracks.clock(math.max(0, now - trial.startAt)), if trial.pb then "  ·  BEST " .. Tracks.clock(trial.pb) else "")
+		elseif trial.carTrack == "coast" then
+			lineText.Text = "COASTAL CIRCUIT  ·  cross the line for a timed lap"
+		end
+	end
+	raceKey.Visible = trial.carTrack ~= "coast"
 end
 
 ---------------------------------------------------------------------------------------------------
@@ -762,8 +796,34 @@ local function onMessage(m: { [string]: any })
 	elseif op == "driving" then
 		-- (The seat says so too; this only names the car before the seat has replicated.)
 		dashName.Text = string.upper(tostring(m.name or ""))
+		trial.carTrack = if m.track == "coast" then "coast" else "boulevard"
+		trial.running = false
+	elseif op == "trialStart" then
+		trial.running = true
+		trial.startAt = tonumber(m.at) or Workspace:GetServerTimeNow()
+		trial.track = tostring(m.track or trial.carTrack)
+	elseif op == "trialLap" then
+		local time = tonumber(m.time) or 0
+		trial.pb = tonumber(m.pb) or trial.pb
+		trial.flash = string.format("LAP  ·  %s%s", Tracks.clock(time), if m.best then "  ·  NEW BEST" else (if trial.pb then "  ·  BEST " .. Tracks.clock(trial.pb) else ""))
+		trial.flashUntil = os.clock() + 3.5
+		if m.best and m.previous then
+			Toast.show("A new best lap", string.format("%s on %s, %s quicker than before.", Tracks.clock(time), (Tracks.byId[tostring(m.track)] or Tracks.byId.boulevard).name, Tracks.clock(math.max(0, (tonumber(m.previous) or time) - time))), 3.5)
+		end
+		pcall(Sound.play, if m.best then "reward" else "tick", 0.6)
+	elseif op == "trialVoid" then
+		trial.running = false
+		Toast.show("That lap doesn't count", tostring(m.why or ""), 3)
+	elseif op == "trialEnd" then
+		trial.running = false
+	elseif op == "racingRank" then
+		Toast.show("Racing rank: " .. tostring(m.name or ""), tostring(m.line or ""), 5)
+		pcall(Sound.play, "reward", 0.8)
+	elseif op == "card" then
+		CarDrive.openCard()
 	elseif op == "parked" then
-		-- nothing more to do: the seat is empty
+		-- (The seat is empty: no lap runs without a car.)
+		trial.running = false
 	elseif op == "refused" then
 		Toast.show("The Grand Prix", tostring(m.why or "Not now."), 2.5)
 	elseif op == "closed" then

@@ -523,6 +523,18 @@ local services = {
 				SetAsync = function(_, key, value)
 					data[key] = value
 				end,
+				GetAsync = function(_, key)
+					return data[key]
+				end,
+				-- (As on Roblox: returning nil cancels the write.)
+				UpdateAsync = function(_, key, fn)
+					local new = fn(data[key])
+					if new == nil then
+						return nil
+					end
+					data[key] = new
+					return new
+				end,
 				GetSortedAsync = function(_, ascending, size)
 					local rows = {}
 					for k, v in data do

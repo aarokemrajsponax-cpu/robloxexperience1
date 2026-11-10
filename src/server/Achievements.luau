@@ -19,6 +19,8 @@ local Achievements = {}
 
 -- Tells the guest's screen (set by Main).
 Achievements.notify = function(_player: Player, _badge: BadgeBook.Badge, _extra: { [string]: any }?) end
+-- A badge was given, said or quietly (set by Main: Prestige counts every badge).
+Achievements.given = function(_player: Player, _badge: BadgeBook.Badge, _quiet: boolean) end
 
 local function record(data: Profiles.Data): any
 	local d = data :: any
@@ -86,6 +88,16 @@ function Achievements.stats(data: Profiles.Data): { [string]: number }
 		auras = auras,
 		referrals = referral.total or 0,
 		evenings = if type(d.calendar) == "table" and type(d.calendar.total) == "number" then d.calendar.total else 0,
+		flights = t.flights or 0,
+		pearls = t.pearls or 0,
+		sunsets = t.sunsets or 0,
+		races = t.races or 0,
+		raceWins = t.raceWins or 0,
+		podiums = t.podiums or 0,
+		trialLaps = t.trialLaps or 0,
+		runwayWins = t.runwayWins or 0,
+		triviaWins = t.triviaWins or 0,
+		arenaWins = t.arenaWins or 0,
 	}
 end
 
@@ -138,6 +150,7 @@ local function give(player: Player, data: Profiles.Data, badge: BadgeBook.Badge,
 	d.badges[badge.key] = true
 	d.badgeAt[badge.key] = os.time()
 	toRoblox(player, data, badge.key)
+	task.defer(Achievements.given, player, badge, quiet == true)
 	Analytics.custom(player, "Badge", nil, { key = badge.key })
 	if not quiet then
 		-- (With it: how many the guest has now, of how many, and the next on the same ladder with

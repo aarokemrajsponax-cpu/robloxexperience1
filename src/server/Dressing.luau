@@ -13,6 +13,7 @@ local Caps = require(ReplicatedStorage.Shared.Caps)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Ledger = require(ReplicatedStorage.Shared.Ledger)
 local Levels = require(ReplicatedStorage.Shared.Levels)
+local PrestigeRules = require(ReplicatedStorage.Shared.Prestige)
 local Rating = require(ReplicatedStorage.Shared.Rating)
 local Wardrobe = require(ReplicatedStorage.Shared.Wardrobe)
 
@@ -132,9 +133,46 @@ function Dressing.nameplate(player: Player)
 		name.Position = UDim2.fromOffset(34, 0)
 		name.Size = UDim2.new(1, -40, 1, 0)
 	end
-	-- Above the name: OWNER for the owner, else the title the guest wears (the Gem Shop).
+	-- At the plate's right end, a guest's laurel of Maison Prestige: its numeral in its colour.
+	local laurel = player:GetAttribute("Prestige")
+	local laurelColour = if type(laurel) == "number" then PrestigeRules.colour(laurel) else nil
+	if laurelColour then
+		local l = PrestigeRules.get(laurel :: number) :: PrestigeRules.Level
+		local chip = Instance.new("TextLabel")
+		chip.Name = "Laurel"
+		chip.AnchorPoint = Vector2.new(1, 0.5)
+		chip.Position = UDim2.new(1, -3, 0.5, 0)
+		chip.Size = UDim2.new(0, 30, 0, 22)
+		chip.BackgroundColor3 = Color3.fromRGB(16, 14, 12)
+		chip.BackgroundTransparency = 0.05
+		chip.FontFace = Brand.Fonts.display
+		chip.TextScaled = true
+		chip.TextColor3 = laurelColour
+		chip.Text = l.numeral
+		local cc = Instance.new("UICorner")
+		cc.CornerRadius = UDim.new(0, 4)
+		cc.Parent = chip
+		local cs = Instance.new("UIStroke")
+		cs.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		cs.Thickness = 1.5
+		cs.Color = laurelColour
+		cs.Parent = chip
+		local cp = Instance.new("UIPadding")
+		cp.PaddingLeft = UDim.new(0, 3)
+		cp.PaddingRight = UDim.new(0, 3)
+		cp.PaddingTop = UDim.new(0, 3)
+		cp.PaddingBottom = UDim.new(0, 3)
+		cp.Parent = chip
+		chip.Parent = plate
+		name.Size = UDim2.new(name.Size.X.Scale, name.Size.X.Offset - 32, 1, 0)
+	end
+	-- Above the name: OWNER for the owner, else the title the guest wears (the Gem Shop), else
+	-- their laurel's title.
 	local owner = player:GetAttribute("MaisonAdmin") == true
 	local title = player:GetAttribute("Title")
+	if type(title) ~= "string" then
+		title = player:GetAttribute("PrestigeTitle")
+	end
 	if owner or type(title) == "string" then
 		local line = Instance.new("TextLabel")
 		line.Name = "Title"
@@ -164,6 +202,12 @@ function Dressing.nameplate(player: Player)
 		end
 		if not frame and data.goldKey then
 			frame = Wardrobe.get("plate_goldkey")
+		end
+		if not frame and laurelColour and not owner then
+			-- (No frame worn: the laurel's colour borders the plate.)
+			stroke.Color = laurelColour
+			stroke.Thickness = if (laurel :: number) >= PrestigeRules.TOP then 2.5 else 2
+			stroke.Transparency = 0
 		end
 		if frame then
 			plate.BackgroundColor3 = frame.style.fill or plate.BackgroundColor3
@@ -340,6 +384,10 @@ function Dressing.canWear(data: Profiles.Data, item: Wardrobe.Item): boolean
 		return data.goldKey
 	elseif item.source == "blackCard" and item.kind == "nameplate" then
 		return data.blackCard.active
+	elseif item.source == "prestige" then
+		-- (Maison Prestige's pieces come with their laurel, and stay with it.)
+		local p = (data :: any).prestige
+		return type(p) == "table" and (tonumber(p.level) or 0) >= (tonumber((item :: any).prestige) or math.huge)
 	end
 	return data.owned[item.id] == true
 end

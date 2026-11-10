@@ -6,6 +6,7 @@
 --   run: keep walking or be carried off the end), the golden treadmill (double Stride, for Gems),
 --   and the lectern with the upgrades board.
 --   The Basement Stair (the Obsidian Room): the way down into the Maison Basement, and its boards.
+--   The Jet Lounge (on the Terrace): the private jet's boarding arch, to Luxury Island.
 -- The prompts are tagged "AttractionPrompt" (server/Attractions connects them): Kind "go" takes a
 -- guest in, "panel" opens the attraction's board on their screen.
 
@@ -44,7 +45,7 @@ end
 
 -- A grand entrance on a wall: a tall arch of black lacquer and brass, a curtain of the attraction's
 -- light hanging in it, its name over it. `cf`: the arch's middle on the floor, facing into the room.
-function Lobbies.entrance(parent: Instance, id: string, cf: CFrame): BasePart
+function Lobbies.entrance(parent: Instance, id: string, cf: CFrame, noPlaque: boolean?): BasePart
 	local def = AttractionList.byId[id]
 	local m = Kit.model(parent, "Entrance_" .. id)
 	local w, h = 14, 17
@@ -64,6 +65,9 @@ function Lobbies.entrance(parent: Instance, id: string, cf: CFrame): BasePart
 	Kit.pointLight(veil, 1.6, 26, def.colour:Lerp(rgb(255, 255, 255), 0.4))
 	HolidayProps.sparkle(veil, def.colour:Lerp(GOLD, 0.5), 6, 0.6)
 	prompt(veil, id, "go", "Go in", def.name, 0.3)
+	if noPlaque then
+		return veil
+	end
 	-- A plaque beside it: what it is, in a sentence.
 	local plaque = Kit.part(m, "Plaque", Vector3.new(6.4, 3.4, 0.25), cf * CFrame.new(w / 2 + 6.5, 6, -0.6) * CFrame.Angles(0, 0, 0), L.blackLacquer, { collide = false })
 	Kit.engrave(plaque, Enum.NormalId.Front, {
@@ -207,6 +211,18 @@ local function auctionRoom(parent: Instance)
 	}, { ppu = 50, lit = false, brightness = 1.5, maxDistance = 200 })
 end
 
+-- The Jet Lounge, on the Terrace: the private jet's boarding arch in the east balustrade's middle
+-- (between its two planters), facing the fire pit. A guest without the Island Key who walks up is
+-- shown how to get it (server/Attractions: the island is "locked" for them).
+local function jetLounge(parent: Instance)
+	local R = Layout.Terrace
+	local y = R.floorY
+	local m = Kit.model(parent, "JetLounge")
+	local z = R.minZ + 10 * Layout.SCALE -- (the terrace's z 40 as drawn: between the planters)
+	local at = Vector3.new(R.maxX - 3, y, z)
+	Lobbies.entrance(m, "island", CFrame.lookAt(at, at - Vector3.new(1, 0, 0)), true)
+end
+
 function Lobbies.build(parent: Instance)
 	local root = Kit.model(parent, "Lobbies")
 	local rooms: { { name: string, fn: (Instance) -> () } } = {
@@ -214,6 +230,7 @@ function Lobbies.build(parent: Instance)
 		{ name = "The Basement Stair", fn = basementStair },
 		{ name = "The Executive's Anteroom", fn = anteroom },
 		{ name = "The Grand Auction", fn = auctionRoom },
+		{ name = "The Jet Lounge", fn = jetLounge },
 	}
 	for _, room in rooms do
 		local ok, err = pcall(room.fn :: any, root)

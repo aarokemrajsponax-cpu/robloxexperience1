@@ -8,6 +8,7 @@
 -- are the walls, and they stop cars only (the "CarWalls" group: guests walk straight through).
 -- The infield is walled for cars, so nobody takes a short cut across it.
 
+local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
@@ -198,6 +199,33 @@ function Circuit.build(parent: Instance): Model
 		{ text = "Any car is yours to drive. Press Race to race.", size = 0.3, font = Brand.Fonts.body, color = C.bone },
 	}, 4)
 	board:SetAttribute("GarageSign", true)
+	-- The Racing Club: a tall board between the garage and the gantry, with the records, the
+	-- racing ranks and the next race a press away (server/TimeTrials answers its prompt).
+	local clubCf = CFrame.lookAt(flatAt(cx + 30, kerbZ + 4, 0), flatAt(cx + 30, kerbZ + 20, 0))
+	local club = Kit.model(bays, "RacingClub")
+	for _, side in { -1, 1 } do
+		Kit.post(club, "ClubPost", 9, 0.5, (clubCf * CFrame.new(side * 4.6, 0, 0)).Position, LOOK.black)
+		Kit.post(club, "ClubBand", 0.4, 0.62, (clubCf * CFrame.new(side * 4.6, 8.2, 0)).Position, LOOK.gold)
+	end
+	local clubBoard = Kit.part(club, "ClubBoard", Vector3.new(9, 4.6, 0.3), clubCf * CFrame.new(0, 6.4, 0), LOOK.black)
+	Kit.part(club, "ClubFrame", Vector3.new(9.3, 4.9, 0.2), clubCf * CFrame.new(0, 6.4, 0.12), LOOK.gold, PAINT)
+	Kit.engrave(clubBoard, Enum.NormalId.Front, {
+		{ text = "THE RACING CLUB", size = 0.26, font = Brand.Fonts.display, color = C.gold },
+		{ text = "records · racing ranks · the next race", size = 0.14, font = Brand.Fonts.body, color = C.bone },
+		{ text = "timed laps any time: cross the line and keep to the road", size = 0.12, font = Brand.Fonts.body, color = C.bone },
+	}, { ppu = 60, lit = false, brightness = 1.4, maxDistance = 220 })
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.Name = "RacingClubPrompt"
+	prompt.ActionText = "Records & the next race"
+	prompt.ObjectText = "The Racing Club"
+	prompt.KeyboardKeyCode = Enum.KeyCode.E
+	prompt.GamepadKeyCode = Enum.KeyCode.ButtonX
+	prompt.HoldDuration = 0
+	prompt.MaxActivationDistance = 14
+	prompt.RequiresLineOfSight = false
+	prompt.Style = Enum.ProximityPromptStyle.Custom
+	prompt.Parent = clubBoard
+	CollectionService:AddTag(prompt, "RacingClubPrompt")
 	-- The Private Garage: two more bays, west of the others, and their own sign.
 	for i = 1, #GrandPrix.GARAGE do
 		local p = GrandPrix.privateBay(i).Position

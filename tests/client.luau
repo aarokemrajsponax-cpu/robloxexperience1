@@ -8094,6 +8094,168 @@ coroutine.wrap(function()
 end)()
 
 ---------------------------------------------------------------------------------------------------
+-- 7h. Maison Prestige: the card from the Fortune screen (every laurel, what it needs and brings),
+-- a new laurel's reveal, the Flourish, and the ring of light at the feet of the highest
+---------------------------------------------------------------------------------------------------
+coroutine.wrap(function()
+	local PrestigePanel = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "PrestigePanel")
+	local FortunePanel = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "FortunePanel")
+	local Laurels = module("StarterPlayer", "StarterPlayerScripts", "Client", "World", "Laurels")
+	local PrestigeRules = module("ReplicatedStorage", "Shared", "Prestige")
+	local RootM = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "Root")
+	local errorsBefore = #errors
+	RootM.close()
+	advance(0.5)
+	local levels = {}
+	for _, l in PrestigeRules.Levels do
+		table.insert(levels, { level = l.level, name = l.name, numeral = l.numeral, points = l.points, milestone = l.milestone and l.milestone.line, milestoneMet = l.level <= 4, rewards = l.rewards, held = l.level <= 3, since = if l.level <= 3 then 1793000000 else nil })
+	end
+	invokeResults.EmpireAsk = function(request)
+		if request.op == "prestige" then
+			return { ok = true, level = 3, points = 72, top = 10, levels = levels, next = { level = 4, name = "Gold Laurel", short = 18, milestone = "Reach the Treasury at the foot of the Maison Basement", milestoneMet = true }, flourish = false }
+		end
+		return { ok = true, total = 128400, earned = 120400, rank = 6, shown = true, parts = {}, boards = { available = true, here = {}, week = {}, all = {} } }
+	end
+	FortunePanel.open()
+	advance(0.6)
+	check("the Fortune screen has a key to Maison Prestige", textOnScreen("Maison Prestige") ~= nil)
+	press("Maison Prestige")
+	advance(0.6)
+	check("the Prestige card: the laurel held and the points to the next", PrestigePanel.isOpen() and textOnScreen("Silver Laurel") ~= nil and textOnScreen("72 laurel points  ·  18 more for the Gold Laurel") ~= nil)
+	check("...the next laurel's great deed, ticked when done", textOnScreen("✓ Its great deed is done: Reach the Treasury at the foot of the Maison Basement.") ~= nil)
+	check("...every laurel, with what it needs and brings", textOnScreen("Maison Legend") ~= nil and textOnScreen("460 laurel points  ·  Become Sovereign of the Maison") ~= nil and textOnScreen("The title Gold Laurel  ·  A gold border  ·  The Laurel Flourish: a shower of gold leaves, at a key") ~= nil)
+	check("...the laurels held, with the day they came", textOnScreen("Held since 26 Oct 2026") ~= nil)
+	check("...no Flourish key before its laurel", (function()
+		local key = find(playerGui, function(d)
+			return d:IsA("TextButton") and d.Text == "The Laurel Flourish"
+		end)
+		return key == nil or key.Visible == false
+	end)())
+	snapshot("prestige")
+	RootM.close()
+	advance(0.5)
+	serverSays("Empire", { op = "prestige", level = 4, name = "Gold Laurel", numeral = "IV", rewards = PrestigeRules.Levels[4].rewards })
+	advance(0.8)
+	check("a new laurel: MAISON PRESTIGE, its numeral and its name", textOnScreen("MAISON PRESTIGE") ~= nil and textOnScreen("GOLD LAUREL") ~= nil and textOnScreen("IV") ~= nil)
+	check("...and what it brings", textOnScreen("Laurel IV  ·  The Laurel Flourish: a shower of gold leaves, at a key") ~= nil)
+	snapshot("prestige-up")
+	advance(5.5)
+	serverSays("Empire", { op = "flourish", userId = LocalPlayer.UserId, level = 4 })
+	advance(1)
+	LocalPlayer:SetAttribute("Prestige", 5)
+	signalOf(LocalPlayer, "attr:Prestige"):Fire()
+	advance(0.3)
+	check("from the Platinum Laurel: a ring of light at their feet", Laurels.ringOf(LocalPlayer) ~= nil)
+	LocalPlayer:SetAttribute("Prestige", nil)
+	signalOf(LocalPlayer, "attr:Prestige"):Fire()
+	advance(0.3)
+	check("...and none without it", Laurels.ringOf(LocalPlayer) == nil)
+	invokeResults.EmpireAsk = nil
+	check("no errors with Maison Prestige", #errors == errorsBefore, errors[errorsBefore + 1])
+end)()
+
+---------------------------------------------------------------------------------------------------
+-- 7i. Luxury Island: the Jet Lounge's card (the Island Key, liveries, the island's light, the
+-- Exchange), the flight in, the island's own light, the day's pearls, its screen, and home
+---------------------------------------------------------------------------------------------------
+coroutine.wrap(function()
+	local IslandPanel = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "IslandPanel")
+	local IslandHud = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "IslandHud")
+	local IslandView = module("StarterPlayer", "StarterPlayerScripts", "Client", "World", "IslandView")
+	local IslandPlan = module("ReplicatedStorage", "Shared", "Island")
+	local RootM = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "Root")
+	local Lighting = game:GetService("Lighting")
+	local errorsBefore = #errors
+	RootM.close()
+	advance(0.5)
+	local liveries = {}
+	for _, l in IslandPlan.Liveries do
+		table.insert(liveries, { id = l.id, name = l.name, line = l.line, owned = l.id == "noir", gilt = l.gilt, gems = l.gems, product = l.product, onSale = if l.product then false else nil })
+	end
+	local themes = {}
+	for _, t in IslandPlan.Themes do
+		table.insert(themes, { id = t.id, name = t.name, line = t.line, owned = t.id == "golden", gilt = t.gilt, gems = t.gems })
+	end
+	local function islandState(key)
+		return {
+			ok = true, key = key, keyRank = 6, keyRankName = "Tycoon", rank = 5, keyGilt = 25000, keyGems = 250,
+			pearlSpots = IslandPlan.pearlsFor(20775), pearlTaken = { false, true, false, false, false }, pearlBalance = 12, pearlsAll = 31,
+			toasted = false, postcards = { jet = true }, postcardCount = 1, postcardTotal = 6,
+			liveries = liveries, livery = "noir", themes = themes, theme = "golden", flights = 4,
+			exchange = { { id = "suite_shelllamp", name = "The Seashell Lamp", line = "Mother-of-pearl, a soft white glow. From the island.", pearls = 15, owned = false }, { id = "suite_coralthrone", name = "The Coral Throne", line = "Coral velvet on a gilt frame: the island's own seat.", pearls = 60, owned = false } },
+		}
+	end
+	invokeResults.AttractionAsk = islandState(false)
+	serverSays("Attraction", { op = "panel", id = "island" })
+	advance(0.6)
+	check("the Jet Lounge's card: the Island Key, its rank and its prices, before anyone pays", IslandPanel.isOpen() and textOnScreen("The Island Key") ~= nil and textOnScreen("○  A wealth rank of Tycoon (a Fortune of 100,000): you're a Magnate now") ~= nil and textOnScreen("○  The key itself: 25,000 Gilt, or 250 Gems") ~= nil)
+	check("...both ways to pay", textOnScreen("25,000 Gilt") ~= nil and textOnScreen("250 Gems") ~= nil)
+	snapshot("island-key")
+	press("Liveries")
+	advance(0.4)
+	check("Liveries: each with its price, the house's own worn, the Robux ones not on sale until they are", textOnScreen("Maison Noir") ~= nil and textOnScreen("Worn") ~= nil and textOnScreen("12,000 Gilt") ~= nil and textOnScreen("120 Gems") ~= nil and textOnScreen("Not on sale") ~= nil)
+	snapshot("island-liveries")
+	press("12,000 Gilt")
+	advance(0.4)
+	check("buying a livery asks the server by name (never a price)", sent[#sent].message[1].act == "livery" and sent[#sent].message[1].what == "riviera" and sent[#sent].message[1].gilt == nil)
+	press("Island light")
+	advance(0.4)
+	check("Island light: the four lights, the chosen one marked", textOnScreen("Golden Hour") ~= nil and textOnScreen("Chosen") ~= nil and textOnScreen("Moonlit") ~= nil and textOnScreen("20,000 Gilt") ~= nil)
+	press("The Exchange")
+	advance(0.4)
+	check("the Exchange: the pearls held, each piece's price in pearls", textOnScreen("You have 12 pearls. Each day's five lie on the lagoon's floor: swim down beside one to bring it up.") ~= nil and textOnScreen("15 pearls") ~= nil and textOnScreen("60 pearls") ~= nil)
+	snapshot("island-exchange")
+	RootM.close()
+	advance(0.5)
+	-- The flight in.
+	invokeResults.AttractionAsk = islandState(true)
+	LocalPlayer:SetAttribute("IslandTheme", "golden")
+	LocalPlayer:SetAttribute("JetLivery", "riviera")
+	LocalPlayer:SetAttribute("Attraction", "island")
+	signalOf(LocalPlayer, "attr:Attraction"):Fire()
+	serverSays("Attraction", { op = "entered", id = "island" })
+	advance(1)
+	local flight = playerGui:FindFirstChild("MaisonFlight")
+	check("the jet: a few seconds in its cabin, to the island", flight ~= nil and textOnScreen("To Luxury Island") ~= nil and workspace:FindFirstChild("IslandCabin") ~= nil and camera.CameraType == roblox.Enum.CameraType.Scriptable)
+	snapshot("island-flight")
+	advance(6)
+	check("...then the island, and the camera back with them", playerGui:FindFirstChild("MaisonFlight") == nil and workspace:FindFirstChild("IslandCabin") == nil and camera.CameraType == roblox.Enum.CameraType.Custom)
+	check("the island's own light on this screen (Golden Hour)", Lighting:FindFirstChild("IslandAtmosphere") ~= nil and math.abs(Lighting.ClockTime - 17.55) < 0.01)
+	local pearlsShown = 0
+	local folder = workspace:FindFirstChild("MaisonIsland")
+	for _, m in (if folder then folder:GetChildren() else {}) do
+		if m.Name == "IslandPearl" then
+			pearlsShown += 1
+		end
+	end
+	check("the day's pearls still to find, on the lagoon's floor (one already brought up)", pearlsShown == 4, pearlsShown)
+	check("its screen: the day at a glance", IslandHud.mounted() and textOnScreen("LUXURY ISLAND") ~= nil and textOnScreen("🐚 1 / 5") ~= nil and textOnScreen("🌅 Ready") ~= nil and textOnScreen("📸 1 / 6") ~= nil)
+	check("...Fly home, and Liveries & light", textOnScreen("Fly home") ~= nil and textOnScreen("Liveries & light") ~= nil)
+	snapshot("island-hud")
+	serverSays("Attraction", { op = "toasted", gilt = 350, friends = 1 })
+	advance(0.3)
+	check("the sunset toasted: said on its screen", textOnScreen("🌅 Toasted") ~= nil)
+	-- Choosing the moonlit night relights this screen at once.
+	LocalPlayer:SetAttribute("IslandTheme", "moonlit")
+	signalOf(LocalPlayer, "attr:IslandTheme"):Fire()
+	advance(0.3)
+	check("a new light chosen: the island relit (Moonlit)", math.abs(Lighting.ClockTime - 0.6) < 0.01)
+	-- Home.
+	LocalPlayer:SetAttribute("Attraction", nil)
+	signalOf(LocalPlayer, "attr:Attraction"):Fire()
+	serverSays("Attraction", { op = "left", id = "island", why = "home" })
+	advance(0.5)
+	check("home: the flight back, and the house's own light exactly as it was", textOnScreen("Home to the Maison") ~= nil and Lighting:FindFirstChild("IslandAtmosphere") == nil and not IslandHud.mounted())
+	advance(6.5)
+	check("...the pearls gone from this screen", workspace:FindFirstChild("MaisonIsland") == nil or #workspace.MaisonIsland:GetChildren() == 0)
+	invokeResults.AttractionAsk = nil
+	LocalPlayer:SetAttribute("IslandTheme", nil)
+	LocalPlayer:SetAttribute("JetLivery", nil)
+	check("no errors with Luxury Island", #errors == errorsBefore, errors[errorsBefore + 1])
+	local _ = IslandView
+end)()
+
+---------------------------------------------------------------------------------------------------
 -- 8. A respawn hands straight back to the follow camera
 ---------------------------------------------------------------------------------------------------
 camera.CameraType = roblox.Enum.CameraType.Scriptable

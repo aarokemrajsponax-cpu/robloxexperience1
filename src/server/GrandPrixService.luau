@@ -29,6 +29,7 @@ local Workspace = game:GetService("Workspace")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local GrandPrix = require(ReplicatedStorage.Shared.GrandPrix)
+local Tracks = require(ReplicatedStorage.Shared.Tracks)
 local Names = require(ReplicatedStorage.Shared.Names)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Gilt = require(script.Parent.Gilt)
@@ -42,6 +43,9 @@ local Service = {}
 Service.isBusy = function(_player: Player): boolean
 	return false
 end
+-- Every beat of the circuit (TimeTrials times laps from it), and racing points for a result.
+Service.onTick = function(_t: number) end
+Service.points = function(_player: Player, _n: number, _why: string) end
 Service.gemsChanged = function(_player: Player) end
 Service.onFinish = function(_player: Player, _place: number, _field: number) end
 -- Whether a guest holds the Private Garage, and offering it (Main: Purchases.Racing).
@@ -62,6 +66,7 @@ end
 
 type Car = {
 	def: { [string]: any },
+	track: string, -- "boulevard" (the street, and the races) or "coast" (Luxury Island's timed laps)
 	index: number,
 	home: CFrame,
 	model: Model,
@@ -386,6 +391,10 @@ local function payDriver(player: Player, place_: number, time: number, field: nu
 		end
 	end
 	pcall(Service.onFinish, player, place_, field)
+	-- Racing points: for finishing, more on the podium, more again for the win.
+	local P = Tracks.POINTS
+	local points = P.finish + (if place_ <= 3 and field >= 2 then P.podium else 0) + (if place_ == 1 then P.win else 0)
+	pcall(Service.points, player, points, "race")
 	return gilt, gems
 end
 
@@ -586,6 +595,9 @@ function Service.join(player: Player): (boolean, string?, boolean?)
 	if not car or car.driver ~= player then
 		return false, "Get in a car first."
 	end
+	if car.track ~= "boulevard" then
+		return false, "The Grand Prix races on the Grand Boulevard, before the house. This car is for timed laps on the Coastal Circuit."
+	end
 	if race.state == "results" and not door.reopenBy then
 		return false, "The next Grand Prix opens in " .. clockText(Service.opensIn()) .. ".", true
 	end
@@ -639,8 +651,26 @@ local function carById(id: string): Car?
 	return nil
 end
 
+-- A racer's rank on the car they drive: its stripes in their rank's colour (none for a Rookie).
+local function stripes(car: Car, player: Player?)
+	local rankNo = if player then player:GetAttribute("RacingRank") else nil
+	local rank = if type(rankNo) == "number" then Tracks.RANKS[rankNo] else nil
+	local colour = rank and rank.stripe
+	for _, d in car.model:GetChildren() do
+		if d:IsA("BasePart") and d.Name == "RacingStripe" then
+			d.Transparency = if colour then 0 else 1
+			if colour then
+				d.Color = colour
+				d.Material = if rankNo == #Tracks.RANKS then Enum.Material.Neon else Enum.Material.SmoothPlastic
+			end
+		end
+	end
+end
+Service.stripes = stripes
+
 local function leftCar(car: Car)
 	local player = car.driver
+	stripes(car, nil)
 	car.driver = nil
 	if player then
 		byPlayer[player] = nil
@@ -713,7 +743,8 @@ function Service.drive(player: Player, carId: string): (boolean, string?)
 		car.chassis.Anchored = false
 		setOwner(car, player)
 	end
-	send(player, { op = "driving", carId = car.def.id, name = car.def.name })
+	stripes(car, player)
+	send(player, { op = "driving", carId = car.def.id, name = car.def.name, track = car.track })
 	return true, nil
 end
 
@@ -757,6 +788,12 @@ function Service.reset(player: Player): boolean
 		r.history = { { at = cf.Position, t = t } }
 	elseif race.state == "countdown" and r then
 		return false
+	elseif car.track ~= "boulevard" then
+		-- (The island's cars: set down on the Coastal Circuit's road, pointing the way it runs.)
+		local s = Tracks.progress(car.track, car.chassis.CFrame.Position)
+		local p, dir = Tracks.point(car.track, s)
+		local at = Vector3.new(p.X, Tracks.ride(car.track) + 0.4, p.Z)
+		cf = CFrame.lookAt(at, at + Vector3.new(dir.X, 0, dir.Z))
 	else
 		local pos = car.chassis.CFrame.Position
 		local look = car.chassis.CFrame.LookVector
@@ -901,6 +938,22 @@ function Service.cars(): { Car }
 	return cars
 end
 
+-- The car a guest is driving (nil: none).
+function Service.carOf(player: Player): Car?
+	local car = byPlayer[player]
+	return if car and car.driver == player then car else nil
+end
+
+-- Whether a guest is on the grid or racing now (their laps are the race's, not timed laps).
+function Service.inRace(player: Player): boolean
+	return racerOf(player) ~= nil and (race.state == "countdown" or race.state == "racing")
+end
+
+-- Whether the Grand Boulevard is the race's just now.
+function Service.racing(): boolean
+	return race.state == "countdown" or race.state == "racing"
+end
+
 local function setupGroups()
 	pcall(function()
 		local PhysicsService = game:GetService("PhysicsService")
@@ -934,11 +987,16 @@ function Service.start(parent: Instance?)
 	for i, def in GrandPrix.GARAGE do
 		table.insert(fleet, { def = def, home = GrandPrix.privateBay(i) })
 	end
+	-- Luxury Island's cars, for timed laps of the Coastal Circuit (they drive like every other).
+	for i, def in Tracks.COAST_CARS do
+		table.insert(fleet, { def = def, home = Tracks.bay(i) })
+	end
 	for i, entry in fleet do
 		local def = entry.def
 		local model = Motorcar.build(holder, def, entry.home)
 		local car: Car = {
 			def = def,
+			track = def.track or "boulevard",
 			index = i,
 			home = entry.home,
 			model = model,
@@ -980,6 +1038,7 @@ function Service.start(parent: Instance?)
 		local ok, err = pcall(function()
 			upkeep()
 			stepRace()
+			Service.onTick(now())
 		end)
 		if not ok then
 			warn("[Maison] The Grand Prix: " .. tostring(err))

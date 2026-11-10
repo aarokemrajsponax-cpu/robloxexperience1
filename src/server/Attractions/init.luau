@@ -31,6 +31,7 @@ local Types = require(script.Types)
 local Luxe = require(script.Luxe)
 local Basement = require(script.Basement)
 local ExecutiveGame = require(script.Executive)
+local IslandGame = require(script.Island)
 
 local Attractions = {}
 
@@ -51,6 +52,7 @@ local GAMES: { [string]: Types.Game } = {
 	luxe = Luxe :: any,
 	basement = Basement :: any,
 	executive = ExecutiveGame :: any,
+	island = IslandGame :: any,
 }
 
 local event = Remotes.event("Attraction")
@@ -458,6 +460,25 @@ local function hookPrompt(prompt: Instance)
 	end
 	(prompt :: ProximityPrompt).Triggered:Connect(function(player: Player)
 		if kind == "panel" then
+			event:FireClient(player, { op = "panel", id = id, which = prompt:GetAttribute("Panel") })
+			return
+		elseif kind == "act" then
+			-- (Something done on the spot: the attraction decides, and says so.)
+			local game_ = GAMES[id]
+			if game_ and game_.ask then
+				local ok, r = pcall(game_.ask :: any, ctx, player, { op = "act", id = id, act = prompt:GetAttribute("Act"), what = prompt:GetAttribute("What") })
+				if ok and type(r) == "table" then
+					if r.ok == true and type(r.title) == "string" then
+						event:FireClient(player, { op = "notice", title = r.title, line = tostring(r.line or "") })
+					elseif r.ok ~= true and type(r.why) == "string" then
+						event:FireClient(player, { op = "notice", title = "Not just now", line = r.why })
+					end
+				end
+			end
+			return
+		end
+		local g = GAMES[id]
+		if kind ~= "home" and g and g.locked and g.locked(ctx, player) and not inside[player] then
 			event:FireClient(player, { op = "panel", id = id })
 			return
 		end

@@ -202,7 +202,7 @@ local PLACES: { Place } = {
 	{ id = "boutique", text = "The Boutique" },
 	{ id = "library", text = "The Library" },
 	{ id = "ballroom", text = "The Ballroom" },
-	{ id = "terrace", text = "The Terrace" },
+	{ id = "terrace", text = "The Terrace  ·  the Jet Lounge" },
 	{ id = "suite", text = "Your Suite" },
 	{ id = "grandPrix", text = "The Grand Prix" },
 }
@@ -247,6 +247,12 @@ function Concierge.recommend(player: Player): (string, string?)
 	if (tonumber(basement.clears) or 0) == 0 then
 		return R.basement, "obsidian"
 	end
+	-- (A Tycoon without the Island Key: the jet waits.)
+	local island = if type(pages.island) == "table" then pages.island else {}
+	local reached = if type(data.empire) == "table" then tonumber(data.empire.rank) or 1 else 1
+	if island.key ~= true and reached >= (tonumber(((settings.Attractions or {}).island or {}).keyRank) or 6) then
+		return R.island, "terrace"
+	end
 	return R.quartermaster, "midnight"
 end
 
@@ -254,7 +260,7 @@ end
 function Concierge.answer(id: string): string?
 	local settings = Concierge.settings()
 	local a = settings.Attractions or {}
-	local luxe, basement, executive = a.luxe or {}, a.basement or {}, a.executive or {}
+	local luxe, basement, executive, island = a.luxe or {}, a.basement or {}, a.executive or {}, a.island or {}
 	local function commas(n: number): string
 		local text = tostring(math.floor(n))
 		local out = text:reverse():gsub("(%d%d%d)", "%1,"):reverse()
@@ -268,6 +274,8 @@ function Concierge.answer(id: string): string?
 					:gsub("{invitePrice}", commas(tonumber(executive.invitePrice) or 25000))
 					:gsub("{stride}", tostring(math.floor((tonumber(luxe.stridePerLevel) or 0.035) * 1000 + 0.5) / 10))
 					:gsub("{skipGems}", tostring(tonumber(basement.skipGems) or 25))
+					:gsub("{islandGilt}", commas(tonumber(island.keyGilt) or 25000))
+					:gsub("{islandGems}", tostring(tonumber(island.keyGems) or 250))
 			)
 		end
 	end
