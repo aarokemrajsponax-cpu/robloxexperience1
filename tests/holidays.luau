@@ -32,9 +32,7 @@ local function signalOf(inst, name)
 	signals[key] = signals[key] or H.signal()
 	return signals[key]
 end
-roblox.implementProperty("ProximityPrompt", "Triggered", function(self)
-	return signalOf(self, "Triggered")
-end)
+-- (A prompt's Triggered: the harness gives every prompt one already.)
 roblox.implementMethod("Instance", "GetPropertyChangedSignal", function(self, prop)
 	return signalOf(self, "prop:" .. prop)
 end)

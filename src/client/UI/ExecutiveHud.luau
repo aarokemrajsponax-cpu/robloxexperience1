@@ -1,0 +1,477 @@
+--!strict
+-- The Executive Suite's own screen, shown only while a guest is up there: in the hallway, the alert
+-- (how near security is to showing you out) and the door's code as you've found it; in the Office,
+-- the phase, what's left of it (the generators, the bodyguards, the Executive's own bar) and your
+-- composure. Keys: Leave, the Decoy (once, if packed), and Fire (or click) in the Office. The keypad
+-- at the door. What's thrown, the shockwave and the shots are drawn here, where the server says.
+-- Everything shown is what the server last said; the server decides every hit.
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
+
+local Brand = require(ReplicatedStorage.Shared.Brand)
+local Plan = require(ReplicatedStorage.Shared.Executive)
+local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Rules = require(ReplicatedStorage.Shared.Fortune)
+local Root = require(script.Parent.Root)
+local Theme = require(script.Parent.Theme)
+local Toast = require(script.Parent.Toast)
+
+local ExecutiveHud = {}
+
+local C = Brand.Colours
+local GOLD = Color3.fromRGB(255, 204, 90)
+local RED = Color3.fromRGB(235, 70, 80)
+local BLUE = Color3.fromRGB(120, 200, 255)
+local CARD_W = 340
+local CARD_H = 96
+local KEYPAD = "ExecutiveKeypad"
+
+local card: Frame? = nil
+local keys: Frame? = nil
+local parts: { [string]: any } = {}
+local view: { [string]: any } = {}
+local conns: { RBXScriptConnection } = {}
+local effects: { Instance } = {}
+
+local function ask(request: { [string]: any }): { [string]: any }?
+	local ok, r = pcall(function()
+		return Remotes.func("AttractionAsk"):InvokeServer(request)
+	end)
+	return if ok and type(r) == "table" then r else nil
+end
+
+local function now(): number
+	local ok, t = pcall(function()
+		return Workspace:GetServerTimeNow()
+	end)
+	return if ok and type(t) == "number" then t else os.clock()
+end
+
+local function fighting(): boolean
+	local p = view.phase
+	return p == "shield" or p == "detail" or p == "boss"
+end
+
+local function label(parent: Instance, name: string, text: string, size: number, font: Font, colour: Color3, y: number, align: Enum.TextXAlignment?): TextLabel
+	local l = Instance.new("TextLabel")
+	l.Name = name
+	l.BackgroundTransparency = 1
+	l.Size = UDim2.new(1, 0, 0, size + 6)
+	l.Position = UDim2.fromOffset(0, y)
+	l.FontFace = font
+	l.TextSize = size
+	l.TextColor3 = colour
+	l.Text = text
+	l.TextXAlignment = align or Enum.TextXAlignment.Left
+	l.TextTruncate = Enum.TextTruncate.AtEnd
+	l.Parent = parent
+	return l
+end
+
+local function bar(parent: Instance, name: string, y: number, colour: Color3): Frame
+	local track = Instance.new("Frame")
+	track.Name = name
+	track.Position = UDim2.fromOffset(0, y)
+	track.Size = UDim2.new(1, 0, 0, 6)
+	track.BackgroundColor3 = Color3.fromRGB(48, 42, 36)
+	track.BorderSizePixel = 0
+	track.Parent = parent
+	local fill = Instance.new("Frame")
+	fill.Name = "Fill"
+	fill.Size = UDim2.new(0, 0, 1, 0)
+	fill.BackgroundColor3 = colour
+	fill.BorderSizePixel = 0
+	fill.Parent = track
+	return fill
+end
+
+local function place()
+	local c = card
+	if not c then
+		return
+	end
+	local y = math.max(Root.topClear() + 6, 126)
+	c.Position = UDim2.new(0.5, 0, 0, y)
+	Root.setTop("Executive", y + CARD_H + 4, CARD_W / 2)
+	local k = keys
+	if k then
+		k.Position = UDim2.new(0.5, 0, 1, -(14 + Root.bottomClear()))
+	end
+end
+
+local PHASE_NAMES: { [string]: string } = { hall = "The hallway", won = "The Executive, beaten" }
+for _, p in Plan.Phases do
+	PHASE_NAMES[p.id] = p.name
+end
+
+local function draw()
+	if not card then
+		return
+	end
+	local phase = tostring(view.phase or "hall")
+	parts.phase.Text = string.upper(PHASE_NAMES[phase] or phase)
+	if phase == "hall" then
+		parts.top.Text = "CODE  " .. tostring(view.digits or "_ _ _ _")
+		parts.under.Text = if view.open then "THE DOOR IS OPEN" else "READ THE FOUR TERMINALS · THE KEYPAD IS BY THE DOOR"
+		local alert = math.clamp(tonumber(view.alert) or 0, 0, 1)
+		parts.fill.Size = UDim2.new(alert, 0, 1, 0)
+		parts.fill.BackgroundColor3 = Color3.fromRGB(255, 196, 80):Lerp(RED, alert)
+		parts.second.Size = UDim2.new(0, 0, 1, 0)
+		parts.label2.Text = if alert > 0.05 then string.format("ALERT %d%%", math.floor(alert * 100 + 0.5)) else "UNSEEN"
+	else
+		local left = ""
+		if phase == "shield" then
+			left = string.format("GENERATORS LEFT  %d", tonumber(view.generators) or 0)
+		elseif phase == "detail" then
+			left = string.format("BODYGUARDS LEFT  %d", tonumber(view.guards) or 0)
+		elseif phase == "boss" then
+			left = "THE EXECUTIVE"
+		else
+			left = "THE SAFE AND THE LIFT DOWN ARE OPEN"
+		end
+		parts.top.Text = left
+		parts.under.Text = ""
+		local boss = if phase == "boss" then math.clamp((tonumber(view.boss) or 0) / math.max(1, tonumber(view.bossMax) or 1), 0, 1) else 0
+		parts.fill.Size = UDim2.new(boss, 0, 1, 0)
+		parts.fill.BackgroundColor3 = RED
+		local comp = math.clamp((tonumber(view.composure) or 0) / math.max(1, tonumber(view.max) or 100), 0, 1)
+		parts.second.Size = UDim2.new(comp, 0, 1, 0)
+		parts.label2.Text = string.format("COMPOSURE %d", tonumber(view.composure) or 0)
+	end
+	local fire = parts.fireKey :: TextButton?
+	if fire then
+		fire.Visible = fighting()
+	end
+	local decoy = parts.decoyKey :: TextButton?
+	if decoy then
+		decoy.Visible = view.decoy == true and phase == "hall"
+	end
+	local cross = parts.cross :: Frame?
+	if cross then
+		cross.Visible = fighting()
+	end
+end
+
+-- A shot from this guest's sidearm, toward where they aim (the server decides what it hits).
+local function shoot(direction: Vector3)
+	if not fighting() then
+		return
+	end
+	pcall(function()
+		Remotes.event("AttractionFire"):FireServer(direction.Unit)
+	end)
+end
+ExecutiveHud.shoot = shoot
+
+local function aimFromScreen(position: Vector2?): Vector3
+	local ok, direction = pcall(function()
+		local camera = Workspace.CurrentCamera :: Camera
+		local at = position or (camera.ViewportSize / 2)
+		return camera:ViewportPointToRay(at.X, at.Y).Direction
+	end)
+	if ok and typeof(direction) == "Vector3" and direction.Magnitude > 0.5 then
+		return direction
+	end
+	-- (No camera to aim with: straight ahead of the guest.)
+	local character = Players.LocalPlayer.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if root and root:IsA("BasePart") then
+		return root.CFrame.LookVector
+	end
+	return Vector3.new(0, 0, 1)
+end
+
+function ExecutiveHud.openKeypad()
+	if Root.isOpen(KEYPAD) then
+		return
+	end
+	local w = Root.panelWidth(300)
+	local group, content = Theme.glass(Root.panels, KEYPAD, UDim2.fromOffset(w, 420))
+	Theme.fitHeight(group, content)
+	Theme.list(content, 8).VerticalAlignment = Enum.VerticalAlignment.Top
+	Theme.text(content, "The Executive's door", 11, "caps", { LayoutOrder = 1 })
+	local entered = ""
+	local shown = Theme.text(content, "_ _ _ _", 28, "display", { LayoutOrder = 2 })
+	Theme.text(content, "Your code so far: " .. tostring(view.digits or "_ _ _ _"), 12, "body", { LayoutOrder = 3, TextColor3 = C.smoke })
+	local function show()
+		local out = {}
+		for k = 1, 4 do
+			out[k] = if k <= #entered then string.sub(entered, k, k) else "_"
+		end
+		shown.Text = table.concat(out, " ")
+	end
+	local grid = Instance.new("Frame")
+	grid.Name = "Keys"
+	grid.BackgroundTransparency = 1
+	grid.Size = UDim2.new(1, 0, 0, 200)
+	grid.LayoutOrder = 4
+	grid.Parent = content
+	local layout = Instance.new("UIGridLayout")
+	layout.CellSize = UDim2.fromOffset(64, 44)
+	layout.CellPadding = UDim2.fromOffset(8, 8)
+	layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	layout.Parent = grid
+	for i, k in { "1", "2", "3", "4", "5", "6", "7", "8", "9", "Clear", "0", "Enter" } do
+		local key = Theme.key(grid, k, k == "Enter", function()
+			if k == "Clear" then
+				entered = ""
+			elseif k == "Enter" then
+				local code = entered
+				task.spawn(function()
+					local r = ask({ op = "act", id = "executive", act = "code", code = code })
+					if r and r.ok == true then
+						Root.close(KEYPAD)
+					else
+						Toast.show("The door", if r and type(r.why) == "string" then r.why else "Not just now.", 3)
+						entered = ""
+						show()
+					end
+				end)
+			elseif #entered < 4 then
+				entered ..= k
+			end
+			show()
+		end, 64)
+		key.LayoutOrder = i
+	end
+	local close = Theme.key(content, "Close", false, function()
+		Root.close(KEYPAD)
+	end, 160)
+	close.LayoutOrder = 10
+	Root.open(KEYPAD, group)
+end
+
+function ExecutiveHud.mounted(): boolean
+	return card ~= nil
+end
+
+function ExecutiveHud.mount()
+	if card then
+		return
+	end
+	local c = Instance.new("Frame")
+	c.Name = "ExecutiveCard"
+	c.AnchorPoint = Vector2.new(0.5, 0)
+	c.Size = UDim2.fromOffset(CARD_W, CARD_H)
+	c.BackgroundColor3 = Color3.fromRGB(12, 14, 22)
+	c.BackgroundTransparency = 0.08
+	c.Parent = Root.hud
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 14)
+	corner.Parent = c
+	local edge = Instance.new("UIStroke")
+	edge.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	edge.Color = BLUE
+	edge.Thickness = 1.25
+	edge.Transparency = 0.3
+	edge.Parent = c
+	local pad = Instance.new("UIPadding")
+	pad.PaddingLeft = UDim.new(0, 14)
+	pad.PaddingRight = UDim.new(0, 14)
+	pad.PaddingTop = UDim.new(0, 8)
+	pad.Parent = c
+	label(c, "Title", "THE EXECUTIVE SUITE", 11, Brand.Fonts.bodyBold, GOLD, 0)
+	parts.phase = label(c, "Phase", "", 11, Brand.Fonts.bodyBold, C.bone, 0, Enum.TextXAlignment.Right)
+	parts.top = label(c, "Top", "", 15, Brand.Fonts.bodyBold, C.bone, 20)
+	parts.under = label(c, "Under", "", 10, Brand.Fonts.bodyBold, C.smoke, 40)
+	parts.fill = bar(c, "MainBar", 58, Color3.fromRGB(255, 196, 80))
+	parts.second = bar(c, "SecondBar", 70, BLUE)
+	parts.label2 = label(c, "Second", "", 10, Brand.Fonts.bodyBold, C.smoke, 76, Enum.TextXAlignment.Right)
+	-- A crosshair in the middle while there's something to stun.
+	local cross = Instance.new("Frame")
+	cross.Name = "Crosshair"
+	cross.AnchorPoint = Vector2.new(0.5, 0.5)
+	cross.Position = UDim2.fromScale(0.5, 0.5)
+	cross.Size = UDim2.fromOffset(18, 18)
+	cross.BackgroundTransparency = 1
+	cross.Visible = false
+	cross.Parent = Root.hud
+	for _, s in { UDim2.fromOffset(18, 2), UDim2.fromOffset(2, 18) } do
+		local line = Instance.new("Frame")
+		line.AnchorPoint = Vector2.new(0.5, 0.5)
+		line.Position = UDim2.fromScale(0.5, 0.5)
+		line.Size = s
+		line.BackgroundColor3 = Color3.new(1, 1, 1)
+		line.BorderSizePixel = 0
+		line.Parent = cross
+	end
+	parts.cross = cross
+	card = c
+
+	local k = Instance.new("Frame")
+	k.Name = "ExecutiveKeys"
+	k.AnchorPoint = Vector2.new(0.5, 1)
+	k.BackgroundTransparency = 1
+	k.Size = UDim2.fromOffset(420, 44)
+	k.Parent = Root.hud
+	Theme.list(k, 10, true).HorizontalAlignment = Enum.HorizontalAlignment.Center
+	Theme.key(k, "Leave", false, function()
+		task.spawn(function()
+			local r = ask({ op = "home" })
+			if r and r.ok ~= true and type(r.why) == "string" then
+				Toast.show("Not just now", r.why, 3)
+			end
+		end)
+	end, 120)
+	parts.decoyKey = Theme.key(k, "Decoy", false, function()
+		task.spawn(function()
+			local r = ask({ op = "act", id = "executive", act = "decoy" })
+			if r and r.ok ~= true and type(r.why) == "string" then
+				Toast.show("The decoy", r.why, 3)
+			end
+		end)
+	end, 120)
+	parts.fireKey = Theme.key(k, "Fire", true, function()
+		shoot(aimFromScreen(nil))
+	end, 120)
+	keys = k
+	place()
+	draw()
+	table.insert(conns, Root.TopChanged:Connect(place))
+	-- A click aims where it lands (a tap on the Fire key aims at the middle).
+	table.insert(conns, UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: boolean)
+		if gameProcessed or not fighting() then
+			return
+		end
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			shoot(aimFromScreen(Vector2.new(input.Position.X, input.Position.Y)))
+		end
+	end))
+end
+
+function ExecutiveHud.unmount()
+	for _, c in conns do
+		c:Disconnect()
+	end
+	conns = {}
+	for _, e in effects do
+		e:Destroy()
+	end
+	effects = {}
+	if card then
+		card:Destroy()
+		card = nil
+	end
+	if keys then
+		keys:Destroy()
+		keys = nil
+	end
+	local cross = parts.cross :: Frame?
+	if cross then
+		cross:Destroy()
+	end
+	if Root.isOpen(KEYPAD) then
+		Root.close(KEYPAD)
+	end
+	parts = {}
+	view = {}
+	Root.setTop("Executive", nil)
+end
+
+-- Something thrown or sent out, drawn where the server says, for as long as it flies.
+local function fly(m: { [string]: any }, kind: string)
+	local part = Instance.new("Part")
+	part.Anchored = true
+	part.CanCollide = false
+	part.CanQuery = false
+	part.CastShadow = false
+	if kind == "throw" then
+		part.Name = "Briefcase"
+		part.Size = Vector3.new(2, 1.4, 0.6)
+		part.Color = Color3.fromRGB(90, 56, 30)
+		part.Material = Enum.Material.Leather
+	else
+		part.Name = "Shockwave"
+		part.Shape = Enum.PartType.Cylinder
+		part.Color = Color3.fromRGB(255, 200, 80)
+		part.Material = Enum.Material.Neon
+		part.Transparency = 0.45
+	end
+	part.Parent = Workspace
+	table.insert(effects, part)
+	local born, life = tonumber(m.born) or now(), tonumber(m.life) or 2
+	local conn: RBXScriptConnection? = nil
+	conn = RunService.Heartbeat:Connect(function()
+		local age = now() - born
+		if age > life or not part.Parent then
+			if conn then
+				conn:Disconnect()
+			end
+			part:Destroy()
+			return
+		end
+		if kind == "throw" and typeof(m.from) == "Vector3" and typeof(m.dir) == "Vector3" then
+			part.CFrame = CFrame.new(m.from + m.dir * (tonumber(m.speed) or 40) * age) * CFrame.Angles(age * 9, age * 5, 0)
+		elseif typeof(m.at) == "Vector3" then
+			local r = math.max(0.5, (tonumber(m.speed) or 26) * age)
+			part.Size = Vector3.new(0.3, r * 2, r * 2)
+			part.CFrame = CFrame.new(m.at + Vector3.new(0, 0.3, 0)) * CFrame.Angles(0, 0, math.rad(90))
+		end
+	end)
+end
+
+local function tracer(m: { [string]: any })
+	if typeof(m.from) ~= "Vector3" or typeof(m.dir) ~= "Vector3" then
+		return
+	end
+	local length = 60
+	local beam = Instance.new("Part")
+	beam.Name = "Tracer"
+	beam.Anchored = true
+	beam.CanCollide = false
+	beam.CanQuery = false
+	beam.CastShadow = false
+	beam.Material = Enum.Material.Neon
+	beam.Color = BLUE
+	beam.Size = Vector3.new(0.12, 0.12, length)
+	beam.CFrame = CFrame.lookAt(m.from + m.dir * length / 2, m.from + m.dir * length)
+	beam.Parent = Workspace
+	task.delay(0.08, function()
+		beam:Destroy()
+	end)
+end
+
+function ExecutiveHud.on(m: { [string]: any })
+	local op = m.op
+	if op == "executive" then
+		view = m
+		draw()
+	elseif op == "digit" then
+		Toast.show(string.format("Terminal %d", tonumber(m.n) or 0), string.format("Digit %d of the code: %s", tonumber(m.n) or 0, tostring(m.digit)), 3)
+	elseif op == "keypad" then
+		ExecutiveHud.openKeypad()
+	elseif op == "doorOpen" then
+		Toast.show("The door is open", "The Executive's Office, straight ahead.", 3)
+	elseif op == "phase" then
+		if type(m.name) == "string" then
+			Toast.show(m.name, tostring(m.line or ""), 4)
+		end
+	elseif op == "alarm" then
+		Toast.show("Security", "You were seen too long: you've been shown out. The invitation is spent.", 5)
+	elseif op == "escorted" then
+		Toast.show("Escorted out", "No composure left. Try again with another invitation.", 5)
+	elseif op == "won" then
+		local line = string.format("%s to your Estate  ·  %d Gems", Rules.format(tonumber(m.worth) or 0), tonumber(m.gems) or 0)
+		if m.brainrot then
+			line ..= "  ·  Il Dirigente Supremo for your collection"
+		end
+		Toast.show("The Executive, beaten", line .. ". The safe is open.", 6)
+	elseif op == "safe" then
+		Toast.show("The safe", Rules.format(tonumber(m.worth) or 0) .. " to your Estate.", 3)
+	elseif op == "throw" then
+		fly(m, "throw")
+	elseif op == "wave" then
+		fly(m, "wave")
+	elseif op == "shot" then
+		tracer(m)
+	elseif op == "decoy" then
+		Toast.show("A decoy", string.format("Every eye in the hallway is on it for %d seconds.", tonumber(m.seconds) or 8), 3)
+	end
+end
+
+return ExecutiveHud

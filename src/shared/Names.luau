@@ -1,8 +1,9 @@
 --!strict
 -- The name the house shows for a guest, wherever it shows one (headlines, giveaways, gifts,
 -- nameplates, chat, boards, trades, notices).
---   The owner always goes by their house name, AJKR (Config.Admin.ownerName), never their Roblox
---   username: whatever they do in the house, it's AJKR doing it.
+--   The owner (whoever owns the experience on Roblox: the server works it out, server/Ownership, and
+--   tells every screen) goes by their house name: AJKR while AJKR's account is the owner
+--   (Config.Admin.ownerName), anyone else by their own display name.
 --   Nobody else can pass for the owner: a guest whose display name reads as the owner's house name
 --   ("AJKR", "a.j.k.r", "AJKR_") is shown by their @username instead.
 
@@ -12,8 +13,20 @@ local Config = require(script.Parent.Config)
 
 local Names = {}
 
+-- What the server has told every screen about the owner (an attribute on the Workspace).
+local function told(name: string): any
+	local ok, value = pcall(function()
+		return game:GetService("Workspace"):GetAttribute(name)
+	end)
+	return if ok then value else nil
+end
+
 -- The owner's house name.
 function Names.owner(): string
+	local name = told("MaisonOwnerName")
+	if type(name) == "string" and name ~= "" then
+		return name
+	end
 	local n = Config.data.Admin.ownerName
 	return if type(n) == "string" and n ~= "" then n else "AJKR"
 end
@@ -23,10 +36,12 @@ local function plain(s: string): string
 	return (string.gsub(string.lower(s), "[^%w]", ""))
 end
 
+-- The owner's UserId, as the server says (0: not known: nobody is taken for the owner).
 local function ownerId(): number
-	local id = Config.data.Admin.ownerUserId
-	return if type(id) == "number" then id else 0
+	local n = tonumber(told("MaisonOwnerId"))
+	return if n then n else 0
 end
+Names.ownerId = ownerId
 
 -- Whether this is the owner: by UserId only (never a name, which can change or be copied). In
 -- Studio, also the pretend test player the server marked as standing in for the owner; never on

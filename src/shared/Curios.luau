@@ -28,7 +28,7 @@ export type Curio = {
 	glyph: string, -- the big emoji on its medallion
 	accent: string, -- a small emoji beside it ("" for none)
 	colour: Color3, -- the medallion
-	source: "tables" | "event" | "gems" | "achievement" | "season" | "attraction",
+	source: "tables" | "event" | "gems" | "achievement" | "season" | "attraction" | "auction",
 	gems: number?, -- its price in the Cabinet, when it's sold there
 	tradeable: boolean,
 	how: string, -- how it's had, in words, for its card
@@ -97,6 +97,18 @@ Curios.List = {
 	-- from the Executive's office. Earned by playing them, never sold.
 	{ id = "ladroLussuoso", name = "Ladro Lussuoso", line = "A raccoon in white tie who only steals the very best. Leaves a thank-you note.", rarity = "Epic", family = "meme", glyph = "🦝", accent = "🎩", colour = rgb(70, 70, 86), source = "attraction", tradeable = true, how = "Steal a Luxe: carried out of the Long Gallery and banked" },
 	{ id = "gattoGioielliere", name = "Gatto Gioielliere", line = "A cat who appraises diamonds by sitting on them. Never wrong.", rarity = "Legendary", family = "meme", glyph = "🐈", accent = "💍", colour = rgb(228, 196, 120), source = "attraction", tradeable = true, how = "Steal a Luxe: carried out of the Strongroom and banked" },
+	{ id = "topoTesoriere", name = "Topo Tesoriere", line = "A mole in a green eyeshade who keeps the Treasury's books. Counts every coin twice.", rarity = "Legendary", family = "meme", glyph = "🐀", accent = "💰", colour = rgb(120, 96, 60), source = "attraction", tradeable = false, how = "The Maison Basement: reach the Treasury for the first time" },
+	{ id = "dirigenteSupremo", name = "Il Dirigente Supremo", line = "A briefcase in a pinstripe suit. It has never once been late for a meeting.", rarity = "Legendary", family = "meme", glyph = "💼", accent = "🕴️", colour = rgb(30, 34, 60), source = "attraction", tradeable = false, how = "The Executive Suite: beat the Executive for the first time" },
+	-- The Grand Auction's lots: each only ever won there (shared/AuctionLots), never sold.
+	{ id = "pavoneDoro", name = "Il Pavone d'Oro", line = "A golden peacock that has never once lowered its tail.", rarity = "Legendary", family = "meme", glyph = "🦚", accent = "✨", colour = rgb(214, 170, 60), source = "auction", tradeable = true, how = "The Grand Auction: won at the Library's rostrum" },
+	{ id = "banchiereBianco", name = "Il Banchiere Bianco", line = "A banker in white tie who counts in his sleep.", rarity = "Legendary", family = "meme", glyph = "🎩", accent = "💵", colour = rgb(230, 230, 236), source = "auction", tradeable = true, how = "The Grand Auction: won at the Library's rostrum" },
+	{ id = "uovoMezzanotte", name = "The Midnight Egg", line = "A jewelled egg that opens on a tiny ballroom.", rarity = "Legendary", family = "meme", glyph = "🥚", accent = "🌙", colour = rgb(40, 40, 90), source = "auction", tradeable = true, how = "The Grand Auction: won at the Library's rostrum" },
+	{ id = "tazzaImperiale", name = "La Tazza Imperiale", line = "An emperor's teacup. Still warm, somehow.", rarity = "Epic", family = "meme", glyph = "🍵", accent = "👑", colour = rgb(200, 220, 230), source = "auction", tradeable = true, how = "The Grand Auction: won at the Library's rostrum" },
+	{ id = "orologioRe", name = "L'Orologio del Re", line = "The king's watch: it runs a minute fast, on purpose.", rarity = "Legendary", family = "meme", glyph = "⌚", accent = "👑", colour = rgb(200, 160, 70), source = "auction", tradeable = true, how = "The Grand Auction: won at the Library's rostrum" },
+	{ id = "lupoBorsa", name = "Il Lupo di Borsa", line = "A wolf in a waistcoat who reads the markets aloud.", rarity = "Legendary", family = "meme", glyph = "🐺", accent = "📈", colour = rgb(90, 90, 100), source = "auction", tradeable = true, how = "The Grand Auction: won at the Library's rostrum" },
+	{ id = "cignoInverno", name = "Il Cigno d'Inverno", line = "A swan carved from winter itself. It never melts.", rarity = "Legendary", family = "meme", glyph = "🦢", accent = "❄️", colour = rgb(200, 230, 255), source = "auction", tradeable = true, how = "The Grand Auction: a winter lot" },
+	{ id = "coniglioPrimavera", name = "Il Coniglio di Primavera", line = "A spring hare in a gilded waistcoat.", rarity = "Legendary", family = "meme", glyph = "🐇", accent = "🌸", colour = rgb(240, 200, 220), source = "auction", tradeable = true, how = "The Grand Auction: a spring lot" },
+	{ id = "zuccaArgento", name = "La Zucca d'Argento", line = "A silver pumpkin with a candle that never burns down.", rarity = "Legendary", family = "meme", glyph = "🎃", accent = "🕯️", colour = rgb(200, 200, 210), source = "auction", tradeable = true, how = "The Grand Auction: an autumn lot" },
 	{ id = "midnightOwl", name = "Hibou de Minuit", line = "Only seen by those who sort without a single slip after midnight.", rarity = "Secret", family = "meme", glyph = "🦉", accent = "🌙", colour = rgb(30, 30, 50), source = "tables", tradeable = false, how = "A secret: a flawless run at the Midnight Room's table" },
 	-- Delicacies: the Cabinet, for Gems (the exact one you choose)
 	{ id = "truffle", name = "The Black Truffle", line = "From Périgord, in a velvet box.", rarity = "Rare", family = "delicacy", glyph = "🍄", accent = "🖤", colour = rgb(50, 40, 40), source = "gems", gems = 60, tradeable = true, how = "The Cabinet: 60 Gems" },

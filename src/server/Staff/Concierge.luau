@@ -1,6 +1,9 @@
 --!strict
 -- The Concierge: stands at the lectern, greets guests, shows new guests round the house (the
--- tour), walks guests to a room, and answers when spoken to. Dry, warm, unhurried. Never runs.
+-- tour: every destination, and how the house's money works), walks guests to a room or shows them
+-- the way anywhere (gold arrows on the floor; taken there at once only if they ask), says what to do
+-- next from what they've done, and answers questions from how the house really works. Dry, warm,
+-- unhurried. Never runs.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -34,6 +37,29 @@ end
 -- Set by the server: may this guest enter a room (the Midnight Room is earned)?
 Concierge.canEnter = function(_player: Player, _room: string): boolean
 	return true
+end
+-- Set by Main: a guest's saved record (for what to do next), the house's places, going straight
+-- to one, and whether they've been shown this build's news (and noting it).
+Concierge.dataOf = function(_player: Player): any?
+	return nil
+end
+Concierge.placeAt = function(_id: string): (string?, Vector3?)
+	return nil, nil
+end
+Concierge.travel = function(_player: Player, _id: string): (boolean, string?)
+	return false, "Not just now."
+end
+Concierge.newsSeen = function(_player: Player): boolean
+	return true
+end
+Concierge.markNews = function(_player: Player) end
+-- The holiday on now, by the house's calendar (set by Main: shared/LiveCalendar): its name and line.
+Concierge.season = function(): (string?, string?)
+	return nil, nil
+end
+-- The house's settings the answers quote (set by Main: Config.data).
+Concierge.settings = function(): { [string]: any }
+	return {}
 end
 
 local function characterRoot(player: Player): BasePart?
@@ -155,6 +181,7 @@ end
 Concierge.toured = function(_player: Player) end
 
 function Concierge.tour(player: Player)
+	Concierge.markNews(player)
 	touring[player] = os.clock()
 	tourEvent:FireClient(player, { op = "start" })
 end
@@ -164,12 +191,135 @@ function Concierge.isTouring(player: Player): boolean
 	return since ~= nil and os.clock() - since < 900
 end
 
+-- The places a guest may ask for (rooms first: the Concierge can walk them there himself).
+type Place = { id: string, text: string, room: boolean? }
+local PLACES: { Place } = {
+	{ id = "velvet", text = "Steal a Luxe  ·  the Luxe Lounge", room = true },
+	{ id = "obsidian", text = "The Maison Basement  ·  the Basement Stair", room = true },
+	{ id = "midnight", text = "The Executive Suite  ·  the Anteroom", room = true },
+	{ id = "salon", text = "The Salon", room = true },
+	{ id = "vault", text = "The Vault" },
+	{ id = "boutique", text = "The Boutique" },
+	{ id = "library", text = "The Library" },
+	{ id = "ballroom", text = "The Ballroom" },
+	{ id = "terrace", text = "The Terrace" },
+	{ id = "suite", text = "Your Suite" },
+	{ id = "grandPrix", text = "The Grand Prix" },
+}
+Concierge.PLACES = PLACES
+
+local wayEvent = Remotes.event("Travel")
+
+-- Shows a guest the way to a place: walking, with gold arrows on their own floor.
+function Concierge.showWay(player: Player, id: string): boolean
+	local name, at = Concierge.placeAt(id)
+	if not name or not at then
+		return false
+	end
+	wayEvent:FireClient(player, { op = "way", place = id, name = name, at = at })
+	return true
+end
+
+-- Where to go next, from what the guest has done (their record, as the server keeps it).
+function Concierge.recommend(player: Player): (string, string?)
+	local R = V.recommend
+	local data = Concierge.dataOf(player)
+	if not data then
+		return R.luxe, "velvet"
+	end
+	local pages = if type(data.attractions) == "table" then data.attractions else {}
+	local luxe = if type(pages.luxe) == "table" then pages.luxe else {}
+	local basement = if type(pages.basement) == "table" then pages.basement else {}
+	local executive = if type(pages.executive) == "table" then pages.executive else {}
+	local settings = Concierge.settings()
+	local luxeCfg = (settings.Attractions or {}).luxe or {}
+	if (tonumber(executive.invites) or 0) > 0 then
+		return R.executive, "midnight"
+	end
+	if (tonumber(luxe.hauls) or 0) == 0 then
+		return R.luxe, "velvet"
+	end
+	local bagLevel = tonumber(luxe.bag) or 1
+	local nextBag = luxeCfg.bagPrice and luxeCfg.bagPrice[bagLevel + 1]
+	if nextBag and (tonumber(data.gilt) or 0) >= nextBag then
+		return R.upgrade, "velvet"
+	end
+	if (tonumber(basement.clears) or 0) == 0 then
+		return R.basement, "obsidian"
+	end
+	return R.quartermaster, "midnight"
+end
+
+-- An answer, with the house's own numbers in it.
+function Concierge.answer(id: string): string?
+	local settings = Concierge.settings()
+	local a = settings.Attractions or {}
+	local luxe, basement, executive = a.luxe or {}, a.basement or {}, a.executive or {}
+	local function commas(n: number): string
+		local text = tostring(math.floor(n))
+		local out = text:reverse():gsub("(%d%d%d)", "%1,"):reverse()
+		return if out:sub(1, 1) == "," then out:sub(2) else out
+	end
+	for _, q in V.questions do
+		if q.id == id then
+			return (
+				q.a
+					:gsub("{inviteHaul}", commas(tonumber(executive.inviteHaul) or 8000))
+					:gsub("{invitePrice}", commas(tonumber(executive.invitePrice) or 25000))
+					:gsub("{stride}", tostring(math.floor((tonumber(luxe.stridePerLevel) or 0.035) * 1000 + 0.5) / 10))
+					:gsub("{skipGems}", tostring(tonumber(basement.skipGems) or 25))
+			)
+		end
+	end
+	return nil
+end
+
+-- Somewhere to go: walked by the Concierge (a room, when he's free), shown the way with arrows, or
+-- taken there at once.
+local function findPlace(player: Player, id: string)
+	local name = nil
+	local isRoom = false
+	for _, p in PLACES do
+		if p.id == id then
+			name = p.text
+			isRoom = p.room == true
+		end
+	end
+	if not name then
+		return
+	end
+	Dialogue.say(player, V.speaker, (V.find.how:gsub("{place}", name)), {
+		{ id = "walk", text = V.choices.walk },
+		{ id = "now", text = V.choices.now },
+	}, function(how)
+		if player.Parent ~= Players then
+			return
+		end
+		if how == "now" then
+			local ok, why = Concierge.travel(player, id)
+			if not ok then
+				Dialogue.say(player, V.speaker, why or "Not just now.", nil, nil, 2.5)
+			else
+				Dialogue.close(player)
+			end
+			return
+		end
+		local s = staff
+		if isRoom and s and not s.busy then
+			Concierge.lead(player, id)
+		elseif Concierge.showWay(player, id) then
+			Dialogue.say(player, V.speaker, V.find.showing, nil, nil, 3)
+		end
+	end)
+end
+Concierge.findPlace = findPlace
+
 local function menu(player: Player)
 	local choices = {
-		{ id = "room", text = V.choices.takeMe },
+		{ id = "next", text = V.choices.next },
+		{ id = "find", text = V.choices.find },
+		{ id = "ask", text = V.choices.ask },
 		{ id = "tour", text = V.choices.tour },
-		{ id = "library", text = V.choices.library },
-		{ id = "ballroom", text = V.choices.ballroom },
 		{ id = "how", text = V.choices.how },
 		{ id = "bye", text = V.choices.bye },
 	}
@@ -184,6 +334,56 @@ local function menu(player: Player)
 	Dialogue.say(player, V.speaker, V.returning:gsub("{name}", Names.of(player)), choices, function(choice)
 		if choice == "usual" and usual then
 			Concierge.lead(player, usual)
+		elseif choice == "next" then
+			local line, place = Concierge.recommend(player)
+			Dialogue.say(player, V.speaker, line, if place then {
+				{ id = "go", text = V.choices.walk },
+				{ id = "now", text = V.choices.now },
+				{ id = "fine", text = V.choices.thanks },
+			} else nil, if place then function(next: string)
+				if next == "go" then
+					local s = staff
+					if s and not s.busy then
+						Concierge.lead(player, place)
+					else
+						Concierge.showWay(player, place)
+						Dialogue.say(player, V.speaker, V.find.showing, nil, nil, 3)
+					end
+				elseif next == "now" then
+					local ok, why = Concierge.travel(player, place)
+					if not ok then
+						Dialogue.say(player, V.speaker, why or "Not just now.", nil, nil, 2.5)
+					else
+						Dialogue.close(player)
+					end
+				end
+			end else nil, if place then nil else 4)
+		elseif choice == "find" then
+			local list = {}
+			for _, p in PLACES do
+				table.insert(list, { id = p.id, text = p.text })
+			end
+			Dialogue.say(player, V.speaker, V.find.which, list, function(id: string)
+				findPlace(player, id)
+			end)
+		elseif choice == "ask" then
+			local list = {}
+			for _, q in V.questions do
+				table.insert(list, { id = q.id, text = q.q })
+			end
+			Dialogue.say(player, V.speaker, V.whichQuestion, list, function(id: string)
+				local a = Concierge.answer(id)
+				if a then
+					Dialogue.say(player, V.speaker, a, {
+						{ id = "more", text = V.choices.ask },
+						{ id = "fine", text = V.choices.thanks },
+					}, function(next: string)
+						if next == "more" then
+							menu(player)
+						end
+					end)
+				end
+			end)
 		elseif choice == "tour" then
 			Concierge.tour(player)
 		elseif choice == "evening" then
@@ -247,7 +447,25 @@ end
 function Concierge.greet(player: Player, firstVisit: boolean, nightlyPending: boolean?, remembered: string?)
 	local ok, new = pcall(Concierge.needsTour, player)
 	if firstVisit or (ok and new == true) then
+		-- (A new guest's tour shows them everything new too.)
+		Concierge.markNews(player)
 		offerTour(player)
+	elseif not Concierge.newsSeen(player) then
+		-- A guest from before the house changed: shown what's new, once, if they'd like.
+		Concierge.markNews(player)
+		Dialogue.say(player, V.speaker, (V.returning:gsub("{name}", Names.of(player))) .. "  " .. V.newsOffer, {
+			{ id = "tour", text = V.newsYes },
+			{ id = "later", text = V.newsLater },
+		}, function(choice: string)
+			if player.Parent ~= Players or Concierge.isSeated(player) then
+				return
+			end
+			if choice == "tour" then
+				Concierge.tour(player)
+			else
+				Dialogue.say(player, V.speaker, V.newsLaterLine, nil, nil, 3)
+			end
+		end)
 	else
 		Dialogue.say(player, V.speaker, (V.returning:gsub("{name}", Names.of(player))), nil, nil, 3.5)
 		-- One thing the house remembers (last time, a milestone, being missed).
@@ -257,6 +475,16 @@ function Concierge.greet(player: Player, firstVisit: boolean, nightlyPending: bo
 			task.delay(3.8, function()
 				if player.Parent == Players and not Concierge.isSeated(player) then
 					Dialogue.say(player, V.speaker, remembered, nil, nil, 4)
+				end
+			end)
+		end
+		-- The holiday that's on, if one is.
+		local holiday, holidayLine = Concierge.season()
+		if holiday then
+			extra += 3.8
+			task.delay(extra, function()
+				if player.Parent == Players and not Concierge.isSeated(player) then
+					Dialogue.say(player, V.speaker, string.format("%s at the Maison. %s", holiday, holidayLine or ""), nil, nil, 4)
 				end
 			end)
 		end
@@ -308,6 +536,10 @@ function Concierge.offerHelp(player: Player)
 			end
 		end)
 	end)
+end
+
+Concierge.menu = function(player: Player)
+	menu(player)
 end
 
 function Concierge.line(player: Player, line: string, hold: number?)

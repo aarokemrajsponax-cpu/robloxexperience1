@@ -5,5 +5,5 @@
 
 return {
 	number = 72,
-	label = "Build 72 (in progress) · 10 Nov · Your Fortune: become the wealthiest",
+	label = "Build 72 · 10 Nov · Become the wealthiest: three attractions and the Grand Auction",
 }

@@ -58,6 +58,9 @@ Luxe.clear = function(from: Vector3, to: Vector3, ignore: { Instance }): boolean
 	return hit == nil
 end
 
+-- A haul was banked (set by the attractions: a great one brings an invitation to the Executive Suite).
+Luxe.banked = function(_player: Player, _worth: number) end
+
 -- How a guard is made (set by tests; in the game, a dressed rig the house's staff are made like).
 Luxe.makeGuard = function(parent: Instance, name: string, at: CFrame): (Model, BasePart, Humanoid?)
 	local ok, staff = pcall(function()
@@ -358,6 +361,7 @@ local function bank(ctx: Types.Ctx, player: Player, run: Run)
 	resetSpeed(ctx, player, run)
 	ctx.send(player, { op = "banked", worth = worth, base = base, bonus = bonus, gilt = gilt, gems = given, pieces = pieces, brainrots = brainrots, record = record })
 	ctx.tally(player, "luxeHauls", 1)
+	Luxe.banked(player, worth)
 	ctx.tally(player, "luxeWorth", worth)
 	if crown then
 		ctx.tally(player, "crownJewels", 1)
@@ -366,7 +370,7 @@ local function bank(ctx: Types.Ctx, player: Player, run: Run)
 	ctx.progress(player, "luxeBank", 1)
 	ctx.progress(player, "luxeWorth", worth)
 	if crown then
-		ctx.herald(player, { kind = "haul", title = "The Crown Jewel", line = "carried the Crown Jewel out of Steal a Luxe", glyph = "💎", worth = worth })
+		ctx.herald(player, { kind = "haul", title = "The Crown Jewel", line = "carried the Crown Jewel out of Steal a Luxe", glyph = "💎", worth = worth, everywhere = true })
 	elseif worth >= (tonumber(c.greatHaul) or math.huge) then
 		ctx.herald(player, { kind = "haul", title = "A great haul", line = string.format("banked %d pieces from Steal a Luxe", count), glyph = "💰", worth = worth })
 	end

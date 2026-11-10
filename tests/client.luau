@@ -409,6 +409,9 @@ end)
 ---------------------------------------------------------------------------------------------------
 local game = Instance.new("DataModel")
 local workspace = game:GetService("Workspace")
+-- (The server tells every screen who the owner is: AJKR's account, in these tests.)
+workspace:SetAttribute("MaisonOwnerId", "8722595934")
+workspace:SetAttribute("MaisonOwnerName", "AJKR")
 local camera = Instance.new("Camera")
 camera.Parent = workspace
 workspace.CurrentCamera = camera
@@ -7484,11 +7487,14 @@ end)()
 	for i, t in tiles do
 		firstLit[i] = t.Material == Enum.Material.Neon
 	end
-	advance(1.5)
+	-- (Looked at beat by beat: a pattern can come round to the same tiles a few beats on.)
 	local changed = false
-	for i, t in tiles do
-		if (t.Material == Enum.Material.Neon) ~= firstLit[i] or (firstLit[i] and t.Color ~= tiles[i].Color) then
-			changed = true
+	for _ = 1, 3 do
+		advance(0.5)
+		for i, t in tiles do
+			if (t.Material == Enum.Material.Neon) ~= firstLit[i] then
+				changed = true
+			end
 		end
 	end
 	check("...and it changes with the beat", changed)
@@ -7799,6 +7805,283 @@ coroutine.wrap(function()
 	RootM.close()
 	advance(0.5)
 	check("no errors with Steal a Luxe", #errors == errorsBefore, errors[errorsBefore + 1])
+end)()
+
+---------------------------------------------------------------------------------------------------
+-- 7d. The Maison Basement: its screen only inside, the clock, checkpoints and falls, the skip (its
+-- cost said before anything is spent), the Treasury, the best times, the machinery moving
+---------------------------------------------------------------------------------------------------
+coroutine.wrap(function()
+	local BasementHud = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "BasementHud")
+	local BasementPanel = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "BasementPanel")
+	local Motion = module("StarterPlayer", "StarterPlayerScripts", "Client", "World", "BasementMotion")
+	local Plan = module("ReplicatedStorage", "Shared", "Basement")
+	local RootM = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "Root")
+	local errorsBefore = #errors
+	RootM.close()
+	advance(0.5)
+	local clockAt = 5000
+	BasementHud.now = function()
+		return clockAt
+	end
+	check("no Basement screen in the house", textOnScreen("THE MAISON BASEMENT") == nil)
+	LocalPlayer:SetAttribute("Attraction", "basement")
+	signalOf(LocalPlayer, "attr:Attraction"):Fire()
+	serverSays("Attraction", { op = "entered", id = "basement" })
+	serverSays("Attraction", { op = "basement", checkpoint = 4, stage = 5, stageName = "The Pipes", zone = "The Boiler Room", started = 4917.5, assisted = false, falls = 2, best = 205.5, done = false, skips = 0, skipGems = 25, skipOnSale = true })
+	advance(0.4)
+	check("inside, its screen is up: the stage and its part", textOnScreen("THE MAISON BASEMENT") ~= nil and textOnScreen("Stage 5 of 16  ·  The Pipes") ~= nil and textOnScreen("THE BOILER ROOM") ~= nil)
+	check("...the run's clock, by the server's clock", textOnScreen("1:22.50") ~= nil)
+	check("...the best time and the falls", textOnScreen("BEST 3:25.50") ~= nil and textOnScreen("FALLS 2") ~= nil)
+	snapshot("basement-hud")
+	serverSays("Attraction", { op = "checkpoint", n = 5, gilt = 40, purse = 0, zone = "The Boiler Room", skipped = false })
+	advance(0.3)
+	check("a checkpoint: its number and its Gilt", textOnScreen("Checkpoint 5") ~= nil and textOnScreen("+40 Gilt") ~= nil)
+	advance(3)
+	serverSays("Attraction", { op = "checkpoint", n = 8, gilt = 55, purse = 1500, zone = "The Boiler Room", skipped = false })
+	advance(0.3)
+	check("a part's end: its purse to the Estate", textOnScreen("The Boiler Room, done") ~= nil and textOnScreen("1,500 to your Estate  ·  checkpoint 8") ~= nil)
+	advance(5)
+	serverSays("Attraction", { op = "fell", why = "steam", checkpoint = 8 })
+	advance(0.3)
+	check("a fall: back to the checkpoint, and why", textOnScreen("Back to checkpoint 8") ~= nil and textOnScreen("The steam caught you.") ~= nil)
+	advance(3)
+	check("Skip a stage says what it does and costs before anything is spent", press("Skip a stage") and (advance(0.5) or true) and textOnScreen("On to the next checkpoint. A skipped run isn't timed for the boards, and the stage you skip pays nothing. The Treasury itself can't be skipped to.") ~= nil and textOnScreen("25 Gems") ~= nil and textOnScreen("Robux") ~= nil)
+	snapshot("basement-skip")
+	local sentBefore = #sent
+	press("Cancel")
+	advance(0.4)
+	check("Cancel spends nothing", #sent == sentBefore and textOnScreen("25 Gems") == nil)
+	invokeResults.AttractionAsk = { ok = false, why = "That's 25 Gems." }
+	press("Skip a stage")
+	advance(0.4)
+	press("25 Gems")
+	advance(0.5)
+	check("for Gems: asks the server to skip, by Gems (never a price)", sent[#sent].remote == "AttractionAsk" and sent[#sent].message[1].act == "skip" and sent[#sent].message[1].what == "gems" and sent[#sent].message[1].price == nil)
+	check("...and says why not when it can't", textOnScreen("That's 25 Gems.") ~= nil)
+	advance(3)
+	serverSays("Attraction", { op = "treasury", seconds = 198.25, timed = true, record = true, weekRecord = true, best = 198.25, gems = 10, brainrot = "topoTesoriere", first = true, falls = 3 })
+	advance(0.3)
+	check("the Treasury: the time, a new best, the Gems and the brainrot", textOnScreen("The Treasury  ·  3:18.25") ~= nil and textOnScreen("A new best time.  ·  10 Gems from the chest  ·  Topo Tesoriere for your collection") ~= nil)
+	snapshot("basement-treasury")
+	advance(6)
+	-- The machinery, by the server's clock: a piston and a sinking tile of the course.
+	local moverIndex, tileIndex
+	for i, e in Plan.Elements do
+		if e.kind == "mover" and not moverIndex then
+			moverIndex = i
+		elseif e.kind == "vanish" and not tileIndex then
+			tileIndex = i
+		end
+	end
+	local piston = Instance.new("Part")
+	piston:SetAttribute("Element", moverIndex)
+	piston.Parent = workspace
+	CollectionService:AddTag(piston, "BasementMover")
+	local tile = Instance.new("Part")
+	tile:SetAttribute("Element", tileIndex)
+	tile.Parent = workspace
+	CollectionService:AddTag(tile, "BasementVanish")
+	local te = Plan.Elements[tileIndex]
+	local goneAt = 1234.5
+	while Plan.solid(te, goneAt) do
+		goneAt += 0.05
+	end
+	Motion.apply(goneAt)
+	check("a sinking tile, when it's gone, can't be stood on (and can't be seen)", tile.CanCollide == false and tile.Transparency == 1)
+	Motion.apply(1234.5)
+	local moved = #CollectionService:GetTagged("BasementMover") > 0
+	for _, part in CollectionService:GetTagged("BasementMover") do
+		local e = Plan.Elements[part:GetAttribute("Element")]
+		local at = Plan.moverAt(e, 1234.5)
+		if (part.CFrame.Position - (module("ReplicatedStorage", "Shared", "Attractions").origin("basement") + at)).Magnitude > 1e-3 then
+			moved = false
+		end
+	end
+	check("the pistons stand where the server's clock says", moved)
+	LocalPlayer:SetAttribute("Attraction", nil)
+	signalOf(LocalPlayer, "attr:Attraction"):Fire()
+	advance(0.5)
+	check("out of the Basement, its screen is gone at once", textOnScreen("THE MAISON BASEMENT") == nil and textOnScreen("Skip a stage") == nil)
+	-- The best times.
+	invokeResults.AttractionAsk = { ok = true, which = "all", entries = { { userId = 888, name = "Wren", score = 150 }, { userId = LocalPlayer.UserId, name = "Ada", score = 198.25 } }, available = true, best = 198.25, weekBest = 198.25 }
+	serverSays("Attraction", { op = "panel", id = "basement" })
+	advance(0.6)
+	check("the lectern opens the best times, fastest first, with your own best", BasementPanel.isOpen() and textOnScreen("1.  Wren") ~= nil and textOnScreen("2:30.00") ~= nil and textOnScreen("Your best: 3:18.25") ~= nil)
+	snapshot("basement-board")
+	invokeResults.AttractionAsk = { ok = true, which = "friends", entries = {}, available = true }
+	press("Friends")
+	advance(0.6)
+	check("...and among friends", sent[#sent].message[1].what == "friends" and textOnScreen("None of your friends has a time yet.") ~= nil)
+	RootM.close()
+	advance(0.5)
+	check("no errors with the Maison Basement", #errors == errorsBefore, errors[errorsBefore + 1])
+end)()
+
+---------------------------------------------------------------------------------------------------
+-- 7e. The Executive Suite: the Quartermaster's board, its screen only up there, the hallway's alert
+-- and code, the keypad, the Office's phases, firing (aimed here, judged by the server)
+---------------------------------------------------------------------------------------------------
+coroutine.wrap(function()
+	local ExecutiveHud = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "ExecutiveHud")
+	local ExecutivePanel = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "ExecutivePanel")
+	local RootM = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "Root")
+	local errorsBefore = #errors
+	RootM.close()
+	advance(0.5)
+	invokeResults.AttractionAsk = {
+		ok = true,
+		invites = 1,
+		most = 5,
+		invitePrice = 25000,
+		inviteHaul = 8000,
+		sidearm = false,
+		wins = 0,
+		gear = {
+			{ id = "sidearm", name = "The Executive Sidearm", line = "A stun pistol: every guest carries one up. Free, and needed for the Office.", price = 0, glyph = "🔫", free = true, packed = false },
+			{ id = "disguise", name = "A Disguise", line = "Cameras and guards take longer to notice you.", price = 4000, glyph = "🎭", packed = true },
+			{ id = "decoy", name = "A Decoy", line = "Once a run.", price = 2500, glyph = "🎈", packed = false },
+		},
+	}
+	serverSays("Attraction", { op = "panel", id = "executive" })
+	advance(0.6)
+	check("the Quartermaster's board: invitations and how to earn them", ExecutivePanel.isOpen() and textOnScreen("Invitations: 1 of 5") ~= nil and textOnScreen("One is spent going up. Earn them: clear the Maison Basement, or bank a haul of 8,000 or more in Steal a Luxe.") ~= nil and textOnScreen("25,000 Gilt") ~= nil)
+	check("...the sidearm, free", textOnScreen("Take it (free)") ~= nil)
+	check("...the gear with its price, or packed", textOnScreen("2,500 Gilt") ~= nil and textOnScreen("Packed") ~= nil)
+	snapshot("executive-quartermaster")
+	press("Take it (free)")
+	advance(0.5)
+	check("taking the sidearm asks the server (nothing paid)", sent[#sent].message[1].act == "sidearm")
+	RootM.close()
+	advance(0.5)
+	LocalPlayer:SetAttribute("Attraction", "executive")
+	signalOf(LocalPlayer, "attr:Attraction"):Fire()
+	serverSays("Attraction", { op = "executive", phase = "hall", open = false, alert = 0.42, composure = 100, max = 100, gear = { sidearm = true, decoy = true }, decoy = true, digits = "4 _ 7 _", generators = 3, guards = 0, boss = 1, bossMax = 1 })
+	advance(0.4)
+	check("up there, its screen: the hallway, the alert and the code as found", textOnScreen("THE EXECUTIVE SUITE") ~= nil and textOnScreen("CODE  4 _ 7 _") ~= nil and textOnScreen("ALERT 42%") ~= nil)
+	check("...the decoy key, and no Fire key in the hallway", textOnScreen("Decoy") ~= nil and textOnScreen("Fire") == nil)
+	snapshot("executive-hall")
+	serverSays("Attraction", { op = "keypad" })
+	advance(0.5)
+	invokeResults.AttractionAsk = { ok = false, why = "That's not the code." }
+	for _, k in { "4", "1", "7", "2" } do
+		press(k)
+	end
+	press("Enter")
+	advance(0.5)
+	check("the keypad sends the four digits typed", sent[#sent].message[1].act == "code" and sent[#sent].message[1].code == "4172")
+	check("...and says so when it's wrong", textOnScreen("That's not the code.") ~= nil)
+	RootM.close()
+	advance(3)
+	serverSays("Attraction", { op = "phase", phase = "boss", name = "The Executive", line = "Dodge the briefcases, jump the shockwave, and stun him." })
+	serverSays("Attraction", { op = "executive", phase = "boss", open = true, alert = 0, composure = 72, max = 100, gear = { sidearm = true }, decoy = false, digits = "4 1 7 2", generators = 0, guards = 0, boss = 300, bossMax = 600 })
+	advance(0.4)
+	check("in the Office: the phase, his bar and composure", textOnScreen("THE EXECUTIVE") ~= nil and textOnScreen("COMPOSURE 72") ~= nil)
+	check("...the Fire key", textOnScreen("Fire") ~= nil)
+	snapshot("executive-boss")
+	local firedBefore = #sent
+	press("Fire")
+	advance(0.2)
+	local fired = sent[#sent]
+	check("Fire sends only where it was aimed (the server decides what it hits)", #sent > firedBefore and fired.remote == "AttractionFire" and typeof(fired.message[1]) == "Vector3")
+	serverSays("Attraction", { op = "won", worth = 25000, gems = 15, brainrot = "dirigenteSupremo", first = true })
+	advance(0.3)
+	check("beaten: what's paid, plainly", textOnScreen("25,000 to your Estate  ·  15 Gems  ·  Il Dirigente Supremo for your collection. The safe is open.") ~= nil)
+	advance(6)
+	LocalPlayer:SetAttribute("Attraction", nil)
+	signalOf(LocalPlayer, "attr:Attraction"):Fire()
+	advance(0.5)
+	check("down from the Suite, its screen is gone at once", textOnScreen("THE EXECUTIVE SUITE") == nil and textOnScreen("Fire") == nil)
+	check("no errors with the Executive Suite", #errors == errorsBefore, errors[errorsBefore + 1])
+end)()
+
+---------------------------------------------------------------------------------------------------
+-- 7f. The Concierge's way to a place: gold arrows on the floor, a pill with how far, Stop, arriving
+---------------------------------------------------------------------------------------------------
+coroutine.wrap(function()
+	local Wayfinder = module("StarterPlayer", "StarterPlayerScripts", "Client", "World", "Wayfinder")
+	local errorsBefore = #errors
+	advance(0.5)
+	local here = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+	local from = if here then here.CFrame.Position else Vector3.new(0, 3, 0)
+	local target = from + Vector3.new(60, 0, 0)
+	serverSays("Travel", { op = "way", place = "vault", name = "The Vault", at = target })
+	advance(0.6)
+	local folder = workspace:FindFirstChild("Wayfinder")
+	local arrows = 0
+	if folder then
+		for _, d in folder:GetChildren() do
+			if d.Name == "WayArrow" then
+				arrows += 1
+			end
+		end
+	end
+	check("shown the way: gold arrows along the floor to the place (a straight line with no path)", here ~= nil and Wayfinder.showing() and arrows >= 8, arrows)
+	check("...a beam of light over the place", folder ~= nil and folder:FindFirstChild("WayBeam") ~= nil)
+	check("...and where they're going, how far, and a key to stop", textOnScreen("To The Vault  ·  60 studs") ~= nil and textOnScreen("Stop") ~= nil)
+	snapshot("wayfinder")
+	if here then
+		here.CFrame = CFrame.new(target + Vector3.new(4, 0, 0))
+	end
+	advance(0.6)
+	check("arriving ends it, and says so", not Wayfinder.showing() and workspace:FindFirstChild("Wayfinder") == nil and textOnScreen("You've arrived") ~= nil)
+	advance(3.5)
+	serverSays("Travel", { op = "way", place = "vault", name = "The Vault", at = target })
+	advance(0.4)
+	press("Stop")
+	advance(0.4)
+	check("Stop ends it at once", not Wayfinder.showing() and textOnScreen("To The Vault") == nil)
+	check("no errors with the way about the house", #errors == errorsBefore, errors[errorsBefore + 1])
+end)()
+
+---------------------------------------------------------------------------------------------------
+-- 7g. The Grand Auction: the week's lots, the highest bid, the least next bid, bidding, the notices
+---------------------------------------------------------------------------------------------------
+coroutine.wrap(function()
+	local AuctionPanel = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "AuctionPanel")
+	local RootM = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "Root")
+	local errorsBefore = #errors
+	RootM.close()
+	advance(0.5)
+	invokeResults.AuctionAsk = {
+		ok = true,
+		now = 0,
+		lots = {
+			{ id = "w2920-pavone", name = "Il Pavone d'Oro", line = "A golden peacock that has never once lowered its tail.", glyph = "🦚", currency = "Gilt", start = 5000, left = 4 * 86400 + 7 * 3600 + 120, high = 10500, by = "Wren", mine = false, minNext = 11100, history = { { name = "Wren", amount = 10500 }, { name = "Ada", amount = 10000 } }, seasonal = false, settled = false },
+			{ id = "w2920-lupo", name = "Il Lupo di Borsa", line = "A wolf in a waistcoat who reads the markets aloud.", glyph = "🐺", currency = "Gems", start = 60, left = 4 * 86400, high = 0, mine = false, minNext = 60, history = {}, seasonal = false, settled = false },
+		},
+	}
+	serverSays("Attraction", { op = "panel", id = "auction" })
+	advance(0.6)
+	check("the rostrum opens the Grand Auction: the week's lots", AuctionPanel.isOpen() and textOnScreen("The Grand Auction") ~= nil and textOnScreen("🦚  Il Pavone d'Oro") ~= nil)
+	check("...the highest bid and by whom, the time left and the least next bid", textOnScreen("Highest: 10,500 Gilt, by Wren") ~= nil and textOnScreen("Closes in 4d 7h  ·  the least bid now is 11,100 Gilt") ~= nil)
+	check("...the last bids", textOnScreen("Lately: Wren 10,500  ·  Ada 10,000") ~= nil)
+	check("...a lot with no bids opens at its price, in Gems where it's Gems", textOnScreen("No bids yet: it opens at 60 Gems") ~= nil)
+	check("...that a bid is given back in full if outbid", textOnScreen("given back in full if someone outbids you", true) ~= nil or textOnScreen("One of a kind, this week only. Your bid is taken from your purse when it stands, and given back in full if someone outbids you.") ~= nil)
+	snapshot("auction")
+	invokeResults.AuctionAsk = { ok = false, why = "Someone bid first: the least bid now is 11,700 Gilt." }
+	press("Bid 11,100 Gilt")
+	advance(0.6)
+	local bidSent = nil
+	for i = #sent, 1, -1 do
+		if sent[i].remote == "AuctionAsk" and sent[i].message[1].op == "bid" then
+			bidSent = sent[i].message[1]
+			break
+		end
+	end
+	check("Bid asks for the lot and the amount (the server decides if it stands)", bidSent ~= nil and bidSent.lot == "w2920-pavone" and bidSent.amount == 11100)
+	check("...and says plainly when it didn't", textOnScreen("Someone bid first: the least bid now is 11,700 Gilt.") ~= nil)
+	RootM.close()
+	advance(4)
+	serverSays("Empire", { op = "outbid", lot = "w2920-pavone", name = "Il Pavone d'Oro", back = 11100, currency = "Gilt" })
+	advance(0.3)
+	check("outbid: said, with the bid back", textOnScreen("Outbid: Il Pavone d'Oro") ~= nil and textOnScreen("Your 11,100 Gilt is back in your purse.") ~= nil)
+	advance(6)
+	serverSays("Empire", { op = "auctionWon", lot = "w2920-pavone", name = "Il Pavone d'Oro", glyph = "🦚", amount = 14000, currency = "Gilt" })
+	advance(0.3)
+	check("a lot won: said, and where it went", textOnScreen("Sold to you: Il Pavone d'Oro") ~= nil and textOnScreen("For 14,000 Gilt. It's in your collection.") ~= nil)
+	advance(6)
+	check("no errors with the Grand Auction", #errors == errorsBefore, errors[errorsBefore + 1])
 end)()
 
 ---------------------------------------------------------------------------------------------------

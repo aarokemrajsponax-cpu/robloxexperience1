@@ -12,6 +12,10 @@ local AttractionList = require(ReplicatedStorage.Shared.Attractions)
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Rules = require(ReplicatedStorage.Shared.Fortune)
+local BasementHud = require(script.Parent.BasementHud)
+local BasementPanel = require(script.Parent.BasementPanel)
+local ExecutiveHud = require(script.Parent.ExecutiveHud)
+local ExecutivePanel = require(script.Parent.ExecutivePanel)
 local LuxeHud = require(script.Parent.LuxeHud)
 local LuxePanel = require(script.Parent.LuxePanel)
 local Root = require(script.Parent.Root)
@@ -74,6 +78,16 @@ local function follow()
 	else
 		LuxeHud.unmount()
 	end
+	if id == "basement" then
+		BasementHud.mount()
+	else
+		BasementHud.unmount()
+	end
+	if id == "executive" then
+		ExecutiveHud.mount()
+	else
+		ExecutiveHud.unmount()
+	end
 end
 
 function Attraction.start()
@@ -98,13 +112,25 @@ function Attraction.start()
 		elseif op == "panel" then
 			if m.id == "luxe" then
 				LuxePanel.open()
+			elseif m.id == "basement" then
+				BasementPanel.open()
+			elseif m.id == "executive" then
+				ExecutivePanel.open()
+			elseif m.id == "auction" then
+				require(script.Parent.AuctionPanel).open()
 			end
 		elseif op == "stride" then
 			strideChip(m)
+		elseif op == "invited" then
+			Toast.show("An invitation", "To the Executive Suite: see the Quartermaster in the Midnight Room.", 4)
 		elseif op == "strideUp" then
 			Toast.show(string.format("Stride level %d", tonumber(m.level) or 1), string.format("%d%% faster in Steal a Luxe", tonumber(m.faster) or 0), 3)
 		elseif LuxeHud.mounted() then
 			LuxeHud.on(m)
+		elseif BasementHud.mounted() then
+			BasementHud.on(m)
+		elseif ExecutiveHud.mounted() then
+			ExecutiveHud.on(m)
 		end
 	end)
 	player:GetAttributeChangedSignal(AttractionList.ATTRIBUTE):Connect(follow)

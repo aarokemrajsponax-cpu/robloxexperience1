@@ -5,6 +5,7 @@
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local AttractionList = require(ReplicatedStorage.Shared.Attractions)
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local Layout = require(ReplicatedStorage.Shared.Layout).raw -- (the house as drawn: see World/Grand)
 local PianoKeys = require(ReplicatedStorage.Shared.PianoKeys)
@@ -467,7 +468,9 @@ local function roomDoor(m: Model, roomId: string)
 	-- The room's name, in serif, above the door (the client fades it in as you approach).
 	-- A part's Front face is its LookVector, which here faces into the Foyer.
 	local namePlate = Kit.part(model, "NamePlate", Vector3.new(w, 1.4, 0.1), base * CFrame.new(0, h + 1.6, -1.25), { color = Color3.new(), material = Enum.Material.SmoothPlastic, transparency = 1 }, { collide = false, query = false, shadow = false })
-	local roomName = if room then room.name else roomId
+	-- (A room that's an attraction's way in now goes by that name: the Luxe Lounge, and so on.)
+	local attraction = AttractionList.byRoom[roomId]
+	local roomName = if attraction then attraction.roomName elseif room then room.name else roomId
 	Kit.engrave(namePlate, Enum.NormalId.Front, { { text = roomName, size = 0.8, font = Brand.Fonts.display, color = Brand.Colours.lightGold } }, { ppu = 60, lit = false, brightness = 1.2 })
 	CollectionService:AddTag(namePlate, "RoomName")
 	-- And at eye level, beside the door, where a guest walking across the Foyer reads it: a black
@@ -481,15 +484,22 @@ local function roomDoor(m: Model, roomId: string)
 		local board = Kit.part(model, "RoomSign", Vector3.new(4.6, 2.9, 0.18), stand * CFrame.new(0, 4.3, 0) * CFrame.Angles(math.rad(6), 0, 0), L.blackLacquer, { collide = false, query = false })
 		Kit.part(model, "RoomSignEdge", Vector3.new(4.8, 3.1, 0.12), board.CFrame * CFrame.new(0, 0, 0.06), L.brass, { collide = false, query = false, shadow = false })
 		local pips = string.rep("●", room.level) .. string.rep("○", 4 - room.level)
-		Kit.engrave(board, Enum.NormalId.Front, {
-			{ text = string.upper(room.name), size = 0.62, font = Brand.Fonts.display, color = Brand.Colours.brightGold },
-			{ text = string.upper(room.tag), size = 0.34, font = Brand.Fonts.bodyBold, color = Brand.Colours.bone },
-			{ text = pips, size = 0.34, font = Brand.Fonts.bodyBold, color = Brand.Colours.gold },
-		}, { ppu = 90, lit = false, brightness = 1.5, maxDistance = 160 })
+		Kit.engrave(board, Enum.NormalId.Front, if attraction
+			then {
+				{ text = string.upper(attraction.roomName), size = 0.56, font = Brand.Fonts.display, color = Brand.Colours.brightGold },
+				{ text = string.upper(attraction.name), size = 0.38, font = Brand.Fonts.bodyBold, color = Brand.Colours.bone },
+				{ text = string.upper(attraction.tag), size = 0.28, font = Brand.Fonts.bodyBold, color = Brand.Colours.gold },
+			}
+			else {
+				{ text = string.upper(room.name), size = 0.62, font = Brand.Fonts.display, color = Brand.Colours.brightGold },
+				{ text = string.upper(room.tag), size = 0.34, font = Brand.Fonts.bodyBold, color = Brand.Colours.bone },
+				{ text = pips, size = 0.34, font = Brand.Fonts.bodyBold, color = Brand.Colours.gold },
+			}, { ppu = 90, lit = false, brightness = 1.5, maxDistance = 160 })
 		CollectionService:AddTag(board, "RoomSign")
 	end
-	-- The Midnight Room is roped until earned.
-	if roomId == "midnight" then
+	-- A room that's earned is roped until it is (none now: the Executive Suite's invitation is
+	-- checked at its lift).
+	if spec.gated then
 		local p = { -w / 2 + 0.6, w / 2 - 0.6 }
 		for _, x in p do
 			local pos = (base * CFrame.new(x, 0, -2.2)).Position

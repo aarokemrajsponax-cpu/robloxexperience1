@@ -91,7 +91,7 @@ function AbuseShow.buildAvatar(fresh: boolean?): boolean
 		return false
 	end
 	building = true
-	local ok, model = pcall(AbuseShow.makeAvatar, Config.data.Admin.ownerUserId)
+	local ok, model = pcall(AbuseShow.makeAvatar, require(script.Parent.Ownership).ownerId() or Config.data.Admin.ownerUserId)
 	building = false
 	if not ok or typeof(model) ~= "Instance" or not (model :: Instance):IsA("Model") then
 		return old ~= nil
@@ -122,7 +122,7 @@ function AbuseShow.buildAvatar(fresh: boolean?): boolean
 		end
 	end
 	m.Name = AbuseShow.AVATAR
-	m:SetAttribute("UserId", Config.data.Admin.ownerUserId)
+	m:SetAttribute("UserId", require(script.Parent.Ownership).ownerId() or Config.data.Admin.ownerUserId)
 	m:SetAttribute("BuiltAt", os.time())
 	-- (The new one in, then the old one out: a screen copying it always finds one.)
 	m.Parent = home
@@ -297,7 +297,7 @@ function AbuseShow.start()
 		end
 	end)
 	local function watch(p: Player)
-		if p.UserId == Config.data.Admin.ownerUserId then
+		if require(script.Parent.Ownership).isOwner(p) then
 			pcall(function()
 				p.CharacterAppearanceLoaded:Connect(function()
 					task.delay(1, AbuseShow.buildAvatar, true)

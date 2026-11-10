@@ -221,6 +221,11 @@ start("The herald", function()
 end)
 -- The attractions: each one's own screen while (and only while) a guest is in it.
 start("The attractions", require(script.Parent.UI.Attraction).start)
+start("The Basement's machinery", require(script.Parent.World.BasementMotion).start)
+-- The Grand Auction's notices (outbid, a lot won).
+start("The Grand Auction", require(script.Parent.UI.AuctionPanel).start)
+-- The Concierge's way to a place: gold arrows on the floor, walking.
+start("The way about the house", require(script.Parent.World.Wayfinder).start)
 start("Holidays", require(script.Parent.World.HolidayFX).start)
 start("Auras", require(script.Parent.World.Auras).start)
 start("Companions", require(script.Parent.World.Companions).start)
@@ -591,7 +596,8 @@ local function startHud()
 	-- The Owner Console: a key only the owner sees (the server checks every request), opened by
 	-- itself, with a welcome, when they arrive.
 	local function ownerKey()
-		if player:GetAttribute("MaisonAdmin") == true and not ownerKeyShown then
+		-- (The owner, or an admin the owner appointed: the server checks every request either way.)
+		if (player:GetAttribute("MaisonAdmin") == true or player:GetAttribute("MaisonStaff") == true) and not ownerKeyShown then
 			ownerKeyShown = true
 			Hud.setOwnerKey(function()
 				OwnerConsole.open()
@@ -613,6 +619,7 @@ local function startHud()
 	end
 	ownerKey()
 	player:GetAttributeChangedSignal("MaisonAdmin"):Connect(ownerKey)
+	player:GetAttributeChangedSignal("MaisonStaff"):Connect(ownerKey)
 	-- What to do next, under the keys while you walk (stepping aside while something bigger holds
 	-- the screen: the Meme Takeover, the Golden Transformation, a holiday's title, an effect's big
 	-- words, Admin Abuse's arrival card and gifts, a headline, a badge coming in, the sleigh ride).

@@ -29,6 +29,8 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
 local Types = require(script.Types)
 local Luxe = require(script.Luxe)
+local Basement = require(script.Basement)
+local ExecutiveGame = require(script.Executive)
 
 local Attractions = {}
 
@@ -47,6 +49,8 @@ end
 
 local GAMES: { [string]: Types.Game } = {
 	luxe = Luxe :: any,
+	basement = Basement :: any,
+	executive = ExecutiveGame :: any,
 }
 
 local event = Remotes.event("Attraction")
@@ -288,6 +292,22 @@ local ctx: Types.Ctx = {
 	end,
 }
 Attractions.ctx = ctx
+
+-- Invitations to the Executive Suite, earned in the others: the Maison Basement cleared, a great
+-- haul banked in Steal a Luxe.
+Basement.cleared = function(player: Player)
+	ExecutiveGame.invite(ctx, player, "basement")
+end
+Luxe.banked = function(player: Player, worth: number)
+	if worth >= (tonumber(cfg("executive").inviteHaul) or 8000) then
+		ExecutiveGame.invite(ctx, player, "haul")
+	end
+end
+
+-- An invitation from the owner (House controls).
+function Attractions.invite(player: Player): boolean
+	return ExecutiveGame.invite(ctx, player, "owner")
+end
 
 ---------------------------------------------------------------------------------------------------
 -- In and out

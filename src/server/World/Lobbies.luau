@@ -5,6 +5,7 @@
 --   The Luxe Lounge (the Velvet Room): four treadmills to train your Stride on (their belts really
 --   run: keep walking or be carried off the end), the golden treadmill (double Stride, for Gems),
 --   and the lectern with the upgrades board.
+--   The Basement Stair (the Obsidian Room): the way down into the Maison Basement, and its boards.
 -- The prompts are tagged "AttractionPrompt" (server/Attractions connects them): Kind "go" takes a
 -- guest in, "panel" opens the attraction's board on their screen.
 
@@ -135,11 +136,90 @@ local function luxeLounge(parent: Instance)
 	}, { ppu = 50, lit = false, brightness = 1.5, maxDistance = 180 })
 end
 
+-- The Basement Stair, in the Obsidian Room: the way down on its north wall, and the boards.
+local function basementStair(parent: Instance)
+	local R = Layout.Obsidian
+	local y = R.arrival.Y
+	local m = Kit.model(parent, "BasementStair")
+	local midX = (R.minX + R.maxX) / 2
+	local at = Vector3.new(midX, y, R.maxZ - 2.2)
+	Lobbies.entrance(m, "basement", CFrame.lookAt(at, at + Vector3.new(0, 0, -1)))
+	-- The boards: a lectern beside the way down, and the times over it.
+	local lx = midX - 18
+	local lectern = Kit.model(m, "Lectern")
+	local lcf = CFrame.lookAt(Vector3.new(lx, y, R.maxZ - 8), Vector3.new(lx, y, R.minZ))
+	Kit.part(lectern, "Stand", Vector3.new(2.2, 3.6, 1.6), lcf * CFrame.new(0, 1.8, 0), L.brass)
+	local top = Kit.part(lectern, "Desk", Vector3.new(3.2, 0.3, 2.4), lcf * CFrame.new(0, 3.8, 0) * CFrame.Angles(math.rad(-18), 0, 0), L.blackLacquer)
+	prompt(top, "basement", "panel", "Best times", "The Maison Basement")
+	Kit.pointLight(top, 0.9, 12, rgb(255, 214, 160))
+	local sign = Kit.part(m, "StairSign", Vector3.new(22, 3.2, 0.3), CFrame.lookAt(Vector3.new(lx, y + 9, R.maxZ - 1.4), Vector3.new(lx, y + 9, R.minZ)), L.blackLacquer, { collide = false })
+	Kit.engrave(sign, Enum.NormalId.Front, {
+		{ text = "THE MAISON BASEMENT", size = 0.55, font = Brand.Fonts.display, color = rgb(255, 214, 120) },
+		{ text = "sixteen stages down to the Treasury · best times at the lectern", size = 0.28, font = Brand.Fonts.body, color = rgb(230, 220, 200) },
+	}, { ppu = 50, lit = false, brightness = 1.5, maxDistance = 180 })
+end
+
+-- The Executive's Anteroom, in the Midnight Room: the lift up on its south wall, and the
+-- Quartermaster at his desk beside it (the sidearm, the gear, invitations).
+local function anteroom(parent: Instance)
+	local R = Layout.Midnight
+	local y = R.arrival.Y
+	local m = Kit.model(parent, "ExecutiveAnteroom")
+	local midX = (R.minX + R.maxX) / 2
+	local at = Vector3.new(midX, y, R.minZ + 2.2)
+	Lobbies.entrance(m, "executive", CFrame.lookAt(at, at + Vector3.new(0, 0, 1)))
+	-- The Quartermaster's desk: walnut and brass, his gear laid out on it.
+	local dx = midX + 20
+	local dcf = CFrame.lookAt(Vector3.new(dx, y, R.minZ + 9), Vector3.new(dx, y, R.maxZ))
+	local desk = Kit.model(m, "QuartermasterDesk")
+	Kit.part(desk, "Counter", Vector3.new(9, 3.6, 2.6), dcf * CFrame.new(0, 1.8, 0), L.walnut)
+	local top = Kit.part(desk, "Top", Vector3.new(9.4, 0.3, 3), dcf * CFrame.new(0, 3.75, 0), L.brass)
+	for k, glyphColour in { rgb(40, 40, 46), rgb(90, 70, 50), rgb(60, 90, 70) } do
+		Kit.part(desk, "Case" .. k, Vector3.new(1.6, 0.6, 1.1), dcf * CFrame.new(-3 + (k - 1) * 3, 4.2, 0), { color = glyphColour, material = Enum.Material.Leather }, { collide = false })
+	end
+	prompt(top, "executive", "panel", "Equipment", "The Quartermaster")
+	Kit.pointLight(top, 1, 14, rgb(255, 220, 170))
+	local sign = Kit.part(m, "AnteroomSign", Vector3.new(24, 3.2, 0.3), CFrame.lookAt(Vector3.new(midX, y + 15, R.minZ + 1.4), Vector3.new(midX, y + 15, R.maxZ)), L.blackLacquer, { collide = false })
+	Kit.engrave(sign, Enum.NormalId.Front, {
+		{ text = "THE EXECUTIVE SUITE", size = 0.55, font = Brand.Fonts.display, color = rgb(255, 214, 120) },
+		{ text = "by invitation only · see the Quartermaster for your sidearm and gear", size = 0.28, font = Brand.Fonts.body, color = rgb(230, 220, 200) },
+	}, { ppu = 50, lit = false, brightness = 1.5, maxDistance = 180 })
+end
+
+-- The Grand Auction, in the Library: the auctioneer's rostrum at the far end, and its board.
+local function auctionRoom(parent: Instance)
+	local R = Layout.Library
+	local y = R.arrival.Y
+	local m = Kit.model(parent, "GrandAuction")
+	local midX = (R.minX + R.maxX) / 2
+	local rcf = CFrame.lookAt(Vector3.new(midX, y, R.maxZ - 6), Vector3.new(midX, y, R.minZ))
+	Kit.part(m, "Dais", Vector3.new(12, 0.8, 6), rcf * CFrame.new(0, 0.4, 0), L.walnut)
+	Kit.part(m, "DaisEdge", Vector3.new(12.2, 0.12, 6.2), rcf * CFrame.new(0, 0.82, 0), L.brass, { collide = false })
+	Kit.part(m, "Rostrum", Vector3.new(3.4, 4, 2), rcf * CFrame.new(0, 2.8, -1.2), L.walnut)
+	local top = Kit.part(m, "RostrumTop", Vector3.new(3.8, 0.3, 2.4), rcf * CFrame.new(0, 4.95, -1.2) * CFrame.Angles(math.rad(-15), 0, 0), L.brass)
+	Kit.part(m, "Gavel", Vector3.new(0.4, 0.4, 1.4), rcf * CFrame.new(0.8, 5.3, -1.2), L.walnut, { collide = false })
+	prompt(top, "auction", "panel", "Bid", "The Grand Auction", 0)
+	Kit.pointLight(top, 1.1, 18, rgb(255, 220, 170))
+	local board = Kit.part(m, "AuctionBoard", Vector3.new(20, 5, 0.3), CFrame.lookAt(Vector3.new(midX, y + 11, R.maxZ - 1.2), Vector3.new(midX, y + 11, R.minZ)), L.blackLacquer, { collide = false })
+	Kit.engrave(board, Enum.NormalId.Front, {
+		{ text = "THE GRAND AUCTION", size = 0.36, font = Brand.Fonts.display, color = rgb(255, 214, 120) },
+		{ text = "this week's lots · one of a kind · bid at the rostrum in Gilt or Gems", size = 0.18, font = Brand.Fonts.body, color = rgb(230, 220, 200) },
+	}, { ppu = 50, lit = false, brightness = 1.5, maxDistance = 200 })
+end
+
 function Lobbies.build(parent: Instance)
 	local root = Kit.model(parent, "Lobbies")
-	local ok, err = pcall(luxeLounge :: any, root)
-	if not ok then
-		warn("[Maison] The Luxe Lounge couldn't be furnished: " .. tostring(err))
+	local rooms: { { name: string, fn: (Instance) -> () } } = {
+		{ name = "The Luxe Lounge", fn = luxeLounge },
+		{ name = "The Basement Stair", fn = basementStair },
+		{ name = "The Executive's Anteroom", fn = anteroom },
+		{ name = "The Grand Auction", fn = auctionRoom },
+	}
+	for _, room in rooms do
+		local ok, err = pcall(room.fn :: any, root)
+		if not ok then
+			warn("[Maison] " .. room.name .. " couldn't be furnished: " .. tostring(err))
+		end
 	end
 end
 

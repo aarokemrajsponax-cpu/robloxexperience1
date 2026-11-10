@@ -9,7 +9,11 @@
 --   * It never floods: each guest's feats of one kind at most once in Config.Herald.kindGap seconds,
 --     and the house hears at most one feat every Config.Herald.gap seconds (the rest wait, a few at
 --     most; the oldest of too many are let go).
+--   * The very greatest (the Crown Jewel, the Executive beaten for the first time, an auction won)
+--     are told in every server of the game too (MessagingService), at most one a server every
+--     Config.Herald.farGap seconds; a server hearing one tells it like its own, gap and all.
 
+local MessagingService = game:GetService("MessagingService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -27,7 +31,17 @@ export type Feat = {
 	glyph: string?, -- an emoji for its medallion
 	worth: number?, -- a figure to show with it
 	colour: Color3?,
+	everywhere: boolean?, -- told in every server of the game too
 }
+
+local TOPIC = "MaisonHerald"
+local lastFar = -math.huge
+-- Sends a feat to every other server (set by tests).
+Herald.publish = function(message: { [string]: any })
+	pcall(function()
+		MessagingService:PublishAsync(TOPIC, message)
+	end)
+end
 
 local function cfg(): { [string]: any }
 	return (Config.data :: any).Herald
@@ -88,6 +102,14 @@ function Herald.feat(player: Player, feat: Feat): boolean
 		return false
 	end
 	kinds[feat.kind] = now
+	if feat.everywhere and now - lastFar >= (tonumber(cfg().farGap) or 30) then
+		lastFar = now
+		local far = table.clone(message)
+		far.colour = nil -- (Color3 doesn't travel between servers)
+		far.far = true
+		far.server = game.JobId
+		task.spawn(Herald.publish, far)
+	end
 	table.insert(queue, message)
 	while #queue > (tonumber(cfg().queue) or 6) do
 		table.remove(queue, 1)
@@ -100,6 +122,28 @@ function Herald.start()
 	Players.PlayerRemoving:Connect(function(player: Player)
 		lastOfKind[player] = nil
 	end)
+	-- Another server's great feat: told here like our own (never this server's own, again).
+	pcall(function()
+		MessagingService:SubscribeAsync(TOPIC, function(packet: any)
+			Herald.hear(packet and packet.Data)
+		end)
+	end)
+end
+
+-- A feat from another server.
+function Herald.hear(m: any)
+	if type(m) ~= "table" or m.op ~= "feat" or m.server == game.JobId then
+		return
+	end
+	if type(m.title) ~= "string" or type(m.line) ~= "string" or type(m.name) ~= "string" then
+		return
+	end
+	local message = { op = "feat", kind = tostring(m.kind), title = m.title, line = m.line, glyph = m.glyph, worth = tonumber(m.worth), name = m.name, userId = tonumber(m.userId), seconds = tonumber(cfg().seconds) or 5, far = true }
+	table.insert(queue, message)
+	while #queue > (tonumber(cfg().queue) or 6) do
+		table.remove(queue, 1)
+	end
+	drain()
 end
 
 -- For tests: what's waiting to be told.

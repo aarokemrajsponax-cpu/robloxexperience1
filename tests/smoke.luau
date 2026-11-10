@@ -429,15 +429,16 @@ check("62 collectable pieces", Catalogue.totalCollectable() == 62, Catalogue.tot
 ---------------------------------------------------------------------------------------------------
 local Layout = module("ReplicatedStorage", "Shared", "Layout")
 local tables = CollectionService.GetTagged(CollectionService, "MaisonTable")
-check("42 tables: six in the Salon, the Obsidian and the Midnight Room, four duel halves in the Library, twenty in the Ballroom", #tables == 42, #tables)
+check("30 tables: six in the Salon, four duel halves in the Library, twenty in the Ballroom", #tables == 30, #tables)
 do
-	local inVelvet = 0
+	local gone = 0
 	for _, t in tables do
-		if t:GetAttribute("Room") == "velvet" or string.find(tostring(t:GetAttribute("TableId")), "velvet", 1, true) then
-			inVelvet += 1
+		local room = t:GetAttribute("Room")
+		if room == "velvet" or room == "obsidian" or room == "midnight" then
+			gone += 1
 		end
 	end
-	check("the Velvet Room has no sorting tables (it's the Luxe Lounge, the way into Steal a Luxe)", inVelvet == 0, inVelvet)
+	check("the Velvet, Obsidian and Midnight Rooms have no sorting tables (the attractions' rooms now)", gone == 0, gone)
 end
 local ids = {}
 for _, t in tables do
@@ -777,7 +778,30 @@ for _, roomId in { "salon", "velvet", "obsidian", "midnight" } do
 	end
 	table.insert(route, { door.centre + door.facing * 6, FLOOR }) -- in front of the room's door
 	table.insert(route, { inside, FLOOR }) -- through it
-	if roomId == "velvet" then
+	if roomId == "midnight" then
+		-- The Executive's Anteroom: across it to the lift up on its south wall, and to the
+		-- Quartermaster's desk. (Its door is open to everyone now: the invitation is at the lift.)
+		local R = Layout.Midnight
+		local midX = (R.minX + R.maxX) / 2
+		local toLift = table.clone(route)
+		table.insert(toLift, { Vector3.new(midX, FLOOR, (R.minZ + R.maxZ) / 2), FLOOR })
+		table.insert(toLift, { Vector3.new(midX, FLOOR, R.minZ + 6), FLOOR })
+		local why = walk(toLift, 1.0)
+		check("a guest can walk from the street spawn to the lift up to the Executive Suite", why == nil, why)
+		local desk = walk({ { inside, FLOOR }, { Vector3.new(midX + 20, FLOOR, (R.minZ + R.maxZ) / 2), FLOOR }, { Vector3.new(midX + 20, FLOOR, R.minZ + 12.5), FLOOR } }, 0.9)
+		check("...and to the Quartermaster's desk", desk == nil, desk)
+	elseif roomId == "obsidian" then
+		-- The Basement Stair: across it to the way down on its north wall, and to the lectern.
+		local R = Layout.Obsidian
+		local midX = (R.minX + R.maxX) / 2
+		local toStair = table.clone(route)
+		table.insert(toStair, { Vector3.new(midX, FLOOR, (R.minZ + R.maxZ) / 2), FLOOR })
+		table.insert(toStair, { Vector3.new(midX, FLOOR, R.maxZ - 6), FLOOR })
+		local why = walk(toStair, 1.0)
+		check("a guest can walk from the street spawn to the way down into the Maison Basement", why == nil, why)
+		local lectern = walk({ { inside, FLOOR }, { Vector3.new(midX - 18, FLOOR, (R.minZ + R.maxZ) / 2), FLOOR }, { Vector3.new(midX - 18, FLOOR, R.maxZ - 11), FLOOR } }, 0.9)
+		check("...and to the lectern with its best times", lectern == nil, lectern)
+	elseif roomId == "velvet" then
 		-- The Luxe Lounge: across it to the way into Steal a Luxe, and onto each treadmill.
 		local R = Layout.Velvet
 		local mid = Vector3.new(-70, FLOOR, (R.minZ + R.maxZ) / 2)
@@ -1110,9 +1134,10 @@ end
 
 check("the street spawn is clear", blocked(Layout.Street.spawn.Position, 1, 1.2, 5) == nil)
 check("the Foyer spawn is clear", blocked(Layout.Foyer.spawn.Position, 1, FLOOR + 1.2, FLOOR + 5) == nil)
--- Until it's earned, the Midnight Room's doorway is closed.
+-- The Midnight Room's doorway is open to everyone now (the Executive Suite's invitation is checked
+-- at its lift, by the server).
 local closed = walk({ { Layout.RoomDoors.midnight.centre + Vector3.new(-4, 0, 0), FLOOR }, { Layout.RoomDoors.midnight.centre + Vector3.new(4, 0, 0), FLOOR } }, 1.0)
-check("the Midnight Room is closed until earned", closed ~= nil)
+check("the Midnight Room's doorway is open to everyone", closed == nil, closed)
 
 -- Pieces laid out on the felt stay inside it and never overlap.
 for count = 4, 28 do

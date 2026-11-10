@@ -3110,7 +3110,7 @@ function AbuseShow.start()
 	end
 	-- The owner walking into this server: their hologram waves hello to everyone already here.
 	Players.PlayerAdded:Connect(function(p: Player)
-		if p.UserId == Config.data.Admin.ownerUserId and p ~= player then
+		if p.UserId == (tonumber(game:GetService("Workspace"):GetAttribute("MaisonOwnerId")) or 0) and p ~= player then
 			task.delay(2, function()
 				if p.Parent == Players then
 					OwnerCameo.say("I'm here! Say hi! 👋 Something big might be about to happen...", "wave", 6)

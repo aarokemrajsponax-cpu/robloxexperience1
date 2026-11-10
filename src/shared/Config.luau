@@ -306,6 +306,7 @@ local defaults = {
 		empireAsk = { rate = 3, burst = 8 },
 		attractionAsk = { rate = 8, burst = 16 }, -- a pickup, a checkpoint, a shot: quick, never a flood
 		attraction = { rate = 12, burst = 24 },
+		attractionFire = { rate = 5, burst = 8 }, -- the sidearm: a few shots a second at most
 		auctionAsk = { rate = 3, burst = 8 },
 	},
 
@@ -659,9 +660,18 @@ local defaults = {
 	},
 
 	-- Commissions (Appendix I1): Gilt for the Evening's and the Week's.
+	-- Live Operations (the owner's calendar, server/AdminService and shared/LiveCalendar): the
+	-- house's reference time zone (one of LiveCalendar.ZONES: daylight saving is worked out), and
+	-- which regions' holidays it keeps besides everyone's.
+	LiveOps = {
+		timezone = "America/New_York",
+		regions = { "global", "US" },
+	},
+
 	Commissions = {
 		eveningGilt = 150,
 		weekGilt = 600,
+		seasonGilt = 5000, -- the Season's Commission (a quarter of the year)
 	},
 
 	-- Badges on guests' Roblox profiles: each key is a Badge Book badge (shared/BadgeBook). Make
@@ -824,12 +834,54 @@ local defaults = {
 			goldenGems = 150, -- the golden treadmill (double Stride), for good
 			greatHaul = 8000, -- a haul worth this much is told to the whole house
 		},
+		-- The Maison Basement (server/Attractions/Basement): the obby under the house.
+		basement = {
+			origin = { 3000, 0, -3000 },
+			skipGems = 25, -- one stage on, for Gems (a skipped run is never timed for the boards)
+			chestGems = 10, -- the Treasury's chest, the first clear of the day
+			chestGemsAgain = 3, -- and each clear after it that day
+			dailyGems = 25, -- the most Gems a day from the Basement
+			quick = 240, -- seconds: the Under Four Minutes badge
+			heraldUnder = 180, -- a record under three minutes is told to the house
+			fallGrace = 1.5, -- seconds back at a checkpoint before anything can send you back again
+			boardSeconds = 120,
+			store = "Basement_v1",
+		},
+		-- The Executive Suite (server/Attractions/Executive): by invitation, the boss at the top.
+		executive = {
+			origin = { 0, 0, -3400 },
+			maxInvites = 5, -- the most invitations a guest holds
+			invitePrice = 25000, -- an invitation for Gilt, at the Quartermaster's desk
+			inviteHaul = 8000, -- a haul banked in Steal a Luxe worth this much brings an invitation
+			prize = 25000, -- beating the Executive: to the Estate of everyone in the Office
+			prizeGems = 15,
+			dailyGems = 20,
+			safe = 6000, -- the safe, once each, after he's beaten
+			damage = 10, -- a sidearm's stun
+			fireGap = 0.3,
+			range = 140,
+			noticeSeconds = 2.2, -- in sight this long, the alert is full
+			disguise = 0.6, -- a disguise: noticed this much as fast
+			alertFade = 0.1,
+			cameraRange = 40,
+			cameraAngle = 30,
+			guardRange = 26,
+			guardAngle = 55,
+			guardSpeed = 9,
+			bodyguardSpeed = 14,
+			punch = 12,
+			memoDamage = 8,
+			briefcase = 15,
+			shockwave = 20,
+			decoySeconds = 8,
+		},
 	},
 
 	-- The house's herald (server/Herald): feats told to everyone in the house. Each guest's feats
 	-- of one kind are told at most once in `kindGap` seconds, and the house hears at most one feat
 	-- every `gap` seconds (the rest wait their turn, `queue` at most; older ones are let go).
 	Herald = {
+		farGap = 30, -- the greatest feats, told in every server: at most one from a server in this long
 		gap = 6,
 		kindGap = 45,
 		queue = 6,

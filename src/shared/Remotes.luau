@@ -28,6 +28,7 @@ Remotes.Events = {
 	"Travel", -- client -> server: go to a place in the house; server -> client: arrived, or why not
 	"Empire", -- server -> client: a feat told to the house, a new wealth rank, an objective's progress
 	"Attraction", -- server -> client: Steal a Luxe, the Maison Basement, the Executive Suite (what happens in them)
+	"AttractionFire", -- client -> server: the Executive Suite's sidearm (where it was aimed; the server decides the rest)
 }
 
 Remotes.Functions = {

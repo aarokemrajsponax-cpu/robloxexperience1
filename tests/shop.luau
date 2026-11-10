@@ -387,6 +387,9 @@ for _ = 1, g.target do
 		Collection.round(fay, "salon", "Flawless")
 	elseif g.kind == "nightly" then
 		Collection.nightly(fay)
+	else
+		-- (An attraction's: a haul banked, the Treasury reached, a level of Stride...)
+		Collection.event(fay, g.kind, nil, nil, 1)
 	end
 end
 local view = Collection.view(profiles[fay].Data)
@@ -772,15 +775,15 @@ end
 do
 local AdminService = module("ServerScriptService", "Server", "AdminService")
 local GiltService = module("ServerScriptService", "Server", "Gilt")
--- The owner is one UserId (XxxXxxX_77797's, Config.Admin.ownerUserId): nobody else, ever (in
--- Studio the first test player stands in; off here, so the live rule is what's tested).
+-- The owner is whoever owns the experience on Roblox (server/Ownership): the user who owns it, or
+-- the owner of the group that does; worked out on the server, followed when it changes, nobody while
+-- it can't be. (In Studio the first test player stands in; off here, so the live rule is tested.)
 Config.data.Admin.studioFirstPlayer = false
-local realOwner = Config.data.Admin.ownerUserId
-check("the owner's powers are pinned to XxxXxxX_77797's UserId", realOwner == 8722595934)
-Config.data.Admin.ownerUserId = 100
+local Ownership = module("ServerScriptService", "Server", "Ownership")
+check("the UserId written into the game is only AJKR's name, never who the owner is", Config.data.Admin.ownerUserId == 8722595934)
 H.game.CreatorType = H.Enum.CreatorType.User
-H.game.CreatorId = 555
-local owner = guest("AJ", 100)
+H.game.CreatorId = 8722595934 -- (AJKR's account owns it)
+local owner = guest("AJ", 8722595934)
 local ned = guest("Ned", 101)
 local adminNotes = {}
 AdminService.note = function(text, everywhere)
@@ -807,27 +810,77 @@ local function lastBroadcast(op)
 	end
 	return nil
 end
-check("only the owner may use House controls", adminAs(ned, { op = "state" }).ok == false and adminAs(owner, { op = "state" }).ok == true)
-do
-	-- Not even whoever the experience belongs to on Roblox, unless they're the owner's UserId.
-	local creator = guest("Cid", 555)
-	check("the experience's creator account isn't the owner unless it's the owner's UserId", adminAs(creator, { op = "state" }).ok == false)
-end
+check("1. an experience owned by a user: that user is the owner, and only they may use House controls", adminAs(ned, { op = "state" }).ok == false and adminAs(owner, { op = "state" }).ok == true)
 check("the owner is marked, so only they see the House key", owner:GetAttribute("MaisonAdmin") == true and ned:GetAttribute("MaisonAdmin") ~= true)
 do
-	-- With no owner pinned (0), nobody has them: not the experience's creator, not a group's owner
-	-- (rank 255 in it), not a member.
-	Config.data.Admin.ownerUserId = 0
+	local view = adminAs(owner, { op = "state" })
+	check("the panel shows who the owner is, and how (AJKR's account goes by AJKR)", type(view.owner) == "table" and view.owner.userId == 8722595934 and view.owner.kind == "user" and view.owner.verified == true and view.owner.name == "AJKR")
+	-- 5. A UserId written into the game decides nothing.
+	Config.data.Admin.ownerUserId = 100
+	local pinned = guest("Pin", 100)
+	run(Ownership.refresh)
+	check("5. a UserId written into the game has no powers while that account doesn't own the experience", adminAs(pinned, { op = "state" }).ok == false and not AdminService.isAdmin(pinned) and AdminService.isAdmin(owner))
+	Config.data.Admin.ownerUserId = 8722595934
+	-- 8. Nothing about the owner is ever saved.
+	local opened = {}
+	local realGet, realOrdered = services.DataStoreService.GetDataStore, services.DataStoreService.GetOrderedDataStore
+	services.DataStoreService.GetDataStore = function(self, name, ...)
+		table.insert(opened, name)
+		return realGet(self, name, ...)
+	end
+	services.DataStoreService.GetOrderedDataStore = function(self, name, ...)
+		table.insert(opened, name)
+		return realOrdered(self, name, ...)
+	end
+	run(Ownership.refresh)
+	services.DataStoreService.GetDataStore, services.DataStoreService.GetOrderedDataStore = realGet, realOrdered
+	local inRecord = false
+	for k in profiles[owner].Data do
+		if string.find(string.lower(tostring(k)), "owner", 1, true) then
+			inRecord = true
+		end
+	end
+	check("8. the owner is never saved: no DataStore opened to find them out, nothing in a guest's record", #opened == 0 and not inRecord, table.concat(opened, ", "))
+	-- 2. A group owns it: the group's owner, never its admins or members.
+	H.groupInfo = H.groupInfo or {}
+	H.groupInfo[777] = { Id = 777, Owner = { Id = 102, Name = "Gia" } }
 	H.game.CreatorType = H.Enum.CreatorType.Group
 	H.game.CreatorId = 777
 	local gia, max = guest("Gia", 102), guest("Max", 103)
 	H.groups[102] = { { Id = 777, Rank = 255 } }
-	H.groups[103] = { { Id = 777, Rank = 10 }, { Id = 5, Rank = 255 } }
-	check("with no owner pinned, nobody has House controls: not a group's owner", adminAs(gia, { op = "state" }).ok == false)
-	check("...nor a member of the group", adminAs(max, { op = "state" }).ok == false)
+	H.groups[103] = { { Id = 777, Rank = 254 }, { Id = 5, Rank = 255 } }
+	owner:SetAttribute("AdminFly", true)
+	owner:SetAttribute("AdminSpeed", 3)
+	run(Ownership.refresh)
+	check("2. an experience owned by a group: the group's owner is the owner", AdminService.isAdmin(gia) and adminAs(gia, { op = "state" }).ok == true and gia:GetAttribute("MaisonAdmin") == true)
+	check("...never an admin or member of the group", not AdminService.isAdmin(max) and adminAs(max, { op = "state" }).ok == false)
+	check("3. the owner before has no powers the moment it changes hands, and theirs still running stop", not AdminService.isAdmin(owner) and owner:GetAttribute("MaisonAdmin") ~= true and owner:GetAttribute("AdminFly") == nil and owner:GetAttribute("AdminSpeed") == nil)
+	check("...and their screen asks in vain", adminAs(owner, { op = "state" }).ok == false)
+	-- 4. The group changes hands.
+	H.groupInfo[777] = { Id = 777, Owner = { Id = 103, Name = "Max" } }
+	run(Ownership.refresh)
+	check("4. the group changes hands: its new owner has the powers, the one before none", AdminService.isAdmin(max) and not AdminService.isAdmin(gia) and gia:GetAttribute("MaisonAdmin") ~= true and max:GetAttribute("MaisonAdmin") == true)
+	-- 6. Roblox doesn't answer.
+	H.groupInfo[777] = nil
+	run(Ownership.refresh)
+	check("6. when Roblox can't say who the owner is, nobody has the powers", not AdminService.isAdmin(max) and adminAs(max, { op = "state" }).ok == false and max:GetAttribute("MaisonAdmin") ~= true)
+	H.groupInfo[777] = { Id = 777, Owner = { Id = 103, Name = "Max" } }
+	run(Ownership.refresh)
+	check("...and the owner has them again as soon as it can", AdminService.isAdmin(max))
+	H.game.CreatorId = 0
+	run(Ownership.refresh)
+	check("...an unpublished place has no owner at all (Studio's test players aside)", not AdminService.isAdmin(max) and not AdminService.isAdmin(owner))
+	-- Back to the user who owns it.
 	H.game.CreatorType = H.Enum.CreatorType.User
-	H.game.CreatorId = 555
-	Config.data.Admin.ownerUserId = 100
+	H.game.CreatorId = 8722595934
+	run(Ownership.refresh)
+	check("ownership back with the first owner: theirs again, the group's owner has none", AdminService.isAdmin(owner) and not AdminService.isAdmin(max) and owner:GetAttribute("MaisonAdmin") == true)
+	for _, g in { gia, max, pinned } do
+		local i = table.find(guests, g)
+		if i then
+			table.remove(guests, i)
+		end
+	end
 end
 do
 	-- AJKR and nobody else (XxxXxxX_77797's UserId): names count for nothing, nor does a mark the
@@ -863,8 +916,8 @@ do
 	local player2 = arrive("Player2", -2)
 	check("in Studio, the first pretend test player stands in for the owner (one, not two)", AdminService.isAdmin(player1) and not AdminService.isAdmin(player2))
 	check("...and the owner's own account is the owner in Studio too", AdminService.isAdmin(owner))
-	-- Nor can a Config on the Creator Dashboard change who the owner is.
-	check("no dashboard Config can change who the owner is", Config.set("Admin.ownerUserId", 104) == false and Config.set("Admin.studioFirstPlayer", true) == false and Config.data.Admin.ownerUserId == 100 and table.find(Config.paths(), "Admin.ownerUserId") == nil)
+	-- 7. Nor can a Config on the Creator Dashboard, or anything a screen says, change who the owner is.
+	check("7. no dashboard Config can change who the owner is", Config.set("Admin.ownerUserId", 104) == false and Config.set("Admin.studioFirstPlayer", true) == false and Config.data.Admin.ownerUserId == 8722595934 and table.find(Config.paths(), "Admin.ownerUserId") == nil)
 	check("...while the owner's other settings still can be", Config.set("Admin.headlineSeconds", 6) == true and table.find(Config.paths(), "Admin.headlineSeconds") ~= nil)
 	Config.data.Admin.studioFirstPlayer = false
 	for _, g in added do
@@ -1565,7 +1618,7 @@ do
 	end
 	local owner
 	for _, g in guests do
-		if g.UserId == 100 then
+		if g.UserId == 8722595934 then
 			owner = g
 		end
 	end
@@ -2052,7 +2105,7 @@ do
 	local AdminService = module("ServerScriptService", "Server", "AdminService")
 	local owner, ned
 	for _, g in guests do
-		if g.UserId == 100 then
+		if g.UserId == 8722595934 then
 			owner = g
 		elseif g.UserId == 101 then
 			ned = g
@@ -2201,7 +2254,7 @@ do
 	-- The owner isn't in this server for any of it.
 	local owner
 	for _, g in guests do
-		if g.UserId == 100 then
+		if g.UserId == 8722595934 then
 			owner = g
 		end
 	end
@@ -2340,7 +2393,7 @@ do
 	local show = Config.data.Admin.show
 	local owner, ned, other
 	for _, g in guests do
-		if g.UserId == 100 then
+		if g.UserId == 8722595934 then
 			owner = g
 		elseif g.UserId == 101 then
 			ned = g

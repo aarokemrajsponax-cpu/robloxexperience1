@@ -117,7 +117,7 @@ Layout.RoomDoors = {
 	salon = { centre = Vector3.new(-30, 3, 4), facing = Vector3.new(1, 0, 0), open = true, gated = false, approach = { Vector3.new(-12, 3, 8) } },
 	velvet = { centre = Vector3.new(-30, 3, 35), facing = Vector3.new(1, 0, 0), open = true, gated = false, approach = { Vector3.new(-4, 3, 14), Vector3.new(-14, 3, 24) } },
 	-- The Midnight Room's door opens only for guests who have earned it (see the gate).
-	midnight = { centre = Vector3.new(30, 3, 4), facing = Vector3.new(-1, 0, 0), open = false, gated = true, approach = { Vector3.new(4, 3, 8), Vector3.new(16, 3, 7) } },
+	midnight = { centre = Vector3.new(30, 3, 4), facing = Vector3.new(-1, 0, 0), open = true, gated = false, approach = { Vector3.new(4, 3, 8), Vector3.new(16, 3, 7) } },
 	obsidian = { centre = Vector3.new(30, 3, 35), facing = Vector3.new(-1, 0, 0), open = true, gated = false, approach = { Vector3.new(4, 3, 12), Vector3.new(26, 3, 12), Vector3.new(26, 3, 28) } },
 }
 Layout.RoomDoorWidth = 8
@@ -449,6 +449,8 @@ Layout.Tour = {
 	points = {
 		salonDoor = Vector3.new(-30, 3, 4),
 		velvetDoor = Vector3.new(-30, 3, 35),
+		obsidianDoor = Vector3.new(30, 3, 35),
+		midnightDoor = Vector3.new(30, 3, 4),
 		tonightBoard = Vector3.new(-29.4, 9, 17),
 		livreDOr = Vector3.new(-19, 3, 36),
 		vault = Vector3.new(-8, 3, 53),

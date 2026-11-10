@@ -377,6 +377,43 @@ a Nightly attempt or a Mythic's odds.
 - **The launch kit**: page text, icon, thumbnails and the gameplay video's shot list are in
   [`LAUNCH.md`](LAUNCH.md).
 
+## Build 72 — become the wealthiest
+
+Sorting is no longer the point: **build your fortune, master the Maison, become the wealthiest.**
+
+- **Your Fortune** (under the Gilt bar): Gilt, Gems, your collection, your Suite and your Estate,
+  counted by the server; ten wealth ranks; the Wealthiest boards (this house, this week, all time),
+  which rank earned wealth only. Great feats are told to the house, the greatest to every server.
+- **Steal a Luxe** (through the Velvet Room, now the Luxe Lounge): a residence of three wings,
+  guards who notice, chase and catch, a getaway car to bank at; upgrades for Gilt; Stride trained on
+  the Lounge's treadmills (faster in the residence only).
+- **The Maison Basement** (the Obsidian Room, now the Basement Stair): a sixteen-stage obby down to
+  the Treasury; checkpoints, purses, best times on the boards (all time, week, friends); a stage
+  skip for Gems or Robux that's never timed and never pays.
+- **The Executive Suite** (the Midnight Room, now the Executive's Anteroom): by invitation (earned,
+  or for Gilt; never chance, never Robux); the Quartermaster's sidearm (free) and gear; the security
+  hallway, the code door, and the Executive in three phases.
+- **The Grand Auction** (the Library): three one-of-a-kind lots a week (and the season's), bid for in
+  every server at once; bids reserved, refunded when beaten, delivered when won.
+- **The Concierge**: a tour of every destination and how the money works; finds any place (gold
+  arrows on the floor, or there at once if you ask); answers questions with the house's own numbers;
+  says what to do next; shows guests from before what's new, once.
+- **Objectives**: the Evening, Week's and new Season's Commissions, now mostly about the attractions.
+- **The owner**: whoever owns the experience on Roblox (the user, or the owning group's owner),
+  checked on the server and followed when it changes; admins the owner appoints (the house's fun,
+  never the owner's own controls); an audit log; **LIVE OPS**: the holiday calendar in the house's
+  time zone (daylight saving included), previews and starts.
+
+The economy's numbers are in `ECONOMY.md`.
+
+To set up after publishing:
+
+- **The Robux stage skip** isn't offered until it exists: create a developer product named
+  "Basement: Skip a Stage" (reference price 19 Robux) in Creator Hub and put its id in
+  `ProductConfig.luau` (`basementSkip`, `Id = 0` now). The Gem skip works without it.
+- **LIVE OPS' time zone** is `America/New_York`; change `Config.LiveOps.timezone` (any zone in
+  `LiveCalendar.ZONES`) and `Config.LiveOps.regions` for the holidays the house keeps.
+
 ## Build 70 — what's new
 
 The plan for growing the game, put into the game:

@@ -51,9 +51,9 @@ local function places(): { [string]: Place }
 	-- (The Concierge: where guests arrive, in front of the desk, facing the Concierge.)
 	out.concierge = { name = "The Concierge", at = Layout.Foyer.spawn }
 	out.salon = { name = "The Salon", at = facing(Layout.Salon.arrival, Layout.Salon.arrival - Vector3.new(10, 0, 0)) }
-	out.velvet = { name = "The Velvet Room", at = facing(Layout.Velvet.arrival, Layout.Velvet.arrival - Vector3.new(10, 0, 0)) }
-	out.obsidian = { name = "The Obsidian Room", at = facing(Layout.Obsidian.arrival, Layout.Obsidian.arrival + Vector3.new(10, 0, 0)) }
-	out.midnight = { name = "The Midnight Room", at = facing(Layout.Midnight.arrival, Layout.Midnight.arrival + Vector3.new(10, 0, 0)) }
+	out.velvet = { name = "The Luxe Lounge", at = facing(Layout.Velvet.arrival, Layout.Velvet.arrival - Vector3.new(10, 0, 0)) }
+	out.obsidian = { name = "The Basement Stair", at = facing(Layout.Obsidian.arrival, Layout.Obsidian.arrival + Vector3.new(10, 0, 0)) }
+	out.midnight = { name = "The Executive's Anteroom", at = facing(Layout.Midnight.arrival, Layout.Midnight.arrival + Vector3.new(10, 0, 0)) }
 	fromStop("tonight", "Tonight's table")
 	fromStop("vault", "The Vault")
 	fromStop("boutique", "The Boutique")

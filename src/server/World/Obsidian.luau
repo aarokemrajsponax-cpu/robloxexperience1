@@ -1,13 +1,13 @@
 --!strict
--- The Obsidian Room: black on black. Polished stone, one hard key light per table, gold only on
--- the edges of the cases.
+-- The Obsidian Room, now the Basement Stair (the way down into the Maison Basement): black on
+-- black, polished stone, gilded objects on plinths along the far wall. The way down and the boards
+-- are furnished at the grown size (World/Lobbies).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Layout = require(ReplicatedStorage.Shared.Layout).raw -- (the house as drawn: see World/Grand)
 local Kit = require(script.Parent.Kit)
 local RoomShell = require(script.Parent.RoomShell)
-local SortingTable = require(script.Parent.SortingTable)
 
 local L = Kit.Looks
 local O = Layout.Obsidian
@@ -46,23 +46,6 @@ function Obsidian.build(parent: Instance): Model
 		sharedSouth = true, -- the Midnight Room's north wall
 	})
 	plinths(root)
-	local tables = Kit.folder(root, "Tables")
-	local style: SortingTable.Style = {
-		roomName = "The Obsidian Room",
-		top = L.blackLacquer,
-		legs = L.ink,
-		felt = { color = Color3.fromRGB(10, 10, 12), material = Enum.Material.Fabric },
-		caseBase = L.ink,
-		caseRim = L.brass,
-		chair = { color = Color3.fromRGB(14, 14, 16), material = Enum.Material.Leather },
-		lamp = "key",
-		lampColor = Color3.fromRGB(255, 240, 220),
-		lampBrightness = 2.4,
-		ceiling = FLOOR + O.height,
-	}
-	for i, centre in O.tables do
-		SortingTable.build(tables, "obsidian", i, Layout.tableFrame(centre), style)
-	end
 	return root
 end
 

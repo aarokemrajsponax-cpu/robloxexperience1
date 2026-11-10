@@ -4,7 +4,7 @@
 local Types = {}
 
 -- A feat for the whole house (server/Herald).
-export type Feat = { kind: string, title: string, line: string, glyph: string?, worth: number?, colour: Color3? }
+export type Feat = { kind: string, title: string, line: string, glyph: string?, worth: number?, colour: Color3?, everywhere: boolean? }
 
 -- What every attraction works through (server/Attractions makes it). Every reward is decided by
 -- the attraction from what the server sees; nothing a screen says is a reward, a price or a place.

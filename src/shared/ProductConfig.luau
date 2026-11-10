@@ -456,6 +456,21 @@ add({
 	UX = { DisplayName = "The Private Garage", Category = "Grand Prix", Line = "Two cars only you may drive, for good: the Gilded Phantom and the Imperial Violet. They drive like every other car.", Offer = true, Order = 55, Action = "prompt" },
 })
 
+-- The Maison Basement (server/Attractions/Basement, Purchases/BasementSkip): one stage on, for a
+-- guest stuck on it. A skipped run is never timed for the boards and a skipped stage pays nothing.
+ProductConfig.Basement = { "basementSkip" } :: { string }
+add({
+	Key = "basementSkip",
+	Name = "Basement: Skip a Stage",
+	ProductType = "DeveloperProduct",
+	Id = 0,
+	Handler = "basementSkip",
+	Pricing = { ReferencePrice = 19, Tier = "Entry", Rationale = "A way past one stage someone is stuck on: cheap, and never a way up the boards." },
+	Reward = { Type = "BasementSkip", Stages = 1 },
+	Rules = { Stackable = true, CooldownSeconds = 0, MaxHeld = 10 },
+	UX = { DisplayName = "Skip a Stage", Category = "The Maison Basement", Line = "Takes you on to the next checkpoint of the Maison Basement. A skipped run isn't timed for the boards, and the stage skipped pays nothing.", Offer = false, Order = 93, Action = "prompt" },
+})
+
 -- The holiday games (server/Holidays): more of the same fun, at a fixed price, never a chance.
 -- Turkeys: five free catches each visit to the Harvest Field, then more. The sleigh: one ride to
 -- the North Pole free each Christmas, then more.

@@ -89,21 +89,25 @@ function Attractions.origin(id: string): Vector3
 	return placed(id) or Vector3.zero
 end
 
--- How far an attraction's place reaches either side of its middle (and below and above it).
-Attractions.REACH = {
-	luxe = Vector3.new(260, 140, 260),
-	basement = Vector3.new(260, 160, 260),
-	executive = Vector3.new(320, 120, 160),
-} :: { [string]: Vector3 }
+-- How far an attraction's place reaches from its origin: the box it's built in (a guest inside it
+-- is in that attraction; anywhere else, in the Maison).
+Attractions.BOUNDS = {
+	luxe = { min = Vector3.new(-260, -140, -260), max = Vector3.new(260, 140, 260) },
+	basement = { min = Vector3.new(-90, -140, -60), max = Vector3.new(90, 60, 820) },
+	executive = { min = Vector3.new(-320, -120, -160), max = Vector3.new(320, 120, 160) },
+} :: { [string]: { min: Vector3, max: Vector3 } }
 
 -- Which attraction's place a point is in, or nil (the Maison and everywhere else).
 function Attractions.areaAt(p: Vector3): string?
 	for _, a in Attractions.List do
 		-- (One with no place yet has no area: never the Maison's own.)
 		local o = placed(a.id)
-		local r = Attractions.REACH[a.id]
-		if o and r and math.abs(p.X - o.X) <= r.X and math.abs(p.Z - o.Z) <= r.Z and p.Y >= o.Y - r.Y and p.Y <= o.Y + r.Y then
-			return a.id
+		local b = Attractions.BOUNDS[a.id]
+		if o and b then
+			local rel = p - o
+			if rel.X >= b.min.X and rel.X <= b.max.X and rel.Y >= b.min.Y and rel.Y <= b.max.Y and rel.Z >= b.min.Z and rel.Z <= b.max.Z then
+				return a.id
+			end
 		end
 	end
 	return nil

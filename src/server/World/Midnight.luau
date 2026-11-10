@@ -1,13 +1,13 @@
 --!strict
--- The Midnight Room: ink blue and almost dark. One lamp at each table, and the city through a
--- round window. A velvet rope across the door until you've earned it.
+-- The Midnight Room, now the Executive's Anteroom (the lift up to the Executive Suite): ink blue
+-- and almost dark, the city through a round window. Its lift and the Quartermaster's desk are
+-- furnished at the grown size (World/Lobbies); the invitation is checked at the lift.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Layout = require(ReplicatedStorage.Shared.Layout).raw -- (the house as drawn: see World/Grand)
 local Kit = require(script.Parent.Kit)
 local RoomShell = require(script.Parent.RoomShell)
-local SortingTable = require(script.Parent.SortingTable)
 
 local L = Kit.Looks
 local M = Layout.Midnight
@@ -67,23 +67,6 @@ function Midnight.build(parent: Instance): Model
 		rail = L.darkBrass,
 	})
 	roundWindow(root)
-	local tables = Kit.folder(root, "Tables")
-	local style: SortingTable.Style = {
-		roomName = "The Midnight Room",
-		top = { color = Color3.fromRGB(16, 18, 28), material = Enum.Material.Wood },
-		legs = L.ink,
-		felt = { color = Color3.fromRGB(10, 12, 22), material = Enum.Material.Fabric },
-		caseBase = { color = Color3.fromRGB(12, 14, 30), material = Enum.Material.Fabric },
-		caseRim = L.darkBrass,
-		chair = { color = Color3.fromRGB(18, 22, 40), material = Enum.Material.Fabric },
-		lamp = "single",
-		lampColor = Color3.fromRGB(255, 206, 140),
-		lampBrightness = 1.6,
-		ceiling = FLOOR + M.height,
-	}
-	for i, centre in M.tables do
-		SortingTable.build(tables, "midnight", i, Layout.tableFrame(centre), style)
-	end
 	return root
 end
 

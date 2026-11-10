@@ -32,6 +32,7 @@ local function record(data: Profiles.Data): any
 	d.badges = d.badges or {}
 	d.mythics = d.mythics or {}
 	d.commissions = d.commissions or { evening = { key = "", progress = 0, done = false }, week = { key = "", progress = 0, done = false } }
+	d.commissions.season = d.commissions.season or { key = "", progress = 0, done = false }
 	d.standing = d.standing or "Guest"
 	return d
 end
@@ -67,7 +68,7 @@ end
 ---------------------------------------------------------------------------------------------------
 -- Commissions
 ---------------------------------------------------------------------------------------------------
-local function tick(player: Player, slot: string, g: Commissions.Goal, kind: Commissions.Kind, room: string?, case: string?)
+local function tick(player: Player, slot: string, g: Commissions.Goal, kind: Commissions.Kind, room: string?, case: string?, amount: number?)
 	local data = Profiles.get(player)
 	if not data then
 		return
@@ -81,25 +82,28 @@ local function tick(player: Player, slot: string, g: Commissions.Goal, kind: Com
 	if state.done then
 		return
 	end
-	local step = Commissions.progress(g, kind, room, case)
+	local step = Commissions.progress(g, kind, room, case, amount)
 	if step <= 0 then
 		return
 	end
 	state.progress = math.min(g.target, state.progress + step)
 	if state.progress >= g.target then
 		state.done = true
-		local big = slot == "week"
-		local paid = Gilt.pay(player, data, Commissions.reward(big), if big then "The Week's Commission" else "The Evening Commission")
+		local big = slot ~= "evening"
+		local season = slot == "season"
+		local title = if season then "The Season's Commission" elseif big then "The Week's Commission" else "The Evening Commission"
+		local paid = Gilt.pay(player, data, Commissions.reward(big, season), title)
 		Collection.ledger(player, if big then "week" else "evening")
-		Collection.notice(player, if big then "The Week's Commission" else "The Evening Commission", string.format("%s. +%d Gilt.", g.text, paid))
+		Collection.notice(player, title, string.format("%s. +%d Gilt.", g.text, paid))
 		Analytics.custom(player, "Commission done", nil, { slot = slot, goal = g.id })
 	end
 end
 
 -- Something happened that a Commission might count.
-function Collection.event(player: Player, kind: Commissions.Kind, room: string?, case: string?)
-	tick(player, "evening", Commissions.evening(), kind, room, case)
-	tick(player, "week", Commissions.weekly(), kind, room, case)
+function Collection.event(player: Player, kind: Commissions.Kind, room: string?, case: string?, amount: number?)
+	tick(player, "evening", Commissions.evening(), kind, room, case, amount)
+	tick(player, "week", Commissions.weekly(), kind, room, case, amount)
+	tick(player, "season", Commissions.seasonal(), kind, room, case, amount)
 end
 
 function Collection.commissions(data: Profiles.Data): { { [string]: any } }
@@ -108,13 +112,14 @@ function Collection.commissions(data: Profiles.Data): { { [string]: any } }
 	local specs: { { slot: string, goal: Commissions.Goal, label: string } } = {
 		{ slot = "evening", goal = Commissions.evening(), label = "This evening" },
 		{ slot = "week", goal = Commissions.weekly(), label = "This week" },
+		{ slot = "season", goal = Commissions.seasonal(), label = "This season" },
 	}
 	for _, spec in specs do
 		local slot, g, label = spec.slot, spec.goal, spec.label
 		local state = d.commissions[slot]
 		local progress = if state.key == g.id then state.progress else 0
 		local done = state.key == g.id and state.done
-		table.insert(out, { label = label, text = g.text, progress = progress, target = g.target, done = done, gilt = Commissions.reward(slot == "week") })
+		table.insert(out, { label = label, text = g.text, progress = progress, target = g.target, done = done, gilt = Commissions.reward(slot ~= "evening", slot == "season") })
 	end
 	return out
 end

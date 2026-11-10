@@ -171,12 +171,9 @@ TableService.say = function(player, line)
 	Concierge.line(player, line, 3)
 end
 Concierge.isSeated = TableService.isSeated
-Concierge.canEnter = function(player, room)
-	if room ~= "midnight" then
-		return true
-	end
-	local data = require(script.Parent.Profiles).get(player)
-	return data ~= nil and data.flags.midnight == true
+-- Every room is open to everyone now (the Executive Suite's invitation is checked at its lift).
+Concierge.canEnter = function(_player, _room)
+	return true
 end
 Concierge.needsTour = function(player)
 	local data = require(script.Parent.Profiles).get(player)
@@ -362,6 +359,40 @@ end
 local Travel = require(script.Parent.Travel)
 Travel.isBusy = AdminService.isSeated
 boot("Travel", Travel.start)
+-- The Concierge's way about the house: a guest's record (for what to do next), the places and
+-- going straight to one, this build's news (shown once to guests from before it), the settings
+-- his answers quote.
+Concierge.dataOf = function(player)
+	return require(script.Parent.Profiles).get(player)
+end
+Concierge.placeAt = function(id)
+	local p = Travel.places()[id]
+	if p then
+		return p.name, p.at.Position
+	end
+	return nil, nil
+end
+Concierge.travel = Travel.go
+Concierge.newsSeen = function(player)
+	local data = require(script.Parent.Profiles).get(player)
+	return data == nil or (type(data.flags) == "table" and data.flags.news72 == true)
+end
+Concierge.markNews = function(player)
+	local data = require(script.Parent.Profiles).get(player)
+	if data and type(data.flags) == "table" then
+		data.flags.news72 = true
+	end
+end
+Concierge.settings = function()
+	return ConfigData
+end
+Concierge.season = function()
+	local on = require(ReplicatedStorage.Shared.LiveCalendar).active(os.time())
+	if on then
+		return on.name, on.line
+	end
+	return nil, nil
+end
 boot("The Grand Prix", function()
 	GrandPrixService.start(Workspace:FindFirstChild("Maison") or Workspace)
 end)
@@ -784,6 +815,33 @@ boot("The Empire", function()
 	end
 	Empire.isOwner = AdminService.isAdmin
 	Empire.start()
+	-- The attractions count toward the objectives (the Evening, Week's and Season's Commissions).
+	-- The owner's grant: an invitation to the Executive Suite.
+	AdminService.invite = Empire.Attractions.invite
+	Empire.Attractions.progress = function(player, kind, n)
+		Collection.event(player, kind :: any, nil, nil, n)
+	end
+	-- The Maison Basement's Skip a Stage: skips held (by receipt), the purchase window, and using
+	-- one at once for a guest in the Basement when its receipt arrives.
+	local Basement = require(script.Parent.Attractions.Basement)
+	local skips = Purchases.BasementSkip
+	Basement.skipsHeld = skips.held
+	Basement.useSkip = skips.use
+	Basement.offerSkip = skips.offer
+	Basement.skipOnSale = skips.onSale
+	skips.useNow = function(player: Player): boolean
+		return Basement.useHeldSkip(Empire.Attractions.ctx, player)
+	end
+end)
+
+-- The Grand Auction, in the Library: the week's lots, bid for in every server at once.
+boot("The Grand Auction", function()
+	local Auction = require(script.Parent.Auction)
+	Auction.award = Achievements.award
+	Auction.tally = function(player, stat, n, once)
+		AdminService.tally(player, stat, n, once)
+	end
+	Auction.start()
 end)
 
 -- Last: saved profiles (everything listening for them is connected by now).

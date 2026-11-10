@@ -1,9 +1,10 @@
 --!strict
 -- House controls: the owner's panel for keeping the house lively (the "admin abuse" evenings
 -- other Roblox games are known for, in the house's own manner), and the owner's own powers. Only
--- the owner, AJKR (the Roblox account XxxXxxX_77797, UserId 8722595934: Config.Admin.ownerUserId),
--- may use any of it: nobody else, whatever their screen sends. Every request is checked here, never on the guest's screen; the powers the
--- owner's screen carries out (flying) are switched on by the server.
+-- the owner may use any of it: whoever owns the experience on Roblox (server/Ownership: the user,
+-- or the owning group's owner), worked out on the server, followed when it changes, and nobody when
+-- it can't be. Nobody else, whatever their screen sends. Every request is checked here, never on the
+-- guest's screen; the powers the owner's screen carries out (flying) are switched on by the server.
 --
 -- Three ways in, one set of rules: the Owner Console in the game (AdminAsk, owner only), the other
 -- servers of the game (MessagingService, when the owner chose "every server"), and the Owner Remote
@@ -33,6 +34,8 @@ local TextService = game:GetService("TextService")
 local Workspace = game:GetService("Workspace")
 
 local Names = require(ReplicatedStorage.Shared.Names)
+local LiveCalendar = require(ReplicatedStorage.Shared.LiveCalendar)
+local Ownership = require(script.Parent.Ownership)
 local AbuseNights = require(ReplicatedStorage.Shared.AbuseNights)
 local Config = require(ReplicatedStorage.Shared.Config)
 local HouseEvents = require(ReplicatedStorage.Shared.HouseEvents)
@@ -96,19 +99,14 @@ AdminService.showStopped = function() end
 ---------------------------------------------------------------------------------------------------
 -- Who may use it
 ---------------------------------------------------------------------------------------------------
-local ownerCache: { [Player]: boolean } = {}
 local studioOwner: Player? = nil -- Studio only: the first test player, standing in for the owner
 
 function AdminService.isAdmin(player: Player): boolean
-	local cached = ownerCache[player]
-	if cached ~= nil then
-		return cached
-	end
-	-- The owner, by their UserId: XxxXxxX_77797's, AJKR (never a name: a username can change, and a
-	-- display name anyone can copy). Nothing else counts: not the account or group the experience
-	-- belongs to, not a group rank, not a Studio collaborator. No UserId set, nobody has them.
-	local owner = cfg().ownerUserId
-	local yes = type(owner) == "number" and owner > 0 and player.UserId == owner
+	-- The owner of the experience on Roblox, by UserId (never a name: a username can change, and a
+	-- display name anyone can copy): the user who owns it, or the owner of the group that does.
+	-- Not a group's admins or ranks, not a Studio collaborator, not a UserId written into the game.
+	-- Not known (Roblox didn't answer): nobody, until it is.
+	local yes = Ownership.isOwner(player)
 	if not yes and RunService:IsStudio() and cfg().studioFirstPlayer and player.UserId <= 0 and (studioOwner == nil or studioOwner == player or studioOwner.Parent ~= Players) then
 		-- (Testing in Studio with its pretend players, Player1 and Player2, who have no real
 		-- account: the first one in plays the owner. A real account never stands in, even in
@@ -116,9 +114,37 @@ function AdminService.isAdmin(player: Player): boolean
 		studioOwner = player
 		yes = true
 	end
-	ownerCache[player] = yes
 	return yes
 end
+
+-- Who the owner is now (for the owner's panel).
+function AdminService.owner(): { [string]: any }
+	return Ownership.current()
+end
+
+-- The owner changed (on Roblox): the new owner is marked and has every power; whoever was the
+-- owner before is unmarked, and every power of theirs still running is switched off.
+local function ownershipChanged()
+	for _, p in Players:GetPlayers() do
+		local now = AdminService.isAdmin(p)
+		if now then
+			p:SetAttribute("MaisonAdmin", true)
+		elseif p:GetAttribute("MaisonAdmin") == true then
+			p:SetAttribute("MaisonAdmin", nil)
+			for _, attr in { "AdminFly", "AdminGhost", "AdminSpeed", "AdminJump", "AdminSize", "AdminInvisible" } do
+				p:SetAttribute(attr, nil)
+			end
+			pcall(function()
+				local character = p.Character
+				local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+				if humanoid then
+					humanoid.JumpPower = 35
+				end
+			end)
+		end
+	end
+end
+AdminService.ownershipChanged = ownershipChanged
 
 ---------------------------------------------------------------------------------------------------
 -- Timed events
@@ -743,7 +769,7 @@ end
 -- checked just now (then nothing is shown).
 local function ownerText(text: string): string?
 	local ok, result = pcall(function()
-		local r = TextService:FilterStringAsync(text, cfg().ownerUserId, Enum.TextFilterContext.PublicChat)
+		local r = TextService:FilterStringAsync(text, Ownership.ownerId() or cfg().ownerUserId, Enum.TextFilterContext.PublicChat)
 		return r:GetNonChatStringForBroadcastAsync()
 	end)
 	return if ok and type(result) == "string" then result else nil
@@ -1819,6 +1845,142 @@ end
 ---------------------------------------------------------------------------------------------------
 local lastAsk: { [Player]: number } = {}
 
+---------------------------------------------------------------------------------------------------
+-- Staff: admins the owner appoints (never the owner: that's whoever owns the experience)
+---------------------------------------------------------------------------------------------------
+-- An admin runs the house's fun (events, Admin Abuse, effects, headlines, the season, the calendar)
+-- and may stop it all; the owner alone gives Gilt, Gems, invitations and giveaways, removes a guest,
+-- schedules, summons, and appoints or dismisses admins. No admin can change who the owner is or
+-- their own place on the staff.
+local STAFF_OPS: { [string]: boolean } = {
+	state = true, calendar = true, event = true, abuse = true, mega = true, countdown = true, fx = true,
+	fxAllOff = true, headline = true, announce = true, salute = true, season = true, crown = true,
+	spotlight = true, clock = true, ballroomOpen = true, grandPrixOpen = true, show = true, stop = true,
+	stopAll = true, freeze = true, ["goto"] = true, power = true,
+}
+AdminService.STAFF_OPS = STAFF_OPS
+local staff: { [number]: { name: string, since: number } } = {}
+local STAFF_KEY = "admins"
+AdminService.staffStore = function(): any
+	return DataStoreService:GetDataStore("MaisonStaff_v1")
+end
+AdminService.auditStore = function(): any
+	return DataStoreService:GetDataStore("MaisonAudit_v1")
+end
+-- An invitation to the Executive Suite (set by Main: the attractions).
+AdminService.invite = function(_player: Player): boolean
+	return false
+end
+
+local function readStaff(raw: any): { [number]: { name: string, since: number } }
+	local out: { [number]: { name: string, since: number } } = {}
+	if type(raw) == "table" then
+		for k, v in raw do
+			local id = tonumber(k)
+			if id and type(v) == "table" then
+				out[id] = { name = tostring(v.name or "An admin"), since = tonumber(v.since) or 0 }
+			end
+		end
+	end
+	return out
+end
+
+local function markStaff()
+	for _, p in Players:GetPlayers() do
+		local on = staff[p.UserId] ~= nil and not AdminService.isAdmin(p)
+		p:SetAttribute("MaisonStaff", if on then true else nil)
+	end
+end
+
+-- Reads the staff list again (every server does, now and then: an appointment reaches them all).
+function AdminService.loadStaff()
+	local ok, raw = pcall(function()
+		return AdminService.staffStore():GetAsync(STAFF_KEY)
+	end)
+	if ok then
+		staff = readStaff(raw)
+		markStaff()
+	end
+end
+
+-- The Live Operations calendar: the reference time zone, what's on, and what's coming (the next
+-- week, or month), each with the house's dress for it and its event, where it has them.
+local DRESS: { [string]: string } = { newYear = "toast", valentines = "rose", stPatrick = "emerald", easter = "bloom", halloween = "hallows", thanksgiving = "longtable", christmas = "yule" }
+local EVENT: { [string]: string } = { newYear = "newYear", valentines = "valentine", stPatrick = "stPatrick", easter = "easter", halloween = "halloween", thanksgiving = "thanksgiving", christmas = "christmas" }
+function AdminService.calendar(days: number?): { [string]: any }
+	local now = os.time()
+	local zone = LiveCalendar.zone()
+	local here = LiveCalendar.localDate(now, zone)
+	local function shape(w: LiveCalendar.Window): { [string]: any }
+		local a, b = LiveCalendar.localDate(w.starts, zone), LiveCalendar.localDate(w.ends - 1, zone)
+		return {
+			id = w.id,
+			name = w.name,
+			glyph = w.glyph,
+			line = w.line,
+			starts = w.starts,
+			ends = w.ends,
+			from = string.format("%d/%d", a.month, a.day),
+			to = string.format("%d/%d", b.month, b.day),
+			on = w.starts <= now and now < w.ends,
+			dress = DRESS[w.id],
+			event = EVENT[w.id],
+			game = w.game,
+		}
+	end
+	local active = LiveCalendar.active(now, zone)
+	local list = {}
+	for _, w in LiveCalendar.upcoming(now, days or 31, zone) do
+		table.insert(list, shape(w))
+	end
+	return {
+		zone = zone,
+		today = string.format("%04d-%02d-%02d %02d:%02d", here.year, here.month, here.day, here.hour, here.min),
+		active = if active then shape(active) else nil,
+		upcoming = list,
+	}
+end
+
+-- "owner", "admin", or nil.
+function AdminService.rank(player: Player): string?
+	if AdminService.isAdmin(player) then
+		return "owner"
+	end
+	if staff[player.UserId] then
+		return "admin"
+	end
+	return nil
+end
+
+-- The audit log: every control used, by whom (kept here, and in the store for every server).
+local audit: { { t: number, by: string, rank: string, op: string, detail: string } } = {}
+local function record(player: Player, rank: string, op: string, r: { [string]: any })
+	local detail = ""
+	for _, k in { "id", "minutes", "amount", "userId", "everywhere" } do
+		if r[k] ~= nil then
+			detail ..= string.format("%s=%s ", k, tostring(r[k]))
+		end
+	end
+	local entry = { t = os.time(), by = Names.of(player), rank = rank, op = tostring(op), detail = detail }
+	table.insert(audit, entry)
+	while #audit > 100 do
+		table.remove(audit, 1)
+	end
+	task.spawn(function()
+		pcall(function()
+			AdminService.auditStore():UpdateAsync("log", function(old: any): any
+				local list = if type(old) == "table" then old else {}
+				table.insert(list, entry)
+				while #list > 300 do
+					table.remove(list, 1)
+				end
+				return list
+			end)
+		end)
+	end)
+end
+AdminService.audit = audit
+
 local function state(player: Player?): { [string]: any }
 	local guests = {}
 	for _, p in Players:GetPlayers() do
@@ -1842,6 +2004,29 @@ local function state(player: Player?): { [string]: any }
 	end
 	return {
 		ok = true,
+		owner = Ownership.current(),
+		rank = if player then AdminService.rank(player) else nil,
+		staff = (function(): any
+			if not player or not AdminService.isAdmin(player) then
+				return nil
+			end
+			local list = {}
+			for id, s in staff do
+				table.insert(list, { userId = id, name = s.name, since = s.since })
+			end
+			return list
+		end)(),
+		audit = (function(): any
+			if not player or not AdminService.isAdmin(player) then
+				return nil
+			end
+			local list = {}
+			for k = #audit, math.max(1, #audit - 19), -1 do
+				table.insert(list, audit[k])
+			end
+			return list
+		end)(),
+		calendar = AdminService.calendar(),
 		guests = guests,
 		events = events,
 		seasons = seasons,
@@ -2101,7 +2286,8 @@ local function everywhere(m: { [string]: any }, byName: string)
 end
 
 local function handle(player: Player, request: unknown): any
-	if not AdminService.isAdmin(player) then
+	local rank = AdminService.rank(player)
+	if not rank then
 		-- (Someone else's screen asking for the owner's controls: refused, and noted.)
 		RemoteGuard.reject(player, "adminAsk", "not the owner")
 		return { ok = false, why = "House controls are for the owner." }
@@ -2117,8 +2303,50 @@ local function handle(player: Player, request: unknown): any
 	local r = request :: { [string]: any }
 	local op = r.op
 	local byName = Names.of(player)
+	if rank ~= "owner" and not STAFF_OPS[tostring(op)] then
+		return { ok = false, why = "That's for the owner." }
+	end
 	Analytics.custom(player, "House controls", nil, { op = tostring(op) })
+	if op ~= "state" and op ~= "calendar" then
+		record(player, rank, tostring(op), r)
+	end
 	if op == "state" then
+		return state(player)
+	elseif op == "calendar" then
+		return { ok = true, calendar = AdminService.calendar(if r.days == 31 then 31 else 7) }
+	elseif op == "appoint" or op == "dismiss" then
+		-- (The owner only: checked above. Never the owner themself.)
+		local id = tonumber(r.userId)
+		local target = if id then Players:GetPlayerByUserId(id) else nil
+		if op == "appoint" and (not target or AdminService.isAdmin(target)) then
+			return { ok = false, why = "Choose a guest in this house." }
+		end
+		local ok = pcall(function()
+			AdminService.staffStore():UpdateAsync(STAFF_KEY, function(old: any): any
+				local list = if type(old) == "table" then old else {}
+				if op == "appoint" and target then
+					list[tostring(target.UserId)] = { name = Names.of(target), since = os.time() }
+				elseif id then
+					list[tostring(id)] = nil
+				end
+				staff = readStaff(list)
+				return list
+			end)
+		end)
+		if not ok then
+			return { ok = false, why = "The staff list couldn't be saved just now." }
+		end
+		markStaff()
+		return state(player)
+	elseif op == "invite" then
+		local id = tonumber(r.userId)
+		local target = if id then Players:GetPlayerByUserId(id) else nil
+		if not target then
+			return { ok = false, why = "Choose a guest in this house." }
+		end
+		if not AdminService.invite(target) then
+			return { ok = false, why = "They hold the most invitations already." }
+		end
 		return state(player)
 	elseif op == "event" and type(r.id) == "string" and HouseEvents.byId[r.id] then
 		local id = r.id
@@ -2430,6 +2658,18 @@ end
 
 function AdminService.start()
 	Gilt.boost = AdminService.giltBoost
+	Ownership.start()
+	Ownership.Changed:Connect(ownershipChanged)
+	task.spawn(function()
+		AdminService.loadStaff()
+		while true do
+			task.wait(60)
+			AdminService.loadStaff()
+		end
+	end)
+	Players.PlayerAdded:Connect(function()
+		markStaff()
+	end)
 	local function mark(player: Player)
 		task.spawn(function()
 			if AdminService.isAdmin(player) then
@@ -2493,7 +2733,6 @@ function AdminService.start()
 	end
 	Players.PlayerAdded:Connect(mark)
 	Players.PlayerRemoving:Connect(function(player)
-		ownerCache[player] = nil
 		lastAsk[player] = nil
 		if studioOwner == player then
 			studioOwner = nil

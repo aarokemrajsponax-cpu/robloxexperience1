@@ -4,7 +4,7 @@
 local Brand = {}
 
 Brand.Name = "MAISON NOIR"
-Brand.Tagline = "A table covered in expensive things, and somewhere to put all of it."
+Brand.Tagline = "Build your fortune. Master the Maison. Become the wealthiest."
 Brand.Credit = "development of AJKR"
 Brand.Owner = "AJKR"
 

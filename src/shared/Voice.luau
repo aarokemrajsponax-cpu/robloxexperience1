@@ -6,7 +6,7 @@ local Voice = {}
 
 Voice.Concierge = {
 	speaker = "THE CONCIERGE",
-	firstVisit = "Good evening. The tables are set.",
+	firstVisit = "Good evening. Build your fortune, master the Maison, become the wealthiest.",
 	returning = "Good to see you again, {name}.",
 	rare = "Now that one I'd keep an eye on.",
 	mythic = "Nobody touch anything.",
@@ -25,9 +25,9 @@ Voice.Concierge = {
 	arrived = "The Salon. Any table you like.",
 	arrivedIn = {
 		salon = "The Salon. Any table you like.",
-		velvet = "The Velvet Room. The clock waits for your first piece.",
-		obsidian = "The Obsidian Room. Every case is open from the first deal.",
-		midnight = "The Midnight Room. Mind the dark.",
+		velvet = "The Luxe Lounge. Train your Stride, then through the arch to Steal a Luxe.",
+		obsidian = "The Basement Stair. Sixteen stages down to the Treasury.",
+		midnight = "The Executive's Anteroom. The Quartermaster will see to your sidearm.",
 	},
 	whichRoom = "Which room this evening?",
 	standInOffer = "Nobody's free just now. A Stand-in can sit opposite you, if you'd rather not wait.",
@@ -63,8 +63,46 @@ Voice.Concierge = {
 		bye = "Good night",
 		setEvening = "Set the evening",
 		tour = "Show me the house",
+		next = "What should I do next?",
+		find = "Find a place",
+		ask = "I have a question",
+		walk = "Walk me there",
+		now = "Take me there now",
+		back = "Something else",
 	},
-	tourOffer = "Welcome to Maison Noir. Shall I show you round? It's quick.",
+	-- Finding a place: walking (the gold arrows on the floor) unless the guest asks to be taken.
+	find = {
+		which = "Where would you like to go?",
+		how = "{place}. Shall I show you the way, or take you there now?",
+		showing = "Follow the gold arrows on the floor. They'll fade when you're there.",
+		leading = "This way. I'll walk you.",
+	},
+	-- What to do next, from what the guest has done (server/Staff/Concierge).
+	recommend = {
+		luxe = "Start with Steal a Luxe, through the Luxe Lounge. It's the quickest way to grow your Estate.",
+		upgrade = "Your purse could buy a bigger bag in the Luxe Lounge. More in the bag, more in the Estate.",
+		basement = "Try the Maison Basement, down the Basement Stair. The Treasury pays well, and brings an invitation upstairs.",
+		executive = "You hold an invitation. The Executive Suite: the lift is in the Midnight Room.",
+		quartermaster = "You've no invitation yet. Clear the Basement or bank a great haul, and the Executive Suite opens to you.",
+		climb = "{gap} more and you'll be {rank}. Every haul, purse and prize counts.",
+	},
+	-- Answers, from how the house really works (the numbers are filled in from its settings).
+	questions = {
+		{ id = "rich", q = "How do I get rich?", a = "Everything you own counts toward your Fortune: Gilt, Gems, your collection, your Suite and your Estate. The attractions grow your Estate fastest." },
+		{ id = "estate", q = "What is my Estate?", a = "What you've banked and won in the attractions. It only ever grows, and a fifth of every haul comes to your purse in Gilt as well." },
+		{ id = "invite", q = "How do I get into the Executive Suite?", a = "By invitation: clear the Maison Basement, or bank a haul of {inviteHaul} or more in Steal a Luxe. The Quartermaster also sells one for {invitePrice} Gilt. Take your free sidearm from him first." },
+		{ id = "stride", q = "What does Stride do?", a = "It makes you faster in Steal a Luxe, and only there: {stride}% a level. Walk the treadmills in the Luxe Lounge to train it." },
+		{ id = "caught", q = "What if a guard catches me?", a = "Everything in your bag is lost and you're shown out to the courtyard. What you've already banked is safe." },
+		{ id = "skip", q = "Can I skip a Basement stage?", a = "For {skipGems} Gems, or a skip bought with Robux. A skipped run isn't timed for the boards, and the stage you skip pays nothing." },
+		{ id = "boards", q = "Where are the boards?", a = "Tap your Fortune, under your Gilt: the Wealthiest in this house, this week and of all time. The Basement's best times are at the lectern on the Basement Stair." },
+		{ id = "gems", q = "What are Gems for?", a = "The Gem Shop, the golden treadmill, a Basement skip and the Cabinet's curios. The attractions' rarest finds pay a few each day." },
+	},
+	whichQuestion = "Ask me anything.",
+	newsOffer = "The house has changed since you were last here: your Fortune, and three new attractions. Shall I show you?",
+	newsYes = "Show me",
+	newsLater = "Later",
+	newsLaterLine = "Of course. Ask me for the tour any time.",
+	tourOffer = "Welcome to Maison Noir, where everyone is here to become the wealthiest. Shall I show you round? It's quick.",
 	tourYes = "Show me the house",
 	tourSkip = "Straight to a table",
 	tourLater = "I'll look around",
@@ -78,19 +116,19 @@ Voice.Tour = {
 	{
 		stop = "lectern",
 		title = "Welcome",
-		line = "Here you sort fancy things into their right cases. Right answers build a streak, and every run you bank pays you Gilt.",
+		line = "Build your fortune, master the Maison, become the wealthiest. Everything you own counts: your Fortune is under your Gilt.",
 	},
 	{
 		stop = "salon",
 		place = "salonDoor",
 		title = "The Salon",
-		line = "Sit at a table (press E). Drag each piece to its case, or press 1 to 6. No clock in here, so take your time.",
+		line = "Sort fine things into their cases for Gilt, at your own pace: sit at a table and press E. Tonight's table is here too.",
 	},
 	{
 		stop = "salon",
 		place = "velvetDoor",
-		title = "The timed rooms",
-		line = "The Velvet, Obsidian and Midnight Rooms have a clock, each harder than the last. Midnight opens at round IV in Obsidian.",
+		title = "Steal a Luxe",
+		line = "Through the Luxe Lounge: slip into a great residence, carry out what you can and bank it at the car before the guards catch you. Train your Stride on the treadmills first.",
 	},
 	{
 		stop = "tonight",
@@ -108,7 +146,7 @@ Voice.Tour = {
 		stop = "vault",
 		place = "vault",
 		title = "The Vault",
-		line = "Every piece you've ever sorted is kept here. The Archivist at the desk keeps your badges.",
+		line = "Your collection, kept and shown: every piece and brainrot here counts toward your Fortune. The Archivist keeps your badges.",
 	},
 	{
 		stop = "boutique",
@@ -121,6 +159,18 @@ Voice.Tour = {
 		place = "mirror",
 		title = "The Wardrobe",
 		line = "Wear what you own: your look, your nameplate, your table, your lamp and your trail.",
+	},
+	{
+		stop = "boutique",
+		place = "obsidianDoor",
+		title = "The Maison Basement",
+		line = "Down the Basement Stair: sixteen stages of jumps, steam and lasers to the Treasury. Each part's end pays its purse, and your best time goes on the boards.",
+	},
+	{
+		stop = "boutique",
+		place = "midnightDoor",
+		title = "The Executive Suite",
+		line = "By invitation only: clear the Basement or bank a great haul for one. Take your free sidearm from the Quartermaster, then beat the Executive in his office.",
 	},
 	{
 		stop = "library",
@@ -149,7 +199,7 @@ Voice.Tour = {
 	{
 		stop = "suite",
 		title = "Off you go",
-		line = "Brainrots you find at the tables earn you Gilt every hour: see them in Collection. Shall I take you to a table?",
+		line = "Earn in the attractions, grow your Estate, climb the wealth ranks and the Wealthiest boards. Ask me anything at my lectern.",
 	},
 }
 
@@ -171,7 +221,9 @@ Voice.TourWalk = {
 -- The names on the gold pins the tour's cards put over things.
 Voice.TourPlaces = {
 	salonDoor = "The Salon",
-	velvetDoor = "The Velvet Room",
+	velvetDoor = "The Luxe Lounge",
+	obsidianDoor = "The Basement Stair",
+	midnightDoor = "The Executive's Anteroom",
 	tonightBoard = "Tonight's table",
 	livreDOr = "The Livre d'Or",
 	vault = "The Vault",
@@ -268,8 +320,8 @@ Voice.WhatsNew = {
 	build = 72,
 	lines = {
 		"Your Fortune: everything you own, counted. Climb the wealth ranks and the Wealthiest boards.",
-		"Steal a Luxe, through the Velvet Room: carry out what you can, bank it at the car, mind the guards.",
-		"Train your Stride on the Luxe Lounge's treadmills. Every haul you bank grows your Estate.",
+		"Three attractions: Steal a Luxe, the Maison Basement and, by invitation, the Executive Suite.",
+		"The Grand Auction in the Library, and a Concierge who shows you the way anywhere.",
 	},
 }
 

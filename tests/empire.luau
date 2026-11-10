@@ -31,6 +31,7 @@ local Wardrobe = module("ReplicatedStorage", "Shared", "Wardrobe")
 local Empire = module("ServerScriptService", "Server", "Empire")
 local Fortune = module("ServerScriptService", "Server", "Fortune")
 local Herald = module("ServerScriptService", "Server", "Herald")
+local Names = module("ReplicatedStorage", "Shared", "Names")
 
 local tallies = {}
 Empire.tally = function(p, stat, n, once)
@@ -278,5 +279,42 @@ check("a burst of feats isn't told all at once", #feats() - before <= 1, #feats(
 advance(Config.data.Herald.gap * 14)
 check("...the house hears them one at a time, the oldest of too many let go", #feats() - before <= Config.data.Herald.queue and #feats() - before >= 2, #feats() - before)
 check("...and the last to come is among those told", feats()[#feats()].line == "found number 12", feats()[#feats()].line)
+
+---------------------------------------------------------------------------------------------------
+-- The greatest feats, told in every server
+---------------------------------------------------------------------------------------------------
+do
+	local sentFar = {}
+	Herald.publish = function(m)
+		table.insert(sentFar, m)
+	end
+	local zoe = H.guest("Zoe", 4401)
+	advance(60)
+	run(function()
+		Herald.feat(zoe, { kind = "executive", title = "The Executive beaten", line = "beat the Executive in his own office", glyph = "🕴️", worth = 25000, everywhere = true })
+	end)
+	check("a great feat is sent to every other server, named, with what happened", #sentFar == 1 and sentFar[1].name == Names.of(zoe) and sentFar[1].line == "beat the Executive in his own office" and sentFar[1].far == true)
+	run(function()
+		Herald.feat(zoe, { kind = "haul", title = "The Crown Jewel", line = "carried the Crown Jewel out of Steal a Luxe", everywhere = true })
+	end)
+	check("...but never more than one from a server in a while", #sentFar == 1)
+	local waiting = Herald.waiting()
+	run(function()
+		Herald.hear({ op = "feat", kind = "auction", title = "Sold at the Grand Auction", line = "won Il Pavone d'Oro at the Grand Auction", name = "Wren", userId = 77, server = "elsewhere" })
+	end)
+	check("another server's great feat is told here too", Herald.waiting() == waiting + 1 or #feats("auction") > 0)
+	local before = Herald.waiting()
+	run(function()
+		Herald.hear({ op = "feat", kind = "auction", title = "x", line = "made up", server = "elsewhere" })
+		Herald.hear("nonsense")
+	end)
+	check("...and anything that isn't a whole feat is ignored", Herald.waiting() == before)
+	profiles[zoe].Data.settings.showFortune = "Off"
+	advance(60)
+	run(function()
+		Herald.feat(zoe, { kind = "auction", title = "Sold", line = "won something", everywhere = true })
+	end)
+	check("a guest who keeps their feats to themselves is never told to other servers", #sentFar == 1)
+end
 
 H.finish()

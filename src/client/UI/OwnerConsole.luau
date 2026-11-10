@@ -54,8 +54,11 @@ OwnerConsole.Categories = {
 	{ id = "world", name = "WORLD", glyph = "🌅", accent = rgb(90, 180, 255) },
 	{ id = "message", name = "MESSAGE", glyph = "📣", accent = rgb(255, 120, 200) },
 	{ id = "powers", name = "POWERS", glyph = "🦸", accent = rgb(120, 230, 255) },
+	{ id = "live", name = "LIVE OPS", glyph = "📅", accent = rgb(255, 214, 120) },
 	{ id = "more", name = "MORE", glyph = "⚙️", accent = rgb(200, 190, 170) },
 } :: { Category }
+-- (An admin the owner appointed sees the house's fun, never the owner's own: gifts, staff, more.)
+OwnerConsole.OWNER_ONLY = { players = true, more = true } :: { [string]: boolean }
 
 local page = "abuse"
 local everywhere = true
@@ -443,7 +446,15 @@ function OwnerConsole.open(startPage: string?)
 				c:Destroy()
 			end
 		end
+		-- (An admin, not the owner: the owner's own pages aren't shown.)
+		local staffOnly = Players.LocalPlayer:GetAttribute("MaisonAdmin") ~= true
+		if staffOnly and OwnerConsole.OWNER_ONLY[page] then
+			page = "abuse"
+		end
 		for i, c in OwnerConsole.Categories do
+			if staffOnly and OwnerConsole.OWNER_ONLY[c.id] then
+				continue
+			end
 			local lit = c.id == page
 			local b = Instance.new("TextButton")
 			b.Name = "Cat_" .. c.id
@@ -651,6 +662,11 @@ function OwnerConsole.open(startPage: string?)
 			tile(g2, 10, rgb(255, 214, 90), { id = "token", glyph = "👑", name = "The Owner's Token", line = "A curio from you for every guest (once a day each)." }, function()
 				send({ op = "token", everywhere = everywhere }, "Tokens handed out" .. scopeText() .. ".")
 			end)
+			-- Who the owner is: whoever owns the experience on Roblox, as the server found out.
+			local o = v.owner
+			if type(o) == "table" then
+				section("THE OWNER", if o.verified then string.format("%s owns this experience on Roblox%s. Whoever owns it has these controls: if that changes on Roblox, they follow it within minutes, in every server.", tostring(o.name or "The owner"), if o.kind == "group" then ", as the owner of the group it belongs to" else "") else "Roblox hasn't said who owns the experience just now: the owner's controls wait until it does.")
+			end
 			-- For yourself, to try what guests buy: Gilt and Gems into your own purse (this server).
 			local s4 = section("FOR YOU", "Gilt and Gems for your own purse, to try the shops as a guest would.")
 			local g4 = grid(s4)
@@ -788,6 +804,81 @@ function OwnerConsole.open(startPage: string?)
 				tile(g2, i, rgb(120, 230, 255), { id = "goto_" .. place, glyph = "🚪", name = PLACES[place] or place }, function()
 					send({ op = "goto", place = place })
 				end)
+			end
+		elseif page == "live" then
+			local cal = v.calendar or {}
+			local s = section("THE MAISON — LIVE OPERATIONS", string.format("The house keeps its holidays by the clock in %s (it's %s there): each begins at midnight there, in every server at once, and dresses the house by itself.", tostring(cal.zone or "UTC"), tostring(cal.today or "")))
+			local _ = s
+			local on = cal.active
+			if type(on) == "table" then
+				local s1 = section("ON NOW: " .. string.upper(tostring(on.name)), tostring(on.line) .. string.format("  (%s to %s)", tostring(on.from), tostring(on.to)))
+				local g1 = grid(s1)
+				if on.event then
+					tile(g1, 1, accent, { id = "liveStart" .. tostring(on.id), glyph = tostring(on.glyph), name = "Start its event" .. scopeText(), line = "Its hunt and its games, on now." }, function()
+						send({ op = "event", id = on.event, minutes = minutes, everywhere = everywhere }, tostring(on.name) .. scopeText() .. ".")
+					end)
+				end
+			end
+			local s2 = section("THE MONTH AHEAD", "Preview a holiday's dress in this server for five minutes, or start its event now. Stopping everything is on the EVENTS page.")
+			local g2 = grid(s2)
+			for i, w in (cal.upcoming or {}) :: { any } do
+				if i > 12 then
+					break
+				end
+				local dated = string.format("%s to %s%s", tostring(w.from), tostring(w.to), if w.on then " · on now" else "")
+				if w.dress then
+					tile(g2, i * 2, accent, { id = "livePreview" .. tostring(w.id), glyph = tostring(w.glyph), name = tostring(w.name), line = "Preview here (5 min) · " .. dated }, function()
+						send({ op = "season", id = w.dress, minutes = 5 }, tostring(w.name) .. ": dressed here for five minutes.")
+					end)
+				else
+					tile(g2, i * 2, accent, { id = "liveInfo" .. tostring(w.id), glyph = tostring(w.glyph), name = tostring(w.name), line = dated .. " · " .. tostring(w.line) }, function() end)
+				end
+				if w.event then
+					tile(g2, i * 2 + 1, accent, { id = "liveEvent" .. tostring(w.id), glyph = "▶️", name = "Start " .. tostring(w.name) .. scopeText(), line = "Its event, now." }, function()
+						send({ op = "event", id = w.event, minutes = minutes, everywhere = everywhere }, tostring(w.name) .. scopeText() .. ".")
+					end)
+				end
+			end
+			-- The owner's own: the staff and what's been done.
+			if type(v.staff) == "table" then
+				local s3 = section("STAFF", "Admins run the house's fun (events, Admin Abuse, effects, headlines, the season) and can stop it all. Only you give Gilt, Gems, invitations and giveaways, remove a guest, or appoint and dismiss admins.")
+				local g3 = grid(s3)
+				local n = 0
+				for _, a in v.staff :: { any } do
+					n += 1
+					tile(g3, n, rgb(255, 120, 120), { id = "dismiss" .. tostring(a.userId), glyph = "🛡️", name = "Dismiss " .. tostring(a.name), line = "No longer an admin." }, function()
+						send({ op = "dismiss", userId = a.userId }, tostring(a.name) .. " is no longer an admin.")
+					end)
+				end
+				local me = Players.LocalPlayer.UserId
+				for _, g in (v.guests or {}) :: { any } do
+					local already = false
+					for _, a in v.staff :: { any } do
+						if a.userId == g.userId then
+							already = true
+						end
+					end
+					if g.userId ~= me and not already then
+						n += 1
+						tile(g3, n, rgb(120, 200, 140), { id = "appoint" .. tostring(g.userId), glyph = "🛡️", name = "Appoint " .. tostring(g.name), line = "An admin of the house." }, function()
+							send({ op = "appoint", userId = g.userId }, tostring(g.name) .. " is an admin now.")
+						end)
+						n += 1
+						tile(g3, n, rgb(150, 210, 255), { id = "invite" .. tostring(g.userId), glyph = "🕴️", name = "Invite " .. tostring(g.name), line = "An invitation to the Executive Suite." }, function()
+							send({ op = "invite", userId = g.userId }, tostring(g.name) .. " has an invitation to the Executive Suite.")
+						end)
+					end
+				end
+			end
+			if type(v.audit) == "table" and #v.audit > 0 then
+				local lines = {}
+				for k, a in v.audit :: { any } do
+					if k > 10 then
+						break
+					end
+					table.insert(lines, string.format("%s  %s (%s): %s %s", os.date("%H:%M", a.t), tostring(a.by), tostring(a.rank), tostring(a.op), tostring(a.detail)))
+				end
+				section("RECENT ACTIONS", table.concat(lines, "\n"))
 			end
 		elseif page == "more" then
 			local s = section("THE CLASSIC CONTROLS", "Every page of House controls: the schedule, Salutes and Suite shows, the guest list.")

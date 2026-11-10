@@ -15,6 +15,8 @@ local Instance, Vector3, Enum, CFrame = roblox.Instance, roblox.Vector3, roblox.
 
 local H = {}
 H.groups = {} :: { [number]: { any } }
+H.groupInfo = {} :: { [number]: any } -- GroupService:GetGroupInfoAsync's answers, by group
+H.userNames = {} :: { [number]: string } -- UserService's names, by UserId
 H.tagged = {} :: { [string]: { any } } -- CollectionService's tags (the world's pieces a test needs)
 H.tagAdded = {} :: { [string]: any } -- CollectionService's added signals, by tag
 H.savesWork = true -- false: profile saves never land (a DataStore outage)
@@ -521,12 +523,15 @@ local services = {
 				SetAsync = function(_, key, value)
 					data[key] = value
 				end,
-				GetSortedAsync = function(_, _ascending, size)
+				GetSortedAsync = function(_, ascending, size)
 					local rows = {}
 					for k, v in data do
 						table.insert(rows, { key = k, value = v })
 					end
 					table.sort(rows, function(x, y)
+						if ascending then
+							return x.value < y.value
+						end
 						return x.value > y.value
 					end)
 					while #rows > size do
@@ -540,9 +545,29 @@ local services = {
 		end,
 	},
 	-- The groups each guest is in (H.groups[userId] = { { Id, Rank } }), for the owner check.
+	UserService = {
+		GetUserInfosByUserIdsAsync = function(_, ids)
+			local out = {}
+			for _, id in ids do
+				local name = H.userNames[id]
+				if name then
+					table.insert(out, { Id = id, Username = name, DisplayName = name })
+				end
+			end
+			return out
+		end,
+	},
 	GroupService = {
 		GetGroupsAsync = function(_, userId)
 			return H.groups[userId] or {}
+		end,
+		-- (A group's info: H.groupInfo[groupId]; a group the test hasn't described: Roblox doesn't answer.)
+		GetGroupInfoAsync = function(_, groupId)
+			local info = H.groupInfo[groupId]
+			if not info then
+				error("HTTP 500 (the group service didn't answer)")
+			end
+			return info
 		end,
 	},
 	HttpService = {
@@ -682,9 +707,9 @@ local services = {
 }
 
 local gameShim = setmetatable({
-	-- Who owns the experience: a user unless a test makes it a group.
+	-- Who owns the experience: a user (AJKR's account) unless a test makes it someone else.
 	CreatorType = Enum.CreatorType.User,
-	CreatorId = 1,
+	CreatorId = 8722595934,
 	GetService = function(_, name)
 		if services[name] then
 			return services[name]
@@ -994,6 +1019,16 @@ H.receipt = receipt
 H.askAs = askAs
 H.lastOp = lastOp
 H.Instance = Instance
+-- Who owns the experience, found out as the game does when it opens (server/Ownership): every
+-- screen then knows the owner. A test that changes the owner calls Ownership.refresh again.
+do
+	local ok, err = pcall(function()
+		module("ServerScriptService", "Server", "Ownership").refresh()
+	end)
+	if not ok then
+		print("(the owner couldn't be found out: " .. tostring(err) .. ")")
+	end
+end
 H.Vector3 = Vector3
 H.Enum = Enum
 H.CFrame = CFrame

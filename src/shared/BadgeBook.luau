@@ -31,6 +31,7 @@ BadgeBook.Groups = {
 	{ id = "events", name = "Events and Admin Abuse" },
 	{ id = "holidays", name = "Holidays" },
 	{ id = "social", name = "Friends" },
+	{ id = "attractions", name = "The attractions" },
 	{ id = "secrets", name = "Secrets" },
 }
 
@@ -247,6 +248,13 @@ moment("social", "suiteVisit", "House Call", "Visit a friend's Suite.", "🛋️
 moment("social", "guestBook", "Signed and Dated", "Sign the Livre d'Or.", "✒️", "bronze")
 moment("social", "circle", "In the Circle", "Join a Circle.", "⭕", "bronze")
 moment("social", "admired", "Admirer", "Admire another guest's look.", "💐", "bronze")
+
+-- The attractions
+moment("attractions", "crownJewel", "The Crown Jewel", "Carry the Crown Jewel out of Steal a Luxe and bank it.", "💎", "gold")
+moment("attractions", "basementClear", "The Treasury", "Reach the Treasury at the foot of the Maison Basement.", "🗝️", "silver")
+moment("attractions", "executiveBoss", "The Corner Office", "Beat the Executive in his own office.", "🕴️", "gold")
+moment("attractions", "auctionWin", "Sold to You", "Win a lot at the Grand Auction.", "🔨", "gold")
+moment("attractions", "basementQuick", "Under Four Minutes", "Run the Maison Basement in under four minutes, no stage skipped.", "⏱️", "gold")
 
 -- Secrets
 moment("secrets", "metOwner", "Met the Owner", "Be in the house with the owner.", "👑", "gold")
