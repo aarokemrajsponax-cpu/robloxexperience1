@@ -772,6 +772,20 @@ require(script.Parent.RemoteGuard).invoke(Remotes.func("BadgeAsk"), "badgeAsk", 
 	return view
 end)
 
+-- The Empire: every guest's Fortune and the Wealthiest boards, the herald, and the attractions
+-- (Steal a Luxe, the Maison Basement, the Executive Suite). Build your fortune, master the Maison,
+-- become the wealthiest. (Loaded inside its own start: a fault in it never stops the house.)
+boot("The Empire", function()
+	local Empire = require(script.Parent.Empire)
+	Empire.isSeated = AdminService.isSeated
+	Empire.award = Achievements.award
+	Empire.tally = function(player, stat, n, once)
+		AdminService.tally(player, stat, n, once)
+	end
+	Empire.isOwner = AdminService.isAdmin
+	Empire.start()
+end)
+
 -- Last: saved profiles (everything listening for them is connected by now).
 local Profiles = require(script.Parent.Profiles)
 boot("Profiles", Profiles.start)

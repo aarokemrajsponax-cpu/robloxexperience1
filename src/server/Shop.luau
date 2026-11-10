@@ -471,6 +471,13 @@ local function registerHandlers()
 		local amount = ctx.product.Reward.Amount :: number
 		local player, data = ctx.player, ctx.data
 		data.gilt += amount
+		-- (Bought Gilt is counted on the guest's Fortune page: the Wealthiest boards rank what was
+		-- earned, so they leave it out. server/Fortune.)
+		local d = data :: any
+		if type(d.empire) ~= "table" then
+			d.empire = {}
+		end
+		d.empire.bought = (tonumber(d.empire.bought) or 0) + amount
 		ctx:after(function()
 			Analytics.source(player, "Gilt", amount, data.gilt, "Purchase")
 			notice(player, "Gilt", string.format("+%s Gilt. Thank you.", Gilt.format(amount)))

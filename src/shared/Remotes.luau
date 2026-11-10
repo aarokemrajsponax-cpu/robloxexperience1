@@ -26,6 +26,8 @@ Remotes.Events = {
 	"Holiday", -- server -> client: the holiday games (a door answered, a turkey caught, a gift loaded...)
 	"Race", -- the Grand Prix: client -> server (race, leave, reset, hello); server -> client (the race)
 	"Travel", -- client -> server: go to a place in the house; server -> client: arrived, or why not
+	"Empire", -- server -> client: a feat told to the house, a new wealth rank, an objective's progress
+	"Attraction", -- server -> client: Steal a Luxe, the Maison Basement, the Executive Suite (what happens in them)
 }
 
 Remotes.Functions = {
@@ -46,6 +48,9 @@ Remotes.Functions = {
 	"AbuseGiftAsk", -- client -> server: open the owner's gift during Admin Abuse
 	"HolidayAsk", -- client -> server: the holiday games (go there, go home, board the sleigh, open a gift)
 	"CalendarAsk", -- client -> server: the Evening Calendar (what's waiting, open today's present)
+	"EmpireAsk", -- client -> server: your Fortune and the Wealthiest boards, the objectives, the Concierge's answers
+	"AttractionAsk", -- client -> server: the attractions (go in, go home, pick up, bank, a checkpoint, train, upgrade)
+	"AuctionAsk", -- client -> server: the Grand Auction (the lots, a bid)
 }
 
 local folder: Folder? = nil

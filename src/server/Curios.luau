@@ -286,6 +286,11 @@ local function gemsGrant(ctx: Grants.Context)
 	local amount = ctx.product.Reward.Amount :: number
 	local d = ctx.data :: any
 	d.gems = (if type(d.gems) == "number" then d.gems else 0) + amount
+	-- (Bought Gems are counted on the guest's Fortune page: the Wealthiest boards leave them out.)
+	if type(d.empire) ~= "table" then
+		d.empire = {}
+	end
+	d.empire.boughtGems = (tonumber(d.empire.boughtGems) or 0) + amount
 	ctx:after(function()
 		Curios.push(ctx.player)
 		curioEvent:FireClient(ctx.player, { op = "gems", amount = amount, gems = d.gems })

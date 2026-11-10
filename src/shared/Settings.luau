@@ -60,6 +60,7 @@ Settings.Definitions = {
 	choice("showCrest", "The Club", "Show my Circle's crest", { "On", "Off" }, true),
 	choice("parcelsTo", "The Club", "Ballroom parcels go to", { "Random", "Rivals", "Leader", "Nearly out" }, true),
 	choice("rivalUpdates", "The Club", "Rival updates in the house", { "On", "Off" }, true),
+	choice("showFortune", "The Club", "Show my Fortune and feats to the house", { "On", "Off" }, true, "the Wealthiest boards, and feats told to everyone"),
 	choice("offerStandIn", "The Club", "Offer a Stand-in while I wait", { "Yes", "No" }, true),
 	-- Your perks (only shown to guests who hold them)
 	perk(choice("velocitySpeed", "Your perks", "VIP Velocity Elite speed", { "On", "Off" }, true, "1.5× walking and running"), "velocity"),

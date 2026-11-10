@@ -209,6 +209,16 @@ start("Effects for everyone", function()
 end)
 -- The owner's headlines, countdowns and giveaways (on every screen); the holidays' looks; auras.
 start("Headlines", Headline.start)
+start("The herald", function()
+	local Herald = require(script.Parent.UI.Herald)
+	Herald.busy = function(): boolean
+		return Headline.showing() or State.phase ~= "play"
+	end
+	Herald.sound = function(own: boolean)
+		Sound.play(if own then "reward" else "chime")
+	end
+	Herald.start()
+end)
 start("Holidays", require(script.Parent.World.HolidayFX).start)
 start("Auras", require(script.Parent.World.Auras).start)
 start("Companions", require(script.Parent.World.Companions).start)
@@ -559,6 +569,13 @@ local function startHud()
 			return TableClient.isSeated() or State.phase ~= "play"
 		end
 		GiltBar.start()
+	end)
+	-- The Fortune plaque under it (what the house is about: build your fortune), and the herald
+	-- (feats told to the whole house).
+	start("The Fortune plaque", function()
+		local FortunePlaque = require(script.Parent.UI.FortunePlaque)
+		FortunePlaque.open = require(script.Parent.UI.FortunePanel).open
+		FortunePlaque.start()
 	end)
 	-- The Friend Booster, in the bottom-right corner (out of the way at a table or under a panel).
 	start("The Friend Booster", function()

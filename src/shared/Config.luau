@@ -303,6 +303,10 @@ local defaults = {
 		calendarAsk = { rate = 1, burst = 4 },
 		race = { rate = 3, burst = 8 },
 		travel = { rate = 1, burst = 3 },
+		empireAsk = { rate = 3, burst = 8 },
+		attractionAsk = { rate = 8, burst = 16 }, -- a pickup, a checkpoint, a shot: quick, never a flood
+		attraction = { rate = 12, burst = 24 },
+		auctionAsk = { rate = 3, burst = 8 },
 	},
 
 	-- Levels (Shared/Levels has the curve): XP for each thing the server sees happen.
@@ -766,6 +770,29 @@ local defaults = {
 		flagAverageAfter = 40,
 		flagRatePerSecond = 3,
 		flagRateOver = 20,
+	},
+
+	-- Fortune (shared/Fortune, server/Fortune): everything a guest owns, in Gilt. The house's aim:
+	-- build your fortune, master the Maison, become the wealthiest.
+	Fortune = {
+		gemWorth = 40, -- a Gem's worth in a Fortune (the Gem Shop's own rate: 25 Gems, 1,000 Gilt)
+		mythicWorth = 2500, -- a Mythic piece in the Vault
+		cashShare = 0.2, -- the part of a haul's worth paid in Gilt when it's banked (the rest is Estate)
+		syncSeconds = 2, -- how often each guest's Fortune is worked out again
+		boardSeconds = 90, -- how often the Wealthiest boards are read, and each guest's place offered
+		boardSize = 25,
+		announceFrom = 4, -- the first wealth rank (its number) the whole house is told of
+		store = "Wealthiest_v1",
+	},
+
+	-- The house's herald (server/Herald): feats told to everyone in the house. Each guest's feats
+	-- of one kind are told at most once in `kindGap` seconds, and the house hears at most one feat
+	-- every `gap` seconds (the rest wait their turn, `queue` at most; older ones are let go).
+	Herald = {
+		gap = 6,
+		kindGap = 45,
+		queue = 6,
+		seconds = 5, -- how long a feat stays on every screen
 	},
 
 	Gilt = {

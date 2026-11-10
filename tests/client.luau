@@ -3958,8 +3958,12 @@ do
 	local fetched, bare = {}, 0
 	for _, p in preloads do
 		for _, item in p.list do
-			if typeof(item) == "Instance" and item:IsA("Sound") then
-				fetched[item.SoundId] = p
+			-- (A sound fetched earlier and since put away is destroyed: reading it would stop the run.)
+			local alive, id = pcall(function()
+				return if typeof(item) == "Instance" and item:IsA("Sound") then item.SoundId else nil
+			end)
+			if alive and id then
+				fetched[id] = p
 			elseif type(item) == "string" then
 				bare += 1
 			end
@@ -7615,6 +7619,85 @@ end)()
 	check("...the lamps their own colour, the ceiling in its place", lamp.Color == lampWas and (ceiling.CFrame.Position - ceilingWas.Position).Magnitude < 0.01)
 	check("...and the dancers and the mirror ball gone", stage() == nil)
 	check("no errors at the party", #errors == errorsBefore, errors[errorsBefore + 1])
+end)()
+
+---------------------------------------------------------------------------------------------------
+-- 7b. The Fortune: the plaque under the Gilt bar, the Fortune screen, the herald
+---------------------------------------------------------------------------------------------------
+coroutine.wrap(function()
+	local FortuneRules = module("ReplicatedStorage", "Shared", "Fortune")
+	local FortunePanel = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "FortunePanel")
+	local RootM = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "Root")
+	local errorsBefore = #errors
+	RootM.close()
+	advance(0.5)
+	local plaque = find(playerGui, function(d)
+		return d.Name == "FortunePlaque"
+	end)
+	local giltBar = find(playerGui, function(d)
+		return d.Name == "GiltBar" and d:IsA("Frame")
+	end)
+	check("the Fortune plaque stands under the Gilt bar", plaque ~= nil and giltBar ~= nil and plaque.Position.Y.Offset >= giltBar.Position.Y.Offset + giltBar.Size.Y.Offset, plaque and plaque.Position.Y.Offset)
+	LocalPlayer:SetAttribute("Fortune", 128400)
+	LocalPlayer:SetAttribute("FortuneRank", 6)
+	signalOf(LocalPlayer, "attr:Fortune"):Fire()
+	signalOf(LocalPlayer, "attr:FortuneRank"):Fire()
+	advance(3)
+	check("it shows the server's figure, counted up to exactly", plaque ~= nil and plaque.Row.Figure.Text == "128,400", plaque and plaque.Row.Figure.Text)
+	check("...and the wealth rank it stands at", plaque ~= nil and plaque.Row.Rank.Text == "TYCOON", plaque and plaque.Row.Rank.Text)
+	check("...with how far through the rank along its foot", plaque ~= nil and math.abs(plaque.Track.Fill.Size.X.Scale - FortuneRules.progress(128400)) < 1e-6)
+	check("it shows and hides with the Gilt bar", plaque ~= nil and giltBar ~= nil and plaque.Visible == giltBar.Visible)
+	snapshot("fortune-plaque")
+	-- The Fortune screen.
+	invokeResults.EmpireAsk = {
+		ok = true,
+		total = 128400,
+		earned = 120400,
+		rank = 6,
+		shown = true,
+		hauls = 12,
+		week = 30200,
+		parts = { gilt = 8400, gems = 2000, collection = 31000, suite = 12000, estate = 75000 },
+		boards = {
+			available = true,
+			here = { { userId = LocalPlayer.UserId, name = "Ada", score = 120400 }, { userId = 77, name = "Wren", score = 64000 } },
+			week = { { userId = 77, name = "Wren", score = 41000 }, { userId = LocalPlayer.UserId, name = "Ada", score = 30200 } },
+			all = { { userId = 91, name = "Bartholomew the Magnificent", score = 2450000 }, { userId = LocalPlayer.UserId, name = "Ada", score = 120400 } },
+		},
+	}
+	check("the plaque opens the Fortune screen", pressNamed("FortunePlaque") and FortunePanel.isOpen())
+	advance(0.6)
+	check("...which asks the server for it (nothing else)", sent[#sent].remote == "EmpireAsk" and sent[#sent].message[1].op == "fortune")
+	check("...the Fortune and its rank, and how far to the next", textOnScreen("128,400") ~= nil and textOnScreen("TYCOON") ~= nil and textOnScreen("121,600 more to become Baron") ~= nil)
+	check("...the house's aim", textOnScreen(FortuneRules.TAGLINE) ~= nil)
+	check("...what it's made of, part by part", textOnScreen("Your Estate (hauls, chests and auctions)") ~= nil and textOnScreen("75,000") ~= nil and textOnScreen("31,000") ~= nil and textOnScreen("8,400") ~= nil)
+	check("...the wealthiest in this house, richest first", textOnScreen("1.  Ada") ~= nil and textOnScreen("2.  Wren") ~= nil and textOnScreen("120K") ~= nil)
+	check("...and that the boards rank what was earned, not bought", textOnScreen("Gilt and Gems bought with Robux aren't counted") ~= nil)
+	snapshot("fortune")
+	press("All time")
+	advance(0.3)
+	check("All time: the long board, with long names kept on their line", textOnScreen("1.  Bartholomew the Magnificent") ~= nil and textOnScreen("2.45M") ~= nil)
+	snapshot("fortune-all")
+	press("Close")
+	advance(0.5)
+	check("Close puts it away", not FortunePanel.isOpen())
+	-- The herald: a feat told to the house.
+	serverSays("Empire", { op = "feat", kind = "haul", title = "A great haul", line = "carried the Crown Jewel out of Steal a Luxe", glyph = "💎", worth = 15000, name = "Wren", userId = 77, seconds = 5 })
+	advance(1)
+	check("a feat is told across the top: who, and what they did", textOnScreen("Wren carried the Crown Jewel out of Steal a Luxe") ~= nil and textOnScreen("A GREAT HAUL  ·  15,000") ~= nil)
+	snapshot("feat")
+	advance(7)
+	check("...and goes after a few seconds", textOnScreen("Wren carried the Crown Jewel") == nil)
+	serverSays("Empire", { op = "feat", kind = "basement", title = "The Basement beaten", line = "reached the Treasury at the foot of the Maison Basement", name = "Ada", userId = LocalPlayer.UserId, seconds = 4 })
+	advance(1)
+	check("your own feat says You", textOnScreen("You reached the Treasury at the foot of the Maison Basement") ~= nil)
+	advance(6)
+	serverSays("Empire", { op = "rank", rank = 7, name = "Baron", line = "The house asks your opinion now." })
+	advance(0.6)
+	check("a new wealth rank is told to you", textOnScreen("You are now: Baron") ~= nil and textOnScreen("The house asks your opinion now.") ~= nil)
+	snapshot("fortune-rank")
+	advance(8)
+	check("no errors with the Fortune", #errors == errorsBefore, errors[errorsBefore + 1])
 end)()
 
 ---------------------------------------------------------------------------------------------------
