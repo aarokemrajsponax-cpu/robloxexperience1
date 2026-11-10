@@ -7992,7 +7992,7 @@ coroutine.wrap(function()
 	press("Fire")
 	advance(0.2)
 	local fired = sent[#sent]
-	check("Fire sends only where it was aimed (the server decides what it hits)", #sent > firedBefore and fired.remote == "AttractionFire" and typeof(fired.message[1]) == "Vector3")
+	check("Fire sends only where it was aimed (the server decides what it hits)", #sent > firedBefore and fired.remote == "AttractionFire" and typeof(fired.message) == "Vector3" and math.abs(fired.message.Magnitude - 1) < 1e-3)
 	serverSays("Attraction", { op = "won", worth = 25000, gems = 15, brainrot = "dirigenteSupremo", first = true })
 	advance(0.3)
 	check("beaten: what's paid, plainly", textOnScreen("25,000 to your Estate  ·  15 Gems  ·  Il Dirigente Supremo for your collection. The safe is open.") ~= nil)
