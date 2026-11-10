@@ -26,6 +26,7 @@ local Terrace = require(script.Parent.Terrace)
 local SuiteRoom = require(script.Parent.Suite)
 local SuiteFinish = require(script.Parent.SuiteFinish)
 local Passages = require(script.Parent.Passages)
+local Lobbies = require(script.Parent.Lobbies)
 
 local Build = {}
 
@@ -97,6 +98,9 @@ function Build.run(options: Options?): Folder
 	step("the Grand Scale", function() Grand.apply(root, require(ReplicatedStorage.Shared.Layout).SCALE) end)
 	-- Built at the grown size: the Suite's fireplace and its front doors.
 	step("the Suite's fireplace and doors", function() SuiteFinish.build(root) end)
+	-- Built at the grown size: the attractions' rooms off the Foyer (their entrances, the Luxe
+	-- Lounge's treadmills).
+	step("the attractions' rooms", function() Lobbies.build(root) end)
 	-- The Grand Prix's circuit, on the street (laid at the grown size).
 	step("the Grand Prix circuit", function() Circuit.build(root) end)
 	-- Surfaces laid flush in one plane flicker as the camera moves: lift each clear.

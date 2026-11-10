@@ -219,6 +219,8 @@ start("The herald", function()
 	end
 	Herald.start()
 end)
+-- The attractions: each one's own screen while (and only while) a guest is in it.
+start("The attractions", require(script.Parent.UI.Attraction).start)
 start("Holidays", require(script.Parent.World.HolidayFX).start)
 start("Auras", require(script.Parent.World.Auras).start)
 start("Companions", require(script.Parent.World.Companions).start)
@@ -499,9 +501,13 @@ local function applySpeed()
 	if humanoid then
 		-- One speed from every effect (Shared/Speed): the house's Quickstep event and VIP Velocity
 		-- Elite (the server sets "SpeedPerk" only for a guest who owns it and hasn't switched it off).
-		humanoid.WalkSpeed = Speed.resolve(running, Workspace:GetAttribute("SpeedBoost"), player:GetAttribute("SpeedPerk"), player:GetAttribute("AdminSpeed"))
+		humanoid.WalkSpeed = Speed.resolve(running, Workspace:GetAttribute("SpeedBoost"), player:GetAttribute("SpeedPerk"), player:GetAttribute("AdminSpeed"), player:GetAttribute("SpeedTrained"))
 	end
 end
+-- Steal a Luxe's Stride and the weight of the bag (only the server sets it, only in the residence).
+player:GetAttributeChangedSignal("SpeedTrained"):Connect(function()
+	applySpeed()
+end)
 Workspace:GetAttributeChangedSignal("SpeedBoost"):Connect(function()
 	applySpeed()
 end)

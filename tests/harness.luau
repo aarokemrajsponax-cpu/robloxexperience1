@@ -16,6 +16,7 @@ local Instance, Vector3, Enum, CFrame = roblox.Instance, roblox.Vector3, roblox.
 local H = {}
 H.groups = {} :: { [number]: { any } }
 H.tagged = {} :: { [string]: { any } } -- CollectionService's tags (the world's pieces a test needs)
+H.tagAdded = {} :: { [string]: any } -- CollectionService's added signals, by tag
 H.savesWork = true -- false: profile saves never land (a DataStore outage)
 H.saveDelay = 0.3 -- seconds a profile save takes to land
 
@@ -74,6 +75,21 @@ local function signal()
 	end
 	return s
 end
+
+-- (Lune's instances have no events: a prompt's Triggered is a signal of the harness's own, one per
+-- prompt, that a test fires. A test may put its own in place of this one.)
+local promptSignals = {}
+local nextPromptSid = 0
+roblox.implementProperty("ProximityPrompt", "Triggered", function(self)
+	local id = self:GetAttribute("HarnessSid")
+	if not id then
+		nextPromptSid += 1
+		id = nextPromptSid
+		self:SetAttribute("HarnessSid", id)
+	end
+	promptSignals[id] = promptSignals[id] or signal()
+	return promptSignals[id]
+end)
 
 local heartbeat = signal()
 
@@ -145,15 +161,34 @@ end
 
 local function newGuest(name: string, userId: number)
 	local h = humanoid()
-	local root = {
-		Position = Vector3.new(0, 0, 0),
+	-- (Its root keeps one CFrame: its Position is that CFrame's, and setting either moves it.)
+	local placed = CFrame.new()
+	local root = setmetatable({
 		IsA = function(_, class)
 			return class == "BasePart" or class == "Part"
 		end,
 		FindFirstChild = function()
 			return nil
 		end,
-	}
+	}, {
+		__index = function(_, k)
+			if k == "Position" then
+				return placed.Position
+			elseif k == "CFrame" then
+				return placed
+			end
+			return nil
+		end,
+		__newindex = function(t, k, v)
+			if k == "Position" then
+				placed = CFrame.new(v) * (placed - placed.Position)
+			elseif k == "CFrame" then
+				placed = v
+			else
+				rawset(t, k, v)
+			end
+		end,
+	})
 	local character = {
 		FindFirstChildOfClass = function(_, class)
 			return if class == "Humanoid" then h else nil
@@ -162,7 +197,7 @@ local function newGuest(name: string, userId: number)
 			return if n == "HumanoidRootPart" then root elseif n == "Humanoid" then h else nil
 		end,
 		PivotTo = function(_, cf)
-			root.Position = cf.Position
+			root.CFrame = cf
 		end,
 		Parent = workspace,
 	}
@@ -615,6 +650,14 @@ local services = {
 		AddTag = function(_, inst, tag)
 			H.tagged[tag] = H.tagged[tag] or {}
 			table.insert(H.tagged[tag], inst)
+			local added = H.tagAdded[tag]
+			if added then
+				added:Fire(inst)
+			end
+		end,
+		GetInstanceAddedSignal = function(_, tag)
+			H.tagAdded[tag] = H.tagAdded[tag] or H.signal()
+			return H.tagAdded[tag]
 		end,
 		HasTag = function(_, inst, tag)
 			return table.find(H.tagged[tag] or {}, inst) ~= nil
@@ -859,6 +902,7 @@ local TEMPLATE = {
 
 local function guest(name, id)
 	local g = newGuest(name, id)
+	g.body = g.Character -- (a test that needs them standing somewhere puts it back)
 	g.Character = nil
 	table.insert(guests, g)
 	newProfile(g, TEMPLATE)

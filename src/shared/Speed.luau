@@ -11,15 +11,19 @@ local Speed = {}
 
 -- `running`: Shift (or the left stick) held. `event` and `perk`: multipliers (read from
 -- attributes, so anything that isn't a positive number counts as none).
-function Speed.resolve(running: boolean, event: any, perk: any, owner: any): number
+-- `trained`: Steal a Luxe's own (its Stride, and the weight of the bag), set by the server as the
+-- "SpeedTrained" attribute only while a guest is in the residence; with it the cap is higher.
+function Speed.resolve(running: boolean, event: any, perk: any, owner: any, trained: any): number
 	local m = Config.data.Movement
 	local base = if running then m.runSpeed else m.walkSpeed
 	local e = if type(event) == "number" and event > 0 and event == event then event else 1
 	local p = if type(perk) == "number" and perk > 0 and perk == perk then perk else 1
+	local t = if type(trained) == "number" and trained > 0 and trained == trained then trained else 1
 	if type(owner) == "number" and owner > 1 and owner == owner then
-		return math.min(Config.data.Admin.speedCap, base * e * p * owner)
+		return math.min(Config.data.Admin.speedCap, base * e * p * t * owner)
 	end
-	return math.min(m.maxSpeed, base * e * p)
+	local cap = if t > 1 then math.max(m.maxSpeed, tonumber((m :: any).trainedMaxSpeed) or m.maxSpeed) else m.maxSpeed
+	return math.min(cap, base * e * p * t)
 end
 
 return Speed

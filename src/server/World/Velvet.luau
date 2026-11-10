@@ -1,13 +1,13 @@
 --!strict
--- The Velvet Room: deep green walls, pendant lights on long cords, smoked mirrors, and a tall
--- case clock in the corner.
+-- The Velvet Room, now the Luxe Lounge (the way into Steal a Luxe): deep green walls, smoked
+-- mirrors, and a tall case clock in the corner. Its treadmills, its upgrades board and the entrance
+-- itself are furnished at the grown size (World/Lobbies).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Layout = require(ReplicatedStorage.Shared.Layout).raw -- (the house as drawn: see World/Grand)
 local Kit = require(script.Parent.Kit)
 local RoomShell = require(script.Parent.RoomShell)
-local SortingTable = require(script.Parent.SortingTable)
 
 local L = Kit.Looks
 local V = Layout.Velvet
@@ -83,23 +83,6 @@ function Velvet.build(parent: Instance): Model
 	mirrors(root)
 	caseClock(root)
 	sideboard(root)
-	local tables = Kit.folder(root, "Tables")
-	local style: SortingTable.Style = {
-		roomName = "The Velvet Room",
-		top = L.darkWood,
-		legs = L.ink,
-		felt = { color = Color3.fromRGB(14, 22, 18), material = Enum.Material.Fabric },
-		caseBase = { color = Color3.fromRGB(14, 36, 26), material = Enum.Material.Fabric },
-		caseRim = L.brass,
-		chair = { color = Color3.fromRGB(22, 50, 36), material = Enum.Material.Fabric },
-		lamp = "cord",
-		lampColor = Color3.fromRGB(255, 222, 170),
-		lampBrightness = 1.5,
-		ceiling = FLOOR + V.height,
-	}
-	for i, centre in V.tables do
-		SortingTable.build(tables, "velvet", i, Layout.tableFrame(centre), style)
-	end
 	local fill = Kit.part(root, "FillLight", Vector3.new(1, 1, 1), CFrame.new(-56, FLOOR + 12, 46), { color = Color3.new(), material = Enum.Material.SmoothPlastic, transparency = 1 }, { collide = false, query = false, shadow = false })
 	Kit.pointLight(fill, 0.4, 40, Color3.fromRGB(170, 210, 180))
 	return root

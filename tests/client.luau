@@ -7701,6 +7701,107 @@ coroutine.wrap(function()
 end)()
 
 ---------------------------------------------------------------------------------------------------
+-- 7c. Steal a Luxe: its screen only inside, the bag, the guards, banking, the board, Stride
+---------------------------------------------------------------------------------------------------
+coroutine.wrap(function()
+	local LuxePanel = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "LuxePanel")
+	local RootM = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "Root")
+	local errorsBefore = #errors
+	RootM.close()
+	advance(0.5)
+	local function card()
+		return find(playerGui, function(d)
+			return d.Name == "LuxeCard"
+		end)
+	end
+	check("no Steal a Luxe screen in the house", card() == nil and textOnScreen("STEAL A LUXE") == nil)
+	LocalPlayer:SetAttribute("Attraction", "luxe")
+	signalOf(LocalPlayer, "attr:Attraction"):Fire()
+	serverSays("Attraction", { op = "entered", id = "luxe" })
+	advance(0.5)
+	check("inside, its screen is up", card() ~= nil and textOnScreen("STEAL A LUXE") ~= nil)
+	check("...with how it's played, said once on the way in", textOnScreen("Steal a Luxe") ~= nil)
+	serverSays("Attraction", { op = "luxe", bag = { { id = "ring", name = "Diamond Ring", glyph = "💍", rarity = "Rare", worth = 1700 }, { id = "pearls", name = "Pearl Necklace", glyph = "📿", rarity = "Common", worth = 260 } }, capacity = 4, worth = 1960, bonus = 0.1, wing = "The Long Gallery", watched = 0.4, chased = false, speed = 0.93, grace = false })
+	advance(0.3)
+	local c = card()
+	check("the wing they're in", textOnScreen("THE LONG GALLERY") ~= nil)
+	check("the bag: a slot for each piece it holds, two of four filled", c ~= nil and c.Bag:FindFirstChild("Slot4") ~= nil and c.Bag:FindFirstChild("Slot5") == nil and c.Bag.Slot1:FindFirstChild("Glyph") ~= nil and c.Bag.Slot3:FindFirstChild("Glyph") == nil)
+	check("what it's worth and the banker's cut at the car", textOnScreen("Carrying 1,960  ·  +10% at the car") ~= nil and textOnScreen("2 / 4") ~= nil)
+	check("a guard noticing them, shown before he gives chase", textOnScreen("A GUARD IS NOTICING YOU") ~= nil and c ~= nil and math.abs(c.Track.Fill.Size.X.Scale - 0.4) < 1e-6)
+	check("their pace with the bag", textOnScreen("PACE 93%") ~= nil)
+	snapshot("luxe-hud")
+	serverSays("Attraction", { op = "luxe", bag = {}, capacity = 4, worth = 0, bonus = 0, wing = "The Strongroom", watched = 1, chased = true, speed = 1, grace = false })
+	advance(0.3)
+	check("chased: run", textOnScreen("A GUARD IS AFTER YOU  ·  RUN") ~= nil)
+	serverSays("Attraction", { op = "caught", lost = 1960, n = 2 })
+	advance(0.3)
+	check("caught: what was lost, plainly", textOnScreen("The guards took back 2 pieces (1,960). You're shown out to the courtyard.") ~= nil)
+	advance(6)
+	serverSays("Attraction", { op = "banked", worth = 4820, base = 4382, bonus = 0.1, gilt = 964, gems = 2, pieces = {}, brainrots = { "ladroLussuoso" }, record = true })
+	advance(0.3)
+	check("banked: to the Estate, the Gilt to the purse, the Gems and the brainrot", textOnScreen("A record haul: 4,820") ~= nil and textOnScreen("4,820 to your Estate  ·  964 Gilt to your purse  ·  2 Gems  ·  a brainrot for your collection") ~= nil)
+	advance(6)
+	-- The board.
+	invokeResults.AttractionAsk = {
+		ok = true,
+		upgrades = {
+			bag = { level = 2, top = 6, now = "carries 4 pieces", nextLine = "carries 5 pieces", price = 4000 },
+			quiet = { level = 1, top = 4, now = "ordinary shoes", nextLine = "guards see you 15% less far", price = 2500 },
+			banker = { level = 4, top = 4, now = "+30% on everything banked" },
+			stride = { level = 3, points = 120, next = 180, from = 100, faster = 7, top = 11 },
+			golden = false,
+			goldenGems = 150,
+			hauls = 12,
+			banked = 48200,
+			best = 9100,
+		},
+	}
+	check("Upgrades opens the board", press("Upgrades") and (advance(0.6) or true) and LuxePanel.isOpen())
+	check("...which asks the server for it", sent[#sent].remote == "AttractionAsk" and sent[#sent].message[1].op == "state" and sent[#sent].message[1].id == "luxe")
+	check("...every upgrade with what it does now, next, and its price", textOnScreen("A bigger bag  ·  2 of 6") ~= nil and textOnScreen("Next: carries 5 pieces") ~= nil and textOnScreen("4,000 Gilt") ~= nil and textOnScreen("2,500 Gilt") ~= nil)
+	check("...at the top, no price", textOnScreen("At its best") ~= nil)
+	check("...Stride, and where to train it", textOnScreen("Stride  ·  level 3 of 11") ~= nil and textOnScreen("7% faster in the residence  ·  120 of 180 points to the next level") ~= nil and textOnScreen("Walk the treadmills in the Luxe Lounge to train it: a point a second.") ~= nil)
+	check("...the golden treadmill, for its price in Gems", textOnScreen("150 Gems") ~= nil)
+	check("...and the records", textOnScreen("Hauls banked: 12  ·  in all: 48,200  ·  best: 9,100") ~= nil)
+	snapshot("luxe-board")
+	invokeResults.AttractionAsk = { ok = false, why = "That's 4,000 Gilt." }
+	press("4,000 Gilt")
+	advance(0.6)
+	check("buying asks the server for the upgrade by name (never a price)", sent[#sent].remote == "AttractionAsk" and sent[#sent].message[1].act == "upgrade" and sent[#sent].message[1].what == "bag" and sent[#sent].message[1].price == nil)
+	check("...and says why not when it can't", textOnScreen("That's 4,000 Gilt.") ~= nil)
+	press("Close")
+	advance(0.5)
+	check("Close puts the board away", not LuxePanel.isOpen())
+	invokeResults.AttractionAsk = { ok = true }
+	press("Leave")
+	advance(0.5)
+	check("Leave asks to go home", sent[#sent].remote == "AttractionAsk" and sent[#sent].message[1].op == "home")
+	LocalPlayer:SetAttribute("Attraction", nil)
+	signalOf(LocalPlayer, "attr:Attraction"):Fire()
+	serverSays("Attraction", { op = "left", id = "luxe", why = "home" })
+	advance(0.5)
+	check("out of the residence, its screen is gone at once", card() == nil and textOnScreen("STEAL A LUXE") == nil and textOnScreen("Leave") == nil)
+	-- The Lounge: Stride on the treadmills, and the lectern's board.
+	serverSays("Attraction", { op = "stride", level = 2, points = 61, next = 100, from = 40, golden = false })
+	advance(0.3)
+	check("on a treadmill, Stride counts up at the foot of the screen", textOnScreen("STRIDE  ·  LEVEL 2  ·  61 / 100") ~= nil)
+	snapshot("luxe-stride")
+	advance(3.5)
+	check("...and goes when they step off", textOnScreen("STRIDE  ·  LEVEL 2") == nil)
+	serverSays("Attraction", { op = "strideUp", level = 3, faster = 7 })
+	advance(0.3)
+	check("a new Stride level is told", textOnScreen("Stride level 3") ~= nil and textOnScreen("7% faster in Steal a Luxe") ~= nil)
+	advance(4)
+	invokeResults.AttractionAsk = { ok = false, why = "nope" }
+	serverSays("Attraction", { op = "panel", id = "luxe" })
+	advance(0.6)
+	check("the lectern opens the board (and says so when it can't be read)", LuxePanel.isOpen() and textOnScreen("The board couldn't be read just now. Try again in a moment.") ~= nil)
+	RootM.close()
+	advance(0.5)
+	check("no errors with Steal a Luxe", #errors == errorsBefore, errors[errorsBefore + 1])
+end)()
+
+---------------------------------------------------------------------------------------------------
 -- 8. A respawn hands straight back to the follow camera
 ---------------------------------------------------------------------------------------------------
 camera.CameraType = roblox.Enum.CameraType.Scriptable

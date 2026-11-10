@@ -785,6 +785,47 @@ local defaults = {
 		store = "Wealthiest_v1",
 	},
 
+	-- The attractions (shared/Attractions, server/Attractions): each in its own place, well away from
+	-- the Maison (out of sight across the night air), reached through its room off the Foyer.
+	Attractions = {
+		travelGap = 2, -- seconds between one trip (in, or home) and the next
+		-- Steal a Luxe (server/Attractions/Luxe): the residence, its guards and the getaway car.
+		luxe = {
+			origin = { -3000, 0, -3000 },
+			-- The bag: how many pieces it carries at each level, and the Gilt to reach that level.
+			bag = { 3, 4, 5, 6, 8, 10 },
+			bagPrice = { 0, 1500, 4000, 10000, 25000, 60000 },
+			-- Quiet shoes: how far a guard sees you (times his own reach), and the Gilt for each pair.
+			quiet = { 1, 0.85, 0.72, 0.6 },
+			quietPrice = { 0, 2500, 7500, 20000 },
+			-- The banker's cut: a bonus on everything banked, and the Gilt for each.
+			banker = { 0, 0.1, 0.2, 0.3 },
+			bankerPrice = { 0, 5000, 15000, 40000 },
+			-- Stride (the treadmills in the Luxe Lounge): points to reach each level, and how much
+			-- faster each level makes you in the residence (and nowhere else).
+			stride = { 0, 40, 100, 180, 300, 460, 660, 920, 1250, 1650, 2200 },
+			stridePerLevel = 0.035,
+			stridePerSecond = 1, -- on an ordinary treadmill (the golden one: twice)
+			-- The weight of the bag: each piece carried slows you this much, never below `slowest`.
+			weight = 0.035,
+			slowest = 0.7,
+			-- The guards.
+			seeRange = 36, -- studs (a deeper wing's guards see further: the wing's `sharp`)
+			seeAngle = 55, -- degrees either side of where he looks
+			noticeSeconds = 1.1, -- in sight this long (at the edge of his reach) and he gives chase
+			patrolSpeed = 11,
+			chaseSpeed = 21, -- a touch slower than an unladen walk: a heavy bag is what gets you caught
+			chaseGiveUp = 5, -- seconds out of his sight before he gives up
+			catchReach = 4.5,
+			caughtGrace = 6, -- seconds after being shown out before anyone notices you again
+			respawn = 40, -- seconds before a piece taken (or dropped) is back on its plinth
+			reach = 11, -- how close a guest must stand to take a piece
+			dailyGems = 15, -- the most Gems a day from Steal a Luxe (its rarest pieces)
+			goldenGems = 150, -- the golden treadmill (double Stride), for good
+			greatHaul = 8000, -- a haul worth this much is told to the whole house
+		},
+	},
+
 	-- The house's herald (server/Herald): feats told to everyone in the house. Each guest's feats
 	-- of one kind are told at most once in `kindGap` seconds, and the house hears at most one feat
 	-- every `gap` seconds (the rest wait their turn, `queue` at most; older ones are let go).
@@ -1035,6 +1076,7 @@ local defaults = {
 		walkSpeed = 24,
 		runSpeed = 34,
 		maxSpeed = 51, -- no combination of events and perks moves a guest faster than this
+		trainedMaxSpeed = 62, -- in Steal a Luxe, with Stride from the treadmills
 		npcWalkSpeed = 18,
 		-- Guests and staff are drawn at this size: a touch under Roblox's own, the size the
 		-- furniture was made for. (The rooms themselves are grand: Layout.SCALE.)

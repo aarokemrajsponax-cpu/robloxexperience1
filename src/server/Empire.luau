@@ -10,6 +10,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Rules = require(ReplicatedStorage.Shared.Fortune)
+local Attractions = require(script.Parent.Attractions)
 local Fortune = require(script.Parent.Fortune)
 local Herald = require(script.Parent.Herald)
 local RemoteGuard = require(script.Parent.RemoteGuard)
@@ -33,6 +34,7 @@ end
 
 Empire.Fortune = Fortune
 Empire.Herald = Herald
+Empire.Attractions = Attractions
 
 local started: { string } = {}
 local function part(name: string, fn: () -> ())
@@ -79,6 +81,21 @@ function Empire.start()
 		Fortune.start()
 	end)
 	part("The herald", Herald.start)
+	part("The attractions", function()
+		Attractions.isSeated = function(player: Player): boolean
+			return Empire.isSeated(player)
+		end
+		Attractions.award = function(player: Player, key: string)
+			Empire.award(player, key)
+		end
+		Attractions.tally = function(player: Player, stat: string, n: number, once: string?)
+			Empire.tally(player, stat, n, once)
+		end
+		Attractions.isOwner = function(player: Player): boolean
+			return Empire.isOwner(player)
+		end
+		Attractions.start()
+	end)
 	part("The Empire's questions", function()
 		RemoteGuard.invoke(Remotes.func("EmpireAsk"), "empireAsk", onAsk)
 	end)

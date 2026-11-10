@@ -265,11 +265,11 @@ Voice.WelcomeBack = {
 -- What's new in this build, told once to each returning guest (Welcome back). Only shown while
 -- `build` is the build that's playing, so old news never shows as new.
 Voice.WhatsNew = {
-	build = 71,
+	build = 72,
 	lines = {
-		"Phones held sideways: Start here and Tonight's table now fit the screen, keys and all.",
-		"Every perk and key reads in clear words, never dark on dark.",
-		"Pieces are tossed up off the cloth and into their cases, on every screen.",
+		"Your Fortune: everything you own, counted. Climb the wealth ranks and the Wealthiest boards.",
+		"Steal a Luxe, through the Velvet Room: carry out what you can, bank it at the car, mind the guards.",
+		"Train your Stride on the Luxe Lounge's treadmills. Every haul you bank grows your Estate.",
 	},
 }
 

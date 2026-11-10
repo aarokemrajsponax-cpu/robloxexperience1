@@ -429,7 +429,16 @@ check("62 collectable pieces", Catalogue.totalCollectable() == 62, Catalogue.tot
 ---------------------------------------------------------------------------------------------------
 local Layout = module("ReplicatedStorage", "Shared", "Layout")
 local tables = CollectionService.GetTagged(CollectionService, "MaisonTable")
-check("48 tables: six in each room, four duel halves in the Library, twenty in the Ballroom", #tables == 48, #tables)
+check("42 tables: six in the Salon, the Obsidian and the Midnight Room, four duel halves in the Library, twenty in the Ballroom", #tables == 42, #tables)
+do
+	local inVelvet = 0
+	for _, t in tables do
+		if t:GetAttribute("Room") == "velvet" or string.find(tostring(t:GetAttribute("TableId")), "velvet", 1, true) then
+			inVelvet += 1
+		end
+	end
+	check("the Velvet Room has no sorting tables (it's the Luxe Lounge, the way into Steal a Luxe)", inVelvet == 0, inVelvet)
+end
 local ids = {}
 for _, t in tables do
 	local id = t:GetAttribute("TableId")
@@ -766,17 +775,35 @@ for _, roomId in { "salon", "velvet", "obsidian", "midnight" } do
 	for _, point in door.approach do
 		table.insert(route, { point, FLOOR })
 	end
-	for _, leg in {
-		{ door.centre + door.facing * 6, FLOOR }, -- in front of the room's door
-		{ inside, FLOOR }, -- through it
-		{ Vector3.new(inside.X, FLOOR, chair.Z), FLOOR }, -- along the wall, past the first table
-		{ Vector3.new(chair.X - inward.X * 3.5, FLOOR, chair.Z), FLOOR },
-		{ Vector3.new(chair.X, FLOOR, chair.Z), FLOOR },
-	} do
-		table.insert(route, leg)
+	table.insert(route, { door.centre + door.facing * 6, FLOOR }) -- in front of the room's door
+	table.insert(route, { inside, FLOOR }) -- through it
+	if roomId == "velvet" then
+		-- The Luxe Lounge: across it to the way into Steal a Luxe, and onto each treadmill.
+		local R = Layout.Velvet
+		local mid = Vector3.new(-70, FLOOR, (R.minZ + R.maxZ) / 2)
+		local toEntrance = table.clone(route)
+		table.insert(toEntrance, { mid, FLOOR })
+		table.insert(toEntrance, { Vector3.new(R.minX + 6, FLOOR, (R.minZ + R.maxZ) / 2), FLOOR })
+		local why = walk(toEntrance, 1.0)
+		check("a guest can walk from the street spawn to the way into Steal a Luxe", why == nil, why)
+		for _, belt in CollectionService.GetTagged(CollectionService, "LuxeTreadmill") do
+			local p = belt.CFrame.Position
+			local back = if belt:GetAttribute("Golden") then 1 else -1 -- (the end a guest steps on at)
+			local legs = { { inside, FLOOR }, { mid, FLOOR }, { Vector3.new(p.X, FLOOR, mid.Z), FLOOR }, { Vector3.new(p.X, FLOOR, p.Z + back * 8), FLOOR }, { Vector3.new(p.X, FLOOR, p.Z + back * 3), FLOOR } }
+			local twhy = walk(legs, 0.9)
+			check("a guest can walk onto the treadmill at x " .. math.floor(p.X), twhy == nil, twhy)
+		end
+	else
+		for _, leg in {
+			{ Vector3.new(inside.X, FLOOR, chair.Z), FLOOR }, -- along the wall, past the first table
+			{ Vector3.new(chair.X - inward.X * 3.5, FLOOR, chair.Z), FLOOR },
+			{ Vector3.new(chair.X, FLOOR, chair.Z), FLOOR },
+		} do
+			table.insert(route, leg)
+		end
+		local why = walk(route, 1.0, if roomId == "midnight" then earned else nil)
+		check("a guest can walk from the street spawn to a chair in " .. roomId, why == nil, why)
 	end
-	local why = walk(route, 1.0, if roomId == "midnight" then earned else nil)
-	check("a guest can walk from the street spawn to a chair in " .. roomId, why == nil, why)
 	-- The Concierge's walk from the lectern to the room's arrival point.
 	local home = Layout.Foyer.conciergeHome.Position
 	local legs = { { home, FLOOR } }

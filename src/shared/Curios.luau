@@ -28,7 +28,7 @@ export type Curio = {
 	glyph: string, -- the big emoji on its medallion
 	accent: string, -- a small emoji beside it ("" for none)
 	colour: Color3, -- the medallion
-	source: "tables" | "event" | "gems" | "achievement" | "season",
+	source: "tables" | "event" | "gems" | "achievement" | "season" | "attraction",
 	gems: number?, -- its price in the Cabinet, when it's sold there
 	tradeable: boolean,
 	how: string, -- how it's had, in words, for its card
@@ -93,6 +93,10 @@ Curios.List = {
 	-- The Ballroom's own Secret: for winning an evening against three or more guests.
 	{ id = "reginaBallo", name = "La Regina del Ballo", line = "The Ballroom's queen. She curtsies only to winners.", rarity = "Secret", family = "meme", glyph = "👸", accent = "💃", colour = rgb(120, 40, 90), source = "event", tradeable = false, how = "A secret: win a Ballroom evening against three or more guests" },
 	-- The Secret: found only by a flawless run at the Midnight Room's table
+	-- The attractions' own brainrots: carried out of Steal a Luxe, won in the Maison Basement, taken
+	-- from the Executive's office. Earned by playing them, never sold.
+	{ id = "ladroLussuoso", name = "Ladro Lussuoso", line = "A raccoon in white tie who only steals the very best. Leaves a thank-you note.", rarity = "Epic", family = "meme", glyph = "🦝", accent = "🎩", colour = rgb(70, 70, 86), source = "attraction", tradeable = true, how = "Steal a Luxe: carried out of the Long Gallery and banked" },
+	{ id = "gattoGioielliere", name = "Gatto Gioielliere", line = "A cat who appraises diamonds by sitting on them. Never wrong.", rarity = "Legendary", family = "meme", glyph = "🐈", accent = "💍", colour = rgb(228, 196, 120), source = "attraction", tradeable = true, how = "Steal a Luxe: carried out of the Strongroom and banked" },
 	{ id = "midnightOwl", name = "Hibou de Minuit", line = "Only seen by those who sort without a single slip after midnight.", rarity = "Secret", family = "meme", glyph = "🦉", accent = "🌙", colour = rgb(30, 30, 50), source = "tables", tradeable = false, how = "A secret: a flawless run at the Midnight Room's table" },
 	-- Delicacies: the Cabinet, for Gems (the exact one you choose)
 	{ id = "truffle", name = "The Black Truffle", line = "From Périgord, in a velvet box.", rarity = "Rare", family = "delicacy", glyph = "🍄", accent = "🖤", colour = rgb(50, 40, 40), source = "gems", gems = 60, tradeable = true, how = "The Cabinet: 60 Gems" },
