@@ -898,6 +898,16 @@ function DirectoryPanel.open()
 	end
 	local rows = math.ceil(#Directory.List / cols)
 	local each = math.floor((roomForCards - (rows - 1) * gap) / rows)
+	-- (Short of room for every row at its least: the hint under the title goes, since every card
+	-- says "Closer look" itself, and the rows have its height.)
+	local hint = true
+	if each < least then
+		hint = false
+		local hintH = math.ceil(Theme.textSize(13, "body") * 1.25) + 6
+		headH -= hintH
+		roomForCards += hintH
+		each = math.floor((roomForCards - (rows - 1) * gap) / rows)
+	end
 	local shape: Shape
 	if each - 106 >= 76 and cardW - 26 >= nameNeed then
 		local h = math.min(236, each)
@@ -913,8 +923,10 @@ function DirectoryPanel.open()
 	list.VerticalAlignment = Enum.VerticalAlignment.Top
 	Theme.text(content, "The Maison Directory", 11, "caps", { LayoutOrder = 1 })
 	Theme.text(content, "Every game in the house", 26, "display", { LayoutOrder = 2 })
-	local sub = Theme.text(content, "Tap a card for a closer look, and the way there.", 13, "body", { LayoutOrder = 3, TextColor3 = C.smoke })
-	sub.Name = "Hint"
+	if hint then
+		local sub = Theme.text(content, "Tap a card for a closer look, and the way there.", 13, "body", { LayoutOrder = 3, TextColor3 = C.smoke })
+		sub.Name = "Hint"
+	end
 	if eventName then
 		-- What's on in the house tonight (the attractions are dressed for a holiday, too).
 		local ribbon = Instance.new("Frame")
