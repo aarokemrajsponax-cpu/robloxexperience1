@@ -141,6 +141,8 @@ Closet.Message:Connect(function(op: string, m: any)
 			BoutiquePanel.open("salutes")
 		elseif m.panel == "guestBook" then
 			GuestBookPanel.open()
+		elseif m.panel == "showcase" then
+			require(script.Parent.UI.ShowcasePanel).open()
 		end
 	elseif op == "gift" and type(m.item) == "table" then
 		task.delay(2.5, GiftPanel.show, tostring(m.from), m.item)
@@ -189,7 +191,20 @@ start("The counter", Counter.start)
 start("Tables", TableClient.start)
 start("The house around you", Ambient.start)
 start("The Ballroom", BallroomView.start)
-start("The Vault", VaultView.start)
+-- The holidays inside the attractions (World/HolidayFX dresses the house itself).
+start("Holidays in the attractions", require(script.Parent.World.AttractionDress).start)
+start("The Vault", function()
+	-- (The display's card sets the domes again as soon as it changes; its photograph is photo mode.)
+	local ShowcasePanel = require(script.Parent.UI.ShowcasePanel)
+	ShowcasePanel.changed = function(v: { [string]: any })
+		VaultView.featured(if type(v.featured) == "table" then v.featured else {})
+		SuiteView.retheme()
+	end
+	ShowcasePanel.photo = function()
+		require(script.Parent.UI.PhotoMode).enter()
+	end
+	VaultView.start()
+end)
 start("The Suite", function()
 	SuiteView.playPiano = PianoPanel.private
 	SuiteView.start()

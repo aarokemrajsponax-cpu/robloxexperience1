@@ -143,6 +143,32 @@ function Herald.start()
 			end
 		elseif m.op == "flourish" and type(m.userId) == "number" then
 			require(script.Parent.Parent.World.Laurels).flourish(m.userId, if type(m.level) == "number" then m.level else nil)
+		elseif m.op == "streak" and type(m.count) == "number" then
+			-- The day's first visit: how the streak stands, what it's worth, and what tomorrow adds.
+			local count = math.floor(m.count)
+			local gems = tonumber(m.gems) or 0
+			local line
+			if count <= 1 then
+				line = if m.broke then "A new streak starts today. Come back tomorrow: every day in a row, your Gilt counts for more." else "Come back tomorrow to start a streak: every day in a row, your Gilt counts for more."
+			else
+				local boost, nextBoost = tonumber(m.boost) or 0, tonumber(m.next) or 0
+				line = if nextBoost > boost
+					then string.format("Your Gilt counts %d%% more today. Come back tomorrow for %d%%.", boost, nextBoost)
+					else string.format("Your Gilt counts %d%% more today, the most there is. Come back tomorrow to keep it.", boost)
+			end
+			if gems > 0 then
+				line = string.format("%d Gems from the house.  %s", gems, line)
+			end
+			-- (The next Gems, plainly: how many days away.)
+			local giftAt, giftGems = tonumber(m.giftAt), tonumber(m.giftGems)
+			if giftAt and giftGems and giftAt > count then
+				local days = math.floor(giftAt - count)
+				line ..= string.format("  %d more day%s for %d Gems.", days, if days == 1 then "" else "s", math.floor(giftGems))
+			end
+			Toast.show(if count <= 1 then "Welcome back" else string.format("🔥 %d days in a row", count), line, 6)
+			if gems > 0 then
+				pcall(Herald.sound, true)
+			end
 		end
 	end)
 end

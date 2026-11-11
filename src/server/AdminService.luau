@@ -36,6 +36,7 @@ local Workspace = game:GetService("Workspace")
 local Names = require(ReplicatedStorage.Shared.Names)
 local LiveCalendar = require(ReplicatedStorage.Shared.LiveCalendar)
 local Ownership = require(script.Parent.Ownership)
+local TrendWatch = require(script.Parent.TrendWatch)
 local AbuseNights = require(ReplicatedStorage.Shared.AbuseNights)
 local Config = require(ReplicatedStorage.Shared.Config)
 local HouseEvents = require(ReplicatedStorage.Shared.HouseEvents)
@@ -1856,7 +1857,7 @@ local STAFF_OPS: { [string]: boolean } = {
 	state = true, calendar = true, event = true, abuse = true, mega = true, countdown = true, fx = true,
 	fxAllOff = true, headline = true, announce = true, salute = true, season = true, crown = true,
 	spotlight = true, clock = true, ballroomOpen = true, grandPrixOpen = true, show = true, stop = true,
-	stopAll = true, freeze = true, ["goto"] = true, power = true,
+	stopAll = true, freeze = true, ["goto"] = true, power = true, trends = true,
 }
 AdminService.STAFF_OPS = STAFF_OPS
 local staff: { [number]: { name: string, since: number } } = {}
@@ -2307,13 +2308,42 @@ local function handle(player: Player, request: unknown): any
 		return { ok = false, why = "That's for the owner." }
 	end
 	Analytics.custom(player, "House controls", nil, { op = tostring(op) })
-	if op ~= "state" and op ~= "calendar" then
+	if op ~= "state" and op ~= "calendar" and op ~= "trends" then
 		record(player, rank, tostring(op), r)
 	end
 	if op == "state" then
 		return state(player)
 	elseif op == "calendar" then
 		return { ok = true, calendar = AdminService.calendar(if r.days == 31 then 31 else 7) }
+	elseif op == "trends" or op == "trendNote" or op == "trendStatus" or op == "trendRemove" then
+		-- Trend Watch: the house's own numbers (the staff may read them); the ideas are the
+		-- owner's alone (checked above: only "trends" is the staff's).
+		if op == "trendNote" then
+			local ok, why = TrendWatch.addNote(if type(r.text) == "string" then r.text else "", byName)
+			if not ok then
+				return { ok = false, why = why or "That idea couldn't be kept." }
+			end
+		elseif op == "trendStatus" or op == "trendRemove" then
+			local id = tonumber(r.id)
+			if not id then
+				return { ok = false, why = "Choose an idea." }
+			end
+			local ok, why
+			if op == "trendStatus" then
+				ok, why = TrendWatch.setStatus(id, tostring(r.status))
+			else
+				ok, why = TrendWatch.remove(id)
+			end
+			if not ok then
+				return { ok = false, why = why or "That couldn't be changed." }
+			end
+		end
+		local v = TrendWatch.view()
+		if rank ~= "owner" then
+			v.notes = nil
+		end
+		v.owner = rank == "owner"
+		return v
 	elseif op == "appoint" or op == "dismiss" then
 		-- (The owner only: checked above. Never the owner themself.)
 		local id = tonumber(r.userId)

@@ -1018,7 +1018,7 @@ function Shop.start()
 	registerHandlers()
 	registerEligibility()
 	local CollectionService = game:GetService("CollectionService")
-	local panels: { [string]: string } = { BoutiqueCounter = "boutique", WardrobeMirror = "wardrobe", LedgerBook = "ledger", RegisterBook = "register", BlackCardLectern = "blackCard", SuiteFurnish = "suite", CircleBook = "circles", SaluteDesk = "salutes", GuestBook = "guestBook" }
+	local panels: { [string]: string } = { BoutiqueCounter = "boutique", WardrobeMirror = "wardrobe", LedgerBook = "ledger", RegisterBook = "register", BlackCardLectern = "blackCard", SuiteFurnish = "suite", CircleBook = "circles", SaluteDesk = "salutes", GuestBook = "guestBook", VaultLedger = "showcase" }
 	for tag, panel in panels do
 		for _, part in CollectionService:GetTagged(tag) do
 			local p = part:FindFirstChildOfClass("ProximityPrompt")

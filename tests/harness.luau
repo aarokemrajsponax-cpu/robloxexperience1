@@ -526,6 +526,9 @@ local services = {
 				GetAsync = function(_, key)
 					return data[key]
 				end,
+				RemoveAsync = function(_, key)
+					data[key] = nil
+				end,
 				-- (As on Roblox: returning nil cancels the write.)
 				UpdateAsync = function(_, key, fn)
 					local new = fn(data[key])

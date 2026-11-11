@@ -149,4 +149,77 @@ check("...refused requests are not written as done", seen["gift:Ned"] == nil)
 check("...kept for every server", type(H.dataStores.MaisonAudit_v1) == "table" and #H.dataStores.MaisonAudit_v1.log >= 3)
 check("the owner can never be appointed or dismissed (they own the experience)", adminAs(owner, { op = "appoint", userId = 8722595934 }).ok == false and AdminService.rank(owner) == "owner")
 
+---------------------------------------------------------------------------------------------------
+-- 6. Trend Watch (server/TrendWatch, on the LIVE OPERATIONS page)
+---------------------------------------------------------------------------------------------------
+local TrendWatch = module("ServerScriptService", "Server", "TrendWatch")
+local tday = 20400
+TrendWatch.now = function()
+	return tday * 86400 + 7200
+end
+-- Yesterday's record, as the servers wrote it: in parts, each server adding to its own.
+local mine = TrendWatch.shard()
+local other = (mine % TrendWatch.SHARDS) + 1
+H.dataStores.MaisonTrends_v1 = H.dataStores.MaisonTrends_v1 or {}
+H.dataStores.MaisonTrends_v1[TrendWatch.key(tday - 1, mine)] = { visits = 6, ["attraction:gala"] = 4 }
+H.dataStores.MaisonTrends_v1[TrendWatch.key(tday - 1, other)] = { visits = 4, trade = 2 }
+for _ = 1, 12 do
+	TrendWatch.event("Attraction entered", { attraction = "gala" })
+end
+TrendWatch.event("Curio", { curio = "croissantino", source = "tables" })
+TrendWatch.event("Curio", { curio = "croissantino", source = "trade" })
+TrendWatch.event("Trade", { trade = "t1" })
+TrendWatch.event("House controls", { op = "state" })
+TrendWatch.did("race", 1)
+TrendWatch.did("luxeWorth", 90000)
+for _ = 1, 8 do
+	TrendWatch.count("visits")
+end
+run(TrendWatch.flush)
+local rec = H.dataStores.MaisonTrends_v1[TrendWatch.key(tday, mine)]
+check("the house's counts are written to this server's part of the day's record, in one write", type(rec) == "table" and rec["attraction:gala"] == 12 and rec.visits == 8 and rec["did:race"] == 1, rec)
+check("only what's counted: a curio found (not one traded), never the console's own use, never an amount", rec.curio == 1 and rec["House controls"] == nil and rec["did:luxeWorth"] == nil)
+TrendWatch.count("visits", 2)
+run(TrendWatch.flush)
+check("the next write adds to the same part", H.dataStores.MaisonTrends_v1[TrendWatch.key(tday, mine)].visits == 10)
+check("servers are spread across the parts", TrendWatch.SHARDS >= 4 and mine >= 1 and mine <= TrendWatch.SHARDS)
+-- Another server's part of today.
+H.dataStores.MaisonTrends_v1[TrendWatch.key(tday, other)] = { visits = 5 }
+local tv = adminAs(ned, { op = "trends" })
+check("a guest who isn't staff never sees Trend Watch", tv.ok == false)
+tv = adminAs(owner, { op = "trends" })
+local byKey = {}
+for _, t in tv.trends do
+	byKey[t.key] = t
+end
+check("today beside yesterday, most first, named for the owner", tv.ok == true and tv.trends[1].key == "visits" and byKey["attraction:gala"].yesterday == 4 and byKey["attraction:gala"].change == 200 and byKey["attraction:gala"].name == "The Grand Ballroom: visits", tv.trends[1])
+check("every server's part, added together", byKey.visits.today == 15 and byKey.visits.yesterday == 10 and byKey.visits.change == 50 and byKey.trade.yesterday == 2, byKey.visits)
+check("nothing claimed as partial when every part was read", tv.partial == false)
+check("something new today has no change claimed", byKey["did:race"] ~= nil and byKey["did:race"].change == nil)
+check("no outside trend source is claimed", tv.source == nil)
+-- The owner's ideas.
+r = adminAs(owner, { op = "trendNote", text = "A winter runway week: snow-white looks, voted by the guests." })
+check("the owner keeps an idea: an idea, until approved", r.ok == true and r.notes[1].status == "idea" and r.notes[1].by == "AJKR")
+local ideaId = r.notes[1].id
+r = adminAs(owner, { op = "trendNote", text = "   " })
+check("an empty idea isn't kept", r.ok == false)
+r = adminAs(owner, { op = "trendStatus", id = ideaId, status = "approved" })
+check("approved, by the owner", r.ok == true and r.notes[1].status == "approved")
+r = adminAs(owner, { op = "trendStatus", id = ideaId, status = "live" })
+check("a status that isn't one of the choices is refused", r.ok == false)
+local admin = H.guest("Ivy", 1103)
+H.dataStores.MaisonStaff_v1.admins["1103"] = { name = "Ivy", since = 1 }
+run(AdminService.loadStaff)
+r = adminAs(admin, { op = "trends" })
+check("an admin reads the house's numbers, never the owner's ideas", r.ok == true and type(r.trends) == "table" and r.notes == nil and r.owner == false)
+r = adminAs(admin, { op = "trendNote", text = "Mine now" })
+check("...nor keeps, approves or removes one", r.ok == false and adminAs(admin, { op = "trendStatus", id = ideaId, status = "declined" }).ok == false and adminAs(admin, { op = "trendRemove", id = ideaId }).ok == false)
+r = adminAs(owner, { op = "trendRemove", id = ideaId })
+check("the owner removes an idea", r.ok == true and #r.notes == 0)
+local logged = {}
+for _, a in adminAs(owner, { op = "state" }).audit do
+	logged[a.op] = true
+end
+check("the ideas' changes are in the audit log, reading the numbers isn't", logged.trendNote == true and logged.trendStatus == true and logged.trends == nil)
+
 H.finish()

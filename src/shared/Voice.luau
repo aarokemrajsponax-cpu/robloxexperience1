@@ -85,6 +85,7 @@ Voice.Concierge = {
 		executive = "You hold an invitation. The Executive Suite: the lift is in the Midnight Room.",
 		quartermaster = "You've no invitation yet. Clear the Basement or bank a great haul, and the Executive Suite opens to you.",
 		island = "You've the Fortune for Luxury Island now. The Island Key is at the Jet Lounge, on the Terrace.",
+		gala = "Bring a friend to the Grand Ballroom, through the great doors at the far end of the Ballroom: trivia, the Runway, the Daily Arena and the dance floor.",
 		climb = "{gap} more and you'll be {rank}. Every haul, purse and prize counts.",
 	},
 	-- Answers, from how the house really works (the numbers are filled in from its settings).
@@ -96,6 +97,8 @@ Voice.Concierge = {
 		{ id = "caught", q = "What if a guard catches me?", a = "Everything in your bag is lost and you're shown out to the courtyard. What you've already banked is safe." },
 		{ id = "skip", q = "Can I skip a Basement stage?", a = "For {skipGems} Gems, or a skip bought with Robux. A skipped run isn't timed for the boards, and the stage you skip pays nothing." },
 		{ id = "island", q = "How do I get to Luxury Island?", a = "By the private jet, from the Jet Lounge on the Terrace. The Island Key is for a Tycoon: {islandGilt} Gilt or {islandGems} Gems, yours for good. Five pearls lie in its lagoon every day." },
+		{ id = "gala", q = "What's in the Grand Ballroom?", a = "Through the great doors at the far end of the Ballroom: the dance floor and its jukebox, Luxury Trivia, the Runway's themed shows, the Daily Arena, three photo sets, the Exchange and the Hall of Fame. A little Gilt for all of it, up to {galaGilt} a day." },
+		{ id = "trade", q = "How do I trade?", a = "At the Exchange's stands in the Grand Ballroom, or the Trade key on a guest's card: Gilt, Gems, brainrots and curios. You both see every offer, and nothing changes hands until you both confirm the very same trade." },
 		{ id = "boards", q = "Where are the boards?", a = "Tap your Fortune, under your Gilt: the Wealthiest in this house, this week and of all time. The Basement's best times are at the lectern on the Basement Stair." },
 		{ id = "gems", q = "What are Gems for?", a = "The Gem Shop, the golden treadmill, a Basement skip and the Cabinet's curios. The attractions' rarest finds pay a few each day." },
 	},
@@ -184,7 +187,7 @@ Voice.Tour = {
 		stop = "ballroom",
 		place = "ballroomDoor",
 		title = "The Ballroom",
-		line = "Opens every 20 minutes for one big game. The last lamp still lit wins the whole pot of Gilt.",
+		line = "Lights Out every 20 minutes: the last lamp still lit wins the pot. Through the great doors at the far end, the Grand Ballroom: dancing, trivia, the Runway and more, best with friends.",
 	},
 	{
 		stop = "terrace",
@@ -319,11 +322,11 @@ Voice.WelcomeBack = {
 -- What's new in this build, told once to each returning guest (Welcome back). Only shown while
 -- `build` is the build that's playing, so old news never shows as new.
 Voice.WhatsNew = {
-	build = 72,
+	build = 73,
 	lines = {
-		"Your Fortune: everything you own, counted. Climb the wealth ranks and the Wealthiest boards.",
-		"Three attractions: Steal a Luxe, the Maison Basement and, by invitation, the Executive Suite.",
-		"The Grand Auction in the Library, and a Concierge who shows you the way anywhere.",
+		"The Grand Ballroom, through the Ballroom's great doors: trivia, a runway, the Daily Arena.",
+		"Luxury Island by private jet, two circuits for racing, and Maison Prestige's laurels.",
+		"Show off your Vault and theme your Suite, and come back each day: your streak pays more.",
 	},
 }
 
@@ -416,6 +419,7 @@ Voice.Guide = {
 			{ place = "concierge", title = "The Concierge", line = "Stands by the front door, ready to help.", how = "Speak to him and pick Show me the house: he walks you round every room and explains it." },
 			{ place = "boutique", title = "The Boutique", line = "The house's shop for looks.", how = "Looks, table styles, lamps and trails for Gilt (a few for Robux, always with the price shown first). The Wardrobe beside it is where you wear what you own." },
 			{ place = "vault", title = "The Vault", line = "Your collection, kept for good.", how = "Every piece you've ever sorted is on its shelves. The Archivist at the desk keeps your badges and records." },
+			{ place = "ballroom", title = "The Grand Ballroom", line = "The house's hall of entertainments.", how = "Through the great doors at the far end of the Ballroom: the dance floor and the jukebox, Luxury Trivia, the Runway, the Daily Arena, three photo sets, the Exchange's trading stands and the Hall of Fame." },
 			{ place = "terrace", title = "The Terrace", line = "A rooftop to relax on, and the jet to the island.", how = "A bar with treats, a fire pit and loungers under the stars. The Jet Lounge's arch flies Island Key holders to Luxury Island." },
 			{ place = "suite", title = "Your Suite", line = "Your own private rooms upstairs.", how = "Ring the bell inside to furnish them. Only you can go in, unless you invite friends with the Suites key." },
 		} :: { GuideItem },

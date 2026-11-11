@@ -16,6 +16,7 @@ local RoundPanel = require(script.Parent.RoundPanel)
 local DecreePanel = require(script.Parent.DecreePanel)
 local Closet = require(script.Parent.Parent.Closet)
 local ProductArt = require(script.Parent.ProductArt)
+local ProductConfig = require(ReplicatedStorage.Shared.ProductConfig)
 
 local BoutiquePanel = {}
 
@@ -90,6 +91,57 @@ local function giftPicker(card: Card)
 	Root.open("GiftPicker", group)
 end
 
+local PERMANENT = "Permanent: yours for good"
+
+-- A closer look at a piece (its picture large, all its words, what it is for good), and, for
+-- Gilt, the purchase confirmed before anything is spent: the price, and what you hold.
+local function closer(card: Card, giltPrice: number?, onBuy: (() -> ())?)
+	local CARD = "BoutiqueCloser"
+	if Root.isOpen(CARD) then
+		Root.close(CARD)
+	end
+	local size = Root.size()
+	local group, content = Theme.glass(Root.panels, CARD, UDim2.fromOffset(math.min(440, size.X - 24), math.min(if onBuy then 430 else 400, size.Y - 40)), nil, nil, "ruby")
+	Theme.list(content, 8).VerticalAlignment = Enum.VerticalAlignment.Top
+	Theme.text(content, if onBuy then "Confirm your purchase" else "A closer look", 11, "caps", { LayoutOrder = 1 })
+	local artHolder = Instance.new("Frame")
+	artHolder.BackgroundTransparency = 1
+	artHolder.Size = UDim2.new(1, 0, 0, 132)
+	artHolder.LayoutOrder = 2
+	artHolder.Parent = content
+	local art = ProductArt.draw(artHolder, card.kind, card.style, 128)
+	art.AnchorPoint = Vector2.new(0.5, 0)
+	art.Position = UDim2.fromScale(0.5, 0)
+	Theme.text(content, card.name, 22, "display", { LayoutOrder = 3 })
+	Theme.text(content, string.upper(tostring(card.kindName or "")) .. "  ·  " .. PERMANENT, 11, "bodyBold", { LayoutOrder = 4, TextColor3 = Color3.fromRGB(255, 196, 160) })
+	Theme.text(content, card.line or "", 13, "body", { LayoutOrder = 5, TextColor3 = Brand.Colours.smoke, TextWrapped = true })
+	if giltPrice then
+		local after = Closet.gilt - giltPrice
+		Theme.text(content, string.format("%s Gilt  ·  you hold %s%s", RoundPanel.number(giltPrice), RoundPanel.number(Closet.gilt), if after >= 0 then string.format(", %s after", RoundPanel.number(after)) else ""), 14, "bodyBold", { LayoutOrder = 6, TextColor3 = if after >= 0 then Brand.Colours.lightGold else Color3.fromRGB(240, 120, 120) })
+	end
+	local keys = Instance.new("Frame")
+	keys.BackgroundTransparency = 1
+	keys.Size = UDim2.new(1, 0, 0, 46)
+	keys.LayoutOrder = 7
+	keys.Parent = content
+	Theme.list(keys, 10, true).HorizontalAlignment = Enum.HorizontalAlignment.Center
+	if onBuy and giltPrice then
+		local enough = Closet.gilt >= giltPrice
+		Theme.key(keys, if enough then "Buy for " .. RoundPanel.number(giltPrice) .. " Gilt" else "Not enough Gilt", enough, function()
+			if not enough then
+				return
+			end
+			Root.close(CARD)
+			onBuy()
+		end, 230).LayoutOrder = 1
+	end
+	Theme.key(keys, if onBuy then "Not now" else "Close", false, function()
+		Root.close(CARD)
+	end, 130).LayoutOrder = 2
+	Root.open(CARD, group)
+end
+BoutiquePanel.closer = closer
+
 -- One piece on the shelf.
 local function row(parent: Instance, card: Card, order: number, mode: "robux" | "gilt" | "show")
 	local r = Instance.new("Frame")
@@ -102,10 +154,20 @@ local function row(parent: Instance, card: Card, order: number, mode: "robux" | 
 	local corner = Instance.new("UICorner")
 	corner.CornerRadius = UDim.new(0, 2)
 	corner.Parent = r
-	-- Its picture: the piece itself, drawn in its own colours (ProductArt).
+	-- Its picture: the piece itself, drawn in its own colours (ProductArt); a tap for a closer look.
 	local art = ProductArt.draw(r, card.kind, card.style, 66)
 	art.Name = "Swatch"
 	art.Position = UDim2.fromOffset(10, 10)
+	local look = Instance.new("TextButton")
+	look.Name = "Preview"
+	look.Text = ""
+	look.BackgroundTransparency = 1
+	look.Size = UDim2.fromOffset(66, 66)
+	look.Position = UDim2.fromOffset(10, 10)
+	look.Parent = r
+	look.Activated:Connect(function()
+		closer(card, nil, nil)
+	end)
 	local texts = Instance.new("Frame")
 	texts.BackgroundTransparency = 1
 	texts.Position = UDim2.fromOffset(88, 8)
@@ -115,6 +177,8 @@ local function row(parent: Instance, card: Card, order: number, mode: "robux" | 
 	Theme.text(texts, card.kindName or "", 10, "caps", { LayoutOrder = 1, TextXAlignment = Enum.TextXAlignment.Left })
 	Theme.text(texts, card.name, 17, "display", { LayoutOrder = 2, TextXAlignment = Enum.TextXAlignment.Left })
 	Theme.text(texts, card.line or "", 12, "body", { LayoutOrder = 3, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Brand.Colours.smoke })
+	-- (Every piece in the house is for good: said plainly, on every one.)
+	Theme.text(texts, PERMANENT, 10, "bodyBold", { LayoutOrder = 4, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(255, 196, 160) })
 	local actions = Instance.new("Frame")
 	actions.BackgroundTransparency = 1
 	actions.AnchorPoint = Vector2.new(1, 0.5)
@@ -156,7 +220,9 @@ local function row(parent: Instance, card: Card, order: number, mode: "robux" | 
 		if type(card.giltAlt) == "number" then
 			local enough = Closet.gilt >= card.giltAlt
 			local g = Theme.key(actions, RoundPanel.number(card.giltAlt) .. " Gilt", not both and enough, function()
-				after(Closet.ask({ op = "buyGilt", item = card.id }), "It's yours.")
+				closer(card, card.giltAlt, function()
+					after(Closet.ask({ op = "buyGilt", item = card.id }), "It's yours.")
+				end)
 			end, 150)
 			g.Size = UDim2.fromOffset(150, h)
 			g.LayoutOrder = 2
@@ -173,7 +239,9 @@ local function row(parent: Instance, card: Card, order: number, mode: "robux" | 
 			Theme.text(actions, "For " .. tostring(card.standing) .. "s", 12, "body", { LayoutOrder = 1, TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = Brand.Colours.dim })
 		else
 			local buy = Theme.key(actions, RoundPanel.number(card.gilt or 0) .. " Gilt", true, function()
-				after(Closet.ask({ op = "buyGilt", item = card.id }), "It's yours.")
+				closer(card, card.gilt or 0, function()
+					after(Closet.ask({ op = "buyGilt", item = card.id }), "It's yours.")
+				end)
 			end, 150)
 			buy.Size = UDim2.fromOffset(150, 34)
 			buy.LayoutOrder = 1
@@ -232,7 +300,9 @@ local function render()
 			r.BackgroundColor3 = if o.best then Color3.fromRGB(34, 26, 12) else Color3.fromRGB(16, 16, 20)
 			r.BackgroundTransparency = 0.15
 			local asideText = if o.disabled and type(o.why) == "string" then o.why elseif type(o.status) == "string" then o.status else nil
+			local term = ProductConfig.term(tostring(o.key))
 			local high = 20 + (if o.best then 15 else 0) + 30 + 3 + Theme.measure(o.line or "", 12, Brand.Fonts.body, textW).Y
+				+ (if term ~= "" then 3 + Theme.measure(term, 11, Brand.Fonts.bodyBold, textW).Y else 0)
 				+ (if asideText then 3 + Theme.measure(asideText, 11, Brand.Fonts.bodyMedium, textW).Y else 0) + 6
 			r.Size = UDim2.new(1, 0, 0, math.max(86, math.ceil(high)))
 			r.LayoutOrder = add()
@@ -256,11 +326,15 @@ local function render()
 			end
 			Theme.text(texts, o.name, 22, "display", { LayoutOrder = 1, TextXAlignment = Enum.TextXAlignment.Left })
 			Theme.text(texts, o.line or "", 12, "body", { LayoutOrder = 2, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Brand.Colours.smoke, TextWrapped = true })
+			-- What it is, plainly: for good, for a time (and how long), or used once; what's in it.
+			if term ~= "" then
+				Theme.text(texts, term, 11, "bodyBold", { LayoutOrder = 3, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(255, 196, 160), TextWrapped = true }).Name = "Term"
+			end
 			-- What the server says about it now (Luck's time left, a rain waiting), or why it
 			-- can't be bought just now.
 			local aside = if o.disabled and type(o.why) == "string" then o.why elseif type(o.status) == "string" then o.status else nil
 			if aside then
-				Theme.text(texts, aside, 11, "bodyMedium", { LayoutOrder = 3, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Brand.Colours.lightGold, TextWrapped = true })
+				Theme.text(texts, aside, 11, "bodyMedium", { LayoutOrder = 4, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Brand.Colours.lightGold, TextWrapped = true })
 			end
 			local compose = o.action == "compose"
 			local k = Theme.key(r, if compose then "Write it" else robux(o.price), not o.disabled, function()

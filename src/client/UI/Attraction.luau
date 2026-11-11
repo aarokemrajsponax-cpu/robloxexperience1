@@ -4,7 +4,8 @@
 -- they're out. What the server tells them about it (the Attraction event) comes here first: going
 -- in and out, the house's notices, the board at the Luxe Lounge's lectern, and Stride while they
 -- walk a treadmill in the Lounge (a small count at the foot of the screen). Luxury Island's jet
--- flies them in and home (World/IslandView), and the Jet Lounge's card opens from its arch.
+-- flies them in and home (World/IslandView), and the Jet Lounge's card opens from its arch. The
+-- Grand Ballroom's screen, cards and hall (UI/GalaHud, UI/GalaPanel, World/GalaView) too.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -17,6 +18,9 @@ local BasementHud = require(script.Parent.BasementHud)
 local BasementPanel = require(script.Parent.BasementPanel)
 local ExecutiveHud = require(script.Parent.ExecutiveHud)
 local ExecutivePanel = require(script.Parent.ExecutivePanel)
+local GalaHud = require(script.Parent.GalaHud)
+local GalaPanel = require(script.Parent.GalaPanel)
+local GalaView = require(script.Parent.Parent.World.GalaView)
 local IslandHud = require(script.Parent.IslandHud)
 local IslandPanel = require(script.Parent.IslandPanel)
 local IslandView = require(script.Parent.Parent.World.IslandView)
@@ -101,6 +105,18 @@ local function follow()
 	else
 		IslandHud.unmount()
 	end
+	-- The Grand Ballroom: its screen, and the hall's light, music and dance floor on this one.
+	if id == "gala" then
+		GalaHud.mount()
+		GalaView.enter()
+	else
+		GalaHud.unmount()
+		GalaView.leave()
+		GalaPanel.closePoses()
+		if GalaPanel.isOpen() then
+			Root.close("GalaCard")
+		end
+	end
 end
 
 function Attraction.start()
@@ -126,6 +142,30 @@ function Attraction.start()
 		IslandView.update(st)
 		IslandHud.update(st)
 	end
+	-- The Grand Ballroom: one state for its screen and the hall; its cards; poses in photo mode.
+	GalaView.changed = GalaHud.update
+	GalaHud.openPanel = GalaPanel.open
+	GalaPanel.move = GalaView.move
+	GalaPanel.stop = GalaView.stopMove
+	GalaPanel.state = GalaView.state
+	GalaPanel.changed = GalaView.update
+	GalaPanel.invite = function(userId: number, name: string)
+		require(script.Parent.TradePanel).invite(userId, name)
+	end
+	GalaView.photo = function()
+		local PhotoMode = require(script.Parent.PhotoMode)
+		PhotoMode.enter()
+		if PhotoMode.isActive() then
+			GalaPanel.poses()
+			task.spawn(function()
+				while PhotoMode.isActive() do
+					task.wait(0.3)
+				end
+				GalaPanel.closePoses()
+			end)
+		end
+	end
+	GalaView.start()
 	Remotes.event("Attraction").OnClientEvent:Connect(function(m: any)
 		if type(m) ~= "table" then
 			return
@@ -165,6 +205,13 @@ function Attraction.start()
 				require(script.Parent.AuctionPanel).open()
 			elseif m.id == "island" then
 				IslandPanel.open(if type(m.which) == "string" then m.which else nil)
+			elseif m.id == "gala" then
+				GalaPanel.open(if type(m.which) == "string" then m.which else nil)
+			end
+		elseif op == "gala" then
+			GalaView.on(m)
+			if GalaHud.mounted() then
+				GalaHud.on(m)
 			end
 		elseif op == "stride" then
 			strideChip(m)

@@ -97,6 +97,62 @@ function Sound.score(id: string, volume: number?): () -> ()
 	end
 end
 
+-- A record that loops (the Grand Ballroom's jukebox): like a score, but round and round, and
+-- started `at` seconds in (so everyone in the hall hears the same bar). Returns the function that
+-- fades it out, and the Sound (its TimePosition is the beat the dance floor lights to).
+function Sound.scoreLoop(id: string, volume: number?, at: number?): (() -> (), Sound?)
+	if id == "" then
+		return function() end, nil
+	end
+	scoring += 1
+	TweenService:Create(music, TweenInfo.new(1.2, Enum.EasingStyle.Sine), { Volume = levels.music * 0.12 }):Play()
+	local s = Instance.new("Sound")
+	s.Name = "Record"
+	s.SoundId = id
+	s.Volume = 0
+	s.Looped = true
+	s.SoundGroup = show
+	s.Parent = SoundService
+	s:Play()
+	local start = at or 0
+	if start > 0 then
+		-- (Once Roblox knows its length: the same moment in it as everyone else.)
+		task.spawn(function()
+			for _ = 1, 40 do
+				local ok, len = pcall(function()
+					return s.TimeLength
+				end)
+				if not s.Parent then
+					return
+				end
+				if ok and type(len) == "number" and len > 1 then
+					pcall(function()
+						s.TimePosition = start % len
+					end)
+					return
+				end
+				task.wait(0.25)
+			end
+		end)
+	end
+	TweenService:Create(s, TweenInfo.new(1, Enum.EasingStyle.Sine), { Volume = volume or 0.8 }):Play()
+	local stopped = false
+	return function()
+		if stopped then
+			return
+		end
+		stopped = true
+		scoring = math.max(0, scoring - 1)
+		TweenService:Create(s, TweenInfo.new(1.2, Enum.EasingStyle.Sine), { Volume = 0 }):Play()
+		task.delay(1.3, function()
+			s:Destroy()
+		end)
+		if scoring == 0 then
+			TweenService:Create(music, TweenInfo.new(2.5, Enum.EasingStyle.Sine), { Volume = if dipped then levels.music * 0.45 else levels.music }):Play()
+		end
+	end, s
+end
+
 -- A show's music as a playlist (Admin Abuse, an effect switched on): `songs` play one after
 -- another in a shuffled order, each at its own gain, round and round, at the music level while
 -- the house's music sinks under it. Returns a function that fades it out (and brings the house's

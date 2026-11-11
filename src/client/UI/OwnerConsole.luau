@@ -66,6 +66,8 @@ local minutes = 15
 local nightChoice: string? = nil -- the night chosen for the next Admin Abuse (nil: a surprise)
 local headlineStyle = "gold"
 local welcomed = false
+local trendView: { [string]: any }? = nil -- Trend Watch, as the server last told it (LIVE OPS)
+local trendAsked = -math.huge
 
 local function ask(request: { [string]: any }): any
 	local ok, result = pcall(function()
@@ -369,6 +371,27 @@ function OwnerConsole.open(startPage: string?)
 				notice(done, false, 2.5)
 			end
 			reload(r)
+		end)
+	end
+
+	-- Trend Watch's own requests: the answer is Trend Watch's view, not the console's state.
+	local function trendSend(request: { [string]: any }, done: string?)
+		trendAsked = os.clock()
+		task.spawn(function()
+			local r = ask(request)
+			if type(r) == "table" and r.ok == true then
+				trendView = r
+				if done then
+					notice(done, false, 2.5)
+				end
+			elseif type(r) == "table" and r.why then
+				notice(tostring(r.why), true)
+			else
+				notice("The house didn't answer just now.", true)
+			end
+			if group.Parent and page == "live" then
+				render()
+			end
 		end)
 	end
 
@@ -836,6 +859,115 @@ function OwnerConsole.open(startPage: string?)
 				if w.event then
 					tile(g2, i * 2 + 1, accent, { id = "liveEvent" .. tostring(w.id), glyph = "▶️", name = "Start " .. tostring(w.name) .. scopeText(), line = "Its event, now." }, function()
 						send({ op = "event", id = w.event, minutes = minutes, everywhere = everywhere }, tostring(w.name) .. scopeText() .. ".")
+					end)
+				end
+			end
+			-- Trend Watch: the house's own numbers, and the owner's ideas.
+			local tv = trendView
+			if (tv == nil or os.clock() - trendAsked > 60) and os.clock() - trendAsked > 5 then
+				trendSend({ op = "trends" }, nil)
+			end
+			local MUTED = rgb(170, 164, 150)
+			local s4 = section("TREND WATCH", "What guests did most today (since midnight UTC), counted in every server, beside yesterday. These are the house's own numbers: no outside trend source is connected, so nothing here says what's popular anywhere else.")
+			if tv == nil then
+				label(s4, "Reading the house's numbers…", 12, BODY, MUTED, { LayoutOrder = 3, TextXAlignment = Enum.TextXAlignment.Left })
+			elseif type(tv.trends) ~= "table" or #tv.trends == 0 then
+				label(s4, "Nothing counted yet today. The numbers arrive as guests play: each server adds its counts every two minutes.", 12, BODY, MUTED, { LayoutOrder = 3, TextXAlignment = Enum.TextXAlignment.Left, AutomaticSize = Enum.AutomaticSize.Y, Size = UDim2.new(1, 0, 0, 0) })
+			else
+				local function thousands(n: number): string
+					local text = tostring(math.floor(n))
+					local out = string.reverse((string.gsub(string.reverse(text), "(%d%d%d)", "%1,")))
+					return (string.gsub(out, "^,", ""))
+				end
+				local list = Instance.new("Frame")
+				list.Name = "TrendRows"
+				list.BackgroundTransparency = 1
+				list.Size = UDim2.new(1, 0, 0, 0)
+				list.AutomaticSize = Enum.AutomaticSize.Y
+				list.LayoutOrder = 3
+				list.Parent = s4
+				local ll = Instance.new("UIListLayout")
+				ll.Padding = UDim.new(0, 3)
+				ll.SortOrder = Enum.SortOrder.LayoutOrder
+				ll.Parent = list
+				local function row(i: number, name: string, today: string, before: string, change: string, changeColour: Color3, head: boolean)
+					local f = Instance.new("Frame")
+					f.Name = if head then "TrendHead" else "Trend" .. i
+					f.LayoutOrder = i
+					f.Size = UDim2.new(1, 0, 0, if head then 20 else 26)
+					f.BackgroundColor3 = rgb(30, 27, 34)
+					f.BackgroundTransparency = if head then 1 elseif i % 2 == 0 then 0.35 else 0.65
+					f.Parent = list
+					corner(f, 6)
+					local size = if head then 10 else 12
+					local font = if head then HEAVY else BODY
+					local dim = if head then MUTED else rgb(236, 228, 210)
+					label(f, name, size, font, dim, { Position = UDim2.fromOffset(10, 0), Size = UDim2.new(0.52, -10, 1, 0), TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = false, TextTruncate = Enum.TextTruncate.AtEnd })
+					label(f, today, size, if head then HEAVY else BOLD, if head then MUTED else GOLD, { Position = UDim2.fromScale(0.52, 0), Size = UDim2.new(0.16, 0, 1, 0), TextXAlignment = Enum.TextXAlignment.Right })
+					label(f, before, size, font, MUTED, { Position = UDim2.fromScale(0.68, 0), Size = UDim2.new(0.16, 0, 1, 0), TextXAlignment = Enum.TextXAlignment.Right })
+					label(f, change, size, if head then HEAVY else BOLD, changeColour, { Position = UDim2.fromScale(0.84, 0), Size = UDim2.new(0.16, -10, 1, 0), TextXAlignment = Enum.TextXAlignment.Right })
+				end
+				if tv.partial == true then
+					label(s4, "Part of the record couldn't be read just now, so some of these are lower than they are. Look again in a minute.", 11, BODY, rgb(255, 170, 120), { LayoutOrder = 2, TextXAlignment = Enum.TextXAlignment.Left, AutomaticSize = Enum.AutomaticSize.Y, Size = UDim2.new(1, 0, 0, 0) })
+				end
+				row(0, "WHAT GUESTS DID", "TODAY", "YESTERDAY", "CHANGE", MUTED, true)
+				for i, t in tv.trends :: { any } do
+					if i > 14 then
+						break
+					end
+					local change, colour = "new today", rgb(150, 210, 255)
+					if type(t.change) == "number" then
+						change = (if t.change > 0 then "+" else "") .. tostring(t.change) .. "%"
+						colour = if t.change > 0 then rgb(120, 220, 140) elseif t.change < 0 then rgb(255, 140, 130) else MUTED
+					end
+					row(i, tostring(t.name), thousands(tonumber(t.today) or 0), thousands(tonumber(t.yesterday) or 0), change, colour, false)
+				end
+			end
+			if tv and tv.owner == true then
+				local s5 = section("TREND IDEAS", "Your notes on what's worth borrowing from: an event format, a collectible theme, a seasonal look. Inspiration only: build something of the house's own, never someone else's characters, names, music or art. An idea stays an idea until you approve it, and approving one changes nothing in the game by itself.")
+				local idea = Instance.new("TextBox")
+				idea.Name = "TrendIdea"
+				idea.LayoutOrder = 3
+				idea.Size = UDim2.new(1, 0, 0, 40)
+				idea.BackgroundColor3 = rgb(26, 24, 30)
+				idea.FontFace = BOLD
+				idea.TextSize = 14
+				idea.TextColor3 = rgb(250, 240, 220)
+				idea.PlaceholderText = "An idea worth trying, in your own words (up to 160 letters)…"
+				idea.PlaceholderColor3 = rgb(140, 132, 120)
+				idea.ClearTextOnFocus = false
+				idea.Text = ""
+				idea.Parent = s5
+				corner(idea, 8)
+				stroke(idea, accent, 1.5, 0.3)
+				local addRow = chips(s5)
+				addRow.LayoutOrder = 4
+				chipKey(addRow, 1, "💡 KEEP IDEA", true, accent, function()
+					local text = string.sub(idea.Text, 1, 160)
+					if string.match(text, "^%s*$") then
+						notice("Write the idea first.", true, 2)
+						return
+					end
+					trendSend({ op = "trendNote", text = text }, "Kept, as an idea.")
+				end)
+				local STATUS: { [string]: { string } } = { idea = { "💡", "IDEA" }, approved = { "✅", "APPROVED" }, declined = { "❌", "DECLINED" } }
+				for i, n in (tv.notes or {}) :: { any } do
+					if i > 12 then
+						break
+					end
+					local st = STATUS[tostring(n.status)] or STATUS.idea
+					local when = if type(n.at) == "number" then os.date("%d %b", n.at) else ""
+					local sn = section(string.format("%s  %s · %s · %s", st[1], st[2], tostring(n.by or "you"), tostring(when)), tostring(n.text))
+					sn.Name = "TrendNote" .. tostring(n.id)
+					local acts = chips(sn)
+					chipKey(acts, 1, "✅ APPROVE", n.status == "approved", rgb(120, 220, 140), function()
+						trendSend({ op = "trendStatus", id = n.id, status = "approved" }, "Approved: it's a note for the build, not part of the game yet.")
+					end)
+					chipKey(acts, 2, "❌ DECLINE", n.status == "declined", rgb(255, 140, 130), function()
+						trendSend({ op = "trendStatus", id = n.id, status = "declined" }, "Declined.")
+					end)
+					chipKey(acts, 3, "🗑 REMOVE", false, MUTED, function()
+						trendSend({ op = "trendRemove", id = n.id }, "Removed.")
 					end)
 				end
 			end

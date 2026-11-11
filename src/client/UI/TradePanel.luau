@@ -1,7 +1,7 @@
 --!strict
 -- A trade with another guest (TradeService on the server decides everything). Your offer on the
--- left (tap your curios below to add them, tap an offered one to take it back), theirs on the
--- right, exactly as the server holds them. "Lock in" when you're happy; when you both have,
+-- left (tap your curios below to add them, tap an offered one to take it back; Gilt and Gems from
+-- the purse keys), theirs on the right, exactly as the server holds them. "Lock in" when you're happy; when you both have,
 -- a short countdown, then "Confirm". Any change unlocks both of you, so nothing can change after
 -- you confirm. Cancel at any time. Invitations arrive as a small card: accept, no thanks, or block.
 
@@ -20,6 +20,27 @@ local TradePanel = {}
 local NAME = "Trade"
 local INVITE = "TradeInvite"
 local C = Brand.Colours
+local GILT, GEMS = "$gilt", "$gems" -- (an offer's Gilt and Gems, beside its curios)
+local GOLD = Color3.fromRGB(255, 204, 90)
+local GEM = Color3.fromRGB(140, 205, 255)
+
+local function commas(n: number): string
+	local text = tostring(math.floor(n))
+	local out = text:reverse():gsub("(%d%d%d)", "%1,"):reverse()
+	return if out:sub(1, 1) == "," then out:sub(2) else out
+end
+
+-- An offer's Gilt and Gems in a few words ("" for none).
+local function purseLine(offer: { [string]: number }): string
+	local parts = {}
+	if (offer[GILT] or 0) > 0 then
+		table.insert(parts, "💰 " .. commas(offer[GILT]) .. " Gilt")
+	end
+	if (offer[GEMS] or 0) > 0 then
+		table.insert(parts, "💎 " .. commas(offer[GEMS]) .. " Gems")
+	end
+	return table.concat(parts, "   ·   ")
+end
 
 local state: { [string]: any }? = nil
 local refresh: (() -> ())? = nil
@@ -51,7 +72,10 @@ local function offerRow(parent: Instance, offer: { [string]: number }, onTap: ((
 	grid.Parent = parent
 	local ids = {}
 	for id in offer do
-		table.insert(ids, id)
+		-- (Curios only: an offer's Gilt and Gems are shown along the side's foot.)
+		if Curios.byId[id] then
+			table.insert(ids, id)
+		end
 	end
 	table.sort(ids, Curios.compare)
 	for i, id in ids do
@@ -116,22 +140,31 @@ function TradePanel.open()
 	local mineBox = box(sides, "Mine", 1, UDim2.new(0.5, -4, 1, 0))
 	local theirsBox = box(sides, "Theirs", 2, UDim2.new(0.5, -4, 1, 0))
 	theirsBox.Position = UDim2.new(0.5, 4, 0, 0)
-	Theme.text(content, "Your curios: tap one to offer it", 12, "caps", { LayoutOrder = 4, TextXAlignment = Enum.TextXAlignment.Left })
+	-- The purse: Gilt and Gems to add to your side (the server checks every one).
+	local purse = Instance.new("Frame")
+	purse.Name = "Purse"
+	purse.BackgroundTransparency = 1
+	purse.Size = UDim2.new(1, 0, 0, 36)
+	purse.LayoutOrder = 4
+	purse.Parent = content
+	local purseRow = Theme.list(purse, 6, true)
+	purseRow.HorizontalAlignment = Enum.HorizontalAlignment.Left
+	Theme.text(content, "Your curios: tap one to offer it", 12, "caps", { LayoutOrder = 5, TextXAlignment = Enum.TextXAlignment.Left })
 	local shelf = Instance.new("ScrollingFrame")
 	shelf.Name = "YourCurios"
 	shelf.BackgroundTransparency = 1
 	shelf.BorderSizePixel = 0
-	shelf.Size = UDim2.new(1, 0, 1, -(30 + 22 + 200 + 20 + 60 + 40))
+	shelf.Size = UDim2.new(1, 0, 1, -(30 + 22 + 200 + 20 + 60 + 40 + 44))
 	shelf.CanvasSize = UDim2.new()
 	shelf.AutomaticCanvasSize = Enum.AutomaticSize.Y
 	shelf.ScrollBarThickness = 3
-	shelf.LayoutOrder = 5
+	shelf.LayoutOrder = 6
 	shelf.Parent = content
 	local keys = Instance.new("Frame")
 	keys.Name = "Keys"
 	keys.BackgroundTransparency = 1
 	keys.Size = UDim2.new(1, 0, 0, 48)
-	keys.LayoutOrder = 6
+	keys.LayoutOrder = 7
 	keys.Parent = content
 	Theme.list(keys, 8, true).HorizontalAlignment = Enum.HorizontalAlignment.Center
 
@@ -158,11 +191,30 @@ function TradePanel.open()
 			list.Name = "Items"
 			list.BackgroundTransparency = 1
 			list.Position = UDim2.fromOffset(8, 34)
-			list.Size = UDim2.new(1, -16, 1, -40)
+			list.Size = UDim2.new(1, -16, 1, -66)
 			list.ClipsDescendants = true
 			list.Parent = b
 			items[b] = list
 		end
+		-- Each side's Gilt and Gems, along its foot.
+		local function money(b: Frame, offer: { [string]: number })
+			local line = purseLine(offer)
+			local t = Instance.new("TextLabel")
+			t.Name = "Money"
+			t.BackgroundTransparency = 1
+			t.AnchorPoint = Vector2.new(0, 1)
+			t.Position = UDim2.new(0, 10, 1, -6)
+			t.Size = UDim2.new(1, -20, 0, 20)
+			t.TextTruncate = Enum.TextTruncate.AtEnd
+			t.Text = if line == "" then "No Gilt or Gems" else line
+			t.TextXAlignment = Enum.TextXAlignment.Left
+			t.FontFace = Brand.Fonts.bodyBold
+			t.TextSize = 13
+			t.TextColor3 = if line == "" then C.dim else GOLD
+			t.Parent = b
+		end
+		money(mineBox, s.mine)
+		money(theirsBox, s.theirs)
 		local function head(b: Frame, text: string, ok: boolean)
 			local t = Instance.new("TextLabel")
 			t.Name = "Heading"
@@ -187,6 +239,70 @@ function TradePanel.open()
 			setOffer(o)
 		end)
 		offerRow(items[theirsBox], s.theirs)
+		-- The purse keys: add Gilt or Gems to your side (never more than you hold, or a trade's
+		-- limit), or clear them.
+		for _, c in purse:GetChildren() do
+			if c:IsA("GuiObject") then
+				c:Destroy()
+			end
+		end
+		local gilt = tonumber((game:GetService("Players").LocalPlayer :: Player):GetAttribute("Gilt")) or 0
+		local gems = tonumber((game:GetService("Players").LocalPlayer :: Player):GetAttribute("Gems")) or 0
+		local function purseKey(text: string, colour: Color3, width: number, fn: () -> ())
+			local k = Theme.key(purse, text, false, fn, width)
+			k.Size = UDim2.fromOffset(width, 34)
+			k.TextColor3 = colour
+			return k
+		end
+		local function add(key: string, n: number, most: number)
+			local o = table.clone(mine) :: { [string]: number? }
+			local now = (o[key] or 0) :: number
+			o[key] = math.min(now + n, most)
+			if (o[key] :: number) <= now then
+				Toast.show("Trading", if key == GILT then "That's all the Gilt you can offer." else "That's all the Gems you can offer.", 2.5)
+				return
+			end
+			setOffer(o)
+		end
+		local function clear(key: string)
+			local o = table.clone(mine) :: { [string]: number? }
+			o[key] = nil
+			setOffer(o)
+		end
+		local maxGilt = math.min(tonumber(s.maxGilt) or 100000, gilt)
+		local order = 0
+		local function nextOrder(): number
+			order += 1
+			return order
+		end
+		purseKey("💰 +100", GOLD, 84, function()
+			add(GILT, 100, maxGilt)
+		end).LayoutOrder = nextOrder()
+		purseKey("+1,000", GOLD, 80, function()
+			add(GILT, 1000, maxGilt)
+		end).LayoutOrder = nextOrder()
+		purseKey("+10,000", GOLD, 88, function()
+			add(GILT, 10000, maxGilt)
+		end).LayoutOrder = nextOrder()
+		if (mine[GILT] or 0) > 0 then
+			purseKey("No Gilt", C.smoke, 84, function()
+				clear(GILT)
+			end).LayoutOrder = nextOrder()
+		end
+		if s.paid == true then
+			local maxGems = math.min(tonumber(s.maxGems) or 100, gems, tonumber(s.gemsLeft) or 0)
+			purseKey("💎 +1", GEM, 64, function()
+				add(GEMS, 1, maxGems)
+			end).LayoutOrder = nextOrder()
+			purseKey("+10", GEM, 58, function()
+				add(GEMS, 10, maxGems)
+			end).LayoutOrder = nextOrder()
+			if (mine[GEMS] or 0) > 0 then
+				purseKey("No Gems", C.smoke, 84, function()
+					clear(GEMS)
+				end).LayoutOrder = nextOrder()
+			end
+		end
 		-- Your tradeable curios, less what's already offered.
 		for _, c in shelf:GetChildren() do
 			c:Destroy()
@@ -291,7 +407,7 @@ function TradePanel.invited(m: { [string]: any })
 	local group, content = Theme.glass(Root.panels, INVITE, UDim2.fromOffset(math.min(420, Root.size().X - 24), 210))
 	Theme.list(content, 8).VerticalAlignment = Enum.VerticalAlignment.Top
 	Theme.text(content, "A trade?", 22, "display", { LayoutOrder = 1 })
-	Theme.text(content, tostring(m.from) .. " would like to trade curios with you.", 14, "body", { LayoutOrder = 2, TextColor3 = C.smoke })
+	Theme.text(content, tostring(m.from) .. " would like to trade with you.", 14, "body", { LayoutOrder = 2, TextColor3 = C.smoke })
 	local keys = Instance.new("Frame")
 	keys.BackgroundTransparency = 1
 	keys.Size = UDim2.new(1, 0, 0, 48)

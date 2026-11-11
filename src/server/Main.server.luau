@@ -144,6 +144,14 @@ task.spawn(Pianist.spawn, staffFolder)
 
 local Analytics = require(script.Parent.Analytics)
 boot("Analytics", Analytics.start)
+-- Trend Watch (the owner's LIVE OPERATIONS page): the house's own counts of what guests do, from
+-- every server, and the owner's ideas. No outside trend source.
+boot("Trend Watch", function()
+	local TrendWatch = require(script.Parent.TrendWatch)
+	Analytics.observed = TrendWatch.event
+	require(script.Parent.Collection).observed = TrendWatch.did
+	TrendWatch.start()
+end)
 
 local Boards = require(script.Parent.Boards)
 local Memory = require(script.Parent.Memory)
@@ -529,6 +537,19 @@ require(script.Parent.Seating).suiteData = SuiteVisits.dataFor
 Shop.pushed = SuiteVisits.hostChanged
 boot("Friends", Friends.start)
 boot("Suite visits", SuiteVisits.start)
+-- The Vault's and the Suite's displays: featured curios, the arrangement, who may look round a
+-- Vault or visit a Suite (Suite visits ask), the Suite's themes, invitations.
+boot("The displays", function()
+	local Showcase = require(script.Parent.Showcase)
+	SuiteVisits.mayVisit = Showcase.mayVisitSuite
+	Showcase.suiteChanged = function(_host: Player)
+		SuiteVisits.sweep()
+	end
+	Showcase.invitedTo = function(guest: Player, host: Player)
+		Remotes.event("Shop"):FireClient(guest, { op = "notice", title = "An invitation", line = require(ReplicatedStorage.Shared.Names).of(host) .. " invites you to their Suite. The Suites key takes you there." })
+	end
+	Showcase.start()
+end)
 Archivist.onSpeak = function(player)
 	local V = require(ReplicatedStorage.Shared.Voice)
 	Dialogue.say(player, V.Archivist.speaker, V.Archivist.kept, nil, nil, 2.5)
@@ -803,6 +824,13 @@ boot("The Evening Calendar", Calendar.start)
 local Newcomer = require(script.Parent.Newcomer)
 GiltService.welcome = Newcomer.mult
 boot("The newcomer's welcome", Newcomer.start)
+-- The daily streak: a little more Gilt for every day in a row, and a few Gems at its milestones.
+local Streak = require(script.Parent.Streak)
+GiltService.streak = Streak.mult
+Streak.gemsGiven = function(player: Player)
+	require(script.Parent.Curios).push(player)
+end
+boot("The daily streak", Streak.start)
 -- Moments the Badge Book counts.
 require(script.Parent.TradeService).traded = function(player)
 	Achievements.tally(player, "trades", 1)

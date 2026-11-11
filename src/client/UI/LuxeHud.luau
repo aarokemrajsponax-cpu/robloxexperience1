@@ -69,7 +69,7 @@ local function place()
 	end
 	-- Under whatever stands along the top, and under the row of keys at the top right (Shop, Menu,
 	-- Settings: their foot is at 118).
-	local y = math.max(Root.topClear() + 6, 126)
+	local y = math.max(Root.topClear("Luxe") + 6, 126)
 	c.Position = UDim2.new(0.5, 0, 0, y)
 	Root.setTop("Luxe", y + CARD_H + 4, CARD_W / 2)
 	local k = keys

@@ -90,6 +90,10 @@ function Empire.start()
 	end)
 	part("The herald", Herald.start)
 	part("Prestige", Prestige.start)
+	-- The Grand Ballroom's Hall of Fame: the house's best on six boards, from every server.
+	part("The Hall of Fame", function()
+		require(script.Parent.HallOfFame).start()
+	end)
 	part("The attractions", function()
 		Attractions.isSeated = function(player: Player): boolean
 			return Empire.isSeated(player)

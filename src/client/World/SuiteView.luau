@@ -562,7 +562,76 @@ end
 
 local welcomed = false
 
+---------------------------------------------------------------------------------------------------
+-- The Suite's look (shared/Showcase): its walls, trim and parquet in the theme its owner chose
+-- (the host's when visiting); the house's own, Maison Noir, as it was built.
+---------------------------------------------------------------------------------------------------
+local Showcase = require(ReplicatedStorage.Shared.Showcase)
+local built: { [BasePart]: Color3 } = {}
+local suiteModel: Instance? = nil
+local lastTheme = "noir"
+
+local function findSuite(): Instance?
+	local m = suiteModel
+	if m and m.Parent then
+		return m
+	end
+	for _, d in Workspace:GetDescendants() do
+		if d:IsA("Model") and d.Name == "Suite" and d:FindFirstChild("Skirting") then
+			suiteModel = d
+			return d
+		end
+	end
+	return nil
+end
+
+local TRIM = { Skirting = true, PictureRail = true, WallCap = true, Cornice = true }
+local function role(name: string): string?
+	if TRIM[name] then
+		return "trim"
+	elseif string.sub(name, 1, 4) == "Wall" or string.sub(name, 1, 11) == "GalleryWall" then
+		return "walls"
+	elseif name == "Parquet" then
+		return "floor"
+	end
+	return nil
+end
+
+local function themeNow(): string
+	local v = visiting
+	local who = if v then Players:GetPlayerByUserId(v.userId) else player
+	local id = who and who:GetAttribute("SuiteTheme")
+	return if type(id) == "string" then id else "noir"
+end
+
+function SuiteView.retheme()
+	local m = findSuite()
+	if not m then
+		return
+	end
+	local t = Showcase.themeById[themeNow()]
+	for _, d in m:GetChildren() do
+		if d:IsA("BasePart") then
+			local r = role(d.Name)
+			if r then
+				local was = built[d]
+				if not was then
+					was = d.Color
+					built[d] = was
+				end
+				if not t or t.id == "noir" then
+					d.Color = was
+				else
+					d.Color = if r == "trim" then t.trim elseif r == "floor" then t.floor else t.walls
+				end
+			end
+		end
+	end
+end
+
 function SuiteView.start()
+	player:GetAttributeChangedSignal("SuiteTheme"):Connect(SuiteView.retheme)
+	task.defer(SuiteView.retheme)
 	doors()
 	Closet.Changed:Connect(function()
 		doors()
@@ -587,6 +656,7 @@ function SuiteView.start()
 			visiting = nil
 		end
 		doors()
+		SuiteView.retheme()
 		if inside then
 			task.spawn(draw)
 		end
@@ -627,6 +697,12 @@ function SuiteView.start()
 				clear()
 			end
 			privacy()
+			-- (A host who chooses another look: their visitors see it at once.)
+			local want = themeNow()
+			if want ~= lastTheme then
+				lastTheme = want
+				SuiteView.retheme()
+			end
 			task.wait(0.25)
 		end
 	end)

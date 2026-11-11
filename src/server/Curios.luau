@@ -106,6 +106,21 @@ function Curios.give(player: Player?, data: Profiles.Data, id: string, n: number
 	while #b.recent > RECENT do
 		table.remove(b.recent)
 	end
+	-- The acquisition history (the Vault's display: shared/Showcase), and when each was first had.
+	local bb = b :: any
+	if type(bb.history) ~= "table" then
+		bb.history = {}
+	end
+	table.insert(bb.history, 1, { id = id, n = n or 1, at = os.time(), source = source or "" })
+	while #bb.history > 40 do
+		table.remove(bb.history)
+	end
+	if type(bb.first) ~= "table" then
+		bb.first = {}
+	end
+	if bb.first[id] == nil then
+		bb.first[id] = os.time()
+	end
 	if player then
 		Analytics.custom(player, "Curio", n or 1, { curio = id, rarity = c.rarity, source = source or "" })
 	end

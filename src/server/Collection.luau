@@ -99,8 +99,12 @@ local function tick(player: Player, slot: string, g: Commissions.Goal, kind: Com
 	end
 end
 
+-- Something a Commission might count happened (set by Main: Trend Watch counts it).
+Collection.observed = function(_kind: string, _amount: number?) end
+
 -- Something happened that a Commission might count.
 function Collection.event(player: Player, kind: Commissions.Kind, room: string?, case: string?, amount: number?)
+	pcall(Collection.observed, kind, amount)
 	tick(player, "evening", Commissions.evening(), kind, room, case, amount)
 	tick(player, "week", Commissions.weekly(), kind, room, case, amount)
 	tick(player, "season", Commissions.seasonal(), kind, room, case, amount)

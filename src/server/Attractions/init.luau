@@ -32,6 +32,7 @@ local Luxe = require(script.Luxe)
 local Basement = require(script.Basement)
 local ExecutiveGame = require(script.Executive)
 local IslandGame = require(script.Island)
+local GalaGame = require(script.Gala)
 
 local Attractions = {}
 
@@ -53,6 +54,7 @@ local GAMES: { [string]: Types.Game } = {
 	basement = Basement :: any,
 	executive = ExecutiveGame :: any,
 	island = IslandGame :: any,
+	gala = GalaGame :: any,
 }
 
 local event = Remotes.event("Attraction")
@@ -119,6 +121,12 @@ end
 local function lobbyFrame(id: string): CFrame
 	local def = AttractionList.byId[id]
 	local room = def and (Layout :: any)[string.upper(string.sub(def.room, 1, 1)) .. string.sub(def.room, 2)]
+	-- (A room may say where a guest comes home to from its attraction: the Ballroom's great doors.)
+	local home = room and def and room[def.id .. "Home"]
+	if typeof(home) == "Vector3" then
+		local centre = if typeof(room.centre) == "Vector3" then room.centre else home
+		return CFrame.lookAt(home, Vector3.new(centre.X, home.Y, centre.Z))
+	end
 	local at: Vector3 = if room and typeof(room.arrival) == "Vector3" then room.arrival else Layout.Foyer.spawn.Position
 	local door = def and (Layout.RoomDoors :: any)[def.room]
 	local inward = if door then -door.facing else Vector3.new(0, 0, 1)

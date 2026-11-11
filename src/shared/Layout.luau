@@ -325,6 +325,10 @@ Layout.Ballroom = {
 	-- Where the camera watches from (the Gallery rail, looking into the ring).
 	galleryView = CFrame.lookAt(Vector3.new(61, 40, 73), Vector3.new(61, 22, 125)),
 	board = CFrame.lookAt(Vector3.new(61, 28, 76.3), Vector3.new(61, 28, 125)),
+	-- The great doors to the Grand Ballroom, in the middle of the north wall (World/Lobbies), and
+	-- where a guest comes home to from it: just before them, between the two nearest tables.
+	galaDoors = Vector3.new(61, 20, 181),
+	galaHome = Vector3.new(61, 20, 177.5),
 }
 
 -- Table `i` of a Ballroom ring (1 to 20): its centre, facing the middle of the room. The ring is

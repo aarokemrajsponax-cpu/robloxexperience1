@@ -757,4 +757,54 @@ function ProductConfig.validate(handlers: { [string]: boolean }?): { [string]: s
 	return problems
 end
 
+-- What a product is, plainly, for every shelf and every confirmation: whether it's yours for
+-- good or for a time (and how long), or used once, and what's in it. (`permanent` true for what
+-- stays.) Never a countdown that isn't real, never a "was" price.
+function ProductConfig.term(key: string): (string, boolean)
+	local e = ProductConfig.byKey[key]
+	if not e then
+		return "", false
+	end
+	local reward = (e :: any).Reward or {}
+	local rules = (e :: any).Rules or {}
+	local t = reward.Type
+	local function mins(seconds: number): string
+		local m = math.floor(seconds / 60 + 0.5)
+		if m >= 60 and m % 60 == 0 then
+			return string.format("%d hour%s", m // 60, if m == 60 then "" else "s")
+		end
+		return string.format("%d minute%s", m, if m == 1 then "" else "s")
+	end
+	if rules.OneTime == true or t == "GoldKey" or t == "DoubleGilt" or t == "Velocity" then
+		return "Permanent: yours for good", true
+	elseif t == "Luck" then
+		return string.format("Timed: %s of play (its clock only runs while you're here; buying more adds time)", mins(tonumber(reward.DurationSeconds) or 1800)), false
+	elseif t == "GoldenHour" then
+		return string.format("Timed: %s, for everyone in the house", mins((tonumber(reward.Minutes) or 15) * 60)), false
+	elseif t == "Rain" then
+		return string.format("One use: %d seconds of Gilt for everyone here (%d each), %d more for you", tonumber(reward.DurationSeconds) or 20, tonumber(reward.ShareGilt) or 0, tonumber(reward.PurchaserBonusGilt) or 0), false
+	elseif t == "Decree" then
+		return string.format("One use: your words on every screen for %d seconds", tonumber(reward.DisplaySeconds) or 8), false
+	elseif t == "Revive" then
+		return string.format("One use: %d more seconds on the clock", tonumber(reward.Seconds) or 15), false
+	elseif t == "Piano" then
+		return string.format("Time at the Foyer's piano: %s (it only runs while you play)", mins(tonumber(reward.Seconds) or 180)), false
+	elseif t == "Gilt" then
+		return string.format("At once: %s Gilt", ProductConfig.commas(tonumber(reward.Amount) or 0)), false
+	elseif t == "Gems" then
+		return string.format("At once: %s Gems", ProductConfig.commas(tonumber(reward.Amount) or 0)), false
+	elseif t == "Treat" then
+		return "One use: a treat from the Terrace bar", false
+	elseif t == "Spectacle" then
+		return "One use: a spectacle for your Suite, played when you choose", false
+	end
+	return "", false
+end
+
+function ProductConfig.commas(n: number): string
+	local text = tostring(math.floor(n))
+	local out = text:reverse():gsub("(%d%d%d)", "%1,"):reverse()
+	return if out:sub(1, 1) == "," then out:sub(2) else out
+end
+
 return ProductConfig

@@ -102,7 +102,11 @@ function Analytics.fields(fields: { [any]: any }?): { [string]: string }?
 	return out
 end
 
+-- Something happened (set by Main: Trend Watch counts it, whether or not Roblox's analytics is on).
+Analytics.observed = function(_name: string, _fields: { [any]: any }?) end
+
 function Analytics.custom(player: Player, name: string, value: number?, fields: { [any]: any }?)
+	pcall(Analytics.observed, name, fields)
 	if not enabled() then
 		return
 	end

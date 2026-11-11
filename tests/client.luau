@@ -3105,7 +3105,7 @@ do
 	snapshot("howto-sorting")
 	press("Rooms")
 	advance(0.6)
-	local places = { "The Salon", "The Velvet Room", "The Obsidian Room", "The Midnight Room", "The Concierge", "The Boutique", "The Vault", "The Terrace", "Your Suite" }
+	local places = { "The Salon", "The Velvet Room", "The Obsidian Room", "The Midnight Room", "The Concierge", "The Boutique", "The Vault", "The Grand Ballroom", "The Terrace", "Your Suite" }
 	local missing = {}
 	for _, name in places do
 		if not textOnScreen(name) then
@@ -4999,6 +4999,72 @@ check("Fly asks the server (which checks it's the owner)", pressNamed("Tile_fly"
 	local m = lastAsk("power")
 	return m ~= nil and m.power == "fly"
 end)())
+-- LIVE OPS: Trend Watch, the house's own numbers, and the owner's ideas.
+do
+	local consoleState = invokeResults.AdminAsk
+	invokeResults.AdminAsk = function(request)
+		if type(request) == "table" and (request.op == "trends" or request.op == "trendNote" or request.op == "trendStatus" or request.op == "trendRemove") then
+			return {
+				ok = true,
+				owner = true,
+				partial = request.op == "trendRemove",
+				trends = {
+					{ key = "visits", name = "Visits to the house", today = 1204, yesterday = 980, change = 23 },
+					{ key = "attraction:gala", name = "The Grand Ballroom: visits", today = 310, yesterday = 0 },
+					{ key = "did:race", name = "Grand Prix races finished", today = 96, yesterday = 120, change = -20 },
+				},
+				notes = {
+					{ id = 2, text = "A winter runway week: snow-white looks, voted by the guests.", status = "idea", by = "AJKR", at = 1793000000 },
+					{ id = 1, text = "A daily photo challenge on the terrace.", status = "approved", by = "AJKR", at = 1792000000 },
+				},
+			}
+		end
+		return consoleState
+	end
+	local function inNote(id: number, text: string): boolean
+		local sec = find(playerGui, function(d)
+			return d.Name == "TrendNote" .. id
+		end)
+		local b = sec and find(sec, function(d)
+			return d:IsA("TextButton") and d.Text == text
+		end)
+		if not b then
+			return false
+		end
+		signalOf(b, "Activated"):Fire()
+		return true
+	end
+	check("LIVE OPS: Trend Watch, the house's own numbers beside yesterday", pressNamed("Cat_live") and (function()
+		advance(0.8)
+		return textOnScreen("TREND WATCH") ~= nil and textOnScreen("1,204") ~= nil and textOnScreen("+23%") ~= nil and textOnScreen("-20%") ~= nil and textOnScreen("new today") ~= nil
+	end)())
+	check("...and says no outside trend source is connected", textOnScreen("no outside trend source is connected") ~= nil)
+	check("the owner's ideas: each an idea until approved", textOnScreen("TREND IDEAS") ~= nil and textOnScreen("A winter runway week") ~= nil and textOnScreen("APPROVED · AJKR") ~= nil and textOnScreen("Inspiration only") ~= nil)
+	snapshot("owner-console-trends")
+	local box = find(playerGui, function(d)
+		return d:IsA("TextBox") and d.Name == "TrendIdea"
+	end)
+	if box then
+		box.Text = "A masked-ball week in the Grand Ballroom."
+	end
+	check("an idea is kept, in the owner's words", box ~= nil and press("💡 KEEP IDEA") and (function()
+		advance(0.5)
+		local m = lastAsk("trendNote")
+		return m ~= nil and m.text == "A masked-ball week in the Grand Ballroom."
+	end)())
+	check("approved or declined by the owner, one idea at a time", inNote(2, "✅ APPROVE") and (function()
+		advance(0.5)
+		local m = lastAsk("trendStatus")
+		return m ~= nil and m.id == 2 and m.status == "approved"
+	end)())
+	check("...or removed", inNote(1, "🗑 REMOVE") and (function()
+		advance(0.5)
+		local m = lastAsk("trendRemove")
+		return m ~= nil and m.id == 1
+	end)())
+	check("when part of the record couldn't be read, the console says so", textOnScreen("Part of the record couldn't be read just now") ~= nil)
+	invokeResults.AdminAsk = consoleState
+end
 check("the classic House controls are a tap away", pressNamed("Cat_more") and pressNamed("Tile_classic_events") and (function()
 	advance(1)
 	return textOnScreen("House controls") ~= nil and textOnScreen("Golden Hour") ~= nil
@@ -8253,6 +8319,385 @@ coroutine.wrap(function()
 	LocalPlayer:SetAttribute("JetLivery", nil)
 	check("no errors with Luxury Island", #errors == errorsBefore, errors[errorsBefore + 1])
 	local _ = IslandView
+end)()
+
+---------------------------------------------------------------------------------------------------
+-- 7j. The Grand Ballroom: its screen (the record playing, the day's Gilt, the three activities,
+-- the keys), the hall's own light and the jukebox's record, the dance floor lighting to the beat,
+-- this guest's Badge Book in the gallery's frames, a trivia question at the podium, the Runway's
+-- vote, the Arena's round, the Dance & music card and the Exchange, and home again
+---------------------------------------------------------------------------------------------------
+coroutine.wrap(function()
+	local GalaHud = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "GalaHud")
+	local GalaPanel = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "GalaPanel")
+	local GalaView = module("StarterPlayer", "StarterPlayerScripts", "Client", "World", "GalaView")
+	local GalaPlan = module("ReplicatedStorage", "Shared", "Gala")
+	local RootM = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "Root")
+	local Lighting = game:GetService("Lighting")
+	local SoundService = game:GetService("SoundService")
+	local errorsBefore = #errors
+	RootM.close()
+	advance(0.5)
+	-- A few of the hall's pieces, as the server builds them: tiles, a moving light, two frames.
+	local hall = Instance.new("Model")
+	hall.Name = "GrandBallroomTest"
+	hall.Parent = workspace
+	for k = 1, 12 do
+		local t = Instance.new("Part")
+		t.Name = "Tile"
+		t.Material = roblox.Enum.Material.Glass
+		t:SetAttribute("I", k % 4 - 2)
+		t:SetAttribute("J", k // 4 - 1)
+		t:SetAttribute("Ring", k % 7)
+		t.Parent = hall
+		CollectionService:AddTag(t, "GalaTile")
+	end
+	local sweep = Instance.new("Part")
+	sweep.Name = "Sweep"
+	sweep.Parent = hall
+	CollectionService:AddTag(sweep, "GalaSweep")
+	for k = 1, 2 do
+		local f = Instance.new("Part")
+		f.Name = "GalleryFrame"
+		f.Size = roblox.Vector3.new(6.4, 6.4, 0.2)
+		f:SetAttribute("Index", k)
+		f.Parent = hall
+		CollectionService:AddTag(f, "GalaFrame")
+	end
+	local records = {}
+	for i, r in Config.data.Assets.AbuseMusic.abuse do
+		table.insert(records, { n = i, name = GalaPlan.TRACK_NAMES[i] or ("Record " .. i), id = r.id, gain = r.gain, bpm = r.bpm, beat = r.beat, votes = if i == 4 then 2 else 0 })
+	end
+	local juke = { track = 3, name = "Stadium Rave", startedAt = workspace:GetServerTimeNow() - 20, changeIn = 80, records = records, mine = nil }
+	local hallState = {
+		ok = true, juke = juke,
+		trivia = { phase = "idle", seats = 0, left = 0, seated = false },
+		runway = { phase = "signup", theme = "Midnight Gala", line = "Dark, dramatic, dressed for the last waltz.", models = 2, left = 30, mine = false },
+		arena = { phase = "idle", challenge = "spotlight", players = 0, left = 0, mine = false, serverStart = 0 },
+		today = { gilt = 312, cap = 2500, minutes = 3, minutesCap = 10, sets = { frame = true, rose = false, moon = false } },
+	}
+	invokeResults.AttractionAsk = hallState
+	invokeResults.BadgeAsk = { ok = true, earned = { firstDance = 1790000000, runwayWin = 1790500000 }, count = 2, total = 180 }
+	LocalPlayer:SetAttribute("Attraction", "gala")
+	signalOf(LocalPlayer, "attr:Attraction"):Fire()
+	serverSays("Attraction", { op = "entered", id = "gala" })
+	advance(1)
+	check("the Grand Ballroom's screen: the hall at a glance", GalaHud.mounted() and textOnScreen("THE GRAND BALLROOM") ~= nil and textOnScreen("♪  Stadium Rave  ·  the next record in 1:19") ~= nil or textOnScreen("♪  Stadium Rave  ·  the next record in 1:20") ~= nil)
+	check("...today's Gilt from the hall, of the day's most", textOnScreen("💰 312 / 2,500 today") ~= nil)
+	check("...the three activities, each with what it's doing", textOnScreen("🎓 Open") ~= nil and textOnScreen("👗 Signing up") ~= nil and textOnScreen("MIDNIGHT GALA") ~= nil and textOnScreen("🔦 Open") ~= nil and textOnScreen("SPOTLIGHT CHASE") ~= nil)
+	check("...and its keys: home to the Ballroom, Dance & music", textOnScreen("Ballroom") ~= nil and textOnScreen("Dance & music") ~= nil)
+	check("the hall's own light on this screen", Lighting:FindFirstChild("GalaBloom") ~= nil and math.abs(Lighting.ClockTime - 21) < 0.01)
+	local record = nil
+	for _, d in SoundService:GetDescendants() do
+		if d.Name == "Record" then
+			record = d
+		end
+	end
+	check("the jukebox's record plays, round and round", record ~= nil and record.SoundId == records[3].id and record.Looped == true, record and record.SoundId)
+	advance(0.5)
+	local lit = 0
+	for _, t in CollectionService:GetTagged("GalaTile") do
+		if t.Material == roblox.Enum.Material.Neon then
+			lit += 1
+		end
+	end
+	check("the dance floor lights to the beat", lit > 0 and lit < 12, lit)
+	local portrait = hall:FindFirstChildWhichIsA("Part")
+	local hung = false
+	for _, f in CollectionService:GetTagged("GalaFrame") do
+		local gui = f:FindFirstChild("GalaPortrait")
+		if gui and textOnScreen ~= nil then
+			for _, d in gui:GetDescendants() do
+				if d:IsA("TextLabel") and (d.Text == "Runway Star" or d.Text == "On the Floor") then
+					hung = true
+				end
+			end
+		end
+	end
+	check("this guest's own Badge Book hangs in the gallery's frames", hung)
+	snapshot("gala-hud")
+	-- Luxury Trivia at the podium.
+	serverSays("Attraction", { op = "gala", kind = "trivia", phase = "lobby", seats = 2, left = 12, mine = true })
+	advance(0.4)
+	check("at a podium: the round about to start, and a key to leave it", textOnScreen("2 at the podiums. Answer on your screen: quick and right scores most.") ~= nil and textOnScreen("Leave the podium") ~= nil)
+	serverSays("Attraction", { op = "gala", kind = "trivia", phase = "question", n = 3, of = 7, q = "Which city is famous for its gondolas?", choices = { "Florence", "Venice", "Milan", "Naples" }, left = 12, seated = true })
+	advance(0.4)
+	check("the question, and its four answers", textOnScreen("Which city is famous for its gondolas?") ~= nil and textOnScreen("B   Venice") ~= nil and textOnScreen("D   Naples") ~= nil)
+	snapshot("gala-question")
+	pressNamed("AnswerB")
+	advance(0.4)
+	check("an answer is asked of the server by its number, never as right", sent[#sent].message[1].act == "answer" and sent[#sent].message[1].n == 2 and sent[#sent].message[1].correct == nil)
+	serverSays("Attraction", { op = "gala", kind = "trivia", phase = "reveal", right = 2, answer = "Venice", n = 3, of = 7, mine = 2, correct = true, score = 287, paid = 12 })
+	advance(0.4)
+	check("the answer told: the right one marked", textOnScreen("✓  B   Venice") ~= nil)
+	serverSays("Attraction", { op = "gala", kind = "trivia", phase = "results", standings = { { name = "Ada", userId = 1, score = 1012, right = 7, won = true, place = 1 }, { name = LocalPlayer.DisplayName, userId = LocalPlayer.UserId, score = 287, right = 3, won = false, place = 2 } }, winners = { "Ada" }, mine = { name = LocalPlayer.DisplayName, userId = LocalPlayer.UserId, score = 287, right = 3, won = false, place = 2 } })
+	advance(0.4)
+	check("the results: your place, your points, the winner", textOnScreen("2nd place  ·  287 points, 3 right  ·  Ada wins") ~= nil)
+	advance(GalaPlan.TRIVIA_RESULTS + 0.5)
+	-- The Runway's vote.
+	serverSays("Attraction", { op = "gala", kind = "runway", phase = "vote", theme = "Midnight Gala", models = { { userId = 77, name = "Ada" }, { userId = LocalPlayer.UserId, name = LocalPlayer.DisplayName } }, left = 20 })
+	advance(0.4)
+	check("the Runway's vote: each model's face and name, never a vote for your own look", textOnScreen("Whose look wore the theme best? One vote, never for your own.") ~= nil and textOnScreen("Ada") ~= nil and textOnScreen("YOUR LOOK") ~= nil)
+	snapshot("gala-vote")
+	pressNamed("Model1")
+	advance(0.4)
+	check("a vote is asked for by the model's id", sent[#sent].message[1].act == "vote" and sent[#sent].message[1].what == "runway" and sent[#sent].message[1].n == 77)
+	serverSays("Attraction", { op = "gala", kind = "runway", phase = "results", theme = "Midnight Gala", winner = "Ada", winnerId = 77, rows = {} })
+	advance(0.4)
+	check("the show's winner", textOnScreen("Ada takes the show.") ~= nil)
+	advance(GalaPlan.RUNWAY_RESULTS + 0.5)
+	-- The Daily Arena.
+	serverSays("Attraction", { op = "gala", kind = "arena", phase = "countdown", challenge = "spotlight", players = 3, left = 8, mine = true })
+	advance(0.4)
+	check("in the Arena's next round: the challenge, how it's scored, a key to leave", textOnScreen("Keep inside the light: two points every second you're in it.  3 in the next round.") ~= nil and textOnScreen("Leave the round") ~= nil)
+	serverSays("Attraction", { op = "gala", kind = "arena", phase = "play", challenge = "spotlight", serverStart = workspace:GetServerTimeNow(), left = 45, players = 3, mine = true })
+	advance(0.4)
+	check("the Arena's spotlight drifts across its ring on this screen", workspace:FindFirstChild("GalaArenaSpot") ~= nil)
+	serverSays("Attraction", { op = "gala", kind = "arena", phase = "results", challenge = "spotlight", rows = { { name = LocalPlayer.DisplayName, userId = LocalPlayer.UserId, points = 54, won = true, paid = 215 } }, winners = { LocalPlayer.DisplayName }, mine = true })
+	advance(0.4)
+	check("the Arena won: the points and the Gilt", textOnScreen("The winner  ·  54 points  ·  +215 Gilt") ~= nil and workspace:FindFirstChild("GalaArenaSpot") == nil)
+	advance(GalaPlan.ARENA_RESULTS + 0.5)
+	-- Dance & music, and the Exchange.
+	serverSays("Attraction", { op = "panel", id = "gala", which = "dance" })
+	advance(0.5)
+	check("Dance & music: the moves and the jukebox's records, with their votes", GalaPanel.isOpen() and textOnScreen("Groove") ~= nil and textOnScreen("Shuffle") ~= nil and textOnScreen("Stadium Rave") ~= nil and textOnScreen("♪ Playing now  ·  0 votes for next") ~= nil and textOnScreen("2 votes for next") ~= nil)
+	snapshot("gala-dance")
+	invokeResults.AttractionAsk = { ok = true, track = 3, name = "Stadium Rave", changeIn = 70, records = records, mine = 4 }
+	press("Vote")
+	advance(0.5)
+	check("a vote for the next record is asked by its number", sent[#sent].message[1].act == "vote" and sent[#sent].message[1].what == "juke" and type(sent[#sent].message[1].n) == "number")
+	invokeResults.AttractionAsk = hallState
+	press("The Exchange")
+	advance(0.4)
+	check("the Exchange: every other guest in the house, and how a trade keeps you safe", textOnScreen("Trade Gilt, Gems, brainrots and curios with any guest in the house. Both of you see every offer; nothing changes hands until you both confirm the very same trade.") ~= nil)
+	snapshot("gala-exchange")
+	RootM.close()
+	advance(0.5)
+	-- Home.
+	LocalPlayer:SetAttribute("Attraction", nil)
+	signalOf(LocalPlayer, "attr:Attraction"):Fire()
+	serverSays("Attraction", { op = "left", id = "gala", why = "home" })
+	advance(2)
+	local still = false
+	for _, d in SoundService:GetDescendants() do
+		if d.Name == "Record" then
+			still = true
+		end
+	end
+	check("home: the hall's screen gone, the house's own light back, the record faded out", not GalaHud.mounted() and Lighting:FindFirstChild("GalaBloom") == nil and not still)
+	hall:Destroy()
+	invokeResults.AttractionAsk = nil
+	invokeResults.BadgeAsk = nil
+	check("no errors with the Grand Ballroom", #errors == errorsBefore, errors[errorsBefore + 1])
+	local _ = GalaView
+	local _ = portrait
+end)()
+
+---------------------------------------------------------------------------------------------------
+-- 7k. The Vault's display and your Suite: the four domes, the collection's completion (so close,
+-- complete), the history, who may look round, the Suite's themes (each priced, or what it comes
+-- with) and who may visit; and each of the house's cards in its own light, not all black and gold
+---------------------------------------------------------------------------------------------------
+coroutine.wrap(function()
+	local ShowcasePanel = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "ShowcasePanel")
+	local GalaPanelM = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "GalaPanel")
+	local Cs = module("StarterPlayer", "StarterPlayerScripts", "Client", "CurioState")
+	local RootM = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "Root")
+	local errorsBefore = #errors
+	RootM.close()
+	advance(0.5)
+	local heldBefore = Cs.items
+	Cs.items = { croissantino = 3, chatCouture = 1, baguettone = 1 }
+	local themes = {}
+	for _, t in module("ReplicatedStorage", "Shared", "Showcase").Themes do
+		table.insert(themes, { id = t.id, open = t.id == "noir", owned = t.id == "noir", price = module("ReplicatedStorage", "Shared", "Showcase").themePrice(t) })
+	end
+	invokeResults.ShowcaseAsk = {
+		ok = true, featured = { "chatCouture" }, arrange = "rarity", vault = "everyone", suite = "friends", theme = "noir", themes = themes,
+		completion = { held = 3, total = 80, families = { { id = "relic", held = 0, total = 31 }, { id = "meme", held = 3, total = 42 }, { id = "delicacy", held = 6, total = 7 } }, rarities = { { id = "Common", held = 2, total = 12 }, { id = "Rare", held = 1, total = 10 } } },
+		history = { { id = "baguettone", n = 1, at = 1790000000, source = "tables" }, { id = "chatCouture", n = 1, at = 1789990000, source = "trade" } },
+		first = { croissantino = 1789000000, chatCouture = 1789990000, baguettone = 1790000000 },
+		friends = {}, invited = {},
+	}
+	serverSays("Shop", { op = "open", panel = "showcase" })
+	advance(0.8)
+	local panels = playerGui:FindFirstChild("MaisonPanels")
+	local card = panels and panels:FindFirstChild("Showcase", true)
+	check("the Vault's display: its four domes, the one chosen and three empty", ShowcasePanel.isOpen() and textOnScreen("The Vault's Display") ~= nil and textOnScreen("Le Chat Couture") ~= nil and textOnScreen("Empty dome") ~= nil)
+	check("...in the Vault's own light (emerald), not the house's black and gold", card ~= nil and card:GetAttribute("Mood") == "emerald", card and card:GetAttribute("Mood"))
+	snapshot("showcase-featured")
+	press("Collection")
+	advance(0.5)
+	check("the collection: each family's completion, and one nearly done says so", textOnScreen("So close: 1 to go") ~= nil and textOnScreen("3 of 42") ~= nil and textOnScreen("By rarity") ~= nil)
+	check("...every curio held, with its rarity, its words and when it was first had", textOnScreen("Croissantino Furioso  ·  COMMON  ·  ×3") ~= nil)
+	snapshot("showcase-collection")
+	press("History")
+	advance(0.4)
+	check("the history: the latest first, with how each came", textOnScreen("Baguettone Gigante") ~= nil and textOnScreen("A trade") ~= nil)
+	press("Your Suite")
+	advance(0.4)
+	check("the Suite's looks, each with its price or what it comes with", textOnScreen("Ivory Salon") ~= nil and textOnScreen("15,000 Gilt") ~= nil and textOnScreen("With the Island Key") ~= nil and textOnScreen("With Maison Prestige 4") ~= nil)
+	check("...and who may visit", textOnScreen("Who may visit your Suite") ~= nil and textOnScreen("Invited friends") ~= nil)
+	snapshot("showcase-suite")
+	press("15,000 Gilt")
+	advance(0.5)
+	check("buying a look asks the server by its name, never a price", sent[#sent].message[1].op == "buyTheme" and sent[#sent].message[1].what == "ivory" and sent[#sent].message[1].gilt == nil)
+	RootM.close()
+	advance(0.5)
+	-- Each card in its own light.
+	GalaPanelM.open("dance")
+	advance(0.5)
+	local gala = panels and panels:FindFirstChild("GalaCard", true)
+	check("the Grand Ballroom's card in amethyst", gala ~= nil and gala:GetAttribute("Mood") == "amethyst", gala and gala:GetAttribute("Mood"))
+	RootM.close()
+	advance(0.5)
+	Cs.items = heldBefore
+	invokeResults.ShowcaseAsk = nil
+	check("no errors with the Vault's display", #errors == errorsBefore, errors[errorsBefore + 1])
+end)()
+
+---------------------------------------------------------------------------------------------------
+-- 7l. Coming back each day, and buying plainly: the daily streak (its toast, the next Gems, its
+-- chip), the Boutique's closer look and its Gilt purchases confirmed with the price, every offer's
+-- term, and the holidays inside the attractions
+---------------------------------------------------------------------------------------------------
+coroutine.wrap(function()
+	local RootM = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "Root")
+	local AttractionDress = module("StarterPlayer", "StarterPlayerScripts", "Client", "World", "AttractionDress")
+	local errorsBefore = #errors
+	RootM.close()
+	advance(0.5)
+	-- The daily streak.
+	serverSays("Empire", { op = "streak", count = 3, best = 3, boost = 10, next = 15, gems = 5, broke = false, giftAt = 7, giftGems = 15 })
+	advance(0.8)
+	check("the day's streak: how many days, the Gems, what it adds and tomorrow's", textOnScreen("3 days in a row") ~= nil and textOnScreen("5 Gems from the house") ~= nil and textOnScreen("Come back tomorrow for 15%") ~= nil)
+	check("...and the next Gems, plainly", textOnScreen("4 more days for 15 Gems") ~= nil)
+	snapshot("streak")
+	advance(7)
+	serverSays("Empire", { op = "streak", count = 9, best = 9, boost = 30, next = 30, gems = 0, broke = false, giftAt = 14, giftGems = 30 })
+	advance(0.8)
+	check("at the most there is, it never promises more", textOnScreen("the most there is") ~= nil and textOnScreen("Come back tomorrow for 30%") == nil)
+	advance(7)
+	LocalPlayer:SetAttribute("Streak", 9)
+	LocalPlayer:SetAttribute("StreakBoost", 30)
+	signalOf(LocalPlayer, "attr:Streak"):Fire()
+	signalOf(LocalPlayer, "attr:StreakBoost"):Fire()
+	advance(0.5)
+	check("the streak's chip: the days and the Gilt it adds", textOnScreen("9 DAYS IN A ROW") ~= nil and textOnScreen("+30% GILT") ~= nil)
+	LocalPlayer:SetAttribute("Streak", nil)
+	LocalPlayer:SetAttribute("StreakBoost", nil)
+	signalOf(LocalPlayer, "attr:Streak"):Fire()
+	advance(0.5)
+	check("...and no chip without a streak", textOnScreen("DAYS IN A ROW") == nil)
+
+	-- The Boutique: a closer look, and Gilt confirmed before it's spent.
+	local velvet = { id = "look_velvet", name = "Velvet Smoking Jacket", kind = "look", kindName = "Looks", line = "Midnight velvet with satin lapels.", robux = 199, giltAlt = 2000, owned = false, style = { outfit = "tux" } }
+	invokeResults.ShopAsk = {
+		today = { velvet }, featured = {}, season = { id = "harvest", name = "Harvest Nights", price = 599, pieces = {} },
+		gilt = {}, goldKey = { owned = false, price = 499 }, ledger = { view = ledgerView, price = 399 },
+		guests = {}, standing = "Guest", balance = 0, credits = {},
+		offers = {
+			{ key = "doubleGilt", name = "Double Gilt", line = "Every Gilt you earn, doubled, for good.", price = 399, action = "prompt", category = "Boost" },
+			{ key = "godModeLuck", name = "Luck Booster", line = "2.5× Gilt for 30 minutes of play.", price = 199, action = "prompt", category = "Boost" },
+		},
+		ok = true, prompted = true,
+	}
+	serverSays("Shop", { op = "state", owned = {}, equipped = {}, gilt = 1200, goldKey = false, credits = {} })
+	serverSays("Shop", { op = "open", panel = "boutique" })
+	advance(1)
+	press("Today")
+	advance(0.5)
+	local preview = find(playerGui, function(d)
+		return d:IsA("TextButton") and d.Name == "Preview" and d.Visible ~= false
+	end)
+	if preview then
+		signalOf(preview, "Activated"):Fire()
+	end
+	advance(0.5)
+	check("a tap on the piece: a closer look, saying it's yours for good", preview ~= nil and textOnScreen("A closer look") ~= nil and textOnScreen("Velvet Smoking Jacket") ~= nil and textOnScreen("Permanent: yours for good") ~= nil)
+	snapshot("boutique-closer")
+	press("Close")
+	advance(0.5)
+	local asked = #sent
+	check("Gilt asks first: the price, what you hold, and not enough is said plainly", press("2,000 Gilt") and (function()
+		advance(0.5)
+		return textOnScreen("Confirm your purchase") ~= nil and textOnScreen("you hold 1,200") ~= nil and textOnScreen("Not enough Gilt") ~= nil
+	end)())
+	press("Not enough Gilt")
+	advance(0.3)
+	local spent = false
+	for i = asked + 1, #sent do
+		if sent[i].remote == "ShopAsk" and sent[i].message[1] and sent[i].message[1].op == "buyGilt" then
+			spent = true
+		end
+	end
+	check("...and nothing is asked of the server", spent == false)
+	press("Not now")
+	advance(0.3)
+	serverSays("Shop", { op = "state", owned = {}, equipped = {}, gilt = 5000, goldKey = false, credits = {} })
+	advance(0.5)
+	check("with enough: the price, what's left after, and Buy for the price", press("2,000 Gilt") and (function()
+		advance(0.5)
+		return textOnScreen("you hold 5,000, 3,000 after") ~= nil and press("Buy for 2,000 Gilt")
+	end)() and (function()
+		advance(0.5)
+		local m = nil
+		for i = #sent, 1, -1 do
+			if sent[i].remote == "ShopAsk" and sent[i].message[1] and sent[i].message[1].op == "buyGilt" then
+				m = sent[i].message[1]
+				break
+			end
+		end
+		return m ~= nil and m.item == "look_velvet" and m.price == nil
+	end)())
+	RootM.close()
+	advance(0.5)
+	serverSays("Shop", { op = "open", panel = "boutique" })
+	advance(1)
+	press("Offers")
+	advance(0.5)
+	check("every offer says what it is: permanent, or timed and how", textOnScreen("Permanent: yours for good") ~= nil and textOnScreen("Timed: 30 minutes of play") ~= nil)
+	snapshot("boutique-terms")
+	RootM.close()
+	advance(0.5)
+
+	-- The holidays inside the attractions.
+	local HouseEventsM = module("ReplicatedStorage", "Shared", "HouseEvents")
+	local AttractionListM = module("ReplicatedStorage", "Shared", "Attractions")
+	workspace:SetAttribute(HouseEventsM.attribute("halloween"), workspace:GetServerTimeNow() + 600)
+	LocalPlayer:SetAttribute(AttractionListM.ATTRIBUTE, "gala")
+	AttractionDress.follow()
+	advance(1.6)
+	check("in an attraction on a holiday, it's dressed (round the way in, on this screen)", AttractionDress.dressed() == "gala:halloween" and workspace:FindFirstChild("AttractionDress") ~= nil)
+	LocalPlayer:SetAttribute(AttractionListM.ATTRIBUTE, nil)
+	AttractionDress.follow()
+	advance(0.3)
+	check("...and undressed on leaving", AttractionDress.dressed() == nil and workspace:FindFirstChild("AttractionDress") == nil)
+	workspace:SetAttribute(HouseEventsM.attribute("halloween"), nil)
+	-- (No physics here, so nothing stands on a floor: each holiday's pieces are built directly.)
+	local built, failed = {}, {}
+	for _, h in HouseEventsM.Holidays do
+		local f = roblox.Instance.new("Folder")
+		for i = 1, 3 do
+			local ok, why = pcall(AttractionDress.piece, f, h, roblox.Vector3.new(0, 0, 0), roblox.Vector3.new(0, 0, 1), i)
+			if not ok then
+				table.insert(failed, h .. ": " .. tostring(why))
+			end
+		end
+		local parts = 0
+		for _, d in f:GetDescendants() do
+			if d:IsA("BasePart") then
+				parts += 1
+			end
+		end
+		if parts > 0 then
+			table.insert(built, h)
+		end
+		f:Destroy()
+	end
+	check("every holiday's pieces are built (pumpkins, hay, firs, bells, hearts, clovers, eggs)", #failed == 0 and #built == #HouseEventsM.Holidays, if #failed > 0 then failed[1] else table.concat(built, ", "))
+	invokeResults.ShopAsk = nil
+	check("no errors with the streak, the Boutique's terms and the holidays inside", #errors == errorsBefore, errors[errorsBefore + 1])
 end)()
 
 ---------------------------------------------------------------------------------------------------

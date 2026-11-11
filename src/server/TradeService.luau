@@ -10,6 +10,11 @@
 -- trade can never change after someone has confirmed it: a confirmation names the offers'
 -- version, and a stale one is refused. Either side may cancel at any time; leaving cancels.
 -- Guests can block (no more invitations from them this visit) and report (logged for the owner).
+--
+-- Besides curios (brainrots among them), a side may offer Gilt and Gems: "$gilt" and "$gems" in
+-- the offer, each checked against what the guest holds and kept within a trade's limits; Gems
+-- (bought with Robux) only where Roblox allows both guests to trade what was bought, and no more
+-- than a day's worth sent by any one guest. Wardrobe pieces stay with whoever bought them.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -20,6 +25,8 @@ local CurioList = require(ReplicatedStorage.Shared.Curios)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Analytics = require(script.Parent.Analytics)
 local Curios = require(script.Parent.Curios)
+local Fortune = require(script.Parent.Fortune)
+local Gilt = require(script.Parent.Gilt)
 local Policy = require(script.Parent.Policy)
 local Profiles = require(script.Parent.Profiles)
 local RemoteGuard = require(script.Parent.RemoteGuard)
@@ -37,7 +44,13 @@ TradeService.Settings = {
 	inviteGap = 10, -- seconds between invitations to the same guest
 	inviteLife = 30, -- an invitation lapses after this long
 	history = 10, -- trades kept in each profile
+	maxGilt = 100000, -- Gilt on one side of a trade
+	maxGems = 100, -- Gems on one side of a trade
+	gemsADay = 300, -- Gems any one guest may send in trades in a day
 }
+TradeService.GILT = "$gilt"
+TradeService.GEMS = "$gems"
+local GILT, GEMS = TradeService.GILT, TradeService.GEMS
 
 type Offer = { [string]: number }
 export type Trade = {
@@ -88,7 +101,10 @@ local function view(t: Trade, p: Player): { [string]: any }
 		version = t.version,
 		state = t.state,
 		countdown = if t.state == "countdown" then math.max(0, math.ceil(t.countdownEnds - TradeService.clock())) else 0,
-		paid = paidOk(t), -- whether curios bought with Gems may be offered in this trade
+		paid = paidOk(t), -- whether curios bought with Gems (and Gems) may be offered in this trade
+		maxGilt = TradeService.Settings.maxGilt,
+		maxGems = TradeService.Settings.maxGems,
+		gemsLeft = TradeService.gemsLeft(p),
 	}
 end
 
@@ -120,10 +136,51 @@ local function unlock(t: Trade)
 	t.state = "open"
 end
 
+-- The Gems a guest's trades have sent today (and the day).
+local function gemsPage(data: Profiles.Data): { day: number, sent: number }
+	local d = data :: any
+	local today = math.floor(os.time() / 86400)
+	if type(d.tradeGems) ~= "table" or d.tradeGems.day ~= today then
+		d.tradeGems = { day = today, sent = 0 }
+	end
+	return d.tradeGems
+end
+
+-- How many more Gems a guest may send in trades today.
+function TradeService.gemsLeft(player: Player): number
+	local data = Profiles.get(player)
+	if not data then
+		return 0
+	end
+	return math.max(0, TradeService.Settings.gemsADay - gemsPage(data).sent)
+end
+
+local function commas(n: number): string
+	local text = tostring(math.floor(n))
+	local out = text:reverse():gsub("(%d%d%d)", "%1,"):reverse()
+	return if out:sub(1, 1) == "," then out:sub(2) else out
+end
+
 -- Whether `data` holds everything in `offer`, and all of it can be traded (`paid`: whether this
--- trade may carry curios bought with Robux).
+-- trade may carry curios bought with Robux, and Gems).
 local function holds(data: Profiles.Data, offer: Offer, paid: boolean): (boolean, string?)
 	for id, n in offer do
+		local d = data :: any
+		if id == GILT then
+			if (tonumber(d.gilt) or 0) < n then
+				return false, "You don't hold that much Gilt."
+			end
+			continue
+		elseif id == GEMS then
+			if not paid then
+				return false, "Gems can't be part of this trade."
+			elseif (tonumber(d.gems) or 0) < n then
+				return false, "You don't hold that many Gems."
+			elseif gemsPage(data).sent + n > TradeService.Settings.gemsADay then
+				return false, string.format("That's more Gems than a day's trades may send (%d left today).", math.max(0, TradeService.Settings.gemsADay - gemsPage(data).sent))
+			end
+			continue
+		end
 		local c = CurioList.byId[id]
 		if not c then
 			return false, "That curio isn't known."
@@ -151,15 +208,47 @@ local function swap(t: Trade): (boolean, string?)
 		return false, whyA or whyB
 	end
 	local gaveA, gaveB = {}, {}
+	-- Gilt and Gems from one purse to the other, then the curios.
+	local function money(from: Player, fromData: any, to: Player, toData: any, offer: Offer, gave: { string })
+		local g = offer[GILT]
+		if g and g > 0 then
+			fromData.gilt -= g
+			toData.gilt = (tonumber(toData.gilt) or 0) + g
+			Analytics.sink(from, "Gilt", g, fromData.gilt, "Trade")
+			Analytics.source(to, "Gilt", g, toData.gilt, "Trade")
+			table.insert(gave, commas(g) .. " Gilt")
+		end
+		local gems = offer[GEMS]
+		if gems and gems > 0 then
+			fromData.gems -= gems
+			toData.gems = (tonumber(toData.gems) or 0) + gems
+			gemsPage(fromData).sent += gems
+			from:SetAttribute("Gems", fromData.gems)
+			to:SetAttribute("Gems", toData.gems)
+			Analytics.sink(from, "Gems", gems, fromData.gems, "Trade")
+			Analytics.source(to, "Gems", gems, toData.gems, "Trade")
+			table.insert(gave, commas(gems) .. " Gems")
+		end
+	end
+	money(t.a, da, t.b, db, t.offers[t.a], gaveA)
+	money(t.b, db, t.a, da, t.offers[t.b], gaveB)
 	for id, n in t.offers[t.a] do
-		Curios.take(da, id, n)
-		Curios.give(t.b, db, id, n, "trade")
-		table.insert(gaveA, string.format("%s ×%d", CurioList.byId[id].name, n))
+		if id ~= GILT and id ~= GEMS then
+			Curios.take(da, id, n)
+			Curios.give(t.b, db, id, n, "trade")
+			table.insert(gaveA, string.format("%s ×%d", CurioList.byId[id].name, n))
+		end
 	end
 	for id, n in t.offers[t.b] do
-		Curios.take(db, id, n)
-		Curios.give(t.a, da, id, n, "trade")
-		table.insert(gaveB, string.format("%s ×%d", CurioList.byId[id].name, n))
+		if id ~= GILT and id ~= GEMS then
+			Curios.take(db, id, n)
+			Curios.give(t.a, da, id, n, "trade")
+			table.insert(gaveB, string.format("%s ×%d", CurioList.byId[id].name, n))
+		end
+	end
+	for _, p in { t.a, t.b } do
+		Gilt.changed(p)
+		pcall(Fortune.sync, p)
 	end
 	local now = os.time()
 	local sides: { { any } } = { { da, t.b, gaveA, gaveB }, { db, t.a, gaveB, gaveA } }
@@ -226,12 +315,21 @@ local function readOffer(v: unknown): Offer?
 	local out: Offer = {}
 	local kinds = 0
 	for k, n in v :: { [unknown]: unknown } do
-		if type(k) ~= "string" or #k > 40 or type(n) ~= "number" or n ~= math.floor(n) or n < 1 or n > TradeService.Settings.maxEach then
+		if type(k) ~= "string" or #k > 40 or type(n) ~= "number" or n ~= n or n ~= math.floor(n) or n < 1 then
 			return nil
 		end
-		kinds += 1
-		if kinds > TradeService.Settings.maxKinds then
-			return nil
+		if k == GILT or k == GEMS then
+			if n > (if k == GILT then TradeService.Settings.maxGilt else TradeService.Settings.maxGems) then
+				return nil
+			end
+		else
+			if n > TradeService.Settings.maxEach then
+				return nil
+			end
+			kinds += 1
+			if kinds > TradeService.Settings.maxKinds then
+				return nil
+			end
 		end
 		out[k] = n
 	end

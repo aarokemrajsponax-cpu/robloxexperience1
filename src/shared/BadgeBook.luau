@@ -34,7 +34,7 @@ BadgeBook.Groups = {
 	{ id = "attractions", name = "The attractions" },
 	{ id = "island", name = "Luxury Island" },
 	{ id = "racing", name = "The Grand Prix" },
-	{ id = "pavilion", name = "The Pavilion" },
+	{ id = "pavilion", name = "The Grand Ballroom" },
 	{ id = "secrets", name = "Secrets" },
 }
 
@@ -298,7 +298,7 @@ ladder("racing", "trialLaps", "⏱️", "Drive %d timed laps.", {
 moment("racing", "lapAce", "Lap Ace", "Drive a timed lap of the Grand Boulevard in under 12 seconds.", "⚡", "gold")
 moment("racing", "coastAce", "Coast Ace", "Drive a timed lap of Luxury Island's Coastal Circuit in under 11 seconds.", "🌊", "gold")
 
--- The Pavilion
+-- The Grand Ballroom
 ladder("pavilion", "runwayWins", "👗", "Win %d rounds on the Runway.", {
 	{ 1, "Runway Star", "runwayWin" }, { 5, "Cover Look" }, { 25, "Icon of the Runway" },
 }, "Win a round on the Runway.")
@@ -308,8 +308,8 @@ ladder("pavilion", "triviaWins", "🎓", "Win %d rounds of Luxury Trivia.", {
 ladder("pavilion", "arenaWins", "🏆", "Win %d of the Arena's challenges.", {
 	{ 1, "Arena Champion", "arenaWin" }, { 10, "Ten Crowns" }, { 50, "The Arena's Own" },
 }, "Win one of the Arena's challenges.")
-moment("pavilion", "photoSets", "Picture Perfect", "Strike a pose at every photo set in the Pavilion.", "🖼️", "silver")
-moment("pavilion", "firstDance", "On the Floor", "Dance on the Pavilion's dance floor.", "💃", "bronze")
+moment("pavilion", "photoSets", "Picture Perfect", "Strike a pose at every photo set in the Grand Ballroom.", "🖼️", "silver")
+moment("pavilion", "firstDance", "On the Floor", "Take to the Grand Ballroom's dance floor.", "💃", "bronze")
 
 -- Secrets
 moment("secrets", "metOwner", "Met the Owner", "Be in the house with the owner.", "👑", "gold")

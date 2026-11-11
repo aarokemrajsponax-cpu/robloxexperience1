@@ -219,10 +219,13 @@ function Root.bottomClear(): number
 end
 
 -- The lowest edge of what stands along the top (0: nothing there).
-function Root.topClear(): number
+-- (`except`: a strip's own key, so what it says of itself never pushes it further down.)
+function Root.topClear(except: string?): number
 	local low = 0
-	for _, edge in topEdges do
-		low = math.max(low, edge.bottom)
+	for key, edge in topEdges do
+		if key ~= except then
+			low = math.max(low, edge.bottom)
+		end
 	end
 	return low
 end

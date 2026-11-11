@@ -75,7 +75,7 @@ local function place()
 	if not c then
 		return
 	end
-	local y = math.max(Root.topClear() + 6, 126)
+	local y = math.max(Root.topClear("Island") + 6, 126)
 	c.Position = UDim2.new(0.5, 0, 0, y)
 	Root.setTop("Island", y + CARD_H + 4, CARD_W / 2)
 	local k = keys

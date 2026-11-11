@@ -8,6 +8,9 @@
 --                          by chamber, with a chest at each way out and the Treasury at the bottom.
 --   The Executive Suite   (through the Midnight Room): by invitation only. Security, puzzles, the
 --                          Executive himself, and the lift out with what you took.
+--   The Grand Ballroom    (through the great doors at the far end of the Ballroom): dancing,
+--                          Luxury Trivia, the Runway, the Daily Arena, photo sets, the Exchange
+--                          and the Hall of Fame.
 --   Luxury Island         (from the Jet Lounge on the Terrace): the private island, by the jet,
 --                          for guests who hold the Island Key.
 -- While a guest is in one, the server sets their "Attraction" attribute to its id: its screen (and
@@ -64,6 +67,16 @@ Attractions.List = {
 		colour = rgb(120, 200, 255),
 	},
 	{
+		id = "gala",
+		name = "The Grand Ballroom",
+		room = "ballroom",
+		roomName = "The Ballroom",
+		tag = "DANCE · TRIVIA · THE RUNWAY · THE ARENA",
+		line = "The house's hall of entertainments: the dance floor, Luxury Trivia, the Runway, the Daily Arena, the photo sets, the Exchange and the Hall of Fame.",
+		glyph = "💃",
+		colour = rgb(255, 196, 120),
+	},
+	{
 		id = "island",
 		name = "Luxury Island",
 		room = "terrace",
@@ -108,6 +121,7 @@ Attractions.BOUNDS = {
 	basement = { min = Vector3.new(-90, -140, -60), max = Vector3.new(90, 60, 820) },
 	executive = { min = Vector3.new(-320, -120, -160), max = Vector3.new(320, 120, 160) },
 	island = { min = Vector3.new(-520, -80, -420), max = Vector3.new(420, 260, 440) },
+	gala = { min = Vector3.new(-160, -40, -140), max = Vector3.new(160, 90, 140) },
 } :: { [string]: { min: Vector3, max: Vector3 } }
 
 -- Which attraction's place a point is in, or nil (the Maison and everywhere else).

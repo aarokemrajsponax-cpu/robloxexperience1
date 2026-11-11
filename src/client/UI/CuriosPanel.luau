@@ -458,6 +458,11 @@ function CuriosPanel.open(start: string?)
 		Root.close(NAME)
 	end, 200)
 	close.LayoutOrder = 1
+	-- The Vault's display: the four domes, the collection's completion, the history.
+	Theme.key(keys, "The Vault's display", false, function()
+		Root.close(NAME)
+		require(script.Parent.ShowcasePanel).open("featured")
+	end, 210).LayoutOrder = 2
 	local conn = CurioState.Changed:Connect(function()
 		if content.Parent then
 			fill()

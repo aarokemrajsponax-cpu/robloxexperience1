@@ -2,7 +2,8 @@
 -- The objectives: the Evening Commission, the Week's Commission and the Season's (a quarter of the
 -- year), each the same for everyone, chosen by the date on the server's clock. Most are about the
 -- house's fortune now: hauls banked in Steal a Luxe, the Maison Basement's Treasury, the Executive
--- beaten, Stride trained; some still at the Salon's tables. Missing any costs nothing.
+-- beaten, Stride trained, the Grand Prix's races, the Grand Ballroom's trivia, Runway and Arena;
+-- some still at the Salon's tables. Missing any costs nothing.
 
 local Catalogue = require(script.Parent.Catalogue)
 local Config = require(script.Parent.Config)
@@ -10,7 +11,7 @@ local Seed = require(script.Parent.Seed)
 
 local Commissions = {}
 
-export type Kind = "file" | "rounds" | "flawless" | "nightly" | "library" | "ballroom" | "luxeBank" | "luxeWorth" | "stride" | "basementClear" | "executiveWin"
+export type Kind = "file" | "rounds" | "flawless" | "nightly" | "library" | "ballroom" | "luxeBank" | "luxeWorth" | "stride" | "basementClear" | "executiveWin" | "race" | "raceWin" | "trivia" | "runway" | "arena"
 export type Goal = { id: string, kind: Kind, room: string?, case: string?, target: number, text: string }
 
 local ROOMS = { salon = "the Salon" }
@@ -41,10 +42,11 @@ type Size = "evening" | "week" | "season"
 
 local function goal(key: string, size: Size): Goal
 	local rng = Random.new(Seed.hash(key))
+	-- (The Grand Prix's races and the Grand Ballroom's activities too: everyone can reach them.)
 	local kinds: { Kind } = if size == "season"
-		then { "luxeWorth", "basementClear", "executiveWin", "luxeBank" }
-		elseif size == "week" then { "luxeBank", "luxeWorth", "basementClear", "executiveWin", "file", "rounds", "library", "ballroom", "nightly" }
-		else { "luxeBank", "luxeWorth", "basementClear", "stride", "file", "rounds", "flawless", "nightly" }
+		then { "luxeWorth", "basementClear", "executiveWin", "luxeBank", "raceWin" }
+		elseif size == "week" then { "luxeBank", "luxeWorth", "basementClear", "executiveWin", "file", "rounds", "library", "ballroom", "nightly", "race", "raceWin", "trivia", "runway", "arena" }
+		else { "luxeBank", "luxeWorth", "basementClear", "stride", "file", "rounds", "flawless", "nightly", "race", "trivia", "arena" }
 	local kind = kinds[rng:NextInteger(1, #kinds)]
 	local room = ROOM_IDS[rng:NextInteger(1, #ROOM_IDS)]
 	local case = Catalogue.Cases[rng:NextInteger(1, 4)].id -- the first four cases open from round I
@@ -76,6 +78,20 @@ local function goal(key: string, size: Size): Goal
 		return { id = key, kind = kind, target = n, text = if big then "Sit tonight's table on four nights this week" else "Sit tonight's table" }
 	elseif kind == "library" then
 		return { id = key, kind = kind, target = 5, text = "Play five evenings of Tête-à-Tête in the Library" }
+	elseif kind == "race" then
+		local n = if big then 10 else 2
+		return { id = key, kind = kind, target = n, text = if big then "Finish ten Grand Prix races" else "Finish two Grand Prix races" }
+	elseif kind == "raceWin" then
+		local n = if size == "season" then 12 else 2
+		return { id = key, kind = kind, target = n, text = if size == "season" then "Win twelve Grand Prix races" else "Win two Grand Prix races" }
+	elseif kind == "trivia" then
+		local n = if big then 8 else 2
+		return { id = key, kind = kind, target = n, text = string.format("Play %s rounds of Luxury Trivia in the Grand Ballroom", words(n)) }
+	elseif kind == "runway" then
+		return { id = key, kind = kind, target = 3, text = "Walk in three shows on the Grand Ballroom's Runway" }
+	elseif kind == "arena" then
+		local n = if big then 6 else 2
+		return { id = key, kind = kind, target = n, text = string.format("Take part in %s rounds of the Daily Arena", words(n)) }
 	end
 	return { id = key, kind = "ballroom", target = 3, text = "Sit three Lights Out evenings in the Ballroom" }
 end

@@ -377,6 +377,49 @@ a Nightly attempt or a Mythic's odds.
 - **The launch kit**: page text, icon, thumbnails and the gameplay video's shot list are in
   [`LAUNCH.md`](LAUNCH.md).
 
+## Build 73 — Luxury Island, the Grand Ballroom and Maison Prestige
+
+- **Luxury Island** (the Jet Lounge on the Terrace): the private island by jet, for guests who hold
+  the **Island Key** (the Tycoon rank, then Gilt or Gems, the price shown first). Villas and plunge
+  pools, the day's five pearls on the lagoon's floor, the Sunset Lookout's toast (more with
+  friends), six postcard spots, the Pearl Exchange's Suite pieces, jet liveries and island lights.
+- **The Grand Ballroom** (the great doors at the far end of the Ballroom): a hall of its own with
+  **Luxury Trivia** (eight podiums, quicker answers score more), **the Runway** (a theme each show,
+  guests walk and vote), **the Daily Arena** (one of three challenges each day), a **dance floor** with a
+  DJ booth and a jukebox the guests vote on, **photo sets**, the **Exchange** (trade stands), the
+  **gallery** (your latest badges framed on the walls, and the hall's still to earn) and the **Hall
+  of Fame**'s six boards, read from every server.
+- **Maison Prestige**: ten laurels earned from Badge Book points and, from the fourth, a great deed.
+  Nothing is ever reset. Titles, nameplate laurels and borders, the Laurel Flourish, rings of light,
+  and Suite and Vault pieces.
+- **Racing**: timed laps on the Grand Boulevard and the new Coastal Circuit, every gate and lap
+  checked on the server's clock; all-time, weekly and friends' boards; racing ranks that paint the
+  stripes of any car you drive; the Records card; Join the next race from anywhere.
+- **The Vault's display**: four featured curios under domes in the Vault, an arrangement, the
+  collection's completion by family ("So close: 2 to go"), the last forty arrivals, and who may
+  look round (everyone, friends, only me).
+- **The Suite's look**: seven themes (Gilt, Gems, the Island Key or Prestige; the price shown
+  first), and who may visit (friends, invited friends only, nobody), with invitations.
+- **The Boutique**: every offer says whether it's **permanent**, **timed** (and how long), **one
+  use** or **at once**; a **Preview** before buying; Gilt purchases ask once more with the price.
+- **The daily streak**: days in a row make every Gilt count a little more (up to 30%), with Gems
+  at three, seven, fourteen and thirty days. A toast says where it stands and what tomorrow brings.
+- **The holidays inside the attractions**: pumpkins, firs and presents, hearts, clovers, eggs and
+  more, set round wherever you come in. On your own screen only, never in the way.
+- **Colour**: each panel has its own palette (amethyst for the Ballroom, sea for the Island,
+  emerald for curios, ruby for the Boutique...) and a few of its own objects at rest in the corner.
+- **Trading money**: Gilt and Gems can be part of a trade, with limits (see `ECONOMY.md`).
+- **The owner's LIVE OPS page** now has **Trend Watch**: what guests did most today beside
+  yesterday, from every server, and the owner's trend ideas (approve, decline, remove). It reads no
+  outside source and says so. Researched notes and the borrowing rules are in `TRENDS.md`.
+
+To set up after publishing:
+
+- **Two jet liveries** aren't offered until their products exist: create developer products for
+  "Jet Livery: Midnight Aurora" (reference 149 Robux) and "Jet Livery: Sovereign Gold" (reference
+  349 Robux) and put their ids in `ProductConfig.luau` (`jetAurora`, `jetSovereign`, `Id = 0` now).
+  Every other livery is for Gilt or Gems and works now.
+
 ## Build 72 — become the wealthiest
 
 Sorting is no longer the point: **build your fortune, master the Maison, become the wealthiest.**

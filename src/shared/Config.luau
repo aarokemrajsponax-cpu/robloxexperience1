@@ -305,6 +305,7 @@ local defaults = {
 		travel = { rate = 1, burst = 3 },
 		empireAsk = { rate = 3, burst = 8 },
 		racingAsk = { rate = 1, burst = 4 }, -- the racing card reads the boards: never a flood
+		showcaseAsk = { rate = 3, burst = 8 }, -- the Vault's and the Suite's displays
 		attractionAsk = { rate = 8, burst = 16 }, -- a pickup, a checkpoint, a shot: quick, never a flood
 		attraction = { rate = 12, burst = 24 },
 		attractionFire = { rate = 5, burst = 8 }, -- the sidearm: a few shots a second at most
@@ -886,6 +887,17 @@ local defaults = {
 			pearlGilt = 250, -- each of the day's five pearls
 			pearlSetGems = 2, -- all five in a day
 			dailyGems = 10, -- the most Gems a day from the island
+		},
+		-- The Grand Ballroom (server/Attractions/Gala): the hall of entertainments through the
+		-- great doors at the far end of the Ballroom. Every reward is shared/Gala's REWARDS unless
+		-- set here (dailyGilt: all its Gilt in a day; danceMinute, triviaCorrect, triviaWin,
+		-- runwayWalk, runwayWin, runwayVote, arenaTakePart, arenaPoint, arenaWin, photoSet, winGems).
+		gala = {
+			origin = { -3000, 0, 3000 },
+			dailyGems = 3, -- the most Gems a day from wins in the hall
+			trackSeconds = 150, -- each jukebox record, before the most-voted goes on
+			hallStore = "MaisonHall_v1", -- the Hall of Fame's ordered data stores (one a board)
+			hallSeconds = 120, -- how often the Hall of Fame is read
 		},
 	},
 

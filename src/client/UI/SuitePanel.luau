@@ -454,6 +454,11 @@ function SuitePanel.open(start: string?)
 		Root.close(NAME)
 		require(script.Parent.Parent.World.SuiteSpectacle).open()
 	end, 170).LayoutOrder = 1
+	-- Its look (a theme for its walls, trim and floor), who may visit, and invitations.
+	Theme.key(keys, "Look & visits", false, function()
+		Root.close(NAME)
+		require(script.Parent.ShowcasePanel).open("suite")
+	end, 180).LayoutOrder = 3
 	-- The pictures turn slowly.
 	local spin = RunService.RenderStepped:Connect(function(dt: number)
 		for _, p in previews do

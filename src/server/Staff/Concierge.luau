@@ -201,7 +201,7 @@ local PLACES: { Place } = {
 	{ id = "vault", text = "The Vault" },
 	{ id = "boutique", text = "The Boutique" },
 	{ id = "library", text = "The Library" },
-	{ id = "ballroom", text = "The Ballroom" },
+	{ id = "ballroom", text = "The Ballroom  ·  the Grand Ballroom" },
 	{ id = "terrace", text = "The Terrace  ·  the Jet Lounge" },
 	{ id = "suite", text = "Your Suite" },
 	{ id = "grandPrix", text = "The Grand Prix" },
@@ -247,6 +247,10 @@ function Concierge.recommend(player: Player): (string, string?)
 	if (tonumber(basement.clears) or 0) == 0 then
 		return R.basement, "obsidian"
 	end
+	-- (Never been in the Grand Ballroom: the house's fun, with friends.)
+	if type(pages.gala) ~= "table" then
+		return R.gala, "ballroom"
+	end
 	-- (A Tycoon without the Island Key: the jet waits.)
 	local island = if type(pages.island) == "table" then pages.island else {}
 	local reached = if type(data.empire) == "table" then tonumber(data.empire.rank) or 1 else 1
@@ -276,6 +280,7 @@ function Concierge.answer(id: string): string?
 					:gsub("{skipGems}", tostring(tonumber(basement.skipGems) or 25))
 					:gsub("{islandGilt}", commas(tonumber(island.keyGilt) or 25000))
 					:gsub("{islandGems}", tostring(tonumber(island.keyGems) or 250))
+					:gsub("{galaGilt}", commas(tonumber((a.gala or {}).dailyGilt) or 2500))
 			)
 		end
 	end

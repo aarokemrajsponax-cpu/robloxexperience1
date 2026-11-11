@@ -1,6 +1,7 @@
 --!strict
 -- The Vault's vitrines, filled on this guest's screen with the pieces they have filed (each guest
--- sees their own). The centre vitrine holds their Mythics, each with its serial number.
+-- sees their own). The centre vitrine holds their Mythics, each with its serial number; the four
+-- domes of the display by the east wall, their featured curios.
 
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
@@ -119,6 +120,70 @@ local function fill(view: { [string]: any })
 	end
 end
 
+-- The four domes of the Vault's display: each with this guest's featured curio standing in it
+-- (its glyph on a medallion in its rarity's colour, its name beneath), or empty.
+local Curios = require(ReplicatedStorage.Shared.Curios)
+local Remotes = require(ReplicatedStorage.Shared.Remotes)
+
+function VaultView.featured(ids: { string })
+	for _, medal in CollectionService:GetTagged("VaultFeature") do
+		if medal:IsA("BasePart") then
+			local old = medal:FindFirstChild("Featured")
+			if old then
+				old:Destroy()
+			end
+			local i = tonumber(medal:GetAttribute("Index")) or 0
+			local id = ids[i]
+			local c = id and Curios.byId[id]
+			if c then
+				local gui = Instance.new("SurfaceGui")
+				gui.Name = "Featured"
+				gui.Face = Enum.NormalId.Front
+				gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+				gui.PixelsPerStud = 120
+				gui.LightInfluence = 0
+				gui.Brightness = 1.4
+				gui.MaxDistance = 40
+				gui.Parent = medal
+				local disc = Instance.new("Frame")
+				disc.Size = UDim2.fromScale(1, 1)
+				disc.BackgroundColor3 = (c :: any).colour or Color3.fromRGB(40, 30, 20)
+				disc.BorderSizePixel = 0
+				disc.Parent = gui
+				local round = Instance.new("UICorner")
+				round.CornerRadius = UDim.new(0.5, 0)
+				round.Parent = disc
+				local ring = Instance.new("UIStroke")
+				ring.Color = Curios.RarityColour[(c :: any).rarity] or Brand.Colours.gold
+				ring.Thickness = 4
+				ring.Parent = disc
+				local glyph = Instance.new("TextLabel")
+				glyph.BackgroundTransparency = 1
+				glyph.Size = UDim2.fromScale(1, 1)
+				glyph.Text = (c :: any).glyph or "✦"
+				glyph.TextScaled = true
+				glyph.FontFace = Brand.Fonts.body
+				glyph.Parent = disc
+				local pad = Instance.new("UIPadding")
+				pad.PaddingTop = UDim.new(0.16, 0)
+				pad.PaddingBottom = UDim.new(0.16, 0)
+				pad.Parent = glyph
+			end
+		end
+	end
+end
+
+local function askFeatured()
+	task.spawn(function()
+		local ok, r = pcall(function()
+			return Remotes.func("ShowcaseAsk"):InvokeServer({ op = "state" })
+		end)
+		if ok and type(r) == "table" and r.ok == true and inside then
+			VaultView.featured(if type(r.featured) == "table" then r.featured else {})
+		end
+	end)
+end
+
 function VaultView.start()
 	task.spawn(function()
 		while true do
@@ -133,6 +198,7 @@ function VaultView.start()
 						fill(view)
 					end
 				end)
+				askFeatured()
 			elseif not now and inside then
 				inside = false
 				local f = folder

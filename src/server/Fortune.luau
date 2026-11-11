@@ -245,6 +245,11 @@ function Fortune.refreshBoards()
 	boards.at = os.time()
 end
 
+-- The Wealthiest board of all time as last read (the Grand Ballroom's Hall of Fame shows it too).
+function Fortune.top(): { Entry }
+	return boards.all
+end
+
 -- Offers a guest's earned Fortune (and this week's gain) to the boards, when it has changed.
 function Fortune.submit(player: Player)
 	local data = Profiles.get(player)

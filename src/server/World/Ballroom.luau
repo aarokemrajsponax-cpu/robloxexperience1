@@ -60,9 +60,15 @@ local function shell(m: Model)
 	Kit.span(m, "WallS_E", Vector3.new(C.maxX + 2, Y, B.minZ - 2), Vector3.new(B.maxX + 2, top, B.minZ), L.blackLacquer)
 	-- Inside faces: lacquer panels between gold pilasters.
 	Kit.span(m, "FacingW", Vector3.new(B.minX, Y, B.minZ), Vector3.new(B.minX + 0.2, top, B.maxZ), L.blackLacquer, { collide = false, query = false })
+	-- (The great doors to the Grand Ballroom stand in the middle of the north wall: World/Lobbies.)
+	local function clearOfDoors(x0: number, x1: number): boolean
+		return x1 < 51 or x0 > 71
+	end
 	local x = B.minX + 8
 	while x < B.maxX - 4 do
-		Kit.span(m, "PilasterN", Vector3.new(x - 0.5, Y, B.maxZ - 0.6), Vector3.new(x + 0.5, top - 1, B.maxZ), L.brass, { collide = false, query = false })
+		if clearOfDoors(x - 0.5, x + 0.5) then
+			Kit.span(m, "PilasterN", Vector3.new(x - 0.5, Y, B.maxZ - 0.6), Vector3.new(x + 0.5, top - 1, B.maxZ), L.brass, { collide = false, query = false })
+		end
 		x += 12
 	end
 	local z = B.minZ + 16
@@ -76,7 +82,9 @@ local function shell(m: Model)
 	-- Mirrors along the north wall, between the pilasters; drapes on the east wall.
 	x = B.minX + 14
 	while x < B.maxX - 8 do
-		Kit.span(m, "Mirror", Vector3.new(x - 4.5, Y + 3, B.maxZ - 0.4), Vector3.new(x + 4.5, Y + 20, B.maxZ - 0.2), MIRROR, { collide = false, query = false })
+		if clearOfDoors(x - 4.5, x + 4.5) then
+			Kit.span(m, "Mirror", Vector3.new(x - 4.5, Y + 3, B.maxZ - 0.4), Vector3.new(x + 4.5, Y + 20, B.maxZ - 0.2), MIRROR, { collide = false, query = false })
+		end
 		x += 12
 	end
 	z = B.minZ + 22

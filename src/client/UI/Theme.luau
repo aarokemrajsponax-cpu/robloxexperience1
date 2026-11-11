@@ -12,6 +12,7 @@
 local ContentProvider = game:GetService("ContentProvider")
 local HapticService = game:GetService("HapticService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
@@ -132,7 +133,144 @@ Theme.moods = {
 		plainText = rgb(222, 255, 228),
 		accent = rgb(124, 232, 144),
 	},
+	-- The house's own rooms each in their own light (Theme.PanelLooks says which panel is which):
+	-- the Grand Ballroom in amethyst and rose, Luxury Island in sea glass, the Vault and the
+	-- collection in emerald, Gems in sapphire, the Boutique in ruby, the Wardrobe in rosé, Fortune
+	-- and Prestige in champagne, the Suite and the house's own settings in midnight and silver.
+	amethyst = {
+		panel = { rgb(98, 46, 124), rgb(40, 20, 54), rgb(14, 11, 18), rgb(82, 30, 66) },
+		edge = { rgb(255, 216, 242), rgb(204, 146, 255), rgb(98, 42, 132) },
+		line = rgb(242, 204, 255),
+		gold = { rgb(255, 232, 248), rgb(230, 168, 240), rgb(170, 96, 204) },
+		goldText = rgb(32, 10, 38),
+		goldEdge = rgb(255, 224, 250),
+		plain = rgb(24, 16, 30),
+		plainGlow = rgb(204, 146, 255),
+		plainText = rgb(246, 230, 255),
+		accent = rgb(228, 174, 255),
+	},
+	sea = {
+		panel = { rgb(22, 116, 136), rgb(14, 46, 58), rgb(10, 16, 20), rgb(16, 72, 84) },
+		edge = { rgb(232, 255, 255), rgb(104, 222, 238), rgb(20, 98, 120) },
+		line = rgb(204, 250, 255),
+		gold = { rgb(238, 255, 255), rgb(126, 226, 238), rgb(40, 152, 178) },
+		goldText = rgb(6, 26, 32),
+		goldEdge = rgb(216, 255, 255),
+		plain = rgb(12, 24, 28),
+		plainGlow = rgb(92, 212, 232),
+		plainText = rgb(226, 252, 255),
+		accent = rgb(122, 228, 242),
+	},
+	emerald = {
+		panel = { rgb(18, 100, 72), rgb(12, 40, 30), rgb(10, 14, 12), rgb(58, 64, 20) },
+		edge = { rgb(242, 255, 222), rgb(112, 212, 152), rgb(20, 82, 58) },
+		line = rgb(212, 255, 222),
+		gold = { rgb(255, 246, 206), rgb(234, 208, 124), rgb(178, 142, 62) },
+		goldText = rgb(22, 18, 6),
+		goldEdge = rgb(255, 238, 172),
+		plain = rgb(12, 24, 18),
+		plainGlow = rgb(102, 212, 152),
+		plainText = rgb(228, 255, 238),
+		accent = rgb(132, 228, 170),
+	},
+	sapphire = {
+		panel = { rgb(30, 62, 144), rgb(16, 24, 58), rgb(10, 12, 20), rgb(42, 30, 92) },
+		edge = { rgb(232, 242, 255), rgb(124, 172, 255), rgb(30, 52, 124) },
+		line = rgb(204, 222, 255),
+		gold = { rgb(238, 246, 255), rgb(154, 194, 255), rgb(72, 112, 222) },
+		goldText = rgb(8, 14, 34),
+		goldEdge = rgb(216, 232, 255),
+		plain = rgb(14, 18, 32),
+		plainGlow = rgb(122, 172, 255),
+		plainText = rgb(228, 238, 255),
+		accent = rgb(144, 190, 255),
+	},
+	ruby = {
+		panel = { rgb(132, 22, 46), rgb(50, 12, 22), rgb(14, 10, 12), rgb(82, 42, 16) },
+		edge = { rgb(255, 228, 202), rgb(232, 92, 112), rgb(112, 16, 34) },
+		line = rgb(255, 204, 204),
+		gold = { rgb(255, 242, 212), rgb(246, 202, 122), rgb(202, 142, 62) },
+		goldText = rgb(30, 10, 6),
+		goldEdge = rgb(255, 228, 172),
+		plain = rgb(26, 12, 16),
+		plainGlow = rgb(232, 92, 112),
+		plainText = rgb(255, 234, 234),
+		accent = rgb(255, 144, 154),
+	},
+	rose = {
+		panel = { rgb(152, 72, 98), rgb(58, 26, 40), rgb(16, 12, 14), rgb(112, 72, 52) },
+		edge = { rgb(255, 232, 238), rgb(238, 152, 174), rgb(122, 52, 72) },
+		line = rgb(255, 216, 228),
+		gold = { rgb(255, 240, 232), rgb(242, 186, 172), rgb(198, 122, 112) },
+		goldText = rgb(36, 14, 18),
+		goldEdge = rgb(255, 228, 224),
+		plain = rgb(28, 16, 20),
+		plainGlow = rgb(238, 152, 174),
+		plainText = rgb(255, 238, 242),
+		accent = rgb(248, 172, 192),
+	},
+	champagne = {
+		panel = { rgb(152, 122, 62), rgb(58, 46, 26), rgb(16, 14, 12), rgb(92, 72, 40) },
+		edge = { rgb(255, 250, 232), rgb(242, 216, 152), rgb(142, 112, 52) },
+		line = rgb(255, 246, 216),
+		gold = { rgb(255, 250, 234), rgb(248, 224, 162), rgb(208, 172, 92) },
+		goldText = rgb(30, 22, 8),
+		goldEdge = rgb(255, 246, 212),
+		plain = rgb(26, 22, 16),
+		plainGlow = rgb(242, 216, 152),
+		plainText = rgb(255, 248, 228),
+		accent = rgb(248, 222, 158),
+	},
+	midnight = {
+		panel = { rgb(38, 48, 96), rgb(18, 22, 42), rgb(10, 11, 16), rgb(32, 30, 62) },
+		edge = { rgb(242, 246, 255), rgb(172, 182, 222), rgb(52, 62, 112) },
+		line = rgb(222, 230, 255),
+		gold = { rgb(248, 250, 255), rgb(202, 210, 238), rgb(142, 152, 198) },
+		goldText = rgb(14, 16, 30),
+		goldEdge = rgb(238, 242, 255),
+		plain = rgb(16, 18, 30),
+		plainGlow = rgb(162, 178, 238),
+		plainText = rgb(234, 240, 255),
+		accent = rgb(178, 194, 255),
+	},
 } :: { [string]: Mood }
+
+-- Each of the house's panels in its own light, and the house's treasures (pieces from the sorting
+-- tables, by case) turning slowly beside its title: the Boutique's jewels and watches, the
+-- Vault's collectibles, the Grand Ballroom's jewellery... The owner's own panels keep the house's
+-- black and gold, plain.
+export type PanelLook = { mood: string, decor: { string }? }
+Theme.PanelLooks = {
+	GalaCard = { mood = "amethyst", decor = { "jewelry", "accessories", "jewelry" } },
+	IslandCard = { mood = "sea", decor = { "accessories", "money", "watches" } },
+	RacingCard = { mood = "grandPrix", decor = { "watches", "keys", "watches" } },
+	Boutique = { mood = "ruby", decor = { "jewelry", "watches", "accessories" } },
+	GemShop = { mood = "sapphire", decor = { "jewelry", "collectibles", "jewelry" } },
+	Curios = { mood = "emerald", decor = { "collectibles", "jewelry", "collectibles" } },
+	Showcase = { mood = "emerald", decor = { "collectibles", "watches", "jewelry" } },
+	Register = { mood = "champagne", decor = { "collectibles", "money", "keys" } },
+	BadgeBook = { mood = "champagne", decor = { "watches", "jewelry", "money" } },
+	PrestigeCard = { mood = "champagne", decor = { "jewelry", "money", "jewelry" } },
+	Fortune = { mood = "champagne", decor = { "money", "jewelry", "money" } },
+	Leaderboard = { mood = "champagne", decor = { "money", "watches", "money" } },
+	Wardrobe = { mood = "rose", decor = { "accessories", "jewelry", "accessories" } },
+	Bar = { mood = "rose" },
+	Admire = { mood = "rose" },
+	Suite = { mood = "midnight", decor = { "collectibles", "keys", "accessories" } },
+	Settings = { mood = "midnight" },
+	Menu = { mood = "midnight", decor = { "keys", "watches", "jewelry" } },
+	HowToPlay = { mood = "midnight", decor = { "watches", "jewelry", "keys" } },
+	Trade = { mood = "sapphire", decor = { "collectibles", "money", "collectibles" } },
+	GrandAuction = { mood = "ruby", decor = { "collectibles", "jewelry", "watches" } },
+	LuxeBoard = { mood = "ruby", decor = { "jewelry", "money", "watches" } },
+	BasementBoard = { mood = "thanksgiving", decor = { "money", "keys", "money" } },
+	Quartermaster = { mood = "midnight", decor = { "keys", "watches", "keys" } },
+	Circles = { mood = "sapphire" },
+	GuestBook = { mood = "champagne" },
+	Calendar = { mood = "ruby", decor = { "jewelry", "accessories", "money" } },
+	WelcomeBack = { mood = "champagne", decor = { "money", "jewelry", "watches" } },
+	StartHere = { mood = "champagne", decor = { "watches", "jewelry", "money" } },
+} :: { [string]: PanelLook }
 
 function Theme.mood(name: string?): Mood
 	return Theme.moods[name or "house"] or Theme.moods.house
@@ -577,8 +715,27 @@ function Theme.glass(parent: Instance, name: string, size: UDim2, position: UDim
 	content.BackgroundTransparency = 1
 	content.ClipsDescendants = true -- (nothing spills past the glass)
 	content.Size = UDim2.fromScale(1, 1)
+	content.ZIndex = 3 -- (over the glass and anything turning on it)
 	content.Parent = group
-	paintGlass(fill, Theme.mood(mood))
+	-- Its light: the one asked for, else the panel's own (Theme.PanelLooks), else the house's.
+	local look = Theme.PanelLooks[name]
+	local chosen = mood or (if look then look.mood else nil) or "house"
+	group:SetAttribute("Mood", chosen)
+	paintGlass(fill, Theme.mood(chosen))
+	if chosen ~= "house" then
+		-- Every key, heading and line put on it takes its light as it arrives.
+		local m = Theme.mood(chosen)
+		group.DescendantAdded:Connect(function(d: Instance)
+			task.defer(function()
+				if d.Parent then
+					Theme.paintOne(d, m)
+				end
+			end)
+		end)
+	end
+	if look and look.decor and size.X.Offset >= 420 then
+		Theme.decor(group, look.decor)
+	end
 	local pad = Instance.new("UIPadding")
 	pad.PaddingTop = UDim.new(0, 22)
 	pad.PaddingBottom = UDim.new(0, 22)
@@ -586,6 +743,102 @@ function Theme.glass(parent: Instance, name: string, size: UDim2, position: UDim
 	pad.PaddingRight = UDim.new(0, 24)
 	pad.Parent = content
 	return group, content
+end
+
+-- The house's treasures beside a panel's title: three pieces from the sorting tables (from the
+-- cases in `cases`, a different three each time), turning slowly and rising and falling a little
+-- in their own small window of light at the panel's top right corner, over the glass and under
+-- its words. Still for a guest whose Movement setting is Still. Gone with the panel.
+function Theme.decor(group: Frame, cases: { string })
+	if group:FindFirstChild("Decor") or #cases == 0 then
+		return
+	end
+	local okC, Catalogue = pcall(require, ReplicatedStorage.Shared.Catalogue)
+	local okP, PieceModels = pcall(require, ReplicatedStorage.Shared.PieceModels)
+	if not okC or not okP then
+		return
+	end
+	local vp = Instance.new("ViewportFrame")
+	vp.Name = "Decor"
+	vp.BackgroundTransparency = 1
+	vp.AnchorPoint = Vector2.new(1, 0)
+	vp.Position = UDim2.new(1, -16, 0, 8)
+	vp.Size = UDim2.fromOffset(176, 70)
+	vp.ZIndex = 2
+	vp.Ambient = Color3.fromRGB(150, 140, 130)
+	vp.LightColor = Color3.fromRGB(255, 238, 214)
+	vp.LightDirection = Vector3.new(-0.5, -1, -0.7)
+	vp.Parent = group
+	local camera = Instance.new("Camera")
+	camera.FieldOfView = 28
+	camera.CFrame = CFrame.lookAt(Vector3.new(0, 0.8, 9), Vector3.new(0, 0.1, 0))
+	camera.Parent = vp
+	vp.CurrentCamera = camera
+	type Turning = { model: Model, x: number, phase: number }
+	local pieces: { Turning } = {}
+	local used: { [string]: boolean } = {}
+	for i = 1, 3 do
+		local caseId = cases[(i - 1) % #cases + 1]
+		local okList, list = pcall(Catalogue.coreForCase, caseId)
+		if okList and type(list) == "table" and #list > 0 then
+			local piece = list[math.random(1, #list)]
+			for _ = 1, 4 do
+				if not used[piece.id] then
+					break
+				end
+				piece = list[math.random(1, #list)]
+			end
+			used[piece.id] = true
+			local okM, model = pcall(PieceModels.build, piece.id, nil)
+			if okM and model then
+				pcall(function()
+					-- (Each the same size in its window, whatever its own.)
+					local extents = model:GetExtentsSize()
+					local biggest = math.max(extents.X, extents.Y, extents.Z)
+					if biggest > 0 then
+						model:ScaleTo(model:GetScale() * 1.7 / biggest)
+					end
+				end)
+				for _, d in model:GetDescendants() do
+					if d:IsA("BasePart") then
+						d.Anchored = true
+						d.CanCollide = false
+					end
+				end
+				local x = (i - 2) * 2.3
+				pcall(function()
+					model:PivotTo(CFrame.new(x, 0, 0))
+				end)
+				model.Parent = vp
+				table.insert(pieces, { model = model, x = x, phase = i * 2.1 })
+			end
+		end
+	end
+	if #pieces == 0 then
+		vp:Destroy()
+		return
+	end
+	local still = State.get("movement") == "Still"
+	local conn: RBXScriptConnection? = nil
+	conn = RunService.Heartbeat:Connect(function()
+		if not vp.Parent then
+			if conn then
+				conn:Disconnect()
+			end
+			return
+		end
+		local t = if still then 0 else os.clock()
+		for _, p in pieces do
+			pcall(function()
+				p.model:PivotTo(CFrame.new(p.x, math.sin(t * 1.1 + p.phase) * 0.12, 0) * CFrame.Angles(0.22, t * 0.5 + p.phase, 0))
+			end)
+		end
+	end)
+	vp.Destroying:Connect(function()
+		if conn then
+			conn:Disconnect()
+		end
+	end)
 end
 
 -- How many screen pixels make one of a panel's own units just now (the screen's scale, and the
@@ -961,25 +1214,42 @@ function Theme.keyPadding(button: TextButton, left: number, right: number)
 	end
 end
 
+-- Paints one thing on a panel in `mood`: the glass, a key, a small heading, a hairline.
+function Theme.paintOne(d: Instance, mood: Mood)
+	local house = Theme.moods.house
+	if d:IsA("Frame") and d:GetAttribute("Glass") == true then
+		paintGlass(d, mood)
+	elseif d:IsA("TextButton") and d:GetAttribute("KeyKind") ~= nil then
+		paintKey(d, d:GetAttribute("KeyKind") == "gold", mood)
+	elseif d:IsA("TextLabel") and (d.TextColor3 == house.accent or d:GetAttribute("Accent") == true) then
+		d:SetAttribute("Accent", true)
+		d.TextColor3 = mood.accent
+	elseif d:IsA("Frame") and d.Name == "Hairline" then
+		d.BackgroundColor3 = mood.accent
+	end
+end
+
 -- Repaints a panel (or any holder) and every key and small heading on it in mood `name`.
 function Theme.paint(root: Instance, name: string)
 	local mood = Theme.mood(name)
-	local house = Theme.moods.house
-	local function one(d: Instance)
-		if d:IsA("Frame") and d:GetAttribute("Glass") == true then
-			paintGlass(d, mood)
-		elseif d:IsA("TextButton") and d:GetAttribute("KeyKind") ~= nil then
-			paintKey(d, d:GetAttribute("KeyKind") == "gold", mood)
-		elseif d:IsA("TextLabel") and (d.TextColor3 == house.accent or d:GetAttribute("Accent") == true) then
-			d:SetAttribute("Accent", true)
-			d.TextColor3 = mood.accent
-		end
-	end
-	one(root)
+	Theme.paintOne(root, mood)
 	for _, d in root:GetDescendants() do
-		one(d)
+		Theme.paintOne(d, mood)
 	end
 	root:SetAttribute("Mood", name)
+end
+
+-- The mood of the panel a thing is on (its nearest holder that has one), or the house's.
+function Theme.moodOf(d: Instance): Mood
+	local node: Instance? = d
+	while node do
+		local m = node:GetAttribute("Mood")
+		if type(m) == "string" then
+			return Theme.mood(m)
+		end
+		node = node.Parent
+	end
+	return Theme.moods.house
 end
 
 function Theme.key(parent: Instance, text: string, primary: boolean?, onPress: () -> (), width: number?, mood: string?): TextButton
@@ -1143,15 +1413,22 @@ function Theme.tabs(parent: Instance, specs: { { string } }, current: string, on
 	local chosen = current
 
 	local function paint()
+		-- (In the panel's own light: gold leaf and black glass in the house's, sea glass on the
+		-- island's, amethyst in the Grand Ballroom's...)
+		local mood = Theme.moodOf(holder)
+		local house = mood == Theme.moods.house
 		for id, k in keys do
 			local on = id == chosen
 			-- The chosen tab is gold leaf; the rest black glass, their words in pale gold.
-			k.BackgroundColor3 = if on then Color3.new(1, 1, 1) else Color3.fromRGB(18, 19, 24)
+			k.BackgroundColor3 = if on then Color3.new(1, 1, 1) elseif house then Color3.fromRGB(18, 19, 24) else mood.plain
 			k.BackgroundTransparency = if on then 0 else 0.1
-			k.TextColor3 = if on then Color3.fromRGB(28, 20, 6) else C.lightGold
+			k.TextColor3 = if on then (if house then Color3.fromRGB(28, 20, 6) else mood.goldText) elseif house then C.lightGold else mood.plainText
 			local sheen = k:FindFirstChild("Metal")
 			if on and not sheen then
-				Theme.metal(k, true)
+				local g = Theme.metal(k, true)
+				if not house then
+					g.Color = Theme.sequence(mood.gold)
+				end
 			elseif not on and sheen then
 				sheen:Destroy()
 			end

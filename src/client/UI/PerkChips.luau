@@ -2,7 +2,8 @@
 -- A guest's perks at a glance, at the left edge while they walk the house (clear of the keys
 -- and the objective card at the top right, the chat at the top left and the thumbstick below):
 -- God-Mode Luck's time left (it only runs while they're here), and anything bought and waiting
--- (a decree to write, revives kept for the next run, a rain waiting its turn). Nothing is shown
+-- (a decree to write, revives kept for the next run, a rain waiting its turn), and the daily
+-- streak (days in a row, and what it adds to Gilt). Nothing is shown
 -- when there's nothing to show, and it's hidden at the table. (Friends here: the Friend Booster
 -- card, bottom right. A new guest's welcome bonus has no capsule: the Start Here card says it.)
 
@@ -35,6 +36,7 @@ Theme.list(stack, 6).HorizontalAlignment = Enum.HorizontalAlignment.Left
 local chips: { [string]: TextButton } = {}
 -- Each perk's own point of light.
 local DOTS: { [string]: Color3 } = {
+	Streak = Color3.fromRGB(255, 140, 70),
 	Friends = Color3.fromRGB(120, 236, 150),
 	Luck = Color3.fromRGB(140, 230, 120),
 	Decree = Color3.fromRGB(255, 214, 120),
@@ -119,6 +121,11 @@ end
 
 local function refresh()
 	stack.Visible = not hidden
+	-- The daily streak (server/Streak): how many days in a row, and what it adds to Gilt.
+	local player = game:GetService("Players").LocalPlayer
+	local streak = tonumber(player:GetAttribute("Streak")) or 0
+	local boost = tonumber(player:GetAttribute("StreakBoost")) or 0
+	chip("Streak", 0, if streak >= 2 then string.format("🔥 %d DAYS IN A ROW  ·  +%d%% GILT", streak, boost) else nil)
 	-- (Friends in the house: the Friend Booster card in the bottom-right corner shows them.)
 	local luck = Perks.luckLeft()
 	local mult = if type(Perks.state.luck) == "table" then tonumber(Perks.state.luck.multiplier) else nil
@@ -148,6 +155,9 @@ end
 
 function PerkChips.start()
 	Perks.Changed:Connect(refresh)
+	local player = game:GetService("Players").LocalPlayer
+	player:GetAttributeChangedSignal("Streak"):Connect(refresh)
+	player:GetAttributeChangedSignal("StreakBoost"):Connect(refresh)
 	local acc = 0
 	RunService.Heartbeat:Connect(function(dt)
 		acc += dt

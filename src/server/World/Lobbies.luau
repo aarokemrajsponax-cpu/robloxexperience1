@@ -223,9 +223,18 @@ local function jetLounge(parent: Instance)
 	Lobbies.entrance(m, "island", CFrame.lookAt(at, at - Vector3.new(1, 0, 0)), true)
 end
 
+-- The Ballroom's far end: the great doors to the Grand Ballroom, on the axis of the room, past the
+-- marble floor and the chandelier (between the two tables nearest the north wall).
+local function grandDoors(parent: Instance)
+	local m = Kit.model(parent, "GrandBallroomDoors")
+	local at = Layout.Ballroom.galaDoors
+	Lobbies.entrance(m, "gala", CFrame.lookAt(at, at + Vector3.new(0, 0, -1)), true)
+end
+
 function Lobbies.build(parent: Instance)
 	local root = Kit.model(parent, "Lobbies")
 	local rooms: { { name: string, fn: (Instance) -> () } } = {
+		{ name = "The Grand Ballroom's doors", fn = grandDoors },
 		{ name = "The Luxe Lounge", fn = luxeLounge },
 		{ name = "The Basement Stair", fn = basementStair },
 		{ name = "The Executive's Anteroom", fn = anteroom },

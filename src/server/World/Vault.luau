@@ -199,6 +199,50 @@ function VaultRoom.dress(m: Model, top: number)
 	motes.Parent = air
 end
 
+-- The featured display along the east wall: a black marble console under four glass domes, each
+-- with a little stage of velvet in it; each guest's screen sets their own four curios on them
+-- (World/VaultView), and its card (the Vault's display: shared/Showcase) chooses them.
+function VaultRoom.featured(m: Model)
+	local f = Kit.model(m, "FeaturedDisplay")
+	local x = V.maxX - 1.1
+	local z0, z1 = 52, 61
+	local face = CFrame.lookAt(Vector3.new(x, FLOOR, (z0 + z1) / 2), Vector3.new(x - 10, FLOOR, (z0 + z1) / 2))
+	f:SetAttribute("GrandAnchor", face.Position)
+	local console = Kit.part(f, "Console", Vector3.new(z1 - z0, 3.2, 1.8), face * CFrame.new(0, 1.6, 0) * CFrame.Angles(0, math.rad(90), 0), L.blackMarble)
+	Kit.part(f, "ConsoleTop", Vector3.new(z1 - z0 + 0.3, 0.14, 2.1), face * CFrame.new(0, 3.27, 0) * CFrame.Angles(0, math.rad(90), 0), L.brass, { shadow = false })
+	Kit.part(f, "ConsoleGlow", Vector3.new(z1 - z0 - 0.4, 0.08, 0.08), face * CFrame.new(0, 0.2, -0.95) * CFrame.Angles(0, math.rad(90), 0), led(GOLD_LIGHT, 0.2), { collide = false, query = false, shadow = false })
+	for i = 1, 4 do
+		local dz = -3.3 + (i - 1) * 2.2
+		local base = face * CFrame.new(dz, 3.34, 0)
+		Kit.cylinder(f, "DomeBase", 0.18, 1.7, base * CFrame.new(0, 0.09, 0) * CFrame.Angles(0, 0, math.rad(90)), L.brass, { collide = false, shadow = false })
+		Kit.cylinder(f, "DomeStage", 0.12, 1.3, base * CFrame.new(0, 0.22, 0) * CFrame.Angles(0, 0, math.rad(90)), VELVET, { collide = false, query = false, shadow = false })
+		Kit.ball(f, "Dome", 1.6, (base * CFrame.new(0, 0.95, 0)).Position, GLASS, { collide = false, query = false, shadow = false })
+		-- The curio itself: a medallion standing on the stage, facing the room.
+		local medal = Kit.part(f, "VaultFeature", Vector3.new(1.05, 1.05, 0.06), base * CFrame.new(0, 0.86, 0), INVISIBLE, { collide = false, query = false, shadow = false })
+		medal:SetAttribute("Index", i)
+		CollectionService:AddTag(medal, "VaultFeature")
+	end
+	local plate = Kit.part(f, "FeaturedPlate", Vector3.new(4.4, 0.7, 0.06), face * CFrame.new(0, 2.4, -0.93), INVISIBLE, { collide = false, query = false, shadow = false })
+	Kit.engrave(plate, Enum.NormalId.Front, {
+		{ text = "FEATURED", size = 0.5, font = Brand.Fonts.display, color = Brand.Colours.brightGold },
+		{ text = "Choose what's shown", size = 0.32, font = Brand.Fonts.bodyBold, color = Color3.fromRGB(236, 226, 206) },
+	}, { ppu = 90, lit = false, brightness = 1.6 })
+	local p = Instance.new("ProximityPrompt")
+	p.Name = "LedgerPrompt"
+	p.ActionText = "Arrange"
+	p.ObjectText = "The Vault's display"
+	p.HoldDuration = 0
+	p.MaxActivationDistance = 9
+	p.RequiresLineOfSight = false
+	p.Style = Enum.ProximityPromptStyle.Custom
+	p.KeyboardKeyCode = Enum.KeyCode.E
+	p.GamepadKeyCode = Enum.KeyCode.ButtonX
+	p.Parent = console
+	CollectionService:AddTag(console, "VaultLedger")
+	local lamp = Kit.part(f, "DisplayLight", Vector3.new(0.4, 0.4, 0.4), face * CFrame.new(0, 7.4, -1.2), INVISIBLE, { collide = false, query = false, shadow = false })
+	Kit.spotLight(lamp, Enum.NormalId.Bottom, 1.4, 12, 70, Color3.fromRGB(255, 226, 180), false)
+end
+
 function VaultRoom.build(parent: Instance): Model
 	local m = Kit.model(parent, "Vault")
 	local top = FLOOR + V.height
@@ -260,6 +304,7 @@ function VaultRoom.build(parent: Instance): Model
 		{ text = "Everything you've filed, kept here", size = 0.3, font = Brand.Fonts.bodyBold, color = Color3.fromRGB(236, 226, 206) },
 	}, { ppu = 90, lit = false, brightness = 2 })
 	VaultRoom.dress(m, top)
+	VaultRoom.featured(m)
 	local fill = Kit.part(m, "Fill", Vector3.new(1, 1, 1), CFrame.new(-8, top - 2, 53), INVISIBLE, { collide = false, query = false, shadow = false })
 	Kit.pointLight(fill, 0.6, 34, Color3.fromRGB(230, 214, 200))
 	return m

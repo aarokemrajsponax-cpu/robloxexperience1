@@ -1,7 +1,10 @@
-# The Maison's economy (Build 72)
+# The Maison's economy (Build 73)
 
 Every figure here is the game's own (`src/shared/Config.luau`, `src/shared/Luxe.luau`,
-`src/shared/Basement.luau`, `src/shared/AuctionLots.luau`, `src/shared/Fortune.luau`). The
+`src/shared/Basement.luau`, `src/shared/AuctionLots.luau`, `src/shared/Fortune.luau`,
+`src/shared/Island.luau`, `src/shared/Gala.luau`, `src/shared/Tracks.luau`,
+`src/shared/Prestige.luau`, `src/shared/Showcase.luau`, `src/server/Streak.luau`,
+`src/server/TradeService.luau`). The
 earning rates in section 7 are design estimates from those numbers, **not measured play data**:
 check them against live analytics after release and tune the Config, not the code.
 
@@ -93,3 +96,78 @@ invitation price or the 8,000 haul mark. All of these are Config values.
 
 Newcomer 0 · Climber 1,000 · Affluent 5,000 · Wealthy 15,000 · Magnate 40,000 · Tycoon 100,000 ·
 Baron 250,000 · Mogul 600,000 · Billionaire 1,500,000 · Sovereign of the Maison 5,000,000.
+
+## 9. Luxury Island
+
+- **The Island Key**: the wealth rank of Tycoon first, then **25,000 Gilt** or **250 Gems**, the
+  price shown before buying. Once, for good.
+- **The day's pearls**: five on the lagoon's floor, the same places for everyone that day,
+  **250 Gilt** each, and **2 Gems** for all five. **10 Gems** a day at most from the island.
+- **The sunset toast**: **300 Gilt** once a day, **+50** for each friend who toasts within the
+  same three minutes (four counted at most).
+- **Postcards**: six spots; all six bring a badge and **1,000 Gilt**, once.
+- **The Pearl Exchange** (Suite pieces for pearls): the shell lamp 15, the palm lounger 30, the
+  coral throne 60, the pearl chandelier 120.
+- **Jet liveries** (a look only, never faster): Riviera 12,000 Gilt, Champagne 30,000 Gilt,
+  Emerald Club 120 Gems, Rosé 180 Gems; **Midnight Aurora** (reference 149 Robux) and **Sovereign
+  Gold** (reference 349 Robux), each sold only once its product exists.
+- **Island lights**: Azure Noon 8,000 Gilt, Rosé Dawn 60 Gems, Moonlit 20,000 Gilt.
+
+## 10. The Grand Ballroom (through the Ballroom's great doors)
+
+| Activity | Gilt |
+|---|---|
+| The dance floor | 8 a minute, ten minutes a day |
+| Luxury Trivia | 12 each right answer, 150 for the win |
+| The runway | 30 for walking, 8 for voting, 200 for the win |
+| The Daily Arena | 25 for taking part, 1 a point (40 at most), 150 for the win |
+| The photo sets | 25 for the first pose at each set, each day |
+
+- **2,500 Gilt** a day at most from the whole hall. **1 Gem** for each win, **3 a day** at most.
+- Nothing in the hall is bought or random. Winning is answering, walking, voting and playing.
+
+## 11. Racing
+
+- Racing points: **3** to finish, **+3** on the podium, **+6** for the win, **+2** for a personal
+  best, **1** a timed lap (20 laps a day count).
+- Racing ranks (stripes on any car you drive): Rookie 0, Club Racer 40, Pro 150, Ace 400,
+  Champion 1,000, Legend 2,500.
+
+## 12. Maison Prestige (no reset, ever)
+
+- Laurel points from the Badge Book: **1** a bronze badge, **2** silver, **4** gold, **8** platinum.
+- Ten laurels at 12, 30, 55, 90, 135, 185, 245, 310, 380 and 460 points. From the fourth up, each
+  also needs one great deed: the Treasury, the Executive beaten, the Island Key, an auction lot
+  won, a Grand Prix won, then the Billionaire and Sovereign ranks.
+- What they bring is a look: titles, borders, a flourish, Suite pieces, the Prestige Plinth. No
+  Gilt, Gems or advantage. Nothing is taken away to reach one.
+
+## 13. The displays
+
+- **The Vault's display**: four featured curios, an arrangement, the collection's completion and
+  the last forty arrivals. Free.
+- **Suite themes**: Maison Noir (free), Ivory Salon **15,000 Gilt**, Emerald Study **20,000 Gilt**,
+  Rosé **120 Gems**, Midnight Blue **150 Gems**; Island White with the Island Key, the Laurel Rooms
+  with the fourth laurel. Paid once, the price shown first, all of it or none.
+
+## 14. The daily streak
+
+- Days in a row (UTC): each Gilt earned counts for **5% more** a day after the first, up to
+  **30%** from the seventh day. A missed day starts it again at one (the best is kept).
+- Gems from the house: **5** at three days, **15** at seven, **30** at fourteen, **60** at thirty
+  and every thirty days after.
+- The streak joins the other boosts, and all of them together stay under the house's one cap.
+
+## 15. Trading money
+
+- Gilt and Gems can be part of a trade: **100,000 Gilt** and **100 Gems** at most on one side, and
+  **300 Gems** a day sent at most.
+- Gems, and curios bought with Gems, change hands only where Roblox's policies allow trading
+  paid items for both guests. Wardrobe pieces stay with whoever bought them.
+
+## 16. The Boutique's terms
+
+Every offer says what it is before it's bought: **Permanent: yours for good**, **Timed** (how
+long, and whether the clock runs only while you play), **One use** or **At once**, with the
+bundle's contents listed. A Gilt purchase asks once more, with the price, before it's taken.
+There are no countdowns on offers, no "was" prices and nothing random for Robux.

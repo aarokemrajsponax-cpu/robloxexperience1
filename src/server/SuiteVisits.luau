@@ -22,6 +22,11 @@ local SuiteVisits = {}
 
 -- A guest has just walked into a friend's Suite (set by Main: the Badge Book).
 SuiteVisits.visited = function(_player: Player, _host: Player) end
+-- Whether a guest may walk into a host's Suite now, as the host has chosen (set by Main:
+-- server/Showcase: friends, only invited friends, or nobody).
+SuiteVisits.mayVisit = function(_host: Player, _visitor: Player): (boolean, string?)
+	return true, nil
+end
 
 -- Set by Main: whether a guest is seated at a table (they get up first).
 SuiteVisits.isSeated = function(_player: Player): boolean
@@ -48,7 +53,7 @@ function SuiteVisits.hostOf(player: Player): Player?
 		return nil
 	end
 	local host = Players:GetPlayerByUserId(id)
-	if host and host.Parent == Players and Friends.are(player, host) then
+	if host and host.Parent == Players and Friends.are(player, host) and (SuiteVisits.mayVisit(host, player)) then
 		return host
 	end
 	return nil
@@ -141,6 +146,10 @@ local function onAsk(player: Player, request: unknown): any
 		if not Friends.are(player, host) then
 			return { ok = false, why = "Only friends on Roblox may visit each other's Suites." }
 		end
+		local may, why = SuiteVisits.mayVisit(host, player)
+		if not may then
+			return { ok = false, why = why or "Their Suite isn't open just now." }
+		end
 		setHost(player, host)
 		moveIn(player)
 		notice(host, "A visitor", Names.of(player) .. " is visiting your Suite.")
@@ -159,7 +168,7 @@ local function sweep()
 			if not host then
 				setHost(p, nil)
 				if inSuite(p) then
-					notice(p, "Your Suite", "Your friend has gone, so this is your own Suite again.")
+					notice(p, "Your Suite", "Your friend's Suite has closed to visitors, so this is your own Suite again.")
 				end
 			elseif not inSuite(p) and os.clock() - (began[p] or 0) > GRACE then
 				setHost(p, nil)
