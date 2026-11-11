@@ -493,6 +493,24 @@ function LuxeBuild.build(parent: Instance, o: Vector3, goHome: (player: Player) 
 	for _, at in { Vector3.new(-32, H - 2, 22), Vector3.new(-32, H - 2, 50), Vector3.new(32, H - 2, 22), Vector3.new(32, H - 2, 50) } do
 		chandelier(arch, o + at, rgb(255, 222, 180), 1.4)
 	end
+	-- The galleries' own light: brass sconces between the paintings on the outer walls, a
+	-- wainscot of walnut under them, and a long runner down each gallery.
+	local soft = { collide = false, query = false, shadow = false }
+	for _, side in { -1, 1 } do
+		local wx = side * 58.8
+		Kit.span(arch, "Wainscot", o + Vector3.new(wx, 0.2, 1), o + Vector3.new(wx - side * 0.4, 4, 69), L.walnut, soft)
+		Kit.span(arch, "ChairRail", o + Vector3.new(wx, 4, 1), o + Vector3.new(wx - side * 0.5, 4.3, 69), L.brass, soft)
+		for z = 6, 66, 12 do
+			local at = o + Vector3.new(wx - side * 0.3, 9.6, z + (if side > 0 then 6 else 0))
+			Kit.part(arch, "SconcePlate", Vector3.new(0.2, 1.4, 0.7), CFrame.new(at), L.brass, soft)
+			local shade = Kit.part(arch, "SconceShade", Vector3.new(0.8, 0.9, 0.8), CFrame.new(at + Vector3.new(-side * 0.6, 0.3, 0)), look(rgb(255, 214, 160), Enum.Material.Neon, nil, 0.3), soft)
+			Kit.pointLight(shade, 0.6, 16, rgb(255, 214, 170))
+		end
+		Kit.span(arch, "GalleryRunner", o + Vector3.new(side * 30 - 3, 0.2, 4), o + Vector3.new(side * 30 + 3, 0.25, 66), L.carpet, soft)
+		for _, ex in { -3.3, 3 } do
+			Kit.span(arch, "RunnerEdge", o + Vector3.new(side * 30 + ex, 0.2, 4), o + Vector3.new(side * 30 + ex + 0.3, 0.27, 66), L.brass, soft)
+		end
+	end
 	-- The Strongroom: steel, stacks of gold behind bars, a cold white light.
 	for _, x in { -36, 36 } do
 		for z = 76, 124, 12 do

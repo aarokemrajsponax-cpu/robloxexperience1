@@ -217,6 +217,41 @@ async function build() {
 	moon.shadow.bias = -0.0006;
 	scene.add(moon, moon.target);
 
+	// Daytime (Lighting.ClockTime 6 to 19): Roblox's sky, roughly: a gradient from deep blue
+	// overhead to a pale (or, near sunset, warm) horizon, the sun where the clock puts it, sky light
+	// from above and haze into the distance. (Night keeps the dark backdrop and the moon.)
+	const clock = L.clock ?? 0;
+	if (clock >= 6 && clock <= 19) {
+		const golden = Math.max(0, 1 - Math.min(Math.abs(clock - 18), Math.abs(clock - 6.5)) / 2.2);
+		const top = new THREE.Color().setRGB(0.16, 0.36, 0.72);
+		const horizon = new THREE.Color().setRGB(0.78, 0.86, 0.95).lerp(new THREE.Color(1.0, 0.72, 0.5), golden);
+		const c = document.createElement("canvas");
+		c.width = 2; c.height = 256;
+		const g = c.getContext("2d");
+		const grad = g.createLinearGradient(0, 0, 0, 256);
+		grad.addColorStop(0, "#" + top.getHexString());
+		grad.addColorStop(0.62, "#" + horizon.getHexString());
+		grad.addColorStop(1, "#" + horizon.clone().multiplyScalar(0.92).getHexString());
+		g.fillStyle = grad; g.fillRect(0, 0, 2, 256);
+		const tex = new THREE.CanvasTexture(c);
+		tex.colorSpace = THREE.SRGBColorSpace;
+		scene.background = tex;
+		scene.fog = new THREE.Fog(horizon, 420, 2600);
+		const elev = Math.max(0.08, Math.sin(((clock - 6) / 13) * Math.PI)) ;
+		const sunColour = new THREE.Color(1, 0.96, 0.88).lerp(new THREE.Color(1, 0.7, 0.45), golden);
+		const sun = new THREE.DirectionalLight(sunColour, 2.6 * (0.6 + 0.4 * elev));
+		sun.position.set(-260 * Math.cos(elev), 400 * elev + 40, 220);
+		sun.target.position.set(0, 0, 0);
+		sun.castShadow = true;
+		sun.shadow.mapSize.set(4096, 4096);
+		const ssc = sun.shadow.camera;
+		ssc.left = -320; ssc.right = 320; ssc.top = 320; ssc.bottom = -320; ssc.near = 1; ssc.far = 1400;
+		sun.shadow.bias = -0.0006;
+		scene.add(sun, sun.target);
+		scene.add(new THREE.HemisphereLight(new THREE.Color(0.6, 0.75, 1.0), new THREE.Color(0.35, 0.3, 0.22), 1.1));
+		moon.intensity = 0;
+	}
+
 	const pmrem = new THREE.PMREMGenerator(renderer);
 	scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
 	scene.environmentIntensity = 0.35;

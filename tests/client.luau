@@ -8261,7 +8261,7 @@ coroutine.wrap(function()
 	advance(0.5)
 	local liveries = {}
 	for _, l in IslandPlan.Liveries do
-		table.insert(liveries, { id = l.id, name = l.name, line = l.line, owned = l.id == "noir", gilt = l.gilt, gems = l.gems, product = l.product, onSale = if l.product then false else nil })
+		table.insert(liveries, { id = l.id, name = l.name, line = l.line, owned = l.id == "noir" or l.id == "ivory", gilt = l.gilt, gems = l.gems, product = l.product, onSale = if l.product then false else nil })
 	end
 	local themes = {}
 	for _, t in IslandPlan.Themes do

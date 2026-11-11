@@ -272,7 +272,7 @@ end
 -- The jets in their liveries
 ---------------------------------------------------------------------------------------------------
 local function paint(model: Instance, liveryId: string)
-	local l = Plan.liveryById[liveryId] or Plan.liveryById.noir
+	local l = Plan.liveryById[liveryId] or Plan.liveryById.ivory
 	for _, d in model:GetDescendants() do
 		if d:IsA("BasePart") then
 			local which = d:GetAttribute("Livery")
@@ -305,7 +305,7 @@ local function paintAll()
 	local jet = strip and strip:FindFirstChild("Jet")
 	if jet then
 		local mine = player:GetAttribute("JetLivery")
-		paint(jet, if type(mine) == "string" then mine else "noir")
+		paint(jet, if type(mine) == "string" then mine else "ivory")
 	end
 	local gallery = isle:FindFirstChild("JetGallery")
 	if gallery then
@@ -472,7 +472,7 @@ end
 local function buildCabin(at: CFrame, liveryId: string, outbound: boolean): Model
 	local m = Instance.new("Model")
 	m.Name = "IslandCabin"
-	local l = Plan.liveryById[liveryId] or Plan.liveryById.noir
+	local l = Plan.liveryById[liveryId] or Plan.liveryById.ivory
 	local IVORY, WALNUT, CARPET = rgb(236, 228, 212), rgb(92, 56, 34), rgb(206, 194, 172)
 	local GOLD, STITCH = rgb(214, 176, 96), rgb(214, 202, 182)
 	local floor = cabinPart(m, "Floor", Vector3.new(9, 0.4, 30), at * CFrame.new(0, -0.2, 0), CARPET, Enum.Material.Fabric)
@@ -732,7 +732,7 @@ function IslandView.flight(outbound: boolean)
 	local o = origin()
 	local at = CFrame.new(o + Vector3.new(0, 1200, -2600)) * CFrame.Angles(0, math.pi, 0)
 	local liveryId = player:GetAttribute("JetLivery")
-	local cabin = buildCabin(at, if type(liveryId) == "string" then liveryId else "noir", outbound)
+	local cabin = buildCabin(at, if type(liveryId) == "string" then liveryId else "ivory", outbound)
 	local puffs = buildSky(cabin, at, outbound)
 	cabin.Parent = Workspace
 	local camWas = camera.CameraType

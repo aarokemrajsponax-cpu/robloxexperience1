@@ -409,6 +409,16 @@ a Nightly attempt or a Mythic's odds.
   the camera turns from the cabin to the window, and the island's piano starts in the air.
 - **Luxury Island at dusk.** Tiki torches along the top of the sand and either side of the pier,
   their firelight given on each guest's screen (brightest on a moonlit evening).
+- **The jet in Ivory & Gold.** A new free livery and the default for every guest (Maison Noir stays
+  free too): ivory lacquer and a gold cheat line, with a nose that narrows to a point. The
+  overwater villas have teak-framed windows, a door with its lamp and a teak pergola over each
+  deck; the yachts, hull windows, a swim platform and chrome rails.
+- **The Basement, dressed.** Oak racks of bottles in the Wine Cellar; copper pipes, red valve
+  wheels and gauges in the Boiler Room; walls of safe-deposit boxes in the Old Vaults; stacked
+  gold in the Treasury Depths; a warm sconce in every stage. Checkpoints are a glowing border
+  round the pad with a brass medallion, not a slab of colour.
+- **The Long Gallery, lit.** Brass sconces between the paintings, walnut wainscot, a runner edged
+  in brass down each gallery.
 - **Fixes.** On phones, the Fortune plaque no longer sits over the scores while you sort, and the
   table's first-time hint grows to fit its words. Three badge descriptions trimmed to fit their
   cards.

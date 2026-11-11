@@ -76,10 +76,11 @@ local function page(ctx: Types.Ctx, data: any): { [string]: any }
 	if type(p.pearlTaken) ~= "table" then
 		p.pearlTaken = {}
 	end
+	p.liveries.ivory = true
 	p.liveries.noir = true
 	p.themes.golden = true
 	if type(p.livery) ~= "string" or not Plan.liveryById[p.livery] then
-		p.livery = "noir"
+		p.livery = "ivory"
 	end
 	if type(p.theme) ~= "string" or not Plan.themeById[p.theme] then
 		p.theme = "golden"

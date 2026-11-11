@@ -126,6 +126,7 @@ Island.POSTCARDS_GILT = 1000
 ---------------------------------------------------------------------------------------------------
 export type Livery = { id: string, name: string, line: string, body: Color3, trim: Color3, stripe: Color3, cabin: Color3, gilt: number?, gems: number?, product: string? }
 Island.Liveries = {
+	{ id = "ivory", name = "Ivory & Gold", line = "Ivory lacquer and a gold cheat line: the classic private jet.", body = rgb(244, 240, 230), trim = rgb(206, 166, 84), stripe = rgb(196, 152, 66), cabin = rgb(214, 200, 176) },
 	{ id = "noir", name = "Maison Noir", line = "Black lacquer and gold: the house's own.", body = rgb(16, 16, 20), trim = rgb(214, 176, 96), stripe = rgb(240, 206, 120), cabin = rgb(84, 46, 30) },
 	{ id = "riviera", name = "Riviera", line = "White as a yacht, a line of Mediterranean blue.", body = rgb(240, 240, 236), trim = rgb(36, 96, 168), stripe = rgb(86, 160, 226), cabin = rgb(214, 200, 176), gilt = 12000 },
 	{ id = "champagne", name = "Champagne", line = "Pale gold from nose to tail.", body = rgb(226, 206, 160), trim = rgb(150, 116, 60), stripe = rgb(255, 238, 190), cabin = rgb(236, 226, 206), gilt = 30000 },

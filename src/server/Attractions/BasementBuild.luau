@@ -215,8 +215,20 @@ function BasementBuild.build(parent: Instance, o: Vector3, goHome: (player: Play
 		local c = Plan.Checkpoints[n]
 		local zone = Plan.Zones[c.zone]
 		local top = o + c.at
-		local ring = Kit.part(course, "CheckpointRing", Vector3.new(c.size.X - 1, 0.1, c.size.Z - 1), CFrame.new(top + Vector3.new(0, 0.06, 0)), look(zone.colour, Enum.Material.Neon, nil, 0.55), { collide = false, query = false, shadow = false })
+		-- (The pad itself, faintly tinted; a glowing border of its part's colour round it, and a
+		-- brass medallion in the middle.)
+		local ring = Kit.part(course, "CheckpointRing", Vector3.new(c.size.X - 1, 0.1, c.size.Z - 1), CFrame.new(top + Vector3.new(0, 0.06, 0)), look(zone.colour, Enum.Material.SmoothPlastic, nil, 0.85), { collide = false, query = false, shadow = false })
 		ring.Name = "Checkpoint" .. n
+		local edge = look(zone.colour:Lerp(Color3.new(1, 1, 1), 0.15), Enum.Material.Neon, nil, 0.15)
+		local glow = { collide = false, query = false, shadow = false }
+		local w, d = c.size.X - 1, c.size.Z - 1
+		for _, sz in { -1, 1 } do
+			Kit.part(course, "CheckpointEdge", Vector3.new(w, 0.12, 0.35), CFrame.new(top + Vector3.new(0, 0.08, sz * (d / 2 - 0.18))), edge, glow)
+		end
+		for _, sx in { -1, 1 } do
+			Kit.part(course, "CheckpointEdge", Vector3.new(0.35, 0.12, d), CFrame.new(top + Vector3.new(sx * (w / 2 - 0.18), 0.08, 0)), edge, glow)
+		end
+		Kit.cylinder(course, "CheckpointMedallion", 0.1, math.min(w, d) * 0.32, CFrame.new(top + Vector3.new(0, 0.1, 0)) * CFrame.Angles(0, 0, math.rad(90)), look(Color3.fromRGB(196, 156, 74), Enum.Material.Metal, 0.3), glow)
 		ring:SetAttribute("Checkpoint", n)
 		checkpoints[n] = ring
 		if n > 0 and n < Plan.STAGES then
@@ -237,7 +249,67 @@ function BasementBuild.build(parent: Instance, o: Vector3, goHome: (player: Play
 		end
 		-- (A lamp over every checkpoint.)
 		local lamp = Kit.part(course, "Lamp", Vector3.new(1.2, 0.4, 1.2), CFrame.new(top + Vector3.new(0, 12, 0)), look(rgb(255, 230, 190), Enum.Material.Neon), { collide = false, query = false, shadow = false })
-		Kit.pointLight(lamp, 1.1, 30, zone.colour:Lerp(rgb(255, 240, 220), 0.6))
+		Kit.pointLight(lamp, 0.9, 30, zone.colour:Lerp(rgb(255, 240, 220), 0.6))
+	end
+
+	-- Each stage's walls dressed as the place it is (never in anyone's way: no collisions, no
+	-- queries): oak racks of bottles in the Wine Cellar; copper pipes, red valve wheels and gauges
+	-- in the Boiler Room; walls of safe-deposit boxes in the Old Vaults; stacked gold in the
+	-- Treasury Depths. A warm sconce on one wall of every stage.
+	local DRESS = { collide = false, query = false, shadow = false }
+	local RACK = look(rgb(54, 34, 22), Enum.Material.Wood)
+	local BOTTLES = { look(rgb(28, 52, 34), Enum.Material.Glass, 0.2), look(rgb(84, 16, 28), Enum.Material.Glass, 0.2) }
+	local COPPER = look(rgb(184, 110, 64), Enum.Material.Metal, 0.2)
+	local VALVE = look(rgb(170, 30, 34), Enum.Material.Metal, 0.1)
+	local DIAL = look(rgb(236, 230, 214), Enum.Material.SmoothPlastic)
+	local BOXES = look(rgb(96, 104, 116), Enum.Material.Metal, 0.15)
+	local BRASS = look(rgb(196, 156, 74), Enum.Material.Metal, 0.25)
+	local BAR = look(rgb(236, 186, 64), Enum.Material.Metal, 0.35)
+	local dressing = Kit.model(arch, "Dressing")
+	local function dress(n: number, z0: number, z1: number, y: number)
+		local zone = Plan.zoneOf(n)
+		for _, side in { -1, 1 } do
+			local x = side * 17.2
+			local inward = -side
+			if zone == 1 then
+				for z = z0 + 6, z1 - 6, 12 do
+					Kit.part(dressing, "Rack", Vector3.new(0.6, 7, 8), CFrame.new(o + Vector3.new(x, y + 3.5, z)), RACK, DRESS)
+					for r = 0, 2 do
+						for c = 0, 3 do
+							Kit.cylinder(dressing, "Bottle", 0.3, 0.7, CFrame.new(o + Vector3.new(x + inward * 0.32, y + 1.6 + r * 2, z - 2.7 + c * 1.8)), BOTTLES[(r + c) % 2 + 1], DRESS)
+						end
+					end
+				end
+			elseif zone == 2 then
+				for _, h in { 5.5, 8.6 } do
+					Kit.cylinder(dressing, "Pipe", z1 - z0, 0.9, CFrame.new(o + Vector3.new(x, y + h, (z0 + z1) / 2)) * CFrame.Angles(0, math.rad(90), 0), COPPER, DRESS)
+				end
+				for z = z0 + 8, z1 - 8, 16 do
+					Kit.cylinder(dressing, "ValveWheel", 0.25, 2, CFrame.new(o + Vector3.new(x + inward * 0.7, y + 7, z)), VALVE, DRESS)
+					Kit.cylinder(dressing, "Gauge", 0.2, 1.3, CFrame.new(o + Vector3.new(x + inward * 0.4, y + 3.6, z + 3)), DIAL, DRESS)
+					Kit.cylinder(dressing, "GaugeRim", 0.18, 1.5, CFrame.new(o + Vector3.new(x + inward * 0.36, y + 3.6, z + 3)), BRASS, DRESS)
+				end
+			elseif zone == 3 then
+				for z = z0 + 5, z1 - 5, 9 do
+					Kit.part(dressing, "Boxes", Vector3.new(0.4, 6, 7.4), CFrame.new(o + Vector3.new(x, y + 4, z)), BOXES, DRESS)
+					for r = 0, 2 do
+						for c = 0, 3 do
+							Kit.ball(dressing, "Knob", 0.28, o + Vector3.new(x + inward * 0.25, y + 2.2 + r * 1.8, z - 2.7 + c * 1.8), BRASS, DRESS)
+						end
+					end
+				end
+			else
+				for z = z0 + 5, z1 - 5, 10 do
+					for k = 0, 2 do
+						Kit.part(dressing, "GoldBar", Vector3.new(1.4, 0.7, 3), CFrame.new(o + Vector3.new(x + inward * 0.9, y + 0.4 + k * 0.72, z + (k % 2) * 0.4)), BAR, DRESS)
+					end
+				end
+			end
+		end
+		-- A warm sconce, on alternate walls.
+		local sx = (if n % 2 == 0 then 1 else -1) * 17.1
+		local shade = Kit.part(dressing, "Sconce", Vector3.new(0.5, 1.2, 1.2), CFrame.new(o + Vector3.new(sx, y + 10, (z0 + z1) / 2)), look(rgb(255, 214, 160), Enum.Material.Neon, nil, 0.25), DRESS)
+		Kit.pointLight(shade, 0.8, 22, Plan.Zones[zone].colour:Lerp(rgb(255, 226, 180), 0.65))
 	end
 
 	-- Walls and a ceiling over each stage, in its part's look.
@@ -254,6 +326,7 @@ function BasementBuild.build(parent: Instance, o: Vector3, goHome: (player: Play
 		end
 		local low = pit.at.Y - 1
 		local h = high - low
+		dress(n, z0, z1, math.min(a.at.Y, b.at.Y) + 0.5)
 		for _, x in { -18, 18 } do
 			Kit.part(arch, "Wall", Vector3.new(1, h, z1 - z0), CFrame.new(o + Vector3.new(x, low + h / 2, (z0 + z1) / 2)), WALL[zone])
 		end

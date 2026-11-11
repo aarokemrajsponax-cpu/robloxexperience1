@@ -262,7 +262,7 @@ end
 function IslandBuild.jet(parent: Instance, cf: CFrame, k: number?, simple: boolean?): Model
 	local s = k or 1
 	local m = Kit.model(parent, "Jet")
-	local body = look(rgb(16, 16, 20), Enum.Material.SmoothPlastic, 0.12)
+	local body = look(rgb(244, 240, 230), Enum.Material.SmoothPlastic, 0.18)
 	local trim = look(rgb(214, 176, 96), Enum.Material.Metal, 0.2)
 	local opts = if simple then TRIM else nil
 	local y = 6.2 * s -- the fuselage's centre above the ground
@@ -272,8 +272,11 @@ function IslandBuild.jet(parent: Instance, cf: CFrame, k: number?, simple: boole
 	local along = CFrame.Angles(0, math.rad(90), 0) -- (a cylinder's length along the jet)
 	-- The fuselage: the cabin, the nose (a taper and a round tip), the tail cone.
 	paint(Kit.cylinder(m, "Fuselage", 34 * s, 7.6 * s, at(0, 6.2, 0) * along, body, opts), "body")
-	paint(Kit.cylinder(m, "Nose", 7 * s, 6.8 * s, at(0, 6.1, -20.4) * along, body, opts), "body")
-	paint(Kit.ball(m, "NoseTip", 6.6 * s, (at(0, 6, -23.6)).Position, body, opts), "body")
+	-- (The nose narrows in steps to a point: no blunt dome.)
+	paint(Kit.cylinder(m, "Nose", 6 * s, 6.8 * s, at(0, 6.1, -19.9) * along, body, opts), "body")
+	paint(Kit.cylinder(m, "NoseTaper", 3.2 * s, 5.4 * s, at(0, 5.95, -24.2) * along, body, opts), "body")
+	paint(Kit.cylinder(m, "NoseTaper2", 2.4 * s, 3.8 * s, at(0, 5.8, -26.8) * along, body, opts), "body")
+	paint(Kit.ball(m, "NoseTip", 3.4 * s, (at(0, 5.7, -28.0)).Position, body, opts), "body")
 	paint(Kit.cylinder(m, "Tail", 8 * s, 6.4 * s, at(0, 6.4, 20.8) * along, body, opts), "body")
 	paint(Kit.cylinder(m, "TailCone", 6 * s, 4.4 * s, at(0, 6.8, 27.6) * along, body, opts), "body")
 	paint(Kit.ball(m, "TailTip", 3.6 * s, (at(0, 7, 30.6)).Position, body, opts), "body")
@@ -532,6 +535,31 @@ local function overwater(parent: Instance, o: Vector3)
 		for _, dz in { -3.75, 3.75 } do
 			Kit.part(m, "GlassDoors", Vector3.new(0.3, 7.4, 3.5), CFrame.new(hc + Vector3.new(side * 5.5, 4, dz)), GLASS, { shadow = false })
 		end
+		-- Windows on both sides (dark glass in teak), a door surround with a brass lamp, and a
+		-- pergola of teak over the deck's open side.
+		for _, dz in { -6, 6 } do
+			for _, wx in { -2.4, 2.4 } do
+				local wc = hc + Vector3.new(wx, 4.6, dz + (if dz > 0 then 0.52 else -0.52))
+				Kit.part(m, "Window", Vector3.new(2.6, 3.2, 0.12), CFrame.new(wc), DARK_GLASS, TRIM)
+				Kit.part(m, "WindowFrame", Vector3.new(2.9, 0.25, 0.2), CFrame.new(wc + Vector3.new(0, 1.7, 0)), TEAK, TRIM)
+				Kit.part(m, "WindowFrame", Vector3.new(2.9, 0.25, 0.2), CFrame.new(wc - Vector3.new(0, 1.7, 0)), TEAK, TRIM)
+				Kit.part(m, "WindowMullion", Vector3.new(0.18, 3.2, 0.2), CFrame.new(wc), TEAK, TRIM)
+			end
+		end
+		local door = hc + Vector3.new(-side * 6.05, 0, 0)
+		for _, dz in { -2.2, 2.2 } do
+			Kit.part(m, "DoorPost", Vector3.new(0.3, 7.4, 0.4), CFrame.new(door + Vector3.new(0, 3.7, dz)), TEAK, TRIM)
+		end
+		Kit.part(m, "DoorHead", Vector3.new(0.3, 0.4, 4.8), CFrame.new(door + Vector3.new(0, 7.4, 0)), TEAK, TRIM)
+		lantern(m, door + Vector3.new(-side * 0.2, 6.2, 2.9))
+		local pz = z
+		for _, dz in { -7.4, 7.4 } do
+			Kit.post(m, "PergolaPost", 8.4, 0.5, o + Vector3.new(cx + side * 10.2, deckY + 0.3, pz + dz), TEAK, TRIM)
+		end
+		for k = 0, 5 do
+			Kit.part(m, "PergolaSlat", Vector3.new(9, 0.3, 0.4), CFrame.new(o + Vector3.new(cx + side * 5.6, deckY + 8.7, pz - 6.25 + k * 2.5)), TEAK, TRIM)
+		end
+		Kit.part(m, "PergolaBeam", Vector3.new(0.5, 0.5, 15.4), CFrame.new(o + Vector3.new(cx + side * 10.2, deckY + 8.5, pz)), TEAK, TRIM)
 		-- The thatched roof: two slopes and a ridge.
 		for _, dz in { -1, 1 } do
 			Kit.part(m, "Thatch", Vector3.new(14, 0.8, 8.6), CFrame.new(hc + Vector3.new(0, 10.4, dz * 3.6)) * CFrame.Angles(dz * math.rad(28), 0, 0), THATCH)
@@ -750,6 +778,12 @@ local function yacht(parent: Instance, cf: CFrame, length: number, name: string)
 	Kit.part(m, "RadarArch", Vector3.new(7 * k, 3 * k, 1 * k), cf * CFrame.new(0, 13.4 * k, 4 * k), HULL)
 	Kit.part(m, "Radar", Vector3.new(4 * k, 0.3 * k, 0.6 * k), cf * CFrame.new(0, 15.2 * k, 4 * k), NAVY, TRIM)
 	Kit.part(m, "Railing", Vector3.new(10.6 * k, 0.2 * k, 40 * k), cf * CFrame.new(0, 5.6 * k, 2 * k), CHROME, TRIM)
+	for _, side in { -1, 1 } do
+		Kit.part(m, "HullWindows", Vector3.new(0.12, 0.9 * k, 26 * k), cf * CFrame.new(side * 5.56 * k, 2.4 * k, 3 * k), DARK_GLASS, TRIM)
+		Kit.part(m, "Rubbing", Vector3.new(0.14, 0.25 * k, 38 * k), cf * CFrame.new(side * 5.58 * k, 0.6 * k, 4 * k), CHROME, TRIM)
+	end
+	Kit.part(m, "SwimPlatform", Vector3.new(10 * k, 0.4 * k, 3 * k), cf * CFrame.new(0, -0.6 * k, 24.4 * k), DECK, TRIM)
+	Kit.part(m, "UpperRail", Vector3.new(7.8 * k, 0.15 * k, 14.4 * k), cf * CFrame.new(0, 12.6 * k, 2 * k), CHROME, TRIM)
 	local plate = Kit.part(m, "Transom", Vector3.new(9 * k, 2 * k, 0.2), cf * CFrame.new(0, 2 * k, 23.1 * k), HULL, TRIM)
 	Kit.engrave(plate, Enum.NormalId.Back, { { text = string.upper(name), size = 0.6, font = Brand.Fonts.display, color = rgb(196, 160, 82) } }, { ppu = 60, lit = false })
 end

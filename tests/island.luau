@@ -200,7 +200,7 @@ check("or for Gems", r.ok == true and page(bo).key == true and data(bo).gems == 
 r = askAs(ada, { op = "go", id = "island" })
 check("with the key: the jet flies them in", r.ok == true and ada:GetAttribute("Attraction") == "island")
 check("...beside the jet, on the island", (ada.root.CFrame.Position - (O + Plan.Arrival.Position)).Magnitude < 6)
-check("...their livery and their light, on them for every screen", ada:GetAttribute("JetLivery") == "noir" and ada:GetAttribute("IslandTheme") == "golden")
+check("...their livery and their light, on them for every screen", ada:GetAttribute("JetLivery") == "ivory" and ada:GetAttribute("IslandTheme") == "golden")
 check("...and the flight counted", page(ada).flights == 1)
 
 ---------------------------------------------------------------------------------------------------
