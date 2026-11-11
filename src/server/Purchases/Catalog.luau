@@ -170,6 +170,42 @@ function Catalog.discover()
 	end
 	discovered = found
 	rebuild()
+	Catalog.reportMissing()
+end
+
+-- The owner is told, once a server (and again only when the list changes), which developer
+-- products aren't on sale yet because no product with their name exists in Creator Hub: every one
+-- is money the house can't take. (Never the timed rooms' revives: nothing offers them now. Never
+-- the VIP Velocity Elite product while its game pass is on sale.)
+local lastMissing = ""
+function Catalog.missing(): { string }
+	local skip: { [string]: boolean } = {}
+	for _, key in ProductConfig.RoomRevives do
+		skip[key] = true
+	end
+	if Catalog.idOf("velocityElite") ~= 0 then
+		skip.velocityEliteProduct = true
+	end
+	local out = {}
+	for _, e in ProductConfig.List do
+		if e.ProductType == "DeveloperProduct" and not skip[e.Key] and Catalog.idOf(e.Key) == 0 then
+			table.insert(out, e.Name)
+		end
+	end
+	return out
+end
+function Catalog.reportMissing()
+	local names = Catalog.missing()
+	local text = table.concat(names, ", ")
+	if text == lastMissing then
+		return
+	end
+	lastMissing = text
+	if #names == 0 then
+		return
+	end
+	local shown = table.concat(names, ", ", 1, math.min(#names, 12))
+	Catalog.report(string.format("%d products aren't on sale yet (make each in Creator Hub with this exact name): %s%s.", #names, shown, if #names > 12 then string.format(", and %d more", #names - 12) else ""))
 end
 
 -- Validates every entry (handlers: the server's grant handlers). Broken entries are switched off

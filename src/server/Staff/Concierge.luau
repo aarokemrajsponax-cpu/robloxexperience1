@@ -259,7 +259,16 @@ function Concierge.recommend(player: Player): (string, string?)
 	if island.key ~= true and reached >= (tonumber(((settings.Attractions or {}).island or {}).keyRank) or 6) then
 		return R.island, "terrace"
 	end
-	return R.quartermaster, "midnight"
+	local ex = (settings.Attractions or {}).executive or {}
+	local function commas(n: number): string
+		local text = tostring(math.floor(n))
+		local out = text:reverse():gsub("(%d%d%d)", "%1,"):reverse()
+		return if out:sub(1, 1) == "," then out:sub(2) else out
+	end
+	local line = R.quartermaster
+		:gsub("{inviteHaul}", commas(tonumber(ex.inviteHaul) or 8000))
+		:gsub("{invitePrice}", commas(tonumber(ex.invitePrice) or 25000))
+	return line, "midnight"
 end
 
 -- An answer, with the house's own numbers in it.

@@ -142,10 +142,10 @@ ladder("tables", "flawless", "💎", "Play %d Flawless rounds.", {
 	{ 1000, "Flawless Forever" },
 }, "Play your first Flawless round.")
 moment("tables", "flawless_salon", "Salon Perfect", "A Flawless round in the Salon.", "🕯️", "bronze")
-moment("tables", "flawless_velvet", "Velvet Perfect", "A Flawless round in the Velvet Room.", "🍷", "silver")
-moment("tables", "flawless_obsidian", "Obsidian Perfect", "A Flawless round in the Obsidian Room.", "🖤", "gold")
-moment("tables", "flawless_midnight", "Midnight Perfect", "A Flawless round in the Midnight Room.", "🌑", "platinum")
-moment("tables", "midnight", "After Midnight", "Open the Midnight Room.", "🕛", "gold")
+moment("tables", "flawless_velvet", "Velvet Perfect", "A Flawless round at tonight's table, on a gentle-clock night.", "🍷", "silver")
+moment("tables", "flawless_obsidian", "Obsidian Perfect", "A Flawless round at tonight's table, on a brisk-clock night.", "🖤", "gold")
+moment("tables", "flawless_midnight", "Midnight Perfect", "A Flawless round at tonight's table on a Friday, the hardest clock.", "🌑", "platinum")
+moment("tables", "midnight", "After Midnight", "Reach round IV of tonight's table on a brisk-clock night.", "🕛", "gold")
 
 -- Nights at the house
 ladder("nights", "nights", "🌙", "Spend %d nights at the house.", {

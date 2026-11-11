@@ -980,6 +980,12 @@ do
 	-- (Chronos Defiance is only ever offered at a timed table's clock, and no table the house lays
 	-- today offers one: a card for it could never be bought, so it isn't shown.)
 	check("Chronos Defiance isn't on the Offers page: no table offers a revive today", byKey.chronosDefiance == nil)
+	do
+		-- The owner is told which products still need making in Creator Hub, by their exact names.
+		local missing = table.concat(Catalog.missing(), "|")
+		check("the owner's list of products still to make names them exactly (Gem Pouch, Boutique 99)", string.find(missing, "Gem Pouch", 1, true) ~= nil and string.find(missing, "Boutique 99", 1, true) ~= nil)
+		check("...never one made already, nor the old rooms' revives", string.find(missing, "Luck Booster", 1, true) == nil and string.find(missing, "Double Gilt", 1, true) == nil and string.find(missing, "Revive:", 1, true) == nil)
+	end
 	local r = H.askAs(zoe, { op = "offer", key = "godModeLuck" })
 	check("buying Luck Booster opens Roblox's window for its id", r.ok and prompts[#prompts].id == 3716216448)
 	check("its receipt grants it", receipt(zoe, 3716216448, "LIVE-1", 399) == GRANTED and Luck.remaining(zoe, profiles[zoe].Data) > 1790)
