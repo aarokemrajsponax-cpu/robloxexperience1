@@ -328,4 +328,62 @@ advance(3)
 r = askAs(ada, { op = "home" })
 check("home again: back in the Jet Lounge", r.ok == true and ada:GetAttribute("Attraction") == nil and Layout.zoneAt(ada.root.CFrame.Position) == "terrace", ada.root.CFrame.Position)
 
+---------------------------------------------------------------------------------------------------
+-- 10. The Maison Directory's cards, and the first-time notes
+---------------------------------------------------------------------------------------------------
+do
+	-- (A guest new to the house: no key, no invitation.)
+	local cy = H.guest("Cy", 903)
+	advance(1)
+	local d = askAs(cy, { op = "directory" })
+	local cards = d and d.cards or {}
+	check("the Directory: a card from the server for every attraction", d.ok == true and cards.luxe ~= nil and cards.basement ~= nil and cards.executive ~= nil and cards.gala ~= nil and cards.island ~= nil)
+	check("...the island closed without the Island Key, with what opens it (the rank, both prices)", cards.island.open == false and cards.island.keyRank == "Tycoon" and cards.island.keyRankAt == 100000 and cards.island.keyGilt == 25000 and cards.island.keyGems == 250 and cards.island.rankReady == false, string.format("%s %s %s %s %s %s", tostring(cards.island.open), tostring(cards.island.keyRank), tostring(cards.island.keyRankAt), tostring(cards.island.keyGilt), tostring(cards.island.keyGems), tostring(cards.island.rankReady)))
+	check("...the Executive Suite closed without an invitation, with how one is earned", cards.executive.open == false and cards.executive.invites == 0 and cards.executive.inviteHaul == 8000 and cards.executive.invitePrice == 25000)
+	check("...Steal a Luxe, the Basement and the Grand Ballroom open to everyone, with the figures", cards.luxe.open == true and cards.basement.open == true and cards.basement.stages == 16 and cards.gala.open == true and cards.gala.galaGilt == 2500)
+	local da = askAs(ada, { op = "directory" })
+	check("...the island open to the guest who holds the key", da.cards.island.open == true)
+	check("...and, standing in the Jet Lounge, the island is the one whose door is here", da.here == "island" and da.inside == nil, da.here)
+	local ex = module("ServerScriptService", "Server", "Attractions", "Executive")
+	ex.invite(Attractions.ctx, cy, "owner")
+	d = askAs(cy, { op = "directory" })
+	check("...an invitation opens the Suite's card (one is spent going up)", d.cards.executive.open == true and d.cards.executive.invites == 1)
+	d = askAs(cy, { op = "directory", gilt = 100 })
+	check("a Directory request with anything else in it: refused", d.ok == false)
+	-- The first time in: the screen is told so, once ever.
+	local entered = {}
+	for _, m in ada.inbox do
+		if m.op == "entered" and m.id == "island" then
+			table.insert(entered, m)
+		end
+	end
+	check("the first flight in: told it's the first time (how it works, on the screen)", #entered >= 1 and entered[1].first == true)
+	check("...and noted in the record's one-time flags", data(ada).flags.guide_island == true and Attractions.firstLook(data(ada), "island") == false)
+	advance(3)
+	local again = askAs(ada, { op = "go", id = "island" })
+	local latest = nil
+	for i = #ada.inbox, 1, -1 do
+		if ada.inbox[i].op == "entered" then
+			latest = ada.inbox[i]
+			break
+		end
+	end
+	check("...after that, never again", again.ok == true and latest ~= nil and latest.first == false)
+	advance(3)
+	askAs(ada, { op = "home" })
+	-- The rooms' guide cards (the Vault) and the Grand Auction's: once each, nothing paid.
+	local giltBefore, gemsBefore = data(cy).gilt, data(cy).gems
+	local r = askAs(cy, { op = "guide", what = "vault" })
+	check("a room's guide card: the first time, said so", r.ok == true and r.first == true)
+	r = askAs(cy, { op = "guide", what = "vault" })
+	check("...and only once (kept in the record)", r.ok == true and r.first == false and data(cy).flags.guide_vault == true)
+	r = askAs(cy, { op = "guide", what = "auction" })
+	check("the Grand Auction's: once too", r.ok == true and r.first == true)
+	check("...and nothing is paid for any of it", data(cy).gilt == giltBefore and data(cy).gems == gemsBefore)
+	r = askAs(cy, { op = "guide", what = "gilt" })
+	check("a guide card that isn't the house's: refused", r.ok == false)
+	r = askAs(cy, { op = "guide", what = string.rep("v", 40) })
+	check("...or one far too long", r.ok == false)
+end
+
 H.finish()

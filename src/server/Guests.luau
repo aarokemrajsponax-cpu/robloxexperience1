@@ -70,6 +70,24 @@ end
 -- Whether a guest is still new to the house: they haven't had the Concierge's tour and have
 -- played fewer than two rounds. Until then the gold arrow leads them to the Concierge, and the
 -- Concierge offers the tour before anything else.
+-- Which of the house's games a guest has been into (the objective card suggests the next one to
+-- try): the first-time note each one leaves (server/Attractions), or, for a guest from before it,
+-- what their record already shows of it.
+function Guests.tried(data: any): { [string]: boolean }
+	local out: { [string]: boolean } = {}
+	local flags = if type(data.flags) == "table" then data.flags else {}
+	local pages = if type(data.attractions) == "table" then data.attractions else {}
+	local function num(v: any): number
+		return if type(v) == "number" then v else 0
+	end
+	for _, id in { "luxe", "basement", "executive", "gala", "island" } do
+		local p = pages[id]
+		local before = type(p) == "table" and (num(p.hauls) > 0 or num(p.caught) > 0 or num(p.deepest) > 0 or num(p.clears) > 0 or num(p.wins) > 0 or num(p.flights) > 0 or num(p.minutes) > 0 or num(p.gilt) > 0)
+		out[id] = flags["guide_" .. id] == true or before == true
+	end
+	return out
+end
+
 function Guests.needsGuide(data: Profiles.Data): boolean
 	-- (Read with care: a page missing a part never stops the welcome going out.)
 	local d = data :: any
@@ -97,6 +115,7 @@ local function payload(player: Player, data: Profiles.Data, visit: Visit): { [st
 		registered = registered,
 		saved = not Profiles.isMock(),
 		unlocked = { midnight = data.flags.midnight == true },
+		tried = Guests.tried(data),
 		nightly = { played = data.nightly.day == Nightly.at().day, score = data.nightly.score, grade = data.nightly.grade },
 		launch = visit.launch,
 		-- (A returning guest who hasn't seen this build's news yet: Welcome back shows it, once.)

@@ -196,6 +196,9 @@ end
 Concierge.openHowTo = function(player)
 	Remotes.event("Guest"):FireClient(player, { op = "howto" })
 end
+Concierge.openDirectory = function(player)
+	Remotes.event("Guest"):FireClient(player, { op = "directory" })
+end
 Concierge.inviteToLibrary = function(player)
 	Remotes.event("Guest"):FireClient(player, { op = "inviteLibrary" })
 end
@@ -388,6 +391,8 @@ Concierge.placeAt = function(id)
 	return nil, nil
 end
 Concierge.travel = Travel.go
+-- (The Maison Directory's "Walk me there": the Concierge's gold arrows, from anywhere.)
+Travel.showWay = Concierge.showWay
 Concierge.newsSeen = function(player)
 	local data = require(script.Parent.Profiles).get(player)
 	return data == nil or (type(data.flags) == "table" and data.flags.news72 == true)

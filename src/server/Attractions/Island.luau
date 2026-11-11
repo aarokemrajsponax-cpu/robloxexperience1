@@ -447,6 +447,29 @@ function Island.locked(ctx: Types.Ctx, player: Player): boolean
 	return data ~= nil and page(ctx, data).key ~= true
 end
 
+-- Its card in the Maison Directory: open with the Island Key; else what opens it (the rank, the
+-- key's two prices) and the rank the guest has reached.
+function Island.directory(ctx: Types.Ctx, player: Player): { [string]: any }
+	local need = keyRank(ctx)
+	local r = FortuneRules.Ranks[need] or FortuneRules.Ranks[#FortuneRules.Ranks]
+	local out: { [string]: any } = {
+		open = false,
+		keyRank = r.name,
+		keyRankAt = r.at,
+		keyGilt = keyGilt(ctx),
+		keyGems = keyGems(ctx),
+		rankReady = false,
+	}
+	local data = ctx.data(player)
+	if data then
+		local p = page(ctx, data)
+		out.open = p.key == true
+		out.rankReady = rankReached(data) >= need
+		out.flights = p.flights
+	end
+	return out
+end
+
 function Island.leave(_ctx: Types.Ctx, _player: Player, _why: string) end
 
 function Island.step(_ctx: Types.Ctx, _dt: number) end

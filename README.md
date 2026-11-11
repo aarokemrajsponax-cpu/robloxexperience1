@@ -377,6 +377,49 @@ a Nightly attempt or a Mythic's odds.
 - **The launch kit**: page text, icon, thumbnails and the gameplay video's shot list are in
   [`LAUNCH.md`](LAUNCH.md).
 
+## Build 75 — the Maison Directory, first-visit guides, the house's words brought up to date
+
+- **The Maison Directory** (the gold **▶ Play** key, first at the top right; the Menu's first tile;
+  or ask the Concierge to *show me every game*). Every game in the house on a card of its own:
+  Steal a Luxe, the Maison Basement, the Executive Suite, the Grand Ballroom, the Grand Auction and
+  Luxury Island. Each card has its picture (one of the house's treasures in its own colours), its
+  name, a short line, whether it's **open** to you or **locked** (dimmed under a lock, its line
+  saying what opens it), how far you've come in it (hauls and your best, the deepest stage,
+  today's Gilt in the hall, invitations held), and *Closer look*. Pointed at, a card lifts and its
+  edge brightens; pressed, it gives; the one last looked at keeps a gold edge.
+  - **A closer look** (over the cards, which come back as they were): how it plays in three steps,
+    what it pays, **how to open it** with the house's real figures (an invitation: clear the
+    Basement, a haul of 8,000, or 25,000 Gilt; the Island Key: Tycoon, then 25,000 Gilt or 250
+    Gems), and the ways there: **Take me there** (to its room), **Walk me there** (the Concierge's
+    gold arrows; nobody is moved) or **Go in**, standing at its door. Inside another game or at a
+    table, the keys are dimmed and say why. ✕, Back, Escape or B close it.
+  - Every open, locked and figure is the server's (AttractionAsk `directory`); nothing a card says
+    opens a door. Asking never changes anyone's record. What's on in the house (an event, a
+    holiday) is shown on a ribbon across the top.
+  - Fits every screen: laid out from the size its words are really set at (larger on a phone), as
+    many cards across as leave every name on one line, each picture beside its words; on a phone
+    on its side the last row scrolls up into view. The closer look is in two columns where the
+    screen is wide, so its keys are always in view.
+- **The first time in each game, a short card says how it works** (checkpoints and purses in the
+  Basement, the alert and the code in the Executive Suite, the bag and the guards in Steal a Luxe,
+  the pearls and the toast on the island, the stages of the Grand Ballroom). It sits at the top of
+  the screen, clear of the thumbstick and the jump button; *Got it* puts it away, and it goes by
+  itself after a while. Once ever: the server keeps the note in the record's one-time flags. The
+  same for the Vault (how a collection is kept) and the Grand Auction (how bidding works, inside
+  its own screen).
+- **The Grand Auction looks like an auction house.** Round the rostrum in the Library: a velvet
+  backdrop under a brass pelmet, two lots on marble pedestals under glass, each in its own pool of
+  light with a brass lot plate, a rope line on brass stanchions open in front of the rostrum, and
+  bidding paddles on the dais. Only the pedestals are solid; the way to the rostrum and the duel
+  tables is clear.
+- **What to do next** now points to the games you haven't tried yet (Steal a Luxe, then the
+  Basement, then the Grand Ballroom), with *Take me there*; then your best run in the Salon.
+- **Brought up to date.** *How to play* no longer lists the old timed rooms (they became the
+  attractions' rooms): its rooms page has the Salon, then **the games** in the Directory's own
+  words, each with Go. The Foyer's door tags name the Luxe Lounge, the Basement Stair and the
+  Executive's Anteroom (no more "opens at round IV"). The Concierge's answer on Basement skips
+  gives the prices by stage.
+
 ## Build 74 — the Executive Suite rebuilt, brainrots with character
 
 - **The Executive Suite, rebuilt.** The hallway is a gallery: black marble and an oxblood runner

@@ -528,6 +528,16 @@ function Basement.state(ctx: Types.Ctx, player: Player): { [string]: any }
 	return out
 end
 
+-- Its card in the Maison Directory: always open; the deepest stage reached, clears, the best time.
+function Basement.directory(ctx: Types.Ctx, player: Player): { [string]: any }
+	local data = ctx.data(player)
+	if not data then
+		return { open = true, stages = Plan.STAGES }
+	end
+	local p = page(ctx, data)
+	return { open = true, stages = Plan.STAGES, deepest = p.deepest, clears = p.clears, bestTime = p.best }
+end
+
 function Basement.ask(ctx: Types.Ctx, player: Player, r: { [string]: unknown }): any
 	local data = ctx.data(player)
 	if not data then

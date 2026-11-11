@@ -29,6 +29,8 @@ Concierge.isSeated = function(_player: Player): boolean
 end
 -- Set by the client bridge: opens How to play on the guest's screen.
 Concierge.openHowTo = function(_player: Player) end
+-- Set by Main: the Maison Directory on the guest's screen (every game in the house, on a card).
+Concierge.openDirectory = function(_player: Player) end
 Concierge.inviteToLibrary = function(_player: Player) end
 -- The room of a guest's usual table, or nil (set by Main from Memory).
 Concierge.usualRoom = function(_player: Player): string?
@@ -278,6 +280,7 @@ function Concierge.answer(id: string): string?
 					:gsub("{invitePrice}", commas(tonumber(executive.invitePrice) or 25000))
 					:gsub("{stride}", tostring(math.floor((tonumber(luxe.stridePerLevel) or 0.035) * 1000 + 0.5) / 10))
 					:gsub("{skipGems}", tostring(tonumber(basement.skipGems) or 25))
+					:gsub("{skipStep}", tostring(tonumber(basement.skipGemsStep) or 15))
 					:gsub("{islandGilt}", commas(tonumber(island.keyGilt) or 25000))
 					:gsub("{islandGems}", tostring(tonumber(island.keyGems) or 250))
 					:gsub("{galaGilt}", commas(tonumber((a.gala or {}).dailyGilt) or 2500))
@@ -330,6 +333,7 @@ Concierge.findPlace = findPlace
 local function menu(player: Player)
 	local choices = {
 		{ id = "next", text = V.choices.next },
+		{ id = "games", text = V.choices.games },
 		{ id = "find", text = V.choices.find },
 		{ id = "ask", text = V.choices.ask },
 		{ id = "tour", text = V.choices.tour },
@@ -428,6 +432,9 @@ local function menu(player: Player)
 		elseif choice == "how" then
 			Dialogue.close(player)
 			Concierge.openHowTo(player)
+		elseif choice == "games" then
+			Dialogue.close(player)
+			Concierge.openDirectory(player)
 		else
 			Dialogue.say(player, V.speaker, V.goodNight, nil, nil, 2)
 		end

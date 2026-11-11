@@ -1,6 +1,6 @@
 --!strict
--- Going straight to a place in the house: How to play's Go keys, and the what's-next card's "Take
--- me there". Only to the places named here (never a point a screen names), never from a table, a
+-- Going straight to a place in the house: How to play's Go keys, the what's-next card's "Take me
+-- there" and the Maison Directory's; or ("way") the Concierge's gold arrows there, walking. Only to the places named here (never a point a screen names), never from a table, a
 -- seat or a car, and not twice in a moment. The server moves the guest (Integrity.teleport, so
 -- the watch on how guests move knows it was the house).
 
@@ -17,6 +17,11 @@ local Travel = {}
 
 -- Set by Main: whether the guest is at a table (in any room).
 Travel.isBusy = function(_player: Player): boolean
+	return false
+end
+-- Set by Main: the Concierge's gold arrows to a place, walking (Concierge.showWay): whether it
+-- knows the place.
+Travel.showWay = function(_player: Player, _id: string): boolean
 	return false
 end
 
@@ -106,12 +111,19 @@ function Travel.start()
 			return
 		end
 		local m = message :: { [string]: unknown }
-		if m.op ~= "go" or type(m.place) ~= "string" or #(m.place :: string) > 24 then
+		if (m.op ~= "go" and m.op ~= "way") or type(m.place) ~= "string" or #(m.place :: string) > 24 then
 			return
 		end
 		local id = m.place :: string
-		local ok, why = Travel.go(player, id)
 		local r = remote :: RemoteEvent
+		if m.op == "way" then
+			-- (Walking: the arrows show the way and nobody is moved. Only a place the house knows.)
+			if not PLACES[id] or not Travel.showWay(player, id) then
+				r:FireClient(player, { op = "refused", why = "There's no such place." })
+			end
+			return
+		end
+		local ok, why = Travel.go(player, id)
 		if ok then
 			r:FireClient(player, { op = "arrived", place = id, name = PLACES[id].name })
 		else

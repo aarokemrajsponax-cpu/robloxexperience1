@@ -8,6 +8,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
+local Directory = require(ReplicatedStorage.Shared.Directory)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Rules = require(ReplicatedStorage.Shared.Fortune)
 local Root = require(script.Parent.Root)
@@ -51,6 +52,12 @@ local function money(amount: number, currency: string): string
 	return Rules.format(amount) .. " " .. currency
 end
 
+-- Set by Main: whether this is the guest's first time at the rostrum (the server's note:
+-- AttractionAsk "guide").
+AuctionPanel.firstTime = function(): boolean
+	return false
+end
+
 function AuctionPanel.open()
 	if Root.isOpen(NAME) then
 		return
@@ -62,12 +69,54 @@ function AuctionPanel.open()
 	Theme.text(content, "The Library", 11, "caps", { LayoutOrder = 1 })
 	Theme.text(content, "The Grand Auction", 26, "display", { LayoutOrder = 2 })
 	Theme.text(content, "One of a kind, this week only. Your bid is taken from your purse when it stands, and given back in full if someone outbids you.", 12, "body", { LayoutOrder = 3, TextColor3 = C.smoke })
+	-- The first time ever at the rostrum: how bidding works, in a box of its own (the server keeps
+	-- the note, so it's shown once).
+	task.spawn(function()
+		if not AuctionPanel.firstTime() or not group.Parent then
+			return
+		end
+		local spec = Directory.byId.auction
+		local box = Instance.new("Frame")
+		box.Name = "HowBidding"
+		box.BackgroundColor3 = Color3.fromRGB(14, 30, 22)
+		box.BackgroundTransparency = 0.15
+		box.AutomaticSize = Enum.AutomaticSize.Y
+		box.Size = UDim2.new(1, 0, 0, 0)
+		box.LayoutOrder = 4
+		box.Parent = content
+		local bc = Instance.new("UICorner")
+		bc.CornerRadius = UDim.new(0, 10)
+		bc.Parent = box
+		local bs = Instance.new("UIStroke")
+		bs.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		bs.Color = spec.accent
+		bs.Transparency = 0.4
+		bs.Parent = box
+		local bp = Instance.new("UIPadding")
+		bp.PaddingTop = UDim.new(0, 8)
+		bp.PaddingBottom = UDim.new(0, 8)
+		bp.PaddingLeft = UDim.new(0, 12)
+		bp.PaddingRight = UDim.new(0, 12)
+		bp.Parent = box
+		Theme.list(box, 4).HorizontalAlignment = Enum.HorizontalAlignment.Left
+		Theme.text(box, "First time here  ·  how bidding works", 11, "caps", { LayoutOrder = 1, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = spec.accent })
+		for n, line in spec.intro do
+			Theme.text(box, "·  " .. line, 13, "body", {
+				LayoutOrder = 1 + n,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				TextWrapped = true,
+				AutomaticSize = Enum.AutomaticSize.Y,
+				Size = UDim2.new(1, 0, 0, 0),
+				TextColor3 = C.bone,
+			})
+		end
+	end)
 	local rows = Instance.new("Frame")
 	rows.Name = "Lots"
 	rows.BackgroundTransparency = 1
 	rows.AutomaticSize = Enum.AutomaticSize.Y
 	rows.Size = UDim2.new(1, 0, 0, 0)
-	rows.LayoutOrder = 4
+	rows.LayoutOrder = 5
 	rows.Parent = content
 	Theme.list(rows, 10).VerticalAlignment = Enum.VerticalAlignment.Top
 	Theme.text(rows, "One moment.", 13, "body", { LayoutOrder = 1, TextColor3 = C.smoke })

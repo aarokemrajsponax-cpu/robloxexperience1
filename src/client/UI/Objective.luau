@@ -1,8 +1,9 @@
 --!strict
 -- One quiet card under the keys while you walk: what to do next, and how. A first visit is told
 -- to take a seat; then tonight's table, if it's waiting (with a key that takes you there); then a
--- holiday game, while one is open (and first of all while you're playing it); then the next room
--- to open; then your best run to beat. It is never shown at a table. It comes up bright
+-- holiday game, while one is open (and first of all while you're playing it); then the next of the
+-- house's games to try (Steal a Luxe, the Basement, the Grand Ballroom); then your best run to
+-- beat. It is never shown at a table. It comes up bright
 -- when it changes and settles back after a few seconds, so it's there whenever you look for it.
 -- It steps aside while something bigger holds the screen, and comes back quietly after. Its –
 -- key folds it away into a small NEXT tab (and the tab brings it back); the choice is kept, like
@@ -104,17 +105,20 @@ function Objective.current(): Goal?
 		end
 		return { key = "ballroom:open", title = "The Ballroom is open", line = "Lights Out: sit, sort, keep your lamp lit", how = string.format("The last lamp wins %s Gilt or more. It closes soon.", potText), go = "ballroom" }
 	end
-	if not State.unlocked.midnight then
-		return { key = "midnight", title = V.next, line = V.midnight, how = V.midnightHow }
-	end
-	-- The best run in any room.
-	local top, where = 0, nil
-	if type(guest.best) == "table" then
-		for id, points in guest.best do
-			if type(points) == "number" and points > top then
-				top, where = points, id
+	-- The house's games not yet tried, one at a time (the server says which, and each one gone into
+	-- since is crossed off here).
+	local tried = if type(guest.tried) == "table" then guest.tried else nil
+	if tried then
+		for _, t in V.try do
+			if tried[t.id] ~= true then
+				return { key = "try:" .. t.id, title = V.next, line = t.line, how = t.how, go = "place:" .. t.place }
 			end
 		end
+	end
+	-- The best run at the Salon's tables.
+	local top, where = 0, nil
+	if type(guest.best) == "table" and type(guest.best.salon) == "number" and guest.best.salon > 0 then
+		top, where = guest.best.salon, "salon"
 	end
 	local room = if where then Rooms.get(where) else nil
 	if top > 0 and room then
@@ -329,6 +333,17 @@ function Objective.start(go: (mode: string) -> ())
 	end)
 	Workspace:GetAttributeChangedSignal("BallroomState"):Connect(function()
 		task.defer(Objective.refresh)
+	end)
+	-- (Into one of the house's games: crossed off what's still to try.)
+	Remotes.event("Attraction").OnClientEvent:Connect(function(message: any)
+		local guest = State.guest
+		if type(message) == "table" and message.op == "entered" and type(message.id) == "string" and guest then
+			if type(guest.tried) ~= "table" then
+				guest.tried = {}
+			end
+			guest.tried[message.id] = true
+			task.defer(Objective.refresh)
+		end
 	end)
 	Remotes.event("Table").OnClientEvent:Connect(function(message: any)
 		if type(message) ~= "table" then

@@ -205,6 +205,19 @@ function Hud.hideCoach()
 	note:Destroy()
 end
 
+-- The Play key: the Maison Directory, every game in the house on a card (UI/DirectoryPanel). First
+-- in the row, in gold, where a guest looking for something to do looks first.
+local playKey: TextButton? = nil
+function Hud.setPlayKey(onPress: () -> ())
+	if playKey then
+		return
+	end
+	local key = Theme.key(bar, "▶ Play", true, onPress, 104)
+	key.Name = "PlayKey"
+	key.LayoutOrder = -25
+	playKey = key
+end
+
 -- The Menu key: everything else in the house (Main fills it), just after Shop.
 local menuKey: TextButton? = nil
 function Hud.setMenuKey(onPress: () -> ())
@@ -264,6 +277,10 @@ function Hud.setSeated(seated: boolean)
 	end
 	if helpKey then
 		helpKey.Visible = not seated
+	end
+	-- (The Directory's ways there wait until the guest stands up: its key steps aside too.)
+	if playKey then
+		playKey.Visible = not seated
 	end
 	if seated then
 		Hud.hideCoach()

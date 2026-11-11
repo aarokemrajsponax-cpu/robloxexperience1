@@ -54,6 +54,9 @@ export type Game = {
 	arrived: ((ctx: Ctx, player: Player) -> ())?,
 	-- Whether it's closed to a guest for now (its entrance then opens its board, to say how).
 	locked: ((ctx: Ctx, player: Player) -> boolean)?,
+	-- Its card in the Maison Directory: whether it's open to the guest ("open"), the house's own
+	-- figures for its words, and the guest's own progress in it (server/Attractions "directory").
+	directory: ((ctx: Ctx, player: Player) -> { [string]: any })?,
 }
 
 return Types

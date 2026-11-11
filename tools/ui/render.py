@@ -318,6 +318,9 @@ def layout_children(node):
                     y = inner.y
                 place(k, inner, (x, y))
                 x += kw + padding
+            # (Side by side, the row is as tall as its tallest child once that child has grown to
+            # fit its words: an automatic height is only known after it's laid out.)
+            node["_content_h"] = max([k["_rect"].h for k in guis_v] + [node["_content_h"]])
         for k in guis:
             if "_rect" not in k:
                 place(k, inner)
@@ -368,6 +371,9 @@ def gradient_fill(w, h, grad, base_rgb, base_t):
 
 def rounded_mask(size, box, radius):
     m = Image.new("L", size, 0)
+    # (A shape smaller than its own inset, a speck in a small illustration, draws nothing.)
+    if box[2] < box[0] or box[3] < box[1]:
+        return m
     ImageDraw.Draw(m).rounded_rectangle(box, radius=max(0, radius), fill=255)
     return m
 

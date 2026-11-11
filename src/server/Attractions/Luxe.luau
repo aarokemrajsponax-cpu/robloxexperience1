@@ -700,6 +700,17 @@ function Luxe.state(ctx: Types.Ctx, player: Player): { [string]: any }
 	return out
 end
 
+-- Its card in the Maison Directory: always open; the guest's hauls, their best and their Stride.
+function Luxe.directory(ctx: Types.Ctx, player: Player): { [string]: any }
+	local data = ctx.data(player)
+	if not data then
+		return { open = true }
+	end
+	local p = page(ctx, data)
+	local level = strideLevel(ctx, p)
+	return { open = true, hauls = p.hauls, best = p.best, banked = p.banked, stride = level }
+end
+
 function Luxe.ask(ctx: Types.Ctx, player: Player, r: { [string]: unknown }): any
 	local data = ctx.data(player)
 	if not data then

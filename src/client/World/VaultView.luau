@@ -184,6 +184,9 @@ local function askFeatured()
 	end)
 end
 
+-- Set by Main: a guest has just walked into the Vault (the first time ever, its guide card).
+VaultView.entered = function() end
+
 function VaultView.start()
 	task.spawn(function()
 		while true do
@@ -192,6 +195,7 @@ function VaultView.start()
 			local now = root ~= nil and root:IsA("BasePart") and Layout.zoneAt(root.Position) == "vault"
 			if now and not inside then
 				inside = true
+				task.spawn(VaultView.entered)
 				task.spawn(function()
 					local view = Closet.ask({ op = "register" })
 					if inside and type(view) == "table" and view.register then

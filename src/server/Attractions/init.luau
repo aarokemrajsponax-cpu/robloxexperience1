@@ -18,6 +18,7 @@ local Analytics = require(script.Parent.Analytics)
 local AttractionList = require(ReplicatedStorage.Shared.Attractions)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Curios = require(script.Parent.Curios)
+local Directory = require(ReplicatedStorage.Shared.Directory)
 local Fortune = require(script.Parent.Fortune)
 local Gilt = require(script.Parent.Gilt)
 local Herald = require(script.Parent.Herald)
@@ -330,6 +331,25 @@ local function inLobby(player: Player, id: string): boolean
 	return def ~= nil and root ~= nil and Layout.zoneAt(root.CFrame.Position) == def.room
 end
 
+-- Whether this is a guest's first look at one of the house's guide cards (shared/Directory: an
+-- attraction's, the Grand Auction's, the Vault's), and a note that it's been shown: once, ever, in
+-- their record's one-time flags. Nothing is paid for it.
+local function firstLook(data: any, what: string): boolean
+	if type(data) ~= "table" then
+		return false
+	end
+	if type(data.flags) ~= "table" then
+		data.flags = {}
+	end
+	local key = "guide_" .. what
+	if data.flags[key] == true then
+		return false
+	end
+	data.flags[key] = true
+	return true
+end
+Attractions.firstLook = firstLook
+
 -- Takes a guest into an attraction. Returns { ok, why }.
 function Attractions.go(player: Player, id: string): { [string]: any }
 	local g = GAMES[id]
@@ -365,7 +385,8 @@ function Attractions.go(player: Player, id: string): { [string]: any }
 		return { ok = false, why = "Not just now." }
 	end
 	Analytics.custom(player, "Attraction entered", 1, { attraction = id })
-	event:FireClient(player, { op = "entered", id = id })
+	-- (The first time ever: their screen shows how it works, once.)
+	event:FireClient(player, { op = "entered", id = id, first = firstLook(Profiles.get(player), id) })
 	return { ok = true }
 end
 
@@ -386,6 +407,42 @@ end
 
 function Attractions.inside(player: Player): string?
 	return inside[player]
+end
+
+-- The Maison Directory's cards (UI/DirectoryPanel): for each attraction, whether it's open to this
+-- guest, the house's own figures for its words, and how far they've come in it (each attraction's
+-- own `directory`, else whether it's `locked`); which one they're in, and which one's way in is in
+-- the room they stand in (that one can be gone into from the card at once). Only what the server
+-- sees: nothing a screen says opens a door.
+function Attractions.directory(player: Player): { [string]: any }
+	if not Profiles.get(player) then
+		return { ok = false, why = "Your ledger is still being opened." }
+	end
+	local cards: { [string]: any } = {}
+	for id, g in GAMES do
+		local card: { [string]: any } = { open = true }
+		if g.directory then
+			local ok, got = pcall(g.directory :: any, ctx, player)
+			if ok and type(got) == "table" then
+				for k, v in got do
+					card[k] = v
+				end
+			end
+		elseif g.locked then
+			local ok, shut = pcall(g.locked :: any, ctx, player)
+			card.open = not (ok and shut == true)
+		end
+		card.open = card.open == true
+		cards[id] = card
+	end
+	local here: string? = nil
+	local root = rootOf(player)
+	if root then
+		local zone = Layout.zoneAt(root.CFrame.Position)
+		local def = if zone then AttractionList.byRoom[zone] else nil
+		here = if def then def.id else nil
+	end
+	return { ok = true, cards = cards, inside = inside[player], here = here, seated = Attractions.isSeated(player) }
 end
 
 ---------------------------------------------------------------------------------------------------
@@ -424,6 +481,19 @@ local function onAsk(player: Player, request: unknown): any
 			end
 		end
 		return s
+	elseif op == "directory" then
+		return Attractions.directory(player)
+	elseif op == "guide" then
+		-- (A room's or the Grand Auction's guide card, the first time a guest is there.)
+		local what = r.what
+		if type(what) ~= "string" or #what > 24 or not Directory.isGuide(what) then
+			return { ok = false, why = "That isn't something the house does." }
+		end
+		local data = Profiles.get(player)
+		if not data then
+			return { ok = false, why = "Your ledger is still being opened." }
+		end
+		return { ok = true, first = firstLook(data, what) }
 	elseif op == "act" then
 		local g = id and GAMES[id]
 		if not g or not g.ask then

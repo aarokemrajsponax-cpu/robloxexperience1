@@ -64,6 +64,7 @@ Voice.Concierge = {
 		setEvening = "Set the evening",
 		tour = "Show me the house",
 		next = "What should I do next?",
+		games = "Show me every game",
 		find = "Find a place",
 		ask = "I have a question",
 		walk = "Walk me there",
@@ -95,7 +96,7 @@ Voice.Concierge = {
 		{ id = "invite", q = "How do I get into the Executive Suite?", a = "By invitation: clear the Maison Basement, or bank a haul of {inviteHaul} or more in Steal a Luxe. The Quartermaster also sells one for {invitePrice} Gilt. Take your free sidearm from him first." },
 		{ id = "stride", q = "What does Stride do?", a = "It makes you faster in Steal a Luxe, and only there: {stride}% a level. Walk the treadmills in the Luxe Lounge to train it." },
 		{ id = "caught", q = "What if a guard catches me?", a = "Everything in your bag is lost and you're shown out to the courtyard. What you've already banked is safe." },
-		{ id = "skip", q = "Can I skip a Basement stage?", a = "For {skipGems} Gems, or a skip bought with Robux. A skipped run isn't timed for the boards, and the stage you skip pays nothing." },
+		{ id = "skip", q = "Can I skip a Basement stage?", a = "Yes, and the deeper the stage, the more it costs: {skipGems} Gems for the first, {skipStep} more for each stage after it. Skips bought with Robux work too, more of them further down. A skipped run isn't timed for the boards, and the stage you skip pays nothing." },
 		{ id = "island", q = "How do I get to Luxury Island?", a = "By the private jet, from the Jet Lounge on the Terrace. The Island Key is for a Tycoon: {islandGilt} Gilt or {islandGems} Gems, yours for good. Five pearls lie in its lagoon every day." },
 		{ id = "gala", q = "What's in the Grand Ballroom?", a = "Through the great doors at the far end of the Ballroom: the dance floor and its jukebox, Luxury Trivia, the Runway's themed shows, the Daily Arena, three photo sets, the Exchange and the Hall of Fame. A little Gilt for all of it, up to {galaGilt} a day." },
 		{ id = "trade", q = "How do I trade?", a = "At the Exchange's stands in the Grand Ballroom, or the Trade key on a guest's card: Gilt, Gems, brainrots and curios. You both see every offer, and nothing changes hands until you both confirm the very same trade." },
@@ -322,11 +323,11 @@ Voice.WelcomeBack = {
 -- What's new in this build, told once to each returning guest (Welcome back). Only shown while
 -- `build` is the build that's playing, so old news never shows as new.
 Voice.WhatsNew = {
-	build = 74,
+	build = 75,
 	lines = {
-		"The Executive Suite, rebuilt: a gallery hallway, a vault door, an office over the city at night.",
-		"Your brainrot has a character now: its own trick, a nap, a jump for joy when you earn.",
-		"Lounge music on Luxury Island, a finer getaway car, and deeper Basement stages cost more to skip.",
+		"Press Play at the top right: every game in the house on a card, how it plays, and the way there.",
+		"The first time you go into a game, a short card says how it works. Once, then never again.",
+		"The Concierge shows you every game, and what to do next now points to the games you haven't tried.",
 	},
 }
 
@@ -409,17 +410,15 @@ Voice.Guide = {
 		lead = "Every place in the house: what it is, how it works, and what you get. Go takes you straight there.",
 		heading = "Where to sort",
 		sort = {
-			{ place = "salon", title = "The Salon", line = "The first tables, and the calmest: no clock at all.", how = "Sit at any table and sort at your own pace. The best place to learn.", win = "Gilt for every run you bank." },
-			{ place = "velvet", title = "The Velvet Room", line = "Your first timed room.", how = "A clock runs every round: clear the table before it runs out.", win = "More Gilt than the Salon." },
-			{ place = "obsidian", title = "The Obsidian Room", line = "Timed, and harder again.", how = "Fewer seconds and more pieces. Reach round IV here and the Midnight Room opens for you.", win = "More Gilt, and the way into Midnight." },
-			{ place = "midnight", title = "The Midnight Room", line = "The hardest tables in the house.", how = "It opens once you reach round IV in the Obsidian Room.", win = "The best pay of any table." },
+			{ place = "salon", title = "The Salon", line = "The tables, and the calmest room: no clock at all.", how = "Sit at any table and sort at your own pace. The best place to learn.", win = "Gilt for every run you bank." },
 		} :: { GuideItem },
+		-- (The games: drawn from shared/Directory, the same words as the Maison Directory's cards.)
+		headingGames = "The games",
 		heading2 = "Around the house",
 		visit = {
 			{ place = "concierge", title = "The Concierge", line = "Stands by the front door, ready to help.", how = "Speak to him and pick Show me the house: he walks you round every room and explains it." },
 			{ place = "boutique", title = "The Boutique", line = "The house's shop for looks.", how = "Looks, table styles, lamps and trails for Gilt (a few for Robux, always with the price shown first). The Wardrobe beside it is where you wear what you own." },
 			{ place = "vault", title = "The Vault", line = "Your collection, kept for good.", how = "Every piece you've ever sorted is on its shelves. The Archivist at the desk keeps your badges and records." },
-			{ place = "ballroom", title = "The Grand Ballroom", line = "The house's hall of entertainments.", how = "Through the great doors at the far end of the Ballroom: the dance floor and the jukebox, Luxury Trivia, the Runway, the Daily Arena, three photo sets, the Exchange's trading stands and the Hall of Fame." },
 			{ place = "terrace", title = "The Terrace", line = "A rooftop to relax on, and the jet to the island.", how = "A bar with treats, a fire pit and loungers under the stars. The Jet Lounge's arch flies Island Key holders to Luxury Island." },
 			{ place = "suite", title = "Your Suite", line = "Your own private rooms upstairs.", how = "Ring the bell inside to furnish them. Only you can go in, unless you invite friends with the Suites key." },
 		} :: { GuideItem },
@@ -468,10 +467,14 @@ Voice.Objective = {
 		touch = "Optional: one try a day. Take me there seats you at it.",
 		gamepad = "Optional: one try a day. Take me there seats you at it.",
 	},
-	midnight = "Reach round IV in the Obsidian Room to open the Midnight Room",
-	midnightHow = "The Concierge in the Foyer will walk you there",
+	-- (The house's games a guest hasn't been into yet, one at a time, in this order.)
+	try = {
+		{ id = "luxe", place = "velvet", line = "Play Steal a Luxe: carry out a fortune and bank it", how = "Its way in is the Luxe Lounge, off the Foyer. Press Play at the top right for every game." },
+		{ id = "basement", place = "obsidian", line = "Go down the Maison Basement: sixteen stages to the Treasury", how = "Its stair is off the Foyer. Clear it for an invitation to the Executive Suite." },
+		{ id = "gala", place = "ballroom", line = "Visit the Grand Ballroom: trivia, the Runway, the Daily Arena", how = "Through the great doors at the far end of the Ballroom." },
+	},
 	best = "Beat your best run in {room}: {points} points",
-	bestHow = "Any room. The Midnight Room pays the most.",
+	bestHow = "Any table in the Salon.",
 	takeMe = "Take me there",
 }
 

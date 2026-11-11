@@ -190,6 +190,65 @@ local function anteroom(parent: Instance)
 	}, { ppu = 50, lit = false, brightness = 1.5, maxDistance = 180 })
 end
 
+-- The auction house round the rostrum: a velvet backdrop under a brass pelmet, two lots on marble
+-- pedestals under glass in their own pools of light (each with its brass lot plate), a rope line
+-- with its opening in front of the rostrum, and a stand of bidding paddles on the dais. Only the
+-- pedestals are solid; nothing stands in the way to the rostrum or the duel tables.
+local function auctionHouse(m: Model, rcf: CFrame)
+	local DECO = { collide = false, query = false }
+	local GLASS = { color = rgb(220, 232, 240), material = Enum.Material.Glass, transparency = 0.82, reflectance = 0.15 }
+	local GOLD = { color = rgb(232, 186, 82), material = Enum.Material.Metal, reflectance = 0.2 }
+	-- The backdrop: folds of velvet behind the dais, below the board.
+	for i = -8, 7 do
+		local look = if i % 2 == 0 then L.burgundyVelvet else L.deepVelvet
+		Kit.part(m, "Drape", Vector3.new(1.02, 7.4, 0.3 + (i % 2) * 0.12), rcf * CFrame.new(i + 0.5, 4.5, 3.4), look, DECO)
+	end
+	Kit.part(m, "Pelmet", Vector3.new(16.6, 0.6, 0.6), rcf * CFrame.new(0, 8.45, 3.2), L.brass, DECO)
+	Kit.part(m, "Fringe", Vector3.new(16.4, 0.25, 0.4), rcf * CFrame.new(0, 8.05, 3.1), GOLD, DECO)
+	-- Two lots, each on its pedestal under glass, lit from above.
+	for k, side in { -1, 1 } do
+		local base = rcf * CFrame.new(side * 9, 0, -2)
+		Kit.part(m, "LotPlinth" .. k, Vector3.new(2, 3.4, 2), base * CFrame.new(0, 1.7, 0), L.boneMarble)
+		Kit.part(m, "LotPlinthFoot" .. k, Vector3.new(2.4, 0.3, 2.4), base * CFrame.new(0, 0.15, 0), L.blackMarble, DECO)
+		Kit.part(m, "LotPlinthTop" .. k, Vector3.new(2.3, 0.2, 2.3), base * CFrame.new(0, 3.5, 0), L.brass, DECO)
+		if k == 1 then
+			-- (A golden egg on a little ebony stand.)
+			Kit.part(m, "LotStand" .. k, Vector3.new(0.6, 0.3, 0.6), base * CFrame.new(0, 3.75, 0), L.blackLacquer, DECO)
+			Kit.ball(m, "LotEgg", 1.1, (base * CFrame.new(0, 4.45, 0)).Position, GOLD, DECO)
+			Kit.ball(m, "LotEggJewel", 0.28, (base * CFrame.new(0, 4.5, -0.5)).Position, { color = rgb(200, 30, 60), material = Enum.Material.Glass }, DECO)
+		else
+			-- (A porcelain vase with a gold band.)
+			Kit.post(m, "LotVase" .. k, 1.3, 0.7, (base * CFrame.new(0, 3.6, 0)).Position, L.bone, DECO)
+			Kit.post(m, "LotVaseNeck" .. k, 0.5, 0.42, (base * CFrame.new(0, 4.9, 0)).Position, L.bone, DECO)
+			Kit.post(m, "LotVaseBand" .. k, 0.14, 0.74, (base * CFrame.new(0, 4.3, 0)).Position, GOLD, DECO)
+		end
+		Kit.part(m, "LotDome" .. k, Vector3.new(1.8, 2.1, 1.8), base * CFrame.new(0, 4.65, 0), GLASS, DECO)
+		local plate = Kit.part(m, "LotPlate" .. k, Vector3.new(1.3, 0.45, 0.06), base * CFrame.new(0, 2.6, -1.04), L.brass, DECO)
+		Kit.engrave(plate, Enum.NormalId.Front, { { text = if k == 1 then "LOT I" else "LOT II", size = 0.6, font = Brand.Fonts.display, color = rgb(40, 28, 10) } }, { ppu = 60, lit = true, maxDistance = 60 })
+		-- (Its light: a small spot high above, pointed down at it.)
+		local lamp = Kit.part(m, "LotLamp" .. k, Vector3.new(0.4, 0.4, 0.4), base * CFrame.new(0, 12, 0), { color = rgb(30, 30, 30), material = Enum.Material.Metal, transparency = 1 }, DECO)
+		Kit.spotLight(lamp, Enum.NormalId.Bottom, 2.2, 16, 26, rgb(255, 236, 200), false)
+	end
+	-- The rope line, open in front of the rostrum.
+	for k, x in { -7.5, -4.5, 4.5, 7.5 } do
+		local at = rcf * CFrame.new(x, 0, -4.8)
+		Kit.post(m, "Stanchion" .. k, 3, 0.25, at.Position, L.brass, DECO)
+		Kit.ball(m, "StanchionTop" .. k, 0.42, (at * CFrame.new(0, 3.1, 0)).Position, L.brass, DECO)
+		Kit.post(m, "StanchionFoot" .. k, 0.14, 0.9, at.Position, L.brass, DECO)
+	end
+	for k, x in { -6, 6 } do
+		Kit.cylinder(m, "Rope" .. k, 3, 0.2, rcf * CFrame.new(x, 2.55, -4.8), L.burgundyVelvet, DECO)
+	end
+	-- The bidding paddles, in a walnut stand on the dais beside the rostrum (out of the way to it).
+	local stand = rcf * CFrame.new(3.9, 0.8, -0.4)
+	Kit.part(m, "PaddleStand", Vector3.new(1.4, 2.6, 0.7), stand * CFrame.new(0, 1.3, 0), L.walnut, DECO)
+	for k = 1, 3 do
+		local cf = stand * CFrame.new(-0.42 + (k - 1) * 0.42, 3.25, 0) * CFrame.Angles(0, 0, math.rad(-8 + (k - 1) * 8))
+		Kit.part(m, "PaddleHandle" .. k, Vector3.new(0.12, 0.9, 0.12), cf, L.darkWood, DECO)
+		Kit.cylinder(m, "Paddle" .. k, 0.08, 0.7, cf * CFrame.new(0, 0.7, 0) * CFrame.Angles(0, math.rad(90), 0), L.bone, DECO)
+	end
+end
+
 -- The Grand Auction, in the Library: the auctioneer's rostrum at the far end, and its board.
 local function auctionRoom(parent: Instance)
 	local R = Layout.Library
@@ -209,6 +268,7 @@ local function auctionRoom(parent: Instance)
 		{ text = "THE GRAND AUCTION", size = 0.36, font = Brand.Fonts.display, color = rgb(255, 214, 120) },
 		{ text = "this week's lots · one of a kind · bid at the rostrum in Gilt or Gems", size = 0.18, font = Brand.Fonts.body, color = rgb(230, 220, 200) },
 	}, { ppu = 50, lit = false, brightness = 1.5, maxDistance = 200 })
+	auctionHouse(m, rcf)
 end
 
 -- The Jet Lounge, on the Terrace: the private jet's boarding arch in the east balustrade's middle

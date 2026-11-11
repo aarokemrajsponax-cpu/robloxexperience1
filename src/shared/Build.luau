@@ -4,6 +4,6 @@
 -- see whether Studio has the latest code from GitHub.
 
 return {
-	number = 74,
-	label = "Build 74 · 11 Nov · Executive floor rebuilt, brainrots with character",
+	number = 75,
+	label = "Build 75 · 11 Nov · a Directory of every game, guides for a first visit",
 }

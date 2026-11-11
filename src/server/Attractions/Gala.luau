@@ -1247,6 +1247,16 @@ function Gala.state(ctx: Types.Ctx, player: Player): { [string]: any }
 	}
 end
 
+-- Its card in the Maison Directory: always open; today's Gilt from the hall, and its daily cap.
+function Gala.directory(ctx: Types.Ctx, player: Player): { [string]: any }
+	-- (Read as it is: asking for the card never makes the hall's page in the record.)
+	local data = ctx.data(player)
+	local pages = if data and type(data.attractions) == "table" then data.attractions else nil
+	local p = if pages and type(pages[Plan.ID]) == "table" then pages[Plan.ID] else nil
+	local today = if p and p.day == Plan.day(Gala.time()) then num(p.gilt, 0) else 0
+	return { open = true, galaGilt = R(ctx, "dailyGilt"), giltToday = today }
+end
+
 function Gala.ask(ctx: Types.Ctx, player: Player, r: { [string]: unknown }): { [string]: any }
 	local act = r.act
 	local what = r.what

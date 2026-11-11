@@ -10,6 +10,7 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
+local AttractionList = require(ReplicatedStorage.Shared.Attractions)
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local Layout = require(ReplicatedStorage.Shared.Layout)
 local Rooms = require(ReplicatedStorage.Shared.Rooms)
@@ -30,9 +31,9 @@ local doors: { Door } = {}
 local names: { { gui: SurfaceGui, position: Vector3, tag: BillboardGui? } } = {}
 
 -- A room's name where everyone sees it: a tag hung in its doorway at eye level (always the same
--- size on screen, readable from across the Foyer), the room's name in heavy gold, how hard it is
--- and a pip a step; the Midnight Room says how it opens until it's yours. Hidden as you walk
--- through.
+-- size on screen, readable from across the Foyer), the room's name in heavy gold, and beneath it
+-- how hard its tables are (a pip a step) or, for an attraction's room, the game it's the way into.
+-- Hidden as you walk through.
 local function doorTag(plate: BasePart): BillboardGui?
 	local door = plate.Parent
 	local roomId = door and door:GetAttribute("Room")
@@ -75,7 +76,9 @@ local function doorTag(plate: BasePart): BillboardGui?
 	name.FontFace = Brand.Fonts.heavy
 	name.TextScaled = true
 	name.TextColor3 = Brand.Colours.brightGold
-	name.Text = string.upper(room.name)
+	-- (A room that's an attraction's way in goes by that name: the Luxe Lounge, and so on.)
+	local attraction = AttractionList.byRoom[room.id]
+	name.Text = string.upper(if attraction then attraction.roomName else room.name)
 	name.Parent = bg
 	local fit = Instance.new("UITextSizeConstraint")
 	fit.MaxTextSize = 24
@@ -89,18 +92,11 @@ local function doorTag(plate: BasePart): BillboardGui?
 	line.TextScaled = true
 	line.TextColor3 = Brand.Colours.bone
 	local pips = string.rep("●", room.level) .. string.rep("○", 4 - room.level)
-	line.Text = string.upper(room.tag) .. "   " .. pips
+	line.Text = if attraction then string.upper(attraction.name) .. (if attraction.id == "executive" then "  ·  BY INVITATION" else "") else string.upper(room.tag) .. "   " .. pips
 	line.Parent = bg
 	local lfit = Instance.new("UITextSizeConstraint")
 	lfit.MaxTextSize = 15
 	lfit.Parent = line
-	if room.id == "midnight" then
-		local function locked()
-			line.Text = if State.unlocked.midnight then string.upper(room.tag) .. "   " .. pips else "🔒  OPENS AT ROUND IV IN OBSIDIAN"
-		end
-		locked()
-		State.Unlocked:Connect(locked)
-	end
 	g.Parent = plate
 	return g
 end

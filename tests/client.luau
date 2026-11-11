@@ -1463,6 +1463,7 @@ serverSays("Guest", {
 	registered = 0,
 	saved = false,
 	unlocked = { midnight = false },
+	tried = { luxe = false, basement = false, executive = false, gala = false, island = false },
 	nightly = { played = false, score = 0, grade = "" },
 })
 advance(12)
@@ -2770,7 +2771,7 @@ advance(0.5)
 serverSays("Table", { op = "left" })
 advance(2)
 check("no errors through the Nightly", #errors == 0, errors[1])
-check("after tonight's table, what's next is the Midnight Room", textOnScreen("Reach round IV in the Obsidian Room") ~= nil and textOnScreen("Tonight's table is laid") == nil)
+check("after tonight's table, what's next is a game not yet tried: Steal a Luxe, with the way there", textOnScreen("Play Steal a Luxe") ~= nil and textOnScreen("Reach round IV") == nil and textOnScreen("Tonight's table is laid") == nil)
 
 ---------------------------------------------------------------------------------------------------
 -- 6. The Library: a whole Tête-à-Tête on screen
@@ -3105,7 +3106,7 @@ do
 	snapshot("howto-sorting")
 	press("Rooms")
 	advance(0.6)
-	local places = { "The Salon", "The Velvet Room", "The Obsidian Room", "The Midnight Room", "The Concierge", "The Boutique", "The Vault", "The Grand Ballroom", "The Terrace", "Your Suite" }
+	local places = { "The Salon", "Steal a Luxe", "The Maison Basement", "The Executive Suite", "The Grand Ballroom", "The Grand Auction", "Luxury Island", "The Concierge", "The Boutique", "The Vault", "The Terrace", "Your Suite" }
 	local missing = {}
 	for _, name in places do
 		if not textOnScreen(name) then
@@ -3113,7 +3114,8 @@ do
 		end
 	end
 	check("The rooms: every place in a line", #missing == 0, table.concat(missing, ", "))
-	check("...the Suite, the Vault and the rest explained: what each is and how it works", textOnScreen("Ring the bell inside to furnish them") ~= nil and textOnScreen("The Archivist at the desk") ~= nil and textOnScreen("round IV") ~= nil)
+	check("...the Suite, the Vault and the rest explained: what each is and how it works", textOnScreen("Ring the bell inside to furnish them") ~= nil and textOnScreen("The Archivist at the desk") ~= nil and textOnScreen("An invitation opens it") ~= nil)
+	check("...and no room that isn't there any more (the old timed rooms, round IV)", textOnScreen("The Velvet Room") == nil and textOnScreen("round IV") == nil)
 	local goKeys = 0
 	for _, d in playerGui:GetDescendants() do
 		if d:IsA("TextButton") and d.Name == "Key" and norm(d.Text) == "go" then
@@ -7819,7 +7821,8 @@ coroutine.wrap(function()
 			return d.Name == "LuxeCard"
 		end)
 	end
-	check("no Steal a Luxe screen in the house", card() == nil and textOnScreen("STEAL A LUXE") == nil)
+	-- (Its screen, not its name: what to do next may well suggest playing it.)
+	check("no Steal a Luxe screen in the house", card() == nil and not module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "LuxeHud").mounted())
 	LocalPlayer:SetAttribute("Attraction", "luxe")
 	signalOf(LocalPlayer, "attr:Attraction"):Fire()
 	serverSays("Attraction", { op = "entered", id = "luxe" })
@@ -7923,7 +7926,7 @@ coroutine.wrap(function()
 	BasementHud.now = function()
 		return clockAt
 	end
-	check("no Basement screen in the house", textOnScreen("THE MAISON BASEMENT") == nil)
+	check("no Basement screen in the house", not BasementHud.mounted())
 	LocalPlayer:SetAttribute("Attraction", "basement")
 	signalOf(LocalPlayer, "attr:Attraction"):Fire()
 	serverSays("Attraction", { op = "entered", id = "basement" })
@@ -8726,6 +8729,258 @@ coroutine.wrap(function()
 	check("every holiday's pieces are built (pumpkins, hay, firs, bells, hearts, clovers, eggs)", #failed == 0 and #built == #HouseEventsM.Holidays, if #failed > 0 then failed[1] else table.concat(built, ", "))
 	invokeResults.ShopAsk = nil
 	check("no errors with the streak, the Boutique's terms and the holidays inside", #errors == errorsBefore, errors[errorsBefore + 1])
+end)()
+
+---------------------------------------------------------------------------------------------------
+-- 7m. The Maison Directory: the Play key, every game on a card (open or locked, what opens it, how
+-- far you've come), each card's states, its closer look (how it plays, what it pays, how to open
+-- it, the ways there) and the first-visit cards (an attraction's, the Vault's, the auction's)
+---------------------------------------------------------------------------------------------------
+coroutine.wrap(function()
+	local DirectoryPanel = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "DirectoryPanel")
+	local FirstVisit = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "FirstVisit")
+	local AuctionPanelM = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "AuctionPanel")
+	local RootM = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "Root")
+	local AttractionListM = module("ReplicatedStorage", "Shared", "Attractions")
+	local errorsBefore = #errors
+	RootM.close()
+	advance(0.5)
+	local answer = {
+		ok = true,
+		cards = {
+			luxe = { open = true, hauls = 12, best = 9400, banked = 84000, stride = 3 },
+			basement = { open = true, stages = 16, deepest = 9, clears = 0 },
+			executive = { open = false, invites = 0, sidearm = false, inviteHaul = 8000, invitePrice = 25000, most = 5 },
+			gala = { open = true, galaGilt = 2500, giltToday = 600 },
+			island = { open = false, keyRank = "Tycoon", keyRankAt = 100000, keyGilt = 25000, keyGems = 250, rankReady = false },
+		},
+	}
+	local guides = {}
+	invokeResults.AttractionAsk = function(r)
+		if type(r) == "table" and r.op == "directory" then
+			return answer
+		elseif type(r) == "table" and r.op == "guide" then
+			local first = guides[r.what] == nil
+			guides[r.what] = true
+			return { ok = true, first = first }
+		end
+		return { ok = false, why = "That isn't something the house does." }
+	end
+	local function cardsOnScreen()
+		local out = {}
+		for _, d in playerGui:GetDescendants() do
+			if d:IsA("TextButton") and string.sub(d.Name, 1, 5) == "Card_" then
+				out[string.sub(d.Name, 6)] = d
+			end
+		end
+		return out
+	end
+	local playKey = find(playerGui, function(d)
+		return d.Name == "PlayKey"
+	end)
+	check("the Play key: at the top right, first in the row", playKey ~= nil and playKey.Visible == true and playKey.Parent ~= nil and playKey.Parent.Name == "TopRight" and playKey.LayoutOrder < -20)
+	local HudM = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "Hud")
+	HudM.setSeated(true)
+	check("...which steps aside at a table, like Shop", playKey ~= nil and playKey.Visible == false)
+	HudM.setSeated(false)
+	if playKey then
+		signalOf(playKey, "Activated"):Fire()
+	end
+	advance(0.8)
+	local cards = cardsOnScreen()
+	local n = 0
+	for _ in cards do
+		n += 1
+	end
+	check("Play opens the Maison Directory: every game in the house, six cards", DirectoryPanel.isOpen() and textOnScreen("Every game in the house") ~= nil and n == 6, n)
+	check("...each with its name", textOnScreen("Steal a Luxe") ~= nil and textOnScreen("The Maison Basement") ~= nil and textOnScreen("The Executive Suite") ~= nil and textOnScreen("The Grand Ballroom") ~= nil and textOnScreen("The Grand Auction") ~= nil and textOnScreen("Luxury Island") ~= nil)
+	check("...and its picture: a treasure of its own on every card", (function()
+		for _, b in cards do
+			if not find(b, function(d)
+				return d.Name == "Treasure" and d:GetAttribute("Piece") ~= nil
+			end) then
+				return false
+			end
+		end
+		return true
+	end)())
+	local asked = nil
+	for i = #sent, 1, -1 do
+		if sent[i].remote == "AttractionAsk" and sent[i].message[1] and sent[i].message[1].op == "directory" then
+			asked = sent[i].message[1]
+			break
+		end
+	end
+	check("it asks the server which are open (nothing else: no claim, no price)", asked ~= nil and asked.id == nil and asked.what == nil)
+	check("how far you've come: hauls and the best, the deepest stage, today's Gilt in the hall", textOnScreen("12 hauls  ·  best 9,400") ~= nil and textOnScreen("Deepest: stage 9 of 16") ~= nil and textOnScreen("Today: 600 of 2,500 Gilt") ~= nil)
+	local ex, isl, lux = cards.executive, cards.island, cards.luxe
+	local function has(b, name)
+		return b ~= nil and find(b, function(d)
+			return d.Name == name
+		end) ~= nil
+	end
+	local function chipText(b)
+		local c = b and find(b, function(d)
+			return d.Name == "Chip"
+		end)
+		return if c then norm(c.Text) else ""
+	end
+	check("closed to you: under a lock, saying so", has(ex, "Lock") and has(isl, "Lock") and not has(lux, "Lock") and chipText(ex) == norm("LOCKED") and chipText(isl) == norm("LOCKED") and chipText(lux) == norm("OPEN"), chipText(ex) .. " / " .. chipText(isl))
+	check("...with what opens it in place of its line", textOnScreen("Needs an invitation") ~= nil and textOnScreen("Needs the Island Key") ~= nil)
+	check("every card says it opens a closer look", (function()
+		for _, b in cards do
+			if not find(b, function(d)
+				return d.Name == "More" and string.find(norm(d.Text), norm("Closer look"), 1, true) ~= nil
+			end) then
+				return false
+			end
+		end
+		return true
+	end)())
+	snapshot("directory")
+	-- Its states: pointed at, pressed, let go.
+	signalOf(lux, "MouseEnter"):Fire()
+	advance(0.2)
+	check("pointed at, a card lifts and brightens", lux:GetAttribute("Look") == "over")
+	signalOf(lux, "MouseButton1Down"):Fire()
+	advance(0.1)
+	check("...pressed, it gives a little", lux:GetAttribute("Look") == "down")
+	signalOf(lux, "MouseButton1Up"):Fire()
+	signalOf(lux, "MouseLeave"):Fire()
+	advance(0.2)
+	check("...and rests again", lux:GetAttribute("Look") == "rest")
+	-- The closer look of one that's closed: how to open it first.
+	signalOf(ex, "Activated"):Fire()
+	advance(0.8)
+	check("a tap: its closer look, over the cards", RootM.isOpen("DirectoryCard") and textOnScreen("How it plays") ~= nil and textOnScreen("What it pays") ~= nil)
+	check("...how to open it, with the house's own figures", textOnScreen("How to open it") ~= nil and textOnScreen("bank a haul of 8,000 or more in Steal a Luxe, or buy one from the Quartermaster for 25,000 Gilt") ~= nil)
+	check("...that the sidearm is free, when you haven't one", textOnScreen("Your sidearm is free from the Quartermaster") ~= nil)
+	check("...the three steps of how it plays", textOnScreen("Read the four terminals for the door's code") ~= nil)
+	check("...and the ways there: Take me there, Walk me there, Back", textOnScreen("Take me there") ~= nil and textOnScreen("Walk me there") ~= nil and textOnScreen("Back") ~= nil)
+	snapshot("directory-locked")
+	local walks = sentOps("Travel", "way")
+	press("Walk me there")
+	advance(0.3)
+	local last = sent[#sent]
+	check("Walk me there asks for the Concierge's arrows to its room (nobody is moved)", sentOps("Travel", "way") == walks + 1 and last.remote == "Travel" and last.message.place == "midnight" and not DirectoryPanel.isOpen())
+	serverSays("Travel", { op = "way", place = "midnight", name = "The Executive's Anteroom", at = Vector3.new(40, 4, 0) })
+	advance(0.5)
+	-- Back to the cards: the one looked at keeps its gold edge.
+	DirectoryPanel.open()
+	advance(0.8)
+	cards = cardsOnScreen()
+	check("opened again: the card last looked at is marked", cards.executive ~= nil and cards.executive:GetAttribute("Look") == "selected")
+	signalOf(cards.luxe, "Activated"):Fire()
+	advance(0.8)
+	check("an open one: what it pays, and you so far", textOnScreen("a fifth of it comes to your purse as Gilt") ~= nil and textOnScreen("You so far") ~= nil and textOnScreen("How to open it") == nil)
+	local goes = sentOps("Travel", "go")
+	press("Take me there")
+	advance(0.3)
+	last = sent[#sent]
+	check("Take me there asks the house to take you to its room", sentOps("Travel", "go") == goes + 1 and last.message.place == "velvet")
+	-- Standing at its door: Go in.
+	answer.here = "luxe"
+	DirectoryPanel.open()
+	advance(0.8)
+	cards = cardsOnScreen()
+	check("standing in its room: the card says you're here", chipText(cards.luxe) == norm("YOU'RE HERE"))
+	signalOf(cards.luxe, "Activated"):Fire()
+	advance(0.8)
+	local before = #sent
+	check("...and its closer look offers Go in", press("Go in"))
+	advance(0.3)
+	local went = nil
+	for i = before + 1, #sent do
+		if sent[i].remote == "AttractionAsk" and sent[i].message[1] and sent[i].message[1].op == "go" then
+			went = sent[i].message[1]
+		end
+	end
+	check("...which asks the server to go in (the server checks the door)", went ~= nil and went.id == "luxe")
+	answer.here = nil
+	-- At a table, or inside an attraction: the ways there are dimmed and say why.
+	LocalPlayer:SetAttribute(AttractionListM.ATTRIBUTE, "basement")
+	DirectoryPanel.open()
+	advance(0.8)
+	cards = cardsOnScreen()
+	check("inside one: its card says so", chipText(cards.basement) == norm("YOU'RE IN IT"))
+	signalOf(cards.gala, "Activated"):Fire()
+	advance(0.8)
+	local goKey = find(playerGui, function(d)
+		return d.Name == "Key_Go" and d:IsA("TextButton")
+	end)
+	check("...and elsewhere's ways there are dimmed, saying why", goKey ~= nil and goKey:GetAttribute("Disabled") == true and textOnScreen("You're in The Maison Basement: leave it by its way out first.") ~= nil)
+	goes = sentOps("Travel", "go")
+	press("Take me there")
+	advance(0.3)
+	check("...and do nothing", sentOps("Travel", "go") == goes and RootM.isOpen("DirectoryCard"))
+	press("Back")
+	advance(0.5)
+	check("Back: the cards again", RootM.isOpen("Directory") and not RootM.isOpen("DirectoryCard"))
+	RootM.close()
+	advance(0.5)
+	LocalPlayer:SetAttribute(AttractionListM.ATTRIBUTE, nil)
+	check("Close puts the Directory away", not DirectoryPanel.isOpen())
+	-- The Menu's first tile opens it too.
+	module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "MenuPanel").open()
+	advance(0.6)
+	check("the Menu's first tile: Every game", (function()
+		local t = find(playerGui, function(d)
+			return d.Name == "Tile_directory"
+		end)
+		return t ~= nil and t.LayoutOrder == 1
+	end)())
+	RootM.close()
+	advance(0.5)
+
+	-- The first time inside an attraction: how it works, once.
+	serverSays("Attraction", { op = "entered", id = "basement", first = true })
+	advance(0.8)
+	check("the first time in: a card of how it works (checkpoints, purses, skips)", FirstVisit.showing() and textOnScreen("First time here") ~= nil and textOnScreen("Stand on each checkpoint's pad") ~= nil and textOnScreen("A skip costs Gems, more on deeper stages") ~= nil)
+	snapshot("first-visit")
+	check("...out of the way: at the top, clear of the thumbstick, the jump button and the what-to-do-next card", (function()
+		local g = playerGui:FindFirstChild("FirstVisit", true)
+		return g ~= nil and g.AnchorPoint.Y == 0 and g.Position.Y.Scale == 0 and g.Position.Y.Offset < 200 and g.Position.X.Offset + g.Size.X.Offset / 2 <= module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "Root").size().X - 12 - 300
+	end)())
+	press("Got it")
+	advance(0.3)
+	check("...Got it puts it away", not FirstVisit.showing())
+	serverSays("Attraction", { op = "left", id = "basement", why = "home" })
+	advance(0.5)
+	serverSays("Attraction", { op = "entered", id = "basement", first = false })
+	advance(0.5)
+	check("...and after that, only its line", not FirstVisit.showing() and textOnScreen("First time here") == nil)
+	serverSays("Attraction", { op = "left", id = "basement", why = "home" })
+	advance(7)
+	serverSays("Attraction", { op = "entered", id = "luxe", first = true })
+	advance(0.5)
+	serverSays("Attraction", { op = "left", id = "luxe", why = "home" })
+	advance(0.3)
+	check("...and it goes when you leave", not FirstVisit.showing())
+	-- The Vault, the first time: asked of the server, once.
+	FirstVisit.room("vault")
+	advance(0.5)
+	check("the Vault the first time: how the collection is kept", textOnScreen("Set four under the domes") ~= nil and textOnScreen("everyone, your friends, or only you") ~= nil)
+	press("Got it")
+	advance(0.3)
+	FirstVisit.room("vault")
+	advance(0.5)
+	check("...and never again", not FirstVisit.showing())
+	-- The Grand Auction, the first time: how bidding works, inside its own screen.
+	invokeResults.AuctionAsk = { ok = true, now = 0, lots = {} }
+	serverSays("Attraction", { op = "panel", id = "auction" })
+	advance(0.8)
+	check("the Grand Auction the first time: how bidding works, in its own screen", AuctionPanelM.isOpen() and textOnScreen("how bidding works") ~= nil and textOnScreen("Outbid, it comes straight back") ~= nil)
+	snapshot("auction-first")
+	RootM.close()
+	advance(0.5)
+	serverSays("Attraction", { op = "panel", id = "auction" })
+	advance(0.8)
+	check("...and not the next time", AuctionPanelM.isOpen() and textOnScreen("how bidding works") == nil)
+	RootM.close()
+	advance(0.5)
+	invokeResults.AuctionAsk = nil
+	invokeResults.AttractionAsk = nil
+	check("no errors with the Directory and the first-visit cards", #errors == errorsBefore, errors[errorsBefore + 1])
 end)()
 
 ---------------------------------------------------------------------------------------------------

@@ -910,6 +910,27 @@ function Executive.ask(ctx: Types.Ctx, player: Player, r: { [string]: unknown })
 	return { ok = false, why = "That isn't something the house does." }
 end
 
+-- Its card in the Maison Directory: open while the guest holds an invitation (one is spent going
+-- up); how many they hold, whether they have their sidearm, and the figures for how to earn one.
+function Executive.directory(ctx: Types.Ctx, player: Player): { [string]: any }
+	local c = cfg(ctx)
+	local out: { [string]: any } = {
+		open = false,
+		inviteHaul = tonumber(c.inviteHaul) or 8000,
+		invitePrice = tonumber(c.invitePrice) or 25000,
+		most = tonumber(c.maxInvites) or 5,
+	}
+	local data = ctx.data(player)
+	if data then
+		local p = page(ctx, data)
+		out.invites = p.invites
+		out.open = p.invites > 0
+		out.sidearm = p.sidearm == true
+		out.wins = p.wins
+	end
+	return out
+end
+
 -- An invitation, earned (the Basement, a great haul) or given (the owner). Returns whether it fit.
 function Executive.invite(ctx: Types.Ctx, player: Player, why: string): boolean
 	local data = ctx.data(player)

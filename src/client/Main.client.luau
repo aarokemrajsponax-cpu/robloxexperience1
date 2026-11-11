@@ -210,8 +210,16 @@ start("The Vault", function()
 	ShowcasePanel.photo = function()
 		require(script.Parent.UI.PhotoMode).enter()
 	end
+	-- (The first time ever in the Vault: how a collection is kept, on a card of its own.)
+	VaultView.entered = function()
+		require(script.Parent.UI.FirstVisit).room("vault")
+	end
 	VaultView.start()
 end)
+-- The Grand Auction's "how bidding works", the first time at the rostrum (the server's note).
+require(script.Parent.UI.AuctionPanel).firstTime = function(): boolean
+	return require(script.Parent.UI.FirstVisit).firstAt("auction")
+end
 start("The Suite", function()
 	SuiteView.playPiano = PianoPanel.private
 	SuiteView.start()
@@ -373,6 +381,9 @@ start("Curios", function()
 		QuickDock.setSeated(false)
 	end)
 	for _, tile in {
+		{ id = "directory", title = "Every game", line = "The Maison Directory: every game, and the way there.", glyph = "🎲", open = function()
+			require(script.Parent.UI.DirectoryPanel).open()
+		end },
 		{ id = "daily", title = "The Evening Calendar", line = "A present every day you come: seven to a week.", glyph = "🗓️", open = CalendarPanel.open },
 		{ id = "collection", title = "Your Collection", line = "Your brainrots, their tip jar, every curio.", glyph = "🏺", open = function()
 			CuriosPanel.open("squad")
@@ -589,6 +600,10 @@ local function startHud()
 		end)
 		Hud.setHelpKey(HowToPlay.open)
 		Hud.setMenuKey(MenuPanel.open)
+		-- (The Maison Directory: every game in the house on a card, first in the row.)
+		Hud.setPlayKey(function()
+			require(script.Parent.UI.DirectoryPanel).open()
+		end)
 		ContextActionService:BindAction("MaisonMenu", function(_, state)
 			if state == Enum.UserInputState.Begin and not TableClient.isSeated() then
 				MenuPanel.open()
@@ -660,7 +675,11 @@ local function startHud()
 			return MemeTakeover.isRunning() or Midas.isRunning() or Stagecraft.titleUp() or AbuseFX.bannerUp() or AbuseShow.cardUp() or AbuseShow.openingUp() or Headline.showing() or Celebrate.badgeUp() or SleighRide.riding()
 		end
 		Objective.start(function(mode: string)
-			if mode == "ballroom" then
+			if string.sub(mode, 1, 6) == "place:" then
+				-- (To one of the house's games: the house takes you to its room.)
+				Remotes.event("Travel"):FireServer({ op = "go", place = string.sub(mode, 7) })
+				return
+			elseif mode == "ballroom" then
 				-- (To the Ballroom's door, while it's open.)
 				Remotes.event("Table"):FireServer({ op = "goBallroom" })
 				return
@@ -897,6 +916,30 @@ end
 HowToPlay.shop = function()
 	BoutiquePanel.open()
 end
+-- The Maison Directory's ways there: by the house (Travel "go"), walking with the Concierge's gold
+-- arrows (Travel "way"), or straight in from the room its way in is in (AttractionAsk "go").
+do
+	local DirectoryPanel = require(script.Parent.UI.DirectoryPanel)
+	DirectoryPanel.go = HowToPlay.go
+	DirectoryPanel.walk = function(place: string)
+		travelEvent:FireServer({ op = "way", place = place })
+	end
+	DirectoryPanel.enter = function(id: string)
+		task.spawn(function()
+			local ok, r = pcall(function()
+				return Remotes.func("AttractionAsk"):InvokeServer({ op = "go", id = id })
+			end)
+			if not ok or type(r) ~= "table" then
+				Toast.show("Not just now", "The house couldn't answer. Try again in a moment.", 3)
+			elseif r.ok ~= true then
+				Toast.show("Not just now", tostring(r.why or "Not just now."), 3)
+			end
+		end)
+	end
+	DirectoryPanel.isSeated = function(): boolean
+		return TableClient.isSeated()
+	end
+end
 travelEvent.OnClientEvent:Connect(function(message: any)
 	if type(message) ~= "table" then
 		return
@@ -909,7 +952,7 @@ travelEvent.OnClientEvent:Connect(function(message: any)
 			Toast.show(Voice.Guide.arrived, tostring(message.name or ""), 2.5)
 		end
 	elseif message.op == "refused" then
-		Toast.show(Voice.Guide.key, tostring(message.why or "Not just now."), 2.5)
+		Toast.show("Not just now", tostring(message.why or "Not just now."), 2.5)
 	end
 end)
 
@@ -940,6 +983,12 @@ end)
 Remotes.event("Guest").OnClientEvent:Connect(function(message: any)
 	if type(message) == "table" and message.op == "howto" then
 		HowToPlay.open()
+	elseif type(message) == "table" and message.op == "directory" then
+		-- (The Concierge's "Show me every game".)
+		local DirectoryPanel = require(script.Parent.UI.DirectoryPanel)
+		if not DirectoryPanel.isOpen() then
+			DirectoryPanel.open()
+		end
 	elseif type(message) == "table" and message.op == "clubHowTo" then
 		-- (On the Concierge's tour, the Club Floor is being explained already.)
 		if not Tour.active() then

@@ -225,6 +225,18 @@ do
 	choose(ada, "next")
 	said = lastLine(ada)
 	check("asked what next, he says it and offers the way", said.line == Voice.Concierge.recommend.executive and choiceIds(said).go ~= nil)
+	-- Every game in the house: the Maison Directory, on the guest's own screen.
+	local opened = {}
+	Concierge.openDirectory = function(p)
+		table.insert(opened, p)
+	end
+	run(function()
+		Concierge.menu(ada)
+	end)
+	said = lastLine(ada)
+	check("his menu offers every game in the house", choiceIds(said).games ~= nil)
+	choose(ada, "games")
+	check("...which opens the Maison Directory on the guest's screen", #opened == 1 and opened[1] == ada)
 end
 
 ---------------------------------------------------------------------------------------------------
@@ -285,6 +297,43 @@ do
 	end
 	check("...in the house's voice (no exclamation marks)", voice)
 	check("every room is open to him (the invitation is at the Suite's lift)", AttractionList.byRoom.midnight ~= nil)
+end
+
+---------------------------------------------------------------------------------------------------
+-- 13. The Maison Directory's "Walk me there": Travel "way", the Concierge's own gold arrows
+---------------------------------------------------------------------------------------------------
+do
+	Travel.showWay = Concierge.showWay
+	run(Travel.start)
+	local g = H.guest("Wren", 813)
+	advance(1)
+	local function travel(m)
+		run(function()
+			Remotes.event("Travel").OnServerEvent:Fire(g, m)
+		end)
+		advance(0.2)
+	end
+	local was = g.root.CFrame.Position
+	local before = #g.inbox
+	travel({ op = "way", place = "midnight" })
+	local got = g.inbox[#g.inbox]
+	check("13. Walk me there: the gold arrows to the room, from anywhere", #g.inbox == before + 1 and got.op == "way" and got.place == "midnight" and type(got.name) == "string" and typeof(got.at) == "Vector3")
+	check("...and nobody is moved", (g.root.CFrame.Position - was).Magnitude < 0.01)
+	travel({ op = "way", place = "nowhere" })
+	check("...a place the house doesn't know: refused, plainly", g.inbox[#g.inbox].op == "refused")
+	before = #g.inbox
+	travel({ op = "teleport", place = "vault" })
+	travel({ op = "way", place = 5 })
+	check("...and nothing but its own requests is heard", #g.inbox == before)
+	check("every place the Directory leads to is one the house knows", (function()
+		local Directory = module("ReplicatedStorage", "Shared", "Directory")
+		for _, e in Directory.List do
+			if not Travel.places()[e.place] then
+				return false
+			end
+		end
+		return true
+	end)())
 end
 
 H.finish()

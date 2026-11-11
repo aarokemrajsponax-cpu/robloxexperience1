@@ -454,6 +454,14 @@ check("a guest new to the house (no tour yet, no rounds) is marked to be led to 
 local Build = module("ReplicatedStorage", "Shared", "Build")
 check("a first visit has no news to be told (and this build's is marked seen)", owner.inbox[1] ~= nil and owner.inbox[1].news == false and profiles[owner].seenBuild == Build.number)
 check("a guest who already has a character isn't given another", owner.loads == 0 and owner.Character == early)
+-- Which of the house's games they've been into (the objective card suggests the next to try).
+local tried = owner.inbox[1] and owner.inbox[1].tried
+check("the welcome says which games a guest has tried: none, to someone new", type(tried) == "table" and tried.luxe == false and tried.basement == false and tried.executive == false and tried.gala == false and tried.island == false)
+check("...a game is tried once its first-time note is in the record", Guests.tried({ flags = { guide_basement = true }, attractions = {} }).basement == true)
+check("...or, for a guest from before that note, once the record shows play in it", (function()
+	local t = Guests.tried({ flags = {}, attractions = { luxe = { hauls = 3 }, gala = { day = 1, gilt = 0, minutes = 0 }, island = { flights = 2 } } })
+	return t.luxe == true and t.gala == false and t.island == true and t.executive == false
+end)())
 
 ---------------------------------------------------------------------------------------------------
 -- 2. A guest joining normally: one character, placed, even if the profile is slow

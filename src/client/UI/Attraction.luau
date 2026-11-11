@@ -18,6 +18,7 @@ local BasementHud = require(script.Parent.BasementHud)
 local BasementPanel = require(script.Parent.BasementPanel)
 local ExecutiveHud = require(script.Parent.ExecutiveHud)
 local ExecutivePanel = require(script.Parent.ExecutivePanel)
+local FirstVisit = require(script.Parent.FirstVisit)
 local GalaHud = require(script.Parent.GalaHud)
 local GalaPanel = require(script.Parent.GalaPanel)
 local GalaView = require(script.Parent.Parent.World.GalaView)
@@ -174,18 +175,29 @@ function Attraction.start()
 		if op == "entered" then
 			follow()
 			local def = AttractionList.byId[tostring(m.id)]
+			-- (The very first time: how it works, on a card of its own; after that, a line.)
+			local first = m.first == true
 			if m.id == "island" then
 				-- (The jet: a few seconds in its cabin while the island is made ready.)
 				IslandView.flight(true)
 				task.delay(6.4, function()
 					if def and player:GetAttribute(AttractionList.ATTRIBUTE) == "island" then
-						Toast.show(def.name, "Five pearls on the lagoon's floor today, the sunset toast at the Lookout, and your jet on the airstrip to fly home.", 6)
+						if first then
+							FirstVisit.attraction("island")
+						else
+							Toast.show(def.name, "Five pearls on the lagoon's floor today, the sunset toast at the Lookout, and your jet on the airstrip to fly home.", 6)
+						end
 					end
 				end)
 			elseif def then
-				Toast.show(def.name, def.line, 6)
+				if first then
+					FirstVisit.attraction(def.id)
+				else
+					Toast.show(def.name, def.line, 6)
+				end
 			end
 		elseif op == "left" then
+			FirstVisit.hide()
 			follow()
 			if m.id == "island" and m.why == "home" then
 				IslandView.flight(false)
@@ -216,7 +228,7 @@ function Attraction.start()
 		elseif op == "stride" then
 			strideChip(m)
 		elseif op == "invited" then
-			Toast.show("An invitation", "To the Executive Suite: see the Quartermaster in the Midnight Room.", 4)
+			Toast.show("An invitation", "To the Executive Suite: see the Quartermaster in the Executive's Anteroom.", 4)
 		elseif op == "strideUp" then
 			Toast.show(string.format("Stride level %d", tonumber(m.level) or 1), string.format("%d%% faster in Steal a Luxe", tonumber(m.faster) or 0), 3)
 		elseif LuxeHud.mounted() then

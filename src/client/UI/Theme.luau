@@ -349,6 +349,18 @@ function Theme.onHover(fn: () -> ())
 	hoverSound = fn
 end
 
+-- The house's little sounds for something pressed or pointed at that isn't a key (a card).
+function Theme.playClick()
+	if clickSound then
+		clickSound()
+	end
+end
+function Theme.playHover()
+	if hoverSound then
+		hoverSound()
+	end
+end
+
 local function fontFor(kind: TextKind): Font
 	if kind == "display" then
 		return displayFont
@@ -394,6 +406,20 @@ local function applyText(r: Registered)
 	if fit and fit:IsA("UITextSizeConstraint") then
 		fit.MaxTextSize = size
 	end
+end
+
+-- How big words set with Theme.text(..., size, kind) really come out (the house's floors and the
+-- guest's text size applied: on a phone, small words are set larger), and how much room they take
+-- at that size: for laying a panel out before it's drawn.
+function Theme.textSize(size: number, kind: TextKind?): number
+	local k: TextKind = kind or "body"
+	local floor = math.max(FLOOR[k] or FLOOR_TEXT, math.min(FLOOR_MAX, (MIN_PX[k] or MIN_PX_TEXT) / uiScale))
+	return math.floor(math.max(Theme.snap(size), floor) * textScale + 0.5)
+end
+function Theme.measureAs(text: string, size: number, kind: TextKind?, width: number?): Vector2
+	local k: TextKind = kind or "body"
+	local face = if k == "display" and size < 22 then Brand.Fonts.bodyBold else fontFor(k)
+	return Theme.measure(if k == "caps" then Caps(text) else text, Theme.textSize(size, k), face, width)
 end
 
 function Theme.refresh()

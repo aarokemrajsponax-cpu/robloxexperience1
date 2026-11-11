@@ -14,6 +14,7 @@ local RunService = game:GetService("RunService")
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local Caps = require(ReplicatedStorage.Shared.Caps)
 local Catalogue = require(ReplicatedStorage.Shared.Catalogue)
+local Directory = require(ReplicatedStorage.Shared.Directory)
 local Voice = require(ReplicatedStorage.Shared.Voice)
 local Root = require(script.Parent.Root)
 local Theme = require(script.Parent.Theme)
@@ -481,6 +482,18 @@ function HowToPlay.guide(page: string?)
 			paragraph(scroll, R.lead, nextOrder(), 16)
 			heading(scroll, R.heading, nextOrder())
 			rows(R.sort, false)
+			-- The games, in the Maison Directory's own words (shared/Directory), each with its Go.
+			heading(scroll, R.headingGames, nextOrder())
+			local games: { Voice.GuideItem } = {}
+			local figures = Directory.figures(nil)
+			for _, e in Directory.List do
+				local how = table.concat(e.steps, " ")
+				if e.unlock then
+					how ..= " " .. Directory.fill(e.unlock, figures)
+				end
+				table.insert(games, { place = e.place, title = e.name, line = e.tagline, how = how, win = Directory.fill(e.rewards, figures) } :: any)
+			end
+			rows(games, false)
 			heading(scroll, R.heading2, nextOrder())
 			rows(R.visit, false)
 		elseif id == "gilt" then
