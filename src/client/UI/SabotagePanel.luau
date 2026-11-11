@@ -32,7 +32,7 @@ SabotagePanel.Kinds = {
 	{ id = "blackout", glyph = "🌑", name = "Blackout", line = "Their felt goes dark for 6 s", colour = rgb(150, 120, 255) },
 	{ id = "freeze", glyph = "❄️", name = "Butterfingers", line = "They can't file a piece for 4 s", colour = rgb(120, 210, 255) },
 } :: { Kind }
-local SHIELD: Kind = { id = "shield", glyph = "🛡️", name = "Shield", line = "Stops the next one sent at you", colour = rgb(255, 214, 110) }
+local SHIELD: Kind = { id = "shield", glyph = "🛡️", name = "Shield", line = "Stops the next one sent at that table", colour = rgb(255, 214, 110) }
 local byId: { [string]: Kind } = { shield = SHIELD }
 for _, k in SabotagePanel.Kinds do
 	byId[k.id] = k
@@ -108,7 +108,18 @@ function SabotagePanel.show(info: { [string]: any })
 	end
 	Theme.list(content, 8).VerticalAlignment = Enum.VerticalAlignment.Top
 	Theme.text(content, "Sabotage", 24, "display", { LayoutOrder = 1 })
-	Theme.text(content, if info.playing == true then string.format("Hit a rival's table. The whole room sees who sent it. %d left for you this evening.", left) else "Sabotage is for an evening in play.", 13, "body", { LayoutOrder = 2, TextColor3 = C.smoke })
+	if info.canSend == false then
+		-- (Fair play: a guest whose lamp is lit can't pay to change their own evening.)
+		Theme.text(content, "You're playing this evening, so you can't send any: sabotage and Shields come only from guests watching. Every table starts with one Shield, free.", 14, "body", { LayoutOrder = 2, TextColor3 = C.bone, TextWrapped = true })
+		local done = Theme.key(content, "Close", false, function()
+			SabotagePanel.close()
+		end, 160)
+		done.LayoutOrder = 40
+		done.Size = UDim2.fromOffset(160, 36)
+		Root.open(NAME, group)
+		return
+	end
+	Theme.text(content, if info.playing == true then string.format("Hinder a table, or send it a Shield. The whole room sees who sent it. Nobody playing can buy these. %d left for you this evening.", left) else "Sabotage is for an evening in play.", 13, "body", { LayoutOrder = 2, TextColor3 = C.smoke })
 	-- The tables still lit.
 	local list = Instance.new("ScrollingFrame")
 	list.Name = "Targets"
@@ -193,13 +204,16 @@ function SabotagePanel.show(info: { [string]: any })
 		key.Size = UDim2.fromOffset(w - 36, 42)
 	end
 	Theme.text(content, "Parcel Bomb: six lookalikes on their felt  ·  Blackout: their felt dark for 6 s  ·  Butterfingers: no filing for 4 s", 12, "body", { LayoutOrder = 20, TextColor3 = C.dim })
-	if mine then
-		local shield = Theme.key(content, string.format("%s  Shield my table  ·  %s", SHIELD.glyph, costText("shield", info)), false, function()
-			SabotagePanel.send({ op = "sabotage", kind = "shield", seat = mine })
-		end, w - 36)
-		shield.LayoutOrder = 30
-		shield.Size = UDim2.fromOffset(w - 36, 40)
-	end
+	-- (Or help instead: a Shield for the chosen table.)
+	local shield = Theme.key(content, string.format("%s  Send a Shield to this table  ·  %s", SHIELD.glyph, costText("shield", info)), false, function()
+		if chosen then
+			SabotagePanel.send({ op = "sabotage", kind = "shield", seat = chosen })
+		else
+			Toast.show("Sabotage", "Choose a table first.", 2)
+		end
+	end, w - 36)
+	shield.LayoutOrder = 30
+	shield.Size = UDim2.fromOffset(w - 36, 40)
 	local close = Theme.key(content, "Close", false, function()
 		SabotagePanel.close()
 	end, 160)
@@ -305,7 +319,7 @@ function SabotagePanel.heard(m: { [string]: any }, mySeat: number?)
 	local by = tostring(m.by or "Someone")
 	local to = tostring(m.toName or ("table " .. tostring(m.seat)))
 	if m.kind == "shield" then
-		Toast.show("🛡️ Shield up", string.format("%s raised a Shield.", by), 2)
+		Toast.show("🛡️ Shield up", string.format("%s sent a Shield to %s.", by, tostring(m.toName or "a table")), 2)
 	elseif m.blocked == true then
 		Toast.show(k.glyph .. " Blocked", string.format("%s's %s bounced off %s's Shield.", by, k.name, to), 2.2)
 	else

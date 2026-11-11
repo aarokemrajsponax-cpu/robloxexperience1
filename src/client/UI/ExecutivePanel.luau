@@ -1,12 +1,14 @@
 --!strict
--- The Quartermaster's board (at his desk in the Executive's Anteroom): your invitations to the
--- Executive Suite and every way to earn one (or one for Gilt), the sidearm (free: every guest takes
--- one up), and the gear for the next run, each with what it does and its price in Gilt. Every
--- figure and price is the server's (AttractionAsk "state"); the server takes the price or says why.
+-- The Quartermaster's board (at his desk in the Executive's Anteroom): going up in three plain
+-- steps (your free stun pistol; an invitation, with every way to get one, numbered, and one to buy
+-- for Gilt; then the lift), what you still need, and the optional gear for the next run, each with
+-- what it does and its price in Gilt. Every figure and price is the server's (AttractionAsk
+-- "state"); the server takes the price or says why.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
+local Directory = require(ReplicatedStorage.Shared.Directory)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Rules = require(ReplicatedStorage.Shared.Fortune)
 local Root = require(script.Parent.Root)
@@ -105,26 +107,56 @@ function ExecutivePanel.open()
 	fill = function(s: { [string]: any })
 		clear(rows)
 		local invites, most = tonumber(s.invites) or 0, tonumber(s.most) or 5
-		Theme.text(rows, string.format("Invitations: %d of %d", invites, most), 16, "bodyBold", { LayoutOrder = 1, TextColor3 = GOLD, TextXAlignment = Enum.TextXAlignment.Left })
-		Theme.text(rows, string.format("One is spent going up. Earn them: clear the Maison Basement, or bank a haul of %s or more in Steal a Luxe.", Rules.format(tonumber(s.inviteHaul) or 8000)), 12, "body", { LayoutOrder = 2, TextColor3 = C.smoke, TextXAlignment = Enum.TextXAlignment.Left })
 		local price = tonumber(s.invitePrice) or 25000
-		line(rows, 3, "An invitation", "For Gilt, if you'd rather not wait.", if invites >= most then "You hold the most" else Rules.format(price) .. " Gilt", invites < most, if invites < most then function()
-			act({ op = "act", id = "executive", act = "invite" })
-		end else nil)
-		Theme.hairline(rows, UDim.new(0, 120), 4)
+		local figures = Directory.figures({ executive = { inviteHaul = s.inviteHaul, invitePrice = s.invitePrice, most = s.most } })
+		local armed = s.sidearm == true
+		-- What's still needed, first, in one line.
+		local needs = if armed and invites > 0 then "You're ready: take the lift up at the end of this room."
+			elseif invites > 0 then "One step left: take your free stun pistol below, then the lift."
+			elseif armed then "One thing left: an invitation (below), then the lift."
+			else "Two things to go up: your free stun pistol, and an invitation."
+		Theme.text(rows, needs, 16, "bodyBold", { LayoutOrder = 1, TextColor3 = GOLD, TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true })
+		local function heading(order: number, text: string)
+			Theme.text(rows, text, 11, "caps", { LayoutOrder = order, TextXAlignment = Enum.TextXAlignment.Left })
+		end
+		local function plain(order: number, text: string, colour: Color3?)
+			Theme.text(rows, text, 13, "body", { LayoutOrder = order, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = colour or C.smoke, TextWrapped = true })
+		end
+		-- Step 1: the stun pistol (free).
+		heading(2, "Step 1  ·  Your stun pistol")
 		local gear = if type(s.gear) == "table" then s.gear else {}
 		for i, g in gear do
 			if g.free then
-				line(rows, 10 + i, tostring(g.glyph or "") .. "  " .. tostring(g.name), tostring(g.line), if g.packed then "Taken" else "Take it (free)", not g.packed, if g.packed then nil else function()
+				line(rows, 2 + i, tostring(g.glyph or "") .. "  " .. tostring(g.name), tostring(g.line), if g.packed then "Taken" else "Take it (free)", not g.packed, if g.packed then nil else function()
 					act({ op = "act", id = "executive", act = "sidearm" })
 				end)
-			else
-				line(rows, 10 + i, tostring(g.glyph or "") .. "  " .. tostring(g.name), tostring(g.line), if g.packed then "Packed" else Rules.format(tonumber(g.price) or 0) .. " Gilt", false, if g.packed then nil else function()
+			end
+		end
+		-- Step 2: an invitation, every way to get one.
+		heading(10, string.format("Step 2  ·  An invitation  ·  you hold %d of %d", invites, most))
+		local e = Directory.byId.executive
+		plain(11, "Each of these gets you one:")
+		local ways = e.ways or {}
+		for n = 1, math.min(2, #ways) do
+			plain(11 + n, string.format("%d.  %s", n, Directory.fill(ways[n], figures)), C.bone)
+		end
+		line(rows, 14, "3.  Buy one here", "For Gilt, if you'd rather not wait.", if invites >= most then "You hold the most" else Rules.format(price) .. " Gilt", invites < most, if invites < most then function()
+			act({ op = "act", id = "executive", act = "invite" })
+		end else nil)
+		-- Step 3: the lift.
+		heading(20, "Step 3  ·  The lift")
+		plain(21, Directory.fill("The lift at the end of this room takes you up. Each trip up uses one invitation, and you can hold up to {most}.", figures))
+		-- The rest is optional.
+		Theme.hairline(rows, UDim.new(0, 120), 22)
+		heading(23, "Optional gear for your next run")
+		for i, g in gear do
+			if not g.free then
+				line(rows, 23 + i, tostring(g.glyph or "") .. "  " .. tostring(g.name), tostring(g.line), if g.packed then "Packed" else Rules.format(tonumber(g.price) or 0) .. " Gilt", false, if g.packed then nil else function()
 					act({ op = "act", id = "executive", act = "gear", what = g.id })
 				end)
 			end
 		end
-		Theme.text(rows, "Gear is packed for your next run and works only in the Suite.", 12, "body", { LayoutOrder = 30, TextColor3 = C.smoke })
+		plain(40, "Gear is packed for your next run only, and works only in the Suite.")
 	end
 	local close = Theme.key(content, "Close", false, function()
 		Root.close(NAME)

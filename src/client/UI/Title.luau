@@ -78,9 +78,7 @@ function Title.show(choices: Choices)
 	-- One quiet line for tonight's table.
 	local nightlyRoom = Rooms.get(tostring(Workspace:GetAttribute("NightlyRoom") or ""))
 	if nightlyRoom then
-		local ruleName = string.gsub(nightlyRoom.name, "^The ", "")
-		ruleName = string.gsub(ruleName, " Room$", "")
-		Theme.text(column, "Tonight's table: " .. ruleName .. " rules.", 14, "body", { LayoutOrder = 7, TextColor3 = Brand.Colours.smoke })
+		Theme.text(column, "Tonight's table: one try, the same pieces for everyone, " .. string.lower(Rooms.pace(nightlyRoom.id)) .. ".", 14, "body", { LayoutOrder = 7, TextColor3 = Brand.Colours.smoke })
 	end
 	-- A Private Evening says so, plainly, before anyone plays.
 	if Workspace:GetAttribute("PrivateEvening") == true then

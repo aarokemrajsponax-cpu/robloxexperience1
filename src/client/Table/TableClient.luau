@@ -175,8 +175,8 @@ local function roomTitle(): string
 	elseif tableMode == "ballroom" then
 		return Voice.Ballroom.title
 	elseif tableMode == "nightly" or tableMode == "rehearsal" then
-		-- Tonight's table is played under its room's rules (and clock); say which.
-		return "Tonight's table · " .. room().name
+		-- Tonight's table is played under the night's own rules (and clock); say how it plays.
+		return "Tonight's table · " .. Rooms.pace(roomId)
 	end
 	return room().name
 end

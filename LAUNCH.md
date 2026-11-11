@@ -1,5 +1,9 @@
 # Maison Noir — the launch kit
 
+(Build 76: the step-by-step launch guide, with every product's exact name and price, is the
+separate *Maison Noir Launch Guide* document. The thumbnails and video shots in §3 and §4 below
+predate the attractions: take fresh ones of the games, as that guide describes.)
+
 Everything the game page needs, and the few switches to flip before the doors open. (How to
 get the word out once it's open, with posts, a trailer plan and an ads plan: `MARKETING.md`.) The words
 are written to be pasted as they are; the pictures are real shots of the game, taken in Studio
@@ -14,33 +18,33 @@ with the camera positions below, so the page never promises something the game i
 - **Maison Noir: Sort the Night**
 - **Maison Noir — a house of fine things**
 
-**Genre:** Puzzle. **Subgenre:** Sorting / Matching. (Set up as what it is: a puzzle and
-competition game with a beautiful lobby. Roblox's younger catalogues leave out social
-hangouts, so it shouldn't be described as one.)
+**Genre:** **Party & casual**, subgenre **Minigame** (Creator Dashboard → the game → Publish
+Settings → Game Details). Roblox asks for the genre of the core gameplay loop, and here that's a
+house full of different games. The genre can be changed only once every three months.
 
-**Description** (paste as is, about 900 characters):
+**Description** (paste as is):
 
-> A private members' house at midnight, and a table covered in expensive things.
+> A grand private house at midnight, full of games, and one question: who is the wealthiest guest?
 >
-> Sort watches, jewels, keys and curios into their cases before the clock runs down. Three in
-> a row pays. The light shows you where things belong, and every room plays by its own rules:
-> the Salon is gentle, the Obsidian Room is not.
+> Slip into a great residence in Steal a Luxe and carry out what you can before the guards see
+> you. Climb down the sixteen stages of the Maison Basement to its Treasury. Earn an invitation to
+> the Executive Suite and get past its security. Bid at the Grand Auction, keep your lamp lit in
+> the Ballroom's Lights Out, race the Grand Prix on the street outside, or sort treasures at the
+> Salon's tables at your own pace.
 >
-> Once a night, everyone on Roblox sits the same table: the Nightly. Up the Grand Stair,
-> members compete: head to head in the Library, twenty at a time in the Ballroom, where the
-> lamps go out one by one until only one is left.
+> Everything you win grows your Fortune. Fill your Vault, furnish your Suite, and take the private
+> jet to Luxury Island.
 >
-> Collect every piece for your Vault, furnish your Suite, earn your House Standing and a
-> hallmark beside your name. Nothing here can be bought that wins a game: everything sold is
-> style.
+> Fair by design: the Wealthiest boards count only what you earn, never what's bought, and every
+> price is shown before you pay.
 >
-> The house follows the calendar: snow at Yuletide, lanterns at All Hallows, warm nights on
-> the terrace in High Summer. And the terrace bar is open every evening.
+> The house keeps the calendar: lanterns at All Hallows, a harvest at Thanksgiving, snow at
+> Christmas.
 >
-> development of AJKR
+> Made by AJKR
 
-**Tags / keywords to pick where Roblox offers them:** puzzle, sorting, collecting, luxury,
-competitive, leaderboard, seasonal.
+**Tags / keywords to pick where Roblox offers them:** minigames, heist, obby, luxury,
+collecting, competitive, seasonal.
 
 **Social links:** none (no links off Roblox, §13).
 

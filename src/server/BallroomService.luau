@@ -11,7 +11,10 @@
 -- minutes, after an evening or when nobody came. It opens early for everyone when a guest buys
 -- "Open the Ballroom Now", or the owner says so. And during an evening, any guest in the room may
 -- sabotage a table (Robux, through Purchases/Sabotage): a Parcel Bomb, a Blackout, Butterfingers,
--- or a Shield against them; every one is announced to the room, with who sent it.
+-- or a Shield against them; every one is announced to the room, with who sent it. Fair play:
+-- nobody whose lamp is lit may pay to change the evening they're playing in; those are sent by
+-- guests watching (or whose lamp has gone out), and every table starts the evening with one
+-- Shield, free.
 
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
@@ -794,6 +797,10 @@ local function eveningStart(e: Evening, now: number)
 			standInRig(s)
 		end
 		names[tostring(i)] = { name = s.name, standIn = s.player == nil }
+		-- (Every table still in play starts the evening with a Shield, free: the first sabotage
+		-- sent at it from the room bounces off.)
+		s.shield = 1
+		s.model:SetAttribute("Shield", true)
 	end
 	e.real = real
 	e.alive = lit
@@ -1067,15 +1074,12 @@ function BallroomService.canSabotage(player: Player, kind: string, seat: number)
 		return false, "Sabotage is only for an evening in play."
 	end
 	local mine = seatOf[player]
-	if kind == "shield" then
-		local s = if mine then seats[mine] else nil
-		if not s or not s.alive then
-			return false, "A Shield is for a guest whose lamp is still lit."
-		end
-		if s.shield > 0 then
-			return false, "Your Shield is already up."
-		end
-		return true, nil
+	-- Fair play: nobody whose lamp is lit may pay to change the evening they're playing (no
+	-- sabotage from a rival, no Shield for oneself). Guests watching, and those whose lamp has
+	-- gone out, may send one at any table still lit, or a Shield to one.
+	local own = if mine then seats[mine] else nil
+	if own and own.alive then
+		return false, "You're playing this evening: sabotage and Shields are sent by guests watching."
 	end
 	if not mine and not inBallroom(player) then
 		return false, "Come up to the Ballroom to send one."
@@ -1084,8 +1088,14 @@ function BallroomService.canSabotage(player: Player, kind: string, seat: number)
 	if not target or not target.alive then
 		return false, "That lamp is already out."
 	end
+	if kind == "shield" then
+		if target.shield > 0 then
+			return false, "That table's Shield is already up."
+		end
+		return true, nil
+	end
 	if mine == seat then
-		return false, "Not at your own table!"
+		return false, "Not at your own table."
 	end
 	if os.clock() - target.hitAt < cfg().sabotage.gap then
 		return false, "That table was hit a moment ago. Try another, or wait a few seconds."
@@ -1108,7 +1118,7 @@ function BallroomService.sabotage(player: Player, kind: string, seat: number): (
 	local from = Names.of(player)
 	local c = cfg().sabotage
 	if kind == "shield" then
-		local s = seats[seatOf[player] :: number]
+		local s = seats[seat]
 		s.shield += 1
 		s.model:SetAttribute("Shield", true)
 		broadcast({ op = "sabotage", kind = "shield", by = from, seat = s.index, toName = s.name })
@@ -1155,7 +1165,10 @@ local function sabotageTargets(player: Player): { [string]: any }
 	end)
 	local e = evening
 	local used = if e then e.sabotages[player] or 0 else 0
-	return { op = "sabotageInfo", targets = list, mine = seatOf[player], left = math.max(0, cfg().sabotage.perEvening - used), playing = e ~= nil and e.state == "playing" }
+	-- (Whether this guest may send any: not while their own lamp is lit.)
+	local mine = seatOf[player]
+	local own = if mine then seats[mine] else nil
+	return { op = "sabotageInfo", targets = list, mine = mine, left = math.max(0, cfg().sabotage.perEvening - used), playing = e ~= nil and e.state == "playing", canSend = not (own ~= nil and own.alive) }
 end
 
 -- Opens the Ballroom now, for everyone (bought, or the owner's word). False if it's already

@@ -254,4 +254,34 @@ do
 	leave(g3)
 end
 
+do
+	-- Tonight's table is laid at a Salon table (the timed rooms' doors became the attractions):
+	-- it plays the night's own rules and clock there, then carries on as the Salon's own table.
+	local night = H.module("ReplicatedStorage", "Shared", "Nightly").at()
+	local g, ok, deal = seat("salon", "nightly")
+	check("tonight's table at a Salon table: the Nightly, under the night's rules and clock", ok and deal ~= nil and deal.mode == "nightly" and deal.room == night.room and deal.clock ~= nil, deal and (tostring(deal.mode) .. " " .. tostring(deal.room)))
+	say(g, { op = "lift", uid = deal and deal.pieces[1].uid })
+	advance((deal and deal.clock and deal.clock.budget or 60) + 1)
+	if H.lastOp(g, "reviveOffer") then
+		say(g, { op = "noRevive" })
+		advance(1)
+	end
+	check("...no revive is offered at tonight's table (a fair try for everyone)", H.lastOp(g, "reviveOffer") == nil)
+	local mark = #g.inbox
+	say(g, { op = "again" })
+	advance(1)
+	local again = newest(g, "deal", mark)
+	check("...and after the try, the Salon's own table again, with no clock", again ~= nil and again.mode == "room" and again.room == "salon" and again.clock == nil, again and again.room)
+	leave(g)
+	-- Where Play takes a guest: a free Salon table (there are no timed rooms' tables to find).
+	local CS = H.game:GetService("CollectionService")
+	local free = H.Instance.new("Model")
+	free.Name = "Table-salon-free"
+	free:SetAttribute("Room", "salon")
+	free:SetAttribute("TableId", "T-salon-free")
+	CS:AddTag(free, "MaisonTable")
+	check("Play for tonight's table finds a free Salon table", TableService.nightlyTable() == free)
+	CS:RemoveTag(free, "MaisonTable")
+end
+
 H.finish()

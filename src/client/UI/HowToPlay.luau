@@ -50,6 +50,8 @@ HowToPlay.tour = function() end
 -- Set by Main: tonight's table (one try a day), straight to a free table for it; the Shop.
 HowToPlay.tonight = function() end
 HowToPlay.shop = function() end
+-- Set by Main: the Maison Directory (every game in the house, on a card).
+HowToPlay.directory = function() end
 
 -- The piece, drawn as it is on the sorting screen, in a pool of gold light, floating gently.
 local function viewport(parent: Instance, pieceId: string): (Frame, () -> ())
@@ -393,6 +395,11 @@ function HowToPlay.guide(page: string?)
 				Root.close(GUIDE)
 				HowToPlay.tonight()
 			end
+		elseif item.action == "directory" then
+			return function()
+				Root.close(GUIDE)
+				HowToPlay.directory()
+			end
 		elseif item.place then
 			return goTo(item.place)
 		end
@@ -488,8 +495,16 @@ function HowToPlay.guide(page: string?)
 			local figures = Directory.figures(nil)
 			for _, e in Directory.List do
 				local how = table.concat(e.steps, " ")
-				if e.unlock then
-					how ..= " " .. Directory.fill(e.unlock, figures)
+				if e.ways then
+					-- (How to get in, one way a line, numbered: never a sentence to untangle.)
+					local lines = { "", Directory.fill(e.waysLead or "", figures) }
+					for n, way in e.ways do
+						table.insert(lines, string.format("%d. %s", n, Directory.fill(way, figures)))
+					end
+					if e.waysAfter then
+						table.insert(lines, Directory.fill(e.waysAfter, figures))
+					end
+					how ..= "\n" .. table.concat(lines, "\n")
 				end
 				table.insert(games, { place = e.place, title = e.name, line = e.tagline, how = how, win = Directory.fill(e.rewards, figures) } :: any)
 			end

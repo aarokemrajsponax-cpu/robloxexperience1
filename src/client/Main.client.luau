@@ -916,6 +916,9 @@ end
 HowToPlay.shop = function()
 	BoutiquePanel.open()
 end
+HowToPlay.directory = function()
+	require(script.Parent.UI.DirectoryPanel).open()
+end
 -- The Maison Directory's ways there: by the house (Travel "go"), walking with the Concierge's gold
 -- arrows (Travel "way"), or straight in from the room its way in is in (AttractionAsk "go").
 do

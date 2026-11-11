@@ -131,11 +131,11 @@ do
 end
 stand(ada, Layout.Midnight.arrival)
 local r = askAs(ada, { op = "go", id = "executive" })
-check("no sidearm: the lift says to see the Quartermaster first", r.ok == false and string.find(r.why, "sidearm", 1, true) ~= nil, r.why)
+check("no sidearm: the lift says to take the free stun pistol from the Quartermaster first", r.ok == false and string.find(r.why, "free stun pistol", 1, true) ~= nil and string.find(r.why, "Quartermaster", 1, true) ~= nil, r.why)
 r = askAs(ada, { op = "act", id = "executive", act = "sidearm" })
 check("the sidearm is free", r.ok == true and page(ada).sidearm == true and data(ada).gilt == 0)
 r = askAs(ada, { op = "go", id = "executive" })
-check("no invitation: by invitation only, and how to earn one", r.ok == false and string.find(r.why, "by invitation only", 1, true) ~= nil and string.find(r.why, "Maison Basement", 1, true) ~= nil, r.why)
+check("no invitation: said plainly, with every way to get one and the real figures", r.ok == false and string.find(r.why, "You need an invitation", 1, true) ~= nil and string.find(r.why, "Maison Basement", 1, true) ~= nil and string.find(r.why, "8,000", 1, true) ~= nil and string.find(r.why, "25,000 Gilt", 1, true) ~= nil, r.why)
 r = askAs(ada, { op = "act", id = "executive", act = "invite" })
 check("an invitation for Gilt, without the Gilt: its price", r.ok == false and r.why == "An invitation is 25,000 Gilt.", r.why)
 data(ada).gilt = 30000

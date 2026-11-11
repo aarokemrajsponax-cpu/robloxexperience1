@@ -26,7 +26,10 @@ export type Entry = {
 	mood: string, -- the light of its card's closer look (UI/Theme moods)
 	steps: { string }, -- how it plays, in three lines
 	rewards: string, -- what it pays
-	unlock: string?, -- how a guest opens it, where it's closed to them
+	unlock: string?, -- how a guest opens it, where it's closed to them (one sentence, for a card)
+	waysLead: string?, -- what opens it, plainly (the line before its ways)
+	ways: { string }?, -- each way to open it, numbered on its closer look and in How to play
+	waysAfter: string?, -- what comes after it's open
 	intro: { string }, -- the first time inside: three short lines
 }
 
@@ -47,9 +50,9 @@ Directory.List = {
 		deep = rgb(46, 10, 20),
 		mood = "ruby",
 		steps = {
-			"Pick up what you can carry. The fuller the bag, the slower you go.",
-			"Keep out of the guards' sight. Caught, the bag is lost; what's banked is safe.",
-			"Bank it at the getaway car, then go back for more.",
+			"Walk round the residence and pick up the treasures you can carry. The fuller your bag, the slower you walk.",
+			"Keep out of the guards' sight. If one catches you, you lose what's in your bag.",
+			"Carry it out to the getaway car to bank it: banked loot is yours for good. Then go back for more.",
 		},
 		rewards = "Every haul grows your Estate, and a fifth of it comes to your purse as Gilt. A haul of {inviteHaul} or more earns an invitation to the Executive Suite.",
 		intro = {
@@ -72,9 +75,9 @@ Directory.List = {
 		deep = rgb(44, 26, 6),
 		mood = "thanksgiving",
 		steps = {
-			"Jump, climb and dodge your way down, stage by stage.",
-			"Each stage has a checkpoint. Fall, and you're back at the last one.",
-			"Each chamber's way out pays its purse. The Treasury waits at the bottom.",
+			"Jump, climb and dodge down sixteen stages, one after another.",
+			"Step on each stage's checkpoint pad. If you fall, you go back to the last pad you reached.",
+			"Each of the four chambers pays when you reach its way out, and the Treasury at the bottom pays the most.",
 		},
 		rewards = "A little Gilt at each new checkpoint, a purse to your Estate at the end of each chamber, the Treasury's Gems, and an invitation to the Executive Suite when you clear it.",
 		intro = {
@@ -97,12 +100,19 @@ Directory.List = {
 		deep = rgb(8, 20, 40),
 		mood = "midnight",
 		steps = {
-			"Take your free sidearm from the Quartermaster in the Anteroom.",
-			"Read the four terminals for the door's code, out of the cameras' sight.",
-			"Beat the Executive's three phases, open the safe, and take the lift down.",
+			"Up the lift with your stun pistol: four terminals in the hallway each show one digit of the door's code. Keep out of the cameras' and guards' sight.",
+			"Type the code at the door. Inside the Office: shoot the three generators, stun his four bodyguards, then stun the Executive.",
+			"Beat him and the safe opens: take it, then the lift down.",
 		},
 		rewards = "Beat him and everyone in the Office is paid to their Estate, with Gems and his brainrot the first time. The safe pays once more.",
-		unlock = "An invitation opens it: clear the Maison Basement, bank a haul of {inviteHaul} or more in Steal a Luxe, or buy one from the Quartermaster for {invitePrice} Gilt.",
+		unlock = "You need an invitation: finish the Maison Basement, carry {inviteHaul} of loot out of Steal a Luxe in one trip, or buy one for {invitePrice} Gilt.",
+		waysLead = "You need an invitation to go up. Each of these gets you one:",
+		ways = {
+			"Finish the Maison Basement: reach the Treasury at the very bottom.",
+			"In Steal a Luxe, carry loot worth {inviteHaul} or more to the getaway car in a single trip.",
+			"Or buy one from the Quartermaster, in the Executive's Anteroom, for {invitePrice} Gilt.",
+		},
+		waysAfter = "Then take your free stun pistol from the Quartermaster and ride the lift up. Each trip up uses one invitation, and you can hold up to {most}.",
 		intro = {
 			"Cameras and guards raise the alert. Fill it, and security shows you out.",
 			"Each terminal holds a digit of the door's code. Three wrong tries and the alert jumps.",
@@ -117,7 +127,7 @@ Directory.List = {
 		name = "The Grand Ballroom",
 		tagline = "The dance floor, Luxury Trivia, the Runway, the Daily Arena and the Hall of Fame.",
 		short = "Trivia, the Runway and the Daily Arena.",
-		piece = "champagneCoupe",
+		piece = "pearlNecklace",
 		glyph = "💃",
 		accent = rgb(255, 196, 120),
 		deep = rgb(40, 22, 30),
@@ -178,7 +188,13 @@ Directory.List = {
 			"Choose your jet's livery and your villa's theme.",
 		},
 		rewards = "Gilt for each pearl and for the day's toast (more with friends), and Gems for all five pearls.",
-		unlock = "The Island Key opens it, yours for good: reach {keyRank} ({keyRankAt} Fortune), then {keyGilt} Gilt or {keyGems} Gems at the Jet Lounge's desk.",
+		unlock = "You need the Island Key: reach the rank of {keyRank} ({keyRankAt} Fortune), then buy it at the Jet Lounge for {keyGilt} Gilt or {keyGems} Gems.",
+		waysLead = "You need the Island Key, once. It's yours for good:",
+		ways = {
+			"Grow your Fortune to {keyRankAt}: that's the rank of {keyRank}.",
+			"Then buy the Island Key at the Jet Lounge's desk, on the Terrace: {keyGilt} Gilt or {keyGems} Gems.",
+		},
+		waysAfter = "After that, the private jet in the Jet Lounge flies you there whenever you like.",
 		intro = {
 			"Five pearls lie on the lagoon's floor today. Go close to one to bring it up.",
 			"The sunset toast at the Lookout pays once a day, and more for each friend who toasts with you.",
@@ -248,12 +264,14 @@ function Directory.figures(cards: { [string]: any }?): { [string]: string }
 		keyRankAt = Fortune.format(rank.at),
 		keyGilt = Fortune.format(tonumber(isl.keyGilt) or 25000),
 		keyGems = tostring(math.floor(tonumber(isl.keyGems) or 250)),
+		most = tostring(math.floor(tonumber(ex.maxInvites) or 5)),
 	}
 	local c: { [string]: any } = cards or {}
 	local e, g, i = c.executive, c.gala, c.island
 	if type(e) == "table" then
 		f.inviteHaul = formatted(e.inviteHaul) or f.inviteHaul
 		f.invitePrice = formatted(e.invitePrice) or f.invitePrice
+		f.most = if type(e.most) == "number" then tostring(math.floor(e.most)) else f.most
 	end
 	if type(g) == "table" then
 		f.galaGilt = formatted(g.galaGilt) or f.galaGilt

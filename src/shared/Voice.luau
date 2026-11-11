@@ -93,7 +93,7 @@ Voice.Concierge = {
 	questions = {
 		{ id = "rich", q = "How do I get rich?", a = "Everything you own counts toward your Fortune: Gilt, Gems, your collection, your Suite and your Estate. The attractions grow your Estate fastest." },
 		{ id = "estate", q = "What is my Estate?", a = "What you've banked and won in the attractions. It only ever grows, and a fifth of every haul comes to your purse in Gilt as well." },
-		{ id = "invite", q = "How do I get into the Executive Suite?", a = "By invitation: clear the Maison Basement, or bank a haul of {inviteHaul} or more in Steal a Luxe. The Quartermaster also sells one for {invitePrice} Gilt. Take your free sidearm from him first." },
+		{ id = "invite", q = "How do I get into the Executive Suite?", a = "You need an invitation. Each of these gets you one: finish the Maison Basement; carry loot worth {inviteHaul} or more out of Steal a Luxe in a single trip; or buy one from the Quartermaster in the Anteroom for {invitePrice} Gilt. Take your free stun pistol from him too, then ride the lift up." },
 		{ id = "stride", q = "What does Stride do?", a = "It makes you faster in Steal a Luxe, and only there: {stride}% a level. Walk the treadmills in the Luxe Lounge to train it." },
 		{ id = "caught", q = "What if a guard catches me?", a = "Everything in your bag is lost and you're shown out to the courtyard. What you've already banked is safe." },
 		{ id = "skip", q = "Can I skip a Basement stage?", a = "Yes, and the deeper the stage, the more it costs: {skipGems} Gems for the first, {skipStep} more for each stage after it. Skips bought with Robux work too, more of them further down. A skipped run isn't timed for the boards, and the stage you skip pays nothing." },
@@ -323,11 +323,11 @@ Voice.WelcomeBack = {
 -- What's new in this build, told once to each returning guest (Welcome back). Only shown while
 -- `build` is the build that's playing, so old news never shows as new.
 Voice.WhatsNew = {
-	build = 75,
+	build = 76,
 	lines = {
-		"Press Play at the top right: every game in the house on a card, how it plays, and the way there.",
-		"The first time you go into a game, a short card says how it works. Once, then never again.",
-		"The Concierge shows you every game, and what to do next now points to the games you haven't tried.",
+		"How to play says it plainly now: every way into the Executive Suite and Luxury Island, with how close you are.",
+		"Tonight's table is back: press Play on its card and you're seated at a Salon table, against tonight's clock.",
+		"Lights Out is fair: only guests watching can send sabotage or a Shield, and every table starts with a Shield, free.",
 	},
 }
 
@@ -355,7 +355,7 @@ Voice.Hints = {
 		{ id = "shop", line = "You have Gilt to spend: Shop, top right, has table styles, auras and more.", after = 240, every = 1200 },
 		{ id = "suite", line = "Your Suite is yours to decorate. The Suites key on the left takes you there.", after = 420 },
 		{ id = "collection", line = "Brainrots you find earn Gilt every hour, even while you're away. See them in Collection.", after = 600 },
-		{ id = "tonight", line = "Tonight's table: one try a day at the night's best score. It's in the Foyer.", after = 900 },
+		{ id = "tonight", line = "Tonight's table: one try a day, the same pieces for every guest. The card at the top of your screen seats you at it.", after = 900 },
 	} :: { Hint },
 }
 
@@ -384,15 +384,15 @@ Voice.Guide = {
 		{ "extras", "Extras" },
 	},
 	basics = {
-		lead = "Maison Noir is a sorting game in a grand house. You sort treasures into the right cases, earn Gilt (the house's gold coins), and spend it on things you like. That's the whole game. Everything else is a bonus.",
+		lead = "Maison Noir is a grand house full of games. Play them to earn Gilt (the house's gold coins), grow your Fortune and become the wealthiest guest in the house. Spend what you earn on looks, your Suite and your collection.",
 		heading = "Your first five minutes",
 		steps = {
-			{ title = "Go to a table", line = "The tables are in the Salon, through the doors on your left as you come in. Walk up to any chair and press E. On a phone, tap Sit.", key = "Take me there", action = "sit" },
-			{ title = "Sort the treasures", line = "Treasures land on the table: watches, rings, gold, keys and more. Drag each one down into the case it belongs in. Every case says what goes inside.", key = "See how", action = "sorting" },
-			{ title = "Earn Gilt", line = "Every piece in the right case scores points. A few right in a row is a streak, and then each one scores more. When you bank the run (or stand up), your points become Gilt." },
-			{ title = "Spend it", line = "Press Shop at the top right for new looks, table styles and more. Upstairs, your own Suite is yours to furnish.", key = "Shop", action = "shop" },
+			{ title = "See every game", line = "Press the gold Play key at the top right. Each game has a card: what it is, how to play it, and a key that takes you there.", key = "Open it", action = "directory" },
+			{ title = "Start with Steal a Luxe", line = "Its door is the Luxe Lounge, off the Foyer. Pick up treasures, keep out of the guards' sight, and carry them to the getaway car. Every trip grows your Fortune.", place = "velvet", key = "Take me there" },
+			{ title = "Or sit at a table", line = "In the Salon, sort treasures into their cases for Gilt, with no clock. Walk up to any chair and press E. On a phone, tap Sit.", key = "See how", action = "sorting" },
+			{ title = "Spend it", line = "Press Shop at the top right for looks, cars and more. Upstairs, your own Suite is yours to furnish.", key = "Shop", action = "shop" },
 		} :: { GuideItem },
-		after = "Lost at any time? Press How to play at the top right, or ask the Concierge by the front door.",
+		after = "Lost at any time? Press How to play or Play at the top right, or talk to the Concierge by the front door.",
 	},
 	sorting = {
 		lead = "Every treasure belongs in one of six cases along the bottom of the table. Each case shows a piece that goes in it.",
@@ -402,7 +402,7 @@ Voice.Guide = {
 			{ title = "A wrong case", line = "It only breaks your streak. Shrug it off and sort the next one." },
 			{ title = "Not sure where it goes?", line = "In the Salon, wait a moment and a thread of gold runs from the piece to its case." },
 			{ title = "Rounds", line = "Clear the table to finish a round. Then pick Next round (more pieces, more points) or Bank the run to take your Gilt now." },
-			{ title = "Clocks", line = "The Salon has no clock: take your time. The Velvet, Obsidian and Midnight Rooms do, and they pay more for it." },
+			{ title = "Clocks", line = "The Salon has no clock: take your time. Tonight's table has one: gentle on some nights, brisk or hard on others." },
 		} :: { GuideItem },
 		key = "Try it at a table",
 	},
@@ -418,26 +418,27 @@ Voice.Guide = {
 		visit = {
 			{ place = "concierge", title = "The Concierge", line = "Stands by the front door, ready to help.", how = "Speak to him and pick Show me the house: he walks you round every room and explains it." },
 			{ place = "boutique", title = "The Boutique", line = "The house's shop for looks.", how = "Looks, table styles, lamps and trails for Gilt (a few for Robux, always with the price shown first). The Wardrobe beside it is where you wear what you own." },
-			{ place = "vault", title = "The Vault", line = "Your collection, kept for good.", how = "Every piece you've ever sorted is on its shelves. The Archivist at the desk keeps your badges and records." },
+			{ place = "vault", title = "The Vault", line = "Your collection, kept for good.", how = "Every piece you've sorted stands on its shelves. The console under the four domes shows your curios, how complete your collection is, and who may look round. The Archivist at the desk keeps your badges and records." },
 			{ place = "terrace", title = "The Terrace", line = "A rooftop to relax on, and the jet to the island.", how = "A bar with treats, a fire pit and loungers under the stars. The Jet Lounge's arch flies Island Key holders to Luxury Island." },
 			{ place = "suite", title = "Your Suite", line = "Your own private rooms upstairs.", how = "Ring the bell inside to furnish them. Only you can go in, unless you invite friends with the Suites key." },
 		} :: { GuideItem },
 	},
 	gilt = {
-		lead = "Gilt is the house's money. You earn it by sorting, and spend it on things you keep.",
+		lead = "Gilt is the house's money. You earn it in every game, and spend it on things you keep.",
 		items = {
-			{ title = "Gilt", line = "Earned at every table: the better your run, the more you get.", how = "Your Gilt is shown at the top left of the screen." },
-			{ title = "Gems", line = "Rarer than Gilt.", how = "Won in races, the holiday games and the Evening Calendar's presents. Spend them in the Gems shop on auras, titles and more." },
+			{ title = "Gilt", line = "Earned everywhere: the tables, Steal a Luxe, the Basement, the Grand Ballroom, the island and the races.", how = "Your Gilt is shown at the top left of the screen." },
+			{ title = "Gems", line = "Rarer than Gilt.", how = "Won in the games (the Basement's Treasury, the Executive Suite, the island's pearls, the Grand Ballroom), in races, the holiday games and the Evening Calendar's presents. Spend them in the Gem Shop and the Cabinet." },
+			{ title = "Your Fortune", line = "Everything you own, added up.", how = "Your Gilt, Gems, collection, Suite and your Estate (all you've banked in the games). It's under your Gilt: tap it for the Wealthiest boards, which count only what you earned, never what was bought." },
 			{ title = "The Shop", line = "Everything for sale, in one place.", how = "Looks, table styles, lamps and more for Gilt. Some special things are for Robux, always with the price shown first.", key = "Shop", action = "shop" },
 			{ title = "Levels and badges", line = "Everything you do counts.", how = "Sorting, racing and playing earn XP and raise your level. Badges in the Badge Book mark what you've done." },
-			{ place = "tonight", title = "Tonight's table", line = "Optional: once a day, everyone plays the same table.", how = "You get one try a day. The best scores go up on the board in the hall.", key = "Play", action = "nightly" },
+			{ place = "tonight", title = "Tonight's table", line = "Optional: once a day, everyone plays the same table.", how = "Press Play and you're seated at a free Salon table: five rounds against tonight's clock, with the same pieces for every guest in every server. One try a day; the best scores go up on the board in the Foyer.", key = "Play", action = "nightly" },
 		} :: { GuideItem },
 	},
 	extras = {
 		lead = "Big games and fun on the side. All optional, all worth a try.",
 		items = {
 			{ place = "grandPrix", title = "The Grand Prix", line = "Ultra-luxury cars on the street outside.", how = "Walk up to any car and press E to drive (or F to ride along with a friend). Every 10 minutes a race opens: press Race, line up on the grid, wait for the five lights, then three laps. Reset puts a stuck car right.", win = "Gilt for the top three, and Gems for the winner." },
-			{ place = "ballroom", title = "The Ballroom", line = "Lights Out: the big game, every 20 minutes.", how = "When it opens, sit in any chair before the countdown ends. Then everyone sorts at once. Your table holds 16 pieces: go over for 3 seconds and your lamp goes out.", win = "The last lamp still lit wins the whole pot of Gilt." },
+			{ place = "ballroom", title = "The Ballroom", line = "Lights Out: the big game, every 20 minutes.", how = "When it opens, sit in any chair before the countdown ends. Then everyone sorts at once. Your table holds 16 pieces: go over for 3 seconds and your lamp goes out. Guests watching can send a sabotage or a Shield to a table; nobody playing can buy either, and every table starts with one Shield, free.", win = "The last lamp still lit wins the whole pot of Gilt." },
 			{ place = "library", title = "The Library", line = "Tête-à-Tête: one on one.", how = "Sit at a Library table to face another player. You both get exactly the same pieces; three in a row sends a parcel of lookalikes across to them.", win = "First to win three hands wins the match." },
 			{ title = "Curios and brainrots", line = "Collectibles found as you play.", how = "They turn up at the tables. Open Collection (left of the screen) to see them, and Trade to swap with friends safely.", win = "Brainrots earn you Gilt every hour." },
 			{ title = "Holiday games", line = "In their season, the house throws a party.", how = "Trick or Treat on Hallows Lane, the Turkey Round-Up, Santa's Sleigh, the Great Egg Hunt and the Luck of the Irish.", win = "Gifts, Gilt and Gems." },

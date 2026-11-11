@@ -26,9 +26,6 @@ end)
 local BOARDS = {
 	{ id = "nightly", label = "Tonight" },
 	{ id = "salon", label = "Salon" },
-	{ id = "velvet", label = "Velvet" },
-	{ id = "obsidian", label = "Obsidian" },
-	{ id = "midnight", label = "Midnight" },
 	{ id = "library", label = "Library" },
 	{ id = "ballroom", label = "Ballroom" },
 	{ id = "soiree", label = "Soirée" },

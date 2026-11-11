@@ -26,6 +26,11 @@ local CANVAS = { color = Color3.fromRGB(226, 216, 196), material = Enum.Material
 local BULB = { color = Color3.fromRGB(255, 206, 140), material = Enum.Material.Neon }
 local INVISIBLE = { color = Color3.new(), material = Enum.Material.SmoothPlastic, transparency = 1 }
 local GLASS_DOOR = { color = Color3.fromRGB(30, 34, 40), material = Enum.Material.Glass, reflectance = 0.2, transparency = 0.45 }
+-- Warm teak underfoot where guests sit; silvery olive leaves; the lanterns' glow.
+local TEAK = { color = Color3.fromRGB(128, 88, 56), material = Enum.Material.WoodPlanks }
+local OLIVE = { color = Color3.fromRGB(104, 122, 88), material = Enum.Material.Grass }
+local BARK = { color = Color3.fromRGB(86, 72, 58), material = Enum.Material.Wood }
+local LANTERN_GLOW = { color = Color3.fromRGB(255, 214, 150), material = Enum.Material.Neon, transparency = 0.3 }
 
 -- A balustrade from a to b (on the terrace floor): posts, a top rail, and an invisible guard.
 local function balustrade(m: Model, a: Vector3, b: Vector3)
@@ -58,9 +63,43 @@ local function lounge(m: Model, centre: Vector3)
 	end
 end
 
+-- A café parasol: eight canvas panels sloping down from a brass finial, a rib under every seam,
+-- on a dark brass pole (a real canopy's shape, never a flat disc).
 local function parasol(m: Model, at: Vector3)
-	Kit.post(m, "ParasolPole", 8, 0.25, at, L.darkBrass, { collide = false })
-	Kit.cylinder(m, "ParasolCanopy", 0.4, 9, CFrame.new(at + Vector3.new(0, 7.6, 0)) * CFrame.Angles(0, 0, math.rad(90)), CANVAS, { collide = false })
+	Kit.post(m, "ParasolPole", 8.4, 0.25, at, L.darkBrass, { collide = false })
+	local top = at + Vector3.new(0, 8.4, 0)
+	local reach, droop = 4.7, math.rad(17)
+	for i = 0, 7 do
+		local a = i / 8 * math.pi * 2
+		local panel = CFrame.lookAt(top, top + Vector3.new(math.cos(a), 0, math.sin(a))) * CFrame.Angles(-droop, 0, 0)
+		Kit.part(m, "ParasolPanel", Vector3.new(reach * 0.8, 0.12, reach), panel * CFrame.new(0, 0, -reach / 2), CANVAS, { collide = false })
+		local b = a + math.pi / 8
+		local rib = CFrame.lookAt(top, top + Vector3.new(math.cos(b), 0, math.sin(b))) * CFrame.Angles(-droop, 0, 0)
+		Kit.part(m, "ParasolRib", Vector3.new(0.09, 0.09, reach), rib * CFrame.new(0, -0.14, -reach / 2), L.darkBrass, { collide = false, shadow = false, query = false })
+	end
+	Kit.ball(m, "ParasolFinial", 0.5, top + Vector3.new(0, 0.3, 0), L.brass, { collide = false, query = false })
+end
+
+-- An olive tree in a stone urn: a dark twisted trunk and a loose, silvery crown.
+local function olive(m: Model, at: Vector3)
+	Kit.post(m, "OliveUrn", 1.8, 2.6, at, STONE)
+	Kit.post(m, "OliveTrunk", 4.4, 0.35, at + Vector3.new(0, 1.7, 0), BARK, { collide = false })
+	for i, o in { Vector3.new(0, 6.4, 0), Vector3.new(1, 5.8, 0.6), Vector3.new(-0.9, 6, -0.7), Vector3.new(0.3, 7.1, -0.4) } do
+		Kit.ball(m, "OliveCrown", 2.4 - i * 0.18, at + o, OLIVE, { collide = false, shadow = false })
+	end
+end
+
+-- A floor lantern: brass base and cap, warm glass between, its light pooling on the deck.
+local function lantern(m: Model, at: Vector3)
+	Kit.part(m, "LanternBase", Vector3.new(1.1, 0.25, 1.1), CFrame.new(at + Vector3.new(0, 0.125, 0)), L.darkBrass, { collide = false })
+	local glass = Kit.part(m, "LanternGlass", Vector3.new(0.85, 1.5, 0.85), CFrame.new(at + Vector3.new(0, 1, 0)), LANTERN_GLOW, { collide = false, shadow = false, query = false })
+	Kit.part(m, "LanternCap", Vector3.new(1.2, 0.25, 1.2), CFrame.new(at + Vector3.new(0, 1.875, 0)), L.darkBrass, { collide = false })
+	local light = Instance.new("PointLight")
+	light.Color = Color3.fromRGB(255, 196, 130)
+	light.Range = 11
+	light.Brightness = 0.9
+	light.Shadows = false
+	light.Parent = glass
 end
 
 -- A string of bulbs sagging between two points.
@@ -122,6 +161,9 @@ function Terrace.build(parent: Instance): Model
 	Kit.span(m, "StepGuardS", Vector3.new(26, CLUB, z0 - 0.6), Vector3.new(T.minX, Y + 6, z0), STONE)
 	-- The paving, laid on the roof.
 	Kit.span(m, "Paving", Vector3.new(T.minX, Y - 0.2, T.minZ), Vector3.new(T.maxX, Y, T.maxZ), PAVING)
+	-- A teak deck where guests sit (the loungers and the café tables), a step's breath above the
+	-- paving: warm wood underfoot, the slate left round the bar, the fire pit and the edges.
+	Kit.span(m, "DeckFloor", Vector3.new(34.5, Y - 0.1, 31.2), Vector3.new(61, Y + 0.12, 53.5), TEAK)
 	-- The balustrade on the three open sides, and the west side beyond the Foyer's wall.
 	balustrade(m, Vector3.new(T.minX + 0.5, 0, T.minZ + 0.5), Vector3.new(T.maxX - 0.5, 0, T.minZ + 0.5))
 	balustrade(m, Vector3.new(T.maxX - 0.5, 0, T.minZ + 0.5), Vector3.new(T.maxX - 0.5, 0, T.maxZ - 0.5))
@@ -130,6 +172,14 @@ function Terrace.build(parent: Instance): Model
 	balustrade(m, Vector3.new(T.minX + 0.5, 0, z0 - 0.5), Vector3.new(T.minX + 0.5, 0, 44.5))
 	for _, p in { Vector3.new(33, Y, 33), Vector3.new(77.5, Y, 32.5), Vector3.new(33, Y, 60), Vector3.new(77.5, Y, 47.5), Vector3.new(64, Y, 60) } do
 		planter(m, p)
+	end
+	-- Olive trees in stone urns, at the deck's south edge, by the menu board and by the fire.
+	for _, p in { Vector3.new(58, Y, 33), Vector3.new(41, Y, 59.6), Vector3.new(77.4, Y, 40) } do
+		olive(m, p)
+	end
+	-- Two lanterns either side of the way in from the doors.
+	for _, p in { Vector3.new(35.5, Y, 50), Vector3.new(35.5, Y, 58) } do
+		lantern(m, p)
 	end
 	-- Two café tables under parasols, in the middle of the terrace.
 	for _, c in { Vector3.new(44, Y, 48), Vector3.new(57, Y, 45) } do

@@ -377,6 +377,44 @@ a Nightly attempt or a Mythic's odds.
 - **The launch kit**: page text, icon, thumbnails and the gameplay video's shot list are in
   [`LAUNCH.md`](LAUNCH.md).
 
+## Build 76 — How to play in plain words, tonight's table back, a fair Lights Out, the Terrace dressed
+
+- **How to play, in plain words.** *Basics* says what the game is (a grand house full of games:
+  earn Gilt, grow your Fortune, become the wealthiest guest) and the first five minutes: see every
+  game (**Open it**: the Directory), start with Steal a Luxe (**Take me there**), or sit at a table
+  (**See how**: the sorting, step by step), then spend it (**Shop**). *Rooms* lists every way into
+  a locked game, numbered: the Executive Suite's three (finish the Maison Basement; carry 8,000 or
+  more out of Steal a Luxe in one trip; or buy one from the Quartermaster for 25,000 Gilt), then
+  the free stun pistol and the lift; Luxury Island's (reach the rank of Tycoon, then buy the Island
+  Key at the Jet Lounge). *Gilt & Shop* explains Gems and the Fortune (the Wealthiest boards count
+  only what's earned, never what's bought).
+- **Getting into the Executive Suite, step by step.** The Quartermaster's card: a line at the top
+  saying what's left, then *Step 1 · Your stun pistol* (free), *Step 2 · An invitation* (how many
+  you hold, each way numbered, *3. Buy one here* with its price), *Step 3 · The lift*, then the
+  optional gear. A locked game's closer look in the Directory: *How to get in*, every way numbered
+  with this guest's own progress beside it (the deepest stage reached, the best trip, Gilt in hand
+  against the price; a ✓ by a way already met), then what comes after. The lift's refusals and
+  the Concierge's answer say the same, plainly.
+- **Tonight's table is back.** Its **Play** key looked for tables in the old timed rooms (gone
+  since the attractions took their doors), so it always answered that every table was taken. Now
+  it seats the guest at a free Salon table, played under the night's own rules and clock, the
+  same pieces for everyone; after the try the table carries on as the Salon's own. Its labels say
+  how it plays (*A gentle clock*, *A brisk clock*) instead of naming rooms nobody can walk into:
+  the table's title, tonight's card, the Foyer's board, the title screen and the Register's odds.
+  Its runs no longer post to those rooms' old boards, and the Boards panel no longer has their tabs.
+- **Chronos Defiance is off the Shop's page.** It's only ever offered when a timed table's clock
+  runs out, and no table offers one today, so its card could never be bought (and never was: a
+  purchase outside its moment is refused).
+- **Lights Out is fair** (this changes what can be sold): nobody playing an evening can buy
+  sabotage or Shields. Guests watching send them, the whole room sees who did, and every table
+  starts with one Shield, free.
+- **The Terrace, dressed for a quiet evening:** a warm teak deck where guests sit, café parasols
+  with real sloped canopies (eight panels on brass ribs, not a flat disc), olive trees in stone
+  urns, and two lanterns at the way in. Nothing new stands in a path, and the house stays inside
+  its part and light budgets.
+- The launch guide (a separate document) walks through the whole launch: products by exact name
+  and price, the store page, testing, launch day and after.
+
 ## Build 75 — the Maison Directory, first-visit guides, the house's words brought up to date
 
 - **The Maison Directory** (the gold **▶ Play** key, first at the top right; the Menu's first tile;

@@ -477,7 +477,8 @@ local function bank(s: Session, reason: string?): { [string]: any }
 		end
 		summary.giltTotal = data.gilt
 	end
-	if not s.flagged then
+	if not s.flagged and s.mode == "room" then
+		-- (Tonight's table has its own board; its rules' old room boards take nothing new.)
 		Boards.submit(player, s.room.id, boardScore)
 	end
 	Analytics.step(player, 10)
@@ -940,10 +941,6 @@ function TableService.seat(player: Player, model: Model, teleport: boolean?, wan
 	end
 	local data = Profiles.get(player)
 	local mode: Mode = wanted or "room"
-	if mode ~= "room" and model:GetAttribute("Room") == "salon" then
-		-- The Salon never runs a clock, so tonight's (timed) table is never played there.
-		mode = "room"
-	end
 	if mode == "nightly" then
 		-- One try a day (UTC). Once it's played (or where nothing is recorded, a private server)
 		-- the table simply plays as its own room: no rehearsals, nothing to explain.
@@ -1028,21 +1025,11 @@ function TableService.freeTable(roomId: string, near: Vector3?): Model?
 	return best
 end
 
--- A free table for tonight's table. Never in the Salon (the Salon has no clock): a table in
--- tonight's room when it's open to everyone, else the Obsidian or the Velvet Room.
+-- A free table for tonight's table: any free Salon table. The Nightly brings its own rules and
+-- clock (Nightly.at().room's tuning), whichever table it's laid on; the timed rooms' tables went
+-- when their doors became the attractions.
 function TableService.nightlyTable(near: Vector3?): Model?
-	local night = Nightly.at()
-	local order = { "obsidian", "velvet" }
-	if night.room ~= "salon" and night.room ~= "midnight" then
-		table.insert(order, 1, night.room)
-	end
-	for _, roomId in order do
-		local m = TableService.freeTable(roomId, near)
-		if m then
-			return m
-		end
-	end
-	return nil
+	return TableService.freeTable("salon", near)
 end
 
 local function onMessage(player: Player, message: unknown)

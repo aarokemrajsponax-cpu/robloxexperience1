@@ -194,14 +194,15 @@ local function buildUi()
 	highlightTabs()
 end
 
--- The Sabotage key: during an evening in play, for a guest at a lit table or watching in the room.
+-- The Sabotage key: during an evening in play, for a guest watching in the room (or whose lamp has
+-- gone out). Nobody playing may pay to change the evening, so a guest at a lit table has none.
 local sabotageKey: TextButton? = nil
 local function ballroomState(): string
 	local v = Workspace:GetAttribute("BallroomState")
 	return if type(v) == "string" then v else "open"
 end
 local function updateSabotageKey()
-	local want = ballroomState() == "playing" and ((mySeat ~= nil and playing) or (mySeat == nil and inRoom))
+	local want = ballroomState() == "playing" and not (mySeat ~= nil and playing) and (inRoom or mySeat ~= nil)
 	if want and not sabotageKey then
 		local k = Theme.key(Root.hud, "💣  Sabotage", true, function()
 			tableEvent:FireServer({ op = "sabotageInfo" })

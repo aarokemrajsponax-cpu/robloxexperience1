@@ -40,6 +40,16 @@ local tags = {
 }
 local levels = { salon = 1, velvet = 2, obsidian = 3, midnight = 4 }
 
+-- How each set of rules plays, in a few plain words. The timed rooms' doors became the
+-- attractions, so their rules are only played at tonight's table now: say how it plays, never
+-- the name of a room nobody can walk into.
+local paces = {
+	salon = "No clock",
+	velvet = "A gentle clock",
+	obsidian = "A brisk clock",
+	midnight = "The hardest clock, nothing named",
+}
+
 function Rooms.get(id: string): Room?
 	local tuning = Config.data.Rooms[id]
 	if tuning == nil then
@@ -54,6 +64,19 @@ function Rooms.get(id: string): Room?
 		timed = tuning.clockBase ~= nil,
 		tuning = tuning,
 	}
+end
+
+-- A set of rules in plain words ("A gentle clock").
+function Rooms.pace(id: string?): string
+	return paces[id or ""] or paces.salon
+end
+
+-- Where a run under these rules was played, mid-sentence: the Salon's own, or tonight's table.
+function Rooms.where(id: string?): string
+	if id == nil or id == "salon" then
+		return "the Salon"
+	end
+	return "tonight's table"
 end
 
 function Rooms.all(): { Room }

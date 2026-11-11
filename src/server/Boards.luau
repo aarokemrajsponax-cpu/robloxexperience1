@@ -231,7 +231,7 @@ local function drawTonight()
 			local night = Nightly.at()
 			local room = Rooms.get(night.room)
 			text(Voice.Foyer.tonight, 0.07, Brand.Fonts.display, Brand.Colours.gold)
-			text("Tonight's table · " .. (if room then room.name else "") .. " rules", 0.04, Brand.Fonts.body, Brand.Colours.smoke)
+			text("Tonight's table · " .. Rooms.pace(if room then room.id else nil) .. " · at any Salon table", 0.04, Brand.Fonts.body, Brand.Colours.smoke)
 			local nightly = cache["nightly:tonight"]
 			local count = nightly.count or #nightly.entries
 			text(if count == 1 then "One guest has sat it so far" elseif count > 1 then string.format("%d guests have sat it so far", count) else "Nobody has sat it yet tonight", 0.032, Brand.Fonts.body, Brand.Colours.dim)

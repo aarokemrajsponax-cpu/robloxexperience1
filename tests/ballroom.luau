@@ -777,8 +777,9 @@ check("the room grows darker", chandelierLight.Brightness < 1.3)
 
 ---------------------------------------------------------------------------------------------------
 -- 4b. Sabotage (bought with Robux; under test, sent at once): a Parcel Bomb, Butterfingers, a
--- Blackout, a Shield; never at your own table, never twice at a table within seconds, at most a
--- few an evening; and the whole room hears who sent what.
+-- Blackout, a Shield. Fair play: never from a guest whose lamp is lit; every table starts with one
+-- Shield, free; never twice at a table within seconds, at most a few an evening; and the whole
+-- room hears who sent what.
 ---------------------------------------------------------------------------------------------------
 local Sab = C.sabotage
 -- (Ada keeps sorting while the seconds pass.)
@@ -798,33 +799,49 @@ local function lit(except)
 	end
 	return nil
 end
-send(ada, { op = "sabotage", kind = "bomb", seat = 1 })
-check("not at your own table", last(ada, "sabotageRefused") ~= nil and string.find(last(ada, "sabotageRefused").why, "own", 1, true) ~= nil)
-local victim = lit()
-local mB = mark(ada)
-send(ada, { op = "sabotage", kind = "bomb", seat = victim })
-local heard = take(ada, "sabotage", mB)
-local bomb = take(ada, "parcel", mB)
-check("a Parcel Bomb: six lookalikes on its way to the table, and the room hears who sent it", #heard == 1 and heard[1].kind == "bomb" and heard[1].by == "Ada" and heard[1].seat == victim and #bomb == 1 and bomb[1].bomb == true and bomb[1].count == Sab.bombPieces)
-send(ada, { op = "sabotage", kind = "freeze", seat = victim })
-check("the same table can't be hit again straight away", last(ada, "sabotageRefused") ~= nil and string.find(last(ada, "sabotageRefused").why, "moment", 1, true) ~= nil)
+-- Fair play: Ada's lamp is lit, so she can't pay to change the evening (no sabotage, no Shield).
+send(ada, { op = "sabotage", kind = "bomb", seat = lit() })
+check("fair play: a guest whose lamp is lit can't pay to sabotage a rival", last(ada, "sabotageRefused") ~= nil and string.find(last(ada, "sabotageRefused").why, "playing", 1, true) ~= nil)
+local refusedBefore = last(ada, "sabotageRefused")
+send(ada, { op = "sabotage", kind = "shield", seat = 1 })
+check("...nor buy a Shield for her own table", last(ada, "sabotageRefused") ~= nil and last(ada, "sabotageRefused") ~= refusedBefore and string.find(last(ada, "sabotageRefused").why, "playing", 1, true) ~= nil)
+check("every table starts the evening with one Shield, free", tagged.BallroomTable[1]:GetAttribute("Shield") == true and tagged.BallroomTable[lit()]:GetAttribute("Shield") == true)
+send(ada, { op = "sabotageInfo" })
+check("...and her panel says she can't send any", last(ada, "sabotageInfo") ~= nil and last(ada, "sabotageInfo").canSend == false)
 local cleoW = guest("Watcher", 96)
 cleoW.root.Position = Vector3.new(61, 32, 72) * G
 local farW = guest("Faraway", 97)
-send(farW, { op = "sabotage", kind = "bomb", seat = lit(victim) })
+send(farW, { op = "sabotage", kind = "bomb", seat = lit() })
 check("only a guest in the Ballroom may send one", last(farW, "sabotageRefused") ~= nil)
 local info
 send(cleoW, { op = "sabotageInfo" })
 info = last(cleoW, "sabotageInfo")
-check("the panel lists the tables still lit, and how many are left to send", info ~= nil and #info.targets >= 2 and info.left == Sab.perEvening and info.playing == true)
+check("the panel lists the tables still lit, and how many are left to send", info ~= nil and #info.targets >= 2 and info.left == Sab.perEvening and info.playing == true and info.canSend == true)
+-- A guest watching sends one: the first bounces off the table's free Shield.
+local victim = lit()
+send(cleoW, { op = "sabotage", kind = "bomb", seat = victim })
+check("a guest watching may send one: the first at a table bounces off its free Shield", last(cleoW, "sabotageRefused") == nil and last(ada, "sabotage") ~= nil and last(ada, "sabotage").blocked == true and tagged.BallroomTable[victim]:GetAttribute("Shield") == false)
+busy(Sab.gap + 0.1)
+local mB = mark(ada)
+send(cleoW, { op = "sabotage", kind = "bomb", seat = victim })
+local heard = take(ada, "sabotage", mB)
+local bomb = take(ada, "parcel", mB)
+check("a Parcel Bomb: six lookalikes on their way to the table, and the room hears who sent it", #heard == 1 and heard[1].kind == "bomb" and heard[1].by == "Watcher" and heard[1].seat == victim and #bomb == 1 and bomb[1].bomb == true and bomb[1].count == Sab.bombPieces)
+send(cleoW, { op = "sabotage", kind = "freeze", seat = victim })
+check("the same table can't be hit again straight away", last(cleoW, "sabotageRefused") ~= nil and string.find(last(cleoW, "sabotageRefused").why, "moment", 1, true) ~= nil)
 local other = lit(victim)
 send(cleoW, { op = "sabotage", kind = "blackout", seat = other })
-check("a guest watching from the Gallery can send one too", last(cleoW, "sabotageRefused") == nil and last(ada, "sabotage").by == "Watcher" and last(ada, "sabotage").kind == "blackout")
--- A Shield stops the next one; Butterfingers stops filing.
-send(ada, { op = "sabotage", kind = "shield", seat = 1 })
-check("a Shield goes up on your own table", tagged.BallroomTable[1]:GetAttribute("Shield") == true and last(ben, "sabotage") == nil or tagged.BallroomTable[1]:GetAttribute("Shield") == true)
+check("a blackout from the Gallery: heard by the room, with its sender", last(ada, "sabotage").by == "Watcher" and last(ada, "sabotage").kind == "blackout")
+-- Ada's free Shield holds once; a Shield sent by a guest watching holds once more.
 send(cleoW, { op = "sabotage", kind = "freeze", seat = 1 })
-check("the Shield stops it (and is used up), and Ada is told it held", last(ada, "sabotaged") ~= nil and last(ada, "sabotaged").blocked == true and tagged.BallroomTable[1]:GetAttribute("Shield") == false)
+check("Ada's free Shield stops the first (and is used up), and she's told it held", last(ada, "sabotaged") ~= nil and last(ada, "sabotaged").blocked == true and tagged.BallroomTable[1]:GetAttribute("Shield") == false)
+send(cleoW, { op = "sabotage", kind = "shield", seat = 1 })
+check("a guest watching may send a Shield to a table", tagged.BallroomTable[1]:GetAttribute("Shield") == true and last(ada, "sabotage") ~= nil and last(ada, "sabotage").kind == "shield")
+send(cleoW, { op = "sabotage", kind = "shield", seat = 1 })
+check("...one at a time", last(cleoW, "sabotageRefused") ~= nil and string.find(last(cleoW, "sabotageRefused").why, "already up", 1, true) ~= nil)
+busy(Sab.gap + 0.1)
+send(cleoW, { op = "sabotage", kind = "freeze", seat = 1 })
+check("the sent Shield holds too", last(ada, "sabotaged") ~= nil and last(ada, "sabotaged").blocked == true and tagged.BallroomTable[1]:GetAttribute("Shield") == false)
 busy(Sab.gap + 0.1)
 send(cleoW, { op = "sabotage", kind = "freeze", seat = 1 })
 local hitA = last(ada, "sabotaged")

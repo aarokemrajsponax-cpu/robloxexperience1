@@ -141,10 +141,10 @@ local defaults = {
 		-- guest who sat down (Stand-ins add nothing). Nobody else is paid Gilt.
 		potBase = 300,
 		potPerGuest = 250,
-		-- Sabotage, bought with Robux during an evening (from a chair or the Gallery), aimed at a
-		-- table: a Parcel Bomb (`bombPieces` lookalikes after `bombFuse` s), a Blackout (`blackout`
+		-- Sabotage, bought with Robux during an evening by guests watching (never by anyone
+		-- playing that evening), aimed at a table: a Parcel Bomb (`bombPieces` lookalikes after `bombFuse` s), a Blackout (`blackout`
 		-- s of a dark felt), Butterfingers (no filing for `freeze` s); a Shield stops the next one
-		-- aimed at you. A table can't be hit again within `gap` s; each guest at most `perEvening`.
+		-- aimed at its table (every table starts with one, free). A table can't be hit again within `gap` s; each guest at most `perEvening`.
 		sabotage = { gap = 8, perEvening = 6, bombPieces = 6, bombFuse = 2, blackout = 6, freeze = 4 },
 		minRealForRecords = 8, -- an evening counts for records only with this many real guests
 		capacity = 16, -- pieces a felt holds

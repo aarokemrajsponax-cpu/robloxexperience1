@@ -228,7 +228,8 @@ function Attraction.start()
 		elseif op == "stride" then
 			strideChip(m)
 		elseif op == "invited" then
-			Toast.show("An invitation", "To the Executive Suite: see the Quartermaster in the Executive's Anteroom.", 4)
+			local held = tonumber(m.invites) or 1
+			Toast.show("An invitation earned", string.format("To the Executive Suite (you hold %d). Its lift is in the Executive's Anteroom, off the Foyer.", held), 5)
 		elseif op == "strideUp" then
 			Toast.show(string.format("Stride level %d", tonumber(m.level) or 1), string.format("%d%% faster in Steal a Luxe", tonumber(m.faster) or 0), 3)
 		elseif LuxeHud.mounted() then

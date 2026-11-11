@@ -186,7 +186,7 @@ local function anteroom(parent: Instance)
 	local sign = Kit.part(m, "AnteroomSign", Vector3.new(24, 3.2, 0.3), CFrame.lookAt(Vector3.new(midX, y + 15, R.minZ + 1.4), Vector3.new(midX, y + 15, R.maxZ)), L.blackLacquer, { collide = false })
 	Kit.engrave(sign, Enum.NormalId.Front, {
 		{ text = "THE EXECUTIVE SUITE", size = 0.55, font = Brand.Fonts.display, color = rgb(255, 214, 120) },
-		{ text = "by invitation only · see the Quartermaster for your sidearm and gear", size = 0.28, font = Brand.Fonts.body, color = rgb(230, 220, 200) },
+		{ text = "you need an invitation and your free stun pistol · ask the Quartermaster", size = 0.28, font = Brand.Fonts.body, color = rgb(230, 220, 200) },
 	}, { ppu = 50, lit = false, brightness = 1.5, maxDistance = 180 })
 end
 

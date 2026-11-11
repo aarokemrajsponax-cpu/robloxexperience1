@@ -601,8 +601,8 @@ TableService.onRound = function(player, roomId, grade, tableId)
 	Achievements.check(player)
 	Memory.round(player, tableId)
 	if grade == "Flawless" then
-		local room = require(ReplicatedStorage.Shared.Rooms).get(roomId)
-		Memory.highlight(player, "a Flawless round in " .. (if room then room.name else "the house"))
+		local Rooms = require(ReplicatedStorage.Shared.Rooms)
+		Memory.highlight(player, "a Flawless round " .. (if Rooms.get(roomId) then "at " .. Rooms.where(roomId) else "in the house"))
 	end
 end
 TableService.onFiling = function(player, correct)

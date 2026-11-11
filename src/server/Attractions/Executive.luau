@@ -718,10 +718,11 @@ function Executive.enter(ctx: Types.Ctx, player: Player): (CFrame?, string?)
 	end
 	local p = page(ctx, data)
 	if not p.sidearm then
-		return nil, "Take your sidearm from the Quartermaster first: every guest carries one up."
+		return nil, "First take your free stun pistol from the Quartermaster, at his desk in this room."
 	end
 	if p.invites <= 0 then
-		return nil, "The Executive Suite is by invitation only. Clear the Maison Basement, bank a great haul in Steal a Luxe, or ask the Quartermaster."
+		local c = cfg(ctx)
+		return nil, string.format("You need an invitation to go up. Finish the Maison Basement, carry %s of loot out of Steal a Luxe in one trip, or buy one from the Quartermaster here for %s Gilt.", Fortune.format(tonumber(c.inviteHaul) or 8000), Fortune.format(tonumber(c.invitePrice) or 25000))
 	end
 	if run.phase == "won" then
 		return nil, "The Executive has just been beaten: the Suite opens again in a moment."

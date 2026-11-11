@@ -83,7 +83,7 @@ function NightlyCard.show(card: { [string]: any }, actions: Actions)
 		Theme.text(content, Brand.Name, 11, "caps", { LayoutOrder = 1 })
 	end
 	Theme.text(content, if card.scored then "Tonight's Table" else "Tonight's Table · Rehearsal", 22, "display", { LayoutOrder = 2 })
-	Theme.text(content, dateText(card.key) .. "  ·  " .. (if room then room.name else "") .. " rules", 13, "body", { LayoutOrder = 3, TextColor3 = Brand.Colours.smoke })
+	Theme.text(content, dateText(card.key) .. "  ·  " .. Rooms.pace(if room then room.id else nil), 13, "body", { LayoutOrder = 3, TextColor3 = Brand.Colours.smoke })
 	Theme.hairline(content, UDim.new(0, 120), 4)
 	Theme.text(content, RoundPanel.number(card.score), 40, "display", { LayoutOrder = 5, TextColor3 = Brand.Colours.bone })
 	Hallmark.big(content, card.grade, 6)

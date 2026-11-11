@@ -135,7 +135,9 @@ add({
 		Stackable = true,
 		CooldownSeconds = 0,
 	},
-	UX = { DisplayName = "Chronos Defiance", Category = "Survival", Line = "When the clock runs out in a timed room: +15 seconds and your run goes on.", Offer = true, Order = 60, Action = "prompt" },
+	-- (Not on the Shop's page: it's only ever offered in its moment, at a timed table's clock, and
+	-- no table the house lays today offers one. Never a card that can't be bought.)
+	UX = { DisplayName = "Chronos Defiance", Category = "Survival", Line = "When the clock runs out in a timed room: +15 seconds and your run goes on.", Offer = false, Order = 60, Action = "prompt" },
 })
 -- A revive priced by the room: the harder the room, the more its revive costs (and each is spent
 -- only in its own room). Until a room's product exists in Creator Hub, Chronos Defiance stands in.
@@ -424,10 +426,10 @@ local function ballroom(key: string, name: string, price: number, kind: string?,
 		UX = { DisplayName = display, Category = "Ballroom", Line = line, Offer = false, Order = order, Action = "prompt" },
 	})
 end
-ballroom("ballroomBomb", "Ballroom: Parcel Bomb", 19, "bomb", "Parcel Bomb", "Six lookalike pieces land on a rival's felt in two seconds.", 85)
-ballroom("ballroomBlackout", "Ballroom: Blackout", 29, "blackout", "Blackout", "A rival's felt goes dark for six seconds.", 86)
-ballroom("ballroomFreeze", "Ballroom: Butterfingers", 25, "freeze", "Butterfingers", "A rival can't file a piece for four seconds.", 87)
-ballroom("ballroomShield", "Ballroom: Shield", 15, "shield", "Shield", "Stops the next sabotage sent at your table this evening.", 88)
+ballroom("ballroomBomb", "Ballroom: Parcel Bomb", 19, "bomb", "Parcel Bomb", "Six lookalike pieces land on a table's felt in two seconds. Sent by guests watching, never by a player.", 85)
+ballroom("ballroomBlackout", "Ballroom: Blackout", 29, "blackout", "Blackout", "A table's felt goes dark for six seconds. Sent by guests watching, never by a player.", 86)
+ballroom("ballroomFreeze", "Ballroom: Butterfingers", 25, "freeze", "Butterfingers", "A table can't file a piece for four seconds. Sent by guests watching, never by a player.", 87)
+ballroom("ballroomShield", "Ballroom: Shield", 15, "shield", "Shield", "Sent to a table still lit: it stops the next sabotage sent at that table. Sent by guests watching.", 88)
 ballroom("ballroomOpen", "Open the Ballroom Now", 49, nil, "Open the Ballroom Now", "Opens the Ballroom for everyone in the house, right now.", 89)
 
 -- The Grand Prix (GrandPrixService, Purchases/Racing): opening it between its hours, for everyone;

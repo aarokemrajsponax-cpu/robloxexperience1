@@ -967,17 +967,19 @@ do
 	for _, o in view.offers do
 		byKey[o.key] = o
 	end
-	local names = { "doubleGilt", "goldenHour", "godModeLuck", "goldKey", "emperorsDecree", "megalodonRainmaker", "giltPurse1", "giltPurse2", "giltPurse3", "chronosDefiance" }
+	local names = { "doubleGilt", "goldenHour", "godModeLuck", "goldKey", "emperorsDecree", "megalodonRainmaker", "giltPurse1", "giltPurse2", "giltPurse3" }
 	local missing = {}
 	for _, k in names do
 		if not byKey[k] then
 			table.insert(missing, k)
 		end
 	end
-	check("every product AJKR made is on the Offers page", #missing == 0, table.concat(missing, ", "))
+	check("every product AJKR made is on the Offers page (that can be bought there)", #missing == 0, table.concat(missing, ", "))
 	check("with Roblox's own prices", byKey.godModeLuck and byKey.godModeLuck.price == 399 and byKey.goldKey and byKey.goldKey.price == 1999 and byKey.doubleGilt and byKey.doubleGilt.price == 998)
 	check("named as in Creator Hub (Luck Booster)", byKey.godModeLuck and byKey.godModeLuck.name == "Luck Booster")
-	check("Chronos Defiance is listed, saying when it can be bought", byKey.chronosDefiance and byKey.chronosDefiance.disabled == true and string.find(byKey.chronosDefiance.why or "", "clock runs out", 1, true) ~= nil)
+	-- (Chronos Defiance is only ever offered at a timed table's clock, and no table the house lays
+	-- today offers one: a card for it could never be bought, so it isn't shown.)
+	check("Chronos Defiance isn't on the Offers page: no table offers a revive today", byKey.chronosDefiance == nil)
 	local r = H.askAs(zoe, { op = "offer", key = "godModeLuck" })
 	check("buying Luck Booster opens Roblox's window for its id", r.ok and prompts[#prompts].id == 3716216448)
 	check("its receipt grants it", receipt(zoe, 3716216448, "LIVE-1", 399) == GRANTED and Luck.remaining(zoe, profiles[zoe].Data) > 1790)

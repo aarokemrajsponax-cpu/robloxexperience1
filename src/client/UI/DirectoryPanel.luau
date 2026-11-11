@@ -464,7 +464,7 @@ local function card(parent: Instance, e: Directory.Entry, order: number, shape: 
 		})
 		if locked then
 			-- (Closed: what opens it, in a few words more, where there's room for them.)
-			local hint = if e.id == "executive" then "Clear the Basement, bank a great haul, or buy one from the Quartermaster." elseif e.id == "island" then fill("Reach {keyRank}, then buy the key at the Jet Lounge.") else nil
+			local hint = if e.id == "executive" then fill("Finish the Basement, carry {inviteHaul} of loot out of Steal a Luxe in one trip, or buy one for {invitePrice} Gilt.") elseif e.id == "island" then fill("Reach the rank of {keyRank}, then buy the key at the Jet Lounge.") else nil
 			local hintRoom = lineRoom - oneLine - 2
 			if hint and Theme.measureAs(hint, 12, "body", room).Y <= hintRoom then
 				Theme.text(words, hint, 12, "body", {
@@ -609,6 +609,62 @@ local function step(parent: Instance, n: number, text: string, accent: Color3, o
 	})
 end
 
+-- How far the guest has come towards one way of getting into a closed game (its number in the
+-- entry's `ways`): whether that way is already met, and a line saying where they stand.
+local function wayProgress(e: Directory.Entry, n: number): (boolean, string?)
+	local s = status
+	local cards = if s and type(s.cards) == "table" then s.cards else {}
+	local function attr(name: string): number
+		return tonumber(player:GetAttribute(name)) or 0
+	end
+	if e.id == "executive" then
+		local ex = cards.executive
+		if n == 1 then
+			local b = cards.basement
+			if type(b) == "table" then
+				local clears, deepest, stages = tonumber(b.clears) or 0, tonumber(b.deepest) or 0, tonumber(b.stages) or BasementRules.STAGES
+				if clears > 0 then
+					return false, string.format("You've finished it %s. Every finish earns another.", if clears == 1 then "once" else tostring(clears) .. " times")
+				end
+				return false, if deepest > 0 then string.format("Your deepest so far: stage %d of %d.", math.min(deepest, stages), stages) else string.format("Not started yet: %d stages.", stages)
+			end
+		elseif n == 2 then
+			local l = cards.luxe
+			local need = if type(ex) == "table" then tonumber(ex.inviteHaul) or 8000 else 8000
+			if type(l) == "table" then
+				local best = tonumber(l.best) or 0
+				if best >= need then
+					return false, string.format("Your best trip: %s. Every trip like it earns another.", Rules.format(best))
+				end
+				return false, string.format("Your best trip so far: %s of %s.", Rules.format(best), Rules.format(need))
+			end
+		elseif n == 3 then
+			local price = if type(ex) == "table" then tonumber(ex.invitePrice) or 25000 else 25000
+			local gilt = attr("Gilt")
+			if gilt >= price then
+				return true, string.format("You have %s Gilt: enough for one.", Rules.format(gilt))
+			end
+			return false, string.format("You have %s Gilt: %s more to go.", Rules.format(gilt), Rules.format(price - gilt))
+		end
+	elseif e.id == "island" then
+		local c = cards.island
+		if n == 1 then
+			if type(c) == "table" and c.rankReady == true then
+				return true, "Done: you've reached it."
+			end
+			local need = if type(c) == "table" then tonumber(c.keyRankAt) or 100000 else 100000
+			return false, string.format("Your Fortune: %s of %s.", Rules.format(attr("Fortune")), Rules.format(need))
+		elseif n == 2 then
+			local giltNeed = if type(c) == "table" then tonumber(c.keyGilt) or 25000 else 25000
+			local gemsNeed = if type(c) == "table" then tonumber(c.keyGems) or 250 else 250
+			local gilt, gems = attr("Gilt"), attr("Gems")
+			local enough = gilt >= giltNeed or gems >= gemsNeed
+			return enough, string.format("You have %s Gilt and %s Gems%s", Rules.format(gilt), Rules.format(gems), if enough then ": enough." else ".")
+		end
+	end
+	return false, nil
+end
+
 -- A key that can't be used just now: dimmed, and pressing it does nothing.
 local function dim(key: TextButton)
 	key.Active = false
@@ -730,7 +786,6 @@ function DirectoryPanel.closer(id: string)
 	end
 	local left = column("Plays", if twoCols then 1 else 2)
 	local right = column("Pays", if twoCols then 2 else 3)
-	local c = cardOf(e)
 	if open == false and e.unlock then
 		-- What opens it, first, in a box of its own (in one column, before how it plays).
 		local box = Instance.new("Frame")
@@ -755,13 +810,63 @@ function DirectoryPanel.closer(id: string)
 		bp.PaddingLeft = UDim.new(0, 12)
 		bp.PaddingRight = UDim.new(0, 12)
 		bp.Parent = box
-		Theme.list(box, 4).HorizontalAlignment = Enum.HorizontalAlignment.Left
-		heading(box, "🔒  How to open it", 1, GOLD)
-		paragraph(box, fill(e.unlock), 2, C.bone)
-		if e.id == "island" and c and c.rankReady == true then
-			paragraph(box, "You've reached the rank. The key is at the Jet Lounge's desk, its price shown before you pay.", 3, C.lightGold)
-		elseif e.id == "executive" and c and c.sidearm ~= true then
-			paragraph(box, "Your sidearm is free from the Quartermaster, in the Anteroom.", 3, C.lightGold)
+		Theme.list(box, 6).HorizontalAlignment = Enum.HorizontalAlignment.Left
+		heading(box, "🔒  How to get in", 1, GOLD)
+		if e.ways then
+			-- Each way, numbered, with how far this guest has come towards it (the server's figures,
+			-- and their own Gilt, Gems and Fortune).
+			paragraph(box, fill(e.waysLead or ""), 2, C.bone)
+			for n, way in e.ways do
+				local met, note = wayProgress(e, n)
+				local row = Instance.new("Frame")
+				row.Name = "Way" .. n
+				row.BackgroundTransparency = 1
+				row.AutomaticSize = Enum.AutomaticSize.Y
+				row.Size = UDim2.new(1, 0, 0, 0)
+				row.LayoutOrder = 2 + n
+				row.Parent = box
+				local badge = Instance.new("TextLabel")
+				badge.Name = "Number"
+				badge.Size = UDim2.fromOffset(24, 24)
+				badge.BackgroundColor3 = if met then rgb(24, 46, 30) else rgb(24, 20, 14)
+				badge.FontFace = Brand.Fonts.figures
+				badge.TextSize = 13
+				badge.TextColor3 = if met then rgb(170, 240, 190) else GOLD
+				badge.Text = if met then "✓" else tostring(n)
+				local mc = Instance.new("UICorner")
+				mc.CornerRadius = UDim.new(1, 0)
+				mc.Parent = badge
+				local ms = Instance.new("UIStroke")
+				ms.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+				ms.Color = if met then rgb(170, 240, 190) else GOLD
+				ms.Transparency = 0.35
+				ms.Parent = badge
+				badge.Parent = row
+				local said = Instance.new("Frame")
+				said.Name = "Words"
+				said.BackgroundTransparency = 1
+				said.Position = UDim2.fromOffset(34, 2)
+				said.Size = UDim2.new(1, -34, 0, 0)
+				said.AutomaticSize = Enum.AutomaticSize.Y
+				said.Parent = row
+				Theme.list(said, 2).HorizontalAlignment = Enum.HorizontalAlignment.Left
+				paragraph(said, fill(way), 1, C.bone)
+				if note then
+					Theme.text(said, note, 13, "bodyMedium", {
+						LayoutOrder = 2,
+						TextXAlignment = Enum.TextXAlignment.Left,
+						TextColor3 = if met then rgb(170, 240, 190) else e.accent:Lerp(Color3.new(1, 1, 1), 0.35),
+						TextWrapped = true,
+						AutomaticSize = Enum.AutomaticSize.Y,
+						Size = UDim2.new(1, 0, 0, 0),
+					})
+				end
+			end
+			if e.waysAfter then
+				paragraph(box, fill(e.waysAfter), 20, C.lightGold)
+			end
+		else
+			paragraph(box, fill(e.unlock), 2, C.bone)
 		end
 	end
 	heading(left, "How it plays", 1)

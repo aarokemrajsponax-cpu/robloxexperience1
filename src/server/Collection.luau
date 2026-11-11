@@ -158,7 +158,7 @@ local function mythicFiled(player: Player, piece: Catalogue.Piece, roomId: strin
 		local room = Rooms.get(roomId)
 		local serialText = if serial then Collection.serialText(serial) else "its number to follow"
 		Collection.say(player, string.format("It's yours: %s, %s.", piece.name, serialText))
-		Collection.announce(string.format("%s · %s was found in %s.", piece.name, serialText, if room then room.name else "the house"))
+		Collection.announce(string.format("%s · %s was found %s.", piece.name, serialText, if room then "at " .. Rooms.where(roomId) else "in the house"))
 		Collection.badge(player, "mythic")
 		Analytics.custom(player, "Mythic filed", serial, { mythic = piece.id, room = roomId })
 	end)
@@ -274,7 +274,7 @@ function Collection.view(data: Profiles.Data): { [string]: any }
 	for _, roomId in { "salon", "velvet", "obsidian", "midnight" } do
 		local room = Rooms.get(roomId)
 		if room then
-			table.insert(odds, { room = room.name, chance = room.tuning.mythicChance })
+			table.insert(odds, { room = if roomId == "salon" then room.name else "Tonight's table · " .. Rooms.pace(roomId), chance = room.tuning.mythicChance })
 		end
 	end
 	local badgeCount = 0
