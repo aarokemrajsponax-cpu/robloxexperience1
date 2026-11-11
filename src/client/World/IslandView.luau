@@ -151,6 +151,23 @@ local function setLanterns(p: Preset, id: string)
 			l.Transparency = p.lantern
 		end
 	end
+	-- The tiki torches along the sand: firelight on this screen, brighter as the light goes.
+	local fire = if id == "moonlit" then 1.5 elseif id == "golden" or id == "dawn" then 1.1 else 0.6
+	for _, f in CollectionService:GetTagged("IslandTorch") do
+		if f:IsA("BasePart") then
+			local light = f:FindFirstChild("IslandTorchLight") :: PointLight?
+			if not light then
+				local nl = Instance.new("PointLight")
+				nl.Name = "IslandTorchLight"
+				nl.Range = 16
+				nl.Color = rgb(255, 150, 70)
+				nl.Shadows = false
+				nl.Parent = f
+				light = nl
+			end
+			(light :: PointLight).Brightness = fire
+		end
+	end
 	-- (Moonlit: a few of the lanterns really light the night.)
 	if id == "moonlit" and #moonLights == 0 then
 		local n = 0
@@ -448,16 +465,26 @@ local function cabinPart(parent: Instance, name: string, size: Vector3, cf: CFra
 	return p
 end
 
--- The cabin, built far up in the sky: ivory leather and walnut, oval windows, club seats facing
--- across a table with two glasses of something sparkling, a warm light along the ceiling.
-local function buildCabin(at: CFrame, liveryId: string): Model
+-- The cabin, built far up in the sky: ivory leather and walnut, oval windows (a few shades half
+-- drawn), club seats with armrests, pillows and gold piping facing across tables set with white
+-- orchids, two glasses of something sparkling and a bottle on ice; a divan aft, the galley's
+-- cabinet, a walnut bulkhead with the flight's map, and a warm glow along the ceiling.
+local function buildCabin(at: CFrame, liveryId: string, outbound: boolean): Model
 	local m = Instance.new("Model")
 	m.Name = "IslandCabin"
 	local l = Plan.liveryById[liveryId] or Plan.liveryById.noir
 	local IVORY, WALNUT, CARPET = rgb(236, 228, 212), rgb(92, 56, 34), rgb(206, 194, 172)
-	cabinPart(m, "Floor", Vector3.new(9, 0.4, 30), at * CFrame.new(0, -0.2, 0), CARPET, Enum.Material.Fabric)
+	local GOLD, STITCH = rgb(214, 176, 96), rgb(214, 202, 182)
+	local floor = cabinPart(m, "Floor", Vector3.new(9, 0.4, 30), at * CFrame.new(0, -0.2, 0), CARPET, Enum.Material.Fabric)
+	cabinPart(m, "Aisle", Vector3.new(2.2, 0.05, 28), at * CFrame.new(0, 0.02, 0), rgb(150, 120, 84), Enum.Material.Fabric)
 	cabinPart(m, "Ceiling", Vector3.new(9, 0.4, 30), at * CFrame.new(0, 7.4, 0), IVORY, Enum.Material.SmoothPlastic)
-	cabinPart(m, "CeilingLight", Vector3.new(1.2, 0.1, 26), at * CFrame.new(0, 7.15, 0), rgb(255, 222, 170), Enum.Material.Neon, 0.1)
+	local glow = cabinPart(m, "CeilingLight", Vector3.new(1.2, 0.1, 26), at * CFrame.new(0, 7.15, 0), rgb(255, 222, 170), Enum.Material.Neon, 0.1)
+	local warm = Instance.new("PointLight")
+	warm.Color = rgb(255, 214, 160)
+	warm.Brightness = 0.9
+	warm.Range = 18
+	warm.Parent = glow
+	local _ = floor
 	for _, side in { -1, 1 } do
 		-- The side walls: a lower panel and a curve inward above, with the windows between.
 		for i = 0, 6 do
@@ -468,37 +495,130 @@ local function buildCabin(at: CFrame, liveryId: string): Model
 			cabinPart(m, "WindowFrame", Vector3.new(0.12, 2.6, 0.24), at * CFrame.new(side * 4.3, 3.9, z - 1.12), WALNUT, Enum.Material.Wood)
 			cabinPart(m, "WindowFrame", Vector3.new(0.12, 2.6, 0.24), at * CFrame.new(side * 4.3, 3.9, z + 1.12), WALNUT, Enum.Material.Wood)
 			cabinPart(m, "WindowSill", Vector3.new(0.6, 0.12, 2.4), at * CFrame.new(side * 4.1, 2.62, z), WALNUT, Enum.Material.Wood)
+			-- (A few shades half drawn, as on any long flight.)
+			if (i + (if side > 0 then 1 else 0)) % 3 == 0 then
+				cabinPart(m, "Shade", Vector3.new(0.08, 1.1, 2.0), at * CFrame.new(side * 4.28, 4.7, z), rgb(244, 238, 226), Enum.Material.Fabric)
+			end
 		end
 		cabinPart(m, "Ledge", Vector3.new(1.2, 0.2, 28), at * CFrame.new(side * 3.7, 2.6, 0), WALNUT, Enum.Material.Wood)
+		cabinPart(m, "LedgeGilt", Vector3.new(1.22, 0.05, 28), at * CFrame.new(side * 3.7, 2.72, 0), GOLD, Enum.Material.Metal)
 		-- A wing outside, in the livery, and the engine's glow.
 		cabinPart(m, "Wing", Vector3.new(26, 0.7, 7), at * CFrame.new(side * 17, -0.4, 4) * CFrame.Angles(0, side * math.rad(-24), side * math.rad(-4)), l.body, Enum.Material.SmoothPlastic)
 		cabinPart(m, "WingEdge", Vector3.new(26, 0.72, 0.5), at * CFrame.new(side * 17, -0.38, 0.6) * CFrame.Angles(0, side * math.rad(-24), side * math.rad(-4)), l.trim, Enum.Material.Metal)
+		cabinPart(m, "Winglet", Vector3.new(0.5, 3.6, 3), at * CFrame.new(side * 29.4, 1.2, 9.6) * CFrame.Angles(0, side * math.rad(-24), side * math.rad(-14)), l.trim, Enum.Material.Metal)
+		cabinPart(m, "NavLight", Vector3.new(0.5, 0.5, 0.5), at * CFrame.new(side * 29.6, 3.2, 9.8), if side > 0 then rgb(80, 255, 120) else rgb(255, 60, 60), Enum.Material.Neon, 0, Enum.PartType.Ball)
 	end
-	-- The bulkhead ahead: walnut, and a gold plate.
+	-- The bulkhead ahead: walnut, a gold plate, and the flight's map.
 	cabinPart(m, "Bulkhead", Vector3.new(9, 7.6, 0.4), at * CFrame.new(0, 3.6, -15), WALNUT, Enum.Material.Wood)
-	cabinPart(m, "Plate", Vector3.new(2.4, 0.5, 0.1), at * CFrame.new(0, 5.2, -14.75), rgb(214, 176, 96), Enum.Material.Metal)
+	cabinPart(m, "Plate", Vector3.new(2.4, 0.5, 0.1), at * CFrame.new(0, 6.6, -14.75), GOLD, Enum.Material.Metal)
+	local screen = cabinPart(m, "MapScreen", Vector3.new(4.2, 2.4, 0.1), at * CFrame.new(0, 4.2, -14.74), rgb(14, 18, 30), Enum.Material.SmoothPlastic)
+	cabinPart(m, "MapFrame", Vector3.new(4.5, 2.7, 0.06), at * CFrame.new(0, 4.2, -14.77), GOLD, Enum.Material.Metal)
+	local sg = Instance.new("SurfaceGui")
+	sg.Face = Enum.NormalId.Back
+	sg.CanvasSize = Vector2.new(420, 240)
+	sg.LightInfluence = 0
+	sg.Parent = screen
+	local function line(text: string, y: number, size: number, colour: Color3, font: Font)
+		local t = Instance.new("TextLabel")
+		t.BackgroundTransparency = 1
+		t.Position = UDim2.fromOffset(0, y)
+		t.Size = UDim2.new(1, 0, 0, size + 8)
+		t.Text = text
+		t.TextSize = size
+		t.TextColor3 = colour
+		t.FontFace = font
+		t.Parent = sg
+	end
+	line(if outbound then "THE MAISON  ✈  LUXURY ISLAND" else "LUXURY ISLAND  ✈  THE MAISON", 46, 24, rgb(255, 214, 120), Brand.Fonts.bodyBold)
+	line(if outbound then "Arriving at golden hour" else "Arriving at the Maison tonight", 96, 22, rgb(236, 228, 212), Brand.Fonts.body)
+	line("41,000 ft  ·  520 knots  ·  Smooth air", 150, 18, rgb(170, 186, 210), Brand.Fonts.body)
 	cabinPart(m, "Aft", Vector3.new(9, 7.6, 0.4), at * CFrame.new(0, 3.6, 15), IVORY, Enum.Material.SmoothPlastic)
-	-- Two pairs of club seats across a table, and the glasses.
+	-- Two pairs of club seats across a table: armrests, a pillow, gold piping, stitched seats.
 	for _, pair in { -5, 6 } do
 		for _, side in { -1, 1 } do
 			for _, facing in { -1, 1 } do
 				local z = pair + facing * 2.6
 				local seat = at * CFrame.new(side * 2.4, 0, z) * CFrame.Angles(0, if facing == 1 then 0 else math.pi, 0)
 				cabinPart(m, "Seat", Vector3.new(2.6, 1.4, 2.4), seat * CFrame.new(0, 1.2, 0), IVORY, Enum.Material.Leather)
+				cabinPart(m, "Stitch", Vector3.new(2.62, 0.05, 0.08), seat * CFrame.new(0, 1.92, 0), STITCH, Enum.Material.Fabric)
 				cabinPart(m, "SeatBack", Vector3.new(2.6, 3.2, 0.7), seat * CFrame.new(0, 3, 1.1), IVORY, Enum.Material.Leather)
+				cabinPart(m, "Piping", Vector3.new(2.64, 0.1, 0.74), seat * CFrame.new(0, 4.6, 1.1), GOLD, Enum.Material.Metal)
+				cabinPart(m, "Pillow", Vector3.new(1.4, 0.7, 0.4), seat * CFrame.new(0, 4.0, 0.62), rgb(196, 168, 132), Enum.Material.Fabric)
+				for _, ax in { -1.42, 1.42 } do
+					cabinPart(m, "Armrest", Vector3.new(0.34, 0.6, 2.2), seat * CFrame.new(ax, 2.1, 0.1), IVORY, Enum.Material.Leather)
+				end
 				cabinPart(m, "SeatBase", Vector3.new(2, 0.6, 2), seat * CFrame.new(0, 0.3, 0), WALNUT, Enum.Material.Wood)
 			end
 			cabinPart(m, "Table", Vector3.new(2.4, 0.2, 2.2), at * CFrame.new(side * 2.4, 2.4, pair), WALNUT, Enum.Material.Wood)
+			cabinPart(m, "TableEdge", Vector3.new(2.44, 0.06, 2.24), at * CFrame.new(side * 2.4, 2.32, pair), GOLD, Enum.Material.Metal)
+		end
+		-- A white orchid on the left table.
+		local vase = at * CFrame.new(-2.9, 2.62, pair + 0.5)
+		cabinPart(m, "Vase", Vector3.new(0.5, 0.28, 0.5), vase, rgb(240, 240, 244), Enum.Material.Glass, 0.2, Enum.PartType.Cylinder)
+		cabinPart(m, "Stem", Vector3.new(0.06, 0.9, 0.06), vase * CFrame.new(0, 0.55, 0), rgb(70, 120, 60), Enum.Material.SmoothPlastic)
+		for k = 0, 3 do
+			cabinPart(m, "Bloom", Vector3.new(0.26, 0.26, 0.26), vase * CFrame.new(0.12 + k * 0.08, 0.9 - k * 0.12, 0.04 * k), rgb(252, 248, 252), Enum.Material.SmoothPlastic, 0, Enum.PartType.Ball)
 		end
 	end
+	-- The glasses, and the bottle on ice.
 	for _, x in { -2.8, -2.0 } do
 		cabinPart(m, "Glass", Vector3.new(0.6, 0.22, 0.22), at * CFrame.new(x, 2.85, -5.2) * CFrame.Angles(0, 0, math.rad(90)), rgb(230, 240, 250), Enum.Material.Glass, 0.4, Enum.PartType.Cylinder)
 		cabinPart(m, "Fizz", Vector3.new(0.4, 0.2, 0.2), at * CFrame.new(x, 2.8, -5.2) * CFrame.Angles(0, 0, math.rad(90)), rgb(250, 222, 150), Enum.Material.Neon, 0.3, Enum.PartType.Cylinder)
 	end
+	local bucket = at * CFrame.new(2.9, 2.85, -5.4)
+	cabinPart(m, "IceBucket", Vector3.new(0.7, 0.62, 0.62), bucket * CFrame.Angles(0, 0, math.rad(90)), rgb(206, 210, 218), Enum.Material.Metal, 0, Enum.PartType.Cylinder)
+	cabinPart(m, "Bottle", Vector3.new(1.0, 0.26, 0.26), bucket * CFrame.new(0, 0.5, 0) * CFrame.Angles(0, 0, math.rad(80)), rgb(24, 52, 34), Enum.Material.Glass, 0.05, Enum.PartType.Cylinder)
+	cabinPart(m, "Foil", Vector3.new(0.24, 0.27, 0.27), bucket * CFrame.new(0.08, 0.98, 0) * CFrame.Angles(0, 0, math.rad(80)), GOLD, Enum.Material.Foil, 0, Enum.PartType.Cylinder)
+	-- Aft: a divan along the right, and the galley's walnut cabinet on the left.
+	cabinPart(m, "Divan", Vector3.new(2.2, 1.3, 6), at * CFrame.new(3, 1.1, 11.6), IVORY, Enum.Material.Leather)
+	cabinPart(m, "DivanBack", Vector3.new(0.6, 2.4, 6), at * CFrame.new(3.9, 2.6, 11.6), IVORY, Enum.Material.Leather)
+	for k = 0, 2 do
+		cabinPart(m, "Cushion", Vector3.new(0.5, 1.1, 1.4), at * CFrame.new(3.5, 2.3, 9.8 + k * 1.8), if k == 1 then rgb(170, 60, 70) else rgb(196, 168, 132), Enum.Material.Fabric)
+	end
+	cabinPart(m, "Galley", Vector3.new(1.6, 3.6, 5), at * CFrame.new(-3.4, 1.8, 11.8), WALNUT, Enum.Material.Wood)
+	cabinPart(m, "GalleyTop", Vector3.new(1.7, 0.12, 5.1), at * CFrame.new(-3.4, 3.66, 11.8), GOLD, Enum.Material.Metal)
+	for k = 0, 2 do
+		cabinPart(m, "Decanter", Vector3.new(0.36, 0.8, 0.36), at * CFrame.new(-3.4, 4.1, 10.4 + k * 1.3), if k == 1 then rgb(150, 60, 30) else rgb(220, 160, 70), Enum.Material.Glass, 0.25)
+	end
 	return m
 end
 
+-- The clouds: each a cluster of soft puffs, around the jet and a sea of them below; the sun low.
+local function buildSky(parent: Instance, at: CFrame, outbound: boolean): { { part: Part, offset: Vector3 } }
+	local sky = Instance.new("Model")
+	sky.Name = "Clouds"
+	sky.Parent = parent
+	local puffs: { { part: Part, offset: Vector3 } } = {}
+	local rng = Random.new(7)
+	local tint = if outbound then rgb(255, 236, 222) else rgb(150, 160, 196)
+	local under = if outbound then rgb(255, 214, 196) else rgb(112, 122, 160)
+	local function cloud(centre: Vector3, size: number, colour: Color3, flat: number)
+		for k = 1, 4 do
+			local o = centre + Vector3.new(rng:NextNumber(-0.6, 0.6) * size, rng:NextNumber(-0.15, 0.25) * size * flat, rng:NextNumber(-0.7, 0.7) * size)
+			local s = size * rng:NextNumber(0.55, 1.0)
+			local puff = cabinPart(sky, "Cloud", Vector3.new(s, s * 0.55 * flat, s * 1.25), at * CFrame.new(o), colour, Enum.Material.SmoothPlastic, rng:NextNumber(0.12, 0.3), Enum.PartType.Ball)
+			table.insert(puffs, { part = puff, offset = o })
+		end
+	end
+	for i = 1, 14 do
+		local side = if i % 2 == 0 then 1 else -1
+		cloud(Vector3.new(side * rng:NextNumber(30, 110), rng:NextNumber(-30, 24), rng:NextNumber(-180, 180)), rng:NextNumber(18, 40), tint, 1)
+	end
+	-- (The sea of cloud far below, streaming past.)
+	for i = 1, 22 do
+		cloud(Vector3.new(rng:NextNumber(-260, 260), -70 + rng:NextNumber(-6, 6), rng:NextNumber(-180, 180)), rng:NextNumber(40, 70), under, 0.45)
+		local _ = i
+	end
+	-- The sun (or the moon, flying home), low over the cloud sea.
+	local orb = cabinPart(sky, "Sun", Vector3.new(36, 36, 36), at * CFrame.new(320, 10, -380), if outbound then rgb(255, 214, 140) else rgb(230, 236, 255), Enum.Material.Neon, 0, Enum.PartType.Ball)
+	local halo = cabinPart(sky, "SunHalo", Vector3.new(70, 70, 70), at * CFrame.new(320, 10, -380), if outbound then rgb(255, 170, 110) else rgb(150, 170, 230), Enum.Material.Neon, 0.85, Enum.PartType.Ball)
+	local _ = orb
+	local _h = halo
+	return puffs
+end
+
 -- The flight. `outbound`: to the island (else home). Any key or tap ends it early.
+local FLIGHT = 9 -- seconds
 function IslandView.flight(outbound: boolean)
 	if flying then
 		return
@@ -509,6 +629,8 @@ function IslandView.flight(outbound: boolean)
 	end
 	flying = true
 	pcall(IslandView.cinematic, true)
+	-- (The island's music starts in the cabin: the cocktail piano going out, the house's coming home.)
+	pcall(Sound.setAttraction, if outbound then "island" else nil)
 	local gui = player:FindFirstChild("PlayerGui")
 	local screen = Instance.new("ScreenGui")
 	screen.Name = "MaisonFlight"
@@ -553,6 +675,19 @@ function IslandView.flight(outbound: boolean)
 	words.Text = if outbound then "To Luxury Island" else "Home to the Maison"
 	words.TextTransparency = 1
 	words.Parent = foot
+	-- (What the cabin says as the flight goes on.)
+	local aside = Instance.new("TextLabel")
+	aside.Name = "Aside"
+	aside.BackgroundTransparency = 1
+	aside.AnchorPoint = Vector2.new(0.5, 0)
+	aside.Position = UDim2.new(0.5, 0, 0, 14)
+	aside.Size = UDim2.new(0.8, 0, 0, 24)
+	aside.FontFace = Brand.Fonts.body
+	aside.TextSize = 18
+	aside.TextColor3 = rgb(236, 228, 212)
+	aside.Text = ""
+	aside.TextTransparency = 1
+	aside.Parent = screen:FindFirstChild("BarTop")
 	local skip = Instance.new("TextLabel")
 	skip.Name = "Skip"
 	skip.BackgroundTransparency = 1
@@ -577,28 +712,33 @@ function IslandView.flight(outbound: boolean)
 	task.delay(0.25, function()
 		TweenService:Create(words, TweenInfo.new(0.9), { TextTransparency = 0 }):Play()
 	end)
+	type Aside = { at: number, text: string }
+	local asides: { Aside } = if outbound
+		then { { at = 1.4, text = "Welcome aboard. Champagne is served." }, { at = 4.2, text = "Cruising above the clouds, the sun going gold." }, { at = 6.8, text = "Beginning our descent to Luxury Island." } }
+		else { { at = 1.4, text = "Welcome aboard. A nightcap is served." }, { at = 4.2, text = "Cruising home under the stars." }, { at = 6.8, text = "The lights of the Maison, ahead." } }
+	for _, a in asides do
+		task.delay(a.at, function()
+			if not screen.Parent then
+				return
+			end
+			TweenService:Create(aside, TweenInfo.new(0.3), { TextTransparency = 1 }):Play()
+			task.wait(0.3)
+			aside.Text = a.text
+			TweenService:Create(aside, TweenInfo.new(0.6), { TextTransparency = 0.05 }):Play()
+		end)
+	end
 
-	-- The cabin, high over the sea, and the clouds.
+	-- The cabin, high over the sea, and the sky round it.
 	local o = origin()
 	local at = CFrame.new(o + Vector3.new(0, 1200, -2600)) * CFrame.Angles(0, math.pi, 0)
 	local liveryId = player:GetAttribute("JetLivery")
-	local cabin = buildCabin(at, if type(liveryId) == "string" then liveryId else "noir")
-	local clouds = Instance.new("Model")
-	clouds.Name = "Clouds"
-	clouds.Parent = cabin
-	local puffs: { { part: Part, offset: Vector3 } } = {}
-	local rng = Random.new(7)
-	for i = 1, 16 do
-		local side = if i % 2 == 0 then 1 else -1
-		local offset = Vector3.new(side * rng:NextNumber(26, 90), rng:NextNumber(-40, 30), rng:NextNumber(-180, 180))
-		local size = rng:NextNumber(18, 46)
-		local puff = cabinPart(clouds, "Cloud", Vector3.new(size, size * 0.6, size * 1.3), at * CFrame.new(offset), if outbound then rgb(255, 238, 222) else rgb(150, 160, 190), Enum.Material.SmoothPlastic, 0.12, Enum.PartType.Ball)
-		table.insert(puffs, { part = puff, offset = offset })
-	end
+	local cabin = buildCabin(at, if type(liveryId) == "string" then liveryId else "noir", outbound)
+	local puffs = buildSky(cabin, at, outbound)
 	cabin.Parent = Workspace
 	local camWas = camera.CameraType
 	camera.CameraType = Enum.CameraType.Scriptable
-	local seat = at * CFrame.new(1.6, 4.1, 3.6)
+	-- (Standing in the aisle aft: down the cabin to the bulkhead first, then round to the windows.)
+	local seat = at * CFrame.new(0.4, 4.7, 7.4)
 	local t = 0
 	local done = false
 	local conns: { RBXScriptConnection } = {}
@@ -629,15 +769,21 @@ function IslandView.flight(outbound: boolean)
 	end
 	table.insert(conns, RunService.RenderStepped:Connect(function(dt: number)
 		t += dt
-		-- A gentle bank and the faintest sway; the clouds stream past.
-		local bank = math.sin(t * 0.7) * math.rad(2.5)
+		-- From the cabin to the window: the camera turns slowly from the tables to the sky, banks
+		-- gently, sways the faintest bit, and dips its nose as the descent begins.
+		local u = math.clamp(t / FLIGHT, 0, 1)
+		local ease = u * u * (3 - 2 * u)
+		local yaw = math.rad(-4) + (math.rad(-58) - math.rad(-4)) * ease
+		local pitch = math.rad(-7) + (if t > 6.8 then math.rad(-4) * math.clamp((t - 6.8) / 2, 0, 1) else 0)
+		local bank = math.sin(t * 0.6) * math.rad(2.2)
 		local sway = Vector3.new(math.sin(t * 1.3) * 0.04, math.sin(t * 2.1) * 0.03, 0)
-		camera.CFrame = seat * CFrame.Angles(math.rad(-4), math.rad(-38) + math.sin(t * 0.4) * math.rad(3), bank) + sway
+		camera.CFrame = seat * CFrame.Angles(pitch, yaw + math.sin(t * 0.4) * math.rad(2), bank) + sway
 		for _, p in puffs do
-			local z = ((p.offset.Z + t * 160 + 180) % 360) - 180
-			p.part.CFrame = at * CFrame.new(p.offset.X, p.offset.Y, z)
+			local z = ((p.offset.Z + t * 150 + 180) % 360) - 180
+			local sink = if t > 6.8 then (t - 6.8) * 6 else 0
+			p.part.CFrame = at * CFrame.new(p.offset.X, p.offset.Y + sink, z)
 		end
-		if t >= 5.5 then
+		if t >= FLIGHT then
 			finish()
 		end
 	end))

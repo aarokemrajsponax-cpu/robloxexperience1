@@ -5,5 +5,5 @@
 
 return {
 	number = 74,
-	label = "Build 74 · 11 Nov · The Executive Suite rebuilt, brainrots with character",
+	label = "Build 74 · 11 Nov · Executive floor rebuilt, brainrots with character",
 }

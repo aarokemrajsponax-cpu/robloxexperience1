@@ -402,6 +402,13 @@ a Nightly attempt or a Mythic's odds.
   wear a gold halo, Mythics and Secrets a crown. Your own one's tricks make a small sound.
 - **Music in the attractions.** The cocktail piano on Luxury Island; the jazz trio in Steal a Luxe,
   the Basement and the Executive Suite (all from the house's own licensed playlists).
+- **The private jet, a real flight.** Nine seconds (any key skips): club seats with pillows and gold
+  piping, white orchids and champagne on ice, a divan and the galley's decanters, the flight's map
+  on the walnut bulkhead; outside, clusters of cloud, a sea of cloud below and a low gold sun (the
+  moon flying home). The cabin speaks as you go ("Champagne is served", "Beginning our descent"),
+  the camera turns from the cabin to the window, and the island's piano starts in the air.
+- **Luxury Island at dusk.** Tiki torches along the top of the sand and either side of the pier,
+  their firelight given on each guest's screen (brightest on a moonlit evening).
 - **Fixes.** On phones, the Fortune plaque no longer sits over the scores while you sort, and the
   table's first-time hint grows to fit its words. Three badge descriptions trimmed to fit their
   cards.

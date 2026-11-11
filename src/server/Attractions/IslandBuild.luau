@@ -229,6 +229,20 @@ local function bush(parent: Instance, at: Vector3, size: number, k: number)
 	end
 end
 
+-- A tiki torch on the sand: a bamboo pole, a woven cup and its flame (lit on each screen).
+local function torch(parent: Instance, at: Vector3)
+	local m = Kit.model(parent, "Torch")
+	Kit.post(m, "Pole", 6.4, 0.32, at, TRUNK, TRIM)
+	for k = 1, 3 do
+		Kit.cylinder(m, "Binding", 0.18, 0.42, CFrame.new(at + Vector3.new(0, 1.2 + k * 1.4, 0)) * CFrame.Angles(0, 0, math.rad(90)), TRUNK_RING, TRIM)
+	end
+	Kit.cylinder(m, "Cup", 0.9, 0.8, CFrame.new(at + Vector3.new(0, 6.7, 0)) * CFrame.Angles(0, 0, math.rad(90)), TRUNK_RING, TRIM)
+	local flame = Kit.part(m, "Flame", Vector3.new(0.5, 1.1, 0.5), CFrame.new(at + Vector3.new(0, 7.6, 0)), look(rgb(255, 150, 50), Enum.Material.Neon, nil, 0.1), TRIM)
+	Kit.part(m, "FlameCore", Vector3.new(0.28, 0.6, 0.28), CFrame.new(at + Vector3.new(0, 7.45, 0)), look(rgb(255, 230, 150), Enum.Material.Neon), TRIM)
+	-- (Its light is each guest's screen's to give: World/IslandView. The island has none of its own.)
+	CollectionService:AddTag(flame, "IslandTorch")
+end
+
 -- A hanging lantern: a glowing paper globe (lit brighter on a moonlit evening: World/IslandView).
 local function lantern(parent: Instance, at: Vector3)
 	local p = Kit.ball(parent, "Lantern", 1.1, at, LANTERN, TRIM)
@@ -571,6 +585,14 @@ local function beach(parent: Instance, o: Vector3): BasePart
 	for i = 0, 3 do
 		local at = o + Vector3.new(-100 + i * 24, sandAt(100), 100)
 		Furniture.build("cabana", m, CFrame.lookAt(at, at + Vector3.new(0, 0, 20)), {}, false)
+	end
+	-- Tiki torches along the top of the sand, between the cabanas and the loungers, and either side
+	-- of the way onto the pier: firelight at dusk.
+	for _, x in { -112, -88, -64, -36, 4, 28, 42, 92, 116, 136 } do
+		torch(m, o + Vector3.new(x, sandAt(108), 108))
+	end
+	for _, x in { -29.5, -18.5 } do
+		torch(m, o + Vector3.new(x, sandAt(112), 112))
 	end
 	-- The Coral Club: a raised deck under a thatched pavilion, its bar, and the DJ's booth.
 	local c = o + Vector3.new(66, sandAt(104) + 0.9, 104)
