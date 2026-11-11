@@ -121,6 +121,19 @@ local function zoneOf(n: number): number
 end
 Basement.zoneOf = zoneOf
 
+-- Skipping a stage costs more the deeper it is, so the hard stages near the Treasury are never a
+-- cheap way down: Gems (the first stage's price, and more for each stage after it), or skips held
+-- (one for a stage in the first part, two in the second, three in the third, four in the last).
+Basement.SKIP_GEMS = 25
+Basement.SKIP_GEMS_STEP = 15
+function Basement.skipGems(stage: number, base: number?, step: number?): number
+	local n = math.clamp(math.floor(stage), 1, Basement.STAGES)
+	return math.floor((base or Basement.SKIP_GEMS) + (step or Basement.SKIP_GEMS_STEP) * (n - 1))
+end
+function Basement.skipsNeeded(stage: number): number
+	return zoneOf(math.clamp(math.floor(stage), 1, Basement.STAGES))
+end
+
 ---------------------------------------------------------------------------------------------------
 -- The course (from the start, at the foot of the stair down: the top of its landing at y = 0)
 ---------------------------------------------------------------------------------------------------

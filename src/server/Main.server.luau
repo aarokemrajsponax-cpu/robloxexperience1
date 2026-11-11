@@ -901,7 +901,7 @@ boot("The Empire", function()
 	Basement.useSkip = skips.use
 	Basement.offerSkip = skips.offer
 	Basement.skipOnSale = skips.onSale
-	skips.useNow = function(player: Player): boolean
+	skips.useNow = function(player: Player): (boolean, string?)
 		return Basement.useHeldSkip(Empire.Attractions.ctx, player)
 	end
 	-- Luxury Island: friends at the sunset toast, the Robux liveries, the Exchange's pieces.

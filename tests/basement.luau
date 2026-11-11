@@ -474,7 +474,30 @@ check("with no skip held, the purchase window (never a skip given)", r.ok == fal
 held[ada] = 1
 r = askAs(ada, { op = "act", id = "basement", act = "skip" })
 check("a skip held is used", r.ok == true and Game.runs[ada].checkpoint == 2 and held[ada] == 0)
-for n = 3, 15 do
+-- The deeper the stage, the more a skip costs.
+check("the price rises with every stage: 25 Gems at the first, 15 more each stage after", Plan.skipGems(1) == C.skipGems and Plan.skipGems(2) == C.skipGems + C.skipGemsStep and Plan.skipGems(15) == C.skipGems + 14 * C.skipGemsStep and Plan.skipGems(15) == 235)
+check("...and skips held: one in the first part, then two, three and four", Plan.skipsNeeded(1) == 1 and Plan.skipsNeeded(4) == 1 and Plan.skipsNeeded(5) == 2 and Plan.skipsNeeded(9) == 3 and Plan.skipsNeeded(13) == 4 and Plan.skipsNeeded(15) == 4)
+check("the guest's screen is told this stage's price", last(ada, "basement").stage == 3 and last(ada, "basement").skipGems == Plan.skipGems(3) and last(ada, "basement").skipNeed == 1)
+for n = 3, 8 do
+	onCheckpoint(ada, n)
+end
+-- (Stage 9, in the third part: 145 Gems, or three skips.)
+data(ada).gems = Plan.skipGems(9) - 1
+r = askAs(ada, { op = "act", id = "basement", act = "skip", what = "gems" })
+check("a deep stage for the first stage's price is refused, with its own price", r.ok == false and r.why == "That's 145 Gems." and Game.runs[ada].checkpoint == 8 and data(ada).gems == 144, r.why)
+held[ada] = 2
+offered = 0
+r = askAs(ada, { op = "act", id = "basement", act = "skip" })
+check("too few skips held for a deep stage: none used, the purchase window for one more", r.ok == false and r.prompted == true and r.need == 3 and r.held == 2 and held[ada] == 2 and offered == 1 and Game.runs[ada].checkpoint == 8, r)
+local usedNow, kept = Game.useHeldSkip(Attractions.ctx, ada)
+check("...and one arriving by receipt that still isn't enough is kept, saying how many it takes", usedNow == false and kept == "Kept. Stage 9 takes 3 skips, and you hold 2." and held[ada] == 2, kept)
+held[ada] = 3
+r = askAs(ada, { op = "act", id = "basement", act = "skip" })
+check("with enough: all three used, one stage on", r.ok == true and Game.runs[ada].checkpoint == 9 and held[ada] == 0)
+data(ada).gems = Plan.skipGems(10)
+r = askAs(ada, { op = "act", id = "basement", act = "skip", what = "gems" })
+check("...or Gems, for exactly that stage's price", r.ok == true and Game.runs[ada].checkpoint == 10 and data(ada).gems == 0)
+for n = 11, 15 do
 	onCheckpoint(ada, n)
 end
 held[ada] = 1

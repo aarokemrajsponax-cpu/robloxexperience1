@@ -322,11 +322,11 @@ Voice.WelcomeBack = {
 -- What's new in this build, told once to each returning guest (Welcome back). Only shown while
 -- `build` is the build that's playing, so old news never shows as new.
 Voice.WhatsNew = {
-	build = 73,
+	build = 74,
 	lines = {
-		"The Grand Ballroom, through the Ballroom's great doors: trivia, a runway, the Daily Arena.",
-		"Luxury Island by private jet, two circuits for racing, and Maison Prestige's laurels.",
-		"Show off your Vault and theme your Suite, and come back each day: your streak pays more.",
+		"The Executive Suite, rebuilt: a gallery hallway, a vault door, an office over the city at night.",
+		"Your brainrot has a character now: its own trick, a nap, a jump for joy when you earn.",
+		"Lounge music on Luxury Island, a finer getaway car, and deeper Basement stages cost more to skip.",
 	},
 }
 

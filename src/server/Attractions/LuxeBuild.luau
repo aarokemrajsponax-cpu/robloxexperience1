@@ -100,8 +100,12 @@ local function chandelier(parent: Instance, at: Vector3, colour: Color3?, bright
 		local drop = Kit.part(m, "Crystal", Vector3.new(0.35, 1.3, 0.35), CFrame.new(at + Vector3.new(math.cos(a) * 2, -0.8, math.sin(a) * 2)), look(rgb(255, 240, 210), Enum.Material.Glass, 0.3, 0.2), { collide = false, query = false, shadow = false })
 		drop.CastShadow = false
 	end
-	local bulb = Kit.part(m, "Glow", Vector3.new(1.4, 1.4, 1.4), CFrame.new(at + Vector3.new(0, -0.9, 0)), look(rgb(255, 214, 150), Enum.Material.Neon, nil, 0.1), { collide = false, query = false, shadow = false })
-	Kit.pointLight(bulb, brightness or 1.6, 46, colour or rgb(255, 214, 160))
+	local bulb = Kit.part(m, "Glow", Vector3.new(1.1, 1.1, 1.1), CFrame.new(at + Vector3.new(0, -0.9, 0)), look(rgb(255, 214, 150), Enum.Material.Neon, nil, 0.35), { collide = false, query = false, shadow = false })
+	for i = 0, 7 do
+		local a = i * math.pi / 4 + math.pi / 8
+		Kit.part(m, "Candle", Vector3.new(0.22, 0.5, 0.22), CFrame.new(at + Vector3.new(math.cos(a) * 1.7, 0.5, math.sin(a) * 1.7)), look(rgb(255, 226, 180), Enum.Material.Neon, nil, 0.2), { collide = false, query = false, shadow = false })
+	end
+	Kit.pointLight(bulb, brightness or 1.15, 42, colour or rgb(255, 214, 160))
 end
 
 local function painting(parent: Instance, cf: CFrame, w: number, h: number, canvas: Color3, accent: Color3)
@@ -135,27 +139,50 @@ end
 local function car(parent: Instance, o: Vector3)
 	local m = Kit.model(parent, "GetawayCar")
 	local cf = CFrame.new(o) * LuxePlan.Car
-	local paint = look(rgb(12, 12, 14), Enum.Material.SmoothPlastic, 0.25)
-	Kit.part(m, "Body", Vector3.new(22, 2.8, 7.4), cf * CFrame.new(0, 2.4, 0), paint)
-	Kit.part(m, "Cabin", Vector3.new(12, 2.4, 6.8), cf * CFrame.new(-1, 4.9, 0), paint)
-	Kit.part(m, "Glass", Vector3.new(12.2, 1.6, 6.9), cf * CFrame.new(-1, 5.1, 0), L.smokedGlass, { collide = false })
-	Kit.part(m, "TrimLine", Vector3.new(22.2, 0.25, 7.5), cf * CFrame.new(0, 3.3, 0), L.brass, { collide = false, shadow = false })
-	Kit.part(m, "Grille", Vector3.new(0.3, 1.6, 4.2), cf * CFrame.new(11.1, 2.5, 0), L.brass, { collide = false })
+	local paint = look(rgb(10, 10, 13), Enum.Material.SmoothPlastic, 0.35)
+	local chrome = look(rgb(214, 218, 226), Enum.Material.Metal, 0.45)
+	local soft = { collide = false, shadow = false }
+	-- The body: long and low, the hood falling to a brass grille, the roof over a band of smoked
+	-- glass with its pillars, chrome bumpers and running boards, a gold pinstripe.
+	Kit.part(m, "Body", Vector3.new(22, 2.4, 7.4), cf * CFrame.new(0, 2.2, 0), paint)
+	Kit.part(m, "Hood", Vector3.new(6.4, 0.7, 7.2), cf * CFrame.new(7.6, 3.55, 0) * CFrame.Angles(0, 0, math.rad(-4)), paint, soft)
+	Kit.part(m, "Cabin", Vector3.new(11, 1.0, 6.8), cf * CFrame.new(-1.2, 3.9, 0), paint)
+	Kit.part(m, "Glass", Vector3.new(10.8, 1.7, 6.6), cf * CFrame.new(-1.2, 5.25, 0), L.smokedGlass, soft)
+	Kit.part(m, "Roof", Vector3.new(10.2, 0.35, 6.7), cf * CFrame.new(-1.4, 6.25, 0), paint, soft)
+	Kit.part(m, "Windscreen", Vector3.new(0.3, 1.9, 6.4), cf * CFrame.new(4.5, 5.2, 0) * CFrame.Angles(0, 0, math.rad(28)), L.smokedGlass, soft)
+	for _, px in { -6.5, -2.4, 1.8 } do
+		Kit.part(m, "Pillar", Vector3.new(0.45, 1.8, 6.7), cf * CFrame.new(px, 5.25, 0), paint, soft)
+	end
+	Kit.part(m, "Pinstripe", Vector3.new(22.1, 0.12, 7.45), cf * CFrame.new(0, 3.05, 0), L.brass, soft)
+	Kit.part(m, "RoofLine", Vector3.new(10.3, 0.1, 6.75), cf * CFrame.new(-1.4, 6.45, 0), L.brass, soft)
+	for _, bx in { 11.2, -11.2 } do
+		Kit.part(m, "Bumper", Vector3.new(0.5, 0.6, 7.6), cf * CFrame.new(bx, 1.5, 0), chrome, soft)
+	end
+	for _, side in { -1, 1 } do
+		Kit.part(m, "RunningBoard", Vector3.new(14, 0.3, 0.5), cf * CFrame.new(-0.5, 1.15, side * 3.85), chrome, soft)
+		Kit.part(m, "Handle", Vector3.new(0.8, 0.14, 0.12), cf * CFrame.new(-4.2, 3.6, side * 3.74), chrome, soft)
+		Kit.part(m, "Handle", Vector3.new(0.8, 0.14, 0.12), cf * CFrame.new(0.2, 3.6, side * 3.74), chrome, soft)
+	end
+	Kit.part(m, "Grille", Vector3.new(0.3, 1.8, 3.6), cf * CFrame.new(11.1, 2.5, 0), L.brass, soft)
+	Kit.part(m, "Mascot", Vector3.new(0.6, 0.9, 0.2), cf * CFrame.new(10.6, 4.3, 0), L.brass, soft)
 	for _, side in { -1.4, 1.4 } do
-		local lamp = Kit.part(m, "Headlamp", Vector3.new(0.3, 0.8, 1.2), cf * CFrame.new(11.15, 2.9, side * 2), look(rgb(255, 246, 220), Enum.Material.Neon), { collide = false, shadow = false })
+		local lamp = Kit.part(m, "Headlamp", Vector3.new(0.3, 0.7, 1.1), cf * CFrame.new(11.15, 2.9, side * 2), look(rgb(255, 246, 220), Enum.Material.Neon, nil, 0.2), soft)
 		Kit.spotLight(lamp, Enum.NormalId.Right, 2, 40, 45, rgb(255, 240, 210))
-		Kit.part(m, "Taillamp", Vector3.new(0.3, 0.6, 1.2), cf * CFrame.new(-11.15, 2.9, side * 2), look(rgb(255, 40, 50), Enum.Material.Neon), { collide = false, shadow = false })
+		Kit.part(m, "Taillamp", Vector3.new(0.3, 0.5, 1.1), cf * CFrame.new(-11.15, 2.9, side * 2), look(rgb(255, 40, 50), Enum.Material.Neon, nil, 0.15), soft)
 	end
 	for _, wx in { -7, 7 } do
 		for _, wz in { -3.5, 3.5 } do
 			Kit.cylinder(m, "Wheel", 1.2, 3, cf * CFrame.new(wx, 1.5, wz) * CFrame.Angles(0, math.rad(90), 0), look(rgb(20, 20, 22), Enum.Material.Rubber))
-			Kit.cylinder(m, "Hub", 1.3, 1.6, cf * CFrame.new(wx, 1.5, wz) * CFrame.Angles(0, math.rad(90), 0), L.brass, { collide = false })
+			Kit.cylinder(m, "Rim", 1.25, 2.0, cf * CFrame.new(wx, 1.5, wz) * CFrame.Angles(0, math.rad(90), 0), chrome, { collide = false })
+			Kit.cylinder(m, "Hub", 1.3, 0.9, cf * CFrame.new(wx, 1.5, wz) * CFrame.Angles(0, math.rad(90), 0), L.brass, { collide = false })
 		end
 	end
-	-- The open boot, glowing: where the haul goes.
-	local boot = Kit.part(m, "Boot", Vector3.new(5, 0.4, 6.6), cf * CFrame.new(-8.5, 3.9, 0), look(GOLD, Enum.Material.Neon, nil, 0.25), { collide = false, shadow = false })
-	Kit.pointLight(boot, 1.6, 18, GOLD)
-	HolidayProps.sparkle(boot, GOLD, 8, 0.5)
+	-- The open boot: its lid raised, a hold of oxblood velvet lit soft gold, where the haul goes.
+	Kit.part(m, "BootLid", Vector3.new(4.4, 0.25, 6.8), cf * CFrame.new(-10.2, 5.6, 0) * CFrame.Angles(0, 0, math.rad(62)), paint, soft)
+	Kit.part(m, "Velvet", Vector3.new(4.6, 0.12, 6.6), cf * CFrame.new(-8.6, 3.42, 0), look(rgb(110, 18, 32), Enum.Material.Fabric), soft)
+	local boot = Kit.part(m, "Boot", Vector3.new(4.2, 0.1, 6.0), cf * CFrame.new(-8.6, 3.52, 0), look(GOLD, Enum.Material.Neon, nil, 0.6), soft)
+	Kit.pointLight(boot, 1.2, 14, GOLD)
+	HolidayProps.sparkle(boot, GOLD, 6, 0.5)
 	-- The bank: a ring of gold light on the paving round the car, and a sign over it.
 	local b = LuxePlan.Bank
 	local ring = look(GOLD, Enum.Material.Neon, nil, 0.35)
@@ -419,6 +446,20 @@ function LuxeBuild.build(parent: Instance, o: Vector3, goHome: (player: Player) 
 	Kit.span(arch, "GalleryFloor", o + Vector3.new(-59, 0, 1), o + Vector3.new(59, 0.2, 69), PARQUET)
 	Kit.span(arch, "StrongFloor", o + Vector3.new(-39, 0, 71), o + Vector3.new(39, 0.2, 129), L.blackMarble)
 	Kit.span(arch, "Runner", o + Vector3.new(-3, 0.2, -69), o + Vector3.new(3, 0.25, -1), L.carpet, { collide = false, query = false })
+	for _, x in { -3.3, 3 } do
+		Kit.span(arch, "RunnerEdge", o + Vector3.new(x, 0.2, -69), o + Vector3.new(x + 0.3, 0.27, -1), L.brass, { collide = false, query = false, shadow = false })
+	end
+	-- (The Garden Hall's floor: black marble squares set in the cream, a chequer under the lamps.)
+	for ix = 0, 13 do
+		for iz = 0, 7 do
+			if (ix + iz) % 2 == 0 then
+				local x0, z0 = -56 + ix * 8, -67 + iz * 8.25
+				if not (x0 > -8 and x0 < 4) then
+					Kit.span(arch, "Chequer", o + Vector3.new(x0, 0.2, z0), o + Vector3.new(x0 + 8, 0.23, z0 + 8.25), L.blackMarble, { collide = false, query = false, shadow = false })
+				end
+			end
+		end
+	end
 	-- Ceilings.
 	Kit.span(arch, "Ceiling", o + Vector3.new(-61, H, -71), o + Vector3.new(61, H + 1, 71), L.blackLacquer)
 	Kit.span(arch, "Ceiling", o + Vector3.new(-41, H, 71), o + Vector3.new(41, H + 1, 131), L.blackLacquer)
@@ -465,8 +506,9 @@ function LuxeBuild.build(parent: Instance, o: Vector3, goHome: (player: Player) 
 		end
 	end
 	for _, at in { Vector3.new(0, H - 2, 84), Vector3.new(0, H - 2, 112), Vector3.new(-22, H - 2, 98), Vector3.new(22, H - 2, 98) } do
-		chandelier(arch, o + at, rgb(220, 236, 255), 1.5)
+		chandelier(arch, o + at, rgb(214, 228, 255), 0.95)
 	end
+	Kit.span(arch, "StrongRunner", o + Vector3.new(-3, 0.2, 71), o + Vector3.new(3, 0.25, 120), L.carpet, { collide = false, query = false })
 	-- The wings' names, over each doorway as you go in.
 	type Sign = { name: string, at: Vector3, toward: Vector3 }
 	local signs: { Sign } = {

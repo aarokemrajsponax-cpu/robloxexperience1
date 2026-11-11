@@ -1,7 +1,9 @@
 --!strict
--- The Maison Basement's Robux (ProductConfig "basementSkip"): Skip a Stage. A skip held moves a
--- guest in the Basement one checkpoint on, straight away; bought outside it (or when it can't be
--- used: the last stage, the Treasury reached), it's kept for the next run. A skipped run is never
+-- The Maison Basement's Robux (ProductConfig "basementSkip"): Skip a Stage. Each purchase is one
+-- skip. A stage takes more skips the deeper it is (one in the first part, then two, three, four:
+-- shared/Basement.skipsNeeded), so the hard stages are never a cheap way down. With enough held,
+-- a guest in the Basement moves one checkpoint on straight away; otherwise (outside it, too few
+-- for this stage, the last stage, the Treasury reached) they're kept. A skipped run is never
 -- timed for the boards, and a skipped stage pays nothing: it's a way past a stage someone is stuck
 -- on, never a way up the boards. Until the product exists in Creator Hub it isn't offered at all
 -- (Gems can always skip instead: the Basement's own price, in its HUD).
@@ -16,9 +18,10 @@ local BasementSkip = {}
 BasementSkip.KEY = "basementSkip"
 local CREDIT = "basement_skip"
 
--- Set by Main: use a skip at once for a guest in the Basement (false: they're not, or can't).
-BasementSkip.useNow = function(_player: Player): boolean
-	return false
+-- Set by Main: use the skips held at once for a guest in the Basement (false: they're not there,
+-- or can't; with a line when they hold too few for the stage they're on).
+BasementSkip.useNow = function(_player: Player): (boolean, string?)
+	return false, nil
 end
 
 function BasementSkip.held(player: Player): number
@@ -56,8 +59,9 @@ local function grant(ctx: Grants.Context)
 	Perks.add(ctx.data, CREDIT, 1)
 	local player = ctx.player
 	ctx:after(function()
-		if not BasementSkip.useNow(player) then
-			Perks.tell(player, { op = "notice", title = "Skip a Stage", line = "Kept for your next run in the Maison Basement." })
+		local used, line = BasementSkip.useNow(player)
+		if not used then
+			Perks.tell(player, { op = "notice", title = "Skip a Stage", line = line or "Kept for your next run in the Maison Basement." })
 		end
 		Perks.push(player)
 	end)

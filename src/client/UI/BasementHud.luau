@@ -120,11 +120,25 @@ function BasementHud.offerSkip()
 	Theme.text(content, "The Maison Basement", 11, "caps", { LayoutOrder = 1 })
 	Theme.text(content, "Skip a stage", 24, "display", { LayoutOrder = 2 })
 	Theme.text(content, "On to the next checkpoint. A skipped run isn't timed for the boards, and the stage you skip pays nothing. The Treasury itself can't be skipped to.", 13, "body", { LayoutOrder = 3, TextColor3 = C.smoke })
+	-- This stage's price, plainly, before anything is spent: it rises with every stage.
+	local stage = tonumber(view.stage) or 1
+	local gems = tonumber(view.skipGems) or Plan.skipGems(stage)
+	local need = tonumber(view.skipNeed) or Plan.skipsNeeded(stage)
+	local heldNow = tonumber(view.skips) or 0
+	local price = string.format("Stage %d: %d Gems", stage, gems)
+	if view.skipOnSale or heldNow > 0 then
+		price ..= string.format(", or %d skip%s (you hold %d)", need, if need == 1 then "" else "s", heldNow)
+	end
+	price ..= ". The deeper the stage, the more a skip costs."
+	if view.skipOnSale and heldNow < need and need > 1 then
+		price ..= string.format(" Each purchase is one skip: %d more for this stage.", need - heldNow)
+	end
+	Theme.text(content, price, 13, "bodyBold", { LayoutOrder = 4, TextColor3 = C.lightGold })
 	local row = Instance.new("Frame")
 	row.Name = "Choices"
 	row.BackgroundTransparency = 1
 	row.Size = UDim2.new(1, 0, 0, 46)
-	row.LayoutOrder = 4
+	row.LayoutOrder = 5
 	row.Parent = content
 	Theme.list(row, 10, true).HorizontalAlignment = Enum.HorizontalAlignment.Center
 	local function go(request: { [string]: any })
@@ -136,19 +150,19 @@ function BasementHud.offerSkip()
 			end
 		end)
 	end
-	local heldNow = tonumber(view.skips) or 0
-	if heldNow > 0 then
-		Theme.key(row, string.format("Use a skip held (%d)", heldNow), true, function()
+	local enough = heldNow >= need
+	if enough then
+		Theme.key(row, if need == 1 then "Use 1 skip" else string.format("Use %d skips", need), true, function()
 			go({ op = "act", id = "basement", act = "skip" })
-		end, 190)
+		end, 150)
 	end
-	Theme.key(row, string.format("%d Gems", tonumber(view.skipGems) or 25), heldNow == 0, function()
+	Theme.key(row, string.format("%d Gems", gems), not enough, function()
 		go({ op = "act", id = "basement", act = "skip", what = "gems" })
 	end, 130)
-	if heldNow == 0 and view.skipOnSale then
-		Theme.key(row, "Robux", false, function()
+	if not enough and view.skipOnSale then
+		Theme.key(row, "Buy a skip", false, function()
 			go({ op = "act", id = "basement", act = "skip" })
-		end, 110)
+		end, 130)
 	end
 	local cancel = Theme.key(content, "Cancel", false, closeSkip, 160)
 	cancel.LayoutOrder = 10

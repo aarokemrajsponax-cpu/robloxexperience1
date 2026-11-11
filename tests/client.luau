@@ -5426,6 +5426,30 @@ do
 		local line = walker:FindFirstChild("Line", true)
 		return body ~= nil and body.Size.X.Scale >= 6.5 and line ~= nil and string.find(line.Text, "GOLD", 1, true) ~= nil and string.find(line.Text, "2.2K Gilt/hr", 1, true) ~= nil
 	end)())
+	-- Its character: the Frog King (a crown on its shoulder) bows, with a sparkle, now and then.
+	local tricks = {}
+	for _ = 1, 30 do
+		advance(0.5)
+		local kind, bubble = Walkers.mood(LocalPlayer)
+		if kind then
+			tricks[kind .. ":" .. tostring(bubble)] = true
+		end
+	end
+	check("while you stand still, it does its own trick, with a bubble", tricks["bow:✨"] == true, next(tricks))
+	check("a Legendary wears a gold halo", walker ~= nil and walker:FindFirstChild("Halo", true) ~= nil)
+	LocalPlayer:SetAttribute("Gilt", (tonumber(LocalPlayer:GetAttribute("Gilt")) or 0) + 250)
+	signalOf(LocalPlayer, "attr:Gilt"):Fire()
+	advance(0.2)
+	check("it jumps for joy when you earn Gilt", (function()
+		local kind, bubble = Walkers.mood(LocalPlayer)
+		return kind == "joy" and bubble == "💰"
+	end)())
+	advance(2)
+	LocalPlayer:SetAttribute("Brainrot", "moonCheese")
+	signalOf(LocalPlayer, "attr:Brainrot"):Fire()
+	advance(1)
+	check("a Mythic wears a crown", Walkers.of(LocalPlayer) ~= nil and Walkers.of(LocalPlayer):FindFirstChild("Crown", true) ~= nil)
+	snapshot("brainrot-walker")
 	LocalPlayer:SetAttribute("Brainrot", nil)
 	advance(0.3)
 	check("...and goes back to the squad when it stops walking", Walkers.of(LocalPlayer) == nil)
@@ -7903,7 +7927,7 @@ coroutine.wrap(function()
 	LocalPlayer:SetAttribute("Attraction", "basement")
 	signalOf(LocalPlayer, "attr:Attraction"):Fire()
 	serverSays("Attraction", { op = "entered", id = "basement" })
-	serverSays("Attraction", { op = "basement", checkpoint = 4, stage = 5, stageName = "The Pipes", zone = "The Boiler Room", started = 4917.5, assisted = false, falls = 2, best = 205.5, done = false, skips = 0, skipGems = 25, skipOnSale = true })
+	serverSays("Attraction", { op = "basement", checkpoint = 4, stage = 5, stageName = "The Pipes", zone = "The Boiler Room", started = 4917.5, assisted = false, falls = 2, best = 205.5, done = false, skips = 0, skipGems = 85, skipNeed = 2, skipOnSale = true })
 	advance(0.4)
 	check("inside, its screen is up: the stage and its part", textOnScreen("THE MAISON BASEMENT") ~= nil and textOnScreen("Stage 5 of 16  ·  The Pipes") ~= nil and textOnScreen("THE BOILER ROOM") ~= nil)
 	check("...the run's clock, by the server's clock", textOnScreen("1:22.50") ~= nil)
@@ -7921,19 +7945,20 @@ coroutine.wrap(function()
 	advance(0.3)
 	check("a fall: back to the checkpoint, and why", textOnScreen("Back to checkpoint 8") ~= nil and textOnScreen("The steam caught you.") ~= nil)
 	advance(3)
-	check("Skip a stage says what it does and costs before anything is spent", press("Skip a stage") and (advance(0.5) or true) and textOnScreen("On to the next checkpoint. A skipped run isn't timed for the boards, and the stage you skip pays nothing. The Treasury itself can't be skipped to.") ~= nil and textOnScreen("25 Gems") ~= nil and textOnScreen("Robux") ~= nil)
+	check("Skip a stage says what it does and costs before anything is spent", press("Skip a stage") and (advance(0.5) or true) and textOnScreen("On to the next checkpoint. A skipped run isn't timed for the boards, and the stage you skip pays nothing. The Treasury itself can't be skipped to.") ~= nil and textOnScreen("85 Gems") ~= nil and textOnScreen("Buy a skip") ~= nil)
+	check("...this stage's own price, which rises with every stage, and how many skips it takes", textOnScreen("Stage 5: 85 Gems, or 2 skips (you hold 0). The deeper the stage, the more a skip costs.") ~= nil and textOnScreen("Each purchase is one skip: 2 more for this stage.") ~= nil)
 	snapshot("basement-skip")
 	local sentBefore = #sent
 	press("Cancel")
 	advance(0.4)
-	check("Cancel spends nothing", #sent == sentBefore and textOnScreen("25 Gems") == nil)
-	invokeResults.AttractionAsk = { ok = false, why = "That's 25 Gems." }
+	check("Cancel spends nothing", #sent == sentBefore and textOnScreen("85 Gems") == nil)
+	invokeResults.AttractionAsk = { ok = false, why = "That's 85 Gems." }
 	press("Skip a stage")
 	advance(0.4)
-	press("25 Gems")
+	press("85 Gems")
 	advance(0.5)
 	check("for Gems: asks the server to skip, by Gems (never a price)", sent[#sent].remote == "AttractionAsk" and sent[#sent].message[1].act == "skip" and sent[#sent].message[1].what == "gems" and sent[#sent].message[1].price == nil)
-	check("...and says why not when it can't", textOnScreen("That's 25 Gems.") ~= nil)
+	check("...and says why not when it can't", textOnScreen("That's 85 Gems.") ~= nil)
 	advance(3)
 	serverSays("Attraction", { op = "treasury", seconds = 198.25, timed = true, record = true, weekRecord = true, best = 198.25, gems = 10, brainrot = "topoTesoriere", first = true, falls = 3 })
 	advance(0.3)

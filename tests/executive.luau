@@ -236,6 +236,14 @@ r = askAs(ada, { op = "act", id = "executive", act = "code", code = wrong })
 check("three wrong: the alert jumps", r.ok == false and Game.guests[ada].alert >= alertBefore + 0.4)
 r = askAs(ada, { op = "act", id = "executive", act = "code", code = code })
 check("the right code opens the door, for everyone up here", r.ok == true and Game.run.open == true and Game.built().door.CanCollide == false and last(ada, "doorOpen") ~= nil)
+check("...its wheel, bolts and bands go with it", #Game.built().doorDressing >= 10 and (function()
+	for _, p in Game.built().doorDressing do
+		if p.Transparency ~= 1 then
+			return false
+		end
+	end
+	return true
+end)())
 
 ---------------------------------------------------------------------------------------------------
 -- 3. The Office: three phases
@@ -381,6 +389,20 @@ Game.built().liftDown.Triggered:Fire(ada)
 check("and takes them home", Attractions.inside(ada) == nil and Layout.zoneAt(ada.root.CFrame.Position) == "midnight")
 -- Empty: a new run.
 check("the Suite empty: a new run, with a new code", Game.run.phase == "hall" and Game.run.open == false and Game.built().door.CanCollide == true)
+check("...and the vault door shut again, dressed as it was", Game.built().door.Transparency == 0 and Game.built().doorDressing[1].Transparency == 0)
+check("the Office's decoration never stops a shot or a guard's eye", (function()
+	local root = Game.built().root
+	local dressing = root:FindFirstChild("Dressing")
+	if not dressing then
+		return false
+	end
+	for _, d in dressing:GetDescendants() do
+		if d:IsA("BasePart") and d.CanQuery then
+			return false
+		end
+	end
+	return true
+end)())
 
 ---------------------------------------------------------------------------------------------------
 -- 4. The alarm

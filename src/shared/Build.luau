@@ -4,6 +4,6 @@
 -- see whether Studio has the latest code from GitHub.
 
 return {
-	number = 73,
-	label = "Build 73 · 11 Nov · Luxury Island, the Grand Ballroom and Maison Prestige",
+	number = 74,
+	label = "Build 74 · 11 Nov · The Executive Suite rebuilt, brainrots with character",
 }

@@ -465,10 +465,10 @@ add({
 	ProductType = "DeveloperProduct",
 	Id = 0,
 	Handler = "basementSkip",
-	Pricing = { ReferencePrice = 19, Tier = "Entry", Rationale = "A way past one stage someone is stuck on: cheap, and never a way up the boards." },
+	Pricing = { ReferencePrice = 19, Tier = "Entry", Rationale = "A way past a stage someone is stuck on, never a way up the boards. One skip a purchase; deeper stages take more skips, so the hard ones near the Treasury are never cheap." },
 	Reward = { Type = "BasementSkip", Stages = 1 },
 	Rules = { Stackable = true, CooldownSeconds = 0, MaxHeld = 10 },
-	UX = { DisplayName = "Skip a Stage", Category = "The Maison Basement", Line = "Takes you on to the next checkpoint of the Maison Basement. A skipped run isn't timed for the boards, and the stage skipped pays nothing.", Offer = false, Order = 93, Action = "prompt" },
+	UX = { DisplayName = "Skip a Stage", Category = "The Maison Basement", Line = "One skip for the Maison Basement. A stage in its first part takes one skip; deeper parts take two, three, then four. A skipped run isn't timed for the boards, and the stage skipped pays nothing.", Offer = false, Order = 93, Action = "prompt" },
 })
 
 -- The holiday games (server/Holidays): more of the same fun, at a fixed price, never a chance.

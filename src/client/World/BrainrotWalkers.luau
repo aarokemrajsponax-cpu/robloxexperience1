@@ -6,6 +6,11 @@
 -- sparks falling from it; a Gold, Diamond or Rainbow one shines in it, and the rarest give off
 -- light. Over its head: its name, its stars and what it earns an hour. Nothing here changes a
 -- score or a payment (the server keeps those).
+-- Each has a character of its own: while its guest stands still it does its trick now and then
+-- (dancers dance, the quick ones spin, the grand ones bow, the musical ones sway to a note, the
+-- rarest flip), with a bubble over its head; left long enough it dozes off (and wakes when its
+-- guest moves); it jumps for joy when its guest earns Gilt. A Legendary wears a gold halo; a
+-- Mythic or a Secret, a crown. Your own one's tricks make a small sound.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -15,8 +20,45 @@ local Workspace = game:GetService("Workspace")
 local Brainrots = require(ReplicatedStorage.Shared.Brainrots)
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local Curios = require(ReplicatedStorage.Shared.Curios)
+local Sound = require(script.Parent.Parent.Sound)
 
 local BrainrotWalkers = {}
+
+-- Its trick, by its character (its accent first, then its rarity): what it does, and the bubble.
+type Trick = { kind: string, bubble: string }
+local BY_ACCENT: { [string]: Trick } = {
+	["💃"] = { kind = "dance", bubble = "🎵" },
+	["🎭"] = { kind = "dance", bubble = "🎵" },
+	["🎤"] = { kind = "sway", bubble = "🎵" },
+	["🎹"] = { kind = "sway", bubble = "🎵" },
+	["🎼"] = { kind = "sway", bubble = "🎵" },
+	["🚀"] = { kind = "spin", bubble = "💨" },
+	["💨"] = { kind = "spin", bubble = "💨" },
+	["🌪️"] = { kind = "spin", bubble = "💨" },
+	["⚡"] = { kind = "spin", bubble = "⚡" },
+	["🏎️"] = { kind = "spin", bubble = "💨" },
+	["👑"] = { kind = "bow", bubble = "✨" },
+	["🎩"] = { kind = "bow", bubble = "✨" },
+	["💼"] = { kind = "bow", bubble = "💼" },
+	["🕴️"] = { kind = "bow", bubble = "✨" },
+	["💰"] = { kind = "boing", bubble = "💰" },
+	["💵"] = { kind = "boing", bubble = "💰" },
+	["📈"] = { kind = "boing", bubble = "📈" },
+	["😠"] = { kind = "wiggle", bubble = "💢" },
+	["👻"] = { kind = "spin", bubble = "👻" },
+	["💪"] = { kind = "boing", bubble = "💪" },
+}
+local BY_RARITY: { [string]: Trick } = {
+	Common = { kind = "boing", bubble = "❤️" },
+	Uncommon = { kind = "wiggle", bubble = "❤️" },
+	Rare = { kind = "spin", bubble = "✨" },
+	Epic = { kind = "spin", bubble = "✨" },
+	Legendary = { kind = "flip", bubble = "✨" },
+	Mythic = { kind = "flip", bubble = "👑" },
+	Secret = { kind = "flip", bubble = "🌙" },
+}
+local TRICK_TIME = 1.3 -- seconds a trick lasts
+local DOZE_AFTER = 40 -- seconds of its guest standing still before it dozes
 
 -- (Further than this from the camera, a walker is out of sight: it waits, and catches up.)
 local FAR = 220
@@ -46,6 +88,15 @@ type Walker = {
 	height: number,
 	phase: number,
 	rainbow: UIGradient?,
+	trick: Trick,
+	nextTrick: number, -- when it next does its trick (while its guest stands still)
+	trickAt: number?, -- when the one it's doing began
+	trickKind: string?,
+	bubble: TextLabel,
+	stillSince: number, -- since when its guest has stood still
+	gilt: number?, -- its guest's Gilt, last seen (a rise: a jump for joy)
+	mine: boolean,
+	crown: TextLabel?,
 }
 local walkers: { [Player]: Walker } = {}
 
@@ -188,6 +239,48 @@ local function build(p: Player)
 		accent.Text = c.accent
 		accent.Parent = glyph
 	end
+	-- A bubble for its moods (its trick, a doze, joy), over its shoulder.
+	local bubble = Instance.new("TextLabel")
+	bubble.Name = "Bubble"
+	bubble.BackgroundTransparency = 1
+	bubble.AnchorPoint = Vector2.new(0.5, 0.5)
+	bubble.Position = UDim2.fromScale(0.86, 0.02)
+	bubble.Size = UDim2.fromScale(0.36, 0.36)
+	bubble.TextScaled = true
+	bubble.Text = ""
+	bubble.TextTransparency = 1
+	bubble.ZIndex = 3
+	bubble.Parent = body
+	-- The rarest, crowned; a Legendary, haloed.
+	local crown: TextLabel? = nil
+	if c.rarity == "Mythic" or c.rarity == "Secret" then
+		local cr = Instance.new("TextLabel")
+		cr.Name = "Crown"
+		cr.BackgroundTransparency = 1
+		cr.AnchorPoint = Vector2.new(0.5, 0.5)
+		cr.Position = UDim2.fromScale(0.5, -0.02)
+		cr.Size = UDim2.fromScale(0.34, 0.34)
+		cr.TextScaled = true
+		cr.Text = "👑"
+		cr.ZIndex = 2
+		cr.Parent = body
+		crown = cr
+	elseif c.rarity == "Legendary" then
+		local halo = Instance.new("Frame")
+		halo.Name = "Halo"
+		halo.AnchorPoint = Vector2.new(0.5, 0.5)
+		halo.Position = UDim2.fromScale(0.5, 0.06)
+		halo.Size = UDim2.fromScale(0.5, 0.12)
+		halo.BackgroundTransparency = 1
+		halo.ZIndex = 2
+		halo.Parent = body
+		round(halo)
+		local hs = Instance.new("UIStroke")
+		hs.Thickness = 3
+		hs.Color = rgb(255, 214, 110)
+		hs.Transparency = 0.05
+		hs.Parent = halo
+	end
 	-- Over its head: its name, its stars and what it earns.
 	local tag = Instance.new("BillboardGui")
 	tag.Name = "Tag"
@@ -258,7 +351,43 @@ local function build(p: Player)
 		height = h,
 		phase = (p.UserId % 89) / 89 * math.pi * 2,
 		rainbow = rainbow,
+		trick = BY_ACCENT[c.accent] or BY_RARITY[c.rarity] or BY_RARITY.Common,
+		nextTrick = os.clock() + 4 + (p.UserId % 5),
+		trickAt = nil,
+		trickKind = nil,
+		bubble = bubble,
+		stillSince = os.clock(),
+		gilt = tonumber(p:GetAttribute("Gilt")),
+		mine = p == Players.LocalPlayer,
+		crown = crown,
 	}
+end
+
+-- Starts a trick (or a jump for joy) with its bubble.
+local function perform(w: Walker, kind: string, bubble: string, t: number)
+	w.trickAt = t
+	w.trickKind = kind
+	w.bubble.Text = bubble
+	w.bubble.TextTransparency = 0
+	if w.mine then
+		pcall(Sound.play, if kind == "joy" then "coinDrop" else "pickup", 0.22, 1.1 + (w.phase % 0.4))
+	end
+end
+BrainrotWalkers.perform = perform
+
+-- Its guest earned Gilt: a jump for joy (never more than one every few seconds).
+local function cheer(p: Player)
+	local w = walkers[p]
+	if not w then
+		return
+	end
+	local g = tonumber(p:GetAttribute("Gilt"))
+	local before = w.gilt
+	w.gilt = g
+	if g and before and g > before and (not w.trickAt or os.clock() - w.trickAt > 3) then
+		w.stillSince = os.clock()
+		perform(w, "joy", "💰", os.clock())
+	end
 end
 
 local function watch(p: Player)
@@ -267,6 +396,9 @@ local function watch(p: Player)
 			build(p)
 		end)
 	end
+	p:GetAttributeChangedSignal("Gilt"):Connect(function()
+		cheer(p)
+	end)
 	p.CharacterAdded:Connect(function()
 		task.wait(0.5)
 		build(p)
@@ -318,10 +450,77 @@ function BrainrotWalkers.start()
 			local hop = math.abs(math.sin(t * 9 + w.phase)) * 0.55 * moving * (h / 4)
 			local bob = math.sin(t * 2 + w.phase) * 0.1 * (1 - moving)
 			local squash = math.sin(t * 18 + w.phase * 2) * 0.05 * moving + math.sin(t * 2 + w.phase) * 0.025
+			local turn = math.sin(t * 1.6 + w.phase) * 4 + math.sin(t * 9 + w.phase) * 7 * moving
+			local sway = 0
+			-- Its character: tricks while its guest stands still, a doze when left long enough.
+			if moving > 0.15 then
+				w.stillSince = t
+				if w.trickKind == "doze" then
+					w.trickAt, w.trickKind = nil, nil
+					w.bubble.TextTransparency = 1
+				end
+				w.nextTrick = math.max(w.nextTrick, t + 3)
+			elseif not w.trickAt and t - w.stillSince > DOZE_AFTER then
+				perform(w, "doze", "💤", t)
+			elseif not w.trickAt and t >= w.nextTrick then
+				perform(w, w.trick.kind, w.trick.bubble, t)
+			end
+			local at, kind = w.trickAt, w.trickKind
+			if at and kind then
+				local u = (t - at) / TRICK_TIME
+				if kind == "doze" then
+					-- Slow breaths, a tilt, the bubble drifting.
+					squash = math.sin(t * 1.2) * 0.06
+					turn = 14 + math.sin(t * 1.2) * 2
+					bob = -0.12 * h / 4
+					w.bubble.Position = UDim2.fromScale(0.86 + math.sin(t * 0.8) * 0.04, 0.0 - (t % 3) * 0.03)
+				elseif u >= 1 then
+					w.trickAt, w.trickKind = nil, nil
+					w.bubble.TextTransparency = 1
+					w.bubble.Position = UDim2.fromScale(0.86, 0.02)
+					w.nextTrick = t + 6 + (w.phase * 1.7) % 5
+				else
+					local up = math.sin(u * math.pi)
+					w.bubble.TextTransparency = math.clamp((u - 0.75) * 4, 0, 1)
+					w.bubble.Position = UDim2.fromScale(0.86, 0.02 - up * 0.12)
+					if kind == "spin" then
+						turn = u * 360
+						hop = up * 0.35 * (h / 4)
+					elseif kind == "flip" then
+						turn = -u * 360
+						hop = up * 1.1 * (h / 4)
+						squash = -0.08 * up
+					elseif kind == "boing" or kind == "joy" then
+						local bounces = if kind == "joy" then 2 else 3
+						local b = math.abs(math.sin(u * math.pi * bounces))
+						hop = b * (if kind == "joy" then 1.2 else 0.7) * (h / 4)
+						squash = (0.5 - b) * 0.18
+					elseif kind == "wiggle" then
+						turn = math.sin(u * math.pi * 8) * 16
+					elseif kind == "sway" then
+						turn = math.sin(u * math.pi * 3) * 12
+						sway = math.sin(u * math.pi * 3) * 0.35
+					elseif kind == "dance" then
+						turn = math.sin(u * math.pi * 4) * 14
+						sway = math.sin(u * math.pi * 2) * 0.6
+						hop = math.abs(math.sin(u * math.pi * 4)) * 0.4 * (h / 4)
+					elseif kind == "bow" then
+						turn = -up * 22
+						bob -= up * 0.25 * (h / 4)
+						squash = up * 0.08
+					end
+				end
+			end
+			local crown = w.crown
+			if crown then
+				crown.Position = UDim2.fromScale(0.5, -0.02 + math.sin(t * 2.4 + w.phase) * 0.02)
+				crown.Rotation = math.sin(t * 1.3 + w.phase) * 6
+			end
+			local across = (w.root.CFrame.RightVector * sway)
 			table.insert(parts, w.part)
-			table.insert(frames, CFrame.new(w.at + Vector3.new(0, h * 0.5 + hop + bob, 0)))
+			table.insert(frames, CFrame.new(w.at + across + Vector3.new(0, h * 0.5 + hop + bob, 0)))
 			w.body.Size = UDim2.fromScale(h * (1 + squash), h * (1 - squash))
-			w.glyph.Rotation = math.sin(t * 1.6 + w.phase) * 4 + math.sin(t * 9 + w.phase) * 7 * moving
+			w.glyph.Rotation = turn
 			w.aura.BackgroundTransparency = 0.55 + 0.12 * math.sin(t * 2.6 + w.phase)
 			local disc = CFrame.new(w.at + Vector3.new(0, 0.06, 0)) * CFrame.Angles(0, 0, math.pi / 2)
 			table.insert(parts, w.shadow)
@@ -338,6 +537,15 @@ function BrainrotWalkers.start()
 			Workspace:BulkMoveTo(parts, frames, Enum.BulkMoveMode.FireCFrameChanged)
 		end
 	end)
+end
+
+-- For tests: what a guest's brainrot is doing (its trick, a doze, joy) and the bubble it shows.
+function BrainrotWalkers.mood(p: Player): (string?, string?)
+	local w = walkers[p]
+	if not w or not w.trickKind then
+		return nil, nil
+	end
+	return w.trickKind, w.bubble.Text
 end
 
 -- For tests: the brainrot walking beside a guest, if any.

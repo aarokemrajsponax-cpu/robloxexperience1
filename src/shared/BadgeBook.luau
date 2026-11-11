@@ -234,7 +234,7 @@ moment("events", "fx_meteor", "Impact", "Live through a meteor shower.", "☄️
 moment("events", "fx_titan", "Something Big", "See the Titan meme rise over the house.", "🗿", "silver")
 
 -- Holidays
-moment("holidays", "holiday_halloween", "All Hallows' Hunter", "Find a pumpkin in the All Hallows' Hunt, or a treat on Hallows Lane.", "🎃", "silver")
+moment("holidays", "holiday_halloween", "All Hallows' Hunter", "Find a pumpkin in the Hunt, or a treat on Hallows Lane.", "🎃", "silver")
 moment("holidays", "holiday_thanksgiving", "Turkey Catcher", "Catch a turkey in the Harvest Field.", "🦃", "silver")
 moment("holidays", "holiday_christmas", "Present Opener", "Open a present: the Gift Drop's, or a gift from the North Pole.", "🎁", "silver")
 moment("holidays", "holiday_newYear", "Happy New Year", "Be in the house when the New Year arrives.", "🎆", "silver")
@@ -267,7 +267,7 @@ moment("attractions", "crownJewel", "The Crown Jewel", "Carry the Crown Jewel ou
 moment("attractions", "basementClear", "The Treasury", "Reach the Treasury at the foot of the Maison Basement.", "🗝️", "silver")
 moment("attractions", "executiveBoss", "The Corner Office", "Beat the Executive in his own office.", "🕴️", "gold")
 moment("attractions", "auctionWin", "Sold to You", "Win a lot at the Grand Auction.", "🔨", "gold")
-moment("attractions", "basementQuick", "Under Four Minutes", "Run the Maison Basement in under four minutes, no stage skipped.", "⏱️", "gold")
+moment("attractions", "basementQuick", "Under Four Minutes", "Clear the Basement in under four minutes, no skips.", "⏱️", "gold")
 
 -- Luxury Island
 moment("island", "islandKey", "The Island Key", "Unlock Luxury Island at the Jet Lounge.", "🏝️", "gold")
@@ -296,7 +296,7 @@ ladder("racing", "trialLaps", "⏱️", "Drive %d timed laps.", {
 	{ 1, "Hot Lap", "firstTrial" }, { 25, "Lapping It Up" }, { 100, "The Hundred Laps" },
 }, "Drive a timed lap.")
 moment("racing", "lapAce", "Lap Ace", "Drive a timed lap of the Grand Boulevard in under 12 seconds.", "⚡", "gold")
-moment("racing", "coastAce", "Coast Ace", "Drive a timed lap of Luxury Island's Coastal Circuit in under 11 seconds.", "🌊", "gold")
+moment("racing", "coastAce", "Coast Ace", "A timed lap of the Coastal Circuit in under 11 seconds.", "🌊", "gold")
 
 -- The Grand Ballroom
 ladder("pavilion", "runwayWins", "👗", "Win %d rounds on the Runway.", {

@@ -788,7 +788,8 @@ local function build()
 	-- foot.
 	-- (The first times you sit: a line of how to play, on a soft dark pill above the pieces so the
 	-- words never mix with them, kept inside its pill on any screen.)
-	header.hint = label(root, "", 15, F.body, LIGHT, { Name = "Hint", TextTransparency = 1, TextWrapped = true, ZIndex = 30, BackgroundColor3 = Color3.fromRGB(12, 12, 15) })
+	-- (Its height grows with its words: on a narrow phone the hint takes three lines, all inside.)
+	header.hint = label(root, "", 15, F.body, LIGHT, { Name = "Hint", TextTransparency = 1, TextWrapped = true, ZIndex = 30, BackgroundColor3 = Color3.fromRGB(12, 12, 15), AutomaticSize = Enum.AutomaticSize.Y })
 	do
 		local hc = Instance.new("UICorner")
 		hc.CornerRadius = UDim.new(0, 12)

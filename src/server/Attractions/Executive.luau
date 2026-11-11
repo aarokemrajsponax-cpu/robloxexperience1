@@ -256,8 +256,7 @@ local function fresh(_ctx: Types.Ctx)
 		run.generators["gen" .. i] = 100
 		part.Transparency = 0
 	end
-	b.door.CanCollide = true
-	b.door.Transparency = 0
+	ExecutiveBuild.door(b, true)
 	b.shield.CanCollide = true
 	b.shield.Transparency = 0.3
 	b.safe.Enabled = false
@@ -875,8 +874,7 @@ function Executive.ask(ctx: Types.Ctx, player: Player, r: { [string]: unknown })
 		end
 		run.open = true
 		local b = built :: ExecutiveBuild.Built
-		b.door.CanCollide = false
-		b.door.Transparency = 1
+		ExecutiveBuild.door(b, false)
 		broadcast(ctx, { op = "doorOpen" })
 		pushAll(ctx)
 		return { ok = true }

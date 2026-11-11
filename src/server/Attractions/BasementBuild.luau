@@ -55,12 +55,17 @@ local LOOKS: { [string]: Kit.Look } = {
 	treasury = look(rgb(40, 30, 16), Enum.Material.Marble),
 }
 
+-- What waits below each part's stages (each looks like what it is, never a flat colour): a dark,
+-- glossy pool of spilled wine; the furnace's cracked lava; an inky abyss under the vaults; a sea
+-- of gold coins.
 local PIT: { [number]: Kit.Look } = {
-	look(rgb(90, 10, 28), Enum.Material.Neon, nil, 0.25), -- spilled wine
-	look(rgb(255, 110, 30), Enum.Material.Neon, nil, 0.2), -- the furnace
-	look(rgb(30, 60, 120), Enum.Material.Neon, nil, 0.3), -- the vault's depths
-	look(rgb(200, 150, 40), Enum.Material.Neon, nil, 0.25), -- a sea of coins
+	look(rgb(74, 8, 24), Enum.Material.Glass, 0.35, 0.05), -- spilled wine
+	look(rgb(255, 104, 28), Enum.Material.CrackedLava), -- the furnace
+	look(rgb(12, 20, 40), Enum.Material.Glass, 0.3, 0.08), -- the vault's depths
+	look(rgb(214, 162, 52), Enum.Material.Foil, 0.35), -- a sea of coins
 }
+-- (The light each gives off.)
+local PIT_GLOW: { [number]: Color3 } = { rgb(150, 20, 50), rgb(255, 110, 30), rgb(60, 110, 220), rgb(240, 180, 60) }
 local WALL: { [number]: Kit.Look } = {
 	look(rgb(48, 30, 26), Enum.Material.Brick),
 	look(rgb(60, 44, 34), Enum.Material.CorrodedMetal),
@@ -178,7 +183,7 @@ local function element(parent: Instance, o: Vector3, i: number, e: Plan.El, zone
 		return bar
 	elseif kind == "pit" then
 		local p = Kit.part(parent, "Pit", e.size, cf, PIT[zone] or PIT[1], { shadow = false })
-		Kit.pointLight(p, 0.8, 30, (PIT[zone] or PIT[1]).color)
+		Kit.pointLight(p, if zone == 2 then 1.1 else 0.7, 30, PIT_GLOW[zone] or PIT_GLOW[1])
 		return p
 	end
 	return nil

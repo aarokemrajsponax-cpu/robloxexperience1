@@ -377,6 +377,35 @@ a Nightly attempt or a Mythic's odds.
 - **The launch kit**: page text, icon, thumbnails and the gameplay video's shot list are in
   [`LAUNCH.md`](LAUNCH.md).
 
+## Build 74 — the Executive Suite rebuilt, brainrots with character
+
+- **The Executive Suite, rebuilt.** The hallway is a gallery: black marble and an oxblood runner
+  edged in brass, navy silk over walnut panelling, a coffered ceiling with opal pendants,
+  paintings with picture lights, busts on plinths, sconces over the code terminals. The code door
+  is a vault door (a brass wheel, bolts and bands, which go with it when the code is in). The
+  Office has walnut floors and a navy rug, marble pilasters, bookcases, the bodyguards' double
+  doors, a marble fireplace with club chairs, the drinks cabinet, crystal chandeliers, the city at
+  night through mullioned glass, a partner's desk with a banker's lamp, the Executive's monogram
+  over the lift, and generators in brass cages. Every piece of decoration is invisible to shots
+  and to the guards' eyes, so the game plays exactly as before.
+- **Steal a Luxe.** A finer limousine (hood, roof and pillars, chrome, a raised boot over lit
+  velvet), a black-and-white marble chequer in the Garden Hall, softer chandeliers, a moodier
+  Strongroom.
+- **The Maison Basement.** What waits below each part looks like what it is: spilled wine, the
+  furnace's cracked lava, an inky abyss, a sea of gold coins. **Skips cost more the deeper the
+  stage**: 25 Gems at stage 1 and 15 more each stage after (235 at stage 15), or Robux skips:
+  one for a stage in the first part, then two, three and four. The card shows this stage's price
+  before anything is spent.
+- **Brainrots with character.** While you stand still, your brainrot does its own trick (dancers
+  dance, the quick ones spin, the grand ones bow, the musical ones sway, the rarest flip) with a
+  bubble over its head; left long enough it dozes; it jumps for joy when you earn Gilt. Legendaries
+  wear a gold halo, Mythics and Secrets a crown. Your own one's tricks make a small sound.
+- **Music in the attractions.** The cocktail piano on Luxury Island; the jazz trio in Steal a Luxe,
+  the Basement and the Executive Suite (all from the house's own licensed playlists).
+- **Fixes.** On phones, the Fortune plaque no longer sits over the scores while you sort, and the
+  table's first-time hint grows to fit its words. Three badge descriptions trimmed to fit their
+  cards.
+
 ## Build 73 — Luxury Island, the Grand Ballroom and Maison Prestige
 
 - **Luxury Island** (the Jet Lounge on the Terrace): the private island by jet, for guests who hold

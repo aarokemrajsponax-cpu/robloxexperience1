@@ -839,7 +839,8 @@ local defaults = {
 		-- The Maison Basement (server/Attractions/Basement): the obby under the house.
 		basement = {
 			origin = { 3000, 0, -3000 },
-			skipGems = 25, -- one stage on, for Gems (a skipped run is never timed for the boards)
+			skipGems = 25, -- skipping the first stage, for Gems (a skipped run is never timed for the boards)
+			skipGemsStep = 15, -- ...and this much more for each stage deeper (stage 15: 235)
 			chestGems = 10, -- the Treasury's chest, the first clear of the day
 			chestGemsAgain = 3, -- and each clear after it that day
 			dailyGems = 25, -- the most Gems a day from the Basement

@@ -50,8 +50,12 @@ inside the residence only; never above 62.
   Gilt through the cash share).
 - The Treasury's chest: **10 Gems** the first clear of the day, **3** after (25 a day at most);
   Topo Tesoriere the first time ever; an invitation to the Executive Suite every clear.
-- A skip: **25 Gems**, or a Robux skip (reference price 19) when it's on sale. A skipped stage pays
-  nothing and a skipped run is never timed for the boards. The Treasury can't be skipped to.
+- A skip costs more the deeper the stage, so the hard stages near the Treasury are never a cheap
+  way down: **25 Gems** at stage 1 and **15 more** for each stage after (stage 9: 145, stage 15:
+  235). Or Robux skips (reference price 19 each, when on sale): **one** skip for a stage in the
+  first part, **two** in the second, **three** in the third, **four** in the last. The card shows
+  this stage's price before anything is spent. A skipped stage pays nothing and a skipped run is
+  never timed for the boards. The Treasury can't be skipped to.
 
 ## 4. The Executive Suite (the Midnight Room)
 

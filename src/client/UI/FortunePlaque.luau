@@ -11,6 +11,7 @@ local RunService = game:GetService("RunService")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local Rules = require(ReplicatedStorage.Shared.Fortune)
+local GiltBar = require(script.Parent.GiltBar)
 local Root = require(script.Parent.Root)
 local Theme = require(script.Parent.Theme)
 
@@ -162,6 +163,8 @@ function FortunePlaque.start()
 		gilt:GetPropertyChangedSignal("Visible"):Connect(follow)
 	end
 	Root.PanelsChanged:Connect(follow)
+	-- (Told directly whenever the bar shows or hides: seated at a table, the plaque goes with it.)
+	GiltBar.shown = follow
 	follow()
 end
 

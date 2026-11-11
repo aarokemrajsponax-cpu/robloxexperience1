@@ -32,6 +32,8 @@ local GOLD = rgb(255, 204, 90)
 
 -- Set by Main.
 GiltBar.openGems = function() end
+-- (Set by the Fortune plaque under it: told whenever the bar shows or hides.)
+GiltBar.shown = function() end
 GiltBar.openBadges = function() end
 GiltBar.isBusy = function(): boolean
 	return false
@@ -111,6 +113,7 @@ function GiltBar.refresh()
 	if c then
 		c.Visible = show
 	end
+	pcall(GiltBar.shown)
 end
 
 function GiltBar.setSeated(on: boolean)

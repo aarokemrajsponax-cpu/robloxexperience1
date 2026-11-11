@@ -105,6 +105,13 @@ Theme.onClick(Sound.ui)
 Theme.onHover(Sound.hover)
 Root.onDip(Sound.dip)
 Sound.preload()
+-- (In an attraction: its own music.)
+local function attractionMusic()
+	local id = Players.LocalPlayer:GetAttribute("Attraction")
+	Sound.setAttraction(if type(id) == "string" then id else nil)
+end
+Players.LocalPlayer:GetAttributeChangedSignal("Attraction"):Connect(attractionMusic)
+attractionMusic()
 Theme.preloadFonts()
 
 Closet.start()

@@ -614,7 +614,7 @@ local REVERB: { [string]: Enum.ReverbType } = {
 type Song = { id: string, gain: number }
 type Deck = { songs: { Song }, at: number, name: string }
 
-local mix = { zone = "", intensity = nil :: number?, lit = nil :: number?, soiree = false }
+local mix = { zone = "", intensity = nil :: number?, lit = nil :: number?, soiree = false, attraction = nil :: string? }
 local loops: { [string]: Sound? } = {}
 local decks: { [string]: Deck } = {}
 local targets: { [string]: number } = {}
@@ -704,6 +704,12 @@ local TRACK_FOR: { [string]: string } = {
 	midnight = "table",
 	library = "table",
 	ballroom = "ballroom",
+	-- The attractions (away from the house): the cocktail piano on Luxury Island, the jazz trio for
+	-- the earning ones. (The Grand Ballroom plays its own records: World/GalaView.)
+	attraction_island = "lounge",
+	attraction_luxe = "table",
+	attraction_basement = "table",
+	attraction_executive = "table",
 }
 
 local function playlist(track: string): { Song }
@@ -1087,7 +1093,7 @@ end
 
 local function remix()
 	local c = Config.data.Music
-	local zone = mix.zone
+	local zone = if mix.attraction then "attraction_" .. mix.attraction else mix.zone
 	local level = c.level
 	local wanted: { [string]: number } = {}
 	local function want(key: string, songs: { Song }, volume: number, into: SoundGroup, parent: Instance?)
@@ -1172,6 +1178,15 @@ function Sound.enterZone(zone: string)
 	pcall(function()
 		SoundService.AmbientReverb = REVERB[zone] or Enum.ReverbType.Room
 	end)
+	remix()
+end
+
+-- In an attraction (its id), or back in the house (nil): its own music, or the house's.
+function Sound.setAttraction(id: string?)
+	if id == mix.attraction then
+		return
+	end
+	mix.attraction = id
 	remix()
 end
 

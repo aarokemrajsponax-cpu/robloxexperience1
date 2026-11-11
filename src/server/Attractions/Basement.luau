@@ -13,7 +13,8 @@
 --                 last purse, the brainrot Topo Tesoriere the first time ever, and the run's time.
 --   Times         from leaving the start to the Treasury. The best is kept, and goes to the boards
 --                 (all time and this week); a run with a skipped stage is never timed for them.
---   Skips         one stage on, for a skip held (Robux, ProductConfig "basementSkip") or for Gems.
+--   Skips         one stage on, for skips held (Robux, ProductConfig "basementSkip") or for Gems;
+--                 the deeper the stage, the more it costs (shared/Basement's skipGems, skipsNeeded).
 --                 Never the Treasury itself, never a stage's Gilt; the run is marked as skipped.
 
 local DataStoreService = game:GetService("DataStoreService")
@@ -90,6 +91,11 @@ local lastRefresh = -math.huge
 
 local function cfg(ctx: Types.Ctx): { [string]: any }
 	return ctx.cfg(ID)
+end
+
+-- What skipping `stage` costs in Gems (Config can change the first stage's price and the step).
+local function skipGems(ctx: Types.Ctx, stage: number): number
+	return Plan.skipGems(stage, tonumber(cfg(ctx).skipGems), tonumber(cfg(ctx).skipGemsStep))
 end
 
 local function weekIndex(): number
@@ -203,7 +209,8 @@ local function summary(ctx: Types.Ctx, player: Player, run: Run): { [string]: an
 		best = if p then p.best else nil,
 		done = run.done,
 		skips = Basement.skipsHeld(player),
-		skipGems = tonumber(cfg(ctx).skipGems) or 25,
+		skipGems = skipGems(ctx, next),
+		skipNeed = Plan.skipsNeeded(next),
 		skipOnSale = Basement.skipOnSale(),
 	}
 end
@@ -454,7 +461,20 @@ function Basement.step(ctx: Types.Ctx, _dt: number)
 	end
 end
 
--- Moves a guest one checkpoint on (a skip held or bought for Gems). Never onto the Treasury.
+-- Uses `need` skips held, all of them or none.
+local function useSkips(player: Player, need: number): boolean
+	if Basement.skipsHeld(player) < need then
+		return false
+	end
+	for _ = 1, need do
+		if not Basement.useSkip(player) then
+			return false
+		end
+	end
+	return true
+end
+
+-- Moves a guest one checkpoint on (skips held or Gems). Never onto the Treasury.
 local function skip(ctx: Types.Ctx, player: Player, run: Run, how: string): { [string]: any }
 	local n = run.checkpoint + 1
 	run.assisted = true
@@ -468,16 +488,21 @@ end
 
 -- A skip that arrived by receipt for a guest in the Basement: used at once (set as the purchase
 -- system's hook by Main).
-function Basement.useHeldSkip(ctx: Types.Ctx, player: Player): boolean
+-- (Not used: false, and for a guest in the Basement who holds too few for this stage, a line
+-- saying how many it takes.)
+function Basement.useHeldSkip(ctx: Types.Ctx, player: Player): (boolean, string?)
 	local run = runs[player]
 	if not run or run.done or run.checkpoint + 1 >= Plan.STAGES then
-		return false
+		return false, nil
 	end
-	if not Basement.useSkip(player) then
-		return false
+	local stage = run.checkpoint + 1
+	local need = Plan.skipsNeeded(stage)
+	if not useSkips(player, need) then
+		local held = Basement.skipsHeld(player)
+		return false, string.format("Kept. Stage %d takes %d skips, and you hold %d.", stage, need, held)
 	end
 	skip(ctx, player, run, "held")
-	return true
+	return true, nil
 end
 
 function Basement.state(ctx: Types.Ctx, player: Player): { [string]: any }
@@ -492,7 +517,8 @@ function Basement.state(ctx: Types.Ctx, player: Player): { [string]: any }
 		clears = p.clears,
 		deepest = p.deepest,
 		skips = Basement.skipsHeld(player),
-		skipGems = tonumber(cfg(ctx).skipGems) or 25,
+		skipGems = skipGems(ctx, 1),
+		skipNeed = Plan.skipsNeeded(1),
 		skipOnSale = Basement.skipOnSale(),
 	}
 	local run = runs[player]
@@ -519,19 +545,22 @@ function Basement.ask(ctx: Types.Ctx, player: Player, r: { [string]: unknown }):
 			return { ok = false, why = "The last stage is yours to run: the Treasury can't be skipped to." }
 		end
 		local how = r.what
+		-- (The price is this stage's, worked out here: the deeper the stage, the more it costs.)
+		local stage = run.checkpoint + 1
 		if how == "gems" then
-			local price = tonumber(cfg(ctx).skipGems) or 25
+			local price = skipGems(ctx, stage)
 			if not ctx.spend(player, 0, price, "basement_skip") then
 				return { ok = false, why = string.format("That's %d Gems.", price) }
 			end
 			return skip(ctx, player, run, "gems")
 		end
-		-- A skip held, or the purchase window.
-		if Basement.skipsHeld(player) > 0 and Basement.useSkip(player) then
+		-- Skips held (enough for this stage), or the purchase window for one more.
+		local need = Plan.skipsNeeded(stage)
+		if useSkips(player, need) then
 			return skip(ctx, player, run, "held")
 		end
 		local ok, why = Basement.offerSkip(player)
-		return { ok = false, prompted = ok, why = if ok then nil else why }
+		return { ok = false, prompted = ok, need = need, held = Basement.skipsHeld(player), why = if ok then nil else why }
 	elseif r.act == "boards" then
 		local which = if r.what == "week" or r.what == "friends" then r.what else "all"
 		local list: { any } = {}
