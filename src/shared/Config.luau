@@ -202,21 +202,21 @@ local defaults = {
 	-- (ProductConfig), so 0 is fine for them; an id here (or in Roblox Configs) overrides that.
 	-- Game passes can't be found by name: paste their ids. Prices are always read live.
 	Products = {
-		tier49 = 0, tier79 = 0, tier99 = 0, tier149 = 0, tier199 = 0,
-		tier249 = 0, tier299 = 0, tier399 = 0, tier499 = 0, tier599 = 0,
-		introduction = 0, -- once per account, first 7 days, only in the Boutique
-		ledger = 0, -- the Leather-Bound Ledger, per Term
-		season = 0, -- a season collection
+		tier49 = 3730507439, tier79 = 0, tier99 = 0, tier149 = 0, tier199 = 0,
+		tier249 = 3730507898, tier299 = 0, tier399 = 0, tier499 = 0, tier599 = 0,
+		introduction = 3718631594, -- once per account, first 7 days, only in the Boutique
+		ledger = 3730506949, -- the Leather-Bound Ledger, per Term
+		season = 3730507079, -- a season collection
 		goldKey = 0, -- a game pass
-		goldKeyGift = 0, -- a developer product at the Gold Key's price: the Gold Key, for another guest
+		goldKeyGift = 3730507218, -- a developer product at the Gold Key's price: the Gold Key, for another guest
 		blackCard = "", -- the Black Card subscription's id ("EXP-..."); "" means it isn't offered
 		-- Salutes: one developer product each (suggested prices in Salutes.luau).
-		salute_goldLeaf = 0,
-		salute_encore = 0,
-		salute_chandelier = 0,
-		salute_fireworks = 0,
-		salute_grand = 0,
-		salute_finale = 0,
+		salute_goldLeaf = 3717087684,
+		salute_encore = 3717087721,
+		salute_chandelier = 3717087770,
+		salute_fireworks = 3717087849,
+		salute_grand = 3717088010,
+		salute_finale = 3717088065,
 		-- More of what guests buy (developer products, found by their names in ProductConfig).
 		-- AJKR's developer products (Creator Hub ids, pasted so nothing depends on names).
 		giltPurse1 = 3716215371, -- Gilt Purse
@@ -234,13 +234,48 @@ local defaults = {
 		godModeLuck = 3716216448, -- Luck Booster
 		megalodonRainmaker = 3716216867, -- Megalodon Rainmaker
 		-- Time at the Foyer's grand piano (found by name until their ids are pasted here).
-		pianoSession1 = 0, -- Piano Session 1 Minute
-		pianoSession3 = 0, -- Piano Session 3 Minutes
-		pianoSession5 = 0, -- Piano Session 5 Minutes
-		pianoSession10 = 0, -- Piano Session 10 Minutes
+		pianoSession1 = 3716256340, -- Piano Session 1 Minute
+		pianoSession3 = 3716256520, -- Piano Session 3 Minutes
+		pianoSession5 = 3716257177, -- Piano Session 5 Minutes
+		pianoSession10 = 3716257665, -- Piano Session 10 Minutes
 		saluteQueue = 4, -- salutes waiting their turn in one house, at most
 		benefactorMinutes = 30, -- the giver's nameplate carries a gold star this long
 		choiceSeconds = 3600, -- a Boutique piece chosen (or a gift) waits this long for its purchase
+		-- Pasted from Creator Hub (12 Nov): every developer product AJKR made, by id.
+		ballroomBlackout = 3718440835,
+		ballroomBomb = 3718440744,
+		ballroomFreeze = 3718440911,
+		ballroomOpen = 3718440668,
+		ballroomShield = 3718441057,
+		barGoldSpritz = 3716945110,
+		barGrandPlatter = 3716945216,
+		barMacaronTower = 3716945159,
+		basementSkip = 3730510576,
+		brainrotFeast = 3730510464,
+		brainrotPenthouse = 3730510391,
+		gems1 = 3716945551,
+		gems2 = 3716945633,
+		gems3 = 3716945745,
+		grandPrixGarage = 3730510730,
+		grandPrixOpen = 3730510658,
+		jetAurora = 3730510159,
+		jetSovereign = 3730510266,
+		salute_sleigh = 3718034943,
+		sleighRide = 3718435461,
+		sleighSeason = 3730508809,
+		spectacleFireworks = 3716945273,
+		spectacleGolden = 3716945392,
+		spectacleMemes = 3716945343,
+		tier149 = 3730507620,
+		tier199 = 3730507815,
+		tier299 = 3730507946,
+		tier399 = 3730508014,
+		tier499 = 3730508074,
+		tier599 = 3730508163,
+		tier79 = 3730507512,
+		tier99 = 3730507573,
+		turkeyHunter = 3718435597,
+		turkeyMore = 3718435559,
 	},
 
 	-- Products' names, prices, rewards and rules: Shared/ProductConfig (the game finds each
