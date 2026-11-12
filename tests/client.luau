@@ -752,6 +752,35 @@ local services = {
 	},
 }
 
+-- A prompt held as Roblox holds one: begun, it fires PromptButtonHoldBegan; it's triggered only
+-- when held for its whole HoldDuration (at once when that's 0); let go sooner and it isn't.
+-- (Each prompt triggered on this screen, in order: services.ProximityPromptService.triggered.)
+services.ProximityPromptService.triggered = {}
+services.ProximityPromptService.holds = {}
+roblox.implementMethod("ProximityPrompt", "InputHoldBegin", function(self)
+	local promptHolds, promptTriggers = services.ProximityPromptService.holds, services.ProximityPromptService.triggered
+	local token = {}
+	promptHolds[self] = token
+	signalOf(self, "PromptButtonHoldBegan"):Fire()
+	local function finish()
+		if promptHolds[self] == token then
+			promptHolds[self] = nil
+			table.insert(promptTriggers, self)
+			signalOf(self, "Triggered"):Fire(LocalPlayer)
+			services.ProximityPromptService.PromptTriggered:Fire(self)
+		end
+	end
+	if self.HoldDuration <= 0 then
+		finish()
+	else
+		taskShim.delay(self.HoldDuration, finish)
+	end
+end)
+roblox.implementMethod("ProximityPrompt", "InputHoldEnd", function(self)
+	services.ProximityPromptService.holds[self] = nil
+	signalOf(self, "PromptButtonHoldEnded"):Fire()
+end)
+
 ---------------------------------------------------------------------------------------------------
 -- The remotes, as the client sees them
 ---------------------------------------------------------------------------------------------------
@@ -7176,6 +7205,63 @@ end)()
 	end
 	advance(0.3)
 	check("walking away: the cards go", #Prompts.cards() == 0)
+
+	-- A tap on a card works for a prompt that's held (a lift, a terminal, a safe) as for one that
+	-- isn't: the card holds it the whole way (until Build 77 it let go after one frame, so a held
+	-- prompt could never be finished from a phone), says HOLD on a keyboard, and fills while held.
+	local promptTriggers = services.ProximityPromptService.triggered
+	local held = {}
+	for i, spec in { { "Go in", "Steal a Luxe", 0 }, { "Crack the safe", "The Executive's safe", 1.2 } } do
+		local part = Instance.new("Part")
+		part.Name = "HeldThing" .. i
+		part.Parent = workspace
+		local p = Instance.new("ProximityPrompt")
+		p.Style = roblox.Enum.ProximityPromptStyle.Custom
+		p.ActionText = spec[1]
+		p.ObjectText = spec[2]
+		p.HoldDuration = spec[3]
+		p.KeyboardKeyCode = roblox.Enum.KeyCode.E
+		p.Parent = part
+		table.insert(held, p)
+		services.ProximityPromptService.PromptShown:Fire(p, roblox.Enum.ProximityPromptInputType.Keyboard)
+	end
+	advance(0.6)
+	local function cardFor(p)
+		for _, card in Prompts.cards() do
+			local object = card:FindFirstChild("Object") :: any
+			if object and object.Text == p.ObjectText then
+				return card
+			end
+		end
+		return nil
+	end
+	local instant, slow = cardFor(held[1]), cardFor(held[2])
+	local slowKey = slow and slow:FindFirstChild("Key") :: any
+	local instantKey = instant and instant:FindFirstChild("Key") :: any
+	check("a held prompt's card says so on its key (HOLD E); an instant one just E", slowKey ~= nil and slowKey.Text == "HOLD E" and instantKey ~= nil and instantKey.Text == "E", slowKey and slowKey.Text)
+	local before = #promptTriggers
+	if instant then
+		signalOf(instant, "Activated"):Fire()
+	end
+	advance(0.2)
+	check("a tap on a way in: in at once", #promptTriggers == before + 1 and promptTriggers[#promptTriggers] == held[1])
+	before = #promptTriggers
+	if slow then
+		signalOf(slow, "Activated"):Fire()
+	end
+	advance(0.6)
+	local fill = slow and slow:FindFirstChild("HoldFill") :: any
+	check("a tap on a held prompt: the card keeps holding it (not done half way)", #promptTriggers == before and fill ~= nil)
+	advance(0.65)
+	-- (The harness's tweens land at their end, so the gold reads full the moment the hold is.)
+	check("...and it's done when the hold is, the card full of gold (a tap is enough, on any screen)", #promptTriggers == before + 1 and promptTriggers[#promptTriggers] == held[2] and fill ~= nil and fill.Size.X.Scale == 1, fill and fill.Size.X.Scale)
+	advance(0.5)
+	check("...then the gold drains away", fill ~= nil and fill.Size.X.Scale == 0)
+	for _, p in held do
+		services.ProximityPromptService.PromptHidden:Fire(p)
+		p.Parent.Parent = nil
+	end
+	advance(0.3)
 
 	-- The strip's lines: each capsule as wide as its words; a long line wraps to a second line in
 	-- a taller capsule, never running off its edge.

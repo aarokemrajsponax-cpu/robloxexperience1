@@ -323,11 +323,11 @@ Voice.WelcomeBack = {
 -- What's new in this build, told once to each returning guest (Welcome back). Only shown while
 -- `build` is the build that's playing, so old news never shows as new.
 Voice.WhatsNew = {
-	build = 76,
+	build = 77,
 	lines = {
-		"How to play says it plainly now: every way into the Executive Suite and Luxury Island, with how close you are.",
-		"Tonight's table is back: press Play on its card and you're seated at a Salon table, against tonight's clock.",
-		"Lights Out is fair: only guests watching can send sabotage or a Shield, and every table starts with a Shield, free.",
+		"Every way in answers one press of E or one tap: Steal a Luxe, the Basement, the Executive Suite, the Grand Ballroom and Luxury Island.",
+		"Things you hold (a lift, a terminal, the safe) say HOLD on their card and fill with gold. On a phone, one tap holds it for you.",
+		"How to play says it plainly: every way into the Executive Suite and Luxury Island, with how close you are.",
 	},
 }
 

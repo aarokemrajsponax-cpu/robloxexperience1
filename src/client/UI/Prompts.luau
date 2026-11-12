@@ -5,6 +5,11 @@
 -- In a column on the screen rather than a card floating over each thing, two things side by
 -- side (the piano and the salute beside it) never pile their cards on each other, nor on anyone's
 -- name. Every card in the column is the same width, so their edges line up.
+--
+-- A prompt that's held (HoldDuration above 0: a lift, a terminal, a safe) says HOLD on its key,
+-- fills with gold while it's held, and a tap or click on its card holds it for the guest the whole
+-- way. (Until Build 77 a tap let go after a single frame, so a held prompt could never be finished
+-- from its card on a phone, and every attraction's way in asked for a hold nobody could see.)
 
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -28,6 +33,7 @@ Prompts.actionFor = function(_prompt: ProximityPrompt): string?
 end
 
 local shown: { [ProximityPrompt]: TextButton } = {}
+local wires: { [ProximityPrompt]: { RBXScriptConnection } } = {}
 local column: Frame? = nil
 local serial = 0
 
@@ -40,11 +46,10 @@ local function keyLabel(prompt: ProximityPrompt): string
 	local kind = State.inputKind()
 	if kind == "touch" then
 		return "TAP"
-	elseif kind == "gamepad" then
-		local name = prompt.GamepadKeyCode.Name
-		return (string.gsub(name, "^Button", ""))
 	end
-	return prompt.KeyboardKeyCode.Name
+	local held = prompt.HoldDuration > 0
+	local name = if kind == "gamepad" then (string.gsub(prompt.GamepadKeyCode.Name, "^Button", "")) else prompt.KeyboardKeyCode.Name
+	return if held then "HOLD " .. name else name
 end
 
 -- The column: right of the middle of the screen, where the guest's figure stands, a little below
@@ -106,8 +111,19 @@ local function build(prompt: ProximityPrompt): TextButton
 	stroke.Transparency = 0.35
 	stroke.Parent = button
 
+	-- (Gold rising behind the words while the prompt is held.)
+	local fill = Instance.new("Frame")
+	fill.Name = "HoldFill"
+	fill.BackgroundColor3 = Brand.Colours.gold
+	fill.BackgroundTransparency = 0.7
+	fill.BorderSizePixel = 0
+	fill.Size = UDim2.fromScale(0, 1)
+	fill.ZIndex = 1
+	fill.Parent = button
+
 	local key = Instance.new("TextLabel")
 	key.Name = "Key"
+	key.ZIndex = 2
 	key.BackgroundColor3 = Brand.Colours.gold
 	key.BackgroundTransparency = 0.05
 	key.AnchorPoint = Vector2.new(0, 0.5)
@@ -122,6 +138,7 @@ local function build(prompt: ProximityPrompt): TextButton
 
 	local action = Instance.new("TextLabel")
 	action.Name = "Action"
+	action.ZIndex = 2
 	action.BackgroundTransparency = 1
 	action.FontFace = Brand.Fonts.bodyMedium
 	action.TextSize = ACTION
@@ -133,6 +150,7 @@ local function build(prompt: ProximityPrompt): TextButton
 
 	local object = Instance.new("TextLabel")
 	object.Name = "Object"
+	object.ZIndex = 2
 	object.BackgroundTransparency = 1
 	object.FontFace = Brand.Fonts.body
 	object.TextSize = OBJECT
@@ -164,13 +182,45 @@ local function build(prompt: ProximityPrompt): TextButton
 	end
 	button:SetAttribute("Wants", LEAST_W)
 	button.Size = UDim2.fromOffset(LEAST_W, 50)
-	prompt:GetPropertyChangedSignal("ActionText"):Connect(fit)
-	prompt:GetPropertyChangedSignal("ObjectText"):Connect(fit)
+	-- (Let go of when the card goes: the prompt outlives it.)
+	local own = wires[prompt]
+	if own then
+		for _, c in own do
+			c:Disconnect()
+		end
+	end
+	own = {}
+	wires[prompt] = own
+	table.insert(own, prompt:GetPropertyChangedSignal("ActionText"):Connect(fit))
+	table.insert(own, prompt:GetPropertyChangedSignal("ObjectText"):Connect(fit))
+	table.insert(own, prompt:GetPropertyChangedSignal("HoldDuration"):Connect(fit))
+	table.insert(own, prompt.PromptButtonHoldBegan:Connect(function()
+		fill.Size = UDim2.fromScale(0, 1)
+		Ease.play(fill, Ease.info(math.max(0.05, prompt.HoldDuration), Enum.EasingStyle.Linear), { Size = UDim2.fromScale(1, 1) })
+	end))
+	table.insert(own, prompt.PromptButtonHoldEnded:Connect(function()
+		Ease.play(fill, Ease.info(0.15, Enum.EasingStyle.Quad), { Size = UDim2.fromScale(0, 1) })
+	end))
 
+	-- A tap or click: pressed and held for as long as the prompt asks (a moment for most), then
+	-- let go. One at a time.
+	local holding = false
 	button.Activated:Connect(function()
+		if holding then
+			return
+		end
+		holding = true
+		local need = prompt.HoldDuration
 		prompt:InputHoldBegin()
-		task.wait()
-		prompt:InputHoldEnd()
+		if need > 0 then
+			task.wait(need + 0.08)
+		else
+			task.wait()
+		end
+		pcall(function()
+			prompt:InputHoldEnd()
+		end)
+		holding = false
 	end)
 	button.Parent = stack()
 	shown[prompt] = button
@@ -204,6 +254,13 @@ function Prompts.hold(name: string, on: boolean)
 end
 
 local function drop(prompt: ProximityPrompt)
+	local own = wires[prompt]
+	if own then
+		wires[prompt] = nil
+		for _, c in own do
+			c:Disconnect()
+		end
+	end
 	local card = shown[prompt]
 	if card then
 		shown[prompt] = nil

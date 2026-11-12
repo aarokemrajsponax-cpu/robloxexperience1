@@ -377,6 +377,17 @@ a Nightly attempt or a Mythic's odds.
 - **The launch kit**: page text, icon, thumbnails and the gameplay video's shot list are in
   [`LAUNCH.md`](LAUNCH.md).
 
+## Build 77 — every way in answers one press or one tap
+
+- **The attractions' ways in work.** Each glowing arch's prompt asked for a 0.3-second hold, but
+  the house's own prompt cards showed no hold, so a quick E did nothing; and a tap on a card let
+  go after one frame, so on a phone a held prompt could never be finished. Now every way in is a
+  single press or tap, and a prompt that is held (a Basement lift, an Executive terminal, the safe)
+  says **HOLD E** on its card, fills with gold while it's held, and a tap or click on the card holds
+  it for the guest the whole way. (The cards also let go of their prompt's signals when they go.)
+- Tests: the client suite's fake prompts now hold as Roblox does (triggered only after the whole
+  hold), and a tap on a card is checked for an instant prompt and a held one.
+
 ## Build 76 — How to play in plain words, tonight's table back, a fair Lights Out, the Terrace dressed
 
 - **How to play, in plain words.** *Basics* says what the game is (a grand house full of games:

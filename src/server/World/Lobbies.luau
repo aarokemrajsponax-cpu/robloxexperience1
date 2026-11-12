@@ -64,7 +64,8 @@ function Lobbies.entrance(parent: Instance, id: string, cf: CFrame, noPlaque: bo
 	veil.CanQuery = true
 	Kit.pointLight(veil, 1.6, 26, def.colour:Lerp(rgb(255, 255, 255), 0.4))
 	HolidayProps.sparkle(veil, def.colour:Lerp(GOLD, 0.5), 6, 0.6)
-	prompt(veil, id, "go", "Go in", def.name, 0.3)
+	-- (One press of E, or one tap, and you're in: the way in never asks for a hold.)
+	prompt(veil, id, "go", "Go in", def.name)
 	if noPlaque then
 		return veil
 	end
