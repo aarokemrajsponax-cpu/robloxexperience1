@@ -857,8 +857,36 @@ local defaults = {
 			chaseGiveUp = 5, -- seconds out of his sight before he gives up
 			catchReach = 4.5,
 			caughtGrace = 6, -- seconds after being shown out before anyone notices you again
-			respawn = 40, -- seconds before a piece taken (or dropped) is back on its plinth
+			respawn = 300, -- seconds before a piece taken is back on its own plinth (each its own timer)
+			dropBack = 20, -- seconds before the pieces a caught guest dropped are back on their plinths
 			reach = 11, -- how close a guest must stand to take a piece
+			-- Lifting a piece (Build 78): held for its size, its grade and its worth, plus a little for
+			-- every stud of reach past `near`; Quick Hands (bought at the Lounge's board) shortens it.
+			hold = {
+				size = { tiny = 0.25, small = 0.45, medium = 0.75, large = 1.15, huge = 1.7 },
+				rarity = { Common = 0, Uncommon = 0.08, Rare = 0.2, Epic = 0.35, Legendary = 0.55, Exclusive = 0.9, Limited = 0.45 },
+				valuePer = 40000, -- a piece's worth adds worth / valuePer seconds...
+				valueMost = 0.35, -- ...at most this much
+				near = 4, -- studs within which reaching adds nothing
+				perStud = 0.07, -- seconds a stud past `near`
+				least = 0.25,
+				most = 3.5,
+				slack = 0.75, -- the server lets a lift through at this share of its hold (the network's lag)
+			},
+			hands = { 1, 0.85, 0.72, 0.6 },
+			handsPrice = { 0, 3000, 9000, 22000 },
+			massSlow = 0.004, -- each kilogram in the bag slows a guest this much more (never below `slowest`)
+			-- Security (Build 78).
+			cameraRange = 38,
+			cameraAngle = 24, -- degrees either side of where a camera points
+			cameraSeconds = 0.9, -- seen this long by a camera: spotted
+			alertFor = 25, -- seconds a wing stays on Alert after the last sighting
+			lockdownFor = 30, -- seconds a lockdown lasts
+			alertSight = 1.2, -- on Alert (and in a lockdown) the wing's guards see this much further...
+			alertSpeed = 1.15, -- ...and walk this much faster
+			searchSeconds = 4, -- how long a guard looks round where someone was seen
+			reinforcements = 2, -- extra guards in a wing while it's locked down
+			objectives = 3, -- side jobs given at the start of each run
 			dailyGems = 15, -- the most Gems a day from Steal a Luxe (its rarest pieces)
 			goldenGems = 150, -- the golden treadmill (double Stride), for good
 			greatHaul = 8000, -- a haul worth this much is told to the whole house
@@ -1400,6 +1428,30 @@ local defaults = {
 		--   table: the four sorting rooms and the Library (a cool-jazz trio)
 		--   ballroom: the band (waltzes)
 		Playlists = {
+			-- The attractions' own (Build 78; each mood is described just above AbuseMusic, below).
+			luxe = {
+				{ id = "rbxassetid://1842229516", gain = 1.55 }, -- Jazz Graphics (No. 4), 2:26
+				{ id = "rbxassetid://9044545570", gain = 0.54 }, -- Night Run (drum and bass), 3:03
+				{ id = "rbxassetid://1842229501", gain = 1.55 }, -- Jazz Graphics (No. 3), 2:45
+			},
+			luxeAlarm = {
+				{ id = "rbxassetid://1842754581", gain = 1.08 }, -- Enemy Escape, 2:08
+				{ id = "rbxassetid://9038275152", gain = 0.59 }, -- Electric Shock (dubstep), 3:19
+			},
+			basement = {
+				{ id = "rbxassetid://9038274387", gain = 0.60 }, -- Next Level (dubstep, electro), 3:15
+				{ id = "rbxassetid://1837088784", gain = 0.72 }, -- Digital Dawn (dance), 2:20
+				{ id = "rbxassetid://1839931160", gain = 0.65 }, -- 8 Bit Dubstep, 2:25
+				{ id = "rbxassetid://1846368080", gain = 0.79 }, -- Stadium Rave (A), 2:34
+			},
+			executive = {
+				{ id = "rbxassetid://74182710760944", gain = 0.61 }, -- Barren Planet, 2:16
+				{ id = "rbxassetid://9045959116", gain = 1.33 }, -- Galactron, 2:57
+			},
+			executiveBoss = {
+				{ id = "rbxassetid://1839459610", gain = 1.16 }, -- Grand Overture, 1:22
+				{ id = "rbxassetid://118322552504405", gain = 0.99 }, -- Heroes Theme, 1:44
+			},
 			lounge = {
 				{ id = "rbxassetid://106960476637326", gain = 1.22 }, -- Late Night Classics · Alan Hawkshaw (Cocktail Time (BRS4)), 3:18
 				{ id = "rbxassetid://72188165880204", gain = 1.41 }, -- After Hours · Alan Hawkshaw (Cocktail Time (BRS4)), 2:10
@@ -1431,6 +1483,13 @@ local defaults = {
 		-- library (APM Music, uploaded by APMOfficial): it takes over from the house's music while
 		-- Admin Abuse or a switched-on effect is on, and the house's music comes back after. `gain`
 		-- evens their loudness (measured, to about -17 dBFS: a little above the house's music).
+		-- The attractions' own scores (Build 78), from Roblox's licensed music library (free in any
+		-- experience), chosen for each one's mood. Swap in your own ids here.
+		--   luxe           a heist: spy jazz and a drum-and-bass chase, tense and stylish
+		--   luxeAlarm      the residence in lockdown: harder, faster
+		--   basement       the course: fast electronic, made for jumping to
+		--   executive      the Executive Suite: dark, quiet, watchful
+		--   executiveBoss  the Executive himself: his own score, building
 		AbuseMusic = {
 			-- A Grand Prix race, for the drivers in it: driving music, from the lights to the flag
 			-- (World/AbuseMusic). Swap in your own ids here.

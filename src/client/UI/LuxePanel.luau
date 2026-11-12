@@ -24,6 +24,7 @@ local UPGRADES = {
 	{ key = "bag", name = "A bigger bag" },
 	{ key = "quiet", name = "Quiet shoes" },
 	{ key = "banker", name = "The banker's cut" },
+	{ key = "hands", name = "Quick hands" },
 }
 
 local function ask(request: { [string]: any }): { [string]: any }?
@@ -88,7 +89,7 @@ function LuxePanel.open()
 	Theme.list(content, 8).VerticalAlignment = Enum.VerticalAlignment.Top
 	Theme.text(content, "Steal a Luxe", 11, "caps", { LayoutOrder = 1 })
 	Theme.text(content, "The Upgrades", 26, "display", { LayoutOrder = 2 })
-	Theme.text(content, "Carry more, be seen less, bank more of it. Your Fortune grows with every haul.", 13, "body", { LayoutOrder = 3, TextColor3 = C.smoke })
+	Theme.text(content, "Carry more, be seen less, lift quicker, bank more of it. Your Fortune grows with every haul.", 13, "body", { LayoutOrder = 3, TextColor3 = C.smoke })
 	local rows = Instance.new("Frame")
 	rows.Name = "Rows"
 	rows.BackgroundTransparency = 1

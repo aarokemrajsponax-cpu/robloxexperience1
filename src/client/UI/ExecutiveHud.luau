@@ -18,6 +18,7 @@ local Plan = require(ReplicatedStorage.Shared.Executive)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Rules = require(ReplicatedStorage.Shared.Fortune)
 local Root = require(script.Parent.Root)
+local Sound = require(script.Parent.Parent.Sound)
 local Theme = require(script.Parent.Theme)
 local Toast = require(script.Parent.Toast)
 
@@ -125,6 +126,8 @@ local function draw()
 	end
 	local phase = tostring(view.phase or "hall")
 	parts.phase.Text = string.upper(PHASE_NAMES[phase] or phase)
+	-- (The Executive's own score while he's on his feet; the Suite's again after.)
+	Sound.setMood(if phase == "boss" then "boss" else nil)
 	-- The code, big, in its four slots until the door opens.
 	local strip = parts.strip :: Frame?
 	if strip then
@@ -414,6 +417,7 @@ function ExecutiveHud.mount()
 end
 
 function ExecutiveHud.unmount()
+	Sound.setMood(nil)
 	for _, c in conns do
 		c:Disconnect()
 	end

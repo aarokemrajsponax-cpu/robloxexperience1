@@ -5,7 +5,10 @@
 -- taking a piece (only within reach, only with room in the bag), the weight of the bag, the guards
 -- (seeing, chasing, giving up, catching: the bag lost), banking at the car (the Estate, the cash
 -- share, the brainrots, the day's Gems), the upgrades (their real prices, never the screen's),
--- Stride from the treadmills, and every way out letting go of the guest.
+-- Stride from the treadmills, and every way out letting go of the guest. Build 78: six wings (the
+-- Drop Room with its loft and roof, the Garage, the Secret Stash), lifts that take their hold, the
+-- van and the helicopter, the cameras, the alarm and its lockdown, the laser grid, the side jobs,
+-- the Limited pieces, and each plinth's own five minutes (kept with the guest's ledger).
 --
 -- Usage (from the repo root):  rojo sourcemap default.project.json -o sourcemap.json
 --                              lune run tests/luxe.luau
@@ -37,6 +40,12 @@ local CurioList = module("ReplicatedStorage", "Shared", "Curios")
 local Attractions = module("ServerScriptService", "Server", "Attractions")
 local Luxe = module("ServerScriptService", "Server", "Attractions", "Luxe")
 local Lobbies = module("ServerScriptService", "Server", "World", "Lobbies")
+-- (The house's calendar, as the tests say: no holiday open unless a test opens one.)
+local HolidayGames = module("ReplicatedStorage", "Shared", "HolidayGames")
+local holidayOpen = nil
+HolidayGames.byCalendar = function()
+	return holidayOpen
+end
 local Fortune = module("ServerScriptService", "Server", "Fortune")
 local Herald = module("ServerScriptService", "Server", "Herald")
 local C = Config.data.Attractions.luxe
@@ -83,6 +92,14 @@ run(Herald.start)
 run(Attractions.start)
 
 local O = Luxe.origin()
+-- (The cameras look away until their own tests: a guest stood still for a test isn't seen by one.)
+local camsKept = table.clone(Luxe.cams)
+table.clear(Luxe.cams)
+local function calm()
+	for _, a in Luxe.alarms do
+		a.level, a.untilAt = 0, 0
+	end
+end
 local ask = Remotes.funcs.AttractionAsk.OnServerInvoke
 local function askAs(g, request)
 	advance(0.4)
@@ -147,11 +164,19 @@ end
 local function giltOf(g)
 	return data(g).gilt
 end
+-- Stood within reach long enough to lift what's on plinth `s`: its hold, as every screen works it out.
+local function holdOn(g, s)
+	if s.piece then
+		local d = (g.root.CFrame.Position - s.top.CFrame.Position).Magnitude
+		local need = Plan.holdFor(s.piece, d, C.hands[page(g).hands] or 1, C.hold)
+		steps(math.ceil(need * 10) + 1)
+	end
+end
 
 ---------------------------------------------------------------------------------------------------
 -- 1. The plan
 ---------------------------------------------------------------------------------------------------
-check("three wings, each deeper one sharper", #Plan.Wings == 3 and Plan.Wings[1].sharp < Plan.Wings[2].sharp and Plan.Wings[2].sharp < Plan.Wings[3].sharp)
+check("six wings: the house's three each sharper than the last, and the three beyond them too", #Plan.Wings == 6 and Plan.Wings[1].sharp < Plan.Wings[2].sharp and Plan.Wings[2].sharp < Plan.Wings[3].sharp and Plan.Wings[4].sharp < Plan.Wings[5].sharp and Plan.Wings[5].sharp < Plan.Wings[6].sharp)
 do
 	local ok = true
 	for _, s in Plan.Spots do
@@ -175,15 +200,47 @@ do
 		end
 	end
 	check("a plinth in the Strongroom is never given the Crown Jewel by chance", never)
-	local worth = { 0, 0, 0 }
-	local n = { 0, 0, 0 }
+	local worth = { 0, 0, 0, 0, 0, 0 }
+	local n = { 0, 0, 0, 0, 0, 0 }
 	for _, p in Plan.Pieces do
 		if p.weight > 0 then
 			worth[p.wing] += p.worth
 			n[p.wing] += 1
 		end
 	end
-	check("the deeper the wing, the more its pieces are worth", worth[1] / n[1] < worth[2] / n[2] and worth[2] / n[2] < worth[3] / n[3])
+	check("the deeper the wing, the more its pieces are worth (and the Secret Stash's the most)", worth[1] / n[1] < worth[2] / n[2] and worth[2] / n[2] < worth[3] / n[3] and worth[4] / n[4] < worth[5] / n[5] and worth[5] / n[5] < worth[6] / n[6] and worth[6] / n[6] > worth[3] / n[3])
+	local labels = true
+	for _, r in Plan.Rarities do
+		if r.label ~= (r.order >= 3) then
+			labels = false
+		end
+	end
+	check("seven grades, Common to Limited: Rare and up wear a label", #Plan.Rarities == 7 and Plan.Rarities[7].id == "Limited" and labels)
+	local limitedOk, limitedCount = true, 0
+	for _, p in Plan.Pieces do
+		if p.rarity == "Limited" then
+			limitedCount += 1
+			if p.weight ~= 0 or p.limited == nil or HolidayGames.byId[p.limited] == nil then
+				limitedOk = false
+			end
+		elseif p.limited ~= nil then
+			limitedOk = false
+		end
+	end
+	check("every Limited piece belongs to a real holiday, and is never set out by chance", limitedOk and limitedCount == 5, limitedCount)
+	local sized = true
+	for _, p in Plan.Pieces do
+		if C.hold.size[p.size or ""] == nil or type(p.mass) ~= "number" then
+			sized = false
+		end
+	end
+	check("every piece has a size (how long it takes to lift) and a weight", sized)
+	local tiny = Plan.holdFor(Plan.byId.shades, 0, 1, C.hold)
+	local huge = Plan.holdFor(Plan.byId.bullion, 0, 1, C.hold)
+	local far = Plan.holdFor(Plan.byId.shades, C.reach, 1, C.hold)
+	local quick = Plan.holdFor(Plan.byId.bullion, 0, C.hands[#C.hands], C.hold)
+	check("a lift takes longer the bigger, rarer and dearer the piece, and the further the reach", tiny < huge and far > tiny and tiny >= C.hold.least and huge <= C.hold.most, tiny, huge, far)
+	check("Quick Hands shortens it", quick < huge)
 	for _, p in Plan.Pieces do
 		if p.curio then
 			check("the brainrot " .. p.name .. " is a real collectible", CurioList.byId[p.curio] ~= nil, p.curio)
@@ -199,6 +256,22 @@ do
 		check("a guard's round stays in his wing (wing " .. w.wing .. ")", inside)
 	end
 	check("the bank is in the courtyard, out of every wing", Plan.wingAt(Vector3.new(0, 0, -108)) == nil and Plan.inBank(Vector3.new(0, 0, -108)))
+	check("the garage van is a way out, in the Garage", Plan.bankAt(Vector3.new(110, 3, -50)).id == "van" and Plan.wingAt(Vector3.new(110, 3, -50)) == 5)
+	check("the helicopter is a way out, up on the Drop Room's roof (not the floor below it)", Plan.bankAt(Vector3.new(-98, Plan.ROOF + 3, -26)).id == "heli" and Plan.bankAt(Vector3.new(-98, 3, -26)) == nil and Plan.bankAt(Vector3.new(-98, Plan.LOFT + 3, -26)) == nil)
+	local camsIn = true
+	for _, cam in Plan.Cameras do
+		if Plan.wingAt(cam.at) ~= cam.wing then
+			camsIn = false
+		end
+	end
+	check("every wing has a camera, each hung in its own wing", camsIn and #Plan.Cameras >= #Plan.Wings)
+	local goalsOk = true
+	for _, o in Plan.Objectives do
+		if Plan.objectiveOf[o.id] ~= o or o.gilt <= 0 then
+			goalsOk = false
+		end
+	end
+	check("ten side jobs, each paying its Gilt", #Plan.Objectives == 10 and goalsOk)
 	check("Stride: no points is level 1; the last step is the top", Plan.strideLevel(0, C.stride) == 1 and Plan.strideLevel(C.stride[#C.stride], C.stride) == #C.stride and select(2, Plan.strideLevel(C.stride[#C.stride], C.stride)) == nil)
 end
 
@@ -213,18 +286,75 @@ do
 			full += 1
 		end
 	end
-	check("every plinth has a piece on it when the house opens (21)", full == 21, full)
+	check("every plinth has a piece on it when the house opens (" .. #Plan.Spots .. ")", full == #Plan.Spots, full)
 	check("the Crown Jewel is on its plinth", Luxe.spots[21].piece and Luxe.spots[21].piece.id == "crownJewel")
-	check("eight guards walk the residence", #Luxe.guards == 8, #Luxe.guards)
+	check("a guard for every round walks the residence", #Luxe.guards == #Plan.Patrols and #Plan.Patrols == 12, #Luxe.guards)
 	local torches = 0
 	for _, g in Luxe.guards do
 		if g.model:FindFirstChild("Torch", true) then
 			torches += 1
 		end
 	end
-	check("every guard carries a torch (where he looks, everyone can see)", torches == 8, torches)
+	check("every guard carries a torch (where he looks, everyone can see)", torches == #Plan.Patrols, torches)
 	local take = Luxe.spots[1].model:FindFirstChild("Take", true)
 	check("a piece can be taken with a prompt", take ~= nil and take:IsA("ProximityPrompt"))
+	local holds, labelsOk = true, true
+	for _, sp in Luxe.spots do
+		local pr = sp.model and sp.model:FindFirstChild("Take", true)
+		if not pr or math.abs(pr.HoldDuration - Plan.holdFor(sp.piece, 0, 1, C.hold)) > 1e-3 or pr:GetAttribute("Piece") ~= sp.piece.id then
+			holds = false
+		end
+		local grade = sp.model and sp.model:FindFirstChild("Grade", true)
+		local wants = Plan.rarityOf[sp.piece.rarity].label
+		if wants ~= (grade ~= nil) or (grade and grade.Chip.Text ~= "<" .. string.upper(sp.piece.rarity) .. ">") then
+			labelsOk = false
+		end
+	end
+	check("each piece's prompt holds for its own lift (up close: the screen adds the reach)", holds)
+	check("Rare and up wear their grade over them, <RARE> to <EXCLUSIVE>; the rest don't", labelsOk and Luxe.spots[21].model:FindFirstChild("Grade", true).Chip.Text == "<EXCLUSIVE>")
+	local res = workspace.Attractions.StealALuxe
+	local heads = 0
+	for _, cam in camsKept do
+		if cam.head and cam.head:FindFirstChild("View") then
+			heads += 1
+		end
+	end
+	check("a camera for every camera in the plan, each with a head that turns and a light where it looks", #camsKept == #Plan.Cameras and heads == #Plan.Cameras, heads)
+	local beams = 0
+	for _, d in res:GetDescendants() do
+		if d:IsA("BasePart") and d.Name == "Laser" then
+			beams += 1
+			if d.CanCollide or d.CanQuery then
+				beams = -99
+			end
+		end
+	end
+	check("the Strongroom's laser grid is built (light only: nothing to bump into or hide behind)", beams == #Plan.Lasers, beams)
+	local door = res:FindFirstChild("StashDoor", true)
+	local lever = res:FindFirstChild("PullBar", true)
+	check("the Secret Stash's panel is shut, and a loose gold bar waits on the last stack on the right", door ~= nil and door.CanCollide and lever ~= nil and lever:IsA("ProximityPrompt"))
+	local van = res:FindFirstChild("GarageVan", true)
+	local heli = res:FindFirstChild("Helicopter", true)
+	check("the van waits in the Garage, the helicopter on the roof", van ~= nil and heli ~= nil and heli:FindFirstChild("Cabin").CFrame.Position.Y > O.Y + Plan.ROOF)
+	local stairs, top = 0, 0
+	for _, d in res.Architecture.DropRoom:GetChildren() do
+		if d.Name == "Stair" then
+			stairs += 1
+			top = math.max(top, d.CFrame.Position.Y + d.Size.Y / 2 - O.Y)
+		end
+	end
+	check("stairs a stud a step: up to the loft, and on up to the roof", stairs == Plan.ROOF and math.abs(top - Plan.ROOF) < 1e-3, stairs, top)
+	local hatch = O + Vector3.new(-120, Plan.ROOF - 0.5, -40)
+	local covered = false
+	for _, d in res.Architecture.DropRoom:GetChildren() do
+		if d.Name == "Roof" then
+			local rel = d.CFrame:PointToObjectSpace(hatch)
+			if math.abs(rel.X) < d.Size.X / 2 and math.abs(rel.Y) < d.Size.Y / 2 and math.abs(rel.Z) < d.Size.Z / 2 then
+				covered = true
+			end
+		end
+	end
+	check("and a hatch in the roof over the top flight (nobody bumps their head)", not covered)
 end
 local R = Layout.Velvet
 local belts = H.tagged.LuxeTreadmill or {}
@@ -317,6 +447,10 @@ do
 	check("a way from the arrival, past the car, through every wing to the Crown Jewel can be walked", why == nil, why)
 	local east = walk({ Vector3.new(0, 0, -50), Vector3.new(30, 0, -50), Vector3.new(35, 0, -20), Vector3.new(35, 0, 8), Vector3.new(35, 0, 66), Vector3.new(0, 0, 66) })
 	check("and the east doorway into the Long Gallery too", east == nil, east)
+	local drop = walk({ Vector3.new(-40, 0, -26), Vector3.new(-92, 0, -26) })
+	check("the Garden Hall's west door leads into the Drop Room", drop == nil, drop)
+	local garage = walk({ Vector3.new(40, 0, -26), Vector3.new(96, 0, -26), Vector3.new(96, 0, -40), Vector3.new(105, 0, -45) })
+	check("its east door into the Garage, and on to the van", garage == nil and Plan.bankAt(Vector3.new(105, 3, -45)).id == "van", garage)
 	local home = walk({ Plan.Arrival.Position, Vector3.new(0, 0, -130) })
 	check("the arch home is a few steps from the arrival, with nothing in the way", home == nil and (Plan.HomeArch.Position - Plan.Arrival.Position).Magnitude < 10, home)
 end
@@ -358,7 +492,8 @@ steps(25) -- (past the few seconds nobody notices a guest who has just come in)
 local function spotNear(g, id)
 	local s = Luxe.spots[id]
 	local top = s.top.CFrame.Position - O
-	standIn(g, Vector3.new(top.X, 0, top.Z - 4))
+	standIn(g, Vector3.new(top.X, s.spot.at.Y, top.Z - 4))
+	holdOn(g, s)
 	return s
 end
 standIn(ava, Vector3.new(0, 0, -40))
@@ -379,9 +514,17 @@ r = askAs(ava, { op = "act", id = "luxe", act = "take", n = 1 })
 check("within reach, the piece is taken", r.ok == true and r.piece == first.id, r.why)
 check("it's in the bag", #Luxe.runs[ava].bag == 1 and Luxe.runs[ava].bag[1] == first)
 check("and gone from its plinth for everyone", s1.piece == nil and s1.model == nil)
+check("its plinth says when it's back (five minutes, its own timer), for every screen's countdown", math.abs(s1.top:GetAttribute("BackAt") - (workspace:GetServerTimeNow() + C.respawn)) < 1, s1.top:GetAttribute("BackAt"))
 check("the guest is told what they took and its worth", last(ava, "took") ~= nil and last(ava, "took").worth == first.worth)
 local slowed = ava:GetAttribute("SpeedTrained")
-check("a piece in the bag slows them a little", type(slowed) == "number" and math.abs(slowed - (1 - C.weight)) < 1e-3, slowed)
+local function slowFor(bag)
+	local mass = 0
+	for _, p in bag do
+		mass += p.mass or 0
+	end
+	return math.max(C.slowest, 1 - #bag * C.weight - mass * C.massSlow)
+end
+check("a piece in the bag slows them a little (and more the heavier it is)", type(slowed) == "number" and math.abs(slowed - slowFor(Luxe.runs[ava].bag)) < 1e-3, slowed)
 r = askAs(ava, { op = "act", id = "luxe", act = "take", n = 1 })
 check("an empty plinth has nothing to take", r.ok == false and r.why == "Someone has been here before you.")
 -- Through the prompt, as a guest would.
@@ -395,9 +538,11 @@ check("a third: the bag (three to begin with) is full", #Luxe.runs[ava].bag == 3
 spotNear(ava, 4)
 r = askAs(ava, { op = "act", id = "luxe", act = "take", n = 4 })
 check("a fourth doesn't fit, and the guest is told how to carry more", r.ok == false and string.find(r.why, "Your bag is full (3)", 1, true) ~= nil, r.why)
-check("three pieces: slower again, but never below the slowest", math.abs(ava:GetAttribute("SpeedTrained") - math.max(C.slowest, 1 - 3 * C.weight)) < 1e-3)
-steps(C.respawn * 10 + 5)
-check("a plinth is given another piece of its wing a while later", s1.piece ~= nil and s1.piece.wing == 1 and s1.model ~= nil)
+check("three pieces: slower again, but never below the slowest", math.abs(ava:GetAttribute("SpeedTrained") - slowFor(Luxe.runs[ava].bag)) < 1e-3)
+steps(C.respawn * 10 - 50)
+check("a lifted piece isn't back before its five minutes", s1.piece == nil)
+steps(60)
+check("then the same piece is back on its own plinth", s1.piece == first and s1.model ~= nil and s1.top:GetAttribute("BackAt") == nil)
 
 ---------------------------------------------------------------------------------------------------
 -- 5. Banking at the car
@@ -475,7 +620,9 @@ walled = true
 steps(15)
 check("behind a wall, he doesn't see you", (g1.suspicion[ava] or 0) == 0)
 walled = false
--- Far off: unseen; nearer with ordinary shoes, seen; with the quietest shoes, unseen again.
+-- Far off: unseen; nearer with ordinary shoes, seen; with the quietest shoes, unseen again. (The
+-- wing calm again first: on Alert its guards see further.)
+calm()
 faceGuard(Vector3.new(0, 0, -60), Vector3.new(0, 0, 0))
 standIn(ava, Vector3.new(0, 0, -60 + C.seeRange + 2))
 steps(15)
@@ -492,6 +639,7 @@ steps(15)
 check("with the quietest shoes, the same distance is too far for him", (g1.suspicion[ava] or 0) == 0)
 page(ava).quiet = 1
 -- Caught: the bag is lost and they're shown out to the courtyard.
+calm()
 faceGuard(Vector3.new(0, 0, -50), Vector3.new(0, 0, 0))
 standIn(ava, Vector3.new(0, 0, -40))
 steps(12)
@@ -514,8 +662,8 @@ steps(math.floor(C.caughtGrace * 10) - 5)
 check("for a few seconds after, nobody notices them", (g1.suspicion[ava] or 0) == 0)
 steps(15)
 check("then they can be noticed again", (g1.suspicion[ava] or 0) > 0 or g1.state == "chase")
-steps(15)
-check("the plinth they emptied is filled again within seconds (not the usual wait)", s5.piece ~= nil and s5.model ~= nil)
+steps(C.dropBack * 10)
+check("the plinth they emptied is filled again in a few seconds (not the five-minute wait)", s5.piece ~= nil and s5.model ~= nil)
 -- He walks his rounds.
 parkGuards(nil)
 local g6 = Luxe.guards[6]
@@ -533,7 +681,9 @@ check("a guard walks his round, point to point", g6.index ~= 2 or (g6.root.CFram
 parkGuards(nil)
 local spotC = Luxe.spots[21]
 local function bankOne(g, s, piece)
-	-- (A piece put on a plinth for the test, as the residence would.)
+	-- (A piece put on a plinth for the test, as the residence would; the house quiet.)
+	parkGuards(nil)
+	calm()
 	if s.model then
 		s.model:Destroy()
 	end
@@ -546,7 +696,8 @@ local function bankOne(g, s, piece)
 		s.model = module("ServerScriptService", "Server", "Attractions", "LuxeBuild").piece(workspace.Attractions.StealALuxe.Pieces, s.top, piece, s.spot.id)
 	end
 	local top = s.top.CFrame.Position - O
-	standIn(g, Vector3.new(top.X, 0, top.Z - 4))
+	standIn(g, Vector3.new(top.X, s.spot.at.Y, top.Z - 4))
+	holdOn(g, s)
 	local res = askAs(g, { op = "act", id = "luxe", act = "take", n = s.spot.id })
 	standIn(g, Vector3.new(0, 0, -108))
 	steps(2)
@@ -565,14 +716,16 @@ for _, bc in broadcasts do
 	end
 end
 check("the house is told (a real feat, by a real guest)", feat ~= nil and feat.worth == b2.worth)
-steps(C.respawn * 10 + 20 - 80)
-check("the Crown Jewel comes back far more slowly than the rest (still gone after the usual wait)", spotC.piece == nil)
+steps(C.respawn * 10 - 80 - 50)
+check("the Crown Jewel isn't back before its five minutes", spotC.piece == nil)
+steps(70)
+check("then it's back on its own plinth", spotC.piece ~= nil and spotC.piece.id == "crownJewel")
 local res2, b3 = bankOne(ava, Luxe.spots[9], Plan.byId.ladro)
 check("a brainrot piece banked is the guest's to keep as a brainrot", res2.ok == true and b3 ~= nil and b3.brainrots[1] == "ladroLussuoso" and (data(ava).curios.items.ladroLussuoso or 0) == 1, res2.why)
 -- Gems: never more than the day's cap.
 local paid = Plan.byId.crownJewel.gems
-for i = 1, 6 do
-	local _, b = bankOne(ava, Luxe.spots[17], Plan.byId.tiara)
+for _, id in { 17, 18, 11, 12, 13, 14 } do
+	local _, b = bankOne(ava, Luxe.spots[id], Plan.byId.tiara)
 	paid += b.gems
 end
 check("Gems from Steal a Luxe stop at the day's cap", paid == C.dailyGems, paid)
@@ -608,6 +761,227 @@ r = askAs(ava, { op = "act", id = "luxe", act = "golden" })
 check("and it isn't sold twice", r.ok == false and data(ava).gems == 5)
 local st = askAs(ava, { op = "state", id = "luxe" })
 check("the board is told every upgrade, its level and its next price", st.ok == true and st.upgrades.bag.level == 2 and st.upgrades.bag.price == C.bagPrice[3] and st.upgrades.quiet.price == C.quietPrice[2] and st.upgrades.golden == true and st.run ~= nil)
+
+---------------------------------------------------------------------------------------------------
+-- 8b. Build 78: lifts that take their hold, the side jobs, the van and the helicopter, the cameras,
+-- the alarm and its lockdown, the laser grid, the Secret Stash, Limited pieces, the five minutes
+---------------------------------------------------------------------------------------------------
+local LuxeBuild = module("ServerScriptService", "Server", "Attractions", "LuxeBuild")
+local function setPiece(s, piece)
+	if s.model then
+		s.model:Destroy()
+	end
+	s.piece = piece
+	s.back = 0
+	s.model = LuxeBuild.piece(workspace.Attractions.StealALuxe.Pieces, s.top, piece, s.spot.id)
+end
+local function beside(g, s)
+	local top = s.top.CFrame.Position - O
+	standIn(g, Vector3.new(top.X, s.spot.at.Y, top.Z - 4))
+end
+parkGuards(nil)
+calm()
+page(ava).banker = 1
+Luxe.runs[ava].goals = { { id = "dropRoom", done = false }, { id = "van", done = false }, { id = "loft", done = false } }
+-- A big piece in the Drop Room: tried at once, refused; held long enough, lifted.
+local deckSpot = Luxe.spots[22]
+setPiece(deckSpot, Plan.byId.deck)
+beside(ava, deckSpot)
+r = askAs(ava, { op = "act", id = "luxe", act = "take", n = 22 })
+check("a big piece lifted at once is refused: a lift takes its hold", r.ok == false and r.why == "Hold it a moment longer.", r.why)
+holdOn(ava, deckSpot)
+local giltBefore = giltOf(ava)
+r = askAs(ava, { op = "act", id = "luxe", act = "take", n = 22 })
+check("held long enough, it's lifted", r.ok == true and r.piece == "deck", r.why)
+local job = last(ava, "objective")
+-- (Paid as all Gilt is, under the day's soft cap: the screen is told what was actually paid.)
+check("lifting in the Drop Room is a side job: done, and its Gilt paid at once", job ~= nil and job.id == "dropRoom" and job.gilt > 0 and giltOf(ava) - giltBefore == job.gilt and Luxe.runs[ava].goals[1].done == true, job and job.id)
+local hud = last(ava, "luxe")
+local hudGoals = hud and hud.goals or {}
+check("the screen is told the run's side jobs, what each pays and which are done", #hudGoals == 3 and hudGoals[1].line == Plan.objectiveOf.dropRoom.line and hudGoals[1].done == true and hudGoals[2].gilt == Plan.objectiveOf.van.gilt)
+-- The van.
+standIn(ava, Vector3.new(105, 0, -45))
+steps(2)
+local bv = last(ava, "banked")
+check("the garage van is a way out: walk up to it with the bag and it's banked", bv ~= nil and bv.route == "van" and #Luxe.runs[ava].bag == 0, bv and bv.route)
+check("with its bonus (a little more for the side way out)", bv and bv.worth == math.floor(Plan.byId.deck.worth * (1 + C.banker[1] + Plan.Banks[2].bonus) + 0.5), bv and bv.worth)
+check("and that side job is done too", last(ava, "objective").id == "van")
+-- The loft, and the helicopter on the roof.
+local loftSpot = Luxe.spots[28]
+setPiece(loftSpot, Plan.byId.headphones)
+beside(ava, loftSpot)
+holdOn(ava, loftSpot)
+r = askAs(ava, { op = "act", id = "luxe", act = "take", n = 28 })
+check("a piece up on the loft is lifted from the loft (and that's a side job)", r.ok == true and last(ava, "objective").id == "loft", r.why)
+standIn(ava, Vector3.new(-98, 0, -26))
+steps(2)
+check("on the floor under the helipad, nothing is banked", #Luxe.runs[ava].bag == 1)
+standIn(ava, Vector3.new(-98, Plan.ROOF, -26))
+steps(2)
+local bh = last(ava, "banked")
+check("up on the roof, the helicopter banks it, with the best bonus of all", bh ~= nil and bh.route == "heli" and #Luxe.runs[ava].bag == 0 and bh.worth == math.floor(Plan.byId.headphones.worth * (1 + C.banker[1] + Plan.Banks[3].bonus) + 0.5), bh and bh.worth)
+-- A Legendary lifted puts its wing on Alert.
+calm()
+local keySpot = Luxe.spots[31]
+setPiece(keySpot, Plan.byId.keyFob)
+beside(ava, keySpot)
+holdOn(ava, keySpot)
+r = askAs(ava, { op = "act", id = "luxe", act = "take", n = 31 })
+check("lifting a Legendary puts its wing on Alert", r.ok == true and Luxe.alarms[5].level == 1 and workspace.Attractions.StealALuxe:GetAttribute("Alarm5") == 1, Luxe.alarms[5].level)
+standIn(ava, Vector3.new(0, 0, -108))
+steps(2)
+
+-- The cameras: one held still for the test sees a guest in front of it, in its wing.
+for _, cam in camsKept do
+	table.insert(Luxe.cams, cam)
+end
+calm()
+parkGuards(nil)
+local cam = Luxe.cams[3]
+local sweepWas = cam.def.sweep
+cam.def.sweep = 0
+local look = Plan.cameraLook(cam.def, 0)
+local inFront = cam.def.at + look * 14
+local spottedBefore = count(ava, "spotted")
+standIn(ava, Vector3.new(inFront.X, 0, inFront.Z))
+steps(15)
+local sp = last(ava, "spotted")
+check("a camera that sees a guest long enough puts its wing on Alert", count(ava, "spotted") == spottedBefore + 1 and sp.by == "a camera" and Luxe.alarms[cam.def.wing].level == 1, sp and sp.by)
+local aimed = CFrame.lookAt(cam.world, cam.world + look + Vector3.new(0, -0.35, 0))
+check("its head turns where it looks", (cam.head.CFrame.Position - aimed.Position).Magnitude < 1e-3 and cam.head.CFrame.LookVector:Dot(aimed.LookVector) > 0.999)
+local guardsBefore = #Luxe.guards
+steps(50)
+check("seen again on Alert, the wing locks down", Luxe.alarms[cam.def.wing].level == 2, Luxe.alarms[cam.def.wing].level)
+check("more guards come", #Luxe.guards == guardsBefore + C.reinforcements, #Luxe.guards - guardsBefore)
+check("every screen can see it (the residence says so) and the guest is told", workspace.Attractions.StealALuxe:GetAttribute("Alarm" .. cam.def.wing) == 2 and last(ava, "alarm") ~= nil and last(ava, "alarm").level == 2)
+local behind = cam.def.at - look * 6
+standIn(ava, Vector3.new(behind.X, 0, behind.Z))
+local n0 = count(ava, "spotted")
+steps(30)
+check("behind a camera, unseen", count(ava, "spotted") == n0)
+standIn(ava, Vector3.new(inFront.X, 0, inFront.Z))
+walled = true
+steps(30)
+check("behind something solid, unseen", count(ava, "spotted") == n0)
+walled = false
+cam.def.sweep = sweepWas
+table.clear(Luxe.cams)
+standIn(ava, Vector3.new(0, 0, -108))
+steps(math.ceil((C.lockdownFor + C.alertFor) * 10) + 20)
+check("then it cools: the lockdown to Alert, Alert to calm, and the extra guards go", Luxe.alarms[cam.def.wing].level == 0 and #Luxe.guards == guardsBefore, Luxe.alarms[cam.def.wing].level)
+
+-- The laser grid: a dark beam can be crossed; a lit one locks the Strongroom down.
+calm()
+parkGuards(nil)
+local t = Luxe.now()
+local lit, dark = nil, nil
+for _, l in Plan.Lasers do
+	if not Plan.laserOn(l, t + 0.1) and not dark then
+		dark = l
+	end
+end
+for _, l in Plan.Lasers do
+	if Plan.laserOn(l, t + 0.2) and not lit then
+		lit = l
+	end
+end
+check("(one beam is dark and one lit)", lit ~= nil and dark ~= nil)
+local before = count(ava, "spotted")
+standIn(ava, Vector3.new(-20, 0, dark.z))
+steps(1)
+check("a dark beam can be crossed", count(ava, "spotted") == before and Luxe.alarms[3].level == 0)
+standIn(ava, Vector3.new(-20, 0, lit.z))
+steps(1)
+check("a lit one is seen: the Strongroom locks down", count(ava, "spotted") == before + 1 and last(ava, "spotted").by == "the laser grid" and Luxe.alarms[3].level == 2, Luxe.alarms[3].level)
+local shown = true
+for _, d in workspace.Attractions.StealALuxe:GetDescendants() do
+	if d:IsA("BasePart") and d.Name == "Laser" then
+		for _, l in Plan.Lasers do
+			if math.abs(d.CFrame.Position.Z - (O.Z + l.z)) < 0.1 and (d.Transparency < 0.5) ~= Plan.laserOn(l, Luxe.now()) then
+				shown = false
+			end
+		end
+	end
+end
+check("each beam shows lit or dark as the server says", shown)
+standIn(ava, Vector3.new(-20, 0, lit.z + 1.5))
+steps(20)
+calm()
+parkGuards(nil)
+
+-- The Secret Stash: the loose bar opens its panel; inside, a side job; it shuts again when nobody's
+-- in the doorway (never on anyone).
+local door = workspace.Attractions.StealALuxe:FindFirstChild("StashDoor", true)
+local lever = workspace.Attractions.StealALuxe:FindFirstChild("PullBar", true)
+Luxe.runs[ava].goals = { { id = "stash", done = false } }
+standIn(ava, Plan.Stash.lever + Vector3.new(-5, 0, 0))
+lever.Triggered:Fire(ava)
+check("pulled, the panel slides open, and the guest is told", door.CanCollide == false and door.Transparency == 1 and last(ava, "notice").line == "A panel slid open at the back of the Strongroom.")
+standIn(ava, Vector3.new(0, 0, 141))
+steps(2)
+check("walking into the Secret Stash is a side job, done", last(ava, "objective") ~= nil and last(ava, "objective").id == "stash")
+steps(Plan.Stash.openFor * 10 + 10)
+check("it never shuts on a guest inside", door.CanCollide == false)
+standIn(ava, Vector3.new(0, 0, 100))
+steps(40)
+check("out again, it shuts", door.CanCollide == true and door.Transparency == 0)
+local stashSpot = Luxe.spots[37]
+check("its plinths hold the finest things in the house", stashSpot.piece ~= nil and stashSpot.piece.wing == 6 and Plan.rarityOf[stashSpot.piece.rarity].order >= 5)
+standIn(ava, Vector3.new(0, 0, -108))
+steps(2)
+
+-- Each plinth's five minutes, kept with the guest's ledger: a piece they banked can't be lifted by
+-- them again sooner (not in a fresh server, not after a restart).
+local sX = Luxe.spots[23]
+local resX = bankOne(ava, sX, Plan.byId.shades)
+check("(banked)", resX.ok == true, resX.why)
+setPiece(sX, Plan.byId.shades) -- (as a fresh server would have it: full again at once)
+beside(ava, sX)
+holdOn(ava, sX)
+r = askAs(ava, { op = "act", id = "luxe", act = "take", n = 23 })
+check("a guest can't lift a piece they banked again before its five minutes, even where it's back sooner", r.ok == false and string.find(r.why, "You banked this one not long ago", 1, true) ~= nil, r.why)
+check("it's kept with their ledger", type(page(ava).lifted["23"]) == "number")
+H.setWallClock(H.fakeOs.time() + C.respawn + 1)
+r = askAs(ava, { op = "act", id = "luxe", act = "take", n = 23 })
+check("after its five minutes, it's theirs to lift again", r.ok == true, r.why)
+standIn(ava, Vector3.new(0, 0, -108))
+steps(2)
+
+-- Limited pieces: set out only while their holiday is open on the house's calendar.
+local sL = Luxe.spots[24]
+local seen, wrong = 0, 0
+local function cycle(n)
+	for _ = 1, n do
+		if sL.model then
+			sL.model:Destroy()
+		end
+		sL.piece, sL.model, sL.back = nil, nil, 0
+		steps(1)
+		if sL.piece and sL.piece.rarity == "Limited" then
+			if sL.piece.limited == holidayOpen then
+				seen += 1
+			else
+				wrong += 1
+			end
+		end
+	end
+end
+holidayOpen = nil
+cycle(40)
+check("with no holiday open, a Limited piece is never set out", seen == 0 and wrong == 0)
+holidayOpen = "halloween"
+cycle(60)
+check("while Halloween is open, the Drop Room sets out its Limited piece now and then (and no other)", seen > 0 and wrong == 0, seen)
+local tag = sL.model and sL.model:FindFirstChild("Grade", true)
+check("and it wears its label, <LIMITED>", sL.piece.rarity ~= "Limited" or (tag ~= nil and tag.Chip.Text == "<LIMITED>"))
+holidayOpen = nil
+cycle(1)
+check("once the holiday closes, its plinth is given an ordinary piece", sL.piece ~= nil and sL.piece.rarity ~= "Limited")
+local logged = {}
+for _, e in H.customEvents do
+	logged[e.name] = true
+end
+check("what guests do here is logged for the owner (lifts, banks, side jobs, wings, the stash)", logged["Luxe taken"] and logged["Luxe banked"] and logged["Luxe objective"] and logged["Luxe wing"] and logged["Luxe stash opened"])
 
 ---------------------------------------------------------------------------------------------------
 -- 9. Every way out lets go of the guest

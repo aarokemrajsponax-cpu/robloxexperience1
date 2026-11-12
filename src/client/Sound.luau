@@ -614,7 +614,7 @@ local REVERB: { [string]: Enum.ReverbType } = {
 type Song = { id: string, gain: number }
 type Deck = { songs: { Song }, at: number, name: string }
 
-local mix = { zone = "", intensity = nil :: number?, lit = nil :: number?, soiree = false, attraction = nil :: string? }
+local mix = { zone = "", intensity = nil :: number?, lit = nil :: number?, soiree = false, attraction = nil :: string?, mood = nil :: string? }
 local loops: { [string]: Sound? } = {}
 local decks: { [string]: Deck } = {}
 local targets: { [string]: number } = {}
@@ -704,12 +704,17 @@ local TRACK_FOR: { [string]: string } = {
 	midnight = "table",
 	library = "table",
 	ballroom = "ballroom",
-	-- The attractions (away from the house): the cocktail piano on Luxury Island, the jazz trio for
-	-- the earning ones. (The Grand Ballroom plays its own records: World/GalaView.)
+	-- The attractions (away from the house), each with a sound of its own (Build 78): the cocktail
+	-- piano on Luxury Island; a tense, stylish heist score in Steal a Luxe (and a harder one when
+	-- the residence locks down); fast electronic for the Basement's course; something dark and
+	-- quiet for the Executive Suite, and its own score when the Executive himself steps out. (The
+	-- Grand Ballroom plays its own records: World/GalaView.)
 	attraction_island = "lounge",
-	attraction_luxe = "table",
-	attraction_basement = "table",
-	attraction_executive = "table",
+	attraction_luxe = "luxe",
+	attraction_luxe_alarm = "luxeAlarm",
+	attraction_basement = "basement",
+	attraction_executive = "executive",
+	attraction_executive_boss = "executiveBoss",
 }
 
 local function playlist(track: string): { Song }
@@ -1094,6 +1099,10 @@ end
 local function remix()
 	local c = Config.data.Music
 	local zone = if mix.attraction then "attraction_" .. mix.attraction else mix.zone
+	-- (A moment in an attraction with music of its own: the boss, a lockdown.)
+	if mix.attraction and mix.mood and TRACK_FOR[zone .. "_" .. mix.mood] then
+		zone ..= "_" .. mix.mood
+	end
 	local level = c.level
 	local wanted: { [string]: number } = {}
 	local function want(key: string, songs: { Song }, volume: number, into: SoundGroup, parent: Instance?)
@@ -1187,7 +1196,25 @@ function Sound.setAttraction(id: string?)
 		return
 	end
 	mix.attraction = id
+	mix.mood = nil
 	remix()
+end
+
+-- A moment in the attraction that has its own music ("boss" in the Executive's Office, "alarm"
+-- when Steal a Luxe locks down), or nil: the attraction's own again. Crossfades like any move.
+function Sound.setMood(mood: string?)
+	if mood ~= mix.mood then
+		mix.mood = mood
+		remix()
+	end
+end
+
+-- (For tests: the moment's mood, and which playlist a space plays.)
+function Sound.mood(): string?
+	return mix.mood
+end
+function Sound.trackFor(zone: string): string?
+	return TRACK_FOR[zone]
 end
 
 -- How far the run has built (Music.intensity), or nil away from a table.

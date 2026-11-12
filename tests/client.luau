@@ -7938,10 +7938,32 @@ coroutine.wrap(function()
 	local c = card()
 	check("the wing they're in", textOnScreen("THE LONG GALLERY") ~= nil)
 	check("the bag: a slot for each piece it holds, two of four filled", c ~= nil and c.Bag:FindFirstChild("Slot4") ~= nil and c.Bag:FindFirstChild("Slot5") == nil and c.Bag.Slot1:FindFirstChild("Glyph") ~= nil and c.Bag.Slot3:FindFirstChild("Glyph") == nil)
-	check("what it's worth and the banker's cut at the car", textOnScreen("Carrying 1,960  ·  +10% at the car") ~= nil and textOnScreen("2 / 4") ~= nil)
+	check("what it's worth and the banker's cut when it's banked", textOnScreen("Carrying 1,960  ·  +10% when banked") ~= nil and textOnScreen("2 / 4") ~= nil)
+	check("the card stands at the bottom left, beside the dock down the left", c ~= nil and c.AnchorPoint == Vector2.new(0, 1) and c.Position.Y.Scale == 1 and c.Position.X.Scale == 0 and c.Position.X.Offset >= RootM.left + 12 - 1e-6)
 	check("a guard noticing them, shown before he gives chase", textOnScreen("A GUARD IS NOTICING YOU") ~= nil and c ~= nil and math.abs(c.Track.Fill.Size.X.Scale - 0.4) < 1e-6)
 	check("their pace with the bag", textOnScreen("PACE 93%") ~= nil)
 	snapshot("luxe-hud")
+	-- Build 78: the run's side jobs, the wing's alarm (and the alarm's music in a lockdown).
+	local SoundM = module("StarterPlayer", "StarterPlayerScripts", "Client", "Sound")
+	local goals = {
+		{ id = "dropRoom", line = "Lift something in the Drop Room", gilt = 400, done = true },
+		{ id = "van", line = "Get away in the garage van", gilt = 600, done = false },
+		{ id = "stash", line = "Find the Secret Stash", gilt = 1500, done = false },
+	}
+	serverSays("Attraction", { op = "luxe", bag = { { id = "grails", name = "Grail Sneakers", glyph = "👟", rarity = "Rare", worth = 1600 } }, capacity = 4, worth = 1600, bonus = 0, wing = "The Drop Room", wingId = 4, watched = 0, chased = false, speed = 0.96, grace = false, alarm = 1, goals = goals, mass = 1, hands = 1 })
+	advance(0.3)
+	check("the run's side jobs, which are done, and what each pays", textOnScreen("SIDE JOBS  ·  1 OF 3 DONE") ~= nil and textOnScreen("✓  Lift something in the Drop Room") ~= nil and textOnScreen("○  Find the Secret Stash") ~= nil and textOnScreen("+1,500") ~= nil)
+	check("the wing on Alert, said plainly", textOnScreen("ALERT  ·  THE GUARDS ARE LOOKING FOR YOU") ~= nil and SoundM.mood() == nil)
+	serverSays("Attraction", { op = "luxe", bag = {}, capacity = 4, worth = 0, bonus = 0, wing = "The Drop Room", wingId = 4, watched = 0, chased = false, speed = 1, grace = false, alarm = 2, goals = goals, mass = 0, hands = 1 })
+	advance(0.3)
+	check("a lockdown: said plainly, and the alarm's music plays", textOnScreen("LOCKDOWN  ·  MORE GUARDS  ·  GET OUT") ~= nil and SoundM.mood() == "alarm")
+	snapshot("luxe-hud-lockdown")
+	serverSays("Attraction", { op = "objective", id = "van", line = "Get away in the garage van", gilt = 600 })
+	advance(0.3)
+	check("a side job done is told, with what it paid", textOnScreen("Get away in the garage van  ·  +600 Gilt") ~= nil)
+	serverSays("Attraction", { op = "luxe", bag = {}, capacity = 4, worth = 0, bonus = 0, wing = "The Drop Room", wingId = 4, watched = 0, chased = false, speed = 1, grace = false, alarm = 0, goals = goals, mass = 0, hands = 1 })
+	advance(0.3)
+	check("calm again: the banner goes, the residence's own music comes back", textOnScreen("LOCKDOWN") == nil and textOnScreen("ALERT  ·") == nil and SoundM.mood() == nil)
 	serverSays("Attraction", { op = "luxe", bag = {}, capacity = 4, worth = 0, bonus = 0, wing = "The Strongroom", watched = 1, chased = true, speed = 1, grace = false })
 	advance(0.3)
 	check("chased: run", textOnScreen("A GUARD IS AFTER YOU  ·  RUN") ~= nil)
@@ -7960,6 +7982,7 @@ coroutine.wrap(function()
 			bag = { level = 2, top = 6, now = "carries 4 pieces", nextLine = "carries 5 pieces", price = 4000 },
 			quiet = { level = 1, top = 4, now = "ordinary shoes", nextLine = "guards see you 15% less far", price = 2500 },
 			banker = { level = 4, top = 4, now = "+30% on everything banked" },
+			hands = { level = 1, top = 4, now = "ordinary hands", nextLine = "lift 15% quicker", price = 3000 },
 			stride = { level = 3, points = 120, next = 180, from = 100, faster = 7, top = 11 },
 			golden = false,
 			goldenGems = 150,
@@ -7972,6 +7995,7 @@ coroutine.wrap(function()
 	check("...which asks the server for it", sent[#sent].remote == "AttractionAsk" and sent[#sent].message[1].op == "state" and sent[#sent].message[1].id == "luxe")
 	check("...every upgrade with what it does now, next, and its price", textOnScreen("A bigger bag  ·  2 of 6") ~= nil and textOnScreen("Next: carries 5 pieces") ~= nil and textOnScreen("4,000 Gilt") ~= nil and textOnScreen("2,500 Gilt") ~= nil)
 	check("...at the top, no price", textOnScreen("At its best") ~= nil)
+	check("...and Quick hands: lifts that take less holding", textOnScreen("Quick hands  ·  1 of 4") ~= nil and textOnScreen("Next: lift 15% quicker") ~= nil and textOnScreen("3,000 Gilt") ~= nil)
 	check("...Stride, and where to train it", textOnScreen("Stride  ·  level 3 of 11") ~= nil and textOnScreen("7% faster in the residence  ·  120 of 180 points to the next level") ~= nil and textOnScreen("Walk the treadmills in the Luxe Lounge to train it: a point a second.") ~= nil)
 	check("...the golden treadmill, for its price in Gems", textOnScreen("150 Gems") ~= nil)
 	check("...and the records", textOnScreen("Hauls banked: 12  ·  in all: 48,200  ·  best: 9,100") ~= nil)
@@ -8212,6 +8236,9 @@ coroutine.wrap(function()
 	serverSays("Attraction", { op = "executive", phase = "boss", open = true, alert = 0, composure = 72, max = 100, gear = { sidearm = true }, decoy = false, digits = "4 1 7 2", generators = 0, guards = 0, boss = 300, bossMax = 600 })
 	advance(0.4)
 	check("in the Office: the phase, his bar and composure", textOnScreen("THE EXECUTIVE") ~= nil and textOnScreen("COMPOSURE 72") ~= nil)
+	local SoundM = module("StarterPlayer", "StarterPlayerScripts", "Client", "Sound")
+	check("the Executive steps out: his own score takes over", SoundM.mood() == "boss")
+	check("each attraction has its own music (never the table's jazz trio): a heist, a course, the Suite, the boss", SoundM.trackFor("attraction_luxe") == "luxe" and SoundM.trackFor("attraction_basement") == "basement" and SoundM.trackFor("attraction_executive") == "executive" and SoundM.trackFor("attraction_executive_boss") == "executiveBoss" and SoundM.trackFor("attraction_luxe_alarm") == "luxeAlarm")
 	check("...the Fire key", textOnScreen("Fire") ~= nil)
 	snapshot("executive-boss")
 	local firedBefore = #sent
