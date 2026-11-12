@@ -10,7 +10,11 @@
 --   The Office        the Executive, in three phases: behind his shield (shoot out its three
 --                     generators), his security detail (four bodyguards), and the man himself
 --                     (briefcases thrown, the shockwave of a hostile takeover: jump it, and his
---                     dash). Beat him: his rewards, the safe, and the lift down.
+--                     dash). Build 78: every attack of his is wound up first, where everyone can
+--                     see it (a ring, a lane, his raised hand), and at the last of his composure
+--                     he goes all in (the finale: quicker, two shockwaves at a time). Beat him:
+--                     his rewards, the safe, and the extraction: the lift down within a minute,
+--                     for a clean getaway's bonus.
 --
 -- The sidearm is free and every guest takes one from the Quartermaster before going up; the rest of
 -- the gear is optional, for Gilt, and works only in the Suite. Invitations come by playing (the
@@ -79,10 +83,18 @@ Executive.BossSpots = {
 } :: { Vector3 }
 
 Executive.Phases = {
-	{ id = "shield", name = "The Shield", line = "Shoot out the three generators behind his shield." },
-	{ id = "detail", name = "The Security Detail", line = "His bodyguards. Stun all four." },
-	{ id = "boss", name = "The Executive", line = "Dodge the briefcases, jump the shockwave, and stun him." },
-} :: { { id: string, name: string, line: string } }
+	{ id = "shield", name = "The Shield", line = "Shoot out the three generators behind his shield.", say = "You've come a long way up. Let's see what you're worth." },
+	{ id = "detail", name = "The Security Detail", line = "His bodyguards. Stun all four.", say = "Gentlemen. Show our guests out." },
+	{ id = "boss", name = "The Executive", line = "Watch for his wind-up: a ring is a shockwave (jump it), a lane is his dash (step aside), a raised hand is briefcases (move).", say = "If you want something done properly, you do it yourself." },
+} :: { { id: string, name: string, line: string, say: string } }
+Executive.FINALE_SAY = "A hostile takeover, then."
+Executive.WON_SAY = "Well played. The lift is yours. For now."
+-- What each wind-up means, said on every screen while it lasts.
+Executive.Windups = {
+	volley = "BRIEFCASES  ·  KEEP MOVING",
+	wave = "SHOCKWAVE  ·  JUMP AS THE RING REACHES YOU",
+	dash = "HIS DASH  ·  STEP OUT OF THE LANE",
+} :: { [string]: string }
 
 -- Where a camera looks at time t (its sweep, back and forth): a direction on the level.
 function Executive.cameraLook(c: { at: Vector3, sweep: number, period: number, phase: number }, t: number): Vector3

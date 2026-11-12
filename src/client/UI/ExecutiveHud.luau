@@ -5,13 +5,20 @@
 -- composure. Keys: Leave, the Decoy (once, if packed), and Fire (or click) in the Office. The keypad
 -- at the door. What's thrown, the shockwave and the shots are drawn here, where the server says.
 -- Everything shown is what the server last said; the server decides every hit.
+-- Build 78: the Executive's wind-ups drawn where everyone can see them (a ring for a shockwave, a
+-- lane for his dash, a ring under him for briefcases) and said plainly while they last; his lines
+-- as captions; the way into the Office a moment's look at him (letterboxed); his finale in a red
+-- grade; and after he's beaten, the extraction's minute counting down to the lift.
 
+local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 
+local AttractionList = require(ReplicatedStorage.Shared.Attractions)
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local Ease = require(ReplicatedStorage.Shared.Ease)
 local Plan = require(ReplicatedStorage.Shared.Executive)
@@ -38,6 +45,10 @@ local parts: { [string]: any } = {}
 local view: { [string]: any } = {}
 local conns: { RBXScriptConnection } = {}
 local effects: { Instance } = {}
+-- (Build 78) the wind-up on show and when it ends; the intro's camera; the finale's grade.
+local windup: { line: string, untilAt: number }? = nil
+local introBusy = false
+local cinematic: { [string]: any } = {}
 
 local function ask(request: { [string]: any }): { [string]: any }?
 	local ok, r = pcall(function()
@@ -144,7 +155,16 @@ local function draw()
 			place()
 		end
 	end
-	if phase == "hall" then
+	if phase == "won" and tonumber(view.extractUntil) then
+		-- The extraction's minute, counting down to the lift.
+		local left = math.max(0, math.ceil((tonumber(view.extractUntil) :: number) - now()))
+		parts.top.Text = if left > 0 then string.format("EXTRACTION  ·  THE LIFT DOWN  %d:%02d", left // 60, left % 60) else "THE LIFT DOWN IS OPEN"
+		parts.under.Text = if left > 0 then "A CLEAN GETAWAY PAYS A BONUS  ·  THE SAFE IS OPEN" else ""
+		parts.under.TextColor3 = if left > 0 then GOLD else C.smoke
+		parts.fill.Size = UDim2.new(0, 0, 1, 0)
+		parts.second.Size = UDim2.new(0, 0, 1, 0)
+		parts.label2.Text = ""
+	elseif phase == "hall" then
 		parts.top.Text = "CODE  " .. tostring(view.digits or "_ _ _ _")
 		parts.under.Text = if view.open then "THE DOOR IS OPEN" else "READ THE FOUR TERMINALS · THE KEYPAD IS BY THE DOOR"
 		local alert = math.clamp(tonumber(view.alert) or 0, 0, 1)
@@ -164,7 +184,15 @@ local function draw()
 			left = "THE SAFE AND THE LIFT DOWN ARE OPEN"
 		end
 		parts.top.Text = left
-		parts.under.Text = ""
+		-- (What he's winding up, said plainly while it lasts.)
+		local w = windup
+		if w and now() < w.untilAt then
+			parts.under.Text = w.line
+			parts.under.TextColor3 = RED
+		else
+			parts.under.Text = if view.finale then "HIS FINALE  ·  HE'S QUICKER NOW" else ""
+			parts.under.TextColor3 = if view.finale then RED else C.smoke
+		end
 		local boss = if phase == "boss" then math.clamp((tonumber(view.boss) or 0) / math.max(1, tonumber(view.bossMax) or 1), 0, 1) else 0
 		parts.fill.Size = UDim2.new(boss, 0, 1, 0)
 		parts.fill.BackgroundColor3 = RED
@@ -281,6 +309,165 @@ function ExecutiveHud.openKeypad()
 	end, 160)
 	close.LayoutOrder = 10
 	Root.open(KEYPAD, group)
+end
+
+-- A line of the Executive's, as a caption at the foot of the screen (over the keys).
+function ExecutiveHud.caption(say: string?)
+	if type(say) ~= "string" or say == "" then
+		return
+	end
+	local old = cinematic.caption :: Instance?
+	if old then
+		old:Destroy()
+	end
+	local l = Instance.new("TextLabel")
+	l.Name = "ExecutiveCaption"
+	l.AnchorPoint = Vector2.new(0.5, 1)
+	l.Position = UDim2.new(0.5, 0, 1, -(78 + Root.bottomClear()))
+	l.Size = UDim2.fromOffset(math.min(620, Root.size().X - 40), 30)
+	l.BackgroundColor3 = Color3.fromRGB(8, 8, 12)
+	l.BackgroundTransparency = 0.25
+	l.FontFace = Brand.Fonts.body
+	l.TextSize = 17
+	l.TextColor3 = Color3.fromRGB(240, 232, 214)
+	l.Text = "“" .. say .. "”  — The Executive"
+	l.TextWrapped = true
+	l.Parent = Root.hud
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 8)
+	corner.Parent = l
+	cinematic.caption = l
+	task.delay(4, function()
+		if cinematic.caption == l then
+			cinematic.caption = nil
+			l:Destroy()
+		end
+	end)
+end
+
+local function letterbox(on: boolean)
+	for _, key in { "barTop", "barFoot" } do
+		local f = cinematic[key] :: Instance?
+		if f then
+			f:Destroy()
+			cinematic[key] = nil
+		end
+	end
+	if not on then
+		return
+	end
+	for i, key in { "barTop", "barFoot" } do
+		local f = Instance.new("Frame")
+		f.Name = "Letterbox"
+		f.BorderSizePixel = 0
+		f.BackgroundColor3 = Color3.new(0, 0, 0)
+		f.Size = UDim2.new(1, 0, 0.09, 0)
+		f.AnchorPoint = Vector2.new(0, if i == 1 then 0 else 1)
+		f.Position = UDim2.fromScale(0, if i == 1 then 0 else 1)
+		f.ZIndex = 50
+		f.Parent = Root.hud
+		cinematic[key] = f
+	end
+end
+
+-- The way into the Office: a moment's look at the man behind the desk, then back to the guest.
+function ExecutiveHud.intro(m: { [string]: any })
+	ExecutiveHud.caption(m.say)
+	local cam = Workspace.CurrentCamera
+	if introBusy or not cam or typeof(m.at) ~= "Vector3" then
+		return
+	end
+	introBusy = true
+	letterbox(true)
+	local from = cam.CFrame
+	local ok = pcall(function()
+		cam.CameraType = Enum.CameraType.Scriptable
+		local look = CFrame.lookAt(m.at + Vector3.new(0, 1.2, -13), m.at)
+		TweenService:Create(cam, TweenInfo.new(1.1, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), { CFrame = look }):Play()
+	end)
+	task.delay(if ok then 2.6 else 0, function()
+		pcall(function()
+			TweenService:Create(cam, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), { CFrame = from }):Play()
+		end)
+		task.delay(0.65, function()
+			pcall(function()
+				cam.CameraType = Enum.CameraType.Custom
+			end)
+			letterbox(false)
+			introBusy = false
+		end)
+	end)
+end
+
+-- His finale's red grade over everything (and gone again once it's over).
+local function grade(on: boolean)
+	local g = cinematic.grade :: Instance?
+	if on and not g then
+		local cc = Instance.new("ColorCorrectionEffect")
+		cc.Name = "ExecutiveFinale"
+		cc.TintColor = Color3.fromRGB(255, 205, 205)
+		cc.Contrast = 0.08
+		cc.Saturation = 0.12
+		cc.Parent = Lighting
+		cinematic.grade = cc
+	elseif not on and g then
+		g:Destroy()
+		cinematic.grade = nil
+	end
+end
+ExecutiveHud.grade = grade
+
+-- A wind-up, drawn where the server says, for as long as it lasts: a ring where a shockwave will
+-- start, a lane where he'll dash, a ring under him for his briefcases.
+local function warn(m: { [string]: any })
+	local seconds = math.max(0.2, tonumber(m.seconds) or 1)
+	windup = { line = tostring(m.line or ""), untilAt = now() + seconds }
+	local floorY = AttractionList.origin("executive").Y + 0.12
+	local made: { BasePart } = {}
+	local function piece(name: string, size: Vector3, cf: CFrame, shape: Enum.PartType?): Part
+		local p = Instance.new("Part")
+		p.Name = name
+		p.Anchored = true
+		p.CanCollide = false
+		p.CanQuery = false
+		p.CanTouch = false
+		p.CastShadow = false
+		p.Material = Enum.Material.Neon
+		p.Color = RED
+		p.Transparency = 0.3
+		if shape then
+			p.Shape = shape
+		end
+		p.Size = size
+		p.CFrame = cf
+		p.Parent = Workspace
+		table.insert(made, p)
+		table.insert(effects, p)
+		return p
+	end
+	local kind = tostring(m.kind)
+	if kind == "wave" and typeof(m.at) == "Vector3" then
+		piece("WaveWarning", Vector3.new(0.12, 9, 9), CFrame.new(Vector3.new(m.at.X, floorY, m.at.Z)) * CFrame.Angles(0, 0, math.rad(90)), Enum.PartType.Cylinder)
+	elseif kind == "dash" and typeof(m.from) == "Vector3" and typeof(m.to) == "Vector3" then
+		local a = Vector3.new(m.from.X, floorY, m.from.Z)
+		local b = Vector3.new(m.to.X, floorY, m.to.Z)
+		local length = math.max(1, (b - a).Magnitude)
+		piece("DashLane", Vector3.new(6.4, 0.1, length), CFrame.lookAt((a + b) / 2, b))
+	elseif typeof(m.from) == "Vector3" then
+		piece("VolleyWarning", Vector3.new(0.12, 6, 6), CFrame.new(Vector3.new(m.from.X, floorY, m.from.Z)) * CFrame.Angles(0, 0, math.rad(90)), Enum.PartType.Cylinder)
+	end
+	for _, p in made do
+		pcall(function()
+			TweenService:Create(p, TweenInfo.new(seconds / 3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Transparency = 0.75 }):Play()
+		end)
+	end
+	Sound.play("low", 0.45)
+	task.delay(seconds, function()
+		for _, p in made do
+			p:Destroy()
+		end
+	end)
+	draw()
 end
 
 function ExecutiveHud.mounted(): boolean
@@ -405,6 +592,21 @@ function ExecutiveHud.mount()
 	place()
 	draw()
 	table.insert(conns, Root.TopChanged:Connect(place))
+	-- (The wind-up's line and the extraction's minute kept up to the moment.)
+	local tick = 0
+	table.insert(conns, RunService.Heartbeat:Connect(function(dt: number)
+		tick += dt
+		if tick >= 0.2 then
+			tick = 0
+			if windup or view.phase == "won" then
+				draw()
+				local w = windup
+				if w and now() >= w.untilAt then
+					windup = nil
+				end
+			end
+		end
+	end))
 	-- A click aims where it lands (a tap on the Fire key aims at the middle).
 	table.insert(conns, UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: boolean)
 		if gameProcessed or not fighting() then
@@ -418,6 +620,20 @@ end
 
 function ExecutiveHud.unmount()
 	Sound.setMood(nil)
+	grade(false)
+	letterbox(false)
+	local cap = cinematic.caption :: Instance?
+	if cap then
+		cap:Destroy()
+	end
+	cinematic = {}
+	windup = nil
+	if introBusy then
+		pcall(function()
+			(Workspace.CurrentCamera :: Camera).CameraType = Enum.CameraType.Custom
+		end)
+		introBusy = false
+	end
 	for _, c in conns do
 		c:Disconnect()
 	end
@@ -539,6 +755,29 @@ function ExecutiveHud.on(m: { [string]: any })
 		if type(m.name) == "string" then
 			Toast.show(m.name, tostring(m.line or ""), 4)
 		end
+		if m.phase ~= "shield" then
+			ExecutiveHud.caption(m.say)
+		end
+		if m.phase == "won" or m.phase == "hall" then
+			grade(false)
+			windup = nil
+		end
+	elseif op == "intro" then
+		ExecutiveHud.intro(m)
+	elseif op == "windup" then
+		warn(m)
+	elseif op == "finale" then
+		view.finale = true
+		grade(true)
+		ExecutiveHud.caption(m.say)
+		Sound.play("lowHit", 0.7)
+		draw()
+	elseif op == "extract" then
+		view.extractUntil = tonumber(m.untilAt)
+		Toast.show("Security is on its way", string.format("The lift down within %d seconds is a clean getaway: +%s Gilt. The safe is open too.", tonumber(m.seconds) or 60, Rules.format(tonumber(m.gilt) or 0)), 5)
+		draw()
+	elseif op == "extracted" then
+		Toast.show("A clean getaway", "+" .. Rules.format(tonumber(m.gilt) or 0) .. " Gilt", 4)
 	elseif op == "alarm" then
 		Toast.show("Security", "You were seen too long: you've been shown out. The invitation is spent.", 5)
 	elseif op == "escorted" then
@@ -548,7 +787,7 @@ function ExecutiveHud.on(m: { [string]: any })
 		if m.brainrot then
 			line ..= "  ·  Il Dirigente Supremo for your collection"
 		end
-		Toast.show("The Executive, beaten", line .. ". The safe is open.", 6)
+		Toast.show("The Executive, beaten", line .. ". The safe is open, and the lift down.", 6)
 	elseif op == "safe" then
 		Toast.show("The safe", Rules.format(tonumber(m.worth) or 0) .. " to your Estate.", 3)
 	elseif op == "throw" then

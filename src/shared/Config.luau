@@ -914,6 +914,15 @@ local defaults = {
 			inviteHaul = 8000, -- a haul banked in Steal a Luxe worth this much brings an invitation
 			prize = 25000, -- beating the Executive: to the Estate of everyone in the Office
 			prizeGems = 15,
+			-- Build 78: his wind-ups (seconds of warning before each attack: calm, at half his
+			-- composure, and in his finale), when the finale comes, his dash, and the extraction.
+			windup = 1.1,
+			windupEnraged = 0.85,
+			windupFinale = 0.7,
+			finaleAt = 0.3, -- of his composure left
+			dash = 18, -- composure, to whoever is still in his dash's lane
+			extractSeconds = 60, -- after he's beaten: the lift down within this long...
+			extractGilt = 2500, -- ...for a clean getaway's bonus (once a run)
 			dailyGems = 20,
 			safe = 6000, -- the safe, once each, after he's beaten
 			damage = 10, -- a sidearm's stun

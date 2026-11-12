@@ -30,6 +30,16 @@ local RemoteGuard = require(script.Parent.Parent.RemoteGuard)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local ExecutiveBuild = require(script.Parent.ExecutiveBuild)
 local Types = require(script.Parent.Types)
+local okAnalytics, Analytics = pcall(function()
+	return require(script.Parent.Parent.Analytics) :: any
+end)
+
+-- (What guests do up here, for the owner's analytics: how far they get, where they're shown out.)
+local function note(player: Player, name: string, props: { [string]: any }?)
+	if okAnalytics and Analytics and Analytics.custom then
+		pcall(Analytics.custom, player, name, 1, props)
+	end
+end
 
 local Executive = {}
 
@@ -121,6 +131,7 @@ type Guest = {
 	safe: boolean,
 	hits: { [string]: boolean },
 	out: boolean,
+	extracted: boolean?, -- (Build 78) away down the lift within the extraction's minute
 }
 type Shot = { id: string, from: Vector3, dir: Vector3, speed: number, born: number, radius: number, damage: number, life: number }
 type Wave = { id: string, at: Vector3, born: number, speed: number, width: number, damage: number, life: number }
@@ -143,6 +154,10 @@ local run = {
 	wonAt = 0,
 	serial = 0,
 	hallGuards = {} :: { Actor },
+	-- Build 78: the attack he's winding up (fires at `fireAt`), his finale, the extraction's end.
+	pending = nil :: { kind: string, fireAt: number, from: Vector3, to: Vector3?, at: Vector3? }?,
+	finale = false,
+	extractUntil = 0,
 }
 local rng = Random.new()
 
@@ -214,6 +229,8 @@ local function status(ctx: Types.Ctx, player: Player): { [string]: any }
 		guards = guardsLeft,
 		boss = bossHp,
 		bossMax = bossMax,
+		finale = run.finale,
+		extractUntil = if run.phase == "won" then run.extractUntil else nil,
 	}
 end
 
@@ -250,6 +267,9 @@ local function fresh(_ctx: Types.Ctx)
 	run.shots, run.waves = {}, {}
 	run.decoyUntil = -math.huge
 	run.wonAt = 0
+	run.pending = nil
+	run.finale = false
+	run.extractUntil = 0
 	clearActors()
 	run.generators = {}
 	for i, part in b.generators do
@@ -296,6 +316,7 @@ local function hurt(ctx: Types.Ctx, player: Player, g: Guest, amount: number, wh
 	if g.composure <= 0 then
 		g.out = true
 		ctx.send(player, { op = "escorted" })
+		note(player, "Executive escorted", { phase = run.phase, why = why })
 		ctx.sendHome(player, ID)
 	end
 end
@@ -328,6 +349,9 @@ local function startPhase(ctx: Types.Ctx, phase: string)
 		run.attackIndex = 0
 	elseif phase == "won" then
 		run.wonAt = Executive.clock()
+		run.pending = nil
+		-- The extraction: the lift down within the minute, for a clean getaway's bonus.
+		run.extractUntil = run.wonAt + (tonumber(cfg(ctx).extractSeconds) or 60)
 		b.safe.Enabled = true
 		b.liftDown.Enabled = true
 	end
@@ -337,7 +361,18 @@ local function startPhase(ctx: Types.Ctx, phase: string)
 			def = p
 		end
 	end
-	broadcast(ctx, { op = "phase", phase = phase, name = def and def.name, line = def and def.line })
+	broadcast(ctx, { op = "phase", phase = phase, name = def and def.name, line = def and def.line, say = if def then def.say elseif phase == "won" then Plan.WON_SAY else nil })
+	for player, g in guests do
+		if not g.out then
+			note(player, "Executive phase", { phase = phase })
+		end
+	end
+	if phase == "shield" then
+		-- (The way in: a moment's look at the man behind the desk, on every screen.)
+		broadcast(ctx, { op = "intro", at = origin + Plan.Desk + Vector3.new(0, 4, 3), say = def and def.say })
+	elseif phase == "won" then
+		broadcast(ctx, { op = "extract", seconds = tonumber(cfg(ctx).extractSeconds) or 60, untilAt = run.extractUntil, gilt = tonumber(cfg(ctx).extractGilt) or 2500 })
+	end
 	pushAll(ctx)
 end
 
@@ -544,6 +579,7 @@ local function hallStep(ctx: Types.Ctx, dt: number, t: number)
 		if g.alert >= 1 then
 			g.out = true
 			ctx.send(player, { op = "alarm" })
+			note(player, "Executive alarm", nil)
 			ctx.tally(player, "executiveCaught", 1)
 			ctx.sendHome(player, ID)
 		elseif math.abs(g.alert - before) > 0.04 or (seen and before == 0) then
@@ -649,28 +685,64 @@ local function officeStep(ctx: Types.Ctx, _dt: number, t: number)
 		end
 	elseif run.phase == "boss" and boss then
 		local enraged = boss.hp < boss.max / 2
-		if t >= run.nextAttack then
-			run.nextAttack = t + (if enraged then 1.8 else 2.6)
-			run.attackIndex += 1
-			local kind = run.attackIndex % 3
-			local bpos = boss.root.CFrame.Position - origin
-			if kind == 1 then
-				-- A volley of briefcases, one at each of up to three guests.
+		-- The finale: at the last of his composure he goes all in (said once, on every screen).
+		if not run.finale and boss.hp <= boss.max * (tonumber(c.finaleAt) or 0.3) then
+			run.finale = true
+			broadcast(ctx, { op = "finale", say = Plan.FINALE_SAY })
+			pushAll(ctx)
+		end
+		local pending = run.pending
+		if pending and t >= pending.fireAt then
+			run.pending = nil
+			if pending.kind == "volley" then
+				-- A volley of briefcases, one at each of up to three guests, where they are now.
 				for i = 1, math.min(3, #here) do
-					throw(ctx, bpos + Vector3.new(0, 2, 0), here[i].at, tonumber(c.briefcase) or 15, t)
+					throw(ctx, pending.from + Vector3.new(0, 2, 0), here[i].at, tonumber(c.briefcase) or 15, t)
 				end
 				broadcast(ctx, { op = "attack", kind = "volley" })
-			elseif kind == 2 then
-				run.serial += 1
-				local w: Wave = { id = "w" .. run.serial, at = Vector3.new(bpos.X, 0, bpos.Z), born = t, speed = 26, width = 3, damage = tonumber(c.shockwave) or 20, life = 2.2 }
-				table.insert(run.waves, w)
-				broadcast(ctx, { op = "wave", id = w.id, at = origin + w.at, born = w.born, speed = w.speed, width = w.width, life = w.life })
+			elseif pending.kind == "wave" then
+				-- (In the finale, a second ring behind the first.)
+				for k = 0, if run.finale then 1 else 0 do
+					run.serial += 1
+					local w: Wave = { id = "w" .. run.serial, at = pending.at or Vector3.zero, born = t + k * 0.6, speed = 26, width = 3, damage = tonumber(c.shockwave) or 20, life = 2.2 + k * 0.6 }
+					table.insert(run.waves, w)
+					broadcast(ctx, { op = "wave", id = w.id, at = origin + w.at, born = w.born, speed = w.speed, width = w.width, life = w.life })
+				end
 			else
-				-- His dash, to another spot.
-				local spot = Plan.BossSpots[rng:NextInteger(1, #Plan.BossSpots)]
-				Executive.walk(boss, origin + spot, 40)
+				-- His dash, down the lane he showed: whoever is still in it is knocked aside.
+				local to = pending.to or pending.from
+				Executive.walk(boss, origin + to, 40)
+				local lane = flat(to - pending.from)
+				for _, h in here do
+					local rel = flat(h.at - pending.from)
+					local along = if lane.Magnitude > 1e-3 then math.clamp(rel:Dot(lane.Unit), 0, lane.Magnitude) else 0
+					local off = (rel - (if lane.Magnitude > 1e-3 then lane.Unit * along else Vector3.zero)).Magnitude
+					if off <= 3.2 and h.at.Y < 6 then
+						hurt(ctx, h.player, h.g, tonumber(c.dash) or 18, "dash")
+					end
+				end
 				broadcast(ctx, { op = "attack", kind = "dash" })
 			end
+		elseif not pending and t >= run.nextAttack then
+			-- The next attack, wound up first where everyone can see it.
+			run.attackIndex += 1
+			local kinds = { "volley", "wave", "dash" }
+			local kind = kinds[(run.attackIndex - 1) % 3 + 1]
+			local windup = if run.finale then (tonumber(c.windupFinale) or 0.7) elseif enraged then (tonumber(c.windupEnraged) or 0.85) else (tonumber(c.windup) or 1.1)
+			local bpos = boss.root.CFrame.Position - origin
+			local next: { kind: string, fireAt: number, from: Vector3, to: Vector3?, at: Vector3? } = { kind = kind, fireAt = t + windup, from = bpos }
+			if kind == "wave" then
+				next.at = Vector3.new(bpos.X, 0, bpos.Z)
+			elseif kind == "dash" then
+				local spot = Plan.BossSpots[rng:NextInteger(1, #Plan.BossSpots)]
+				if flat(spot - bpos).Magnitude < 4 then
+					spot = Plan.BossSpots[(table.find(Plan.BossSpots, spot) or 1) % #Plan.BossSpots + 1]
+				end
+				next.to = spot
+			end
+			run.pending = next
+			run.nextAttack = t + windup + (if run.finale then 1.4 elseif enraged then 1.8 else 2.6)
+			broadcast(ctx, { op = "windup", kind = kind, seconds = windup, from = origin + bpos, at = if next.at then origin + next.at else nil, to = if next.to then origin + next.to else nil, line = Plan.Windups[kind], finale = run.finale })
 		end
 	end
 end
@@ -707,15 +779,31 @@ function Executive.build(ctx: Types.Ctx, parent: Instance)
 		answered(player, "The safe", Executive.ask(ctx, player, { act = "safe" }))
 	end)
 	b.liftDown.Triggered:Connect(function(player: Player)
-		if ctx.inside(player) == ID and run.phase == "won" then
-			ctx.sendHome(player, ID)
-		end
+		Executive.extract(ctx, player)
 	end)
 	-- The sidearm: a guest's screen sends where they aimed; the server decides what was hit.
 	RemoteGuard.event(Remotes.event("AttractionFire"), "attractionFire", function(player: Player, dir: unknown)
 		Executive.fire(ctx, player, dir)
 	end)
 	fresh(ctx)
+end
+
+-- The lift down after he's beaten: home, and within the extraction's minute a clean getaway's bonus
+-- (once a run, for a guest who was in the fight).
+function Executive.extract(ctx: Types.Ctx, player: Player): boolean
+	if ctx.inside(player) ~= ID or run.phase ~= "won" then
+		return false
+	end
+	local g = guests[player]
+	if g and g.paid and not g.extracted and Executive.clock() <= run.extractUntil then
+		g.extracted = true
+		local gilt = ctx.gilt(player, tonumber(cfg(ctx).extractGilt) or 2500, "The Executive Suite: a clean getaway")
+		ctx.send(player, { op = "extracted", gilt = gilt })
+		note(player, "Executive extracted", nil)
+		ctx.tally(player, "executiveExtractions", 1)
+	end
+	ctx.sendHome(player, ID)
+	return true
 end
 
 function Executive.enter(ctx: Types.Ctx, player: Player): (CFrame?, string?)
@@ -750,10 +838,14 @@ function Executive.enter(ctx: Types.Ctx, player: Player): (CFrame?, string?)
 		end
 	end)
 	ctx.tally(player, "executiveVisits", 1)
+	note(player, "Executive entered", { invites = p.invites })
 	return CFrame.new(Plan.Arrival), nil
 end
 
-function Executive.leave(ctx: Types.Ctx, player: Player, _why: string)
+function Executive.leave(ctx: Types.Ctx, player: Player, why: string)
+	if guests[player] then
+		note(player, "Executive left", { phase = run.phase, why = why })
+	end
 	guests[player] = nil
 	-- The Suite empty: a new run for whoever comes up next.
 	if next(guests) == nil then

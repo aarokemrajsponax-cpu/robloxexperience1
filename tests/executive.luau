@@ -326,12 +326,26 @@ for k = 1, 4 do
 	end
 end
 check("all four stunned: the Executive himself", Game.run.phase == "boss" and Game.run.actors.boss.hp > 1)
--- His briefcases.
+-- His briefcases. (Build 78: every attack is wound up first, where everyone can see it, and said
+-- plainly while it lasts; then it comes.)
+local function unleash()
+	T = Game.run.nextAttack + 0.01
+	steps(1)
+	local p = Game.run.pending
+	if p then
+		T = p.fireAt + 0.01
+		steps(1)
+	end
+end
 composure = Game.guests[ada].composure
 T = Game.run.nextAttack + 0.01
 steps(1)
+local wound = last(ada, "windup")
+check("his briefcases are wound up first: every screen is told what's coming, and for how long", wound ~= nil and wound.kind == "volley" and math.abs(wound.seconds - C.windup) < 1e-6 and wound.line == Plan.Windups.volley and last(ada, "throw") == nil)
+T = Game.run.pending.fireAt + 0.01
+steps(1)
 local thrown = last(ada, "throw")
-check("he throws briefcases (every screen is told where, and when)", thrown ~= nil and thrown.speed > 0)
+check("he throws briefcases when it's up (every screen is told where, and when)", thrown ~= nil and thrown.speed > 0)
 local s = Game.run.shots[#Game.run.shots]
 T = s.born + 0.3
 local p1 = s.from + s.dir * s.speed * 0.3
@@ -341,10 +355,9 @@ check("a briefcase that reaches you takes composure, once", Game.guests[ada].com
 steps(2)
 check("...only once", Game.guests[ada].composure == composure - C.briefcase)
 -- The shockwave: jump it.
-T = Game.run.nextAttack + 0.01
-steps(1)
+unleash()
 local w = Game.run.waves[#Game.run.waves]
-check("his shockwave (every screen is told)", w ~= nil and last(ada, "wave") ~= nil)
+check("his shockwave, wound up first where it will start (every screen is told)", w ~= nil and last(ada, "wave") ~= nil and last(ada, "windup").kind == "wave" and (last(ada, "windup").at - (O + w.at)).Magnitude < 1e-3)
 composure = Game.guests[ada].composure
 T = w.born + 0.5
 standIn(ada, w.at + Vector3.new(w.speed * 0.5, 0, 0), 6.5)
@@ -356,11 +369,39 @@ T = Game.run.nextAttack + 3 * 2.6 + 0.01
 Game.run.attackIndex = 1 -- (the next is the shockwave)
 Game.run.nextAttack = T - 0.01
 steps(1)
+T = Game.run.pending.fireAt + 0.01
+steps(1)
 w2 = Game.run.waves[#Game.run.waves]
 T = w2.born + 0.5
 standIn(ada, w2.at + Vector3.new(w2.speed * 0.5, 0, 0))
 steps(1)
 check("on the ground as it passes: it takes composure", Game.guests[ada].composure == composure - C.shockwave)
+-- His dash: the lane shown first; still in it when he comes, it takes composure; out of it, nothing.
+local function dashLane()
+	Game.run.attackIndex = 2 -- (the next is his dash)
+	Game.run.nextAttack = T
+	T += 0.01
+	steps(1)
+	local p = Game.run.pending
+	return p, last(ada, "windup")
+end
+local lane, said = dashLane()
+check("his dash is wound up first: the lane it will take, from where he stands to where he's going", lane ~= nil and lane.kind == "dash" and said.kind == "dash" and said.to ~= nil and (said.to - (O + lane.to)).Magnitude < 1e-3)
+composure = Game.guests[ada].composure
+local mid = (lane.from + lane.to) / 2
+standIn(ada, Vector3.new(mid.X, 0, mid.Z))
+T = lane.fireAt + 0.01
+steps(1)
+check("still in its lane when he comes: it takes composure", Game.guests[ada].composure == composure - C.dash and last(ada, "hurt").why == "dash")
+lane = dashLane()
+local side = (lane.to - lane.from)
+local across = Vector3.new(-side.Z, 0, side.X).Unit
+local mid2 = (lane.from + lane.to) / 2 + across * 8
+composure = Game.guests[ada].composure
+standIn(ada, Vector3.new(mid2.X, 0, mid2.Z))
+T = lane.fireAt + 0.01
+steps(1)
+check("stepped out of the lane: nothing", Game.guests[ada].composure == composure)
 -- Bo comes up and is escorted out at no composure.
 stand(bo, Layout.Midnight.arrival)
 data(bo).gilt = 0
@@ -375,6 +416,8 @@ Game.run.attackIndex = 0
 Game.run.nextAttack = T
 T += 0.01
 steps(1)
+T = Game.run.pending.fireAt + 0.01
+steps(1)
 for _, sh in Game.run.shots do
 	s2 = sh
 end
@@ -384,6 +427,27 @@ standIn(bo, Vector3.new(p2.X, 0, p2.Z))
 standIn(ada, Vector3.new(-25, 0, 50))
 steps(1)
 check("no composure left: escorted out", Attractions.inside(bo) == nil and last(bo, "escorted") ~= nil)
+-- His finale: at the last of his composure, said on every screen; quicker wind-ups; two rings.
+local boss = Game.run.actors.boss
+standIn(ada, Vector3.new(-10, 0, 10))
+while boss.hp > boss.max * C.finaleAt do
+	shoot(ada, "boss")
+end
+Game.run.pending = nil
+T += 0.01
+steps(1)
+local fin = last(ada, "finale")
+check("at the last of his composure, his finale: said on every screen", fin ~= nil and fin.say == Plan.FINALE_SAY and Game.run.finale == true and last(ada, "executive").finale == true)
+Game.run.attackIndex = 1 -- (the next is the shockwave)
+Game.run.nextAttack = T
+Game.run.waves = {}
+T += 0.01
+steps(1)
+check("...his wind-ups quicker", Game.run.pending ~= nil and math.abs(last(ada, "windup").seconds - C.windupFinale) < 1e-6 and last(ada, "windup").finale == true)
+T = Game.run.pending.fireAt + 0.01
+steps(1)
+check("...and two rings at a time", #Game.run.waves == 2 and Game.run.waves[2].born > Game.run.waves[1].born)
+Game.run.waves = {}
 -- He falls.
 local estateWas = Fortune.page(data(ada)).estate
 local gemsWas = data(ada).gems
@@ -414,8 +478,13 @@ check("the safe, once each: to the Estate", r.ok == true and Fortune.page(data(a
 r = askAs(ada, { op = "act", id = "executive", act = "safe" })
 check("...only once", r.ok == false)
 check("the lift down is open", Game.built().liftDown.Enabled == true)
+local ex = last(ada, "extract")
+check("beaten: the extraction's minute, said to everyone in the Office (with its bonus)", ex ~= nil and ex.seconds == C.extractSeconds and ex.gilt == C.extractGilt and math.abs(Game.run.extractUntil - (Game.run.wonAt + C.extractSeconds)) < 1e-6 and last(ada, "executive").extractUntil ~= nil)
 advance(3)
+local giltBefore = data(ada).gilt
 Game.built().liftDown.Triggered:Fire(ada)
+local away = last(ada, "extracted")
+check("the lift down within the minute: a clean getaway's bonus", away ~= nil and away.gilt > 0 and data(ada).gilt - giltBefore == away.gilt)
 check("and takes them home", Attractions.inside(ada) == nil and Layout.zoneAt(ada.root.CFrame.Position) == "midnight")
 -- Empty: a new run.
 check("the Suite empty: a new run, with a new code", Game.run.phase == "hall" and Game.run.open == false and Game.built().door.CanCollide == true)
