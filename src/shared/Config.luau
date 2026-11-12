@@ -727,6 +727,7 @@ local defaults = {
 		holiday_easter = 0,
 		goldenTurkeyCaught = 0,
 		santasHelper = 0,
+		basementSecrets = 2281422215983983, -- Every Secret: all eight of the Basement's secrets
 		register50 = 0,
 		seasonSet = 0,
 		foundingTerm = 0,
