@@ -377,6 +377,34 @@ a Nightly attempt or a Mythic's odds.
 - **The launch kit**: page text, icon, thumbnails and the gameplay video's shot list are in
   [`LAUNCH.md`](LAUNCH.md).
 
+## Build 78 — Steal a Luxe triples, the Basement turns over, the Executive fights fair
+
+- **Steal a Luxe, three new wings** off the Garden Hall: the **Drop Room** (streetwear, a loft up
+  the stairs, the roof and its helicopter), the **Garage** (show cars, the van by the roller door)
+  and the **Secret Stash** (behind a panel opened by a loose gold bar). 39 plinths, 21 new pieces,
+  grades Common to Exclusive and holiday-only Limited, with labels over Rare and up. Lifts take a
+  hold that grows with size, grade, worth and reach (Quick Hands shortens it); every piece comes back
+  to its own plinth five minutes after it's lifted, and a guest can't lift a piece they banked again
+  sooner in any server (kept with their ledger). Eleven sweeping cameras, an Alert and a lockdown
+  with reinforcements, the Strongroom's laser grid, guards that search. Three ways out (car, van
+  +5%, helicopter +10%) and three side jobs a run. The HUD moved to the bottom left.
+- **The Basement turns over every five minutes**: the House Course, Double Time, Blackout and The
+  Gauntlet (crushers, a second sweep, a launch pad to a hidden ledge). A run keeps its course to the
+  Treasury; everyone is told before each turn. Two secrets per course, each course's own best time.
+- **The Executive Suite**: every attack wound up where everyone can see it (a ring, a lane, a ring
+  under him) and said on screen; his dash hurts in its lane; a finale at his last 30%; a letterboxed
+  look at him on the way in, his lines as captions; the extraction (the lift within a minute, +2,500
+  Gilt).
+- **Music per mode** from licensed Roblox library tracks: a heist (and its alarm), an electronic
+  course, the Suite's dark ambient, the boss's score.
+- **Street luxury**: the new wings in concrete, graphite, black chrome and neon with the stud
+  texture on what's displayed; every attraction's entrance in the Maison restyled (stud-textured
+  graphite piers, chrome, the attraction's own neon); **The Drop**, a street-luxury cosmetic line in
+  the Boutique (Robux through the existing tier products, two for Gilt), style only.
+- New Commissions: side jobs in Steal a Luxe, getaways by van or helicopter.
+- Owner analytics events for Steal a Luxe, the Basement and the Executive Suite (wings visited,
+  lifts, banks by way out, falls, secrets, phases reached, exits).
+
 ## Build 77 — every way in answers one press or one tap
 
 - **The attractions' ways in work.** Each glowing arch's prompt asked for a 0.3-second hold, but

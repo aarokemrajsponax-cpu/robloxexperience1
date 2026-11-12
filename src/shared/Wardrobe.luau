@@ -110,6 +110,24 @@ local items: { Item } = {
 	{ id = "flourish_snuff", name = "Candle Snuff", kind = "flourish", source = "boutique", robux = 199, line = "A curl of smoke and a spark.", style = { colour = rgb(220, 214, 206), kind = "snuff" } },
 	{ id = "flourish_spray", name = "Champagne", kind = "flourish", source = "boutique", robux = 249, line = "A spray of pale gold.", style = { colour = rgb(250, 232, 176), kind = "spray" } },
 
+	-- The Drop (Build 78): the house's street-luxury line. Graphite, chrome and neon, the stud
+	-- texture showing. Style only, as everything here; two of them always on the shelf.
+	{ id = "trail_pinkneon", name = "Pink Neon", kind = "trail", source = "boutique", robux = 99, always = true, line = "A hot-pink neon thread, from the Drop Room.", style = { colour = rgb(255, 60, 170) } },
+	{ id = "trail_iceneon", name = "Ice Neon", kind = "trail", source = "boutique", robux = 99, line = "Cold blue neon, like the Garage's lights.", style = { colour = rgb(70, 220, 255) } },
+	{ id = "trail_chrome", name = "Liquid Chrome", kind = "trail", source = "boutique", robux = 149, line = "A thread of polished chrome.", style = { colour = rgb(214, 218, 226) } },
+	{ id = "plate_blackchrome", name = "Black Chrome", kind = "nameplate", source = "boutique", robux = 149, always = true, line = "Black chrome with a hot-pink hairline.", style = { frame = rgb(30, 30, 34), fill = rgb(8, 8, 10), line = rgb(255, 60, 170) } },
+	{ id = "plate_dropday", name = "Drop Day", kind = "nameplate", source = "boutique", robux = 199, line = "Pink neon round black, a line of ice blue.", style = { frame = rgb(255, 60, 170), fill = rgb(10, 10, 12), line = rgb(70, 220, 255) } },
+	{ id = "table_concrete", name = "Concrete and Chrome", kind = "table", source = "boutique", robux = 299, line = "Poured-concrete grey, chrome rims.", style = { felt = rgb(58, 60, 64), rim = rgb(214, 218, 226) } },
+	{ id = "table_graphiteneon", name = "Graphite Neon", kind = "table", source = "boutique", robux = 399, line = "Graphite felt, the rims in pink neon.", style = { felt = rgb(24, 24, 28), rim = rgb(255, 60, 170) } },
+	{ id = "lamp_pinkneon", name = "Pink Neon", kind = "lamp", source = "boutique", robux = 149, line = "Your table lit like the Drop Room.", style = { colour = rgb(255, 120, 200) } },
+	{ id = "lamp_iceneon", name = "Ice Neon", kind = "lamp", source = "boutique", robux = 149, line = "Your table lit like the Garage.", style = { colour = rgb(140, 225, 255) } },
+	{ id = "flourish_chrome", name = "Chrome Confetti", kind = "flourish", source = "boutique", robux = 249, line = "A spray of chrome confetti.", style = { colour = rgb(214, 218, 226), kind = "spray" } },
+	{ id = "flourish_neonrain", name = "Neon Rain", kind = "flourish", source = "boutique", robux = 249, line = "Pink neon, falling slow.", style = { colour = rgb(255, 90, 190), kind = "leaf" } },
+	{ id = "card_graphite", name = "Graphite Grid", kind = "card", source = "boutique", robux = 99, line = "Graphite, a fine chrome stripe.", style = { back = rgb(30, 30, 34), pattern = "pinstripe" } },
+	-- (And two to earn with Gilt, by playing.)
+	{ id = "trail_streetgold", name = "Street Gold", kind = "trail", source = "gilt", gilt = 2500, line = "Gold on concrete. Earned, not bought.", style = { colour = rgb(255, 196, 60) } },
+	{ id = "plate_concrete", name = "Poured Concrete", kind = "nameplate", source = "gilt", gilt = 3000, line = "Concrete grey, a lime-green line.", style = { frame = rgb(64, 66, 70), fill = rgb(18, 18, 20), line = rgb(190, 255, 70) } },
+
 	-- Gestures (need an uploaded animation in Config.Assets.Animations).
 	{ id = "gesture_tiphat", name = "Tip of the Hat", kind = "gesture", source = "boutique", robux = 49, line = "A small courtesy.", style = { animation = "tipHat" } },
 	{ id = "gesture_clap", name = "Slow Applause", kind = "gesture", source = "boutique", robux = 79, line = "Three slow claps.", style = { animation = "applause" } },

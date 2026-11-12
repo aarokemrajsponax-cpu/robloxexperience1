@@ -4,6 +4,6 @@
 -- see whether Studio has the latest code from GitHub.
 
 return {
-	number = 77,
-	label = "Build 77 · 12 Nov · every way in answers one press or one tap",
+	number = 78,
+	label = "Build 78 · 12 Nov · Steal a Luxe triples, the Basement turns over, the Executive fights fair",
 }

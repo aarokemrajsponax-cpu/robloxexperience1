@@ -657,7 +657,16 @@ SaluteService.note = function(text, everywhere)
 end
 local mo = guest("Mo", 13)
 local sh = askAs(mo, { op = "shelves" })
-check("the Boutique always has its staples (the Suite's pieces are at its bell)", sh.always and #sh.always == 6, sh.always and #sh.always)
+check("the Boutique always has its staples (the Suite's pieces are at its bell)", sh.always and #sh.always == 8, sh.always and #sh.always)
+check("...two of them from the Drop, the house's street-luxury line (Build 78)", (function()
+	local found = 0
+	for _, a in sh.always do
+		if a.id == "trail_pinkneon" or a.id == "plate_blackchrome" then
+			found += 1
+		end
+	end
+	return found == 2
+end)())
 check("the staples aren't also in the rotation", (function()
 	for _, c in sh.today do
 		for _, a in sh.always do

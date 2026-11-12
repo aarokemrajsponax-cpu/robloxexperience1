@@ -11,7 +11,7 @@ local Seed = require(script.Parent.Seed)
 
 local Commissions = {}
 
-export type Kind = "file" | "rounds" | "flawless" | "nightly" | "library" | "ballroom" | "luxeBank" | "luxeWorth" | "stride" | "basementClear" | "executiveWin" | "race" | "raceWin" | "trivia" | "runway" | "arena"
+export type Kind = "file" | "rounds" | "flawless" | "nightly" | "library" | "ballroom" | "luxeBank" | "luxeWorth" | "stride" | "basementClear" | "executiveWin" | "race" | "raceWin" | "trivia" | "runway" | "arena" | "luxeJob" | "luxeEscape"
 export type Goal = { id: string, kind: Kind, room: string?, case: string?, target: number, text: string }
 
 local ROOMS = { salon = "the Salon" }
@@ -45,8 +45,8 @@ local function goal(key: string, size: Size): Goal
 	-- (The Grand Prix's races and the Grand Ballroom's activities too: everyone can reach them.)
 	local kinds: { Kind } = if size == "season"
 		then { "luxeWorth", "basementClear", "executiveWin", "luxeBank", "raceWin" }
-		elseif size == "week" then { "luxeBank", "luxeWorth", "basementClear", "executiveWin", "file", "rounds", "library", "ballroom", "nightly", "race", "raceWin", "trivia", "runway", "arena" }
-		else { "luxeBank", "luxeWorth", "basementClear", "stride", "file", "rounds", "flawless", "nightly", "race", "trivia", "arena" }
+		elseif size == "week" then { "luxeBank", "luxeWorth", "basementClear", "executiveWin", "file", "rounds", "library", "ballroom", "nightly", "race", "raceWin", "trivia", "runway", "arena", "luxeJob", "luxeEscape" }
+		else { "luxeBank", "luxeWorth", "basementClear", "stride", "file", "rounds", "flawless", "nightly", "race", "trivia", "arena", "luxeJob" }
 	local kind = kinds[rng:NextInteger(1, #kinds)]
 	local room = ROOM_IDS[rng:NextInteger(1, #ROOM_IDS)]
 	local case = Catalogue.Cases[rng:NextInteger(1, 4)].id -- the first four cases open from round I
@@ -57,6 +57,13 @@ local function goal(key: string, size: Size): Goal
 	elseif kind == "luxeWorth" then
 		local n = if size == "season" then 500000 elseif big then 60000 else 5000
 		return { id = key, kind = kind, target = n, text = string.format("Bank %s in Steal a Luxe", commas(n)) }
+	elseif kind == "luxeJob" then
+		-- (Build 78: the run's side jobs.)
+		local n = if big then 8 else 2
+		return { id = key, kind = kind, target = n, text = string.format("Finish %s side jobs in Steal a Luxe", words(n)) }
+	elseif kind == "luxeEscape" then
+		local n = if big then 3 else 1
+		return { id = key, kind = kind, target = n, text = if n == 1 then "Get away from Steal a Luxe by the van or the helicopter" else string.format("Get away from Steal a Luxe by the van or the helicopter %s times", words(n)) }
 	elseif kind == "stride" then
 		return { id = key, kind = kind, target = 2, text = "Train two levels of Stride on the Luxe Lounge's treadmills" }
 	elseif kind == "basementClear" then

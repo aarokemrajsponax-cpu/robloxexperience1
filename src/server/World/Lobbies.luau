@@ -43,18 +43,36 @@ local function prompt(parent: BasePart, id: string, kind: string, action: string
 	return p
 end
 
--- A grand entrance on a wall: a tall arch of black lacquer and brass, a curtain of the attraction's
--- light hanging in it, its name over it. `cf`: the arch's middle on the floor, facing into the room.
+-- A grand entrance on a wall, in the house's street luxury (Build 78): piers of graphite with the
+-- stud texture showing, capped in chrome, a line of the attraction's own neon up each and under the
+-- black chrome lintel, a curtain of its light hanging in the arch, its name over it. `cf`: the
+-- arch's middle on the floor, facing into the room.
+local GRAPHITE = { color = rgb(34, 34, 40), material = Enum.Material.Plastic } :: any
+local CHROME = { color = rgb(200, 204, 212), material = Enum.Material.Metal, reflectance = 0.35 } :: any
+local BLACK_CHROME = { color = rgb(24, 24, 28), material = Enum.Material.Metal, reflectance = 0.3 } :: any
+local SOFT = { collide = false, query = false, shadow = false }
+
+local function studded(p: BasePart)
+	p.TopSurface = Enum.SurfaceType.Studs
+	p.FrontSurface = Enum.SurfaceType.Studs
+	p.BackSurface = Enum.SurfaceType.Studs
+	p.LeftSurface = Enum.SurfaceType.Studs
+	p.RightSurface = Enum.SurfaceType.Studs
+end
+
 function Lobbies.entrance(parent: Instance, id: string, cf: CFrame, noPlaque: boolean?): BasePart
 	local def = AttractionList.byId[id]
 	local m = Kit.model(parent, "Entrance_" .. id)
 	local w, h = 14, 17
+	local neon = { color = def.colour:Lerp(rgb(255, 255, 255), 0.15), material = Enum.Material.Neon } :: any
 	for _, side in { -1, 1 } do
-		Kit.part(m, "Pier", Vector3.new(2.4, h + 2, 2.4), cf * CFrame.new(side * (w / 2 + 1.2), (h + 2) / 2, 0), L.blackLacquer)
-		Kit.part(m, "PierBand", Vector3.new(2.6, 0.5, 2.6), cf * CFrame.new(side * (w / 2 + 1.2), h * 0.66, 0), L.brass, { collide = false })
-		Kit.part(m, "PierCap", Vector3.new(3, 0.8, 3), cf * CFrame.new(side * (w / 2 + 1.2), h + 2.3, 0), L.brass)
+		studded(Kit.part(m, "Pier", Vector3.new(2.4, h + 2, 2.4), cf * CFrame.new(side * (w / 2 + 1.2), (h + 2) / 2, 0), GRAPHITE))
+		Kit.part(m, "PierBand", Vector3.new(2.6, 0.35, 2.6), cf * CFrame.new(side * (w / 2 + 1.2), h * 0.66, 0), CHROME, SOFT)
+		Kit.part(m, "PierGlow", Vector3.new(0.3, h - 1, 0.12), cf * CFrame.new(side * (w / 2 + 1.2), (h - 1) / 2 + 0.5, -1.26), neon, SOFT)
+		Kit.part(m, "PierCap", Vector3.new(3, 0.8, 3), cf * CFrame.new(side * (w / 2 + 1.2), h + 2.3, 0), CHROME)
 	end
-	Kit.part(m, "Lintel", Vector3.new(w + 5, 2.6, 2.4), cf * CFrame.new(0, h + 1.3, 0), L.blackLacquer)
+	Kit.part(m, "Lintel", Vector3.new(w + 5, 2.6, 2.4), cf * CFrame.new(0, h + 1.3, 0), BLACK_CHROME)
+	Kit.part(m, "LintelGlow", Vector3.new(w, 0.18, 0.18), cf * CFrame.new(0, h + 0.05, -1.25), neon, SOFT)
 	local board = Kit.part(m, "NameBoard", Vector3.new(w + 2, 2, 0.3), cf * CFrame.new(0, h + 1.3, -1.3), L.blackLacquer, { collide = false })
 	Kit.engrave(board, Enum.NormalId.Front, {
 		{ text = string.upper(def.name), size = 0.62, font = Brand.Fonts.display, color = rgb(255, 214, 120) },

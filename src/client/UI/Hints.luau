@@ -223,6 +223,11 @@ function Hints.check()
 	if Hints.isBusy() or seated() or Root.top() ~= nil then
 		return
 	end
+	-- (Inside an attraction its own keys stand at the foot of the screen, and the house's tips
+	-- aren't about it: they wait until the guest is back in the house.)
+	if Players.LocalPlayer:GetAttribute("Attraction") ~= nil then
+		return
+	end
 	local h = Hints.pick()
 	if not h then
 		return

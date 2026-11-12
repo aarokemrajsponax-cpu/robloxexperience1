@@ -323,11 +323,12 @@ Voice.WelcomeBack = {
 -- What's new in this build, told once to each returning guest (Welcome back). Only shown while
 -- `build` is the build that's playing, so old news never shows as new.
 Voice.WhatsNew = {
-	build = 77,
+	build = 78,
 	lines = {
-		"Every way in answers one press of E or one tap: Steal a Luxe, the Basement, the Executive Suite, the Grand Ballroom and Luxury Island.",
-		"Things you hold (a lift, a terminal, the safe) say HOLD on their card and fill with gold. On a phone, one tap holds it for you.",
-		"How to play says it plainly: every way into the Executive Suite and Luxury Island, with how close you are.",
+		"Steal a Luxe has three new wings: the Drop Room (a loft, and a helicopter on the roof), the Garage (the van is a way out) and a Secret Stash. Mind the cameras and the lasers.",
+		"The Maison Basement turns over every five minutes: Double Time, Blackout and The Gauntlet, each with two secrets. Your run keeps its course to the Treasury.",
+		"The Executive shows every attack before it comes. Beat him, then make the lift within a minute for a clean getaway.",
+		"The Drop, the house's street-luxury line, is in the Boutique: neon trails, black chrome nameplates and more.",
 	},
 }
 

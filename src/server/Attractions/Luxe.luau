@@ -352,6 +352,7 @@ local function complete(ctx: Types.Ctx, player: Player, run: Run, id: string)
 			local paid = if o then ctx.gilt(player, o.gilt, "Steal a Luxe: " .. o.line) else 0
 			ctx.send(player, { op = "objective", id = id, line = if o then o.line else id, gilt = paid })
 			ctx.tally(player, "luxeObjectives", 1)
+			ctx.progress(player, "luxeJob", 1)
 			note(player, "Luxe objective", { objective = id })
 			return
 		end
@@ -571,6 +572,9 @@ local function bank(ctx: Types.Ctx, player: Player, run: Run, way: Plan.Bank?)
 		complete(ctx, player, run, "van")
 	elseif route.id == "heli" then
 		complete(ctx, player, run, "heli")
+	end
+	if route.id ~= "car" then
+		ctx.progress(player, "luxeEscape", 1)
 	end
 	if bestOrder >= 3 then
 		complete(ctx, player, run, "bankRare")
