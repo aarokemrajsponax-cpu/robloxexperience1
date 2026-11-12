@@ -1140,6 +1140,64 @@ local function selectionRing(): Frame
 	stroke.Parent = ring
 	return ring
 end
+Theme.selectionRing = selectionRing
+
+-- Selection (the ring a controller moves from key to key) is for controllers only. On a touch
+-- screen or with a mouse Roblox still draws its glowing box round whatever is selected, so there
+-- nothing ever is: a panel selects its first key only when the guest last used a controller, and
+-- the moment they touch the screen or use the mouse, any selection is let go.
+local function lastInput(): Enum.UserInputType?
+	local ok, t = pcall(function()
+		return game:GetService("UserInputService"):GetLastInputType()
+	end)
+	return if ok then t else nil
+end
+
+function Theme.onController(): boolean
+	local t = lastInput()
+	return t ~= nil and string.sub(t.Name, 1, 7) == "Gamepad"
+end
+
+local function pointing(t: Enum.UserInputType?): boolean
+	return t == Enum.UserInputType.Touch
+		or t == Enum.UserInputType.MouseButton1
+		or t == Enum.UserInputType.MouseButton2
+		or t == Enum.UserInputType.MouseButton3
+		or t == Enum.UserInputType.MouseMovement
+		or t == Enum.UserInputType.MouseWheel
+end
+
+-- Selects `object` for a controller (and nothing otherwise).
+function Theme.select(object: GuiObject?)
+	pcall(function()
+		game:GetService("GuiService").SelectedObject = if object and Theme.onController() then object else nil
+	end)
+end
+
+-- Once, at the start: no selection box on touch or mouse, whatever selected it; and a controller's
+-- selection drawn as the house's own gold ring rather than Roblox's blue box.
+function Theme.keepSelectionToControllers(playerGui: Instance?)
+	local GuiService = game:GetService("GuiService")
+	local function letGo()
+		pcall(function()
+			if GuiService.SelectedObject ~= nil and pointing(lastInput()) then
+				GuiService.SelectedObject = nil
+			end
+		end)
+	end
+	pcall(function()
+		game:GetService("UserInputService").LastInputTypeChanged:Connect(letGo)
+	end)
+	pcall(function()
+		GuiService:GetPropertyChangedSignal("SelectedObject"):Connect(letGo)
+	end)
+	if playerGui then
+		pcall(function()
+			(playerGui :: any).SelectionImageObject = selectionRing()
+		end)
+	end
+	letGo()
+end
 
 -- A brass key. Under the pointer (or a gamepad's selection) it lifts a touch and its edge
 -- brightens; pressed, it sinks; let go, it springs back with a soft click and a brief glint to

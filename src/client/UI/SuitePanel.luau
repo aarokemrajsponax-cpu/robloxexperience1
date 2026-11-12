@@ -481,7 +481,7 @@ function SuitePanel.open(start: string?)
 		table.clear(previews)
 	end)
 	pcall(function()
-		game:GetService("GuiService").SelectedObject = close
+		Theme.select(close)
 	end)
 	-- A piece bought for Robux arrives a moment later: show it when it does.
 	local changed: RBXScriptConnection? = nil

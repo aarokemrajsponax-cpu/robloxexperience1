@@ -2,7 +2,6 @@
 -- Staff lines in a glass panel: the speaker's name in small gold capitals, the line in serif,
 -- and two or three short replies when there's a choice. Never the default Roblox bubble.
 
-local GuiService = game:GetService("GuiService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Ease = require(ReplicatedStorage.Shared.Ease)
@@ -97,7 +96,7 @@ function Dialogue.show(speaker: string, line: string, choices: { Choice }?, onCh
 		task.defer(function()
 			if first and first.Parent then
 				pcall(function()
-					GuiService.SelectedObject = first
+					Theme.select(first)
 				end)
 			end
 		end)

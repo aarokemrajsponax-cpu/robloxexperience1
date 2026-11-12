@@ -94,7 +94,7 @@ function AdmireCard.show(card: { [string]: any })
 	end, 140)
 	Root.open(NAME, group, nil, false)
 	pcall(function()
-		game:GetService("GuiService").SelectedObject = gift
+		Theme.select(gift)
 	end)
 end
 

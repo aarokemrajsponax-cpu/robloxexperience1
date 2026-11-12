@@ -544,7 +544,7 @@ local function summons(m: { [string]: any })
 	end, 170)
 	Root.open(NAME, group, nil, false)
 	pcall(function()
-		game:GetService("GuiService").SelectedObject = go
+		Theme.select(go)
 	end)
 end
 

@@ -214,7 +214,7 @@ function CirclePanel.open()
 	end, 300)
 	Root.open(NAME, group)
 	pcall(function()
-		game:GetService("GuiService").SelectedObject = close
+		Theme.select(close)
 	end)
 	reload()
 end
@@ -255,7 +255,7 @@ function CirclePanel.offer(m: { [string]: any })
 	end, 160)
 	Root.open(OFFER, group, nil, false)
 	pcall(function()
-		game:GetService("GuiService").SelectedObject = yes
+		Theme.select(yes)
 	end)
 end
 

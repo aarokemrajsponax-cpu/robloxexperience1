@@ -132,10 +132,7 @@ function Title.show(choices: Choices)
 
 	-- Gamepad: start on Play.
 	task.defer(function()
-		local GuiService = game:GetService("GuiService")
-		pcall(function()
-			GuiService.SelectedObject = play
-		end)
+		Theme.select(play)
 	end)
 end
 

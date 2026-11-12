@@ -108,7 +108,7 @@ function GuestBookPanel.open()
 	end, 300)
 	Root.open(NAME, group)
 	pcall(function()
-		game:GetService("GuiService").SelectedObject = close
+		Theme.select(close)
 	end)
 	task.spawn(function()
 		local v = Closet.ask({ op = "guestBook" })

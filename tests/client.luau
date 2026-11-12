@@ -8834,6 +8834,23 @@ coroutine.wrap(function()
 	check("no errors with the Vault's display", #errors == errorsBefore, errors[errorsBefore + 1])
 end)()
 
+
+-- The selection box: Roblox draws it round whatever is selected, so it's for a controller only.
+do
+	local ThemeS = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "Theme")
+	local key = roblox.Instance.new("TextButton")
+	ThemeS.select(key)
+	check("no selection box on a touch screen or with a mouse: a panel's key isn't selected", GuiService.SelectedObject == nil)
+	local was = UserInputService.GetLastInputType
+	UserInputService.GetLastInputType = function()
+		return roblox.Enum.UserInputType.Gamepad1
+	end
+	ThemeS.select(key)
+	check("...but with a controller it is, so a controller can still find its way", GuiService.SelectedObject == key)
+	UserInputService.GetLastInputType = was
+	GuiService.SelectedObject = nil
+end
+
 ---------------------------------------------------------------------------------------------------
 -- 7l. Coming back each day, and buying plainly: the daily streak (its toast, the next gift, its
 -- chip), the Boutique's closer look and its Gilt purchases confirmed with the price, every offer's

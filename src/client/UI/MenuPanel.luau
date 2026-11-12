@@ -170,7 +170,7 @@ function MenuPanel.open()
 	end, 200)
 	Root.open(NAME, group)
 	pcall(function()
-		game:GetService("GuiService").SelectedObject = close
+		Theme.select(close)
 	end)
 end
 

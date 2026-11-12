@@ -382,7 +382,7 @@ local function panel(heading: string, sub: string?, grade: string, rows: { { str
 	Root.open(NAME, group, nil, false)
 	scan(group)
 	pcall(function()
-		game:GetService("GuiService").SelectedObject = primary
+		Theme.select(primary)
 	end)
 end
 

@@ -82,7 +82,7 @@ function BlackCardPanel.open()
 		conn:Disconnect()
 	end)
 	pcall(function()
-		game:GetService("GuiService").SelectedObject = hold
+		Theme.select(hold)
 	end)
 end
 

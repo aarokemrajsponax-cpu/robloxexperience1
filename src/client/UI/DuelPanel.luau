@@ -101,7 +101,7 @@ function DuelPanel.show(message: { [string]: any }, actions: Actions)
 	end, 260).LayoutOrder = 3
 	Root.open(NAME, group, nil, false)
 	pcall(function()
-		game:GetService("GuiService").SelectedObject = keys:FindFirstChildWhichIsA("TextButton")
+		Theme.select(keys:FindFirstChildWhichIsA("TextButton"))
 	end)
 end
 

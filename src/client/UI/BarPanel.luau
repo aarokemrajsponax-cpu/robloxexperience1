@@ -233,7 +233,7 @@ function BarPanel.open()
 	close.LayoutOrder = 1
 	Root.open(NAME, group)
 	pcall(function()
-		game:GetService("GuiService").SelectedObject = close
+		Theme.select(close)
 	end)
 	reload()
 end

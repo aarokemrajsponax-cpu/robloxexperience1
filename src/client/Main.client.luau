@@ -85,6 +85,9 @@ local ScreenFX = require(script.Parent.UI.ScreenFX)
 
 local player = Players.LocalPlayer
 
+-- No selection box on a touch screen or with a mouse (only a controller's own, in gold).
+Theme.keepSelectionToControllers(player:FindFirstChild("PlayerGui"))
+
 -- First of all: for the owner, anything that breaks shows on screen.
 pcall(function()
 	require(script.Parent.UI.ErrorNotice).start()

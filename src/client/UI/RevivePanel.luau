@@ -114,7 +114,7 @@ function RevivePanel.open(m: { [string]: any }, actions: Actions)
 	Root.open(NAME, group, nil, false)
 	Sound.play("low", 0.3)
 	pcall(function()
-		game:GetService("GuiService").SelectedObject = revive
+		Theme.select(revive)
 	end)
 	lastWhole = -1
 	beat = RunService.Heartbeat:Connect(function()

@@ -105,7 +105,7 @@ local function card(caps: string, heading: string, sub: string?, rows: { { strin
 	end, 260).LayoutOrder = 4
 	Root.open(NAME, group, nil, false)
 	pcall(function()
-		game:GetService("GuiService").SelectedObject = keys:FindFirstChildWhichIsA("TextButton")
+		Theme.select(keys:FindFirstChildWhichIsA("TextButton"))
 	end)
 end
 
