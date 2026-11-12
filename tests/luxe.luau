@@ -1170,9 +1170,12 @@ local level = Plan.strideLevel(page(ben).stride, C.stride)
 local expect = 1 + (level - 1) * C.stridePerLevel
 check("in the residence, Stride makes them faster", level >= 2 and math.abs((ben:GetAttribute("SpeedTrained") or 1) - expect) < 1e-3, ben:GetAttribute("SpeedTrained"))
 local m = Config.data.Movement
-check("the walk with Stride is faster than without", Speed.resolve(false, nil, nil, nil, expect) > Speed.resolve(false, nil, nil, nil, nil))
-check("never past the residence's own cap", Speed.resolve(true, 3, 3, nil, 3) == m.trainedMaxSpeed)
-check("and the house's cap stands for everyone without it", Speed.resolve(true, 3, 3, nil, nil) == m.maxSpeed)
+check("the walk with Stride is faster than without", Speed.resolve(false, nil, nil, nil, expect, "luxe") > Speed.resolve(false, nil, nil, nil, nil, "luxe"))
+check("never past the residence's own cap", Speed.resolve(true, 3, 3, nil, 3, "luxe") == m.trainedMaxSpeed)
+check("and its own cap stands for everyone without it", Speed.resolve(true, 3, 3, nil, nil, "luxe") == m.tunedMaxSpeed)
+check("the residence keeps the pace its guards were set for", Speed.resolve(false, nil, nil, nil, nil, "luxe") == m.tunedWalkSpeed and Speed.resolve(true, nil, nil, nil, nil, "luxe") == m.tunedRunSpeed)
+check("...while the house (drawn grander) is walked faster", Speed.resolve(false, nil, nil, nil, nil, nil) == m.walkSpeed and m.walkSpeed > m.tunedWalkSpeed and Speed.resolve(true, 3, 3, nil, nil) == m.maxSpeed)
+check("...and so are the island and the Grand Ballroom", Speed.resolve(false, nil, nil, nil, nil, "island") == m.walkSpeed and Speed.resolve(false, nil, nil, nil, nil, "gala") == m.walkSpeed)
 check("a bag never slows anyone below the slowest", Luxe.speedOf(Attractions.ctx, page(ben), 100) >= C.slowest * expect - 1e-6)
 
 -- A malformed request.

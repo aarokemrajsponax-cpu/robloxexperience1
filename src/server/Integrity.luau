@@ -123,7 +123,7 @@ end
 -- How fast this guest may move just now (studs a second): running, with every event and perk the
 -- server set on them.
 local function fastest(player: Player): number
-	return Speed.resolve(true, world():GetAttribute("SpeedBoost"), player:GetAttribute("SpeedPerk"), player:GetAttribute("AdminSpeed"), player:GetAttribute("SpeedTrained"))
+	return Speed.resolve(true, world():GetAttribute("SpeedBoost"), player:GetAttribute("SpeedPerk"), player:GetAttribute("AdminSpeed"), player:GetAttribute("SpeedTrained"), player:GetAttribute("Attraction"))
 end
 
 -- How high this guest's jump lifts them (studs), from the jump the server gave them.

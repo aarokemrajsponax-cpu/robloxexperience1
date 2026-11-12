@@ -377,6 +377,27 @@ a Nightly attempt or a Mythic's odds.
 - **The launch kit**: page text, icon, thumbnails and the gameplay video's shot list are in
   [`LAUNCH.md`](LAUNCH.md).
 
+## Build 79 — Gems only from Robux, a grander house, a brisker walk
+
+- **Gems come only from Robux.** Nothing in the house pays Gems for playing any more: Gems come
+  from a Gem pack's receipt, the owner's own gift, a trade with another guest, or an auction bid
+  returned. Every balance already held stays, and every Gem price is unchanged. What used to pay
+  Gems pays Gilt: Steal a Luxe pays a piece's worth (no Gems on top); the Basement's Treasury chest
+  (400 Gilt the day's first clear, in full; 120 after), the Executive's prize (600 Gilt, in full)
+  and the island's five pearls (100 Gilt more, in full); Ballroom wins (+50 Gilt each); the Grand
+  Prix winner (240 Gilt); every tenth level ((10 + level/2) x 40 Gilt more); the Evening Calendar
+  (220, 400 and 1,500 Gilt where Gems were; 1,900 on later sevenths); the daily streak (200, 600,
+  1,200, 2,400 Gilt); the holiday games (Gilt only; Santa's gifts are Gilt, a heap of Gilt or a
+  trove of 500 to 750, odds 70/28/2, shown). A purchases test reads the server's source and fails
+  if anything but a receipt, the owner's gift, a trade or an auction bid grows a Gem balance.
+- **A grander Maison.** The Grand Scale is 2 (from 1.6): every room, doorway, stair and ceiling a
+  quarter bigger, furniture its own size. The Grand Prix circuit keeps to the road in front of the
+  bigger house (it follows the kerb). Same parts and lights as before.
+- **A brisker walk.** In the house, on its street, on the island, in the Grand Ballroom and at the
+  holiday games, guests walk at 30 and run at 42 (from 24 and 34), so a room takes no longer to
+  cross than it did. Steal a Luxe, the Basement's obby and the Executive Suite keep the pace their
+  guards, gaps and timings were set for (24 and 34). The movement watch knows both.
+
 ## Build 78 — Steal a Luxe triples, the Basement turns over, the Executive fights fair
 
 - **Steal a Luxe, three new wings** off the Garden Hall: the **Drop Room** (streetwear, a loft up
@@ -993,7 +1014,7 @@ The plan for growing the game, put into the game:
     for your own sorting table (Aurora Silk, Sakura, Ice Palace 500; Liquid Gold, Galaxy Velvet
     1,000; Obsidian Fire 2,500) and **guide trails** (Diamond Dust 250; Phoenix, Nebula 500;
     Prism 1,000). Prices sit at 250, 500, 1,000 and 2,500, so every Gem pack buys something whole
-    with nothing stranded, and Gems are earned by playing too. Kept for good, one of each worn at
+    with nothing stranded. (Since Build 79 Gems come only from Robux, the owner's gift or a trade.) Kept for good, one of each worn at
     a time; the server checks every purchase and every wear.
   - **The Concierge walks** on the tour (its walk plays in step, with a sway from foot to foot)
     and **the Pianist sits on the bench**, never sunk into it.

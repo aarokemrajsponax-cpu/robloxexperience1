@@ -1198,13 +1198,21 @@ local defaults = {
 	},
 
 	Movement = {
-		-- (The Grand house is 1.6 times the size it was drawn, so guests walk briskly: 17 felt like
-		-- a snail, and phones have no Shift key to run with. Build 68: everyone walks at 24.)
-		walkSpeed = 24,
-		runSpeed = 34,
-		maxSpeed = 51, -- no combination of events and perks moves a guest faster than this
+		-- (The Grand house is twice the size it was drawn (Layout.SCALE), so guests walk briskly:
+		-- 17 felt like a snail, and phones have no Shift key to run with. Build 68: 24. Build 79:
+		-- the house grew from 1.6 to 2, and its pace with it, so a room takes no longer to cross.)
+		walkSpeed = 30,
+		runSpeed = 42,
+		maxSpeed = 63, -- no combination of events and perks moves a guest faster than this
+		-- The attractions whose guards, gaps and timings were set for a guest's pace keep it there
+		-- (Speed.resolve): Steal a Luxe, the Basement's obby and the Executive Suite. The island,
+		-- the Grand Ballroom and the holiday games are walked at the house's own pace.
+		tuned = { luxe = true, basement = true, executive = true },
+		tunedWalkSpeed = 24,
+		tunedRunSpeed = 34,
+		tunedMaxSpeed = 51,
 		trainedMaxSpeed = 62, -- in Steal a Luxe, with Stride from the treadmills
-		npcWalkSpeed = 18,
+		npcWalkSpeed = 22, -- (Build 79: from 18, with the house: the Concierge's tour keeps its pace)
 		-- Guests and staff are drawn at this size: a touch under Roblox's own, the size the
 		-- furniture was made for. (The rooms themselves are grand: Layout.SCALE.)
 		guestScale = 0.8,

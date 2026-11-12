@@ -4,6 +4,6 @@
 -- see whether Studio has the latest code from GitHub.
 
 return {
-	number = 78,
-	label = "Build 78 · 12 Nov · three new wings, courses that turn over, a fairer Executive",
+	number = 79,
+	label = "Build 79 · 12 Nov · Gems only from Robux, a grander house, a brisker walk",
 }

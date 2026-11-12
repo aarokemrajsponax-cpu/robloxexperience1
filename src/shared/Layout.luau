@@ -561,7 +561,7 @@ end
 -- and heights, stair runs. What is not a distance is left alone (directions, counts, seconds), and
 -- so is what keeps its size (the sorting table's own geometry, the piano's bench, the lift's car).
 ---------------------------------------------------------------------------------------------------
-Layout.SCALE = 1.6
+Layout.SCALE = 2 -- (Build 79: from 1.6. The house's pace grew with it: Config.Movement.)
 -- The Suite's furniture is built a size up from the rest of the house's (Furniture.build's scale):
 -- every guest's own rooms are furnished on the grandest scale.
 Layout.SUITE_FURNITURE = 1.2

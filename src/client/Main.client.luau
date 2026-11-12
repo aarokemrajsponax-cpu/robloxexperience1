@@ -543,9 +543,13 @@ local function applySpeed()
 	if humanoid then
 		-- One speed from every effect (Shared/Speed): the house's Quickstep event and VIP Velocity
 		-- Elite (the server sets "SpeedPerk" only for a guest who owns it and hasn't switched it off).
-		humanoid.WalkSpeed = Speed.resolve(running, Workspace:GetAttribute("SpeedBoost"), player:GetAttribute("SpeedPerk"), player:GetAttribute("AdminSpeed"), player:GetAttribute("SpeedTrained"))
+		humanoid.WalkSpeed = Speed.resolve(running, Workspace:GetAttribute("SpeedBoost"), player:GetAttribute("SpeedPerk"), player:GetAttribute("AdminSpeed"), player:GetAttribute("SpeedTrained"), player:GetAttribute("Attraction"))
 	end
 end
+-- In or out of an attraction: the few with their own pace keep it (Shared/Speed).
+player:GetAttributeChangedSignal("Attraction"):Connect(function()
+	applySpeed()
+end)
 -- Steal a Luxe's Stride and the weight of the bag (only the server sets it, only in the residence).
 player:GetAttributeChangedSignal("SpeedTrained"):Connect(function()
 	applySpeed()

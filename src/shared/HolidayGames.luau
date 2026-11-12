@@ -21,6 +21,7 @@
 
 local Config = require(script.Parent.Config)
 local HouseEvents = require(script.Parent.HouseEvents)
+local Layout = require(script.Parent.Layout)
 
 local HolidayGames = {}
 
@@ -187,8 +188,14 @@ HolidayGames.Pole = {
 	arrival = Vector3.new(0, 0.6, -70),
 }
 
+-- The sleigh's ways round the house (its spot at the kerb, its climbs and its circles) were laid
+-- round the house at the Grand Scale of 1.6; they grow with it, so they clear it just as well.
+function HolidayGames.grown(v: Vector3): Vector3
+	return v * (Layout.SCALE / 1.6)
+end
+
 -- The sleigh at the Maison's kerb: on the road in front of the house, facing east along it.
-HolidayGames.HOME_SLEIGH = CFrame.lookAt(Vector3.new(-22, 0, -70), Vector3.new(100, 0, -70))
+HolidayGames.HOME_SLEIGH = CFrame.lookAt(HolidayGames.grown(Vector3.new(-22, 0, -70)), HolidayGames.grown(Vector3.new(100, 0, -70)))
 
 -- The sleigh's frame at the North Pole.
 function HolidayGames.poleSleigh(): CFrame
@@ -231,13 +238,14 @@ end
 function HolidayGames.flightPoints(toPole: boolean): { Vector3 }
 	local H = HolidayGames.HOME_SLEIGH.Position
 	local P = HolidayGames.poleSleigh().Position
+	local g = HolidayGames.grown
 	if toPole then
 		return {
 			H,
-			H + Vector3.new(36, 0.5, 0),
-			H + Vector3.new(96, 18, -6),
-			Vector3.new(150, 90, 60),
-			Vector3.new(70, 230, 380),
+			H + g(Vector3.new(36, 0.5, 0)),
+			H + g(Vector3.new(96, 18, -6)),
+			g(Vector3.new(150, 90, 60)),
+			g(Vector3.new(70, 230, 380)),
 			Vector3.new(0, 330, 1150),
 			Vector3.new(0, 320, 2150),
 			P + Vector3.new(-130, 170, -380),
@@ -253,10 +261,10 @@ function HolidayGames.flightPoints(toPole: boolean): { Vector3 }
 		P + Vector3.new(110, 190, -460),
 		Vector3.new(0, 330, 2050),
 		Vector3.new(0, 330, 950),
-		Vector3.new(-150, 210, 260),
-		Vector3.new(-220, 50, -70),
-		H + Vector3.new(-90, 6, 0),
-		H + Vector3.new(-30, 0.5, 0),
+		g(Vector3.new(-150, 210, 260)),
+		g(Vector3.new(-220, 50, -70)),
+		H + g(Vector3.new(-90, 6, 0)),
+		H + g(Vector3.new(-30, 0.5, 0)),
 		H,
 	}
 end

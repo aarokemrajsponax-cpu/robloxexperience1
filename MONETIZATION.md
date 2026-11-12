@@ -247,8 +247,10 @@ two taps (the price, then *Confirm · 💎 price*); nothing is sold that wins a 
 Gilt or XP, never a score, and every Gilt boost together stays under
 `ProductConfig.Settings.MaxGiltMultiplier`). *Trust boundary:* the screen sends only an item's id
 (`GemAsk`: `op`, `id`, `kind`; any other field is refused), the server reads the price from the
-list, takes Gems only if the guest holds enough and says how many more otherwise. Level rewards
-(Gems every tenth level) are the only free Gems.
+list, takes Gems only if the guest holds enough and says how many more otherwise. Since Build 79
+nothing in the house pays Gems for playing: Gems come only from a Gem pack's receipt, the owner's
+own gift, a trade with another guest or an auction bid returned (`tests/purchases.luau` section L
+checks the server's source for it).
 
 **Suite spectacles** (Suite Fireworks 199, Meme Takeover 299, Golden Transformation 499). A show
 in the buyer's own Suite. Each receipt saves one show as a credit (`show:<key>`) first; once the

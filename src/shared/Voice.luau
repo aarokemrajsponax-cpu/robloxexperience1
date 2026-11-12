@@ -323,12 +323,12 @@ Voice.WelcomeBack = {
 -- What's new in this build, told once to each returning guest (Welcome back). Only shown while
 -- `build` is the build that's playing, so old news never shows as new.
 Voice.WhatsNew = {
-	build = 78,
+	build = 79,
 	lines = {
-		"Steal a Luxe has three new wings: the Drop Room (a loft, and a helicopter on the roof), the Garage (the van is a way out) and a Secret Stash. Mind the cameras and the lasers.",
-		"The Maison Basement turns over every five minutes: Double Time, Blackout and The Gauntlet, each with two secrets. Your run keeps its course to the Treasury.",
-		"The Executive shows every attack before it comes. Beat him, then make the lift within a minute for a clean getaway.",
-		"The Drop, the house's street-luxury line, is in the Boutique: neon trails, black chrome nameplates and more.",
+		"The Maison is grander: every room a quarter wider, deeper and taller, and you walk it faster, so a room takes no longer to cross.",
+		"Every game, race, present and streak now pays Gilt, and more of it. Gems come only from the Gem packs in the shop or a trade.",
+		"The Basement's chest, the Executive's prize and the island's five pearls pay Gilt in full. The Ballroom's winners take more Gilt.",
+		"Santa's gifts hold Gilt, a heap of Gilt, or now and then a trove of it.",
 	},
 }
 

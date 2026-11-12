@@ -8,11 +8,15 @@
 -- hairpin, west along the far straight, round the west hairpin and home. Distance round it is
 -- `s`, from 0 at the start line to `length()`; a lap is four sectors, which must come in order.
 
+local Layout = require(script.Parent.Layout)
+
 local GrandPrix = {}
 
 -- World units (the house is built, then grown by Layout.SCALE; this is laid at the grown size).
+-- The circuit keeps its own size and keeps to the road whatever the house's scale: its near
+-- straight runs a set way out from the kerb, where the cars wait in their bays.
 GrandPrix.TRACK = {
-	centre = Vector3.new(0, 0, -130), -- the middle of the infield, on the road's surface
+	centre = Vector3.new(0, 0, Layout.Street.kerbZ - 75.6), -- the middle of the infield, on the road's surface
 	half = 118, -- half the length of each straight
 	radius = 52, -- the hairpins' radius, to the middle of the road
 	width = 26, -- the road's width

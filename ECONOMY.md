@@ -13,7 +13,7 @@ check them against live analytics after release and tune the Config, not the cod
 | | What it is | How it changes |
 |---|---|---|
 | **Gilt** | The spending money | Earned in every attraction and at the tables, spent on upgrades, gear, invitations, bids, the Boutique |
-| **Gems** | The rare currency | A few from the rarest finds (each source has a daily cap), bought with Robux, spent at the Gem Shop, on the golden treadmill, a Basement skip, Gem lots |
+| **Gems** | The rare currency | Only from Robux (a Gem pack), the owner's gift or a trade: no game pays them (Build 79). Spent at the Gem Shop, on the golden treadmill, a Basement skip, Gem lots |
 | **Estate** | Banked wealth from the attractions | Only ever grows: hauls, the Basement's purses, the Executive's prize and safe |
 | **Fortune** | The aim of the game | Gilt + Gems × 40 + the collection by rarity + Suite items + Estate |
 

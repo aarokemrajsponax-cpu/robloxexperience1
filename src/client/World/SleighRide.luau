@@ -544,32 +544,34 @@ end
 -- the kerb; or, with the sleigh away, in from the north, round, and off north again.
 local function flyoverPoints(fromKerb: boolean): { Vector3 }
 	local H = HolidayGames.HOME_SLEIGH.Position
+	-- (Laid round the house at the Grand Scale of 1.6: grown with it.)
+	local g = HolidayGames.grown
 	if fromKerb then
 		return {
 			H,
-			H + Vector3.new(36, 0.5, 0),
-			Vector3.new(66, 26, -84),
-			Vector3.new(170, 84, -40),
-			Vector3.new(196, 118, 130),
-			Vector3.new(80, 150, 330),
-			Vector3.new(-120, 140, 310),
-			Vector3.new(-200, 104, 110),
-			Vector3.new(-186, 58, -50),
-			Vector3.new(-110, 14, -72),
-			H + Vector3.new(-30, 0.5, 0),
+			H + g(Vector3.new(36, 0.5, 0)),
+			g(Vector3.new(66, 26, -84)),
+			g(Vector3.new(170, 84, -40)),
+			g(Vector3.new(196, 118, 130)),
+			g(Vector3.new(80, 150, 330)),
+			g(Vector3.new(-120, 140, 310)),
+			g(Vector3.new(-200, 104, 110)),
+			g(Vector3.new(-186, 58, -50)),
+			g(Vector3.new(-110, 14, -72)),
+			H + g(Vector3.new(-30, 0.5, 0)),
 			H,
 		}
 	end
 	return {
-		Vector3.new(420, 230, 640),
-		Vector3.new(220, 140, 200),
-		Vector3.new(170, 96, -30),
-		Vector3.new(60, 64, -112),
-		Vector3.new(-110, 80, -96),
-		Vector3.new(-200, 112, 90),
-		Vector3.new(-120, 150, 310),
-		Vector3.new(80, 190, 460),
-		Vector3.new(320, 260, 760),
+		g(Vector3.new(420, 230, 640)),
+		g(Vector3.new(220, 140, 200)),
+		g(Vector3.new(170, 96, -30)),
+		g(Vector3.new(60, 64, -112)),
+		g(Vector3.new(-110, 80, -96)),
+		g(Vector3.new(-200, 112, 90)),
+		g(Vector3.new(-120, 150, 310)),
+		g(Vector3.new(80, 190, 460)),
+		g(Vector3.new(320, 260, 760)),
 	}
 end
 SleighRide.flyoverPoints = flyoverPoints
