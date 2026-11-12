@@ -783,7 +783,7 @@ function ExecutiveHud.on(m: { [string]: any })
 	elseif op == "escorted" then
 		Toast.show("Escorted out", "No composure left. Try again with another invitation.", 5)
 	elseif op == "won" then
-		local line = string.format("%s to your Estate  ·  %d Gems", Rules.format(tonumber(m.worth) or 0), tonumber(m.gems) or 0)
+		local line = string.format("%s to your Estate  ·  +%s Gilt", Rules.format(tonumber(m.worth) or 0), Rules.format(tonumber(m.gilt) or 0))
 		if m.brainrot then
 			line ..= "  ·  Il Dirigente Supremo for your collection"
 		end

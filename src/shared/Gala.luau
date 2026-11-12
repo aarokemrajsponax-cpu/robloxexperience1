@@ -325,16 +325,15 @@ Gala.REWARDS = {
 	danceMinute = 8, -- a minute on the dance floor
 	danceMinutes = 10, -- minutes a day that pay
 	triviaCorrect = 12, -- each right answer
-	triviaWin = 150,
+	triviaWin = 200,
 	runwayWalk = 30,
-	runwayWin = 200,
+	runwayWin = 250,
 	runwayVote = 8,
 	arenaTakePart = 25,
 	arenaPoint = 1,
 	arenaPoints = 40, -- most points that pay in one round
-	arenaWin = 150,
+	arenaWin = 200,
 	photoSet = 25, -- the first pose at each set, every day
-	winGems = 1, -- Gems for a win (within the day's Gems cap)
 }
 
 -- A trivia answer's score: right answers only, more for the quicker.

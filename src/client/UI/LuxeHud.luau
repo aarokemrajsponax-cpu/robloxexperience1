@@ -632,9 +632,6 @@ function LuxeHud.on(m: { [string]: any })
 	elseif op == "banked" then
 		Sound.play("kaching", 0.8)
 		local line = string.format("%s to your Estate  ·  %s Gilt to your purse", Rules.format(tonumber(m.worth) or 0), Rules.format(tonumber(m.gilt) or 0))
-		if (tonumber(m.gems) or 0) > 0 then
-			line ..= string.format("  ·  %d Gems", m.gems)
-		end
 		if type(m.brainrots) == "table" and #m.brainrots > 0 then
 			line ..= "  ·  a brainrot for your collection"
 		end

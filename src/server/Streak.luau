@@ -2,8 +2,9 @@
 -- The daily streak: a guest who comes to the house on consecutive days (UTC) keeps a streak, and
 -- every Gilt they earn counts for a little more while it lasts (5% more a day, up to 30% from the
 -- seventh day on); a day missed starts it again at one. At three, seven, fourteen and thirty days
--- in a row, and every thirty after, the house gives a few Gems (once each time the streak reaches
--- it). Everything is the server's own clock and record; a guest's screen is told their streak
+-- in a row, and every thirty after, the house gives a gift of Gilt (once each time the streak
+-- reaches it; never Gems, which come only from Robux, the owner's gift or a trade). Everything is
+-- the server's own clock and record; a guest's screen is told their streak
 -- (the attributes "Streak" and "StreakBoost", in whole percent) and, on their first visit of a
 -- day, how it stands.
 
@@ -11,18 +12,17 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
-local Analytics = require(script.Parent.Analytics)
+local Gilt = require(script.Parent.Gilt)
 local Profiles = require(script.Parent.Profiles)
 
 local Streak = {}
 
 Streak.PER_DAY = 0.05
 Streak.MOST = 0.30
-Streak.GIFTS = { [3] = 5, [7] = 15, [14] = 30, [30] = 60 } :: { [number]: number }
+-- The Gilt gifts (paid exactly, outside the day's soft cap), and every thirty days past thirty.
+Streak.GIFTS = { [3] = 200, [7] = 600, [14] = 1200, [30] = 2400 } :: { [number]: number }
+Streak.EVERY_THIRTY = 2400
 Streak.now = os.time
-
--- A Gems gift was given (set by Main: the Gems on the guest's screen).
-Streak.gemsGiven = function(_player: Player) end
 
 export type Page = { day: number, count: number, best: number }
 
@@ -39,19 +39,19 @@ function Streak.page(data: Profiles.Data): Page
 	return d.streak :: Page
 end
 
--- The Gems for reaching `count` days in a row (0 for none).
+-- The Gilt gift for reaching `count` days in a row (0 for none).
 function Streak.gift(count: number): number
 	local g = Streak.GIFTS[count]
 	if g then
 		return g
 	end
 	if count > 30 and count % 30 == 0 then
-		return 60
+		return Streak.EVERY_THIRTY
 	end
 	return 0
 end
 
--- The next day in a row that brings Gems, after `count`, and how many.
+-- The next day in a row that brings a gift, after `count`, and how much.
 function Streak.nextGift(count: number): (number, number)
 	for d = count + 1, count + 30 do
 		local g = Streak.gift(d)
@@ -59,7 +59,7 @@ function Streak.nextGift(count: number): (number, number)
 			return d, g
 		end
 	end
-	return count + 30, 60
+	return count + 30, Streak.EVERY_THIRTY
 end
 
 -- How much more a guest's Gilt counts for (1 = none): 5% a day after the first, up to 30%.
@@ -102,26 +102,20 @@ function Streak.arrive(player: Player, data: Profiles.Data)
 	end
 	p.day = now
 	p.best = math.max(p.best, p.count)
-	local gems = Streak.gift(p.count)
-	if gems > 0 then
-		local d = data :: any
-		d.gems = (tonumber(d.gems) or 0) + gems
-		player:SetAttribute("Gems", d.gems)
-		Analytics.source(player, "Gems", gems, d.gems, "Daily streak")
-		Streak.gemsGiven(player)
-	end
+	local gift = Streak.gift(p.count)
+	local paid = if gift > 0 then Gilt.give(player, data, gift, "Daily streak") else 0
 	publish(player, p)
-	local giftAt, giftGems = Streak.nextGift(p.count)
+	local giftAt, giftGilt = Streak.nextGift(p.count)
 	Remotes.event("Empire"):FireClient(player, {
 		op = "streak",
 		count = p.count,
 		best = p.best,
 		boost = math.floor((Streak.boostFor(p.count) - 1) * 100 + 0.5),
 		next = math.floor((Streak.boostFor(p.count + 1) - 1) * 100 + 0.5),
-		gems = gems,
+		gift = paid,
 		broke = broke,
 		giftAt = giftAt,
-		giftGems = giftGems,
+		giftGilt = giftGilt,
 	})
 end
 

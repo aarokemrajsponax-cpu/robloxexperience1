@@ -62,7 +62,7 @@ local function format(n: number): string
 	return if out:sub(1, 1) == "," then out:sub(2) else out
 end
 
-function Celebrate.levelUp(level: number, title: string, gilt: number, gems: number)
+function Celebrate.levelUp(level: number, title: string, gilt: number)
 	local gui = screen()
 	local old = gui:FindFirstChild("LevelUp")
 	if old then
@@ -139,7 +139,7 @@ function Celebrate.levelUp(level: number, title: string, gilt: number, gems: num
 	reward.TextScaled = true
 	reward.TextColor3 = rgb(255, 230, 150)
 	reward.TextStrokeTransparency = 0.4
-	reward.Text = "+" .. format(gilt) .. " Gilt" .. (if gems > 0 then "  ·  +" .. format(gems) .. " Gems" else "")
+	reward.Text = "+" .. format(gilt) .. " Gilt"
 	reward.Parent = box
 	TweenService:Create(scale, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
 	sound("regalFanfare", 0.9)

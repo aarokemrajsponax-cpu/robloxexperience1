@@ -6,15 +6,12 @@ local Types = {}
 -- Config.HolidayGames.
 export type Cfg = {
 	windows: { [string]: { lead: number, linger: number } },
-	gemsPerDay: number,
 	travelGap: number,
 	lane: {
 		origin: { number },
 		gilt: number,
-		gemChance: number,
 		minuitGilt: number,
 		fullBagGilt: number,
-		fullBagGems: number,
 		roundMinutes: number,
 		reach: number,
 		knockGap: number,
@@ -23,9 +20,7 @@ export type Cfg = {
 		origin: { number },
 		turkeys: number,
 		gilt: number,
-		gemChance: number,
 		goldenGilt: number,
-		goldenGems: number,
 		goldenEvery: number,
 		speed: number,
 		goldenSpeed: number,
@@ -56,29 +51,25 @@ export type Cfg = {
 		odds: { [string]: number },
 		gilt: { number },
 		moreGilt: { number },
-		gems: { number },
-		moreGems: { number },
+		trove: { number },
 	},
 	eggs: {
 		count: number,
 		gilt: number,
-		gemChance: number,
 		goldenGilt: number,
-		goldenGems: number,
 		again: number,
 		reach: number,
 	},
 	luck: { mythic: number, curioFind: number, curioRare: number },
 }
 
--- A guest's holiday page in their saved record: today's Gems from the games (the ceiling), the
+-- A guest's holiday page in their saved record: the
 -- North Pole's gifts waiting to be opened and those loaded today, the Lane's round and the doors
 -- knocked at in it, and how many sleigh rides there have been. What's been bought: turkey catches
 -- held, the Turkey Hunter Pass's year, sleigh rides held and Santa's Season Pass's year; and the
 -- free sleigh rides taken this year (`rideYear`, `freeTaken`).
 export type Saved = {
 	day: number,
-	gems: number,
 	gifts: number,
 	loaded: number,
 	round: number,
@@ -101,8 +92,7 @@ export type Ctx = {
 	trusted: (player: Player) -> boolean,
 	moved: (player: Player) -> (),
 	saved: (data: any) -> Saved,
-	reward: (player: Player, gilt: number, gems: number, source: string) -> (number, number),
-	gemsLeft: (player: Player) -> number,
+	reward: (player: Player, gilt: number, source: string) -> number,
 	send: (player: Player, message: { [string]: any }) -> (),
 	broadcast: (message: { [string]: any }) -> (),
 	teleport: (player: Player, cf: CFrame) -> boolean,

@@ -1918,7 +1918,7 @@ do
 	run(function()
 		Progress.add(lv, 500000, "test")
 	end)
-	check("every level on the way is rewarded once, and the top is level 100", lv:GetAttribute("Level") == 100 and #ups == 99 and ups[#ups].level == 100 and ups[9].gems > 0)
+	check("every level on the way is rewarded once (every tenth with far more Gilt, never Gems), and the top is level 100", lv:GetAttribute("Level") == 100 and #ups == 99 and ups[#ups].level == 100 and ups[9].gilt > Levels.reward(9) and ups[9].gems == nil)
 
 	-- The Badge Book.
 	check("ten times the badges there were (151)", BadgeBook.count >= 130)

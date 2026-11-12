@@ -450,14 +450,15 @@ check("...and two rings at a time", #Game.run.waves == 2 and Game.run.waves[2].b
 Game.run.waves = {}
 -- He falls.
 local estateWas = Fortune.page(data(ada)).estate
-local gemsWas = data(ada).gems
+local gemsWas, giltWas = data(ada).gems, data(ada).gilt
 standIn(ada, Vector3.new(-10, 0, 10))
 while Game.run.actors.boss.hp > 0 do
 	shoot(ada, "boss")
 end
 local won = last(ada, "won")
 check("the Executive beaten: everyone in the Office is paid", Game.run.phase == "won" and won ~= nil and Fortune.page(data(ada)).estate == estateWas + C.prize)
-check("...his Gems", data(ada).gems == gemsWas + C.prizeGems and won.gems == C.prizeGems)
+check("...the prize's Gilt, in full (once an invitation: outside the day's soft cap)", won.gilt == C.prizeGilt and data(ada).gilt >= giltWas + C.prizeGilt, won.gilt)
+check("...and never a Gem: those come only from Robux", won.gems == nil and data(ada).gems == gemsWas)
 check("...Il Dirigente Supremo, the first time", won.first == true and won.brainrot == "dirigenteSupremo" and (data(ada).curios.items.dirigenteSupremo or 0) == 1)
 check("...the badge", (function()
 	for _, a in awards do

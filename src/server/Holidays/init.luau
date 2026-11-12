@@ -8,8 +8,9 @@
 --
 -- Every reward is decided here, from what the server sees: where a guest's character stands, what
 -- this module put in the world, and the guest's saved record. Nothing a screen says is a reward,
--- a price, an amount or a place. Each guest gets at most Config.HolidayGames.gemsPerDay Gems a
--- day from all of them together; Gilt goes through Gilt.pay (its boosts and its daily soft cap).
+-- a price, an amount or a place. Every reward is Gilt (through Gilt.pay: its boosts and its daily
+-- soft cap) and the holidays' curios; never Gems, which come only from Robux, the owner's gift or
+-- a trade.
 -- A character that moves faster than anyone can (a teleport the server didn't make) finds nothing
 -- for a few seconds. And every game has its own limits (a door once a round, a catch a second,
 -- so many gifts a trip and a day).
@@ -23,7 +24,6 @@ local HolidayGames = require(ReplicatedStorage.Shared.HolidayGames)
 local Layout = require(ReplicatedStorage.Shared.Layout)
 local Names = require(ReplicatedStorage.Shared.Names)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
-local Analytics = require(script.Parent.Analytics)
 local Curios = require(script.Parent.Curios)
 local Gilt = require(script.Parent.Gilt)
 local ProductConfig = require(ReplicatedStorage.Shared.ProductConfig)
@@ -122,7 +122,6 @@ local function saved(data: Profiles.Data): Types.Saved
 	end
 	local h = d.holiday
 	h.day = if type(h.day) == "number" then h.day else -1
-	h.gems = if type(h.gems) == "number" then h.gems else 0
 	h.gifts = if type(h.gifts) == "number" then math.max(0, math.floor(h.gifts)) else 0
 	h.loaded = if type(h.loaded) == "number" then h.loaded else 0
 	h.round = if type(h.round) == "number" then h.round else -1
@@ -144,7 +143,6 @@ local function saved(data: Profiles.Data): Types.Saved
 	end
 	if h.day ~= today() then
 		h.day = today()
-		h.gems = 0
 		h.loaded = 0
 	end
 	return h :: Types.Saved
@@ -163,37 +161,16 @@ local function broadcast(message: { [string]: any })
 	holidayEvent:FireAllClients(message)
 end
 
--- Pays a guest for something found in a holiday game: Gilt through Gilt.pay, Gems up to the day's
--- ceiling. Returns what was paid (Gilt, Gems).
-local function reward(player: Player, gilt: number, gems: number, source: string): (number, number)
-	local data = Profiles.get(player)
-	if not data then
-		return 0, 0
-	end
-	local paid = if gilt > 0 then Gilt.pay(player, data, math.floor(gilt), source) else 0
-	local given = 0
-	if gems > 0 then
-		local h = saved(data)
-		given = math.max(0, math.min(math.floor(gems), cfg().gemsPerDay - h.gems))
-		if given > 0 then
-			local d = data :: any
-			h.gems += given
-			d.gems = (if type(d.gems) == "number" then d.gems else 0) + given
-			Analytics.source(player, "Gems", given, d.gems, source)
-			Curios.push(player)
-		end
-	end
-	Holidays.tally(player, "pickups", 1)
-	return paid, given
-end
-
--- Gems for today are all given: what's left of them, for the screens that say so.
-local function gemsLeft(player: Player): number
+-- Pays a guest for something found in a holiday game, in Gilt through Gilt.pay. Returns what was
+-- paid.
+local function reward(player: Player, gilt: number, source: string): number
 	local data = Profiles.get(player)
 	if not data then
 		return 0
 	end
-	return math.max(0, cfg().gemsPerDay - saved(data).gems)
+	local paid = if gilt > 0 then Gilt.pay(player, data, math.floor(gilt), source) else 0
+	Holidays.tally(player, "pickups", 1)
+	return paid
 end
 
 local function teleport(player: Player, cf: CFrame): boolean
@@ -249,7 +226,6 @@ ctx = {
 	moved = moved,
 	saved = saved,
 	reward = reward,
-	gemsLeft = gemsLeft,
 	send = send,
 	broadcast = broadcast,
 	teleport = teleport,
@@ -483,7 +459,7 @@ end
 
 local function state(player: Player): { [string]: any }
 	local data = Profiles.get(player)
-	local s: { [string]: any } = { ok = true, game = current, gemsLeft = gemsLeft(player), prices = prices() }
+	local s: { [string]: any } = { ok = true, game = current, prices = prices() }
 	if data then
 		local h = saved(data)
 		s.gifts = h.gifts

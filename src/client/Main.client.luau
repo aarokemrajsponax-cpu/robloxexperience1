@@ -161,7 +161,7 @@ Closet.Message:Connect(function(op: string, m: any)
 	elseif op == "notice" then
 		Toast.show(tostring(m.title), tostring(m.line), 4)
 	elseif op == "levelUp" and type(m.level) == "number" then
-		Celebrate.levelUp(m.level, tostring(m.title or ""), if type(m.gilt) == "number" then m.gilt else 0, if type(m.gems) == "number" then m.gems else 0)
+		Celebrate.levelUp(m.level, tostring(m.title or ""), if type(m.gilt) == "number" then m.gilt else 0)
 	elseif op == "badge" and type(m.name) == "string" then
 		Celebrate.badge(m)
 	end

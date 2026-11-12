@@ -3197,7 +3197,7 @@ do
 	press("Extras")
 	advance(0.6)
 	check("Extras: the Grand Prix, the Ballroom, the Library, curios and brainrots, holidays, events", textOnScreen("The Grand Prix") ~= nil and textOnScreen("The Ballroom") ~= nil and textOnScreen("The Library") ~= nil and textOnScreen("Curios and brainrots") ~= nil and textOnScreen("Holiday games") ~= nil and textOnScreen("Events") ~= nil)
-	check("...each saying how it works and what you get", textOnScreen("press E to drive") ~= nil and textOnScreen("five lights") ~= nil and textOnScreen("lamp goes out") ~= nil and textOnScreen("You get: Gilt for the top three, and Gems for the winner.") ~= nil and textOnScreen("You get: The last lamp still lit wins the whole pot of Gilt.") ~= nil)
+	check("...each saying how it works and what you get", textOnScreen("press E to drive") ~= nil and textOnScreen("five lights") ~= nil and textOnScreen("lamp goes out") ~= nil and textOnScreen("You get: Gilt for the top three, the most for the winner.") ~= nil and textOnScreen("You get: The last lamp still lit wins the whole pot of Gilt.") ~= nil)
 	snapshot("howto-extras")
 	press("Gilt & Shop")
 	advance(0.6)
@@ -5358,9 +5358,9 @@ check("the Gilt bar steps aside under a panel", (function()
 	return hidden and giltBar.Visible == true
 end)())
 -- Levels and badges, celebrated.
-serverSays("Shop", { op = "levelUp", level = 20, title = "Adept", gilt = 350, gems = 20 })
+serverSays("Shop", { op = "levelUp", level = 20, title = "Adept", gilt = 1150 })
 advance(0.6)
-check("LEVEL UP! with the new level, its name and its reward", textOnScreen("LEVEL UP!") ~= nil and textOnScreen("ADEPT") ~= nil and textOnScreen("+350 Gilt") ~= nil)
+check("LEVEL UP! with the new level, its name and its reward", textOnScreen("LEVEL UP!") ~= nil and textOnScreen("ADEPT") ~= nil and textOnScreen("+1,150 Gilt") ~= nil)
 snapshot("level-up")
 advance(4)
 serverSays("Shop", { op = "badge", key = "metOwner", name = "Met the Owner", line = "Be in the house with the owner.", glyph = "👑", tier = "gold", count = 12, total = 155 })
@@ -5567,7 +5567,7 @@ end)()
 	local state = { ok = true, op = "calendar", step = 2, weeks = 0, total = 2, ready = true, nextIn = 5 * 3600 }
 	invokeResults.CalendarAsk = function(req)
 		if type(req) == "table" and req.op == "open" then
-			state = { ok = true, op = "calendar", step = 3, weeks = 0, total = 3, ready = false, nextIn = 5 * 3600 + 60, opened = 3, gilt = 0, gems = 5, xp = 0 }
+			state = { ok = true, op = "calendar", step = 3, weeks = 0, total = 3, ready = false, nextIn = 5 * 3600 + 60, opened = 3, gilt = 220, xp = 0 }
 		end
 		return state
 	end
@@ -5584,12 +5584,12 @@ end)()
 		states[i] = e and e:GetAttribute("State") or "none"
 	end
 	check("the Evening Calendar: seven evenings, two opened, tonight's waiting", textOnScreen("The Evening Calendar") ~= nil and textOnScreen("Tonight's present is waiting") ~= nil and table.concat(states, " ") == "opened opened today later later later later", table.concat(states, " "))
-	check("...every present shown as it is (the third: 5 Gems)", textOnScreen("5 GEMS") ~= nil and textOnScreen("Miss a day and nothing is lost") ~= nil)
+	check("...every present shown as it is (the third: 220 Gilt)", textOnScreen("220") ~= nil and textOnScreen("Miss a day and nothing is lost") ~= nil)
 	snapshot("calendar")
 	check("opening tonight's", press("Open tonight's present"))
 	advance(1)
 	check("...the third evening ticked off, and when the next one comes", textOnScreen("Tonight's present is open") ~= nil and textOnScreen("ready in 5h 01m") ~= nil and evening(3) ~= nil and evening(3):GetAttribute("State") == "opened")
-	check("...and what it was, said plainly", textOnScreen("Evening 3: 5 Gems.") ~= nil)
+	check("...and what it was, said plainly", textOnScreen("Evening 3: 220 Gilt.") ~= nil)
 	snapshot("calendar-opened")
 	Root2.close()
 	advance(0.5)
@@ -6456,11 +6456,8 @@ end
 		saved = function(d)
 			return d
 		end,
-		reward = function(_, gilt, gems)
-			return gilt, gems
-		end,
-		gemsLeft = function()
-			return cfg.gemsPerDay
+		reward = function(_, gilt)
+			return gilt
 		end,
 		send = function() end,
 		broadcast = function() end,
@@ -6704,13 +6701,13 @@ end
 	snapshot("lane-door")
 	advance(0.4)
 	check("...and throws the treat to whoever knocked", HolidayKit.inFlight() > 0, HolidayKit.inFlight())
-	serverSays("Holiday", { op = "treat", i = 1, host = "Lady Belladonna", line = "A gold-leaf truffle for you, darling.", treat = "truffle", treatName = "a gold-leaf truffle", gilt = 45, gems = 1, visited = { 1 }, total = 9 })
+	serverSays("Holiday", { op = "treat", i = 1, host = "Lady Belladonna", line = "A gold-leaf truffle for you, darling.", treat = "truffle", treatName = "a gold-leaf truffle", gilt = 50, visited = { 1 }, total = 9 })
 	advance(0.3)
 	local says = host and host:FindFirstChild("Head") and host.Head:FindFirstChild("HostSays")
 	local saysText = says and says:FindFirstChildWhichIsA("TextLabel")
 	check("the host says their line", saysText ~= nil and saysText.Text == "A gold-leaf truffle for you, darling.")
 	advance(1.9)
-	check("what it paid pops up: the treat, who gave it, +45 Gilt and +1 Gem", HolidayPop.count() >= 1 and textOnScreen("Lady Belladonna") ~= nil and textOnScreen("+45 GILT") ~= nil and textOnScreen("+1 GEM") ~= nil)
+	check("what it paid pops up: the treat, who gave it, +50 Gilt", HolidayPop.count() >= 1 and textOnScreen("Lady Belladonna") ~= nil and textOnScreen("+50 GILT") ~= nil)
 	check("...the treat landed", HolidayKit.inFlight() == 0)
 	snapshot("lane-treat")
 	advance(3)
@@ -6739,9 +6736,9 @@ end
 	for i = 1, 9 do
 		table.insert(all, i)
 	end
-	serverSays("Holiday", { op = "treat", i = 9, host = "The Midnight Hostess", line = "The finest treat on the Lane.", treat = "truffle", treatName = "a midnight truffle", gilt = 150, gems = 0, visited = all, total = 9, full = true, bonusGilt = 300, bonusGems = 3 })
+	serverSays("Holiday", { op = "treat", i = 9, host = "The Midnight Hostess", line = "The finest treat on the Lane.", treat = "truffle", treatName = "a midnight truffle", gilt = 150, visited = all, total = 9, full = true, bonusGilt = 420 })
 	advance(2.8)
-	check("every door: a full bag, and its bonus", textOnScreen("A full bag!") ~= nil and textOnScreen("+300 GILT") ~= nil and textOnScreen("+3 GEMS") ~= nil)
+	check("every door: a full bag, and its bonus", textOnScreen("A full bag!") ~= nil and textOnScreen("+420 GILT") ~= nil)
 	snapshot("lane-fullbag")
 	advance(5)
 	check("the reward cards go by themselves", HolidayPop.count() == 0, HolidayPop.count())
@@ -6826,7 +6823,7 @@ end
 	snapshot("holiday-field")
 	local t1 = list[1]
 	serverSays("Holiday", { op = "caught", id = t1.id, by = LocalPlayer.UserId, golden = false, at = t1.part.CFrame.Position })
-	serverSays("Holiday", { op = "turkey", golden = false, gilt = 40, gems = 1 })
+	serverSays("Holiday", { op = "turkey", golden = false, gilt = 40 })
 	advance(0.3)
 	check("a catch: feathers and a GOBBLE!", textOnScreen("GOBBLE!") ~= nil or find(workspace, function(d)
 		return d:IsA("TextLabel") and d.Text == "GOBBLE!"
@@ -6836,9 +6833,9 @@ end
 	serverSays("Holiday", { op = "goldenTurkey" })
 	advance(0.3)
 	check("a golden turkey out of the barn is called out", textOnScreen("A golden turkey has walked out of the barn!") ~= nil)
-	serverSays("Holiday", { op = "turkey", golden = true, gilt = 400, gems = 4 })
+	serverSays("Holiday", { op = "turkey", golden = true, gilt = 560 })
 	advance(0.5)
-	check("the golden one: a bigger card", textOnScreen("The golden turkey!") ~= nil and textOnScreen("+4 GEMS") ~= nil)
+	check("the golden one: a bigger card", textOnScreen("The golden turkey!") ~= nil and textOnScreen("+560 GILT") ~= nil)
 	snapshot("field-golden")
 	advance(6)
 	pressTile("Home")
@@ -7062,8 +7059,8 @@ end
 	check("home: the Gifts key, with how many are waiting", dockTile("Gifts") ~= nil and dockTile("Gifts"):FindFirstChild("Count") ~= nil and dockTile("Gifts").Count.Text == "3")
 	-- The gifts open at home: a screen of their own, the odds written at the foot.
 	local opened = {
-		{ { kind = "gems", gilt = 0, gems = 3 } },
-		{ { kind = "gilt", gilt = 60, gems = 0 }, { kind = "moreGilt", gilt = 240, gems = 0 } },
+		{ { kind = "trove", gilt = 620 } },
+		{ { kind = "gilt", gilt = 60 }, { kind = "moreGilt", gilt = 240 } },
 	}
 	local giftsLeft = 3
 	answers.open = function(req)
@@ -7076,11 +7073,11 @@ end
 	end
 	advance(2.2)
 	check("...and the gift screen opens by itself", GiftOpening.isOpen() and textOnScreen("Gifts from the North Pole") ~= nil and textOnScreen("3 gifts to open") ~= nil)
-	check("...with what a gift holds, and its odds, written at the foot (and that it's free)", textOnScreen("40–90 Gilt 60%") ~= nil and textOnScreen("12–18 Gems 2%") ~= nil and textOnScreen("never sold") ~= nil)
+	check("...with what a gift holds, and its odds, written at the foot (and that it's free)", textOnScreen("45–95 Gilt 70%") ~= nil and textOnScreen("500–750 Gilt 2%") ~= nil and textOnScreen("never sold") ~= nil)
 	snapshot("gifts")
 	check("OPEN", press("Open"))
 	advance(2.6)
-	check("...it shakes, the lid flies off and what was in it rises out: +3 Gems", textOnScreen("+3 GEMS") ~= nil and textOnScreen("Gems!") ~= nil and lastAsk("open") ~= nil and lastAsk("open").n == 1)
+	check("...it shakes, the lid flies off and what was in it rises out: a trove of Gilt", textOnScreen("+620 GILT") ~= nil and textOnScreen("A trove of Gilt!") ~= nil and lastAsk("open") ~= nil and lastAsk("open").n == 1)
 	snapshot("gift-reveal")
 	check("...and the dock's count goes down", dockTile("Gifts") ~= nil and dockTile("Gifts").Count.Text == "2")
 	advance(1)
@@ -7133,9 +7130,9 @@ end
 		signalOf(eggs, "ChildRemoved"):Fire(e1)
 	end
 	serverSays("Holiday", { op = "egg", id = 1, by = LocalPlayer.UserId, golden = false, at = at })
-	serverSays("Holiday", { op = "eggFound", golden = false, gilt = 35, gems = 0, left = cfg.eggs.count - 1 })
+	serverSays("Holiday", { op = "eggFound", golden = false, gilt = 40, left = cfg.eggs.count - 1 })
 	advance(0.6)
-	check("an egg found: confetti, and what it paid", textOnScreen("A painted egg") ~= nil and textOnScreen("+35 GILT") ~= nil)
+	check("an egg found: confetti, and what it paid", textOnScreen("A painted egg") ~= nil and textOnScreen("+40 GILT") ~= nil)
 	check("...one fewer on the key", dockTile("Eggs").Count.Text == tostring(cfg.eggs.count - 1))
 	advance(5)
 	Eggs.close(ctx)
@@ -7559,12 +7556,12 @@ end)()
 	check("home: the time along the top", textOnScreen("HOME") ~= nil and textOnScreen("0:38.4") ~= nil)
 
 	-- The result.
-	serverSays("Race", { op = "yourResult", place = 1, field = 2, time = 38.4, gilt = 150, gems = 2 })
+	serverSays("Race", { op = "yourResult", place = 1, field = 2, time = 38.4, gilt = 240 })
 	serverSays("Race", { op = "race", state = "results", id = 1, laps = 3, entrants = { LocalPlayer.DisplayName }, gatherLeft = 0, goIn = 0, startAt = startAt, grid = { { name = LocalPlayer.DisplayName, userId = LocalPlayer.UserId, carId = def.id, slot = 1 } }, ai = {} })
 	serverSays("Race", { op = "results", id = 1, list = { { name = LocalPlayer.DisplayName, userId = LocalPlayer.UserId, place = 1, time = 38.4 }, { name = "Monsieur Laurent", ai = true, place = 2, time = 39.3 } } })
 	advance(0.6)
 	check("the result: You won", textOnScreen("You won") ~= nil)
-	check("...the prize, Gilt and Gems", textOnScreen("+150 Gilt") ~= nil and textOnScreen("+2 Gems") ~= nil)
+	check("...the prize, in Gilt", textOnScreen("+240 Gilt") ~= nil)
 	check("...every driver in order, with times", textOnScreen("1st") ~= nil and textOnScreen("Monsieur Laurent") ~= nil and textOnScreen("0:39.3") ~= nil)
 	check("...Race again and Close", textOnScreen("Race again") ~= nil and textOnScreen("Close") ~= nil)
 	check("...and Invite a friend to race next time", textOnScreen("Invite a friend") ~= nil)
@@ -7973,9 +7970,9 @@ coroutine.wrap(function()
 	advance(0.3)
 	check("caught: what was lost, plainly", textOnScreen("The guards took back 2 pieces (1,960). You're shown out to the courtyard.") ~= nil)
 	advance(6)
-	serverSays("Attraction", { op = "banked", worth = 4820, base = 4382, bonus = 0.1, gilt = 964, gems = 2, pieces = {}, brainrots = { "ladroLussuoso" }, record = true })
+	serverSays("Attraction", { op = "banked", worth = 4820, base = 4382, bonus = 0.1, gilt = 964, pieces = {}, brainrots = { "ladroLussuoso" }, record = true })
 	advance(0.3)
-	check("banked: to the Estate, the Gilt to the purse, the Gems and the brainrot", textOnScreen("A record haul: 4,820") ~= nil and textOnScreen("4,820 to your Estate  ·  964 Gilt to your purse  ·  2 Gems  ·  a brainrot for your collection") ~= nil)
+	check("banked: to the Estate, the Gilt to the purse, and the brainrot", textOnScreen("A record haul: 4,820") ~= nil and textOnScreen("4,820 to your Estate  ·  964 Gilt to your purse  ·  a brainrot for your collection") ~= nil)
 	advance(6)
 	-- The board.
 	invokeResults.AttractionAsk = {
@@ -8093,9 +8090,9 @@ coroutine.wrap(function()
 	check("for Gems: asks the server to skip, by Gems (never a price)", sent[#sent].remote == "AttractionAsk" and sent[#sent].message[1].act == "skip" and sent[#sent].message[1].what == "gems" and sent[#sent].message[1].price == nil)
 	check("...and says why not when it can't", textOnScreen("That's 85 Gems.") ~= nil)
 	advance(3)
-	serverSays("Attraction", { op = "treasury", seconds = 198.25, timed = true, record = true, weekRecord = true, best = 198.25, gems = 10, brainrot = "topoTesoriere", first = true, falls = 3 })
+	serverSays("Attraction", { op = "treasury", seconds = 198.25, timed = true, record = true, weekRecord = true, best = 198.25, chest = 400, brainrot = "topoTesoriere", first = true, falls = 3 })
 	advance(0.3)
-	check("the Treasury: the time, a new best, the Gems and the brainrot", textOnScreen("The Treasury  ·  3:18.25") ~= nil and textOnScreen("A new best time.  ·  10 Gems from the chest  ·  Topo Tesoriere for your collection") ~= nil)
+	check("the Treasury: the time, a new best, the chest's Gilt and the brainrot", textOnScreen("The Treasury  ·  3:18.25") ~= nil and textOnScreen("A new best time.  ·  +400 Gilt from the chest  ·  Topo Tesoriere for your collection") ~= nil)
 	snapshot("basement-treasury")
 	advance(6)
 	-- The machinery, by the server's clock: a piston and a sinking tile of the course.
@@ -8326,10 +8323,10 @@ coroutine.wrap(function()
 	serverSays("Attraction", { op = "finale", say = "A hostile takeover, then." })
 	advance(0.3)
 	check("his finale: his line as a caption, the room in a red grade", textOnScreen("A hostile takeover, then.") ~= nil and game:GetService("Lighting"):FindFirstChild("ExecutiveFinale") ~= nil)
-	serverSays("Attraction", { op = "won", worth = 25000, gems = 15, brainrot = "dirigenteSupremo", first = true })
+	serverSays("Attraction", { op = "won", worth = 25000, gilt = 600, brainrot = "dirigenteSupremo", first = true })
 	serverSays("Attraction", { op = "phase", phase = "won", say = "Well played. The lift is yours. For now." })
 	advance(0.3)
-	check("beaten: what's paid, plainly", textOnScreen("25,000 to your Estate  ·  15 Gems  ·  Il Dirigente Supremo for your collection. The safe is open, and the lift down.") ~= nil)
+	check("beaten: what's paid, plainly", textOnScreen("25,000 to your Estate  ·  +600 Gilt  ·  Il Dirigente Supremo for your collection. The safe is open, and the lift down.") ~= nil)
 	check("...the red grade lifts, and he has the last word", game:GetService("Lighting"):FindFirstChild("ExecutiveFinale") == nil and textOnScreen("Well played. The lift is yours. For now.") ~= nil)
 	local untilAt = workspace:GetServerTimeNow() + 45.5
 	serverSays("Attraction", { op = "executive", phase = "won", open = true, alert = 0, composure = 60, max = 100, gear = { sidearm = true }, decoy = false, digits = "4 1 7 2", generators = 0, guards = 0, boss = 0, bossMax = 600, extractUntil = untilAt })
@@ -8838,7 +8835,7 @@ coroutine.wrap(function()
 end)()
 
 ---------------------------------------------------------------------------------------------------
--- 7l. Coming back each day, and buying plainly: the daily streak (its toast, the next Gems, its
+-- 7l. Coming back each day, and buying plainly: the daily streak (its toast, the next gift, its
 -- chip), the Boutique's closer look and its Gilt purchases confirmed with the price, every offer's
 -- term, and the holidays inside the attractions
 ---------------------------------------------------------------------------------------------------
@@ -8849,13 +8846,13 @@ coroutine.wrap(function()
 	RootM.close()
 	advance(0.5)
 	-- The daily streak.
-	serverSays("Empire", { op = "streak", count = 3, best = 3, boost = 10, next = 15, gems = 5, broke = false, giftAt = 7, giftGems = 15 })
+	serverSays("Empire", { op = "streak", count = 3, best = 3, boost = 10, next = 15, gift = 200, broke = false, giftAt = 7, giftGilt = 600 })
 	advance(0.8)
-	check("the day's streak: how many days, the Gems, what it adds and tomorrow's", textOnScreen("3 days in a row") ~= nil and textOnScreen("5 Gems from the house") ~= nil and textOnScreen("Come back tomorrow for 15%") ~= nil)
-	check("...and the next Gems, plainly", textOnScreen("4 more days for 15 Gems") ~= nil)
+	check("the day's streak: how many days, the gift, what it adds and tomorrow's", textOnScreen("3 days in a row") ~= nil and textOnScreen("200 Gilt from the house") ~= nil and textOnScreen("Come back tomorrow for 15%") ~= nil)
+	check("...and the next gift, plainly", textOnScreen("4 more days for 600 Gilt") ~= nil)
 	snapshot("streak")
 	advance(7)
-	serverSays("Empire", { op = "streak", count = 9, best = 9, boost = 30, next = 30, gems = 0, broke = false, giftAt = 14, giftGems = 30 })
+	serverSays("Empire", { op = "streak", count = 9, best = 9, boost = 30, next = 30, gift = 0, broke = false, giftAt = 14, giftGilt = 1200 })
 	advance(0.8)
 	check("at the most there is, it never promises more", textOnScreen("the most there is") ~= nil and textOnScreen("Come back tomorrow for 30%") == nil)
 	advance(7)

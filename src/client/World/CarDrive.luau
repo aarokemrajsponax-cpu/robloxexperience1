@@ -615,11 +615,8 @@ local function showResults(list: { { [string]: any } }, mine: { [string]: any }?
 		end
 	end
 	Theme.text(content, heading, 26, "display", { LayoutOrder = 2 })
-	if mine and ((mine.gilt or 0) > 0 or (mine.gems or 0) > 0) then
+	if mine and (mine.gilt or 0) > 0 then
 		local prize = "+" .. tostring(mine.gilt) .. " Gilt"
-		if (mine.gems or 0) > 0 then
-			prize ..= "   ·   +" .. tostring(mine.gems) .. " Gems"
-		end
 		Theme.text(content, prize, 18, "bodyBold", { LayoutOrder = 3, TextColor3 = RACING.gold[1] })
 	end
 	-- The standings as a little table: place, driver, time (or why they didn't finish).

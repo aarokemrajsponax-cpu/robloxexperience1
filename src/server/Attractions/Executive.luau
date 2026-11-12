@@ -388,7 +388,7 @@ local function win(ctx: Types.Ctx)
 				p.wins += 1
 				local worth = tonumber(c.prize) or 25000
 				ctx.estate(player, worth, "The Executive Suite")
-				local gems = ctx.gems(player, tonumber(c.prizeGems) or 15, "The Executive Suite", ID)
+				local gilt = ctx.prize(player, tonumber(c.prizeGilt) or 600, "The Executive Suite: the prize")
 				local brainrot = nil
 				local first = not p.firstWin
 				if first then
@@ -401,7 +401,7 @@ local function win(ctx: Types.Ctx)
 				ctx.award(player, "executiveBoss")
 				ctx.tally(player, "executiveWins", 1)
 				ctx.progress(player, "executiveWin", 1)
-				ctx.send(player, { op = "won", worth = worth, gems = gems, brainrot = brainrot, first = first })
+				ctx.send(player, { op = "won", worth = worth, gilt = gilt, brainrot = brainrot, first = first })
 			end
 		end
 	end

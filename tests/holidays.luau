@@ -4,7 +4,7 @@
 -- at the door, once a round, the full bag), the turkeys (they run; a catch pays; the golden one),
 -- Santa's sleigh (boarding, the flight, the Pole, gifts picked up, carried and loaded, left behind,
 -- the flight home, opening them with the odds as shown), the Great Egg Hunt, the luck of the
--- Irish, the day's ceiling on Gems, and a character that jumps further than anyone can.
+-- Irish, never a Gem (only Gilt and curios), and a character that jumps further than anyone can.
 --
 -- Usage (from the repo root):  rojo sourcemap default.project.json -o sourcemap.json
 --                              lune run tests/holidays.luau
@@ -252,17 +252,20 @@ knock(wren, 2)
 atDoor(wren, 3)
 prompts[3].Triggered:Fire(wren)
 check("knocks are a moment apart", count(wren, "treat") == 3)
--- Gems: never more than the day's ceiling from all the games together.
-Config.set("HolidayGames.lane.gemChance", 1)
-Config.set("HolidayGames.gemsPerDay", 2)
+-- Gems: never. Every treat is Gilt (Gems come only from Robux, the owner's gift or a trade).
 local gemsWas = data(wren).gems or 0
 for i = 3, 5 do
 	atDoor(wren, i)
 	knock(wren, i)
 end
-check("a sugared Gem with a treat now and then, never past the day's ceiling", (data(wren).gems or 0) - gemsWas <= 2 and (data(wren).gems or 0) - gemsWas >= 1, (data(wren).gems or 0) - gemsWas)
-Config.set("HolidayGames.gemsPerDay", 25)
-Config.set("HolidayGames.lane.gemChance", 0.15)
+check("every treat is Gilt, and never a Gem", (data(wren).gems or 0) == gemsWas and (function()
+	for _, m in wren.inbox do
+		if m.op == "treat" and m.gems ~= nil then
+			return false
+		end
+	end
+	return true
+end)())
 for i = 6, 9 do
 	atDoor(wren, i)
 	knock(wren, i)
@@ -343,7 +346,7 @@ if golden then
 	place(hunter, golden.at + Vector3.new(0, 2.5, 0))
 	advance(0.2)
 	local g = last(hunter, "turkey")
-	check("the golden turkey pays far more, with Gems", g.golden == true and g.gilt >= C.field.goldenGilt and (data(hunter).gems or 0) - gemsWas == C.field.goldenGems)
+	check("the golden turkey pays far more Gilt (and never a Gem)", g.golden == true and g.gilt >= C.field.goldenGilt and g.gems == nil and (data(hunter).gems or 0) == gemsWas)
 	check("and its own curio and badge", CuriosS.count(data(hunter), "goldenTurkey") == 1 and awards["402:goldenTurkeyCaught"] == true)
 end
 -- Catchable on foot: slower than a guest walks; they tire after a sprint.
@@ -552,10 +555,10 @@ check("and the sleigh is back at the kerb", (sleigh.PrimaryPart.CFrame.Position 
 -- Opening them: the server chooses what each holds.
 giltWas = data(noel).gilt
 local opened = askAs(noel, { op = "open", n = 10 })
-local kinds = { gilt = true, moreGilt = true, gems = true, moreGems = true }
-check("ten opened at once: each Gilt or Gems, decided on the server", opened.ok and #opened.results == 10 and opened.gifts == 5 and (function()
+local kinds = { gilt = true, moreGilt = true, trove = true }
+check("ten opened at once: each Gilt (never a Gem), decided on the server", opened.ok and #opened.results == 10 and opened.gifts == 5 and (function()
 	for _, r in opened.results do
-		if not kinds[r.kind] or (r.gilt <= 0 and r.gems <= 0) then
+		if not kinds[r.kind] or r.gilt <= 0 or r.gems ~= nil then
 			return false
 		end
 	end
@@ -568,7 +571,7 @@ check("asking for fifty at once opens one (never more than ten)", (function()
 end)())
 -- The odds, as the opening screen shows them.
 Holidays.saved(data(noel)).gifts = 4000
-local seen = { gilt = 0, moreGilt = 0, gems = 0, moreGems = 0 }
+local seen = { gilt = 0, moreGilt = 0, trove = 0 }
 for _ = 1, 300 do
 	local r
 	run(function()
@@ -578,20 +581,20 @@ for _ = 1, 300 do
 		seen[x.kind] += 1
 	end
 end
-local total = seen.gilt + seen.moreGilt + seen.gems + seen.moreGems
+local total = seen.gilt + seen.moreGilt + seen.trove
 local function share(k)
 	return seen[k] / total
 end
-check("the odds are the odds shown (60, 28, 10, 2 in 100)", math.abs(share("gilt") - 0.6) < 0.04 and math.abs(share("moreGilt") - 0.28) < 0.04 and math.abs(share("gems") - 0.1) < 0.03 and math.abs(share("moreGems") - 0.02) < 0.012, string.format("%.3f %.3f %.3f %.3f", share("gilt"), share("moreGilt"), share("gems"), share("moreGems")))
-check("Gems past the day's ceiling come as Gilt instead (and say so)", (function()
+check("the odds are the odds shown (70, 28, 2 in 100)", math.abs(share("gilt") - 0.7) < 0.04 and math.abs(share("moreGilt") - 0.28) < 0.04 and math.abs(share("trove") - 0.02) < 0.012, string.format("%.3f %.3f %.3f", share("gilt"), share("moreGilt"), share("trove")))
+check("a trove is a trove of Gilt, never Gems", (function()
 	local r
 	run(function()
 		r = Pole.openGifts(Holidays.ctx, noel, 10)
 	end)
-	for _ = 1, 30 do
+	for _ = 1, 60 do
 		for _, x in r.results do
-			if (x.kind == "gems" or x.kind == "moreGems") then
-				return x.converted == true and x.gems == 0 and x.gilt > 0
+			if x.kind == "trove" then
+				return x.gems == nil and x.gilt > 0
 			end
 		end
 		run(function()
@@ -602,7 +605,7 @@ check("Gems past the day's ceiling come as Gilt instead (and say so)", (function
 end)())
 check("the opening screen's odds add up", (function()
 	local list = HolidayGames.giftOdds()
-	return #list == 4 and list[1].odds == "60%" and list[2].odds == "28%" and list[3].odds == "10%" and list[4].odds == "2%"
+	return #list == 3 and list[1].odds == "70%" and list[2].odds == "28%" and list[3].odds == "2%" and list[3].id == "trove"
 end)())
 -- Gifts are opened at home, never at the Pole.
 local was = at(noel)
@@ -668,7 +671,7 @@ for _, m in finder.inbox do
 	end
 end
 check("walking up to an egg finds it: Gilt for every one", found == C.eggs.count and data(finder).gilt - giltWas >= C.eggs.count * C.eggs.gilt)
-check("the golden egg: Gems, its curio, its badge", (data(finder).gems or 0) - gemsWas >= C.eggs.goldenGems and CuriosS.count(data(finder), "goldenEgg") == 1 and awards["404:goldenEggFound"] == true)
+check("the golden egg: its curio and its badge, and never a Gem", (data(finder).gems or 0) == gemsWas and CuriosS.count(data(finder), "goldenEgg") == 1 and awards["404:goldenEggFound"] == true)
 check("every egg found: the house hides more a minute later", cast("eggsDone") ~= nil and #Eggs.list() == 0)
 advance(C.eggs.again + 1)
 check("more eggs, hidden afresh", #Eggs.list() == C.eggs.count)

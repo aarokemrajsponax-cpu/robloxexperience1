@@ -12,7 +12,7 @@
 -- gifts lying in the snow. Run to pick them up (a few at a time in your arms) and carry them back to
 -- the sleigh to load them before it leaves; anything still in your arms when it goes is left
 -- behind. Everyone at the Pole flies home with it. Loaded gifts are kept (in the guest's saved
--- record) and opened at the Maison: Gilt, a heap of Gilt, Gems, or once in a while a trove of Gems,
+-- record) and opened at the Maison: Gilt, a heap of Gilt, or once in a while a trove of Gilt,
 -- chosen by the server when each is opened, with the odds shown on the screen that opens them.
 -- They're free: no gift, and nothing that makes more of them, is ever sold.
 
@@ -974,7 +974,7 @@ function Pole.openGifts(ctx: Types.Ctx, player: Player, n: number): { [string]: 
 		return { ok = false, why = "No gifts to open. Ride Santa's sleigh to the North Pole for some." }
 	end
 	local c = cfgPole(ctx)
-	local order = { "gilt", "moreGilt", "gems", "moreGems" }
+	local order = { "gilt", "moreGilt", "trove" }
 	local total = 0
 	for _, k in order do
 		total += math.max(0, c.odds[k] or 0)
@@ -994,23 +994,10 @@ function Pole.openGifts(ctx: Types.Ctx, player: Player, n: number): { [string]: 
 		end
 		local range = (c :: any)[kind] :: { number }
 		local amount = ctx.rng:NextInteger(range[1], range[2])
-		local gilt, gems = 0, 0
-		if kind == "gems" or kind == "moreGems" then
-			gems = amount
-		else
-			gilt = amount
-		end
-		-- Today's Gems all given: the rest in Gilt, at the Gem Shop's own rate, and said so.
-		local left = ctx.gemsLeft(player)
-		local converted = 0
-		if gems > left then
-			converted = (gems - left) * 40
-			gems = left
-		end
-		local paidGilt, paidGems = ctx.reward(player, gilt + converted, gems, "A gift from the North Pole")
-		table.insert(results, { kind = kind, gilt = paidGilt, gems = paidGems, converted = converted > 0 })
-		if kind == "moreGems" and paidGems > 0 then
-			ctx.salute("A gift from the North Pole", Names.of(player) .. " found a trove of " .. paidGems .. " Gems in a gift!", player)
+		local paid = ctx.reward(player, amount, "A gift from the North Pole")
+		table.insert(results, { kind = kind, gilt = paid })
+		if kind == "trove" and paid > 0 then
+			ctx.salute("A gift from the North Pole", Names.of(player) .. " found a trove of " .. paid .. " Gilt in a gift.", player)
 		end
 	end
 	ctx.award(player, "holiday_christmas")

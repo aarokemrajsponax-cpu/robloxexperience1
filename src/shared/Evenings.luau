@@ -8,22 +8,22 @@
 
 local Evenings = {}
 
-export type Present = { gilt: number, gems: number, xp: number, curio: string? }
+export type Present = { gilt: number, xp: number, curio: string? }
 
 Evenings.CURIO = "seventhEvening"
 
 Evenings.Week = {
-	{ gilt = 120, gems = 0, xp = 0 },
-	{ gilt = 180, gems = 0, xp = 0 },
-	{ gilt = 0, gems = 5, xp = 0 },
-	{ gilt = 300, gems = 0, xp = 60 },
-	{ gilt = 0, gems = 10, xp = 0 },
-	{ gilt = 450, gems = 0, xp = 0 },
-	{ gilt = 700, gems = 20, xp = 100, curio = Evenings.CURIO },
+	{ gilt = 120, xp = 0 },
+	{ gilt = 180, xp = 0 },
+	{ gilt = 220, xp = 0 },
+	{ gilt = 300, xp = 60 },
+	{ gilt = 400, xp = 0 },
+	{ gilt = 450, xp = 0 },
+	{ gilt = 1500, xp = 100, curio = Evenings.CURIO },
 } :: { Present }
 
--- (After the first week the seventh evening's curio is already yours: more Gems instead.)
-Evenings.SeventhAgain = { gilt = 700, gems = 30, xp = 100 } :: Present
+-- (After the first week the seventh evening's curio is already yours: more Gilt instead.)
+Evenings.SeventhAgain = { gilt = 1900, xp = 100 } :: Present
 
 -- The calendar's day (whole days since 1970, UTC).
 function Evenings.today(now: number?): number
@@ -38,14 +38,11 @@ function Evenings.present(step: number, weeks: number): Present
 	return Evenings.Week[math.clamp(step, 1, 7)]
 end
 
--- A present in words: "300 Gilt + 60 XP", "5 Gems", "700 Gilt + 20 Gems + 100 XP + a curio".
+-- A present in words: "300 Gilt + 60 XP", "1500 Gilt + 100 XP + a curio".
 function Evenings.words(p: Present): string
 	local parts = {}
 	if p.gilt > 0 then
 		table.insert(parts, tostring(p.gilt) .. " Gilt")
-	end
-	if p.gems > 0 then
-		table.insert(parts, tostring(p.gems) .. " Gems")
 	end
 	if p.xp > 0 then
 		table.insert(parts, tostring(p.xp) .. " XP")
@@ -58,11 +55,10 @@ end
 
 -- What the whole first week brings, added up (for the calendar's own line).
 function Evenings.weekTotal(weeks: number): Present
-	local t: Present = { gilt = 0, gems = 0, xp = 0 }
+	local t: Present = { gilt = 0, xp = 0 }
 	for step = 1, 7 do
 		local p = Evenings.present(step, weeks)
 		t.gilt += p.gilt
-		t.gems += p.gems
 		t.xp += p.xp
 	end
 	return t

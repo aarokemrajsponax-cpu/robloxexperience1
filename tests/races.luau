@@ -2,7 +2,7 @@
 -- The Grand Prix (server/GrandPrixService) under Lune on a fake clock: the cars in their bays,
 -- getting in and out, a car left empty going home, Reset, and races: the gathering, the grid, the
 -- house's chauffeurs, laps counted only sector by sector, the order home, the prizes (Gilt, and
--- Gems for a win up to the day's cap), and the cheats it won't pay (a car that jumps further than
+-- the most Gilt for a win, never Gems), and the cheats it won't pay (a car that jumps further than
 -- a car can, a lap that skips the circuit, a driver who gets out). The hours (open, a 50-second
 -- countdown, closed for ten minutes after), opening it early (bought, or the owner, who may also
 -- start a countdown at once), and the Private Garage's two cars (only for its holders).
@@ -250,7 +250,8 @@ advance(0.3)
 local results = broadcastsOf("results", mark)
 local mine = inboxOf(ana, "yourResult")
 check("all racers home: the results, every chauffeur placed by their own time", #results == 1 and #results[1].list == 4 and results[1].list[1].userId == ana.UserId and results[1].list[2].ai == true)
-check("first: the winner's Gilt and Gems", mine[1] and mine[1].place == 1 and mine[1].gilt > 0 and mine[1].gems == C.winGems and anaData.gems == gemsBefore + C.winGems and anaData.gilt > giltBefore, mine[1] and mine[1].gilt)
+check("first: the winner's Gilt, the most of anyone's", mine[1] and mine[1].place == 1 and mine[1].gilt > 0 and mine[1].gilt >= C.prizes[2] and anaData.gilt > giltBefore, mine[1] and mine[1].gilt)
+check("...and never a Gem: those come only from Robux", mine[1] and mine[1].gems == nil and anaData.gems == gemsBefore)
 check("the race is remembered: one run, one win, the best time", anaData.racing.races == 1 and anaData.racing.wins == 1 and anaData.racing.best > 30)
 -- Race again while the results show: closed, saying when it opens and what opening it costs.
 local inbox0 = #ana.inbox
@@ -338,7 +339,7 @@ check("...the race ends with nobody left in it, and nothing paid", mine[1] and m
 advance(C.results + 0.5)
 
 ---------------------------------------------------------------------------------------------------
--- The day's Gems, and two drivers at once
+-- A day of wins (Gilt, never Gems), and two drivers at once
 ---------------------------------------------------------------------------------------------------
 ana.root.Position = phantom.chassis.CFrame.Position + Vector3.new(0, 0, 6)
 ana.humanoid.SeatPart = nil
@@ -353,7 +354,7 @@ for _ = 1, 7 do
 	advance(0.3)
 	advance(C.results + 0.5)
 end
-check("seven wins in a day: Gems only up to the day's cap", anaData.racing.wins == winsBefore + 7 and anaData.gems - gemsStart <= C.gemsPerDay and anaData.racing.gems == C.gemsPerDay, anaData.gems - gemsStart)
+check("seven wins in a day: every one counted, and not one Gem", anaData.racing.wins == winsBefore + 7 and anaData.gems == gemsStart, anaData.gems - gemsStart)
 
 local cara = guestAt(GrandPrix.bay(2).Position + Vector3.new(0, 0, 6))
 Service.drive(cara, "aurelia")

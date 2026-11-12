@@ -427,8 +427,8 @@ local function reach(root: BasePart)
 							pearls[n] = nil
 						end
 						sound("reward", 0.7)
-						local gems = tonumber(r.gems) or 0
-						IslandView.notice("A pearl from the lagoon", string.format("+%d Gilt  ·  %d of %d today%s", tonumber(r.gilt) or 0, tonumber(r.got) or 0, tonumber(r.of) or 5, if gems > 0 then string.format("  ·  all five: +%d Gems", gems) else ""), 3)
+						local set = tonumber(r.set) or 0
+						IslandView.notice("A pearl from the lagoon", string.format("+%d Gilt  ·  %d of %d today%s", tonumber(r.gilt) or 0, tonumber(r.got) or 0, tonumber(r.of) or 5, if set > 0 then string.format("  ·  all five: +%d Gilt more", set) else ""), 3)
 						if type(r.state) == "table" then
 							IslandView.changed(r.state)
 						end

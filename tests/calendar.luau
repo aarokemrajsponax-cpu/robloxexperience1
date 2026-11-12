@@ -1,7 +1,7 @@
 --!nocheck
 -- The Evening Calendar on the server (server/Calendar), under Lune in the house's test harness:
 -- one present a day, exactly the one shown; the next any later day, a missed day losing nothing;
--- the seventh with its curio (once ever: Gems after that); a new week after the seventh; the
+-- the seventh with its curio (once ever: more Gilt after that); a new week after the seventh; the
 -- Badge Book's count; a damaged page mended; and nothing a screen sends can change what it pays.
 --
 -- Usage (from the repo root):  rojo sourcemap default.project.json -o sourcemap.json
@@ -62,10 +62,10 @@ r = askAs(ivy, { op = "open" })
 check("the next day: the second evening's present", r.ok == true and r.opened == 2 and r.gilt == Evenings.Week[2].gilt)
 -- Three days away: nothing lost, the week waits.
 laterDay(3)
-local gems0 = data.gems
+local gems0, gilt3 = data.gems, data.gilt
 r = askAs(ivy, { op = "open" })
-check("three days away and back: the third evening's, nothing lost", r.ok == true and r.opened == 3 and r.gems == Evenings.Week[3].gems and data.gems == gems0 + Evenings.Week[3].gems)
-check("...its Gems on the guest's screen too", ivy:GetAttribute("Gems") == data.gems)
+check("three days away and back: the third evening's, nothing lost", r.ok == true and r.opened == 3 and r.gilt == Evenings.Week[3].gilt and data.gilt == gilt3 + Evenings.Week[3].gilt)
+check("...and never a Gem: those come only from Robux", r.gems == nil and data.gems == gems0)
 laterDay(1)
 xpGiven = 0
 r = askAs(ivy, { op = "open" })
@@ -79,18 +79,26 @@ laterDay(1)
 gilt0, gems0 = data.gilt, data.gems
 r = askAs(ivy, { op = "open" })
 local seventh = Evenings.Week[7]
-check("the seventh: the best of them, with its curio", r.ok == true and r.opened == 7 and r.curio == Evenings.CURIO and CuriosS.count(data, Evenings.CURIO) == 1 and data.gilt == gilt0 + seventh.gilt and data.gems == gems0 + seventh.gems)
+check("the seventh: the best of them, with its curio", r.ok == true and r.opened == 7 and r.curio == Evenings.CURIO and CuriosS.count(data, Evenings.CURIO) == 1 and data.gilt == gilt0 + seventh.gilt and data.gems == gems0)
 check("...and a new week begins", data.calendar.step == 0 and data.calendar.weeks == 1 and askAs(ivy, { op = "state" }).weeks == 1)
 check("every present counted for the Badge Book", opened == 7 and Achievements.stats(data).evenings == 7)
--- The next week's seventh: Gems instead of a second curio.
+-- The next week's seventh: more Gilt instead of a second curio.
 for _ = 1, 6 do
 	laterDay(1)
 	askAs(ivy, { op = "open" })
 end
 laterDay(1)
-gems0 = data.gems
+gilt0, gems0 = data.gilt, data.gems
 r = askAs(ivy, { op = "open" })
-check("the second week's seventh: more Gems, not a second curio", r.ok == true and r.opened == 7 and r.curio == nil and r.gems == Evenings.SeventhAgain.gems and data.gems == gems0 + Evenings.SeventhAgain.gems and CuriosS.count(data, Evenings.CURIO) == 1)
+check("the second week's seventh: more Gilt, not a second curio", r.ok == true and r.opened == 7 and r.curio == nil and r.gilt == Evenings.SeventhAgain.gilt and data.gilt == gilt0 + Evenings.SeventhAgain.gilt and data.gems == gems0 and CuriosS.count(data, Evenings.CURIO) == 1)
+check("no present in the calendar holds a Gem", (function()
+	for _, p in Evenings.Week do
+		if (p :: any).gems ~= nil then
+			return false
+		end
+	end
+	return (Evenings.SeventhAgain :: any).gems == nil
+end)())
 
 ---------------------------------------------------------------------------------------------------
 -- 3. What a screen can't do

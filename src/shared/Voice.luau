@@ -101,7 +101,7 @@ Voice.Concierge = {
 		{ id = "gala", q = "What's in the Grand Ballroom?", a = "Through the great doors at the far end of the Ballroom: the dance floor and its jukebox, Luxury Trivia, the Runway's themed shows, the Daily Arena, three photo sets, the Exchange and the Hall of Fame. A little Gilt for all of it, up to {galaGilt} a day." },
 		{ id = "trade", q = "How do I trade?", a = "At the Exchange's stands in the Grand Ballroom, or the Trade key on a guest's card: Gilt, Gems, brainrots and curios. You both see every offer, and nothing changes hands until you both confirm the very same trade." },
 		{ id = "boards", q = "Where are the boards?", a = "Tap your Fortune, under your Gilt: the Wealthiest in this house, this week and of all time. The Basement's best times are at the lectern on the Basement Stair." },
-		{ id = "gems", q = "What are Gems for?", a = "The Gem Shop, the golden treadmill, a Basement skip and the Cabinet's curios. The attractions' rarest finds pay a few each day." },
+		{ id = "gems", q = "What are Gems for?", a = "The Gem Shop, the golden treadmill, a Basement skip and the Cabinet's curios. Gems come only from a Gem pack in the shop (Robux) or a trade with another guest: nothing in the house pays them out, so every game pays Gilt." },
 	},
 	whichQuestion = "Ask me anything.",
 	newsOffer = "The house has changed since you were last here: your Fortune, and three new attractions. Shall I show you?",
@@ -428,7 +428,7 @@ Voice.Guide = {
 		lead = "Gilt is the house's money. You earn it in every game, and spend it on things you keep.",
 		items = {
 			{ title = "Gilt", line = "Earned everywhere: the tables, Steal a Luxe, the Basement, the Grand Ballroom, the island and the races.", how = "Your Gilt is shown at the top left of the screen." },
-			{ title = "Gems", line = "Rarer than Gilt.", how = "Won in the games (the Basement's Treasury, the Executive Suite, the island's pearls, the Grand Ballroom), in races, the holiday games and the Evening Calendar's presents. Spend them in the Gem Shop and the Cabinet." },
+			{ title = "Gems", line = "Rarer than Gilt.", how = "Bought with Robux (a Gem pack in the shop), or traded with another guest. No game, race, present or streak pays them: those all pay Gilt. Spend Gems in the Gem Shop and the Cabinet." },
 			{ title = "Your Fortune", line = "Everything you own, added up.", how = "Your Gilt, Gems, collection, Suite and your Estate (all you've banked in the games). It's under your Gilt: tap it for the Wealthiest boards, which count only what you earned, never what was bought." },
 			{ title = "The Shop", line = "Everything for sale, in one place.", how = "Looks, table styles, lamps and more for Gilt. Some special things are for Robux, always with the price shown first.", key = "Shop", action = "shop" },
 			{ title = "Levels and badges", line = "Everything you do counts.", how = "Sorting, racing and playing earn XP and raise your level. Badges in the Badge Book mark what you've done." },
@@ -438,11 +438,11 @@ Voice.Guide = {
 	extras = {
 		lead = "Big games and fun on the side. All optional, all worth a try.",
 		items = {
-			{ place = "grandPrix", title = "The Grand Prix", line = "Ultra-luxury cars on the street outside.", how = "Walk up to any car and press E to drive (or F to ride along with a friend). Every 10 minutes a race opens: press Race, line up on the grid, wait for the five lights, then three laps. Reset puts a stuck car right.", win = "Gilt for the top three, and Gems for the winner." },
+			{ place = "grandPrix", title = "The Grand Prix", line = "Ultra-luxury cars on the street outside.", how = "Walk up to any car and press E to drive (or F to ride along with a friend). Every 10 minutes a race opens: press Race, line up on the grid, wait for the five lights, then three laps. Reset puts a stuck car right.", win = "Gilt for the top three, the most for the winner." },
 			{ place = "ballroom", title = "The Ballroom", line = "Lights Out: the big game, every 20 minutes.", how = "When it opens, sit in any chair before the countdown ends. Then everyone sorts at once. Your table holds 16 pieces: go over for 3 seconds and your lamp goes out. Guests watching can send a sabotage or a Shield to a table; nobody playing can buy either, and every table starts with one Shield, free.", win = "The last lamp still lit wins the whole pot of Gilt." },
 			{ place = "library", title = "The Library", line = "Tête-à-Tête: one on one.", how = "Sit at a Library table to face another player. You both get exactly the same pieces; three in a row sends a parcel of lookalikes across to them.", win = "First to win three hands wins the match." },
 			{ title = "Curios and brainrots", line = "Collectibles found as you play.", how = "They turn up at the tables. Open Collection (left of the screen) to see them, and Trade to swap with friends safely.", win = "Brainrots earn you Gilt every hour." },
-			{ title = "Holiday games", line = "In their season, the house throws a party.", how = "Trick or Treat on Hallows Lane, the Turkey Round-Up, Santa's Sleigh, the Great Egg Hunt and the Luck of the Irish.", win = "Gifts, Gilt and Gems." },
+			{ title = "Holiday games", line = "In their season, the house throws a party.", how = "Trick or Treat on Hallows Lane, the Turkey Round-Up, Santa's Sleigh, the Great Egg Hunt and the Luck of the Irish.", win = "Gifts, Gilt and the holiday's own curios." },
 			{ title = "Events", line = "Golden Hour and more.", how = "Watch the strip at the top of the screen: while an event is on, it pays extra.", win = "More Gilt while they last." },
 		} :: { GuideItem },
 	},

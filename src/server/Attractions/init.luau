@@ -168,31 +168,6 @@ local function sendHome(player: Player, id: string)
 	teleport(player, lobbyFrame(id))
 end
 
-local function gems(player: Player, amount: number, source: string, id: string): number
-	local data = Profiles.get(player)
-	amount = math.floor(amount)
-	if not data or amount <= 0 then
-		return 0
-	end
-	local page = saved(data, id)
-	local today = math.floor(os.time() / 86400)
-	if page.gemDay ~= today then
-		page.gemDay = today
-		page.gemsToday = 0
-	end
-	local cap = tonumber(cfg(id).dailyGems) or 0
-	local given = math.max(0, math.min(amount, cap - (tonumber(page.gemsToday) or 0)))
-	if given > 0 then
-		local d = data :: any
-		page.gemsToday = (tonumber(page.gemsToday) or 0) + given
-		d.gems = (if type(d.gems) == "number" then d.gems else 0) + given
-		player:SetAttribute("Gems", d.gems)
-		Analytics.source(player, "Gems", given, d.gems, source)
-		Curios.push(player)
-	end
-	return given
-end
-
 -- Pays a price from a guest's purse: Gilt and/or Gems, all of it or none of it.
 local function spend(player: Player, gilt: number, gemPrice: number, sink: string): boolean
 	local data = Profiles.get(player)
@@ -260,8 +235,16 @@ local ctx: Types.Ctx = {
 		end
 		return Gilt.pay(player, data, math.floor(amount), source)
 	end,
+	-- A prize paid in full, outside the day's soft cap: only for what's limited by design (once a
+	-- day, or once an invitation), never for what can be repeated at will.
+	prize = function(player: Player, amount: number, source: string): number
+		local data = Profiles.get(player)
+		if not data or amount <= 0 then
+			return 0
+		end
+		return Gilt.give(player, data, math.floor(amount), source)
+	end,
 	spend = spend,
-	gems = gems,
 	curio = function(player: Player, id: string, source: string): boolean
 		local data = Profiles.get(player)
 		if not data then

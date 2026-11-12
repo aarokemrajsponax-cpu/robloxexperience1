@@ -164,12 +164,11 @@ local function find(ctx: Types.Ctx, player: Player, e: Egg)
 	local at = e.part.CFrame.Position
 	e.part:Destroy()
 	local gilt = if e.golden then c.goldenGilt else c.gilt
-	local gems = if e.golden then c.goldenGems elseif ctx.rng:NextNumber() < c.gemChance then 1 else 0
-	local paid, given = ctx.reward(player, gilt, gems, if e.golden then "The golden egg" else "The Great Egg Hunt")
+	local paid = ctx.reward(player, gilt, if e.golden then "The golden egg" else "The Great Egg Hunt")
 	ctx.award(player, "holiday_easter")
 	ctx.curio(player, "paintedEgg", "eggs:" .. os.date("!%Y") .. ":" .. tostring(round))
 	ctx.broadcast({ op = "egg", id = e.id, by = player.UserId, golden = e.golden, at = at })
-	ctx.send(player, { op = "eggFound", golden = e.golden, gilt = paid, gems = given, left = #eggs })
+	ctx.send(player, { op = "eggFound", golden = e.golden, gilt = paid, left = #eggs })
 	if e.golden then
 		ctx.award(player, "goldenEggFound")
 		ctx.curio(player, "goldenEgg", "eggs:gold:" .. os.date("!%Y-%j"))

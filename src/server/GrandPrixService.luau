@@ -46,7 +46,6 @@ end
 -- Every beat of the circuit (TimeTrials times laps from it), and racing points for a result.
 Service.onTick = function(_t: number) end
 Service.points = function(_player: Player, _n: number, _why: string) end
-Service.gemsChanged = function(_player: Player) end
 Service.onFinish = function(_player: Player, _place: number, _field: number) end
 -- Whether a guest holds the Private Garage, and offering it (Main: Purchases.Racing).
 Service.hasGarage = function(_player: Player): boolean
@@ -359,10 +358,10 @@ local function begin()
 	broadcastState()
 end
 
-local function payDriver(player: Player, place_: number, time: number, field: number): (number, number)
+local function payDriver(player: Player, place_: number, time: number, field: number): number
 	local data = Profiles.get(player)
 	if not data then
-		return 0, 0
+		return 0
 	end
 	local d = data :: any
 	if type(d.racing) ~= "table" then
@@ -380,22 +379,15 @@ local function payDriver(player: Player, place_: number, time: number, field: nu
 	end
 	local purse = c.prizes[place_] or c.finishGilt
 	local gilt = Gilt.pay(player, data, purse, "Grand Prix")
-	local gems = 0
 	if place_ == 1 then
 		d.racing.wins += 1
-		gems = math.max(0, math.min(c.winGems, c.gemsPerDay - d.racing.gems))
-		if gems > 0 then
-			d.gems += gems
-			d.racing.gems += gems
-			pcall(Service.gemsChanged, player)
-		end
 	end
 	pcall(Service.onFinish, player, place_, field)
 	-- Racing points: for finishing, more on the podium, more again for the win.
 	local P = Tracks.POINTS
 	local points = P.finish + (if place_ <= 3 and field >= 2 then P.podium else 0) + (if place_ == 1 then P.win else 0)
 	pcall(Service.points, player, points, "race")
-	return gilt, gems
+	return gilt
 end
 
 local function finishRace()
@@ -419,16 +411,16 @@ local function finishRace()
 	for i, row in order do
 		local entry = { place = i, name = row.name, time = math.floor(row.time * 100 + 0.5) / 100, ai = row.ai == true }
 		if row.racer then
-			local gilt, gems = payDriver(row.racer.player, i, row.time, field)
+			local gilt = payDriver(row.racer.player, i, row.time, field)
 			entry.userId = row.racer.player.UserId
-			send(row.racer.player, { op = "yourResult", place = i, field = field, time = entry.time, gilt = gilt, gems = gems })
+			send(row.racer.player, { op = "yourResult", place = i, field = field, time = entry.time, gilt = gilt })
 		end
 		table.insert(list, entry)
 	end
 	for _, r in race.racers do
 		if not r.finished then
 			table.insert(list, { place = 0, name = Names.of(r.player), out = r.out or "Did not finish", userId = r.player.UserId })
-			send(r.player, { op = "yourResult", place = 0, field = field, out = r.out or "Did not finish", gilt = 0, gems = 0 })
+			send(r.player, { op = "yourResult", place = 0, field = field, out = r.out or "Did not finish", gilt = 0 })
 		end
 	end
 	sendAll({ op = "results", id = race.id, list = list })

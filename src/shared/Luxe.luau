@@ -31,7 +31,6 @@ export type Piece = {
 	wing: number,
 	weight: number, -- how often it's set out in its wing (never sold: found by playing)
 	curio: string?, -- banked, it's also this collectible (shared/Curios)
-	gems: number?, -- banked, it also pays these Gems (within the day's cap)
 	size: string?, -- tiny, small, medium, large, huge: how long it takes to lift (Config luxe.hold)
 	mass: number?, -- kilograms: what it adds to the bag's weight
 	limited: string?, -- set out only while this holiday is open (shared/HolidayGames): Limited
@@ -82,10 +81,10 @@ Luxe.Pieces = {
 	{ id = "ladro", name = "Ladro Lussuoso", rarity = "Epic", worth = 2500, glyph = "🦝", look = "statuette", wing = 2, weight = 8, curio = "ladroLussuoso" , size = "medium", mass = 3 },
 	-- The Strongroom
 	{ id = "bullion", name = "Gold Bullion Stack", rarity = "Epic", worth = 4800, glyph = "🧱", look = "bullion", wing = 3, weight = 35 , size = "huge", mass = 40 },
-	{ id = "tiara", name = "The Duchess's Tiara", rarity = "Legendary", worth = 8500, glyph = "👑", look = "tiara", wing = 3, weight = 20, gems = 2 , size = "small", mass = 0.6 },
-	{ id = "egg", name = "Jewelled Egg", rarity = "Legendary", worth = 9500, glyph = "🥚", look = "egg", wing = 3, weight = 18, gems = 2 , size = "small", mass = 1.2 },
-	{ id = "gatto", name = "Gatto Gioielliere", rarity = "Legendary", worth = 7000, glyph = "🐈", look = "statuette", wing = 3, weight = 10, curio = "gattoGioielliere", gems = 2 , size = "medium", mass = 4 },
-	{ id = "crownJewel", name = "The Crown Jewel", rarity = "Exclusive", worth = 20000, glyph = "💎", look = "crownJewel", wing = 3, weight = 0, gems = 5 , size = "medium", mass = 2.5 },
+	{ id = "tiara", name = "The Duchess's Tiara", rarity = "Legendary", worth = 8500, glyph = "👑", look = "tiara", wing = 3, weight = 20, size = "small", mass = 0.6 },
+	{ id = "egg", name = "Jewelled Egg", rarity = "Legendary", worth = 9500, glyph = "🥚", look = "egg", wing = 3, weight = 18, size = "small", mass = 1.2 },
+	{ id = "gatto", name = "Gatto Gioielliere", rarity = "Legendary", worth = 7000, glyph = "🐈", look = "statuette", wing = 3, weight = 10, curio = "gattoGioielliere", size = "medium", mass = 4 },
+	{ id = "crownJewel", name = "The Crown Jewel", rarity = "Exclusive", worth = 20000, glyph = "💎", look = "crownJewel", wing = 3, weight = 0, size = "medium", mass = 2.5 },
 	-- The Drop Room (Build 78): streetwear and sneakers.
 	{ id = "shades", name = "Designer Shades", rarity = "Common", worth = 240, glyph = "🕶️", look = "shades", wing = 4, weight = 22, size = "tiny", mass = 0.1 },
 	{ id = "hiTops", name = "Retro High-Tops", rarity = "Uncommon", worth = 700, glyph = "👟", look = "sneaker", wing = 4, weight = 26, size = "small", mass = 1, tint = rgb(230, 230, 236) },
@@ -95,23 +94,23 @@ Luxe.Pieces = {
 	{ id = "deck", name = "Signed Skate Deck", rarity = "Rare", worth = 1500, glyph = "🛹", look = "deck", wing = 4, weight = 12, size = "large", mass = 2.5 },
 	{ id = "chain", name = "Iced Cuban Chain", rarity = "Epic", worth = 3600, glyph = "⛓️", look = "chain", wing = 4, weight = 10, size = "small", mass = 0.8, tint = rgb(220, 235, 255) },
 	{ id = "artToy", name = "Art Toy, Edition of 50", rarity = "Epic", worth = 2800, glyph = "🧸", look = "artToy", wing = 4, weight = 10, size = "medium", mass = 2 },
-	{ id = "record", name = "Platinum Record", rarity = "Legendary", worth = 7500, glyph = "💿", look = "record", wing = 4, weight = 4, size = "medium", mass = 1.5, gems = 2 },
+	{ id = "record", name = "Platinum Record", rarity = "Legendary", worth = 7500, glyph = "💿", look = "record", wing = 4, weight = 4, size = "medium", mass = 1.5 },
 	-- The Garage: supercars, their keys, their rims.
 	{ id = "toolchest", name = "Chrome Tool Chest", rarity = "Uncommon", worth = 900, glyph = "🧰", look = "toolchest", wing = 5, weight = 18, size = "huge", mass = 60 },
 	{ id = "helmet", name = "Racing Helmet", rarity = "Rare", worth = 1800, glyph = "⛑️", look = "helmet", wing = 5, weight = 24, size = "medium", mass = 1.5 },
 	{ id = "rims", name = "Forged Carbon Rims", rarity = "Epic", worth = 4200, glyph = "⚙️", look = "rims", wing = 5, weight = 20, size = "large", mass = 14 },
 	{ id = "chrono", name = "Iced Chronograph", rarity = "Epic", worth = 5200, glyph = "⌚", look = "chrono", wing = 5, weight = 16, size = "tiny", mass = 0.2 },
-	{ id = "keyFob", name = "Supercar Key", rarity = "Legendary", worth = 9000, glyph = "🔑", look = "keyFob", wing = 5, weight = 8, size = "tiny", mass = 0.1, gems = 2 },
+	{ id = "keyFob", name = "Supercar Key", rarity = "Legendary", worth = 9000, glyph = "🔑", look = "keyFob", wing = 5, weight = 8, size = "tiny", mass = 0.1 },
 	-- The Secret Stash: one-of-one finds (Exclusive), or a bag of cash.
-	{ id = "stashCash", name = "A Duffel of Cash", rarity = "Legendary", worth = 8000, glyph = "💰", look = "duffel", wing = 6, weight = 70, size = "medium", mass = 6, gems = 1 },
-	{ id = "goldGrail", name = "The Golden Grail", rarity = "Exclusive", worth = 25000, glyph = "👟", look = "sneaker", wing = 6, weight = 15, size = "small", mass = 1.5, gems = 5, tint = rgb(255, 196, 60) },
-	{ id = "blackChain", name = "Black Diamond Chain", rarity = "Exclusive", worth = 18000, glyph = "⛓️", look = "chain", wing = 6, weight = 15, size = "small", mass = 0.9, gems = 4, tint = rgb(30, 30, 36) },
+	{ id = "stashCash", name = "A Duffel of Cash", rarity = "Legendary", worth = 8000, glyph = "💰", look = "duffel", wing = 6, weight = 70, size = "medium", mass = 6 },
+	{ id = "goldGrail", name = "The Golden Grail", rarity = "Exclusive", worth = 25000, glyph = "👟", look = "sneaker", wing = 6, weight = 15, size = "small", mass = 1.5, tint = rgb(255, 196, 60) },
+	{ id = "blackChain", name = "Black Diamond Chain", rarity = "Exclusive", worth = 18000, glyph = "⛓️", look = "chain", wing = 6, weight = 15, size = "small", mass = 0.9, tint = rgb(30, 30, 36) },
 	-- Limited: set out in the Drop Room only while their holiday is open.
-	{ id = "phantomMask", name = "Phantom Mask", rarity = "Limited", worth = 5000, glyph = "🎭", look = "mask", wing = 4, weight = 0, size = "small", mass = 0.4, limited = "halloween", gems = 2 },
-	{ id = "harvestChain", name = "Harvest Gold Chain", rarity = "Limited", worth = 5000, glyph = "⛓️", look = "chain", wing = 4, weight = 0, size = "small", mass = 0.8, limited = "thanksgiving", gems = 2, tint = rgb(230, 150, 60) },
-	{ id = "frostGrail", name = "Frost Grail Sneakers", rarity = "Limited", worth = 6000, glyph = "👟", look = "sneaker", wing = 4, weight = 0, size = "small", mass = 1, limited = "christmas", gems = 2, tint = rgb(170, 220, 255) },
-	{ id = "cloverKicks", name = "Four-Leaf Kicks", rarity = "Limited", worth = 5000, glyph = "👟", look = "sneaker", wing = 4, weight = 0, size = "small", mass = 1, limited = "stPatrick", gems = 2, tint = rgb(70, 200, 110) },
-	{ id = "chromeEgg", name = "Chrome Egg", rarity = "Limited", worth = 5000, glyph = "🥚", look = "egg", wing = 4, weight = 0, size = "small", mass = 1.2, limited = "easter", gems = 2 },
+	{ id = "phantomMask", name = "Phantom Mask", rarity = "Limited", worth = 5000, glyph = "🎭", look = "mask", wing = 4, weight = 0, size = "small", mass = 0.4, limited = "halloween" },
+	{ id = "harvestChain", name = "Harvest Gold Chain", rarity = "Limited", worth = 5000, glyph = "⛓️", look = "chain", wing = 4, weight = 0, size = "small", mass = 0.8, limited = "thanksgiving", tint = rgb(230, 150, 60) },
+	{ id = "frostGrail", name = "Frost Grail Sneakers", rarity = "Limited", worth = 6000, glyph = "👟", look = "sneaker", wing = 4, weight = 0, size = "small", mass = 1, limited = "christmas", tint = rgb(170, 220, 255) },
+	{ id = "cloverKicks", name = "Four-Leaf Kicks", rarity = "Limited", worth = 5000, glyph = "👟", look = "sneaker", wing = 4, weight = 0, size = "small", mass = 1, limited = "stPatrick", tint = rgb(70, 200, 110) },
+	{ id = "chromeEgg", name = "Chrome Egg", rarity = "Limited", worth = 5000, glyph = "🥚", look = "egg", wing = 4, weight = 0, size = "small", mass = 1.2, limited = "easter" },
 } :: { Piece }
 
 Luxe.byId = {} :: { [string]: Piece }

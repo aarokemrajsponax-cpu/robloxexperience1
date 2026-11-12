@@ -79,7 +79,7 @@ Directory.List = {
 			"Step on each stage's checkpoint pad. If you fall, you go back to the last pad you reached.",
 			"Each of the four chambers pays when you reach its way out, and the Treasury at the bottom pays the most.",
 		},
-		rewards = "A little Gilt at each new checkpoint, a purse to your Estate at the end of each chamber, the Treasury's Gems, and an invitation to the Executive Suite when you clear it.",
+		rewards = "A little Gilt at each new checkpoint, a purse to your Estate at the end of each chamber, the Treasury's chest of Gilt, and an invitation to the Executive Suite when you clear it.",
 		intro = {
 			"Stand on each checkpoint's pad. Fall, and you go back to the last one.",
 			"Each chamber's way out pays its purse to your Estate. Leave by a lift any time and keep it.",
@@ -104,7 +104,7 @@ Directory.List = {
 			"Type the code at the door. Inside the Office: shoot the three generators, stun his four bodyguards, then stun the Executive.",
 			"Beat him and the safe opens: take it, then the lift down.",
 		},
-		rewards = "Beat him and everyone in the Office is paid to their Estate, with Gems and his brainrot the first time. The safe pays once more.",
+		rewards = "Beat him and everyone in the Office is paid to their Estate and in Gilt, with his brainrot the first time. The safe pays once more.",
 		unlock = "You need an invitation: finish the Maison Basement, carry {inviteHaul} of loot out of Steal a Luxe in one trip, or buy one for {invitePrice} Gilt.",
 		waysLead = "You need an invitation to go up. Each of these gets you one:",
 		ways = {
@@ -187,7 +187,7 @@ Directory.List = {
 			"Bring up the day's five pearls from the lagoon, and toast the sunset at the Lookout.",
 			"Choose your jet's livery and your villa's theme.",
 		},
-		rewards = "Gilt for each pearl and for the day's toast (more with friends), and Gems for all five pearls.",
+		rewards = "Gilt for each pearl and for the day's toast (more with friends), and more Gilt for all five pearls.",
 		unlock = "You need the Island Key: reach the rank of {keyRank} ({keyRankAt} Fortune), then buy it at the Jet Lounge for {keyGilt} Gilt or {keyGems} Gems.",
 		waysLead = "You need the Island Key, once. It's yours for good:",
 		ways = {

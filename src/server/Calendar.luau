@@ -76,12 +76,6 @@ function Calendar.open(player: Player, data: Profiles.Data): { [string]: any }
 		c.step = step
 	end
 	local gilt = if present.gilt > 0 then Gilt.give(player, data, present.gilt, "Evening Calendar") else 0
-	if present.gems > 0 then
-		data.gems = (if type(data.gems) == "number" then data.gems else 0) + present.gems
-		Analytics.source(player, "Gems", present.gems, data.gems, "Evening Calendar")
-		player:SetAttribute("Gems", data.gems)
-		Curios.push(player)
-	end
 	local curio: string? = nil
 	if present.curio and Curios.count(data, present.curio) == 0 and Curios.give(player, data, present.curio, 1, "calendar") then
 		curio = present.curio
@@ -95,7 +89,6 @@ function Calendar.open(player: Player, data: Profiles.Data): { [string]: any }
 	s.ok = true
 	s.opened = step
 	s.gilt = gilt
-	s.gems = present.gems
 	s.xp = present.xp
 	s.curio = curio
 	return s

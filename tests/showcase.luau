@@ -186,6 +186,7 @@ Streak.now = function()
 end
 local sd = data(cy)
 local gems0 = sd.gems or 0
+sd.gilt = sd.gilt or 0
 Streak.arrive(cy, sd)
 check("a first visit: a streak of one, no boost yet", sd.streak.count == 1 and cy:GetAttribute("Streak") == 1 and cy:GetAttribute("StreakBoost") == nil and Streak.mult(cy) == 1)
 Streak.arrive(cy, sd)
@@ -194,8 +195,10 @@ day += 1
 Streak.arrive(cy, sd)
 check("the next day: two in a row, 5% more Gilt", sd.streak.count == 2 and math.abs(Streak.mult(cy) - 1.05) < 1e-9 and cy:GetAttribute("StreakBoost") == 5)
 day += 1
+local gilt0 = sd.gilt
 Streak.arrive(cy, sd)
-check("three in a row: a few Gems from the house", sd.streak.count == 3 and sd.gems == gems0 + Streak.GIFTS[3])
+check("three in a row: a gift of Gilt from the house", sd.streak.count == 3 and sd.gilt == gilt0 + Streak.GIFTS[3], sd.gilt - gilt0)
+check("...and never a Gem: those come only from Robux", (sd.gems or 0) == gems0)
 local msg = nil
 for i = #cy.inbox, 1, -1 do
 	if cy.inbox[i].op == "streak" then
@@ -203,14 +206,14 @@ for i = #cy.inbox, 1, -1 do
 		break
 	end
 end
-check("and the guest's screen is told: the streak, its boost, tomorrow's, the Gems", msg ~= nil and msg.count == 3 and msg.boost == 10 and msg.next == 15 and msg.gems == Streak.GIFTS[3], msg)
-check("...and when the next Gems come (seven days in a row: fifteen)", msg ~= nil and msg.giftAt == 7 and msg.giftGems == Streak.GIFTS[7])
-check("the next Gems past thirty: every thirty days", Streak.nextGift(30) == 60 and select(2, Streak.nextGift(45)) == 60)
+check("and the guest's screen is told: the streak, its boost, tomorrow's, the gift", msg ~= nil and msg.count == 3 and msg.boost == 10 and msg.next == 15 and msg.gift == Streak.GIFTS[3] and msg.gems == nil, msg)
+check("...and when the next gift comes (seven days in a row)", msg ~= nil and msg.giftAt == 7 and msg.giftGilt == Streak.GIFTS[7])
+check("the next gift past thirty: every thirty days", select(2, Streak.nextGift(30)) == Streak.EVERY_THIRTY and select(2, Streak.nextGift(45)) == Streak.EVERY_THIRTY)
 day += 3
 check("a streak from days ago is worth nothing now", Streak.mult(cy) == 1)
 Streak.arrive(cy, sd)
 check("a day missed: it starts again at one (the best kept)", sd.streak.count == 1 and sd.streak.best == 3)
 check("never more than 30% more", Streak.boostFor(40) == 1 + Streak.MOST and Streak.boostFor(7) == 1 + Streak.MOST)
-check("Gems every thirty days past thirty", Streak.gift(60) == 60 and Streak.gift(31) == 0)
+check("a gift every thirty days past thirty", Streak.gift(60) == Streak.EVERY_THIRTY and Streak.gift(31) == 0)
 
 H.finish()

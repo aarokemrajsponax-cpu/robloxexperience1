@@ -2314,4 +2314,47 @@ do
 	check("Grand Prix: once held, the Private Garage leaves the Shop's offers", listed == false)
 end
 
+---------------------------------------------------------------------------------------------------
+-- L. Gems come only from Robux: nothing else in the server adds to a Gem balance
+---------------------------------------------------------------------------------------------------
+do
+	local fs = require("@lune/fs")
+	-- (The only places a Gem balance may grow, and why.)
+	local ALLOWED = {
+		["src/server/Curios.luau"] = "a Gem pack's receipt",
+		["src/server/AdminService.luau"] = "the owner's own gift",
+		["src/server/TradeService.luau"] = "another guest's Gems, in a trade",
+		["src/server/Auction.luau"] = "a guest's own bid, returned or refunded",
+	}
+	local found = {}
+	local function scan(dir: string)
+		for _, name in fs.readDir(dir) do
+			local path = dir .. "/" .. name
+			if fs.isDir(path) then
+				scan(path)
+			elseif string.sub(name, -5) == ".luau" then
+				local n = 0
+				for line in string.gmatch(fs.readFile(path), "[^\n]*") do
+					n += 1
+					local code = string.gsub(line, "%-%-.*$", "")
+					if string.find(code, "gems%s*%+=") or (string.find(code, "%.gems%s*=") and string.find(code, "%+")) then
+						table.insert(found, { path = path, line = n })
+					end
+				end
+			end
+		end
+	end
+	scan("src/server")
+	local stray, where = {}, {}
+	for _, f in found do
+		if ALLOWED[f.path] then
+			where[f.path] = true
+		else
+			table.insert(stray, f.path .. ":" .. tostring(f.line))
+		end
+	end
+	check("Gems: nothing in the server adds to a Gem balance but a receipt, the owner's gift, a trade or an auction's own bid", #stray == 0, table.concat(stray, ", "))
+	check("...and a Gem pack's receipt still grants them", where["src/server/Curios.luau"] == true)
+end
+
 H.finish()

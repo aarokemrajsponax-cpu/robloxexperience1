@@ -525,14 +525,12 @@ local function bank(ctx: Types.Ctx, player: Player, run: Run, way: Plan.Bank?)
 	local base = worthOf(run.bag)
 	local worth = math.floor(base * (1 + bonus) + 0.5)
 	local pieces = {}
-	local gems = 0
 	local crown = false
 	local brainrots = {}
 	local finds = {}
 	local bestOrder = 0
 	for _, piece in run.bag do
 		table.insert(pieces, { id = piece.id, name = piece.name, glyph = piece.glyph, rarity = piece.rarity, worth = piece.worth })
-		gems += piece.gems or 0
 		if piece.id == "crownJewel" then
 			crown = true
 		end
@@ -560,13 +558,12 @@ local function bank(ctx: Types.Ctx, player: Player, run: Run, way: Plan.Bank?)
 	run.chasedBy = 0
 	run.spotted = false
 	local gilt = ctx.estate(player, worth, "Steal a Luxe")
-	local given = if gems > 0 then ctx.gems(player, gems, "Steal a Luxe", ID) else 0
 	local record = worth > p.best
 	p.hauls += 1
 	p.banked += worth
 	p.best = math.max(p.best, worth)
 	resetSpeed(ctx, player, run)
-	ctx.send(player, { op = "banked", worth = worth, base = base, bonus = bonus, gilt = gilt, gems = given, pieces = pieces, brainrots = brainrots, record = record, route = route.id, routeName = route.name, finds = finds })
+	ctx.send(player, { op = "banked", worth = worth, base = base, bonus = bonus, gilt = gilt, pieces = pieces, brainrots = brainrots, record = record, route = route.id, routeName = route.name, finds = finds })
 	note(player, "Luxe banked", { route = route.id, worth = worth, pieces = count })
 	if route.id == "van" then
 		complete(ctx, player, run, "van")

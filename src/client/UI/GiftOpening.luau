@@ -1,7 +1,7 @@
 --!strict
 -- Opening the gifts from the North Pole: a screen of its own. The gift stands in the middle in its
 -- wrapping and ribbon, a bow on top; OPEN, and it shakes, the lid flies off in a burst of light, and
--- what was inside rises out of it: Gilt, a heap of Gilt, Gems, or (rarely) a trove of Gems. OPEN
+-- what was inside rises out of it: Gilt, a heap of Gilt, or (rarely) a trove of Gilt. OPEN
 -- ALL opens the rest, each one appearing in turn, with the totals. What each holds is decided on the
 -- server when it's opened; this screen only shows it. The odds are written at the foot, as they
 -- are, and so is that the gifts are free: nothing about them is ever sold.
@@ -24,15 +24,15 @@ local GiftOpening = {}
 
 local C = Brand.Colours
 local NAME = "GiftOpening"
-local GEM = Color3.fromRGB(120, 210, 255)
+local TROVE = Color3.fromRGB(255, 236, 170) -- a trove: the palest, brightest gold
 
 -- Set by World/HolidayPlay: the guest's gifts waiting changed (after opening some), and Ride
 -- again (board Santa's sleigh).
 GiftOpening.changed = function(_left: number) end
 GiftOpening.ride = function() end
 
-local GLYPH = { gilt = "💰", moreGilt = "🏆", gems = "💎", moreGems = "👑" }
-local SAYS = { gilt = "Gilt!", moreGilt = "A heap of Gilt!", gems = "Gems!", moreGems = "A trove of Gems!" }
+local GLYPH = { gilt = "💰", moreGilt = "🏆", trove = "👑" }
+local SAYS = { gilt = "Gilt!", moreGilt = "A heap of Gilt!", trove = "A trove of Gilt!" }
 
 local function ask(request: { [string]: any }): any
 	local ok, r = pcall(function()
@@ -237,12 +237,12 @@ end
 local function reveal(u: Ui, r: { [string]: any })
 	clearStage(u)
 	local kind = tostring(r.kind)
-	local gems = if type(r.gems) == "number" then r.gems else 0
 	local gilt = if type(r.gilt) == "number" then r.gilt else 0
-	local colour = if gems > 0 then GEM else C.brightGold
+	local trove = kind == "trove"
+	local colour = if trove then TROVE else C.brightGold
 	halo(u.stage, colour, 380)
 	burst(u.stage, colour)
-	confetti(u.stage, if gems > 0 then { GEM, Color3.new(1, 1, 1), Color3.fromRGB(180, 140, 255) } else { C.brightGold, Color3.new(1, 1, 1), Color3.fromRGB(255, 120, 110) })
+	confetti(u.stage, if trove then { TROVE, C.brightGold, Color3.new(1, 1, 1) } else { C.brightGold, Color3.new(1, 1, 1), Color3.fromRGB(255, 120, 110) })
 	local glyph = Instance.new("TextLabel")
 	glyph.Name = "Prize"
 	glyph.BackgroundTransparency = 1
@@ -276,25 +276,12 @@ local function reveal(u: Ui, r: { [string]: any })
 	amount.FontFace = Brand.Fonts.figures
 	amount.TextSize = 46
 	amount.TextColor3 = colour
-	amount.Text = if gems > 0 then "+" .. number(gems) .. (if gems == 1 then " GEM" else " GEMS") else "+" .. number(gilt) .. " GILT"
+	amount.Text = "+" .. number(gilt) .. " GILT"
 	amount.Parent = u.stage
-	if r.converted == true then
-		local note = Instance.new("TextLabel")
-		note.Name = "Note"
-		note.BackgroundTransparency = 1
-		note.AnchorPoint = Vector2.new(0.5, 0)
-		note.Position = UDim2.new(0.5, 0, 0.64, 92)
-		note.Size = UDim2.new(1, 0, 0, 20)
-		note.FontFace = Brand.Fonts.body
-		note.TextSize = 14
-		note.TextColor3 = C.smoke
-		note.Text = "Today's Gems are all given out, so it came as Gilt."
-		note.Parent = u.stage
-	end
-	if kind == "moreGems" then
+	if trove then
 		Sound.play("regalFanfare", 0.7)
 		Sound.play("celebrate", 0.5)
-	elseif gems > 0 then
+	elseif kind == "moreGilt" then
 		Sound.play("crystal", 0.8)
 	else
 		Sound.play("coinDrop", 0.7)
@@ -376,7 +363,7 @@ local function openAll(u: Ui)
 	layout.VerticalAlignment = Enum.VerticalAlignment.Center
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
 	layout.Parent = grid
-	local totalGilt, totalGems, n = 0, 0, 0
+	local totalGilt, n = 0, 0
 	while u.left > 0 and n < 40 do
 		local r = ask({ op = "open", n = math.min(10, u.left) })
 		if not r.ok or type(r.results) ~= "table" then
@@ -385,10 +372,9 @@ local function openAll(u: Ui)
 		u.left = if type(r.gifts) == "number" then r.gifts else 0
 		for _, x in r.results do
 			n += 1
-			local gems = if type(x.gems) == "number" then x.gems else 0
 			local gilt = if type(x.gilt) == "number" then x.gilt else 0
+			local trove = x.kind == "trove"
 			totalGilt += gilt
-			totalGems += gems
 			local tile = Instance.new("Frame")
 			tile.Name = "Tile"
 			tile.LayoutOrder = n
@@ -396,8 +382,8 @@ local function openAll(u: Ui)
 			tile.BackgroundTransparency = 0.05
 			corner(tile, 12)
 			local s = Instance.new("UIStroke")
-			s.Color = if gems > 0 then GEM else C.gold
-			s.Thickness = if x.kind == "moreGems" or x.kind == "moreGilt" then 2.5 else 1.2
+			s.Color = if trove then TROVE else C.gold
+			s.Thickness = if trove or x.kind == "moreGilt" then 2.5 else 1.2
 			s.Parent = tile
 			local g = Instance.new("TextLabel")
 			g.BackgroundTransparency = 1
@@ -411,15 +397,15 @@ local function openAll(u: Ui)
 			t.Size = UDim2.new(1, 0, 0.4, 0)
 			t.FontFace = Brand.Fonts.heavy
 			t.TextScaled = true
-			t.TextColor3 = if gems > 0 then GEM else C.brightGold
-			t.Text = if gems > 0 then "+" .. gems .. " 💎" else "+" .. number(gilt)
+			t.TextColor3 = if trove then TROVE else C.brightGold
+			t.Text = "+" .. number(gilt)
 			t.Parent = tile
 			local sc = Instance.new("UIScale")
 			sc.Scale = 0.4
 			sc.Parent = tile
 			tile.Parent = grid
 			TweenService:Create(sc, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
-			Sound.play(if gems > 0 then "crystal" else "coinDrop", 0.4, 1 + (n % 5) * 0.05)
+			Sound.play(if trove then "crystal" else "coinDrop", 0.4, 1 + (n % 5) * 0.05)
 			task.wait(0.12)
 		end
 		GiftOpening.changed(u.left)
@@ -433,7 +419,7 @@ local function openAll(u: Ui)
 	sum.FontFace = Brand.Fonts.figures
 	sum.TextSize = 30
 	sum.TextColor3 = C.brightGold
-	sum.Text = "+" .. number(totalGilt) .. " GILT" .. (if totalGems > 0 then "   +" .. number(totalGems) .. (if totalGems == 1 then " GEM" else " GEMS") else "")
+	sum.Text = "+" .. number(totalGilt) .. " GILT"
 	sum.Parent = u.stage
 	Sound.play("reward", 0.7)
 	setCount(u)
@@ -489,8 +475,7 @@ local function oddsLine(): string
 	local pole = Config.data.HolidayGames.pole :: any
 	for _, o in HolidayGames.giftOdds() do
 		local range = pole[o.id]
-		local unit = if o.id == "gems" or o.id == "moreGems" then "Gems" else "Gilt"
-		local amount = if type(range) == "table" then string.format("%s–%s %s", number(range[1]), number(range[2]), unit) else o.name
+		local amount = if type(range) == "table" then string.format("%s–%s Gilt", number(range[1]), number(range[2])) else o.name
 		table.insert(parts, o.glyph .. " " .. amount .. " " .. o.odds)
 	end
 	return "What a gift holds: " .. table.concat(parts, "  ·  ") .. ". Free from Santa's sleigh; never sold."

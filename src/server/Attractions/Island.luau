@@ -230,12 +230,12 @@ local function pearl(ctx: Types.Ctx, player: Player, data: any, p: { [string]: a
 			got += 1
 		end
 	end
-	local gems = 0
+	local set = 0
 	if got >= #today then
-		gems = ctx.gems(player, num(cfg(ctx).pearlSetGems, Plan.PEARL_SET_GEMS), "island pearls", Plan.ID)
+		set = ctx.prize(player, num(cfg(ctx).pearlSetGilt, Plan.PEARL_SET_GILT), "island pearls: all five")
 	end
 	local _ = data
-	return { ok = true, pearl = n, got = got, of = #today, gilt = gilt, gems = gems, balance = p.pearls }
+	return { ok = true, pearl = n, got = got, of = #today, gilt = gilt, set = set, balance = p.pearls }
 end
 
 local LOOKOUT = Plan.Places.summit.at

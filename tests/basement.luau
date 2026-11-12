@@ -3,7 +3,7 @@
 -- under Lune on a fake clock, in the house's test harness: a course that can be run (every jump
 -- within a guest's reach, a pit under every stage), going down from the Basement Stair, checkpoints
 -- in order (and only in order), the Gilt at each and each part's purse, falling and the machinery
--- sending you back (never on a moment's brush), the Treasury (its Gems, the brainrot, the time,
+-- sending you back (never on a moment's brush), the Treasury (its Gilt, the brainrot, the time,
 -- the boards), skipping a stage (never timed, never the Treasury), and the lifts home.
 --
 -- Usage (from the repo root):  rojo sourcemap default.project.json -o sourcemap.json
@@ -444,13 +444,23 @@ for n = 8, 15 do
 end
 check("(at the Falling Coins' end)", Game.runs[ada].checkpoint == 15)
 check("each part's purse paid at its end", Fortune.page(data(ada)).estate == estateWas + Plan.Zones[1].purse + Plan.Zones[2].purse + Plan.Zones[3].purse)
-local gemsWas = data(ada).gems
+local gemsWas, giltWas = data(ada).gems, data(ada).gilt
+-- (The day's soft cap set aside, to see the chest's own amount.)
+data(ada).giltDay.earned = 0
 T = 1000 + 205.5
 onCheckpoint(ada, 16)
 local tr = last(ada, "treasury")
 check("the Treasury: the run's time, from leaving the start", tr ~= nil and math.abs(tr.seconds - 205.5) < 1e-6 and tr.timed == true, tr and tr.seconds)
 check("...the last purse", Fortune.page(data(ada)).estate == estateWas + Plan.Zones[1].purse + Plan.Zones[2].purse + Plan.Zones[3].purse + Plan.Zones[4].purse)
-check("...the chest's Gems, the first clear of the day", tr.gems == C.chestGems and data(ada).gems == gemsWas + C.chestGems)
+check("...the chest's Gilt, the first clear of the day", tr.chest == C.chestGilt and data(ada).gilt >= giltWas + C.chestGilt, tr.chest)
+check("...and the chests after it are Gilt as everywhere in the house: under the day's soft cap", (function()
+	local was = data(ada).gilt
+	data(ada).giltDay.earned = 100000
+	local paid = Attractions.ctx.gilt(ada, C.chestGilt, "test")
+	data(ada).gilt = was
+	return paid > 0 and paid < C.chestGilt
+end)())
+check("...and never a Gem: those come only from Robux", tr.gems == nil and data(ada).gems == gemsWas)
 check("...Topo Tesoriere, the first time ever", tr.first == true and tr.brainrot == "topoTesoriere" and (data(ada).curios.items.topoTesoriere or 0) == 1)
 check("...the badges: the Treasury, and under four minutes", (function()
 	local got = {}
@@ -494,10 +504,11 @@ for n = 1, 15 do
 end
 T = 5000 + 300
 gemsWas = data(ada).gems
+data(ada).giltDay.earned = 0
 onCheckpoint(ada, 16)
 tr = last(ada, "treasury")
 check("a slower run isn't a record, and the best stands", tr.record == false and Game.page(Attractions.ctx, data(ada)).best == 205.5)
-check("the day's second chest pays its smaller Gems", tr.gems == C.chestGemsAgain and data(ada).gems == gemsWas + C.chestGemsAgain)
+check("the day's second chest pays its smaller Gilt (no Gems)", tr.chest == C.chestGiltAgain and data(ada).gems == gemsWas, tr.chest)
 check("no second Topo Tesoriere", tr.brainrot == nil and (data(ada).curios.items.topoTesoriere or 0) == 1)
 
 ---------------------------------------------------------------------------------------------------

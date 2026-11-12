@@ -19,7 +19,7 @@ local Progress = {}
 Progress.boost = function(_player: Player): number
 	return 1
 end
-Progress.levelUp = function(_player: Player, _level: number, _gilt: number, _gems: number) end
+Progress.levelUp = function(_player: Player, _level: number, _gilt: number) end
 
 local function cfg(): { [string]: any }
 	return Config.data.Levels :: any
@@ -67,8 +67,7 @@ function Progress.add(player: Player, amount: number, reason: string): number
 		local from = L.best
 		L.best = now
 		for level = from + 1, now do
-			local gilt, gems = Levels.reward(level)
-			Progress.levelUp(player, level, gilt, gems)
+			Progress.levelUp(player, level, Levels.reward(level))
 			Analytics.custom(player, "Level", level, { reason = reason })
 		end
 	end

@@ -446,7 +446,6 @@ local function triviaResults(ctx: Types.Ctx)
 			table.insert(winners, Names.of(s.player))
 			pay(ctx, s.player, R(ctx, "triviaWin"), "Luxury Trivia win")
 			ctx.tally(s.player, "triviaWins", 1)
-			ctx.gems(s.player, R(ctx, "winGems"), "Luxury Trivia win", Plan.ID)
 			if s.right == Plan.TRIVIA_QUESTIONS then
 				ctx.herald(s.player, { kind = "gala", title = "LUXURY TRIVIA", line = "answered all seven, and won Luxury Trivia", glyph = "🎓" })
 			end
@@ -698,7 +697,6 @@ local function runwayResults(ctx: Types.Ctx)
 		local w = winner :: Model
 		pay(ctx, w.player, R(ctx, "runwayWin"), "The Runway win")
 		ctx.tally(w.player, "runwayWins", 1)
-		ctx.gems(w.player, R(ctx, "winGems"), "The Runway win", Plan.ID)
 		ctx.herald(w.player, { kind = "gala", title = "THE RUNWAY", line = "won the Runway: " .. th.name, glyph = "👗", colour = th.colour })
 		runwayBoard(string.format("%s takes the show  ·  %d vote%s", Names.of(w.player), best, if best == 1 then "" else "s"))
 	else
@@ -969,7 +967,6 @@ local function arenaResults(ctx: Types.Ctx)
 				table.insert(winners, row.name)
 				row.paid += pay(ctx, player, R(ctx, "arenaWin"), "The Daily Arena win")
 				ctx.tally(player, "arenaWins", 1)
-				ctx.gems(player, R(ctx, "winGems"), "The Daily Arena win", Plan.ID)
 			end
 		end
 	end

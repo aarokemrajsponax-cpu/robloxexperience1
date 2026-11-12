@@ -73,7 +73,7 @@ Island.PEARL_SPOTS = {
 Island.PEARLS_A_DAY = 5
 Island.PEARL_REACH = 7 -- how near a guest must be to bring one up
 Island.PEARL_GILT = 250 -- each pearl
-Island.PEARL_SET_GEMS = 2 -- all five in a day
+Island.PEARL_SET_GILT = 100 -- all five in a day
 
 -- The day's pearls: `count` spots (indices into PEARL_SPOTS), the same for everyone on `day`.
 function Island.pearlsFor(day: number, count: number?): { number }

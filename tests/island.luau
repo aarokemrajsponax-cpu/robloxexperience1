@@ -255,11 +255,13 @@ check("...once a day", r.ok == false)
 r = act(ada, { act = "pearl", n = 9 })
 check("a pearl that isn't today's: refused", r.ok == false)
 data(ada).gems = 0
+giltBefore = data(ada).gilt
 for i = 2, 5 do
 	standOn(ada, Plan.PEARL_SPOTS[today[i]], 0.5)
 	r = act(ada, { act = "pearl", n = i })
 end
-check("all five in a day: a little more (Gems)", r.ok == true and r.got == 5 and r.gems == 2 and data(ada).gems == 2)
+check("all five in a day: a little more Gilt", r.ok == true and r.got == 5 and r.set == Plan.PEARL_SET_GILT and data(ada).gilt == giltBefore + 4 * 250 + Plan.PEARL_SET_GILT, r.set, data(ada).gilt - giltBefore)
+check("...and never a Gem: those come only from Robux", r.gems == nil and data(ada).gems == 0)
 T += 86400
 state = askAs(ada, { op = "state", id = "island" })
 check("the next day: five new pearls to find", state.pearlTaken[1] == false and page(ada).pearls == 5)

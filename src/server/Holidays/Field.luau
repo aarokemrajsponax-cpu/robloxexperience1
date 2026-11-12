@@ -615,13 +615,12 @@ local function catch(ctx: Types.Ctx, player: Player, t: Turkey)
 	local where = t.part.CFrame.Position
 	t.part:Destroy()
 	local gilt = if t.golden then c.goldenGilt else c.gilt
-	local gems = if t.golden then c.goldenGems elseif ctx.rng:NextNumber() < c.gemChance then 1 else 0
-	local paid, given = ctx.reward(player, gilt, gems, if t.golden then "The golden turkey" else "Turkey Round-Up")
+	local paid = ctx.reward(player, gilt, if t.golden then "The golden turkey" else "Turkey Round-Up")
 	ctx.award(player, "holiday_thanksgiving")
 	ctx.curio(player, "goldenWishbone", "field:" .. os.date("!%Y"))
 	ctx.broadcast({ op = "caught", id = t.id, by = player.UserId, golden = t.golden, at = where })
 	visitOf(ctx, player).caught += 1
-	ctx.send(player, { op = "turkey", golden = t.golden, gilt = paid, gems = given })
+	ctx.send(player, { op = "turkey", golden = t.golden, gilt = paid })
 	ctx.send(player, meter(ctx, player))
 	if t.golden then
 		ctx.award(player, "goldenTurkeyCaught")

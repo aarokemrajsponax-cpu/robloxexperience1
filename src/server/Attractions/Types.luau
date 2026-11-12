@@ -24,7 +24,8 @@ export type Ctx = {
 	estate: (player: Player, worth: number, source: string, cash: boolean?) -> number, -- to the Estate (and Gilt)
 	gilt: (player: Player, amount: number, source: string) -> number, -- earned Gilt (Gilt.pay)
 	spend: (player: Player, gilt: number, gems: number, sink: string) -> boolean, -- pays a price (or nothing)
-	gems: (player: Player, amount: number, source: string, id: string) -> number, -- within the day's cap
+	prize: (player: Player, amount: number, source: string) -> number, -- in full: once a day or an invitation
+	-- (No Gems: they come only from Robux, the owner's gift or a trade. Rewards are Gilt.)
 	curio: (player: Player, id: string, source: string) -> boolean,
 	herald: (player: Player, feat: Feat) -> boolean,
 	send: (player: Player, message: { [string]: any }) -> (),

@@ -4,7 +4,7 @@
 -- treadmills, its board), going in only from there, a way through the residence that can be walked,
 -- taking a piece (only within reach, only with room in the bag), the weight of the bag, the guards
 -- (seeing, chasing, giving up, catching: the bag lost), banking at the car (the Estate, the cash
--- share, the brainrots, the day's Gems), the upgrades (their real prices, never the screen's),
+-- share, the brainrots, never a Gem), the upgrades (their real prices, never the screen's),
 -- Stride from the treadmills, and every way out letting go of the guest. Build 78: six wings (the
 -- Drop Room with its loft and roof, the Garage, the Secret Stash), lifts that take their hold, the
 -- van and the helicopter, the cameras, the alarm and its lockdown, the laser grid, the side jobs,
@@ -676,7 +676,7 @@ walking = false
 check("a guard walks his round, point to point", g6.index ~= 2 or (g6.root.CFrame.Position - (g6.points[1] + Vector3.new(0, 3, 0))).Magnitude > 5)
 
 ---------------------------------------------------------------------------------------------------
--- 7. The rarest pieces: the brainrots, the Gems (a day's cap), the Crown Jewel
+-- 7. The rarest pieces: the brainrots, never a Gem, the Crown Jewel
 ---------------------------------------------------------------------------------------------------
 parkGuards(nil)
 local spotC = Luxe.spots[21]
@@ -706,7 +706,7 @@ end
 local gemsWas = data(ava).gems
 local res, b2 = bankOne(ava, spotC, nil)
 check("the Crown Jewel can be taken and banked", res.ok == true and b2 ~= nil and b2.worth == Plan.byId.crownJewel.worth and b2.pieces[1].id == "crownJewel", res.why)
-check("it pays its Gems", b2.gems == Plan.byId.crownJewel.gems and data(ava).gems == gemsWas + Plan.byId.crownJewel.gems, b2.gems)
+check("it pays its worth, and never a Gem (those come only from Robux)", b2.gems == nil and data(ava).gems == gemsWas, b2.gems)
 check("and earns its achievement", #awards > 0 and awards[#awards].key == "crownJewel")
 steps(80)
 local feat = nil
@@ -722,13 +722,22 @@ steps(70)
 check("then it's back on its own plinth", spotC.piece ~= nil and spotC.piece.id == "crownJewel")
 local res2, b3 = bankOne(ava, Luxe.spots[9], Plan.byId.ladro)
 check("a brainrot piece banked is the guest's to keep as a brainrot", res2.ok == true and b3 ~= nil and b3.brainrots[1] == "ladroLussuoso" and (data(ava).curios.items.ladroLussuoso or 0) == 1, res2.why)
--- Gems: never more than the day's cap.
-local paid = Plan.byId.crownJewel.gems
+-- Gems: never, however rare the piece or however many are banked.
+local gemsNow = data(ava).gems
+local anyGem = false
 for _, id in { 17, 18, 11, 12, 13, 14 } do
 	local _, b = bankOne(ava, Luxe.spots[id], Plan.byId.tiara)
-	paid += b.gems
+	anyGem = anyGem or b == nil or b.gems ~= nil
 end
-check("Gems from Steal a Luxe stop at the day's cap", paid == C.dailyGems, paid)
+check("no haul in Steal a Luxe pays a Gem, however rare", not anyGem and data(ava).gems == gemsNow)
+check("...and no piece says it would", (function()
+	for _, p in Plan.Pieces do
+		if (p :: any).gems ~= nil then
+			return false
+		end
+	end
+	return true
+end)())
 
 ---------------------------------------------------------------------------------------------------
 -- 8. Upgrades: the house's prices

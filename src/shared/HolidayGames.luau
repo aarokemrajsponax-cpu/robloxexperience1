@@ -5,13 +5,13 @@
 -- decided and paid on the server (Config.HolidayGames has the numbers).
 --
 --   All Hallows': trick or treat on Hallows Lane, a street of grand houses away from the Maison. A
---     host in costume answers every door with a treat: Gilt, and now and then a sugared Gem.
+--     host in costume answers every door with a treat of Gilt, and more for a full bag.
 --   Thanksgiving: the Turkey Round-Up in the Harvest Field. The turkeys run; catch them for Gilt,
---     now and then a Gem, and more for the golden one.
+--     and far more for the golden one.
 --   Christmas: Santa's sleigh waits at the kerb. Ride it to the North Pole, gather the gifts lying
 --     in the snow, load them on the sleigh before it flies home, and open them at the Maison:
---     Gilt, more Gilt, Gems, and once in a while a lot of Gems. (Free gifts: nothing about them
---     is ever sold.)
+--     Gilt, a heap of Gilt, and once in a while a trove of it. (Free gifts: nothing about them is
+--     ever sold. Never Gems: those come only from Robux, the owner's gift or a trade.)
 --   Easter: the Great Egg Hunt. Painted eggs hidden all over the house; one is golden.
 --   St Patrick's: the luck of the Irish. Mythics and the rarer curios turn up far more often at the
 --     tables (never a score).
@@ -337,8 +337,7 @@ end
 HolidayGames.GiftKinds = {
 	{ id = "gilt", name = "Gilt", glyph = "💰" },
 	{ id = "moreGilt", name = "A heap of Gilt", glyph = "💰" },
-	{ id = "gems", name = "Gems", glyph = "💎" },
-	{ id = "moreGems", name = "A trove of Gems", glyph = "👑" },
+	{ id = "trove", name = "A trove of Gilt", glyph = "👑" },
 }
 
 -- Each kind's exact chance, as a percentage worked out from the weights (for the opening screen):

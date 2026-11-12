@@ -4,8 +4,8 @@
 -- closing its far end; railings, gas lamps, jack-o'-lanterns on every step, violet light washing
 -- up the fronts. Knock at a door (its prompt) and it opens on a lit hall, where a host in costume
 -- (a masked countess, a pumpkin-headed gentleman, a friendly ghost in a bow tie...) hands over a
--- treat: Gilt, and now and then a sugared Gem. Each door once a round for each guest; every door
--- in one round fills the bag (more Gilt, a few Gems, the Candy Pail). Everything is gentle:
+-- treat of Gilt. Each door once a round for each guest; every door in one round fills the bag
+-- (more Gilt, the Candy Pail). Everything is gentle:
 -- costumes, sweets and candlelight.
 --
 -- The server builds the street and the hosts and decides every treat; every screen opens the
@@ -774,8 +774,7 @@ function Lane.knock(ctx: Types.Ctx, player: Player, i: number)
 	h.doors[key] = true
 	local list = visited(ctx, h)
 	local gilt = if i == #doors then c.minuitGilt else c.gilt
-	local gems = if ctx.rng:NextNumber() < c.gemChance then 1 else 0
-	local paid, given = ctx.reward(player, gilt, gems, "Trick or treat")
+	local paid = ctx.reward(player, gilt, "Trick or treat")
 	ctx.award(player, "holiday_halloween")
 	ctx.curio(player, "jackOLantern", "lane:" .. tostring(h.round))
 	local message: { [string]: any } = {
@@ -786,17 +785,15 @@ function Lane.knock(ctx: Types.Ctx, player: Player, i: number)
 		treat = host.treat,
 		treatName = host.treatName,
 		gilt = paid,
-		gems = given,
 		visited = list,
 		total = #doors,
 		ends = roundEnds(ctx),
 	}
 	if #list >= #doors then
 		-- Every door in one round: a full bag.
-		local bonusGilt, bonusGems = ctx.reward(player, c.fullBagGilt, c.fullBagGems, "Trick or treat: a full bag")
+		local bonusGilt = ctx.reward(player, c.fullBagGilt, "Trick or treat: a full bag")
 		message.full = true
 		message.bonusGilt = bonusGilt
-		message.bonusGems = bonusGems
 		ctx.award(player, "fullBag")
 		ctx.curio(player, "candyPail", "lane:full:" .. tostring(h.round))
 		ctx.salute("Hallows Lane", Names.of(player) .. " has knocked at every door. A full bag!", player)

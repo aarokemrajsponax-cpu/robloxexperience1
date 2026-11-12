@@ -333,8 +333,8 @@ function BasementHud.on(m: { [string]: any })
 		else
 			line = "A skipped run isn't timed for the boards."
 		end
-		if (tonumber(m.gems) or 0) > 0 then
-			line ..= string.format("  ·  %d Gems from the chest", m.gems)
+		if (tonumber(m.chest) or 0) > 0 then
+			line ..= "  ·  +" .. Rules.format(tonumber(m.chest) or 0) .. " Gilt from the chest"
 		end
 		if m.brainrot then
 			line ..= "  ·  Topo Tesoriere for your collection"

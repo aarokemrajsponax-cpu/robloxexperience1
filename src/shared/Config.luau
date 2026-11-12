@@ -361,8 +361,8 @@ local defaults = {
 	-- countdown (others may join until it ends, never after); then closed for `closedSeconds`,
 	-- after a race or when nobody raced. (Open it now: the Robux product, or the owner's power.)
 	-- A race counts down, runs `laps` laps; the house's chauffeurs fill the grid up to `field`.
-	-- Prizes by place (Gilt, under the day's usual soft cap); the winner's Gems stop at
-	-- `gemsPerDay` a day.
+	-- Prizes by place (Gilt, under the day's usual soft cap). Never Gems: those come only from
+	-- Robux, the owner's gift or a trade.
 	GrandPrix = {
 		laps = 3,
 		openSeconds = 300,
@@ -377,10 +377,8 @@ local defaults = {
 		returnAfter = 8, -- a car left empty goes back to its bay after this long
 		resetEvery = 3,
 		results = 8,
-		prizes = { 150, 90, 60 }, -- Gilt for first, second, third
+		prizes = { 240, 100, 60 }, -- Gilt for first, second, third
 		finishGilt = 30, -- every other driver who finishes
-		winGems = 2,
-		gemsPerDay = 10,
 	},
 
 	-- The Concierge's walking tour (each guest's own guide, drawn on their screen).
@@ -554,8 +552,8 @@ local defaults = {
 
 	-- The holiday games (server/Holidays, World/HolidayGames, shared/HolidayGames): what guests
 	-- do on the holidays. Free to play, open for each holiday's days and whenever its holiday event
-	-- is on. The server decides and pays every reward; the Gems are always small, with a ceiling
-	-- each day.
+	-- is on. The server decides and pays every reward, all of it in Gilt (and the holidays'
+	-- curios): never Gems.
 	HolidayGames = {
 		-- How many days before and after its day each is open (UTC).
 		windows = {
@@ -565,17 +563,14 @@ local defaults = {
 			easter = { lead = 2, linger = 1 }, -- Good Friday to Easter Monday
 			stPatrick = { lead = 3, linger = 1 }, -- 14 to 18 March
 		},
-		gemsPerDay = 25, -- the most Gems the holiday games give one guest in a day, all together
 		travelGap = 2.5, -- seconds between one trip (out to a game, or home) and the next
 		-- Hallows Lane (All Hallows'): a street of grand houses away from the Maison; a host in
 		-- costume at every door gives a treat.
 		lane = {
 			origin = { -3000, 0, 0 },
-			gilt = 45, -- each door's treat
-			gemChance = 0.15, -- and a sugared Gem (1) this often
+			gilt = 50, -- each door's treat
 			minuitGilt = 150, -- the great house at the end of the Lane gives more
-			fullBagGilt = 300, -- every door on the Lane in one round
-			fullBagGems = 3,
+			fullBagGilt = 420, -- every door on the Lane in one round
 			roundMinutes = 20, -- every door opens to a guest again after this long
 			reach = 16, -- studs from a door a guest may knock
 			knockGap = 1.5, -- seconds between knocks
@@ -584,10 +579,8 @@ local defaults = {
 		field = {
 			origin = { 3000, 0, 0 },
 			turkeys = 12, -- in the field at once
-			gilt = 40,
-			gemChance = 0.12,
-			goldenGilt = 400, -- the golden turkey
-			goldenGems = 4,
+			gilt = 45,
+			goldenGilt = 560, -- the golden turkey
 			goldenEvery = 90, -- seconds before a new golden turkey walks out after one is caught
 			-- (Slower than a guest walks, 17, so a turkey can always be run down: they dodge, and tire
 			-- after a sprint. The golden one is quicker: hold Shift to run, 28.)
@@ -625,19 +618,16 @@ local defaults = {
 			loadReach = 18, -- close enough to the sleigh to load
 			-- What a gift holds (the server chooses; the odds are shown when it's opened): weights,
 			-- and the amounts (from, to).
-			odds = { gilt = 60, moreGilt = 28, gems = 10, moreGems = 2 },
-			gilt = { 40, 90 },
+			odds = { gilt = 70, moreGilt = 28, trove = 2 },
+			gilt = { 45, 95 },
 			moreGilt = { 160, 320 },
-			gems = { 2, 3 },
-			moreGems = { 12, 18 },
+			trove = { 500, 750 },
 		},
 		-- The Great Egg Hunt (Easter): painted eggs hidden all over the house.
 		eggs = {
 			count = 30,
-			gilt = 35,
-			gemChance = 0.12,
-			goldenGilt = 600, -- the golden egg
-			goldenGems = 5,
+			gilt = 40,
+			goldenGilt = 800, -- the golden egg
 			again = 60, -- seconds after the last egg is found before more are hidden
 			reach = 5,
 		},
@@ -887,7 +877,6 @@ local defaults = {
 			searchSeconds = 4, -- how long a guard looks round where someone was seen
 			reinforcements = 2, -- extra guards in a wing while it's locked down
 			objectives = 3, -- side jobs given at the start of each run
-			dailyGems = 15, -- the most Gems a day from Steal a Luxe (its rarest pieces)
 			goldenGems = 150, -- the golden treadmill (double Stride), for good
 			greatHaul = 8000, -- a haul worth this much is told to the whole house
 		},
@@ -896,9 +885,8 @@ local defaults = {
 			origin = { 3000, 0, -3000 },
 			skipGems = 25, -- skipping the first stage, for Gems (a skipped run is never timed for the boards)
 			skipGemsStep = 15, -- ...and this much more for each stage deeper (stage 15: 235)
-			chestGems = 10, -- the Treasury's chest, the first clear of the day
-			chestGemsAgain = 3, -- and each clear after it that day
-			dailyGems = 25, -- the most Gems a day from the Basement
+			chestGilt = 400, -- the Treasury's chest, the first clear of the day
+			chestGiltAgain = 120, -- and each clear after it that day
 			quick = 240, -- seconds: the Under Four Minutes badge
 			heraldUnder = 180, -- a record under three minutes is told to the house
 			fallGrace = 1.5, -- seconds back at a checkpoint before anything can send you back again
@@ -913,7 +901,7 @@ local defaults = {
 			invitePrice = 25000, -- an invitation for Gilt, at the Quartermaster's desk
 			inviteHaul = 8000, -- a haul banked in Steal a Luxe worth this much brings an invitation
 			prize = 25000, -- beating the Executive: to the Estate of everyone in the Office
-			prizeGems = 15,
+			prizeGilt = 600, -- and this much Gilt to each of them
 			-- Build 78: his wind-ups (seconds of warning before each attack: calm, at half his
 			-- composure, and in his finale), when the finale comes, his dash, and the extraction.
 			windup = 1.1,
@@ -923,7 +911,6 @@ local defaults = {
 			dash = 18, -- composure, to whoever is still in his dash's lane
 			extractSeconds = 60, -- after he's beaten: the lift down within this long...
 			extractGilt = 2500, -- ...for a clean getaway's bonus (once a run)
-			dailyGems = 20,
 			safe = 6000, -- the safe, once each, after he's beaten
 			damage = 10, -- a sidearm's stun
 			fireGap = 0.3,
@@ -951,16 +938,14 @@ local defaults = {
 			keyGilt = 25000,
 			keyGems = 250,
 			pearlGilt = 250, -- each of the day's five pearls
-			pearlSetGems = 2, -- all five in a day
-			dailyGems = 10, -- the most Gems a day from the island
+			pearlSetGilt = 100, -- all five in a day
 		},
 		-- The Grand Ballroom (server/Attractions/Gala): the hall of entertainments through the
 		-- great doors at the far end of the Ballroom. Every reward is shared/Gala's REWARDS unless
 		-- set here (dailyGilt: all its Gilt in a day; danceMinute, triviaCorrect, triviaWin,
-		-- runwayWalk, runwayWin, runwayVote, arenaTakePart, arenaPoint, arenaWin, photoSet, winGems).
+		-- runwayWalk, runwayWin, runwayVote, arenaTakePart, arenaPoint, arenaWin, photoSet).
 		gala = {
 			origin = { -3000, 0, 3000 },
-			dailyGems = 3, -- the most Gems a day from wins in the hall
 			trackSeconds = 150, -- each jukebox record, before the most-voted goes on
 			hallStore = "MaisonHall_v1", -- the Hall of Fame's ordered data stores (one a board)
 			hallSeconds = 120, -- how often the Hall of Fame is read

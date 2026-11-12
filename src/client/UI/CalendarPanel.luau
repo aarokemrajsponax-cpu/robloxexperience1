@@ -58,9 +58,7 @@ end
 local function face(p: Evenings.Present, seventh: boolean): (string, string, string?)
 	if seventh then
 		-- (The best of them: its whole present is said in full under the row.)
-		return "crown", "THE BEST", if p.curio then "+ A CURIO" else "+ " .. tostring(p.gems) .. " GEMS"
-	elseif p.gems > 0 then
-		return "gems", tostring(p.gems) .. " GEMS", nil
+		return "crown", "THE BEST", if p.curio then "+ A CURIO" else "+ " .. tostring(p.gilt) .. " GILT"
 	elseif p.gilt > 0 then
 		return "gilt", tostring(p.gilt), if p.xp > 0 then "+" .. tostring(p.xp) .. " XP" else "GILT"
 	end
@@ -175,7 +173,7 @@ local function draw(s: State)
 	local headline = if s.ready then (if s.step == 6 then "The seventh evening: the best of them" else "Tonight's present is waiting") else "Tonight's present is open"
 	Theme.text(content, headline, 24, "display", { LayoutOrder = 2 })
 	local total = Evenings.weekTotal(s.weeks)
-	Theme.text(content, string.format("A present every day you come: open the next one, any day. Miss a day and nothing is lost. This week: %s Gilt, %d Gems and %d XP in all.", tostring(total.gilt), total.gems, total.xp), 14, "body", {
+	Theme.text(content, string.format("A present every day you come: open the next one, any day. Miss a day and nothing is lost. This week: %s Gilt and %d XP in all.", tostring(total.gilt), total.xp), 14, "body", {
 		LayoutOrder = 3,
 		TextColor3 = rgb(206, 200, 190),
 	})

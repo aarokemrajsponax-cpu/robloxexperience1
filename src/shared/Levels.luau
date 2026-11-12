@@ -79,11 +79,14 @@ function Levels.colour(level: number): Color3
 	return colour
 end
 
--- Gilt for reaching a level (and Gems on every tenth).
-function Levels.reward(level: number): (number, number)
+-- Gilt for reaching a level, and a good deal more on every tenth. (Never Gems: those come only
+-- from Robux, the owner's gift or a trade.)
+function Levels.reward(level: number): number
 	local gilt = 50 + level * 15
-	local gems = if level % 10 == 0 then 10 + level // 2 else 0
-	return gilt, gems
+	if level % 10 == 0 then
+		gilt += (10 + level // 2) * 40
+	end
+	return gilt
 end
 
 return Levels

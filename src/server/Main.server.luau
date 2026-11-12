@@ -353,12 +353,9 @@ CuriosService.lucky = function(player)
 	Achievements.award(player, "luckOfTheIrish")
 end
 boot("The holiday games", Holidays.start)
--- The Grand Prix: the house's cars on the street, and races round the circuit for Gilt and Gems.
+-- The Grand Prix: the house's cars on the street, and races round the circuit for Gilt.
 local GrandPrixService = require(script.Parent.GrandPrixService)
 GrandPrixService.isBusy = AdminService.isSeated
-GrandPrixService.gemsChanged = function(player)
-	CuriosService.push(player)
-end
 GrandPrixService.onFinish = function(player, place, field)
 	AdminService.tally(player, "races", 1)
 	if place == 1 then
@@ -732,20 +729,15 @@ Progress.boost = function(player)
 	b *= Friends.xpBoost(player)
 	return b
 end
-Progress.levelUp = function(player, level, gilt, gems)
+Progress.levelUp = function(player, level, gilt)
 	local data = require(script.Parent.Profiles).get(player)
 	if not data then
 		return
 	end
 	data.gilt += gilt
 	Analytics.source(player, "Gilt", gilt, data.gilt, "Level " .. tostring(level))
-	if gems > 0 then
-		data.gems += gems
-		Analytics.source(player, "Gems", gems, data.gems, "Level " .. tostring(level))
-		CuriosService.push(player)
-	end
 	GiltService.changed(player)
-	Remotes.event("Shop"):FireClient(player, { op = "levelUp", level = level, title = LevelsShared.title(level), gilt = gilt, gems = gems })
+	Remotes.event("Shop"):FireClient(player, { op = "levelUp", level = level, title = LevelsShared.title(level), gilt = gilt })
 	Achievements.check(player)
 	if level % ConfigData.Levels.announceEvery == 0 then
 		Remotes.event("Salute"):FireAllClients({ op = "levelPublic", name = Names.of(player), userId = player.UserId, level = level, title = LevelsShared.title(level) })
@@ -829,12 +821,9 @@ boot("The Evening Calendar", Calendar.start)
 local Newcomer = require(script.Parent.Newcomer)
 GiltService.welcome = Newcomer.mult
 boot("The newcomer's welcome", Newcomer.start)
--- The daily streak: a little more Gilt for every day in a row, and a few Gems at its milestones.
+-- The daily streak: a little more Gilt for every day in a row, and a Gilt gift at its milestones.
 local Streak = require(script.Parent.Streak)
 GiltService.streak = Streak.mult
-Streak.gemsGiven = function(player: Player)
-	require(script.Parent.Curios).push(player)
-end
 boot("The daily streak", Streak.start)
 -- Moments the Badge Book counts.
 require(script.Parent.TradeService).traded = function(player)
