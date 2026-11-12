@@ -4,6 +4,9 @@
 -- time, the falls, and two keys: Leave, and Skip (one stage on: for a skip held, for Gems at the
 -- house's price, or for Robux when it's on sale; a skipped run isn't timed for the boards and the
 -- stage skipped pays nothing, and the screen says so before anything is spent).
+-- Build 78: the course the run is on (in its colour), when the course turns over and to what (or
+-- that the run keeps its course to the Treasury), the secrets found; told when the course turns,
+-- when a secret is found, and at the Treasury the course's own best.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -16,13 +19,14 @@ local Rules = require(ReplicatedStorage.Shared.Fortune)
 local Root = require(script.Parent.Root)
 local Theme = require(script.Parent.Theme)
 local Toast = require(script.Parent.Toast)
+local BasementMotion = require(script.Parent.Parent.World.BasementMotion)
 
 local BasementHud = {}
 
 local C = Brand.Colours
 local GOLD = Color3.fromRGB(255, 204, 90)
 local CARD_W = 340
-local CARD_H = 92
+local CARD_H = 112
 local SKIP = "BasementSkip"
 
 local card: Frame? = nil
@@ -85,6 +89,27 @@ local function clockText(): string
 	return Plan.clock(BasementHud.now() - started)
 end
 
+-- The course the run is on, and when the course turns over (or that the run keeps its own).
+function BasementHud.courseLine()
+	local l = parts.course :: TextLabel?
+	if not l then
+		return
+	end
+	local course = view.course
+	if type(course) ~= "string" then
+		l.Text = ""
+		return
+	end
+	local var = Plan.Variants[tonumber(view.variant) or 1] or Plan.Variants[1]
+	l.TextColor3 = var.tint:Lerp(Color3.new(1, 1, 1), 0.25)
+	local left = math.max(0, math.floor((tonumber(view.turnsAt) or 0) - BasementHud.now()))
+	if view.started and view.upNow and view.upNow ~= course and not view.done then
+		l.Text = string.format("● %s  ·  YOUR RUN KEEPS IT  ·  UP NOW: %s", string.upper(course), string.upper(tostring(view.upNow)))
+	else
+		l.Text = string.format("● %s  ·  NEXT: %s IN %d:%02d", string.upper(course), string.upper(tostring(view.nextCourse or "")), left // 60, left % 60)
+	end
+end
+
 local function draw()
 	if not card then
 		return
@@ -93,8 +118,9 @@ local function draw()
 	parts.zone.Text = string.upper(tostring(view.zone or Plan.Zones[Plan.zoneOf(stage)].name))
 	parts.stage.Text = string.format("Stage %d of %d  ·  %s", stage, Plan.STAGES, tostring(view.stageName or Plan.StageNames[stage]))
 	parts.best.Text = if tonumber(view.best) then "BEST " .. Plan.clock(view.best) else "NO BEST YET"
-	parts.falls.Text = string.format("FALLS %d", tonumber(view.falls) or 0) .. (if view.assisted then "  ·  SKIPPED: NOT TIMED" else "")
+	parts.falls.Text = string.format("FALLS %d", tonumber(view.falls) or 0) .. (if tonumber(view.secretsOf) then string.format("  ·  SECRETS %d / %d", tonumber(view.secrets) or 0, view.secretsOf) else "") .. (if view.assisted then "  ·  SKIPPED: NOT TIMED" else "")
 	parts.clock.Text = clockText()
+	BasementHud.courseLine()
 	local skipKey = parts.skipKey :: TextButton?
 	if skipKey then
 		local heldNow = tonumber(view.skips) or 0
@@ -204,6 +230,7 @@ function BasementHud.mount()
 	parts.clock = label(c, "Clock", "0:00.00", 22, Brand.Fonts.figures, Color3.new(1, 1, 1), 42)
 	parts.best = label(c, "Best", "", 11, Brand.Fonts.bodyBold, GOLD, 46, Enum.TextXAlignment.Right)
 	parts.falls = label(c, "Falls", "", 10, Brand.Fonts.bodyBold, C.smoke, 62, Enum.TextXAlignment.Right)
+	parts.course = label(c, "Course", "", 11, Brand.Fonts.bodyBold, C.bone, 82)
 	card = c
 
 	local k = Instance.new("Frame")
@@ -233,6 +260,7 @@ function BasementHud.mount()
 		if clock then
 			clock.Text = clockText()
 		end
+		BasementHud.courseLine()
 	end)
 end
 
@@ -264,13 +292,28 @@ local FELL = {
 	steam = "The steam caught you.",
 	laser = "A laser caught you.",
 	valve = "The valve's bar swept you off.",
+	crusher = "A crusher caught you.",
 }
 
 function BasementHud.on(m: { [string]: any })
 	local op = m.op
 	if op == "basement" then
 		view = m
+		if type(m.secretIds) == "table" then
+			for _, id in m.secretIds do
+				BasementMotion.found[tostring(id)] = true
+			end
+		end
 		draw()
+	elseif op == "course" then
+		if m.soon then
+			Toast.show("The course turns in " .. tostring(tonumber(m.seconds) or 30) .. " seconds", "Next: " .. tostring(m.soon) .. ". " .. tostring(m.line or ""), 4)
+		elseif m.now then
+			Toast.show("The course has turned: " .. tostring(m.now), tostring(m.line or "") .. (if m.keeps then " Your run keeps " .. tostring(m.keeps) .. " to the Treasury." else ""), 5)
+		end
+	elseif op == "secret" then
+		BasementMotion.found[tostring(m.id)] = true
+		Toast.show("A secret: " .. tostring(m.name), string.format("+%s Gilt  ·  %d of %d found", Rules.format(tonumber(m.gilt) or 0), tonumber(m.found) or 0, tonumber(m.of) or 0), 4)
 	elseif op == "checkpoint" then
 		local n = tonumber(m.n) or 0
 		local purse = tonumber(m.purse) or 0
@@ -295,6 +338,19 @@ function BasementHud.on(m: { [string]: any })
 		end
 		if m.brainrot then
 			line ..= "  ·  Topo Tesoriere for your collection"
+		end
+		-- (The course it was run on, and its own best.)
+		if type(m.course) == "string" then
+			if m.courseRecord then
+				line ..= "  ·  " .. m.course .. ": a new best on this course"
+			elseif tonumber(m.coursePb) then
+				line ..= "  ·  " .. m.course .. " best: " .. Plan.clock(m.coursePb)
+			else
+				line ..= "  ·  " .. m.course
+			end
+		end
+		if tonumber(m.secretsOf) then
+			line ..= string.format("  ·  secrets %d of %d", tonumber(m.secrets) or 0, m.secretsOf)
 		end
 		Toast.show(title, line, 6)
 	end

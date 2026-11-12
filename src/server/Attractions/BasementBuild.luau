@@ -7,6 +7,10 @@
 -- What moves (the pistons, the sinking tiles, the steam, the lasers, the valve's bars) is built
 -- here where it stands at the start; every screen moves it by the server's clock (World/
 -- BasementMotion), each part tagged with its kind and its element's number in the plan.
+-- Build 78: the four versions of the course. What belongs to one version only (its crushers, a
+-- second bar, its secrets and their ledges, the launch pad) is built in a model tagged
+-- BasementVariant with the version's number: each screen shows only its own run's. Every pad and
+-- plank has a glowing edge (BasementGuide), lit only in Blackout.
 
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -78,6 +82,23 @@ local function tag(part: Instance, name: string, index: number)
 	CollectionService:AddTag(part, name)
 end
 
+local SOFT = { collide = false, query = false, shadow = false }
+
+-- A pad's or a plank's glowing edges, unlit until a screen is in Blackout (along a plank's sides,
+-- across a pad's front and back).
+local function guides(parent: Instance, cf: CFrame, size: Vector3, long: boolean)
+	local glow = look(rgb(120, 200, 255), Enum.Material.Neon, nil, 1)
+	for _, side in { -1, 1 } do
+		local g
+		if long then
+			g = Kit.part(parent, "Guide", Vector3.new(0.22, 0.08, size.Z), cf * CFrame.new(side * (size.X / 2 - 0.11), size.Y / 2 + 0.04, 0), glow, SOFT)
+		else
+			g = Kit.part(parent, "Guide", Vector3.new(size.X, 0.08, 0.22), cf * CFrame.new(0, size.Y / 2 + 0.04, side * (size.Z / 2 - 0.11)), glow, SOFT)
+		end
+		CollectionService:AddTag(g, "BasementGuide")
+	end
+end
+
 local function prompt(parent: BasePart, name: string, action: string, object: string, hold: number?): ProximityPrompt
 	local p = Instance.new("ProximityPrompt")
 	p.Name = name
@@ -114,6 +135,7 @@ local function element(parent: Instance, o: Vector3, i: number, e: Plan.El, zone
 			return disc
 		end
 		local p = Kit.part(parent, if kind == "beam" then "Beam" else "Pad", e.size, cf, lk)
+		guides(parent, cf, e.size, kind == "beam")
 		if e.look == "barrel" then
 			-- The barrel under its lid.
 			Kit.cylinder(parent, "Barrel", 6, e.size.X - 0.4, cf * CFrame.new(0, -3.5, 0) * CFrame.Angles(0, 0, math.rad(90)), LOOKS.barrel, { collide = false })
@@ -181,6 +203,34 @@ local function element(parent: Instance, o: Vector3, i: number, e: Plan.El, zone
 		Kit.post(parent, "Hub", 2.4, 2.2, o + e.at - Vector3.new(0, 1.6, 0), look(rgb(184, 110, 64), Enum.Material.Metal, 0.15))
 		tag(bar, "BasementSpinner", i)
 		return bar
+	elseif kind == "crusher" then
+		-- The block hangs over its floor (each screen drops it and lifts it again), between two
+		-- black posts with a beam over them; it turns red in the moment before it drops.
+		local floorY = -e.size.Y / 2
+		local block = Kit.part(parent, "Crusher", Vector3.new(e.size.X, 2.4, e.size.Z), cf * CFrame.new(0, floorY + 1.2 + 7, 0), look(rgb(58, 60, 66), Enum.Material.DiamondPlate, 0.1), SOFT)
+		tag(block, "BasementCrusher", i)
+		for _, side in { -1, 1 } do
+			Kit.part(parent, "CrusherPost", Vector3.new(0.6, 11, 0.6), cf * CFrame.new(side * (e.size.X / 2 + 0.5), floorY + 5.5, 0), L.blackLacquer, SOFT)
+		end
+		Kit.part(parent, "CrusherBeam", Vector3.new(e.size.X + 1.6, 0.8, 1), cf * CFrame.new(0, floorY + 11.2, 0), L.blackLacquer, SOFT)
+		Kit.part(parent, "CrusherMark", Vector3.new(e.size.X, 0.06, e.size.Z), cf * CFrame.new(0, floorY + 0.04, 0), look(rgb(255, 180, 40), Enum.Material.Neon, nil, 0.55), SOFT)
+		return block
+	elseif kind == "bouncer" then
+		local p = Kit.part(parent, "LaunchPad", e.size, cf, look(rgb(40, 40, 46), Enum.Material.DiamondPlate, 0.1))
+		local glow = Kit.part(parent, "LaunchGlow", Vector3.new(e.size.X - 0.4, 0.1, e.size.Z - 0.4), cf * CFrame.new(0, e.size.Y / 2 + 0.03, 0), look(rgb(190, 255, 70), Enum.Material.Neon), SOFT)
+		Kit.pointLight(glow, 1, 12, rgb(190, 255, 70))
+		p:SetAttribute("Bounce", e.bounce or 80)
+		tag(p, "BasementBouncer", i)
+		return p
+	elseif kind == "secret" then
+		-- Something lost, glowing gold and turning slowly over its spot (each screen turns it, and
+		-- hides it once that guest has found it).
+		local find = Kit.cylinder(parent, "Secret", 0.3, 1.8, cf * CFrame.Angles(0, math.rad(90), 0), look(rgb(255, 214, 110), Enum.Material.Neon), SOFT)
+		find:SetAttribute("Secret", e.id)
+		Kit.pointLight(find, 1.2, 12, rgb(255, 214, 120))
+		HolidayProps.sparkle(find, rgb(255, 230, 160), 3, 0.35)
+		tag(find, "BasementSecret", i)
+		return find
 	elseif kind == "pit" then
 		local p = Kit.part(parent, "Pit", e.size, cf, PIT[zone] or PIT[1], { shadow = false })
 		Kit.pointLight(p, if zone == 2 then 1.1 else 0.7, 30, PIT_GLOW[zone] or PIT_GLOW[1])
@@ -202,9 +252,24 @@ function BasementBuild.build(parent: Instance, o: Vector3, goHome: (player: Play
 	Kit.part(arch, "EntryHall", Vector3.new(12, 1, 12), CFrame.new(o + Vector3.new(0, -0.5, -10)), LOOKS.stone)
 	Kit.part(arch, "EntryWall", Vector3.new(37, 34, 1), CFrame.new(o + Vector3.new(0, 1, -17.5)), WALL[1])
 
+	local versions: { [number]: Model } = {}
 	for i, e in Plan.Elements do
 		local zone = Plan.zoneOf(math.max(1, e.stage))
-		local p = element(course, o, i, e, zone)
+		local holder: Instance = course
+		if e.variant then
+			-- (A version's own: in its model, shown only on that version's screens.)
+			local n = e.variant :: number
+			local m = versions[n]
+			if not m then
+				local made = Kit.model(course, "Version" .. n)
+				made:SetAttribute("Variant", n)
+				CollectionService:AddTag(made, "BasementVariant")
+				versions[n] = made
+				m = made
+			end
+			holder = m :: Model
+		end
+		local p = element(holder, o, i, e, zone)
 		if p then
 			parts[i] = p
 		end

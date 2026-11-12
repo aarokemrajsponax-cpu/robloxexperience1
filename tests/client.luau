@@ -8130,6 +8130,68 @@ coroutine.wrap(function()
 		end
 	end
 	check("the pistons stand where the server's clock says", moved)
+	-- Build 78: the run's course decides the machinery's pace, which pieces are here, and the light.
+	local crushIndex
+	for i, e in Plan.Elements do
+		if e.kind == "crusher" and not crushIndex then
+			crushIndex = i
+		end
+	end
+	local crusher = Instance.new("Part")
+	crusher:SetAttribute("Element", crushIndex)
+	crusher.Parent = workspace
+	CollectionService:AddTag(crusher, "BasementCrusher")
+	local ce = Plan.Elements[crushIndex]
+	local was = crusher.CFrame
+	Motion.apply(1234.5, 1)
+	check("on another course, the Gauntlet's crusher stays still", crusher.CFrame == was)
+	local downT = 1234.5
+	while not Plan.burning(ce, Plan.paced(4, downT)) do
+		downT += 0.05
+	end
+	Motion.apply(downT, 4)
+	local o = module("ReplicatedStorage", "Shared", "Attractions").origin("basement")
+	check("on the Gauntlet, the crusher comes down when the server's clock says", math.abs(crusher.CFrame.Position.Y - (o.Y + ce.at.Y - ce.size.Y / 2 + 1.2)) < 1e-3)
+	local holder = Instance.new("Model")
+	holder:SetAttribute("Variant", 4)
+	holder.Parent = workspace
+	CollectionService:AddTag(holder, "BasementVariant")
+	local ledge = Instance.new("Part")
+	ledge.Transparency = 0
+	ledge.CanCollide = true
+	ledge.Parent = holder
+	local guide = Instance.new("Part")
+	guide.Transparency = 1
+	guide.Parent = workspace
+	CollectionService:AddTag(guide, "BasementGuide")
+	Motion.dress(1)
+	check("another course's own pieces aren't here on this screen (not seen, not stood on)", ledge.Transparency == 1 and ledge.CanCollide == false and guide.Transparency == 1)
+	Motion.dress(4)
+	check("...and its own course's are", ledge.Transparency == 0 and ledge.CanCollide == true)
+	Motion.dress(3)
+	check("in Blackout every edge glows", guide.Transparency < 0.5)
+	Motion.dress(1)
+	serverSays("Attraction", { op = "basement", checkpoint = 4, stage = 5, stageName = "The Pipes", zone = "The Boiler Room", started = 4917.5, assisted = false, falls = 2, best = 205.5, done = false, skips = 0, skipGems = 85, skipNeed = 2, skipOnSale = true, course = "The Gauntlet", courseId = "gauntlet", variant = 4, upNow = "The Gauntlet", turnsAt = 5192, nextCourse = "The House Course", secrets = 3, secretsOf = 8, secretIds = { "trussKey" } })
+	advance(0.3)
+	check("the course the run is on, and when the course turns next (and to what)", textOnScreen("● THE GAUNTLET  ·  NEXT: THE HOUSE COURSE IN 3:12") ~= nil)
+	check("...the secrets found so far", textOnScreen("SECRETS 3 / 8") ~= nil)
+	check("...and the ones found aren't shown again on this screen", Motion.found.trussKey == true)
+	snapshot("basement-course")
+	serverSays("Attraction", { op = "basement", checkpoint = 4, stage = 5, stageName = "The Pipes", zone = "The Boiler Room", started = 4917.5, assisted = false, falls = 2, best = 205.5, done = false, skips = 0, skipGems = 85, skipNeed = 2, skipOnSale = true, course = "The Gauntlet", courseId = "gauntlet", variant = 4, upNow = "The House Course", turnsAt = 5492, nextCourse = "Double Time", secrets = 3, secretsOf = 8, secretIds = {} })
+	advance(0.3)
+	check("once the course has turned, a run under way says it keeps its own", textOnScreen("● THE GAUNTLET  ·  YOUR RUN KEEPS IT  ·  UP NOW: THE HOUSE COURSE") ~= nil)
+	serverSays("Attraction", { op = "course", soon = "Blackout", line = "The lights are down and every edge glows.", seconds = 30 })
+	advance(0.3)
+	check("a turn coming is told", textOnScreen("The course turns in 30 seconds") ~= nil and textOnScreen("Next: Blackout.") ~= nil)
+	advance(4.5)
+	serverSays("Attraction", { op = "secret", id = "goldLeaf", name = "A Gold Leaf", gilt = 300, found = 4, of = 8 })
+	advance(0.3)
+	check("a secret found: what it is, its Gilt, how many of eight", textOnScreen("A secret: A Gold Leaf") ~= nil and textOnScreen("+300 Gilt  ·  4 of 8 found") ~= nil and Motion.found.goldLeaf == true)
+	advance(4.5)
+	serverSays("Attraction", { op = "fell", why = "crusher", checkpoint = 1 })
+	advance(0.3)
+	check("a crusher's catch, said plainly", textOnScreen("A crusher caught you.") ~= nil)
+	advance(3)
 	LocalPlayer:SetAttribute("Attraction", nil)
 	signalOf(LocalPlayer, "attr:Attraction"):Fire()
 	advance(0.5)

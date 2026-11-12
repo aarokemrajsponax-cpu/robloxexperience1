@@ -16,6 +16,12 @@
 --   Skips         one stage on, for skips held (Robux, ProductConfig "basementSkip") or for Gems;
 --                 the deeper the stage, the more it costs (shared/Basement's skipGems, skipsNeeded).
 --                 Never the Treasury itself, never a stage's Gilt; the run is marked as skipped.
+--   Courses       (Build 78) the course turns over every five minutes (shared/Basement Variants):
+--                 a run keeps the version it started on to the Treasury (a run not yet begun
+--                 takes the new one); every guest down here is told a turn is coming, and when it
+--                 comes. Its machinery runs at its own pace, by its own sums; each version keeps
+--                 its own best time; its secrets pay once each, for good; its launch pad tells the
+--                 movement watch it's the house throwing them up.
 
 local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
@@ -23,6 +29,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
 local AttractionList = require(ReplicatedStorage.Shared.Attractions)
+local okAnalytics, Analytics = pcall(function()
+	return require(script.Parent.Parent.Analytics) :: any
+end)
 local Names = require(ReplicatedStorage.Shared.Names)
 local Plan = require(ReplicatedStorage.Shared.Basement)
 local BasementBuild = require(script.Parent.BasementBuild)
@@ -58,6 +67,11 @@ end
 -- A guest reached the Treasury (set by the attractions: an invitation to the Executive Suite).
 Basement.cleared = function(_player: Player) end
 
+-- The version of the course up at time t (set by tests).
+Basement.variantNow = function(t: number): number
+	return Plan.variantAt(t)
+end
+
 -- The boards' stores (set by tests).
 Basement.store = function(name: string): any
 	return DataStoreService:GetOrderedDataStore(name)
@@ -79,6 +93,8 @@ type Run = {
 	grace: number,
 	touching: { [number]: number }, -- an element's number: how many beats in a row they've touched it
 	done: boolean,
+	variant: number, -- the version of the course this run is on (Build 78)
+	launchGrace: number, -- (os.clock) the movement watch was last told of a launch pad
 }
 
 local origin = Vector3.zero
@@ -88,6 +104,19 @@ local byStage: { [number]: { { i: number, e: Plan.El } } } = {}
 local boards: { [string]: any } = { all = {}, week = {}, available = false }
 local names: { [number]: string } = {}
 local lastRefresh = -math.huge
+local announced = { period = -1, warned = -1 } -- (the turns of the course told to everyone down here)
+local secretIds: { [string]: Plan.El } = {}
+for _, e in Plan.Secrets do
+	if e.id then
+		secretIds[e.id] = e
+	end
+end
+
+local function note(player: Player, name: string, props: { [string]: any }?)
+	if okAnalytics and Analytics and Analytics.custom then
+		pcall(Analytics.custom, player, name, 1, props)
+	end
+end
 
 local function cfg(ctx: Types.Ctx): { [string]: any }
 	return ctx.cfg(ID)
@@ -113,6 +142,12 @@ local function page(ctx: Types.Ctx, data: any): { [string]: any }
 	p.clears = if type(p.clears) == "number" then p.clears else 0
 	p.deepest = if type(p.deepest) == "number" then p.deepest else 0
 	p.firstClear = p.firstClear == true
+	if type(p.bests) ~= "table" then
+		p.bests = {} -- a course's id -> its best time (Build 78)
+	end
+	if type(p.secrets) ~= "table" then
+		p.secrets = {} -- a secret's id -> true, once found
+	end
 	return p
 end
 
@@ -193,11 +228,39 @@ end
 ---------------------------------------------------------------------------------------------------
 -- Telling a guest's screen
 ---------------------------------------------------------------------------------------------------
+local function secretsFound(p: { [string]: any }?): (number, { string })
+	local n, ids = 0, {}
+	if p then
+		for id in p.secrets do
+			if secretIds[id] then
+				n += 1
+				table.insert(ids, id)
+			end
+		end
+	end
+	return n, ids
+end
+
 local function summary(ctx: Types.Ctx, player: Player, run: Run): { [string]: any }
 	local data = ctx.data(player)
 	local p = if data then page(ctx, data) else nil
 	local next = math.min(Plan.STAGES, run.checkpoint + 1)
+	local t = Basement.clock()
+	local up = Basement.variantNow(t)
+	local course = Plan.Variants[run.variant] or Plan.Variants[1]
+	local found, ids = secretsFound(p)
 	return {
+		course = course.name,
+		courseId = course.id,
+		courseLine = course.line,
+		variant = run.variant,
+		upNow = Plan.Variants[up].name, -- (the version up just now: the next run's)
+		turnsAt = Plan.variantEnds(t),
+		nextCourse = Plan.Variants[up % #Plan.Variants + 1].name,
+		coursePb = if p then p.bests[course.id] else nil,
+		secrets = found,
+		secretsOf = #Plan.Secrets,
+		secretIds = ids,
 		op = "basement",
 		checkpoint = run.checkpoint,
 		stage = next,
@@ -229,6 +292,7 @@ end
 
 -- Back to the last checkpoint.
 local function fall(ctx: Types.Ctx, player: Player, run: Run, why: string)
+	note(player, "Basement fall", { stage = run.checkpoint + 1, why = why, course = (Plan.Variants[run.variant] or Plan.Variants[1]).id })
 	run.falls += 1
 	run.grace = os.clock() + (tonumber(cfg(ctx).fallGrace) or 1.5)
 	run.touching = {}
@@ -256,7 +320,14 @@ local function finish(ctx: Types.Ctx, player: Player, run: Run, data: any, p: { 
 		end
 	end
 	local record, weekRecord = false, false
+	local course = Plan.Variants[run.variant] or Plan.Variants[1]
+	local courseRecord = false
 	if seconds and not run.assisted then
+		local was = p.bests[course.id]
+		if type(was) ~= "number" or seconds < was then
+			courseRecord = type(was) == "number"
+			p.bests[course.id] = seconds
+		end
 		if not p.best or seconds < p.best then
 			record = p.best ~= nil
 			p.best = seconds
@@ -275,6 +346,7 @@ local function finish(ctx: Types.Ctx, player: Player, run: Run, data: any, p: { 
 	end
 	ctx.tally(player, "basementClears", 1)
 	ctx.progress(player, "basementClear", 1)
+	local found = secretsFound(p)
 	ctx.send(player, {
 		op = "treasury",
 		seconds = seconds,
@@ -286,7 +358,13 @@ local function finish(ctx: Types.Ctx, player: Player, run: Run, data: any, p: { 
 		brainrot = brainrot,
 		first = first,
 		falls = run.falls,
+		course = course.name,
+		coursePb = p.bests[course.id],
+		courseRecord = courseRecord,
+		secrets = found,
+		secretsOf = #Plan.Secrets,
 	})
+	note(player, "Basement cleared", { course = course.id, seconds = if seconds then math.floor(seconds) else -1, falls = run.falls })
 	if first then
 		ctx.herald(player, { kind = "basement", title = "The Basement beaten", line = "reached the Treasury at the foot of the Maison Basement", glyph = "🗝️" })
 	elseif seconds and not run.assisted and seconds <= (tonumber(c.heraldUnder) or 180) and record then
@@ -336,10 +414,44 @@ local function bodyIn(at: Vector3, centre: Vector3, size: Vector3, cf: CFrame?):
 	return false
 end
 
+-- A secret found: paid once, kept for good.
+local function findSecret(ctx: Types.Ctx, player: Player, run: Run, e: Plan.El)
+	local data = ctx.data(player)
+	if not data or not e.id then
+		return
+	end
+	local p = page(ctx, data)
+	if p.secrets[e.id] then
+		return
+	end
+	p.secrets[e.id] = true
+	local found = secretsFound(p)
+	local gilt = ctx.gilt(player, tonumber(cfg(ctx).secretGilt) or 300, "The Maison Basement: a secret")
+	ctx.send(player, { op = "secret", id = e.id, name = e.name, gilt = gilt, found = found, of = #Plan.Secrets })
+	ctx.tally(player, "basementSecrets", 1)
+	note(player, "Basement secret", { secret = e.id, course = (Plan.Variants[run.variant] or Plan.Variants[1]).id })
+	if found >= #Plan.Secrets then
+		ctx.award(player, "basementSecrets")
+	end
+	push(ctx, player, run)
+end
+
 local function judge(ctx: Types.Ctx, player: Player, run: Run, at: Vector3, t: number)
 	if run.done then
 		return
 	end
+	-- (A run not yet begun takes whichever version is up: the course they'll run is the one in
+	-- front of them.)
+	if not run.started and run.checkpoint == 0 then
+		local up = Basement.variantNow(t)
+		if up ~= run.variant then
+			run.variant = up
+			player:SetAttribute("BasementVariant", up)
+			push(ctx, player, run)
+		end
+	end
+	-- The machinery's time on this run's course.
+	local tv = Plan.paced(run.variant, t)
 	-- Leaving the start: the clock starts.
 	if not run.started and run.checkpoint == 0 and at.Z > Plan.Checkpoints[0].at.Z + Plan.Checkpoints[0].size.Z / 2 then
 		run.started = t
@@ -351,10 +463,29 @@ local function judge(ctx: Types.Ctx, player: Player, run: Run, at: Vector3, t: n
 		reach(ctx, player, run, on)
 		return
 	end
+	-- Secrets, and a launch pad (the movement watch is told it's the house throwing them up).
+	for _, n in { run.checkpoint + 1, run.checkpoint } do
+		local near: { { i: number, e: Plan.El } } = byStage[n] or {}
+		for _, item in near do
+			local e: Plan.El = item.e
+			local kind: string = e.kind
+			if kind == "secret" and Plan.inVariant(e, run.variant) then
+				if (at - e.at).Magnitude <= 3.6 then
+					findSecret(ctx, player, run, e)
+				end
+			elseif kind == "bouncer" and Plan.inVariant(e, run.variant) then
+				local rel = at - e.at
+				if math.abs(rel.X) <= e.size.X / 2 + 1.5 and math.abs(rel.Z) <= e.size.Z / 2 + 1.5 and rel.Y > -1 and rel.Y < 24 and os.clock() >= run.launchGrace then
+					run.launchGrace = os.clock() + 0.5
+					ctx.moved(player)
+				end
+			end
+		end
+	end
 	if os.clock() < run.grace then
 		return
 	end
-	-- What can send them back: in the stage they're on, and the one behind.
+	-- What can send them back: in the stage they're on, and the one behind (on this run's course).
 	for _, n in { run.checkpoint + 1, run.checkpoint } do
 		local list = byStage[n]
 		if not list then
@@ -362,17 +493,20 @@ local function judge(ctx: Types.Ctx, player: Player, run: Run, at: Vector3, t: n
 		end
 		for _, item in list do
 			local e, i = item.e, item.i
+			if not Plan.inVariant(e, run.variant) then
+				continue
+			end
 			local hit = false
 			if e.kind == "pit" then
 				if Plan.inBox(at, e.at + Vector3.new(0, 3, 0), e.size + Vector3.new(0, 6, 0), 0) then
 					fall(ctx, player, run, "fall")
 					return
 				end
-			elseif e.kind == "steam" or e.kind == "laser" then
+			elseif e.kind == "steam" or e.kind == "laser" or e.kind == "crusher" then
 				-- (Burning a moment already, so a screen a beat behind isn't caught by its start.)
-				hit = Plan.burning(e, t) and Plan.burning(e, t - 0.15) and bodyIn(at, e.at, e.size)
+				hit = Plan.burning(e, tv) and Plan.burning(e, tv - 0.15) and bodyIn(at, e.at, e.size)
 			elseif e.kind == "spinner" then
-				hit = bodyIn(at, e.at, e.size, Plan.spinnerFrame(e, t))
+				hit = bodyIn(at, e.at, e.size, Plan.spinnerFrame(e, tv))
 			end
 			if hit then
 				local k = (run.touching[i] or 0) + 1
@@ -427,7 +561,10 @@ function Basement.enter(ctx: Types.Ctx, player: Player): (CFrame?, string?)
 		return nil, "Your ledger is still being opened."
 	end
 	page(ctx, data)
-	runs[player] = { checkpoint = 0, started = nil, assisted = false, paid = {}, falls = 0, grace = os.clock() + 2, touching = {}, done = false }
+	local up = Basement.variantNow(Basement.clock())
+	runs[player] = { checkpoint = 0, started = nil, assisted = false, paid = {}, falls = 0, grace = os.clock() + 2, touching = {}, done = false, variant = up, launchGrace = 0 }
+	player:SetAttribute("BasementVariant", up)
+	note(player, "Basement entered", { course = Plan.Variants[up].id })
 	task.defer(function()
 		local run = runs[player]
 		if run then
@@ -438,8 +575,13 @@ function Basement.enter(ctx: Types.Ctx, player: Player): (CFrame?, string?)
 	return CFrame.new(Plan.ARRIVAL_AT) * CFrame.Angles(0, math.pi, 0), nil
 end
 
-function Basement.leave(_ctx: Types.Ctx, player: Player, _why: string)
+function Basement.leave(_ctx: Types.Ctx, player: Player, why: string)
+	local run = runs[player]
+	if run then
+		note(player, "Basement left", { stage = run.checkpoint, why = why, done = run.done })
+	end
 	runs[player] = nil
+	player:SetAttribute("BasementVariant", nil)
 end
 
 function Basement.step(ctx: Types.Ctx, _dt: number)
@@ -451,6 +593,27 @@ function Basement.step(ctx: Types.Ctx, _dt: number)
 		local at = ctx.at(player, ID)
 		if at then
 			judge(ctx, player, run, at, t)
+		end
+	end
+	-- The course's turns, told to everyone down here: thirty seconds before, and as it comes.
+	local period = math.floor(t / Plan.VARIANT_SECONDS)
+	local left = Plan.variantEnds(t) - t
+	local up = Basement.variantNow(t)
+	if announced.period ~= period then
+		local first = announced.period == -1
+		announced.period = period
+		if not first then
+			for player, run in runs do
+				local var = Plan.Variants[up]
+				ctx.send(player, { op = "course", now = var.name, line = var.line, keeps = if run.started and not run.done then (Plan.Variants[run.variant] or Plan.Variants[1]).name else nil })
+				push(ctx, player, run)
+			end
+		end
+	elseif left <= 30 and announced.warned ~= period then
+		announced.warned = period
+		local nextVar = Plan.Variants[up % #Plan.Variants + 1]
+		for player in runs do
+			ctx.send(player, { op = "course", soon = nextVar.name, line = nextVar.line, seconds = math.floor(left + 0.5) })
 		end
 	end
 	if os.clock() - lastRefresh > (tonumber(cfg(ctx).boardSeconds) or 120) then
@@ -535,7 +698,8 @@ function Basement.directory(ctx: Types.Ctx, player: Player): { [string]: any }
 		return { open = true, stages = Plan.STAGES }
 	end
 	local p = page(ctx, data)
-	return { open = true, stages = Plan.STAGES, deepest = p.deepest, clears = p.clears, bestTime = p.best }
+	local up = Plan.Variants[Basement.variantNow(Basement.clock())]
+	return { open = true, stages = Plan.STAGES, deepest = p.deepest, clears = p.clears, bestTime = p.best, course = up.name, secrets = (secretsFound(p)), secretsOf = #Plan.Secrets }
 end
 
 function Basement.ask(ctx: Types.Ctx, player: Player, r: { [string]: unknown }): any

@@ -268,6 +268,7 @@ moment("attractions", "basementClear", "The Treasury", "Reach the Treasury at th
 moment("attractions", "executiveBoss", "The Corner Office", "Beat the Executive in his own office.", "🕴️", "gold")
 moment("attractions", "auctionWin", "Sold to You", "Win a lot at the Grand Auction.", "🔨", "gold")
 moment("attractions", "basementQuick", "Under Four Minutes", "Clear the Basement in under four minutes, no skips.", "⏱️", "gold")
+moment("attractions", "basementSecrets", "Every Secret", "Find all eight secrets in the Maison Basement's four courses.", "🔎", "gold")
 
 -- Luxury Island
 moment("island", "islandKey", "The Island Key", "Unlock Luxury Island at the Jet Lounge.", "🏝️", "gold")

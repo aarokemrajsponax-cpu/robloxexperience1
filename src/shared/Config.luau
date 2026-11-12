@@ -904,6 +904,7 @@ local defaults = {
 			fallGrace = 1.5, -- seconds back at a checkpoint before anything can send you back again
 			boardSeconds = 120,
 			store = "Basement_v1",
+			secretGilt = 300, -- each of the four courses' secrets, the first time it's found (once, for good)
 		},
 		-- The Executive Suite (server/Attractions/Executive): by invitation, the boss at the top.
 		executive = {

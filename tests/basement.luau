@@ -66,6 +66,10 @@ end
 Game.friends = function(_, userId)
 	return userId == 777
 end
+-- (The House Course for the tests of the course itself; section 8 lets it turn over.)
+Game.variantNow = function()
+	return 1
+end
 
 local awards, tallies = {}, {}
 Attractions.award = function(p, key)
@@ -163,7 +167,7 @@ do
 	for n = 1, 16 do
 		local list = { { at = Plan.Checkpoints[n - 1].at - Vector3.new(0, 0.5, 0), size = Vector3.new(12, 1, 8), kind = "pad" } }
 		for _, e in Plan.Elements do
-			if e.stage == n and (e.kind == "pad" or e.kind == "beam" or e.kind == "vanish" or e.kind == "mover" or e.kind == "conveyor") then
+			if e.stage == n and e.variant == nil and (e.kind == "pad" or e.kind == "beam" or e.kind == "vanish" or e.kind == "mover" or e.kind == "conveyor") then
 				table.insert(list, e)
 			end
 		end
@@ -197,6 +201,45 @@ do
 		end
 	end
 	check("no gap anywhere wider than 5 studs (a guest jumps about 8 at a walk)", worst <= 5.01, string.format("%.2f at %s", worst, worstWhere))
+	-- (Each course's own ledges: a short hop from the way through, or the launch pad's throw.)
+	local farLedge = ""
+	for _, e in Plan.Elements do
+		if e.variant and e.kind == "pad" then
+			local best, bestUp = math.huge, 0
+			for _, f in Plan.Elements do
+				if f.stage == e.stage and f.variant == nil and (f.kind == "pad" or f.kind == "beam" or f.kind == "vanish" or f.kind == "mover" or f.kind == "conveyor") then
+					local function span(x, axis)
+						local lo, hi = x.at[axis] - x.size[axis] / 2, x.at[axis] + x.size[axis] / 2
+						if x.kind == "mover" and x.b then
+							lo, hi = math.min(lo, x.b[axis] - x.size[axis] / 2), math.max(hi, x.b[axis] + x.size[axis] / 2)
+						end
+						return lo, hi
+					end
+					local a0, a1 = span(e, "X")
+					local b0, b1 = span(f, "X")
+					local c0, c1 = span(e, "Z")
+					local d0, d1 = span(f, "Z")
+					local gx = math.max(0, math.max(a0, b0) - math.min(a1, b1))
+					local gz = math.max(0, math.max(c0, d0) - math.min(c1, d1))
+					local gap = math.sqrt(gx * gx + gz * gz)
+					if gap < best then
+						best, bestUp = gap, (e.at.Y + e.size.Y / 2) - (f.at.Y + f.size.Y / 2)
+					end
+				end
+			end
+			local thrown = false
+			for _, b in Plan.Elements do
+				if b.kind == "bouncer" and b.variant == e.variant and b.stage == e.stage then
+					local apex = (b.bounce or 0) ^ 2 / (2 * 196.2)
+					thrown = (Vector3.new(e.at.X, 0, e.at.Z) - Vector3.new(b.at.X, 0, b.at.Z)).Magnitude < 6 and (e.at.Y - b.at.Y) < apex
+				end
+			end
+			if not thrown and (best > 3 or bestUp > 1) then
+				farLedge ..= string.format("stage %d (%.1f across, %.1f up) ", e.stage, best, bestUp)
+			end
+		end
+	end
+	check("each course's own ledges are a short hop from the way through (or the launch pad throws you there)", farLedge == "", farLedge)
 	check("no step up higher than 2 studs (a guest jumps about 3)", rise <= 2.01, string.format("%.2f at %s", rise, riseWhere))
 	local truss = nil
 	for _, e in Plan.Elements do
@@ -272,7 +315,14 @@ do
 	for _, tag in { "BasementMover", "BasementVanish", "BasementSteam", "BasementLaser", "BasementSpinner" } do
 		kinds[tag] = #(H.tagged[tag] or {})
 	end
-	check("its machinery is tagged for every screen to move: pistons, tiles, steam, lasers, valves", kinds.BasementMover == 4 and kinds.BasementVanish == 12 and kinds.BasementSteam == 4 and kinds.BasementLaser == 4 and kinds.BasementSpinner == 3, kinds)
+	check("its machinery is tagged for every screen to move: pistons, tiles, steam, lasers, valves", kinds.BasementMover == 4 and kinds.BasementVanish == 12 and kinds.BasementSteam == 5 and kinds.BasementLaser == 4 and kinds.BasementSpinner == 4, kinds)
+	check("and the courses' own: three crushers, a launch pad, eight secrets, every edge's glow", #(H.tagged.BasementCrusher or {}) == 3 and #(H.tagged.BasementBouncer or {}) == 1 and #(H.tagged.BasementSecret or {}) == 8 and #(H.tagged.BasementGuide or {}) > 60)
+	local versions = H.tagged.BasementVariant or {}
+	local each = {}
+	for _, m in versions do
+		each[m:GetAttribute("Variant")] = true
+	end
+	check("each course's own pieces are kept together, for each screen to show only its run's", #versions == 4 and each[1] and each[2] and each[3] and each[4])
 	local belts = 0
 	for _, d in workspace.Attractions.MaisonBasement:GetDescendants() do
 		if d:IsA("BasePart") and d.Name == "Belt" and d.AssemblyLinearVelocity.Magnitude > 5 then
@@ -376,7 +426,7 @@ check("...and for a moment after, nothing sends them back again", Game.runs[ada]
 steps(20)
 local bar
 for _, e in Plan.Elements do
-	if e.kind == "spinner" and e.stage == 7 then
+	if e.kind == "spinner" and e.stage == 7 and e.variant == nil then
 		bar = e
 	end
 end
@@ -550,5 +600,144 @@ bd = askAs(ada, { op = "act", id = "basement", act = "boards", what = "week" })
 check("this week: their week's best", bd.ok == true and bd.weekBest == 205.5)
 local st = askAs(ada, { op = "state", id = "basement" })
 check("the board is told their best, clears and deepest", st.ok == true and st.best == 205.5 and st.clears == 3 and st.deepest == 16)
+
+---------------------------------------------------------------------------------------------------
+-- 8. Build 78: the course turns over every five minutes; a run keeps its own course
+---------------------------------------------------------------------------------------------------
+Game.variantNow = function(t)
+	return Plan.variantAt(t)
+end
+check("four courses, each up for five minutes in turn by the server's clock", #Plan.Variants == 4 and Plan.variantAt(0) == 1 and Plan.variantAt(299) == 1 and Plan.variantAt(300) == 2 and Plan.variantAt(600) == 3 and Plan.variantAt(900) == 4 and Plan.variantAt(1200) == 1 and Plan.variantEnds(10) == 300)
+check("each course's machinery runs at its own pace", Plan.paced(1, 100) == 100 and math.abs(Plan.paced(2, 100) - 140) < 1e-9 and Plan.paced(3, 100) < 100)
+local perCourse = true
+for n = 1, #Plan.Variants do
+	if Plan.secretsIn(n) ~= 2 then
+		perCourse = false
+	end
+end
+check("two secrets on each course, eight in all", #Plan.Secrets == 8 and perCourse)
+local guestsDown = {}
+-- A run on Double Time (up at 9000 + 300 * k: 9300 is period 31, the 4th course... found here).
+local function periodOf(n)
+	local p = 40
+	while Plan.variantAt(p * Plan.VARIANT_SECONDS) ~= n do
+		p += 1
+	end
+	return p * Plan.VARIANT_SECONDS
+end
+local dt0 = periodOf(2)
+T = dt0 + 10
+data(bo).gilt = 0
+advance(3)
+stand(bo, Layout.Obsidian.arrival)
+r = askAs(bo, { op = "go", id = "basement" })
+check("(Bo goes down)", r.ok == true, r.why)
+steps(2)
+check("a run takes the course that's up: told to the screen, in the guest's own attribute", Game.runs[bo].variant == 2 and bo:GetAttribute("BasementVariant") == 2 and last(bo, "basement").course == "Double Time")
+-- Not yet begun: the course turns, and the run takes the new one.
+T = dt0 + Plan.VARIANT_SECONDS + 1
+steps(1)
+check("a run not yet begun takes the next course when it turns", Game.runs[bo].variant == 3 and bo:GetAttribute("BasementVariant") == 3)
+-- Begun: the run keeps its course.
+standIn(bo, Vector3.new(0, -1, 10.5))
+steps(1)
+check("(off the start: the clock runs)", Game.runs[bo].started ~= nil)
+T = dt0 + 2 * Plan.VARIANT_SECONDS - 25
+steps(1)
+local soon = last(bo, "course")
+check("thirty seconds before a turn, everyone down here is told what's next", soon ~= nil and soon.soon == Plan.Variants[4].name and soon.seconds == 25)
+T = dt0 + 2 * Plan.VARIANT_SECONDS + 1
+steps(1)
+local turned = last(bo, "course")
+check("when it turns, they're told, and a run under way keeps its own course to the Treasury", turned ~= nil and turned.now == Plan.Variants[4].name and turned.keeps == Plan.Variants[3].name and Game.runs[bo].variant == 3)
+check("its screen says which course the run is on and which is up", last(bo, "basement").course == "Blackout" and last(bo, "basement").upNow == "The Gauntlet")
+-- A crusher: of the Gauntlet only.
+local crush
+for _, e in Plan.Elements do
+	if e.kind == "crusher" and e.stage == 2 then
+		crush = e
+	end
+end
+local function downAt(e, n, from)
+	local t = from
+	while not (Plan.burning(e, Plan.paced(n, t)) and Plan.burning(e, Plan.paced(n, t - 0.15))) do
+		t += 0.05
+	end
+	return t
+end
+Game.runs[bo].checkpoint = 1
+Game.runs[bo].grace = 0
+local fallsWas = Game.runs[bo].falls
+T = downAt(crush, 3, T)
+standIn(bo, crush.at - Vector3.new(0, crush.size.Y / 2 - 0.5, 0))
+steps(3)
+check("on another course, the Gauntlet's crusher isn't there: nothing", Game.runs[bo].falls == fallsWas)
+Game.runs[bo].variant = 4
+Game.runs[bo].grace = 0
+T = downAt(crush, 4, T + 0.5)
+standIn(bo, crush.at - Vector3.new(0, crush.size.Y / 2 - 0.5, 0))
+steps(1)
+T += 0.1
+steps(1)
+check("on the Gauntlet, caught under a crusher as it comes down: back to the checkpoint", Game.runs[bo].falls == fallsWas + 1 and last(bo, "fell").why == "crusher", last(bo, "fell") and last(bo, "fell").why)
+local up = T
+while Plan.burning(crush, Plan.paced(4, up)) or Plan.burning(crush, Plan.paced(4, up - 0.15)) or Plan.crusherLift(crush, Plan.paced(4, up)) < 6.5 do
+	up += 0.05
+end
+check("its warning comes before it drops", (function()
+	local t = up
+	while not Plan.crusherWarns(crush, Plan.paced(4, t)) do
+		t += 0.05
+	end
+	return not Plan.burning(crush, Plan.paced(4, t))
+end)())
+-- The launch pad tells the movement watch it's the house throwing them up.
+local moves = 0
+local movedWas = Attractions.ctx.moved
+Attractions.ctx.moved = function(p)
+	moves += 1
+	return movedWas(p)
+end
+local pad
+for _, e in Plan.Elements do
+	if e.kind == "bouncer" then
+		pad = e
+	end
+end
+Game.runs[bo].checkpoint = 9
+Game.runs[bo].grace = 0
+standIn(bo, pad.at + Vector3.new(0, pad.size.Y / 2, 0))
+steps(2)
+check("standing on the Gauntlet's launch pad, the movement watch is told the house is throwing them up", moves >= 1)
+Attractions.ctx.moved = movedWas
+-- Secrets: each paid once, for good; another course's isn't there.
+local key, other
+for _, e in Plan.Secrets do
+	if e.variant == 4 and e.stage == 10 then
+		key = e
+	elseif e.variant == 1 and not other then
+		other = e
+	end
+end
+local giltWas = data(bo).gilt
+standIn(bo, key.at - Vector3.new(0, 3, 0))
+steps(2)
+local found = last(bo, "secret")
+check("a secret of this run's course, touched: found, and its Gilt paid", found ~= nil and found.id == "trussKey" and found.found == 1 and found.of == 8 and data(bo).gilt - giltWas == found.gilt and found.gilt > 0)
+check("...kept with their ledger, for good", Game.page(Attractions.ctx, data(bo)).secrets.trussKey == true)
+steps(5)
+check("...and paid only once", count(bo, "secret") == 1)
+Game.runs[bo].checkpoint = other.stage - 1
+standIn(bo, other.at - Vector3.new(0, 3, 0))
+steps(2)
+check("another course's secret isn't there to find", count(bo, "secret") == 1)
+-- Each course keeps its own best.
+Game.runs[bo].checkpoint = 15
+Game.runs[bo].started = T - 222.5
+onCheckpoint(bo, 16)
+local tr = last(bo, "treasury")
+check("at the Treasury: the course it was run on, and that course's own best", tr ~= nil and tr.course == "The Gauntlet" and math.abs(tr.coursePb - 222.5) < 1e-6 and Game.page(Attractions.ctx, data(bo)).bests.gauntlet ~= nil and tr.secretsOf == 8)
+local dir = Game.directory(Attractions.ctx, bo)
+check("the Directory's card says which course is up, and the secrets found", dir.course == Plan.Variants[Plan.variantAt(T)].name and dir.secrets == 1 and dir.secretsOf == 8)
 
 H.finish()

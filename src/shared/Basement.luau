@@ -12,10 +12,15 @@
 -- Everything that moves, moves by the server's clock (workspace:GetServerTimeNow()): every screen
 -- moves it the same way, and the server judges by the same sums. Fall, or touch steam, a laser or
 -- the valve, and you're back at your last checkpoint.
+--
+-- Build 78: the course turns over every five minutes, in turn (Variants): the House Course, Double
+-- Time (every machine faster, steam on the Gold Steps), Blackout (the lights down, every edge
+-- glowing) and The Gauntlet (crushers, a second sweep, a launch pad to a hidden ledge). A guest's
+-- run keeps the version it started on until the Treasury; each version has two secrets to find.
 
 local Basement = {}
 
-export type Kind = "pad" | "beam" | "vanish" | "steam" | "mover" | "spinner" | "conveyor" | "truss" | "laser" | "pit" | "chest"
+export type Kind = "pad" | "beam" | "vanish" | "steam" | "mover" | "spinner" | "conveyor" | "truss" | "laser" | "pit" | "chest" | "crusher" | "bouncer" | "secret"
 export type El = {
 	kind: Kind,
 	stage: number,
@@ -27,6 +32,10 @@ export type El = {
 	on: number?, -- the part of the cycle it's there (a tile) or burning (steam, a laser)
 	speed: number?, -- a belt (studs a second) or a valve's sweep (degrees a second)
 	look: string?, -- how it's built (BasementBuild)
+	variant: number?, -- only in this version of the course (nil: in every one)
+	bounce: number?, -- a launch pad: how hard it throws you up (studs a second)
+	id: string?, -- a secret: its id (kept with the guest's ledger once found)
+	name: string?, -- a secret: what it is
 }
 export type Zone = { id: number, name: string, line: string, from: number, to: number, colour: Color3, purse: number }
 export type Checkpoint = { n: number, at: Vector3, size: Vector3, zone: number }
@@ -105,6 +114,28 @@ local function laser(c: Vector3, w: number, y: number, period: number, phase: nu
 	return add({ kind = "laser", at = c + v(0, y, 0), size = v(w, 0.5, 0.5), period = period, phase = phase, on = on })
 end
 
+-- A crusher over the floor at `c`: a heavy block that slams down `on` of every `period` seconds
+-- (its box is the column it fills when down; it shakes and drops in the moment before).
+local function crusher(c: Vector3, w: number, d: number, period: number, phase: number, on: number): El
+	return add({ kind = "crusher", at = c + v(0, 4, 0), size = v(w, 8, d), period = period, phase = phase, on = on })
+end
+
+-- A launch pad: stand on it and it throws you up (`bounce` studs a second).
+local function bouncer(c: Vector3, w: number, d: number, bounce: number): El
+	return add({ kind = "bouncer", at = c - v(0, 0.4, 0), size = v(w, 0.8, d), bounce = bounce, look = "bouncer" })
+end
+
+-- A secret: something lost, floating over the floor at `c`, found by touching it.
+local function secret(id: string, name: string, c: Vector3): El
+	return add({ kind = "secret", at = c + v(0, 1.8, 0), size = v(2.4, 2.4, 2.4), id = id, name = name })
+end
+
+-- (Only in version `n` of the course.)
+local function only(n: number, e: El): El
+	e.variant = n
+	return e
+end
+
 local function checkpoint(n: number, c: Vector3, zone: number): Vector3
 	pad(c, 12, 8, if n % 4 == 0 then "landing" else "checkpoint")
 	Basement.Checkpoints[n] = { n = n, at = c, size = v(12, 6, 8), zone = zone }
@@ -147,6 +178,9 @@ do
 	for i = 1, 5 do
 		pad(s + v(if i % 2 == 0 then 2 else -2, -i, 4 + 4 + 2.5 + (i - 1) * 9), 5, 5, "barrel")
 	end
+	-- (The House Course's secret: a barrel off to the side of the third.)
+	only(1, pad(s + v(-8.5, -2.5, 4 + 4 + 2.5 + 18), 4, 4, "barrel"))
+	only(1, secret("cellarCork", "A Vintage Cork", s + v(-8.5, -2.5, 4 + 4 + 2.5 + 18)))
 	s = checkpoint(1, s + v(0, -6, 4 + 4 + 2.5 + 36 + 2.5 + 4 + 4), 1)
 end
 
@@ -154,6 +188,7 @@ end
 stage = 2
 do
 	beam(s + v(0, 0, 4 + 2 + 10), 1.8, 20)
+	only(4, crusher(s + v(0, 0, 4 + 2 + 10), 3, 3, 2.6, 0, 0.3)) -- (The Gauntlet: a crusher over the plank)
 	pad(s + v(3, -1, 4 + 2 + 20 + 4 + 2.5), 5, 5, "barrel")
 	pad(s + v(-3, -2, 4 + 2 + 20 + 4 + 5 + 4 + 2.5), 5, 5, "barrel")
 	s = checkpoint(2, s + v(0, -3, 4 + 2 + 20 + 4 + 5 + 4 + 5 + 4 + 4), 1)
@@ -172,6 +207,9 @@ end
 stage = 4
 do
 	conveyor(s + v(0, 0, 4 + 12), 7, 24, 9)
+	-- (Blackout's secret: a ledge beside the belt, in the dark.)
+	only(3, pad(s + v(7.5, 0.5, 4 + 12), 4, 4, "barrel"))
+	only(3, secret("beltLabel", "A Lost Wine Label", s + v(7.5, 0.5, 4 + 12)))
 	s = checkpoint(4, s + v(0, -1, 4 + 24 + 4 + 4), 1)
 end
 
@@ -192,6 +230,9 @@ do
 		local z = 4 + 4 + 3 + (i - 1) * 10
 		mover(s + v(-6, -i * 0.5, z), s + v(6, -i * 0.5, z), 6, 6, 4.5, (i - 1) * 0.33)
 	end
+	-- (Double Time's secret: a grate past the second piston's far end.)
+	only(2, pad(s + v(12, -1, 4 + 4 + 3 + 10), 4, 4, "grate"))
+	only(2, secret("pistonCog", "A Brass Cog", s + v(12, -1, 4 + 4 + 3 + 10)))
 	s = checkpoint(6, s + v(0, -2, 4 + 4 + 3 + 20 + 3 + 4 + 4), 2)
 end
 
@@ -201,6 +242,7 @@ do
 	local c = s + v(0, -1, 4 + 3 + 9)
 	pad(c, 18, 18, "valve")
 	spinner(c, 16, 75, 0)
+	only(4, spinner(c, 16, -50, 0.5)) -- (The Gauntlet: a second bar, the other way)
 	s = checkpoint(7, s + v(0, -1, 4 + 3 + 18 + 3 + 4), 2)
 end
 
@@ -221,6 +263,7 @@ do
 	for i = 1, 4 do
 		laser(s + v(0, 0, 4 + 2 + 4 + (i - 1) * 8), 8, 1.4 + (i % 2) * 1.6, 2.4, (i - 1) * 0.25, 0.5)
 	end
+	only(4, crusher(s + v(0, 0, 4 + 2 + 24), 8, 3, 3, 0.5, 0.32)) -- (The Gauntlet: a crusher across the hall)
 	s = checkpoint(9, s + v(0, 0, 4 + 2 + 32 + 2 + 4), 3)
 end
 
@@ -228,6 +271,10 @@ end
 stage = 10
 do
 	pad(s + v(0, 0, 4 + 2 + 3), 8, 6, "vault")
+	-- (The Gauntlet's way round: a launch pad up to a hidden ledge, and its secret.)
+	only(4, bouncer(s + v(-2.5, 0.2, 4 + 2 + 3), 2.5, 2.5, 82))
+	only(4, pad(s + v(-6.5, 14, 4 + 2 + 3), 5, 5, "steel"))
+	only(4, secret("trussKey", "The Night Porter's Key", s + v(-6.5, 14, 4 + 2 + 3)))
 	truss(s + v(0, 0, 4 + 2 + 6 + 1), 9)
 	pad(s + v(0, 8, 4 + 2 + 6 + 2 + 3), 6, 6, "vault")
 	beam(s + v(0, 8, 4 + 2 + 6 + 2 + 6 + 8), 1.8, 16, "steel")
@@ -252,6 +299,7 @@ do
 	pad(c, 20, 20, "safe")
 	spinner(c + v(0, 0, -5), 9, 90, 0)
 	spinner(c + v(0, 0, 5), 9, -90, 0.25)
+	only(3, secret("safeDial", "A Safe's Dial", c + v(8.5, 0, 8.5))) -- (Blackout's: the vault's far corner)
 	beam(s + v(0, -1, 4 + 3 + 20 + 2 + 7), 1.8, 14, "steel")
 	s = checkpoint(12, s + v(0, -2, 4 + 3 + 20 + 2 + 14 + 3 + 4), 3)
 end
@@ -262,6 +310,10 @@ do
 	for i = 1, 6 do
 		pad(s + v(if i % 2 == 0 then 3 else -3, -i, 4 + 4 + 1.75 + (i - 1) * 7.5), 3.5, 3.5, "gold")
 	end
+	only(2, steam(s + v(-3, -3, 4 + 4 + 1.75 + 15), 3.5, 3.5, 2.4, 0.3, 0.3)) -- (Double Time: steam on the third step)
+	-- (The House Course's second secret: a gold step off the fourth.)
+	only(1, pad(s + v(8.5, -3.5, 4 + 4 + 1.75 + 22.5), 3.5, 3.5, "gold"))
+	only(1, secret("goldLeaf", "A Gold Leaf", s + v(8.5, -3.5, 4 + 4 + 1.75 + 22.5)))
 	s = checkpoint(13, s + v(0, -7, 4 + 4 + 3.5 + 37.5 + 4 + 4), 4)
 end
 
@@ -271,6 +323,9 @@ do
 	conveyor(s + v(0, 0, 4 + 13), 7, 26, 11)
 	steam(s + v(0, 0, 4 + 9), 7, 3, 2.8, 0, 0.35)
 	steam(s + v(0, 0, 4 + 19), 7, 3, 2.8, 0.5, 0.35)
+	-- (The Gauntlet's second secret: a ledge beside the belt.)
+	only(4, pad(s + v(-7.5, 0.5, 4 + 20), 4, 4, "gold"))
+	only(4, secret("countingCoin", "The First Coin Counted", s + v(-7.5, 0.5, 4 + 20)))
 	s = checkpoint(14, s + v(0, -1, 4 + 26 + 4 + 4), 4)
 end
 
@@ -280,6 +335,9 @@ do
 	for i = 1, 5 do
 		vanish(s + v(if i % 2 == 0 then 1.5 else -1.5, -0.6 * i, 4 + 3.5 + 2.25 + (i - 1) * 8), 4.5, 4.5, 2.4, (i - 1) * 0.2, 0.62)
 	end
+	-- (Double Time's second secret: a gold ledge off the third tile.)
+	only(2, pad(s + v(-8, -1.5, 4 + 3.5 + 2.25 + 16), 4, 4, "gold"))
+	only(2, secret("coinPurse", "A Silk Coin Purse", s + v(-8, -1.5, 4 + 3.5 + 2.25 + 16)))
 	s = checkpoint(15, s + v(0, -3.5, 4 + 3.5 + 4.5 + 32 + 3.5 + 4), 4)
 end
 
@@ -287,6 +345,7 @@ end
 stage = 16
 do
 	beam(s + v(0, 0, 4 + 2 + 7), 1.6, 14, "gold")
+	only(4, crusher(s + v(0, 0, 4 + 2 + 7), 3, 3, 2.8, 0.25, 0.3)) -- (The Gauntlet: a crusher on the narrow way)
 	pad(s + v(0, -1, 4 + 2 + 14 + 5 + 2.5), 5, 5, "gold")
 	local t = s + v(0, -2, 4 + 2 + 14 + 5 + 5 + 4 + 8)
 	pad(t, 24, 16, "treasury")
@@ -309,10 +368,62 @@ for n = 1, Basement.STAGES do
 	Basement.Pits[n] = pit
 end
 
+-- The secrets, in the order they're met.
+Basement.Secrets = {} :: { El }
+for _, e in E do
+	if e.kind == "secret" then
+		table.insert(Basement.Secrets, e)
+	end
+end
+
 -- How long the whole course runs (for the walls and the lights).
 Basement.LENGTH = Basement.Checkpoints[16].at.Z + 12
 Basement.Arrival = CFrame.new(v(0, 0, -1)) -- on the start landing, facing down the course (+Z: see lookToward)
 Basement.ARRIVAL_AT = v(0, 0, -1)
+
+---------------------------------------------------------------------------------------------------
+-- The versions of the course (Build 78): each up for five minutes by the server's clock, in turn
+---------------------------------------------------------------------------------------------------
+export type Variant = { id: string, name: string, line: string, pace: number, tint: Color3, bright: number, glow: boolean }
+Basement.Variants = {
+	{ id = "house", name = "The House Course", line = "The course as the house built it. Two secrets off the beaten way.", pace = 1, tint = rgb(255, 214, 160), bright = 1, glow = false },
+	{ id = "doubleTime", name = "Double Time", line = "Every machine runs faster, and steam on the Gold Steps. Time your steps.", pace = 1.4, tint = rgb(255, 120, 70), bright = 1.1, glow = false },
+	{ id = "blackout", name = "Blackout", line = "The lights are down and every edge glows. The machines run a little slower.", pace = 0.85, tint = rgb(120, 160, 255), bright = 0.3, glow = true },
+	{ id = "gauntlet", name = "The Gauntlet", line = "Crushers, a second sweep on the Valve, and a launch pad to a hidden ledge.", pace = 1, tint = rgb(200, 255, 120), bright = 0.9, glow = false },
+} :: { Variant }
+Basement.VARIANT_SECONDS = 300
+
+-- The version up at time t (1 to 4).
+function Basement.variantAt(t: number): number
+	return math.floor(t / Basement.VARIANT_SECONDS) % #Basement.Variants + 1
+end
+
+-- When the version up at time t gives way to the next.
+function Basement.variantEnds(t: number): number
+	return (math.floor(t / Basement.VARIANT_SECONDS) + 1) * Basement.VARIANT_SECONDS
+end
+
+-- The machinery's time on version n: everything runs at its pace.
+function Basement.paced(n: number, t: number): number
+	local var = Basement.Variants[n]
+	return t * (if var then var.pace else 1)
+end
+
+-- Whether an element is part of version n (most are part of every one).
+function Basement.inVariant(e: El, n: number): boolean
+	return e.variant == nil or e.variant == n
+end
+
+-- How many secrets a version has.
+function Basement.secretsIn(n: number): number
+	local k = 0
+	for _, e in Basement.Secrets do
+		if e.variant == n then
+			k += 1
+		end
+	end
+	return k
+end
 
 ---------------------------------------------------------------------------------------------------
 -- The machinery's sums (the same on the server and on every screen)
@@ -345,12 +456,36 @@ function Basement.fade(e: El, t: number): number
 	return 1
 end
 
--- Whether steam or a laser is burning at time t.
+-- Whether steam or a laser is burning (or a crusher is down) at time t.
 function Basement.burning(e: El, t: number): boolean
-	if e.kind ~= "steam" and e.kind ~= "laser" then
+	if e.kind ~= "steam" and e.kind ~= "laser" and e.kind ~= "crusher" then
 		return false
 	end
 	return cycle(e, t) < (e.on or 0.4)
+end
+
+-- How high a crusher's block hangs over its floor at time t (0: down). Down `on` of its cycle; it
+-- rises, waits at the top, and in the last moment shakes and drops: you can see it coming.
+function Basement.crusherLift(e: El, t: number): number
+	local c = cycle(e, t)
+	local on = e.on or 0.3
+	if c < on then
+		return 0
+	end
+	local up = (c - on) / (1 - on)
+	if up < 0.3 then
+		return 7 * (up / 0.3)
+	elseif up < 0.88 then
+		return 7
+	end
+	return 7 * (1 - (up - 0.88) / 0.12)
+end
+
+-- Whether a crusher is about to drop (its warning: the block shakes and glows).
+function Basement.crusherWarns(e: El, t: number): boolean
+	local c = cycle(e, t)
+	local on = e.on or 0.3
+	return c >= on and (c - on) / (1 - on) >= 0.7
 end
 
 -- Where a mover is at time t (and how fast it's going: its riders go with it).
