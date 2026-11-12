@@ -66,6 +66,19 @@ function Lobbies.entrance(parent: Instance, id: string, cf: CFrame, noPlaque: bo
 	HolidayProps.sparkle(veil, def.colour:Lerp(GOLD, 0.5), 6, 0.6)
 	-- (One press of E, or one tap, and you're in: the way in never asks for a hold.)
 	prompt(veil, id, "go", "Go in", def.name)
+	-- Walk through it: an entry zone just in front of the arch (Attractions: once per walk-in), and
+	-- a glowing threshold on the floor that says where to walk.
+	local zone = Kit.part(m, "PortalZone", Vector3.new(w - 1, h, 3.2), cf * CFrame.new(0, h / 2, -1.6), { color = def.colour, material = Enum.Material.SmoothPlastic, transparency = 1 }, { collide = false, query = false, shadow = false })
+	zone:SetAttribute("Attraction", id)
+	CollectionService:AddTag(zone, "AttractionPortal")
+	local glow = def.colour:Lerp(GOLD, 0.25)
+	Kit.part(m, "Threshold", Vector3.new(w - 1, 0.07, 3), cf * CFrame.new(0, 0.085, -1.6), { color = glow, material = Enum.Material.Neon, transparency = 0.45 }, { collide = false, query = false, shadow = false })
+	for i = -1, 1 do
+		-- Three chevrons pointing in.
+		for _, side in { -1, 1 } do
+			Kit.part(m, "Chevron", Vector3.new(1.5, 0.05, 0.3), cf * CFrame.new(i * 3.2 + side * 0.55, 0.19, -2.65) * CFrame.Angles(0, math.rad(side * 35), 0), { color = Color3.new(1, 1, 1), material = Enum.Material.Neon, transparency = 0.2 }, { collide = false, query = false, shadow = false })
+		end
+	end
 	if noPlaque then
 		return veil
 	end

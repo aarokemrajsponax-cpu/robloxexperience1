@@ -668,6 +668,79 @@ end
 advance(3)
 arch.Triggered:Fire(ava)
 check("the arch home takes them home", Attractions.inside(ava) == nil and last(ava, "left").why == "home")
+-- Walking through the arch (Build 78): every way in has an entry zone, and walking into it takes a
+-- guest in, on any device; once per walk-in, never back in a loop, never through a wall.
+local zones = {}
+for _, z in H.tagged.AttractionPortal or {} do
+	zones[z:GetAttribute("Attraction")] = z
+end
+local everyWay = true
+for _, p in H.tagged.AttractionPrompt or {} do
+	if p:GetAttribute("Kind") == "go" and zones[p:GetAttribute("Attraction")] == nil then
+		everyWay = false
+	end
+end
+check("every way in has a zone to walk through", everyWay and zones.luxe ~= nil)
+local function within(z, at)
+	local rel = z.CFrame:PointToObjectSpace(at)
+	return math.abs(rel.X) <= z.Size.X / 2 and math.abs(rel.Y) <= z.Size.Y / 2 and math.abs(rel.Z) <= z.Size.Z / 2
+end
+local loops = {}
+for id, z in zones do
+	local home = Attractions.lobbyFrame(id).Position + Vector3.new(0, 3, 0)
+	for _, other in zones do
+		if within(other, home) then
+			table.insert(loops, id)
+		end
+	end
+end
+check("nobody comes home into a way in (no loops)", #loops == 0, table.concat(loops, ", "))
+local zl = zones.luxe
+local floorY = zl.CFrame.Position.Y - zl.Size.Y / 2
+advance(3)
+stand(ava, Vector3.new(zl.CFrame.Position.X, floorY, zl.CFrame.Position.Z))
+steps(3)
+check("walking into the arch takes a guest in", Attractions.inside(ava) == "luxe")
+advance(3)
+arch.Triggered:Fire(ava)
+steps(3)
+check("...and home again, they stay home (the zone isn't where they arrive)", Attractions.inside(ava) == nil)
+advance(3)
+-- Standing in the zone on arrival doesn't count: they must walk out and in again.
+stand(ava, Vector3.new(zl.CFrame.Position.X, floorY, zl.CFrame.Position.Z))
+steps(3)
+local entered = Attractions.inside(ava) == "luxe"
+check("in again by walking in again", entered)
+advance(3)
+arch.Triggered:Fire(ava)
+steps(2)
+-- Just through the wall behind the arch (another room): nothing happens.
+local behind = zl.CFrame * CFrame.new(0, 0, zl.Size.Z / 2 + 3)
+stand(ava, Vector3.new(behind.Position.X, floorY, behind.Position.Z))
+steps(3)
+check("from the other side of the wall: nothing", Attractions.inside(ava) == nil)
+-- A way in that turns a guest back (the Executive Suite: an invitation from her haul, but no stun
+-- pistol yet), walked into: told why, once per walk-in (not every moment they stand there).
+local ze = zones.executive
+if ze then
+	local function count()
+		local n = 0
+		for _, m in ava.inbox do
+			if (m.op == "notice" and m.line == "First take your free stun pistol from the Quartermaster, at his desk in this room.") or (m.op == "panel" and m.id == "executive") then
+				n += 1
+			end
+		end
+		return n
+	end
+	local before = count()
+	local fy = ze.CFrame.Position.Y - ze.Size.Y / 2
+	advance(3)
+	stand(ava, Vector3.new(ze.CFrame.Position.X, fy, ze.CFrame.Position.Z))
+	steps(6)
+	check("a way in that turns a guest back, walked into: told why once (not every moment they stand there)", count() == before + 1 and Attractions.inside(ava) == nil, count() - before)
+	inLounge(ava)
+	steps(2)
+end
 -- Quitting.
 inLounge(ava)
 advance(3)

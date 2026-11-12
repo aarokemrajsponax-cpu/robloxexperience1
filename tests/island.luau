@@ -104,6 +104,37 @@ for _, p in H.tagged.AttractionPrompt or {} do
 end
 check("the island is one of the attractions, entered from the Terrace", AttractionList.byId.island ~= nil and AttractionList.byId.island.room == "terrace")
 check("its prompts: the arch, the way home, the Livery Desk, the Exchange, the toast, six postcards", kinds["go:"] == 1 and kinds["home:"] == 1 and kinds["panel:liveries"] == 1 and kinds["panel:exchange"] == 1 and kinds["act:toast"] == 1 and kinds["act:postcard"] == 6)
+-- Walking into the jet's arch without the Island Key: still locked, and what opens it is shown
+-- (once per walk-in), never a way round it.
+do
+	local zone
+	for _, z in H.tagged.AttractionPortal or {} do
+		if z:GetAttribute("Attraction") == "island" then
+			zone = z
+		end
+	end
+	check("the jet's arch has a zone to walk through", zone ~= nil)
+	if zone then
+		local keyless = H.guest("Kip", 911)
+		local function panels()
+			local n = 0
+			for _, m in keyless.inbox do
+				if m.op == "panel" and m.id == "island" then
+					n += 1
+				end
+			end
+			return n
+		end
+		local floorY = zone.CFrame.Position.Y - zone.Size.Y / 2
+		stand(keyless, Vector3.new(zone.CFrame.Position.X, floorY, zone.CFrame.Position.Z))
+		for _ = 1, 8 do
+			advance(0.1)
+		end
+		check("walked into without the Island Key: still locked, what opens it shown once", Attractions.inside(keyless) == nil and panels() == 1, panels())
+		keyless.Parent = nil
+		advance(0.3)
+	end
+end
 local built = Game.built()
 local isle = built and built.model
 check("the island is built", isle ~= nil)

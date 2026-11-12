@@ -505,11 +505,89 @@ local function onAsk(player: Player, request: unknown): any
 end
 
 ---------------------------------------------------------------------------------------------------
+-- Walk-through ways in
+---------------------------------------------------------------------------------------------------
+-- Every entrance's glowing arch has an entry zone just in front of it (World/Lobbies, tagged
+-- AttractionPortal). Walking into an open one takes a guest in, on any device: once per walk-in
+-- (the zone must be left before it can take them again; the usual travel gap stands too). A
+-- locked one shows what opens it, once per walk-in. The zone stands inside the attraction's own
+-- room and Attractions.go checks the room as well, so nothing reaches it through a wall. The
+-- arch's prompt (E, or a tap) still works the same.
+local portals: { BasePart } = {}
+local inZone: { [Player]: BasePart } = {}
+
+local function within(part: BasePart, at: Vector3): boolean
+	local rel = part.CFrame:PointToObjectSpace(at)
+	local half = part.Size / 2
+	return math.abs(rel.X) <= half.X and math.abs(rel.Y) <= half.Y and math.abs(rel.Z) <= half.Z
+end
+
+local function addPortal(z: Instance)
+	if z:IsA("BasePart") and type(z:GetAttribute("Attraction")) == "string" and not table.find(portals, z) then
+		table.insert(portals, z)
+	end
+end
+
+-- The way in, walked into: in (true), or not (and the guest has been told why, when it's worth
+-- saying). Returns false without a word only for a moment's wait (the zone tries again).
+local function walkedIn(player: Player, id: string): boolean
+	local g = GAMES[id]
+	if g and g.locked and g.locked(ctx, player) then
+		event:FireClient(player, { op = "panel", id = id })
+		return true
+	end
+	local result = Attractions.go(player, id)
+	if result.ok == true then
+		return true
+	end
+	if result.why == "One moment." then
+		return false
+	end
+	if type(result.why) == "string" then
+		event:FireClient(player, { op = "notice", title = "Not just now", line = result.why })
+	end
+	return true
+end
+
+function Attractions.portals()
+	for _, player in Players:GetPlayers() do
+		local root = rootOf(player)
+		local hit: BasePart? = nil
+		if root and not inside[player] then
+			local at = root.CFrame.Position
+			for _, z in portals do
+				if z.Parent and within(z, at) then
+					hit = z
+					break
+				end
+			end
+		end
+		if hit == nil then
+			inZone[player] = nil
+		elseif inZone[player] ~= hit then
+			local id = hit:GetAttribute("Attraction") :: string
+			if walkedIn(player, id) then
+				inZone[player] = hit
+			end
+		end
+	end
+	for player in inZone do
+		if player.Parent == nil then
+			inZone[player] = nil
+		end
+	end
+end
+
+---------------------------------------------------------------------------------------------------
 -- Start
 ---------------------------------------------------------------------------------------------------
 
 -- One beat of every attraction: guests who have left one (any way at all) are let go of first.
 function Attractions.step(dt: number)
+	local okPortals, whyPortals = pcall(Attractions.portals :: any)
+	if not okPortals then
+		warn("[Maison] A way in stumbled: " .. tostring(whyPortals))
+	end
 	for player, id in inside do
 		local root = rootOf(player)
 		if player.Parent == nil then
@@ -579,6 +657,10 @@ function Attractions.start()
 		hookPrompt(prompt)
 	end
 	CollectionService:GetInstanceAddedSignal("AttractionPrompt"):Connect(hookPrompt)
+	for _, z in CollectionService:GetTagged("AttractionPortal") do
+		addPortal(z)
+	end
+	CollectionService:GetInstanceAddedSignal("AttractionPortal"):Connect(addPortal)
 	RemoteGuard.invoke(Remotes.func("AttractionAsk"), "attractionAsk", onAsk)
 	local function watch(player: Player)
 		player.CharacterAdded:Connect(function()
