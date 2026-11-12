@@ -213,8 +213,38 @@ check("out of sight, the alert falls", Game.guests[ada].alert <= a3)
 walled = false
 -- The terminals: a digit each.
 r = askAs(ada, { op = "act", id = "executive", act = "terminal", n = 1 })
-check("a terminal out of reach gives nothing", r.ok == false and r.why == "Get closer to it.")
+check("a terminal out of reach gives nothing", r.ok == false and r.why == "Get closer to the terminal.")
 local code = Game.run.code
+-- Pressed from the edge of its prompt's reach (10 studs from the screen, across the hallway):
+-- read, never refused for distance. (The check used to measure from the lectern's foot, a stride
+-- further off, and refuse in silence.)
+do
+	local at = Plan.Terminals[1]
+	local inward = if at.X < 0 then 1 else -1
+	standIn(ada, at + Vector3.new(inward * (1.4 + 9.5), 0, 0))
+	r = askAs(ada, { op = "act", id = "executive", act = "terminal", n = 1 })
+	check("a terminal read from the edge of its prompt's reach", r.ok == true, r.why)
+	-- And a refusal through the prompt itself is said on the guest's screen.
+	standIn(ada, Vector3.new(0, 0, Plan.Door.z - 4))
+	local promptOf
+	for _, d in workspace:GetDescendants() do
+		if d:IsA("ProximityPrompt") and d.Name == "Terminal" and d.Parent and d.Parent:GetAttribute("Terminal") == 2 then
+			promptOf = d
+		end
+	end
+	local before = #ada.inbox
+	if promptOf then
+		promptOf.Triggered:Fire(ada)
+	end
+	local said
+	for i = before + 1, #ada.inbox do
+		if ada.inbox[i].op == "notice" then
+			said = ada.inbox[i]
+		end
+	end
+	check("a press that's refused says why on the guest's screen (never a silent E)", said ~= nil and said.line == "Get closer to the terminal.", said and said.line)
+	check("the terminals answer a short hold (0.8 s) from 10 studs", promptOf ~= nil and math.abs(promptOf.HoldDuration - 0.8) < 1e-3 and promptOf.MaxActivationDistance == 10)
+end
 for n, at in Plan.Terminals do
 	standIn(ada, at + Vector3.new(if at.X < 0 then 3 else -3, 0, 0))
 	r = askAs(ada, { op = "act", id = "executive", act = "terminal", n = n })

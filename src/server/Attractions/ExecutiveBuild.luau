@@ -277,7 +277,7 @@ function ExecutiveBuild.build(parent: Instance, o: Vector3, goHome: (player: Pla
 		Kit.part(m, "Bezel", V(0.3, 1.9, 2.5), CFrame.new(base + V(inward * 0.05, 4.1, 0)), L.blackLacquer, DECO)
 		local screen = Kit.part(m, "Screen", V(0.2, 1.6, 2.2), CFrame.new(base + V(inward * 0.2, 4.1, 0)), look(rgb(60, 255, 170), Enum.Material.Neon, nil, 0.2), { collide = false })
 		screen:SetAttribute("Terminal", i)
-		terminals[i] = prompt(screen, "Terminal", "Read it", "A code terminal (" .. i .. " of 4)", 1.2, 8)
+		terminals[i] = prompt(screen, "Terminal", "Read the code", "Terminal " .. i .. " of 4", 0.8, 10)
 		CollectionService:AddTag(screen, "ExecTerminal")
 	end
 	-- The cameras: a dark dome on an arm, with a red eye.

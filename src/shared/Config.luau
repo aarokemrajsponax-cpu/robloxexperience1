@@ -202,8 +202,8 @@ local defaults = {
 	-- (ProductConfig), so 0 is fine for them; an id here (or in Roblox Configs) overrides that.
 	-- Game passes can't be found by name: paste their ids. Prices are always read live.
 	Products = {
-		tier49 = 3730507439, tier79 = 0, tier99 = 0, tier149 = 0, tier199 = 0,
-		tier249 = 3730507898, tier299 = 0, tier399 = 0, tier499 = 0, tier599 = 0,
+		tier49 = 3730507439, tier79 = 3730507512, tier99 = 3730507573, tier149 = 3730507620, tier199 = 3730507815,
+		tier249 = 3730507898, tier299 = 3730507946, tier399 = 3730508014, tier499 = 3730508074, tier599 = 3730508163,
 		introduction = 3718631594, -- once per account, first 7 days, only in the Boutique
 		ledger = 3730506949, -- the Leather-Bound Ledger, per Term
 		season = 3730507079, -- a season collection
@@ -266,14 +266,6 @@ local defaults = {
 		spectacleFireworks = 3716945273,
 		spectacleGolden = 3716945392,
 		spectacleMemes = 3716945343,
-		tier149 = 3730507620,
-		tier199 = 3730507815,
-		tier299 = 3730507946,
-		tier399 = 3730508014,
-		tier499 = 3730508074,
-		tier599 = 3730508163,
-		tier79 = 3730507512,
-		tier99 = 3730507573,
 		turkeyHunter = 3718435597,
 		turkeyMore = 3718435559,
 	},

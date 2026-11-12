@@ -686,9 +686,16 @@ function Executive.build(ctx: Types.Ctx, parent: Instance)
 		end
 	end)
 	local b = built :: ExecutiveBuild.Built
+	-- (Every press is answered: what it did, or why not. A refusal said nowhere looked like a
+	-- broken E.)
+	local function answered(player: Player, title: string, r: any)
+		if type(r) == "table" and r.ok ~= true and type(r.why) == "string" then
+			ctx.send(player, { op = "notice", title = title, line = r.why })
+		end
+	end
 	for i, p in b.terminals do
 		p.Triggered:Connect(function(player: Player)
-			Executive.ask(ctx, player, { act = "terminal", n = i })
+			answered(player, "Terminal " .. i, Executive.ask(ctx, player, { act = "terminal", n = i }))
 		end)
 	end
 	b.keypad.Triggered:Connect(function(player: Player)
@@ -697,7 +704,7 @@ function Executive.build(ctx: Types.Ctx, parent: Instance)
 		end
 	end)
 	b.safe.Triggered:Connect(function(player: Player)
-		Executive.ask(ctx, player, { act = "safe" })
+		answered(player, "The safe", Executive.ask(ctx, player, { act = "safe" }))
 	end)
 	b.liftDown.Triggered:Connect(function(player: Player)
 		if ctx.inside(player) == ID and run.phase == "won" then
@@ -845,8 +852,11 @@ function Executive.ask(ctx: Types.Ctx, player: Player, r: { [string]: unknown })
 		if not spot or not at then
 			return { ok = false, why = "Not that." }
 		end
-		if (flat(at - spot)).Magnitude > 9 then
-			return { ok = false, why = "Get closer to it." }
+		-- (Measured from the terminal's screen, as its prompt is: a little past the prompt's own
+		-- reach, so whoever the prompt answers is never refused for distance.)
+		local screen = spot + Vector3.new(if spot.X < 0 then 1.4 else -1.4, 0, 0)
+		if (flat(at - screen)).Magnitude > 13 then
+			return { ok = false, why = "Get closer to the terminal." }
 		end
 		g.digits[n :: number] = true
 		ctx.send(player, { op = "digit", n = n, digit = string.sub(run.code, n :: number, n :: number) })

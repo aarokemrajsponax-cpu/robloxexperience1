@@ -13,6 +13,7 @@ local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
+local Ease = require(ReplicatedStorage.Shared.Ease)
 local Plan = require(ReplicatedStorage.Shared.Executive)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Rules = require(ReplicatedStorage.Shared.Fortune)
@@ -89,6 +90,8 @@ local function bar(parent: Instance, name: string, y: number, colour: Color3): F
 	return fill
 end
 
+local STRIP_H = 70
+
 local function place()
 	local c = card
 	if not c then
@@ -96,7 +99,15 @@ local function place()
 	end
 	local y = math.max(Root.topClear("Executive") + 6, 126)
 	c.Position = UDim2.new(0.5, 0, 0, y)
-	Root.setTop("Executive", y + CARD_H + 4, CARD_W / 2)
+	local strip = parts.strip :: Frame?
+	local below = 0
+	if strip then
+		strip.Position = UDim2.new(0.5, 0, 0, y + CARD_H + 8)
+		if strip.Visible then
+			below = STRIP_H + 8
+		end
+	end
+	Root.setTop("Executive", y + CARD_H + 4 + below, CARD_W / 2)
 	local k = keys
 	if k then
 		k.Position = UDim2.new(0.5, 0, 1, -(14 + Root.bottomClear()))
@@ -114,6 +125,22 @@ local function draw()
 	end
 	local phase = tostring(view.phase or "hall")
 	parts.phase.Text = string.upper(PHASE_NAMES[phase] or phase)
+	-- The code, big, in its four slots until the door opens.
+	local strip = parts.strip :: Frame?
+	if strip then
+		local want = phase == "hall" and not view.open
+		local known = string.split(tostring(view.digits or "_ _ _ _"), " ")
+		for k, slot in parts.slots :: { TextLabel } do
+			local d = known[k]
+			local has = type(d) == "string" and d ~= "_" and d ~= ""
+			slot.Text = if has then d else "?"
+			slot.TextColor3 = if has then GOLD else C.smoke
+		end
+		if strip.Visible ~= want then
+			strip.Visible = want
+			place()
+		end
+	end
 	if phase == "hall" then
 		parts.top.Text = "CODE  " .. tostring(view.digits or "_ _ _ _")
 		parts.under.Text = if view.open then "THE DOOR IS OPEN" else "READ THE FOUR TERMINALS · THE KEYPAD IS BY THE DOOR"
@@ -195,8 +222,14 @@ function ExecutiveHud.openKeypad()
 	Theme.list(content, 8).VerticalAlignment = Enum.VerticalAlignment.Top
 	Theme.text(content, "The Executive's door", 11, "caps", { LayoutOrder = 1 })
 	local entered = ""
-	local shown = Theme.text(content, "_ _ _ _", 28, "display", { LayoutOrder = 2 })
-	Theme.text(content, "Your code so far: " .. tostring(view.digits or "_ _ _ _"), 12, "body", { LayoutOrder = 3, TextColor3 = C.smoke })
+	local shown = Theme.text(content, "_ _ _ _", 30, "display", { LayoutOrder = 2 })
+	-- What the terminals told this guest, big enough to read at a glance; with all four read,
+	-- the code is filled in and Enter is all it takes.
+	local known = tostring(view.digits or "_ _ _ _")
+	Theme.text(content, "From the terminals:  " .. known, 18, "display", { LayoutOrder = 3, TextColor3 = GOLD })
+	if not string.find(known, "_", 1, true) then
+		entered = string.gsub(known, " ", "")
+	end
 	local function show()
 		local out = {}
 		for k = 1, 4 do
@@ -204,6 +237,7 @@ function ExecutiveHud.openKeypad()
 		end
 		shown.Text = table.concat(out, " ")
 	end
+	show()
 	local grid = Instance.new("Frame")
 	grid.Name = "Keys"
 	grid.BackgroundTransparency = 1
@@ -303,6 +337,41 @@ function ExecutiveHud.mount()
 	parts.cross = cross
 	card = c
 
+	-- The code's four slots, under the card while the door is shut.
+	local strip = Instance.new("Frame")
+	strip.Name = "CodeStrip"
+	strip.AnchorPoint = Vector2.new(0.5, 0)
+	strip.BackgroundTransparency = 1
+	strip.Size = UDim2.fromOffset(4 * 58 + 3 * 10, STRIP_H)
+	strip.Visible = false
+	strip.Parent = Root.hud
+	local slots: { TextLabel } = {}
+	for k = 1, 4 do
+		local s = Instance.new("TextLabel")
+		s.Name = "Slot" .. k
+		s.Size = UDim2.fromOffset(58, STRIP_H)
+		s.Position = UDim2.fromOffset((k - 1) * 68, 0)
+		s.BackgroundColor3 = Color3.fromRGB(10, 12, 16)
+		s.BackgroundTransparency = 0.06
+		s.FontFace = Brand.Fonts.display
+		s.TextSize = 44
+		s.TextColor3 = C.smoke
+		s.Text = "?"
+		local sc = Instance.new("UICorner")
+		sc.CornerRadius = UDim.new(0, 10)
+		sc.Parent = s
+		local ss = Instance.new("UIStroke")
+		ss.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		ss.Color = BLUE
+		ss.Thickness = 1.5
+		ss.Transparency = 0.35
+		ss.Parent = s
+		s.Parent = strip
+		slots[k] = s
+	end
+	parts.strip = strip
+	parts.slots = slots
+
 	local k = Instance.new("Frame")
 	k.Name = "ExecutiveKeys"
 	k.AnchorPoint = Vector2.new(0.5, 1)
@@ -364,6 +433,12 @@ function ExecutiveHud.unmount()
 	local cross = parts.cross :: Frame?
 	if cross then
 		cross:Destroy()
+	end
+	local strip = parts.strip :: Frame?
+	if strip then
+		strip:Destroy()
+		parts.strip = nil
+		parts.slots = nil
 	end
 	if Root.isOpen(KEYPAD) then
 		Root.close(KEYPAD)
@@ -442,7 +517,16 @@ function ExecutiveHud.on(m: { [string]: any })
 		view = m
 		draw()
 	elseif op == "digit" then
-		Toast.show(string.format("Terminal %d", tonumber(m.n) or 0), string.format("Digit %d of the code: %s", tonumber(m.n) or 0, tostring(m.digit)), 3)
+		local n = tonumber(m.n) or 0
+		local slot = (parts.slots or {})[n] :: TextLabel?
+		if slot then
+			-- (The slot lights up with its digit, then settles: there until the door opens.)
+			slot.Text = tostring(m.digit)
+			slot.TextColor3 = GOLD
+			slot.BackgroundColor3 = Color3.fromRGB(70, 56, 20)
+			Ease.play(slot, Ease.info(0.9, Enum.EasingStyle.Quad), { BackgroundColor3 = Color3.fromRGB(10, 12, 16) })
+		end
+		Toast.show(string.format("Terminal %d of 4", n), string.format("Digit %d is %s. It stays on your screen until the door opens.", n, tostring(m.digit)), 3)
 	elseif op == "keypad" then
 		ExecutiveHud.openKeypad()
 	elseif op == "doorOpen" then
