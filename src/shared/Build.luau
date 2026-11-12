@@ -5,5 +5,5 @@
 
 return {
 	number = 78,
-	label = "Build 78 · 12 Nov · Steal a Luxe triples, the Basement turns over, the Executive fights fair",
+	label = "Build 78 · 12 Nov · three new wings, courses that turn over, a fairer Executive",
 }

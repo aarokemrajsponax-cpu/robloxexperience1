@@ -7238,7 +7238,9 @@ end)()
 	local instant, slow = cardFor(held[1]), cardFor(held[2])
 	local slowKey = slow and slow:FindFirstChild("Key") :: any
 	local instantKey = instant and instant:FindFirstChild("Key") :: any
-	check("a held prompt's card says so on its key (HOLD E); an instant one just E", slowKey ~= nil and slowKey.Text == "HOLD E" and instantKey ~= nil and instantKey.Text == "E", slowKey and slowKey.Text)
+	-- (On a touch screen both say TAP: one tap holds a held one the whole way.)
+	local wantSlow, wantInstant = if DEVICE.touch then "TAP" else "HOLD E", if DEVICE.touch then "TAP" else "E"
+	check("a held prompt's card says so on its key (HOLD E); an instant one just E", slowKey ~= nil and slowKey.Text == wantSlow and instantKey ~= nil and instantKey.Text == wantInstant, slowKey and slowKey.Text)
 	local before = #promptTriggers
 	if instant then
 		signalOf(instant, "Activated"):Fire()
