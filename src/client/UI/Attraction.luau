@@ -22,6 +22,9 @@ local FirstVisit = require(script.Parent.FirstVisit)
 local GalaHud = require(script.Parent.GalaHud)
 local GalaPanel = require(script.Parent.GalaPanel)
 local GalaView = require(script.Parent.Parent.World.GalaView)
+-- (Build 81) The Flex Studio: its card, and the reel shot on this screen.
+local FlexPanel = require(script.Parent.FlexPanel)
+FlexPanel.shoot = require(script.Parent.Parent.World.FlexReel).play
 local IslandHud = require(script.Parent.IslandHud)
 local IslandPanel = require(script.Parent.IslandPanel)
 local IslandView = require(script.Parent.Parent.World.IslandView)
@@ -218,9 +221,16 @@ function Attraction.start()
 			elseif m.id == "island" then
 				IslandPanel.open(if type(m.which) == "string" then m.which else nil)
 			elseif m.id == "gala" then
-				GalaPanel.open(if type(m.which) == "string" then m.which else nil)
+				if m.which == "flex" or m.which == "feed" then
+					FlexPanel.open(m.which)
+				else
+					GalaPanel.open(if type(m.which) == "string" then m.which else nil)
+				end
 			end
 		elseif op == "gala" then
+			if m.kind == "flex" then
+				FlexPanel.on(m)
+			end
 			GalaView.on(m)
 			if GalaHud.mounted() then
 				GalaHud.on(m)

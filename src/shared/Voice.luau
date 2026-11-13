@@ -86,7 +86,7 @@ Voice.Concierge = {
 		executive = "You hold an invitation. Take your free stun pistol from the Quartermaster, then ride his lift up: it's in the Executive's Anteroom, off the Foyer.",
 		quartermaster = "The Executive Suite needs an invitation. Finish the Maison Basement, carry {inviteHaul} of loot out of Steal a Luxe in one trip, or buy one from the Quartermaster for {invitePrice} Gilt.",
 		island = "You've the Fortune for Luxury Island now. The Island Key is at the Jet Lounge, on the Terrace.",
-		gala = "Bring a friend to the Grand Ballroom, through the great doors at the far end of the Ballroom: trivia, the Runway, the Daily Arena and the dance floor.",
+		gala = "Bring a friend to the Grand Ballroom, through the great doors at the far end of the Ballroom: the Flex Studio, trivia, the Runway, the Daily Arena and the dance floor.",
 		climb = "{gap} more and you'll be {rank}. Every haul, purse and prize counts.",
 	},
 	-- Answers, from how the house really works (the numbers are filled in from its settings).
@@ -98,7 +98,7 @@ Voice.Concierge = {
 		{ id = "caught", q = "What if a guard catches me?", a = "Everything in your bag is lost and you're shown out to the courtyard. What you've already banked is safe." },
 		{ id = "skip", q = "Can I skip a Basement stage?", a = "Yes, and the deeper the stage, the more it costs: {skipGems} Gems for the first, {skipStep} more for each stage after it. Skips bought with Robux work too, more of them further down. A skipped run isn't timed for the boards, and the stage you skip pays nothing." },
 		{ id = "island", q = "How do I get to Luxury Island?", a = "By the private jet, from the Jet Lounge on the Terrace. The Island Key is for a Tycoon: {islandGilt} Gilt or {islandGems} Gems, yours for good. Five pearls lie in its lagoon every day." },
-		{ id = "gala", q = "What's in the Grand Ballroom?", a = "Through the great doors at the far end of the Ballroom: the dance floor and its jukebox, Luxury Trivia, the Runway's themed shows, the Daily Arena, three photo sets, the Exchange and the Hall of Fame. A little Gilt for all of it, up to {galaGilt} a day." },
+		{ id = "gala", q = "What's in the Grand Ballroom?", a = "Through the great doors at the far end of the Ballroom: the Flex Studio (shoot a reel of something you own; guests like it on the Flex Wall), the dance floor and its jukebox, Luxury Trivia, the Runway's themed shows, the Daily Arena, three photo sets, the Exchange and the Hall of Fame. A little Gilt for all of it, up to {galaGilt} a day." },
 		{ id = "trade", q = "How do I trade?", a = "At the Exchange's stands in the Grand Ballroom, or the Trade key on a guest's card: Gilt, Gems, brainrots and curios. You both see every offer, and nothing changes hands until you both confirm the very same trade." },
 		{ id = "boards", q = "Where are the boards?", a = "Tap your Fortune, under your Gilt: the Wealthiest in this house, this week and of all time. The Basement's best times are at the lectern on the Basement Stair." },
 		{ id = "auction", q = "What is the Grand Auction?", a = "In the Library: the week's rare lots, bid for in Gilt or Gems by guests in every server at once. A bid is held from your purse while it stands; outbid, it comes straight back. The highest bid when the week closes wins, and the piece is delivered to you wherever you are." },
@@ -217,7 +217,7 @@ Voice.Tour = {
 		stop = "ballroom",
 		place = "ballroomDoor",
 		title = "The Ballroom",
-		line = "Lights Out every 20 minutes: the last lamp still lit wins the pot. Through the great doors at the far end, the Grand Ballroom: dancing, trivia, the Runway and more, best with friends.",
+		line = "Lights Out every 20 minutes or so: party games on the dance floor (the Chairs, the dark, the Spinner's duel), and the last lamp lit takes the pot. Through the great doors at the far end, the Grand Ballroom: the Flex Studio, dancing, trivia, the Runway and more, best with friends.",
 	},
 	{
 		stop = "terrace",
@@ -352,12 +352,12 @@ Voice.WelcomeBack = {
 -- What's new in this build, told once to each returning guest (Welcome back). Only shown while
 -- `build` is the build that's playing, so old news never shows as new.
 Voice.WhatsNew = {
-	build = 80,
+	build = 81,
 	lines = {
-		"A Home Screen as you arrive: the house's rooms on screen, your Gilt, Gems and level, and Play to begin in front of the Concierge.",
-		"Your hotbar: the Executive Suite's stun pistol, a decoy you've packed, your squad's brainrots and your starred curios. Click a brainrot or a curio to flex it.",
-		"Lights Out has new cards: the lamp going out, your place, and the evening's top three on a podium.",
-		"The street in neon at the door, and new music in every room but the lobby, where the piano stays.",
+		"Lights Out is party games on the dance floor now: the Chairs, the dark and the Spinner's duel. Press Join in the Ballroom; the last lamp lit takes the pot.",
+		"The Executive Suite's hallway is a maze: hide behind its walls, and every guard and camera shows on the floor where it's looking.",
+		"The Flex Studio in the Grand Ballroom: shoot a reel of something you own, and like other guests' reels on the Flex Wall.",
+		"A grander Home Screen, a Concierge who keeps pace on the tour, and a clearer Quartermaster.",
 	},
 }
 
@@ -502,7 +502,7 @@ Voice.Objective = {
 	try = {
 		{ id = "luxe", place = "velvet", line = "Play Steal a Luxe: carry out a fortune and bank it", how = "Its way in is the Luxe Lounge, off the Foyer. Press Play at the top right for every game." },
 		{ id = "basement", place = "obsidian", line = "Go down the Maison Basement: sixteen stages to the Treasury", how = "Its stair is off the Foyer. Clear it for an invitation to the Executive Suite." },
-		{ id = "gala", place = "ballroom", line = "Visit the Grand Ballroom: trivia, the Runway, the Daily Arena", how = "Through the great doors at the far end of the Ballroom." },
+		{ id = "gala", place = "ballroom", line = "Visit the Grand Ballroom: the Flex Studio, trivia, the Runway", how = "Through the great doors at the far end of the Ballroom." },
 	},
 	best = "Beat your best run in {room}: {points} points",
 	bestHow = "Any table in the Salon.",

@@ -146,7 +146,11 @@ def fitted_size(n, width, height):
     size = hi
     while size > lo:
         f = font(n.get("weight", "Regular"), size, n.get("family", ""), n.get("style", "Normal"))
-        if f.getlength(n.get("text", "")) <= width and size * 1.2 <= height + 1:
+        try:
+            long = f.getlength(n.get("text", ""))
+        except Exception:  # (a glyph the preview's fonts can't lay out: estimate instead)
+            long = len(n.get("text", "")) * size * 0.55
+        if long <= width and size * 1.2 <= height + 1:
             break
         size -= 0.5
     return size

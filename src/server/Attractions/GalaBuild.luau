@@ -16,6 +16,7 @@ local Brand = require(ReplicatedStorage.Shared.Brand)
 local Furniture = require(ReplicatedStorage.Shared.Furniture)
 local HolidayProps = require(ReplicatedStorage.Shared.HolidayProps)
 local Plan = require(ReplicatedStorage.Shared.Gala)
+local FlexPlan = require(ReplicatedStorage.Shared.Flex)
 local Kit = require(script.Parent.Parent.World.Kit)
 
 local GalaBuild = {}
@@ -59,6 +60,7 @@ export type Built = {
 	podiums: { BasePart }, -- each podium's glow strip, by number
 	coins: Folder,
 	dj: BasePart,
+	flexWall: Board?, -- (Build 81) the Flex Studio's wall the server writes
 }
 
 ---------------------------------------------------------------------------------------------------
@@ -761,6 +763,77 @@ local function signs(m: Model, o: Vector3)
 end
 
 ---------------------------------------------------------------------------------------------------
+-- The Flex Studio (Build 81): a black lacquer stage edged in pink neon, the gold mark where a guest
+-- stands, the phone on its tripod with a ring light, and the Flex Wall behind, tall as a phone held
+-- upright, where the reels go up. Its own lights on the mark.
+---------------------------------------------------------------------------------------------------
+local NEON_PINK = look(rgb(255, 70, 170), Enum.Material.Neon)
+local NEON_ICE = look(rgb(120, 220, 255), Enum.Material.Neon)
+
+local function studio(m: Model, o: Vector3): Board
+	local s = Kit.model(m, "FlexStudio")
+	local S = FlexPlan.STUDIO
+	-- The stage, its neon edge all round.
+	Kit.span(s, "Stage", o + v3(S.minX, 0, S.minZ), o + v3(S.maxX, S.top, S.maxZ), L.blackLacquer)
+	local e = 0.12
+	Kit.span(s, "StageNeon", o + v3(S.minX - e, S.top - 0.3, S.minZ - e), o + v3(S.maxX + e, S.top - 0.06, S.minZ + e), NEON_PINK, TRIM)
+	Kit.span(s, "StageNeon", o + v3(S.minX - e, S.top - 0.3, S.maxZ - e), o + v3(S.maxX + e, S.top - 0.06, S.maxZ + e), NEON_PINK, TRIM)
+	Kit.span(s, "StageNeon", o + v3(S.minX - e, S.top - 0.3, S.minZ), o + v3(S.minX + e, S.top - 0.06, S.maxZ), NEON_ICE, TRIM)
+	Kit.span(s, "StageNeon", o + v3(S.maxX - e, S.top - 0.3, S.minZ), o + v3(S.maxX + e, S.top - 0.06, S.maxZ), NEON_ICE, TRIM)
+	-- The gold mark, and its prompt.
+	local mark = o + FlexPlan.MARK.Position
+	Kit.cylinder(s, "Mark", 0.06, 4.2, CFrame.new(mark + v3(0, 0.03, 0)) * CFrame.Angles(0, 0, math.rad(90)), GILT, TRIM)
+	Kit.cylinder(s, "MarkInner", 0.08, 3.2, CFrame.new(mark + v3(0, 0.04, 0)) * CFrame.Angles(0, 0, math.rad(90)), L.blackLacquer, TRIM)
+	local markPrompt = Kit.part(s, "MarkPrompt", v3(4, 0.2, 4), CFrame.new(mark + v3(0, 2.4, 0)), INVISIBLE, TRIM)
+	prompt(markPrompt, "panel", "Make a reel", "The Flex Studio", { Panel = "flex" }, 10)
+	-- The tripod, the phone on it, the ring light behind the phone: all facing the mark.
+	local t = o + FlexPlan.TRIPOD + v3(0, S.top, 0)
+	for k = 0, 2 do
+		local a = k * math.pi * 2 / 3
+		local foot = t + v3(math.cos(a) * 1.4, 0, math.sin(a) * 1.4)
+		local top = t + v3(0, 4.2, 0)
+		Kit.part(s, "TripodLeg", v3(0.14, (top - foot).Magnitude, 0.14), CFrame.lookAt((foot + top) / 2, top) * CFrame.Angles(math.rad(90), 0, 0), L.blackLacquer, TRIM)
+	end
+	local aim = CFrame.lookAt(t + v3(0, 4.8, 0), mark + v3(0, 4.2, 0))
+	Kit.part(s, "Phone", v3(1.1, 2, 0.16), aim, look(rgb(12, 12, 16), Enum.Material.Glass, 0.3), TRIM)
+	local ring = Kit.cylinder(s, "RingLight", 0.24, 5.2, aim * CFrame.new(0, 0, 0.5) * CFrame.Angles(0, math.rad(90), 0), look(rgb(255, 250, 242), Enum.Material.Neon), TRIM)
+	Kit.cylinder(s, "RingHole", 0.3, 4.0, aim * CFrame.new(0, 0, 0.5) * CFrame.Angles(0, math.rad(90), 0), L.blackLacquer, TRIM)
+	Kit.pointLight(ring, 1.3, 20, rgb(255, 246, 236), false)
+	-- Two spotlights on the mark from the stage's front corners.
+	for _, x in { -9, 9 } do
+		local lamp = Kit.part(s, "StudioLamp", v3(1, 1, 1.4), CFrame.lookAt(o + v3(x, 9, S.minZ + 1), mark + v3(0, 3, 0)), L.blackLacquer, TRIM)
+		Kit.spotLight(lamp, Enum.NormalId.Front, 2.2, 30, 40, rgb(255, 214, 236), false)
+		Kit.post(s, "LampStand", 9, 0.3, o + v3(x, S.top, S.minZ + 1), L.blackLacquer, TRIM)
+	end
+	-- The Flex Wall: upright as a phone, black glass framed in pink neon.
+	local W = o + FlexPlan.WALL
+	local wall = Kit.part(s, "FlexWall", v3(11, 19.5, 0.4), CFrame.lookAt(W + v3(0, 11, 0), W + v3(0, 11, -10)), look(rgb(8, 8, 12), Enum.Material.SmoothPlastic))
+	for _, r in { { 0, 9.95, 11.6, 0.4 }, { 0, -9.95, 11.6, 0.4 }, { -5.7, 0, 0.4, 20.3 }, { 5.7, 0, 0.4, 20.3 } } do
+		Kit.part(s, "WallNeon", v3(r[3], r[4], 0.5), wall.CFrame * CFrame.new(r[1], r[2], 0), NEON_PINK, TRIM)
+	end
+	local board = screen(wall, 30, {
+		{ name = "Title", size = 0.08, font = Brand.Fonts.display, colour = rgb(255, 120, 200), text = "THE FLEX WALL" },
+		{ name = "Live", size = 0.05, font = Brand.Fonts.bodyBold, colour = rgb(255, 214, 120), text = "" },
+		{ name = "Top", size = 0.2, font = Brand.Fonts.display, colour = Color3.new(1, 1, 1), text = "" },
+		{ name = "TopLikes", size = 0.07, font = Brand.Fonts.bodyBold, colour = rgb(255, 90, 140), text = "" },
+		{ name = "Reel2", size = 0.08, font = Brand.Fonts.bodyBold, colour = Brand.Colours.bone, text = "" },
+		{ name = "Reel3", size = 0.08, font = Brand.Fonts.bodyBold, colour = Brand.Colours.bone, text = "" },
+		{ name = "Reel4", size = 0.08, font = Brand.Fonts.bodyBold, colour = Brand.Colours.bone, text = "" },
+		{ name = "Hint", size = 0.045, font = Brand.Fonts.body, colour = rgb(200, 186, 160), text = "Like a reel at the kiosk beside the wall" },
+	}, false)
+	-- The feed kiosk beside the wall: every reel up there, and a like for each.
+	local kiosk = Kit.part(s, "FeedKiosk", v3(2.2, 3.8, 1.2), CFrame.lookAt(o + v3(8.4, S.top + 1.9, 65), o + v3(8.4, S.top + 1.9, 40)), L.blackLacquer)
+	Kit.part(s, "KioskScreen", v3(1.8, 1.4, 0.1), kiosk.CFrame * CFrame.new(0, 1, -0.62), NEON_ICE, TRIM)
+	prompt(kiosk, "panel", "Like a reel", "The Flex Wall", { Panel = "feed" }, 10)
+	-- Its sign at the foot of the stage.
+	Kit.sign(s, "FlexSign", CFrame.lookAt(o + v3(-8, 0, S.minZ - 2.5), o + v3(-8, 0, 0)), 5.4, 2.4, {
+		{ text = "THE FLEX STUDIO", size = 0.36, font = Brand.Fonts.display, color = rgb(255, 120, 200) },
+		{ text = "Stand on the gold mark: shoot a reel of what you own. Others like it on the wall.", size = 0.4, font = Brand.Fonts.body, color = Brand.Colours.bone },
+	}, 3.4)
+	return board
+end
+
+---------------------------------------------------------------------------------------------------
 -- The whole hall
 ---------------------------------------------------------------------------------------------------
 function GalaBuild.build(parent: Instance, o: Vector3): Built
@@ -786,6 +859,7 @@ function GalaBuild.build(parent: Instance, o: Vector3): Built
 	exchange(m, o)
 	lounges(m, o)
 	signs(m, o)
+	local flexWall = studio(m, o)
 	return {
 		model = m,
 		home = home,
@@ -795,6 +869,7 @@ function GalaBuild.build(parent: Instance, o: Vector3): Built
 		podiums = glows,
 		coins = coins,
 		dj = dj,
+		flexWall = flexWall,
 	}
 end
 

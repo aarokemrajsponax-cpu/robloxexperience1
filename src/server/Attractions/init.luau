@@ -431,10 +431,11 @@ end
 ---------------------------------------------------------------------------------------------------
 -- Requests from a guest's screen
 ---------------------------------------------------------------------------------------------------
-local ASK_KEYS = { op = true, id = true, act = true, what = true, n = true, code = true }
+-- (`item`, `set` and `line`: the Flex Studio's picks, a guest's own thing, a set, a caption.)
+local ASK_KEYS = { op = true, id = true, act = true, what = true, n = true, code = true, item = true, set = true, line = true }
 
 local function onAsk(player: Player, request: unknown): any
-	local r = RemoteGuard.message(request, 6, 0)
+	local r = RemoteGuard.message(request, 8, 0)
 	if not r then
 		RemoteGuard.reject(player, "attractionAsk", "malformed")
 		return { ok = false, why = "That isn't something the house does." }

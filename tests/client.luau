@@ -3342,6 +3342,7 @@ do
 	workspace:SetAttribute("BallroomState", "closed")
 	root.Position = Vector3.new(0, 5, -40)
 	root.CFrame = CFrame.new(0, 5, -40)
+	Floor.roomKeys() -- (out of the Ballroom: the pad goes, as its loop does every half second)
 	advance(1)
 	check("no errors with Lights Out on the floor", #errors == 0, errors[1])
 end
@@ -9124,6 +9125,79 @@ coroutine.wrap(function()
 	check("no errors with the Grand Ballroom", #errors == errorsBefore, errors[errorsBefore + 1])
 	local _ = GalaView
 	local _ = portrait
+end)()
+
+---------------------------------------------------------------------------------------------------
+-- 7j2. The Flex Studio (Build 81): its card (what's yours, the set, the caption, a preview), a reel
+-- asked for, the reel shot on this screen (framed upright, the set round you, the gold card,
+-- Posted), the camera given back, and the Flex Wall's likes
+---------------------------------------------------------------------------------------------------
+coroutine.wrap(function()
+	local FlexPanel = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "FlexPanel")
+	local FlexReel = module("StarterPlayer", "StarterPlayerScripts", "Client", "World", "FlexReel")
+	local RootM = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "Root")
+	local errorsBefore = #errors
+	RootM.close()
+	advance(0.5)
+	local list = {
+		ok = true,
+		items = {
+			{ key = "fortune", kind = "fortune", name = "a Tycoon's Fortune of 1,200,000", glyph = "💰" },
+			{ key = "brainrot:croissantino", kind = "brainrot", name = "Croissantino Furioso", glyph = "🥐", rarity = "Common" },
+		},
+		sets = { { id = "jet", name = "The Private Jet", glyph = "✈️" }, { id = "garage", name = "The Supercar Garage", glyph = "🏎️" } },
+		captions = { { id = "woke", text = "I woke up with {item}." }, { id = "post", text = "{item}. That's the post." } },
+		reels = { { id = 4, by = "Bo", userId = 77, item = { name = "the Gold Key", glyph = "🔑" }, set = "yacht", text = "the Gold Key. That's the post.", likes = 2, liked = false, mine = false } },
+		wait = 0,
+	}
+	invokeResults.AttractionAsk = list
+	serverSays("Attraction", { op = "panel", id = "gala", which = "flex" })
+	advance(0.6)
+	check("the Flex Studio's card: what's yours to flex, the sets, the captions with your thing in them", FlexPanel.isOpen() and textOnScreen("Make a reel") ~= nil and textOnScreen("a Tycoon's Fortune of 1,200,000") ~= nil and textOnScreen("The Private Jet") ~= nil and textOnScreen("I woke up with a Tycoon's Fortune") ~= nil)
+	check("...a preview of how it reads on the wall, and what it pays, said plainly", textOnScreen("On the Flex Wall") ~= nil and textOnScreen("first reel today: +10 Gilt") ~= nil)
+	local function tap(name)
+		local b = find(playerGui, function(d)
+			return d:IsA("TextButton") and d.Name == name
+		end)
+		if b then
+			signalOf(b, "Activated"):Fire()
+		end
+		return b ~= nil
+	end
+	check("...choosing your brainrot, and a set", tap("Tile_brainrot:croissantino") and tap("Tile_garage"))
+	advance(0.3)
+	check("...the preview follows", textOnScreen("I woke up with Croissantino Furioso.") ~= nil)
+	snapshot("flex-studio")
+	invokeResults.AttractionAsk = { ok = true, reel = { id = 5, by = "Ada", userId = LocalPlayer.UserId, item = { name = "Croissantino Furioso", glyph = "🥐", rarity = "Common", kind = "brainrot" }, set = "garage", text = "I woke up with Croissantino Furioso.", likes = 0, mine = true }, gilt = 10 }
+	press("Shoot the reel")
+	advance(0.5)
+	local asked = sent[#sent].message[1]
+	check("Shoot the reel asks the server for exactly what was chosen", asked.act == "flex" and asked.what == "record" and asked.item == "brainrot:croissantino" and asked.set == "garage" and asked.line == "woke")
+	check("...the card closes, and the reel is shot on this screen: REC, the caption, the camera its own", not FlexPanel.isOpen() and FlexReel.playing() and textOnScreen("REC") ~= nil and textOnScreen("I woke up with Croissantino Furioso.") ~= nil and workspace.CurrentCamera.CameraType == roblox.Enum.CameraType.Scriptable)
+	local set = workspace:FindFirstChild("FlexReelSet")
+	check("...the set built round you (the garage, its car), and the thing you're flexing on a gold card", set ~= nil and set:FindFirstChild("CarBody") ~= nil and set:FindFirstChild("FlexCard") ~= nil)
+	check("...on its own layer over the whole screen, the house's keys put away meanwhile", playerGui:FindFirstChild("MaisonReel") ~= nil and RootM.hud.Enabled == false)
+	advance(3)
+	snapshot("flex-reel")
+	advance(6)
+	check("at the end: the set gone, the camera given back, the keys back", not FlexReel.playing() and workspace:FindFirstChild("FlexReelSet") == nil and workspace.CurrentCamera.CameraType ~= roblox.Enum.CameraType.Scriptable and playerGui:FindFirstChild("MaisonReel") == nil and RootM.hud.Enabled == true)
+	-- The Flex Wall: someone else's reel, liked once.
+	invokeResults.AttractionAsk = list
+	serverSays("Attraction", { op = "panel", id = "gala", which = "feed" })
+	advance(0.6)
+	check("the Flex Wall card: each reel with its likes, and Like on someone else's", FlexPanel.isOpen() and textOnScreen("@Bo") ~= nil and textOnScreen("the Gold Key. That's the post.") ~= nil and textOnScreen("♥ 2") ~= nil)
+	invokeResults.AttractionAsk = { ok = true, id = 4, likes = 3 }
+	press("♥  Like")
+	advance(0.5)
+	check("...a like asks the server, and the count follows what it says", sent[#sent].message[1].what == "like" and sent[#sent].message[1].n == 4 and textOnScreen("♥ LIKED") ~= nil and textOnScreen("♥ 3") ~= nil)
+	serverSays("Attraction", { op = "gala", kind = "flex", what = "likes", id = 4, likes = 7 })
+	advance(0.3)
+	check("...and the hall's count, as the server tells it", textOnScreen("♥ 7") ~= nil)
+	snapshot("flex-wall")
+	RootM.close()
+	invokeResults.AttractionAsk = nil
+	advance(0.5)
+	check("no errors in the Flex Studio", #errors == errorsBefore, errors[errorsBefore + 1])
 end)()
 
 ---------------------------------------------------------------------------------------------------

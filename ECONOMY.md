@@ -1,4 +1,4 @@
-# The Maison's economy (Build 73)
+# The Maison's economy (Build 81)
 
 Every figure here is the game's own (`src/shared/Config.luau`, `src/shared/Luxe.luau`,
 `src/shared/Basement.luau`, `src/shared/AuctionLots.luau`, `src/shared/Fortune.luau`,
@@ -119,16 +119,36 @@ Baron 250,000 · Mogul 600,000 · Billionaire 1,500,000 · Sovereign of the Mais
 
 ## 10. The Grand Ballroom (through the Ballroom's great doors)
 
+Low on the Gilt ladder (Build 81): the hall is for fun, its Gilt a little thank-you.
+
 | Activity | Gilt |
 |---|---|
-| The dance floor | 8 a minute, ten minutes a day |
-| Luxury Trivia | 12 each right answer, 150 for the win |
-| The runway | 30 for walking, 8 for voting, 200 for the win |
-| The Daily Arena | 25 for taking part, 1 a point (40 at most), 150 for the win |
-| The photo sets | 25 for the first pose at each set, each day |
+| The dance floor | 4 a minute, ten minutes a day |
+| Luxury Trivia | 6 each right answer, 90 for the win |
+| The Runway | 12 for walking, 4 for voting, 100 for the win |
+| The Daily Arena | 12 for taking part, 1 a point (40 at most), 90 for the win |
+| The photo sets | 10 for the first pose at each set, each day |
+| The Flex Studio (Build 81) | 10 for the first reel of the day; 3 for each like another guest gives your reel, 20 likes a day |
 
-- **2,500 Gilt** a day at most from the whole hall. **1 Gem** for each win, **3 a day** at most.
+- **1,200 Gilt** a day at most from the whole hall (`src/shared/Gala.luau` REWARDS; the Flex
+  Studio's own figures are in `src/shared/Flex.luau`). No Gems: no game pays them (Build 79).
 - Nothing in the hall is bought or random. Winning is answering, walking, voting and playing.
+- A like can't be given to your own reel, and only once per reel; the item in a reel is checked
+  against the guest's own record on the server.
+
+### Lights Out on the dance floor (the Ballroom, Build 81)
+
+One pot for the last lamp lit: 150, plus 60 for each real guest, 1,500 at most
+(`Config.Ballroom.floor.pot`). Stand-ins never take it. Paid through `Gilt.pay`, so boosts and the
+day's soft cap apply.
+
+### The Gilt ladder (Build 81)
+
+Lowest to highest: quick pickups (Admin Abuse's coins, tiles and gifts, the holidays' finds); the
+Grand Ballroom's games and Lights Out; sorting and the Grand Prix; Steal a Luxe and the Maison
+Basement; the Executive Suite; and, above them all, luck and great feats (a Legendary, Mythic or
+Secret find, a holiday's golden prize). Quests pay by how hard they are. The day's soft cap is
+12,000 Gilt, past which Gilt pays at 25% (`Config.Gilt`).
 
 ## 11. Racing
 

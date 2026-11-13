@@ -24,6 +24,7 @@ local Names = require(ReplicatedStorage.Shared.Names)
 local Plan = require(ReplicatedStorage.Shared.Gala)
 local Types = require(script.Parent.Types)
 local GalaBuild = require(script.Parent.GalaBuild)
+local Flex = require(script.Parent.Flex)
 
 local Gala = {}
 
@@ -62,6 +63,8 @@ local function page(ctx: Types.Ctx, data: any): { [string]: any }
 		p.gilt = 0
 		p.minutes = 0
 		p.photos = {}
+		p.reels = 0 -- (Build 81) the Flex Studio's: reels shot, likes paid for, today
+		p.likesPaid = 0
 	end
 	if type(p.photos) ~= "table" then
 		p.photos = {}
@@ -258,6 +261,33 @@ end
 Gala.busy = busy
 
 local ACTIVITY = { trivia = "Luxury Trivia", runway = "the Runway", arena = "the Daily Arena" }
+
+-- What the Flex Studio (server/Attractions/Flex) is handed: the hall's Gilt within its day's cap,
+-- the guest's page, word to the hall, what a guest is busy at, and their Fortune.
+local function flexEnv(ctx: Types.Ctx): Flex.Env
+	return {
+		ctx = ctx,
+		pay = function(player: Player, amount: number, source: string): number
+			return pay(ctx, player, amount, source)
+		end,
+		page = function(data: any): { [string]: any }
+			return page(ctx, data)
+		end,
+		tell = function(m: { [string]: any })
+			tell(ctx, m)
+		end,
+		busy = function(player: Player): string?
+			local b = busy(player)
+			return if b then ACTIVITY[b] or b else nil
+		end,
+		fortune = function(data: any): number
+			local ok, total = pcall(function()
+				return (require(script.Parent.Parent.Fortune) :: any).of(data)
+			end)
+			return if ok and type(total) == "number" then total else 0
+		end,
+	}
+end
 
 local function count(t: { [any]: any }): number
 	local n = 0
@@ -1180,6 +1210,7 @@ function Gala.build(ctx: Types.Ctx, parent: Instance)
 	arenaBoard("Join at the gate: up to twelve a round.")
 	screenIdle()
 	runwayBoard("")
+	Flex.build((built :: GalaBuild.Built).flexWall)
 end
 
 function Gala.enter(_ctx: Types.Ctx, _player: Player): (CFrame?, string?)
@@ -1204,6 +1235,7 @@ function Gala.leave(_ctx: Types.Ctx, player: Player, _why: string)
 	juke.votes[player] = nil
 	runway.votes[player] = nil
 	floorTime[player] = nil
+	Flex.leave(player)
 end
 
 function Gala.step(ctx: Types.Ctx, dt: number)
@@ -1217,6 +1249,7 @@ function Gala.step(ctx: Types.Ctx, dt: number)
 	triviaStep(ctx)
 	runwayStep(ctx)
 	arenaStep(ctx, dt)
+	Flex.step()
 end
 
 function Gala.state(ctx: Types.Ctx, player: Player): { [string]: any }
@@ -1302,6 +1335,15 @@ function Gala.ask(ctx: Types.Ctx, player: Player, r: { [string]: unknown }): { [
 		end
 	elseif act == "pose" then
 		return pose(ctx, player, what)
+	elseif act == "flex" then
+		-- The Flex Studio: the picker, a reel shot, a like.
+		if what == "list" then
+			return Flex.list(flexEnv(ctx), player)
+		elseif what == "record" then
+			return Flex.record(flexEnv(ctx), player, r)
+		elseif what == "like" then
+			return Flex.like(flexEnv(ctx), player, r.n)
+		end
 	elseif act == "state" then
 		local s = Gala.state(ctx, player)
 		s.ok = true

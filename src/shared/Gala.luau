@@ -99,6 +99,7 @@ end
 -- The parts of the hall, for the screens (where a guest is) and the server's checks.
 export type Zone = { id: string, name: string, minX: number, maxX: number, minZ: number, maxZ: number }
 Gala.Zones = {
+	{ id = "studio", name = "The Flex Studio", minX = -14, maxX = 14, minZ = 44, maxZ = 72 },
 	{ id = "trivia", name = "The Salon of Wits", minX = -130, maxX = -46, minZ = 6, maxZ = 110 },
 	{ id = "arena", name = "The Daily Arena", minX = -130, maxX = -46, minZ = -110, maxZ = -6 },
 	{ id = "runway", name = "The Runway", minX = 46, maxX = 130, minZ = 0, maxZ = 110 },

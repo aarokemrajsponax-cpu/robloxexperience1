@@ -377,6 +377,56 @@ a Nightly attempt or a Mythic's odds.
 - **The launch kit**: page text, icon, thumbnails and the gameplay video's shot list are in
   [`LAUNCH.md`](LAUNCH.md).
 
+## Build 81 — Lights Out on the floor, the Suite's maze, the Flex Studio
+
+- **Lights Out is party games on the dance floor** (`server/FloorShow`, `UI/FloorShow`; the
+  sorting evening stays behind `Config.Ballroom.floor.enabled`). A pad at the foot of the screen
+  in the Ballroom says what it is and what it pays, with one big Join key (Leave once in; Remind
+  me while a show is on; Open it now with its real price, or the credit held, while it's closed).
+  Rounds: the Chairs (the music stops dead, stand on a gold seat, fewer seats than guests), Lights
+  Out (get into a circle of light before the room goes dark) and the Spinner's duel (two in the
+  ring, Shove to push the other out, nearer the middle at the bell stays). The last lamp lit takes
+  the pot; stand-ins fill a quiet night but never take it. Every seat, circle and shove is judged by
+  the server (reach, timing, only the two in the ring).
+- **The Executive Suite's hallway is a gallery maze** (48 × 178 studs): the lift's lobby (safe:
+  nobody watches there), then the vitrine island, the split gallery, the serpentine, the colonnade
+  and the vestibule. Walnut partitions taller than any eye give real cover. There are five cameras
+  and five guards. Every guard's and camera's sight is drawn on the floor with a red laser from its
+  eye, cut off at the walls, using the server's own rule (`shared/Executive.inSight`; only walls,
+  partitions and the door block sight). The cameras' heads turn where they look, and the card says
+  "A GUARD SEES YOU" when one does.
+- **The Scanner works now.** It used to do nothing. It marks every guard and every terminal through
+  the walls, and ticks the terminals already read. Guards stop and watch a decoy instead of walking
+  at it, and are put back on their rounds if pushed off. Terminals can't be read through a wall. No
+  solid decoration stands in a lane. The digit notice no longer pops up over the hallway.
+- **The Quartermaster's board** has two columns. Three numbered steps on the left, each with a green
+  tick when done (never a key that looks pressable), and Go up now once ready. Gear cards on the
+  right say what each piece does, with Buy and its price on the key.
+- **The Flex Studio** (the Grand Ballroom's nave; `shared/Flex`, `server/Attractions/Flex`,
+  `UI/FlexPanel`, `World/FlexReel`). The larping booth: stand on the gold mark, pick something you
+  own and a set, then one of the house's captions ("I woke up with …", "POV: …", "Rate my …";
+  nothing typed, so nothing needs filtering). The set is the private jet, the penthouse at night,
+  the supercar garage or the yacht at sunset. Your screen then shoots a seven-second vertical reel
+  round you: three camera moves, the set built round you, your thing on a gold card, and REC and
+  your caption in a phone-shaped frame. It goes up on the Flex Wall, where guests in the hall like
+  it: one like each, never your own. Every item is checked against the guest's own record on the
+  server. Gilt is low on the ladder: 10 for the first reel of the day, 3 a like (20 a day).
+- **The Gilt ladder** (Build 81, `Config.Gilt`): quick pickups lowest, then the Grand Ballroom and
+  Lights Out, sorting and the Grand Prix, Steal a Luxe and the Basement, the Executive Suite, and
+  luck and great feats at the top. See ECONOMY.md.
+- **The Home Screen and the Concierge.** A grander Home Screen with a big Play and a live ticker.
+  The tour's cards explain how to play each attraction, and the Concierge keeps pace with the guest.
+- Research behind the street-luxury direction and the Flex Studio:
+  [The Zoe Report](https://www.thezoereport.com/fashion/fashion-month-fall-winter-2026-street-style-predictions),
+  [Who What Wear](https://www.whowhatwear.com/uk/fashion/trends/luxury-fashion-trends-winter-2026),
+  [Runway Live](https://www.runwaylive.com/fashion-trends-2026-best-loud-luxury-looks.html/fashion-trends-2026-best-loud-luxury-looks),
+  [Trendalytics](https://blog.trendalytics.co/street-style-trends-ss26),
+  [Moneywise](https://moneywise.com/news/top-stories/larping-fake-dashboards-get-rich-quick-courses),
+  [Maclean's](https://www.macleans.ca/society/appearing-wealthy-on-social-media-has-become-an-industry/),
+  [404 Media](https://www.404media.co/larping-how-influencers-fake-being-rich/),
+  [Pulse](https://pulse.byoviral.com/trend/2026-08-10/all-of-gen-z-is-larping-it-s-not-what-you-think-it-is),
+  [Daily Dot](https://www.dailydot.com/culture/i-woke-up-in-a-bugatti-tiktok-trend/).
+
 ## Build 80 — A Home Screen, a hotbar to flex, the street in neon
 
 - **The Home Screen.** A guest arrives to WELCOME TO MAISON NOIR over a slow walk through six
