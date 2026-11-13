@@ -39,7 +39,7 @@ local STEPS = {
 local CLUB_STEPS = {
 	{ title = "Same pieces, both of you", line = "In the Library two guests sort the identical deal. First to clear the felt takes the hand.", piece = "pocketWatch" },
 	{ title = "Three in a row sends a parcel", line = "Three into one case sends a sealed parcel of lookalikes across. Your own parcels cancel theirs.", piece = "goldCoins" },
-	{ title = "Keep your lamp lit", line = "In the Ballroom a felt holds sixteen. Go over for three seconds and your lamp goes out. The last lamp wins.", piece = "blackDiamond" },
+	{ title = "Keep your lamp lit", line = "In the Ballroom's Lights Out: grab a seat when the music stops, stay in the light, win the shove. The last lamp lit wins.", piece = "blackDiamond" },
 }
 
 -- Set by Main: what the last step's key does (seat the guest, or return them to the table).

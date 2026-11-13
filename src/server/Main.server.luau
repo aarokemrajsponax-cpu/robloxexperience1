@@ -209,6 +209,15 @@ DuelService.say = function(player, line)
 	Concierge.line(player, line, 3)
 end
 local BallroomService = require(script.Parent.BallroomService)
+-- Lights Out on the dance floor (Build 81): party games, not sorting (Config.Ballroom.floor).
+local FloorShow = require(script.Parent.FloorShow)
+do
+	-- (Anyone playing tonight's show is as good as seated: nothing else takes them meanwhile.)
+	local sortingSeated = BallroomService.isSeated
+	BallroomService.isSeated = function(player: Player): boolean
+		return sortingSeated(player) or FloorShow.isSeated(player)
+	end
+end
 boot("The Library", function()
 	DuelService.start(function(player)
 		return TableService.isSeated(player) or BallroomService.isSeated(player)
@@ -218,9 +227,20 @@ BallroomService.say = function(player, line)
 	Concierge.line(player, line, 4)
 end
 boot("The Ballroom", function()
-	BallroomService.start(function(player)
-		return TableService.isSeated(player) or DuelService.isSeated(player)
-	end)
+	if ConfigData.Ballroom.floor and ConfigData.Ballroom.floor.enabled == true then
+		FloorShow.isBusy = function(player: Player): boolean
+			local inside = false
+			pcall(function()
+				inside = require(script.Parent.Attractions).inside(player) ~= nil
+			end)
+			return TableService.isSeated(player) or DuelService.isSeated(player) or inside
+		end
+		FloorShow.start()
+	else
+		BallroomService.start(function(player)
+			return TableService.isSeated(player) or DuelService.isSeated(player)
+		end)
+	end
 end)
 TableService.isBusy = function(player)
 	return DuelService.isSeated(player) or BallroomService.isSeated(player)
@@ -277,6 +297,11 @@ end
 BallroomService.secret = function(player)
 	CuriosService.forEvent(player, "reginaBallo", "reginaBallo")
 end
+-- The floor show keeps the same records, boards and Secret brainrot as the sorting evening did.
+FloorShow.say = BallroomService.say
+FloorShow.onFinished = BallroomService.onFinished
+FloorShow.onResult = BallroomService.onResult
+FloorShow.secret = BallroomService.secret
 
 local Dressing = require(script.Parent.Dressing)
 Dressing.crestOf = CircleService.crest
@@ -463,13 +488,34 @@ boot("The Boutique", Shop.start)
 local Purchases = require(script.Parent.Purchases)
 boot("Purchases", Purchases.start)
 -- The Ballroom's Robux (sabotage, opening it early): the Ballroom checks and does each one.
-Purchases.Sabotage.can = BallroomService.canSabotage
-Purchases.Sabotage.apply = BallroomService.sabotage
-Purchases.Sabotage.isClosed = BallroomService.isClosed
+-- (On the dance floor there are no tables to sabotage: nothing is offered, nothing is sold.)
+local function floorOn(): boolean
+	return ConfigData.Ballroom.floor ~= nil and ConfigData.Ballroom.floor.enabled == true
+end
+Purchases.Sabotage.can = function(player: Player, kind: string, seat: number): (boolean, string?)
+	if floorOn() then
+		return false, "Lights Out is on the dance floor now: there's no table to sabotage."
+	end
+	return BallroomService.canSabotage(player, kind, seat)
+end
+Purchases.Sabotage.apply = function(player: Player, kind: string, seat: number): (boolean, string?)
+	if floorOn() then
+		return false, "Lights Out is on the dance floor now: there's no table to sabotage."
+	end
+	return BallroomService.sabotage(player, kind, seat)
+end
+Purchases.Sabotage.isClosed = function(): boolean
+	return if floorOn() then FloorShow.isClosed() else BallroomService.isClosed()
+end
 Purchases.Sabotage.open = function(by: string?)
-	local ok, why = BallroomService.openNow(by)
+	local ok, why
+	if floorOn() then
+		ok, why = FloorShow.openNow(by)
+	else
+		ok, why = BallroomService.openNow(by)
+	end
 	if ok and by then
-		Remotes.event("Salute"):FireAllClients({ op = "salute", id = "ballroomOpened", by = by, effects = { "fireworks" }, seconds = 6, title = "The Ballroom is open", line = by .. " opened the Ballroom for everyone. Lights Out: sit in any chair!" })
+		Remotes.event("Salute"):FireAllClients({ op = "salute", id = "ballroomOpened", by = by, effects = { "fireworks" }, seconds = 6, title = "The Ballroom is open", line = by .. " opened the Ballroom for everyone. Lights Out: press Join in the Ballroom." })
 	end
 	return ok, why
 end
@@ -477,6 +523,9 @@ Purchases.Sabotage.say = function(player: Player, title: string, line: string)
 	require(script.Parent.Purchases.Perks).tell(player, { op = "notice", title = title, line = line })
 end
 AdminService.openBallroom = function(by: string)
+	if floorOn() then
+		return FloorShow.openNow(by)
+	end
 	return BallroomService.openNow(by)
 end
 BallroomService.requestSabotage = Purchases.Sabotage.request
@@ -513,6 +562,8 @@ AdminService.openGrandPrix = function(by: string): (boolean, string?, string?)
 end
 BallroomService.requestOpen = Purchases.Sabotage.openNow
 BallroomService.sabotageInfo = Purchases.Sabotage.info
+FloorShow.requestOpen = Purchases.Sabotage.openNow
+FloorShow.openOffer = Purchases.Sabotage.openOffer
 -- A guest at the Foyer's piano: the Pianist gets up for them, and sits back down after.
 Purchases.Piano.onSession = function(playing: boolean)
 	Pianist.stepAside(playing)

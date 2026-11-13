@@ -1212,6 +1212,9 @@ workspace:SetAttribute("Season", "autumn")
 workspace:SetAttribute("SeasonName", "Autumn")
 
 local Config = module("ReplicatedStorage", "Shared", "Config")
+-- (This run plays the sorting evening in the Ballroom, kept behind the switch: Lights Out on the
+-- dance floor has a block of its own, after the Ballroom's.)
+Config.data.Ballroom.floor.enabled = false
 if MODE == "full" then
 	-- This run walks the optional title screen too, not the Studio shortcut.
 	Config.data.Studio.skipTitle = false
@@ -3253,6 +3256,95 @@ root.CFrame = CFrame.new(0, 5, -40)
 advance(1)
 check("leaving the Ballroom drops its keys and the camera", textOnScreen("Open it now") == nil and textOnScreen("Take a chair") == nil and camera.CameraType == roblox.Enum.CameraType.Custom)
 check("no errors in the Ballroom", #errors == 0, errors[1])
+
+-- Lights Out on the dance floor (Build 81, UI/FloorShow), driven by what the server would say: the
+-- keys in the room, the pill while waiting, each round's banner (the music stopping dead for the
+-- Chairs, the room going dark for Lights Out), the duel's Shove key, a shove landing, the cards.
+do
+	local Floor = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "FloorShow")
+	local SoundM = module("StarterPlayer", "StarterPlayerScripts", "Client", "Sound")
+	local HudM = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "Hud")
+	local function t(s)
+		return workspace:GetServerTimeNow() + s
+	end
+	-- (Lights Out on the floor, switched on here: the sorting evening's screen steps aside.)
+	Config.data.Ballroom.floor.enabled = true
+	advance(0.6)
+	root.Position = Vector3.new(61, 21, 90) * GRAND()
+	root.CFrame = CFrame.new(root.Position)
+	workspace:SetAttribute("BallroomState", "open")
+	Floor.roomKeys()
+	advance(0.3)
+	check("Lights Out on the floor: in the Ballroom while it's open, Join Lights Out", press("Join Lights Out") and sentOps("LightsOut", "join") == 1)
+	Floor.handle({ op = "joined", seat = 1, startsAt = t(58), pot = 210 })
+	Floor.handle({ op = "gathering", count = 3, startsAt = t(58), pot = 270 })
+	advance(0.3)
+	check("...joined: a pill with the countdown and how many are in, and Leave", textOnScreen("YOU'RE IN") ~= nil and textOnScreen("3 GUESTS") ~= nil and (Floor.roomKeys() or true) and textOnScreen("Leave Lights Out") ~= nil)
+	snapshot("lightsout-joined")
+	Floor.handle({ op = "showStart", of = 6, real = 3, pot = 270, guests = {} })
+	Floor.handle({ op = "round", round = 1, kind = "chairs", phase = "music", ends = t(8), alive = 6, of = 6 })
+	advance(0.3)
+	check("the show starts: the round's banner, its name and what to do", textOnScreen("THE CHAIRS") ~= nil and textOnScreen("When the music stops, stand on a gold seat") ~= nil and textOnScreen("YOU'RE IN") == nil)
+	Floor.handle({ op = "round", round = 1, kind = "chairs", phase = "scramble", ends = t(4.9), alive = 6, of = 6 })
+	advance(0.3)
+	check("...the music stops dead: find a seat", SoundM.musicStopped() == true and textOnScreen("Find a seat") ~= nil)
+	Floor.handle({ op = "safe", kind = "chairs" })
+	advance(0.2)
+	check("...on a seat: SAFE", textOnScreen("SAFE") ~= nil)
+	snapshot("lightsout-chairs")
+	Floor.handle({ op = "round", round = 2, kind = "lights", phase = "dark", ends = t(4.5), alive = 5, of = 6 })
+	advance(0.8)
+	check("Lights Out: the music back, the room dark on this screen, stay in the light", SoundM.musicStopped() == false and game:GetService("Lighting"):FindFirstChild("LightsOutDark") ~= nil and textOnScreen("Stay in the light") ~= nil)
+	Floor.handle({ op = "round", round = 3, kind = "spinner", phase = "duel", ends = t(15), alive = 2, of = 6, a = "Ada", b = "Bo", aId = 1, bId = 2 })
+	advance(0.8)
+	check("the Spinner: in the ring, a Shove key and who to push out", textOnScreen("Shove Bo out of the ring") ~= nil and game:GetService("Lighting"):FindFirstChild("LightsOutDark") == nil)
+	local before = sentOps("LightsOut", "shove")
+	press("Shove")
+	press("Shove")
+	check("...a shove is asked of the server (not two at once)", sentOps("LightsOut", "shove") == before + 1)
+	snapshot("lightsout-duel")
+	Floor.handle({ op = "shoved", x = 1, z = 0, power = 60, by = "Bo" })
+	check("a shove landing moves this guest", root.AssemblyLinearVelocity.X > 30)
+	Floor.handle({ op = "out", place = 2, of = 6, reason = "ring", by = "Bo", keys = 0 })
+	advance(2)
+	check("out: OUT, then the card, saying who pushed them out, with Keep watching", textOnScreen("Your lamp is out") ~= nil and textOnScreen("Pushed out of the ring by Bo") ~= nil and textOnScreen("Keep watching") ~= nil)
+	snapshot("lightsout-out")
+	check("...and no Leave key on it (out of the show, a guest just walks on), nor the round's banner behind it", find(playerGui, function(d)
+		return d.Name == "Key_Leave" and d.Parent ~= nil and d.Parent.Name == "More"
+	end) == nil and find(playerGui, function(d)
+		return d.Name == "LightsOutBanner"
+	end) == nil)
+	press("Keep watching")
+	Floor.handle({ op = "showEnd", winner = "Bo", standIn = false, pot = 270, results = { { name = "Bo", place = 1 }, { name = "Ada", place = 2 }, { name = "The Countess", place = 3, standIn = true } } })
+	Floor.handle({ op = "showResult", place = 2, of = 6, keys = 0, points = 70, gilt = 0, pot = 270, counted = false, won = false })
+	advance(4)
+	check("the end: who kept the last lamp, then the result with the podium", textOnScreen("Bo kept the last lamp") ~= nil and textOnScreen("2nd of 6") ~= nil and find(playerGui, function(d)
+		return d.Name == "Podium"
+	end) ~= nil)
+	module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "BallroomPanel").close()
+	-- Closed: the pad at the foot of the screen says when it opens, with Open it now (its price on
+	-- the key, never hidden) and Remind me. The top row of keys is left as it is.
+	Floor.handle({ op = "hello", state = "closed", left = 600, joined = false, pot = 210, openPrice = 49, openHeld = 0 })
+	workspace:SetAttribute("BallroomState", "closed")
+	workspace:SetAttribute("BallroomAt", t(600))
+	Floor.roomKeys()
+	advance(0.3)
+	check("closed: the pad says when it opens, Open it now with its price on the key, and Remind me", textOnScreen("The Ballroom is closed") ~= nil and textOnScreen("opens in 10:00") ~= nil and textOnScreen("Open it now") ~= nil and textOnScreen("49") ~= nil and textOnScreen("Remind me") ~= nil)
+	check("...the top row of keys gains nothing (it never runs under the Gilt)", textOnScreen("Leave Lights Out") == nil and find(playerGui, function(d)
+		return d.Name == "LightsOutPad"
+	end) ~= nil)
+	snapshot("lightsout-closed")
+	local beforeRemind = sentOps("LightsOut", "join")
+	press("Remind me")
+	check("...Remind me asks the server", sentOps("LightsOut", "join") == beforeRemind + 1)
+	HudM.setExtraKeys({})
+	Config.data.Ballroom.floor.enabled = false
+	workspace:SetAttribute("BallroomState", "closed")
+	root.Position = Vector3.new(0, 5, -40)
+	root.CFrame = CFrame.new(0, 5, -40)
+	advance(1)
+	check("no errors with Lights Out on the floor", #errors == 0, errors[1])
+end
 
 ---------------------------------------------------------------------------------------------------
 -- 7. The panels

@@ -54,7 +54,7 @@ function Title.shots(): { Shot }
 		slide("THE SALON", "The tables, and the calmest room: sit anywhere and sort at your own pace.",
 			Vector3.new(S.maxX - 6, floor + 10, S.maxZ - 6), Vector3.new(S.maxX - 10, floor + 12, S.minZ + 22),
 			Vector3.new(S.minX + 20, floor + 2, S.minZ + 12), Vector3.new(S.minX + 20, floor + 2, S.maxZ - 26), 8),
-		slide("THE BALLROOM", "Lights Out every 20 minutes: the last lamp still lit wins the pot.",
+		slide("THE BALLROOM", "Lights Out: party games on the floor, the last lamp lit takes the pot.",
 			Vector3.new(B.minX + 12, club + 34, B.minZ + 10), Vector3.new(B.minX + 36, club + 30, B.minZ + 8),
 			Vector3.new(B.centre.X, club + 2, B.centre.Z + 20), Vector3.new(B.centre.X + 18, club + 2, B.centre.Z + 30), 9),
 		slide("THE LIBRARY", "The Grand Auction: rare lots, bid for in every server at once.",

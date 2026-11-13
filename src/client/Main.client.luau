@@ -202,6 +202,13 @@ start("The counter", Counter.start)
 start("Tables", TableClient.start)
 start("The house around you", Ambient.start)
 start("The Ballroom", BallroomView.start)
+-- Lights Out on the dance floor (Build 81): its own screen, when it's the Ballroom's evening.
+start("Lights Out on the floor", function()
+	local floor = (require(ReplicatedStorage.Shared.Config).data :: any).Ballroom.floor
+	if floor and floor.enabled == true then
+		require(script.Parent.UI.FloorShow).start()
+	end
+end)
 -- The holidays inside the attractions (World/HolidayFX dresses the house itself).
 start("Holidays in the attractions", require(script.Parent.World.AttractionDress).start)
 start("The Vault", function()

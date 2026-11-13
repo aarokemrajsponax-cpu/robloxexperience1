@@ -36,6 +36,7 @@ local pianoGroup = group("MaisonPiano")
 
 local levels = { music = 0.65, effects = 0.85, ambience = 0.7 }
 local dipped = false
+local hushed = false -- Lights Out's Chairs: the music stopped dead
 local scoring = 0 -- shows' scores playing now (the house's music sinks under them)
 
 local function applyVolumes()
@@ -43,7 +44,7 @@ local function applyVolumes()
 	local e = if State.get("effects") == "On" then (State.get("effectsLevel") :: number) / 100 else 0
 	local a = if State.get("ambience") == "On" then (State.get("ambienceLevel") :: number) / 100 else 0
 	levels.music, levels.effects, levels.ambience = m, e, a
-	TweenService:Create(music, TweenInfo.new(0.4), { Volume = m * (if scoring > 0 then 0.12 elseif dipped then 0.45 else 1) }):Play()
+	TweenService:Create(music, TweenInfo.new(0.4), { Volume = if hushed then 0 else m * (if scoring > 0 then 0.12 elseif dipped then 0.45 else 1) }):Play()
 	show.Volume = m
 	effects.Volume = e
 	pianoGroup.Volume = e
@@ -54,6 +55,18 @@ for _, key in { "music", "musicLevel", "effects", "effectsLevel", "ambience", "a
 	State.watch(key, function()
 		applyVolumes()
 	end)
+end
+
+-- Lights Out's Chairs: the music stops dead when it's time to find a seat, and comes back after.
+function Sound.musicStop(on: boolean)
+	if on == hushed then
+		return
+	end
+	hushed = on
+	TweenService:Create(music, TweenInfo.new(if on then 0.08 else 0.6, Enum.EasingStyle.Sine), { Volume = if on then 0 else levels.music * (if scoring > 0 then 0.12 elseif dipped then 0.45 else 1) }):Play()
+end
+function Sound.musicStopped(): boolean
+	return hushed
 end
 
 function Sound.dip(on: boolean)

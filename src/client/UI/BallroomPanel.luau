@@ -28,7 +28,9 @@ BallroomPanel.openSalutes = function() end
 
 local NAME = "Ballroom"
 
-export type Actions = { gallery: () -> (), stay: () -> (), leave: () -> () }
+-- (`galleryText`: the second way to keep watching, named for where it leads: on the dance floor,
+-- "Keep watching" rather than the Gallery.)
+export type Actions = { gallery: () -> (), stay: () -> (), leave: (() -> ())?, galleryText: string? }
 
 local rgb = Color3.fromRGB
 local NEON = rgb(255, 70, 170)
@@ -396,7 +398,7 @@ local function card(c: Card, actions: Actions)
 		end
 	end
 	local function label(id: string): string
-		return if id == "stay" then Voice.Ballroom.nextEvening else Voice.Ballroom.gallery
+		return if id == "stay" then Voice.Ballroom.nextEvening else actions.galleryText or Voice.Ballroom.gallery
 	end
 	Theme.key(keys, label(order[1]), true, go(order[1]), math.min(320, w - 48)).LayoutOrder = 1
 	local more = frame(keys, "More", UDim2.new(1, 0, 0, 0))
@@ -422,10 +424,13 @@ local function card(c: Card, actions: Actions)
 			BallroomPanel.openSalutes()
 		end, half).LayoutOrder = 3
 	end
-	Theme.key(more, "Leave", false, function()
-		BallroomPanel.close()
-		actions.leave()
-	end, half).LayoutOrder = 4
+	local leave = actions.leave
+	if leave then
+		Theme.key(more, "Leave", false, function()
+			BallroomPanel.close()
+			leave()
+		end, half).LayoutOrder = 4
+	end
 
 	-- In: up from a little smaller, with a bounce; the winner's confetti a moment after.
 	local pop = Instance.new("UIScale")
@@ -449,9 +454,15 @@ end
 function BallroomPanel.out(message: { [string]: any }, actions: Actions)
 	local place = if type(message.place) == "number" then message.place else 20
 	local of = if type(message.of) == "number" then message.of else 20
-	local why = if type(message.by) == "string"
-		then Voice.fill(Voice.Ballroom.outByName, { name = message.by })
-		elseif message.reason == "over" then Voice.Ballroom.outOver
+	local by = if type(message.by) == "string" then message.by else nil
+	local reason = message.reason
+	local why = if by and reason == "ring" then Voice.fill(Voice.Ballroom.outRing, { name = by })
+		elseif by and reason == "bell" then Voice.fill(Voice.Ballroom.outBell, { name = by })
+		elseif by then Voice.fill(Voice.Ballroom.outByName, { name = by })
+		elseif reason == "over" then Voice.Ballroom.outOver
+		elseif reason == "chairs" then Voice.Ballroom.outChairs
+		elseif reason == "dark" then Voice.Ballroom.outDark
+		elseif reason == "left" then Voice.Ballroom.outLeft
 		else nil
 	local list: { Chip } = {}
 	if (message.keys or 0) > 0 then

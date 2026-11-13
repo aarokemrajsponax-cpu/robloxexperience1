@@ -122,6 +122,18 @@ function Sabotage.openNow(player: Player): (boolean, string?)
 	return Store.prompt(player, sell, "ballroom")
 end
 
+-- What opening the Ballroom now costs this guest: its price (Roblox's own, or the catalog's until
+-- Roblox says; nil while it isn't on sale) and the credits they hold (a held one opens it free).
+function Sabotage.openOffer(player: Player): (number?, number)
+	local data = Profiles.get(player)
+	local held = if data then Perks.credits(data, credit("open")) else 0
+	if not Store.sellable(Sabotage.KEYS.open) then
+		return nil, held
+	end
+	local e = ProductConfig.byKey[Sabotage.KEYS.open]
+	return Catalog.price(Sabotage.KEYS.open) or (if e then e.Pricing.ReferencePrice else nil), held
+end
+
 -- The prices (Roblox's own, or the catalog's until Roblox says) and the credits held.
 function Sabotage.info(player: Player): { [string]: any }
 	local prices, credits = {}, {}

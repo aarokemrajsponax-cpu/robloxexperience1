@@ -681,6 +681,12 @@ function BallroomView.clear()
 end
 
 function BallroomView.start()
+	-- (Lights Out on the dance floor has its own screen, UI/FloorShow: the tables' keys, the
+	-- sabotage and the status line here are for the sorting evening only.)
+	local floor = (Config.data :: any).Ballroom.floor
+	if floor and floor.enabled == true then
+		return
+	end
 	SabotagePanel.send = function(m: { [string]: any })
 		tableEvent:FireServer(m)
 	end
@@ -688,7 +694,13 @@ function BallroomView.start()
 	RunService.Heartbeat:Connect(roomStep)
 	task.spawn(function()
 		while true do
-			zoneKeys()
+			-- (Lights Out on the floor switched on mid-session: its own screen has the room's keys.)
+			local f = (Config.data :: any).Ballroom.floor
+			if f and f.enabled == true then
+				zoneKeysShown = false
+			else
+				zoneKeys()
+			end
 			task.wait(0.5)
 		end
 	end)
