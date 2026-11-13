@@ -88,7 +88,9 @@ function Build.persistLamps(root: Instance): (number, number)
 						end
 					end
 					local span = if lo and hi then hi - lo else Vector3.zero
-					keep = math.max(span.X, span.Z) <= FIXTURE_MOST
+					-- (A table is kept whole whatever its size: the game finds its lamp, the Bulb's
+					-- TableLight, by name, to dim it, flicker it and dress it.)
+					keep = math.max(span.X, span.Z) <= FIXTURE_MOST or model:GetAttribute("TableId") ~= nil
 					judged[model] = keep
 					if keep then
 						pcall(function()
