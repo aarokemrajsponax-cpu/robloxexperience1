@@ -99,10 +99,10 @@ add({
 	Id = 0, -- paste the game pass id here (or Config.Products.velocityElite)
 	Handler = "velocity",
 	Fallback = "velocityEliteProduct",
-	Pricing = { ReferencePrice = 499, Tier = "Premium", Rationale = "A permanent pass beside the Gold Key: priced as a one-time luxury, not a consumable." },
+	Pricing = { ReferencePrice = 299, Tier = "Medium", Rationale = "A permanent convenience (speed round the house, never in the competitive rooms) and a trail: priced as a one-time treat, well under the Gold Key." },
 	Reward = { Type = "Velocity", SpeedMultiplier = 1.5 },
 	Rules = { OneTime = true, Stackable = false, CooldownSeconds = 0 },
-	UX = { DisplayName = "VIP Velocity Elite", Category = "Status", Line = "Walk and run 1.5× faster through the house, for good, with a gold trail at your heels. Both can be switched off in Settings.", Offer = true, Order = 30, Action = "prompt" },
+	UX = { DisplayName = "VIP Velocity Elite", Category = "Status", Line = "Walk and run 1.5× faster round the house, for good, with a gold trail at your heels. In Steal a Luxe, the Basement and the Executive Suite everyone moves at one pace. Both can be switched off in Settings.", Offer = true, Order = 30, Action = "prompt" },
 })
 add({
 	Key = "velocityEliteProduct",
@@ -111,10 +111,10 @@ add({
 	ProductType = "DeveloperProduct",
 	Id = 0, -- only used when there's no game pass: the same perk, bought once
 	Handler = "velocity",
-	Pricing = { ReferencePrice = 499, Tier = "Premium", Rationale = "The same as the pass, for experiences without one; a second purchase becomes Boutique credit." },
+	Pricing = { ReferencePrice = 299, Tier = "Medium", Rationale = "The same as the pass, for experiences without one; a second purchase becomes Boutique credit." },
 	Reward = { Type = "Velocity", SpeedMultiplier = 1.5 },
 	Rules = { OneTime = true, Stackable = false, CooldownSeconds = 0, DuplicateCredit = "tier499" },
-	UX = { DisplayName = "VIP Velocity Elite", Category = "Status", Line = "Walk and run 1.5× faster through the house, for good, with a gold trail at your heels.", Offer = false, Order = 31, Action = "prompt" },
+	UX = { DisplayName = "VIP Velocity Elite", Category = "Status", Line = "Walk and run 1.5× faster round the house, for good, with a gold trail at your heels. In Steal a Luxe, the Basement and the Executive Suite everyone moves at one pace.", Offer = false, Order = 31, Action = "prompt" },
 })
 add({
 	Key = "chronosDefiance",

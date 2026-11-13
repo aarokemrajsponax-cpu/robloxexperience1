@@ -235,7 +235,7 @@ local defaults = {
 		introduction = 3718631594, -- once per account, first 7 days, only in the Boutique
 		ledger = 3730506949, -- the Leather-Bound Ledger, per Term
 		season = 3730507079, -- a season collection
-		goldKey = 0, -- a game pass
+		goldKey = 2089628601, -- The Gold Key game pass
 		goldKeyGift = 3730507218, -- a developer product at the Gold Key's price: the Gold Key, for another guest
 		blackCard = "", -- the Black Card subscription's id ("EXP-..."); "" means it isn't offered
 		-- Salutes: one developer product each (suggested prices in Salutes.luau).
@@ -255,7 +255,7 @@ local defaults = {
 		goldKeyProduct = 3716216232, -- The Gold Key, as a developer product
 		-- The five new products (ProductConfig). A developer product with no id here is found by
 		-- its name; the VIP Velocity Elite game pass needs its id pasted here.
-		velocityElite = 0, -- a game pass
+		velocityElite = 2081486302, -- the VIP Velocity Elite game pass
 		velocityEliteProduct = 0, -- the same perk as a developer product, if there's no game pass
 		chronosDefiance = 3716216641, -- Chronos Defiance
 		emperorsDecree = 3716216786, -- Emperor's Decree

@@ -178,7 +178,7 @@ All in `src/shared/Config.luau` (or live, in Creator Hub → Configs, as `Sectio
 | --- | --- | --- |
 | The Founding Term | `FoundingTerm` | the Term you launch in: set to `2026-autumn` (change it if you launch after November) |
 | Every product | nothing to paste | make each developer product in Creator Hub with its name from the table below; the game finds it by name |
-| VIP Velocity Elite (game pass) | `Products.velocityElite` | the pass's id (Creator Hub → Monetization → Passes); without it the perk is sold as a developer product of the same name |
+| VIP Velocity Elite (game pass) | `Products.velocityElite` | 2081486302 (pasted). Without an id the perk is sold as a developer product of the same name |
 | The Black Card | `Products.blackCard` | the subscription's id (`EXP-…`), or leave `""` to launch without it |
 | Badges | `Badges.*` | optional: all 151 work in the game's Badge Book already. To make one a real Roblox badge, create it in Creator Hub → your experience → **Associated Items** → **Badges** (Roblox allows a few free each day, then charges Robux per badge) and put its id under the same key, e.g. `metOwner = 123456` (keys: `src/shared/BadgeBook.luau`). Start with the ones players brag about: `metOwner`, `abuseNight`, `firstFlawless`, `level_50`, `holiday_halloween`. |
 | The owner | `Admin.ownerUserId`, `Admin.ownerName` | `8722595934` (your account) and `"AJKR"`: already set; only this account gets the Owner Console, and in the house it always shows as AJKR, never its Roblox username |
@@ -228,13 +228,13 @@ block (that's where most of the money is):
 | `Chronos Defiance` | 49 | when the clock runs out in a timed room: +15 seconds and the run goes on (offered only in that moment) |
 | `Emperor's Decree` | 149 | the buyer's own words (filtered by Roblox first) in gold on every screen in the server for 8 seconds |
 | `Megalodon Rainmaker` | 699 | gold rains on the server: every guest gets 150 Gilt, the buyer 500 more, and everyone sees who made it rain |
-| `VIP Velocity Elite` | 499 | 1.5× walking and running speed and a gold trail, for good (better as a game pass: see below) |
+| `VIP Velocity Elite` | 299 | 1.5× walking and running speed round the house (not in Steal a Luxe, the Basement or the Executive Suite) and a gold trail, for good (better as a game pass: see below) |
 | `Double Gilt` | 399 | every Gilt the buyer earns, doubled, for good (the best seller in games like this) |
 | `Gilt Purse` | 49 | 1,000 Gilt |
 | `Gilt Chest` | 199 | 5,500 Gilt |
 | `Gilt Vault` | 499 | 18,000 Gilt |
 | `Golden Hour for Everyone` | 99 | double Gilt for everyone in the server for 15 minutes, buyer announced |
-| `The Gold Key` | 499 | +20% Gilt, the Study, gold nameplate and Gold Key looks (or make a game pass and paste its id in `Products.goldKey`) |
+| `The Gold Key` | 499 | +20% Gilt, the Study, gold nameplate and Gold Key looks (now also the game pass 2089628601, pasted in `Products.goldKey`, which is sold first) |
 | `The Introduction` | 99 | the first-week starter pack |
 | `Salute: Gold Confetti` (an old `Salute: Gold Leaf` still works) / `Salute: Encore` / `Salute: Chandelier` / `Salute: Fireworks` / `Salute: Grand Salute` / `Salute: Midnight Finale` | 75 / 125 / 175 / 299 / 599 / 999 | a moment for the whole house (Fireworks: a 45-second show over the whole estate; Grand Salute: everything, announced in every house; Midnight Finale: a ten-second countdown on every screen, then a 90-second show, announced in every house). Until each exists, Studio shows a free Preview button. |
 | `Boutique 49` … `Boutique 599` (ten: 49, 79, 99, 149, 199, 249, 299, 399, 499, 599) | the number in the name | the Boutique's pieces at that price |
@@ -262,7 +262,7 @@ Boutique whose product isn't made yet says "not on sale yet" instead of showing 
 
 **The VIP Velocity Elite game pass** (a pass shows on the game page, which sells it better):
 Creator Hub → your experience → **Monetization** → **Passes** → **Create a Pass**: name
-*VIP Velocity Elite*, an image, **Save**; open it → **Sales** → on sale, price **499**. Copy the
+*VIP Velocity Elite*, an image (`assets/passes/vip-velocity-elite.png`), **Save**; open it → **Sales** → on sale, price **299**. Copy the
 pass's id (the number in its page address) into Creator Hub → your experience → **Configs** as
 `Products_velocityElite` (live, no republish), or into `Products.velocityElite` in
 `src/shared/Config.luau`. Guests who bought the developer

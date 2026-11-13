@@ -173,7 +173,7 @@ local function grant(ctx: Grants.Context)
 	local player = ctx.player
 	ctx:after(function()
 		Velocity.apply(player)
-		Perks.tell(player, { op = "notice", title = "VIP Velocity Elite", line = "Yours for good: 1.5× speed and a gold trail. Both can be switched off in Settings." })
+		Perks.tell(player, { op = "notice", title = "VIP Velocity Elite", line = "Yours for good: 1.5× speed round the house and a gold trail. Both can be switched off in Settings." })
 	end)
 end
 
@@ -216,7 +216,7 @@ function Velocity.start()
 						data.perks.velocityPass = true
 						Telemetry.log(player, Telemetry.Events.Granted, PASS, "pass", Catalog.price(PASS), Telemetry.segment(data.purchases))
 						Velocity.apply(player)
-						Perks.tell(player, { op = "notice", title = "VIP Velocity Elite", line = "Yours for good: 1.5× speed and a gold trail. Both can be switched off in Settings." })
+						Perks.tell(player, { op = "notice", title = "VIP Velocity Elite", line = "Yours for good: 1.5× speed round the house and a gold trail. Both can be switched off in Settings." })
 						return
 					end
 					task.wait(attempt * 2)

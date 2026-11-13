@@ -15,7 +15,8 @@ local Speed = {}
 -- "SpeedTrained" attribute only while a guest is in the residence; with it the cap is higher.
 -- `away`: the attraction a guest is in (the server's "Attraction" attribute). The few whose guards,
 -- gaps and timings were set for a guest's pace (Config.Movement.tuned) keep that pace; everywhere
--- else is walked at the house's own, brisker pace (the house is drawn grander).
+-- else is walked at the house's own, brisker pace (the house is drawn grander). In those few,
+-- VIP Velocity Elite's perk doesn't count either: it's for getting round the house, not for winning.
 function Speed.tuned(away: any): boolean
 	local m = Config.data.Movement :: any
 	return type(away) == "string" and type(m.tuned) == "table" and m.tuned[away] == true
@@ -28,7 +29,8 @@ function Speed.resolve(running: boolean, event: any, perk: any, owner: any, trai
 	local run = if tuned then tonumber(m.tunedRunSpeed) or m.runSpeed else m.runSpeed
 	local base = if running then run else walk
 	local e = if type(event) == "number" and event > 0 and event == event then event else 1
-	local p = if type(perk) == "number" and perk > 0 and perk == perk then perk else 1
+	-- A bought perk never counts where guests compete (the tuned attractions): no pay-to-win.
+	local p = if not tuned and type(perk) == "number" and perk > 0 and perk == perk then perk else 1
 	local t = if type(trained) == "number" and trained > 0 and trained == trained then trained else 1
 	if type(owner) == "number" and owner > 1 and owner == owner then
 		return math.min(Config.data.Admin.speedCap, base * e * p * t * owner)

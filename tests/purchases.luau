@@ -532,6 +532,8 @@ do
 	local m = Config.data.Movement
 	check("speed: 1.5× walking", Speed.resolve(false, nil, 1.5) == m.walkSpeed * 1.5)
 	check("speed: the house's event and the perk multiply", Speed.resolve(false, 1.2, 1.5) == math.min(m.maxSpeed, m.walkSpeed * 1.2 * 1.5))
+	check("no pay-to-win: the perk doesn't count in Steal a Luxe, the Basement or the Executive Suite", Speed.resolve(true, nil, 1.5, nil, nil, "luxe") == m.tunedRunSpeed and Speed.resolve(false, nil, 1.5, nil, nil, "basement") == m.tunedWalkSpeed and Speed.resolve(true, nil, 1.5, nil, nil, "executive") == m.tunedRunSpeed)
+	check("...but does on the island and in the Grand Ballroom", Speed.resolve(false, nil, 1.5, nil, nil, "island") == m.walkSpeed * 1.5 and Speed.resolve(false, nil, 1.5, nil, nil, "gala") == m.walkSpeed * 1.5)
 	check("speed: never above the cap", Speed.resolve(true, 3, 1.5) == m.maxSpeed)
 	check("speed: nonsense attributes count as nothing", Speed.resolve(false, "fast", -2) == m.walkSpeed)
 end
@@ -952,7 +954,7 @@ do
 	run(Catalog.discover) -- nothing found by name: only the pasted ids
 	local livePrices = {
 		megalodonRainmaker = 699, emperorsDecree = 249, chronosDefiance = 89, godModeLuck = 399,
-		goldKeyProduct = 1999, goldenHour = 250, giltPurse3 = 799, giltPurse2 = 299, giltPurse1 = 97, doubleGilt = 998,
+		goldKeyProduct = 1999, goldKey = 1999, velocityElite = 299, goldenHour = 250, giltPurse3 = 799, giltPurse2 = 299, giltPurse1 = 97, doubleGilt = 998,
 	}
 	for key, id in H.shippedIds do
 		Config.data.Products[key] = id
@@ -993,7 +995,9 @@ do
 	check("buying Luck Booster opens Roblox's window for its id", r.ok and prompts[#prompts].id == 3716216448)
 	check("its receipt grants it", receipt(zoe, 3716216448, "LIVE-1", 399) == GRANTED and Luck.remaining(zoe, profiles[zoe].Data) > 1790)
 	H.askAs(zoe, { op = "offer", key = "goldKey" })
-	check("the Gold Key is sold as the developer product", prompts[#prompts].id == 3716216232)
+	check("the Gold Key is sold as AJKR's game pass", prompts[#prompts].id == 2089628601 and prompts[#prompts].kind == "pass")
+	H.askAs(zoe, { op = "offer", key = "velocityElite" })
+	check("VIP Velocity Elite too, as AJKR's game pass", prompts[#prompts].id == 2081486302 and prompts[#prompts].kind == "pass")
 	check("Double Gilt by its id, whatever its name", receipt(zoe, 3716211503, "LIVE-2", 998) == GRANTED and profiles[zoe].Data.doubleGilt == true)
 	for key in H.shippedIds do
 		Config.data.Products[key] = 0
