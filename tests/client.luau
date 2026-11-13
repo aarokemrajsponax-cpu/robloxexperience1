@@ -1729,7 +1729,8 @@ do
 			lit += 1
 		end
 	end
-	check("close to the Concierge: what to pick, and the floor arrows go", textOnScreen("Press E: Show me the house") ~= nil and lit == 0, lit)
+	-- (Said for the guest's own hands: Press E with a keyboard, Tap on a touch screen.)
+	check("close to the Concierge: what to pick, and the floor arrows go", textOnScreen(if DEVICE.touch then "Tap Show me the house" else "Press E: Show me the house") ~= nil and lit == 0, lit)
 	-- Speaking to the Concierge: done, for good.
 	services.ProximityPromptService.PromptTriggered:Fire(speak)
 	advance(1)
@@ -2042,7 +2043,8 @@ do
 	local size = sortGui and sortGui.Root.Size
 	check("sorting: it covers the whole screen, nothing of the room shows", sortGui ~= nil and sortGui.IgnoreGuiInset == true and sortGui.Root.Visible == true and sortGui.Root.BackgroundTransparency == 0 and size.X.Scale == 1 and size.Y.Scale == 1)
 	check("sorting: in through a dip to black, not a cut", sortGui.Curtain.BackgroundTransparency == 1)
-	check("sorting: the six cases, named as in the brief", textOnScreen("WATCHES") ~= nil and textOnScreen("JEWELRY") ~= nil and textOnScreen("COLLECTIBLES") ~= nil and textOnScreen("Bars, notes, coins") ~= nil)
+	-- (On a phone the cases are narrow and the line under each name gives way: there's no room.)
+	check("sorting: the six cases, named as in the brief", textOnScreen("WATCHES") ~= nil and textOnScreen("JEWELRY") ~= nil and textOnScreen("COLLECTIBLES") ~= nil and (DEVICE.touch or textOnScreen("Bars, notes, coins") ~= nil))
 	check("sorting: each case shows a piece that goes in it", (function()
 		for _, bin in sortGui.Root.Cases:GetChildren() do
 			local holder = bin:FindFirstChild("MarkHolder")
@@ -4820,11 +4822,15 @@ do
 	advance(0.5)
 	liftPx = -booster.Position.Y.Offset * RootUI.scale
 	check("...and on a bigger phone, above its bigger button (210 px up)", liftPx >= 210 + 10, liftPx)
-	UserInputService.PreferredInput = preferred
+	-- With a mouse (whatever this run's own device is): back in its corner.
+	UserInputService.PreferredInput = EnumShim.PreferredInput.KeyboardAndMouse
 	camera.ViewportSize = DEVICE.size
 	signalOf(camera, "prop:ViewportSize"):Fire()
 	advance(0.5)
 	check("...and back in its corner with a mouse", booster.Position.Y.Offset == -18)
+	UserInputService.PreferredInput = preferred
+	signalOf(camera, "prop:ViewportSize"):Fire()
+	advance(0.5)
 	serverSays("Guest", { op = "friends", friends = {}, gilt = 1, xp = 1 })
 	advance(0.3)
 	check("when they've gone, it's the invitation again", FriendBooster.count() == 0 and textOnScreen("+35% GILT") == nil)

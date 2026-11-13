@@ -104,7 +104,7 @@ local function tiles(parent: Instance, order: number, cols: number, high: number
 			Name = "Name",
 			AutomaticSize = Enum.AutomaticSize.None,
 			Position = UDim2.fromOffset(42, 6),
-			Size = UDim2.new(1, -48, 0, if t.small then 30 else high - 12),
+			Size = UDim2.new(1, -48, 0, if t.small then high - 30 else high - 12),
 			TextXAlignment = Enum.TextXAlignment.Left,
 			TextYAlignment = Enum.TextYAlignment.Top,
 			TextColor3 = C.bone,
@@ -154,7 +154,8 @@ local function maker(body: GuiObject, w: number)
 		local kind = Plan.KindNames[tostring(it.kind)] or ""
 		table.insert(list, { id = tostring(it.key), glyph = tostring(it.glyph or "✨"), name = tostring(it.name), small = string.upper(if it.rarity then tostring(it.rarity) else kind), colour = rarityColour(it.rarity) })
 	end
-	tiles(body, 2, cols, 58, list, view.item, function(id: string)
+	-- (Narrow cards: a taller tile, so a long name's two lines sit clear of the line under it.)
+	tiles(body, 2, cols, if w < 520 then 74 else 60, list, view.item, function(id: string)
 		view.item = id
 		if refresh then
 			refresh()
