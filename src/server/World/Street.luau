@@ -208,12 +208,101 @@ local function city(parent: Instance)
 	end
 end
 
+-- Street luxury at the door: the house's name in pink neon over the lintel, two blade signs on
+-- the corners (NOIR, top to bottom, read from down the street), ice-blue light along the kerb and
+-- pink along the foot of the house, chrome bollards ringed in neon, and a velvet-rope lane up to
+-- the steps. All of it the house's own words and colours, and nothing to walk into but the posts.
+local CHROME: Kit.Look = { color = Color3.fromRGB(214, 218, 226), material = Enum.Material.Metal, reflectance = 0.35 }
+local PINK: Kit.Look = { color = Color3.fromRGB(255, 70, 170), material = Enum.Material.Neon }
+local ICE: Kit.Look = { color = Color3.fromRGB(90, 210, 255), material = Enum.Material.Neon }
+local VELVET: Kit.Look = { color = Color3.fromRGB(150, 18, 70), material = Enum.Material.Fabric }
+
+local function neonFrame(m: Instance, cf: CFrame, w: number, h: number, look: Kit.Look)
+	local t = 0.14
+	Kit.part(m, "NeonTop", Vector3.new(w + t, t, t), cf * CFrame.new(0, h / 2, 0), look, { collide = false, query = false, shadow = false })
+	Kit.part(m, "NeonBottom", Vector3.new(w + t, t, t), cf * CFrame.new(0, -h / 2, 0), look, { collide = false, query = false, shadow = false })
+	Kit.part(m, "NeonLeft", Vector3.new(t, h, t), cf * CFrame.new(-w / 2, 0, 0), look, { collide = false, query = false, shadow = false })
+	Kit.part(m, "NeonRight", Vector3.new(t, h, t), cf * CFrame.new(w / 2, 0, 0), look, { collide = false, query = false, shadow = false })
+end
+
+local function streetLuxury(parent: Instance)
+	local m = Kit.model(parent, "StreetLuxury")
+	local z = S.facadeZ
+	local hw = S.houseHalfWidth
+	local floor = Layout.FLOOR
+	local door = Layout.Door
+	local dh = door.width / 2
+	local pink = Color3.fromRGB(255, 92, 186)
+
+	-- The marquee: MAISON NOIR in pink neon, between the lintel and the first cornice.
+	local y = floor + door.height + 2.85
+	local mcf = CFrame.new(0, y, z - 0.32)
+	local board = Kit.part(m, "Marquee", Vector3.new(11.6, 1.9, 0.24), mcf, L.blackLacquer, { collide = false, shadow = false })
+	Kit.engrave(board, Enum.NormalId.Front, {
+		{ text = "MAISON NOIR", size = 0.8, font = Brand.Lettering.Space, color = pink },
+	}, { ppu = 90, lit = false, brightness = 2.4, maxDistance = 220 })
+	neonFrame(m, mcf * CFrame.new(0, 0, -0.14), 11.9, 2.15, PINK)
+	Kit.pointLight(board, 1.1, 14, Color3.fromRGB(255, 80, 180))
+
+	-- The blade signs: out from each corner of the house at the second storey, NOIR top to bottom.
+	for _, side in { -1, 1 } do
+		local x = side * (hw - 1.2)
+		local bcf = CFrame.new(x, 32, z - 1.9)
+		local blade = Kit.part(m, "BladeSign", Vector3.new(0.3, 13, 3), bcf, L.blackLacquer, { collide = false, shadow = false })
+		local letters = { { text = "N", size = 0.2 }, { text = "O", size = 0.2 }, { text = "I", size = 0.2 }, { text = "R", size = 0.2 } }
+		for _, face in { Enum.NormalId.Left, Enum.NormalId.Right } do
+			local lines = {}
+			for i, l in letters do
+				lines[i] = { text = l.text, size = l.size, font = Brand.Lettering.Space, color = if face == Enum.NormalId.Left then pink else Color3.fromRGB(110, 220, 255) }
+			end
+			Kit.engrave(blade, face, lines, { ppu = 60, lit = false, brightness = 2.2, maxDistance = 260, gap = 0.03 })
+		end
+		local edge = if side < 0 then ICE else PINK
+		Kit.part(m, "BladeEdgeFront", Vector3.new(0.16, 13.2, 0.16), bcf * CFrame.new(0, 0, -1.55), edge, { collide = false, query = false, shadow = false })
+		Kit.part(m, "BladeEdgeTop", Vector3.new(0.16, 0.16, 3.1), bcf * CFrame.new(0, 6.6, 0), edge, { collide = false, query = false, shadow = false })
+		Kit.part(m, "BladeEdgeBottom", Vector3.new(0.16, 0.16, 3.1), bcf * CFrame.new(0, -6.6, 0), edge, { collide = false, query = false, shadow = false })
+		for _, by in { 5, -5 } do
+			Kit.part(m, "BladeBracket", Vector3.new(0.2, 0.2, 0.6), bcf * CFrame.new(0, by, 1.75), CHROME, { collide = false, query = false })
+		end
+	end
+
+	-- Light along the kerb (ice) and along the foot of the house either side of the steps (pink).
+	Kit.part(m, "KerbLight", Vector3.new(120, 0.12, 0.18), CFrame.new(0, 0.42, S.kerbZ - 0.1), ICE, { collide = false, query = false, shadow = false })
+	for _, side in { -1, 1 } do
+		local x0, x1 = dh + 2.7, hw
+		Kit.part(m, "FootLight", Vector3.new(x1 - x0, 0.12, 0.16), CFrame.new(side * (x0 + x1) / 2, 0.07, z - 0.12), PINK, { collide = false, query = false, shadow = false })
+	end
+
+	-- Chrome bollards along the kerb, each ringed in neon (clear of the street lamps).
+	for i, x in { -36, -24, -8, 8, 24, 36 } do
+		local base = Vector3.new(x, 0, S.kerbZ + 1.4)
+		Kit.post(m, "Bollard", 2.2, 0.55, base, CHROME)
+		Kit.post(m, "BollardRing", 0.16, 0.62, base + Vector3.new(0, 1.7, 0), if i % 2 == 0 then ICE else PINK, { collide = false, query = false, shadow = false })
+	end
+
+	-- The velvet-rope lane up to the steps: chrome stanchions, ropes in deep pink velvet.
+	local front = z - S.stepDepth * S.steps
+	for _, side in { -1, 1 } do
+		local x = side * (dh + 1.7)
+		local zs = { front - 1.5, front - 5.5, front - 9.5 }
+		for _, sz in zs do
+			Kit.post(m, "Stanchion", 3, 0.28, Vector3.new(x, 0, sz), CHROME)
+			Kit.ball(m, "StanchionTop", 0.5, Vector3.new(x, 3.1, sz), CHROME, { collide = false, query = false })
+		end
+		for k = 1, #zs - 1 do
+			Kit.span(m, "Rope", Vector3.new(x - 0.09, 2.45, zs[k + 1]), Vector3.new(x + 0.09, 2.63, zs[k]), VELVET, { collide = false, query = false, shadow = false })
+		end
+	end
+	return m
+end
+
 function Street.build(parent: Instance): Model
 	local root = Kit.model(parent, "Street")
 	ground(root)
 	facade(root)
 	neighbours(root)
 	city(root)
+	streetLuxury(root)
 	for _, x in S.lampXs do
 		streetLamp(root, x, S.lampZ)
 	end
