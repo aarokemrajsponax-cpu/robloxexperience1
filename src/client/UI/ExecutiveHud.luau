@@ -50,6 +50,15 @@ local windup: { line: string, untilAt: number }? = nil
 local introBusy = false
 local cinematic: { [string]: any } = {}
 
+-- The Suite's eyes on this screen (World/ExecutiveSight): told what the server says.
+local function sight(fn: string, ...: any)
+	local args = table.pack(...)
+	pcall(function()
+		local S = require(script.Parent.Parent.World.ExecutiveSight) :: any
+		S[fn](table.unpack(args, 1, args.n))
+	end)
+end
+
 local function ask(request: { [string]: any }): { [string]: any }?
 	local ok, r = pcall(function()
 		return Remotes.func("AttractionAsk"):InvokeServer(request)
@@ -181,12 +190,22 @@ local function draw()
 		parts.label2.Text = ""
 	elseif phase == "hall" then
 		parts.top.Text = "CODE  " .. tostring(view.digits or "_ _ _ _")
-		parts.under.Text = if view.open then "THE DOOR IS OPEN" else "READ THE FOUR TERMINALS · THE KEYPAD IS BY THE DOOR"
+		local found = not string.find(tostring(view.digits or "_"), "_", 1, true)
+		parts.under.Text = if view.open then "THE DOOR IS OPEN"
+			elseif found then "ALL FOUR DIGITS · THE KEYPAD IS BY THE VAULT DOOR"
+			else "STAY OUT OF THE RED LIGHT · READ THE FOUR TERMINALS"
+		parts.under.TextColor3 = C.smoke
 		local alert = math.clamp(tonumber(view.alert) or 0, 0, 1)
 		parts.fill.Size = UDim2.new(alert, 0, 1, 0)
 		parts.fill.BackgroundColor3 = Color3.fromRGB(255, 196, 80):Lerp(RED, alert)
 		parts.second.Size = UDim2.new(0, 0, 1, 0)
-		parts.label2.Text = if alert > 0.05 then string.format("ALERT %d%%", math.floor(alert * 100 + 0.5)) else "UNSEEN"
+		-- (Who has eyes on them right now, as the server says; then the alert, falling.)
+		local seen = view.seen
+		parts.label2.Text = if seen == "guard" then "A GUARD SEES YOU"
+			elseif seen == "camera" then "A CAMERA SEES YOU"
+			elseif alert > 0.05 then string.format("ALERT %d%%", math.floor(alert * 100 + 0.5))
+			else "UNSEEN"
+		parts.label2.TextColor3 = if seen then RED else C.smoke
 	else
 		local left = ""
 		if phase == "shield" then
@@ -214,6 +233,7 @@ local function draw()
 		local comp = math.clamp((tonumber(view.composure) or 0) / math.max(1, tonumber(view.max) or 100), 0, 1)
 		parts.second.Size = UDim2.new(comp, 0, 1, 0)
 		parts.label2.Text = string.format("COMPOSURE %d", tonumber(view.composure) or 0)
+		parts.label2.TextColor3 = C.smoke
 	end
 	local fire = parts.fireKey :: TextButton?
 	if fire then
@@ -705,6 +725,7 @@ function ExecutiveHud.unmount()
 	parts = {}
 	view = {}
 	Root.setTop("Executive", nil)
+	sight("reset")
 end
 
 -- Something thrown or sent out, drawn where the server says, for as long as it flies.
@@ -775,6 +796,7 @@ function ExecutiveHud.on(m: { [string]: any })
 	if op == "executive" then
 		local before = fighting()
 		view = m
+		sight("status", m)
 		draw()
 		-- The fight starts: the stun pistol comes out of the inventory, into the guest's hand.
 		if fighting() and not before and not pistolInHand() then
@@ -795,15 +817,19 @@ function ExecutiveHud.on(m: { [string]: any })
 		end
 	elseif op == "digit" then
 		local n = tonumber(m.n) or 0
+		sight("digit", n)
 		local slot = (parts.slots or {})[n] :: TextLabel?
 		if slot then
-			-- (The slot lights up with its digit, then settles: there until the door opens.)
+			-- (The slot lights up with its digit, then settles: there until the door opens. No
+			-- notice over the hallway as well: nothing pops up in the way while the guards walk.)
 			slot.Text = tostring(m.digit)
 			slot.TextColor3 = GOLD
 			slot.BackgroundColor3 = Color3.fromRGB(70, 56, 20)
 			Ease.play(slot, Ease.info(0.9, Enum.EasingStyle.Quad), { BackgroundColor3 = Color3.fromRGB(10, 12, 16) })
 		end
-		Toast.show(string.format("Terminal %d of 4", n), string.format("Digit %d is %s. It stays on your screen until the door opens.", n, tostring(m.digit)), 3)
+		pcall(function()
+			Sound.play("chime", 0.7)
+		end)
 	elseif op == "keypad" then
 		ExecutiveHud.openKeypad()
 	elseif op == "doorOpen" then
@@ -854,7 +880,10 @@ function ExecutiveHud.on(m: { [string]: any })
 	elseif op == "shot" then
 		tracer(m)
 	elseif op == "decoy" then
-		Toast.show("A decoy", string.format("Every eye in the hallway is on it for %d seconds.", tonumber(m.seconds) or 8), 3)
+		if typeof(m.at) == "Vector3" then
+			sight("decoy", m.at, tonumber(m.seconds) or 8)
+		end
+		Toast.show("A decoy", string.format("Every eye in the hallway is on it for %d seconds.", tonumber(m.seconds) or 8), 2.5)
 	end
 end
 

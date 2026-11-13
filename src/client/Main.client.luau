@@ -209,6 +209,8 @@ start("Lights Out on the floor", function()
 		require(script.Parent.UI.FloorShow).start()
 	end
 end)
+-- The Executive Suite's eyes (Build 81): every guard's and camera's sight, drawn in the hallway.
+start("The Suite's eyes", require(script.Parent.World.ExecutiveSight).start)
 -- The holidays inside the attractions (World/HolidayFX dresses the house itself).
 start("Holidays in the attractions", require(script.Parent.World.AttractionDress).start)
 start("The Vault", function()

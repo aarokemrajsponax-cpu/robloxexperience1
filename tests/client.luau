@@ -8492,11 +8492,26 @@ coroutine.wrap(function()
 	check("the Quartermaster's board: going up in three plain steps", ExecutivePanel.isOpen() and textOnScreen("Step 1") ~= nil and textOnScreen("Step 2") ~= nil and textOnScreen("you hold 1 of 5") ~= nil and textOnScreen("Step 3") ~= nil)
 	check("...every way to an invitation, numbered, with the real figures", textOnScreen("1.  Finish the Maison Basement") ~= nil and textOnScreen("2.  In Steal a Luxe, carry loot worth 8,000 or more") ~= nil and textOnScreen("3.  Buy one here") ~= nil and textOnScreen("25,000 Gilt") ~= nil)
 	check("...the sidearm, free", textOnScreen("Take it (free)") ~= nil)
-	check("...the gear with its price, or packed", textOnScreen("2,500 Gilt") ~= nil and textOnScreen("Packed") ~= nil)
+	check("...the gear: what each does, Buy with its price on the key, or a tick once packed", textOnScreen("Buy · 2,500 Gilt") ~= nil and textOnScreen("Packed for your next trip") ~= nil and find(playerGui, function(d)
+		return d:IsA("TextButton") and string.find(string.lower(d.Text), "packed", 1, true) ~= nil
+	end) == nil)
+	check("...and no Go up now before the pistol is taken", textOnScreen("Go up now") == nil)
 	snapshot("executive-quartermaster")
 	press("Take it (free)")
 	advance(0.5)
 	check("taking the sidearm asks the server (nothing paid)", sent[#sent].message[1].act == "sidearm")
+	RootM.close()
+	advance(0.5)
+	-- Ready (the pistol taken, an invitation held): Go up now, straight from the desk.
+	invokeResults.AttractionAsk.sidearm = true
+	invokeResults.AttractionAsk.gear[1].packed = true
+	serverSays("Attraction", { op = "panel", id = "executive" })
+	advance(0.6)
+	check("ready: said plainly, the steps ticked, and Go up now", textOnScreen("You're ready") ~= nil and textOnScreen("Taken: in your inventory") ~= nil and textOnScreen("You hold 1") ~= nil and textOnScreen("Go up now") ~= nil)
+	snapshot("executive-quartermaster-ready")
+	press("Go up now")
+	advance(0.5)
+	check("...which asks the server to take them up (the lift's own checks)", sent[#sent].message[1].op == "go" and sent[#sent].message[1].id == "executive")
 	RootM.close()
 	advance(0.5)
 	LocalPlayer:SetAttribute("Attraction", "executive")
@@ -8517,7 +8532,11 @@ coroutine.wrap(function()
 	check("...large enough to read at a glance", stripSlot ~= nil and stripSlot.TextSize >= 40)
 	serverSays("Attraction", { op = "digit", n = 2, digit = "1" })
 	advance(0.3)
-	check("a terminal read: its digit lands in its slot at once, and a note says it stays", slotText(2) == "1" and textOnScreen("Terminal 2 of 4") ~= nil)
+	check("a terminal read: its digit lands in its slot at once (no notice popping up over the hallway)", slotText(2) == "1" and textOnScreen("Terminal 2 of 4") == nil)
+	check("...the card says what to do: stay out of the red light, read the four terminals", textOnScreen("STAY OUT OF THE RED LIGHT") ~= nil)
+	serverSays("Attraction", { op = "executive", phase = "hall", open = false, alert = 0.42, composure = 100, max = 100, gear = { sidearm = true, decoy = true }, decoy = true, digits = "4 1 7 _", generators = 3, guards = 0, boss = 1, bossMax = 1, seen = "guard" })
+	advance(0.3)
+	check("seen: the card says who has them (a guard), as the server says", textOnScreen("A GUARD SEES YOU") ~= nil)
 	snapshot("executive-hall")
 	serverSays("Attraction", { op = "keypad" })
 	advance(0.5)
@@ -8594,6 +8613,90 @@ coroutine.wrap(function()
 	signalOf(LocalPlayer, "attr:Attraction"):Fire()
 	advance(0.5)
 	check("down from the Suite, its screen is gone at once", textOnScreen("THE EXECUTIVE SUITE") == nil and textOnScreen("Fire") == nil)
+	-- (Build 81) The Suite's eyes: in the hallway, every camera's and guard's sight on the floor
+	-- and a laser from its eye; with a decoy out, every eye on the decoy; the Scanner marks guards
+	-- and terminals through the walls; and nothing drawn once down from the Suite.
+	do
+		local Sight = module("StarterPlayer", "StarterPlayerScripts", "Client", "World", "ExecutiveSight")
+		local Plan = module("ReplicatedStorage", "Shared", "Executive")
+		local base = module("ReplicatedStorage", "Shared", "Attractions").origin("executive")
+		local CS = CollectionService
+		local suite = roblox.Instance.new("Model")
+		suite.Name = "ExecutiveSuite"
+		suite.Parent = workspace
+		local arch = roblox.Instance.new("Model")
+		arch.Name = "Architecture"
+		arch.Parent = suite
+		local walls = roblox.Instance.new("Model")
+		walls.Name = "SightWalls"
+		walls.Parent = suite
+		local lens = roblox.Instance.new("Part")
+		lens.Name = "Lens"
+		lens.CFrame = CFrame.new(base + Plan.Cameras[1].at)
+		lens:SetAttribute("Camera", 1)
+		lens.Parent = arch
+		CS:AddTag(lens, "ExecCamera")
+		local screen = roblox.Instance.new("Part")
+		screen.Name = "Screen"
+		screen.CFrame = CFrame.new(base + Plan.Terminals[1] + Vector3.new(1.4, 4.1, 0))
+		screen:SetAttribute("Terminal", 1)
+		screen.Parent = arch
+		CS:AddTag(screen, "ExecTerminal")
+		local actors = roblox.Instance.new("Folder")
+		actors.Name = "Actors"
+		actors.Parent = suite
+		local guard = roblox.Instance.new("Model")
+		guard.Name = "HallGuard1"
+		guard.Parent = actors
+		local groot = roblox.Instance.new("Part")
+		groot.Name = "HumanoidRootPart"
+		groot.CFrame = CFrame.new(base + Vector3.new(-16, 3, -171)) -- (facing -Z)
+		groot.Parent = guard
+		local keepAt = root.CFrame
+		root.CFrame = CFrame.new(base + Vector3.new(14, 3, -161))
+		root.Position = base + Vector3.new(14, 3, -161)
+		Sight.step()
+		local drawn = workspace:FindFirstChild("ExecutiveSight")
+		local function parts(prefix)
+			local list = {}
+			for _, d in (drawn and drawn:GetChildren() or {}) do
+				if string.sub(d.Name, 1, #prefix) == prefix and d.Transparency < 1 then
+					table.insert(list, d)
+				end
+			end
+			return list
+		end
+		check("in the hallway: a camera's sight on the floor, and its laser", #parts("camera1Sight") == 12 and #parts("camera1Laser") == 1)
+		check("...and a guard's, from its eyes", #parts("HallGuard1Sight") == 12 and #parts("HallGuard1Laser") == 1)
+		local function middle(list)
+			local sum = Vector3.zero
+			for _, d in list do
+				sum += d.CFrame.Position
+			end
+			return sum / math.max(1, #list)
+		end
+		local before = middle(parts("HallGuard1Sight")) - base
+		check("...drawn where it looks (this guard looks down the hall, away from the door)", before.Z < -171 and math.abs(before.Y - 0.14) < 0.5, before)
+		Sight.decoy(base + Vector3.new(0, 0, -150), 8)
+		Sight.step()
+		local after = middle(parts("HallGuard1Sight")) - base
+		check("a decoy out: every eye on the decoy", after.Z > -171, after)
+		Sight.status({ op = "executive", phase = "hall", gear = { sidearm = true, scanner = true } })
+		Sight.digit(1)
+		Sight.step()
+		local mark = guard:FindFirstChild("ScannerMark")
+		local tag = find(playerGui, function(d)
+			return d.Name == "ScannerMark" and d:GetAttribute("Terminal") == 1
+		end)
+		local number = tag and tag:FindFirstChild("Number")
+		check("the Scanner: every guard and every terminal marked through the walls (a read one ticked)", mark ~= nil and mark.DepthMode == roblox.Enum.HighlightDepthMode.AlwaysOnTop and number ~= nil and number.Text == "✓")
+		root.CFrame = keepAt
+		root.Position = keepAt.Position
+		Sight.reset()
+		Sight.step()
+		check("down from the Suite: nothing drawn, nothing marked", #parts("camera1") == 0 and #parts("HallGuard1") == 0 and guard:FindFirstChild("ScannerMark") == nil)
+		suite:Destroy()
+	end
 	check("no errors with the Executive Suite", #errors == errorsBefore, errors[errorsBefore + 1])
 end)()
 

@@ -51,7 +51,11 @@ local walled = false
 Game.clear = function()
 	return not walled
 end
-Game.walk = function() end
+-- (The guards stand still here; each walk asked of them is noted: its speed, by guard.)
+local walked = {}
+Game.walk = function(a, _target, speed)
+	walked[a.id] = speed
+end
 local awards = {}
 Attractions.award = function(p, key)
 	table.insert(awards, { p = p, key = key })
@@ -192,16 +196,25 @@ steps(2)
 -- A camera, looking straight across: seen (slower in a disguise).
 local cam = Plan.Cameras[1]
 T = 6000 - cam.phase * cam.period -- (its sweep at the middle)
-standIn(ada, Vector3.new(0, 0, cam.at.Z))
+standIn(ada, Vector3.new(14, 0, cam.at.Z))
 steps(10)
 local a1 = Game.guests[ada].alert
 check("in a camera's sight, the alert rises (slower in a disguise)", a1 > 0.2 and a1 < 0.35, a1)
+check("...and their screen is told a camera has them", last(ada, "executive").seen == "camera")
 -- A decoy: nobody looks at anyone.
 r = askAs(ada, { op = "act", id = "executive", act = "decoy" })
 check("a decoy, once", r.ok == true)
 local a2 = Game.guests[ada].alert
 steps(20)
 check("while it's out, nobody watches anyone (the alert falls)", Game.guests[ada].alert < a2)
+check("...and every guard stops where it stands to watch it (never walking off into a wall)", (function()
+	for i = 1, #Plan.GuardRounds do
+		if walked["hall" .. i] ~= 0 then
+			return false
+		end
+	end
+	return true
+end)())
 r = askAs(ada, { op = "act", id = "executive", act = "decoy" })
 check("...and only once a run", r.ok == false)
 -- Behind a wall: unseen.
@@ -211,6 +224,40 @@ local a3 = Game.guests[ada].alert
 steps(10)
 check("out of sight, the alert falls", Game.guests[ada].alert <= a3)
 walled = false
+-- The lift's lobby is safe: nobody watches anyone there, even a guard looking straight in.
+do
+	local g1 = Game.run.hallGuards[1]
+	local keep = g1.root.CFrame
+	-- (Facing -Z, the lobby's way: an unturned CFrame. Lune's CFrame.lookAt turns the wrong way
+	-- along Z, so it isn't used for a facing here.)
+	g1.root.CFrame = CFrame.new(O + Vector3.new(0, 3, -171))
+	standIn(ada, Vector3.new(0, 0, -186))
+	Game.guests[ada].alert = 0
+	steps(10)
+	check("the lift's lobby is safe: nobody watches anyone there", Game.guests[ada].alert == 0 and Game.guests[ada].seen == nil)
+	standIn(ada, Vector3.new(0, 0, -174))
+	steps(5)
+	check("...a step past its doorway, a guard looking that way sees them (their screen told who)", Game.guests[ada].alert > 0 and last(ada, "executive").seen == "guard")
+	standIn(ada, Vector3.new(0, 0, -186))
+	steps(3)
+	check("...back in the lobby, out of sight (their screen told that too)", last(ada, "executive").seen == nil)
+	g1.root.CFrame = keep
+	-- A guard pushed off its round (a crowd of guests) is put back on it.
+	local g2 = Game.run.hallGuards[2]
+	g2.root.CFrame = CFrame.new(O + Vector3.new(0, 3, -131))
+	steps(1)
+	check("a guard pushed off its round is put back on it (never left to walk into a wall)", math.abs(g2.root.CFrame.Position.Z - (O.Z - 123)) < 0.5, g2.root.CFrame.Position.Z - O.Z)
+	Game.guests[ada].alert = 0
+end
+-- Never read through a wall of the maze.
+do
+	local at = Plan.Terminals[2]
+	standIn(ada, at + Vector3.new(-3, 0, 0))
+	walled = true
+	r = askAs(ada, { op = "act", id = "executive", act = "terminal", n = 2 })
+	walled = false
+	check("a terminal is never read through a wall of the maze", r.ok == false and string.find(r.why, "other side of the wall", 1, true) ~= nil, r.why)
+end
 -- The terminals: a digit each.
 r = askAs(ada, { op = "act", id = "executive", act = "terminal", n = 1 })
 check("a terminal out of reach gives nothing", r.ok == false and r.why == "Get closer to the terminal.")
@@ -274,6 +321,174 @@ check("...its wheel, bolts and bands go with it", #Game.built().doorDressing >= 
 	end
 	return true
 end)())
+
+---------------------------------------------------------------------------------------------------
+-- 2b. The maze (Build 81): built as planned, every way through open, every guard's round clear
+---------------------------------------------------------------------------------------------------
+do
+	local b = Game.built()
+	local hall = Plan.Hall
+	-- Every partition, solid, taller than any eye up here, and among what blocks sight.
+	local built, tall = 0, true
+	local sightModel = b.sight[1]
+	for _, d in sightModel:GetDescendants() do
+		if d:GetAttribute("Partition") then
+			built += 1
+			if d.Size.Y < 12 or d.CanCollide == false or d.CanQuery == false then
+				tall = false
+			end
+		end
+	end
+	check("the maze: every partition built, solid, taller than any eye, and blocking sight", built == #Plan.Partitions and tall, built)
+	check("...the door blocks sight too, and the lobby holds the lift's arrival", table.find(b.sight, b.door) ~= nil and Plan.inLobby(Plan.Arrival) and not Plan.inLobby(Vector3.new(0, 0, -170)))
+	-- Walking it: a grid over the floor, a guest's width from every wall (and the lecterns).
+	local R, S = 1.2, 0.5
+	local boxes = {}
+	for _, pb in Plan.Partitions do
+		table.insert(boxes, pb)
+	end
+	for _, t in Plan.Terminals do
+		local x = t.X + (if t.X < 0 then 1.2 else -1.2)
+		table.insert(boxes, { x - 0.7, t.Z - 0.7, x + 0.7, t.Z + 0.7 })
+	end
+	local function free(x, z, r)
+		if x < hall.minX + r or x > hall.maxX - r or z < hall.minZ + r or z > hall.maxZ - r then
+			return false
+		end
+		for _, q in boxes do
+			local dx = math.max(q[1] - x, 0, x - q[3])
+			local dz = math.max(q[2] - z, 0, z - q[4])
+			if math.sqrt(dx * dx + dz * dz) <= r then
+				return false
+			end
+		end
+		return true
+	end
+	local function key(i, j)
+		return i * 100000 + j
+	end
+	local si, sj = math.floor(Plan.Arrival.X / S + 0.5), math.floor(Plan.Arrival.Z / S + 0.5)
+	local seen, queue, head = { [key(si, sj)] = true }, { { si, sj } }, 1
+	while head <= #queue do
+		local c = queue[head]
+		head += 1
+		for _, dd in { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } } do
+			local ni, nj = c[1] + dd[1], c[2] + dd[2]
+			local k = key(ni, nj)
+			if not seen[k] and free(ni * S, nj * S, R) then
+				seen[k] = true
+				table.insert(queue, { ni, nj })
+			end
+		end
+	end
+	local function reach(x, z)
+		return seen[key(math.floor(x / S + 0.5), math.floor(z / S + 0.5))] == true
+	end
+	local allTerminals = true
+	for _, t in Plan.Terminals do
+		if not reach(t.X + (if t.X < 0 then 3.5 else -3.5), t.Z) then
+			allTerminals = false
+		end
+	end
+	check("from the lift, every terminal can be walked to", allTerminals)
+	check("...and the keypad and the vault door", reach(Plan.Door.maxX + 1.6, Plan.Door.z - 4) and reach(0, Plan.Door.z - 2.5))
+	check("...and not through a wall (the grid finds walls: inside one is never reached)", not reach(0, -161) and not reach(-10, -106))
+	-- Every guard's round: straight lines through the open lanes, nothing in the way.
+	local roundsClear = true
+	for gi, pts in Plan.GuardRounds do
+		for k = 1, #pts do
+			local a, z = pts[k], pts[k % #pts + 1]
+			for step = 0, 100 do
+				local q = a:Lerp(z, step / 100)
+				if not free(q.X, q.Z, 1.5) then
+					roundsClear = false
+					print("  guard " .. gi .. " blocked at", q)
+					break
+				end
+			end
+		end
+	end
+	check("every guard's round runs clear of every wall", roundsClear)
+	-- Every camera on a side wall, none inside the maze's walls; every terminal against a side wall.
+	local camsOk = true
+	for _, c in Plan.Cameras do
+		if math.abs(math.abs(c.at.X) - hall.maxX) > 1 or Plan.inPartition(c.at) then
+			camsOk = false
+		end
+	end
+	check("every camera hangs on a side wall, clear of the maze's walls", camsOk and #b.cameras == #Plan.Cameras)
+	-- Nothing solid from the dressing stands in a lane: only what hugs a wall.
+	local inWay = {}
+	local dressing = b.root:FindFirstChild("Dressing")
+	for _, d in (dressing and dressing:GetDescendants() or {}) do
+		local okPos, pos = pcall(function()
+			return d.CFrame.Position
+		end)
+		if d:IsA("BasePart") and d.CanCollide ~= false and okPos then
+			local p, size = pos - O, d.Size
+			if p.Y < 7 and p.X > hall.minX and p.X < hall.maxX and p.Z > hall.minZ and p.Z < Plan.Door.z then
+				local half = math.max(size.X, size.Z) / 2
+				-- (Against a side wall, the end wall, the door's wall, or a partition.)
+				local hugs = math.abs(p.X - hall.minX) <= size.X / 2 + 0.8
+					or math.abs(p.X - hall.maxX) <= size.X / 2 + 0.8
+					or math.abs(p.Z - hall.minZ) <= size.Z / 2 + 0.8
+					or math.abs(p.Z - (Plan.Door.z - 0.5)) <= size.Z / 2 + 0.8
+					or Plan.inPartition(p, half + 0.3)
+				if not hugs then
+					table.insert(inWay, d.Name)
+				end
+			end
+		end
+	end
+	check("nothing solid stands in a lane: decoration only hugs the walls", #inWay == 0, table.concat(inWay, ", "))
+end
+
+---------------------------------------------------------------------------------------------------
+-- 2c. The sight every screen draws: the server's own rule, and the floor's triangles
+---------------------------------------------------------------------------------------------------
+do
+	local eye, look = Vector3.new(0, 4, 0), Vector3.new(0, 0, -1)
+	check("in sight: within its range and its angle", Plan.inSight(eye, look, 26, 55, Vector3.new(5, 0, -20)) == true)
+	check("...not past its angle, nor past its range", Plan.inSight(eye, look, 26, 55, Vector3.new(20, 0, -5)) == false and Plan.inSight(eye, look, 26, 55, Vector3.new(0, 0, -30)) == false)
+	local fan = Plan.sightFan(look, 26, 55, 7, function()
+		return 100
+	end)
+	local edge = math.deg(math.acos(math.clamp(fan[1].Unit:Dot(look), -1, 1)))
+	check("the fan: one point a ray, out to its range, its edges at its angle", #fan == 7 and math.abs(fan[1].Magnitude - 26) < 1e-6 and math.abs(edge - 55) < 1e-3 and fan[4].Unit:Dot(look) > 0.999, edge)
+	local short = Plan.sightFan(look, 26, 55, 7, function()
+		return 9
+	end)
+	check("...each ray stopped at the first wall", math.abs(short[4].Magnitude - 9) < 1e-6)
+	local a, b2, c = Vector3.new(0, 0, 0), Vector3.new(10, 0, 0), Vector3.new(3, 0, -6)
+	local cf1, s1, cf2, s2 = Plan.wedges(a, b2, c, 0.05)
+	local area = 0.5 * s1.Y * s1.Z + 0.5 * s2.Y * s2.Z
+	local function corners(cf, s)
+		return {
+			cf:PointToWorldSpace(Vector3.new(0, -s.Y / 2, -s.Z / 2)),
+			cf:PointToWorldSpace(Vector3.new(0, -s.Y / 2, s.Z / 2)),
+			cf:PointToWorldSpace(Vector3.new(0, s.Y / 2, s.Z / 2)),
+		}
+	end
+	local function foot(p, q, r)
+		local u = (r - q).Unit
+		return q + u * (p - q):Dot(u)
+	end
+	local known = { a, b2, c, foot(a, b2, c), foot(b2, a, c), foot(c, a, b2) }
+	local onTriangle = true
+	for _, w in { corners(cf1, s1), corners(cf2, s2) } do
+		for _, q in w do
+			local near = false
+			for _, k in known do
+				if (q - k).Magnitude < 1e-4 then
+					near = true
+				end
+			end
+			onTriangle = onTriangle and near
+		end
+	end
+	check("a triangle on the floor, drawn as two wedges, covers exactly it", math.abs(area - 30) < 1e-6 and onTriangle, area)
+	check("...and one with no area isn't drawn", Plan.wedges(a, b2, Vector3.new(20, 0, 0), 0.05) == nil)
+end
 
 ---------------------------------------------------------------------------------------------------
 -- 3. The Office: three phases

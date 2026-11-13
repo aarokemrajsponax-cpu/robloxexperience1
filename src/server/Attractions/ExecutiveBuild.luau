@@ -39,6 +39,7 @@ export type Built = {
 	liftDown: ProximityPrompt,
 	cameras: { BasePart },
 	actors: Folder, -- where the guards and the Executive stand
+	sight: { Instance }, -- (Build 81) all that blocks sight in the hallway: its walls, the maze, the door
 }
 
 local L = Kit.Looks
@@ -202,71 +203,131 @@ function ExecutiveBuild.build(parent: Instance, o: Vector3, goHome: (player: Pla
 	local hall, office = Plan.Hall, Plan.Office
 
 	---------------------------------------------------------------------------------------------
-	-- The gallery hallway
+	-- The gallery hallway (Build 81): the lift's lobby, then a maze of walnut partitions
 	---------------------------------------------------------------------------------------------
+	-- (Everything that blocks a guard's or a camera's sight is in here: the hallway's walls, the
+	-- partitions and the door. Nothing else does, on the server or on any screen.)
+	local sightModel = Kit.model(root, "SightWalls")
 	box(arch, "HallFloor", o, V(hall.minX, -1, hall.minZ), V(hall.maxX, 0, hall.maxZ), BLACK_MARBLE)
 	box(dress, "HallBorder", o, V(hall.minX, 0, hall.minZ), V(hall.minX + 1.4, 0.04, hall.maxZ), BONE_MARBLE, GHOST)
 	box(dress, "HallBorder", o, V(hall.maxX - 1.4, 0, hall.minZ), V(hall.maxX, 0.04, hall.maxZ), BONE_MARBLE, GHOST)
-	box(dress, "Runner", o, V(-3, 0, hall.minZ + 4), V(3, 0.06, hall.maxZ), RUNNER, GHOST)
-	box(dress, "RunnerEdge", o, V(-3.3, 0, hall.minZ + 4), V(-3, 0.08, hall.maxZ), BRASS, GHOST)
-	box(dress, "RunnerEdge", o, V(3, 0, hall.minZ + 4), V(3.3, 0.08, hall.maxZ), BRASS, GHOST)
-	for z = hall.minZ + 10, hall.maxZ - 6, 14 do
-		-- (A brass star set in the runner every few strides.)
-		Kit.part(dress, "RunnerStar", V(1.4, 0.04, 1.4), CFrame.new(o + V(0, 0.08, z)) * CFrame.Angles(0, math.rad(45), 0), BRASS, GHOST_DARK)
-	end
 	for _, side in { -1, 1 } do
 		local inner = if side < 0 then hall.minX else hall.maxX
 		local wx = if side < 0 then hall.minX - 1 else hall.maxX
-		box(arch, "HallWall", o, V(wx, 0, hall.minZ), V(wx + 1, H, hall.maxZ), SILK)
+		box(sightModel, "HallWall", o, V(wx, 0, hall.minZ), V(wx + 1, H, hall.maxZ), SILK)
 		box(dress, "Wainscot", o, V(inner, 0, hall.minZ), V(inner - side * 0.3, 4.2, hall.maxZ), WALNUT, DECO)
 		box(dress, "Skirting", o, V(inner, 0, hall.minZ), V(inner - side * 0.42, 0.55, hall.maxZ), DARK_WALNUT, DECO)
 		box(dress, "ChairRail", o, V(inner, 4.2, hall.minZ), V(inner - side * 0.45, 4.48, hall.maxZ), BRASS, DECO)
 		box(dress, "Cornice", o, V(inner, H - 0.9, hall.minZ), V(inner - side * 0.55, H, hall.maxZ), WALNUT, DECO)
 		box(dress, "CorniceGilt", o, V(inner, H - 1.08, hall.minZ), V(inner - side * 0.6, H - 0.9, hall.maxZ), BRASS, DECO)
-		for z = hall.minZ + 3, hall.maxZ - 3, 6 do
-			box(dress, "Stile", o, V(inner - side * 0.3, 0.55, z - 0.16), V(inner - side * 0.38, 4.2, z + 0.16), DARK_WALNUT, GHOST_DARK)
-		end
 	end
-	box(arch, "HallEnd", o, V(hall.minX - 1, 0, hall.minZ - 1), V(hall.maxX + 1, H, hall.minZ), SILK)
-	-- The coffered ceiling: walnut beams over black lacquer, opal pendants down the middle.
+	box(sightModel, "HallEnd", o, V(hall.minX - 1, 0, hall.minZ - 1), V(hall.maxX + 1, H, hall.minZ), SILK)
+	-- The coffered ceiling: walnut beams over black lacquer.
 	box(arch, "HallCeiling", o, V(hall.minX - 1, H, hall.minZ - 1), V(hall.maxX + 1, H + 1, hall.maxZ), L.blackLacquer, { shadow = false })
-	for _, x in { -4.5, 4.5 } do
+	for _, x in { -12, 0, 12 } do
 		box(dress, "Beam", o, V(x - 0.5, H - 0.8, hall.minZ), V(x + 0.5, H, hall.maxZ), WALNUT, GHOST_DARK)
 	end
-	for z = hall.minZ + 9, hall.maxZ - 2, 9 do
+	for z = hall.minZ + 12, hall.maxZ - 2, 12 do
 		box(dress, "Beam", o, V(hall.minX, H - 0.8, z - 0.5), V(hall.maxX, H, z + 0.5), WALNUT, GHOST_DARK)
 	end
-	for z = hall.minZ + 18, hall.maxZ - 8, 27 do
-		local m = Kit.model(dress, "Pendant")
-		Kit.part(m, "Stem", V(0.14, 2.6, 0.14), CFrame.new(o + V(0, H - 1.3, z)), BRASS, GHOST_DARK)
-		local globe = Kit.ball(m, "Globe", 1.2, o + V(0, H - 3.2, z), OPAL, GHOST_DARK)
-		Kit.cylinder(m, "Gallery", 0.2, 1.7, CFrame.new(o + V(0, H - 2.5, z)) * CFrame.Angles(0, 0, math.rad(90)), BRASS, GHOST_DARK)
-		Kit.pointLight(globe, 0.75, 22, rgb(255, 226, 184))
-	end
-	-- The paintings: on both walls, clear of the cameras and above the terminals.
-	local slots: { { number } } = {
-		{ -1, -136 }, { -1, -108 }, { -1, -84 }, { -1, -34 },
-		{ 1, -136 }, { 1, -84 }, { 1, -58 }, { 1, -32 },
-	}
-	for i, s in slots do
-		local x = s[1] * (hall.maxX - 0.35)
-		painting(dress, o + V(x, 8.9, s[2]), V(-s[1], 0, 0), 7, 4.6, ART[i])
-	end
-	-- Sconces over every terminal, and across from each.
-	for _, t in Plan.Terminals do
-		for _, sx in { -1, 1 } do
-			sconce(dress, o + V(sx * (hall.maxX - 0.2), 7.2, t.Z), V(-sx, 0, 0), 0.7, 16)
+	-- Opal pendants over both sides of the maze, and down the lobby.
+	for z = hall.minZ + 14, hall.maxZ - 10, 30 do
+		for _, x in { -15, 15 } do
+			local m = Kit.model(dress, "Pendant")
+			Kit.part(m, "Stem", V(0.14, 1.8, 0.14), CFrame.new(o + V(x, H - 0.9, z)), BRASS, GHOST_DARK)
+			local globe = Kit.ball(m, "Globe", 1.2, o + V(x, H - 2.4, z), OPAL, GHOST_DARK)
+			Kit.cylinder(m, "Gallery", 0.2, 1.7, CFrame.new(o + V(x, H - 1.7, z)) * CFrame.Angles(0, 0, math.rad(90)), BRASS, GHOST_DARK)
+			Kit.pointLight(globe, 0.8, 28, rgb(255, 226, 184))
 		end
 	end
-	-- Busts on marble plinths across from the terminals: a little cover from the guards' eyes.
-	for i, t in Plan.Terminals do
-		local x = (if t.X < 0 then 1 else -1) * (hall.maxX - 1.6)
-		local z = t.Z + (if i % 2 == 0 then 9 else -9)
-		local m = Kit.model(dress, "Bust")
-		Kit.part(m, "Foot", V(2.4, 0.3, 2.4), CFrame.new(o + V(x, 0.15, z)), BRASS, DECO)
-		piece(m, "sculpture", CFrame.lookAt(o + V(x, 0.3, z), o + V(0, 0.3, z)), { model = "bust" }, 1.25, true)
+
+	-- The partitions: walnut panelled, a brass cap, a dark skirting; taller than any eye here.
+	local PH = Plan.PARTITION_HEIGHT
+	local artIndex = 0
+	for i, pb in Plan.Partitions do
+		local x1, z1, x2, z2 = pb[1], pb[2], pb[3], pb[4]
+		local w, d = x2 - x1, z2 - z1
+		local column = w <= 4.5 and d <= 4.5
+		local wall = box(sightModel, if column then "Column" else "Partition", o, V(x1, 0, z1), V(x2, PH, z2), if column then BONE_MARBLE else WALNUT)
+		wall:SetAttribute("Partition", i)
+		box(dress, "PartitionCap", o, V(x1 - 0.15, PH, z1 - 0.15), V(x2 + 0.15, PH + 0.35, z2 + 0.15), BRASS, DECO)
+		box(dress, "PartitionFoot", o, V(x1 - 0.12, 0, z1 - 0.12), V(x2 + 0.12, 0.6, z2 + 0.12), if column then BRASS else DARK_WALNUT, DECO)
+		if column then
+			-- A marble column: a brass collar, and a lit niche of the Executive's collection.
+			box(dress, "ColumnCollar", o, V(x1 - 0.1, 9, z1 - 0.1), V(x2 + 0.1, 9.35, z2 + 0.1), BRASS, DECO)
+			continue
+		end
+		box(dress, "PartitionRail", o, V(x1 - 0.1, 4.2, z1 - 0.1), V(x2 + 0.1, 4.45, z2 + 0.1), BRASS, DECO)
+		-- A painting on each long face, where the face is a wall worth hanging one on.
+		local long = math.max(w, d)
+		if long >= 12 then
+			for _, sgn in { -1, 1 } do
+				local at, inward
+				if w >= d then
+					at = V((x1 + x2) / 2, 8.4, if sgn < 0 then z1 - 0.12 else z2 + 0.12)
+					inward = V(0, 0, sgn)
+				else
+					at = V(if sgn < 0 then x1 - 0.12 else x2 + 0.12, 8.4, (z1 + z2) / 2)
+					inward = V(sgn, 0, 0)
+				end
+				-- (Not where the face runs into a side wall: only faces open to the lanes.)
+				local p = at
+				if p.X > hall.minX + 3 and p.X < hall.maxX - 3 then
+					artIndex += 1
+					painting(dress, o + p, inward, math.min(7, long * 0.4), 4.2, ART[(artIndex - 1) % #ART + 1])
+				end
+			end
+		end
 	end
-	-- The terminals: brass lecterns with a green screen each.
+	-- The vitrine island (the first gallery's middle): lit niches on its long faces, the
+	-- Executive's collection behind glass (flush with the walnut: nothing to walk into).
+	do
+		local isle = Plan.Partitions[3]
+		for _, sgn in { -1, 1 } do
+			local z = if sgn < 0 then isle[2] - 0.08 else isle[4] + 0.08
+			for k = -1, 1 do
+				local x = (isle[1] + isle[3]) / 2 + k * 5
+				local glow = Kit.part(dress, "NicheGlow", V(3.4, 2.4, 0.06), CFrame.new(o + V(x, 5.6, z)), look(rgb(255, 214, 150), Enum.Material.Neon, nil, 0.35), GHOST_DARK)
+				Kit.part(dress, "NicheGlass", V(3.6, 2.6, 0.08), CFrame.new(o + V(x, 5.6, z + sgn * 0.05)), GLASS, GHOST_DARK)
+				Kit.part(dress, "NicheFrame", V(3.9, 0.2, 0.12), CFrame.new(o + V(x, 7, z)), BRASS, GHOST_DARK)
+				Kit.part(dress, "NicheFrame", V(3.9, 0.2, 0.12), CFrame.new(o + V(x, 4.2, z)), BRASS, GHOST_DARK)
+				-- A watch on a cushion, or a gold chain on a bust's neck: gold, catching the light.
+				if k == 0 then
+					Kit.cylinder(dress, "Watch", 0.18, 1.1, CFrame.new(o + V(x, 5.6, z + sgn * 0.12)) * CFrame.Angles(0, math.rad(90), 0), look(GOLD, Enum.Material.Metal, 0.35), GHOST_DARK)
+				else
+					Kit.part(dress, "Chain", V(1.8, 0.16, 0.1), CFrame.new(o + V(x, 5.4, z + sgn * 0.12)) * CFrame.Angles(0, 0, math.rad(k * 12)), look(GOLD, Enum.Material.Metal, 0.35), GHOST_DARK)
+				end
+				local _ = glow
+			end
+			Kit.pointLight(Kit.part(dress, "NicheLight", V(0.2, 0.2, 0.2), CFrame.new(o + V((isle[1] + isle[3]) / 2, 7.4, z + sgn * 1.2)), WARM_GLOW, GHOST_DARK), 0.6, 12, rgb(255, 214, 160))
+		end
+	end
+
+	-- The lift's lobby: a rug, two benches against the walls, and over the doorway into the maze
+	-- the line where security begins (said plainly; the lobby itself is safe).
+	box(dress, "LobbyRug", o, V(-14, 0, hall.minZ + 4), V(14, 0.05, Plan.Lobby.maxZ - 3), RUG, GHOST_DARK)
+	box(dress, "LobbyRugBorder", o, V(-14, 0, hall.minZ + 4), V(14, 0.07, hall.minZ + 5), RUG_GOLD, GHOST_DARK)
+	box(dress, "LobbyRugBorder", o, V(-14, 0, Plan.Lobby.maxZ - 4), V(14, 0.07, Plan.Lobby.maxZ - 3), RUG_GOLD, GHOST_DARK)
+	for _, sx in { -1, 1 } do
+		local x = sx * (hall.maxX - 2.2)
+		piece(dress, "chair", CFrame.lookAt(o + V(x, 0, -187), o + V(0, 0, -187)), { model = "club", material = "Leather", colour = rgb(84, 40, 24) }, 1.2, false)
+		sconce(dress, o + V(sx * (hall.maxX - 0.2), 7.2, -187), V(-sx, 0, 0), 0.7, 18)
+	end
+	local doorwayZ = Plan.Lobby.maxZ
+	local line = Kit.part(dress, "SecurityLine", V(10, 0.06, 0.5), CFrame.new(o + V(0, 0.08, doorwayZ - 0.6)), look(rgb(255, 60, 60), Enum.Material.Neon, nil, 0.2), GHOST_DARK)
+	local _ = line
+	local warnSign = Kit.part(dress, "SecuritySign", V(9, 1.3, 0.2), CFrame.lookAt(o + V(0, 13.6, doorwayZ - 0.62), o + V(0, 13.6, doorwayZ - 20)), L.blackLacquer, GHOST_DARK)
+	Kit.engrave(warnSign, Enum.NormalId.Front, {
+		{ text = "SECURITY BEYOND THIS DOOR", size = 0.42, font = Brand.Fonts.bodyBold, color = rgb(255, 120, 110) },
+		{ text = "STAY OUT OF THE RED LIGHT", size = 0.3, font = Brand.Fonts.bodyBold, color = rgb(214, 176, 100) },
+	}, { ppu = 60, lit = false, brightness = 1.4 })
+
+	-- Sconces over every terminal.
+	for _, t in Plan.Terminals do
+		local sx = if t.X < 0 then -1 else 1
+		sconce(dress, o + V(sx * (hall.maxX - 0.2), 7.2, t.Z), V(-sx, 0, 0), 0.7, 16)
+	end
+	-- The terminals: brass lecterns with a green screen each, against the side walls.
 	local terminals: { ProximityPrompt } = {}
 	for i, at in Plan.Terminals do
 		local m = Kit.model(arch, "Terminal" .. i)
@@ -279,13 +340,16 @@ function ExecutiveBuild.build(parent: Instance, o: Vector3, goHome: (player: Pla
 		screen:SetAttribute("Terminal", i)
 		terminals[i] = prompt(screen, "Terminal", "Read the code", "Terminal " .. i .. " of 4", 0.8, 10)
 		CollectionService:AddTag(screen, "ExecTerminal")
+		-- Its number, big on the wall above it, so it's found from down the lane.
+		local plate = Kit.part(dress, "TerminalNumber", V(0.12, 1.6, 1.6), CFrame.new(o + at + V(-inward * 0.85, 9.6, 0)), L.blackLacquer, GHOST_DARK)
+		Kit.engrave(plate, if inward > 0 then Enum.NormalId.Right else Enum.NormalId.Left, { { text = tostring(i), size = 1.1, font = Brand.Fonts.display, color = rgb(90, 255, 180) } }, { ppu = 50, lit = false, brightness = 1.6 })
 	end
-	-- The cameras: a dark dome on an arm, with a red eye.
+	-- The cameras: a dark dome on an arm, with a red eye (turned, on every screen, where they look).
 	local cameras: { BasePart } = {}
 	for i, c in Plan.Cameras do
 		local m = Kit.model(arch, "Camera" .. i)
-		Kit.part(m, "Arm", V(1.4, 0.3, 0.3), CFrame.new(o + c.at + V(if c.at.X > 0 then 0.5 else -0.5, 0.6, 0)), STEEL, { collide = false })
-		local head = Kit.part(m, "Lens", V(1.2, 1, 1.6), CFrame.new(o + c.at), L.blackLacquer, { collide = false })
+		Kit.part(m, "Arm", V(1.4, 0.3, 0.3), CFrame.new(o + c.at + V(if c.at.X > 0 then 0.5 else -0.5, 0.6, 0)), STEEL, { collide = false, query = false })
+		local head = Kit.part(m, "Lens", V(1.2, 1, 1.6), CFrame.new(o + c.at), L.blackLacquer, { collide = false, query = false })
 		head:SetAttribute("Camera", i)
 		CollectionService:AddTag(head, "ExecCamera")
 		local eye = Kit.part(m, "Eye", V(0.3, 0.3, 0.3), CFrame.new(o + c.at + V(0, 0, 0.8)), look(rgb(255, 40, 40), Enum.Material.Neon), { collide = false, query = false, shadow = false })
@@ -301,9 +365,14 @@ function ExecutiveBuild.build(parent: Instance, o: Vector3, goHome: (player: Pla
 	for _, x in { -5.3, 5.3 } do
 		Kit.part(dress, "CrestGilt", V(0.3, 2.4, 0.3), CFrame.new(o + V(x, H - 3, hall.minZ + 0.2)), BRASS, GHOST_DARK)
 	end
-	-- Palms either side of the vault door.
-	for _, x in { -7.4, 7.4 } do
-		piece(dress, "plant", CFrame.new(o + V(x, 0, Plan.Door.z - 3)), { model = "palm" }, 1.2, true)
+	-- The oxblood runner, edged in brass, across the vestibule to the vault door.
+	local runFrom = Plan.Partitions[#Plan.Partitions - 2][4]
+	box(dress, "Runner", o, V(-3, 0, runFrom), V(3, 0.06, Plan.Door.z - 0.6), RUNNER, GHOST)
+	box(dress, "RunnerEdge", o, V(-3.3, 0, runFrom), V(-3, 0.08, Plan.Door.z - 0.6), BRASS, GHOST)
+	box(dress, "RunnerEdge", o, V(3, 0, runFrom), V(3.3, 0.08, Plan.Door.z - 0.6), BRASS, GHOST)
+	-- Palms in the vestibule's corners by the vault door (never in anyone's way).
+	for _, x in { -21, 21 } do
+		piece(dress, "plant", CFrame.new(o + V(x, 0, Plan.Door.z - 3)), { model = "palm" }, 1.2, false)
 	end
 
 	---------------------------------------------------------------------------------------------
@@ -311,9 +380,9 @@ function ExecutiveBuild.build(parent: Instance, o: Vector3, goHome: (player: Pla
 	---------------------------------------------------------------------------------------------
 	local door = box(arch, "CodeDoor", o, V(Plan.Door.minX, 0, Plan.Door.z - 0.5), V(Plan.Door.maxX, 10, Plan.Door.z + 0.5), STEEL)
 	for _, side in { { hall.minX - 1, Plan.Door.minX }, { Plan.Door.maxX, hall.maxX + 1 } } do
-		box(arch, "DoorWall", o, V(side[1], 0, Plan.Door.z - 0.5), V(side[2], H, Plan.Door.z + 0.5), SILK)
+		box(sightModel, "DoorWall", o, V(side[1], 0, Plan.Door.z - 0.5), V(side[2], H, Plan.Door.z + 0.5), SILK)
 	end
-	box(arch, "DoorLintel", o, V(Plan.Door.minX, 10, Plan.Door.z - 0.5), V(Plan.Door.maxX, H, Plan.Door.z + 0.5), SILK)
+	box(sightModel, "DoorLintel", o, V(Plan.Door.minX, 10, Plan.Door.z - 0.5), V(Plan.Door.maxX, H, Plan.Door.z + 0.5), SILK)
 	-- Its brass frame (it stays), and its dressing (it goes with the door).
 	local fz = Plan.Door.z - 0.75
 	box(dress, "DoorFrame", o, V(Plan.Door.minX - 1, 0, fz - 0.25), V(Plan.Door.minX, 11, fz + 0.25), BRASS, DECO)
@@ -597,6 +666,7 @@ function ExecutiveBuild.build(parent: Instance, o: Vector3, goHome: (player: Pla
 		safe = safe,
 		liftDown = liftDown,
 		cameras = cameras,
+		sight = { sightModel, door },
 		actors = actors,
 	}
 end

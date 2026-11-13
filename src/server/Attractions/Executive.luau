@@ -73,12 +73,19 @@ Executive.ray = function(from: Vector3, toward: Vector3, ignore: { Instance }): 
 	end
 	return nil
 end
--- Whether nothing stands between two points (set by tests).
-Executive.clear = function(from: Vector3, to: Vector3, ignore: { Instance }): boolean
+-- What blocks sight in the hallway: its walls, the maze's partitions and the door (set at build).
+-- Only walls: a guest is hidden behind a wall, never behind another guest or a lectern, exactly as
+-- every screen draws the guards' and cameras' sight on the floor (World/ExecutiveSight).
+local sightWalls: { Instance } = {}
+-- Whether no wall stands between two points (set by tests).
+Executive.clear = function(from: Vector3, to: Vector3, _ignore: { Instance }): boolean
+	if #sightWalls == 0 then
+		return true
+	end
 	local ok, hit = pcall(function()
 		local params = RaycastParams.new()
-		params.FilterType = Enum.RaycastFilterType.Exclude
-		params.FilterDescendantsInstances = ignore
+		params.FilterType = Enum.RaycastFilterType.Include
+		params.FilterDescendantsInstances = sightWalls
 		return Workspace:Raycast(from, to - from, params)
 	end)
 	return not ok or hit == nil
@@ -132,6 +139,8 @@ type Guest = {
 	hits: { [string]: boolean },
 	out: boolean,
 	extracted: boolean?, -- (Build 78) away down the lift within the extraction's minute
+	seen: string?, -- (Build 81) who has eyes on them right now: "camera", "guard", or nil
+	sentAlert: number?, -- the alert their screen was last told
 }
 type Shot = { id: string, from: Vector3, dir: Vector3, speed: number, born: number, radius: number, damage: number, life: number }
 type Wave = { id: string, at: Vector3, born: number, speed: number, width: number, damage: number, life: number }
@@ -231,6 +240,7 @@ local function status(ctx: Types.Ctx, player: Player): { [string]: any }
 		bossMax = bossMax,
 		finale = run.finale,
 		extractUntil = if run.phase == "won" then run.extractUntil else nil,
+		seen = if g then g.seen else nil,
 	}
 end
 
@@ -516,23 +526,34 @@ local function flat(v: Vector3): Vector3
 	return Vector3.new(v.X, 0, v.Z)
 end
 
+-- (The rule every screen draws: in range, inside the angle, and no wall between.)
 local function seenFrom(eye: Vector3, look: Vector3, range: number, angle: number, at: Vector3, ignore: { Instance }): boolean
-	local to = flat(at - eye)
-	if to.Magnitude > range or to.Magnitude < 1e-3 then
-		return to.Magnitude < 1e-3
-	end
-	if look.Magnitude < 1e-3 then
-		return false
-	end
-	if flat(look).Unit:Dot(to.Unit) < math.cos(math.rad(angle)) then
+	if not Plan.inSight(eye, look, range, angle, at) then
 		return false
 	end
 	return Executive.clear(eye, at, ignore)
 end
 
+-- The nearest point on a guard's round to where it is (it walks its round's straight lines).
+local function onRound(a: Actor): Vector3
+	local points = a.points :: { Vector3 }
+	local goal = points[a.index]
+	local from = points[(a.index - 2) % #points + 1]
+	local p = a.root.CFrame.Position
+	local d = flat(goal - from)
+	if d.Magnitude < 1e-3 then
+		return Vector3.new(goal.X, p.Y, goal.Z)
+	end
+	local t = math.clamp(flat(p - from):Dot(d) / d:Dot(d), 0, 1)
+	local q = from + d * t
+	return Vector3.new(q.X, p.Y, q.Z)
+end
+
 local function hallStep(ctx: Types.Ctx, dt: number, t: number)
 	local c = cfg(ctx)
-	-- The guards walk their rounds.
+	-- The guards walk their rounds (along the maze's open lanes: each round is straight lines
+	-- with nothing in the way). While a decoy is out they stop where they are and watch it; and
+	-- one pushed off its round (a crowd of guests) is put back on it, so it never walks into a wall.
 	for _, a in run.hallGuards do
 		local points = a.points :: { Vector3 }
 		local goal = points[a.index]
@@ -540,7 +561,16 @@ local function hallStep(ctx: Types.Ctx, dt: number, t: number)
 			a.index = a.index % #points + 1
 			goal = points[a.index]
 		end
-		Executive.walk(a, if t < run.decoyUntil then run.decoyAt else goal, tonumber(c.guardSpeed) or 9)
+		local back = onRound(a)
+		if flat(back - a.root.CFrame.Position).Magnitude > 3 then
+			-- (The root carries the whole figure with it.)
+			a.root.CFrame = a.root.CFrame + (back - a.root.CFrame.Position)
+		end
+		if t < run.decoyUntil then
+			Executive.walk(a, a.root.CFrame.Position, 0)
+		else
+			Executive.walk(a, goal, tonumber(c.guardSpeed) or 9)
+		end
 	end
 	for player, g in guests do
 		local at = ctx.at(player, ID)
@@ -548,24 +578,27 @@ local function hallStep(ctx: Types.Ctx, dt: number, t: number)
 			continue
 		end
 		local world = origin + at
-		local seen = false
-		if t >= run.decoyUntil then
+		local seen: string? = nil
+		-- (The lift's lobby is safe: nobody watches anyone there.)
+		if t >= run.decoyUntil and not Plan.inLobby(at) then
 			local ignore: { Instance } = {}
 			if player.Character then
 				table.insert(ignore, player.Character)
 			end
 			for _, cam in Plan.Cameras do
 				if seenFrom(origin + cam.at, Plan.cameraLook(cam, t), tonumber(c.cameraRange) or 40, tonumber(c.cameraAngle) or 30, world, ignore) then
-					seen = true
+					seen = "camera"
 				end
 			end
 			for _, a in run.hallGuards do
 				local look = a.root.CFrame.LookVector
 				if seenFrom(a.root.CFrame.Position + Vector3.new(0, 1.5, 0), look, tonumber(c.guardRange) or 26, tonumber(c.guardAngle) or 55, world, ignore) then
-					seen = true
+					seen = "guard"
 				end
 			end
 		end
+		local changed = seen ~= g.seen
+		g.seen = seen
 		local before = g.alert
 		if seen then
 			local rate = 1 / (tonumber(c.noticeSeconds) or 2.2)
@@ -582,7 +615,8 @@ local function hallStep(ctx: Types.Ctx, dt: number, t: number)
 			note(player, "Executive alarm", nil)
 			ctx.tally(player, "executiveCaught", 1)
 			ctx.sendHome(player, ID)
-		elseif math.abs(g.alert - before) > 0.04 or (seen and before == 0) then
+		elseif changed or math.abs(g.alert - (g.sentAlert or 0)) > 0.04 or (g.alert == 0 and before > 0) then
+			g.sentAlert = g.alert
 			push(ctx, player)
 		end
 	end
@@ -758,6 +792,13 @@ function Executive.build(ctx: Types.Ctx, parent: Instance)
 		end
 	end)
 	local b = built :: ExecutiveBuild.Built
+	sightWalls = b.sight
+	-- (How far and how wide the guards and cameras see, for every screen's drawing of it.)
+	local c = cfg(ctx)
+	b.root:SetAttribute("GuardRange", tonumber(c.guardRange) or 26)
+	b.root:SetAttribute("GuardAngle", tonumber(c.guardAngle) or 55)
+	b.root:SetAttribute("CameraRange", tonumber(c.cameraRange) or 40)
+	b.root:SetAttribute("CameraAngle", tonumber(c.cameraAngle) or 30)
 	-- (Every press is answered: what it did, or why not. A refusal said nowhere looked like a
 	-- broken E.)
 	local function answered(player: Player, title: string, r: any)
@@ -971,6 +1012,10 @@ function Executive.ask(ctx: Types.Ctx, player: Player, r: { [string]: unknown })
 		local screen = spot + Vector3.new(if spot.X < 0 then 1.4 else -1.4, 0, 0)
 		if (flat(at - screen)).Magnitude > 13 then
 			return { ok = false, why = "Get closer to the terminal." }
+		end
+		-- (Never through a wall of the maze: from its own side, in front of it.)
+		if not Executive.clear(origin + Vector3.new(at.X, 3, at.Z), origin + screen + Vector3.new(0, 4.1, 0), {}) then
+			return { ok = false, why = "Get closer to the terminal: it's on the other side of the wall." }
 		end
 		g.digits[n :: number] = true
 		ctx.send(player, { op = "digit", n = n, digit = string.sub(run.code, n :: number, n :: number) })
