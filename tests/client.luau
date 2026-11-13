@@ -564,9 +564,31 @@ function controls:Disable()
 	self.disabledCount += 1
 end
 local PLAYER_MODULE = { __stub = "PlayerModule" }
+-- Roblox adds its PlayerModule to PlayerScripts in its own time (in Studio, around the first
+-- character): it isn't there when the house starts, and arrives a moment later, below
+-- (playerScripts.arrived).
 local playerScripts = {
-	WaitForChild = function(_, name)
-		return if name == "PlayerModule" then PLAYER_MODULE else nil
+	arrived = false,
+	untimed = 0, -- waits for it with no time limit (a script doing that can stop for good)
+	-- (Waits as Roblox's does: until it's there, or the timeout.)
+	WaitForChild = function(self, name, timeout)
+		if name ~= "PlayerModule" then
+			return nil
+		end
+		if timeout == nil then
+			self.untimed += 1
+		end
+		local waited = 0
+		while not self.arrived do
+			if timeout and waited >= timeout then
+				return nil
+			end
+			waited += taskShim.wait(0.1)
+		end
+		return PLAYER_MODULE
+	end,
+	FindFirstChild = function(self, name)
+		return if name == "PlayerModule" and self.arrived then PLAYER_MODULE else nil
 	end,
 }
 local attrs = {}
@@ -603,6 +625,8 @@ local LocalPlayer = setmetatable({
 		FindFirstChild = function(self, name)
 			if name == "PlayerGui" then
 				return playerGui
+			elseif name == "PlayerScripts" then
+				return playerScripts
 			elseif name == "Backpack" then
 				return rawget(self, "Backpack")
 			end
@@ -1437,6 +1461,14 @@ run(function()
 end)
 advance(1)
 check("the client boots without an error", #errors == 0, errors[1])
+if MODE == "full" then
+	-- (The house's start once waited for Roblox's PlayerModule and stopped there, behind a blank
+	-- screen, when it hadn't come: nothing waits on it now.)
+	check("the Home Screen comes up before Roblox's PlayerModule has arrived", module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "Title").isShowing() == true)
+end
+check("nothing waits for Roblox's PlayerModule without a time limit", playerScripts.untimed == 0, playerScripts.untimed)
+playerScripts.arrived = true
+advance(1)
 -- (This harness runs at 20 frames a second, which Quality takes for a struggling screen: the
 -- shows are tested at full strength, and its stepping down is tested on its own, below.)
 module("StarterPlayer", "StarterPlayerScripts", "Client", "Quality").pin(1)

@@ -1228,6 +1228,9 @@ local defaults = {
 	-- Testing in Studio (never affects the live game).
 	Studio = {
 		skipTitle = false, -- true: Play in Studio skips the Home Screen, straight into your own character
+		-- true: Play in Studio reads Roblox Configs (Creator Hub → Configs) too. Off, the Output stays
+		-- readable: Studio writes a "Config value not found" line for every setting not made there.
+		readConfigs = false,
 	},
 
 	-- The Home Screen (Build 80): WELCOME TO MAISON NOIR over a walk through the house, with Play,

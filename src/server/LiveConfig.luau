@@ -53,6 +53,12 @@ end
 function LiveConfig.begin(): (timeout: number) -> ()
 	local done = false
 	local started = os.clock()
+	if game:GetService("RunService"):IsStudio() and (Config.data :: any).Studio.readConfigs ~= true then
+		-- (Studio writes a warning for each setting not made in Configs: about a thousand lines that
+		-- would bury anything that matters. The live game always reads them.)
+		print("[Maison] Roblox Configs aren't read in Studio (Config.Studio.readConfigs); the live game reads them.")
+		return function(_timeout: number) end
+	end
 	task.spawn(function()
 		local ok, snapshot = pcall(function()
 			return (game:GetService("ConfigService") :: ConfigService):GetConfigAsync()

@@ -56,6 +56,7 @@ local Ambient = require(script.Parent.World.Ambient)
 local BallroomView = require(script.Parent.Table.BallroomView)
 local Tour = require(script.Parent.World.Tour)
 local Perks = require(script.Parent.Perks)
+local Controls = require(script.Parent.Controls)
 local PerkChips = require(script.Parent.UI.PerkChips)
 local DecreePanel = require(script.Parent.UI.DecreePanel)
 local CurioState = require(script.Parent.CurioState)
@@ -533,29 +534,10 @@ start("Usual tables", RegularPlates.start)
 start("Staff", StaffLife.start)
 
 -- The player's own controls (Roblox's): taken away only at a table, in photo mode, or under the
--- optional title screen.
-local controls: any = nil
-local function getControls(): any
-	if controls then
-		return controls
-	end
-	local ok, module = pcall(function()
-		return require((player:WaitForChild("PlayerScripts") :: any):WaitForChild("PlayerModule") :: ModuleScript) :: any
-	end)
-	if ok and module then
-		controls = module:GetControls()
-	end
-	return controls
-end
+-- optional title screen. (Client/Controls never waits for Roblox's PlayerModule: it can come late,
+-- or not at all, and the house's start must never stop for it.)
 local function setControls(on: boolean)
-	local c = getControls()
-	if c then
-		if on then
-			c:Enable()
-		else
-			c:Disable()
-		end
-	end
+	Controls.set(on)
 end
 
 -- Walk by default; hold Shift (or click the left stick) to run.

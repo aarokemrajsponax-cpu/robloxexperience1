@@ -23,6 +23,7 @@ local Voice = require(ReplicatedStorage.Shared.Voice)
 
 local CameraRig = require(script.Parent.Parent.Camera)
 local Sound = require(script.Parent.Parent.Sound)
+local Controls = require(script.Parent.Parent.Controls)
 local State = require(script.Parent.Parent.State)
 local Root = require(script.Parent.Parent.UI.Root)
 local Hud = require(script.Parent.Parent.UI.Hud)
@@ -79,7 +80,6 @@ local local_: Snapshot = { score = 0, streak = 0, runLength = 0, lastCase = nil,
 local clockLeft: number? = nil
 local clockRunning = false
 local paused = false
-local controls: any = nil
 local toTableCallbacks: { () -> () } = {}
 local seatings = 0
 local hintPending = false
@@ -135,18 +135,6 @@ end
 -- Whether you're at a table (the 2D sorting screen doesn't need the 3D table to be streamed in).
 local seatedNow = false
 
-local function getControls(): any
-	if controls then
-		return controls
-	end
-	local ok, module = pcall(function()
-		return require((player:WaitForChild("PlayerScripts") :: any):WaitForChild("PlayerModule") :: ModuleScript) :: any
-	end)
-	if ok and module then
-		controls = module:GetControls()
-	end
-	return controls
-end
 
 local function room(): Rooms.Room
 	if roomId == "library" then
@@ -780,10 +768,7 @@ local function seatIn3D(model: Model?, message: { [string]: any })
 		end)
 	end
 	safely("the controls", function()
-		local ctl = getControls()
-		if ctl then
-			ctl:Disable()
-		end
+		Controls.set(false)
 	end)
 	safely("the camera", function()
 		local ignore: { Instance } = { localFolder() }
@@ -889,10 +874,7 @@ local function onLeft(message: { [string]: any })
 		return
 	end
 	safely("closing the sorting screen", SortScreen.close)
-	local ctl = getControls()
-	if ctl then
-		ctl:Enable()
-	end
+	Controls.set(true)
 	hintPending = false
 	Sound.play("leave", 0.3)
 	safely("the camera", CameraRig.leaveTable)
