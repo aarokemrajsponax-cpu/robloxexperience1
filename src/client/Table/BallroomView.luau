@@ -142,10 +142,25 @@ local function status()
 	label.Visible = #parts > 0 and (inRoom or mySeat ~= nil)
 end
 
+local NEON = Color3.fromRGB(255, 70, 170)
+
 local function highlightTabs()
 	for id, k in tabKeys do
 		k.BackgroundTransparency = if id == tab then 0.05 else 0.35
 		k.TextTransparency = if id == tab then 0 else 0.25
+		-- (The tab parcels go to wears the street's neon edge.)
+		local edge = k:FindFirstChild("TabEdge") :: UIStroke?
+		if not edge then
+			local s = Instance.new("UIStroke")
+			s.Name = "TabEdge"
+			s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+			s.Color = NEON
+			s.Parent = k
+			edge = s
+		end
+		local e = edge :: UIStroke
+		e.Thickness = if id == tab then 2 else 0
+		e.Transparency = if id == tab then 0 else 1
 	end
 end
 
@@ -160,15 +175,33 @@ end
 
 local function buildUi()
 	if not statusLabel then
-		statusLabel = Theme.text(Root.hud, "", 13, "caps", {
+		-- A graphite pill with a neon edge: how many lamps are lit, your felt, your Keys.
+		local pill = Theme.text(Root.hud, "", 13, "caps", {
 			Name = "BallroomStatus",
-			AutomaticSize = Enum.AutomaticSize.None,
+			AutomaticSize = Enum.AutomaticSize.X,
 			AnchorPoint = Vector2.new(0.5, 0),
 			Position = UDim2.new(0.5, 0, 0, 52),
-			Size = UDim2.fromOffset(520, 22),
+			Size = UDim2.fromOffset(0, 30),
 			TextColor3 = Brand.Colours.lightGold,
+			BackgroundColor3 = Color3.fromRGB(16, 15, 20),
+			BackgroundTransparency = 0.12,
+			TextWrapped = false,
 			Visible = false,
 		})
+		local corner = Instance.new("UICorner")
+		corner.CornerRadius = UDim.new(0.5, 0)
+		corner.Parent = pill
+		local edge = Instance.new("UIStroke")
+		edge.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		edge.Color = NEON
+		edge.Thickness = 1.5
+		edge.Transparency = 0.25
+		edge.Parent = pill
+		local pad = Instance.new("UIPadding")
+		pad.PaddingLeft = UDim.new(0, 18)
+		pad.PaddingRight = UDim.new(0, 18)
+		pad.Parent = pill
+		statusLabel = pill
 	end
 	if tabsFrame then
 		return

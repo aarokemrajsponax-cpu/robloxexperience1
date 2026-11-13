@@ -93,8 +93,9 @@ pcall(function()
 	require(script.Parent.UI.ErrorNotice).start()
 end)
 
--- Roblox's own chat stays. The house has no tools and no health bar, and no player list in
--- the top-right corner (it sat over the house's own keys; the boards show who's here).
+-- Roblox's own chat stays. No health bar, and no player list in the top-right corner (it sat
+-- over the house's own keys; the boards show who's here). The inventory, the hotbar, starts put
+-- away: the Satchel shows it once the guest is in play (and away from the tables).
 for _, kind in { Enum.CoreGuiType.Backpack, Enum.CoreGuiType.Health, Enum.CoreGuiType.PlayerList } do
 	pcall(function()
 		StarterGui:SetCoreGuiEnabled(kind, false)
@@ -372,6 +373,15 @@ start("Curios", function()
 		return TableClient.isSeated() or SortScreen.isOpen() or Title.isShowing()
 	end
 	QuickDock.start()
+	-- The Satchel: the hotbar (the Suite's pistol and decoy, the squad, starred curios), put away
+	-- at the tables, under the Home Screen and while a panel is open (so it never sits over one).
+	pcall(function()
+		local Satchel = require(script.Parent.Satchel)
+		Satchel.hidden = function(): boolean
+			return QuickDock.isSorting() or Root.isOpen()
+		end
+		Satchel.start()
+	end)
 	-- The key to watch a fireworks show stands at the foot of the dock, under Invite.
 	local Fireworks = require(script.Parent.World.Fireworks)
 	QuickDock.watchPressed = function()
@@ -781,8 +791,8 @@ local function welcome()
 				StartHere.showWay = function()
 					ConciergeGuide.start()
 				end
-				StartHere.toTable = function()
-					quickSit("room")
+				StartHere.toDirectory = function()
+					require(script.Parent.UI.DirectoryPanel).open()
 				end
 				StartHere.offer()
 			end)
@@ -860,18 +870,23 @@ local function onPlay(fromTitle: boolean?)
 		-- Arrived from an invite to the Library: shown up to the friend's table.
 		task.delay(0.6, quickSit, launch)
 	elseif State.isFirstVisit() and not TableClient.isSeated() then
+		-- (A first evening: the attractions, not a sorting table.)
 		Hud.showStraight(function()
-			quickSit("room")
-		end)
+			require(script.Parent.UI.DirectoryPanel).open()
+		end, Voice.StartHere.attractions)
 	end
 	if launch == "" then
 		task.spawn(welcome)
 	end
 end
 
--- The Concierge's tour: the last card's "Take me to a table", and it steps aside at a table.
+-- The Concierge's tour: the last card's "Show me the attractions" (the Directory), and it steps
+-- aside at a table.
 Tour.toTable = function()
 	quickSit("room")
+end
+Tour.toDirectory = function()
+	require(script.Parent.UI.DirectoryPanel).open()
 end
 -- (A guest shown the house is new no longer: the Concierge's key says Speak again.)
 Tour.ended = function()

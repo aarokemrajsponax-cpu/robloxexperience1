@@ -221,6 +221,19 @@ Theme.moods = {
 		plainText = rgb(255, 248, 228),
 		accent = rgb(248, 222, 158),
 	},
+	-- The street: graphite with a hot-pink neon edge running into ice blue (the Ballroom's cards).
+	neon = {
+		panel = { rgb(74, 22, 60), rgb(24, 16, 28), rgb(10, 10, 14), rgb(18, 40, 60) },
+		edge = { rgb(255, 160, 214), rgb(255, 70, 170), rgb(60, 150, 214) },
+		line = rgb(255, 130, 204),
+		gold = { rgb(255, 244, 214), rgb(244, 206, 120), rgb(206, 150, 64) },
+		goldText = rgb(28, 20, 6),
+		goldEdge = rgb(255, 226, 150),
+		plain = rgb(18, 16, 22),
+		plainGlow = rgb(255, 70, 170),
+		plainText = rgb(255, 236, 248),
+		accent = rgb(255, 120, 200),
+	},
 	midnight = {
 		panel = { rgb(38, 48, 96), rgb(18, 22, 42), rgb(10, 11, 16), rgb(32, 30, 62) },
 		edge = { rgb(242, 246, 255), rgb(172, 182, 222), rgb(52, 62, 112) },
@@ -242,6 +255,8 @@ Theme.moods = {
 export type PanelLook = { mood: string, decor: { string }? }
 Theme.PanelLooks = {
 	GalaCard = { mood = "amethyst", decor = { "jewelry", "accessories", "jewelry" } },
+	Ballroom = { mood = "neon" },
+	Sabotage = { mood = "neon" },
 	IslandCard = { mood = "sea", decor = { "accessories", "money", "watches" } },
 	RacingCard = { mood = "grandPrix", decor = { "watches", "keys", "watches" } },
 	Boutique = { mood = "ruby", decor = { "jewelry", "watches", "accessories" } },

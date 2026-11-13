@@ -288,6 +288,7 @@ local events = {
 	ProximityPrompt = { "Triggered", "TriggerEnded", "PromptShown", "PromptHidden", "PromptButtonHoldBegan", "PromptButtonHoldEnded" },
 	BindableEvent = { "Event" },
 	Sound = { "Ended", "Loaded", "Played" },
+	Tool = { "Activated", "Equipped", "Unequipped" },
 }
 for class, list in events do
 	for _, name in list do
@@ -578,7 +579,14 @@ local LocalPlayer = setmetatable({
 	Character = character,
 	CharacterAdded = signal(),
 	CharacterRemoving = signal(),
+	ChildAdded = signal(),
 	PlayerGui = playerGui,
+	Backpack = (function()
+		-- (the Satchel's items: the hotbar)
+		local b = Instance.new("Backpack")
+		b.Name = "Backpack"
+		return b
+	end)(),
 	CameraMinZoomDistance = 0.5,
 	CameraMaxZoomDistance = 400,
 	DevEnableMouseLock = true,
@@ -592,11 +600,24 @@ local LocalPlayer = setmetatable({
 			end
 			return nil
 		end,
-		FindFirstChild = function(_, name)
+		FindFirstChild = function(self, name)
 			if name == "PlayerGui" then
 				return playerGui
+			elseif name == "Backpack" then
+				return rawget(self, "Backpack")
 			end
 			return nil
+		end,
+		FindFirstChildOfClass = function(self, class)
+			if class == "PlayerGui" then
+				return playerGui
+			elseif class == "Backpack" then
+				return rawget(self, "Backpack")
+			end
+			return nil
+		end,
+		GetChildren = function(self)
+			return { playerGui, rawget(self, "Backpack") }
 		end,
 		GetAttribute = function(_, k)
 			return attrs[k]
@@ -726,7 +747,10 @@ local services = {
 	},
 	ProximityPromptService = { PromptShown = signal(), PromptHidden = signal(), PromptTriggered = signal() },
 	StarterGui = {
-		SetCoreGuiEnabled = function() end,
+		shown = {}, -- what's shown of Roblox's own screen (the hotbar), as the game last set it
+		SetCoreGuiEnabled = function(self, kind, on)
+			self.shown[tostring(kind)] = on
+		end,
 		SetCore = function() end,
 	},
 	RunService = {
@@ -1563,9 +1587,9 @@ check("Shift runs", (function()
 	action.fn("MaisonRun", roblox.Enum.UserInputState.End, { KeyCode = roblox.Enum.KeyCode.LeftShift })
 	return running and humanoid.WalkSpeed == Config.data.Movement.walkSpeed
 end)())
-check("a first visit offers Straight to the table", textOnScreen("Straight to the table") ~= nil)
-check("what's next, while walking: take a seat", textOnScreen("Take a seat at any table in the Salon") ~= nil)
-check("and how, with the keys in your hands", textOnScreen("Walk up to a chair and press E") ~= nil)
+check("a first visit offers the attractions, not a sorting table", textOnScreen("Show me the attractions") ~= nil and textOnScreen("Straight to the table") == nil)
+check("what's next, while walking: an attraction to try, Steal a Luxe first", textOnScreen("Play Steal a Luxe") ~= nil and textOnScreen("Take a seat at any table in the Salon") == nil)
+check("and the way there", textOnScreen("Its way in is the Luxe Lounge") ~= nil)
 check("no errors after Play", #errors == 0, errors[1])
 
 -- The welcome: WELCOME and the guest's name on their own screen (a first evening: a line about the
@@ -1658,7 +1682,7 @@ do
 	check("over the Concierge: THE CONCIERGE, follow the gold arrow to him, and a chevron", bb ~= nil and bb.Adornee == chead and bb.AlwaysOnTop == true and textOnScreen("Follow the gold arrow to him") ~= nil and bb:FindFirstChild("Chevron") ~= nil)
 	-- Start here: the whole game in three plain steps, and Show me the way.
 	advance(3)
-	check("a new guest gets Start here: the game in three plain steps", textOnScreen("Meet the Concierge") ~= nil and textOnScreen("Sit at a table") ~= nil and textOnScreen("Sort the treasures") ~= nil and textOnScreen("Show me the way") ~= nil, textOnScreen("Meet the Concierge") ~= nil)
+	check("a new guest gets Start here: the game in three plain steps (the attractions, not sorting)", textOnScreen("Meet the Concierge") ~= nil and textOnScreen("Pick an attraction") ~= nil and textOnScreen("Build your fortune") ~= nil and textOnScreen("Show me the way") ~= nil and textOnScreen("Sort the treasures") == nil, textOnScreen("Meet the Concierge") ~= nil)
 	snapshot("start-here")
 	press("Show me the way")
 	advance(0.6)
@@ -1755,6 +1779,65 @@ do
 	signalOf(camera, "prop:ViewportSize"):Fire()
 	advance(0.5)
 	check("no errors in the welcome", #errors == 0, errors[1])
+end
+
+-- The Satchel (Build 80): the hotbar out in play; the Suite's pistol, used anywhere else, says
+-- where it works; a brainrot from the squad, used, asks the server to flex it (once in three
+-- seconds); and the flex the server sends back pops up over the guest's head.
+do
+	local backpack = LocalPlayer.Backpack
+	local coreGui = services.StarterGui.shown
+	advance(0.5)
+	check("the hotbar is out in play (Roblox's own inventory)", coreGui["Enum.CoreGuiType.Backpack"] == true, tostring(coreGui["Enum.CoreGuiType.Backpack"]))
+	local function tool(key, kind, id, name)
+		local t = Instance.new("Tool")
+		t.Name = name
+		t:SetAttribute("SatchelKey", key)
+		t:SetAttribute("SatchelKind", kind)
+		t:SetAttribute("SatchelId", id)
+		t.Parent = backpack
+		signalOf(backpack, "ChildAdded"):Fire(t)
+		return t
+	end
+	local pistol = tool("gear:sidearm", "gear", "sidearm", "Stun Pistol")
+	local rot = tool("flex:croissantino", "flex", "croissantino", "Croissantino")
+	advance(0.3)
+	signalOf(pistol, "Activated"):Fire()
+	advance(0.3)
+	check("the Stun Pistol, used in the house: it says it fires only in the Executive Suite", textOnScreen("It fires only in the Executive Suite") ~= nil)
+	check("...and no shot is sent", (function()
+		for _, s in sent do
+			if s.remote == "AttractionFire" then
+				return false
+			end
+		end
+		return true
+	end)())
+	local before = #sent
+	signalOf(rot, "Activated"):Fire()
+	signalOf(rot, "Activated"):Fire()
+	local asks = {}
+	for i = before + 1, #sent do
+		if sent[i].remote == "Satchel" then
+			table.insert(asks, sent[i].message)
+		end
+	end
+	check("a brainrot, used: the server is asked to flex it, by what's in hand (once in three seconds)", #asks == 1 and asks[1].op == "flex" and asks[1].key == "flex:croissantino", #asks)
+	serverSays("Satchel", { op = "flex", userId = 1, id = "croissantino", name = "Gold Croissantino", rarity = "Rare", glyph = "🥐", mut = "gold" })
+	advance(0.5)
+	local flex = find(playerGui, function(d)
+		return d:IsA("BillboardGui") and d.Name == "Flex"
+	end)
+	check("the flex: over the guest's head, their name for it and its rarity", flex ~= nil and textOnScreen("YOU FLEXED") ~= nil and textOnScreen("Gold Croissantino") ~= nil and textOnScreen("GOLD · RARE") ~= nil)
+	advance(3.5)
+	check("...and gone a few seconds later", find(playerGui, function(d)
+		return d:IsA("BillboardGui") and d.Name == "Flex"
+	end) == nil)
+	pistol:Destroy()
+	rot:Destroy()
+	signalOf(backpack, "ChildRemoved"):Fire()
+	advance(0.5)
+	check("no errors with the Satchel", #errors == 0, errors[1])
 end
 
 -- The Black Card on the lectern: not there until it's offered, and never in a guest's first minutes.
@@ -1904,7 +1987,7 @@ do
 	check("each card points at its place: a gold pin with its name", placed >= 10 and pinned == placed, pinned .. " of " .. placed)
 	advance(1)
 	snapshot("tour")
-	check("the last card offers a table", textOnScreen("Take me to a table") ~= nil and textOnScreen("I'll explore") ~= nil)
+	check("the last card offers the attractions", textOnScreen("Show me the attractions") ~= nil and textOnScreen("I'll explore") ~= nil)
 	press("I'll explore")
 	advance(1)
 	check("ending it: your guide goes and the Concierge is back at the lectern", workspace:FindFirstChild("MaisonTourGuide") == nil and chead.LocalTransparencyModifier == 0 and speak.Enabled == true)
@@ -1947,7 +2030,7 @@ do
 	check("there's a gold Shop key on screen", shopKey ~= nil)
 	check("seated: the Shop key steps aside for the sorting screen", shopKey ~= nil and shopKey.Visible == false)
 end
-check("seated: the what's-next card steps aside", textOnScreen("Take a seat at any table in the Salon") == nil)
+check("seated: the what's-next card steps aside", textOnScreen("Play Steal a Luxe") == nil and textOnScreen("Take a seat at any table in the Salon") == nil)
 
 -- The sorting screen: sit down and the house falls away; only the sorting screen is left.
 local sortGui = playerGui:FindFirstChild("MaisonSort")
@@ -3086,18 +3169,40 @@ check("Ballroom: the felt clears", #piecesFolder:GetChildren() == 0)
 press("Stay for the next evening")
 press("Next evening")
 advance(0.5)
-serverSays("Table", { op = "eveningEnd", winner = 12, winnerName = "Ben", keys = 5, seconds = 300, counted = false, results = {} })
+serverSays("Table", { op = "eveningEnd", winner = 12, winnerName = "Ben", keys = 5, seconds = 300, counted = false, results = {
+	{ index = 12, name = "Ben", place = 1, keys = 5 },
+	{ index = 4, name = "Cleo", place = 2, keys = 3 },
+	{ index = 9, name = "Dev", place = 3, keys = 2 },
+	{ index = 1, name = "Ada", place = 4, keys = 1 },
+} })
 advance(3)
 check("Ballroom: the camera finds the last lamp from the Gallery", camera.CFrame.Position.Y > 35 * GRAND(), camera.CFrame.Position.Y)
 serverSays("Table", { op = "eveningResult", place = 4, of = 20, keys = 1, points = 53, gilt = 40, counted = false, won = false })
 advance(8)
 check("Ballroom: the result card", textOnScreen("4th of 20") ~= nil and textOnScreen("not counted for records") ~= nil)
+check("...with the evening's top three on a podium, as the server sent them", find(playerGui, function(d)
+	return d.Name == "Podium"
+end) ~= nil and textOnScreen("Ben") ~= nil and textOnScreen("Cleo") ~= nil and textOnScreen("Dev") ~= nil)
+snapshot("ballroom-result")
 check("Ballroom: the camera is back at the table", camera.CFrame.Position.Y < 35 * GRAND(), camera.CFrame.Position.Y)
 press("Watch from the Gallery")
 check("Ballroom: to the Gallery is sent", sentOps("Table", "gallery") == 1)
 serverSays("Table", { op = "left" })
 advance(2)
 check("Ballroom: leaving gives the controls back", controls.enabled == true)
+-- The last lamp's card: crowned, the pot counted up, the podium with the guest's own name.
+do
+	local Panel = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "BallroomPanel")
+	Panel.standings({ { name = "Ada", place = 1, keys = 6 }, { name = "Ben", place = 2, keys = 4 }, { name = "Cleo", place = 3, keys = 2 } })
+	local none = function() end
+	Panel.result({ op = "eveningResult", place = 1, of = 20, keys = 6, points = 120, gilt = 1200, pot = 1200, counted = true, won = true }, { gallery = none, stay = none, leave = none })
+	advance(2)
+	check("Ballroom: the last lamp's card, the pot counted up to what was paid", textOnScreen("The last lamp in the house is yours") ~= nil and textOnScreen("+1,200 Gilt") ~= nil)
+	check("...and the guest's own name on the podium's top step", textOnScreen("YOU · 6 KEYS") ~= nil)
+	snapshot("ballroom-won")
+	Panel.close()
+	advance(0.5)
+end
 check("no errors through a Lights Out evening", #errors == 0, errors[1])
 -- Standing in the Ballroom without a chair while it's open: Take a chair and Watch.
 workspace:SetAttribute("BallroomState", "open")

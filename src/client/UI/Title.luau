@@ -49,7 +49,7 @@ function Title.shots(): { Shot }
 		slide("THE FOYER", "Where every evening starts: the Concierge, the grand piano, every door.",
 			Vector3.new(F.minX + 34, floor + 13, F.minZ + 6), Vector3.new(F.minX + 58, floor + 15, F.minZ + 4),
 			Vector3.new(F.maxX - 26, floor + 18, F.maxZ - 26), Vector3.new(F.maxX - 18, floor + 20, F.maxZ - 30), 9),
-		slide("THE STREET", "Ultra-luxury cars outside the door, and a race every ten minutes.",
+		slide("THE STREET", "Ultra-luxury cars at the kerb, and the Grand Prix on the street.",
 			Vector3.new(F.minX, floor + 12, Layout.Street.kerbZ - 20), Vector3.new(F.maxX - 8, floor + 16, Layout.Street.kerbZ - 16),
 			Vector3.new(0, floor + 14, Layout.Street.facadeZ), Vector3.new(10, floor + 16, Layout.Street.facadeZ), 9),
 		slide("THE SALON", "The tables, and the calmest room: sit anywhere and sort at your own pace.",

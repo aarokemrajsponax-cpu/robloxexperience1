@@ -22,7 +22,7 @@ StartHere.isBusy = function(): boolean
 	return false
 end
 StartHere.showWay = function() end
-StartHere.toTable = function() end
+StartHere.toDirectory = function() end
 
 local shown = false
 
@@ -124,9 +124,9 @@ function StartHere.open()
 		Root.close(NAME)
 		StartHere.showWay()
 	end, math.min(220, math.floor(inner / 2) - 5)).LayoutOrder = 1
-	Theme.key(keys, S.table, false, function()
+	Theme.key(keys, S.attractions, false, function()
 		Root.close(NAME)
-		StartHere.toTable()
+		StartHere.toDirectory()
 	end, math.min(220, math.floor(inner / 2) - 5)).LayoutOrder = 2
 	Theme.fitHeight(group, content)
 	Root.open(NAME, group)

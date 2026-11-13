@@ -67,9 +67,6 @@ local function setupCollisionGroups()
 	end)
 end
 
--- Whether a guest is still new to the house: they haven't had the Concierge's tour and have
--- played fewer than two rounds. Until then the gold arrow leads them to the Concierge, and the
--- Concierge offers the tour before anything else.
 -- Which of the house's games a guest has been into (the objective card suggests the next one to
 -- try): the first-time note each one leaves (server/Attractions), or, for a guest from before it,
 -- what their record already shows of it.
@@ -88,13 +85,25 @@ function Guests.tried(data: any): { [string]: boolean }
 	return out
 end
 
+-- Whether a guest is still new to the house: no tour from the Concierge yet, fewer than two rounds
+-- at the tables and no attraction played. Until then the gold arrow leads them to the Concierge,
+-- and the Concierge offers the tour before anything else.
 function Guests.needsGuide(data: Profiles.Data): boolean
 	-- (Read with care: a page missing a part never stops the welcome going out.)
 	local d = data :: any
 	local flags = if type(d.flags) == "table" then d.flags else {}
 	local stats = if type(d.stats) == "table" then d.stats else {}
 	local rounds = if type(stats.rounds) == "number" then stats.rounds else 0
-	return flags.toured ~= true and rounds < 2
+	if flags.toured == true or rounds >= 2 then
+		return false
+	end
+	-- (Nor is a guest who has played an attraction: the house is no longer only its tables.)
+	for _, played in Guests.tried(d) do
+		if played then
+			return false
+		end
+	end
+	return true
 end
 
 local function payload(player: Player, data: Profiles.Data, visit: Visit): { [string]: any }

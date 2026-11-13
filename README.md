@@ -377,6 +377,53 @@ a Nightly attempt or a Mythic's odds.
 - **The launch kit**: page text, icon, thumbnails and the gameplay video's shot list are in
   [`LAUNCH.md`](LAUNCH.md).
 
+## Build 80 — A Home Screen, a hotbar to flex, the street in neon
+
+- **The Home Screen.** A guest arrives to WELCOME TO MAISON NOIR over a slow walk through six
+  rooms (the Foyer, the street, the Salon, the Ballroom, the Library, the Terrace), with their own
+  Gilt, Gems and level, and Play, the Shop, How to play and the Leaderboard. Play cuts to the Foyer,
+  in front of the Concierge. `Config.Title.show` turns it off.
+- **Rooms lit from the first second.** Every lamp in the house (334) is kept on every screen, so
+  streaming never drops one: a fixture's model is kept whole, a lamp built into a room moves onto
+  an unseen copy of its part in a small kept model, and a sorting table is kept whole whatever its
+  size (the game finds its lamp by name to dim it). The Home Screen streams the Foyer and every
+  room it shows in ahead of time.
+- **The hotbar (the Satchel).** Roblox's own inventory is back: shown in play, put away at the
+  tables, under the Home Screen and while a panel is open. What's in it is decided by the server
+  from the guest's saved data:
+  - the Executive Suite's stun pistol, once it's taken from the Quartermaster. It fires only in
+    the Suite's fight (aimed at the mouse, or the middle of a touch screen; every shot is judged
+    by the server as before) and comes out into the guest's hand when the fight starts;
+  - a decoy, while one is packed or carried and not yet thrown (thrown only in the hallway);
+  - the brainrots in the squad, then starred curios, rarest first, seven at most.
+  A brainrot or curio is held up on a disc in its colour. Clicking it asks the server to flex it
+  (only what's in that hand, no more than once in three seconds, sent only to guests within 160
+  studs): it pops up big over the guest's head with its name and rarity, a burst in the colour of
+  their Victory Flourish, and a shimmer. Nothing in it can be dropped.
+- **Lights Out's cards.** Graphite glass with a neon edge (a new "neon" panel mood). The lamp-out
+  card: the bulb flickers and dies and smoke rises, the place stands big, then who or what put it
+  out, the Keys held and the lamps still lit. The result card: the evening's top three on a podium
+  (your own name in neon), your Keys, points and the pot. The last lamp's card is crowned, its rays
+  turning, the pot counted up, with confetti. In play, the lamp count sits in a neon pill and the
+  tab your parcels go to wears a neon edge.
+- **The street in neon.** MAISON NOIR in pink neon over the door, NOIR blade signs on the corners,
+  ice-blue light along the kerb and pink along the foot of the house, six chrome bollards ringed in
+  neon, and a velvet-rope lane up to the steps (only the posts are solid). One light more.
+- **Piano in the lobby only.** The Foyer keeps its grand piano. The tables and quiet rooms play a
+  downtempo list, the Ballroom its own dance list, and the Vault, the Suite, the Terrace, the
+  street, the club, the boutique and the island a street list (trap, R&B, chill hip-hop): 24
+  APM-licensed tracks from the Roblox library, levelled to the same loudness.
+- **New guests start with the attractions, not sorting.** Start here's steps are Meet the
+  Concierge, Pick an attraction and Build your fortune. Its second key, the Concierge's first
+  offer, the tour's last card and the first-visit key all say Show me the attractions (the Maison
+  Directory). On a first evening the what's-next line is the first attraction not yet tried (Steal
+  a Luxe first). A guest who has played any attraction is no longer guided as new.
+- **The Concierge knows the whole house.** The tour's Library stop is the Grand Auction (Tête-à-Tête
+  is long gone); the Executive Suite's stop names every way to an invitation and the hotbar's
+  pistol; the Suite's names its cases and visits. Five new answers: the Grand Auction, brainrots,
+  the hotbar, making your Suite yours, and looks. A long list of choices scrolls, so the card
+  never runs off a phone's screen.
+
 ## Build 79 — Gems only from Robux, a grander house, a brisker walk
 
 - **Gems come only from Robux.** Nothing in the house pays Gems for playing any more: Gems come

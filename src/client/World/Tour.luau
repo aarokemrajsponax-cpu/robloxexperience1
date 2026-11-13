@@ -32,6 +32,8 @@ Tour.ended = function() end
 -- Set by Main: sit the guest at a Salon table (the last card's "Take me to a table"), and
 -- whether they're at a table now (the tour steps aside).
 Tour.toTable = function() end
+-- Set by Main: the Maison Directory, every attraction (the last card's "Show me the attractions").
+Tour.toDirectory = function() end
 Tour.isSeated = function(): boolean
 	return false
 end
@@ -402,6 +404,8 @@ local function choose(i: number, id: string)
 		end
 	elseif id == "back" then
 		showCard(math.max(1, i - 1))
+	elseif id == "attractions" then
+		Tour.stop("attractions")
 	elseif id == "table" then
 		Tour.stop("table")
 	else
@@ -416,7 +420,7 @@ showCard = function(i: number)
 	local K = Voice.TourKeys
 	local choices: { Dialogue.Choice }
 	if i == #cards then
-		choices = { { id = "table", text = K.table }, { id = "explore", text = K.explore } }
+		choices = { { id = "attractions", text = K.attractions }, { id = "explore", text = K.explore } }
 	else
 		choices = { { id = "next", text = K.next } }
 		if i > 1 then
@@ -602,6 +606,8 @@ function Tour.stop(reason: string?)
 	pcall(Tour.ended)
 	if reason == "table" then
 		Tour.toTable()
+	elseif reason == "attractions" then
+		Tour.toDirectory()
 	elseif reason == "done" then
 		Dialogue.show(V.speaker, V.tourEnd, nil, nil, 3)
 	elseif reason == "lost" then

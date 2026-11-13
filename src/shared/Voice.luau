@@ -101,6 +101,11 @@ Voice.Concierge = {
 		{ id = "gala", q = "What's in the Grand Ballroom?", a = "Through the great doors at the far end of the Ballroom: the dance floor and its jukebox, Luxury Trivia, the Runway's themed shows, the Daily Arena, three photo sets, the Exchange and the Hall of Fame. A little Gilt for all of it, up to {galaGilt} a day." },
 		{ id = "trade", q = "How do I trade?", a = "At the Exchange's stands in the Grand Ballroom, or the Trade key on a guest's card: Gilt, Gems, brainrots and curios. You both see every offer, and nothing changes hands until you both confirm the very same trade." },
 		{ id = "boards", q = "Where are the boards?", a = "Tap your Fortune, under your Gilt: the Wealthiest in this house, this week and of all time. The Basement's best times are at the lectern on the Basement Stair." },
+		{ id = "auction", q = "What is the Grand Auction?", a = "In the Library: the week's rare lots, bid for in Gilt or Gems by guests in every server at once. A bid is held from your purse while it stands; outbid, it comes straight back. The highest bid when the week closes wins, and the piece is delivered to you wherever you are." },
+		{ id = "brainrots", q = "What are brainrots?", a = "The meme set of curios, each a character of its own. Put up to three in your squad (three more with the Penthouse): they fill a tip jar with Gilt every hour, even while you're away, and the one you choose walks beside you. More of the same one gives it stars." },
+		{ id = "hotbar", q = "What's in my hotbar?", a = "What you carry: the stun pistol once the Quartermaster gives it you (it fires only in the Executive Suite's fight), a decoy you've packed, the brainrots in your squad and the curios you've starred. Hold a brainrot or a curio and click to flex it for everyone near you." },
+		{ id = "suite", q = "How do I make my Suite mine?", a = "Ring the bell inside your Suite to furnish it, piece by piece, where you like. Its cases show off your finest curios, and friends can visit from the Suites list." },
+		{ id = "looks", q = "What are looks and trails for?", a = "Style, never score: looks, trails, nameplates, lamps, chimes and victory flourishes from the Boutique. Wear them at the Wardrobe. Your flourish even colours your flexes." },
 		{ id = "gems", q = "What are Gems for?", a = "The Gem Shop, the golden treadmill, a Basement skip and the Cabinet's curios. Gems come only from a Gem pack in the shop (Robux) or a trade with another guest: nothing in the house pays them out, so every game pays Gilt." },
 	},
 	whichQuestion = "Ask me anything.",
@@ -110,7 +115,7 @@ Voice.Concierge = {
 	newsLaterLine = "Of course. Ask me for the tour any time.",
 	tourOffer = "Welcome to Maison Noir, where everyone is here to become the wealthiest. Shall I show you round? It's quick.",
 	tourYes = "Show me the house",
-	tourSkip = "Straight to a table",
+	tourSkip = "Show me the attractions",
 	tourLater = "I'll look around",
 	tourLaterLine = "Of course. Speak to me any time and I'll show you round.",
 	tourEnd = "Enjoy the house. I'm here if you need me.",
@@ -176,13 +181,13 @@ Voice.Tour = {
 		stop = "boutique",
 		place = "midnightDoor",
 		title = "The Executive Suite",
-		line = "By invitation only: clear the Basement or bank a great haul for one. Take your free sidearm from the Quartermaster, then beat the Executive in his office.",
+		line = "By invitation only: clear the Basement, bank a great haul, or buy one from the Quartermaster for Gilt. Take your free stun pistol from him too: it goes in your hotbar, and fires in the Suite's fight.",
 	},
 	{
 		stop = "library",
 		place = "libraryDoor",
-		title = "Tête-à-Tête",
-		line = "Two players, the same pieces, face to face. First to win three hands wins the match.",
+		title = "The Grand Auction",
+		line = "Up here in the Library: the week's rare lots, bid for in Gilt or Gems by guests in every server at once. Outbid, your bid comes straight back; the highest when the week closes wins.",
 	},
 	{
 		stop = "ballroom",
@@ -200,7 +205,7 @@ Voice.Tour = {
 		stop = "suite",
 		place = "suiteDoor",
 		title = "Your Suite",
-		line = "Your own private rooms. Ring the bell inside to furnish them.",
+		line = "Your own private rooms. Ring the bell inside to furnish them, show off your finest pieces in its cases, and have your friends round.",
 	},
 	{
 		stop = "suite",
@@ -242,7 +247,7 @@ Voice.TourPlaces = {
 	suiteDoor = "Your Suite",
 }
 
-Voice.TourKeys = { next = "Next", back = "Back", done = "End the tour", table = "Take me to a table", explore = "I'll explore" }
+Voice.TourKeys = { next = "Next", back = "Back", done = "End the tour", attractions = "Show me the attractions", explore = "I'll explore" }
 
 -- A Private Evening (a private server).
 Voice.Private = {
@@ -299,12 +304,12 @@ Voice.StartHere = {
 	steps = {
 		-- (`short`: the same step in fewer words, for a phone on its side, where the three stand side by side.)
 		{ title = "Meet the Concierge", line = "Follow the gold arrow and pick Show me the house. He walks you round and teaches you the game.", short = "Follow the gold arrow. He shows you the house." },
-		{ title = "Sit at a table", line = "Any table in the Salon. Walk up to a chair and take a seat.", short = "Any table in the Salon. Walk up and sit." },
-		{ title = "Sort the treasures", line = "Put each piece in its case: watches in Watches, rings in Jewelry, gold in Money. Every right one earns Gilt.", short = "Each piece into its case. Every right one earns Gilt." },
+		{ title = "Pick an attraction", line = "Press Play, top right: Steal a Luxe, the Maison Basement, the Executive Suite, the Grand Auction and more. Steal a Luxe is a good first.", short = "Press Play, top right. Steal a Luxe is a good first." },
+		{ title = "Build your fortune", line = "Every run you bank pays Gilt. Spend it on your Suite and your look, flex your brainrots, and climb to the wealthiest.", short = "Every run you bank pays Gilt. Become the wealthiest." },
 	},
 	after = "For your first half hour, every Gilt you earn counts double. Spend it on your Suite, your look and more.",
 	go = "Show me the way",
-	table = "Straight to a table",
+	attractions = "Show me the attractions",
 }
 
 -- Welcome back (UI/WelcomeBack): a returning guest's one card, once they've arrived: what's waiting
@@ -323,12 +328,12 @@ Voice.WelcomeBack = {
 -- What's new in this build, told once to each returning guest (Welcome back). Only shown while
 -- `build` is the build that's playing, so old news never shows as new.
 Voice.WhatsNew = {
-	build = 79,
+	build = 80,
 	lines = {
-		"The Maison is grander: every room a quarter wider, deeper and taller, and you walk it faster, so a room takes no longer to cross.",
-		"Every game, race, present and streak now pays Gilt, and more of it. Gems come only from the Gem packs in the shop or a trade.",
-		"The Basement's chest, the Executive's prize and the island's five pearls pay Gilt in full. The Ballroom's winners take more Gilt.",
-		"Santa's gifts hold Gilt, a heap of Gilt, or now and then a trove of it.",
+		"A Home Screen as you arrive: the house's rooms on screen, your Gilt, Gems and level, and Play to begin in front of the Concierge.",
+		"Your hotbar: the Executive Suite's stun pistol, a decoy you've packed, your squad's brainrots and your starred curios. Click a brainrot or a curio to flex it.",
+		"Lights Out has new cards: the lamp going out, your place, and the evening's top three on a podium.",
+		"The street in neon at the door, and new music in every room but the lobby, where the piano stays.",
 	},
 }
 
@@ -344,7 +349,7 @@ export type Hint = { id: string, line: string, after: number?, sat: number?, eve
 Voice.Hints = {
 	label = "TIP",
 	list = {
-		{ id = "newcomer", line = "New here? Sit at any table in the Salon to start sorting. How to play, top right, explains it all.", after = 45 },
+		{ id = "newcomer", line = "New here? Press Play, top right, and pick an attraction: Steal a Luxe is a good first. How to play explains it all.", after = 45 },
 		{ id = "keys", line = "When you're holding a piece, keys 1 to 6 drop it straight into a case.", sat = 1 },
 		{ id = "tap", line = "Tap a piece, then tap its case. No need to drag.", sat = 1 },
 		{ id = "streak", line = "Right pieces in a row raise your combo. One wrong case resets it.", sat = 2 },
@@ -542,9 +547,14 @@ Voice.Ballroom = {
 	queued = "You'll be told the moment the Ballroom opens again.",
 	outTitle = "Your lamp is out",
 	outBy = "{place} of {of} · a parcel from {name}",
+	outByName = "A parcel from {name} put it out.",
+	outOver = "Your felt went over sixteen.",
 	outPlace = "{place} of {of}",
 	overCapacity = "Over sixteen. Three seconds.",
 	lastLamp = "The last lamp in the house is yours.",
+	lastLampCaps = "The last lamp",
+	resultTitle = "The evening is over",
+	onlyLast = "Only the last lamp is paid. Next time, it could be you.",
 	place = "{place} of {of}",
 	keys = "Keys",
 	points = "Points this week",

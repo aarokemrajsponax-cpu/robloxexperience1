@@ -82,6 +82,15 @@ function Objective.current(): Goal?
 		local S = Voice.StartHere
 		return { key = "concierge", title = S.title, line = S.goal, how = S.goalHow }
 	end
+	-- (A first evening: the house's attractions first, one at a time, before any table.)
+	local tried = if type(guest.tried) == "table" then guest.tried else nil
+	if guest.firstVisit == true and not seatedOnce and tried then
+		for _, t in V.try do
+			if tried[t.id] ~= true then
+				return { key = "try:" .. t.id, title = V.next, line = t.line, how = t.how, go = "place:" .. t.place }
+			end
+		end
+	end
 	if guest.firstVisit == true and not seatedOnce then
 		return { key = "sit", title = V.next, line = V.sit, how = byInput(V.sitHow), go = "room" }
 	end
@@ -107,7 +116,6 @@ function Objective.current(): Goal?
 	end
 	-- The house's games not yet tried, one at a time (the server says which, and each one gone into
 	-- since is crossed off here).
-	local tried = if type(guest.tried) == "table" then guest.tried else nil
 	if tried then
 		for _, t in V.try do
 			if tried[t.id] ~= true then

@@ -202,7 +202,7 @@ local PLACES: { Place } = {
 	{ id = "salon", text = "The Salon", room = true },
 	{ id = "vault", text = "The Vault" },
 	{ id = "boutique", text = "The Boutique" },
-	{ id = "library", text = "The Library" },
+	{ id = "library", text = "The Grand Auction  ·  the Library" },
 	{ id = "ballroom", text = "The Ballroom  ·  the Grand Ballroom" },
 	{ id = "terrace", text = "The Terrace  ·  the Jet Lounge" },
 	{ id = "suite", text = "Your Suite" },
@@ -450,11 +450,12 @@ local function menu(player: Player)
 	end)
 end
 
--- The tour, offered first: the tour, straight to a table, or left to look around.
+-- The tour, offered first: the tour, the attractions (the Maison Directory), or left to look
+-- around.
 local function offerTour(player: Player)
 	Dialogue.say(player, V.speaker, V.tourOffer, {
 		{ id = "tour", text = V.tourYes },
-		{ id = "table", text = V.tourSkip },
+		{ id = "attractions", text = V.tourSkip },
 		{ id = "later", text = V.tourLater },
 	}, function(choice)
 		if player.Parent ~= Players or Concierge.isSeated(player) then
@@ -462,8 +463,9 @@ local function offerTour(player: Player)
 		end
 		if choice == "tour" then
 			Concierge.tour(player)
-		elseif choice == "table" then
-			Concierge.lead(player, "salon")
+		elseif choice == "attractions" then
+			Dialogue.close(player)
+			Concierge.openDirectory(player)
 		else
 			Dialogue.say(player, V.speaker, V.tourLaterLine, nil, nil, 3)
 		end

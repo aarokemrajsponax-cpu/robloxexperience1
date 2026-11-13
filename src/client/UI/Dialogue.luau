@@ -68,10 +68,29 @@ function Dialogue.show(speaker: string, line: string, choices: { Choice }?, onCh
 	end
 	Theme.text(content, line, 17, "body", { LayoutOrder = 3, TextXAlignment = Enum.TextXAlignment.Left })
 	if hasChoices then
-		local row = Instance.new("Frame")
-		row.BackgroundTransparency = 1
-		row.AutomaticSize = Enum.AutomaticSize.Y
-		row.Size = UDim2.new(1, 0, 0, 0)
+		-- (A long list, the Concierge's questions or his places, scrolls: the card never runs off
+		-- the top of the screen, on a phone least of all.)
+		local room = math.max(150, math.floor(Root.size().Y * 0.45))
+		local row: GuiObject
+		if not wide and #(choices :: { Choice }) * 50 > room then
+			local scroll = Instance.new("ScrollingFrame")
+			scroll.Name = "Choices"
+			scroll.BackgroundTransparency = 1
+			scroll.BorderSizePixel = 0
+			scroll.Size = UDim2.new(1, 0, 0, room)
+			scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+			scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+			scroll.ScrollingDirection = Enum.ScrollingDirection.Y
+			scroll.ScrollBarThickness = 4
+			scroll.ScrollBarImageColor3 = Color3.fromRGB(206, 166, 86)
+			row = scroll
+		else
+			local f = Instance.new("Frame")
+			f.BackgroundTransparency = 1
+			f.AutomaticSize = Enum.AutomaticSize.Y
+			f.Size = UDim2.new(1, 0, 0, 0)
+			row = f
+		end
 		row.LayoutOrder = 4
 		row.Parent = content
 		local rowList = Theme.list(row, 6, wide)

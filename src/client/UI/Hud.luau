@@ -309,11 +309,11 @@ function Hud.setDuelLine(mine: number, theirs: number?, clock: number?)
 	lineText.Text = table.concat(parts, "   ·   ")
 end
 
-function Hud.showStraight(onPress: () -> ())
+function Hud.showStraight(onPress: () -> (), text: string?)
 	if straightKey then
 		return
 	end
-	local key = Theme.key(Root.hud, Voice.Table.straightToTable, true, function()
+	local key = Theme.key(Root.hud, text or Voice.Table.straightToTable, true, function()
 		Hud.hideStraight()
 		onPress()
 	end, 250)

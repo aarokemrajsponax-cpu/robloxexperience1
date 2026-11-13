@@ -997,6 +997,7 @@ local function onBallroom(message: { [string]: any })
 		clockLeft = nil
 		clockBudget = nil
 		BallroomPanel.close()
+		BallroomPanel.standings(message.results)
 		BallroomView.handle(message)
 	elseif op == "eveningResult" then
 		-- After the last lamp's moment.
