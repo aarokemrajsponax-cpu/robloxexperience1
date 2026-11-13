@@ -1004,7 +1004,7 @@ check("the Treasure Hunt hides five golden keys", #keyParts == 5, #keyParts)
 local giltBeforeKey = nd.gilt
 nedRoot.Position = keyParts[1].CFrame.Position
 run(AdminService.collect)
-check("the finder of a key wins Gilt", nd.gilt == giltBeforeKey + 250, nd.gilt - giltBeforeKey)
+check("the finder of a key wins Gilt", nd.gilt == giltBeforeKey + Config.data.Admin.keyGilt, nd.gilt - giltBeforeKey)
 check("and the house hears who found it", string.find(lastBroadcast("salute").line or "", "Ned found a golden key", 1, true) ~= nil)
 for i = 2, 5 do
 	nedRoot.Position = keyParts[i].CFrame.Position

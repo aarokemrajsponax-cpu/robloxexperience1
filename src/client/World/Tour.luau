@@ -247,12 +247,19 @@ local function removeGuide()
 	end
 end
 
+-- The guide's pace just now (studs a second): never slower than the guest's own walk, quicker
+-- when the guest is ahead of him, so he keeps in step with whoever he's showing round.
+local pace = 0
+
 local function walking(on: boolean)
 	local walk, idle = walkTrack, idleTrack
 	if walk then
 		if on and not walk.IsPlaying then
 			walk:Play(0.2)
-			walk:AdjustSpeed(math.clamp(Config.data.Tour.speed / 14, 0.6, 1.3))
+			walk:AdjustSpeed(math.clamp((if pace > 0 then pace else Config.data.Tour.speed) / 16, 0.6, 2))
+		elseif on then
+			-- (The legs keep time with the pace as it changes.)
+			walk:AdjustSpeed(math.clamp((if pace > 0 then pace else Config.data.Tour.speed) / 16, 0.6, 2))
 		elseif not on and walk.IsPlaying then
 			walk:Stop(0.25)
 		end
@@ -312,7 +319,7 @@ end
 local function gait(dt: number, moving: boolean)
 	gaitAmount += ((if moving then 1 else 0) - gaitAmount) * (1 - math.exp(-6 * dt))
 	-- Two steps a stride; a stride of about two and a half studs.
-	gaitPhase = (gaitPhase + dt * (if moving then Config.data.Tour.speed / 2.6 else 0) * math.pi) % (math.pi * 2)
+	gaitPhase = (gaitPhase + dt * (if moving then (if pace > 0 then pace else Config.data.Tour.speed) / 2.6 else 0) * math.pi) % (math.pi * 2)
 	local animated = walkTrack ~= nil and (walkTrack :: AnimationTrack).IsPlaying
 	gaitAnimated = animated
 	if animated then
@@ -487,9 +494,21 @@ local function step(dt: number)
 			gait(dt, false)
 			turnTo(guest - feet, dt)
 		else
+			-- His pace: the house's own, or the guest's walk if that's quicker; and a little
+			-- quicker again while the guest is ahead of him, eased so he never jerks.
+			local want = T.speed
+			local character = Players.LocalPlayer.Character
+			local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+			local theirs = if humanoid then humanoid.WalkSpeed else 0
+			want = math.max(want, theirs * 0.95)
+			if guest and (guest - stop.stand).Magnitude < (pos - stop.stand).Magnitude - 4 then
+				want = math.max(want, theirs * 1.15)
+			end
+			want = math.min(want, 48)
+			pace = if pace <= 0 then want else pace + (want - pace) * (1 - math.exp(-4 * dt))
 			walking(true)
 			gait(dt, true)
-			local left = T.speed * dt
+			local left = pace * dt
 			while left > 0 and pathIndex <= #path do
 				local target = path[pathIndex]
 				local d = target - pos

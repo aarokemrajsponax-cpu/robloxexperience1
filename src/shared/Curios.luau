@@ -52,7 +52,9 @@ Curios.RarityColour = {
 	Limited = rgb(80, 230, 220),
 } :: { [string]: Color3 }
 -- A little Gilt with each curio found at the tables (so the rarer finds are worth more).
-Curios.RarityGilt = { Common = 10, Uncommon = 25, Rare = 60, Epic = 150, Legendary = 400, Mythic = 1000, Secret = 2500, Limited = 0 } :: { [string]: number }
+-- (A Legendary, Mythic or Secret find is luck: the top of the Gilt ladder, above even the
+-- Executive Suite, and paid in full, outside the day's soft cap: server/Curios.)
+Curios.RarityGilt = { Common = 10, Uncommon = 25, Rare = 80, Epic = 300, Legendary = 2500, Mythic = 12000, Secret = 30000, Limited = 0 } :: { [string]: number }
 -- How often each rarity turns up, among the finds at the tables (weights; Secret has its own rule).
 Curios.FindWeights = { Common = 600, Uncommon = 260, Rare = 100, Epic = 32, Legendary = 7, Mythic = 1 } :: { [string]: number }
 

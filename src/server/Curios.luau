@@ -201,7 +201,11 @@ function Curios.afterRun(player: Player, data: Profiles.Data, rounds: number, ac
 		b.found += 1
 		found.name = c.name
 		found.rarity = c.rarity
-		found.gilt = Gilt.pay(player, data, CurioList.RarityGilt[c.rarity] or 0, "Curio found: " .. c.id)
+		-- (Luck at the top of the ladder, Legendary and up, is paid in full: never cut by the day's cap.)
+		local worth = CurioList.RarityGilt[c.rarity] or 0
+		found.gilt = if (CurioList.RarityRank[c.rarity] or 0) >= (CurioList.RarityRank.Legendary or 99)
+			then Gilt.give(player, data, worth, "Curio found: " .. c.id)
+			else Gilt.pay(player, data, worth, "Curio found: " .. c.id)
 	end
 	-- The season's Limited curio, once, for any banked run while it's on.
 	local term = Rating.term().id

@@ -30,6 +30,7 @@ Remotes.Events = {
 	"Attraction", -- server -> client: Steal a Luxe, the Maison Basement, the Executive Suite (what happens in them)
 	"AttractionFire", -- client -> server: the Executive Suite's sidearm (where it was aimed; the server decides the rest)
 	"Satchel", -- client -> server: flex what's in your hand; server -> clients near: someone flexed
+	"LightsOut", -- Lights Out on the dance floor: client -> server (join, leave, shove, open now); server -> client (the show)
 }
 
 Remotes.Functions = {

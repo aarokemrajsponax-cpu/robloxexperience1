@@ -321,19 +321,21 @@ Gala.ARENA_COINS = 14
 Gala.TRACK_SECONDS = 150 -- each record plays this long, then the most-voted goes on
 
 Gala.REWARDS = {
-	dailyGilt = 2500, -- all the Grand Ballroom's Gilt a guest can earn in a day
-	danceMinute = 8, -- a minute on the dance floor
+	-- (Low on the Gilt ladder, as the owner set it: the Grand Ballroom is for fun, its Gilt a
+	-- little thank-you. Sorting and the Grand Prix pay more; the attractions far more.)
+	dailyGilt = 1200, -- all the Grand Ballroom's Gilt a guest can earn in a day
+	danceMinute = 4, -- a minute on the dance floor
 	danceMinutes = 10, -- minutes a day that pay
-	triviaCorrect = 12, -- each right answer
-	triviaWin = 200,
-	runwayWalk = 30,
-	runwayWin = 250,
-	runwayVote = 8,
-	arenaTakePart = 25,
+	triviaCorrect = 6, -- each right answer
+	triviaWin = 90,
+	runwayWalk = 12,
+	runwayWin = 100,
+	runwayVote = 4,
+	arenaTakePart = 12,
 	arenaPoint = 1,
 	arenaPoints = 40, -- most points that pay in one round
-	arenaWin = 200,
-	photoSet = 25, -- the first pose at each set, every day
+	arenaWin = 90,
+	photoSet = 10, -- the first pose at each set, every day
 }
 
 -- A trivia answer's score: right answers only, more for the quicker.

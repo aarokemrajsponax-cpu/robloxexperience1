@@ -373,7 +373,7 @@ do
 	check("the Directory: a card from the server for every attraction", d.ok == true and cards.luxe ~= nil and cards.basement ~= nil and cards.executive ~= nil and cards.gala ~= nil and cards.island ~= nil)
 	check("...the island closed without the Island Key, with what opens it (the rank, both prices)", cards.island.open == false and cards.island.keyRank == "Tycoon" and cards.island.keyRankAt == 100000 and cards.island.keyGilt == 25000 and cards.island.keyGems == 250 and cards.island.rankReady == false, string.format("%s %s %s %s %s %s", tostring(cards.island.open), tostring(cards.island.keyRank), tostring(cards.island.keyRankAt), tostring(cards.island.keyGilt), tostring(cards.island.keyGems), tostring(cards.island.rankReady)))
 	check("...the Executive Suite closed without an invitation, with how one is earned", cards.executive.open == false and cards.executive.invites == 0 and cards.executive.inviteHaul == 8000 and cards.executive.invitePrice == 25000)
-	check("...Steal a Luxe, the Basement and the Grand Ballroom open to everyone, with the figures", cards.luxe.open == true and cards.basement.open == true and cards.basement.stages == 16 and cards.gala.open == true and cards.gala.galaGilt == 2500)
+	check("...Steal a Luxe, the Basement and the Grand Ballroom open to everyone, with the figures", cards.luxe.open == true and cards.basement.open == true and cards.basement.stages == 16 and cards.gala.open == true and cards.gala.galaGilt == 1200)
 	local da = askAs(ada, { op = "directory" })
 	check("...the island open to the guest who holds the key", da.cards.island.open == true)
 	check("...and, standing in the Jet Lounge, the island is the one whose door is here", da.here == "island" and da.inside == nil, da.here)

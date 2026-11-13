@@ -1920,7 +1920,7 @@ do
 	press("Next")
 	advance(6)
 	local _, _, waitState, waitAt = Tour.where()
-	check("the Concierge waits when you fall behind", waitState == "walking" and (waitAt - Vector3.new(9, 3, 12) * GRAND()).Magnitude < 20, waitAt)
+	check("the Concierge waits when you fall behind", waitState == "walking" and (waitAt - Vector3.new(9, 3, 12) * GRAND()).Magnitude < Config.data.Tour.waitBeyond + 4, waitAt)
 	check("on the way: where to, a pin there, and a key to end the tour", textOnScreen("This way, to the Salon") ~= nil and textOnScreen("End the tour") ~= nil and workspace:FindFirstChild("MaisonWaypoint") ~= nil and workspace.MaisonWaypoint.Pin.Label.Text == "The Salon")
 	-- Follow the Concierge to every stop and read every card.
 	local visited = {}
@@ -1965,11 +1965,11 @@ do
 			end
 			placed += 1
 		end
-		if i == 8 then
-			-- Back shows the card before, where you stand.
+		if Voice.Tour[i].title == "The Wardrobe" then
+			-- Back shows the card before, where you stand (the Boutique's, at the same stop).
 			press("Back")
 			advance(0.3)
-			check("Back shows the card before", textOnScreen(Voice.Tour[7].title) ~= nil)
+			check("Back shows the card before", textOnScreen(Voice.Tour[i - 1].title) ~= nil)
 			press("Next")
 			advance(0.3)
 		end
@@ -7233,7 +7233,7 @@ end
 	end
 	advance(2.2)
 	check("...and the gift screen opens by itself", GiftOpening.isOpen() and textOnScreen("Gifts from the North Pole") ~= nil and textOnScreen("3 gifts to open") ~= nil)
-	check("...with what a gift holds, and its odds, written at the foot (and that it's free)", textOnScreen("45–95 Gilt 70%") ~= nil and textOnScreen("500–750 Gilt 2%") ~= nil and textOnScreen("never sold") ~= nil)
+	check("...with what a gift holds, and its odds, written at the foot (and that it's free)", textOnScreen("20–45 Gilt 70%") ~= nil and textOnScreen("500–750 Gilt 2%") ~= nil and textOnScreen("never sold") ~= nil)
 	snapshot("gifts")
 	check("OPEN", press("Open"))
 	advance(2.6)

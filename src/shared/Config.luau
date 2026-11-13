@@ -129,6 +129,34 @@ local defaults = {
 	-- Lights Out in the Ballroom (Appendix H3). Seconds unless noted.
 	Ballroom = {
 		tables = 20,
+		-- Lights Out on the dance floor (Build 81, server/FloorShow): party games inside the ring of
+		-- tables, each guest's lamp lit at a table and put out when they're out. `enabled` false
+		-- brings back the sorting evening (server/BallroomService) instead.
+		floor = {
+			enabled = true,
+			most = 20, -- guests in one show (a lamp each)
+			fill = 6, -- stand-ins make a show at least this many (they never take the pot)
+			countdown = 60, -- seconds from the first guest joining to the start
+			intro = 3, -- seconds a round's name shows before it starts
+			musicMin = 6, -- the Chairs: the music plays between these many seconds...
+			musicMax = 11,
+			scramble = 4.5, -- ...then this long to stand on a seat (one guest a seat)
+			seatRadius = 4.5,
+			seatShare = 0.72, -- seats for this share of the guests (always at least one fewer)
+			lightsWarn = 2, -- Lights Out: the circles show this long, then the dark...
+			lightsDark = 4.5, -- ...this long; outside a circle at the end, you're out
+			circleRadius = 8,
+			circlesPer = 3.5, -- a circle for every this many guests
+			duelAt = 3, -- with this many lamps lit (all real guests), the Spinner's duels
+			ring = 13, -- the duel ring's radius
+			duelSeconds = 15,
+			shoveReach = 9,
+			shoveGap = 0.55, -- seconds between one guest's shoves
+			shovePower = 72,
+			result = 2.5, -- seconds after each round before the next
+			-- The pot (low on the Gilt ladder: a party game): base, more for each real guest, most.
+			pot = { base = 150, perGuest = 60, most = 1500 },
+		},
 		-- The Ballroom keeps hours: it opens for `openSeconds`, and an evening starts `countdown`
 		-- seconds after the first guest sits (others may join until then, never after). If nobody
 		-- sits while it's open, or once an evening ends, it closes for `closedSeconds`. (Open it now:
@@ -337,6 +365,7 @@ local defaults = {
 		attraction = { rate = 12, burst = 24 },
 		attractionFire = { rate = 5, burst = 8 }, -- the sidearm: a few shots a second at most
 		satchel = { rate = 1, burst = 3 }, -- a flex every few seconds (the Satchel waits three anyway)
+		lightsOut = { rate = 6, burst = 10 }, -- Lights Out on the floor: joining, leaving, a shove or two a second
 		auctionAsk = { rate = 3, burst = 8 },
 	},
 
@@ -384,11 +413,13 @@ local defaults = {
 
 	-- The Concierge's walking tour (each guest's own guide, drawn on their screen).
 	Tour = {
-		speed = 19, -- studs a second the Concierge walks (brisk: a guest walks at 24)
-		waitBeyond = 19, -- a guest further behind than this: the Concierge stops and waits
-		resumeWithin = 13, -- and walks on once they're this close
-		arriveWithin = 18, -- at a stop, the card shows once the guest is this close
-		lostBeyond = 110, -- a guest this far away for lostAfter seconds has left the tour
+		-- (Build 81: the house grew and guests walk at 30, so the Concierge walks at 27 and keeps up
+		-- with the guest's own pace, quicker when they're ahead: UI/World/Tour.)
+		speed = 27, -- studs a second the Concierge walks at the least
+		waitBeyond = 26, -- a guest further behind than this: the Concierge stops and waits
+		resumeWithin = 18, -- and walks on once they're this close
+		arriveWithin = 24, -- at a stop, the card shows once the guest is this close
+		lostBeyond = 140, -- a guest this far away for lostAfter seconds has left the tour
 		lostAfter = 40,
 	},
 
@@ -569,8 +600,8 @@ local defaults = {
 		-- costume at every door gives a treat.
 		lane = {
 			origin = { -3000, 0, 0 },
-			gilt = 50, -- each door's treat
-			minuitGilt = 150, -- the great house at the end of the Lane gives more
+			gilt = 25, -- each door's treat
+			minuitGilt = 80, -- the great house at the end of the Lane gives more
 			fullBagGilt = 420, -- every door on the Lane in one round
 			roundMinutes = 20, -- every door opens to a guest again after this long
 			reach = 16, -- studs from a door a guest may knock
@@ -580,8 +611,8 @@ local defaults = {
 		field = {
 			origin = { 3000, 0, 0 },
 			turkeys = 12, -- in the field at once
-			gilt = 45,
-			goldenGilt = 560, -- the golden turkey
+			gilt = 20,
+			goldenGilt = 4000, -- the golden turkey (luck: near the top of the ladder)
 			goldenEvery = 90, -- seconds before a new golden turkey walks out after one is caught
 			-- (Slower than a guest walks, 17, so a turkey can always be run down: they dodge, and tire
 			-- after a sprint. The golden one is quicker: hold Shift to run, 28.)
@@ -620,15 +651,15 @@ local defaults = {
 			-- What a gift holds (the server chooses; the odds are shown when it's opened): weights,
 			-- and the amounts (from, to).
 			odds = { gilt = 70, moreGilt = 28, trove = 2 },
-			gilt = { 45, 95 },
-			moreGilt = { 160, 320 },
+			gilt = { 20, 45 },
+			moreGilt = { 80, 160 },
 			trove = { 500, 750 },
 		},
 		-- The Great Egg Hunt (Easter): painted eggs hidden all over the house.
 		eggs = {
 			count = 30,
-			gilt = 40,
-			goldenGilt = 800, -- the golden egg
+			gilt = 20,
+			goldenGilt = 4000, -- the golden egg (luck: near the top of the ladder)
 			again = 60, -- seconds after the last egg is found before more are hidden
 			reach = 5,
 		},
@@ -774,7 +805,7 @@ local defaults = {
 	-- The Nightly (Appendix H1). Rules by UTC weekday.
 	Nightly = {
 		rounds = 5,
-		gilt = 120,
+		gilt = 150,
 		boardTop = 100,
 		boardHours = 72, -- how long a night's board is kept in memory
 		connectionsChecked = 50,
@@ -887,8 +918,8 @@ local defaults = {
 			origin = { 3000, 0, -3000 },
 			skipGems = 25, -- skipping the first stage, for Gems (a skipped run is never timed for the boards)
 			skipGemsStep = 15, -- ...and this much more for each stage deeper (stage 15: 235)
-			chestGilt = 400, -- the Treasury's chest, the first clear of the day
-			chestGiltAgain = 120, -- and each clear after it that day
+			chestGilt = 800, -- the Treasury's chest, the first clear of the day
+			chestGiltAgain = 250, -- and each clear after it that day
 			quick = 240, -- seconds: the Under Four Minutes badge
 			heraldUnder = 180, -- a record under three minutes is told to the house
 			fallGrace = 1.5, -- seconds back at a checkpoint before anything can send you back again
@@ -903,7 +934,7 @@ local defaults = {
 			invitePrice = 25000, -- an invitation for Gilt, at the Quartermaster's desk
 			inviteHaul = 8000, -- a haul banked in Steal a Luxe worth this much brings an invitation
 			prize = 25000, -- beating the Executive: to the Estate of everyone in the Office
-			prizeGilt = 600, -- and this much Gilt to each of them
+			prizeGilt = 1500, -- and this much Gilt to each of them
 			-- Build 78: his wind-ups (seconds of warning before each attack: calm, at half his
 			-- composure, and in his finale), when the finale comes, his dash, and the extraction.
 			windup = 1.1,
@@ -966,9 +997,15 @@ local defaults = {
 	},
 
 	Gilt = {
+		-- The Gilt ladder (Build 81), lowest to highest: quick pickups (Admin Abuse's coins, tiles
+		-- and gifts, the holidays' finds); the Grand Ballroom's games; sorting and the Grand Prix;
+		-- Steal a Luxe and the Maison Basement; the Executive Suite; and, above them all, luck and
+		-- great feats: a Legendary, Mythic or Secret find, a holiday's golden prize. Quests pay by
+		-- how hard they are (Commissions). The day's soft cap sits high enough that the ladder holds
+		-- through a good evening's play.
 		runDivisor = 40,
 		runMax = 400,
-		dailySoftCap = 2500,
+		dailySoftCap = 12000,
 		softCapRate = 0.25,
 		goldKeyBonus = 0.2, -- the Gold Key: +20% on all Gilt
 		-- Every Boutique piece on the shelves can also be bought with Gilt: this many Gilt for
@@ -1037,12 +1074,12 @@ local defaults = {
 		-- The holidays' hunts: how many pickups, the Gilt each, the curio for finding any (once per
 		-- hunt), and the one golden prize. `moves`: they run (the Turkey Trot).
 		hunts = {
-			halloween = { glyph = "🎃", count = 24, gilt = 30, curio = "jackOLantern", jackpot = "goldenPumpkin", jackpotGilt = 600 },
-			thanksgiving = { glyph = "🦃", count = 14, gilt = 45, curio = "goldenWishbone", jackpot = "goldenTurkey", jackpotGilt = 600, moves = true },
-			christmas = { glyph = "🎁", count = 26, gilt = 30, curio = "housePresent", jackpot = "goldenBell", jackpotGilt = 600 },
-			valentine = { glyph = "💌", count = 22, gilt = 30, curio = "redRose", jackpot = "heartOfGold", jackpotGilt = 600 },
-			stPatrick = { glyph = "🍀", count = 24, gilt = 30, curio = "fourLeafClover", jackpot = "potOfGold", jackpotGilt = 800 },
-			easter = { glyph = "🥚", count = 26, gilt = 30, curio = "paintedEgg", jackpot = "goldenEgg", jackpotGilt = 800 },
+			halloween = { glyph = "🎃", count = 24, gilt = 15, curio = "jackOLantern", jackpot = "goldenPumpkin", jackpotGilt = 4000 },
+			thanksgiving = { glyph = "🦃", count = 14, gilt = 20, curio = "goldenWishbone", jackpot = "goldenTurkey", jackpotGilt = 4000, moves = true },
+			christmas = { glyph = "🎁", count = 26, gilt = 15, curio = "housePresent", jackpot = "goldenBell", jackpotGilt = 4000 },
+			valentine = { glyph = "💌", count = 22, gilt = 15, curio = "redRose", jackpot = "heartOfGold", jackpotGilt = 4000 },
+			stPatrick = { glyph = "🍀", count = 24, gilt = 15, curio = "fourLeafClover", jackpot = "potOfGold", jackpotGilt = 4000 },
+			easter = { glyph = "🥚", count = 26, gilt = 15, curio = "paintedEgg", jackpot = "goldenEgg", jackpotGilt = 4000 },
 		},
 		turkeySpeed = 11, -- studs a second a turkey runs from a guest who comes near
 		newYearGilt = 200, -- every guest in the house when the New Year arrives
@@ -1078,7 +1115,7 @@ local defaults = {
 		-- Gilt, multiplied like all Gilt), and Mega Abuse makes all Gilt triple.
 		table = {
 			golden = { abuse = 2, mega = 3, effect = 1 }, -- golden pieces in each deal
-			goldenGilt = 40, -- what one pays (before Gilt's multipliers)
+			goldenGilt = 20, -- what one pays (before Gilt's multipliers)
 			megaGilt = 3, -- all Gilt during Mega Abuse (Admin Abuse's Golden Hour doubles it)
 		},
 		-- Servers that open while something is on everywhere join in: they look this often (s).
@@ -1096,15 +1133,15 @@ local defaults = {
 			tileFirst = 20,
 			tileEvery = { abuse = 40, mega = 25 },
 			tileWindow = 8,
-			tileGilt = 60,
+			tileGilt = 30,
 			pinataFirst = 50,
 			pinataEvery = { abuse = 150, mega = 90 },
 			pinataSeconds = 70,
 			hits = { base = 24, perGuest = 8, most = 200 },
 			hitRate = 6,
 			reach = 24,
-			pinataGilt = 120,
-			pinataFinal = 80,
+			pinataGilt = 60,
+			pinataFinal = 40,
 		},
 		-- Admin Abuse as a show (server/AbuseShow, World/AbuseShow, World/OwnerCameo).
 		show = {
@@ -1120,9 +1157,9 @@ local defaults = {
 			-- night gives the Admin's Crown (once ever), or `crownBonus` Gilt to one who has it.
 			giftEvery = { abuse = 75, mega = 45 },
 			giftWindow = 25,
-			giftGilt = 40,
+			giftGilt = 20,
 			crownAfter = 3,
-			crownBonus = 150,
+			crownBonus = 75,
 			-- The realms (World/AbuseShow draws them): every night has its own (shared/AbuseNights);
 			-- Mega Abuse goes on from it through these, in an order of the night's own, each for
 			-- about `realmSeconds` (less on a wild night, more on a calm one). `abuseRealm`: the
@@ -1151,12 +1188,12 @@ local defaults = {
 		quickstepSpeed = 1.5,
 		featherGravity = 70,
 		coins = 30, -- gold coins per Gold Rain
-		coinGilt = 25,
+		coinGilt = 10,
 		coinSeconds = 90, -- how long the coins lie there
 		keys = 5, -- golden keys per Treasure Hunt
-		keyGilt = 250,
+		keyGilt = 120,
 		memes = 18, -- meme curios loose in the house during the Brainrot Parade
-		memeGilt = 40,
+		memeGilt = 15,
 		curioHourFind = 2, -- the Night of Curios: how much likelier a find is (never above 0.95)
 		giftGilt = { 100, 500, 1000 }, -- what the owner can give
 		giftGems = { 10, 50, 250 }, -- and in Gems (to a guest, or to themselves to try the Gem Shop)
