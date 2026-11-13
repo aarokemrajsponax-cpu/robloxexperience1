@@ -368,7 +368,8 @@ start("Curios", function()
 		return TableClient.isSeated() or Root.isOpen()
 	end
 	QuickDock.isSorting = function(): boolean
-		return TableClient.isSeated() or SortScreen.isOpen()
+		-- (Away under the Home Screen too: it has the guest's keys of its own.)
+		return TableClient.isSeated() or SortScreen.isOpen() or Title.isShowing()
 	end
 	QuickDock.start()
 	-- The key to watch a fireworks show stands at the foot of the dock, under Invite.
@@ -809,6 +810,10 @@ local function onPlay(fromTitle: boolean?)
 	-- (Each step on its own: one that fails is named in the Output and the rest still happen, so
 	-- a guest is never left without their keys, their Gilt or their camera.)
 	start("Hiding the title", Title.hide)
+	-- (The dock comes back now the Home Screen has gone.)
+	pcall(function()
+		require(script.Parent.UI.QuickDock).setSeated(TableClient.isSeated())
+	end)
 	pcall(State.funnel, 2)
 	waitForCharacter()
 	start("The camera", function()
@@ -1151,20 +1156,15 @@ elseif not Config.data.Title.show then
 	State.setPhase("play")
 	task.spawn(onPlay, false)
 else
-	-- The composed title screen over the street (Config.Title.show).
+	-- The Home Screen (Config.Title.show): WELCOME TO MAISON NOIR over a slow walk through the
+	-- house, the guest's Gilt, Gems and level, and Play (into the Foyer, by the Concierge), the Shop,
+	-- How to play and the Leaderboard. It comes up at once (the guest's figures fill in as they
+	-- arrive), and while it's up the Foyer is sent ahead, lamps and all.
 	setControls(false)
-	State.setPhase("intro")
-	CameraRig.titleDrift()
+	-- (The intro's cover comes down: the Home Screen is the first thing seen.)
+	pcall(Intro.clear)
+	pcall(State.funnel, 1)
 	guardTitleCamera()
-	local okIntro = pcall(function()
-		Intro.play(function()
-			State.funnel(1)
-		end)
-	end)
-	if not okIntro then
-		warn("[Maison] The intro failed; going straight to the title.")
-	end
-	State.waitForWelcome(12)
 	if not playing then
 		State.setPhase("title")
 		local okTitle, err = pcall(function()
@@ -1174,6 +1174,7 @@ else
 				end,
 				how = HowToPlay.open,
 				board = BoardPanel.open,
+				shop = BoutiquePanel.open,
 			})
 		end)
 		if okTitle then

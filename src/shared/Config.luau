@@ -1189,13 +1189,14 @@ local defaults = {
 
 	-- Testing in Studio (never affects the live game).
 	Studio = {
-		skipTitle = true, -- Play in Studio drops you straight into your own character
+		skipTitle = false, -- true: Play in Studio skips the Home Screen, straight into your own character
 	},
 
-	-- The composed title screen over the street (§15). Off: every guest is their own character
+	-- The Home Screen (Build 80): WELCOME TO MAISON NOIR over a walk through the house, with Play,
+	-- the Shop, How to play and the guest's Gilt and Gems. Off: every guest is their own character
 	-- from the first second, and the intro plays over the live house (any key skips it).
 	Title = {
-		show = false,
+		show = true, -- the Home Screen on joining (UI/Title): Play, the Shop, How to play, Gilt and Gems
 	},
 
 	Movement = {

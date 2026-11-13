@@ -139,6 +139,19 @@ function CameraRig.titleDrift()
 	t:Play()
 end
 
+-- The Home Screen's walk through the house: one composed shot at a time, the camera sliding slowly
+-- from `from` to `to`. Anything that takes the camera after it (Play's handoff above all) stops it.
+function CameraRig.tour(from: CFrame, to: CFrame, seconds: number)
+	stopTweens()
+	local c = cam()
+	c.CameraType = Enum.CameraType.Scriptable
+	c.FieldOfView = 62
+	c.CFrame = from
+	local t = TweenService:Create(c, TweenInfo.new(seconds, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { CFrame = to })
+	driftTween = t
+	t:Play()
+end
+
 local function behindAvatar(): CFrame?
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")

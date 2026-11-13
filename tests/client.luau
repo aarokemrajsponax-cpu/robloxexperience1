@@ -1500,6 +1500,49 @@ check("the title shows Play", textOnScreen("Play") ~= nil)
 check("on the title, W/A/S/D count as Play (nobody is left watching)", actions.MaisonWalkToPlay ~= nil)
 check("no errors through the intro and title", #errors == 0, errors[1])
 
+-- The Home Screen (Build 80): WELCOME TO MAISON NOIR over a walk through the house, the guest's own
+-- figures, and the keys.
+do
+	local TitleM = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "Title")
+	local RootH = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "Root")
+	LocalPlayer:SetAttribute("Gilt", 40350)
+	LocalPlayer:SetAttribute("Gems", 120)
+	LocalPlayer:SetAttribute("Level", 24)
+	for _, a in { "Gilt", "Gems", "Level" } do
+		signalOf(LocalPlayer, "attr:" .. a):Fire()
+	end
+	advance(0.3)
+	check("the Home Screen: WELCOME TO MAISON NOIR", TitleM.isShowing() and textOnScreen("Welcome to") ~= nil and textOnScreen("Maison Noir") ~= nil)
+	check("...the guest's own Gilt, Gems and level, live", textOnScreen("40,350") ~= nil and textOnScreen("120") ~= nil and textOnScreen("LV 24") ~= nil)
+	local function key(text)
+		return find(playerGui, function(d)
+			return d:IsA("TextButton") and norm(d.Text) == norm(text)
+		end)
+	end
+	check("...Play, the Shop, How to play and the Leaderboard", key("Play") ~= nil and key("Shop") ~= nil and key("How to play") ~= nil and key("Leaderboard") ~= nil)
+	local names = {}
+	for _, shot in TitleM.shots() do
+		names[shot.name] = true
+	end
+	local function showing(): string?
+		local room = find(playerGui, function(d)
+			return d:IsA("TextLabel") and d.Name == "Room" and d.Parent and d.Parent.Name == "NowShowing"
+		end)
+		return room and room.Text or nil
+	end
+	local first = showing()
+	check("...and the room the camera is showing, named", first ~= nil and names[first] == true, first)
+	check("...the camera itself in the house (its own shot, not the guest's)", camera.CameraType == roblox.Enum.CameraType.Scriptable)
+	snapshot("home")
+	advance(10)
+	local second = showing()
+	check("...and walking on through the house, room by room", second ~= nil and second ~= first and names[second] == true, first, second)
+	check("the Shop opens over the Home Screen", press("Shop") and (advance(1) or true) and RootH.isOpen("Boutique"))
+	RootH.close()
+	advance(0.8)
+	check("...and closes back to it", TitleM.isShowing() and not RootH.isOpen())
+end
+
 ---------------------------------------------------------------------------------------------------
 -- 2. Play: the camera hands over and the guest can walk
 ---------------------------------------------------------------------------------------------------

@@ -57,6 +57,85 @@ export type Options = {
 	polishLater: boolean?,
 }
 
+-- The house's lamps arrive with the house. The world streams in by distance, so on a guest's
+-- first seconds a room's far lamps could arrive after its walls (a dark room that lights up a few
+-- seconds later). Each lamp's own fixture (a chandelier, a sconce, a standard lamp: a model no
+-- more than FIXTURE_MOST studs across) is sent to every guest the moment they join and never
+-- streamed away. Returns how many lamps that covers, and how many there are.
+local FIXTURE_MOST = 40
+function Build.persistLamps(root: Instance): (number, number)
+	local judged: { [Model]: boolean } = {}
+	local covered, lamps = 0, 0
+	for _, d in root:GetDescendants() do
+		if d:IsA("Light") then
+			lamps += 1
+			local model = d:FindFirstAncestorWhichIsA("Model")
+			if model and model ~= root then
+				local keep = judged[model]
+				if keep == nil then
+					local lo, hi = nil :: Vector3?, nil :: Vector3?
+					for _, p in model:GetDescendants() do
+						if p:IsA("BasePart") then
+							local ok, at, size = pcall(function()
+								return p.CFrame.Position, p.Size
+							end)
+							if ok then
+								local half = (size :: Vector3) / 2
+								local a, b = (at :: Vector3) - half, (at :: Vector3) + half
+								lo = if lo then lo:Min(a) else a
+								hi = if hi then hi:Max(b) else b
+							end
+						end
+					end
+					local span = if lo and hi then hi - lo else Vector3.zero
+					keep = math.max(span.X, span.Z) <= FIXTURE_MOST
+					judged[model] = keep
+					if keep then
+						pcall(function()
+							model.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
+						end)
+					end
+				end
+				if keep then
+					covered += 1
+					continue
+				end
+			end
+			-- A lamp built into the room itself: its light moves onto an unseen copy of its lamp (the
+			-- same name, place and size), in a small kept model in the same room, so it's still the
+			-- room's own (the disco finds it, the season tints it) and the lamp itself is untouched.
+			local part = d.Parent
+			local room = d:FindFirstAncestorWhichIsA("Model") or (part and part.Parent)
+			if part and part:IsA("BasePart") and room then
+				local holder = room:FindFirstChild("Lamplight")
+				if not (holder and holder:IsA("Model")) then
+					local m = Instance.new("Model")
+					m.Name = "Lamplight"
+					pcall(function()
+						m.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
+					end)
+					m.Parent = room
+					holder = m
+				end
+				local carrier = Instance.new("Part")
+				carrier.Name = part.Name
+				carrier.Anchored = true
+				carrier.CanCollide = false
+				carrier.CanQuery = false
+				carrier.CanTouch = false
+				carrier.CastShadow = false
+				carrier.Transparency = 1
+				carrier.Size = part.Size
+				carrier.CFrame = part.CFrame
+				carrier.Parent = holder
+				d.Parent = carrier
+				covered += 1
+			end
+		end
+	end
+	return covered, lamps
+end
+
 function Build.run(options: Options?): Folder
 	local existing = Workspace:FindFirstChild("Maison")
 	if existing then
@@ -103,6 +182,9 @@ function Build.run(options: Options?): Folder
 	step("the attractions' rooms", function() Lobbies.build(root) end)
 	-- The Grand Prix's circuit, on the street (laid at the grown size).
 	step("the Grand Prix circuit", function() Circuit.build(root) end)
+	step("the lamps, kept on every screen", function()
+		Build.persistLamps(root)
+	end)
 	-- Surfaces laid flush in one plane flicker as the camera moves: lift each clear.
 	local function polish()
 		step("the flicker fix", function() Flush.settle(root) end)

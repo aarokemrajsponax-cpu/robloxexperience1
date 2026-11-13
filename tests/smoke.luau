@@ -360,6 +360,37 @@ print(("built: %d parts, %d lights, %d surface guis"):format(parts, lights, guis
 -- in, not the whole house. Its lamps cast no shadows but a few.
 check("part budget (under 9,000)", parts < 9000, parts)
 do
+	-- The lamps arrive with the house: each lamp's own fixture is sent to every guest on joining
+	-- and never streamed away (World/Build.persistLamps), so no room waits dark for its lamps.
+	local kept, all = 0, 0
+	for _, d in maison:GetDescendants() do
+		if d:IsA("Light") then
+			all += 1
+			local m = d:FindFirstAncestorWhichIsA("Model")
+			if m and m.ModelStreamingMode == roblox.Enum.ModelStreamingMode.Persistent then
+				kept += 1
+			end
+		end
+	end
+	print(("lamps kept on every screen: %d of %d"):format(kept, all))
+	if process.env.LAMPDEBUG then
+		local seen = {}
+		for _, d in maison:GetDescendants() do
+			if d:IsA("Light") then
+				local m = d:FindFirstAncestorWhichIsA("Model")
+				if not (m and m.ModelStreamingMode == roblox.Enum.ModelStreamingMode.Persistent) then
+					local key = (if m then m:GetFullName() else "(no model)") .. " <- " .. d.Parent.Name .. (if d.Enabled then "" else " [off]")
+					seen[key] = (seen[key] or 0) + 1
+				end
+			end
+		end
+		for k, n in seen do
+			print("UNKEPT", n, k)
+		end
+	end
+	check("the lamps arrive with the house: every one kept on every screen from the first second", kept > 0 and kept == all, kept, all)
+end
+do
 	-- Places to sit in the public rooms: each with a Sit prompt, and each spot facing level.
 	local spots, prompts, tilted = 0, 0, 0
 	for _, d in maison:GetDescendants() do
