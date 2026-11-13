@@ -147,15 +147,17 @@ local function maker(body: GuiObject, w: number)
 			itemName = tostring(it.name)
 		end
 	end
-	local cols = if w >= 520 then 3 else 2
+	-- (A narrow card, or a phone's small screen where the lettering is larger for its size: two
+	-- to a row, and taller, so a long name's lines sit clear of the line under it.)
+	local tight = w < 520 or Root.scale < 0.8
+	local cols = if tight then 2 else 3
 	heading(body, "1  ·  What you're flexing (only what's yours)", 1)
 	local list = {}
 	for _, it in items do
 		local kind = Plan.KindNames[tostring(it.kind)] or ""
 		table.insert(list, { id = tostring(it.key), glyph = tostring(it.glyph or "✨"), name = tostring(it.name), small = string.upper(if it.rarity then tostring(it.rarity) else kind), colour = rarityColour(it.rarity) })
 	end
-	-- (Narrow cards: a taller tile, so a long name's two lines sit clear of the line under it.)
-	tiles(body, 2, cols, if w < 520 then 74 else 60, list, view.item, function(id: string)
+	tiles(body, 2, cols, if tight then 74 else 60, list, view.item, function(id: string)
 		view.item = id
 		if refresh then
 			refresh()
