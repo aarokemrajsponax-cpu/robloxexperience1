@@ -839,19 +839,39 @@ function Executive.enter(ctx: Types.Ctx, player: Player): (CFrame?, string?)
 	end)
 	ctx.tally(player, "executiveVisits", 1)
 	note(player, "Executive entered", { invites = p.invites })
+	Executive.carriedChanged(player)
 	return CFrame.new(Plan.Arrival), nil
 end
 
 function Executive.leave(ctx: Types.Ctx, player: Player, why: string)
-	if guests[player] then
+	local was = guests[player] ~= nil
+	if was then
 		note(player, "Executive left", { phase = run.phase, why = why })
 	end
 	guests[player] = nil
+	if was then
+		Executive.carriedChanged(player)
+	end
 	-- The Suite empty: a new run for whoever comes up next.
 	if next(guests) == nil then
 		fresh(ctx)
 	end
 end
+
+-- What the guest carries from here, for their inventory (server/Satchel): the sidearm once it's
+-- taken, and a decoy while one is packed or carried in this run and not yet thrown.
+function Executive.carried(ctx: Types.Ctx, player: Player): { sidearm: boolean, decoy: boolean }
+	local data = ctx.data(player)
+	if not data then
+		return { sidearm = false, decoy = false }
+	end
+	local p = page(ctx, data)
+	local g = guests[player]
+	local decoy = p.kit.decoy == true or (g ~= nil and g.gear.decoy == true and not g.decoyUsed)
+	return { sidearm = p.sidearm == true, decoy = decoy }
+end
+-- Told whenever that changes (set at boot: the Satchel repacks).
+Executive.carriedChanged = function(_player: Player) end
 
 function Executive.step(ctx: Types.Ctx, dt: number)
 	if not built then
@@ -905,6 +925,7 @@ function Executive.ask(ctx: Types.Ctx, player: Player, r: { [string]: unknown })
 	local act = r.act
 	if act == "sidearm" then
 		p.sidearm = true
+		Executive.carriedChanged(player)
 		return { ok = true, state = Executive.state(ctx, player) }
 	elseif act == "gear" then
 		local id = r.what
@@ -919,6 +940,7 @@ function Executive.ask(ctx: Types.Ctx, player: Player, r: { [string]: unknown })
 			return { ok = false, why = string.format("That's %s Gilt.", Fortune.format(g.price)) }
 		end
 		p.kit[g.id] = true
+		Executive.carriedChanged(player)
 		return { ok = true, state = Executive.state(ctx, player) }
 	elseif act == "invite" then
 		local most = tonumber(c.maxInvites) or 5
@@ -989,6 +1011,7 @@ function Executive.ask(ctx: Types.Ctx, player: Player, r: { [string]: unknown })
 			return { ok = false, why = "A decoy works in the hallway." }
 		end
 		g.decoyUsed = true
+		Executive.carriedChanged(player)
 		run.decoyUntil = Executive.clock() + (tonumber(c.decoySeconds) or 8)
 		run.decoyAt = origin + at
 		broadcast(ctx, { op = "decoy", at = origin + at, seconds = tonumber(c.decoySeconds) or 8 })

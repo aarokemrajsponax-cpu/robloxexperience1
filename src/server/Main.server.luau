@@ -792,6 +792,10 @@ do
 		if data then
 			player:SetAttribute("Gems", data.gems)
 		end
+		require(script.Parent.Satchel).refresh(player)
+	end
+	CuriosService.favChanged = function(player)
+		require(script.Parent.Satchel).refresh(player)
 	end
 end
 CuriosService.secret = function(player)
@@ -905,6 +909,14 @@ boot("The Empire", function()
 	Island.liveryOnSale = Purchases.JetLivery.onSale
 	Island.offerLivery = Purchases.JetLivery.offer
 	Island.ownedChanged = Shop.push
+	-- The Satchel: the sidearm, a decoy, the squad and starred curios as items in the hotbar.
+	local Satchel = require(script.Parent.Satchel)
+	local Executive = require(script.Parent.Attractions.Executive)
+	Satchel.carried = function(player: Player)
+		return Executive.carried(Empire.Attractions.ctx, player)
+	end
+	Executive.carriedChanged = Satchel.refresh
+	Satchel.start()
 end)
 
 -- The Grand Auction, in the Library: the week's lots, bid for in every server at once.

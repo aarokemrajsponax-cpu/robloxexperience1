@@ -43,6 +43,8 @@ Curios.squadState = function(_data: Profiles.Data): { [string]: any }?
 end
 Curios.changing = function(_data: Profiles.Data) end
 Curios.arrived = function(_player: Player?, _data: Profiles.Data, _id: string) end
+-- A curio starred or unstarred (set at boot: the Satchel repacks).
+Curios.favChanged = function(_player: Player) end
 Curios.mutate = function(_data: Profiles.Data, _id: string, _x: number): string?
 	return nil
 end
@@ -346,6 +348,7 @@ local function onAsk(player: Player, request: unknown): any
 		end
 		local favs = bag(data).favs :: { [string]: boolean? }
 		favs[id] = if r.on == true then true else nil
+		Curios.favChanged(player)
 		return { ok = true }
 	elseif r.op == "buy" then
 		local id = RemoteGuard.string(r.id, 40)

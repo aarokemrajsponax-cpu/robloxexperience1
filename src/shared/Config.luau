@@ -336,6 +336,7 @@ local defaults = {
 		attractionAsk = { rate = 8, burst = 16 }, -- a pickup, a checkpoint, a shot: quick, never a flood
 		attraction = { rate = 12, burst = 24 },
 		attractionFire = { rate = 5, burst = 8 }, -- the sidearm: a few shots a second at most
+		satchel = { rate = 1, burst = 3 }, -- a flex every few seconds (the Satchel waits three anyway)
 		auctionAsk = { rate = 3, burst = 8 },
 	},
 

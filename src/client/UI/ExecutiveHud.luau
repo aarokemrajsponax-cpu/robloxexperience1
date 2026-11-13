@@ -68,6 +68,21 @@ local function fighting(): boolean
 	local p = view.phase
 	return p == "shield" or p == "detail" or p == "boss"
 end
+ExecutiveHud.fighting = fighting
+
+-- The stun pistol from the guest's inventory (the Satchel), if it's in their hand.
+local function pistolInHand(): Tool?
+	local character = Players.LocalPlayer.Character
+	if not character then
+		return nil
+	end
+	for _, t in character:GetChildren() do
+		if t:IsA("Tool") and t:GetAttribute("SatchelId") == "sidearm" then
+			return t
+		end
+	end
+	return nil
+end
 
 local function label(parent: Instance, name: string, text: string, size: number, font: Font, colour: Color3, y: number, align: Enum.TextXAlignment?): TextLabel
 	local l = Instance.new("TextLabel")
@@ -225,7 +240,37 @@ local function shoot(direction: Vector3)
 end
 ExecutiveHud.shoot = shoot
 
-local function aimFromScreen(position: Vector2?): Vector3
+local aimFromScreen: (position: Vector2?) -> Vector3
+
+-- The pistol used from the hotbar: aimed at the mouse (or the middle of a touch screen). False
+-- when there's no fight to fire in.
+function ExecutiveHud.fireFromTool(): boolean
+	if not fighting() then
+		return false
+	end
+	local at: Vector2? = nil
+	if UserInputService.MouseEnabled and not UserInputService.TouchEnabled then
+		local ok, m = pcall(function()
+			return UserInputService:GetMouseLocation()
+		end)
+		at = if ok and typeof(m) == "Vector2" then m else nil
+	end
+	shoot(aimFromScreen(at))
+	return true
+end
+
+-- The decoy, thrown (the HUD's key and the hotbar's Decoy both come here).
+local function throwDecoy()
+	task.spawn(function()
+		local r = ask({ op = "act", id = "executive", act = "decoy" })
+		if r and r.ok ~= true and type(r.why) == "string" then
+			Toast.show("The decoy", r.why, 3)
+		end
+	end)
+end
+ExecutiveHud.throwDecoy = throwDecoy
+
+function aimFromScreen(position: Vector2?): Vector3
 	local ok, direction = pcall(function()
 		local camera = Workspace.CurrentCamera :: Camera
 		local at = position or (camera.ViewportSize / 2)
@@ -577,14 +622,7 @@ function ExecutiveHud.mount()
 			end
 		end)
 	end, 120)
-	parts.decoyKey = Theme.key(k, "Decoy", false, function()
-		task.spawn(function()
-			local r = ask({ op = "act", id = "executive", act = "decoy" })
-			if r and r.ok ~= true and type(r.why) == "string" then
-				Toast.show("The decoy", r.why, 3)
-			end
-		end)
-	end, 120)
+	parts.decoyKey = Theme.key(k, "Decoy", false, throwDecoy, 120)
 	parts.fireKey = Theme.key(k, "Fire", true, function()
 		shoot(aimFromScreen(nil))
 	end, 120)
@@ -612,7 +650,8 @@ function ExecutiveHud.mount()
 		if gameProcessed or not fighting() then
 			return
 		end
-		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		-- (With the pistol in hand, the click is the pistol's own: it fires once, from there.)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 and not pistolInHand() then
 			shoot(aimFromScreen(Vector2.new(input.Position.X, input.Position.Y)))
 		end
 	end))
@@ -734,8 +773,26 @@ end
 function ExecutiveHud.on(m: { [string]: any })
 	local op = m.op
 	if op == "executive" then
+		local before = fighting()
 		view = m
 		draw()
+		-- The fight starts: the stun pistol comes out of the inventory, into the guest's hand.
+		if fighting() and not before and not pistolInHand() then
+			pcall(function()
+				local player = Players.LocalPlayer
+				local backpack = player:FindFirstChildOfClass("Backpack")
+				local character = player.Character
+				local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+				if backpack and humanoid then
+					for _, t in backpack:GetChildren() do
+						if t:IsA("Tool") and t:GetAttribute("SatchelId") == "sidearm" then
+							humanoid:EquipTool(t)
+							break
+						end
+					end
+				end
+			end)
+		end
 	elseif op == "digit" then
 		local n = tonumber(m.n) or 0
 		local slot = (parts.slots or {})[n] :: TextLabel?
