@@ -1429,9 +1429,10 @@ local defaults = {
 		-- Music, uploaded by APMOfficial, free in any experience), so the house has music the moment
 		-- it opens, with nothing to upload. Each list plays through in a shuffled order, a breath
 		-- between songs; `gain` evens out their loudness (measured, to about -19 dBFS).
-		--   lounge: the Foyer's grand piano (solo piano), the Suite, the Vault, the Terrace
-		--   table: the four sorting rooms and the Library (a cool-jazz trio)
-		--   ballroom: the band (waltzes)
+		--   lounge: the Foyer's grand piano (solo piano): the lobby, and only the lobby
+		--   table: the sorting rooms and the Library (focused lo-fi and downtempo beats)
+		--   ballroom: the Ballroom's Lights Out evenings (trap, bass house, future bass)
+		--   street: every lounge elsewhere, the street and Luxury Island (lo-fi, trip hop, downtempo)
 		Playlists = {
 			-- The attractions' own (Build 78; each mood is described just above AbuseMusic, below).
 			luxe = {
@@ -1466,22 +1467,42 @@ local defaults = {
 				{ id = "rbxassetid://76320727965632", gain = 1.40 }, -- Blues Impromptu · Alan Hawkshaw (Cocktail Time (BRS4)), 3:35
 				{ id = "rbxassetid://1842182242", gain = 1.55 }, -- Piano Bar Rendezvous · KPM - FTV Media (Piano Solos), 1:46
 			},
+			-- Build 80: piano is the Foyer's alone. The rest of the house plays street luxury, from the
+			-- same licensed library (APM Music; every id checked: APMOfficial, music, no piano in its
+			-- title, tags or notes), each evened to the house's level (`gain`, measured).
+			-- The tables and the Library: focused, unhurried beats to sort and duel to.
 			table = {
-				{ id = "rbxassetid://121473037535720", gain = 0.90 }, -- After Hours · Paul Reeves (Intimate Jazz Trio), 2:34
-				{ id = "rbxassetid://134449348223060", gain = 0.89 }, -- Dawn Light · Paul Reeves (Intimate Jazz Trio), 2:49
-				{ id = "rbxassetid://127701743196315", gain = 1.06 }, -- Lonely Streets · Paul Reeves (Intimate Jazz Trio), 2:45
-				{ id = "rbxassetid://113393753471077", gain = 0.92 }, -- Afternoon Stroll · Paul Reeves (Intimate Jazz Trio), 2:16
-				{ id = "rbxassetid://138206443676469", gain = 0.84 }, -- Breezing On By · Paul Reeves (Intimate Jazz Trio), 2:00
-				{ id = "rbxassetid://97047565303583", gain = 0.84 }, -- Metropolitan Motion · Paul Reeves (Intimate Jazz Trio), 2:23
-				{ id = "rbxassetid://127688638898929", gain = 0.74 }, -- Golden Hour · Paul Reeves (Intimate Jazz Trio), 3:06
+				{ id = "rbxassetid://9044976005", gain = 0.97 }, -- Smooth and Open (underscore) · Red Line (Chill Hop), 1:57
+				{ id = "rbxassetid://9044975007", gain = 1.04 }, -- Get Your Thoughts Right · Red Line (Chill Hop), 1:46
+				{ id = "rbxassetid://9043887612", gain = 0.72 }, -- In Paradise C · Hip Hop Shop (CHILL HOP VIBES), 2:16
+				{ id = "rbxassetid://9043887865", gain = 1.22 }, -- Coy C · Hip Hop Shop (CHILL HOP VIBES), 2:30
+				{ id = "rbxassetid://1837091288", gain = 0.79 }, -- Tailspin · Bibliotheque (DOWNTEMPO BEATS), 2:19
+				{ id = "rbxassetid://1842668036", gain = 0.62 }, -- Nostalgic · Hans Hummer (URBAN GROOVES), 2:18
+				{ id = "rbxassetid://1842696910", gain = 0.57 }, -- Snowglide · Hans Hummer (URBAN GROOVES), 2:42
+				{ id = "rbxassetid://9048155463", gain = 0.98 }, -- Casting Shadows (c) · River Police (Downtempo), 2:33
 			},
+			-- The Ballroom's Lights Out evenings: trap, bass house and future bass, with some weight.
 			ballroom = {
-				{ id = "rbxassetid://1839551469", gain = 0.87 }, -- Vienna Waltz · Johann Strauss I (1800'S SALON PIANO), 2:04
-				{ id = "rbxassetid://1845480542", gain = 0.72 }, -- Ballroom Waltz · Isy Geiger (ALPINE HOLIDAY), 3:02
-				{ id = "rbxassetid://9047452775", gain = 1.05 }, -- Ballroom Waltz · Marvin McMahon (Wonderland), 2:07
-				{ id = "rbxassetid://1839551405", gain = 0.94 }, -- Beauty Waltz · Peter Tchaikovsky (1800'S SALON PIANO), 1:35
-				{ id = "rbxassetid://1838535855", gain = 0.98 }, -- Waltz Of The Flowers · Peter Tchaikovsky (POPULAR CLASSICS), 4:11
-				{ id = "rbxassetid://1842365951", gain = 1.00 }, -- Skater's Waltz · KPM 1000 LP Series (FUN TIME), 4:29
+				{ id = "rbxassetid://1842661606", gain = 0.67 }, -- Late Night Pipe · Hamilton Birch (TRAP BEATS), 2:32
+				{ id = "rbxassetid://1842661542", gain = 0.51 }, -- Rollin Hard · Hamilton Birch (TRAP BEATS), 2:35
+				{ id = "rbxassetid://9045801272", gain = 0.97 }, -- Swagger Ting (a) · KPM Main Series (Cool and Quirky Horns and Beats), 2:04
+				{ id = "rbxassetid://1842062821", gain = 0.54 }, -- Lets Go (a) · Glenn Herweijer (FUTURE BASS), 2:38
+				{ id = "rbxassetid://1842046618", gain = 0.78 }, -- After Party (b) · Glenn Herweijer (FUTURE BASS), 2:33
+				{ id = "rbxassetid://1837681287", gain = 0.60 }, -- Untouchable · Richard Brown (FASHION FUNK 3), 3:10
+				{ id = "rbxassetid://9043997901", gain = 0.58 }, -- High-end Lifestyle A · Sonoton Vanguard (NU CATWALK FASHION), 2:50
+				{ id = "rbxassetid://1842713154", gain = 0.63 }, -- LDN Street Theme · Alex Christopher Mui Cho Khoo (URBAN GROOVES), 2:45
+			},
+			-- The lounges (the Suite, the Vault, the Terrace, the Boutique, the Club Floor, the street
+			-- outside and Luxury Island): late-night lo-fi, trip hop and chrome-plated downtempo.
+			street = {
+				{ id = "rbxassetid://9040103925", gain = 0.80 }, -- Noir · JW Media Music (Lo-Fi Hip Hop), 2:15
+				{ id = "rbxassetid://9040103736", gain = 0.81 }, -- Cloud 9 · JW Media Music (Lo-Fi Hip Hop), 2:40
+				{ id = "rbxassetid://9044974638", gain = 0.90 }, -- Straight Chill Hopper (underscore) · Red Line (Chill Hop), 2:30
+				{ id = "rbxassetid://9043886697", gain = 0.91 }, -- Bravta A · Hip Hop Shop (CHILL HOP VIBES), 2:10
+				{ id = "rbxassetid://9043888346", gain = 1.06 }, -- Pressure Makes Diamonds A · Hip Hop Shop (CHILL HOP VIBES), 3:20
+				{ id = "rbxassetid://92594538412272", gain = 0.71 }, -- A Chrome Reverie · Leland Jackness (ASTROGROOVES: High-End Downtempo), 3:11
+				{ id = "rbxassetid://9042940674", gain = 0.50 }, -- Neon · Montmorency Records (Fashion & Luxury Pop), 3:00
+				{ id = "rbxassetid://1843564781", gain = 0.64 }, -- DJ Set · Marco Cimino (LUXURY AND CHILL), 3:13
 			},
 		},
 		-- Music for Admin Abuse and the owner's effects (World/AbuseMusic), from the same licensed

@@ -2587,7 +2587,7 @@ do
 	local nextAt = songIndex(velvet.SoundId)
 	check("music: when a song ends, the next in the list follows at its own level", nextAt == at % #tableList + 1 and math.abs(velvet.Volume - roomLevel * tableList[nextAt].gain) < 1e-6, velvet.SoundId)
 	local wellFormed = true
-	for _, track in { "lounge", "table", "ballroom" } do
+	for _, track in { "lounge", "table", "ballroom", "street" } do
 		local list = assets.Playlists[track]
 		if #list < 5 then
 			wellFormed = false
@@ -2598,7 +2598,19 @@ do
 			end
 		end
 	end
-	check("music: three playlists of at least five songs, each with its level", wellFormed)
+	check("music: four playlists of at least five songs, each with its level", wellFormed)
+	-- (Build 80: the grand piano is the lobby's alone; every other room plays street luxury.)
+	local pianoLists = {}
+	for _, track in { "table", "ballroom", "street" } do
+		for _, song in assets.Playlists[track] do
+			for _, lounge in assets.Playlists.lounge do
+				if song.id == lounge.id then
+					table.insert(pianoLists, track)
+				end
+			end
+		end
+	end
+	check("music: the lobby's piano plays in the lobby only, never in another room's list", #pianoLists == 0, pianoLists[1])
 	check("and the house knows it has music without a single upload", SoundModule.hasMusic())
 	-- Or found by name, if a playlist is emptied: a track dropped into SoundService, no id copied.
 	assets.Playlists.table = {}

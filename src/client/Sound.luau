@@ -691,25 +691,28 @@ local function asset(tree: string, key: string): string
 	return if type(id) == "string" then id else ""
 end
 
--- The house track a space plays when it has no music of its own. The street, the Club and the
--- Boutique hear the Foyer's piano instead.
+-- The house track a space plays when it has no music of its own. Build 80: the grand piano is the
+-- Foyer's alone; every other lounge (and the street, and the island) plays street luxury.
 local TRACK_FOR: { [string]: string } = {
 	foyer = "lounge",
-	vault = "lounge",
-	suite = "lounge",
-	terrace = "lounge",
+	vault = "street",
+	suite = "street",
+	terrace = "street",
+	street = "street",
+	club = "street",
+	boutique = "street",
 	salon = "table",
 	velvet = "table",
 	obsidian = "table",
 	midnight = "table",
 	library = "table",
 	ballroom = "ballroom",
-	-- The attractions (away from the house), each with a sound of its own (Build 78): the cocktail
-	-- piano on Luxury Island; a tense, stylish heist score in Steal a Luxe (and a harder one when
+	-- The attractions (away from the house), each with a sound of its own (Build 78): lo-fi and
+	-- downtempo on Luxury Island (Build 80: no more piano there); a tense, stylish heist score in Steal a Luxe (and a harder one when
 	-- the residence locks down); fast electronic for the Basement's course; something dark and
 	-- quiet for the Executive Suite, and its own score when the Executive himself steps out. (The
 	-- Grand Ballroom plays its own records: World/GalaView.)
-	attraction_island = "lounge",
+	attraction_island = "street",
 	attraction_luxe = "luxe",
 	attraction_luxe_alarm = "luxeAlarm",
 	attraction_basement = "basement",
@@ -755,7 +758,7 @@ end
 
 -- Whether the house has any music to play (for telling the owner, in Studio, when it hasn't).
 function Sound.hasMusic(): boolean
-	for _, track in { "lounge", "table", "ballroom" } do
+	for _, track in { "lounge", "table", "ballroom", "street" } do
 		if asset("Tracks", track) ~= "" or #playlist(track) > 0 or findUploaded("maison-" .. track) ~= "" then
 			return true
 		end
