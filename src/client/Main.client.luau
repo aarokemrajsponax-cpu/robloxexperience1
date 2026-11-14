@@ -347,6 +347,8 @@ start("Curios", function()
 			CurioReveal.show(m.id, tostring(m.line or ""), if type(m.gilt) == "number" then m.gilt else 0, if type(m.mut) == "string" then m.mut else nil)
 		elseif op == "luckyBox" and type(m.result) == "table" then
 			require(script.Parent.UI.LuckyBoxPanel).reveal(m.result)
+		elseif op == "luckyPull" then
+			require(script.Parent.UI.LuckyBoxPanel).pulled(m)
 		elseif op == "gems" and type(m.amount) == "number" then
 			Toast.show("Gems", string.format("+%d Gems. You hold %d.", m.amount, CurioState.gems), 4)
 		-- The brainrot squad: what it earned while you were away, a full jar, a Feast, the Penthouse.

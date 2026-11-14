@@ -377,10 +377,27 @@ a Nightly attempt or a Mythic's odds.
 - **The launch kit**: page text, icon, thumbnails and the gameplay video's shot list are in
   [`LAUNCH.md`](LAUNCH.md).
 
+## Build 84 — Lucky Boxes in the Grand Ballroom, on a reel
+
+- **The showroom moved** from the Foyer to the Grand Ballroom's Entrance Hall, right of the way
+  in and facing the doors (`shared/Gala.LUCKY`), half again as large for the hall. It uses two
+  lights (the Ballroom keeps to twenty).
+- **The reel.** A bought box opens on a strip of brainrots that runs past a gold marker, slows and
+  stops on what came. The result is the server's, decided before the reel starts; every other
+  brainrot on the strip is drawn by the box's own odds (none is placed beside the result to tease),
+  and the strip always stops inside the result's own tile. Tap to skip. Then the find's reveal.
+- **Lately in this house.** The showroom lists the latest real opens in this server, and a Mythic
+  is told to the others here in one line (never to a guest the boxes aren't sold to).
+- **Not built, by choice:** near-miss displays (a reel stopping just past a rarer prize), losses
+  dressed as wins, and other effects whose purpose is to make players misjudge their chances.
+- **Previews:** Lune's `CFrame.lookAt` turns the wrong way when a target lies off both axes, so the
+  showroom is placed with `CFrame.Angles` (the same in Lune and in Roblox).
+
 ## Build 83 — Luxe Lucky Boxes and AFK mode
 
 - **Luxe Lucky Boxes** (`shared/LuckyBoxes`, `server/LuckyBoxes`, `World/LuckyShowroom`,
-  `UI/LuckyBoxPanel`). A showroom on a gold-lit dais by the Foyer's front wall: the Gilded, the
+  `UI/LuckyBoxPanel`). A showroom on a gold-lit dais in the Grand Ballroom's Entrance Hall, just
+  inside its doors (Build 84; Build 83 had it in the Foyer): the Gilded, the
   Noir (raised in the middle) and the Velvet box, ribboned, glowing and turning on their
   pedestals. Each opens to one brainrot: Rare or better (79 R$), Epic or better (199 R$),
   Legendary or better (449 R$). The panel shows, before the key: every brainrot's chance (adding

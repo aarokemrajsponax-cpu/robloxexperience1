@@ -1,5 +1,6 @@
 --!strict
--- The Luxe Lucky Box showroom in the Foyer, west of the runner and facing the spawn: a black
+-- The Luxe Lucky Box showroom in the Grand Ballroom's Entrance Hall, among its entertainments and
+-- in sight of the doors (shared Gala.LUCKY), built half again as large for the great hall: a black
 -- marble dais ringed in gold light, three pedestals, and on each a gift box in its own colours
 -- (the Gilded, the Noir raised in the middle, the Velvet), ribboned and bowed, glowing and
 -- sparkling, under a velvet backdrop that names them. The boxes turn and float on each guest's
@@ -11,7 +12,6 @@ local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
-local Layout = require(ReplicatedStorage.Shared.Layout).raw -- (the house as drawn: see World/Grand)
 local LuckyBoxes = require(ReplicatedStorage.Shared.LuckyBoxes)
 local Kit = require(script.Parent.Kit)
 
@@ -64,12 +64,16 @@ local function giftBox(parent: Instance, id: string, cf: CFrame): Model
 	end
 	Kit.ball(m, "BowKnot", 0.42, (cf * CFrame.new(0, 1.42, 0)).Position, ribbon, FX)
 	-- Its glow: a light inside, and a little shower of sparkles in its colour.
-	local light = Instance.new("PointLight")
-	light.Brightness = 2.2
-	light.Range = 13
-	light.Color = b.glow
-	light.Shadows = false
-	light.Parent = core
+	-- (Only the Noir, in the middle, carries a light: the Ballroom keeps to its budget of lights.
+	-- The others glow by their neon caps and their sparkles.)
+	if id == "noir" then
+		local light = Instance.new("PointLight")
+		light.Brightness = 2.4
+		light.Range = 15
+		light.Color = b.glow
+		light.Shadows = false
+		light.Parent = core
+	end
 	local sparkle = Instance.new("ParticleEmitter")
 	sparkle.Name = "Sparkle"
 	sparkle.Texture = "rbxasset://textures/particles/sparkles_main.dds"
@@ -108,10 +112,33 @@ local function pedestal(parent: Instance, id: string, base: CFrame, height: numb
 	return base * CFrame.new(0, top + 0.22, 0)
 end
 
-function Showroom.build(parent: Instance): Model
-	local at = Layout.Foyer.luckyBoxes
-	local floor = at.Position.Y
-	local cf = CFrame.new(at.Position.X, floor, at.Position.Z) * at.Rotation
+-- Grows everything built about `base` by `k`: each part's size and its place from the middle,
+-- and each light's reach and each sparkle's size with it.
+local function grow(m: Instance, base: CFrame, k: number)
+	if k == 1 then
+		return
+	end
+	for _, d in m:GetDescendants() do
+		if d:IsA("BasePart") then
+			local rel = base:ToObjectSpace(d.CFrame)
+			d.Size = d.Size * k
+			d.CFrame = base * (rel - rel.Position + rel.Position * k)
+		elseif d:IsA("PointLight") or d:IsA("SpotLight") then
+			(d :: any).Range *= k
+		elseif d:IsA("ParticleEmitter") then
+			local keys = {}
+			for _, kp in d.Size.Keypoints do
+				table.insert(keys, NumberSequenceKeypoint.new(kp.Time, kp.Value * k))
+			end
+			d.Size = NumberSequence.new(keys)
+		end
+	end
+end
+
+-- Builds the showroom standing on the floor at `at` (its front facing the way `at` looks), `k`
+-- times its drawn size.
+function Showroom.build(parent: Instance, at: CFrame, k: number?): Model
+	local cf = at
 	local m = Kit.model(parent, "LuckyShowroom")
 	local up = CFrame.Angles(0, 0, math.rad(90))
 	-- The dais, its gold rim and the ring of light at its foot.
@@ -136,22 +163,15 @@ function Showroom.build(parent: Instance): Model
 		{ text = "LUCKY BOXES", size = 0.4, font = Brand.Fonts.display, color = Brand.Colours.brightGold },
 		{ text = "A brainrot in every box  ·  Every odd shown first", size = 0.13, font = Brand.Fonts.bodyBold, color = Color3.fromRGB(236, 226, 206) },
 	}, { ppu = 60, lit = false, brightness = 1.9, maxDistance = 160 })
-	-- Light on the boxes from above the backdrop, and a warm wash up each side.
-	local lamp = Kit.part(m, "ShowLight", Vector3.new(0.4, 0.4, 0.4), deck * CFrame.new(0, 9.6, 1.2), { color = Color3.new(), material = Enum.Material.SmoothPlastic, transparency = 1 }, FX)
-	Kit.spotLight(lamp, Enum.NormalId.Bottom, 2.4, 16, 80, Color3.fromRGB(255, 228, 190), false)
-	for _, side in { -1, 1 } do
-		local wash = Kit.part(m, "Wash", Vector3.new(0.4, 0.4, 0.4), deck * CFrame.new(side * 3.9, 0, 3.4), { color = Color3.new(), material = Enum.Material.SmoothPlastic, transparency = 1 }, FX)
-		Kit.spotLight(wash, Enum.NormalId.Top, 1.6, 12, 50, Color3.fromRGB(255, 120, 150), false)
-	end
+	-- One light on all three boxes from above the backdrop (two lights in all: the Ballroom's budget).
+	local lamp = Kit.part(m, "ShowLight", Vector3.new(0.4, 0.4, 0.4), deck * CFrame.new(0, 9.6, -1.2), { color = Color3.new(), material = Enum.Material.SmoothPlastic, transparency = 1 }, FX)
+	Kit.spotLight(lamp, Enum.NormalId.Bottom, 3, 16, 90, Color3.fromRGB(255, 228, 190), false)
 
 	-- The three boxes on their pedestals.
 	for _, id in LuckyBoxes.Order do
 		local s = SPOTS[id]
 		local top = pedestal(m, id, deck * CFrame.new(s.x, 0, s.z), 2.4 + s.lift)
 		giftBox(m, id, top * CFrame.new(0, 1.25, 0))
-		-- Its own light from above.
-		local spot = Kit.part(m, "BoxLight", Vector3.new(0.3, 0.3, 0.3), top * CFrame.new(0, 5, 0), { color = Color3.new(), material = Enum.Material.SmoothPlastic, transparency = 1 }, FX)
-		Kit.spotLight(spot, Enum.NormalId.Bottom, 2.6, 9, 45, Color3.fromRGB(255, 236, 210), false)
 	end
 
 	-- The way in: a prompt at the middle pedestal.
@@ -168,6 +188,8 @@ function Showroom.build(parent: Instance): Model
 	p.GamepadKeyCode = Enum.KeyCode.ButtonX
 	p.Enabled = false -- (each guest's screen turns it on when Roblox's policy allows: see the client)
 	p.Parent = hub
+	grow(m, cf, k or 1)
+	p.MaxActivationDistance = 12 * (k or 1)
 	CollectionService:AddTag(m, "LuckyShowroom")
 	return m
 end

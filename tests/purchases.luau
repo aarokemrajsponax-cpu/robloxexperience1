@@ -2022,6 +2022,23 @@ do
 	got = lastOp(ann, "luckyBox")
 	check("...and it is: a Legendary or better, by the same odds among those", got.result.forced == true and LB.rank(got.result.rarity) >= LB.rank("Legendary") and aData.luckyBoxes.since.gilded == 0)
 	check("every open gave a brainrot", aData.luckyBoxes.opened.gilded == 21 and #aData.luckyBoxes.log <= 8)
+	st = curio(ann, { op = "luckyState" })
+	check("the showroom lists this server's latest real opens", #st.lately == 5 and st.lately[1].name == ann.DisplayName and st.lately[1].id == got.result.id)
+	check("a Mythic was told to the others here who may buy, never to a restricted guest", (function()
+		for _, m in cal.inbox do
+			if m.op == "luckyPull" then
+				return false
+			end
+		end
+		for _, m in ben.inbox do
+			if m.op == "luckyPull" then
+				return false
+			end
+		end
+		return true
+	end)())
+	st = curio(ben, { op = "luckyState" })
+	check("...and a restricted guest isn't shown the boxes' opens", #st.lately == 0 and #st.boxes == 0)
 	LBS.random = realRandom
 
 	-- AFK mode: out of the game the squad earns a fifth of its rate, for at most twelve hours.

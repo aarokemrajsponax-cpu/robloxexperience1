@@ -9897,7 +9897,7 @@ end)()
 				end
 				table.insert(boxes, { id = id, key = b.key, price = b.price, ready = true, odds = odds, mut = { gold = b.mut.gold, diamond = b.mut.diamond, rainbow = b.mut.rainbow, plain = LB.plain(id) }, pity = { at = b.pity.at, rarity = b.pity.rarity, left = b.pity.at - 3 }, opened = 3 })
 			end
-			return { ok = true, allowed = true, boxes = boxes, log = {} }
+			return { ok = true, allowed = true, boxes = boxes, log = {}, lately = { { name = "Bo", id = LB.pool("Legendary")[1], rarity = "Legendary", mut = "gold", box = "velvet" } } }
 		elseif req.op == "luckyOpen" then
 			return { ok = true, prompted = true }
 		end
@@ -9915,7 +9915,17 @@ end)()
 			end
 		end
 	end
-	check("the Lucky Box showroom is built in the Foyer, its prompt hidden until Roblox's policy says", prompt ~= nil and prompt.Enabled == false)
+	if not prompt then
+		-- (The Grand Ballroom is built when the house opens it; here the showroom is built alone.)
+		local room = module("ServerScriptService", "Server", "World", "LuckyShowroom").build(workspace, roblox.CFrame.new(0, 0, 600), 1.5)
+		advance(0.2)
+		for _, d in room:GetDescendants() do
+			if d:IsA("ProximityPrompt") and d.Name == "LuckyBoxPrompt" then
+				prompt = d
+			end
+		end
+	end
+	check("the Lucky Box showroom is built, its prompt hidden until Roblox's policy says", prompt ~= nil and prompt.Enabled == false)
 	LocalPlayer:SetAttribute("PaidRandomAllowed", true)
 	advance(0.2)
 	check("...and shown once it does", prompt ~= nil and prompt.Enabled == true)
@@ -9927,6 +9937,7 @@ end)()
 	check("...every brainrot's chance, before the key", textOnScreen("10%") ~= nil and textOnScreen("7.5%") ~= nil and textOnScreen("0.5%") ~= nil and textOnScreen("You hold 2") ~= nil)
 	check("...the mutation odds", textOnScreen("Gold 8%") ~= nil and textOnScreen("Rainbow 0.5%") ~= nil)
 	check("...and the guarantee counter", textOnScreen("guaranteed within 17 opens") ~= nil)
+	check("...and what lately came out here, as it came", textOnScreen("Lately in this house") ~= nil and textOnScreen("Bo: Gold") ~= nil)
 	snapshot("lucky-boxes")
 	pressNamed("Box_noir")
 	advance(0.4)
@@ -9940,12 +9951,33 @@ end)()
 	advance(0.3)
 	check("closed without buying: the key is back", textOnScreen("Waiting for Roblox") == nil)
 	-- The reveal: the box glows in the colour of what came, then the find's reveal.
+	-- The reel: the result where it stops, everything else drawn by the box's odds.
+	local seq = 0
+	local strip = Panel.reel("gilded", "frogKing", function()
+		seq = (seq * 7 + 3) % 97
+		return seq / 97
+	end)
+	local inBox = {}
+	for _, o in LB.odds("gilded") do
+		inBox[o.id] = true
+	end
+	check("the reel: the result where it stops, every other brainrot from the box itself", strip[Panel.REEL.at] == "frogKing" and #strip == Panel.REEL.tiles and (function()
+		for _, cid in strip do
+			if not inBox[cid] then
+				return false
+			end
+		end
+		return true
+	end)())
 	Panel.reveal({ box = "noir", id = LB.pool("Mythic")[1], rarity = "Mythic", mut = "gold", new = true, count = 1, stars = 1, pityLeft = 4 })
 	advance(0.6)
-	check("an open: the box, lit in the rarity that came", find(playerGui, function(d)
-		return d.Name == "LuckyOpening"
-	end) ~= nil and textOnScreen("MYTHIC") ~= nil)
-	advance(2.5)
+	check("an open runs on the reel", find(playerGui, function(d)
+		return d.Name == "Reel"
+	end) ~= nil and textOnScreen("Tap to skip") ~= nil)
+	snapshot("lucky-reel")
+	advance(5.2)
+	check("...stops on what came, its rarity named", textOnScreen("MYTHIC") ~= nil)
+	advance(2)
 	check("...then the find itself", textOnScreen("From The Noir Box") ~= nil)
 	advance(8)
 	RootM.close()

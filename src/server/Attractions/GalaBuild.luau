@@ -918,6 +918,8 @@ function GalaBuild.build(parent: Instance, o: Vector3): Built
 	exchange(m, o)
 	lounges(m, o)
 	signs(m, o)
+	-- The Luxe Lucky Boxes, in the Entrance Hall (World/LuckyShowroom).
+	require(script.Parent.Parent.World.LuckyShowroom).build(m, CFrame.new(o) * Plan.LUCKY, Plan.LUCKY_SCALE)
 	local flexWall = studio(m, o)
 	return {
 		model = m,

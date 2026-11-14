@@ -80,6 +80,12 @@ Gala.RUNWAY = {
 -- The Daily Arena.
 Gala.ARENA = { centre = v3(-88, 0, -58), radius = 30, dais = 5, board = v3(-129.4, 16, -58), gate = v3(-54, 0, -58) }
 
+-- The Luxe Lucky Boxes' showroom (World/LuckyShowroom): in the Entrance Hall, right of the way in,
+-- facing the way in (towards the doors), so it's seen on arriving. (Turned by an angle rather than
+-- CFrame.lookAt, so the test harness's previews show it as Roblox builds it.)
+Gala.LUCKY = CFrame.new(v3(24, 0, -70)) * CFrame.Angles(0, math.atan2(22, 20), 0)
+Gala.LUCKY_SCALE = 1.5
+
 -- The Exchange: four stands.
 Gala.STANDS = { v3(70, 0, -36), v3(106, 0, -36), v3(70, 0, -80), v3(106, 0, -80) } :: { Vector3 }
 Gala.EXCHANGE_BOARD = v3(129.4, 16, -58)

@@ -10,6 +10,7 @@
 -- Only sold to a guest whose Roblox policy allows paid random items (Policy.paidRandomAllowed:
 -- false until Roblox says so). Their screen hides the boxes' keys; the purchase is refused here too.
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Boxes = require(ReplicatedStorage.Shared.LuckyBoxes)
@@ -28,6 +29,10 @@ local Store = require(script.Parent.Purchases.Store)
 local LuckyBoxes = {}
 
 local LOG = 8 -- the last opens kept
+local LATELY = 5 -- this server's latest real opens, shown in the showroom
+
+-- This server's latest opens, as they really came (newest first): who, what, from which box.
+local lately: { { [string]: any } } = {}
 
 -- The random numbers (a test can make them fixed) and whether this guest may buy (a test can say).
 LuckyBoxes.random = Random.new()
@@ -109,7 +114,24 @@ local function grant(ctx: Grants.Context)
 		Analytics.custom(player, "LuckyBox", 1, { box = reward.Box, curio = got.id, rarity = got.rarity, mut = got.mut or "", forced = got.forced })
 		Curios.push(player)
 		curioEvent:FireClient(player, { op = "luckyBox", result = got })
+		LuckyBoxes.noteOpen(player, got)
 	end)
+end
+
+-- A real open, for the showroom's "lately" (this server only). A Mythic is also told to the others
+-- here, once, in a line (never to a guest the boxes aren't sold to).
+function LuckyBoxes.noteOpen(player: Player, got: { [string]: any })
+	table.insert(lately, 1, { name = player.DisplayName, id = got.id, rarity = got.rarity, mut = got.mut, box = got.box })
+	while #lately > LATELY do
+		table.remove(lately)
+	end
+	if got.rarity == "Mythic" then
+		for _, other in Players:GetPlayers() do
+			if other ~= player and LuckyBoxes.allowed(other) then
+				curioEvent:FireClient(other, { op = "luckyPull", name = player.DisplayName, id = got.id, rarity = got.rarity, mut = got.mut, box = got.box })
+			end
+		end
+	end
 end
 
 -- What the showroom shows: each box (its price from Roblox, whether it's on sale), the odds of
@@ -141,7 +163,12 @@ function LuckyBoxes.state(player: Player, data: Profiles.Data): { [string]: any 
 			table.insert(log, { box = e.box, id = e.id, mut = e.mut })
 		end
 	end
-	return { ok = true, allowed = LuckyBoxes.allowed(player), why = if LuckyBoxes.allowed(player) then nil else LuckyBoxes.CLOSED, boxes = boxes, log = log }
+	local recent = {}
+	for _, e in lately do
+		table.insert(recent, table.clone(e))
+	end
+	local ok = LuckyBoxes.allowed(player)
+	return { ok = true, allowed = ok, why = if ok then nil else LuckyBoxes.CLOSED, boxes = if ok then boxes else {}, log = log, lately = if ok then recent else {} }
 end
 
 -- The showroom's requests (CurioAsk): its state, and opening a box (the purchase window).
