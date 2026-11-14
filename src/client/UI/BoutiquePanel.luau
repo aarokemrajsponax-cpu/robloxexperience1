@@ -59,7 +59,11 @@ local function after(result: any, done: string?)
 	if type(result) ~= "table" then
 		Toast.show("The Boutique", "The counter didn't answer. Try again in a moment.", 3)
 	elseif not result.ok then
-		Toast.show("The Boutique", tostring(result.why or "Not just now."), 3)
+		if result.short then
+			Toast.refused(result)
+		else
+			Toast.show("The Boutique", tostring(result.why or "Not just now."), 3)
+		end
 	elseif result.credited then
 		Toast.show("The Boutique", "Paid with your credit. It's yours.", 3)
 	elseif type(result.notice) == "table" then
@@ -143,12 +147,28 @@ end
 BoutiquePanel.closer = closer
 
 -- One piece on the shelf.
+-- A row as tall as what's in it (and at least `least`), padded inside: long words push the row
+-- down rather than spill over the next one.
+local function grows(r: Frame, least: number)
+	r.Size = UDim2.new(1, 0, 0, 0)
+	r.AutomaticSize = Enum.AutomaticSize.Y
+	local floor = Instance.new("UISizeConstraint")
+	floor.MinSize = Vector2.new(0, least)
+	floor.Parent = r
+	local pad = Instance.new("UIPadding")
+	pad.PaddingTop = UDim.new(0, 10)
+	pad.PaddingBottom = UDim.new(0, 10)
+	pad.PaddingLeft = UDim.new(0, 12)
+	pad.PaddingRight = UDim.new(0, 12)
+	pad.Parent = r
+end
+
 local function row(parent: Instance, card: Card, order: number, mode: "robux" | "gilt" | "show")
 	local r = Instance.new("Frame")
 	r.Name = "Card_" .. card.id
 	r.BackgroundColor3 = Color3.fromRGB(16, 16, 20)
 	r.BackgroundTransparency = 0.35
-	r.Size = UDim2.new(1, 0, 0, 86)
+	grows(r, 86)
 	r.LayoutOrder = order
 	r.Parent = parent
 	local corner = Instance.new("UICorner")
@@ -157,21 +177,22 @@ local function row(parent: Instance, card: Card, order: number, mode: "robux" | 
 	-- Its picture: the piece itself, drawn in its own colours (ProductArt); a tap for a closer look.
 	local art = ProductArt.draw(r, card.kind, card.style, 66)
 	art.Name = "Swatch"
-	art.Position = UDim2.fromOffset(10, 10)
+	art.Position = UDim2.fromOffset(0, 0)
 	local look = Instance.new("TextButton")
 	look.Name = "Preview"
 	look.Text = ""
 	look.BackgroundTransparency = 1
 	look.Size = UDim2.fromOffset(66, 66)
-	look.Position = UDim2.fromOffset(10, 10)
+	look.Position = UDim2.fromOffset(0, 0)
 	look.Parent = r
 	look.Activated:Connect(function()
 		closer(card, nil, nil)
 	end)
 	local texts = Instance.new("Frame")
 	texts.BackgroundTransparency = 1
-	texts.Position = UDim2.fromOffset(88, 8)
-	texts.Size = UDim2.new(1, -88 - 170, 1, -16)
+	texts.Position = UDim2.fromOffset(78, -2)
+	texts.Size = UDim2.new(1, -78 - 166, 0, 0)
+	texts.AutomaticSize = Enum.AutomaticSize.Y
 	texts.Parent = r
 	Theme.list(texts, 2).HorizontalAlignment = Enum.HorizontalAlignment.Left
 	Theme.text(texts, card.kindName or "", 10, "caps", { LayoutOrder = 1, TextXAlignment = Enum.TextXAlignment.Left })
@@ -182,7 +203,7 @@ local function row(parent: Instance, card: Card, order: number, mode: "robux" | 
 	local actions = Instance.new("Frame")
 	actions.BackgroundTransparency = 1
 	actions.AnchorPoint = Vector2.new(1, 0.5)
-	actions.Position = UDim2.new(1, -10, 0.5, 0)
+	actions.Position = UDim2.new(1, 0, 0.5, 0)
 	actions.Size = UDim2.fromOffset(160, 76)
 	actions.Parent = r
 	Theme.list(actions, 4).HorizontalAlignment = Enum.HorizontalAlignment.Right
@@ -264,6 +285,63 @@ local function buyKey(parent: Instance, label: string, price: number?, order: nu
 	k.LayoutOrder = order
 end
 
+-- One offer: its name, what it does and for how long, why it can't be had just now if so, and its
+-- price key on the right. The row grows with its words.
+local function offerRow(frame: Instance, o: { [string]: any }, order: number)
+	local r = Instance.new("Frame")
+	r.Name = "Offer_" .. tostring(o.key)
+	r.BackgroundColor3 = if o.best then Color3.fromRGB(34, 26, 12) else Color3.fromRGB(16, 16, 20)
+	r.BackgroundTransparency = 0.15
+	grows(r, 86)
+	r.LayoutOrder = order
+	r.Parent = frame
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 3)
+	corner.Parent = r
+	local edge = Instance.new("UIStroke")
+	edge.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	edge.Color = Brand.Colours.gold
+	edge.Transparency = if o.best then 0.1 else 0.7
+	edge.Parent = r
+	local texts = Instance.new("Frame")
+	texts.BackgroundTransparency = 1
+	texts.Size = UDim2.new(1, -166, 0, 0)
+	texts.AutomaticSize = Enum.AutomaticSize.Y
+	texts.Parent = r
+	Theme.list(texts, 3).HorizontalAlignment = Enum.HorizontalAlignment.Left
+	if o.best then
+		Theme.text(texts, "Best value", 10, "caps", { LayoutOrder = 0, TextXAlignment = Enum.TextXAlignment.Left })
+	end
+	Theme.text(texts, o.name, 22, "display", { LayoutOrder = 1, TextXAlignment = Enum.TextXAlignment.Left })
+	Theme.text(texts, o.line or "", 12, "body", { LayoutOrder = 2, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Brand.Colours.smoke, TextWrapped = true })
+	-- What it is, plainly: for good, for a time (and how long), or used once; what's in it.
+	local term = ProductConfig.term(tostring(o.key))
+	if term ~= "" then
+		Theme.text(texts, term, 11, "bodyBold", { LayoutOrder = 3, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(255, 196, 160), TextWrapped = true }).Name = "Term"
+	end
+	-- What the server says about it now (Luck's time left, a rain waiting), or why it can't be
+	-- bought just now.
+	local aside = if o.disabled and type(o.why) == "string" then o.why elseif type(o.status) == "string" then o.status else nil
+	if aside then
+		Theme.text(texts, aside, 11, "bodyMedium", { LayoutOrder = 4, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Brand.Colours.lightGold, TextWrapped = true })
+	end
+	local compose = o.action == "compose"
+	local k = Theme.key(r, if compose then "Write it" else robux(o.price), not o.disabled, function()
+		if compose then
+			Root.close(NAME)
+			DecreePanel.open()
+		elseif o.disabled then
+			Toast.show("The Boutique", tostring(o.why or "Not just now."), 3)
+		else
+			after(Closet.ask({ op = "offer", key = o.key }))
+		end
+	end, 150)
+	k.Name = "Buy"
+	k.AnchorPoint = Vector2.new(1, 0.5)
+	k.Position = UDim2.new(1, 0, 0.5, 0)
+	k.Size = UDim2.fromOffset(150, 40)
+end
+
 local function render()
 	local frame = list
 	local s = shelves
@@ -287,70 +365,20 @@ local function render()
 		if #offers == 0 then
 			note(frame, "Nothing on offer just now.", add())
 		end
-		-- (Each row as tall as its words: the words' width is the shelf's, less the price key.)
-		-- (AbsoluteSize is in screen pixels: back to the panel's own units, as the words are.)
-		local laid, absW = pcall(function()
-			return (frame :: GuiObject).AbsoluteSize.X
-		end)
-		local shelfW = if laid and type(absW) == "number" then absW / math.max(0.1, Root.scale) else 0
-		local textW = (if shelfW > 0 then shelfW else Root.panelWidth(620) - 56) - 14 - 170
 		for _, o in offers do
-			local r = Instance.new("Frame")
-			r.Name = "Offer_" .. tostring(o.key)
-			r.BackgroundColor3 = if o.best then Color3.fromRGB(34, 26, 12) else Color3.fromRGB(16, 16, 20)
-			r.BackgroundTransparency = 0.15
-			local asideText = if o.disabled and type(o.why) == "string" then o.why elseif type(o.status) == "string" then o.status else nil
-			local term = ProductConfig.term(tostring(o.key))
-			local high = 20 + (if o.best then 15 else 0) + 30 + 3 + Theme.measure(o.line or "", 12, Brand.Fonts.body, textW).Y
-				+ (if term ~= "" then 3 + Theme.measure(term, 11, Brand.Fonts.bodyBold, textW).Y else 0)
-				+ (if asideText then 3 + Theme.measure(asideText, 11, Brand.Fonts.bodyMedium, textW).Y else 0) + 6
-			r.Size = UDim2.new(1, 0, 0, math.max(86, math.ceil(high)))
-			r.LayoutOrder = add()
-			r.Parent = frame
-			local corner = Instance.new("UICorner")
-			corner.CornerRadius = UDim.new(0, 3)
-			corner.Parent = r
-			local edge = Instance.new("UIStroke")
-			edge.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-			edge.Color = Brand.Colours.gold
-			edge.Transparency = if o.best then 0.1 else 0.7
-			edge.Parent = r
-			local texts = Instance.new("Frame")
-			texts.BackgroundTransparency = 1
-			texts.Position = UDim2.fromOffset(14, 10)
-			texts.Size = UDim2.new(1, -14 - 170, 1, -20)
-			texts.Parent = r
-			Theme.list(texts, 3).HorizontalAlignment = Enum.HorizontalAlignment.Left
-			if o.best then
-				Theme.text(texts, "Best value", 10, "caps", { LayoutOrder = 0, TextXAlignment = Enum.TextXAlignment.Left })
+			offerRow(frame, o, add())
+		end
+	elseif currentTab == "buyGilt" then
+		note(frame, "Gilt for Robux: it goes straight into your purse. Double Gilt doubles every Gilt you earn, for good.", add())
+		local any = false
+		for _, o in s.offers or {} do
+			if o.category == "Gilt" or o.key == "doubleGilt" then
+				offerRow(frame, o, add())
+				any = true
 			end
-			Theme.text(texts, o.name, 22, "display", { LayoutOrder = 1, TextXAlignment = Enum.TextXAlignment.Left })
-			Theme.text(texts, o.line or "", 12, "body", { LayoutOrder = 2, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Brand.Colours.smoke, TextWrapped = true })
-			-- What it is, plainly: for good, for a time (and how long), or used once; what's in it.
-			if term ~= "" then
-				Theme.text(texts, term, 11, "bodyBold", { LayoutOrder = 3, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(255, 196, 160), TextWrapped = true }).Name = "Term"
-			end
-			-- What the server says about it now (Luck's time left, a rain waiting), or why it
-			-- can't be bought just now.
-			local aside = if o.disabled and type(o.why) == "string" then o.why elseif type(o.status) == "string" then o.status else nil
-			if aside then
-				Theme.text(texts, aside, 11, "bodyMedium", { LayoutOrder = 4, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Brand.Colours.lightGold, TextWrapped = true })
-			end
-			local compose = o.action == "compose"
-			local k = Theme.key(r, if compose then "Write it" else robux(o.price), not o.disabled, function()
-				if compose then
-					Root.close(NAME)
-					DecreePanel.open()
-				elseif o.disabled then
-					Toast.show("The Boutique", tostring(o.why or "Not just now."), 3)
-				else
-					after(Closet.ask({ op = "offer", key = o.key }))
-				end
-			end, 150)
-			k.Name = "Buy"
-			k.AnchorPoint = Vector2.new(1, 0.5)
-			k.Position = UDim2.new(1, -12, 0.5, 0)
-			k.Size = UDim2.fromOffset(150, 40)
+		end
+		if not any then
+			note(frame, "Gilt isn't on sale just now. Every attraction and table pays it.", add())
 		end
 	elseif currentTab == "always" then
 		note(frame, "Always in the house: the staples, never out of stock.", add())
@@ -366,13 +394,13 @@ local function render()
 			local r = Instance.new("Frame")
 			r.BackgroundColor3 = Color3.fromRGB(16, 16, 20)
 			r.BackgroundTransparency = 0.35
-			r.Size = UDim2.new(1, 0, 0, 76)
+			grows(r, 76)
 			r.LayoutOrder = add()
 			r.Parent = frame
 			local texts = Instance.new("Frame")
 			texts.BackgroundTransparency = 1
-			texts.Position = UDim2.fromOffset(14, 8)
-			texts.Size = UDim2.new(1, -14 - 170, 1, -16)
+			texts.Size = UDim2.new(1, -166, 0, 0)
+			texts.AutomaticSize = Enum.AutomaticSize.Y
 			texts.Parent = r
 			Theme.list(texts, 2).HorizontalAlignment = Enum.HorizontalAlignment.Left
 			Theme.text(texts, sa.name, 17, "display", { LayoutOrder = 1, TextXAlignment = Enum.TextXAlignment.Left })
@@ -390,11 +418,11 @@ local function render()
 			end, 150)
 			k.Name = "Buy"
 			k.AnchorPoint = Vector2.new(1, 0.5)
-			k.Position = UDim2.new(1, -10, 0.5, 0)
+			k.Position = UDim2.new(1, 0, 0.5, 0)
 			k.Size = UDim2.fromOffset(150, 36)
 			if sa.preview then
 				-- The price it will sell at, under the preview key.
-				local t = Theme.text(r, robux(sa.price) .. " when on sale", 10, "caps", { AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -10, 1, -2), Size = UDim2.fromOffset(150, 12) })
+				local t = Theme.text(r, robux(sa.price) .. " when on sale", 10, "caps", { AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, 0, 1, 8), Size = UDim2.fromOffset(150, 12) })
 				t.TextColor3 = Brand.Colours.lightGold
 			end
 		end
@@ -512,6 +540,7 @@ function BoutiquePanel.open(tab: string?, forGuest: { userId: number, name: stri
 	Theme.text(content, if forGuest then "Choosing a gift for " .. forGuest.name .. ". They'll hear it's from you." else "Style, never score. Prices are Roblox's own.", 12, "body", { LayoutOrder = 2, TextColor3 = if forGuest then Brand.Colours.lightGold else Brand.Colours.dim })
 
 	local specs = {
+		{ "buyGilt", "Buy Gilt" },
 		{ "offers", "Offers" },
 		{ "always", "Always here" },
 		{ "today", "Today" },

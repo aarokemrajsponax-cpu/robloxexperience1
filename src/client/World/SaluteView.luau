@@ -211,10 +211,13 @@ local function chandelier(seconds: number)
 	end)
 end
 
--- Fireworks over the whole estate (World/Fireworks), as big as the salute is.
+-- Fireworks over the whole estate (World/Fireworks), as big as the salute is. Fireworks are kept
+-- for the big moments, and when they go up they stay up long enough to watch: never under
+-- FIREWORKS_LEAST seconds, whatever the moment asked for.
+local FIREWORKS_LEAST = 35
 local function fireworks(seconds: number, scale: number, mine: boolean)
 	-- The guest who gave it is taken out to watch at once; everyone else has the key.
-	Fireworks.show(seconds, { scale = scale, watch = mine })
+	Fireworks.show(math.max(FIREWORKS_LEAST, seconds), { scale = scale, watch = mine })
 end
 
 -- The Finale's countdown: ten great golden numbers on every screen, each with a bell, then the

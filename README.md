@@ -377,6 +377,63 @@ a Nightly attempt or a Mythic's odds.
 - **The launch kit**: page text, icon, thumbnails and the gameplay video's shot list are in
   [`LAUNCH.md`](LAUNCH.md).
 
+## Build 82 — The big fix list: revives, the longer Basement, 3D brainrots
+
+- **The Home Screen and the keys.** The Home Screen is laid out from the real screen size (it no
+  longer slides left when Roblox reports a 1×1 viewport at start). Its bottom bar is a live ticker
+  with a LIVE plate. The keys down the left are glass tiles. The 2× Gilt streak chip and "Show me
+  the attractions" are gone, and the Next card folds away completely.
+- **Money words.** A guest who can't afford something sees "Insufficient Gilt" (or Gems), never
+  "Not yet". Buy Gilt is the Boutique's first tab, and the gold + on the Gilt counter opens it.
+  Boutique rows grow to fit their text.
+- **Fireworks** only for the big moments, and they last 35 seconds. Level-ups and the Ballroom or
+  Grand Prix opening don't fire them.
+- **Attraction cards** (`UI/HudCard`): Steal a Luxe, the Executive Suite and the Basement's cards
+  share one look and sit in the bottom-left corner, clear of the dock and the thumbstick. The
+  Basement's clock is gone from its card.
+- **The Executive Suite.** The hallway is half as wide again (`Executive.WIDEN`). Security wears
+  SWAT-style armour, with nothing that shoots. A guest who has just arrived is no longer thought
+  to be outside (the arrival is believed for 4 seconds, and leaving takes 1.5 seconds outside).
+  **Chronos Defiance works here now**: caught by the alarm, or out of composure, a guest gets a
+  15-second moment to revive. A revive held is used at once; otherwise the key shows its Robux
+  price and opens Roblox's purchase window. The moment pauses while that window is open and waits
+  for the receipt after a purchase. A revive puts you back at the lift with your digits kept (or
+  just inside the Office, composure full), at most 3 a run. The receipt is the same idempotent
+  Chronos Defiance grant; a late receipt keeps the revive for later. The fight in the Office plays
+  the beats the Salon used to play; the Salon and the Library now play street luxury.
+- **Steal a Luxe.** Security sleeps until you lift something, so you can look round every wing.
+  Lifting a piece puts the wing on Alert, and its nearest guard comes after you after a 2-second
+  start. Banking or being caught puts security back to sleep. New progression: **the Collection**,
+  every piece banked once each, where completing a wing's set pays 2,000 to 15,000 Gilt once, and
+  **eight heist ranks** from Pickpocket to The Legend of the Residence, for everything ever banked.
+  Both are on the Lounge's board.
+- **The Maison Basement** is more than twice as long (757 to 1,632 studs). Every stage opens with a
+  run-up that grows with the stage: 1 to 9 platforms, smaller and further apart the deeper you go.
+  No gap is wider than 5 studs and no step up is higher than 1; a test checks every hop. The hall is
+  60 studs wide and 32 studs over the highest platform, with vaulted beams and chandeliers. Falls
+  are judged from each stage's own floor: well below it, wherever you land, you're sent back. You
+  can no longer skip ahead by dropping onto a later stage. Old-course times are kept as `bestV1`;
+  the new course has new boards (`Basement_v2`), and the badge is now Under Eight Minutes.
+- **Arriving** at Steal a Luxe, the Basement or the Executive Suite: the guest is held still for
+  6.5 seconds. The screen meanwhile loads the place's model, textures and sounds, then tells the
+  server it's ready (released after 15 seconds at most). Invisible walls stand round all three
+  places.
+- **The Vault's display** holds 8 curios (two rows of domes), up from 4.
+- **The Grand Prix** road is 38 studs wide (was 26); the lap is the same length. The Coastal
+  Circuit is 28 studs wide (was 22).
+- **The Grand Ballroom.** A dance keeps going while you move; only Stop dancing or leaving the
+  Ballroom ends it. A Reset camera key sits with the Ballroom's keys. Photo mode has Reset view,
+  and its bar fits a phone. If photo mode can't open at a photo set, the camera comes back on its
+  own. Trivia answers are lettered keys, with the right answer shown after.
+- **The Grand Auction** shows each lot on its own card: the piece's medallion on a velvet stage,
+  its lot number and grade, the bid that stands in large figures, who holds it, the time left,
+  your own standing, the last bids and the bid keys.
+- **Brainrots in 3D** (`shared/BrainrotFigure`). All 42 are built of parts, each the house's own
+  design: a body shaped like what it is, cartoon eyes with a glint, brows and a mouth for its mood,
+  and what it wears from its accent (a top hat, a crown, a microphone, a tutu, a jetpack, pearls
+  and so on). They walk beside their guests, spin, flip, bow and sway, and stand on the plinths in
+  Steal a Luxe.
+
 ## Build 81 — Lights Out on the floor, the Suite's maze, the Flex Studio
 
 - **Lights Out is party games on the dance floor** (`server/FloorShow`, `UI/FloorShow`; the

@@ -8,6 +8,10 @@
 --                    plinth for everyone, and back (another piece of its wing) a while later.
 --   The bag          each piece in it slows you a little (Config luxe.weight); Stride from the
 --                    treadmills makes you faster here, and only here. Both through "SpeedTrained".
+--   Security         (Build 82) asleep for a guest who hasn't taken anything this trip: they may
+--                    look round every wing, and no guard, camera or beam minds them. The moment
+--                    they lift a piece it wakes: the wing goes on Alert and its nearest guard comes
+--                    after them (after a moment's start). Banked or caught, it sleeps again.
 --   The guards       walk their rounds. In sight (in front of him, near enough, nothing between)
 --                    a guard's suspicion fills (faster the nearer you are); full, he gives chase.
 --                    Out of his sight long enough, or out of his wing, and he gives up. Within
@@ -106,6 +110,7 @@ type Guard = {
 	searchAt: Vector3?, -- where to look (in the world)
 	searchUntil: number,
 	extra: boolean?, -- one of a lockdown's reinforcements (gone when it ends)
+	startAt: number?, -- (Build 82) sent after a guest who lifted a piece: he sets off at this moment
 }
 type Spot = { spot: Plan.Spot, top: BasePart, piece: Plan.Piece?, model: Model?, back: number, last: Plan.Piece? }
 type Goal = { id: string, done: boolean }
@@ -124,6 +129,7 @@ type Run = {
 	wings: { [number]: boolean }, -- every wing they've been in this run
 	exposure: { [number]: number }, -- camera -> how long it's had them in view
 	quietUntil: { [number]: number }, -- camera -> it won't spot them again before this
+	awake: boolean?, -- (Build 82) security is awake for them: they've lifted something this trip
 }
 type Alarm = { level: number, untilAt: number, at: Vector3? }
 type Cam = { def: Plan.Camera, head: BasePart?, world: Vector3 }
@@ -170,6 +176,17 @@ local function page(ctx: Types.Ctx, data: any): { [string]: any }
 	p.hands = level(p.hands, #(c.hands or { 1 }))
 	if type(p.discoveries) ~= "table" then
 		p.discoveries = {} -- piece id -> true: the Exclusive and Limited pieces this guest has banked
+	end
+	-- (Build 82) The Collection: piece id -> true for every piece banked at least once (the
+	-- discoveries made before it count), and wing -> true for each set whose reward is paid.
+	if type(p.collected) ~= "table" then
+		p.collected = {}
+		for id in p.discoveries do
+			p.collected[id] = true
+		end
+	end
+	if type(p.sets) ~= "table" then
+		p.sets = {}
 	end
 	-- Plinth -> when (the wall clock) this guest may lift from it again: a piece they banked is
 	-- theirs again only after its five minutes, in this server or any other (saved with the ledger,
@@ -314,6 +331,7 @@ local function summary(ctx: Types.Ctx, player: Player, run: Run): { [string]: an
 		chased = run.chasedBy > 0,
 		speed = if p then math.floor(speedOf(ctx, p, #run.bag, massOf(run.bag)) * 100 + 0.5) / 100 else 1,
 		grace = run.grace > now,
+		awake = run.awake == true,
 		hands = if p then (c.hands or { 1 })[p.hands] or 1 else 1, -- (each screen times its prompts' holds with it)
 	}
 end
@@ -326,7 +344,7 @@ local function push(ctx: Types.Ctx, player: Player, run: Run, force: boolean?)
 			doneCount += 1
 		end
 	end
-	local key = string.format("%d|%d|%s|%.2f|%s|%s|%s|%d|%d", #s.bag, s.worth, s.wing, s.watched, tostring(s.chased), tostring(s.speed), tostring(s.grace), s.alarm, doneCount)
+	local key = string.format("%d|%d|%s|%.2f|%s|%s|%s|%d|%d|%s", #s.bag, s.worth, s.wing, s.watched, tostring(s.chased), tostring(s.speed), tostring(s.grace), s.alarm, doneCount, tostring(s.awake))
 	if force or key ~= run.sent or now - run.sentAt > 2 then
 		run.sent = key
 		run.sentAt = now
@@ -384,6 +402,37 @@ end
 ---------------------------------------------------------------------------------------------------
 -- Taking, losing and banking
 ---------------------------------------------------------------------------------------------------
+
+local stopChasing: (Player) -> ()
+
+-- Security wakes (Build 82): a guest lifted a piece in `wing`, standing at `at`. The wing goes on
+-- Alert (its guards come to look) and its nearest guard not already after someone comes after
+-- them, setting off after Config luxe.wakeStart seconds.
+local function wake(ctx: Types.Ctx, player: Player, run: Run, wing: number, at: Vector3)
+	local first = not run.awake
+	run.awake = true
+	local c = cfg(ctx)
+	raise(ctx, wing, 1, at)
+	local best: Guard? = nil
+	local bestGap = math.huge
+	for _, g in guards do
+		if g.wing == wing and g.state ~= "chase" then
+			local d = g.root.CFrame.Position - at
+			local gap = Vector3.new(d.X, 0, d.Z).Magnitude
+			if gap < bestGap then
+				best, bestGap = g, gap
+			end
+		end
+	end
+	if best then
+		best.state = "chase"
+		best.target = player
+		best.lastSeen = now
+		best.startAt = now + (tonumber(c.wakeStart) or 2)
+		best.searchAt, best.searchUntil = nil, 0
+	end
+	ctx.send(player, { op = "woke", wing = wing, first = first, chased = best ~= nil, start = tonumber(c.wakeStart) or 2 })
+end
 
 -- A guest takes the piece on plinth `spotId`. Returns { ok, why }.
 function Luxe.take(ctx: Types.Ctx, player: Player, spotId: number): { [string]: any }
@@ -446,6 +495,8 @@ function Luxe.take(ctx: Types.Ctx, player: Player, spotId: number): { [string]: 
 	elseif wing == 5 then
 		complete(ctx, player, run, "garage")
 	end
+	-- Security wakes, and a guard comes after them.
+	wake(ctx, player, run, wing, root.CFrame.Position)
 	-- The great pieces are watched: lifting a Legendary or better puts its wing on Alert, and the
 	-- Crown Jewel locks the Strongroom down.
 	if piece.id == "crownJewel" then
@@ -475,12 +526,13 @@ local function drop(ctx: Types.Ctx, run: Run)
 	run.from = {}
 end
 
-local function stopChasing(player: Player)
+function stopChasing(player: Player)
 	for _, g in guards do
 		g.suspicion[player] = nil
 		if g.target == player then
 			g.target = nil
 			g.state = "return"
+			g.startAt = nil
 		end
 	end
 end
@@ -494,6 +546,7 @@ local function caught(ctx: Types.Ctx, player: Player, run: Run)
 	run.chasedBy = 0
 	run.watched = 0
 	run.spotted = false
+	run.awake = false
 	run.grace = now + cfg(ctx).caughtGrace
 	local caughtAt = ctx.at(player, ID)
 	note(player, "Luxe caught", { wing = if caughtAt then Plan.wingAt(caughtAt) or 0 else 0, lost = lost })
@@ -547,6 +600,36 @@ local function bank(ctx: Types.Ctx, player: Player, run: Run, way: Plan.Bank?)
 		end
 	end
 	local count = #run.bag
+	-- The Collection: pieces banked for the first time, and any wing's set made whole by them.
+	local rankBefore = Plan.rankOf(p.banked)
+	local fresh = 0
+	local touched: { [number]: boolean } = {}
+	for _, piece in run.bag do
+		if not p.collected[piece.id] then
+			p.collected[piece.id] = true
+			fresh += 1
+			touched[piece.wing] = true
+		end
+	end
+	local sets = {}
+	for w in touched do
+		local key = tostring(w)
+		local set = Plan.setOf(w)
+		local whole = #set > 0
+		for _, piece in set do
+			if not p.collected[piece.id] then
+				whole = false
+			end
+		end
+		if whole and not p.sets[key] then
+			p.sets[key] = true
+			local reward = Plan.SetGilt[w] or 0
+			-- (Paid in full: each set pays once, for good.)
+			local paid = if reward > 0 then ctx.prize(player, reward, "Steal a Luxe: " .. Plan.Wings[w].name .. "'s set") else 0
+			table.insert(sets, { wing = w, name = Plan.Wings[w].name, gilt = paid })
+			note(player, "Luxe set", { wing = w })
+		end
+	end
 	local unseen = not run.spotted
 	local wall = os.time()
 	for _, spotId in run.from do
@@ -557,13 +640,24 @@ local function bank(ctx: Types.Ctx, player: Player, run: Run, way: Plan.Bank?)
 	stopChasing(player)
 	run.chasedBy = 0
 	run.spotted = false
+	run.awake = false
 	local gilt = ctx.estate(player, worth, "Steal a Luxe")
 	local record = worth > p.best
 	p.hauls += 1
 	p.banked += worth
 	p.best = math.max(p.best, worth)
 	resetSpeed(ctx, player, run)
-	ctx.send(player, { op = "banked", worth = worth, base = base, bonus = bonus, gilt = gilt, pieces = pieces, brainrots = brainrots, record = record, route = route.id, routeName = route.name, finds = finds })
+	local rankNow = Plan.rankOf(p.banked)
+	local have, total = 0, 0
+	for w in Plan.Wings do
+		for _, piece in Plan.setOf(w) do
+			total += 1
+			if p.collected[piece.id] then
+				have += 1
+			end
+		end
+	end
+	ctx.send(player, { op = "banked", worth = worth, base = base, bonus = bonus, gilt = gilt, pieces = pieces, brainrots = brainrots, record = record, route = route.id, routeName = route.name, finds = finds, fresh = fresh, collected = have, total = total, sets = sets, rankUp = if rankNow > rankBefore then Plan.Ranks[rankNow].name else nil })
 	note(player, "Luxe banked", { route = route.id, worth = worth, pieces = count })
 	if route.id == "van" then
 		complete(ctx, player, run, "van")
@@ -585,7 +679,7 @@ local function bank(ctx: Types.Ctx, player: Player, run: Run, way: Plan.Bank?)
 	-- (A first find told to the house, unless the Crown Jewel is in the same haul: it has its own.)
 	if not crown then
 		for _, name in finds do
-			ctx.herald(player, { kind = "haul", title = "A rare find", line = "found " .. name .. " in Steal a Luxe", glyph = "✦", worth = worth })
+			ctx.herald(player, { kind = "haul", title = "A rare find", line = "found " .. name .. " in Steal a Luxe", glyph = "✨", worth = worth })
 		end
 	end
 	ctx.tally(player, "luxeHauls", 1)
@@ -614,7 +708,7 @@ end
 
 -- How far a guard sees `player` this moment (0: not at all), and how near (0 to 1).
 local function sees(ctx: Types.Ctx, g: Guard, player: Player, run: Run): (boolean, number)
-	if run.grace > now then
+	if run.grace > now or not run.awake then
 		return false, 0
 	end
 	local root = ctx.rootOf(player)
@@ -699,7 +793,12 @@ local function guardStep(ctx: Types.Ctx, g: Guard, dt: number)
 				g.searchAt = at
 				g.searchUntil = 0
 				g.suspicion[target] = 0.4
+			elseif g.startAt and now < g.startAt then
+				-- (Sent after them: he turns to look a moment before he sets off.)
+				run.chasedBy += 1
+				Luxe.walk(g, g.root.CFrame.Position, 0)
 			else
+				g.startAt = nil
 				run.chasedBy += 1
 				local gap = flat(at - g.root.CFrame.Position).Magnitude
 				if gap <= c.catchReach and math.abs(at.Y - g.root.CFrame.Position.Y) < 7 then
@@ -846,7 +945,7 @@ local function cameraStep(ctx: Types.Ctx, dt: number)
 		for player, run in runs do
 			local root = ctx.rootOf(player)
 			local inView = false
-			if root and run.grace <= now and (run.quietUntil[i] or 0) <= now then
+			if root and run.awake and run.grace <= now and (run.quietUntil[i] or 0) <= now then
 				local at = root.CFrame.Position
 				if Plan.wingAt(at - origin) == cam.def.wing then
 					local to = at - cam.world
@@ -888,7 +987,7 @@ end
 local function laserStep(ctx: Types.Ctx)
 	for player, run in runs do
 		local root = ctx.rootOf(player)
-		if root and run.grace <= now then
+		if root and run.awake and run.grace <= now then
 			local at = root.CFrame.Position - origin
 			if Plan.wingAt(at) == 3 then
 				for _, l in Plan.Lasers do
@@ -1170,6 +1269,24 @@ function Luxe.step(ctx: Types.Ctx, dt: number)
 end
 
 -- The upgrades a guest can buy, and what each costs (for the Lounge's board and the HUD).
+-- The Collection as the Lounge's board shows it: the rank, and each wing's set (what's banked of it,
+-- its reward, whether that's paid).
+local function collectionOf(p: { [string]: any }): { [string]: any }
+	local rank, nextAt = Plan.rankOf(p.banked)
+	local wings = {}
+	for w, def in Plan.Wings do
+		local set = Plan.setOf(w)
+		local have = 0
+		for _, piece in set do
+			if p.collected[piece.id] then
+				have += 1
+			end
+		end
+		table.insert(wings, { wing = w, name = def.name, have = have, of = #set, gilt = Plan.SetGilt[w] or 0, paid = p.sets[tostring(w)] == true })
+	end
+	return { rank = rank, rankName = Plan.Ranks[rank].name, nextAt = nextAt, nextName = if Plan.Ranks[rank + 1] then Plan.Ranks[rank + 1].name else nil, banked = p.banked, wings = wings }
+end
+
 local function upgrades(ctx: Types.Ctx, p: { [string]: any }): { [string]: any }
 	local c = cfg(ctx)
 	local function row(kind: string, levels: { number }, prices: { number }, describe: (number) -> string)
@@ -1202,6 +1319,7 @@ local function upgrades(ctx: Types.Ctx, p: { [string]: any }): { [string]: any }
 		hauls = p.hauls,
 		banked = p.banked,
 		best = p.best,
+		collection = collectionOf(p),
 	}
 end
 
@@ -1231,7 +1349,8 @@ function Luxe.directory(ctx: Types.Ctx, player: Player): { [string]: any }
 	for _ in p.discoveries do
 		finds += 1
 	end
-	return { open = true, hauls = p.hauls, best = p.best, banked = p.banked, stride = level, finds = finds }
+	local rank = Plan.rankOf(p.banked)
+	return { open = true, hauls = p.hauls, best = p.best, banked = p.banked, stride = level, finds = finds, rank = Plan.Ranks[rank].name }
 end
 
 function Luxe.ask(ctx: Types.Ctx, player: Player, r: { [string]: unknown }): any
@@ -1259,7 +1378,7 @@ function Luxe.ask(ctx: Types.Ctx, player: Player, r: { [string]: unknown }): any
 			return { ok = false, why = "That's as good as it gets." }
 		end
 		if not ctx.spend(player, price, 0, "luxe_" .. kind) then
-			return { ok = false, why = string.format("That's %s Gilt.", Fortune.format(price)) }
+			return { ok = false, short = "Gilt", why = string.format("That's %s Gilt.", Fortune.format(price)) }
 		end
 		p[kind] = at + 1
 		ctx.tally(player, "luxeUpgrades", 1)
@@ -1275,7 +1394,7 @@ function Luxe.ask(ctx: Types.Ctx, player: Player, r: { [string]: unknown }): any
 		end
 		local gems = tonumber(c.goldenGems) or 150
 		if not ctx.spend(player, 0, gems, "luxe_golden") then
-			return { ok = false, why = string.format("That's %d Gems.", gems) }
+			return { ok = false, short = "Gems", why = string.format("That's %d Gems.", gems) }
 		end
 		p.golden = true
 		return { ok = true, upgrades = upgrades(ctx, p) }

@@ -141,7 +141,7 @@ check("the sidearm is free", r.ok == true and page(ada).sidearm == true and data
 r = askAs(ada, { op = "go", id = "executive" })
 check("no invitation: said plainly, with every way to get one and the real figures", r.ok == false and string.find(r.why, "You need an invitation", 1, true) ~= nil and string.find(r.why, "Maison Basement", 1, true) ~= nil and string.find(r.why, "8,000", 1, true) ~= nil and string.find(r.why, "25,000 Gilt", 1, true) ~= nil, r.why)
 r = askAs(ada, { op = "act", id = "executive", act = "invite" })
-check("an invitation for Gilt, without the Gilt: its price", r.ok == false and r.why == "An invitation is 25,000 Gilt.", r.why)
+check("an invitation for Gilt, without the Gilt: its price, marked as the purse being short (the screen says Insufficient Gilt)", r.ok == false and r.why == "An invitation is 25,000 Gilt." and r.short == "Gilt", r.why)
 data(ada).gilt = 30000
 r = askAs(ada, { op = "act", id = "executive", act = "invite" })
 check("with it: an invitation, for exactly its price", r.ok == true and page(ada).invites == 1 and data(ada).gilt == 5000)
@@ -731,5 +731,155 @@ T = 9000 - cam.phase * cam.period
 standIn(ada, Vector3.new(0, 0, cam.at.Z))
 steps(30)
 check("seen long enough: the alarm, and security shows them out", Attractions.inside(ada) == nil and last(ada, "alarm") ~= nil)
+check("...with no revive held and none on sale, at once (no moment offered)", last(ada, "alarm").revive == false and last(ada, "caught") == nil)
+
+---------------------------------------------------------------------------------------------------
+-- 5. Chronos Defiance in the Suite: caught, a revive keeps the run going
+---------------------------------------------------------------------------------------------------
+local rv = { held = 0, onSale = true, price = 89, spent = 0, offered = 0, offerOk = true, context = nil }
+Game.revives.held = function()
+	return rv.held
+end
+Game.revives.onSale = function()
+	return rv.onSale
+end
+Game.revives.price = function()
+	return rv.price
+end
+Game.revives.spend = function()
+	if rv.held > 0 then
+		rv.held -= 1
+		rv.spent += 1
+		return true
+	end
+	return false
+end
+Game.revives.offer = function(_p, context)
+	rv.offered += 1
+	rv.context = context
+	return rv.offerOk, if rv.offerOk then nil else "The purchase window couldn't open."
+end
+local function caughtAt()
+	T = 9000 - cam.phase * cam.period
+	standIn(ada, Vector3.new(0, 0, cam.at.Z))
+	steps(30)
+end
+page(ada).invites = 1
+stand(ada, Layout.Midnight.arrival)
+advance(3)
+r = askAs(ada, { op = "go", id = "executive" })
+check("(up again)", r.ok == true)
+Game.guests[ada].digits[1] = true
+Game.guests[ada].digits[2] = true
+caughtAt()
+local moment = last(ada, "caught")
+check("caught, with Chronos Defiance on sale: the moment for a revive, still in the Suite", Attractions.inside(ada) == "executive" and Game.guests[ada].out == true and moment ~= nil and last(ada, "alarm").revive == true)
+check("...its price shown, nothing held, where it puts you back, and how long it stands", moment.price == 89 and moment.onSale == true and moment.held == 0 and moment.where == "hall" and math.abs(moment.left - Game.REVIVE.window) < 0.01 and moment.usesLeft == Game.REVIVE.most)
+r = askAs(ada, { op = "act", id = "executive", act = "terminal", n = 3 })
+check("while caught, nothing else in the Suite works", r.ok == false and r.why == "You were caught: security is showing you out.")
+r = askAs(ada, { op = "act", id = "executive", act = "revive" })
+local upd = last(ada, "caughtUpdate")
+check("revive with none held: Roblox's purchase window, for the Suite", r.ok == true and r.prompting == true and rv.offered == 1 and rv.context == "executive" and upd ~= nil and upd.prompting == true)
+check("...and the moment waits while it's open", Game.guests[ada].revive.deadline == T + Game.REVIVE.promptWait)
+r = askAs(ada, { op = "act", id = "executive", act = "revive" })
+check("...one window at a time", r.ok == false and rv.offered == 1)
+Game.reviveClosed(ada, true)
+check("bought: the moment waits for Roblox's receipt", Game.guests[ada].revive.prompting == false and Game.guests[ada].revive.deadline == T + Game.REVIVE.receiptWait and last(ada, "caughtUpdate").prompting == false)
+rv.held = 1 -- (the receipt's credit)
+check("the receipt revives the run (Purchases/Revive asks the Suite)", Game.reviveOpen(ada) == true and Game.reviveNow(ada) == true and rv.spent == 1 and rv.held == 0)
+local back = last(ada, "revived")
+check("...back at the lift, the alert down, composure full, the digits read kept", back ~= nil and back.where == "hall" and Game.guests[ada].out == false and Game.guests[ada].alert == 0 and Game.guests[ada].composure == Game.guests[ada].max and Game.guests[ada].digits[1] == true and Game.guests[ada].digits[2] == true and (ada.root.CFrame.Position - (O + Plan.Arrival + Vector3.new(0, 3, 0))).Magnitude < 0.01)
+check("...and one credit revives once", Game.reviveOpen(ada) == false and Game.reviveNow(ada) == false and rv.spent == 1)
+-- Caught again, a revive held: used at once, with no purchase.
+rv.held = 2
+caughtAt()
+r = askAs(ada, { op = "act", id = "executive", act = "revive" })
+check("caught again with revives held: one used at once, no purchase window", r.ok == true and rv.held == 1 and rv.offered == 1 and Game.guests[ada].out == false and Game.guests[ada].revives == 2)
+-- A purchase window that couldn't open: said, and the moment stands.
+rv.held = 0
+rv.offerOk = false
+caughtAt()
+r = askAs(ada, { op = "act", id = "executive", act = "revive" })
+check("a purchase window that couldn't open: said, and the moment still stands", r.ok == false and r.why == "The purchase window couldn't open." and Game.guests[ada].revive ~= nil and Game.guests[ada].revive.prompting == false)
+rv.offerOk = true
+-- The moment passes: shown out.
+T += Game.REVIVE.window + 1
+steps(1)
+check("the moment passes: security shows them out", Attractions.inside(ada) == nil and last(ada, "caughtEnd") ~= nil)
+-- Leave, at once.
+page(ada).invites = 1
+stand(ada, Layout.Midnight.arrival)
+advance(3)
+r = askAs(ada, { op = "go", id = "executive" })
+caughtAt()
+r = askAs(ada, { op = "act", id = "executive", act = "leaveCaught" })
+check("Leave in the moment: home at once", r.ok == true and Attractions.inside(ada) == nil)
+r = askAs(ada, { op = "act", id = "executive", act = "revive" })
+check("...and no revive to take once home", r.ok == false)
+-- The most one run takes.
+page(ada).invites = 1
+stand(ada, Layout.Midnight.arrival)
+advance(3)
+r = askAs(ada, { op = "go", id = "executive" })
+Game.guests[ada].revives = Game.REVIVE.most
+rv.held = 1
+caughtAt()
+check("a run that's used its last revive: shown out at once", Attractions.inside(ada) == nil and last(ada, "alarm").revive == false and rv.held == 1)
+-- In the Office: back just inside its door, untouchable for a moment.
+page(ada).invites = 1
+stand(ada, Layout.Midnight.arrival)
+advance(3)
+r = askAs(ada, { op = "go", id = "executive" })
+local gA = Game.guests[ada]
+gA.out = true
+gA.composure = 0
+gA.revive = { where = "office", deadline = T + 10, prompting = false, left = 10 }
+check("a revive in the Office: back just inside its door", Game.reviveNow(ada) == true and (ada.root.CFrame.Position - (O + Plan.OfficeEntry + Vector3.new(0, 3, 0))).Magnitude < 0.01 and gA.composure == gA.max and gA.safeUntil == T + 3)
+r = askAs(ada, { op = "home" })
+Game.revives.held = function()
+	return 0
+end
+Game.revives.onSale = function()
+	return false
+end
+
+-- Security's armour (on the staff rig's figure): helmet and visor, a plate carrier marked SECURITY,
+-- pads, a belt and a radio, all welded on and walked through, and nothing that shoots.
+do
+	local Instance = H.Instance
+	local fig = Instance.new("Model")
+	for _, spec in {
+		{ "Head", Vector3.new(1.2, 1.2, 1.2) }, { "UpperTorso", Vector3.new(2, 1.6, 1) }, { "LowerTorso", Vector3.new(2, 0.4, 1) },
+		{ "LeftUpperArm", Vector3.new(1, 1.2, 1) }, { "RightUpperArm", Vector3.new(1, 1.2, 1) },
+		{ "LeftLowerLeg", Vector3.new(1, 1.2, 1) }, { "RightLowerLeg", Vector3.new(1, 1.2, 1) },
+	} do
+		local p = Instance.new("Part")
+		p.Name = spec[1]
+		p.Size = spec[2]
+		p.Parent = fig
+	end
+	local tie = Instance.new("Part")
+	tie.Name = "Tie"
+	tie.Parent = fig
+	Game.armour(fig)
+	local want = { "Helmet", "Visor", "Vest", "Plate", "Radio", "Belt", "LeftShoulder", "RightShoulder", "LeftKnee", "RightKnee" }
+	local all = true
+	for _, n in want do
+		local p = fig:FindFirstChild(n)
+		all = all and p ~= nil and p.CanCollide == false and p.CanQuery == false and p.Massless == true and p:FindFirstChildOfClass("WeldConstraint") ~= nil
+	end
+	check("security in armour: helmet, visor, plate carrier, pads, belt and radio, welded on and walked through", all)
+	local vest = fig:FindFirstChild("Vest")
+	local marked = vest and vest:FindFirstChild("MarkFront") and vest:FindFirstChild("MarkBack")
+	check("...SECURITY across the chest and the back", marked ~= nil and vest.MarkFront:FindFirstChildOfClass("TextLabel").Text == "SECURITY")
+	local armed = false
+	for _, d in fig:GetDescendants() do
+		if d:IsA("Tool") or string.find(string.lower(d.Name), "gun", 1, true) or string.find(string.lower(d.Name), "rifle", 1, true) then
+			armed = true
+		end
+	end
+	check("...and nothing that shoots: no weapon of any kind", not armed)
+	check("...the butler's tie is gone", fig:FindFirstChild("Tie") == nil)
+end
 
 H.finish()

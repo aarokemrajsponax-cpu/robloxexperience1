@@ -98,13 +98,116 @@ Executive.walk = function(actor: any, target: Vector3, speed: number)
 		h:MoveTo(target)
 	end
 end
+-- Security's armour, on a figure built by the staff rig: a helmet with a dark visor, a plate
+-- carrier marked SECURITY front and back, shoulder and knee pads, a belt and a radio. No weapon of
+-- any kind: the Suite's security never shoots (they notice, they chase, they escort). Every piece
+-- is welded on, weightless and walked through, and never in the way of a sight line.
+local ARMOUR = Color3.fromRGB(34, 38, 44)
+local ARMOUR_DARK = Color3.fromRGB(20, 22, 26)
+function Executive.armour(model: Model)
+	for _, name in { "CoatTails", "Tie", "ShirtFront", "LapelKey", "LapelKeyBow" } do
+		local old = model:FindFirstChild(name, true)
+		if old then
+			old:Destroy()
+		end
+	end
+	local function on(partName: string, name: string, size: Vector3, offset: CFrame, colour: Color3, material: Enum.Material?): BasePart?
+		local body = model:FindFirstChild(partName)
+		if not body or not body:IsA("BasePart") then
+			return nil
+		end
+		local p = Instance.new("Part")
+		p.Name = name
+		p.Size = size
+		p.Color = colour
+		p.Material = material or Enum.Material.SmoothPlastic
+		p.CanCollide = false
+		p.CanTouch = false
+		p.CanQuery = false
+		p.Massless = true
+		p.Anchored = false
+		p.CastShadow = true
+		p.CFrame = body.CFrame * offset
+		local weld = Instance.new("WeldConstraint")
+		weld.Part0 = body
+		weld.Part1 = p
+		weld.Parent = p
+		p.Parent = model
+		return p
+	end
+	local head = model:FindFirstChild("Head")
+	if head and head:IsA("BasePart") then
+		local hs = head.Size
+		local helmet = on("Head", "Helmet", Vector3.new(hs.X * 1.18, hs.Y * 0.62, hs.Z * 1.22), CFrame.new(0, hs.Y * 0.32, -hs.Z * 0.02), ARMOUR_DARK)
+		if helmet then
+			local dome = Instance.new("SpecialMesh")
+			dome.MeshType = Enum.MeshType.Sphere
+			dome.Parent = helmet
+		end
+		on("Head", "HelmetBrim", Vector3.new(hs.X * 1.2, hs.Y * 0.08, hs.Z * 0.3), CFrame.new(0, hs.Y * 0.12, -hs.Z * 0.6), ARMOUR_DARK)
+		local visor = on("Head", "Visor", Vector3.new(hs.X * 1.02, hs.Y * 0.26, hs.Z * 0.12), CFrame.new(0, hs.Y * 0.04, -hs.Z * 0.52), Color3.fromRGB(8, 10, 14), Enum.Material.Glass)
+		if visor then
+			visor.Reflectance = 0.35
+			visor.Transparency = 0.08
+		end
+	end
+	local torso = model:FindFirstChild("UpperTorso")
+	if torso and torso:IsA("BasePart") then
+		local ts = torso.Size
+		local vest = on("UpperTorso", "Vest", Vector3.new(ts.X * 1.12, ts.Y * 0.92, ts.Z * 1.35), CFrame.new(0, -ts.Y * 0.02, 0), ARMOUR, Enum.Material.Fabric)
+		if vest then
+			for _, face in { Enum.NormalId.Front, Enum.NormalId.Back } do
+				local gui = Instance.new("SurfaceGui")
+				gui.Name = "Mark" .. face.Name
+				gui.Face = face
+				gui.CanvasSize = Vector2.new(240, 120)
+				gui.LightInfluence = 0.6
+				local word = Instance.new("TextLabel")
+				word.BackgroundTransparency = 1
+				word.Position = UDim2.fromScale(0.08, 0.3)
+				word.Size = UDim2.fromScale(0.84, 0.32)
+				word.Font = Enum.Font.GothamBlack
+				word.TextScaled = true
+				word.TextColor3 = Color3.fromRGB(232, 226, 212)
+				word.Text = "SECURITY"
+				word.Parent = gui
+				gui.Parent = vest
+			end
+		end
+		on("UpperTorso", "Plate", Vector3.new(ts.X * 0.7, ts.Y * 0.5, ts.Z * 0.18), CFrame.new(0, ts.Y * 0.12, -ts.Z * 0.72), ARMOUR_DARK)
+		on("UpperTorso", "Radio", Vector3.new(ts.X * 0.14, ts.Y * 0.24, ts.Z * 0.18), CFrame.new(-ts.X * 0.38, ts.Y * 0.32, -ts.Z * 0.74), Color3.fromRGB(12, 12, 14))
+	end
+	local lower = model:FindFirstChild("LowerTorso")
+	if lower and lower:IsA("BasePart") then
+		local ls = lower.Size
+		on("LowerTorso", "Belt", Vector3.new(ls.X * 1.1, ls.Y * 0.32, ls.Z * 1.3), CFrame.new(0, ls.Y * 0.2, 0), ARMOUR_DARK)
+	end
+	for _, side in { "Left", "Right" } do
+		local arm = model:FindFirstChild(side .. "UpperArm")
+		if arm and arm:IsA("BasePart") then
+			local a = arm.Size
+			on(side .. "UpperArm", side .. "Shoulder", Vector3.new(a.X * 1.35, a.Y * 0.42, a.Z * 1.35), CFrame.new(0, a.Y * 0.28, 0), ARMOUR)
+		end
+		local shin = model:FindFirstChild(side .. "LowerLeg")
+		if shin and shin:IsA("BasePart") then
+			local l = shin.Size
+			on(side .. "LowerLeg", side .. "Knee", Vector3.new(l.X * 1.25, l.Y * 0.32, l.Z * 0.45), CFrame.new(0, l.Y * 0.32, -l.Z * 0.45), ARMOUR_DARK)
+		end
+	end
+end
+
 -- How a figure is made (set by tests).
 Executive.makeFigure = function(parent: Instance, name: string, at: CFrame, kind: string): (Model, BasePart, Humanoid?)
 	local ok, staff = pcall(function()
 		local Rig = require(script.Parent.Parent.Staff.Rig) :: any
 		local spec = Rig.look(if kind == "boss" then "Concierge" else "Guard")
-		spec.coat = if kind == "boss" then Color3.fromRGB(20, 22, 40) else Color3.fromRGB(14, 14, 16)
-		return Rig.build(name, spec, at, parent)
+		spec.coat = if kind == "boss" then Color3.fromRGB(20, 22, 40) else ARMOUR_DARK
+		local built = Rig.build(name, spec, at, parent)
+		-- (Security in armour; the Executive himself in his suit.)
+		if kind ~= "boss" then
+			pcall(Executive.armour, built.model)
+		end
+		return built
 	end)
 	if ok and staff then
 		return staff.model, staff.root, staff.humanoid
@@ -141,6 +244,12 @@ type Guest = {
 	extracted: boolean?, -- (Build 78) away down the lift within the extraction's minute
 	seen: string?, -- (Build 81) who has eyes on them right now: "camera", "guard", or nil
 	sentAlert: number?, -- the alert their screen was last told
+	-- (Build 82) Chronos Defiance: the moment after being caught (where, until when, whether
+	-- Roblox's purchase window is open, the countdown left when it opened), the revives spent this
+	-- run, and a moment untouchable after one.
+	revive: { where: string, deadline: number, prompting: boolean, left: number }?,
+	revives: number?,
+	safeUntil: number?,
 }
 type Shot = { id: string, from: Vector3, dir: Vector3, speed: number, born: number, radius: number, damage: number, life: number }
 type Wave = { id: string, at: Vector3, born: number, speed: number, width: number, damage: number, life: number }
@@ -317,17 +426,130 @@ end
 ---------------------------------------------------------------------------------------------------
 -- Damage and phases
 ---------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------
+-- Caught, and Chronos Defiance
+---------------------------------------------------------------------------------------------------
+-- The revives (set at boot from Purchases/Revive; tests set their own): how many the guest holds,
+-- whether Chronos Defiance is on sale and its price (shown on the key, never hidden), spending one
+-- held, and Roblox's purchase window. The Suite owns the moment: only the server decides a guest
+-- was caught and opens the window; a screen can only ask to revive, never say it may.
+Executive.revives = {
+	held = function(_player: Player): number
+		return 0
+	end,
+	onSale = function(): boolean
+		return false
+	end,
+	price = function(): number?
+		return nil
+	end,
+	spend = function(_player: Player): boolean
+		return false
+	end,
+	offer = function(_player: Player, _context: string): (boolean, string?)
+		return false, "That isn't on sale yet."
+	end,
+}
+-- How long the moment stands (the run ends with it), how long it waits while Roblox's window is
+-- open and then for the receipt, and the most revives one run takes.
+Executive.REVIVE = { window = 15, promptWait = 60, receiptWait = 25, most = 3 }
+
+local suite: Types.Ctx? = nil -- (the attraction's context, for the purchase's own callbacks)
+
+local function reviveMessage(player: Player, g: Guest, op: string): { [string]: any }
+	local r = g.revive
+	local used = g.revives or 0
+	return {
+		op = op,
+		where = if r then r.where else nil,
+		left = if r then math.max(0, r.deadline - Executive.clock()) else 0,
+		prompting = if r then r.prompting else false,
+		held = Executive.revives.held(player),
+		onSale = Executive.revives.onSale(),
+		price = Executive.revives.price(),
+		used = used,
+		usesLeft = Executive.REVIVE.most - used,
+	}
+end
+
+-- Caught (the alarm in the hall, or no composure left in the Office): the moment for a revive, if
+-- one can be had (one held, or Chronos Defiance on sale) and this run hasn't used its last;
+-- otherwise security shows them out at once.
+local function caught(ctx: Types.Ctx, player: Player, g: Guest, where: string)
+	g.out = true
+	g.seen = nil
+	local used = g.revives or 0
+	local can = run.phase ~= "won" and used < Executive.REVIVE.most and (Executive.revives.held(player) > 0 or Executive.revives.onSale())
+	ctx.send(player, { op = if where == "office" then "escorted" else "alarm", revive = can })
+	if can then
+		g.revive = { where = where, deadline = Executive.clock() + Executive.REVIVE.window, prompting = false, left = Executive.REVIVE.window }
+		ctx.send(player, reviveMessage(player, g, "caught"))
+		return
+	end
+	ctx.sendHome(player, ID)
+end
+
+-- Spends a revive on the open moment: back in the run where it stood (the hall's lift lobby with
+-- the digits already read, or just inside the Office's door), the alert down, composure full, and
+-- a moment untouchable. True if revived.
+local function revive(ctx: Types.Ctx, player: Player): boolean
+	local g = guests[player]
+	local r = g and g.revive
+	if not g or not r or not g.out or run.phase == "won" or ctx.inside(player) ~= ID then
+		return false
+	end
+	if not Executive.revives.spend(player) then
+		return false
+	end
+	local used = (g.revives or 0) + 1
+	g.revive = nil
+	g.revives = used
+	g.out = false
+	g.alert = 0
+	g.sentAlert = 0
+	g.seen = nil
+	g.composure = g.max
+	g.safeUntil = Executive.clock() + 3
+	local back = if r.where == "office" then Plan.OfficeEntry else Plan.Arrival
+	ctx.teleport(player, CFrame.new(origin + back))
+	ctx.send(player, { op = "revived", where = r.where, composure = g.composure, held = Executive.revives.held(player), used = used, usesLeft = Executive.REVIVE.most - used })
+	note(player, "Executive revived", { phase = run.phase, where = r.where })
+	push(ctx, player)
+	return true
+end
+
+-- For Purchases/Revive (a revive moment of its own, beside the tables'): open, spend, closed.
+function Executive.reviveOpen(player: Player): boolean
+	local g = guests[player]
+	return g ~= nil and g.revive ~= nil and run.phase ~= "won"
+end
+
+function Executive.reviveNow(player: Player): boolean
+	return suite ~= nil and revive(suite :: Types.Ctx, player)
+end
+
+function Executive.reviveClosed(player: Player, purchased: boolean)
+	local g = guests[player]
+	local r = g and g.revive
+	if not g or not r or not r.prompting or not suite then
+		return
+	end
+	r.prompting = false
+	-- Bought: wait for Roblox's receipt (it revives the moment it's granted). Not bought: the
+	-- countdown resumes where it stood.
+	r.deadline = Executive.clock() + (if purchased then Executive.REVIVE.receiptWait else r.left)
+	;(suite :: Types.Ctx).send(player, reviveMessage(player, g, "caughtUpdate"))
+end
+
 local function hurt(ctx: Types.Ctx, player: Player, g: Guest, amount: number, why: string)
-	if g.out then
+	if g.out or (g.safeUntil and Executive.clock() < g.safeUntil) then
 		return
 	end
 	g.composure = math.max(0, g.composure - amount)
 	ctx.send(player, { op = "hurt", amount = amount, why = why, composure = g.composure })
 	if g.composure <= 0 then
-		g.out = true
-		ctx.send(player, { op = "escorted" })
 		note(player, "Executive escorted", { phase = run.phase, why = why })
-		ctx.sendHome(player, ID)
+		caught(ctx, player, g, "office")
 	end
 end
 
@@ -610,11 +832,9 @@ local function hallStep(ctx: Types.Ctx, dt: number, t: number)
 			g.alert = math.max(0, g.alert - dt * (tonumber(c.alertFade) or 0.1))
 		end
 		if g.alert >= 1 then
-			g.out = true
-			ctx.send(player, { op = "alarm" })
 			note(player, "Executive alarm", nil)
 			ctx.tally(player, "executiveCaught", 1)
-			ctx.sendHome(player, ID)
+			caught(ctx, player, g, "hall")
 		elseif changed or math.abs(g.alert - (g.sentAlert or 0)) > 0.04 or (g.alert == 0 and before > 0) then
 			g.sentAlert = g.alert
 			push(ctx, player)
@@ -785,6 +1005,7 @@ end
 -- The attraction
 ---------------------------------------------------------------------------------------------------
 function Executive.build(ctx: Types.Ctx, parent: Instance)
+	suite = ctx
 	origin = AttractionList.origin(ID)
 	built = ExecutiveBuild.build(parent, origin, function(player: Player)
 		if ctx.inside(player) == ID then
@@ -919,6 +1140,19 @@ function Executive.step(ctx: Types.Ctx, dt: number)
 		return
 	end
 	local t = Executive.clock()
+	-- A revive's moment over (or the Executive beaten meanwhile): security shows them out.
+	local over: { Player } = {}
+	for player, g in guests do
+		local r = g.revive
+		if r and (t >= r.deadline or run.phase == "won") then
+			g.revive = nil
+			table.insert(over, player)
+		end
+	end
+	for _, player in over do
+		ctx.send(player, { op = "caughtEnd" })
+		ctx.sendHome(player, ID)
+	end
 	hallStep(ctx, dt, t)
 	-- Into the Office through the open door: the Executive is waiting.
 	if run.phase == "hall" and run.open and #playersInOffice(ctx) > 0 then
@@ -978,7 +1212,7 @@ function Executive.ask(ctx: Types.Ctx, player: Player, r: { [string]: unknown })
 			return { ok = false, why = "That's already packed for your next run." }
 		end
 		if not ctx.spend(player, g.price, 0, "executive_" .. g.id) then
-			return { ok = false, why = string.format("That's %s Gilt.", Fortune.format(g.price)) }
+			return { ok = false, short = "Gilt", why = string.format("That's %s Gilt.", Fortune.format(g.price)) }
 		end
 		p.kit[g.id] = true
 		Executive.carriedChanged(player)
@@ -990,14 +1224,50 @@ function Executive.ask(ctx: Types.Ctx, player: Player, r: { [string]: unknown })
 		end
 		local price = tonumber(c.invitePrice) or 25000
 		if not ctx.spend(player, price, 0, "executive_invite") then
-			return { ok = false, why = string.format("An invitation is %s Gilt.", Fortune.format(price)) }
+			return { ok = false, short = "Gilt", why = string.format("An invitation is %s Gilt.", Fortune.format(price)) }
 		end
 		p.invites += 1
 		return { ok = true, state = Executive.state(ctx, player) }
 	end
 	-- In the Suite.
 	local g = guests[player]
-	if not g or g.out or ctx.inside(player) ~= ID then
+	if act == "revive" or act == "leaveCaught" then
+		local moment = g and g.revive
+		if not g or not moment or ctx.inside(player) ~= ID then
+			return { ok = false, why = "There's no revive to take just now." }
+		end
+		if act == "leaveCaught" then
+			g.revive = nil
+			ctx.sendHome(player, ID)
+			return { ok = true }
+		end
+		if moment.prompting then
+			return { ok = false, why = "The purchase window is already open." }
+		end
+		if Executive.revives.held(player) > 0 then
+			if revive(ctx, player) then
+				return { ok = true }
+			end
+			return { ok = false, why = "That revive couldn't be used just now. Try again." }
+		end
+		local opened, why = Executive.revives.offer(player, "executive")
+		if g.revive ~= moment then
+			return { ok = false, why = "The moment passed: a revive bought now is kept for your next run." }
+		end
+		if not opened then
+			return { ok = false, why = why or "Not just now." }
+		end
+		-- The countdown waits while Roblox's window is open (up to promptWait).
+		moment.left = math.max(3, moment.deadline - Executive.clock())
+		moment.prompting = true
+		moment.deadline = Executive.clock() + Executive.REVIVE.promptWait
+		ctx.send(player, reviveMessage(player, g, "caughtUpdate"))
+		return { ok = true, prompting = true }
+	end
+	if g and g.out then
+		return { ok = false, why = "You were caught: security is showing you out." }
+	end
+	if not g or ctx.inside(player) ~= ID then
 		return { ok = false, why = "You're not in the Executive Suite." }
 	end
 	local at = ctx.at(player, ID)

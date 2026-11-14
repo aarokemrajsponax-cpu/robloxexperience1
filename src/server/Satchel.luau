@@ -255,7 +255,7 @@ local function medallion(tool: Tool, e: Entry)
 	glyph.BackgroundTransparency = 1
 	glyph.Size = UDim2.fromScale(0.74, 0.74)
 	glyph.Position = UDim2.fromScale(0.13, 0.13)
-	glyph.Text = e.glyph or "✦"
+	glyph.Text = e.glyph or "✨"
 	glyph.TextScaled = true
 	glyph.TextColor3 = rgb(255, 255, 255)
 	glyph.Font = Enum.Font.GothamBold

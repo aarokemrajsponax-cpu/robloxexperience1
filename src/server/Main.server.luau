@@ -480,7 +480,7 @@ Shop.goldenHour = function(buyer, seconds)
 	local ends = Workspace:GetAttribute(require(ReplicatedStorage.Shared.HouseEvents).attribute("goldenHour"))
 	local left = if type(ends) == "number" then math.max(0, ends - os.time()) else 0
 	AdminService.startEvent("goldenHour", left + seconds, Names.of(buyer))
-	Remotes.event("Salute"):FireAllClients({ op = "salute", id = "goldenHourGift", by = Names.of(buyer), effects = { "goldLeaf", "fireworks" }, seconds = 10, title = "Golden Hour", line = Names.of(buyer) .. " bought a Golden Hour for everyone: double Gilt for every guest!" })
+	Remotes.event("Salute"):FireAllClients({ op = "salute", id = "goldenHourGift", by = Names.of(buyer), effects = { "goldLeaf" }, seconds = 10, title = "Golden Hour", line = Names.of(buyer) .. " bought a Golden Hour for everyone: double Gilt for every guest!" })
 end
 boot("The Boutique", Shop.start)
 -- Every Robux purchase: receipts, the purchase ledger, prompts, and the five products. After the
@@ -515,7 +515,7 @@ Purchases.Sabotage.open = function(by: string?)
 		ok, why = BallroomService.openNow(by)
 	end
 	if ok and by then
-		Remotes.event("Salute"):FireAllClients({ op = "salute", id = "ballroomOpened", by = by, effects = { "fireworks" }, seconds = 6, title = "The Ballroom is open", line = by .. " opened the Ballroom for everyone. Lights Out: press Join in the Ballroom." })
+		Remotes.event("Salute"):FireAllClients({ op = "salute", id = "ballroomOpened", by = by, effects = {}, seconds = 6, title = "The Ballroom is open", line = by .. " opened the Ballroom for everyone. Lights Out: press Join in the Ballroom." })
 	end
 	return ok, why
 end
@@ -534,7 +534,7 @@ Purchases.Racing.isClosed = GrandPrixService.isClosed
 Purchases.Racing.open = function(by: string?)
 	local ok, why = GrandPrixService.openNow(by)
 	if ok and by then
-		Remotes.event("Salute"):FireAllClients({ op = "salute", id = "grandPrixOpened", by = by, effects = { "fireworks" }, seconds = 6, title = "The Grand Prix is open", line = by .. " opened the Grand Prix for everyone. Get in any car on the street and press Race." })
+		Remotes.event("Salute"):FireAllClients({ op = "salute", id = "grandPrixOpened", by = by, effects = {}, seconds = 6, title = "The Grand Prix is open", line = by .. " opened the Grand Prix for everyone. Get in any car on the street and press Race." })
 	end
 	return ok, why
 end
@@ -968,6 +968,14 @@ boot("The Empire", function()
 	end
 	Executive.carriedChanged = Satchel.refresh
 	Satchel.start()
+	-- Chronos Defiance in the Executive Suite: caught by security, a revive keeps the run going.
+	local Revive = Purchases.Revive
+	Executive.revives.held = Revive.heldAnywhere
+	Executive.revives.onSale = Revive.onSale
+	Executive.revives.price = Revive.price
+	Executive.revives.spend = Revive.spendAnywhere
+	Executive.revives.offer = Revive.offer
+	table.insert(Revive.windows, { open = Executive.reviveOpen, apply = Executive.reviveNow, closed = Executive.reviveClosed })
 end)
 
 -- The Grand Auction, in the Library: the week's lots, bid for in every server at once.

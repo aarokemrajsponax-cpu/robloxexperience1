@@ -337,13 +337,216 @@ local function glassKey(parent: Instance, text: string, icon: string, accent: Co
 	return b
 end
 
+-- The screen the Home Screen is laid out for. Roblox reports a tiny viewport for a moment as a
+-- client starts (1 by 1 in Studio), and a layout built for that has no room at all: the column
+-- goes negative, the name hangs off the left and PLAY has no width. So a screen too small to be
+-- real is taken as a usual one, and the layout is built again once the real size is known (and
+-- whenever it changes: a window resized, a phone turned).
+local function screen(): Vector2
+	local size = Root.size()
+	if size.X < 320 or size.Y < 240 then
+		return Vector2.new(1280, 720) / math.max(Root.scale, 0.01)
+	end
+	return size
+end
+
+-- A small gold diamond: the ticker's separator (drawn, so it shows in every font).
+local function diamond(parent: Instance, side: number, colour: Color3, order: number): Frame
+	local holder = Instance.new("Frame")
+	holder.Name = "Sep"
+	holder.BackgroundTransparency = 1
+	holder.LayoutOrder = order
+	holder.Size = UDim2.fromOffset(side + 6, side + 6)
+	holder.Parent = parent
+	local d = Instance.new("Frame")
+	d.Name = "Diamond"
+	d.BorderSizePixel = 0
+	d.BackgroundColor3 = colour
+	d.AnchorPoint = Vector2.new(0.5, 0.5)
+	d.Position = UDim2.fromScale(0.5, 0.5)
+	d.Size = UDim2.fromOffset(side, side)
+	d.Rotation = 45
+	d.Parent = holder
+	return holder
+end
+
+-- The ticker along the foot, like a broadcast's: a LIVE plate on the left, then what's true in the
+-- house right now running right to left between gold diamonds, fading in and out at the edges.
+local function ticker(parent: Instance, small: boolean, height: number, isCurrent: () -> boolean): Frame
+	local BAND = Color3.fromRGB(9, 9, 12)
+	local band = Instance.new("Frame")
+	band.Name = "Ticker"
+	band.BorderSizePixel = 0
+	band.BackgroundColor3 = BAND
+	band.BackgroundTransparency = 0.04
+	band.AnchorPoint = Vector2.new(0, 1)
+	band.Position = UDim2.fromScale(0, 1)
+	band.Size = UDim2.new(1, 0, 0, height)
+	band.ClipsDescendants = true
+	band.Parent = parent
+	local depth = Instance.new("UIGradient")
+	depth.Rotation = 90
+	depth.Color = ColorSequence.new(Color3.fromRGB(28, 26, 30), BAND)
+	depth.Parent = band
+	-- A fine gold line along its top, brightest in the middle.
+	local top = Instance.new("Frame")
+	top.Name = "Hairline"
+	top.BorderSizePixel = 0
+	top.BackgroundColor3 = C.lightGold
+	top.Size = UDim2.new(1, 0, 0, 1)
+	top.ZIndex = 3
+	top.Parent = band
+	local topFade = Instance.new("UIGradient")
+	topFade.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.7),
+		NumberSequenceKeypoint.new(0.5, 0),
+		NumberSequenceKeypoint.new(1, 0.7),
+	})
+	topFade.Parent = top
+
+	-- LIVE: a neon plate with a breathing dot, its right edge cut to a point.
+	local plateW = if small then 78 else 104
+	local plate = Instance.new("Frame")
+	plate.Name = "Live"
+	plate.BorderSizePixel = 0
+	plate.BackgroundColor3 = NEON
+	plate.Size = UDim2.new(0, plateW, 1, 0)
+	plate.ZIndex = 4
+	plate.Parent = band
+	local point = Instance.new("Frame")
+	point.Name = "Point"
+	point.BorderSizePixel = 0
+	point.BackgroundColor3 = NEON
+	point.AnchorPoint = Vector2.new(0.5, 0.5)
+	point.Position = UDim2.new(1, 0, 0.5, 0)
+	point.Size = UDim2.fromOffset(math.floor(height * 0.72), math.floor(height * 0.72))
+	point.Rotation = 45
+	point.ZIndex = 3
+	point.Parent = plate
+	local dotSide = if small then 7 else 9
+	local dot = Instance.new("Frame")
+	dot.Name = "Dot"
+	dot.BorderSizePixel = 0
+	dot.BackgroundColor3 = Color3.new(1, 1, 1)
+	dot.AnchorPoint = Vector2.new(0, 0.5)
+	dot.Position = UDim2.new(0, if small then 12 else 16, 0.5, 0)
+	dot.Size = UDim2.fromOffset(dotSide, dotSide)
+	dot.ZIndex = 5
+	dot.Parent = plate
+	corner(dot, dotSide)
+	tween(dot, 0.9, { BackgroundTransparency = 0.65 }, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true)
+	local live = Instance.new("TextLabel")
+	live.Name = "Word"
+	live.BackgroundTransparency = 1
+	live.AnchorPoint = Vector2.new(0, 0.5)
+	live.Position = UDim2.new(0, (if small then 12 else 16) + dotSide + 7, 0.5, 0)
+	live.Size = UDim2.new(1, -((if small then 12 else 16) + dotSide + 7), 0, height)
+	live.FontFace = Brand.Fonts.heavy
+	live.TextSize = Theme.textSize(if small then 12 else 15, "display")
+	live.TextColor3 = Color3.new(1, 1, 1)
+	live.TextXAlignment = Enum.TextXAlignment.Left
+	live.Text = "LIVE"
+	live.ZIndex = 5
+	live.Parent = plate
+
+	-- The track the news runs along, clipped, with soft edges.
+	local gap = if small then 16 else 22
+	local track = Instance.new("Frame")
+	track.Name = "Track"
+	track.BackgroundTransparency = 1
+	track.Position = UDim2.new(0, plateW + math.floor(height * 0.4) + 6, 0, 0)
+	track.Size = UDim2.new(1, -(plateW + math.floor(height * 0.4) + 6), 1, 0)
+	track.ClipsDescendants = true
+	track.ZIndex = 2
+	track.Parent = band
+	local function edge(name: string, left: boolean, width: number)
+		local f = Instance.new("Frame")
+		f.Name = name
+		f.BorderSizePixel = 0
+		f.BackgroundColor3 = BAND
+		f.AnchorPoint = Vector2.new(if left then 0 else 1, 0)
+		f.Position = UDim2.fromScale(if left then 0 else 1, 0)
+		f.Size = UDim2.new(0, width, 1, 0)
+		f.ZIndex = 3
+		f.Parent = track
+		local g = Instance.new("UIGradient")
+		g.Transparency = NumberSequence.new(if left then 0 else 1, if left then 1 else 0)
+		g.Parent = f
+	end
+	edge("FadeIn", true, 28)
+	edge("FadeOut", false, 64)
+	local run = Instance.new("Frame")
+	run.Name = "News"
+	run.BackgroundTransparency = 1
+	run.AutomaticSize = Enum.AutomaticSize.X
+	run.Size = UDim2.new(0, 0, 1, 0)
+	run.ZIndex = 2
+	run.Parent = track
+	local list = Instance.new("UIListLayout")
+	list.FillDirection = Enum.FillDirection.Horizontal
+	list.VerticalAlignment = Enum.VerticalAlignment.Center
+	list.SortOrder = Enum.SortOrder.LayoutOrder
+	list.Padding = UDim.new(0, gap)
+	list.Parent = run
+	local textSize = if small then 12 else 14
+	local sepSide = if small then 5 else 6
+	local running: Tween? = nil
+	local function fill()
+		for _, child in run:GetChildren() do
+			if not child:IsA("UIListLayout") then
+				child:Destroy()
+			end
+		end
+		local items = Title.tickerItems()
+		local order = 0
+		local width = 0
+		-- (Twice over, so the second run follows the first with no seam.)
+		for copy = 1, 2 do
+			for _, item in items do
+				order += 1
+				local label = Instance.new("TextLabel")
+				label.Name = "Item"
+				label.BackgroundTransparency = 1
+				label.LayoutOrder = order
+				label.FontFace = Brand.Fonts.bodyBold
+				label.TextSize = Theme.textSize(textSize, "bodyBold")
+				label.TextColor3 = C.bone
+				label.Text = item
+				local w = math.ceil(Theme.measureAs(item, textSize, "bodyBold").X) + 4
+				label.Size = UDim2.new(0, w, 1, 0)
+				label.ZIndex = 2
+				label.Parent = run
+				order += 1
+				diamond(run, sepSide, C.lightGold, order).ZIndex = 2
+				if copy == 1 then
+					width += w + (sepSide + 6) + gap * 2
+				end
+			end
+		end
+		if running then
+			running:Cancel()
+		end
+		run.Position = UDim2.new(0, 0, 0, 0)
+		-- (A steady 60 pixels a second, however much there is to say.)
+		running = tween(run, math.max(10, width / 60), { Position = UDim2.new(0, -width, 0, 0) }, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1)
+	end
+	fill()
+	task.spawn(function()
+		while isCurrent() and band.Parent do
+			task.wait(20)
+			if isCurrent() and band.Parent then
+				fill()
+			end
+		end
+	end)
+	return band
+end
+
 function Title.show(choices: Choices)
 	if current then
 		return
 	end
 	local player = Players.LocalPlayer
-	local size = Root.size()
-	local small = size.Y < 520 or size.X < 760
 	local frame = Instance.new("Frame")
 	frame.Name = "Title"
 	frame.BackgroundTransparency = 1
@@ -352,329 +555,9 @@ function Title.show(choices: Choices)
 	current = frame
 	tourId += 1
 	local id = tourId
-	local tickerH = if small then 28 else 36
-
-	-- The house's rooms behind it all: deep shade on the left so the words read, and along the foot.
-	local shade = Instance.new("Frame")
-	shade.Name = "Shade"
-	shade.BorderSizePixel = 0
-	shade.BackgroundColor3 = C.nearBlack
-	shade.Size = UDim2.fromScale(1, 1)
-	shade.BackgroundTransparency = 0
-	shade.Parent = frame
-	local g = Instance.new("UIGradient")
-	g.Transparency = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 0.08),
-		NumberSequenceKeypoint.new(if small then 0.64 else 0.48, 0.5),
-		NumberSequenceKeypoint.new(1, 0.94),
-	})
-	g.Parent = shade
-	local foot = Instance.new("Frame")
-	foot.Name = "FootShade"
-	foot.BorderSizePixel = 0
-	foot.BackgroundColor3 = C.nearBlack
-	foot.AnchorPoint = Vector2.new(0, 1)
-	foot.Position = UDim2.fromScale(0, 1)
-	foot.Size = UDim2.new(1, 0, 0.3, 0)
-	foot.Parent = frame
-	local footFade = Instance.new("UIGradient")
-	footFade.Rotation = 90
-	footFade.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(1, 0.25) })
-	footFade.Parent = foot
-
-	-- The column: welcome, the name, the line, the guest's own figures, the keys, the season.
-	local column = Instance.new("Frame")
-	column.Name = "Column"
-	column.BackgroundTransparency = 1
-	column.AnchorPoint = Vector2.new(0, 0.5)
-	column.Position = UDim2.new(0, if small then 28 else 84, 0.5, -tickerH // 2)
-	local width = if small then math.min(420, size.X - 56) else 560
-	column.Size = UDim2.fromOffset(width, 0)
-	column.AutomaticSize = Enum.AutomaticSize.Y
-	column.Parent = frame
-	local list = Theme.list(column, if small then 8 else 12)
-	list.HorizontalAlignment = Enum.HorizontalAlignment.Left
-
-	-- A neon edge down the column's side: the street's own light.
-	local edge = Instance.new("Frame")
-	edge.Name = "NeonEdge"
-	edge.BorderSizePixel = 0
-	edge.BackgroundColor3 = NEON
-	edge.AnchorPoint = Vector2.new(1, 0.5)
-	edge.Position = UDim2.new(0, if small then 16 else 56, 0.5, -tickerH // 2)
-	edge.Size = UDim2.new(0, 3, 0, if small then 260 else 430)
-	edge.Parent = frame
-	local edgeFade = Instance.new("UIGradient")
-	edgeFade.Rotation = 90
-	edgeFade.Color = ColorSequence.new(NEON, ICE)
-	edgeFade.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0), NumberSequenceKeypoint.new(1, 1) })
-	edgeFade.Parent = edge
-
-	-- WELCOME TO, in a small neon tag.
-	local tag = Instance.new("Frame")
-	tag.Name = "WelcomeTag"
-	tag.LayoutOrder = 1
-	tag.BackgroundColor3 = GRAPHITE
-	tag.BackgroundTransparency = 0.1
-	tag.Size = UDim2.fromOffset(if small then 118 else 138, if small then 22 else 26)
-	tag.Parent = column
-	corner(tag, 13)
-	stroke(tag, NEON, 1.2, 0.2)
-	local welcome = Theme.text(tag, "WELCOME TO", if small then 11 else 12, "caps", {
-		AutomaticSize = Enum.AutomaticSize.None,
-		Size = UDim2.fromScale(1, 1),
-		TextColor3 = ICE,
-		TextWrapped = false,
-	})
-	welcome.Name = "Welcome"
-
-	-- The name, stacked and heavy, in gold that catches the light now and then.
-	local nameSize = math.floor(math.min(if small then 54 else 80, width / 5.6, if small then size.Y * 0.11 else size.Y * 0.11))
-	local name = Theme.text(column, "MAISON\nNOIR", nameSize, "display", { LayoutOrder = 2, TextColor3 = Color3.new(1, 1, 1), TextXAlignment = Enum.TextXAlignment.Left, LineHeight = 0.88 })
-	name.Name = "Name"
-	local sheen = Instance.new("UIGradient")
-	sheen.Rotation = 90
-	sheen.Color = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 246, 214)),
-		ColorSequenceKeypoint.new(0.5, Color3.fromRGB(240, 206, 120)),
-		ColorSequenceKeypoint.new(1, Color3.fromRGB(196, 140, 56)),
-	})
-	sheen.Parent = name
-	-- (One gradient per label in Roblox: the glint runs over a second, bright copy of the name.)
-	local shimmer = name:Clone()
-	shimmer.Name = "NameGlint"
-	for _, child in shimmer:GetChildren() do
-		child:Destroy()
+	local function isCurrent(): boolean
+		return current == frame and tourId == id
 	end
-	shimmer.TextColor3 = Color3.new(1, 1, 1)
-	shimmer.BackgroundTransparency = 1
-	shimmer.Position = UDim2.fromOffset(0, 0)
-	shimmer.Size = UDim2.fromScale(1, 1)
-	shimmer.AutomaticSize = Enum.AutomaticSize.None
-	shimmer.LayoutOrder = 0
-	shimmer.Parent = name
-	local band = Instance.new("UIGradient")
-	band.Rotation = 20
-	band.Transparency = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 1),
-		NumberSequenceKeypoint.new(0.44, 1),
-		NumberSequenceKeypoint.new(0.5, 0.35),
-		NumberSequenceKeypoint.new(0.56, 1),
-		NumberSequenceKeypoint.new(1, 1),
-	})
-	band.Offset = Vector2.new(-1, 0)
-	band.Parent = shimmer
-	tween(band, 1.6, { Offset = Vector2.new(1, 0) }, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, false, 3)
-	local underline = Instance.new("Frame")
-	underline.Name = "Underline"
-	underline.LayoutOrder = 3
-	underline.BorderSizePixel = 0
-	underline.BackgroundColor3 = Color3.new(1, 1, 1)
-	underline.Size = UDim2.fromOffset(if small then 96 else 140, 4)
-	underline.Parent = column
-	corner(underline, 2)
-	local underlineColour = Instance.new("UIGradient")
-	underlineColour.Color = ColorSequence.new(NEON, ICE)
-	underlineColour.Parent = underline
-	Theme.text(column, Brand.Tagline, if small then 14 else 18, "italic", { LayoutOrder = 4, TextColor3 = C.bone, TextXAlignment = Enum.TextXAlignment.Left })
-
-	-- The guest's own Gilt, Gems and level, live.
-	local chips = Instance.new("Frame")
-	chips.Name = "Purse"
-	chips.BackgroundTransparency = 1
-	chips.LayoutOrder = 5
-	chips.Size = UDim2.new(1, 0, 0, if small then 30 else 38)
-	chips.Parent = column
-	Theme.list(chips, 8, true).HorizontalAlignment = Enum.HorizontalAlignment.Left
-	local h = if small then 30 else 38
-	local gilt = chip(chips, "Gilt", "gilt", C.lightGold, if small then 122 else 156, h, 1)
-	local gems = chip(chips, "Gems", "gems", ICE, if small then 96 else 118, h, 2)
-	local level = chip(chips, "Level", "crown", NEON, if small then 84 else 102, h, 3)
-	local function refresh()
-		local gv, ev, lv = player:GetAttribute("Gilt"), player:GetAttribute("Gems"), player:GetAttribute("Level")
-		gilt.Text = if type(gv) == "number" then Fortune.format(gv) else "—"
-		gems.Text = if type(ev) == "number" then Fortune.format(ev) else "—"
-		level.Text = if type(lv) == "number" then "LV " .. tostring(math.floor(lv)) else "LV —"
-	end
-	refresh()
-	for _, attribute in { "Gilt", "Gems", "Level" } do
-		table.insert(connections, player:GetAttributeChangedSignal(attribute):Connect(refresh))
-	end
-
-	-- The keys: PLAY, big and gold; the Shop, How to play and the Leaderboard under it, alike.
-	local keys = Instance.new("Frame")
-	keys.Name = "Keys"
-	keys.BackgroundTransparency = 1
-	keys.AutomaticSize = Enum.AutomaticSize.Y
-	keys.Size = UDim2.new(1, 0, 0, 0)
-	keys.LayoutOrder = 6
-	keys.Parent = column
-	local keyList = Theme.list(keys, if small then 8 else 10)
-	keyList.HorizontalAlignment = Enum.HorizontalAlignment.Left
-	local rowW = math.min(width, if small then 390 else 500)
-	local play = playKey(keys, rowW, if small then 54 else 70, small, choices.play)
-	local row = Instance.new("Frame")
-	row.Name = "More"
-	row.BackgroundTransparency = 1
-	row.LayoutOrder = 2
-	row.Size = UDim2.new(0, rowW, 0, if small then 40 else 48)
-	row.Parent = keys
-	Theme.list(row, 8, true).HorizontalAlignment = Enum.HorizontalAlignment.Left
-	local each = math.floor((rowW - 16) / 3)
-	local keyH = if small then 40 else 48
-	if choices.shop then
-		glassKey(row, "Shop", "bag", NEON, each, keyH, 1, choices.shop)
-	end
-	glassKey(row, "How to play", "help", ICE, each, keyH, 2, choices.how)
-	glassKey(row, "Leaderboard", "badge", C.lightGold, each, keyH, 3, choices.board)
-
-	-- The season, and a Private Evening, in small tags.
-	local tags = Instance.new("Frame")
-	tags.Name = "Tags"
-	tags.BackgroundTransparency = 1
-	tags.LayoutOrder = 7
-	tags.Size = UDim2.new(1, 0, 0, if small then 22 else 26)
-	tags.Parent = column
-	Theme.list(tags, 8, true).HorizontalAlignment = Enum.HorizontalAlignment.Left
-	local function smallTag(text: string, colour: Color3, order: number)
-		local w = math.ceil(Theme.measureAs(text, if small then 10 else 11, "caps").X) + 26
-		local t = Instance.new("Frame")
-		t.Name = "Tag"
-		t.LayoutOrder = order
-		t.BackgroundColor3 = GRAPHITE
-		t.BackgroundTransparency = 0.25
-		t.Size = UDim2.fromOffset(w, if small then 22 else 26)
-		t.Parent = tags
-		corner(t, 13)
-		stroke(t, colour, 1, 0.45)
-		Theme.text(t, text, if small then 10 else 11, "caps", { AutomaticSize = Enum.AutomaticSize.None, Size = UDim2.fromScale(1, 1), TextColor3 = colour, TextWrapped = false })
-	end
-	local seasonName = tostring(Workspace:GetAttribute("SeasonName") or "")
-	if seasonName ~= "" then
-		smallTag(seasonName .. " season", C.lightGold, 1)
-	end
-	if Workspace:GetAttribute("PrivateEvening") == true then
-		smallTag(Voice.Private.title, ICE, 2)
-	end
-
-	-- What the camera is showing: the room's name, and a line about it.
-	local caption = Instance.new("Frame")
-	caption.Name = "NowShowing"
-	caption.BackgroundColor3 = GRAPHITE
-	caption.BackgroundTransparency = 0.2
-	caption.AnchorPoint = Vector2.new(1, 1)
-	caption.Position = UDim2.new(1, -18, 1, -(tickerH + 14))
-	caption.Size = UDim2.fromOffset(if small then 300 else 400, if small then 58 else 72)
-	caption.Visible = not small or size.X >= 760
-	caption.Parent = frame
-	corner(caption, 10)
-	stroke(caption, NEON, 1.2, 0.3)
-	local kicker = Instance.new("TextLabel")
-	kicker.Name = "Kicker"
-	kicker.BackgroundTransparency = 1
-	kicker.Position = UDim2.fromOffset(14, 7)
-	kicker.Size = UDim2.new(1, -28, 0, if small then 11 else 12)
-	kicker.FontFace = Brand.Fonts.bodyBold
-	kicker.TextScaled = true
-	kicker.TextXAlignment = Enum.TextXAlignment.Left
-	kicker.TextColor3 = NEON
-	kicker.Text = "NOW SHOWING"
-	kicker.Parent = caption
-	local roomName = Instance.new("TextLabel")
-	roomName.Name = "Room"
-	roomName.BackgroundTransparency = 1
-	roomName.Position = UDim2.fromOffset(14, if small then 20 else 22)
-	roomName.Size = UDim2.new(1, -28, 0, if small then 18 else 22)
-	roomName.FontFace = Brand.Fonts.display
-	roomName.TextScaled = true
-	roomName.TextXAlignment = Enum.TextXAlignment.Left
-	roomName.TextColor3 = C.bone
-	roomName.Text = ""
-	roomName.Parent = caption
-	local roomLine = Instance.new("TextLabel")
-	roomLine.Name = "Line"
-	roomLine.BackgroundTransparency = 1
-	roomLine.Position = UDim2.new(0, 14, 0, if small then 40 else 48)
-	roomLine.Size = UDim2.new(1, -28, 0, if small then 12 else 15)
-	roomLine.FontFace = Brand.Fonts.body
-	roomLine.TextScaled = true
-	roomLine.TextXAlignment = Enum.TextXAlignment.Left
-	roomLine.TextColor3 = C.smoke
-	roomLine.Text = ""
-	roomLine.Parent = caption
-
-	-- The AJKR mark, top right.
-	if not small then
-		local mark = Instance.new("Frame")
-		mark.Name = "Mark"
-		mark.BackgroundTransparency = 1
-		mark.AnchorPoint = Vector2.new(1, 0)
-		mark.Position = UDim2.new(1, -22, 0, 18)
-		mark.Size = UDim2.fromOffset(120, 44)
-		mark.Parent = frame
-		local markList = Theme.list(mark, 3)
-		markList.HorizontalAlignment = Enum.HorizontalAlignment.Right
-		Theme.text(mark, Brand.Owner, 14, "display", { LayoutOrder = 1, TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = C.lightGold })
-		Theme.hairline(mark, UDim.new(0, 40), 2)
-		Theme.text(mark, "© " .. Brand.year(), 11, "body", { LayoutOrder = 3, TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = C.dim })
-	end
-
-	-- The ticker along the foot: what's on in the house, running right to left.
-	local tickerBand = Instance.new("Frame")
-	tickerBand.Name = "Ticker"
-	tickerBand.BorderSizePixel = 0
-	tickerBand.BackgroundColor3 = GRAPHITE
-	tickerBand.BackgroundTransparency = 0.15
-	tickerBand.AnchorPoint = Vector2.new(0, 1)
-	tickerBand.Position = UDim2.fromScale(0, 1)
-	tickerBand.Size = UDim2.new(1, 0, 0, tickerH)
-	tickerBand.ClipsDescendants = true
-	tickerBand.Parent = frame
-	local tickerTop = Instance.new("Frame")
-	tickerTop.Name = "Hairline"
-	tickerTop.BorderSizePixel = 0
-	tickerTop.BackgroundColor3 = Color3.new(1, 1, 1)
-	tickerTop.Size = UDim2.new(1, 0, 0, 2)
-	tickerTop.Parent = tickerBand
-	local tickerTopColour = Instance.new("UIGradient")
-	tickerTopColour.Color = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, NEON),
-		ColorSequenceKeypoint.new(0.5, C.lightGold),
-		ColorSequenceKeypoint.new(1, ICE),
-	})
-	tickerTopColour.Parent = tickerTop
-	local tickerText = Instance.new("TextLabel")
-	tickerText.Name = "News"
-	tickerText.BackgroundTransparency = 1
-	tickerText.AnchorPoint = Vector2.new(0, 0.5)
-	tickerText.Position = UDim2.new(0, 0, 0.5, 1)
-	tickerText.Size = UDim2.new(0, 4000, 1, -4)
-	tickerText.FontFace = Brand.Fonts.bodyBold
-	tickerText.TextSize = Theme.textSize(if small then 12 else 14, "bodyBold")
-	tickerText.TextColor3 = C.bone
-	tickerText.TextXAlignment = Enum.TextXAlignment.Left
-	tickerText.Parent = tickerBand
-	local tickerRun: Tween? = nil
-	local function retick()
-		local line = table.concat(Title.tickerItems(), "      ✦      ")
-		local w = math.ceil(Theme.measureAs(line, if small then 12 else 14, "bodyBold").X) + 90
-		tickerText.Text = line .. "      ✦      " .. line
-		tickerText.Size = UDim2.new(0, w * 2 + 40, 1, -4)
-		if tickerRun then
-			tickerRun:Cancel()
-		end
-		tickerText.Position = UDim2.new(0, 0, 0.5, 1)
-		tickerRun = tween(tickerText, math.max(12, w / 70), { Position = UDim2.new(0, -w, 0.5, 1) }, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1)
-	end
-	retick()
-	task.spawn(function()
-		while current == frame and tourId == id do
-			task.wait(20)
-			if current == frame and tourId == id then
-				retick()
-			end
-		end
-	end)
 
 	-- A curtain for the cuts between rooms (and the first look: nothing seen before it's ready).
 	local curtain = Instance.new("Frame")
@@ -685,15 +568,347 @@ function Title.show(choices: Choices)
 	curtain.Size = UDim2.fromScale(1, 1)
 	curtain.ZIndex = 0
 	curtain.Parent = frame
-	-- (Under everything: a cut darkens the house behind the words, never the words.)
-	shade.ZIndex = 1
-	foot.ZIndex = 1
-	local layers: { Instance? } = { column, edge, caption, frame:FindFirstChild("Mark"), tickerBand }
-	for _, layer in layers do
-		if layer and layer:IsA("GuiObject") then
-			layer.ZIndex = 2
+
+	-- What the camera is showing (the walk sets these; each layout makes its own labels).
+	local roomName: TextLabel? = nil
+	local roomLine: TextLabel? = nil
+	local nowName, nowLine = "", ""
+	local play: TextButton? = nil
+	local builtFor = Vector2.zero
+
+	local function build(fadeIn: boolean)
+		local old = frame:FindFirstChild("Layout")
+		if old then
+			old:Destroy()
 		end
+		for _, c in connections do
+			c:Disconnect()
+		end
+		table.clear(connections)
+		local size = screen()
+		builtFor = size
+		local small = size.Y < 520 or size.X < 760
+		local tickerH = if small then 34 else 44
+		local layout = Instance.new("Frame")
+		layout.Name = "Layout"
+		layout.BackgroundTransparency = 1
+		layout.Size = UDim2.fromScale(1, 1)
+		layout.Parent = frame
+
+		-- The house's rooms behind it all: deep shade on the left so the words read, and along the foot.
+		local shade = Instance.new("Frame")
+		shade.Name = "Shade"
+		shade.BorderSizePixel = 0
+		shade.BackgroundColor3 = C.nearBlack
+		shade.Size = UDim2.fromScale(1, 1)
+		shade.BackgroundTransparency = 0
+		shade.ZIndex = 1
+		shade.Parent = layout
+		local g = Instance.new("UIGradient")
+		g.Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 0.08),
+			NumberSequenceKeypoint.new(if small then 0.64 else 0.48, 0.5),
+			NumberSequenceKeypoint.new(1, 0.94),
+		})
+		g.Parent = shade
+		local foot = Instance.new("Frame")
+		foot.Name = "FootShade"
+		foot.BorderSizePixel = 0
+		foot.BackgroundColor3 = C.nearBlack
+		foot.AnchorPoint = Vector2.new(0, 1)
+		foot.Position = UDim2.fromScale(0, 1)
+		foot.Size = UDim2.new(1, 0, 0.3, 0)
+		foot.ZIndex = 1
+		foot.Parent = layout
+		local footFade = Instance.new("UIGradient")
+		footFade.Rotation = 90
+		footFade.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(1, 0.25) })
+		footFade.Parent = foot
+
+		-- The column: welcome, the name, the line, the guest's own figures, the keys, the season.
+		local left = if small then 28 else math.clamp(math.floor(size.X * 0.06), 48, 96)
+		local width = math.clamp(math.floor(size.X - left * 2), 260, if small then 420 else 560)
+		local column = Instance.new("Frame")
+		column.Name = "Column"
+		column.BackgroundTransparency = 1
+		column.AnchorPoint = Vector2.new(0, 0.5)
+		column.Position = UDim2.new(0, left, 0.5, -tickerH // 2)
+		column.Size = UDim2.fromOffset(width, 0)
+		column.AutomaticSize = Enum.AutomaticSize.Y
+		column.ZIndex = 2
+		column.Parent = layout
+		local list = Theme.list(column, if small then 8 else 12)
+		list.HorizontalAlignment = Enum.HorizontalAlignment.Left
+
+		-- A neon edge down the column's side: the street's own light.
+		local edge = Instance.new("Frame")
+		edge.Name = "NeonEdge"
+		edge.BorderSizePixel = 0
+		edge.BackgroundColor3 = NEON
+		edge.AnchorPoint = Vector2.new(1, 0.5)
+		edge.Position = UDim2.new(0, left - (if small then 12 else 28), 0.5, -tickerH // 2)
+		edge.Size = UDim2.new(0, 3, 0, if small then 260 else 430)
+		edge.ZIndex = 2
+		edge.Parent = layout
+		local edgeFade = Instance.new("UIGradient")
+		edgeFade.Rotation = 90
+		edgeFade.Color = ColorSequence.new(NEON, ICE)
+		edgeFade.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0), NumberSequenceKeypoint.new(1, 1) })
+		edgeFade.Parent = edge
+
+		-- WELCOME TO, in a small neon tag.
+		local tag = Instance.new("Frame")
+		tag.Name = "WelcomeTag"
+		tag.LayoutOrder = 1
+		tag.BackgroundColor3 = GRAPHITE
+		tag.BackgroundTransparency = 0.1
+		tag.Size = UDim2.fromOffset(if small then 118 else 138, if small then 22 else 26)
+		tag.Parent = column
+		corner(tag, 13)
+		stroke(tag, NEON, 1.2, 0.2)
+		local welcome = Theme.text(tag, "WELCOME TO", if small then 11 else 12, "caps", {
+			AutomaticSize = Enum.AutomaticSize.None,
+			Size = UDim2.fromScale(1, 1),
+			TextColor3 = ICE,
+			TextWrapped = false,
+		})
+		welcome.Name = "Welcome"
+
+		-- The name, stacked and heavy, in gold that catches the light now and then.
+		local nameSize = math.floor(math.max(30, math.min(if small then 54 else 80, width / 5.6, size.Y * 0.11)))
+		local name = Theme.text(column, "MAISON\nNOIR", nameSize, "display", { LayoutOrder = 2, TextColor3 = Color3.new(1, 1, 1), TextXAlignment = Enum.TextXAlignment.Left, LineHeight = 0.88 })
+		name.Name = "Name"
+		local sheen = Instance.new("UIGradient")
+		sheen.Rotation = 90
+		sheen.Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 246, 214)),
+			ColorSequenceKeypoint.new(0.5, Color3.fromRGB(240, 206, 120)),
+			ColorSequenceKeypoint.new(1, Color3.fromRGB(196, 140, 56)),
+		})
+		sheen.Parent = name
+		-- (One gradient per label in Roblox: the glint runs over a second, bright copy of the name.)
+		local shimmer = name:Clone()
+		shimmer.Name = "NameGlint"
+		for _, child in shimmer:GetChildren() do
+			child:Destroy()
+		end
+		shimmer.TextColor3 = Color3.new(1, 1, 1)
+		shimmer.BackgroundTransparency = 1
+		shimmer.Position = UDim2.fromOffset(0, 0)
+		shimmer.Size = UDim2.fromScale(1, 1)
+		shimmer.AutomaticSize = Enum.AutomaticSize.None
+		shimmer.LayoutOrder = 0
+		shimmer.Parent = name
+		local glint = Instance.new("UIGradient")
+		glint.Rotation = 20
+		glint.Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 1),
+			NumberSequenceKeypoint.new(0.44, 1),
+			NumberSequenceKeypoint.new(0.5, 0.35),
+			NumberSequenceKeypoint.new(0.56, 1),
+			NumberSequenceKeypoint.new(1, 1),
+		})
+		glint.Offset = Vector2.new(-1, 0)
+		glint.Parent = shimmer
+		tween(glint, 1.6, { Offset = Vector2.new(1, 0) }, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, false, 3)
+		local underline = Instance.new("Frame")
+		underline.Name = "Underline"
+		underline.LayoutOrder = 3
+		underline.BorderSizePixel = 0
+		underline.BackgroundColor3 = Color3.new(1, 1, 1)
+		underline.Size = UDim2.fromOffset(if small then 96 else 140, 4)
+		underline.Parent = column
+		corner(underline, 2)
+		local underlineColour = Instance.new("UIGradient")
+		underlineColour.Color = ColorSequence.new(NEON, ICE)
+		underlineColour.Parent = underline
+		Theme.text(column, Brand.Tagline, if small then 14 else 18, "italic", { LayoutOrder = 4, TextColor3 = C.bone, TextXAlignment = Enum.TextXAlignment.Left })
+
+		-- The guest's own Gilt, Gems and level, live.
+		local chips = Instance.new("Frame")
+		chips.Name = "Purse"
+		chips.BackgroundTransparency = 1
+		chips.LayoutOrder = 5
+		chips.Size = UDim2.new(1, 0, 0, if small then 30 else 38)
+		chips.Parent = column
+		Theme.list(chips, 8, true).HorizontalAlignment = Enum.HorizontalAlignment.Left
+		local h = if small then 30 else 38
+		local gilt = chip(chips, "Gilt", "gilt", C.lightGold, if small then 122 else 156, h, 1)
+		local gems = chip(chips, "Gems", "gems", ICE, if small then 96 else 118, h, 2)
+		local level = chip(chips, "Level", "crown", NEON, if small then 84 else 102, h, 3)
+		local function refresh()
+			local gv, ev, lv = player:GetAttribute("Gilt"), player:GetAttribute("Gems"), player:GetAttribute("Level")
+			gilt.Text = if type(gv) == "number" then Fortune.format(gv) else "—"
+			gems.Text = if type(ev) == "number" then Fortune.format(ev) else "—"
+			level.Text = if type(lv) == "number" then "LV " .. tostring(math.floor(lv)) else "LV —"
+		end
+		refresh()
+		for _, attribute in { "Gilt", "Gems", "Level" } do
+			table.insert(connections, player:GetAttributeChangedSignal(attribute):Connect(refresh))
+		end
+
+		-- The keys: PLAY, big and gold; the Shop, How to play and the Leaderboard under it, alike.
+		local keys = Instance.new("Frame")
+		keys.Name = "Keys"
+		keys.BackgroundTransparency = 1
+		keys.AutomaticSize = Enum.AutomaticSize.Y
+		keys.Size = UDim2.new(1, 0, 0, 0)
+		keys.LayoutOrder = 6
+		keys.Parent = column
+		local keyList = Theme.list(keys, if small then 8 else 10)
+		keyList.HorizontalAlignment = Enum.HorizontalAlignment.Left
+		local rowW = math.min(width, if small then 390 else 500)
+		play = playKey(keys, rowW, if small then 54 else 70, small, choices.play)
+		local row = Instance.new("Frame")
+		row.Name = "More"
+		row.BackgroundTransparency = 1
+		row.LayoutOrder = 2
+		row.Size = UDim2.new(0, rowW, 0, if small then 40 else 48)
+		row.Parent = keys
+		Theme.list(row, 8, true).HorizontalAlignment = Enum.HorizontalAlignment.Left
+		local each = math.floor((rowW - 16) / 3)
+		local keyH = if small then 40 else 48
+		if choices.shop then
+			glassKey(row, "Shop", "bag", NEON, each, keyH, 1, choices.shop)
+		end
+		glassKey(row, "How to play", "help", ICE, each, keyH, 2, choices.how)
+		glassKey(row, "Leaderboard", "badge", C.lightGold, each, keyH, 3, choices.board)
+
+		-- The season, and a Private Evening, in small tags.
+		local tags = Instance.new("Frame")
+		tags.Name = "Tags"
+		tags.BackgroundTransparency = 1
+		tags.LayoutOrder = 7
+		tags.Size = UDim2.new(1, 0, 0, if small then 22 else 26)
+		tags.Parent = column
+		Theme.list(tags, 8, true).HorizontalAlignment = Enum.HorizontalAlignment.Left
+		local function smallTag(text: string, colour: Color3, order: number)
+			local w = math.ceil(Theme.measureAs(text, if small then 10 else 11, "caps").X) + 26
+			local t = Instance.new("Frame")
+			t.Name = "Tag"
+			t.LayoutOrder = order
+			t.BackgroundColor3 = GRAPHITE
+			t.BackgroundTransparency = 0.25
+			t.Size = UDim2.fromOffset(w, if small then 22 else 26)
+			t.Parent = tags
+			corner(t, 13)
+			stroke(t, colour, 1, 0.45)
+			Theme.text(t, text, if small then 10 else 11, "caps", { AutomaticSize = Enum.AutomaticSize.None, Size = UDim2.fromScale(1, 1), TextColor3 = colour, TextWrapped = false })
+		end
+		local seasonName = tostring(Workspace:GetAttribute("SeasonName") or "")
+		if seasonName ~= "" then
+			smallTag(seasonName .. " season", C.lightGold, 1)
+		end
+		if Workspace:GetAttribute("PrivateEvening") == true then
+			smallTag(Voice.Private.title, ICE, 2)
+		end
+
+		-- What the camera is showing: the room's name, and a line about it.
+		local caption = Instance.new("Frame")
+		caption.Name = "NowShowing"
+		caption.BackgroundColor3 = GRAPHITE
+		caption.BackgroundTransparency = 0.2
+		caption.AnchorPoint = Vector2.new(1, 1)
+		caption.Position = UDim2.new(1, -18, 1, -(tickerH + 14))
+		caption.Size = UDim2.fromOffset(if small then 300 else 400, if small then 58 else 72)
+		-- (Only where it can't sit over the column.)
+		caption.Visible = size.X >= left + width + 24 + (if small then 300 else 400)
+		caption.ZIndex = 2
+		caption.Parent = layout
+		corner(caption, 10)
+		stroke(caption, NEON, 1.2, 0.3)
+		local kicker = Instance.new("TextLabel")
+		kicker.Name = "Kicker"
+		kicker.BackgroundTransparency = 1
+		kicker.Position = UDim2.fromOffset(14, 7)
+		kicker.Size = UDim2.new(1, -28, 0, if small then 11 else 12)
+		kicker.FontFace = Brand.Fonts.bodyBold
+		kicker.TextScaled = true
+		kicker.TextXAlignment = Enum.TextXAlignment.Left
+		kicker.TextColor3 = NEON
+		kicker.Text = "NOW SHOWING"
+		kicker.Parent = caption
+		local room = Instance.new("TextLabel")
+		room.Name = "Room"
+		room.BackgroundTransparency = 1
+		room.Position = UDim2.fromOffset(14, if small then 20 else 22)
+		room.Size = UDim2.new(1, -28, 0, if small then 18 else 22)
+		room.FontFace = Brand.Fonts.display
+		room.TextScaled = true
+		room.TextXAlignment = Enum.TextXAlignment.Left
+		room.TextColor3 = C.bone
+		room.Text = nowName
+		room.Parent = caption
+		local line = Instance.new("TextLabel")
+		line.Name = "Line"
+		line.BackgroundTransparency = 1
+		line.Position = UDim2.new(0, 14, 0, if small then 40 else 48)
+		line.Size = UDim2.new(1, -28, 0, if small then 12 else 15)
+		line.FontFace = Brand.Fonts.body
+		line.TextScaled = true
+		line.TextXAlignment = Enum.TextXAlignment.Left
+		line.TextColor3 = C.smoke
+		line.Text = nowLine
+		line.Parent = caption
+		roomName, roomLine = room, line
+
+		-- The AJKR mark, top right.
+		if not small then
+			local mark = Instance.new("Frame")
+			mark.Name = "Mark"
+			mark.BackgroundTransparency = 1
+			mark.AnchorPoint = Vector2.new(1, 0)
+			mark.Position = UDim2.new(1, -22, 0, 18)
+			mark.Size = UDim2.fromOffset(120, 44)
+			mark.ZIndex = 2
+			mark.Parent = layout
+			local markList = Theme.list(mark, 3)
+			markList.HorizontalAlignment = Enum.HorizontalAlignment.Right
+			Theme.text(mark, Brand.Owner, 14, "display", { LayoutOrder = 1, TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = C.lightGold })
+			Theme.hairline(mark, UDim.new(0, 40), 2)
+			Theme.text(mark, "© " .. Brand.year(), 11, "body", { LayoutOrder = 3, TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = C.dim })
+		end
+
+		ticker(layout, small, tickerH, isCurrent).ZIndex = 2
+
+		-- In: the column fades up; PLAY lands last with a little bounce (only the first time).
+		if fadeIn then
+			for _, d in column:GetDescendants() do
+				if (d:IsA("TextLabel") or d:IsA("TextButton")) and d.Name ~= "NameGlint" then
+					local text = d :: any
+					local goal = text.TextTransparency
+					text.TextTransparency = 1
+					Ease.play(d, Ease.info(0.9, Enum.EasingStyle.Sine), { TextTransparency = goal })
+				end
+			end
+			local pop = play and play:FindFirstChildOfClass("UIScale")
+			if pop then
+				pop.Scale = 0.86
+				tween(pop, 0.55, { Scale = 1 }, Enum.EasingStyle.Back, Enum.EasingDirection.Out, 0, false, 0.35)
+			end
+		end
+		-- A controller starts on Play.
+		task.defer(function()
+			if play and isCurrent() then
+				Theme.select(play)
+			end
+		end)
 	end
+	build(true)
+
+	-- Laid out again when the screen's real size arrives, or changes.
+	task.spawn(function()
+		while isCurrent() do
+			task.wait(0.5)
+			if not isCurrent() then
+				return
+			end
+			local now = screen()
+			if math.abs(now.X - builtFor.X) > 12 or math.abs(now.Y - builtFor.Y) > 12 then
+				build(false)
+			end
+		end
+	end)
 
 	-- The walk through the house: Play's room first, every room asked for ahead.
 	local shots = Title.shots()
@@ -703,48 +918,33 @@ function Title.show(choices: Choices)
 	end
 	local function showShot(s: Shot)
 		pcall(CameraRig.tour, s.from, s.to, s.seconds)
-		roomName.Text = s.name
-		roomLine.Text = s.line
+		nowName, nowLine = s.name, s.line
+		if roomName then
+			roomName.Text = s.name
+		end
+		if roomLine then
+			roomLine.Text = s.line
+		end
 	end
 	showShot(shots[1])
 	Ease.play(curtain, Ease.info(0.8, Enum.EasingStyle.Sine), { BackgroundTransparency = 1 })
 	task.spawn(function()
 		local i = 1
-		while current == frame and tourId == id do
+		while isCurrent() do
 			task.wait(math.max(1, shots[i].seconds - 0.45))
-			if current ~= frame or tourId ~= id then
+			if not isCurrent() then
 				return
 			end
 			-- (A cut through black: the curtain closes, the camera moves on, the curtain opens.)
 			Ease.play(curtain, Ease.info(0.35, Enum.EasingStyle.Sine), { BackgroundTransparency = 0 })
 			task.wait(0.4)
-			if current ~= frame or tourId ~= id then
+			if not isCurrent() then
 				return
 			end
 			i = i % #shots + 1
 			showShot(shots[i])
 			Ease.play(curtain, Ease.info(0.5, Enum.EasingStyle.Sine), { BackgroundTransparency = 1 })
 		end
-	end)
-
-	-- In: the column fades up; PLAY lands last with a little bounce.
-	for _, d in column:GetDescendants() do
-		if (d:IsA("TextLabel") or d:IsA("TextButton")) and d.Name ~= "NameGlint" then
-			local text = d :: any
-			local goal = text.TextTransparency
-			text.TextTransparency = 1
-			Ease.play(d, Ease.info(0.9, Enum.EasingStyle.Sine), { TextTransparency = goal })
-		end
-	end
-	local pop = play:FindFirstChildOfClass("UIScale")
-	if pop then
-		pop.Scale = 0.86
-		tween(pop, 0.55, { Scale = 1 }, Enum.EasingStyle.Back, Enum.EasingDirection.Out, 0, false, 0.35)
-	end
-
-	-- A controller starts on Play.
-	task.defer(function()
-		Theme.select(play)
 	end)
 end
 

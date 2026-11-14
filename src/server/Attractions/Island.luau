@@ -185,7 +185,7 @@ local function buyKey(ctx: Types.Ctx, player: Player, data: any, p: { [string]: 
 		gilt = keyGilt(ctx)
 	end
 	if not ctx.spend(player, gilt, gems, "island key") then
-		return { ok = false, why = if gems > 0 then string.format("The Island Key is %d Gems.", gems) else string.format("The Island Key is %s Gilt.", FortuneRules.format(gilt)) }
+		return { ok = false, short = if gems > 0 then "Gems" else "Gilt", why = if gems > 0 then string.format("The Island Key is %d Gems.", gems) else string.format("The Island Key is %s Gilt.", FortuneRules.format(gilt)) }
 	end
 	p.key = true
 	p.keyAt = Island.now()
@@ -319,7 +319,7 @@ local function choose(ctx: Types.Ctx, player: Player, p: { [string]: any }, kind
 		end
 		local gilt, gems = num(def.gilt, 0), num(def.gems, 0)
 		if not ctx.spend(player, gilt, gems, if kind == "livery" then "jet livery" else "island light") then
-			return { ok = false, why = if gems > 0 then string.format("%s is %d Gems.", def.name, gems) else string.format("%s is %s Gilt.", def.name, FortuneRules.format(gilt)) }
+			return { ok = false, short = if gems > 0 then "Gems" else "Gilt", why = if gems > 0 then string.format("%s is %d Gems.", def.name, gems) else string.format("%s is %s Gilt.", def.name, FortuneRules.format(gilt)) }
 		end
 		owned[id] = true
 	end

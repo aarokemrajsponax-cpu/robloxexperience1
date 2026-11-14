@@ -714,11 +714,13 @@ local TRACK_FOR: { [string]: string } = {
 	street = "street",
 	club = "street",
 	boutique = "street",
-	salon = "table",
-	velvet = "table",
-	obsidian = "table",
-	midnight = "table",
-	library = "table",
+	-- (Build 82: the Salon's old beats are the Executive's fight now; the Salon, the Library and the
+	-- attractions' anterooms play street luxury with the rest of the house.)
+	salon = "street",
+	velvet = "street",
+	obsidian = "street",
+	midnight = "street",
+	library = "street",
 	ballroom = "ballroom",
 	-- The attractions (away from the house), each with a sound of its own (Build 78): lo-fi and
 	-- downtempo on Luxury Island (Build 80: no more piano there); a tense, stylish heist score in Steal a Luxe (and a harder one when
@@ -771,7 +773,7 @@ end
 
 -- Whether the house has any music to play (for telling the owner, in Studio, when it hasn't).
 function Sound.hasMusic(): boolean
-	for _, track in { "lounge", "table", "ballroom", "street" } do
+	for _, track in { "lounge", "ballroom", "street" } do
 		if asset("Tracks", track) ~= "" or #playlist(track) > 0 or findUploaded("maison-" .. track) ~= "" then
 			return true
 		end

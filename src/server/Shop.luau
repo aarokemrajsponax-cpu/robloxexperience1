@@ -732,7 +732,7 @@ local function buyWithGilt(player: Player, data: Profiles.Data, itemId: string):
 		return { ok = false, why = "That piece is for " .. item.standing .. "s of the house." }
 	end
 	if data.gilt < price then
-		return { ok = false, why = string.format("Not enough Gilt yet: %s more.", Gilt.format(price - data.gilt)) }
+		return { ok = false, short = "Gilt", why = string.format("Insufficient Gilt: %s more.", Gilt.format(price - data.gilt)) }
 	end
 	data.gilt -= price
 	own(player, data, item)

@@ -10,6 +10,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local Caps = require(ReplicatedStorage.Shared.Caps)
 local Catalogue = require(ReplicatedStorage.Shared.Catalogue)
+local Showcase = require(ReplicatedStorage.Shared.Showcase)
 local Layout = require(ReplicatedStorage.Shared.Layout).raw -- (the house as drawn: see World/Grand)
 local Kit = require(script.Parent.Kit)
 
@@ -199,8 +200,9 @@ function VaultRoom.dress(m: Model, top: number)
 	motes.Parent = air
 end
 
--- The featured display along the east wall: a black marble console under four glass domes, each
--- with a little stage of velvet in it; each guest's screen sets their own four curios on them
+-- The featured display along the east wall: a black marble console under eight glass domes (Build
+-- 82: a raised second row of four behind the first), each with a little stage of velvet in it;
+-- each guest's screen sets their own eight curios on them
 -- (World/VaultView), and its card (the Vault's display: shared/Showcase) chooses them.
 function VaultRoom.featured(m: Model)
 	local f = Kit.model(m, "FeaturedDisplay")
@@ -208,12 +210,18 @@ function VaultRoom.featured(m: Model)
 	local z0, z1 = 52, 61
 	local face = CFrame.lookAt(Vector3.new(x, FLOOR, (z0 + z1) / 2), Vector3.new(x - 10, FLOOR, (z0 + z1) / 2))
 	f:SetAttribute("GrandAnchor", face.Position)
-	local console = Kit.part(f, "Console", Vector3.new(z1 - z0, 3.2, 1.8), face * CFrame.new(0, 1.6, 0) * CFrame.Angles(0, math.rad(90), 0), L.blackMarble)
-	Kit.part(f, "ConsoleTop", Vector3.new(z1 - z0 + 0.3, 0.14, 2.1), face * CFrame.new(0, 3.27, 0) * CFrame.Angles(0, math.rad(90), 0), L.brass, { shadow = false })
-	Kit.part(f, "ConsoleGlow", Vector3.new(z1 - z0 - 0.4, 0.08, 0.08), face * CFrame.new(0, 0.2, -0.95) * CFrame.Angles(0, math.rad(90), 0), led(GOLD_LIGHT, 0.2), { collide = false, query = false, shadow = false })
-	for i = 1, 4 do
-		local dz = -3.3 + (i - 1) * 2.2
-		local base = face * CFrame.new(dz, 3.34, 0)
+	-- (Deeper than it was, to hold two rows: the first at the front, the second on a riser behind.)
+	local console = Kit.part(f, "Console", Vector3.new(z1 - z0, 3.2, 2.6), face * CFrame.new(0, 1.6, -0.4) * CFrame.Angles(0, math.rad(90), 0), L.blackMarble)
+	Kit.part(f, "ConsoleTop", Vector3.new(z1 - z0 + 0.3, 0.14, 2.9), face * CFrame.new(0, 3.27, -0.4) * CFrame.Angles(0, math.rad(90), 0), L.brass, { shadow = false })
+	Kit.part(f, "ConsoleGlow", Vector3.new(z1 - z0 - 0.4, 0.08, 0.08), face * CFrame.new(0, 0.2, -1.75) * CFrame.Angles(0, math.rad(90), 0), led(GOLD_LIGHT, 0.2), { collide = false, query = false, shadow = false })
+	local RISE = 2
+	Kit.part(f, "Riser", Vector3.new(z1 - z0 - 0.2, RISE, 0.8), face * CFrame.new(0, 3.34 + RISE / 2, 0.5) * CFrame.Angles(0, math.rad(90), 0), L.blackMarble)
+	Kit.part(f, "RiserTop", Vector3.new(z1 - z0, 0.12, 1), face * CFrame.new(0, 3.34 + RISE + 0.06, 0.5) * CFrame.Angles(0, math.rad(90), 0), L.brass, { shadow = false })
+	Kit.part(f, "RiserGlow", Vector3.new(z1 - z0 - 0.6, 0.06, 0.06), face * CFrame.new(0, 3.5, 0.08) * CFrame.Angles(0, math.rad(90), 0), led(GOLD_LIGHT, 0.25), { collide = false, query = false, shadow = false })
+	for i = 1, Showcase.FEATURED do
+		local row = (i - 1) // 4
+		local dz = -3.3 + ((i - 1) % 4) * 2.2
+		local base = face * CFrame.new(dz, 3.34 + row * (RISE + 0.12), if row == 0 then -0.75 else 0.5)
 		Kit.cylinder(f, "DomeBase", 0.18, 1.7, base * CFrame.new(0, 0.09, 0) * CFrame.Angles(0, 0, math.rad(90)), L.brass, { collide = false, shadow = false })
 		Kit.cylinder(f, "DomeStage", 0.12, 1.3, base * CFrame.new(0, 0.22, 0) * CFrame.Angles(0, 0, math.rad(90)), VELVET, { collide = false, query = false, shadow = false })
 		Kit.ball(f, "Dome", 1.6, (base * CFrame.new(0, 0.95, 0)).Position, GLASS, { collide = false, query = false, shadow = false })

@@ -267,7 +267,7 @@ moment("attractions", "crownJewel", "The Crown Jewel", "Carry the Crown Jewel ou
 moment("attractions", "basementClear", "The Treasury", "Reach the Treasury at the foot of the Maison Basement.", "🗝️", "silver")
 moment("attractions", "executiveBoss", "The Corner Office", "Beat the Executive in his own office.", "🕴️", "gold")
 moment("attractions", "auctionWin", "Sold to You", "Win a lot at the Grand Auction.", "🔨", "gold")
-moment("attractions", "basementQuick", "Under Four Minutes", "Clear the Basement in under four minutes, no skips.", "⏱️", "gold")
+moment("attractions", "basementQuick", "Under Eight Minutes", "Clear the Basement in under eight minutes, no skips.", "⏱️", "gold")
 moment("attractions", "basementSecrets", "Every Secret", "Find all eight secrets in the Maison Basement's four courses.", "🔎", "gold")
 
 -- Luxury Island

@@ -16,6 +16,7 @@ local Brand = require(ReplicatedStorage.Shared.Brand)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Plan = require(ReplicatedStorage.Shared.Gala)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local HudCard = require(script.Parent.HudCard)
 local Root = require(script.Parent.Root)
 local Sound = require(script.Parent.Parent.Sound)
 local Theme = require(script.Parent.Theme)
@@ -33,8 +34,8 @@ local GOLD = rgb(255, 204, 90)
 local WARM = rgb(255, 196, 120)
 local GOOD = rgb(120, 225, 150)
 local BAD = rgb(240, 110, 110)
-local CARD_W = 440
-local CARD_H = 104
+local CARD_W = 320
+local CARD_H = 166
 
 local card: Frame? = nil
 local keys: Frame? = nil
@@ -88,23 +89,33 @@ local function stroke(f: GuiObject, colour: Color3, t: number)
 	e.Parent = f
 end
 
+-- One of the hall's activities, as a row: its name on the left, where it stands (Open, Playing,
+-- Signing up...) in a small pill on the right.
 local function chip(parent: Instance, name: string, order: number): (TextLabel, TextLabel)
 	local f = Instance.new("Frame")
 	f.Name = name
 	f.BackgroundColor3 = rgb(255, 255, 255)
-	f.BackgroundTransparency = 0.95
-	f.Size = UDim2.new(1 / 3, -6, 1, 0)
+	f.BackgroundTransparency = 0.96
+	f.Size = UDim2.new(1, 0, 0, 28)
 	f.LayoutOrder = order
 	f.Parent = parent
-	corner(f, 8)
-	local big = label(f, "Figure", "", 13, Brand.Fonts.bodyBold, C.bone)
-	big.Position = UDim2.fromOffset(4, 4)
-	big.Size = UDim2.new(1, -8, 0, 18)
+	corner(f, 7)
+	local small = label(f, "Word", "", 11, Brand.Fonts.bodyBold, C.bone)
+	small.Position = UDim2.fromOffset(10, 0)
+	small.Size = UDim2.new(1, -124, 1, 0)
+	small.TextXAlignment = Enum.TextXAlignment.Left
+	local pill = Instance.new("Frame")
+	pill.Name = "State"
+	pill.BackgroundColor3 = rgb(0, 0, 0)
+	pill.BackgroundTransparency = 0.45
+	pill.AnchorPoint = Vector2.new(1, 0.5)
+	pill.Position = UDim2.new(1, -5, 0.5, 0)
+	pill.Size = UDim2.fromOffset(110, 20)
+	pill.Parent = f
+	corner(pill, 10)
+	local big = label(pill, "Figure", "", 11, Brand.Fonts.bodyBold, C.bone)
+	big.Size = UDim2.fromScale(1, 1)
 	big.TextXAlignment = Enum.TextXAlignment.Center
-	local small = label(f, "Word", "", 10, Brand.Fonts.bodyBold, C.smoke)
-	small.Position = UDim2.fromOffset(4, 24)
-	small.Size = UDim2.new(1, -8, 0, 14)
-	small.TextXAlignment = Enum.TextXAlignment.Center
 	return big, small
 end
 
@@ -118,9 +129,10 @@ local function place()
 	if not c then
 		return
 	end
-	local y = math.max(Root.topClear("Gala") + 6, 126)
-	c.Position = UDim2.new(0.5, 0, 0, y)
-	Root.setTop("Gala", y + CARD_H + 4, CARD_W / 2)
+	-- (The bottom-left corner, like every attraction's card: UI/HudCard. While a live card is up,
+	-- a quiz or a show, the hall's card steps aside for it.)
+	HudCard.place(c, 260)
+	c.Visible = live == nil
 	local k = keys
 	if k then
 		k.Position = UDim2.new(0.5, 0, 1, -(14 + Root.bottomClear()))
@@ -236,6 +248,24 @@ local function drawKeys()
 			end
 		end, 180).LayoutOrder = 3
 	end
+	-- (Build 82) The camera back behind the guest, from anywhere in the hall: after a pose at a
+	-- photo set, photo mode or a reel, it's one press away.
+	Theme.key(k, "Reset camera", false, function()
+		GalaHud.resetCamera()
+	end, 150).LayoutOrder = 4
+end
+
+-- The camera back on the guest (photo mode put away first, if it's open).
+function GalaHud.resetCamera()
+	pcall(function()
+		local PhotoMode = require(script.Parent.PhotoMode) :: any
+		if PhotoMode.isActive() then
+			PhotoMode.exit()
+		end
+	end)
+	pcall(function()
+		(require(script.Parent.Parent.Camera) :: any).follow()
+	end)
 end
 
 ---------------------------------------------------------------------------------------------------
@@ -246,6 +276,8 @@ local function clearLive()
 	live = nil
 	if l then
 		l:Destroy()
+		-- (The hall's card comes back from where it stepped aside.)
+		place()
 	end
 	liveTick += 1
 end
@@ -257,17 +289,14 @@ local function liveCard(height: number, accent: Color3): (Frame, Frame)
 	f.Name = "GalaLive"
 	f.AnchorPoint = Vector2.new(0.5, 1)
 	f.Size = UDim2.fromOffset(w, height)
-	f.BackgroundColor3 = rgb(14, 11, 12)
-	f.BackgroundTransparency = 0.08
 	f.Parent = Root.hud
-	corner(f, 14)
-	stroke(f, accent, 0.3)
 	local pad = Instance.new("UIPadding")
-	pad.PaddingLeft = UDim.new(0, 16)
+	pad.PaddingLeft = UDim.new(0, 18)
 	pad.PaddingRight = UDim.new(0, 16)
-	pad.PaddingTop = UDim.new(0, 10)
-	pad.PaddingBottom = UDim.new(0, 10)
+	pad.PaddingTop = UDim.new(0, 12)
+	pad.PaddingBottom = UDim.new(0, 12)
 	pad.Parent = f
+	HudCard.style(f, accent)
 	local inner = Instance.new("Frame")
 	inner.Name = "Inner"
 	inner.BackgroundTransparency = 1
@@ -319,6 +348,59 @@ local function banner(heading: string, line: string, accent: Color3, seconds: nu
 	end
 end
 
+-- One of the four answers: dark glass, the letter in a gold disc on the left, the answer beside it.
+-- Pointed at, its edge turns gold.
+local function answerKey(parent: Instance, letter: string, text: string, onPress: () -> ()): TextButton
+	local b = Instance.new("TextButton")
+	b.AutoButtonColor = false
+	b.BackgroundColor3 = rgb(24, 24, 30)
+	b.BackgroundTransparency = 0.05
+	b.Text = text
+	b.FontFace = Brand.Fonts.bodyBold
+	b.TextSize = 15
+	b.TextColor3 = C.bone
+	b.TextXAlignment = Enum.TextXAlignment.Left
+	b.TextTruncate = Enum.TextTruncate.AtEnd
+	b.Parent = parent
+	corner(b, 10)
+	local edge = Instance.new("UIStroke")
+	edge.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	edge.Color = rgb(255, 255, 255)
+	edge.Transparency = 0.84
+	edge.Thickness = 1
+	edge.Parent = b
+	local pad = Instance.new("UIPadding")
+	pad.PaddingLeft = UDim.new(0, 48)
+	pad.PaddingRight = UDim.new(0, 10)
+	pad.Parent = b
+	local disc = Instance.new("TextLabel")
+	disc.Name = "Letter"
+	disc.AnchorPoint = Vector2.new(0, 0.5)
+	disc.Position = UDim2.new(0, -40, 0.5, 0)
+	disc.Size = UDim2.fromOffset(30, 30)
+	disc.BackgroundColor3 = GOLD
+	disc.TextColor3 = rgb(26, 16, 4)
+	disc.FontFace = Brand.Fonts.heavy
+	disc.TextSize = 15
+	disc.Text = letter
+	disc.Parent = b
+	corner(disc, 15)
+	b.MouseEnter:Connect(function()
+		if edge.Thickness < 2 then
+			edge.Color = GOLD
+			edge.Transparency = 0.3
+		end
+	end)
+	b.MouseLeave:Connect(function()
+		if edge.Thickness < 2 then
+			edge.Color = rgb(255, 255, 255)
+			edge.Transparency = 0.84
+		end
+	end)
+	b.Activated:Connect(onPress)
+	return b
+end
+
 -- Luxury Trivia's question at the podium: four answers, the time counted down.
 local function questionCard(m: { [string]: any })
 	local _, inner = liveCard(208, GOLD)
@@ -345,15 +427,20 @@ local function questionCard(m: { [string]: any })
 	local answered = false
 	for i, text in (if type(m.choices) == "table" then m.choices else {}) do
 		local letter = ({ "A", "B", "C", "D" })[i]
-		local b = Theme.key(grid, letter .. "   " .. tostring(text), false, function()
+		local b = answerKey(grid, letter, tostring(text), function()
 			if answered or not m.seated then
 				return
 			end
 			answered = true
 			for j, other in buttons do
-				other.TextTransparency = if j == i then 0 else 0.5
+				other.TextTransparency = if j == i then 0 else 0.55
+				local edge = other:FindFirstChildOfClass("UIStroke")
+				if edge and j == i then
+					edge.Color = GOLD
+					edge.Transparency = 0
+					edge.Thickness = 2
+				end
 			end
-			buttons[i].TextColor3 = GOLD
 			task.spawn(function()
 				local r = act({ act = "answer", n = i })
 				if r and r.ok ~= true then
@@ -498,13 +585,23 @@ function GalaHud.on(m: { [string]: any })
 		elseif phase == "reveal" then
 			local buttons = trivia.buttons
 			if live and type(buttons) == "table" then
+				-- The right answer lit green and marked RIGHT; a wrong pick of this guest's, red.
 				for i, b in buttons do
+					local verdict: string? = nil
 					if i == m.right then
-						b.TextColor3 = GOOD
-						b.Text = "✓  " .. b.Text
+						b.BackgroundColor3 = rgb(22, 74, 44)
 						b.TextTransparency = 0
+						verdict = "RIGHT"
 					elseif i == m.mine then
-						b.TextColor3 = BAD
+						b.BackgroundColor3 = rgb(86, 24, 30)
+						verdict = "YOUR ANSWER"
+					end
+					if verdict then
+						local tag = label(b, "Verdict", verdict, 10, Brand.Fonts.heavy, if i == m.right then GOOD else BAD)
+						tag.AnchorPoint = Vector2.new(1, 0.5)
+						tag.Position = UDim2.new(1, 0, 0.5, 0)
+						tag.Size = UDim2.fromOffset(84, 14)
+						tag.TextXAlignment = Enum.TextXAlignment.Right
 					end
 				end
 			end
@@ -708,39 +805,34 @@ function GalaHud.mount()
 	c.Name = "GalaCard"
 	c.AnchorPoint = Vector2.new(0.5, 0)
 	c.Size = UDim2.fromOffset(CARD_W, CARD_H)
-	c.BackgroundColor3 = rgb(16, 12, 12)
-	c.BackgroundTransparency = 0.12
 	c.Parent = Root.hud
-	corner(c, 14)
-	stroke(c, WARM, 0.35)
 	local pad = Instance.new("UIPadding")
-	pad.PaddingLeft = UDim.new(0, 14)
-	pad.PaddingRight = UDim.new(0, 14)
-	pad.PaddingTop = UDim.new(0, 8)
+	pad.PaddingLeft = UDim.new(0, 16)
+	pad.PaddingRight = UDim.new(0, 12)
+	pad.PaddingTop = UDim.new(0, 10)
 	pad.Parent = c
-	local title = label(c, "Title", "THE GRAND BALLROOM", 11, Brand.Fonts.bodyBold, GOLD)
+	HudCard.style(c, GOLD)
+	local title = label(c, "Title", "THE GRAND BALLROOM", 11, Brand.Fonts.heavy, GOLD)
 	title.Position = UDim2.fromOffset(0, 0)
-	title.Size = UDim2.new(0.5, 0, 0, 17)
-	parts.zone = label(c, "Zone", "", 11, Brand.Fonts.bodyBold, WARM)
+	title.Size = UDim2.new(0.55, 0, 0, 16)
+	parts.zone = label(c, "Zone", "", 10, Brand.Fonts.bodyBold, WARM)
 	parts.zone.TextXAlignment = Enum.TextXAlignment.Right
 	parts.zone.AnchorPoint = Vector2.new(1, 0)
-	parts.zone.Position = UDim2.new(1, 0, 0, 0)
-	parts.zone.Size = UDim2.new(0.5, 0, 0, 17)
+	parts.zone.Position = UDim2.new(1, 0, 0, 1)
+	parts.zone.Size = UDim2.new(0.45, 0, 0, 15)
 	parts.record = label(c, "Record", "", 12, Brand.Fonts.body, C.bone)
-	parts.record.Position = UDim2.fromOffset(0, 19)
-	parts.record.Size = UDim2.new(0.64, 0, 0, 17)
-	parts.gilt = label(c, "TodayGilt", "", 12, Brand.Fonts.bodyBold, C.smoke)
-	parts.gilt.TextXAlignment = Enum.TextXAlignment.Right
-	parts.gilt.AnchorPoint = Vector2.new(1, 0)
-	parts.gilt.Position = UDim2.new(1, 0, 0, 19)
-	parts.gilt.Size = UDim2.new(0.36, 0, 0, 17)
+	parts.record.Position = UDim2.fromOffset(0, 21)
+	parts.record.Size = UDim2.new(1, 0, 0, 16)
+	parts.gilt = label(c, "TodayGilt", "", 11, Brand.Fonts.bodyBold, C.smoke)
+	parts.gilt.Position = UDim2.fromOffset(0, 39)
+	parts.gilt.Size = UDim2.new(1, 0, 0, 15)
 	local row = Instance.new("Frame")
 	row.Name = "Activities"
 	row.BackgroundTransparency = 1
-	row.Position = UDim2.fromOffset(0, 42)
-	row.Size = UDim2.new(1, 0, 0, 44)
+	row.Position = UDim2.fromOffset(0, 60)
+	row.Size = UDim2.new(1, 0, 0, 28 * 3 + 8)
 	row.Parent = c
-	Theme.list(row, 9, true).HorizontalAlignment = Enum.HorizontalAlignment.Center
+	Theme.list(row, 4)
 	parts.trivia, parts.triviaWord = chip(row, "Trivia", 1)
 	parts.runway, parts.runwayWord = chip(row, "Runway", 2)
 	parts.arena, parts.arenaWord = chip(row, "Arena", 3)
@@ -750,7 +842,7 @@ function GalaHud.mount()
 	k.Name = "GalaKeys"
 	k.AnchorPoint = Vector2.new(0.5, 1)
 	k.BackgroundTransparency = 1
-	k.Size = UDim2.fromOffset(520, 44)
+	k.Size = UDim2.fromOffset(680, 44)
 	k.Parent = Root.hud
 	Theme.list(k, 10, true).HorizontalAlignment = Enum.HorizontalAlignment.Center
 	keys = k
@@ -778,7 +870,6 @@ function GalaHud.unmount()
 	end
 	parts = {}
 	trivia, arena = {}, {}
-	Root.setTop("Gala", nil)
 end
 
 return GalaHud

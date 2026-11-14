@@ -448,7 +448,7 @@ Voice.Guide = {
 		visit = {
 			{ place = "concierge", title = "The Concierge", line = "Stands by the front door, ready to help.", how = "Speak to him and pick Show me the house: he walks you round every room and explains it." },
 			{ place = "boutique", title = "The Boutique", line = "The house's shop for looks.", how = "Looks, table styles, lamps and trails for Gilt (a few for Robux, always with the price shown first). The Wardrobe beside it is where you wear what you own." },
-			{ place = "vault", title = "The Vault", line = "Your collection, kept for good.", how = "Every piece you've sorted stands on its shelves. The console under the four domes shows your curios, how complete your collection is, and who may look round. The Archivist at the desk keeps your badges and records." },
+			{ place = "vault", title = "The Vault", line = "Your collection, kept for good.", how = "Every piece you've sorted stands on its shelves. The console under the eight domes shows your curios, how complete your collection is, and who may look round. The Archivist at the desk keeps your badges and records." },
 			{ place = "terrace", title = "The Terrace", line = "A rooftop to relax on, and the jet to the island.", how = "A bar with treats, a fire pit and loungers under the stars. The Jet Lounge's arch flies Island Key holders to Luxury Island." },
 			{ place = "suite", title = "Your Suite", line = "Your own private rooms upstairs.", how = "Ring the bell inside to furnish them. Only you can go in, unless you invite friends with the Suites key." },
 		} :: { GuideItem },

@@ -220,7 +220,7 @@ Directory.Rooms = {
 		name = "The Vault",
 		glyph = "🏛️",
 		lines = {
-			"The console under the four domes keeps every curio you own.",
+			"The console under the eight domes keeps every curio you own.",
 			"Set four under the domes, and arrange the rest by rarity, family, newest or starred.",
 			"Choose who may look round: everyone, your friends, or only you.",
 		},

@@ -80,7 +80,32 @@ check("a curio that isn't the house's is refused", askAs(ada, { op = "feature", 
 check("a curio not held is refused", askAs(ada, { op = "feature", items = { "gelato" } }).ok == false)
 Curios.give(nil, d, "pigeonetto", 1, "tables")
 Curios.give(nil, d, "fromaggio", 1, "tables")
-check("five is one more than the domes", askAs(ada, { op = "feature", items = { "chatCouture", "croissantino", "baguettone", "pigeonetto", "fromaggio" } }).ok == false)
+do
+	-- (Build 82: eight domes, from four.)
+	local held, given = {}, {}
+	for _, c in CurioList.List do
+		if #held < Rules.FEATURED + 1 and c.id ~= "gelato" then
+			if ((d.curios.items or {})[c.id] or 0) == 0 then
+				table.insert(given, c.id)
+			end
+			Curios.give(nil, d, c.id, 1, "tables")
+			table.insert(held, c.id)
+		end
+	end
+	check("one more than the domes is refused", Rules.FEATURED == 8 and askAs(ada, { op = "feature", items = held }).ok == false)
+	table.remove(held)
+	local eight = askAs(ada, { op = "feature", items = held })
+	check("...and eight, the domes there are, is shown", eight.ok == true and #eight.featured == 8, eight.why)
+	-- (Put back as it was, for what follows.)
+	for _, id in held do
+		if not table.find(given, id) then
+			Curios.take(d, id, 1)
+		end
+	end
+	for _, id in given do
+		Curios.take(d, id, 1)
+	end
+end
 r = askAs(ada, { op = "feature", items = { "chatCouture", "chatCouture", "baguettone" } })
 check("the same curio twice is shown once", r.ok == true and #r.featured == 2, r.featured)
 Curios.take(d, "chatCouture", 1)

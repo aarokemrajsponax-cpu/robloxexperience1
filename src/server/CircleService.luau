@@ -180,7 +180,7 @@ function CircleService.found(player: Player, data: Profiles.Data, choice: any): 
 	elseif not Circle.valid(choice) then
 		return { ok = false, why = "Choose a name and a crest." }
 	elseif data.gilt < cfg().foundGilt then
-		return { ok = false, why = string.format("Founding a Circle takes %d Gilt.", cfg().foundGilt) }
+		return { ok = false, short = "Gilt", why = string.format("Insufficient Gilt: founding a Circle takes %d Gilt.", cfg().foundGilt) }
 	end
 	local c = choice :: Circle.Choice
 	local id = string.sub(string.gsub(HttpService:GenerateGUID(false), "-", ""), 1, 12)

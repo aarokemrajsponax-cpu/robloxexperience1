@@ -121,11 +121,8 @@ end
 
 local function refresh()
 	stack.Visible = not hidden
-	-- The daily streak (server/Streak): how many days in a row, and what it adds to Gilt.
-	local player = game:GetService("Players").LocalPlayer
-	local streak = tonumber(player:GetAttribute("Streak")) or 0
-	local boost = tonumber(player:GetAttribute("StreakBoost")) or 0
-	chip("Streak", 0, if streak >= 2 then string.format("🔥 %d DAYS IN A ROW  ·  +%d%% GILT", streak, boost) else nil)
+	-- (The daily streak's chip is gone: it crowded the screen. The streak still counts on the server
+	-- and adds to Gilt; it may come back as part of something bigger.)
 	-- (Friends in the house: the Friend Booster card in the bottom-right corner shows them.)
 	local luck = Perks.luckLeft()
 	local mult = if type(Perks.state.luck) == "table" then tonumber(Perks.state.luck.multiplier) else nil

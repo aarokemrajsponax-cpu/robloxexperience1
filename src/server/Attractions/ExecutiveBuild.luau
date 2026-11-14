@@ -224,7 +224,7 @@ function ExecutiveBuild.build(parent: Instance, o: Vector3, goHome: (player: Pla
 	box(sightModel, "HallEnd", o, V(hall.minX - 1, 0, hall.minZ - 1), V(hall.maxX + 1, H, hall.minZ), SILK)
 	-- The coffered ceiling: walnut beams over black lacquer.
 	box(arch, "HallCeiling", o, V(hall.minX - 1, H, hall.minZ - 1), V(hall.maxX + 1, H + 1, hall.maxZ), L.blackLacquer, { shadow = false })
-	for _, x in { -12, 0, 12 } do
+	for _, x in { -12 * Plan.WIDEN, 0, 12 * Plan.WIDEN } do
 		box(dress, "Beam", o, V(x - 0.5, H - 0.8, hall.minZ), V(x + 0.5, H, hall.maxZ), WALNUT, GHOST_DARK)
 	end
 	for z = hall.minZ + 12, hall.maxZ - 2, 12 do
@@ -232,7 +232,7 @@ function ExecutiveBuild.build(parent: Instance, o: Vector3, goHome: (player: Pla
 	end
 	-- Opal pendants over both sides of the maze, and down the lobby.
 	for z = hall.minZ + 14, hall.maxZ - 10, 30 do
-		for _, x in { -15, 15 } do
+		for _, x in { -15 * Plan.WIDEN, 15 * Plan.WIDEN } do
 			local m = Kit.model(dress, "Pendant")
 			Kit.part(m, "Stem", V(0.14, 1.8, 0.14), CFrame.new(o + V(x, H - 0.9, z)), BRASS, GHOST_DARK)
 			local globe = Kit.ball(m, "Globe", 1.2, o + V(x, H - 2.4, z), OPAL, GHOST_DARK)
@@ -305,16 +305,17 @@ function ExecutiveBuild.build(parent: Instance, o: Vector3, goHome: (player: Pla
 
 	-- The lift's lobby: a rug, two benches against the walls, and over the doorway into the maze
 	-- the line where security begins (said plainly; the lobby itself is safe).
-	box(dress, "LobbyRug", o, V(-14, 0, hall.minZ + 4), V(14, 0.05, Plan.Lobby.maxZ - 3), RUG, GHOST_DARK)
-	box(dress, "LobbyRugBorder", o, V(-14, 0, hall.minZ + 4), V(14, 0.07, hall.minZ + 5), RUG_GOLD, GHOST_DARK)
-	box(dress, "LobbyRugBorder", o, V(-14, 0, Plan.Lobby.maxZ - 4), V(14, 0.07, Plan.Lobby.maxZ - 3), RUG_GOLD, GHOST_DARK)
+	local rug = 14 * Plan.WIDEN
+	box(dress, "LobbyRug", o, V(-rug, 0, hall.minZ + 4), V(rug, 0.05, Plan.Lobby.maxZ - 3), RUG, GHOST_DARK)
+	box(dress, "LobbyRugBorder", o, V(-rug, 0, hall.minZ + 4), V(rug, 0.07, hall.minZ + 5), RUG_GOLD, GHOST_DARK)
+	box(dress, "LobbyRugBorder", o, V(-rug, 0, Plan.Lobby.maxZ - 4), V(rug, 0.07, Plan.Lobby.maxZ - 3), RUG_GOLD, GHOST_DARK)
 	for _, sx in { -1, 1 } do
 		local x = sx * (hall.maxX - 2.2)
 		piece(dress, "chair", CFrame.lookAt(o + V(x, 0, -187), o + V(0, 0, -187)), { model = "club", material = "Leather", colour = rgb(84, 40, 24) }, 1.2, false)
 		sconce(dress, o + V(sx * (hall.maxX - 0.2), 7.2, -187), V(-sx, 0, 0), 0.7, 18)
 	end
 	local doorwayZ = Plan.Lobby.maxZ
-	local line = Kit.part(dress, "SecurityLine", V(10, 0.06, 0.5), CFrame.new(o + V(0, 0.08, doorwayZ - 0.6)), look(rgb(255, 60, 60), Enum.Material.Neon, nil, 0.2), GHOST_DARK)
+	local line = Kit.part(dress, "SecurityLine", V(10 * Plan.WIDEN, 0.06, 0.5), CFrame.new(o + V(0, 0.08, doorwayZ - 0.6)), look(rgb(255, 60, 60), Enum.Material.Neon, nil, 0.2), GHOST_DARK)
 	local _ = line
 	local warnSign = Kit.part(dress, "SecuritySign", V(9, 1.3, 0.2), CFrame.lookAt(o + V(0, 13.6, doorwayZ - 0.62), o + V(0, 13.6, doorwayZ - 20)), L.blackLacquer, GHOST_DARK)
 	Kit.engrave(warnSign, Enum.NormalId.Front, {

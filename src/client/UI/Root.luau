@@ -192,6 +192,8 @@ end
 
 -- How far right the dock down the left reaches (set by QuickDock), in the UI's own units.
 Root.left = 0
+-- ...and how far down it reaches (0 before it's laid out).
+Root.leftBottom = 0
 
 -- How wide a centred panel may be: what it wants, no wider than the screen, and (when there's
 -- room for a proper panel beside it) clear of the dock down the left, so the two never overlap.

@@ -113,7 +113,7 @@ function LuxePanel.open()
 			if not r then
 				Toast.show("Not just now", "The house couldn't be reached. Try again in a moment.", 3)
 			elseif r.ok ~= true then
-				Toast.show("Not yet", tostring(r.why or "Not just now."), 3)
+				Toast.refused(r)
 			elseif type(r.upgrades) == "table" and group.Parent then
 				Theme.haptic()
 				Toast.show("Yours", "The upgrade is yours, for good.", 2.5)
@@ -157,12 +157,36 @@ function LuxePanel.open()
 		gk.Position = UDim2.new(1, 0, 0.5, 0)
 		Theme.hairline(rows, UDim.new(0, 120), 15)
 		Theme.text(rows, string.format("Hauls banked: %d  ·  in all: %s  ·  best: %s", tonumber(u.hauls) or 0, Rules.format(tonumber(u.banked) or 0), Rules.format(tonumber(u.best) or 0)), 12, "body", { LayoutOrder = 16, TextColor3 = C.lightGold })
+		-- (Build 82) The Collection: the guest's rank, and every wing's set with its reward.
+		local col = if type(u.collection) == "table" then u.collection else nil
+		if col then
+			Theme.hairline(rows, UDim.new(0, 120), 17)
+			Theme.text(rows, "The Collection", 11, "caps", { LayoutOrder = 18 })
+			local rankNext = tonumber(col.nextAt)
+			Theme.text(rows, string.format("Rank: %s", tostring(col.rankName or "")), 18, "display", { LayoutOrder = 19, TextColor3 = GOLD })
+			Theme.text(rows, if rankNext then string.format("%s banked of the %s for %s", Rules.format(tonumber(col.banked) or 0), Rules.format(rankNext), tostring(col.nextName or "the next rank")) else "The highest rank there is.", 12, "body", { LayoutOrder = 20, TextColor3 = C.smoke })
+			Theme.text(rows, "Bank every piece of a wing once and its set pays out, once. Limited pieces come and go with their holiday, and aren't in the sets.", 12, "body", { LayoutOrder = 21, TextColor3 = C.smoke })
+			for i, w in (if type(col.wings) == "table" then col.wings else {}) :: { any } do
+				local line = Instance.new("Frame")
+				line.Name = "Set" .. tostring(w.wing)
+				line.BackgroundTransparency = 1
+				line.Size = UDim2.new(1, 0, 0, 22)
+				line.LayoutOrder = 21 + i
+				line.Parent = rows
+				local have, of = tonumber(w.have) or 0, tonumber(w.of) or 0
+				local name = Theme.text(line, string.format("%s  ·  %d / %d", tostring(w.name), have, of), 13, "bodyBold", { TextXAlignment = Enum.TextXAlignment.Left, Size = UDim2.new(1, -150, 1, 0), AutomaticSize = Enum.AutomaticSize.None, TextColor3 = if w.paid then GOLD else C.bone })
+				name.Position = UDim2.fromOffset(0, 0)
+				local reward = Theme.text(line, if w.paid then "Set complete" else string.format("Set: +%s Gilt", Rules.format(tonumber(w.gilt) or 0)), 12, "body", { TextXAlignment = Enum.TextXAlignment.Right, Size = UDim2.new(0, 146, 1, 0), AutomaticSize = Enum.AutomaticSize.None, TextColor3 = if w.paid then GOLD else C.smoke })
+				reward.AnchorPoint = Vector2.new(1, 0)
+				reward.Position = UDim2.new(1, 0, 0, 0)
+			end
+		end
 	end
 
 	local close = Theme.key(content, "Close", false, function()
 		Root.close(NAME)
 	end, 200)
-	close.LayoutOrder = 20
+	close.LayoutOrder = 40
 	Root.open(NAME, group)
 	task.spawn(function()
 		local r = ask({ op = "state", id = "luxe" })

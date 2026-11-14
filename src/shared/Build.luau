@@ -4,6 +4,6 @@
 -- see whether Studio has the latest code from GitHub.
 
 return {
-	number = 81,
-	label = "Build 81 · 13 Nov · Lights Out on the floor, the Suite's maze, the Flex Studio",
+	number = 82,
+	label = "Build 82 · 14 Nov · The big fix list: revives, the longer Basement, 3D brainrots",
 }

@@ -250,7 +250,7 @@ function BasementBuild.build(parent: Instance, o: Vector3, goHome: (player: Play
 
 	-- The entry hall, at the foot of the stair down, with the arch home behind you.
 	Kit.part(arch, "EntryHall", Vector3.new(12, 1, 12), CFrame.new(o + Vector3.new(0, -0.5, -10)), LOOKS.stone)
-	Kit.part(arch, "EntryWall", Vector3.new(37, 34, 1), CFrame.new(o + Vector3.new(0, 1, -17.5)), WALL[1])
+	Kit.part(arch, "EntryWall", Vector3.new(Plan.HALF_WIDTH * 2 + 1, 80, 1), CFrame.new(o + Vector3.new(0, 0, -17.5)), WALL[1])
 
 	local versions: { [number]: Model } = {}
 	for i, e in Plan.Elements do
@@ -334,7 +334,7 @@ function BasementBuild.build(parent: Instance, o: Vector3, goHome: (player: Play
 	local function dress(n: number, z0: number, z1: number, y: number)
 		local zone = Plan.zoneOf(n)
 		for _, side in { -1, 1 } do
-			local x = side * 17.2
+			local x = side * (Plan.HALF_WIDTH - 0.8)
 			local inward = -side
 			if zone == 1 then
 				for z = z0 + 6, z1 - 6, 12 do
@@ -372,7 +372,7 @@ function BasementBuild.build(parent: Instance, o: Vector3, goHome: (player: Play
 			end
 		end
 		-- A warm sconce, on alternate walls.
-		local sx = (if n % 2 == 0 then 1 else -1) * 17.1
+		local sx = (if n % 2 == 0 then 1 else -1) * (Plan.HALF_WIDTH - 0.9)
 		local shade = Kit.part(dressing, "Sconce", Vector3.new(0.5, 1.2, 1.2), CFrame.new(o + Vector3.new(sx, y + 10, (z0 + z1) / 2)), look(rgb(255, 214, 160), Enum.Material.Neon, nil, 0.25), DRESS)
 		Kit.pointLight(shade, 0.8, 22, Plan.Zones[zone].colour:Lerp(rgb(255, 226, 180), 0.65))
 	end
@@ -385,19 +385,38 @@ function BasementBuild.build(parent: Instance, o: Vector3, goHome: (player: Play
 		-- (From the middle of one checkpoint to the middle of the next: no two walls overlap.)
 		local z0 = if n == 1 then -17 else a.at.Z
 		local z1 = if n == Plan.STAGES then b.at.Z + b.size.Z / 2 + 1 else b.at.Z
-		local high = math.max(a.at.Y, b.at.Y) + 18
-		if n == 10 then
-			high += 8 -- (over the truss's ledge)
+		-- (Build 82: the ceiling a full HEADROOM over the stage's highest platform, and the walls
+		-- HALF_WIDTH either side: a hall, not a corridor.)
+		local top = math.max(a.at.Y, b.at.Y)
+		for _, e in Plan.Elements do
+			if e.stage == n and e.kind ~= "pit" then
+				top = math.max(top, e.at.Y + e.size.Y / 2)
+			end
 		end
+		local high = top + Plan.HEADROOM
 		local low = pit.at.Y - 1
 		local h = high - low
+		local span = Plan.HALF_WIDTH * 2 + 1
 		dress(n, z0, z1, math.min(a.at.Y, b.at.Y) + 0.5)
-		for _, x in { -18, 18 } do
+		for _, x in { -Plan.HALF_WIDTH, Plan.HALF_WIDTH } do
 			Kit.part(arch, "Wall", Vector3.new(1, h, z1 - z0), CFrame.new(o + Vector3.new(x, low + h / 2, (z0 + z1) / 2)), WALL[zone])
 		end
-		Kit.part(arch, "Ceiling", Vector3.new(37, 1, z1 - z0), CFrame.new(o + Vector3.new(0, high + 0.5, (z0 + z1) / 2)), L.blackLacquer, { shadow = false })
+		Kit.part(arch, "Ceiling", Vector3.new(span, 1, z1 - z0), CFrame.new(o + Vector3.new(0, high + 0.5, (z0 + z1) / 2)), L.blackLacquer, { shadow = false })
+		-- Vaulted beams across the ceiling, a chandelier of warm light hung from every other one.
+		for z = z0 + 12, z1 - 6, 24 do
+			Kit.part(dressing, "CeilingBeam", Vector3.new(span - 2, 1.6, 1.6), CFrame.new(o + Vector3.new(0, high - 0.8, z)), WALL[zone], DRESS)
+			for _, side in { -1, 1 } do
+				Kit.part(dressing, "BeamBrace", Vector3.new(1.4, 6, 1.4), CFrame.new(o + Vector3.new(side * (Plan.HALF_WIDTH - 1.2), high - 3, z)), WALL[zone], DRESS)
+			end
+			if math.floor((z - z0) / 24) % 2 == 0 then
+				local drop = math.min(10, Plan.HEADROOM * 0.35)
+				Kit.post(dressing, "ChandelierChain", drop, 0.15, o + Vector3.new(0, high - drop, z), L.brass, DRESS)
+				local bowl = Kit.part(dressing, "Chandelier", Vector3.new(3.2, 0.8, 3.2), CFrame.new(o + Vector3.new(0, high - drop - 0.4, z)), look(rgb(255, 222, 170), Enum.Material.Neon, nil, 0.2), DRESS)
+				Kit.pointLight(bowl, 1.1, 40, Plan.Zones[zone].colour:Lerp(rgb(255, 236, 200), 0.7))
+			end
+		end
 		if n == Plan.STAGES then
-			Kit.part(arch, "EndWall", Vector3.new(37, h, 1), CFrame.new(o + Vector3.new(0, low + h / 2, z1 + 0.5)), WALL[zone])
+			Kit.part(arch, "EndWall", Vector3.new(span, h, 1), CFrame.new(o + Vector3.new(0, low + h / 2, z1 + 0.5)), WALL[zone])
 		end
 	end
 

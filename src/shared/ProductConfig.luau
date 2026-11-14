@@ -135,9 +135,9 @@ add({
 		Stackable = true,
 		CooldownSeconds = 0,
 	},
-	-- (Not on the Shop's page: it's only ever offered in its moment, at a timed table's clock, and
-	-- no table the house lays today offers one. Never a card that can't be bought.)
-	UX = { DisplayName = "Chronos Defiance", Category = "Survival", Line = "When the clock runs out in a timed room: +15 seconds and your run goes on.", Offer = false, Order = 60, Action = "prompt" },
+	-- (Not on the Shop's page: it's only ever offered in its moment, at a timed table's clock or
+	-- when security catches a guest in the Executive Suite. Never a card that can't be bought.)
+	UX = { DisplayName = "Chronos Defiance", Category = "Survival", Line = "When the clock runs out in a timed room: +15 seconds. When security catches you in the Executive Suite: back in the run, your code digits kept.", Offer = false, Order = 60, Action = "prompt" },
 })
 -- A revive priced by the room: the harder the room, the more its revive costs (and each is spent
 -- only in its own room). Until a room's product exists in Creator Hub, Chronos Defiance stands in.

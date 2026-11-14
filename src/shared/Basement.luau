@@ -36,6 +36,7 @@ export type El = {
 	bounce: number?, -- a launch pad: how hard it throws you up (studs a second)
 	id: string?, -- a secret: its id (kept with the guest's ledger once found)
 	name: string?, -- a secret: what it is
+	runUp: number?, -- (Build 82) a stage's run-up: which hop it is (the landing: the last)
 }
 export type Zone = { id: number, name: string, line: string, from: number, to: number, colour: Color3, purse: number }
 export type Checkpoint = { n: number, at: Vector3, size: Vector3, zone: number }
@@ -172,9 +173,46 @@ end
 -- higher than 2.)
 local s = checkpoint(0, v(0, 0, 0), 1)
 
+-- (Build 82) The hall is half as wide again and nearly twice as tall as it was, and every stage
+-- opens with a run-up: platforms across the hall, more of them, smaller and further apart the
+-- deeper the stage (never a gap wider than 5 studs, never a step up higher than 1), drifting out
+-- across the hall and back, onto a landing as wide as a checkpoint. The course is more than twice
+-- as long for it, and grows with the guest: the first stage's run-up is a single easy hop.
+Basement.HALF_WIDTH = 30 -- the hall's walls stand this far either side of the course's line
+Basement.HEADROOM = 32 -- the ceiling over a stage's highest platform
+local RUN_LOOK = { "barrel", "grate", "steel", "gold" }
+function Basement.runUpOf(n: number): (number, number, number)
+	local count = 1 + math.floor(n / 2) -- 1 to 9 platforms
+	local gap = math.min(4.8, 2.6 + n * 0.14) -- 2.7 to 4.8 studs between them
+	local size = math.max(3.6, 6.4 - n * 0.18) -- 6.2 to 3.6 studs across
+	return count, gap, size
+end
+local function runUp(n: number)
+	local count, gap, size = Basement.runUpOf(n)
+	local look = RUN_LOOK[zoneOf(n)]
+	local step = size * 0.55 -- (sideways each hop: never more than half a platform, so a hop is its gap)
+	local side = if n % 2 == 0 then 1 else -1
+	local x, y = 0, 0
+	local z = 4 + gap + size / 2
+	for i = 1, count do
+		-- Out across the hall for the first half, back toward the middle for the rest.
+		x += side * step * (if i <= math.ceil(count / 2) then 1 else -1)
+		y += if i % 3 == 0 then 1 else -0.5
+		pad(s + v(x, y, z), size, size, look).runUp = i
+		z += size + gap
+	end
+	-- The landing (where the stage itself begins), as wide as a checkpoint.
+	-- (After the last platform `z` stands a platform and a gap on: the landing's near edge is one
+	-- gap past the last platform's far edge.)
+	local landing = s + v(0, y - 0.5, z - size / 2 + 4)
+	pad(landing, 12, 8, "landing").runUp = count + 1
+	s = landing
+end
+
 -- 1. The Cellar Steps: five barrel tops, each a stud lower.
 stage = 1
 do
+	runUp(1)
 	for i = 1, 5 do
 		pad(s + v(if i % 2 == 0 then 2 else -2, -i, 4 + 4 + 2.5 + (i - 1) * 9), 5, 5, "barrel")
 	end
@@ -187,6 +225,7 @@ end
 -- 2. The Racks: a narrow plank between the wine racks, then two barrels.
 stage = 2
 do
+	runUp(2)
 	beam(s + v(0, 0, 4 + 2 + 10), 1.8, 20)
 	only(4, crusher(s + v(0, 0, 4 + 2 + 10), 3, 3, 2.6, 0, 0.3)) -- (The Gauntlet: a crusher over the plank)
 	pad(s + v(3, -1, 4 + 2 + 20 + 4 + 2.5), 5, 5, "barrel")
@@ -197,6 +236,7 @@ end
 -- 3. The Tasting Tiles: tiles that sink and rise again, one after another.
 stage = 3
 do
+	runUp(3)
 	for i = 1, 4 do
 		vanish(s + v(0, -0.5 * i, 4 + 3 + 2.5 + (i - 1) * 8), 5, 5, 3.2, (i - 1) * 0.22, 0.62)
 	end
@@ -206,6 +246,7 @@ end
 -- 4. The Barrel Belt: a belt of barrels running back toward you.
 stage = 4
 do
+	runUp(4)
 	conveyor(s + v(0, 0, 4 + 12), 7, 24, 9)
 	-- (Blackout's secret: a ledge beside the belt, in the dark.)
 	only(3, pad(s + v(7.5, 0.5, 4 + 12), 4, 4, "barrel"))
@@ -216,6 +257,7 @@ end
 -- 5. The Pipes: two pipes to walk, steam from a vent between them.
 stage = 5
 do
+	runUp(5)
 	beam(s + v(-2, 0, 4 + 8), 1.6, 16, "pipe")
 	pad(s + v(-2, -1, 4 + 16 + 3 + 3), 6, 6, "grate")
 	steam(s + v(-2, -1, 4 + 16 + 3 + 3), 6, 6, 3, 0, 0.4)
@@ -226,6 +268,7 @@ end
 -- 6. The Pistons: three platforms sliding side to side; ride each across.
 stage = 6
 do
+	runUp(6)
 	for i = 1, 3 do
 		local z = 4 + 4 + 3 + (i - 1) * 10
 		mover(s + v(-6, -i * 0.5, z), s + v(6, -i * 0.5, z), 6, 6, 4.5, (i - 1) * 0.33)
@@ -239,6 +282,7 @@ end
 -- 7. The Great Valve: a round floor with the valve's bar sweeping across it; jump it or time it.
 stage = 7
 do
+	runUp(7)
 	local c = s + v(0, -1, 4 + 3 + 9)
 	pad(c, 18, 18, "valve")
 	spinner(c, 16, 75, 0)
@@ -249,6 +293,7 @@ end
 -- 8. The Furnace Walk: small grates over the furnace, a stud lower each.
 stage = 8
 do
+	runUp(8)
 	for i = 1, 5 do
 		pad(s + v(if i % 2 == 0 then -2.5 else 2.5, -i * 0.8, 4 + 4 + 2 + (i - 1) * 8), 4, 4, "grate")
 	end
@@ -259,6 +304,7 @@ end
 -- 9. The Laser Hall: a long hall, lasers across it, each burning in its turn.
 stage = 9
 do
+	runUp(9)
 	pad(s + v(0, 0, 4 + 2 + 16), 8, 32, "vault")
 	for i = 1, 4 do
 		laser(s + v(0, 0, 4 + 2 + 4 + (i - 1) * 8), 8, 1.4 + (i % 2) * 1.6, 2.4, (i - 1) * 0.25, 0.5)
@@ -270,6 +316,7 @@ end
 -- 10. The Truss: climb the truss to the ledge, along the beam, and drop to the next floor.
 stage = 10
 do
+	runUp(10)
 	pad(s + v(0, 0, 4 + 2 + 3), 8, 6, "vault")
 	-- (The Gauntlet's way round: a launch pad up to a hidden ledge, and its secret.)
 	only(4, bouncer(s + v(-2.5, 0.2, 4 + 2 + 3), 2.5, 2.5, 82))
@@ -285,6 +332,7 @@ end
 -- 11. The Combination: three tiles that sink, then a lift sliding across.
 stage = 11
 do
+	runUp(11)
 	for i = 1, 3 do
 		vanish(s + v(0, -0.5 * i, 4 + 3 + 2.5 + (i - 1) * 8), 5, 5, 2.8, (i - 1) * 0.3, 0.6)
 	end
@@ -295,6 +343,7 @@ end
 -- 12. The Safe Door: two bars sweeping the vault floor, opposite ways, then the plank.
 stage = 12
 do
+	runUp(12)
 	local c = s + v(0, 0, 4 + 3 + 10)
 	pad(c, 20, 20, "safe")
 	spinner(c + v(0, 0, -5), 9, 90, 0)
@@ -307,6 +356,7 @@ end
 -- 13. The Gold Steps: small gold steps, a stud lower each.
 stage = 13
 do
+	runUp(13)
 	for i = 1, 6 do
 		pad(s + v(if i % 2 == 0 then 3 else -3, -i, 4 + 4 + 1.75 + (i - 1) * 7.5), 3.5, 3.5, "gold")
 	end
@@ -320,6 +370,7 @@ end
 -- 14. The Counting House: the belt, and steam over it.
 stage = 14
 do
+	runUp(14)
 	conveyor(s + v(0, 0, 4 + 13), 7, 26, 11)
 	steam(s + v(0, 0, 4 + 9), 7, 3, 2.8, 0, 0.35)
 	steam(s + v(0, 0, 4 + 19), 7, 3, 2.8, 0.5, 0.35)
@@ -332,6 +383,7 @@ end
 -- 15. The Falling Coins: gold tiles that sink faster.
 stage = 15
 do
+	runUp(15)
 	for i = 1, 5 do
 		vanish(s + v(if i % 2 == 0 then 1.5 else -1.5, -0.6 * i, 4 + 3.5 + 2.25 + (i - 1) * 8), 4.5, 4.5, 2.4, (i - 1) * 0.2, 0.62)
 	end
@@ -344,6 +396,7 @@ end
 -- 16. The Treasury: a narrow way, the last leap, and the Treasury itself.
 stage = 16
 do
+	runUp(16)
 	beam(s + v(0, 0, 4 + 2 + 7), 1.6, 14, "gold")
 	only(4, crusher(s + v(0, 0, 4 + 2 + 7), 3, 3, 2.8, 0.25, 0.3)) -- (The Gauntlet: a crusher on the narrow way)
 	pad(s + v(0, -1, 4 + 2 + 14 + 5 + 2.5), 5, 5, "gold")
@@ -363,10 +416,32 @@ for n = 1, Basement.STAGES do
 		end
 	end
 	local z0, z1 = a.at.Z + a.size.Z / 2, b.at.Z - b.size.Z / 2
-	local pit: El = { kind = "pit", stage = n, at = v(0, low - 14, (z0 + z1) / 2), size = v(34, 2, z1 - z0 + 8) }
+	local pit: El = { kind = "pit", stage = n, at = v(0, low - 14, (z0 + z1) / 2), size = v(Basement.HALF_WIDTH * 2 - 2, 2, z1 - z0 + 8) }
 	table.insert(E, pit)
 	Basement.Pits[n] = pit
 end
+
+-- (Build 82) Each stage's floor: its lowest surface (its own platforms, and the checkpoints at
+-- either end). A guest whose stage it is, and who is well below it, has fallen: back to their
+-- checkpoint, wherever they've fallen to (a later stage's platforms below, or any pit). Nobody skips
+-- a stage by dropping onto the lower ones ahead.
+Basement.Floors = {} :: { [number]: number }
+local FLOOR_KINDS = { pad = true, beam = true, vanish = true, mover = true, conveyor = true, bouncer = true, chest = true }
+for n = 1, Basement.STAGES do
+	local a, b = Basement.Checkpoints[n - 1], Basement.Checkpoints[n]
+	local low = math.min(a.at.Y, b.at.Y)
+	for _, e in E do
+		if e.stage == n and FLOOR_KINDS[e.kind] then
+			local top = e.at.Y + e.size.Y / 2
+			if e.kind == "mover" and e.b then
+				top = math.min(top, e.b.Y + e.size.Y / 2)
+			end
+			low = math.min(low, top)
+		end
+	end
+	Basement.Floors[n] = low
+end
+Basement.FALL_BELOW = 6 -- how far under its stage's floor a guest has fallen
 
 -- The secrets, in the order they're met.
 Basement.Secrets = {} :: { El }

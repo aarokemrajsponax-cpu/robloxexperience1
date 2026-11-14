@@ -169,7 +169,7 @@ function IslandPanel.open(which: string?)
 				if r.prompted then
 					return -- (the purchase window is open; its price is in it)
 				end
-				Toast.show("Not yet", tostring(r.why or "Not just now."), 3)
+				Toast.refused(r)
 			else
 				Theme.haptic()
 				Toast.show(tostring(r.title or done or "Done"), tostring(r.line or ""), 3)

@@ -32,6 +32,8 @@ local GOLD = rgb(255, 204, 90)
 
 -- Set by Main.
 GiltBar.openGems = function() end
+-- Set by Main: the Boutique, on its Buy Gilt page.
+GiltBar.openGilt = function() end
 -- (Set by the Fortune plaque under it: told whenever the bar shows or hides.)
 GiltBar.shown = function() end
 GiltBar.openBadges = function() end
@@ -331,7 +333,23 @@ function GiltBar.start()
 		GiltBar.refresh()
 	end)
 
-	local _giltKey, giltValue = part(frame, 1, "coin", rgb(255, 214, 110), "Gilt", 132)
+	local giltKey, giltValue = part(frame, 1, "coin", rgb(255, 214, 110), "Gilt", 132)
+	-- A small gold + at the Gilt's end: more Gilt, in the Boutique (the whole figure is a key too).
+	local plus = Instance.new("TextLabel")
+	plus.Name = "More"
+	plus.AnchorPoint = Vector2.new(1, 0.5)
+	plus.Position = UDim2.new(1, 0, 0.5, 0)
+	plus.Size = UDim2.fromOffset(18, 18)
+	plus.BackgroundColor3 = rgb(242, 188, 66)
+	plus.TextColor3 = rgb(26, 16, 4)
+	plus.FontFace = HEAVY
+	plus.TextSize = 15
+	plus.Text = "+"
+	corner(plus, 9)
+	plus.Parent = giltKey
+	giltKey.Activated:Connect(function()
+		GiltBar.openGilt()
+	end)
 	local gemsKey, gemsValue = part(frame, 2, "gems", rgb(150, 220, 255), "Gems", 96)
 	gemsKey.Activated:Connect(function()
 		GiltBar.openGems()

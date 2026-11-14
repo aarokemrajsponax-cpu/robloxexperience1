@@ -198,7 +198,7 @@ function Satchel.show(m: { [string]: any })
 	local style = if type(m.flourish) == "string" then Wardrobe.get(m.flourish) else nil
 	local burst = if style and typeof(style.style.colour) == "Color3" then style.style.colour else ring
 	local name = if type(m.name) == "string" then m.name else (if curio then curio.name else "")
-	local glyph = if type(m.glyph) == "string" then m.glyph else (if curio then curio.glyph else "✦")
+	local glyph = if type(m.glyph) == "string" then m.glyph else (if curio then curio.glyph else "✨")
 	local mine = who == Players.LocalPlayer
 
 	local gui = Instance.new("BillboardGui")

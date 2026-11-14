@@ -341,7 +341,7 @@ local function onAsk(player: Player, request: unknown): any
 				return { ok = false, why = if t.islandKey then "It comes with the Island Key." elseif t.prestige then "It comes with Maison Prestige " .. t.prestige .. "." else "Buy it first." }
 			end
 			if not spend(player, data, t.gilt or 0, t.gems or 0, "Suite theme") then
-				return { ok = false, why = "You don't have enough for that just now." }
+				return { ok = false, short = if (t.gems or 0) > 0 then "Gems" else "Gilt", why = if (t.gems or 0) > 0 then "Insufficient Gems." else "Insufficient Gilt." }
 			end
 			s.themes[t.id] = true
 		end

@@ -851,6 +851,11 @@ local defaults = {
 	-- the Maison (out of sight across the night air), reached through its room off the Foyer.
 	Attractions = {
 		travelGap = 2, -- seconds between one trip (in, or home) and the next
+		-- (Build 82) Steal a Luxe, the Basement and the Executive Suite: a guest stands still on
+		-- arrival for loadIn seconds while their screen makes the place ready (its parts, its
+		-- textures, its sounds), and until their screen says it is ready, or loadInMost at most.
+		loadIn = 6.5,
+		loadInMost = 15,
 		-- Steal a Luxe (server/Attractions/Luxe): the residence, its guards and the getaway car.
 		luxe = {
 			origin = { -3000, 0, -3000 },
@@ -909,6 +914,7 @@ local defaults = {
 			alertSpeed = 1.15, -- ...and walk this much faster
 			searchSeconds = 4, -- how long a guard looks round where someone was seen
 			reinforcements = 2, -- extra guards in a wing while it's locked down
+			wakeStart = 2, -- (Build 82) seconds' start a guest gets on the guard sent after them when they lift a piece
 			objectives = 3, -- side jobs given at the start of each run
 			goldenGems = 150, -- the golden treadmill (double Stride), for good
 			greatHaul = 8000, -- a haul worth this much is told to the whole house
@@ -920,11 +926,12 @@ local defaults = {
 			skipGemsStep = 15, -- ...and this much more for each stage deeper (stage 15: 235)
 			chestGilt = 800, -- the Treasury's chest, the first clear of the day
 			chestGiltAgain = 250, -- and each clear after it that day
-			quick = 240, -- seconds: the Under Four Minutes badge
-			heraldUnder = 180, -- a record under three minutes is told to the house
+			-- (Build 82: the course is over twice as long, so its times are too.)
+			quick = 480, -- seconds: the Under Eight Minutes badge
+			heraldUnder = 360, -- a record under six minutes is told to the house
 			fallGrace = 1.5, -- seconds back at a checkpoint before anything can send you back again
 			boardSeconds = 120,
-			store = "Basement_v1",
+			store = "Basement_v2", -- (Build 82: the longer course's own boards; the old course's stay in Basement_v1)
 			secretGilt = 300, -- each of the four courses' secrets, the first time it's found (once, for good)
 		},
 		-- The Executive Suite (server/Attractions/Executive): by invitation, the boss at the top.
@@ -1471,9 +1478,9 @@ local defaults = {
 		-- it opens, with nothing to upload. Each list plays through in a shuffled order, a breath
 		-- between songs; `gain` evens out their loudness (measured, to about -19 dBFS).
 		--   lounge: the Foyer's grand piano (solo piano): the lobby, and only the lobby
-		--   table: the sorting rooms and the Library (focused lo-fi and downtempo beats)
 		--   ballroom: the Ballroom's Lights Out evenings (trap, bass house, future bass)
-		--   street: every lounge elsewhere, the street and Luxury Island (lo-fi, trip hop, downtempo)
+		--   street: every other room (the Salon and the Library too), the street and Luxury Island
+		--           (lo-fi, trip hop, downtempo)
 		Playlists = {
 			-- The attractions' own (Build 78; each mood is described just above AbuseMusic, below).
 			luxe = {
@@ -1495,9 +1502,17 @@ local defaults = {
 				{ id = "rbxassetid://74182710760944", gain = 0.61 }, -- Barren Planet, 2:16
 				{ id = "rbxassetid://9045959116", gain = 1.33 }, -- Galactron, 2:57
 			},
+			-- The Executive himself (Build 82): the beats that played in the Salon, which never suited
+			-- the Salon, saved for the fight in his office.
 			executiveBoss = {
-				{ id = "rbxassetid://1839459610", gain = 1.16 }, -- Grand Overture, 1:22
-				{ id = "rbxassetid://118322552504405", gain = 0.99 }, -- Heroes Theme, 1:44
+				{ id = "rbxassetid://9044976005", gain = 0.97 }, -- Smooth and Open (underscore) · Red Line (Chill Hop), 1:57
+				{ id = "rbxassetid://9044975007", gain = 1.04 }, -- Get Your Thoughts Right · Red Line (Chill Hop), 1:46
+				{ id = "rbxassetid://9043887612", gain = 0.72 }, -- In Paradise C · Hip Hop Shop (CHILL HOP VIBES), 2:16
+				{ id = "rbxassetid://9043887865", gain = 1.22 }, -- Coy C · Hip Hop Shop (CHILL HOP VIBES), 2:30
+				{ id = "rbxassetid://1837091288", gain = 0.79 }, -- Tailspin · Bibliotheque (DOWNTEMPO BEATS), 2:19
+				{ id = "rbxassetid://1842668036", gain = 0.62 }, -- Nostalgic · Hans Hummer (URBAN GROOVES), 2:18
+				{ id = "rbxassetid://1842696910", gain = 0.57 }, -- Snowglide · Hans Hummer (URBAN GROOVES), 2:42
+				{ id = "rbxassetid://9048155463", gain = 0.98 }, -- Casting Shadows (c) · River Police (Downtempo), 2:33
 			},
 			lounge = {
 				{ id = "rbxassetid://106960476637326", gain = 1.22 }, -- Late Night Classics · Alan Hawkshaw (Cocktail Time (BRS4)), 3:18
@@ -1511,17 +1526,6 @@ local defaults = {
 			-- Build 80: piano is the Foyer's alone. The rest of the house plays street luxury, from the
 			-- same licensed library (APM Music; every id checked: APMOfficial, music, no piano in its
 			-- title, tags or notes), each evened to the house's level (`gain`, measured).
-			-- The tables and the Library: focused, unhurried beats to sort and duel to.
-			table = {
-				{ id = "rbxassetid://9044976005", gain = 0.97 }, -- Smooth and Open (underscore) · Red Line (Chill Hop), 1:57
-				{ id = "rbxassetid://9044975007", gain = 1.04 }, -- Get Your Thoughts Right · Red Line (Chill Hop), 1:46
-				{ id = "rbxassetid://9043887612", gain = 0.72 }, -- In Paradise C · Hip Hop Shop (CHILL HOP VIBES), 2:16
-				{ id = "rbxassetid://9043887865", gain = 1.22 }, -- Coy C · Hip Hop Shop (CHILL HOP VIBES), 2:30
-				{ id = "rbxassetid://1837091288", gain = 0.79 }, -- Tailspin · Bibliotheque (DOWNTEMPO BEATS), 2:19
-				{ id = "rbxassetid://1842668036", gain = 0.62 }, -- Nostalgic · Hans Hummer (URBAN GROOVES), 2:18
-				{ id = "rbxassetid://1842696910", gain = 0.57 }, -- Snowglide · Hans Hummer (URBAN GROOVES), 2:42
-				{ id = "rbxassetid://9048155463", gain = 0.98 }, -- Casting Shadows (c) · River Police (Downtempo), 2:33
-			},
 			-- The Ballroom's Lights Out evenings: trap, bass house and future bass, with some weight.
 			ballroom = {
 				{ id = "rbxassetid://1842661606", gain = 0.67 }, -- Late Night Pipe · Hamilton Birch (TRAP BEATS), 2:32
@@ -1556,7 +1560,7 @@ local defaults = {
 		--   luxeAlarm      the residence in lockdown: harder, faster
 		--   basement       the course: fast electronic, made for jumping to
 		--   executive      the Executive Suite: dark, quiet, watchful
-		--   executiveBoss  the Executive himself: his own score, building
+		--   executiveBoss  the Executive himself: the beats that used to play in the Salon
 		AbuseMusic = {
 			-- A Grand Prix race, for the drivers in it: driving music, from the lights to the flag
 			-- (World/AbuseMusic). Swap in your own ids here.
@@ -1674,7 +1678,7 @@ local defaults = {
 		-- maison-table or maison-ballroom in SoundService is used if a playlist is emptied.)
 		Tracks = {
 			lounge = "",
-			table = "",
+			street = "",
 			ballroom = "",
 		},
 		Music = { street = "", foyer = "", salon = "", velvet = "", obsidian = "", midnight = "", club = "", library = "", ballroom = "", boutique = "", vault = "", suite = "", terrace = "" },

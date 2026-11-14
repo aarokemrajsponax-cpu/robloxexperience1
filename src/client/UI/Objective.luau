@@ -6,8 +6,8 @@
 -- beat. It is never shown at a table. It comes up bright
 -- when it changes and settles back after a few seconds, so it's there whenever you look for it.
 -- It steps aside while something bigger holds the screen, and comes back quietly after. Its –
--- key folds it away into a small NEXT tab (and the tab brings it back); the choice is kept, like
--- a setting (The room → What-to-do-next card).
+-- key folds it away; the choice is kept, like a setting, and Settings brings it back (The room →
+-- What-to-do-next card).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
@@ -150,7 +150,7 @@ local function hide()
 	end)
 end
 
--- Folded away: a small tab where the card was (NEXT ▾), and tapping it brings the card back.
+-- Folded away: nothing on screen (an earlier small NEXT tab is gone: it crowded the corner).
 local tab: TextButton? = nil
 local function folded(): boolean
 	return State.get("goalCard") == "Hidden"
@@ -182,37 +182,6 @@ Root.TopChanged:Connect(function()
 	end
 end)
 
-local function showTab()
-	if tab then
-		return
-	end
-	local b = Instance.new("TextButton")
-	b.Name = "ObjectiveTab"
-	b.AutoButtonColor = false
-	b.AnchorPoint = Vector2.new(1, 0)
-	b.Position = where()
-	b.BackgroundColor3 = Color3.fromRGB(14, 14, 18)
-	b.BackgroundTransparency = 0.08
-	b.FontFace = Brand.Fonts.bodyBold
-	b.TextSize = 13
-	b.TextColor3 = Brand.Colours.lightGold
-	b.Text = "NEXT  ▾"
-	b.Size = UDim2.fromOffset(Theme.measure(b.Text, 13, Brand.Fonts.bodyBold).X + 28, 30)
-	local c = Instance.new("UICorner")
-	c.CornerRadius = UDim.new(1, 0)
-	c.Parent = b
-	local st = Instance.new("UIStroke")
-	st.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	st.Color = Brand.Colours.gold
-	st.Transparency = 0.25
-	st.Parent = b
-	b.Activated:Connect(function()
-		State.set("goalCard", "Shown")
-	end)
-	b.Parent = Root.hud
-	tab = b
-end
-
 local function show(goal: Goal)
 	dropTab()
 	if card and shownKey == goal.key then
@@ -230,7 +199,7 @@ local function show(goal: Goal)
 		pad.PaddingLeft = UDim.new(0, 16)
 		pad.PaddingRight = UDim.new(0, 40)
 	end
-	-- The – key in its top corner: folds the card away (to the small NEXT tab).
+	-- The – key in its top corner: folds the card away (Settings brings it back).
 	local fold = Instance.new("TextButton")
 	fold.Name = "Fold"
 	fold.AutoButtonColor = false
@@ -306,9 +275,10 @@ function Objective.refresh()
 	end
 	local goal = if seated or State.phase ~= "play" or Root.isOpen() then nil else Objective.current()
 	if goal and folded() and not busy() then
+		-- (Folded: nothing at all on screen. The card comes back from Settings: The room →
+		-- What-to-do-next card.)
 		quietKey = nil
 		hide()
-		showTab()
 		return
 	end
 	dropTab()

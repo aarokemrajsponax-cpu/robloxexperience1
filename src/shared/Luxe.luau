@@ -270,6 +270,45 @@ Luxe.LOFT = 10
 Luxe.ROOF = 19
 Luxe.HEIGHT = 18 -- the residence's walls
 
+-- The Collection (Build 82): every piece of the residence, each banked once. A wing's whole set
+-- (its pieces that are always out: never the Limited ones, which come and go with their holiday)
+-- pays its reward the first time it's complete, and the ranks climb with everything ever banked.
+-- Nothing in it is bought or left to chance: it's the pieces a guest has carried out.
+Luxe.SetGilt = { 2000, 5000, 12000, 6000, 8000, 15000 } :: { number } -- by wing
+Luxe.Ranks = {
+	{ name = "Pickpocket", banked = 0 },
+	{ name = "Cat Burglar", banked = 10000 },
+	{ name = "Gentleman Thief", banked = 40000 },
+	{ name = "Gallery Ghost", banked = 100000 },
+	{ name = "Safecracker", banked = 250000 },
+	{ name = "Master of Disguise", banked = 600000 },
+	{ name = "Phantom of the Residence", banked = 1500000 },
+	{ name = "The Legend of the Residence", banked = 4000000 },
+} :: { { name: string, banked: number } }
+
+-- A wing's set: its pieces that are always out.
+function Luxe.setOf(wing: number): { Piece }
+	local out = {}
+	for _, piece in Luxe.Pieces do
+		if piece.wing == wing and piece.rarity ~= "Limited" then
+			table.insert(out, piece)
+		end
+	end
+	return out
+end
+
+-- The rank for everything ever banked: its number, and what the next one takes (nil at the top).
+function Luxe.rankOf(banked: number): (number, number?)
+	local at = 1
+	for i, r in Luxe.Ranks do
+		if banked >= r.banked then
+			at = i
+		end
+	end
+	local nextRank = Luxe.Ranks[at + 1]
+	return at, if nextRank then nextRank.banked else nil
+end
+
 -- The wing a point is in (from the origin), or nil (the courtyard and beyond).
 function Luxe.wingAt(p: Vector3): number?
 	for _, w in Luxe.Wings do

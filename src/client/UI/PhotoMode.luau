@@ -123,16 +123,27 @@ local function buildOverlay()
 	b.BackgroundTransparency = 0.25
 	b.AnchorPoint = Vector2.new(0.5, 1)
 	b.Position = UDim2.new(0.5, 0, 1, -16)
-	b.Size = UDim2.fromOffset(620, 54)
+	-- (As wide as the keys need, never wider than the screen: on a phone they wrap to two rows.)
+	local screenW = Root.size().X
+	b.Size = UDim2.fromOffset(math.min(800, math.max(280, screenW - 24)), 54)
+	b.AutomaticSize = Enum.AutomaticSize.Y
 	b.Parent = Root.panels
 	local stroke = Instance.new("UIStroke")
 	stroke.Color = Brand.Colours.gold
 	stroke.Transparency = 0.5
 	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 	stroke.Parent = b
-	local list = Theme.list(b, 8, true)
+	local list = Instance.new("UIGridLayout")
+	list.CellSize = UDim2.fromOffset(120, 38)
+	list.CellPadding = UDim2.fromOffset(8, 8)
 	list.HorizontalAlignment = Enum.HorizontalAlignment.Center
 	list.VerticalAlignment = Enum.VerticalAlignment.Center
+	list.SortOrder = Enum.SortOrder.LayoutOrder
+	list.Parent = b
+	local pad = Instance.new("UIPadding")
+	pad.PaddingTop = UDim.new(0, 8)
+	pad.PaddingBottom = UDim.new(0, 8)
+	pad.Parent = b
 	key(b, "‹ Grade", false, function()
 		grade = (grade - 2) % #PhotoMode.Grades + 1
 		applyGrade()
@@ -150,9 +161,13 @@ local function buildOverlay()
 			task.spawn(PhotoMode.capture)
 		end, 5)
 	end
+	-- (Build 82) The view back behind the guest, framed on them, without leaving photo mode.
+	key(b, "Reset view", false, function()
+		PhotoMode.resetView()
+	end, 6)
 	key(b, "Done", false, function()
 		PhotoMode.exit()
-	end, 6)
+	end, 7)
 	bar = b
 	-- The mark on a capture: a hairline and MAISON NOIR, tiny, bottom right.
 	local m = Instance.new("Frame")
@@ -304,6 +319,24 @@ function PhotoMode.exit()
 	look, move = Vector2.zero, Vector3.zero
 	Root.hud.Enabled = hudWas
 	PhotoMode.onExit()
+end
+
+-- The photo camera back behind the guest, a little above, looking at them.
+function PhotoMode.resetView()
+	local anchor = rootPosition()
+	local camera = Workspace.CurrentCamera
+	if not active or not anchor or not camera then
+		return
+	end
+	local character = Players.LocalPlayer.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	local facing = if root and root:IsA("BasePart") then root.CFrame.LookVector else Vector3.new(0, 0, -1)
+	local from = anchor - Vector3.new(facing.X, 0, facing.Z).Unit * 10 + Vector3.new(0, 3, 0)
+	local cf = CFrame.lookAt(from, anchor + Vector3.new(0, 1, 0))
+	position = from
+	local x, y, _ = cf:ToEulerAnglesYXZ()
+	pitch, yaw = x, y
+	camera.CFrame = cf
 end
 
 function PhotoMode.isActive(): boolean

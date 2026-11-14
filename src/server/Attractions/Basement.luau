@@ -148,6 +148,18 @@ local function page(ctx: Types.Ctx, data: any): { [string]: any }
 	if type(p.secrets) ~= "table" then
 		p.secrets = {} -- a secret's id -> true, once found
 	end
+	-- (Build 82) The course more than doubled: times on the old one are kept as they were, under
+	-- their own names, and the new course's bests start afresh.
+	if p.course ~= 2 then
+		if p.best or next(p.bests) ~= nil then
+			p.bestV1 = p.best
+			p.bestsV1 = p.bests
+		end
+		p.best = nil
+		p.weekBest = nil
+		p.bests = {}
+		p.course = 2
+	end
 	return p
 end
 
@@ -488,6 +500,13 @@ local function judge(ctx: Types.Ctx, player: Player, run: Run, at: Vector3, t: n
 	if os.clock() < run.grace then
 		return
 	end
+	-- (Build 82) Well below their stage's floor: fallen, wherever to (a pit, the hall's floor, or a
+	-- later stage's platforms below: nobody skips a stage by dropping onto the ones ahead).
+	local floor = Plan.Floors[math.clamp(run.checkpoint + 1, 1, Plan.STAGES)]
+	if floor and at.Y < floor - Plan.FALL_BELOW then
+		fall(ctx, player, run, "fall")
+		return
+	end
 	-- What can send them back: in the stage they're on, and the one behind (on this run's course).
 	for _, n in { run.checkpoint + 1, run.checkpoint } do
 		local list = byStage[n]
@@ -727,7 +746,7 @@ function Basement.ask(ctx: Types.Ctx, player: Player, r: { [string]: unknown }):
 		if how == "gems" then
 			local price = skipGems(ctx, stage)
 			if not ctx.spend(player, 0, price, "basement_skip") then
-				return { ok = false, why = string.format("That's %d Gems.", price) }
+				return { ok = false, short = "Gems", why = string.format("That's %d Gems.", price) }
 			end
 			return skip(ctx, player, run, "gems")
 		end

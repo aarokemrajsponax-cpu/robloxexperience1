@@ -61,6 +61,18 @@ local GAMES: { [string]: Types.Game } = {
 local event = Remotes.event("Attraction")
 local inside: { [Player]: string } = {}
 local lastTravel: { [Player]: number } = {}
+-- When each guest arrived (and where they were put), and since when they've been seen outside the
+-- place they're in. Right after the way in, the server can still be seeing where the guest stood
+-- before (their own computer moves their character, and the new place takes a moment to come
+-- back), so a guest is never let go of in their first moments, nor for a moment's odd reading:
+-- only once they've really been out of the place for a while.
+local arrived: { [Player]: { at: number, frame: CFrame, again: boolean } } = {}
+local awaySince: { [Player]: number } = {}
+local ARRIVAL_GRACE = 4 -- seconds after arriving when "outside" is never believed
+-- (Build 82) Held on arrival in the tuned attractions (Config.Movement.tuned) while the guest's
+-- screen makes the place ready: until when at least, at most, and whether their screen is ready.
+local held: { [Player]: { from: number, least: number, most: number, ready: boolean, root: BasePart? } } = {}
+local AWAY_SECONDS = 1.5 -- seconds out of the place before a guest is let go of
 local folder: Folder? = nil
 local rng = Random.new()
 
@@ -142,6 +154,24 @@ local function setSpeed(player: Player, multiplier: number?)
 	end
 end
 
+-- Lets a held guest move (their root unanchored, and their screen told).
+local function unhold(player: Player)
+	local h = held[player]
+	if not h then
+		return
+	end
+	held[player] = nil
+	local root = h.root
+	if root then
+		pcall(function()
+			root.Anchored = false
+		end)
+	end
+	if player.Parent then
+		event:FireClient(player, { op = "unheld" })
+	end
+end
+
 -- Lets go of a guest who was in an attraction (`why`: home, respawn, quit, away).
 local function release(player: Player, why: string)
 	local id = inside[player]
@@ -149,6 +179,9 @@ local function release(player: Player, why: string)
 		return
 	end
 	inside[player] = nil
+	arrived[player] = nil
+	awaySince[player] = nil
+	unhold(player)
 	local g = GAMES[id]
 	if g then
 		local ok, err = pcall(g.leave :: any, Attractions.ctx, player, why)
@@ -332,6 +365,8 @@ local function firstLook(data: any, what: string): boolean
 	return true
 end
 Attractions.firstLook = firstLook
+-- (For tests: who is held on arrival.)
+Attractions.held = held
 
 -- Takes a guest into an attraction. Returns { ok, why }.
 function Attractions.go(player: Player, id: string): { [string]: any }
@@ -362,14 +397,31 @@ function Attractions.go(player: Player, id: string): { [string]: any }
 	end
 	lastTravel[player] = now
 	inside[player] = id
+	local frame = (at :: CFrame) + AttractionList.origin(id)
+	arrived[player] = { at = now, frame = frame, again = false }
+	awaySince[player] = nil
 	player:SetAttribute(AttractionList.ATTRIBUTE, id)
-	if not teleport(player, (at :: CFrame) + AttractionList.origin(id)) then
+	if not teleport(player, frame) then
 		release(player, "away")
 		return { ok = false, why = "Not just now." }
 	end
 	Analytics.custom(player, "Attraction entered", 1, { attraction = id })
+	-- (Build 82) The tuned attractions: held still on arrival while the place is made ready (their
+	-- root anchored here, so nobody walks off a floor that isn't there yet on their screen).
+	local hold: number? = nil
+	local movement = (Config.data :: any).Movement
+	if type(movement.tuned) == "table" and movement.tuned[id] == true then
+		local c = (Config.data :: any).Attractions
+		local least = tonumber(c.loadIn) or 6.5
+		local root = rootOf(player)
+		if root then
+			root.Anchored = true
+		end
+		held[player] = { from = now, least = now + least, most = now + math.max(least, tonumber(c.loadInMost) or 15), ready = false, root = root }
+		hold = least
+	end
 	-- (The first time ever: their screen shows how it works, once.)
-	event:FireClient(player, { op = "entered", id = id, first = firstLook(Profiles.get(player), id) })
+	event:FireClient(player, { op = "entered", id = id, first = firstLook(Profiles.get(player), id), hold = hold })
 	return { ok = true }
 end
 
@@ -455,6 +507,13 @@ local function onAsk(player: Player, request: unknown): any
 		return Attractions.go(player, id)
 	elseif op == "home" then
 		return Attractions.home(player)
+	elseif op == "ready" then
+		-- (Their screen has the place ready: let go once the least wait is over.)
+		local h = held[player]
+		if h then
+			h.ready = true
+		end
+		return { ok = true }
 	elseif op == "state" then
 		local which = id or inside[player]
 		local g = which and GAMES[which]
@@ -572,12 +631,35 @@ function Attractions.step(dt: number)
 	if not okPortals then
 		warn("[Maison] A way in stumbled: " .. tostring(whyPortals))
 	end
+	local now = os.clock()
+	for player, h in held do
+		if player.Parent == nil or not inside[player] then
+			unhold(player)
+		elseif (h.ready and now >= h.least) or now >= h.most then
+			unhold(player)
+		end
+	end
 	for player, id in inside do
 		local root = rootOf(player)
 		if player.Parent == nil then
 			release(player, "quit")
 		elseif root and AttractionList.areaAt(root.CFrame.Position) ~= id then
-			release(player, "away")
+			local came = arrived[player]
+			if came and now - came.at < ARRIVAL_GRACE then
+				-- (Still being seen where they were: put them in once more, once.)
+				if not came.again and now - came.at > 1 then
+					came.again = true
+					teleport(player, came.frame)
+				end
+			else
+				local since = awaySince[player] or now
+				awaySince[player] = since
+				if now - since >= AWAY_SECONDS then
+					release(player, "away")
+				end
+			end
+		else
+			awaySince[player] = nil
 		end
 	end
 	for id, g in GAMES do
@@ -629,6 +711,43 @@ local function hookPrompt(prompt: Instance)
 	end)
 end
 
+-- (Build 82) Invisible walls round the edge of each tuned attraction's place (its BOUNDS), so
+-- nobody walks or jumps out of it into the night: the ways out are its arches and its lifts.
+local function bounds(parent: Instance)
+	local movement = (Config.data :: any).Movement
+	local tuned = if type(movement.tuned) == "table" then movement.tuned else {}
+	for id in tuned do
+		local b = AttractionList.BOUNDS[id]
+		if b and GAMES[id] then
+			local m = Instance.new("Model")
+			m.Name = "Bounds_" .. id
+			local o = AttractionList.origin(id)
+			local lo, hi = o + b.min, o + b.max
+			local mid = (lo + hi) / 2
+			local size = hi - lo
+			local function wall(name: string, at: Vector3, s: Vector3)
+				local p = Instance.new("Part")
+				p.Name = name
+				p.Anchored = true
+				p.CanCollide = true
+				p.CanQuery = false
+				p.CanTouch = false
+				p.Transparency = 1
+				p.CastShadow = false
+				p.Size = s
+				p.CFrame = CFrame.new(at)
+				p.Parent = m
+			end
+			wall("West", Vector3.new(lo.X - 1, mid.Y, mid.Z), Vector3.new(2, size.Y, size.Z + 4))
+			wall("East", Vector3.new(hi.X + 1, mid.Y, mid.Z), Vector3.new(2, size.Y, size.Z + 4))
+			wall("South", Vector3.new(mid.X, mid.Y, lo.Z - 1), Vector3.new(size.X + 4, size.Y, 2))
+			wall("North", Vector3.new(mid.X, mid.Y, hi.Z + 1), Vector3.new(size.X + 4, size.Y, 2))
+			wall("Ceiling", Vector3.new(mid.X, hi.Y + 1, mid.Z), Vector3.new(size.X + 4, 2, size.Z + 4))
+			m.Parent = parent
+		end
+	end
+end
+
 function Attractions.start()
 	local parent = holder()
 	for id, g in GAMES do
@@ -636,6 +755,10 @@ function Attractions.start()
 		if not ok then
 			warn("[Maison] Building " .. id .. " failed: " .. tostring(err))
 		end
+	end
+	local okBounds, whyBounds = pcall(bounds :: any, parent)
+	if not okBounds then
+		warn("[Maison] The attractions' edges couldn't be built: " .. tostring(whyBounds))
 	end
 	for _, prompt in CollectionService:GetTagged("AttractionPrompt") do
 		hookPrompt(prompt)
@@ -657,7 +780,10 @@ function Attractions.start()
 	Players.PlayerAdded:Connect(watch)
 	Players.PlayerRemoving:Connect(function(player: Player)
 		release(player, "quit")
+		held[player] = nil
 		lastTravel[player] = nil
+		arrived[player] = nil
+		awaySince[player] = nil
 		for _, g in GAMES do
 			pcall(g.leave :: any, ctx, player, "gone")
 		end

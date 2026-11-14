@@ -16,6 +16,7 @@ local Brand = require(ReplicatedStorage.Shared.Brand)
 local Plan = require(ReplicatedStorage.Shared.Basement)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Rules = require(ReplicatedStorage.Shared.Fortune)
+local HudCard = require(script.Parent.HudCard)
 local Root = require(script.Parent.Root)
 local Theme = require(script.Parent.Theme)
 local Toast = require(script.Parent.Toast)
@@ -26,7 +27,7 @@ local BasementHud = {}
 local C = Brand.Colours
 local GOLD = Color3.fromRGB(255, 204, 90)
 local CARD_W = 340
-local CARD_H = 112
+local CARD_H = 96
 local SKIP = "BasementSkip"
 
 local card: Frame? = nil
@@ -72,21 +73,12 @@ local function place()
 	if not c then
 		return
 	end
-	local y = math.max(Root.topClear("Basement") + 6, 126)
-	c.Position = UDim2.new(0.5, 0, 0, y)
-	Root.setTop("Basement", y + CARD_H + 4, CARD_W / 2)
+	-- (The bottom-left corner, like every attraction's card: UI/HudCard.)
+	HudCard.place(c, 160)
 	local k = keys
 	if k then
 		k.Position = UDim2.new(0.5, 0, 1, -(14 + Root.bottomClear()))
 	end
-end
-
-local function clockText(): string
-	local started = tonumber(view.started)
-	if not started then
-		return "0:00.00"
-	end
-	return Plan.clock(BasementHud.now() - started)
 end
 
 -- The course the run is on, and when the course turns over (or that the run keeps its own).
@@ -119,7 +111,6 @@ local function draw()
 	parts.stage.Text = string.format("Stage %d of %d  ·  %s", stage, Plan.STAGES, tostring(view.stageName or Plan.StageNames[stage]))
 	parts.best.Text = if tonumber(view.best) then "BEST " .. Plan.clock(view.best) else "NO BEST YET"
 	parts.falls.Text = string.format("FALLS %d", tonumber(view.falls) or 0) .. (if tonumber(view.secretsOf) then string.format("  ·  SECRETS %d / %d", tonumber(view.secrets) or 0, view.secretsOf) else "") .. (if view.assisted then "  ·  SKIPPED: NOT TIMED" else "")
-	parts.clock.Text = clockText()
 	BasementHud.courseLine()
 	local skipKey = parts.skipKey :: TextButton?
 	if skipKey then
@@ -172,7 +163,7 @@ function BasementHud.offerSkip()
 		task.spawn(function()
 			local r = ask(request)
 			if r and r.ok ~= true and type(r.why) == "string" then
-				Toast.show("Not yet", r.why, 3)
+				Toast.refused(r)
 			end
 		end)
 	end
@@ -205,32 +196,22 @@ function BasementHud.mount()
 	end
 	local c = Instance.new("Frame")
 	c.Name = "BasementCard"
-	c.AnchorPoint = Vector2.new(0.5, 0)
 	c.Size = UDim2.fromOffset(CARD_W, CARD_H)
-	c.BackgroundColor3 = Color3.fromRGB(14, 12, 16)
-	c.BackgroundTransparency = 0.08
 	c.Parent = Root.hud
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 14)
-	corner.Parent = c
-	local edge = Instance.new("UIStroke")
-	edge.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	edge.Color = GOLD
-	edge.Thickness = 1.25
-	edge.Transparency = 0.3
-	edge.Parent = c
 	local pad = Instance.new("UIPadding")
-	pad.PaddingLeft = UDim.new(0, 14)
+	pad.PaddingLeft = UDim.new(0, 16)
 	pad.PaddingRight = UDim.new(0, 14)
-	pad.PaddingTop = UDim.new(0, 8)
+	pad.PaddingTop = UDim.new(0, 9)
 	pad.Parent = c
-	label(c, "Title", "THE MAISON BASEMENT", 11, Brand.Fonts.bodyBold, GOLD, 0)
-	parts.zone = label(c, "Zone", "THE WINE CELLAR", 11, Brand.Fonts.bodyBold, C.bone, 0, Enum.TextXAlignment.Right)
-	parts.stage = label(c, "Stage", "", 14, Brand.Fonts.bodyBold, C.bone, 20)
-	parts.clock = label(c, "Clock", "0:00.00", 22, Brand.Fonts.figures, Color3.new(1, 1, 1), 42)
-	parts.best = label(c, "Best", "", 11, Brand.Fonts.bodyBold, GOLD, 46, Enum.TextXAlignment.Right)
-	parts.falls = label(c, "Falls", "", 10, Brand.Fonts.bodyBold, C.smoke, 62, Enum.TextXAlignment.Right)
-	parts.course = label(c, "Course", "", 11, Brand.Fonts.bodyBold, C.bone, 82)
+	HudCard.style(c, GOLD)
+	label(c, "Title", "THE MAISON BASEMENT", 11, Brand.Fonts.heavy, GOLD, 0)
+	parts.zone = label(c, "Zone", "THE WINE CELLAR", 10, Brand.Fonts.bodyBold, C.bone, 1, Enum.TextXAlignment.Right)
+	parts.stage = label(c, "Stage", "", 15, Brand.Fonts.bodyBold, C.bone, 21)
+	-- (No running clock on screen: it was hard to read mid-jump. The run is still timed, by the
+	-- server, and the time is told at the Treasury; the best time stays here.)
+	parts.best = label(c, "Best", "", 10, Brand.Fonts.bodyBold, GOLD, 44)
+	parts.falls = label(c, "Falls", "", 10, Brand.Fonts.bodyBold, C.smoke, 44, Enum.TextXAlignment.Right)
+	parts.course = label(c, "Course", "", 10, Brand.Fonts.bodyBold, C.bone, 64)
 	card = c
 
 	local k = Instance.new("Frame")
@@ -256,10 +237,6 @@ function BasementHud.mount()
 	draw()
 	topConn = Root.TopChanged:Connect(place)
 	beat = RunService.Heartbeat:Connect(function()
-		local clock = parts.clock :: TextLabel?
-		if clock then
-			clock.Text = clockText()
-		end
 		BasementHud.courseLine()
 	end)
 end

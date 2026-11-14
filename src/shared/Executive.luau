@@ -77,6 +77,7 @@ Executive.Partitions = {
 } :: { { number } }
 Executive.Door = { z = -22, minX = -4, maxX = 4 } -- the code door across the hall's end
 Executive.Office = { minX = -32, maxX = 32, minZ = -20, maxZ = 62 }
+Executive.OfficeEntry = Vector3.new(0, 0, -14) -- just in through the door (where a revive in the Office puts you)
 Executive.Desk = Vector3.new(0, 0, 44)
 Executive.Lift = Vector3.new(0, 0, 58) -- the way down, behind the desk
 Executive.Safe = Vector3.new(26, 0, 50)
@@ -106,6 +107,32 @@ Executive.GuardRounds = {
 	{ Vector3.new(15, 0, -82.5), Vector3.new(15, 0, -73.5), Vector3.new(-15, 0, -73.5), Vector3.new(-15, 0, -62), Vector3.new(-15, 0, -73.5), Vector3.new(15, 0, -73.5) },
 	{ Vector3.new(-18, 0, -49), Vector3.new(18, 0, -49) },
 } :: { { Vector3 } }
+
+-- The hallway made half as wide again (Build 82): the maze was drawn at 48 studs across and felt
+-- cramped, too easy to be caught in. Every x across the hall (its walls, the partitions, the
+-- terminals, the cameras, the guards' rounds) is scaled by WIDEN, so the maze keeps its shape
+-- with wider ways through it. (The Office keeps its own size.)
+Executive.WIDEN = 1.5
+do
+	local w = Executive.WIDEN
+	Executive.Hall.minX *= w
+	Executive.Hall.maxX *= w
+	for _, b in Executive.Partitions do
+		b[1] *= w
+		b[3] *= w
+	end
+	for i, t in Executive.Terminals do
+		Executive.Terminals[i] = Vector3.new(t.X * w, t.Y, t.Z)
+	end
+	for _, c in Executive.Cameras do
+		c.at = Vector3.new(c.at.X * w, c.at.Y, c.at.Z)
+	end
+	for _, round in Executive.GuardRounds do
+		for i, p in round do
+			round[i] = Vector3.new(p.X * w, p.Y, p.Z)
+		end
+	end
+end
 
 -- The Office: the shield's generators, where the bodyguards come in, where he may dash to.
 Executive.Generators = {

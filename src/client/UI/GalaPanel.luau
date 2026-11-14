@@ -1,7 +1,7 @@
 --!strict
 -- The Grand Ballroom's cards. Dance & music (the jukebox's prompt, or the key at the foot of the
 -- hall's screen): seven moves to dance (Roblox's own emotes, on your own avatar for everyone to
--- see; a dance loops until you walk off), and the jukebox: every record, the one playing, how many
+-- see; a dance keeps going while you move, until Stop dancing or you leave the Ballroom), and the jukebox: every record, the one playing, how many
 -- votes each has for the next, and your vote. The Exchange (its stands): every other guest in the
 -- house, and Trade, which asks them (the trade itself is the house's trading screen: Gilt, Gems,
 -- brainrots and curios, both sides seen, nothing moved until both confirm). And the poses, a row
@@ -138,7 +138,7 @@ local function dance(content: Frame, body: ScrollingFrame)
 	local juke = if type(st.juke) == "table" then st.juke else {}
 	Theme.text(body, "Your moves", 12, "caps", { LayoutOrder = 1, TextXAlignment = Enum.TextXAlignment.Left })
 	moveGrid(body, 2, 64)
-	Theme.text(body, "A dance loops until you walk off. Everyone in the hall sees it. A minute on the dance floor pays a little Gilt, ten minutes a day.", 12, "body", { LayoutOrder = 3, TextColor3 = C.smoke, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left })
+	Theme.text(body, "A dance keeps going while you walk about, until you press Stop dancing or leave the Ballroom. Everyone in the hall sees it. A minute on the dance floor pays a little Gilt, ten minutes a day.", 12, "body", { LayoutOrder = 3, TextColor3 = C.smoke, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left })
 	Theme.hairline(body, UDim.new(0, 120), 4)
 	Theme.text(body, "The jukebox", 12, "caps", { LayoutOrder = 5, TextXAlignment = Enum.TextXAlignment.Left })
 	local left = math.max(0, math.floor(tonumber(juke.changeIn) or 0))

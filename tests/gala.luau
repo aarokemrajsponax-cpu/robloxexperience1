@@ -279,7 +279,7 @@ check("then the podiums are free for the next round", I().trivia.phase == "idle"
 standOn(ada, Vector3.new(-80, 0, 58))
 act(ada, { act = "join", what = "trivia" })
 stand(ada, Vector3.new(0, 3, 0))
-advance(1)
+advance(2) -- (away for a moment and a half: a step outside for a frame isn't leaving)
 check("a guest who leaves the hall leaves their podium (and the round, with nobody left)", not inside(ada) and I().trivia.seats[ada] == nil and I().trivia.phase == "idle")
 advance(3)
 goIn(ada)

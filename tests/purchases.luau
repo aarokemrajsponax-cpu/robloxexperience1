@@ -669,6 +669,39 @@ do
 	advance(deal.clock.budget + 1)
 	send({ op = "noRevive" })
 	check("declining banks the run at once", newest("banked", mark) ~= nil)
+	-- A revive moment away from the tables (the Executive Suite's, when security catches a guest):
+	-- while it's open, Chronos Defiance can be bought, and its receipt revives the run there.
+	local Revive = purchases("Revive")
+	local suite = { open = false, applied = 0, closed = nil }
+	table.insert(Revive.windows, {
+		open = function(p)
+			return p == ana and suite.open
+		end,
+		apply = function(p)
+			if Revive.spendAnywhere(p) then
+				suite.applied += 1
+				return true
+			end
+			return false
+		end,
+		closed = function(_p, bought)
+			suite.closed = bought
+		end,
+	})
+	advance(2)
+	allowed = Store.prompt(ana, "chronosDefiance", "executive")
+	check("away from any moment, Chronos Defiance still isn't for sale", allowed == false)
+	suite.open = true
+	allowed, why = Store.prompt(ana, "chronosDefiance", "executive")
+	check("caught in the Suite: Chronos Defiance can be bought", allowed == true, why)
+	MarketplaceService.PromptProductPurchaseFinished:Fire(160, 5001, true)
+	check("...the Suite hears the purchase window close (bought)", suite.closed == true)
+	receipt(ana, 5001, "REV-SUITE-1", 49)
+	check("...and the receipt revives the run there, the credit spent once", suite.applied == 1 and Perks.credits(data, "revive") == 0)
+	suite.open = false
+	receipt(ana, 5001, "REV-SUITE-1", 49)
+	check("...the same receipt twice revives nothing more", suite.applied == 1 and Perks.credits(data, "revive") == 0)
+	table.remove(Revive.windows)
 	-- Priced by the room: once the Obsidian Room's own revive is in Creator Hub, it's the one sold
 	-- here (dearer than the Velvet Room's), its credit spent only here.
 	table.insert(MarketplaceService.devProducts, { Name = "Revive: Obsidian Room", ProductId = 7201, PriceInRobux = 59 })

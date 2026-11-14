@@ -1,6 +1,6 @@
 --!strict
 -- The Vault's vitrines, filled on this guest's screen with the pieces they have filed (each guest
--- sees their own). The centre vitrine holds their Mythics, each with its serial number; the four
+-- sees their own). The centre vitrine holds their Mythics, each with its serial number; the eight
 -- domes of the display by the east wall, their featured curios.
 
 local CollectionService = game:GetService("CollectionService")
@@ -120,7 +120,7 @@ local function fill(view: { [string]: any })
 	end
 end
 
--- The four domes of the Vault's display: each with this guest's featured curio standing in it
+-- The eight domes of the Vault's display (two rows of four): each with this guest's featured curio standing in it
 -- (its glyph on a medallion in its rarity's colour, its name beneath), or empty.
 local Curios = require(ReplicatedStorage.Shared.Curios)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
@@ -160,7 +160,7 @@ function VaultView.featured(ids: { string })
 				local glyph = Instance.new("TextLabel")
 				glyph.BackgroundTransparency = 1
 				glyph.Size = UDim2.fromScale(1, 1)
-				glyph.Text = (c :: any).glyph or "✦"
+				glyph.Text = (c :: any).glyph or "✨"
 				glyph.TextScaled = true
 				glyph.FontFace = Brand.Fonts.body
 				glyph.Parent = disc

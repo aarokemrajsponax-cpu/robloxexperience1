@@ -10,6 +10,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local CurioList = require(ReplicatedStorage.Shared.Curios)
+local BrainrotFigure = require(ReplicatedStorage.Shared.BrainrotFigure)
 local HolidayProps = require(ReplicatedStorage.Shared.HolidayProps)
 local Fortune = require(ReplicatedStorage.Shared.Fortune)
 local LuxePlan = require(ReplicatedStorage.Shared.Luxe)
@@ -345,6 +346,13 @@ local BUILDERS: { [string]: (m: Model, cf: CFrame, piece: LuxePlan.Piece) -> () 
 	statuette = function(m, cf, piece)
 		local c = if piece.curio then CurioList.byId[piece.curio] else nil
 		gold(m, "Pedestal", Vector3.new(2.4, 0.6, 2.4), cf * CFrame.new(0, 0.3, 0))
+		-- (Build 82) The brainrot itself, in the round, standing on its pedestal.
+		local figure = if c then BrainrotFigure.build(c.id, 3.4, c.colour) else nil
+		if figure then
+			BrainrotFigure.place(figure, cf * CFrame.new(0, 0.6, 0) * CFrame.Angles(0, math.pi, 0))
+			figure.Parent = m
+			return
+		end
 		local medal = P(m, "Medallion", Vector3.new(0.5, 3.2, 3.2), cf * CFrame.new(0, 2.3, 0) * CFrame.Angles(0, math.rad(90), 0), if c then c.colour else GOLD, Enum.Material.SmoothPlastic, Enum.PartType.Cylinder)
 		gold(m, "Rim", Vector3.new(0.45, 3.6, 3.6), cf * CFrame.new(0, 2.3, 0) * CFrame.Angles(0, math.rad(90), 0))
 		for _, face in { Enum.NormalId.Left, Enum.NormalId.Right } do

@@ -153,6 +153,7 @@ local function view(l: Lots.Live, r: Record?, me: number): { [string]: any }
 		name = l.name,
 		line = l.line,
 		glyph = l.glyph,
+		curio = l.curio, -- (Build 82: its medallion on the lot's card)
 		currency = l.currency,
 		start = l.start,
 		ends = l.ends,

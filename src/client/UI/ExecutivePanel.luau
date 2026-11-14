@@ -128,7 +128,7 @@ function ExecutivePanel.open()
 			if not r then
 				Toast.show("Not just now", "The house couldn't be reached. Try again in a moment.", 3)
 			elseif r.ok ~= true then
-				Toast.show("Not yet", tostring(r.why or "Not just now."), 3)
+				Toast.refused(r)
 			elseif after then
 				after(r)
 			elseif type(r.state) == "table" and group.Parent then

@@ -118,7 +118,7 @@ end
 -- is in that attraction; anywhere else, in the Maison).
 Attractions.BOUNDS = {
 	luxe = { min = Vector3.new(-260, -140, -260), max = Vector3.new(260, 140, 260) },
-	basement = { min = Vector3.new(-90, -140, -60), max = Vector3.new(90, 60, 820) },
+	basement = { min = Vector3.new(-90, -140, -60), max = Vector3.new(90, 80, 1760) }, -- (Build 82: the course is over twice as long)
 	executive = { min = Vector3.new(-320, -120, -240), max = Vector3.new(320, 120, 160) },
 	island = { min = Vector3.new(-520, -80, -420), max = Vector3.new(420, 260, 440) },
 	gala = { min = Vector3.new(-160, -40, -140), max = Vector3.new(160, 90, 140) },

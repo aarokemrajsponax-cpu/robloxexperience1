@@ -100,6 +100,34 @@ local function screen(part: BasePart, ppu: number, lines: { { name: string, size
 	gui.MaxDistance = 260
 	gui.ClipsDescendants = true
 	gui.Parent = part
+	-- (Build 82) Every board in the hall dressed alike: a deep plum glass darkening to black, a
+	-- gold hairline inside its edge, a gold sheen on its heading, a short gold rule under it, and
+	-- the live line in a pill of its own colour.
+	local backdrop = Instance.new("Frame")
+	backdrop.Name = "Backdrop"
+	backdrop.Size = UDim2.fromScale(1, 1)
+	backdrop.BackgroundColor3 = Color3.new(1, 1, 1)
+	backdrop.BorderSizePixel = 0
+	backdrop.Parent = gui
+	local wash = Instance.new("UIGradient")
+	wash.Rotation = 90
+	wash.Color = ColorSequence.new(rgb(46, 22, 52), rgb(8, 6, 12))
+	wash.Parent = backdrop
+	local inset = Instance.new("Frame")
+	inset.Name = "Inset"
+	inset.AnchorPoint = Vector2.new(0.5, 0.5)
+	inset.Position = UDim2.fromScale(0.5, 0.5)
+	inset.Size = UDim2.new(1, -math.floor(ppu * 0.5), 1, -math.floor(ppu * 0.5))
+	inset.BackgroundTransparency = 1
+	inset.Parent = gui
+	local rim = Instance.new("UIStroke")
+	rim.Color = rgb(232, 190, 96)
+	rim.Transparency = 0.45
+	rim.Thickness = math.max(2, math.floor(ppu * 0.08))
+	rim.Parent = inset
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, math.floor(ppu * 0.3))
+	corner.Parent = inset
 	local holder = Instance.new("Frame")
 	holder.BackgroundTransparency = 1
 	holder.Size = UDim2.fromScale(1, 1)
@@ -134,6 +162,37 @@ local function screen(part: BasePart, ppu: number, lines: { { name: string, size
 		cap.MaxTextSize = math.floor(line.size * part.Size.Y * ppu * 0.92)
 		cap.Parent = l
 		labels[line.name] = l
+		if i == 1 then
+			-- The heading in gold leaf, and a short gold rule under it.
+			local sheen = Instance.new("UIGradient")
+			sheen.Rotation = 90
+			sheen.Color = ColorSequence.new(rgb(255, 236, 176), rgb(214, 160, 60))
+			sheen.Parent = l
+			l.TextColor3 = Color3.new(1, 1, 1)
+			local rule = Instance.new("Frame")
+			rule.Name = "Rule"
+			rule.LayoutOrder = i
+			rule.Size = UDim2.new(0.18, 0, 0, math.max(2, math.floor(ppu * 0.06)))
+			rule.BackgroundColor3 = rgb(232, 190, 96)
+			rule.BackgroundTransparency = 0.2
+			rule.BorderSizePixel = 0
+			rule.Parent = holder
+			l.LayoutOrder = i - 1
+		elseif line.name == "State" then
+			-- The live line, in a pill.
+			l.Size = UDim2.new(0.78, 0, line.size, 0)
+			l.BackgroundColor3 = line.colour
+			l.BackgroundTransparency = 0.82
+			local pc = Instance.new("UICorner")
+			pc.CornerRadius = UDim.new(0.5, 0)
+			pc.Parent = l
+			local pp = Instance.new("UIPadding")
+			pp.PaddingLeft = UDim.new(0.04, 0)
+			pp.PaddingRight = UDim.new(0.04, 0)
+			pp.PaddingTop = UDim.new(0.12, 0)
+			pp.PaddingBottom = UDim.new(0.12, 0)
+			pp.Parent = l
+		end
 	end
 	return { part = part, labels = labels }
 end

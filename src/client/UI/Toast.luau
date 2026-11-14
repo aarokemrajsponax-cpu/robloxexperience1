@@ -51,6 +51,15 @@ local function shown(): (UDim2, Vector2)
 	return UDim2.new(0.5, 0, 0, 58), Vector2.new(0.5, 0)
 end
 
+-- A refusal from the server, said plainly: "Insufficient Gilt" (or Gems) when it's the purse that's
+-- short (the server marks those with `short`), "Not yet" for anything else.
+function Toast.refused(r: { [string]: any }?, fallback: string?)
+	local reply: { [string]: any } = r or {}
+	local short = reply.short
+	local title = if short == "Gilt" or short == "Gems" then "Insufficient " .. short else "Not yet"
+	Toast.show(title, tostring(reply.why or fallback or "Not just now."), 3)
+end
+
 function Toast.show(title: string, line: string?, seconds: number?)
 	if current then
 		current:Destroy()

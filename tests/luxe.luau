@@ -483,6 +483,21 @@ local hud = last(ava, "luxe")
 check("the HUD is told the bag, its room, the wing and the worth", hud ~= nil and #hud.bag == 0 and hud.capacity == C.bag[1] and hud.worth == 0 and hud.wing == "The courtyard")
 r = askAs(ava, { op = "go", id = "luxe" })
 check("once in, asking again is refused", r.ok == false and r.why == "You're already in Steal a Luxe.", r.why)
+-- (Build 82) Held still on arrival while their screen makes the place ready.
+do
+	local LOAD = Config.data.Attractions.loadIn
+	local h = Attractions.held[ava]
+	check("held still on arrival (their root anchored) while their screen makes the place ready", h ~= nil and ava.root.Anchored == true and last(ava, "entered").hold == LOAD)
+	r = askAs(ava, { op = "ready", id = "luxe" })
+	check("their screen says it's ready: still held until the few seconds are up", r.ok == true and Attractions.held[ava] ~= nil and Attractions.held[ava].ready == true)
+	steps(math.ceil(LOAD * 10))
+	check("...then let go: their root free again, and their screen told", Attractions.held[ava] == nil and ava.root.Anchored == false and last(ava, "unheld") ~= nil)
+	local bounds = workspace.Attractions:FindFirstChild("Bounds_luxe")
+	local b = AttractionList.BOUNDS.luxe
+	local wall = bounds and bounds:FindFirstChild("East")
+	check("invisible walls round the residence's place: walked into, never seen or hit by a ray", bounds ~= nil and #bounds:GetChildren() == 5 and wall.Transparency == 1 and wall.CanCollide == true and wall.CanQuery == false and math.abs(wall.CFrame.Position.X - (O.X + b.max.X + 1)) < 1e-3)
+	check("...round the Basement and the Executive Suite too, not round the island", workspace.Attractions:FindFirstChild("Bounds_basement") ~= nil and workspace.Attractions:FindFirstChild("Bounds_executive") ~= nil and workspace.Attractions:FindFirstChild("Bounds_island") == nil)
+end
 
 ---------------------------------------------------------------------------------------------------
 -- 4. Taking a piece
@@ -567,6 +582,36 @@ check("tallied for the house's records", tallies["501:luxeHauls"] == 1 and talli
 local n = count(ava, "banked")
 steps(5)
 check("standing by the car with nothing carried banks nothing more", count(ava, "banked") == n)
+-- The Collection (Build 82): each piece banked the first time is kept in it.
+do
+	local distinct, nDistinct = {}, 0
+	for _, p in bag do
+		if not distinct[p.id] then
+			distinct[p.id] = true
+			nDistinct += 1
+		end
+	end
+	local total = 0
+	for w in Plan.Wings do
+		total += #Plan.setOf(w)
+	end
+	local kept = true
+	for id in distinct do
+		kept = kept and page(ava).collected[id] == true
+	end
+	check("the collection: every piece banked for the first time is kept, and the haul says how many", banked.fresh == nDistinct and banked.collected == nDistinct and banked.total == total and kept, banked.fresh, banked.collected)
+	check("...the sets leave out the Limited pieces (they come and go with their holiday)", (function()
+		for w in Plan.Wings do
+			for _, piece in Plan.setOf(w) do
+				if piece.rarity == "Limited" then
+					return false
+				end
+			end
+		end
+		return true
+	end)())
+	check("...and the rank climbs with everything banked", Plan.rankOf(0) == 1 and Plan.rankOf(Plan.Ranks[2].banked) == 2 and select(2, Plan.rankOf(0)) == Plan.Ranks[2].banked and select(2, Plan.rankOf(math.huge)) == nil)
+end
 
 ---------------------------------------------------------------------------------------------------
 -- 6. The guards
@@ -583,11 +628,30 @@ local function faceGuard(at, toward)
 	g1.root.CFrame = facing(O + at + Vector3.new(0, 3, 0), O + toward + Vector3.new(0, 3, 0))
 	g1.state, g1.target, g1.suspicion = "patrol", nil, {}
 end
+-- Security asleep (Build 82): a guest who hasn't lifted anything this trip may look round freely.
+calm()
+faceGuard(Vector3.new(0, 0, -50), Vector3.new(0, 0, 0))
+standIn(ava, Vector3.new(0, 0, -35))
+steps(15)
+check("security asleep: in plain sight, a guest who hasn't lifted anything isn't noticed", (g1.suspicion[ava] or 0) == 0 and g1.state ~= "chase" and not Luxe.runs[ava].awake and last(ava, "luxe").awake == false)
 -- A guest standing in front of him, in his wing, in plain sight.
 faceGuard(Vector3.new(0, 0, -50), Vector3.new(0, 0, 0))
 local s5 = spotNear(ava, 5)
 askAs(ava, { op = "act", id = "luxe", act = "take", n = 5 })
 check("(a piece in the bag)", #Luxe.runs[ava].bag == 1)
+-- Lifting it wakes security: the wing on Alert, and its nearest guard sent after them.
+local woke = last(ava, "woke")
+check("lifting a piece wakes security: the wing on Alert, and the guest is told", Luxe.runs[ava].awake == true and woke ~= nil and woke.wing == 1 and woke.first == true and woke.chased == true and Luxe.alarms[1].level == 1)
+check("...the wing's nearest guard comes after them, after a moment's start", g1.state == "chase" and g1.target == ava and g1.startAt ~= nil and math.abs(g1.startAt - Luxe.now() - C.wakeStart) < 1)
+do
+	local was = g1.root.CFrame.Position
+	walking = true
+	standIn(ava, Vector3.new(0, 0, -47))
+	steps(math.floor(C.wakeStart * 10) - 6)
+	check("...in his moment's start he doesn't set off, and can't catch them", (g1.root.CFrame.Position - was).Magnitude < 0.01 and #Luxe.runs[ava].bag == 1 and last(ava, "luxe").chased == true)
+	walking = false
+end
+calm()
 faceGuard(Vector3.new(0, 0, -50), Vector3.new(0, 0, 0))
 standIn(ava, Vector3.new(0, 0, -35))
 steps(1)
@@ -660,6 +724,10 @@ faceGuard(Vector3.new(0, 0, -50), Vector3.new(0, 0, 0))
 standIn(ava, Vector3.new(0, 0, -40))
 steps(math.floor(C.caughtGrace * 10) - 5)
 check("for a few seconds after, nobody notices them", (g1.suspicion[ava] or 0) == 0)
+steps(15)
+check("caught, security sleeps again: unnoticed until they lift something", (g1.suspicion[ava] or 0) == 0 and g1.state ~= "chase" and not Luxe.runs[ava].awake)
+Luxe.runs[ava].awake = true -- (as if they'd lifted something again)
+faceGuard(Vector3.new(0, 0, -50), Vector3.new(0, 0, 0))
 steps(15)
 check("then they can be noticed again", (g1.suspicion[ava] or 0) > 0 or g1.state == "chase")
 steps(C.dropBack * 10)
@@ -839,6 +907,44 @@ r = askAs(ava, { op = "act", id = "luxe", act = "take", n = 31 })
 check("lifting a Legendary puts its wing on Alert", r.ok == true and Luxe.alarms[5].level == 1 and workspace.Attractions.StealALuxe:GetAttribute("Alarm5") == 1, Luxe.alarms[5].level)
 standIn(ava, Vector3.new(0, 0, -108))
 steps(2)
+-- A wing's set made whole pays its reward, once.
+do
+	calm()
+	parkGuards(nil)
+	local set1 = Plan.setOf(1)
+	local final = set1[#set1]
+	for _, piece in set1 do
+		page(ava).collected[piece.id] = if piece ~= final then true else nil
+	end
+	page(ava).sets["1"] = nil
+	local spotId = nil
+	for i, sp in Luxe.spots do
+		if sp.spot.wing == 1 and not spotId then
+			spotId = i
+		end
+	end
+	local function lift()
+		local sp = Luxe.spots[spotId]
+		page(ava).lifted[tostring(spotId)] = nil
+		setPiece(sp, final)
+		beside(ava, sp)
+		holdOn(ava, sp)
+		local rr = askAs(ava, { op = "act", id = "luxe", act = "take", n = spotId })
+		standIn(ava, Vector3.new(0, 0, -108))
+		steps(2)
+		return rr
+	end
+	local giltWas2 = giltOf(ava)
+	local rr = lift()
+	local b = last(ava, "banked")
+	check("the last piece of a wing's set banked: the set pays its reward", rr.ok == true and b ~= nil and #b.sets == 1 and b.sets[1].wing == 1 and b.sets[1].gilt == Plan.SetGilt[1] and page(ava).sets["1"] == true and giltOf(ava) - giltWas2 == b.gilt + Plan.SetGilt[1], rr.why, b and #b.sets)
+	rr = lift()
+	b = last(ava, "banked")
+	check("...once: banking it again pays the haul, never the set again", rr.ok == true and b ~= nil and #b.sets == 0 and b.fresh == 0)
+	local st = askAs(ava, { op = "state", id = "luxe" })
+	local col = st.upgrades.collection
+	check("the Lounge's board shows the rank and every wing's set, with its reward", col ~= nil and col.rankName == Plan.Ranks[col.rank].name and #col.wings == #Plan.Wings and col.wings[1].paid == true and col.wings[1].have == col.wings[1].of and col.wings[2].gilt == Plan.SetGilt[2])
+end
 
 -- The cameras: one held still for the test sees a guest in front of it, in its wing.
 for _, cam in camsKept do
@@ -851,8 +957,12 @@ local sweepWas = cam.def.sweep
 cam.def.sweep = 0
 local look = Plan.cameraLook(cam.def, 0)
 local inFront = cam.def.at + look * 14
+Luxe.runs[ava].awake = false
 local spottedBefore = count(ava, "spotted")
 standIn(ava, Vector3.new(inFront.X, 0, inFront.Z))
+steps(15)
+check("security asleep: a camera doesn't mind a guest who hasn't lifted anything", count(ava, "spotted") == spottedBefore and Luxe.alarms[cam.def.wing].level == 0)
+Luxe.runs[ava].awake = true -- (they've lifted something this trip)
 steps(15)
 local sp = last(ava, "spotted")
 check("a camera that sees a guest long enough puts its wing on Alert", count(ava, "spotted") == spottedBefore + 1 and sp.by == "a camera" and Luxe.alarms[cam.def.wing].level == 1, sp and sp.by)
@@ -902,6 +1012,27 @@ check("a dark beam can be crossed", count(ava, "spotted") == before and Luxe.ala
 standIn(ava, Vector3.new(-20, 0, lit.z))
 steps(1)
 check("a lit one is seen: the Strongroom locks down", count(ava, "spotted") == before + 1 and last(ava, "spotted").by == "the laser grid" and Luxe.alarms[3].level == 2, Luxe.alarms[3].level)
+do
+	calm()
+	parkGuards(nil)
+	Luxe.runs[ava].awake = false
+	steps(20)
+	calm()
+	local t2 = Luxe.now()
+	local litNow = nil
+	for _, l in Plan.Lasers do
+		if Plan.laserOn(l, t2 + 0.1) and not litNow then
+			litNow = l
+		end
+	end
+	local n1 = count(ava, "spotted")
+	Luxe.runs[ava].awake = false
+	standIn(ava, Vector3.new(-20, 0, litNow.z))
+	steps(1)
+	check("security asleep: a lit beam doesn't mind a guest who hasn't lifted anything", count(ava, "spotted") == n1 and Luxe.alarms[3].level == 0, count(ava, "spotted") - n1, Luxe.alarms[3].level, last(ava, "spotted") and last(ava, "spotted").by)
+	Luxe.runs[ava].awake = true
+	calm()
+end
 local shown = true
 for _, d in workspace.Attractions.StealALuxe:GetDescendants() do
 	if d:IsA("BasePart") and d.Name == "Laser" then
@@ -1018,9 +1149,21 @@ inLounge(ava)
 advance(3)
 r = askAs(ava, { op = "go", id = "luxe" })
 check("(in again)", r.ok == true)
+-- Right after the way in, the server may still be seeing where the guest stood before (their own
+-- computer moves their character): that's never taken for leaving, and after a moment they're
+-- put in once more.
+stand(ava, lobby)
+steps(15)
+check("just arrived, still seen where they stood: not let go of (the server's view catches up)", Attractions.inside(ava) == "luxe")
+check("...and put in once more", Attractions.ctx.at(ava, "luxe") ~= nil)
+-- A moment's odd reading isn't leaving either.
+steps(30)
 stand(ava, Layout.Foyer.spawn.Position)
-steps(2)
-check("moved back to the house some other way: let go of", Attractions.inside(ava) == nil and last(ava, "left").why == "away")
+steps(5)
+check("half a second out of the place: still in", Attractions.inside(ava) == "luxe")
+stand(ava, Layout.Foyer.spawn.Position)
+steps(16)
+check("moved back to the house some other way, for good: let go of", Attractions.inside(ava) == nil and last(ava, "left").why == "away")
 -- Too quickly.
 inLounge(ava)
 advance(3)

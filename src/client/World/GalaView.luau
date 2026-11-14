@@ -474,7 +474,8 @@ function GalaView.stopMove()
 	end
 end
 
--- Plays a move on this guest's own avatar (a dance loops until they walk away).
+-- Plays a move on this guest's own avatar. (Build 82) A dance keeps going while they walk, run
+-- or jump: it stops only when they press Stop dancing, choose another move, or leave the Ballroom.
 function GalaView.move(id: string): boolean
 	local m = Plan.moveById[id]
 	local anims = (Config.data :: any).Assets.OwnerEmotes or {}
@@ -499,12 +500,10 @@ function GalaView.move(id: string): boolean
 	tr.Priority = Enum.AnimationPriority.Action
 	tr:Play(0.2)
 	track = tr
-	-- (Walking off stops a dance.)
+	-- (Only a fall that ends them stops it otherwise: their next avatar starts still.)
 	local h = humanoid :: Humanoid
-	moveConn = RunService.Heartbeat:Connect(function()
-		if h.MoveDirection.Magnitude > 0.2 then
-			GalaView.stopMove()
-		end
+	moveConn = h.Died:Connect(function()
+		GalaView.stopMove()
 	end)
 	return true
 end

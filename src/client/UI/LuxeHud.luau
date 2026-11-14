@@ -15,7 +15,6 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
-local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
@@ -24,6 +23,7 @@ local Plan = require(ReplicatedStorage.Shared.Luxe)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Rules = require(ReplicatedStorage.Shared.Fortune)
 local Sound = require(script.Parent.Parent.Sound)
+local HudCard = require(script.Parent.HudCard)
 local Root = require(script.Parent.Root)
 local Theme = require(script.Parent.Theme)
 local Toast = require(script.Parent.Toast)
@@ -90,10 +90,6 @@ local function row(parent: Instance, name: string, height: number, order: number
 	return f
 end
 
-local function touch(): boolean
-	return UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
-end
-
 -- At the bottom left: beside the dock down the left, above whatever stands along the foot of the
 -- screen, and on a phone or tablet lifted clear of the thumbstick (it lives in that corner). When
 -- the screen is too short for the side jobs as well, they fold to a single line.
@@ -103,12 +99,10 @@ local function place()
 		return
 	end
 	local size = Root.size()
-	local x = Root.left + 12
-	-- (Above the Leave and Upgrades keys when the card would reach across to them.)
-	local keysLeft = size.X / 2 - 150
-	local lift = if touch() then math.clamp(size.Y * 0.34, 120, 210) elseif x + CARD_W > keysLeft - 8 then 14 + 44 + 10 else 14
-	local bottom = Root.bottomClear() + lift
-	c.Position = UDim2.new(0, x, 1, -bottom)
+	-- (The bottom-left corner, like every attraction's card: UI/HudCard.)
+	HudCard.place(c, 150)
+	local x = c.Position.X.Offset
+	local bottom = -c.Position.Y.Offset
 	local roof = Root.topClearAt(x, x + CARD_W) + 8
 	local room = size.Y - bottom - roof
 	local fold = (tonumber(parts.fullHeight) or 0) > room
@@ -226,7 +220,7 @@ function LuxeHud.draw()
 			g.Name = "Glyph"
 			g.BackgroundTransparency = 1
 			g.Size = UDim2.fromScale(1, 1)
-			g.Text = tostring(piece.glyph or "✦")
+			g.Text = tostring(piece.glyph or "✨")
 			g.TextSize = 18
 			g.FontFace = Brand.Fonts.body
 			g.TextColor3 = Color3.new(1, 1, 1)
@@ -254,6 +248,10 @@ function LuxeHud.draw()
 	elseif view.grace then
 		parts.seen.Text = "NOBODY HAS NOTICED YOU YET"
 		parts.seen.TextColor3 = C.smoke
+	elseif view.awake == false then
+		-- (Build 82: security sleeps until they lift something.)
+		parts.seen.Text = "SECURITY ASLEEP  ·  LOOK AROUND"
+		parts.seen.TextColor3 = Color3.fromRGB(140, 220, 160)
 	elseif watched > 0.05 then
 		parts.seen.Text = "A GUARD IS NOTICING YOU"
 		parts.seen.TextColor3 = Color3.fromRGB(255, 196, 80)
@@ -436,24 +434,13 @@ function LuxeHud.mount()
 	c.Name = "LuxeCard"
 	c.AnchorPoint = Vector2.new(0, 1)
 	c.Size = UDim2.fromOffset(CARD_W, 160)
-	c.BackgroundColor3 = Color3.fromRGB(14, 12, 16)
-	c.BackgroundTransparency = 0.08
 	c.Parent = Root.hud
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 14)
-	corner.Parent = c
-	local edge = Instance.new("UIStroke")
-	edge.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	edge.Color = GOLD
-	edge.Thickness = 1.25
-	edge.Transparency = 0.3
-	edge.Parent = c
-	parts.edge = edge
 	local pad = Instance.new("UIPadding")
 	pad.PaddingLeft = UDim.new(0, PAD)
 	pad.PaddingRight = UDim.new(0, PAD)
 	pad.PaddingTop = UDim.new(0, 9)
 	pad.Parent = c
+	parts.edge = HudCard.style(c, GOLD)
 	-- Its heading: the attraction and the wing (in the wing's colour).
 	local head = row(c, "Head", 17, 1)
 	label(head, "Title", "STEAL A LUXE", 12, Brand.Fonts.bodyBold, GOLD)
@@ -560,8 +547,8 @@ function LuxeHud.mount()
 			e.Color = AMBER
 			e.Transparency = 0.2
 		else
-			e.Color = GOLD
-			e.Transparency = 0.3
+			e.Color = HudCard.EDGE
+			e.Transparency = HudCard.EDGE_SEEN
 		end
 		if tick >= 0.25 then
 			tick = 0
@@ -641,10 +628,34 @@ function LuxeHud.on(m: { [string]: any })
 		if type(m.finds) == "table" and #m.finds > 0 then
 			line ..= "  ·  a first find: " .. table.concat(m.finds, ", ")
 		end
+		local fresh = tonumber(m.fresh) or 0
+		if fresh > 0 and tonumber(m.total) then
+			line ..= string.format("  ·  %d new for your collection (%d of %d)", fresh, tonumber(m.collected) or 0, tonumber(m.total) or 0)
+		end
 		Toast.show(if m.record then "A record haul: " .. Rules.format(tonumber(m.worth) or 0) else "Banked: " .. Rules.format(tonumber(m.worth) or 0), line, 5)
+		-- (Build 82) A wing's set made whole, or a new rank: said after, each on its own.
+		task.delay(2.5, function()
+			for _, set in (if type(m.sets) == "table" then m.sets else {}) :: { any } do
+				Sound.play("crystal", 0.7)
+				Toast.show("A set complete: " .. tostring(set.name), string.format("Every piece of the wing banked  ·  +%s Gilt", Rules.format(tonumber(set.gilt) or 0)), 4)
+			end
+			if type(m.rankUp) == "string" then
+				Sound.play("notify", 0.7)
+				Toast.show("A new rank: " .. m.rankUp, "For everything you've ever banked in Steal a Luxe.", 4)
+			end
+		end)
 	elseif op == "caught" then
 		local n = tonumber(m.n) or 0
 		Toast.show("Caught", if n > 0 then string.format("The guards took back %d %s (%s). You're shown out to the courtyard.", n, if n == 1 then "piece" else "pieces", Rules.format(tonumber(m.lost) or 0)) else "You're shown out to the courtyard.", 5)
+	elseif op == "woke" then
+		-- Lifting a piece woke security: said once a trip, plainly; the card says the rest.
+		view.awake = true
+		view.chased = m.chased == true
+		Sound.play("stinger", 0.6)
+		if m.first then
+			Toast.show("Security is awake", if m.chased then "A guard is coming after you. Get to a way out." else "The guards are looking for you. Get to a way out.", 3)
+		end
+		LuxeHud.draw()
 	elseif op == "spotted" then
 		view.chased = true
 		Sound.play("stinger", 0.6)

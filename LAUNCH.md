@@ -225,7 +225,7 @@ block (that's where most of the money is):
 | Name (exactly) | Price | What it does |
 | --- | --- | --- |
 | `God-Mode Luck` | 199 | 2.5× Gilt and Ledger pages for 30 minutes of play (time only runs while they're in the house) |
-| `Chronos Defiance` | 49 | when the clock runs out in a timed room: +15 seconds and the run goes on (offered only in that moment) |
+| `Chronos Defiance` | 49 | when the clock runs out in a timed room: +15 seconds and the run goes on; and in the Executive Suite, caught by security, back in the run (offered only in those moments) |
 | `Emperor's Decree` | 149 | the buyer's own words (filtered by Roblox first) in gold on every screen in the server for 8 seconds |
 | `Megalodon Rainmaker` | 699 | gold rains on the server: every guest gets 150 Gilt, the buyer 500 more, and everyone sees who made it rain |
 | `VIP Velocity Elite` | 299 | 1.5× walking and running speed round the house (not in Steal a Luxe, the Basement or the Executive Suite) and a gold trail, for good (better as a game pass: see below) |

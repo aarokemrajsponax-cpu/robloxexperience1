@@ -625,6 +625,9 @@ local function startHud()
 		GiltBar.openGems = function()
 			GemShopPanel.open()
 		end
+		GiltBar.openGilt = function()
+			BoutiquePanel.open("buyGilt")
+		end
 		GiltBar.openBadges = BadgeBookPanel.open
 		GiltBar.isBusy = function(): boolean
 			return TableClient.isSeated() or State.phase ~= "play"
@@ -860,12 +863,9 @@ local function onPlay(fromTitle: boolean?)
 	elseif string.sub(launch, 1, 7) == "library" then
 		-- Arrived from an invite to the Library: shown up to the friend's table.
 		task.delay(0.6, quickSit, launch)
-	elseif State.isFirstVisit() and not TableClient.isSeated() then
-		-- (A first evening: the attractions, not a sorting table.)
-		Hud.showStraight(function()
-			require(script.Parent.UI.DirectoryPanel).open()
-		end, Voice.StartHere.attractions)
 	end
+	-- (A first evening used to get a floating "Show me the attractions" key here: it crowded the
+	-- screen. Play, top right, and the Concierge both open the attractions.)
 	if launch == "" then
 		task.spawn(welcome)
 	end

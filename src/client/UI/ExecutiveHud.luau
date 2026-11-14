@@ -24,6 +24,7 @@ local Ease = require(ReplicatedStorage.Shared.Ease)
 local Plan = require(ReplicatedStorage.Shared.Executive)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Rules = require(ReplicatedStorage.Shared.Fortune)
+local HudCard = require(script.Parent.HudCard)
 local Root = require(script.Parent.Root)
 local Sound = require(script.Parent.Parent.Sound)
 local Theme = require(script.Parent.Theme)
@@ -133,17 +134,14 @@ local function place()
 	if not c then
 		return
 	end
-	local y = math.max(Root.topClear("Executive") + 6, 126)
-	c.Position = UDim2.new(0.5, 0, 0, y)
+	-- (The bottom-left corner, like every attraction's card: UI/HudCard. The code's slots sit just
+	-- above it while the door is shut.)
 	local strip = parts.strip :: Frame?
-	local below = 0
+	HudCard.place(c, 210, if strip and strip.Visible then STRIP_H + 8 else 0)
 	if strip then
-		strip.Position = UDim2.new(0.5, 0, 0, y + CARD_H + 8)
-		if strip.Visible then
-			below = STRIP_H + 8
-		end
+		strip.AnchorPoint = Vector2.new(0, 1)
+		strip.Position = UDim2.new(0, c.Position.X.Offset, 1, c.Position.Y.Offset - CARD_H - 8)
 	end
-	Root.setTop("Executive", y + CARD_H + 4 + below, CARD_W / 2)
 	local k = keys
 	if k then
 		k.Position = UDim2.new(0.5, 0, 1, -(14 + Root.bottomClear()))
@@ -161,8 +159,9 @@ local function draw()
 	end
 	local phase = tostring(view.phase or "hall")
 	parts.phase.Text = string.upper(PHASE_NAMES[phase] or phase)
-	-- (The Executive's own score while he's on his feet; the Suite's again after.)
-	Sound.setMood(if phase == "boss" then "boss" else nil)
+	-- (The fight's own score from the moment the Office's fight begins, through all three of its
+	-- phases; the Suite's again after.)
+	Sound.setMood(if fighting() then "boss" else nil)
 	-- The code, big, in its four slots until the door opens.
 	local strip = parts.strip :: Frame?
 	if strip then
@@ -535,6 +534,172 @@ local function warn(m: { [string]: any })
 	draw()
 end
 
+-- Caught (Build 82): the moment for Chronos Defiance, over the middle of the screen. What happened
+-- and where a revive puts you back, the moment's countdown (paused while Roblox's purchase window
+-- is open), and the keys: a revive held, or one bought (its Robux price on the key), or Leave.
+-- Everything on it is what the server said; the server alone decides whether you're back in.
+local ROBUX = utf8.char(0xE002)
+local CAUGHT = "ExecutiveCaught"
+local caughtCard: Frame? = nil
+local caughtView: { [string]: any } = {}
+
+local function hideCaught()
+	local c = caughtCard
+	if c then
+		local shade = c.Parent
+		c:Destroy()
+		if shade and shade:IsA("Frame") and shade.Name == CAUGHT then
+			shade:Destroy()
+		end
+	end
+	caughtCard = nil
+	caughtView = {}
+end
+
+local function caughtKeys()
+	local c = caughtCard
+	local m = caughtView
+	if not c then
+		return
+	end
+	local row = c:FindFirstChild("Keys") :: Frame?
+	if not row then
+		return
+	end
+	for _, k in row:GetChildren() do
+		if k:IsA("GuiButton") or k:IsA("TextLabel") then
+			k:Destroy()
+		end
+	end
+	local held = tonumber(m.held) or 0
+	local busy = false
+	local function askRevive()
+		if busy then
+			return
+		end
+		busy = true
+		task.spawn(function()
+			local r = ask({ op = "act", id = "executive", act = "revive" })
+			busy = false
+			if not r or r.ok ~= true then
+				Toast.show("Chronos Defiance", if r and type(r.why) == "string" then r.why else "Not just now.", 3)
+			end
+		end)
+	end
+	local w = math.floor((c.Size.X.Offset - 36 - 10) / 2)
+	if m.prompting then
+		Theme.text(row, "The purchase window is open", 13, "body", { LayoutOrder = 1, Size = UDim2.fromOffset(w, 44), TextColor3 = C.smoke })
+	elseif held > 0 then
+		local k = Theme.key(row, string.format("Use a revive (%d)", held), true, askRevive, w)
+		k.LayoutOrder = 1
+	elseif m.onSale and tonumber(m.price) then
+		local k = Theme.key(row, string.format("Revive  %s %d", ROBUX, tonumber(m.price) :: number), true, askRevive, w)
+		k.LayoutOrder = 1
+	end
+	local leave = Theme.key(row, "Leave", false, function()
+		task.spawn(function()
+			ask({ op = "act", id = "executive", act = "leaveCaught" })
+		end)
+	end, w)
+	leave.LayoutOrder = 2
+end
+
+local function showCaught(m: { [string]: any })
+	caughtView = m
+	caughtView.endsAt = os.clock() + (tonumber(m.left) or 0)
+	if caughtCard then
+		caughtKeys()
+		return
+	end
+	local size = Root.size()
+	local shade = Instance.new("Frame")
+	shade.Name = CAUGHT
+	shade.Size = UDim2.fromScale(1, 1)
+	shade.BackgroundColor3 = Color3.new(0, 0, 0)
+	shade.BackgroundTransparency = 0.5
+	shade.BorderSizePixel = 0
+	shade.ZIndex = 20
+	shade.Active = true
+	shade.Parent = Root.hud
+	local w = math.min(380, math.max(280, size.X - 32))
+	local c = Instance.new("Frame")
+	c.Name = "Card"
+	c.AnchorPoint = Vector2.new(0.5, 0.5)
+	c.Position = UDim2.fromScale(0.5, 0.5)
+	c.Size = UDim2.fromOffset(w, 236)
+	c.ZIndex = 21
+	c.Parent = shade
+	local pad = Instance.new("UIPadding")
+	pad.PaddingLeft = UDim.new(0, 18)
+	pad.PaddingRight = UDim.new(0, 18)
+	pad.PaddingTop = UDim.new(0, 16)
+	pad.Parent = c
+	HudCard.style(c, RED)
+	local office = m.where == "office"
+	label(c, "Kicker", "SECURITY", 11, Brand.Fonts.heavy, RED, 0).ZIndex = 22
+	label(c, "Title", if office then "Out of composure" else "You've been seen", 24, Brand.Fonts.display, C.bone, 18).ZIndex = 22
+	local line = label(c, "Line", if office then "A revive puts you back just inside the Office, composure full." else "A revive puts you back at the lift, with every digit you've read.", 13, Brand.Fonts.body, C.smoke, 54)
+	line.TextWrapped = true
+	line.TextTruncate = Enum.TextTruncate.None
+	line.Size = UDim2.new(1, 0, 0, 36)
+	line.TextYAlignment = Enum.TextYAlignment.Top
+	line.ZIndex = 22
+	-- The moment's countdown: a bar running down and the seconds left.
+	local fill = bar(c, "Moment", 104, RED)
+	fill.Size = UDim2.fromScale(1, 1)
+	local track = fill.Parent :: Frame
+	track.ZIndex = 22
+	fill.ZIndex = 23
+	label(c, "Left", "", 12, Brand.Fonts.figures, C.bone, 114, Enum.TextXAlignment.Right).ZIndex = 22
+	label(c, "Uses", "", 12, Brand.Fonts.bodyBold, C.smoke, 114).ZIndex = 22
+	local row = Instance.new("Frame")
+	row.Name = "Keys"
+	row.BackgroundTransparency = 1
+	row.Position = UDim2.fromOffset(0, 142)
+	row.Size = UDim2.new(1, 0, 0, 44)
+	row.ZIndex = 22
+	row.Parent = c
+	Theme.list(row, 10, true).HorizontalAlignment = Enum.HorizontalAlignment.Center
+	local note = label(c, "Note", "Leave, or let the moment pass, and security shows you out.", 11, Brand.Fonts.body, C.dim, 196)
+	note.TextWrapped = true
+	note.TextTruncate = Enum.TextTruncate.None
+	note.ZIndex = 22
+	caughtCard = c
+	caughtKeys()
+	pcall(function()
+		Sound.play("lowHit", 0.6)
+	end)
+end
+
+-- Kept up to the moment (from the card's heartbeat).
+local function tickCaught()
+	local c = caughtCard
+	if not c then
+		return
+	end
+	local m = caughtView
+	local total = math.max(1, tonumber(m.left) or 1)
+	local remaining = if m.prompting then total else math.max(0, (m.endsAt or 0) - os.clock())
+	local track = c:FindFirstChild("Moment") :: Frame?
+	local fill = track and track:FindFirstChild("Fill") :: Frame?
+	if fill then
+		fill.Size = UDim2.fromScale(math.clamp(remaining / total, 0, 1), 1)
+	end
+	local left = c:FindFirstChild("Left") :: TextLabel?
+	if left then
+		left.Text = if m.prompting then "Paused" else string.format("%ds", math.ceil(remaining))
+	end
+	local uses = c:FindFirstChild("Uses") :: TextLabel?
+	if uses then
+		local n = tonumber(m.usesLeft) or 0
+		uses.Text = string.format("%d revive%s left this run", n, if n == 1 then "" else "s")
+	end
+end
+ExecutiveHud.tickCaught = tickCaught
+ExecutiveHud.caughtCard = function(): Frame?
+	return caughtCard
+end
+
 function ExecutiveHud.mounted(): boolean
 	return card ~= nil
 end
@@ -545,26 +710,15 @@ function ExecutiveHud.mount()
 	end
 	local c = Instance.new("Frame")
 	c.Name = "ExecutiveCard"
-	c.AnchorPoint = Vector2.new(0.5, 0)
 	c.Size = UDim2.fromOffset(CARD_W, CARD_H)
-	c.BackgroundColor3 = Color3.fromRGB(12, 14, 22)
-	c.BackgroundTransparency = 0.08
 	c.Parent = Root.hud
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 14)
-	corner.Parent = c
-	local edge = Instance.new("UIStroke")
-	edge.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	edge.Color = BLUE
-	edge.Thickness = 1.25
-	edge.Transparency = 0.3
-	edge.Parent = c
 	local pad = Instance.new("UIPadding")
-	pad.PaddingLeft = UDim.new(0, 14)
+	pad.PaddingLeft = UDim.new(0, 16)
 	pad.PaddingRight = UDim.new(0, 14)
-	pad.PaddingTop = UDim.new(0, 8)
+	pad.PaddingTop = UDim.new(0, 9)
 	pad.Parent = c
-	label(c, "Title", "THE EXECUTIVE SUITE", 11, Brand.Fonts.bodyBold, GOLD, 0)
+	HudCard.style(c, BLUE)
+	label(c, "Title", "THE EXECUTIVE SUITE", 11, Brand.Fonts.heavy, GOLD, 0)
 	parts.phase = label(c, "Phase", "", 11, Brand.Fonts.bodyBold, C.bone, 0, Enum.TextXAlignment.Right)
 	parts.top = label(c, "Top", "", 15, Brand.Fonts.bodyBold, C.bone, 20)
 	parts.under = label(c, "Under", "", 10, Brand.Fonts.bodyBold, C.smoke, 40)
@@ -595,21 +749,21 @@ function ExecutiveHud.mount()
 	-- The code's four slots, under the card while the door is shut.
 	local strip = Instance.new("Frame")
 	strip.Name = "CodeStrip"
-	strip.AnchorPoint = Vector2.new(0.5, 0)
+	strip.AnchorPoint = Vector2.new(0, 1)
 	strip.BackgroundTransparency = 1
-	strip.Size = UDim2.fromOffset(4 * 58 + 3 * 10, STRIP_H)
+	strip.Size = UDim2.fromOffset(4 * 52 + 3 * 8, STRIP_H)
 	strip.Visible = false
 	strip.Parent = Root.hud
 	local slots: { TextLabel } = {}
 	for k = 1, 4 do
 		local s = Instance.new("TextLabel")
 		s.Name = "Slot" .. k
-		s.Size = UDim2.fromOffset(58, STRIP_H)
-		s.Position = UDim2.fromOffset((k - 1) * 68, 0)
-		s.BackgroundColor3 = Color3.fromRGB(10, 12, 16)
+		s.Size = UDim2.fromOffset(52, STRIP_H)
+		s.Position = UDim2.fromOffset((k - 1) * 60, 0)
+		s.BackgroundColor3 = HudCard.BACKGROUND
 		s.BackgroundTransparency = 0.06
 		s.FontFace = Brand.Fonts.display
-		s.TextSize = 44
+		s.TextSize = 36
 		s.TextColor3 = C.smoke
 		s.Text = "?"
 		local sc = Instance.new("UICorner")
@@ -618,8 +772,8 @@ function ExecutiveHud.mount()
 		local ss = Instance.new("UIStroke")
 		ss.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 		ss.Color = BLUE
-		ss.Thickness = 1.5
-		ss.Transparency = 0.35
+		ss.Thickness = 1
+		ss.Transparency = 0.5
 		ss.Parent = s
 		s.Parent = strip
 		slots[k] = s
@@ -656,6 +810,7 @@ function ExecutiveHud.mount()
 		tick += dt
 		if tick >= 0.2 then
 			tick = 0
+			tickCaught()
 			if windup or view.phase == "won" then
 				draw()
 				local w = windup
@@ -678,6 +833,7 @@ function ExecutiveHud.mount()
 end
 
 function ExecutiveHud.unmount()
+	hideCaught()
 	Sound.setMood(nil)
 	grade(false)
 	letterbox(false)
@@ -862,9 +1018,25 @@ function ExecutiveHud.on(m: { [string]: any })
 	elseif op == "extracted" then
 		Toast.show("A clean getaway", "+" .. Rules.format(tonumber(m.gilt) or 0) .. " Gilt", 4)
 	elseif op == "alarm" then
-		Toast.show("Security", "You were seen too long: you've been shown out. The invitation is spent.", 5)
+		if not m.revive then
+			Toast.show("Security", "You were seen too long: you've been shown out. The invitation is spent.", 5)
+		end
 	elseif op == "escorted" then
-		Toast.show("Escorted out", "No composure left. Try again with another invitation.", 5)
+		if not m.revive then
+			Toast.show("Escorted out", "No composure left. Try again with another invitation.", 5)
+		end
+	elseif op == "caught" or op == "caughtUpdate" then
+		showCaught(m)
+		tickCaught()
+	elseif op == "revived" then
+		hideCaught()
+		Toast.show("Back in", if m.where == "office" then "Composure full. He's still waiting." else "The alert is down, and your digits are kept.", 3)
+		pcall(function()
+			Sound.play("chime", 0.8)
+		end)
+	elseif op == "caughtEnd" then
+		hideCaught()
+		Toast.show("Security", "The moment passed: you've been shown out.", 4)
 	elseif op == "won" then
 		local line = string.format("%s to your Estate  ·  +%s Gilt", Rules.format(tonumber(m.worth) or 0), Rules.format(tonumber(m.gilt) or 0))
 		if m.brainrot then

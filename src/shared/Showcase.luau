@@ -1,6 +1,6 @@
 --!strict
 -- The Vault's and the Suite's displays: what a guest shows of what they own, and to whom.
---   The Vault       four featured curios under glass domes in the Vault (any four you hold); your
+--   The Vault       eight featured curios under glass domes in the Vault (any eight you hold); your
 --                   collection's completion (by family and by rarity), every curio's description,
 --                   how it's had and when you first had it; the last forty you came by; how your
 --                   collection is arranged; and who may look at your Vault (everyone, friends, or
@@ -14,7 +14,7 @@ local Showcase = {}
 
 local rgb = Color3.fromRGB
 
-Showcase.FEATURED = 4 -- curios under the Vault's domes
+Showcase.FEATURED = 8 -- curios under the Vault's domes (Build 82: two rows of four, from one)
 Showcase.HISTORY = 40 -- acquisitions kept
 
 export type Choice = { id: string, name: string, line: string }

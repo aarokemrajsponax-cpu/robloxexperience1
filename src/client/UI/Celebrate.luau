@@ -144,22 +144,27 @@ function Celebrate.levelUp(level: number, title: string, gilt: number)
 	TweenService:Create(scale, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
 	sound("regalFanfare", 0.9)
 	task.delay(0.15, sound, "shimmerFall", 0.8)
-	Flakes.fall({
-		seconds = 3.5,
-		centre = function(): Vector3?
-			local r = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-			return if r and r:IsA("BasePart") then r.Position else nil
-		end,
-		colours = { colour, rgb(255, 240, 200), rgb(255, 214, 110) },
-		material = Enum.Material.SmoothPlastic,
-		size = Vector3.new(0.34, 0.02, 0.18),
-		count = 60,
-		radius = 9,
-		height = 10,
-		fall = 3,
-		flutter = 3,
-		burst = true,
-	})
+	-- (A burst of gold flakes round the guest only for every tenth level: the big ones. The rest
+	-- are a card and a fanfare, no fireworks.)
+	local big = level % 10 == 0
+	if big then
+		Flakes.fall({
+			seconds = 3.5,
+			centre = function(): Vector3?
+				local r = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+				return if r and r:IsA("BasePart") then r.Position else nil
+			end,
+			colours = { colour, rgb(255, 240, 200), rgb(255, 214, 110) },
+			material = Enum.Material.SmoothPlastic,
+			size = Vector3.new(0.34, 0.02, 0.18),
+			count = 60,
+			radius = 9,
+			height = 10,
+			fall = 3,
+			flutter = 3,
+			burst = true,
+		})
+	end
 	task.delay(3.4, function()
 		if box.Parent then
 			local t = TweenService:Create(scale, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Scale = 0.01 })

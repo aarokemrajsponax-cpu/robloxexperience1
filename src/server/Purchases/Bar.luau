@@ -249,7 +249,7 @@ function Bar.order(player: Player, data: Profiles.Data, id: string, pour: boolea
 	end
 	local price = item.gilt :: number
 	if data.gilt < price then
-		return { ok = false, why = string.format("Not enough Gilt yet: %s more.", Gilt.format(price - data.gilt)) }
+		return { ok = false, short = "Gilt", why = string.format("Insufficient Gilt: %s more.", Gilt.format(price - data.gilt)) }
 	end
 	if not Bar.serve(player, item) then
 		return { ok = false, why = "Not just now." }

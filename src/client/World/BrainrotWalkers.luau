@@ -17,6 +17,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
+local BrainrotFigure = require(ReplicatedStorage.Shared.BrainrotFigure)
 local Brainrots = require(ReplicatedStorage.Shared.Brainrots)
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local Curios = require(ReplicatedStorage.Shared.Curios)
@@ -97,6 +98,7 @@ type Walker = {
 	gilt: number?, -- its guest's Gilt, last seen (a rise: a jump for joy)
 	mine: boolean,
 	crown: TextLabel?,
+	figure: Model?, -- (Build 82) the brainrot in the round (shared/BrainrotFigure), when it has one
 }
 local walkers: { [Player]: Walker } = {}
 
@@ -119,6 +121,10 @@ local function clear(p: Player)
 	w.part:Destroy()
 	w.shadow:Destroy()
 	w.ring:Destroy()
+	local f = w.figure
+	if f then
+		f:Destroy()
+	end
 end
 
 local function flat(name: string, size: number, colour: Color3, transparency: number, neon: boolean): Part
@@ -336,6 +342,16 @@ local function build(p: Player)
 		l.Parent = part
 	end
 	part.Parent = holder()
+	-- (Build 82) The brainrot in the round: built of parts, with its face and what it wears; the
+	-- flat picture stays only for one with no figure (and its mood's bubble stays over it).
+	local figure: Model? = nil
+	local okFigure, built = pcall(BrainrotFigure.build, c.id, h, c.colour, if mut then mut.colour else nil)
+	if okFigure and built then
+		figure = built
+		built.Parent = holder()
+		glyph.Visible = false
+		aura.Visible = false
+	end
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	walkers[p] = {
 		id = c.id,
@@ -360,6 +376,7 @@ local function build(p: Player)
 		gilt = tonumber(p:GetAttribute("Gilt")),
 		mine = p == Players.LocalPlayer,
 		crown = crown,
+		figure = figure,
 	}
 end
 
@@ -519,6 +536,25 @@ function BrainrotWalkers.start()
 			local across = (w.root.CFrame.RightVector * sway)
 			table.insert(parts, w.part)
 			table.insert(frames, CFrame.new(w.at + across + Vector3.new(0, h * 0.5 + hop + bob, 0)))
+			local fig = w.figure
+			local figRoot = fig and fig.PrimaryPart
+			if figRoot then
+				-- Facing the way its guest faces; a spin turns it round, a flip turns it over
+				-- backwards, a bow tips it forward, the rest sway it from side to side.
+				local look = w.root.CFrame.LookVector
+				local yaw = math.atan2(-look.X, -look.Z)
+				local trickKind = w.trickKind
+				local spinning = trickKind == "spin"
+				local flipping = trickKind == "flip"
+				local pitch = if trickKind == "bow" then math.rad(turn) elseif flipping then math.rad(turn) else 0
+				local roll = if spinning or flipping or trickKind == "bow" then 0 else math.rad(turn) * 0.6
+				local spin = if spinning then math.rad(turn) else 0
+				local base = CFrame.new(w.at + across + Vector3.new(0, hop + bob, 0)) * CFrame.Angles(0, yaw + spin, 0)
+				-- (A flip turns about its middle, not its feet.)
+				local mid = CFrame.new(0, h * 0.45, 0)
+				table.insert(parts, figRoot)
+				table.insert(frames, base * mid * CFrame.Angles(pitch, 0, roll) * mid:Inverse())
+			end
 			w.body.Size = UDim2.fromScale(h * (1 + squash), h * (1 - squash))
 			w.glyph.Rotation = turn
 			w.aura.BackgroundTransparency = 0.55 + 0.12 * math.sin(t * 2.6 + w.phase)
@@ -546,6 +582,12 @@ function BrainrotWalkers.mood(p: Player): (string?, string?)
 		return nil, nil
 	end
 	return w.trickKind, w.bubble.Text
+end
+
+-- For tests: the brainrot's figure (Build 82), if it has one.
+function BrainrotWalkers.figure(p: Player): Model?
+	local w = walkers[p]
+	return if w then w.figure else nil
 end
 
 -- For tests: the brainrot walking beside a guest, if any.

@@ -244,7 +244,7 @@ ctx = {
 		return Curios.forEvent(player, id, key)
 	end,
 	salute = function(title: string, line: string, by: Player?)
-		Remotes.event("Salute"):FireAllClients({ op = "salute", id = "holidayGame", by = if by then Names.of(by) else "", effects = { "fireworks" }, seconds = 7, title = title, line = line })
+		Remotes.event("Salute"):FireAllClients({ op = "salute", id = "holidayGame", by = if by then Names.of(by) else "", effects = {}, seconds = 7, title = title, line = line })
 	end,
 	price = function(key: string): number?
 		local ok, p = pcall(Catalog.price, key)

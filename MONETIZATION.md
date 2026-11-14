@@ -95,6 +95,7 @@ src/server/
     Velocity.luau  Revive.luau  Decree.luau  Luck.luau  Rain.luau     the five products
   Shop.luau               the Boutique's own products' handlers and eligibility; Boutique requests
   TableService.luau       Chronos Defiance's window at timed tables (the table owns the moment)
+  Attractions/Executive   Chronos Defiance's window when security catches a guest (Revive.windows)
   Gilt.luau, LedgerService.luau   God-Mode Luck hooks (personal multiplier, capped)
 src/client/
   Perks.luau              the perk state and purchase messages, as the server sent them

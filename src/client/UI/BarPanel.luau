@@ -126,7 +126,11 @@ function BarPanel.open()
 			if type(r) == "table" and r.ok and not r.prompted then
 				Root.close(NAME) -- one already paid for, served now
 			elseif type(r) == "table" and not r.ok then
-				Toast.show("The Terrace Bar", tostring(r.why or "One moment."), 3)
+				if r.short then
+					Toast.refused(r)
+				else
+					Toast.show("The Terrace Bar", tostring(r.why or "One moment."), 3)
+				end
 			end
 			-- Bought: the house serves it the moment Roblox confirms the purchase.
 		end)

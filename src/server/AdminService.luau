@@ -583,7 +583,7 @@ local function collectHunt(player: Player, item: BasePart, gilt: number)
 	local prize = if jackpot and type(h) == "table" then CurioList.byId[h.jackpot] else nil
 	Remotes.event("Shop"):FireClient(player, { op = "notice", title = if prize then "You found " .. prize.name .. "!" else eventName, line = string.format("+%d Gilt", paid) })
 	if prize then
-		broadcast({ op = "salute", id = "jackpot", by = Names.of(player), effects = { "fireworks", "goldLeaf" }, seconds = 8, title = eventName, line = Names.of(player) .. " found " .. prize.name .. "!" })
+		broadcast({ op = "salute", id = "jackpot", by = Names.of(player), effects = { "goldLeaf" }, seconds = 8, title = eventName, line = Names.of(player) .. " found " .. prize.name .. "!" })
 	end
 	local left = 0
 	if folder then
@@ -2555,7 +2555,7 @@ local function handle(player: Player, request: unknown): any
 		if not ok then
 			return { ok = false, why = why or "Not just now." }
 		end
-		broadcast({ op = "salute", id = "ballroomOpened", by = byName, effects = { "fireworks" }, seconds = 6, title = "The Ballroom is open", line = byName .. " opened the Ballroom. Lights Out: sit in any chair!" })
+		broadcast({ op = "salute", id = "ballroomOpened", by = byName, effects = {}, seconds = 6, title = "The Ballroom is open", line = byName .. " opened the Ballroom. Lights Out: sit in any chair!" })
 		return { ok = true }
 	elseif op == "grandPrixOpen" then
 		-- Skips the Grand Prix's wait: open for everyone now, or a countdown cut to a few seconds.
@@ -2564,7 +2564,7 @@ local function handle(player: Player, request: unknown): any
 			return { ok = false, why = why or "Not just now." }
 		end
 		if said == "The Grand Prix is open." then
-			broadcast({ op = "salute", id = "grandPrixOpened", by = byName, effects = { "fireworks" }, seconds = 6, title = "The Grand Prix is open", line = byName .. " opened the Grand Prix. Get in any car on the street and press Race." })
+			broadcast({ op = "salute", id = "grandPrixOpened", by = byName, effects = {}, seconds = 6, title = "The Grand Prix is open", line = byName .. " opened the Grand Prix. Get in any car on the street and press Race." })
 		end
 		return { ok = true, said = said }
 	elseif op == "bringAll" then

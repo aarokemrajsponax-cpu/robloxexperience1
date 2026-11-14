@@ -138,7 +138,7 @@ local function twinkles(parent: Instance, colour: Color3)
 		star.Size = UDim2.fromOffset(22, 22)
 		star.FontFace = Brand.Fonts.heavy
 		star.TextScaled = true
-		star.Text = "✦"
+		star.Text = "✨"
 		star.TextColor3 = colour
 		star.TextTransparency = 0.2
 		star.ZIndex = 0

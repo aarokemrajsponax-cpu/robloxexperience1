@@ -8,9 +8,11 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
+local Curios = require(ReplicatedStorage.Shared.Curios)
 local Directory = require(ReplicatedStorage.Shared.Directory)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Rules = require(ReplicatedStorage.Shared.Fortune)
+local CurioArt = require(script.Parent.CurioArt)
 local Root = require(script.Parent.Root)
 local Theme = require(script.Parent.Theme)
 local Toast = require(script.Parent.Toast)
@@ -20,6 +22,59 @@ local AuctionPanel = {}
 local NAME = "GrandAuction"
 local C = Brand.Colours
 local GOLD = Color3.fromRGB(255, 204, 90)
+local GREEN = Color3.fromRGB(120, 220, 150)
+local rgb = Color3.fromRGB
+
+-- A rounded frame with a hairline edge.
+local function box(parent: Instance, name: string, colour: Color3, transparency: number, radius: number, edge: Color3?, edgeSeen: number?): Frame
+	local f = Instance.new("Frame")
+	f.Name = name
+	f.BackgroundColor3 = colour
+	f.BackgroundTransparency = transparency
+	f.BorderSizePixel = 0
+	f.Parent = parent
+	local c = Instance.new("UICorner")
+	c.CornerRadius = UDim.new(0, radius)
+	c.Parent = f
+	if edge then
+		local s = Instance.new("UIStroke")
+		s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		s.Color = edge
+		s.Transparency = edgeSeen or 0.6
+		s.Parent = f
+	end
+	return f
+end
+
+-- A small capsule of words (a rarity, the time left, your standing).
+local function chip(parent: Instance, name: string, text: string, colour: Color3, order: number): TextLabel
+	local l = Instance.new("TextLabel")
+	l.Name = name
+	l.BackgroundColor3 = colour
+	l.BackgroundTransparency = 0.82
+	l.BorderSizePixel = 0
+	l.AutomaticSize = Enum.AutomaticSize.X
+	l.Size = UDim2.fromOffset(0, 20)
+	l.FontFace = Brand.Fonts.heavy
+	l.TextSize = 11
+	l.TextColor3 = colour
+	l.Text = string.upper(text)
+	l.LayoutOrder = order
+	l.Parent = parent
+	local c = Instance.new("UICorner")
+	c.CornerRadius = UDim.new(1, 0)
+	c.Parent = l
+	local p = Instance.new("UIPadding")
+	p.PaddingLeft = UDim.new(0, 8)
+	p.PaddingRight = UDim.new(0, 8)
+	p.Parent = l
+	local s = Instance.new("UIStroke")
+	s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	s.Color = colour
+	s.Transparency = 0.55
+	s.Parent = l
+	return l
+end
 
 local function ask(request: { [string]: any }): { [string]: any }?
 	local ok, r = pcall(function()
@@ -154,32 +209,105 @@ function AuctionPanel.open()
 			Theme.text(rows, "No lots this week.", 13, "body", { LayoutOrder = 1, TextColor3 = C.smoke })
 			return
 		end
+		Theme.text(rows, string.format("This week's lots  ·  %d", #lots), 11, "caps", { LayoutOrder = 0, TextXAlignment = Enum.TextXAlignment.Left })
+		local width = rows.AbsoluteSize.X
+		if width < 50 then
+			width = Root.panelWidth(560) - 40
+		end
+		local STAGE = if width < 420 then 84 else 104
 		for i, l in lots do
-			local f = Instance.new("Frame")
-			f.Name = "Lot"
-			f.BackgroundColor3 = Color3.fromRGB(26, 22, 18)
-			f.BackgroundTransparency = 0.2
+			-- (Build 82) A lot as an auction house shows it: the piece on a velvet stage with its lot
+			-- number, then its name and grade, the bid that stands (large), who holds it and how
+			-- long is left, your own standing, the last few bids, and the keys to bid.
+			local currency = tostring(l.currency or "Gilt")
+			local curio = if type(l.curio) == "string" then Curios.byId[l.curio] else nil
+			local rarityColour = if curio then (Curios.RarityColour[(curio :: any).rarity] or GOLD) else GOLD
+			local f = box(rows, "Lot", rgb(18, 14, 12), 0.08, 14, rarityColour, if l.mine then 0.25 else 0.6)
 			f.AutomaticSize = Enum.AutomaticSize.Y
 			f.Size = UDim2.new(1, 0, 0, 0)
 			f.LayoutOrder = i
-			f.Parent = rows
-			local corner = Instance.new("UICorner")
-			corner.CornerRadius = UDim.new(0, 12)
-			corner.Parent = f
+			local depth = Instance.new("UIGradient")
+			depth.Rotation = 90
+			depth.Color = ColorSequence.new(rgb(255, 255, 255), rgb(170, 160, 150))
+			depth.Parent = f
 			local pad = Instance.new("UIPadding")
 			pad.PaddingLeft = UDim.new(0, 12)
 			pad.PaddingRight = UDim.new(0, 12)
-			pad.PaddingTop = UDim.new(0, 8)
-			pad.PaddingBottom = UDim.new(0, 8)
+			pad.PaddingTop = UDim.new(0, 12)
+			pad.PaddingBottom = UDim.new(0, 12)
 			pad.Parent = f
-			Theme.list(f, 3).VerticalAlignment = Enum.VerticalAlignment.Top
-			local currency = tostring(l.currency or "Gilt")
-			Theme.text(f, string.format("%s  %s%s", tostring(l.glyph or ""), tostring(l.name), if l.seasonal then "  ·  a seasonal lot" else ""), 15, "bodyBold", { LayoutOrder = 1, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = GOLD })
-			Theme.text(f, tostring(l.line or ""), 12, "body", { LayoutOrder = 2, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = C.smoke })
+			-- The stage: velvet, the medallion on it, the lot's number under it.
+			local stage = box(f, "Stage", rgb(70, 16, 32), 0.05, 12, rarityColour, 0.4)
+			stage.Size = UDim2.fromOffset(STAGE, STAGE + 22)
+			local sg = Instance.new("UIGradient")
+			sg.Rotation = 90
+			sg.Color = ColorSequence.new(rgb(150, 50, 80), rgb(40, 8, 20))
+			sg.Parent = stage
+			if curio then
+				local m = CurioArt.medallion(stage, (curio :: any).id, STAGE - 20)
+				m.AnchorPoint = Vector2.new(0.5, 0)
+				m.Position = UDim2.new(0.5, 0, 0, 8)
+			else
+				local g = Instance.new("TextLabel")
+				g.BackgroundTransparency = 1
+				g.Size = UDim2.fromOffset(STAGE, STAGE - 8)
+				g.TextScaled = true
+				g.Text = tostring(l.glyph or "")
+				g.Parent = stage
+			end
+			local lotNo = Instance.new("TextLabel")
+			lotNo.Name = "LotNumber"
+			lotNo.BackgroundTransparency = 1
+			lotNo.AnchorPoint = Vector2.new(0.5, 1)
+			lotNo.Position = UDim2.new(0.5, 0, 1, -4)
+			lotNo.Size = UDim2.new(1, 0, 0, 16)
+			lotNo.FontFace = Brand.Fonts.heavy
+			lotNo.TextSize = 11
+			lotNo.TextColor3 = GOLD
+			lotNo.Text = string.format("LOT %d", i)
+			lotNo.Parent = stage
+			-- What's on the right of the stage.
+			local info = Instance.new("Frame")
+			info.Name = "Info"
+			info.BackgroundTransparency = 1
+			info.Position = UDim2.fromOffset(STAGE + 14, 0)
+			info.Size = UDim2.new(1, -(STAGE + 14), 0, 0)
+			info.AutomaticSize = Enum.AutomaticSize.Y
+			info.Parent = f
+			Theme.list(info, 6).HorizontalAlignment = Enum.HorizontalAlignment.Left
+			Theme.text(info, tostring(l.name), 17, "display", { LayoutOrder = 1, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = C.bone })
+			local chips = Instance.new("Frame")
+			chips.Name = "Chips"
+			chips.BackgroundTransparency = 1
+			chips.Size = UDim2.new(1, 0, 0, 20)
+			chips.LayoutOrder = 2
+			chips.Parent = info
+			Theme.list(chips, 6, true).HorizontalAlignment = Enum.HorizontalAlignment.Left
+			if curio then
+				chip(chips, "Rarity", tostring((curio :: any).rarity), rarityColour, 1)
+			end
+			if l.seasonal then
+				chip(chips, "Seasonal", "Seasonal", rgb(150, 210, 255), 2)
+			end
+			chip(chips, "Left", if l.settled then "Closed" else "Closes in " .. AuctionPanel.left(tonumber(l.left) or 0), if l.settled then C.smoke else rgb(255, 214, 140), 3)
+			Theme.text(info, tostring(l.line or ""), 12, "body", { LayoutOrder = 3, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = C.smoke })
+			-- The bid that stands.
 			local high = tonumber(l.high) or 0
-			local standing = if high > 0 then string.format("Highest: %s, by %s%s", money(high, currency), if l.mine then "you" else tostring(l.by or "a guest"), "") else string.format("No bids yet: it opens at %s", money(tonumber(l.start) or 0, currency))
-			Theme.text(f, standing, 13, "bodyBold", { LayoutOrder = 3, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = if l.mine then GOLD else C.bone })
-			Theme.text(f, if l.settled then "Closed." else string.format("Closes in %s  ·  the least bid now is %s", AuctionPanel.left(tonumber(l.left) or 0), money(tonumber(l.minNext) or 0, currency)), 12, "body", { LayoutOrder = 4, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = C.lightGold })
+			Theme.text(info, if high > 0 then "Current bid" else "Opening bid", 10, "caps", { LayoutOrder = 4, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = C.smoke })
+			local figure = Theme.text(info, money(if high > 0 then high else tonumber(l.start) or 0, currency), 24, "bodyBold", { LayoutOrder = 5, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = GOLD })
+			figure.FontFace = Brand.Fonts.figures
+			local standing: string
+			local standColour = C.bone
+			if l.won then
+				standing, standColour = "Sold to you: it's in your collection", GREEN
+			elseif l.mine then
+				standing, standColour = "You're the highest bidder", GREEN
+			elseif high > 0 then
+				standing = "Held by " .. tostring(l.by or "a guest")
+			else
+				standing = "No bids yet: be the first"
+			end
+			Theme.text(info, standing, 13, "bodyBold", { LayoutOrder = 6, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = standColour })
 			local history = if type(l.history) == "table" then l.history else {}
 			if #history > 0 then
 				local parts = {}
@@ -189,25 +317,34 @@ function AuctionPanel.open()
 					end
 					table.insert(parts, string.format("%s %s", tostring(h.name), Rules.format(tonumber(h.amount) or 0)))
 				end
-				Theme.text(f, "Lately: " .. table.concat(parts, "  ·  "), 11, "body", { LayoutOrder = 5, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = C.smoke })
+				Theme.text(info, "Lately: " .. table.concat(parts, "  ·  "), 11, "body", { LayoutOrder = 7, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = C.smoke })
 			end
 			if not l.settled and not l.mine then
 				local keys = Instance.new("Frame")
 				keys.Name = "Keys"
 				keys.BackgroundTransparency = 1
 				keys.Size = UDim2.new(1, 0, 0, 42)
-				keys.LayoutOrder = 6
-				keys.Parent = f
-				Theme.list(keys, 8, true)
+				keys.LayoutOrder = 8
+				keys.Parent = info
+				Theme.list(keys, 8, true).HorizontalAlignment = Enum.HorizontalAlignment.Left
 				local least = tonumber(l.minNext) or 0
 				local more = if currency == "Gems" then least + 10 else math.ceil(least * 1.1 / 100) * 100
+				local keyW = math.clamp(math.floor((width - STAGE - 14 - 8) / 2), 120, 200)
 				Theme.key(keys, "Bid " .. money(least, currency), true, function()
 					bid(l.id, least)
-				end, 200)
+				end, keyW)
 				Theme.key(keys, "Bid " .. money(more, currency), false, function()
 					bid(l.id, more)
-				end, 200)
+				end, keyW)
+			elseif l.mine and not l.settled then
+				Theme.text(info, "Outbid, and your bid comes straight back to your purse.", 11, "body", { LayoutOrder = 8, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = C.smoke })
 			end
+			-- (The card as tall as the taller of its stage and its words.)
+			local sizer = Instance.new("Frame")
+			sizer.Name = "Sizer"
+			sizer.BackgroundTransparency = 1
+			sizer.Size = UDim2.fromOffset(1, STAGE + 22)
+			sizer.Parent = f
 		end
 	end
 	local close = Theme.key(content, "Close", false, function()

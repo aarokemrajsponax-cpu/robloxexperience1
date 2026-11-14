@@ -28,7 +28,7 @@ export type Track = {
 
 Tracks.List = {
 	{ id = "boulevard", name = "The Grand Boulevard", line = "The street circuit before the house: two straights, two hairpins, a boost pad on each straight.", place = "street", width = GrandPrix.TRACK.width, gates = 16, ace = 12, badge = "lapAce" },
-	{ id = "coast", name = "The Coastal Circuit", line = "Luxury Island's road: down the airstrip, round the Jet Gallery and back through the gardens' bends.", place = "island", width = 22, gates = 16, ace = 11, badge = "coastAce" },
+	{ id = "coast", name = "The Coastal Circuit", line = "Luxury Island's road: down the airstrip, round the Jet Gallery and back through the gardens' bends.", place = "island", width = 28, gates = 16, ace = 11, badge = "coastAce" },
 } :: { Track }
 Tracks.byId = {} :: { [string]: Track }
 for _, t in Tracks.List do

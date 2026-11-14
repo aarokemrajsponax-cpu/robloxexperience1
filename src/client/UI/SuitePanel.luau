@@ -250,7 +250,11 @@ function SuitePanel.open(start: string?)
 		task.spawn(function()
 			local r = Closet.ask({ op = "buy", item = o.id })
 			if type(r) == "table" and not r.ok then
-				Toast.show("Your Suite", tostring(r.why or "One moment."), 3)
+				if r.short then
+					Toast.refused(r)
+				else
+					Toast.show("Your Suite", tostring(r.why or "One moment."), 3)
+				end
 			end
 			-- Once it's bought, the house puts it in its spot and this page catches up.
 		end)

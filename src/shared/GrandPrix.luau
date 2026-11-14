@@ -16,10 +16,13 @@ local GrandPrix = {}
 -- The circuit keeps its own size and keeps to the road whatever the house's scale: its near
 -- straight runs a set way out from the kerb, where the cars wait in their bays.
 GrandPrix.TRACK = {
-	centre = Vector3.new(0, 0, Layout.Street.kerbZ - 75.6), -- the middle of the infield, on the road's surface
+	-- (Build 82: the road half as wide again, 26 to 38 studs, for room to pass. The infield's middle
+	-- moved back by the half of what it grew, so the near edge, and the bays along the kerb,
+	-- stay where they were; the lap's line, and so its length, is unchanged.)
+	centre = Vector3.new(0, 0, Layout.Street.kerbZ - 75.6 - 6), -- the middle of the infield, on the road's surface
 	half = 118, -- half the length of each straight
 	radius = 52, -- the hairpins' radius, to the middle of the road
-	width = 26, -- the road's width
+	width = 38, -- the road's width
 	y = 0.06, -- the circuit's surface, just above the street's
 }
 

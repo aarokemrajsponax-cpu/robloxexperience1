@@ -1622,7 +1622,7 @@ check("Shift runs", (function()
 	action.fn("MaisonRun", roblox.Enum.UserInputState.End, { KeyCode = roblox.Enum.KeyCode.LeftShift })
 	return running and humanoid.WalkSpeed == Config.data.Movement.walkSpeed
 end)())
-check("a first visit offers the attractions, not a sorting table", textOnScreen("Show me the attractions") ~= nil and textOnScreen("Straight to the table") == nil)
+check("a first visit: no floating key over the screen (Play, top right, opens the attractions)", textOnScreen("Show me the attractions") == nil and textOnScreen("Straight to the table") == nil)
 check("what's next, while walking: an attraction to try, Steal a Luxe first", textOnScreen("Play Steal a Luxe") ~= nil and textOnScreen("Take a seat at any table in the Salon") == nil)
 check("and the way there", textOnScreen("Its way in is the Luxe Lounge") ~= nil)
 check("no errors after Play", #errors == 0, errors[1])
@@ -2676,17 +2676,17 @@ do
 	check("with the sheet set, the Boutique's chimes can be sold", Wardrobe.deliverable(Wardrobe.get("chime_harp")) and Wardrobe.deliverable(Wardrobe.get("chime_glass")))
 
 	-- A room with no music of its own plays one of the house's tracks.
-	assets.Tracks.table = "rbxassetid://777"
+	assets.Tracks.street = "rbxassetid://777"
 	SoundModule.enterZone("velvet")
 	advance(3)
 	local velvet = loopNamed("Music_velvet")
-	check("music: a room with no track of its own plays the house's table track", velvet ~= nil and velvet.SoundId == "rbxassetid://777" and velvet.Volume > 0, velvet and velvet.SoundId)
+	check("music: a room with no track of its own plays the house's street track", velvet ~= nil and velvet.SoundId == "rbxassetid://777" and velvet.Volume > 0, velvet and velvet.SoundId)
 	SoundModule.enterZone("salon")
 	advance(3)
 	check("music: and a room's own track still wins", salonTrack.SoundId == "rbxassetid://101" and salonTrack.Volume > 0 and velvet.Volume == 0)
-	assets.Tracks.table = ""
+	assets.Tracks.street = ""
 	-- With nothing set, the house's playlist: real recordings from Roblox's licensed library.
-	local tableList = assets.Playlists.table
+	local tableList = assets.Playlists.street
 	local function songIndex(id)
 		for i, song in tableList do
 			if song.id == id then
@@ -2707,7 +2707,7 @@ do
 	local nextAt = songIndex(velvet.SoundId)
 	check("music: when a song ends, the next in the list follows at its own level", nextAt == at % #tableList + 1 and math.abs(velvet.Volume - roomLevel * tableList[nextAt].gain) < 1e-6, velvet.SoundId)
 	local wellFormed = true
-	for _, track in { "lounge", "table", "ballroom", "street" } do
+	for _, track in { "lounge", "ballroom", "street", "executiveBoss" } do
 		local list = assets.Playlists[track]
 		if #list < 5 then
 			wellFormed = false
@@ -2718,10 +2718,11 @@ do
 			end
 		end
 	end
-	check("music: four playlists of at least five songs, each with its level", wellFormed)
+	check("music: four playlists of at least five songs, each with its level", wellFormed and assets.Playlists.table == nil)
+	check("music (Build 82): the Salon plays street luxury; its old beats are the Executive's fight", SoundModule.trackFor("salon") == "street" and SoundModule.trackFor("library") == "street" and assets.Playlists.executiveBoss[1].id == "rbxassetid://9044976005")
 	-- (Build 80: the grand piano is the lobby's alone; every other room plays street luxury.)
 	local pianoLists = {}
-	for _, track in { "table", "ballroom", "street" } do
+	for _, track in { "ballroom", "street", "executiveBoss" } do
 		for _, song in assets.Playlists[track] do
 			for _, lounge in assets.Playlists.lounge do
 				if song.id == lounge.id then
@@ -2733,11 +2734,11 @@ do
 	check("music: the lobby's piano plays in the lobby only, never in another room's list", #pianoLists == 0, pianoLists[1])
 	check("and the house knows it has music without a single upload", SoundModule.hasMusic())
 	-- Or found by name, if a playlist is emptied: a track dropped into SoundService, no id copied.
-	assets.Playlists.table = {}
+	assets.Playlists.street = {}
 	SoundModule.enterZone("salon")
 	advance(3)
 	local uploaded = Instance.new("Sound")
-	uploaded.Name = "maison-table"
+	uploaded.Name = "maison-street"
 	uploaded.SoundId = "rbxassetid://888"
 	uploaded.Parent = game:GetService("SoundService")
 	advance(6)
@@ -2747,7 +2748,7 @@ do
 	check("music: a track dropped into SoundService by name plays, no id needed", found ~= nil and found.SoundId == "rbxassetid://888" and found.Volume > 0, found and found.SoundId)
 	check("and the house knows it has music", SoundModule.hasMusic())
 	uploaded:Destroy()
-	assets.Playlists.table = tableList
+	assets.Playlists.street = tableList
 	advance(6)
 	SoundModule.enterZone("salon")
 	advance(3)
@@ -3650,12 +3651,34 @@ do
 			{ key = "velocityElite", name = "VIP Velocity Elite", line = "Walk and run 1.5× faster through the house, for good, with a gold trail at your heels. Both can be switched off in Settings.", price = 499, action = "prompt", category = "Status" },
 			{ key = "emperorsDecree", name = "Emperor's Decree", line = "Your words, in gold, across every screen in the house for eight seconds.", price = 149, action = "compose", category = "Social" },
 			{ key = "megalodonRainmaker", name = "Megalodon Rainmaker", line = "Gold rains on the whole house: every guest gets 150 Gilt, you get 500 more, and everyone sees who made it rain.", price = 699, action = "prompt", category = "Spectacle", disabled = true, why = "Rains are already waiting their turn in this house. Try again in a few minutes." },
+			{ key = "giltPurse2", name = "Gilt Chest", line = "25,000 Gilt, straight into your purse.", price = 299, action = "prompt", category = "Gilt" },
 		},
 		ok = true, prompted = true,
 	}
 	serverSays("Shop", { op = "open", panel = "boutique" })
 	advance(1)
 	check("the Offers show the new products with Roblox's prices", textOnScreen("Luck Booster") ~= nil and textOnScreen(robux .. " 199") ~= nil and textOnScreen("VIP Velocity Elite") ~= nil)
+	do
+		-- Every offer row as tall as its words: none runs into the next.
+		local rows = {}
+		for _, d in playerGui:GetDescendants() do
+			if d:IsA("Frame") and string.sub(d.Name, 1, 6) == "Offer_" then
+				table.insert(rows, d)
+			end
+		end
+		local grows = #rows > 0
+		for _, r in rows do
+			grows = grows and r.AutomaticSize == roblox.Enum.AutomaticSize.Y and r:FindFirstChildOfClass("UISizeConstraint") ~= nil
+		end
+		check("each offer row grows with its words (nothing spills into the next)", grows, #rows)
+	end
+	-- Buy Gilt: the first page, Gilt for Robux and Double Gilt, nothing else.
+	check("Buy Gilt is the Boutique's first page", press("Buy Gilt"))
+	advance(0.5)
+	check("...the Gilt purses and Double Gilt, with their prices, and nothing else", textOnScreen("Gilt Chest") ~= nil and textOnScreen(robux .. " 299") ~= nil and textOnScreen("Double Gilt") ~= nil and textOnScreen("Luck Booster") == nil)
+	snapshot("buy-gilt")
+	press("Offers")
+	advance(0.5)
 	check("Luck's time left shows under it", textOnScreen("Active: 23 minutes of play left") ~= nil)
 	snapshot("offers")
 	check("an offer that can't be bought now says why", textOnScreen("Rains are already waiting their turn") ~= nil)
@@ -4411,8 +4434,9 @@ check("gold confetti: slips of gold foil flutter down, turning as they fall", (f
 end)())
 advance(14)
 check("and it all clears away", workspace.MaisonLocal:FindFirstChild("GoldLeaf") == nil and workspace.MaisonLocal:FindFirstChild("Spotlight") == nil and workspace.MaisonLocal:FindFirstChild("Flakes") == nil)
-advance(12)
-check("...the fireworks too, once the last willows have fallen", (function()
+-- (Fireworks are kept for big moments and always last long enough to watch: at least 35 seconds.)
+advance(30)
+check("...the fireworks too (a show of at least 35 seconds), once the last willows have fallen", (function()
 	local f = workspace.MaisonLocal:FindFirstChild("Fireworks")
 	return f == nil or #f:GetChildren() == 0
 end)(), (function()
@@ -4482,7 +4506,9 @@ do
 	end
 	advance(0.5)
 	check("...and brought back with the same key", watchLabel() == "Watch", watchLabel())
-	advance(20)
+	advance(15)
+	check("a show runs at least 35 seconds, however short the moment asked for: the key is still there at 16", watchTile() ~= nil)
+	advance(30)
 	check("when the show is over, the key goes", watchTile() == nil)
 end
 
@@ -5636,6 +5662,23 @@ do
 	end
 	advance(0.5)
 	check("...and the pill brings the whole bar back", wholeBar ~= nil and wholeBar.Visible and not pill.Visible and StateG.get("giltBar") == "Shown")
+	-- The Gilt figure (with its small +) opens the Boutique on Buy Gilt.
+	local giltFigure = wholeBar and wholeBar:FindFirstChild("Gilt")
+	check("the Gilt figure carries a + for more Gilt", giltFigure ~= nil and giltFigure:FindFirstChild("More") ~= nil and giltFigure.More.Text == "+")
+	invokeResults.ShopAsk = {
+		today = {}, featured = {}, season = { id = "harvest", name = "Harvest Nights", price = 599, pieces = {} },
+		gilt = {}, goldKey = { owned = false, price = 499 }, ledger = { view = ledgerView, price = 399 },
+		guests = {}, standing = "Guest", balance = 0, credits = {},
+		offers = { { key = "giltPurse1", name = "Gilt Purse", line = "5,000 Gilt, straight into your purse.", price = 99, action = "prompt", category = "Gilt" } },
+	}
+	if giltFigure then
+		signalOf(giltFigure, "Activated"):Fire()
+	end
+	advance(1)
+	local RootGB = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "Root")
+	check("...and opens the Boutique on its Buy Gilt page", RootGB.isOpen("Boutique") and textOnScreen("Gilt for Robux: it goes straight into your purse") ~= nil and textOnScreen("Gilt Purse") ~= nil)
+	RootGB.close()
+	advance(1)
 end
 local giltBar = find(playerGui, function(d)
 	return d.Name == "GiltBar"
@@ -5760,6 +5803,22 @@ do
 	LocalPlayer:SetAttribute("Brainrot", "frogKing")
 	advance(1)
 	local walker = Walkers.of(LocalPlayer)
+	check("...in the round (Build 82): a figure of parts with its face, its crown and its cape, nothing in anyone's way", (function()
+		local fig = Walkers.figure(LocalPlayer)
+		if not fig or not fig.PrimaryPart or fig.Parent == nil then
+			return false
+		end
+		local eyes, crown, cape, solid = 0, false, false, false
+		for _, d in fig:GetDescendants() do
+			if d:IsA("BasePart") then
+				eyes += if d.Name == "Eye" then 1 else 0
+				crown = crown or d.Name == "CrownBand"
+				cape = cape or d.Name == "Cape"
+				solid = solid or d.CanCollide or d.CanQuery or d.CanTouch
+			end
+		end
+		return eyes == 2 and crown and cape and not solid and fig:GetAttribute("Brainrot") == "frogKing"
+	end)())
 	check("your brainrot walks beside you", walker ~= nil and walker.Parent ~= nil and myRoot ~= nil and (walker.CFrame.Position - myRoot.CFrame.Position).Magnitude < 12, walker and myRoot and (walker.CFrame.Position - myRoot.CFrame.Position).Magnitude)
 	check("...as tall as its rarity, with its name, stars, mutation and Gilt an hour over its head", walker ~= nil and (function()
 		local body = walker:FindFirstChild("Body")
@@ -5789,10 +5848,11 @@ do
 	signalOf(LocalPlayer, "attr:Brainrot"):Fire()
 	advance(1)
 	check("a Mythic wears a crown", Walkers.of(LocalPlayer) ~= nil and Walkers.of(LocalPlayer):FindFirstChild("Crown", true) ~= nil)
+	check("...and the new one is built in the round too (the old figure gone)", Walkers.figure(LocalPlayer) ~= nil and Walkers.figure(LocalPlayer):GetAttribute("Brainrot") == "moonCheese")
 	snapshot("brainrot-walker")
 	LocalPlayer:SetAttribute("Brainrot", nil)
 	advance(0.3)
-	check("...and goes back to the squad when it stops walking", Walkers.of(LocalPlayer) == nil)
+	check("...and goes back to the squad when it stops walking", Walkers.of(LocalPlayer) == nil and Walkers.figure(LocalPlayer) == nil)
 end
 -- The Badge Book.
 invokeResults.BadgeAsk = { ok = true, earned = { firstRound = 1790000000, metOwner = 1790000100 }, stats = { rounds = 7, level = 12 }, count = 2, total = 151 }
@@ -8219,8 +8279,25 @@ coroutine.wrap(function()
 	check("no Steal a Luxe screen in the house", card() == nil and not module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "LuxeHud").mounted())
 	LocalPlayer:SetAttribute("Attraction", "luxe")
 	signalOf(LocalPlayer, "attr:Attraction"):Fire()
-	serverSays("Attraction", { op = "entered", id = "luxe" })
+	serverSays("Attraction", { op = "entered", id = "luxe", hold = 6.5 })
 	advance(0.5)
+	-- (Build 82) Held a few seconds on arrival while the place is made ready, said plainly.
+	check("arriving: held still while the place is made ready, said on a card of its own", textOnScreen("NOW ENTERING") ~= nil and textOnScreen("Security sleeps until you lift something.") ~= nil and textOnScreen("Textures and sounds") ~= nil)
+	snapshot("luxe-load-in")
+	advance(13)
+	check("...its screen says when the place is ready (it asks the server to let go)", (function()
+		for i = #sent, 1, -1 do
+			if sent[i].remote == "AttractionAsk" and sent[i].message[1].op == "ready" and sent[i].message[1].id == "luxe" then
+				return true
+			end
+		end
+		return false
+	end)())
+	serverSays("Attraction", { op = "unheld" })
+	advance(0.8)
+	check("...and once let go, the card goes", textOnScreen("NOW ENTERING") == nil and find(playerGui, function(d)
+		return d.Name == "MaisonLoadIn"
+	end) == nil)
 	check("inside, its screen is up", card() ~= nil and textOnScreen("STEAL A LUXE") ~= nil)
 	check("...with how it's played, said once on the way in", textOnScreen("Steal a Luxe") ~= nil)
 	serverSays("Attraction", { op = "luxe", bag = { { id = "ring", name = "Diamond Ring", glyph = "💍", rarity = "Rare", worth = 1700 }, { id = "pearls", name = "Pearl Necklace", glyph = "📿", rarity = "Common", worth = 260 } }, capacity = 4, worth = 1960, bonus = 0.1, wing = "The Long Gallery", watched = 0.4, chased = false, speed = 0.93, grace = false })
@@ -8229,7 +8306,7 @@ coroutine.wrap(function()
 	check("the wing they're in", textOnScreen("THE LONG GALLERY") ~= nil)
 	check("the bag: a slot for each piece it holds, two of four filled", c ~= nil and c.Bag:FindFirstChild("Slot4") ~= nil and c.Bag:FindFirstChild("Slot5") == nil and c.Bag.Slot1:FindFirstChild("Glyph") ~= nil and c.Bag.Slot3:FindFirstChild("Glyph") == nil)
 	check("what it's worth and the banker's cut when it's banked", textOnScreen("Carrying 1,960  ·  +10% when banked") ~= nil and textOnScreen("2 / 4") ~= nil)
-	check("the card stands at the bottom left, beside the dock down the left", c ~= nil and c.AnchorPoint == Vector2.new(0, 1) and c.Position.Y.Scale == 1 and c.Position.X.Scale == 0 and c.Position.X.Offset >= RootM.left + 12 - 1e-6)
+	check("the card stands in the bottom-left corner: under the dock down the left when there's room, beside it otherwise, never over it", c ~= nil and c.AnchorPoint == Vector2.new(0, 1) and c.Position.Y.Scale == 1 and c.Position.X.Scale == 0 and (c.Position.X.Offset >= RootM.left + 12 - 1e-6 or (c.Position.X.Offset == 16 and RootM.size().Y + c.Position.Y.Offset - c.Size.Y.Offset >= RootM.leftBottom + 10 - 1e-6)), c and c.Position)
 	check("a guard noticing them, shown before he gives chase", textOnScreen("A GUARD IS NOTICING YOU") ~= nil and c ~= nil and math.abs(c.Track.Fill.Size.X.Scale - 0.4) < 1e-6)
 	check("their pace with the bag", textOnScreen("PACE 93%") ~= nil)
 	snapshot("luxe-hud")
@@ -8254,7 +8331,15 @@ coroutine.wrap(function()
 	serverSays("Attraction", { op = "luxe", bag = {}, capacity = 4, worth = 0, bonus = 0, wing = "The Drop Room", wingId = 4, watched = 0, chased = false, speed = 1, grace = false, alarm = 0, goals = goals, mass = 0, hands = 1 })
 	advance(0.3)
 	check("calm again: the banner goes, the residence's own music comes back", textOnScreen("LOCKDOWN") == nil and textOnScreen("ALERT  ·") == nil and SoundM.mood() == nil)
-	serverSays("Attraction", { op = "luxe", bag = {}, capacity = 4, worth = 0, bonus = 0, wing = "The Strongroom", watched = 1, chased = true, speed = 1, grace = false })
+	-- (Build 82) Security asleep until a piece is lifted; lifting one wakes it.
+	serverSays("Attraction", { op = "luxe", bag = {}, capacity = 4, worth = 0, bonus = 0, wing = "The Strongroom", watched = 0, chased = false, speed = 1, grace = false, awake = false })
+	advance(0.3)
+	check("security asleep: said on the card (look around freely)", textOnScreen("SECURITY ASLEEP  ·  LOOK AROUND") ~= nil)
+	serverSays("Attraction", { op = "woke", wing = 3, first = true, chased = true, start = 2 })
+	advance(0.3)
+	check("a piece lifted: security is awake, a guard is coming, said once", textOnScreen("A guard is coming after you. Get to a way out.") ~= nil and textOnScreen("A GUARD IS AFTER YOU  ·  RUN") ~= nil and textOnScreen("SECURITY ASLEEP") == nil)
+	advance(4)
+	serverSays("Attraction", { op = "luxe", bag = {}, capacity = 4, worth = 0, bonus = 0, wing = "The Strongroom", watched = 1, chased = true, speed = 1, grace = false, awake = true })
 	advance(0.3)
 	check("chased: run", textOnScreen("A GUARD IS AFTER YOU  ·  RUN") ~= nil)
 	serverSays("Attraction", { op = "caught", lost = 1960, n = 2 })
@@ -8279,6 +8364,17 @@ coroutine.wrap(function()
 			hauls = 12,
 			banked = 48200,
 			best = 9100,
+			collection = {
+				rank = 3,
+				rankName = "Gentleman Thief",
+				nextAt = 100000,
+				nextName = "Gallery Ghost",
+				banked = 48200,
+				wings = {
+					{ wing = 1, name = "The Garden Hall", have = 6, of = 6, gilt = 2000, paid = true },
+					{ wing = 2, name = "The Long Gallery", have = 3, of = 7, gilt = 5000, paid = false },
+				},
+			},
 		},
 	}
 	check("Upgrades opens the board", press("Upgrades") and (advance(0.6) or true) and LuxePanel.isOpen())
@@ -8289,6 +8385,8 @@ coroutine.wrap(function()
 	check("...Stride, and where to train it", textOnScreen("Stride  ·  level 3 of 11") ~= nil and textOnScreen("7% faster in the residence  ·  120 of 180 points to the next level") ~= nil and textOnScreen("Walk the treadmills in the Luxe Lounge to train it: a point a second.") ~= nil)
 	check("...the golden treadmill, for its price in Gems", textOnScreen("150 Gems") ~= nil)
 	check("...and the records", textOnScreen("Hauls banked: 12  ·  in all: 48,200  ·  best: 9,100") ~= nil)
+	check("...the Collection: the rank and what the next one takes", textOnScreen("Rank: Gentleman Thief") ~= nil and textOnScreen("48,200 banked of the 100,000 for Gallery Ghost") ~= nil)
+	check("...every wing's set: what's banked of it and its reward, or complete", textOnScreen("The Garden Hall  ·  6 / 6") ~= nil and textOnScreen("Set complete") ~= nil and textOnScreen("The Long Gallery  ·  3 / 7") ~= nil and textOnScreen("Set: +5,000 Gilt") ~= nil)
 	snapshot("luxe-board")
 	invokeResults.AttractionAsk = { ok = false, why = "That's 4,000 Gilt." }
 	press("4,000 Gilt")
@@ -8351,7 +8449,7 @@ coroutine.wrap(function()
 	serverSays("Attraction", { op = "basement", checkpoint = 4, stage = 5, stageName = "The Pipes", zone = "The Boiler Room", started = 4917.5, assisted = false, falls = 2, best = 205.5, done = false, skips = 0, skipGems = 85, skipNeed = 2, skipOnSale = true })
 	advance(0.4)
 	check("inside, its screen is up: the stage and its part", textOnScreen("THE MAISON BASEMENT") ~= nil and textOnScreen("Stage 5 of 16  ·  The Pipes") ~= nil and textOnScreen("THE BOILER ROOM") ~= nil)
-	check("...the run's clock, by the server's clock", textOnScreen("1:22.50") ~= nil)
+	check("...no running clock on the screen (hard to read mid-jump: the time is told at the Treasury)", textOnScreen("1:22.50") == nil)
 	check("...the best time and the falls", textOnScreen("BEST 3:25.50") ~= nil and textOnScreen("FALLS 2") ~= nil)
 	snapshot("basement-hud")
 	serverSays("Attraction", { op = "checkpoint", n = 5, gilt = 40, purse = 0, zone = "The Boiler Room", skipped = false })
@@ -8566,9 +8664,9 @@ coroutine.wrap(function()
 		local slot = strip and strip:FindFirstChild("Slot" .. k)
 		return slot and slot.Text
 	end
-	check("the code, big, in four slots under the card (what's read, and ? for the rest)", strip ~= nil and strip.Visible and slotText(1) == "4" and slotText(2) == "?" and slotText(3) == "7" and slotText(4) == "?")
+	check("the code, big, in four slots just above the card (what's read, and ? for the rest)", strip ~= nil and strip.Visible and slotText(1) == "4" and slotText(2) == "?" and slotText(3) == "7" and slotText(4) == "?")
 	local stripSlot = strip and strip:FindFirstChild("Slot1")
-	check("...large enough to read at a glance", stripSlot ~= nil and stripSlot.TextSize >= 40)
+	check("...large enough to read at a glance", stripSlot ~= nil and stripSlot.TextSize >= 34)
 	serverSays("Attraction", { op = "digit", n = 2, digit = "1" })
 	advance(0.3)
 	check("a terminal read: its digit lands in its slot at once (no notice popping up over the hallway)", slotText(2) == "1" and textOnScreen("Terminal 2 of 4") == nil)
@@ -8577,6 +8675,52 @@ coroutine.wrap(function()
 	advance(0.3)
 	check("seen: the card says who has them (a guard), as the server says", textOnScreen("A GUARD SEES YOU") ~= nil)
 	snapshot("executive-hall")
+	-- Caught (Build 82): the moment for Chronos Defiance, its Robux price on the key, and Leave.
+	do
+		local R = utf8.char(0xE002)
+		serverSays("Attraction", { op = "alarm", revive = true })
+		serverSays("Attraction", { op = "caught", where = "hall", left = 15, prompting = false, held = 0, onSale = true, price = 89, used = 0, usesLeft = 3 })
+		advance(0.5)
+		check("caught: the moment for a revive, over the middle of the screen, saying where it puts you back", textOnScreen("You've been seen") ~= nil and textOnScreen("A revive puts you back at the lift, with every digit you've read.") ~= nil and textOnScreen("3 revives left this run") ~= nil)
+		check("...no shown-out notice while the moment stands", textOnScreen("The invitation is spent") == nil)
+		check("...the Robux price on the revive key (never hidden), and Leave", textOnScreen("Revive  " .. R .. " 89") ~= nil and find(playerGui, function(d)
+			return d:IsA("TextButton") and d.Name == "Key_Leave" and d:FindFirstAncestor("ExecutiveCaught") ~= nil
+		end) ~= nil)
+		local secs = find(playerGui, function(d)
+			return d.Name == "Left" and d:IsA("TextLabel") and d:FindFirstAncestor("ExecutiveCaught") ~= nil
+		end)
+		check("...and the moment's seconds, counting down", secs ~= nil and (secs.Text == "15s" or secs.Text == "14s"), secs and secs.Text)
+		local caughtCard = ExecutiveHud.caughtCard()
+		local vp = workspace.CurrentCamera.ViewportSize
+		local cw = caughtCard and caughtCard.Size.X.Offset or 0
+		check("...a card that fits the screen", caughtCard ~= nil and cw <= vp.X - 24, cw, vp.X)
+		snapshot("executive-caught")
+		press("Revive  " .. R .. " 89")
+		advance(0.4)
+		check("the revive key asks the server (which opens Roblox's purchase window)", sent[#sent].message[1].act == "revive" and sent[#sent].message[1].id == "executive")
+		serverSays("Attraction", { op = "caughtUpdate", where = "hall", left = 60, prompting = true, held = 0, onSale = true, price = 89, used = 0, usesLeft = 3 })
+		advance(0.4)
+		check("while Roblox's window is open: said, and the countdown paused", textOnScreen("The purchase window is open") ~= nil and textOnScreen("Paused") ~= nil)
+		serverSays("Attraction", { op = "revived", where = "hall", composure = 100, held = 0, used = 1, usesLeft = 2 })
+		advance(0.4)
+		check("revived: the card goes, and the screen says you're back in", ExecutiveHud.caughtCard() == nil and textOnScreen("The alert is down, and your digits are kept.") ~= nil)
+		serverSays("Attraction", { op = "caught", where = "office", left = 15, prompting = false, held = 2, onSale = true, price = 89, used = 1, usesLeft = 2 })
+		advance(0.4)
+		check("caught with revives held: Use a revive, no purchase", textOnScreen("Use a revive (2)") ~= nil and textOnScreen("Out of composure") ~= nil and textOnScreen(R .. " 89") == nil)
+		local leaveKey = find(playerGui, function(d)
+			return d:IsA("TextButton") and d.Name == "Key_Leave" and d:FindFirstAncestor("ExecutiveCaught") ~= nil
+		end)
+		if leaveKey then
+			signalOf(leaveKey, "Activated"):Fire()
+		end
+		advance(0.4)
+		check("Leave in the moment asks the server to see you out", sent[#sent].message[1].act == "leaveCaught")
+		serverSays("Attraction", { op = "caughtEnd" })
+		advance(0.4)
+		check("the moment over: the card goes", ExecutiveHud.caughtCard() == nil and find(playerGui, function(d)
+			return d.Name == "ExecutiveCaught"
+		end) == nil)
+	end
 	serverSays("Attraction", { op = "keypad" })
 	advance(0.5)
 	invokeResults.AttractionAsk = { ok = false, why = "That's not the code." }
@@ -8791,16 +8935,20 @@ coroutine.wrap(function()
 		ok = true,
 		now = 0,
 		lots = {
-			{ id = "w2920-pavone", name = "Il Pavone d'Oro", line = "A golden peacock that has never once lowered its tail.", glyph = "🦚", currency = "Gilt", start = 5000, left = 4 * 86400 + 7 * 3600 + 120, high = 10500, by = "Wren", mine = false, minNext = 11100, history = { { name = "Wren", amount = 10500 }, { name = "Ada", amount = 10000 } }, seasonal = false, settled = false },
-			{ id = "w2920-lupo", name = "Il Lupo di Borsa", line = "A wolf in a waistcoat who reads the markets aloud.", glyph = "🐺", currency = "Gems", start = 60, left = 4 * 86400, high = 0, mine = false, minNext = 60, history = {}, seasonal = false, settled = false },
+			{ id = "w2920-pavone", name = "Il Pavone d'Oro", line = "A golden peacock that has never once lowered its tail.", glyph = "🦚", curio = "pavoneDoro", currency = "Gilt", start = 5000, left = 4 * 86400 + 7 * 3600 + 120, high = 10500, by = "Wren", mine = false, minNext = 11100, history = { { name = "Wren", amount = 10500 }, { name = "Ada", amount = 10000 } }, seasonal = false, settled = false },
+			{ id = "w2920-lupo", name = "Il Lupo di Borsa", line = "A wolf in a waistcoat who reads the markets aloud.", glyph = "🐺", curio = "lupoBorsa", currency = "Gems", start = 60, left = 4 * 86400, high = 0, mine = false, minNext = 60, history = {}, seasonal = false, settled = false },
 		},
 	}
 	serverSays("Attraction", { op = "panel", id = "auction" })
 	advance(0.6)
-	check("the rostrum opens the Grand Auction: the week's lots", AuctionPanel.isOpen() and textOnScreen("The Grand Auction") ~= nil and textOnScreen("🦚  Il Pavone d'Oro") ~= nil)
-	check("...the highest bid and by whom, the time left and the least next bid", textOnScreen("Highest: 10,500 Gilt, by Wren") ~= nil and textOnScreen("Closes in 4d 7h  ·  the least bid now is 11,100 Gilt") ~= nil)
+	check("the rostrum opens the Grand Auction: the week's lots", AuctionPanel.isOpen() and textOnScreen("The Grand Auction") ~= nil and textOnScreen("Il Pavone d'Oro") ~= nil and textOnScreen("This week's lots  ·  2") ~= nil)
+	check("(Build 82) each lot on its own card: the piece's medallion on a velvet stage, its lot number and grade", find(playerGui, function(d)
+		return d.Name == "Stage" and d:FindFirstChild("Medallion") ~= nil
+	end) ~= nil and textOnScreen("LOT 1") ~= nil and textOnScreen("LOT 2") ~= nil and textOnScreen("Legendary") ~= nil)
+	check("...the bid that stands, large, and who holds it; the time left", textOnScreen("Current bid") ~= nil and textOnScreen("10,500 Gilt") ~= nil and textOnScreen("Held by Wren") ~= nil and textOnScreen("Closes in 4d 7h") ~= nil)
+	check("...the least next bid on its key", textOnScreen("Bid 11,100 Gilt") ~= nil)
 	check("...the last bids", textOnScreen("Lately: Wren 10,500  ·  Ada 10,000") ~= nil)
-	check("...a lot with no bids opens at its price, in Gems where it's Gems", textOnScreen("No bids yet: it opens at 60 Gems") ~= nil)
+	check("...a lot with no bids opens at its price, in Gems where it's Gems", textOnScreen("Opening bid") ~= nil and textOnScreen("60 Gems") ~= nil and textOnScreen("No bids yet: be the first") ~= nil)
 	check("...that a bid is given back in full if outbid", textOnScreen("given back in full if someone outbids you", true) ~= nil or textOnScreen("One of a kind, this week only. Your bid is taken from your purse when it stands, and given back in full if someone outbids you.") ~= nil)
 	snapshot("auction")
 	invokeResults.AuctionAsk = { ok = false, why = "Someone bid first: the least bid now is 11,700 Gilt." }
@@ -9094,14 +9242,14 @@ coroutine.wrap(function()
 	check("at a podium: the round about to start, and a key to leave it", textOnScreen("2 at the podiums. Answer on your screen: quick and right scores most.") ~= nil and textOnScreen("Leave the podium") ~= nil)
 	serverSays("Attraction", { op = "gala", kind = "trivia", phase = "question", n = 3, of = 7, q = "Which city is famous for its gondolas?", choices = { "Florence", "Venice", "Milan", "Naples" }, left = 12, seated = true })
 	advance(0.4)
-	check("the question, and its four answers", textOnScreen("Which city is famous for its gondolas?") ~= nil and textOnScreen("B   Venice") ~= nil and textOnScreen("D   Naples") ~= nil)
+	check("the question, and its four answers (each with its letter in a disc)", textOnScreen("Which city is famous for its gondolas?") ~= nil and textOnScreen("Venice") ~= nil and textOnScreen("Naples") ~= nil and find(playerGui, function(d) return d.Name == "AnswerB" and d:FindFirstChild("Letter") ~= nil and d.Letter.Text == "B" end) ~= nil)
 	snapshot("gala-question")
 	pressNamed("AnswerB")
 	advance(0.4)
 	check("an answer is asked of the server by its number, never as right", sent[#sent].message[1].act == "answer" and sent[#sent].message[1].n == 2 and sent[#sent].message[1].correct == nil)
 	serverSays("Attraction", { op = "gala", kind = "trivia", phase = "reveal", right = 2, answer = "Venice", n = 3, of = 7, mine = 2, correct = true, score = 287, paid = 12 })
 	advance(0.4)
-	check("the answer told: the right one marked", textOnScreen("✓  B   Venice") ~= nil)
+	check("the answer told: the right one marked RIGHT", find(playerGui, function(d) return d.Name == "AnswerB" and d:FindFirstChild("Verdict") ~= nil and d.Verdict.Text == "RIGHT" end) ~= nil)
 	serverSays("Attraction", { op = "gala", kind = "trivia", phase = "results", standings = { { name = "Ada", userId = 1, score = 1012, right = 7, won = true, place = 1 }, { name = LocalPlayer.DisplayName, userId = LocalPlayer.UserId, score = 287, right = 3, won = false, place = 2 } }, winners = { "Ada" }, mine = { name = LocalPlayer.DisplayName, userId = LocalPlayer.UserId, score = 287, right = 3, won = false, place = 2 } })
 	advance(0.4)
 	check("the results: your place, your points, the winner", textOnScreen("2nd place  ·  287 points, 3 right  ·  Ada wins") ~= nil)
@@ -9345,7 +9493,7 @@ coroutine.wrap(function()
 	signalOf(LocalPlayer, "attr:Streak"):Fire()
 	signalOf(LocalPlayer, "attr:StreakBoost"):Fire()
 	advance(0.5)
-	check("the streak's chip: the days and the Gilt it adds", textOnScreen("9 DAYS IN A ROW") ~= nil and textOnScreen("+30% GILT") ~= nil)
+	check("the streak has no chip on the screen (it crowded it; the streak still counts)", textOnScreen("9 DAYS IN A ROW") == nil and textOnScreen("+30% GILT") == nil)
 	LocalPlayer:SetAttribute("Streak", nil)
 	LocalPlayer:SetAttribute("StreakBoost", nil)
 	signalOf(LocalPlayer, "attr:Streak"):Fire()

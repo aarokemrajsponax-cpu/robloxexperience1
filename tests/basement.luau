@@ -358,6 +358,15 @@ stand(ada, Layout.Obsidian.arrival)
 r = askAs(ada, { op = "go", id = "basement" })
 check("from the Basement Stair, down they go", r.ok == true and Attractions.inside(ada) == "basement" and ada:GetAttribute("Attraction") == "basement", r.why)
 check("they arrive on the start", Plan.checkpointAt(ada.root.CFrame.Position - O) == 0)
+-- (Build 82) Held still on arrival; a screen that never says it's ready is let go at the most.
+do
+	local c = Config.data.Attractions
+	check("held still on arrival", Attractions.held[ada] ~= nil and ada.root.Anchored == true)
+	steps(math.ceil(c.loadIn * 10) + 5)
+	check("...past the few seconds, still held while their screen hasn't said it's ready", Attractions.held[ada] ~= nil)
+	steps(math.ceil((c.loadInMost - c.loadIn) * 10))
+	check("...and let go at the most, ready or not", Attractions.held[ada] == nil and ada.root.Anchored == false and last(ada, "unheld") ~= nil)
+end
 steps(2)
 local hud = last(ada, "basement")
 check("their screen is told the stage, its part and that the clock hasn't started", hud ~= nil and hud.stage == 1 and hud.stageName == "The Cellar Steps" and hud.zone == "The Wine Cellar" and hud.started == nil)
@@ -750,5 +759,102 @@ local tr = last(bo, "treasury")
 check("at the Treasury: the course it was run on, and that course's own best", tr ~= nil and tr.course == "The Gauntlet" and math.abs(tr.coursePb - 222.5) < 1e-6 and Game.page(Attractions.ctx, data(bo)).bests.gauntlet ~= nil and tr.secretsOf == 8)
 local dir = Game.directory(Attractions.ctx, bo)
 check("the Directory's card says which course is up, and the secrets found", dir.course == Plan.Variants[Plan.variantAt(T)].name and dir.secrets == 1 and dir.secretsOf == 8)
+
+---------------------------------------------------------------------------------------------------
+-- Build 82: a hall half as wide again and nearly twice as tall, run-ups that grow with each stage,
+-- and no skipping a stage by dropping onto the platforms ahead
+---------------------------------------------------------------------------------------------------
+do
+	-- Every hop of every run-up: from the checkpoint, platform to platform, to the landing.
+	local hopsOk, grows, longest = true, true, 0
+	local prev = 0
+	for n = 1, Plan.STAGES do
+		local hops = {}
+		for _, e in Plan.Elements do
+			if e.stage == n and e.runUp then
+				hops[e.runUp] = e
+			end
+		end
+		local count = Plan.runUpOf(n)
+		grows = grows and #hops == count + 1 and count >= prev
+		prev = count
+		local from = Plan.Checkpoints[n - 1]
+		local lastTop, lastFar, lastHalfX, lastX = from.at.Y, from.at.Z + from.size.Z / 2, from.size.X / 2, from.at.X
+		for i = 1, #hops do
+			local e = hops[i]
+			local top = e.at.Y + e.size.Y / 2
+			local gapZ = (e.at.Z - e.size.Z / 2) - lastFar
+			local gapX = math.max(0, math.abs(e.at.X - lastX) - (e.size.X / 2 + lastHalfX))
+			local reach = math.sqrt(gapZ * gapZ + gapX * gapX)
+			longest = math.max(longest, reach)
+			if reach > 5 + 1e-6 or top - lastTop > 1 + 1e-6 or gapZ < 1 then
+				hopsOk = false
+			end
+			lastTop, lastFar, lastHalfX, lastX = top, e.at.Z + e.size.Z / 2, e.size.X / 2, e.at.X
+		end
+	end
+	check("every stage opens with a run-up, longer the deeper the stage", grows and Plan.runUpOf(1) == 1 and Plan.runUpOf(16) >= 8)
+	check("...every hop of it makeable: no gap wider than 5 studs, no step up higher than 1", hopsOk, longest)
+	check("the course is over twice as long as it was (757 studs)", Plan.LENGTH > 757 * 2, Plan.LENGTH)
+	local wide = true
+	for _, e in Plan.Elements do
+		if e.kind ~= "pit" and math.abs(e.at.X) + e.size.X / 2 > Plan.HALF_WIDTH - 1 then
+			wide = false
+		end
+	end
+	check("the hall is half as wide again (and everything stands inside its walls)", Plan.HALF_WIDTH >= 27 and wide and Plan.HEADROOM >= 30)
+	local walls = 0
+	for _, d in workspace.Attractions:GetDescendants() do
+		if d.Name == "Wall" and d:IsA("BasePart") and math.abs(math.abs(d.CFrame.Position.X - O.X) - Plan.HALF_WIDTH) < 0.01 then
+			walls += 1
+		end
+	end
+	check("...its walls built where the plan says, either side of every stage", walls == Plan.STAGES * 2, walls)
+	-- Dropping ahead: on stage 3's way (checkpoint 2), standing on a stage 5 platform far below.
+	local run = Game.runs[bo]
+	run.done = false
+	run.checkpoint = 2
+	run.grace = 0
+	local ahead = nil
+	for _, e in Plan.Elements do
+		if e.stage > 3 and e.kind == "pad" and not e.variant and not ahead and e.at.Y + e.size.Y / 2 + 3 < Plan.Floors[3] - Plan.FALL_BELOW then
+			ahead = e
+		end
+	end
+	local fallsWas2 = run.falls
+	standIn(bo, ahead.at + Vector3.new(0, ahead.size.Y / 2, 0))
+	steps(2)
+	check("dropping onto a later stage's platforms well below: a fall, back to the checkpoint", ahead ~= nil and run.falls == fallsWas2 + 1 and last(bo, "fell").checkpoint == 2 and run.checkpoint == 2)
+	-- A later stage's pit (the old way through the floor): a fall too.
+	run.grace = 0
+	steps(20)
+	local fallsWas3 = run.falls
+	local pit9 = Plan.Pits[9]
+	standIn(bo, pit9.at + Vector3.new(0, pit9.size.Y / 2, 0))
+	steps(2)
+	check("...and so is any pit, whichever stage's", run.falls == fallsWas3 + 1)
+	-- On their own stage, at its lowest, nothing happens.
+	steps(20)
+	local fallsWas4 = run.falls
+	local low = nil
+	for _, e in Plan.Elements do
+		if e.stage == 3 and e.kind == "pad" and not e.variant and (not low or e.at.Y < low.at.Y) then
+			low = e
+		end
+	end
+	standIn(bo, low.at + Vector3.new(0, low.size.Y / 2, 0))
+	steps(4)
+	check("...but their own stage's lowest platform is no fall", run.falls == fallsWas4)
+	-- Times on the old, shorter course: kept under their own names; the new course starts afresh.
+	local pg = Game.page(Attractions.ctx, data(bo))
+	pg.course = nil
+	pg.best = 300
+	pg.bests = { house = 300 }
+	pg = Game.page(Attractions.ctx, data(bo))
+	check("the old course's times are kept as they were (bestV1), and the new course's bests start afresh", pg.bestV1 == 300 and pg.bestsV1.house == 300 and pg.best == nil and next(pg.bests) == nil and pg.course == 2)
+	pg.best = 400
+	pg = Game.page(Attractions.ctx, data(bo))
+	check("...once: a best on the new course stays", pg.best == 400 and pg.bestV1 == 300)
+end
 
 H.finish()

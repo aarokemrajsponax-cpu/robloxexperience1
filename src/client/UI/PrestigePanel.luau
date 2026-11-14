@@ -191,7 +191,7 @@ function PrestigePanel.open()
 			if not r then
 				Toast.show("Not just now", "The house couldn't be reached. Try again in a moment.", 3)
 			elseif r.ok ~= true then
-				Toast.show("Not yet", tostring(r.why or "Not just now."), 3)
+				Toast.refused(r)
 			else
 				Theme.haptic()
 			end

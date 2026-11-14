@@ -30,6 +30,7 @@ local IslandPanel = require(script.Parent.IslandPanel)
 local IslandView = require(script.Parent.Parent.World.IslandView)
 local LuxeHud = require(script.Parent.LuxeHud)
 local LuxePanel = require(script.Parent.LuxePanel)
+local LoadIn = require(script.Parent.LoadIn)
 local Root = require(script.Parent.Root)
 local Toast = require(script.Parent.Toast)
 
@@ -159,6 +160,12 @@ function Attraction.start()
 	GalaView.photo = function()
 		local PhotoMode = require(script.Parent.PhotoMode)
 		PhotoMode.enter()
+		if not PhotoMode.isActive() then
+			-- (Photo mode couldn't open: the camera framed on the set comes straight back.)
+			pcall(function()
+				(require(script.Parent.Parent.Camera) :: any).follow()
+			end)
+		end
 		if PhotoMode.isActive() then
 			GalaPanel.poses()
 			task.spawn(function()
@@ -193,13 +200,30 @@ function Attraction.start()
 					end
 				end)
 			elseif def then
-				if first then
-					FirstVisit.attraction(def.id)
+				local function greet()
+					if first then
+						FirstVisit.attraction(def.id)
+					else
+						Toast.show(def.name, def.line, 6)
+					end
+				end
+				-- (Build 82) Held still a few seconds while the place is made ready: the card says
+				-- so, and the greeting follows once they can move.
+				if tonumber(m.hold) then
+					LoadIn.start(def.id, tonumber(m.hold) :: number, function()
+						-- (Still there once they can move.)
+						if player:GetAttribute(AttractionList.ATTRIBUTE) == def.id then
+							greet()
+						end
+					end)
 				else
-					Toast.show(def.name, def.line, 6)
+					greet()
 				end
 			end
+		elseif op == "unheld" then
+			LoadIn.finish()
 		elseif op == "left" then
+			LoadIn.finish(true)
 			FirstVisit.hide()
 			follow()
 			if m.id == "island" and m.why == "home" then

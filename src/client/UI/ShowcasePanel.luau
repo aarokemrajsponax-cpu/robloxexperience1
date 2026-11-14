@@ -1,7 +1,7 @@
 --!strict
--- The Vault's display and your Suite (the console under the Vault's four domes, the Curios card,
+-- The Vault's display and your Suite (the console under the Vault's eight domes, the Curios card,
 -- the Suite's bell). Five tabs:
---   Featured    the four domes: tap one of your curios to set it under the next dome, tap a dome
+--   Featured    the eight domes: tap one of your curios to set it under the next dome, tap a dome
 --               to empty it (the server keeps only curios you really hold)
 --   Collection  how complete your collection is (each family, each rarity, how many to go), and
 --               every curio you hold, arranged as you like: its rarity, its words, how it's had,
@@ -143,14 +143,22 @@ end
 
 local function featured(body: GuiObject)
 	local current: { string } = if type(view.featured) == "table" then table.clone(view.featured) else {}
-	Theme.text(body, "Four domes in the Vault, by the Archivist's desk: everyone who looks round your Vault sees what's under them. Tap one of your curios to set it under the next dome; tap a dome to empty it.", 12, "body", { LayoutOrder = 1, TextColor3 = C.smoke, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left })
+	Theme.text(body, string.format("%d domes in the Vault, two rows of four on the console by the vault door: everyone who looks round your Vault sees what's under them. Tap one of your curios to set it under the next dome; tap a dome to empty it.", Rules.FEATURED), 12, "body", { LayoutOrder = 1, TextColor3 = C.smoke, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left })
 	local domes = Instance.new("Frame")
 	domes.Name = "Domes"
 	domes.BackgroundTransparency = 1
-	domes.Size = UDim2.new(1, 0, 0, 118)
+	local rows = math.ceil(Rules.FEATURED / 4)
+	domes.Size = UDim2.new(1, 0, 0, rows * 112 + (rows - 1) * 10 + 6)
 	domes.LayoutOrder = 2
 	domes.Parent = body
-	Theme.list(domes, 12, true).HorizontalAlignment = Enum.HorizontalAlignment.Center
+	-- (Four to a row, like the console itself.)
+	local domeGrid = Instance.new("UIGridLayout")
+	domeGrid.CellSize = UDim2.fromOffset(96, 112)
+	domeGrid.CellPadding = UDim2.fromOffset(12, 10)
+	domeGrid.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	domeGrid.SortOrder = Enum.SortOrder.LayoutOrder
+	domeGrid.FillDirectionMaxCells = 4
+	domeGrid.Parent = domes
 	for i = 1, Rules.FEATURED do
 		local id = current[i]
 		local b = Instance.new("TextButton")
@@ -225,7 +233,7 @@ local function featured(body: GuiObject)
 				return
 			end
 			if #current >= Rules.FEATURED then
-				Toast.show("The Vault's display", "All four domes are full: tap a dome to empty it first.", 3)
+				Toast.show("The Vault's display", string.format("All %d domes are full: tap a dome to empty it first.", Rules.FEATURED), 3)
 				return
 			end
 			local list = table.clone(current)
@@ -559,7 +567,7 @@ function ShowcasePanel.isOpen(): boolean
 	return Root.isOpen(NAME)
 end
 
--- Another guest's Vault, as they allow it: their four domes and how complete their collection is.
+-- Another guest's Vault, as they allow it: their domes and how complete their collection is.
 function ShowcasePanel.card(card: { [string]: any })
 	local CARD = "ShowcaseVisit"
 	if Root.isOpen(CARD) then
@@ -591,7 +599,7 @@ function ShowcasePanel.card(card: { [string]: any })
 			Theme.text(cell, (Curios.byId[tostring(id)] :: any).name, 11, "body", { AutomaticSize = Enum.AutomaticSize.None, Size = UDim2.new(1, 0, 0, 34), Position = UDim2.fromOffset(0, 62), TextXAlignment = Enum.TextXAlignment.Center, TextWrapped = true })
 		end
 	end
-	Theme.text(content, if type(card.featured) == "table" and #card.featured > 0 then "Under their four domes." else "Their rarest, as they haven't chosen any to feature yet.", 12, "body", { LayoutOrder = 5, TextColor3 = C.smoke })
+	Theme.text(content, if type(card.featured) == "table" and #card.featured > 0 then "Under their domes." else "Their rarest, as they haven't chosen any to feature yet.", 12, "body", { LayoutOrder = 5, TextColor3 = C.smoke })
 	local keys = Instance.new("Frame")
 	keys.BackgroundTransparency = 1
 	keys.Size = UDim2.new(1, 0, 0, 44)
