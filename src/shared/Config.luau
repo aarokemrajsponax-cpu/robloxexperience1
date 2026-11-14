@@ -1743,6 +1743,17 @@ local defaults = {
 		Doorman = { shirt = 0, pants = 0, accessories = "" },
 		Pianist = { shirt = 0, pants = 0, accessories = "" },
 	},
+	-- AFK mode (client AfkMode, server Afk): after this many seconds without a touch, the AFK card
+	-- shows what the brainrots are earning; every `rejoinMinutes` of it, the guest is rejoined to
+	-- this same server (a fresh one if it's full) so Roblox's 20-minute idle kick never comes.
+	-- The pause-menu note ("You earn Gilt offline with brainrots") shows at most every
+	-- `menuNoteMinutes`.
+	Afk = {
+		after = 120,
+		rejoin = true,
+		rejoinMinutes = 18,
+		menuNoteMinutes = 15,
+	},
 }
 
 Config.data = defaults

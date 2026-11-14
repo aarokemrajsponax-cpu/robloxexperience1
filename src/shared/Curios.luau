@@ -5,8 +5,10 @@
 -- from a big glyph on a coloured medallion with an accent beside it.
 --
 -- How they're had, all plain on each card:
---   * found at the tables (Curios.findChance per banked run; rarer ones less often). Earned by
---     playing, never bought: nothing random is ever sold.
+--   * found at the tables (Curios.findChance per banked run; rarer ones less often), free.
+--   * brainrots also come in the Luxe Lucky Boxes (shared/LuckyBoxes: paid random items, every
+--     odd shown before buying, only those also found at the tables, never where Roblox's policy
+--     for the guest restricts them).
 --   * from events (Gilt Rain, the Brainrot Parade...) and achievements, named on the card.
 --   * from the Cabinet for Gems, at a fixed price, the exact curio you choose.
 -- Curios change no score. A found curio also pays a little Gilt (Curios.RarityGilt), so the meme

@@ -125,6 +125,7 @@ function Purchases.start()
 	Bar.start()
 	require(script.Parent.Curios).start() -- Gem packs (and the Cabinet)
 	require(script.Parent.Brainrots).start() -- the brainrot squad: its jar, its walker, its two products
+	require(script.Parent.LuckyBoxes).start() -- the Luxe Lucky Boxes: odds shown, policy-gated
 	require(script.Spectacles).start() -- Suite spectacles
 	-- A Meme Takeover bought and played: the brainrot squad's Meme Frenzy (double, a quarter hour).
 	require(script.Spectacles).played = function(player: Player, key: string)

@@ -102,7 +102,9 @@ Voice.Concierge = {
 		{ id = "trade", q = "How do I trade?", a = "At the Exchange's stands in the Grand Ballroom, or the Trade key on a guest's card: Gilt, Gems, brainrots and curios. You both see every offer, and nothing changes hands until you both confirm the very same trade." },
 		{ id = "boards", q = "Where are the boards?", a = "Tap your Fortune, under your Gilt: the Wealthiest in this house, this week and of all time. The Basement's best times are at the lectern on the Basement Stair." },
 		{ id = "auction", q = "What is the Grand Auction?", a = "In the Library: the week's rare lots, bid for in Gilt or Gems by guests in every server at once. A bid is held from your purse while it stands; outbid, it comes straight back. The highest bid when the week closes wins, and the piece is delivered to you wherever you are." },
-		{ id = "brainrots", q = "What are brainrots?", a = "The meme set of curios, each a character of its own. Put up to three in your squad (three more with the Penthouse): they fill a tip jar with Gilt every hour, even while you're away, and the one you choose walks beside you. More of the same one gives it stars." },
+		{ id = "brainrots", q = "What are brainrots?", a = "The meme set of curios, each a character of its own. Put up to three in your squad (three more with the Penthouse): they fill a tip jar with Gilt every hour, and the one you choose walks beside you. Out of the game they keep earning (AFK mode): a fifth as fast, for up to 12 hours, so there's Gilt waiting when you come back. More of the same one gives it stars." },
+		{ id = "afk", q = "Do I earn while I'm away?", a = "Yes, with brainrots. Put them in your squad: in the house they fill their tip jar every hour, resting or not. Out of the game they keep earning a fifth as fast, for up to 12 hours. Come back and collect it from Welcome back." },
+		{ id = "luckyBoxes", q = "What are Luxe Lucky Boxes?", a = "Three gift boxes on the dais by the Foyer's front wall. Each opens to one brainrot: Rare or better, Epic or better, or Legendary or better. The odds of every brainrot are shown before you buy and add up to 100%, and a counter shows how many opens until a rarer one is certain. Everything in them is also found free at the tables. (Only where Roblox allows paid random items.)" },
 		{ id = "hotbar", q = "What's in my hotbar?", a = "What you carry: the stun pistol once the Quartermaster gives it you (it fires only in the Executive Suite's fight), a decoy you've packed, the brainrots in your squad and the curios you've starred. Hold a brainrot or a curio and click to flex it for everyone near you." },
 		{ id = "suite", q = "How do I make my Suite mine?", a = "Ring the bell inside your Suite to furnish it, piece by piece, where you like. Its cases show off your finest curios, and friends can visit from the Suites list." },
 		{ id = "looks", q = "What are looks and trails for?", a = "Style, never score: looks, trails, nameplates, lamps, chimes and victory flourishes from the Boutique. Wear them at the Wardrobe. Your flourish even colours your flexes." },
@@ -349,15 +351,30 @@ Voice.WelcomeBack = {
 	go = "Let's go",
 }
 
+-- AFK mode (client AfkMode): the card while a guest rests, and the note in Roblox's menu.
+Voice.Afk = {
+	kicker = "AFK mode  ·  your brainrots are earning",
+	rate = "%s Gilt an hour, into their tip jar",
+	noSquad = "No brainrots earning yet",
+	noSquadLine = "Put a brainrot in your squad (Curios, then Brainrots) and it earns Gilt while you rest.",
+	away = "Out of the game they keep earning too: %d%% of the rate, for up to %d hours.",
+	rested = "Resting for %s",
+	back = "Move, or press any key, to come back.",
+	rejoin = "To keep your place, the house rejoins you to this server every %d minutes.",
+	note = "YOU EARN GILT OFFLINE WITH BRAINROTS",
+	noteLine = "Your squad keeps earning while you're away: %s Gilt an hour, for up to %d hours. Come back tomorrow and collect it.",
+	noteNone = "Put a brainrot in your squad and it keeps earning Gilt while you're away.",
+	welcome = "%s of it while you were away (AFK mode, %s).",
+}
+
 -- What's new in this build, told once to each returning guest (Welcome back). Only shown while
 -- `build` is the build that's playing, so old news never shows as new.
 Voice.WhatsNew = {
-	build = 82,
+	build = 83,
 	lines = {
-		"The Executive Suite: wider halls, armoured security, and a revive when you're caught, so your run can go on.",
-		"Steal a Luxe: security sleeps until you lift something. Bank every piece of a wing for its set reward, and climb eight heist ranks.",
-		"The Maison Basement is more than twice as long, in a far bigger hall, and no stage can be skipped by dropping ahead.",
-		"Every brainrot is in 3D now, beside you and on Steal a Luxe's plinths. The Vault shows eight of your curios.",
+		"Luxe Lucky Boxes, on the dais by the Foyer's front wall: three gift boxes, a brainrot in every one. The odds of each are shown before you buy, with a counter to a guaranteed rarer one.",
+		"AFK mode: your brainrots keep earning while you're away from the game, a fifth as fast, for up to 12 hours. Come back and collect it.",
+		"Resting in the house, the AFK card shows your jar filling, and the house keeps your place for you.",
 	},
 }
 
@@ -384,7 +401,8 @@ Voice.Hints = {
 		{ id = "holiday", line = "A holiday game is on. Its key is at the foot of the left dock.", every = 900 },
 		{ id = "shop", line = "You have Gilt to spend: Shop, top right, has table styles, auras and more.", after = 240, every = 1200 },
 		{ id = "suite", line = "Your Suite is yours to decorate. The Suites key on the left takes you there.", after = 420 },
-		{ id = "collection", line = "Brainrots you find earn Gilt every hour, even while you're away. See them in Collection.", after = 600 },
+		{ id = "collection", line = "Brainrots you find earn Gilt every hour. See them in Collection, and put your best in your squad.", after = 600 },
+		{ id = "afk", line = "You earn Gilt offline with brainrots: your squad keeps filling its tip jar while you're away. Come back tomorrow and collect it.", after = 1200, every = 2400 },
 		{ id = "tonight", line = "Tonight's table: one try a day, the same pieces for every guest. The card at the top of your screen seats you at it.", after = 900 },
 	} :: { Hint },
 }
@@ -470,7 +488,8 @@ Voice.Guide = {
 			{ place = "grandPrix", title = "The Grand Prix", line = "Ultra-luxury cars on the street outside.", how = "Walk up to any car and press E to drive (or F to ride along with a friend). Every 10 minutes a race opens: press Race, line up on the grid, wait for the five lights, then three laps. Reset puts a stuck car right.", win = "Gilt for the top three, the most for the winner." },
 			{ place = "ballroom", title = "The Ballroom", line = "Lights Out: party games on the dance floor.", how = "When it opens, press Join before the countdown ends. Then round after round: the Chairs (when the music stops, stand on a gold seat), Lights Out (be in a circle of light when it goes dark) and, at the end, the Spinner (shove the other guest out of the ring). Out of a round, your lamp goes out.", win = "The last lamp still lit wins the whole pot of Gilt." },
 			{ place = "library", title = "The Library", line = "Tête-à-Tête: one on one.", how = "Sit at a Library table to face another player. You both get exactly the same pieces; three in a row sends a parcel of lookalikes across to them.", win = "First to win three hands wins the match." },
-			{ title = "Curios and brainrots", line = "Collectibles found as you play.", how = "They turn up at the tables. Open Collection (left of the screen) to see them, and Trade to swap with friends safely.", win = "Brainrots earn you Gilt every hour." },
+			{ title = "Curios and brainrots", line = "Collectibles found as you play.", how = "They turn up at the tables. Open Collection (left of the screen) to see them, and Trade to swap with friends safely.", win = "Brainrots earn you Gilt every hour, and a little while you're offline too (AFK mode)." },
+			{ title = "Luxe Lucky Boxes", line = "Three gift boxes on the dais by the Foyer's front wall.", how = "Walk up and press E. Every box gives one brainrot; the odds of each are shown before you buy, with a counter to a guaranteed rarer one. Only where Roblox allows paid random items.", win = "A brainrot every time, Rare or better." },
 			{ title = "Holiday games", line = "In their season, the house throws a party.", how = "Trick or Treat on Hallows Lane, the Turkey Round-Up, Santa's Sleigh, the Great Egg Hunt and the Luck of the Irish.", win = "Gifts, Gilt and the holiday's own curios." },
 			{ title = "Events", line = "Golden Hour and more.", how = "Watch the strip at the top of the screen: while an event is on, it pays extra.", win = "More Gilt while they last." },
 		} :: { GuideItem },

@@ -7,12 +7,16 @@
 -- attribute "PaidTradingAllowed", so their trade screen shows only what they may offer.
 -- And one more: may this guest share captures of their play (IsContentSharingAllowed)? Published as
 -- "ContentSharingAllowed"; until Roblox says yes, every Share and Capture key stays hidden.
+-- And may this guest buy paid random items (ArePaidRandomItemsRestricted)? The Luxe Lucky Boxes
+-- are only sold once Roblox has said they aren't restricted: published as "PaidRandomAllowed",
+-- false until then (and for good if it can't be asked).
 
 local Players = game:GetService("Players")
 
 local Policy = {}
 
 local known: { [Player]: boolean } = {}
+local randomOk: { [Player]: boolean } = {}
 
 -- Asks Roblox. (Replaced in tests.)
 Policy.lookup = function(player: Player): any
@@ -24,6 +28,9 @@ function Policy.refresh(player: Player): boolean?
 	local ok, info = pcall(Policy.lookup, player)
 	if ok and type(info) == "table" and player.Parent then
 		player:SetAttribute("ContentSharingAllowed", info.IsContentSharingAllowed == true)
+		-- Paid random items: allowed only when Roblox says, in so many words, they aren't restricted.
+		randomOk[player] = info.ArePaidRandomItemsRestricted == false
+		player:SetAttribute("PaidRandomAllowed", randomOk[player])
 	end
 	if ok and type(info) == "table" and type(info.IsPaidItemTradingAllowed) == "boolean" then
 		known[player] = info.IsPaidItemTradingAllowed
@@ -48,8 +55,15 @@ function Policy.paidTradingAllowed(player: Player): boolean
 	return known[player] == true
 end
 
+-- Whether this guest may buy paid random items (the Luxe Lucky Boxes): false until Roblox has
+-- said they aren't restricted. Never yields.
+function Policy.paidRandomAllowed(player: Player): boolean
+	return randomOk[player] == true
+end
+
 function Policy.forget(player: Player)
 	known[player] = nil
+	randomOk[player] = nil
 end
 
 function Policy.start()

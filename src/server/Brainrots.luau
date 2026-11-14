@@ -1,7 +1,12 @@
 --!strict
 -- The brainrots on the server (shared/Brainrots has the numbers): each guest's squad, the one
 -- walking beside them, the best mutation of each, and the tip jar the squad fills with Gilt every
--- hour, even while they're away. Kept in the guest's curio page (Curios.bag(data).squad).
+-- hour. Kept in the guest's curio page (Curios.bag(data).squad).
+--
+-- AFK mode: out of the game, the squad earns a fifth of its rate for up to twelve hours
+-- (shared Brainrots.offline). When they were last here is saved once a minute (`seen`); the first
+-- time the jar is settled in a session, the time from then to now is paid at the offline share,
+-- and told to their screen as they arrive.
 --
 -- Everything is decided here: a guest's screen names a brainrot (its id) or a product (its key)
 -- and never sends an amount, a rate, a star or a mutation. The jar is worked out from the saved
@@ -38,7 +43,13 @@ export type Squad = {
 	full: boolean?, -- told the jar is full (so it's said once)
 	boostUntil: number?, -- a Meme Frenzy, until then
 	boostMult: number?,
+	seen: number?, -- the last minute the guest was known to be in the game
 }
+
+-- The profiles settled in this server since they arrived (their offline time is paid once), and
+-- what that paid ({ gilt, seconds }).
+local live: { [any]: boolean } = setmetatable({}, { __mode = "k" }) :: any
+local awayOf: { [any]: { gilt: number, seconds: number } } = setmetatable({}, { __mode = "k" }) :: any
 
 local curioEvent = Remotes.event("Curio")
 
@@ -101,14 +112,38 @@ end
 function Brainrots.settle(data: Profiles.Data)
 	local s = squadOf(data)
 	local now = Brainrots.now()
-	s.held = BrainrotList.jar(s.held, Brainrots.rate(data), s.at, now, s.boostUntil, s.boostMult)
+	local rate = Brainrots.rate(data)
+	if not live[data] then
+		-- The first settle this session: in the game (full rate) until last seen, then away.
+		live[data] = true
+		local seen = if type(s.seen) == "number" then s.seen else s.at
+		local from = math.clamp(seen, s.at, math.max(s.at, now))
+		s.held = BrainrotList.jar(s.held, rate, s.at, from, s.boostUntil, s.boostMult)
+		local before = s.held
+		s.held = BrainrotList.offline(s.held, rate, now - from)
+		awayOf[data] = { gilt = s.held - before, seconds = math.max(0, now - from) }
+	else
+		s.held = BrainrotList.jar(s.held, rate, s.at, now, s.boostUntil, s.boostMult)
+	end
 	s.at = now
+	s.seen = now
 	if s.boostUntil and s.boostUntil <= now then
 		s.boostUntil = nil
 		s.boostMult = nil
 	end
 end
 
+
+-- What AFK mode paid as this guest arrived ({ gilt, seconds }), or nil.
+function Brainrots.away(data: Profiles.Data): { gilt: number, seconds: number }?
+	return awayOf[data]
+end
+
+-- Forgets that a profile was settled this session (a test's way to leave and come back).
+function Brainrots.forget(data: Profiles.Data)
+	live[data] = nil
+	awayOf[data] = nil
+end
 
 -- The one walking beside them, on their character for every screen to draw.
 function Brainrots.dress(player: Player, data: Profiles.Data)
@@ -197,6 +232,19 @@ function Brainrots.mutate(data: Profiles.Data, id: string, x: number): string?
 	end
 	local m = BrainrotList.roll(x)
 	if not m then
+		return nil
+	end
+	local s = squadOf(data)
+	if BrainrotList.better(m, s.mut[id]) then
+		Brainrots.settle(data)
+		s.mut[id] = m
+	end
+	return m
+end
+
+-- A mutation given outright (a Lucky Box's): kept if it's better than the one held.
+function Brainrots.giveMutation(data: Profiles.Data, id: string, m: string?): string?
+	if not m or not BrainrotList.is(id) or not BrainrotList.Mutations[m] then
 		return nil
 	end
 	local s = squadOf(data)
@@ -353,8 +401,17 @@ function Brainrots.start()
 			Brainrots.settle(data)
 			Brainrots.dress(player, data)
 			local s = squadOf(data)
+			local away = Brainrots.away(data)
+			local rate = Brainrots.rate(data)
 			if #s.ids > 0 and s.held >= 1 then
-				curioEvent:FireClient(player, { op = "away", gilt = math.floor(s.held), rate = Brainrots.rate(data) })
+				curioEvent:FireClient(player, {
+					op = "away",
+					gilt = math.floor(s.held), -- in the jar now
+					offline = if away then math.floor(away.gilt) else 0, -- of it, earned in AFK mode
+					seconds = if away then away.seconds else 0,
+					rate = rate,
+					offlineRate = BrainrotList.offlineRate(rate),
+				})
 			end
 		end)
 	end
@@ -371,6 +428,10 @@ function Brainrots.start()
 				if data then
 					local s = squadOf(data)
 					local rate = Brainrots.rate(data)
+					-- Still here: the time until now was in the game (paid in full when settled).
+					if live[data] then
+						s.seen = Brainrots.now()
+					end
 					if rate > 0 and not s.full and BrainrotList.jar(s.held, rate, s.at, Brainrots.now(), s.boostUntil, s.boostMult) >= rate * BrainrotList.JAR_HOURS then
 						s.full = true
 						curioEvent:FireClient(player, { op = "jarFull", gilt = math.floor(rate * BrainrotList.JAR_HOURS) })

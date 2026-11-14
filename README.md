@@ -377,6 +377,43 @@ a Nightly attempt or a Mythic's odds.
 - **The launch kit**: page text, icon, thumbnails and the gameplay video's shot list are in
   [`LAUNCH.md`](LAUNCH.md).
 
+## Build 83 — Luxe Lucky Boxes and AFK mode
+
+- **Luxe Lucky Boxes** (`shared/LuckyBoxes`, `server/LuckyBoxes`, `World/LuckyShowroom`,
+  `UI/LuckyBoxPanel`). A showroom on a gold-lit dais by the Foyer's front wall: the Gilded, the
+  Noir (raised in the middle) and the Velvet box, ribboned, glowing and turning on their
+  pedestals. Each opens to one brainrot: Rare or better (79 R$), Epic or better (199 R$),
+  Legendary or better (449 R$). The panel shows, before the key: every brainrot's chance (adding
+  up to 100%, no empty result), how many of each you hold, the Gold, Diamond and Rainbow odds,
+  and the guarantee counter (Gilded: a Legendary or better within 20 opens; Velvet: a Mythic
+  within 15; Noir: a Mythic within 4). Only brainrots also found free at the tables are in the
+  boxes (no Secrets, no auction or attraction ones). The roll is the server's, on the receipt
+  (idempotent, rolled back and redelivered if it fails). The reveal glows in the colour of the
+  rarity that really came from the first moment, then opens to the house's own find reveal.
+  The Cabinet still sells the exact curio you choose, for a sure thing.
+- **Paid random items and Roblox's policy** (`server/Policy`): `ArePaidRandomItemsRestricted` is
+  read for every guest and published as `PaidRandomAllowed`. Until Roblox says they aren't
+  restricted, that guest sees no showroom prompt, and `Store.eligibility` refuses the purchase.
+  Creator Hub's questionnaire must now answer **Paid random items: yes** (see `LAUNCH.md` §5).
+- **To sell them**, create three developer products with these exact names (prices are yours):
+  `Luxe Lucky Box: Gilded`, `Luxe Lucky Box: Velvet`, `Luxe Lucky Box: Noir`. Until they exist
+  the panel says "Not on sale yet" and nothing can be bought.
+- **AFK mode.** Out of the game, a guest's brainrots keep earning at a fifth of their rate, for up
+  to 12 hours (`shared/Brainrots.offline`); in the game the squad still earns its full rate,
+  resting or not. When they were last in the game is saved once a minute, so the first settle of
+  a visit pays the time since at the AFK share. Welcome back says how much of the jar was earned
+  while away, and for how long.
+- **The AFK card** (`UI/AfkMode`): idle two minutes, the screen shows the jar filling, Gilt an
+  hour, how long you've rested and how to come back. Every 18 minutes of it, the house rejoins the
+  guest to the same server (`server/Afk`, `TeleportAsync` with that server's id; any server if
+  it's full), so Roblox's 20-minute idle kick never comes, and the card comes straight back.
+  Config `Afk` turns the rejoin off or changes its timing.
+- **The pause-menu note.** Opening Roblox's menu shows "YOU EARN GILT OFFLINE WITH BRAINROTS" at
+  the top of the screen with what the squad earns away, at most every 15 minutes. (Roblox draws
+  its menu over the game, so the note is dimmed behind it and clear the moment the menu closes.)
+- **How to play and the Concierge** explain AFK mode and the boxes; the Concierge's tips say it now
+  and then (every 40 minutes at most).
+
 ## Build 82 — The big fix list: revives, the longer Basement, 3D brainrots
 
 - **The Home Screen and the keys.** The Home Screen is laid out from the real screen size (it no

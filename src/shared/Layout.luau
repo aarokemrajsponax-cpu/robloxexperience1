@@ -47,6 +47,9 @@ Layout.Foyer = {
 	spawn = CFrame.lookAt(Vector3.new(9, 6, -1), Vector3.new(9, 6, 4.2)),
 	-- The open floor west of the stair (the Easter eggs are hidden round it).
 	hall = Vector3.new(-20, 6, 12),
+	-- The Luxe Lucky Box showroom: a dais west of the runner by the front wall, facing across the
+	-- Foyer to the spawn (clear of the Salon's door and its sign).
+	luckyBoxes = CFrame.lookAt(Vector3.new(-11, 3, -2.8), Vector3.new(9, 3, -1.5)),
 	lectern = CFrame.lookAt(Vector3.new(9, 3, 1.5), Vector3.new(9, 3, -10)),
 	conciergeHome = CFrame.lookAt(Vector3.new(9, 3, 4.2), Vector3.new(9, 3, -10)),
 	chandelier = Vector3.new(0, 27, 16),

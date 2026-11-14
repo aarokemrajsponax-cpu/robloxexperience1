@@ -1870,6 +1870,229 @@ do
 end
 
 ---------------------------------------------------------------------------------------------------
+-- M3. The Luxe Lucky Boxes (paid random items: odds shown, policy-gated, a guarantee) and AFK mode
+---------------------------------------------------------------------------------------------------
+do
+	local LB = module("ReplicatedStorage", "Shared", "LuckyBoxes")
+	local LBS = module("ServerScriptService", "Server", "LuckyBoxes")
+	local Policy = module("ServerScriptService", "Server", "Policy")
+	local Afk = module("ServerScriptService", "Server", "Afk")
+	Afk.start()
+	local CuriosS = module("ServerScriptService", "Server", "Curios")
+	local BrainrotsS = module("ServerScriptService", "Server", "Brainrots")
+	local BrainrotList = module("ReplicatedStorage", "Shared", "Brainrots")
+	local CurioList = module("ReplicatedStorage", "Shared", "Curios")
+	local curioAsk = Remotes.funcs.CurioAsk.OnServerInvoke
+	local function curio(player, request)
+		advance(0.5)
+		local r
+		run(function()
+			r = curioAsk(player, request)
+		end)
+		return r
+	end
+
+	-- The odds, as shown: every box adds up to 100%, every entry a brainrot found free at the tables.
+	for _, id in LB.Order do
+		local total, ok = 0, true
+		for _, o in LB.odds(id) do
+			total += o.chance
+			local c = CurioList.byId[o.id]
+			ok = ok and o.chance > 0 and c ~= nil and c.family == "meme" and c.source == "tables" and c.rarity == o.rarity and o.rarity ~= "Secret"
+		end
+		local tiers = 0
+		for _, t in LB.Boxes[id].odds do
+			tiers += t.chance
+		end
+		check(id .. ": the odds of every brainrot add up to 100%, no empty result", math.abs(total - 100) < 1e-9 and math.abs(tiers - 100) < 1e-9, total)
+		check(id .. ": only brainrots also found free at the tables, never a Secret", ok)
+		local m = LB.Boxes[id].mut
+		check(id .. ": its mutation odds and plain add up to 1", math.abs(m.gold + m.diamond + m.rainbow + LB.plain(id) - 1) < 1e-9)
+		check(id .. ": each chance is shown exactly", (function()
+			for _, o in LB.odds(id) do
+				if math.abs(tonumber((LB.percent(o.chance):gsub("%%", ""))) - o.chance) > 1e-9 then
+					return false
+				end
+			end
+			return true
+		end)())
+	end
+	check("rarer the dearer: each box's worst is better than the last's", LB.rank(LB.Boxes.velvet.odds[1].rarity) > LB.rank(LB.Boxes.gilded.odds[1].rarity) and LB.rank(LB.Boxes.noir.odds[1].rarity) > LB.rank(LB.Boxes.velvet.odds[1].rarity) and LB.Boxes.noir.price > LB.Boxes.velvet.price and LB.Boxes.velvet.price > LB.Boxes.gilded.price)
+	check("a chance is shown as itself", LB.percent(15.5) == "15.5%" and LB.percent(10) == "10%" and LB.percent(0.5) == "0.5%" and LB.percent(7.5) == "7.5%")
+	local _, low = LB.pick("gilded", 0, 0)
+	local _, high = LB.pick("gilded", 0.99999, 0.99999)
+	local _, forced = LB.pick("gilded", 0, 0, true)
+	check("the pick follows the odds, ends included", low == "Rare" and high == "Mythic")
+	check("a guarantee picks only its rarity or better", forced == "Legendary")
+	check("the rolls land as the odds say (20,000 opens)", (function()
+		local state = 83
+		local rng = { NextNumber = function()
+			state = (state * 1103515245 + 12345) % 2147483648
+			return state / 2147483648
+		end }
+		local n = 20000
+		local got = {}
+		for _ = 1, n do
+			local _, r = LB.pick("velvet", rng.NextNumber(), rng.NextNumber())
+			got[r] = (got[r] or 0) + 1
+		end
+		for _, t in LB.Boxes.velvet.odds do
+			if math.abs((got[t.rarity] or 0) / n * 100 - t.chance) > 1.5 then
+				return false
+			end
+		end
+		return true
+	end)())
+
+	-- Roblox's policy: sold only once Roblox says paid random items aren't restricted.
+	local lookup = Policy.lookup
+	local ann = guest("Ann", 9881)
+	local ben = guest("Ben", 9882)
+	local cal = guest("Cal", 9883)
+	Policy.lookup = function(p)
+		if p == ann then
+			return { ArePaidRandomItemsRestricted = false, IsPaidItemTradingAllowed = true, IsContentSharingAllowed = true }
+		elseif p == ben then
+			return { ArePaidRandomItemsRestricted = true, IsPaidItemTradingAllowed = false, IsContentSharingAllowed = false }
+		end
+		error("PolicyService is down")
+	end
+	run(Policy.refresh, ann)
+	run(Policy.refresh, ben)
+	run(Policy.refresh, cal)
+	advance(0.2)
+	check("allowed: Roblox said paid random items aren't restricted", Policy.paidRandomAllowed(ann) == true and ann:GetAttribute("PaidRandomAllowed") == true)
+	check("restricted: never sold", Policy.paidRandomAllowed(ben) == false and ben:GetAttribute("PaidRandomAllowed") == false)
+	check("no answer from Roblox: not sold (fail safe)", Policy.paidRandomAllowed(cal) == false and cal:GetAttribute("PaidRandomAllowed") ~= true)
+	Policy.lookup = lookup
+
+	for _, p in {
+		{ Name = "Luxe Lucky Box: Gilded", ProductId = 5701, PriceInRobux = 79 },
+		{ Name = "Luxe Lucky Box: Velvet", ProductId = 5702, PriceInRobux = 199 },
+		{ Name = "Luxe Lucky Box: Noir", ProductId = 5703, PriceInRobux = 449 },
+	} do
+		table.insert(MarketplaceService.devProducts, p)
+	end
+	run(Catalog.discover)
+	local problems = ProductConfig.validate(Grants.names())
+	check("the three boxes are valid products, never offered in the Shop", problems.luckyGilded == nil and problems.luckyVelvet == nil and problems.luckyNoir == nil and ProductConfig.byKey.luckyNoir.UX.Offer == false)
+
+	local st = curio(ben, { op = "luckyState" })
+	check("a restricted guest is told why, and where else brainrots come from", st.ok == true and st.allowed == false and type(st.why) == "string" and st.why:find("Cabinet") ~= nil)
+	local before = #prompts
+	local r = curio(ben, { op = "luckyOpen", id = "gilded" })
+	check("...and can't open a box", r.ok == false and r.closed == true and #prompts == before)
+	local ok = Store.prompt(ben, "luckyGilded", "test")
+	check("...not even by the purchase system directly", ok == false and #prompts == before)
+
+	st = curio(ann, { op = "luckyState" })
+	check("the showroom shows each box with Roblox's price, its odds and its guarantee", st.allowed == true and #st.boxes == 3 and st.boxes[1].price == 79 and st.boxes[3].price == 449 and st.boxes[1].ready == true and #st.boxes[1].odds == #LB.odds("gilded") and st.boxes[1].pity.at == 20 and st.boxes[1].pity.left == 20)
+	r = curio(ann, { op = "luckyOpen", id = "noir" })
+	check("an allowed guest's key opens Roblox's purchase window", r.ok == true and #prompts == before + 1)
+	r = curio(ann, { op = "luckyOpen", id = "diamonds" })
+	check("a box that isn't one is refused", r.ok == false)
+
+	-- Opening: the server's roll, once per receipt.
+	local aData = profiles[ann].Data
+	local seq, at = {}, 0
+	local realRandom = LBS.random
+	LBS.random = { NextNumber = function()
+		at += 1
+		return seq[((at - 1) % #seq) + 1]
+	end }
+	seq = { 0.99, 0.99, 0.0001 } -- Mythic, the last of them, Rainbow
+	local result = receipt(ann, 5701, "lucky-1", 79)
+	local got = lastOp(ann, "luckyBox")
+	local mythics = LB.pool("Mythic")
+	check("a box gives one brainrot, the one the roll says", result == GRANTED and got ~= nil and got.result.id == mythics[#mythics] and CuriosS.count(aData, mythics[#mythics]) == 1)
+	check("...told to the screen with its rarity, mutation and that it's new", got.result.rarity == "Mythic" and got.result.mut == "rainbow" and got.result.new == true)
+	check("...its mutation kept with that brainrot", aData.curios.squad.mut[mythics[#mythics]] == "rainbow")
+	receipt(ann, 5701, "lucky-1", 79)
+	check("the same receipt twice opens nothing more", CuriosS.count(aData, mythics[#mythics]) == 1 and aData.luckyBoxes.opened.gilded == 1)
+	check("a Mythic resets the Gilded box's guarantee", aData.luckyBoxes.since.gilded == 0)
+
+	-- The guarantee: 19 opens without a Legendary, then the 20th is one.
+	seq = { 0, 0, 0.99 } -- Rare, the first of them, plain
+	for i = 1, 19 do
+		receipt(ann, 5701, "lucky-p" .. i, 79)
+	end
+	st = curio(ann, { op = "luckyState" })
+	check("the counter: 19 opens without a Legendary, so the next one is", aData.luckyBoxes.since.gilded == 19 and st.boxes[1].pity.left == 1)
+	receipt(ann, 5701, "lucky-p20", 79)
+	got = lastOp(ann, "luckyBox")
+	check("...and it is: a Legendary or better, by the same odds among those", got.result.forced == true and LB.rank(got.result.rarity) >= LB.rank("Legendary") and aData.luckyBoxes.since.gilded == 0)
+	check("every open gave a brainrot", aData.luckyBoxes.opened.gilded == 21 and #aData.luckyBoxes.log <= 8)
+	LBS.random = realRandom
+
+	-- AFK mode: out of the game the squad earns a fifth of its rate, for at most twelve hours.
+	local clock = 1900000000
+	BrainrotsS.now = function()
+		return clock
+	end
+	local dee = guest("Dee", 9884)
+	local dData = profiles[dee].Data
+	CuriosS.give(dee, dData, "croissantino", 1, "tables")
+	BrainrotsS.settle(dData)
+	local rate = BrainrotsS.rate(dData)
+	local s = BrainrotsS.squadOf(dData)
+	check("a brainrot in the squad earns", rate == 40 and #s.ids == 1)
+	clock += 3600
+	BrainrotsS.settle(dData)
+	check("in the game, idle or not: the full rate", math.abs(s.held - 40) < 1e-6, s.held)
+	-- They leave (last seen now) and come back ten hours later.
+	BrainrotsS.forget(dData)
+	clock += 10 * 3600
+	BrainrotsS.settle(dData)
+	local away = BrainrotsS.away(dData)
+	check("away ten hours: a fifth of the rate (80 Gilt), told as AFK mode's", math.abs(s.held - (40 + 80)) < 1e-6 and away ~= nil and math.abs(away.gilt - 80) < 1e-6 and away.seconds == 36000, s.held)
+	-- Away two days: twelve hours' worth at most.
+	BrainrotsS.forget(dData)
+	clock += 48 * 3600
+	BrainrotsS.settle(dData)
+	check("away two days: twelve hours' worth at most (96 Gilt)", math.abs(s.held - (120 + 96)) < 1e-6, s.held)
+	-- The minute it was last seen is what counts: in the game until then, away since.
+	clock += 1800
+	s.seen = clock -- (the once-a-minute mark while they're here)
+	clock += 1800
+	BrainrotsS.settle(dData) -- (still here: all in the game)
+	local held1 = s.held
+	check("still in the game: the full rate", math.abs(held1 - (216 + 40)) < 1e-6, held1)
+	BrainrotsS.forget(dData)
+	clock += 3600
+	BrainrotsS.settle(dData)
+	check("an hour away: a fifth of an hour's rate", math.abs(s.held - (held1 + 8)) < 1e-6, s.held)
+	check("what AFK mode earns is small next to playing", BrainrotList.offlineRate(1000) == 200 and BrainrotList.OFFLINE_SHARE <= 0.25)
+	BrainrotsS.now = function()
+		return os.time()
+	end
+
+	-- The rejoin that keeps an AFK guest's place: only themselves, at most every few minutes.
+	local teleported = {}
+	local canTeleport, teleport = Afk.canTeleport, Afk.teleport
+	Afk.canTeleport = function()
+		return true
+	end
+	Afk.teleport = function(p)
+		table.insert(teleported, p)
+		return true, nil
+	end
+	r = curio(dee, { op = "afkRejoin" })
+	check("an AFK guest is rejoined to keep their place", r.ok == true and #teleported == 1 and teleported[1] == dee)
+	r = curio(dee, { op = "afkRejoin" })
+	check("...at most every few minutes", r.ok == false and #teleported == 1)
+	Config.data.Afk.rejoin = false
+	r = curio(ann, { op = "afkRejoin" })
+	check("...and never when it's switched off", r.ok == false and #teleported == 1)
+	Config.data.Afk.rejoin = true
+	Afk.canTeleport = function()
+		return false
+	end
+	r = curio(ann, { op = "afkRejoin" })
+	check("...nor in Studio", r.ok == false and #teleported == 1)
+	Afk.canTeleport, Afk.teleport = canTeleport, teleport
+end
+
+---------------------------------------------------------------------------------------------------
 -- N. Suite spectacles: kept safe as a show first, then played at once in your own Suite
 ---------------------------------------------------------------------------------------------------
 do

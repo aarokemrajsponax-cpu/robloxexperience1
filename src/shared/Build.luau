@@ -4,6 +4,6 @@
 -- see whether Studio has the latest code from GitHub.
 
 return {
-	number = 82,
-	label = "Build 82 · 14 Nov · The big fix list: revives, the longer Basement, 3D brainrots",
+	number = 83,
+	label = "Build 83 · 14 Nov · Luxe Lucky Boxes and AFK mode",
 }

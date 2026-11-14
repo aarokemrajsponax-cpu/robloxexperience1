@@ -602,6 +602,7 @@ local LocalPlayer = setmetatable({
 	CharacterAdded = signal(),
 	CharacterRemoving = signal(),
 	ChildAdded = signal(),
+	Idled = signal(),
 	PlayerGui = playerGui,
 	Backpack = (function()
 		-- (the Satchel's items: the hotbar)
@@ -770,6 +771,12 @@ local services = {
 		end,
 	},
 	ProximityPromptService = { PromptShown = signal(), PromptHidden = signal(), PromptTriggered = signal() },
+	MarketplaceService = { PromptProductPurchaseFinished = signal() },
+	TeleportService = {
+		GetLocalPlayerTeleportData = function()
+			return nil
+		end,
+	},
 	StarterGui = {
 		shown = {}, -- what's shown of Roblox's own screen (the hotbar), as the game last set it
 		SetCoreGuiEnabled = function(self, kind, on)
@@ -9861,6 +9868,124 @@ coroutine.wrap(function()
 	invokeResults.AuctionAsk = nil
 	invokeResults.AttractionAsk = nil
 	check("no errors with the Directory and the first-visit cards", #errors == errorsBefore, errors[errorsBefore + 1])
+end)()
+
+---------------------------------------------------------------------------------------------------
+-- 7b. The Luxe Lucky Boxes (odds before the key, the guarantee, a policy gate) and AFK mode
+---------------------------------------------------------------------------------------------------
+;(function()
+	local errorsBefore = #errors
+	local LB = module("ReplicatedStorage", "Shared", "LuckyBoxes")
+	local Panel = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "LuckyBoxPanel")
+	local Afk = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "AfkMode")
+	local RootM = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "Root")
+	local curioWas = invokeResults.CurioAsk
+	local asked = {}
+	local allowed = false
+	invokeResults.CurioAsk = function(req)
+		table.insert(asked, req)
+		if req.op == "luckyState" then
+			if not allowed then
+				return { ok = true, allowed = false, why = "Lucky Boxes aren't available on your account: Roblox's settings for it don't allow paid random items. The Cabinet sells the exact curio you choose.", boxes = {}, log = {} }
+			end
+			local boxes = {}
+			for _, id in LB.Order do
+				local b = LB.Boxes[id]
+				local odds = {}
+				for _, o in LB.odds(id) do
+					table.insert(odds, { id = o.id, rarity = o.rarity, chance = o.chance, held = if o.rarity == "Rare" then 2 else 0 })
+				end
+				table.insert(boxes, { id = id, key = b.key, price = b.price, ready = true, odds = odds, mut = { gold = b.mut.gold, diamond = b.mut.diamond, rainbow = b.mut.rainbow, plain = LB.plain(id) }, pity = { at = b.pity.at, rarity = b.pity.rarity, left = b.pity.at - 3 }, opened = 3 })
+			end
+			return { ok = true, allowed = true, boxes = boxes, log = {} }
+		elseif req.op == "luckyOpen" then
+			return { ok = true, prompted = true }
+		end
+		if type(curioWas) == "function" then
+			return curioWas(req)
+		end
+		return curioWas
+	end
+	-- The showroom's prompt: only when Roblox's policy allows paid random items.
+	local prompt = nil
+	for _, root in CollectionService:GetTagged("LuckyShowroom") do
+		for _, d in root:GetDescendants() do
+			if d:IsA("ProximityPrompt") and d.Name == "LuckyBoxPrompt" then
+				prompt = d
+			end
+		end
+	end
+	check("the Lucky Box showroom is built in the Foyer, its prompt hidden until Roblox's policy says", prompt ~= nil and prompt.Enabled == false)
+	LocalPlayer:SetAttribute("PaidRandomAllowed", true)
+	advance(0.2)
+	check("...and shown once it does", prompt ~= nil and prompt.Enabled == true)
+	allowed = true
+	services.ProximityPromptService.PromptTriggered:Fire(prompt)
+	advance(0.8)
+	check("its prompt opens the boxes", Panel.isOpen() and textOnScreen("Pick a box") ~= nil)
+	check("...the three boxes, each with its price", textOnScreen("Gilded") ~= nil and textOnScreen("Velvet") ~= nil and textOnScreen("Noir") ~= nil and textOnScreen("79") ~= nil)
+	check("...every brainrot's chance, before the key", textOnScreen("10%") ~= nil and textOnScreen("7.5%") ~= nil and textOnScreen("0.5%") ~= nil and textOnScreen("You hold 2") ~= nil)
+	check("...the mutation odds", textOnScreen("Gold 8%") ~= nil and textOnScreen("Rainbow 0.5%") ~= nil)
+	check("...and the guarantee counter", textOnScreen("guaranteed within 17 opens") ~= nil)
+	snapshot("lucky-boxes")
+	pressNamed("Box_noir")
+	advance(0.4)
+	check("choosing the Noir shows its own odds", textOnScreen("23%") ~= nil and textOnScreen("15.5%") ~= nil and textOnScreen("guaranteed within 1 opens") == nil)
+	local before = #asked
+	check("its key names the price", press("Open  " .. utf8.char(0xE002) .. " 449"))
+	advance(0.4)
+	check("...and opens Roblox's purchase window for that box", asked[before + 1] ~= nil and asked[before + 1].op == "luckyOpen" and asked[before + 1].id == "noir")
+	check("...then waits for Roblox", textOnScreen("Waiting for Roblox") ~= nil)
+	services.MarketplaceService.PromptProductPurchaseFinished:Fire(1, 5703, false)
+	advance(0.3)
+	check("closed without buying: the key is back", textOnScreen("Waiting for Roblox") == nil)
+	-- The reveal: the box glows in the colour of what came, then the find's reveal.
+	Panel.reveal({ box = "noir", id = LB.pool("Mythic")[1], rarity = "Mythic", mut = "gold", new = true, count = 1, stars = 1, pityLeft = 4 })
+	advance(0.6)
+	check("an open: the box, lit in the rarity that came", find(playerGui, function(d)
+		return d.Name == "LuckyOpening"
+	end) ~= nil and textOnScreen("MYTHIC") ~= nil)
+	advance(2.5)
+	check("...then the find itself", textOnScreen("From The Noir Box") ~= nil)
+	advance(8)
+	RootM.close()
+	advance(0.5)
+	-- A restricted guest: told why, no key.
+	allowed = false
+	Panel.open()
+	advance(0.6)
+	check("a restricted guest sees why, and where else brainrots come from, with no key to buy", Panel.isOpen() and textOnScreen("don't allow paid random items") ~= nil and find(playerGui, function(d)
+		return d.Name == "Box_gilded" or d.Name == "Odds"
+	end) == nil)
+	RootM.close()
+	advance(0.5)
+	LocalPlayer:SetAttribute("PaidRandomAllowed", false)
+	advance(0.2)
+	check("the policy turning it off hides the prompt", prompt ~= nil and prompt.Enabled == false)
+	invokeResults.CurioAsk = curioWas
+
+	-- AFK mode: two minutes idle shows the card; moving or a key ends it; the menu's note.
+	LocalPlayer.Idled:Fire(130)
+	advance(0.4)
+	check("AFK mode after two idle minutes: the card", Afk.active() and textOnScreen("AFK mode") ~= nil and textOnScreen("Move, or press any key") ~= nil)
+	check("...says out of the game they earn a fifth, for up to 12 hours", textOnScreen("20% of the rate, for up to 12 hours") ~= nil)
+	snapshot("afk-mode")
+	UserInputService.InputBegan:Fire({ UserInputType = roblox.Enum.UserInputType.Keyboard, KeyCode = roblox.Enum.KeyCode.W }, false)
+	advance(0.5)
+	check("...and a key brings them back", not Afk.active())
+	GuiService.MenuOpened:Fire()
+	advance(0.6)
+	check("Roblox's menu: you earn Gilt offline with brainrots, at the top", textOnScreen("YOU EARN GILT OFFLINE WITH BRAINROTS") ~= nil)
+	snapshot("afk-note")
+	GuiService.MenuClosed:Fire()
+	advance(7)
+	check("...gone a few seconds after the menu closes", textOnScreen("YOU EARN GILT OFFLINE WITH BRAINROTS") == nil)
+	GuiService.MenuOpened:Fire()
+	advance(0.6)
+	check("...and not shown again straight away (a reminder, not a nag)", textOnScreen("YOU EARN GILT OFFLINE WITH BRAINROTS") == nil)
+	GuiService.MenuClosed:Fire()
+	advance(0.5)
+	check("no errors with the Lucky Boxes or AFK mode", #errors == errorsBefore, errors[errorsBefore + 1])
 end)()
 
 ---------------------------------------------------------------------------------------------------

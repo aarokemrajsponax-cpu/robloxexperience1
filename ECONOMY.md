@@ -194,4 +194,6 @@ Secret find, a holiday's golden prize). Quests pay by how hard they are. The day
 Every offer says what it is before it's bought: **Permanent: yours for good**, **Timed** (how
 long, and whether the clock runs only while you play), **One use** or **At once**, with the
 bundle's contents listed. A Gilt purchase asks once more, with the price, before it's taken.
-There are no countdowns on offers, no "was" prices and nothing random for Robux.
+There are no countdowns on offers and no "was" prices. The one random thing sold for Robux is
+the Luxe Lucky Boxes (Build 83): every odd shown before buying, a brainrot in every box, a
+visible guarantee counter, and never sold where Roblox's policy restricts paid random items.

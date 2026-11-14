@@ -571,6 +571,28 @@ add({
 	Rules = { Stackable = true, CooldownSeconds = 0, MaxHeld = 20 },
 	UX = { DisplayName = "Brainrot Feast", Category = "Brainrots", Line = "Eight hours of everything your squad earns, paid at once.", Offer = false, Order = 93, Action = "prompt" },
 })
+-- The Luxe Lucky Boxes (shared/LuckyBoxes has the odds, server/LuckyBoxes the roll): paid random
+-- items, so each box's odds are shown in full before buying, every open gives a brainrot, and they
+-- are never sold to a guest Roblox's policy restricts (Policy.paidRandomAllowed). Not in the Shop:
+-- only at the Lucky Box showroom, where the odds are beside the key.
+ProductConfig.LuckyBox = { "luckyGilded", "luckyVelvet", "luckyNoir" } :: { string }
+for _, spec in {
+	{ key = "luckyGilded", box = "gilded", name = "Luxe Lucky Box: Gilded", price = 79, tier = "Medium", line = "One brainrot, Rare or better: the odds of each are on the box. Nothing in it is only in boxes." },
+	{ key = "luckyVelvet", box = "velvet", name = "Luxe Lucky Box: Velvet", price = 199, tier = "Premium", line = "One brainrot, Epic or better: the odds of each are on the box. Nothing in it is only in boxes." },
+	{ key = "luckyNoir", box = "noir", name = "Luxe Lucky Box: Noir", price = 449, tier = "Prestige", line = "One brainrot, Legendary or better: the odds of each are on the box. Nothing in it is only in boxes." },
+} do
+	add({
+		Key = spec.key,
+		Name = spec.name,
+		ProductType = "DeveloperProduct",
+		Id = 0,
+		Handler = "luckyBox",
+		Pricing = { ReferencePrice = spec.price, Tier = spec.tier :: Tier, Rationale = "A paid random item: every open gives a brainrot that's also found free at the tables, with every odd shown first and a guarantee counted on the box." },
+		Reward = { Type = "LuckyBox", Box = spec.box },
+		Rules = { Stackable = true, CooldownSeconds = 0, PaidRandom = true },
+		UX = { DisplayName = spec.name, Category = "Lucky Boxes", Line = spec.line, Offer = false, Order = 96, Action = "luckyBox" },
+	})
+end
 for _, s in Salutes.List do
 	add({
 		Key = "salute_" .. s.id,

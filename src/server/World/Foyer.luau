@@ -585,6 +585,8 @@ function Foyer.build(parent: Instance): Model
 	end
 	boutiqueDoor(root)
 	entranceDoors(root)
+	-- The Luxe Lucky Box showroom, west of the runner (World/LuckyShowroom).
+	require(script.Parent.LuckyShowroom).build(root)
 	-- A soft fill so the marble never goes pitch black.
 	local fill = Kit.part(root, "FillLight", Vector3.new(1, 1, 1), CFrame.new(0, FLOOR + 14, 16), { color = Color3.new(), material = Enum.Material.SmoothPlastic, transparency = 1 }, { collide = false, query = false, shadow = false })
 	Kit.pointLight(fill, 0.5, 60, Color3.fromRGB(200, 170, 140))

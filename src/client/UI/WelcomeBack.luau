@@ -38,11 +38,29 @@ WelcomeBack.calendar = function(): { [string]: any }?
 end
 
 local awayGilt = 0
+local offlineGilt = 0 -- of it, what AFK mode earned while they were out of the game
+local offlineSeconds = 0
 local shown = false
 
--- What the brainrots earned while the guest was away (the server says so as they arrive).
-function WelcomeBack.noteAway(gilt: number)
+-- What the brainrots earned while the guest was away (the server says so as they arrive): the jar
+-- now, and of it, what AFK mode earned out of the game, over how long.
+function WelcomeBack.noteAway(gilt: number, offline: number?, seconds: number?)
 	awayGilt = math.max(awayGilt, math.floor(gilt))
+	if offline and offline >= 1 then
+		offlineGilt = math.floor(offline)
+		offlineSeconds = seconds or 0
+	end
+end
+
+-- How long they were away, in words ("9 hours", "35 minutes").
+local function awayFor(seconds: number): string
+	if seconds >= 5400 then
+		return string.format("%d hours", math.floor(seconds / 3600 + 0.5))
+	elseif seconds >= 3600 then
+		return "an hour"
+	end
+	local m = math.max(1, math.floor(seconds / 60 + 0.5))
+	return string.format("%d minute%s", m, if m == 1 then "" else "s")
 end
 
 local function commas(n: number): string
@@ -155,7 +173,8 @@ function WelcomeBack.open(name: string, nights: number, news: boolean, present: 
 		end)
 	end
 	if jar > 0 then
-		row(content, 11, "gilt", string.format(V.jar.title, commas(jar)), if compact then nil else V.jar.line, V.jar.key, function(button: TextButton)
+		local jarLine = if offlineGilt >= 1 then string.format(Voice.Afk.welcome, commas(offlineGilt), awayFor(offlineSeconds)) else V.jar.line
+		row(content, 11, "gilt", string.format(V.jar.title, commas(jar)), if compact then nil else jarLine, V.jar.key, function(button: TextButton)
 			if button:GetAttribute("Done") then
 				return
 			end

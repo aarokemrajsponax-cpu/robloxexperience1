@@ -574,6 +574,7 @@ Purchases.Piano.isOwner = function(player: Player): boolean
 end
 -- Trading curios between guests (the curios and Gems themselves start with Purchases).
 boot("Guest policies", require(script.Parent.Policy).start)
+boot("AFK mode", require(script.Parent.Afk).start)
 boot("Trading", require(script.Parent.TradeService).start)
 boot("Remote limits", require(script.Parent.RemoteGuard).start)
 -- Friends on Roblox in the house together: each may visit the other's Suite, and both earn more

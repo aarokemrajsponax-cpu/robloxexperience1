@@ -1,13 +1,15 @@
 --!strict
 -- The brainrots: the meme set of curios (Curios, family "meme") as characters with powers of their
 -- own. Every guest has a squad of them (three places, three more in the Brainrot Penthouse):
---   * each one in the squad earns Gilt every hour, into a tip jar that holds eight hours of it,
---     even while you're away (collect it when you're back);
+--   * each one in the squad earns Gilt every hour, into a tip jar that holds eight hours of it;
+--     while you're away from the game it keeps earning, a fifth as fast, for up to twelve hours
+--     (AFK mode: collect it when you're back);
 --   * the one you choose walks beside you through the house, as big as its rarity, and adds its
 --     bonus to the Gilt of every run you bank;
 --   * more copies of the same one give it stars (★1 to ★5), each star half again as much;
 --   * found at the tables, one can turn up Gold, Diamond or Rainbow: two, three or five times
---     as much. Earned by playing only; nothing random is ever sold.
+--     as much. Found at the tables, or in a Luxe Lucky Box (shared/LuckyBoxes: its odds always
+--     shown, never sold where Roblox's policy for the player restricts paid random items).
 -- None of it touches a score: the boards stay fair.
 
 local Curios = require(script.Parent.Curios)
@@ -22,6 +24,10 @@ local rgb = Color3.fromRGB
 Brainrots.SLOTS = 3 -- places in everyone's squad
 Brainrots.WING_SLOTS = 3 -- more with the Brainrot Penthouse
 Brainrots.JAR_HOURS = 8 -- the tip jar holds this many hours of what the squad earns
+-- AFK mode: while the guest is out of the game the squad earns this share of its rate, for at
+-- most this many hours away (in the game it earns its full rate, idle or not).
+Brainrots.OFFLINE_SHARE = 0.2
+Brainrots.OFFLINE_HOURS = 12
 
 -- Gilt an hour for one at ★1, by rarity.
 Brainrots.Rate = {
@@ -167,6 +173,19 @@ function Brainrots.jar(held: number, rate: number, at: number, now: number, boos
 	end
 	gained += rate * math.max(0, now - from) / 3600
 	return math.min(cap, held + gained)
+end
+
+-- The jar after `seconds` out of the game: the squad's offline share, for at most OFFLINE_HOURS,
+-- and never past the jar's size.
+function Brainrots.offline(held: number, rate: number, seconds: number): number
+	local cap = math.max(held, rate * Brainrots.JAR_HOURS)
+	local away = math.clamp(seconds, 0, Brainrots.OFFLINE_HOURS * 3600)
+	return math.min(cap, held + rate * Brainrots.OFFLINE_SHARE * away / 3600)
+end
+
+-- What `rate` an hour earns offline, an hour (rounded).
+function Brainrots.offlineRate(rate: number): number
+	return math.floor(rate * Brainrots.OFFLINE_SHARE + 0.5)
 end
 
 -- The Meme Frenzy: after a Meme Takeover plays, the squad earns this many times as much for this long.

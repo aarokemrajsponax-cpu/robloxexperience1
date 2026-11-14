@@ -239,6 +239,11 @@ start("The Suite", function()
 	SuiteView.start()
 end)
 start("Seats", require(script.Parent.World.Seating).start)
+start("AFK mode", require(script.Parent.UI.AfkMode).start)
+start("Luxe Lucky Boxes", function()
+	require(script.Parent.UI.LuckyBoxPanel).start()
+	require(script.Parent.World.LuckyShowroom).start()
+end)
 -- The owner's flight (switched on only by the server, only for the owner), and the House Party.
 start("The owner's flight", require(script.Parent.World.AdminFly).start)
 start("The House Party", require(script.Parent.World.DiscoHouse).start)
@@ -340,13 +345,15 @@ start("Curios", function()
 	CurioState.Message:Connect(function(op: string, m: any)
 		if op == "found" and type(m.id) == "string" then
 			CurioReveal.show(m.id, tostring(m.line or ""), if type(m.gilt) == "number" then m.gilt else 0, if type(m.mut) == "string" then m.mut else nil)
+		elseif op == "luckyBox" and type(m.result) == "table" then
+			require(script.Parent.UI.LuckyBoxPanel).reveal(m.result)
 		elseif op == "gems" and type(m.amount) == "number" then
 			Toast.show("Gems", string.format("+%d Gems. You hold %d.", m.amount, CurioState.gems), 4)
 		-- The brainrot squad: what it earned while you were away, a full jar, a Feast, the Penthouse.
 		elseif op == "away" and type(m.gilt) == "number" then
 			-- (Told on the Welcome back card, with its Collect key; a toast only if no card comes.)
 			awayGilt = math.max(awayGilt, math.floor(m.gilt))
-			WelcomeBack.noteAway(m.gilt)
+			WelcomeBack.noteAway(m.gilt, tonumber(m.offline), tonumber(m.seconds))
 		elseif op == "jarFull" and type(m.gilt) == "number" then
 			Toast.show("Tip jar full", string.format("%s Gilt waiting. Collect it so your squad keeps earning.", BrainrotSquad.commas(m.gilt)), 6)
 		elseif op == "feast" and type(m.gilt) == "number" then
