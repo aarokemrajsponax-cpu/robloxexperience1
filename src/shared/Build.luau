@@ -4,6 +4,6 @@
 -- see whether Studio has the latest code from GitHub.
 
 return {
-	number = 85,
-	label = "Build 85 · 14 Nov · Lucky Boxes for Gems or Gilt",
+	number = 86,
+	label = "Build 86 · 14 Nov · Twin lanes in the Basement, a clearer heist card",
 }

@@ -370,11 +370,12 @@ Voice.Afk = {
 -- What's new in this build, told once to each returning guest (Welcome back). Only shown while
 -- `build` is the build that's playing, so old news never shows as new.
 Voice.WhatsNew = {
-	build = 85,
+	build = 86,
 	lines = {
-		"Luxe Lucky Boxes now open with Gems, or with Gilt if you save up for one. They're just inside the Grand Ballroom, on a spinning reel.",
-		"The showroom shows what has lately come out of the boxes in your server, just as it came.",
-		"AFK mode: your brainrots keep earning while you're away from the game, a fifth as fast, for up to 12 hours. Come back and collect it.",
+		"The Maison Basement fills its wide hall: most stages now have twin lanes either side, the very same obstacles, so a crowd spreads out.",
+		"Steal a Luxe's card is clearer: your bag, what it's worth and the guards, at a glance.",
+		"The keys at the foot of the screen now rise above your hotbar, so the Executive Suite's Fire key is always in reach.",
+		"Luxe Lucky Boxes open with Gems, or with Gilt if you save up for one, just inside the Grand Ballroom.",
 	},
 }
 

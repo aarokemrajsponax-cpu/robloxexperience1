@@ -39,8 +39,8 @@ local RED = Color3.fromRGB(235, 70, 80)
 local AMBER = Color3.fromRGB(255, 176, 60)
 local GREEN = Color3.fromRGB(120, 220, 140)
 local CARD_W = 316
-local SLOT = 30
-local PAD = 12
+local SLOT = 34
+local PAD = 14
 
 local RARITY: { [string]: Color3 } = {}
 for _, r in Plan.Rarities do
@@ -121,11 +121,32 @@ local function wingColour(id: number): Color3
 	return if w then w.colour else C.bone
 end
 
+-- A side job's mark: a ring, filled green once it's done.
+local function tick(parent: Instance, done: boolean): Frame
+	local ring = Instance.new("Frame")
+	ring.Name = "Mark"
+	ring.AnchorPoint = Vector2.new(0, 0.5)
+	ring.Position = UDim2.new(0, 0, 0.5, 0)
+	ring.Size = UDim2.fromOffset(12, 12)
+	ring.BackgroundColor3 = GREEN
+	ring.BackgroundTransparency = if done then 0 else 1
+	ring.BorderSizePixel = 0
+	ring.Parent = parent
+	local rc = Instance.new("UICorner")
+	rc.CornerRadius = UDim.new(1, 0)
+	rc.Parent = ring
+	local edge = Instance.new("UIStroke")
+	edge.Color = if done then GREEN else Color3.fromRGB(150, 138, 118)
+	edge.Thickness = 1.5
+	edge.Parent = ring
+	return ring
+end
+
 -- The side jobs, from `y` down: returns where they end (and, unfolded, where they would).
 local function drawJobs(y: number): (number, number)
 	local jobs = parts.jobs :: Frame
 	for _, child in jobs:GetChildren() do
-		if child:IsA("GuiObject") and child.Name ~= "JobsTitle" then
+		if child:IsA("GuiObject") and child.Name ~= "JobsTitle" and child.Name ~= "JobsCount" and child.Name ~= "Rule" then
 			child:Destroy()
 		end
 	end
@@ -141,38 +162,39 @@ local function drawJobs(y: number): (number, number)
 			done += 1
 		end
 	end
-	parts.jobsTitle.Text = string.format("SIDE JOBS  ·  %d OF %d DONE", done, #goals)
-	local full = 18 + #goals * 18
-	if parts.folded then
-		-- (Too little room: only the next one still to do, on one line.)
-		local h = 18
-		for _, g in goals do
-			if not g.done then
-				local line = label(jobs, "Job", "○  " .. tostring(g.line) .. "  ·  +" .. Rules.format(tonumber(g.gilt) or 0), 12, Brand.Fonts.body, C.bone)
-				line.Position = UDim2.fromOffset(0, 18)
-				line.Size = UDim2.new(1, 0, 0, 16)
-				h += 18
-				break
-			end
-		end
-		jobs.Size = UDim2.new(1, 0, 0, h)
-		return y + h, y + full
-	end
-	for i, g in goals do
+	parts.jobsCount.Text = string.format("%d of %d", done, #goals)
+	local TOP = 26 -- the rule and the title
+	local ROW = 20
+	local full = TOP + #goals * ROW
+	local function jobRow(i: number, g: { [string]: any })
 		local r = Instance.new("Frame")
 		r.Name = "Job" .. i
 		r.BackgroundTransparency = 1
-		r.Position = UDim2.fromOffset(0, 18 * i)
-		r.Size = UDim2.new(1, 0, 0, 18)
+		r.Position = UDim2.fromOffset(0, TOP + ROW * (i - 1))
+		r.Size = UDim2.new(1, 0, 0, ROW)
 		r.Parent = jobs
-		local mark = label(r, "Line", (if g.done then "✓  " else "○  ") .. tostring(g.line), 12, if g.done then Brand.Fonts.body else Brand.Fonts.bodyBold, if g.done then GREEN else C.bone)
-		mark.Size = UDim2.new(1, -62, 1, 0)
+		tick(r, g.done == true)
+		local line = label(r, "Line", tostring(g.line), 12, if g.done then Brand.Fonts.body else Brand.Fonts.bodyBold, if g.done then C.smoke else C.bone)
+		line.Position = UDim2.fromOffset(20, 0)
+		line.Size = UDim2.new(1, -78, 1, 0)
 		local pay = label(r, "Pay", "+" .. Rules.format(tonumber(g.gilt) or 0), 12, Brand.Fonts.figures, if g.done then C.smoke else GOLD)
 		pay.TextXAlignment = Enum.TextXAlignment.Right
 		pay.Size = UDim2.new(1, 0, 1, 0)
-		if g.done then
-			mark.TextTransparency = 0.25
+	end
+	if parts.folded then
+		-- (Too little room: only the next one still to do.)
+		for _, g in goals do
+			if not g.done then
+				jobRow(1, g)
+				jobs.Size = UDim2.new(1, 0, 0, TOP + ROW)
+				return y + TOP + ROW, y + full
+			end
 		end
+		jobs.Size = UDim2.new(1, 0, 0, TOP)
+		return y + TOP, y + full
+	end
+	for i, g in goals do
+		jobRow(i, g)
 	end
 	jobs.Size = UDim2.new(1, 0, 0, full)
 	return y + full, y + full
@@ -184,8 +206,11 @@ function LuxeHud.draw()
 		return
 	end
 	local wingId = tonumber(view.wingId) or 0
-	parts.wing.Text = string.upper(tostring(view.wing))
-	parts.wing.TextColor3 = if wingId > 0 then wingColour(wingId) else C.bone
+	parts.wing.Text = tostring(view.wing)
+	local wc = if wingId > 0 then wingColour(wingId) else C.bone
+	parts.wing.TextColor3 = wc
+	parts.badge.BackgroundColor3 = wc
+	parts.badge.Size = UDim2.fromOffset(math.clamp(#tostring(view.wing) * 7 + 24, 90, 170), 22)
 	-- The bag: a slot for each piece it can hold.
 	local slots = parts.slots :: Frame
 	for _, child in slots:GetChildren() do
@@ -196,7 +221,7 @@ function LuxeHud.draw()
 	local capacity = math.max(1, math.floor(tonumber(view.capacity) or 3))
 	local bag = if type(view.bag) == "table" then view.bag else {}
 	-- (A big bag's slots are smaller, so they all fit on their row.)
-	local size = math.min(SLOT, math.floor((CARD_W - PAD * 2 - 56 + 5) / capacity) - 5)
+	local size = math.min(SLOT, math.floor((CARD_W - PAD * 2 - 56 + 6) / capacity) - 6)
 	for i = 1, capacity do
 		local piece = bag[i]
 		local s = Instance.new("Frame")
@@ -207,7 +232,7 @@ function LuxeHud.draw()
 		s.LayoutOrder = i
 		s.Parent = slots
 		local corner = Instance.new("UICorner")
-		corner.CornerRadius = UDim.new(0, 6)
+		corner.CornerRadius = UDim.new(0, 8)
 		corner.Parent = s
 		local edge = Instance.new("UIStroke")
 		edge.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
@@ -221,7 +246,7 @@ function LuxeHud.draw()
 			g.BackgroundTransparency = 1
 			g.Size = UDim2.fromScale(1, 1)
 			g.Text = tostring(piece.glyph or "✨")
-			g.TextSize = 18
+			g.TextSize = 20
 			g.FontFace = Brand.Fonts.body
 			g.TextColor3 = Color3.new(1, 1, 1)
 			g.Parent = s
@@ -229,38 +254,51 @@ function LuxeHud.draw()
 	end
 	local worth = tonumber(view.worth) or 0
 	local bonus = tonumber(view.bonus) or 0
-	parts.count.Text = string.format("%d / %d", #bag, capacity)
+	parts.count.Text = string.format("%d/%d", #bag, capacity)
 	if #bag == 0 then
-		parts.worth.Text = "Lift what you can  ·  bank it at a way out"
+		parts.worth.Text = "Your bag is empty"
 		parts.worth.TextColor3 = C.smoke
+		parts.worth.FontFace = Brand.Fonts.body
+		parts.worth.TextSize = 13
+		parts.extra.Text = "Lift, then bank at a way out"
 	else
 		local mass = tonumber(view.mass) or 0
-		parts.worth.Text = "Carrying " .. Rules.format(worth) .. (if bonus > 0 then string.format("  ·  +%d%% when banked", math.floor(bonus * 100 + 0.5)) else "  ·  bank it at a way out") .. (if mass >= 1 then string.format("  ·  %s kg", if mass >= 10 then tostring(math.floor(mass + 0.5)) else string.format("%.1f", mass)) else "")
+		parts.worth.Text = Rules.format(worth) .. " Gilt"
 		parts.worth.TextColor3 = GOLD
+		parts.worth.FontFace = Brand.Fonts.display
+		parts.worth.TextSize = 18
+		local bits = {}
+		if bonus > 0 then
+			table.insert(bits, string.format("+%d%% when banked", math.floor(bonus * 100 + 0.5)))
+		end
+		if mass >= 1 then
+			table.insert(bits, if mass >= 10 then tostring(math.floor(mass + 0.5)) .. " kg" else string.format("%.1f kg", mass))
+		end
+		parts.extra.Text = table.concat(bits, ", ")
 	end
-	-- The guards.
+	-- The guards: one plain line with a coloured dot, and how near they are to noticing.
 	local watched = math.clamp(tonumber(view.watched) or 0, 0, 1)
 	parts.fill.Size = UDim2.new(watched, 0, 1, 0)
 	parts.fill.BackgroundColor3 = Color3.fromRGB(255, 196, 80):Lerp(RED, watched)
+	local status, colour
 	if view.chased then
-		parts.seen.Text = "A GUARD IS AFTER YOU  ·  RUN"
-		parts.seen.TextColor3 = RED
+		status, colour = "Run, a guard is after you", RED
 	elseif view.grace then
-		parts.seen.Text = "NOBODY HAS NOTICED YOU YET"
-		parts.seen.TextColor3 = C.smoke
+		status, colour = "Nobody has noticed you yet", C.smoke
 	elseif view.awake == false then
 		-- (Build 82: security sleeps until they lift something.)
-		parts.seen.Text = "SECURITY ASLEEP  ·  LOOK AROUND"
-		parts.seen.TextColor3 = Color3.fromRGB(140, 220, 160)
+		status, colour = "Security asleep, look around", Color3.fromRGB(140, 220, 160)
 	elseif watched > 0.05 then
-		parts.seen.Text = "A GUARD IS NOTICING YOU"
-		parts.seen.TextColor3 = Color3.fromRGB(255, 196, 80)
+		status, colour = "A guard is noticing you", Color3.fromRGB(255, 196, 80)
 	else
-		parts.seen.Text = "UNSEEN"
-		parts.seen.TextColor3 = C.smoke
+		status, colour = "Unseen", C.smoke
 	end
+	parts.seen.Text = status
+	parts.seen.TextColor3 = if colour == C.smoke then C.bone else colour
+	parts.dot.BackgroundColor3 = colour
 	local speed = tonumber(view.speed) or 1
-	parts.pace.Text = string.format("PACE %d%%", math.floor(speed * 100 + 0.5))
+	local pct = math.floor(speed * 100 + 0.5)
+	parts.pace.Text = if pct ~= 100 then string.format("Pace %d%%", pct) else ""
 	-- The wing's alarm.
 	local alarm = tonumber(view.alarm) or 0
 	local banner = parts.alarm :: Frame
@@ -268,33 +306,33 @@ function LuxeHud.draw()
 	parts.alarmText.Text = ""
 	if alarm >= 2 then
 		banner.BackgroundColor3 = Color3.fromRGB(70, 14, 20)
-		parts.alarmText.Text = "LOCKDOWN  ·  MORE GUARDS  ·  GET OUT"
-		parts.alarmText.TextColor3 = Color3.fromRGB(255, 120, 120)
+		parts.alarmText.Text = "Lockdown: more guards are coming. Get out."
+		parts.alarmText.TextColor3 = Color3.fromRGB(255, 130, 130)
 	elseif alarm == 1 then
 		banner.BackgroundColor3 = Color3.fromRGB(60, 40, 12)
-		parts.alarmText.Text = "ALERT  ·  THE GUARDS ARE LOOKING FOR YOU"
+		parts.alarmText.Text = "Alert: the guards are looking for you"
 		parts.alarmText.TextColor3 = AMBER
 	end
 	-- Laid out top to bottom (the card grows upward from its foot).
 	local y = 0
 	parts.head.Position = UDim2.fromOffset(0, y)
-	y += 21
+	y += 28
 	if alarm > 0 then
 		banner.Position = UDim2.fromOffset(0, y)
-		y += 27
+		y += 30
 	end
 	slots.Position = UDim2.fromOffset(0, y)
 	parts.count.Position = UDim2.new(1, 0, 0, y)
-	y += SLOT + 6
-	parts.worth.Position = UDim2.fromOffset(0, y)
-	y += 21
+	y += SLOT + 8
+	parts.worthRow.Position = UDim2.fromOffset(0, y)
+	y += 26
 	parts.seenRow.Position = UDim2.fromOffset(0, y)
-	y += 18
+	y += 22
 	parts.track.Position = UDim2.fromOffset(0, y)
-	y += 10
+	y += 5 + 6
 	local ends, unfolded = drawJobs(y)
-	c.Size = UDim2.fromOffset(CARD_W, ends + 9 + 10)
-	parts.fullHeight = unfolded + 9 + 10
+	c.Size = UDim2.fromOffset(CARD_W, ends + 12 + 10)
+	parts.fullHeight = unfolded + 12 + 10
 end
 
 -- An empty plinth's quiet countdown: when its piece is back (its own five minutes).
@@ -438,24 +476,39 @@ function LuxeHud.mount()
 	local pad = Instance.new("UIPadding")
 	pad.PaddingLeft = UDim.new(0, PAD)
 	pad.PaddingRight = UDim.new(0, PAD)
-	pad.PaddingTop = UDim.new(0, 9)
+	pad.PaddingTop = UDim.new(0, 12)
 	pad.Parent = c
 	parts.edge = HudCard.style(c, GOLD)
-	-- Its heading: the attraction and the wing (in the wing's colour).
-	local head = row(c, "Head", 17, 1)
-	label(head, "Title", "STEAL A LUXE", 12, Brand.Fonts.bodyBold, GOLD)
-	parts.wing = label(head, "Wing", "THE COURTYARD", 12, Brand.Fonts.bodyBold, C.bone)
-	parts.wing.TextXAlignment = Enum.TextXAlignment.Right
+	-- Its heading: the attraction, and the wing as a badge in the wing's colour.
+	local head = row(c, "Head", 22, 1)
+	local title = label(head, "Title", "STEAL A LUXE", 12, Brand.Fonts.heavy, GOLD)
+	title.Size = UDim2.new(0.5, 0, 1, 0)
+	local badge = Instance.new("Frame")
+	badge.Name = "WingBadge"
+	badge.AnchorPoint = Vector2.new(1, 0.5)
+	badge.Position = UDim2.new(1, 0, 0.5, 0)
+	badge.Size = UDim2.fromOffset(150, 22)
+	badge.BackgroundColor3 = C.bone
+	badge.BackgroundTransparency = 0.88
+	badge.BorderSizePixel = 0
+	badge.Parent = head
+	local bcr = Instance.new("UICorner")
+	bcr.CornerRadius = UDim.new(1, 0)
+	bcr.Parent = badge
+	parts.wing = label(badge, "Wing", "The courtyard", 12, Brand.Fonts.bodyBold, C.bone)
+	parts.wing.Size = UDim2.fromScale(1, 1)
+	parts.wing.TextXAlignment = Enum.TextXAlignment.Center
+	parts.badge = badge
 	parts.head = head
 	-- The wing's alarm, when there is one.
-	local banner = row(c, "Alarm", 22, 2)
+	local banner = row(c, "Alarm", 24, 2)
 	banner.BackgroundTransparency = 0
 	banner.BackgroundColor3 = Color3.fromRGB(60, 40, 12)
 	banner.Visible = false
 	local bc = Instance.new("UICorner")
-	bc.CornerRadius = UDim.new(0, 6)
+	bc.CornerRadius = UDim.new(0, 8)
 	bc.Parent = banner
-	parts.alarmText = label(banner, "AlarmText", "", 11, Brand.Fonts.bodyBold, AMBER)
+	parts.alarmText = label(banner, "AlarmText", "", 12, Brand.Fonts.bodyBold, AMBER)
 	parts.alarmText.Size = UDim2.fromScale(1, 1)
 	parts.alarmText.TextXAlignment = Enum.TextXAlignment.Center
 	parts.alarm = banner
@@ -464,45 +517,84 @@ function LuxeHud.mount()
 	slots.Size = UDim2.new(1, -56, 0, SLOT)
 	local slotList = Instance.new("UIListLayout")
 	slotList.FillDirection = Enum.FillDirection.Horizontal
-	slotList.Padding = UDim.new(0, 5)
+	slotList.Padding = UDim.new(0, 6)
 	slotList.SortOrder = Enum.SortOrder.LayoutOrder
 	slotList.VerticalAlignment = Enum.VerticalAlignment.Center
 	slotList.Parent = slots
 	parts.slots = slots
-	parts.count = label(c, "Count", "0 / 3", 14, Brand.Fonts.figures, C.bone)
+	parts.count = label(c, "Count", "0/3", 16, Brand.Fonts.display, C.bone)
 	parts.count.AnchorPoint = Vector2.new(1, 0)
 	parts.count.Size = UDim2.fromOffset(52, SLOT)
 	parts.count.TextXAlignment = Enum.TextXAlignment.Right
-	parts.worth = label(c, "Worth", "", 13, Brand.Fonts.bodyBold, GOLD)
-	-- How near a guard is to noticing, and the pace.
-	local seenRow = row(c, "Seen", 16, 5)
-	parts.seen = label(seenRow, "SeenText", "UNSEEN", 11, Brand.Fonts.bodyBold, C.smoke)
-	parts.seen.Size = UDim2.new(1, -70, 1, 0)
-	parts.pace = label(seenRow, "Pace", "PACE 100%", 11, Brand.Fonts.bodyBold, C.smoke)
+	-- What's in the bag is worth, and what goes with it (the banker's cut, the weight).
+	local worthRow = row(c, "WorthRow", 22, 4)
+	parts.worth = label(worthRow, "Worth", "", 18, Brand.Fonts.display, GOLD)
+	parts.worth.Size = UDim2.new(0.55, 0, 1, 0)
+	parts.extra = label(worthRow, "Extra", "", 11, Brand.Fonts.body, C.smoke)
+	parts.extra.TextXAlignment = Enum.TextXAlignment.Right
+	parts.extra.Size = UDim2.fromScale(1, 1)
+	parts.worthRow = worthRow
+	-- The guards: a dot in the state's colour, the state in plain words, the pace at the right.
+	local seenRow = row(c, "Seen", 18, 5)
+	local dot = Instance.new("Frame")
+	dot.Name = "Dot"
+	dot.AnchorPoint = Vector2.new(0, 0.5)
+	dot.Position = UDim2.new(0, 0, 0.5, 0)
+	dot.Size = UDim2.fromOffset(8, 8)
+	dot.BorderSizePixel = 0
+	dot.BackgroundColor3 = C.smoke
+	dot.Parent = seenRow
+	local dc = Instance.new("UICorner")
+	dc.CornerRadius = UDim.new(1, 0)
+	dc.Parent = dot
+	parts.dot = dot
+	parts.seen = label(seenRow, "SeenText", "Unseen", 13, Brand.Fonts.bodyBold, C.bone)
+	parts.seen.Position = UDim2.fromOffset(16, 0)
+	parts.seen.Size = UDim2.new(1, -86, 1, 0)
+	parts.pace = label(seenRow, "Pace", "", 11, Brand.Fonts.body, C.smoke)
 	parts.pace.TextXAlignment = Enum.TextXAlignment.Right
 	parts.pace.Size = UDim2.fromScale(1, 1)
 	parts.seenRow = seenRow
-	local track = row(c, "Track", 4, 6)
+	local track = row(c, "Track", 5, 6)
 	track.BackgroundTransparency = 0
-	track.BackgroundColor3 = Color3.fromRGB(48, 42, 36)
+	track.BackgroundColor3 = Color3.fromRGB(44, 40, 36)
 	track.BorderSizePixel = 0
+	local tc = Instance.new("UICorner")
+	tc.CornerRadius = UDim.new(1, 0)
+	tc.Parent = track
 	local fill = Instance.new("Frame")
 	fill.Name = "Fill"
 	fill.Size = UDim2.new(0, 0, 1, 0)
 	fill.BorderSizePixel = 0
 	fill.BackgroundColor3 = Color3.fromRGB(255, 196, 80)
 	fill.Parent = track
+	local fc = Instance.new("UICorner")
+	fc.CornerRadius = UDim.new(1, 0)
+	fc.Parent = fill
 	parts.fill = fill
 	parts.track = track
-	-- The run's side jobs.
+	-- The run's side jobs, under a hairline.
 	local jobs = Instance.new("Frame")
 	jobs.Name = "Jobs"
 	jobs.BackgroundTransparency = 1
 	jobs.Size = UDim2.new(1, 0, 0, 0)
 	jobs.Visible = false
 	jobs.Parent = c
-	parts.jobsTitle = label(jobs, "JobsTitle", "SIDE JOBS", 10, Brand.Fonts.bodyBold, C.smoke)
-	parts.jobsTitle.Size = UDim2.new(1, 0, 0, 16)
+	local rule = Instance.new("Frame")
+	rule.Name = "Rule"
+	rule.BorderSizePixel = 0
+	rule.BackgroundColor3 = C.bone
+	rule.BackgroundTransparency = 0.88
+	rule.Position = UDim2.fromOffset(0, 4)
+	rule.Size = UDim2.new(1, 0, 0, 1)
+	rule.Parent = jobs
+	parts.jobsTitle = label(jobs, "JobsTitle", "SIDE JOBS", 10, Brand.Fonts.heavy, C.smoke)
+	parts.jobsTitle.Position = UDim2.fromOffset(0, 9)
+	parts.jobsTitle.Size = UDim2.new(1, 0, 0, 14)
+	parts.jobsCount = label(jobs, "JobsCount", "", 10, Brand.Fonts.bodyBold, C.smoke)
+	parts.jobsCount.Position = UDim2.fromOffset(0, 9)
+	parts.jobsCount.Size = UDim2.new(1, 0, 0, 14)
+	parts.jobsCount.TextXAlignment = Enum.TextXAlignment.Right
 	parts.jobs = jobs
 	card = c
 

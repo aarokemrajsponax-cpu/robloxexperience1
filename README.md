@@ -377,6 +377,24 @@ a Nightly attempt or a Mythic's odds.
 - **The launch kit**: page text, icon, thumbnails and the gameplay video's shot list are in
   [`LAUNCH.md`](LAUNCH.md).
 
+## Build 86 — Twin lanes in the Basement, a clearer heist card, keys above the hotbar
+
+- **Keys above the hotbar.** `Root.setBottom` now fires `Root.TopChanged`, which every attraction
+  HUD already listens to: when the hotbar appears mid-run (the Quartermaster's pistol), the keys
+  along the foot (Leave, Decoy, Fire) rise above it at once. Until now the Suite's keys stayed
+  where they were first placed, under the hotbar, and Fire couldn't be tapped on a phone.
+- **Steal a Luxe's card** (`UI/LuxeHud`), rebuilt: the wing as a badge in its own colour, bigger
+  bag slots with the count beside them, what the bag is worth in large gold figures (the banker's
+  cut and the weight beside it), the guards as one plain line with a coloured dot over a rounded
+  meter (the pace only when it isn't 100%), and the side jobs under a hairline with real
+  checkboxes instead of text symbols. Sentence case throughout, no strings of dots.
+- **Twin lanes in the Basement** (`shared/Basement`, `Basement.Lanes`): the hall is sixty studs
+  wide, so where a stage's obstacles fit twice more inside the walls (12 of the 16 stages), they're
+  laid again in a lane either side: the same obstacles in the same order, timed ones a third of
+  their beat apart. A lane begins on a bridge off the stage's landing and ends on one beside its
+  checkpoint (the checkpoint itself still has to be stood on). Secrets and their ledges aren't
+  copied. Each lane is checked hop by hop like the course, and clear of the course and the walls.
+
 ## Build 85 — Lucky Boxes for Gems or Gilt
 
 - **No more Robux products for the boxes.** Each box opens for Gems, worked out from its old Robux

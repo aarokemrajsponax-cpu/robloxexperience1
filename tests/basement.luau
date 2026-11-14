@@ -167,7 +167,7 @@ do
 	for n = 1, 16 do
 		local list = { { at = Plan.Checkpoints[n - 1].at - Vector3.new(0, 0.5, 0), size = Vector3.new(12, 1, 8), kind = "pad" } }
 		for _, e in Plan.Elements do
-			if e.stage == n and e.variant == nil and (e.kind == "pad" or e.kind == "beam" or e.kind == "vanish" or e.kind == "mover" or e.kind == "conveyor") then
+			if e.stage == n and e.variant == nil and e.lane == nil and (e.kind == "pad" or e.kind == "beam" or e.kind == "vanish" or e.kind == "mover" or e.kind == "conveyor") then
 				table.insert(list, e)
 			end
 		end
@@ -201,13 +201,85 @@ do
 		end
 	end
 	check("no gap anywhere wider than 5 studs (a guest jumps about 8 at a walk)", worst <= 5.01, string.format("%.2f at %s", worst, worstWhere))
+	-- (Build 86) The twin lanes: each the same way through, from its bridge off the landing to its
+	-- bridge onto the checkpoint, every hop as makeable; and clear of the course and the walls.
+	local laneWorst, laneWhere, laneRise, lanes, clash = 0, "", 0, 0, ""
+	for n = 1, 16 do
+		for _, side in { -1, 1 } do
+			local list = {}
+			for _, e in Plan.Elements do
+				if e.stage == n and e.lane == side and e.variant == nil and (e.kind == "pad" or e.kind == "beam" or e.kind == "vanish" or e.kind == "mover" or e.kind == "conveyor") then
+					table.insert(list, e)
+				end
+			end
+			if #list == 0 then
+				continue
+			end
+			lanes += 1
+			-- (The bridges were laid last: the landing's first of them, the checkpoint's second.)
+			local bridges = {}
+			for i = #list, 1, -1 do
+				if list[i].bridge then
+					table.insert(bridges, 1, table.remove(list, i))
+				end
+			end
+			table.insert(list, 1, bridges[1])
+			table.insert(list, bridges[2])
+			for k = 1, #list - 1 do
+				local a, b = list[k], list[k + 1]
+				local function span(e, axis)
+					local lo, hi = e.at[axis] - e.size[axis] / 2, e.at[axis] + e.size[axis] / 2
+					if e.kind == "mover" and e.b then
+						lo, hi = math.min(lo, e.b[axis] - e.size[axis] / 2), math.max(hi, e.b[axis] + e.size[axis] / 2)
+					end
+					return lo, hi
+				end
+				local ax0, ax1 = span(a, "X")
+				local bx0, bx1 = span(b, "X")
+				local az0, az1 = span(a, "Z")
+				local bz0, bz1 = span(b, "Z")
+				local gx = math.max(0, math.max(ax0, bx0) - math.min(ax1, bx1))
+				local gz = math.max(0, math.max(az0, bz0) - math.min(az1, bz1))
+				local gap = math.sqrt(gx * gx + gz * gz)
+				if gap > laneWorst then
+					laneWorst, laneWhere = gap, string.format("stage %d, side %d, step %d", n, side, k)
+				end
+				local up = (b.at.Y + b.size.Y / 2) - (a.at.Y + a.size.Y / 2)
+				if n ~= 10 then
+					laneRise = math.max(laneRise, up)
+				end
+			end
+			for _, e in list do
+				if not e.bridge then
+					local lo, hi = e.at.X - e.size.X / 2, e.at.X + e.size.X / 2
+					if math.max(math.abs(lo), math.abs(hi)) > Plan.HALF_WIDTH - 1 then
+						clash ..= string.format("stage %d by the wall; ", n)
+					end
+					for _, f in Plan.Elements do
+						if f.stage == n and f.lane == nil and f.kind ~= "pit" then
+							local flo, fhi = f.at.X - f.size.X / 2, f.at.X + f.size.X / 2
+							if f.b then
+								flo, fhi = math.min(flo, f.b.X - f.size.X / 2), math.max(fhi, f.b.X + f.size.X / 2)
+							end
+							if math.max(lo, flo) < math.min(hi, fhi) and math.abs(e.at.Z - f.at.Z) < (e.size.Z + f.size.Z) / 2 then
+								clash ..= string.format("stage %d over the course; ", n)
+							end
+						end
+					end
+				end
+			end
+		end
+	end
+	check("twin lanes either side of most stages, filling the wide hall", lanes >= 20, lanes)
+	check("...each lane's every hop makeable, as on the course itself", laneWorst <= 5.01 and laneRise <= 2.01, string.format("%.2f at %s, rise %.2f", laneWorst, laneWhere, laneRise))
+	check("...clear of the course and of the walls", clash == "", clash)
 	-- (Each course's own ledges: a short hop from the way through, or the launch pad's throw.)
 	local farLedge = ""
 	for _, e in Plan.Elements do
 		if e.variant and e.kind == "pad" then
 			local best, bestUp = math.huge, 0
 			for _, f in Plan.Elements do
-				if f.stage == e.stage and f.variant == nil and (f.kind == "pad" or f.kind == "beam" or f.kind == "vanish" or f.kind == "mover" or f.kind == "conveyor") then
+				if f.stage == e.stage and f.variant == nil and f.lane == e.lane and (f.kind == "pad" or f.kind == "beam" or f.kind == "vanish" or f.kind == "mover" or f.kind == "conveyor") then
 					local function span(x, axis)
 						local lo, hi = x.at[axis] - x.size[axis] / 2, x.at[axis] + x.size[axis] / 2
 						if x.kind == "mover" and x.b then
@@ -229,7 +301,7 @@ do
 			end
 			local thrown = false
 			for _, b in Plan.Elements do
-				if b.kind == "bouncer" and b.variant == e.variant and b.stage == e.stage then
+				if b.kind == "bouncer" and b.variant == e.variant and b.stage == e.stage and b.lane == e.lane then
 					local apex = (b.bounce or 0) ^ 2 / (2 * 196.2)
 					thrown = (Vector3.new(e.at.X, 0, e.at.Z) - Vector3.new(b.at.X, 0, b.at.Z)).Magnitude < 6 and (e.at.Y - b.at.Y) < apex
 				end
@@ -315,8 +387,12 @@ do
 	for _, tag in { "BasementMover", "BasementVanish", "BasementSteam", "BasementLaser", "BasementSpinner" } do
 		kinds[tag] = #(H.tagged[tag] or {})
 	end
-	check("its machinery is tagged for every screen to move: pistons, tiles, steam, lasers, valves", kinds.BasementMover == 4 and kinds.BasementVanish == 12 and kinds.BasementSteam == 5 and kinds.BasementLaser == 4 and kinds.BasementSpinner == 4, kinds)
-	check("and the courses' own: three crushers, a launch pad, eight secrets, every edge's glow", #(H.tagged.BasementCrusher or {}) == 3 and #(H.tagged.BasementBouncer or {}) == 1 and #(H.tagged.BasementSecret or {}) == 8 and #(H.tagged.BasementGuide or {}) > 60)
+	local planned = {}
+	for _, e in Plan.Elements do
+		planned[e.kind] = (planned[e.kind] or 0) + 1
+	end
+	check("its machinery is tagged for every screen to move: pistons, tiles, steam, lasers, valves (the twin lanes' too)", kinds.BasementMover == planned.mover and kinds.BasementVanish == planned.vanish and kinds.BasementSteam == planned.steam and kinds.BasementLaser == planned.laser and kinds.BasementSpinner == planned.spinner and planned.vanish > 12, kinds)
+	check("and the courses' own: the crushers, the launch pads, eight secrets (never copied), every edge's glow", #(H.tagged.BasementCrusher or {}) == planned.crusher and #(H.tagged.BasementBouncer or {}) == planned.bouncer and #(H.tagged.BasementSecret or {}) == 8 and #(H.tagged.BasementGuide or {}) > 60)
 	local versions = H.tagged.BasementVariant or {}
 	local each = {}
 	for _, m in versions do
@@ -329,14 +405,14 @@ do
 			belts += 1
 		end
 	end
-	check("its belts really run", belts == 2, belts)
+	check("its belts really run (the lanes' too)", belts == planned.conveyor and belts >= 2, belts)
 	local trusses = 0
 	for _, d in workspace.Attractions.MaisonBasement:GetDescendants() do
 		if d:IsA("TrussPart") then
 			trusses += 1
 		end
 	end
-	check("a truss to climb", trusses == 1)
+	check("a truss to climb (and the lanes' own)", trusses == planned.truss and trusses >= 1)
 	local kindsHere = {}
 	for _, p in H.tagged.AttractionPrompt or {} do
 		kindsHere[p:GetAttribute("Kind") .. ":" .. p:GetAttribute("Attraction")] = p

@@ -37,6 +37,8 @@ export type El = {
 	id: string?, -- a secret: its id (kept with the guest's ledger once found)
 	name: string?, -- a secret: what it is
 	runUp: number?, -- (Build 82) a stage's run-up: which hop it is (the landing: the last)
+	lane: number?, -- (Build 86) a twin lane's copy: which side (-1, 1)
+	bridge: boolean?, -- (Build 86) a twin lane's bridge off a landing or onto a checkpoint
 }
 export type Zone = { id: number, name: string, line: string, from: number, to: number, colour: Color3, purse: number }
 export type Checkpoint = { n: number, at: Vector3, size: Vector3, zone: number }
@@ -404,6 +406,112 @@ do
 	pad(t, 24, 16, "treasury")
 	Basement.Checkpoints[16] = { n = 16, at = t, size = v(24, 8, 16), zone = 4 }
 	add({ kind = "chest", at = t + v(0, 1.5, 4), size = v(5, 3, 3.5) })
+end
+
+-- (Build 86) Twin lanes: the hall is sixty studs wide, so each stage's obstacles are laid again in
+-- a lane at either side of the course where they fit: the very same obstacles in the same order
+-- (a timed one a third of its beat apart), so a lane is never an easier way, only another one, and
+-- a crowd spreads out. A lane begins at a bridge off the stage's landing and ends at one onto its
+-- checkpoint (the checkpoint itself still has to be stood on). Secrets aren't copied, nor their
+-- ledges. Each lane keeps clear of everything else of its stage and of the walls.
+Basement.Lanes = {} :: { [number]: { number } } -- each stage's lane offsets (studs from the line)
+do
+	local WALL = Basement.HALF_WIDTH - 4 -- (clear of the walls' dressing)
+	local GAP = 4
+	local base = #E
+	local secretsAt: { El } = {}
+	for i = 1, base do
+		if E[i].kind == "secret" then
+			table.insert(secretsAt, E[i])
+		end
+	end
+	local function nearSecret(e: El): boolean
+		for _, sc in secretsAt do
+			if sc.stage == e.stage and math.abs(sc.at.X - e.at.X) < 1.5 and math.abs(sc.at.Z - e.at.Z) < 1.5 then
+				return true
+			end
+		end
+		return false
+	end
+	local function copyable(e: El): boolean
+		if e.kind == "secret" or e.kind == "chest" or e.kind == "pit" or e.runUp then
+			return false
+		end
+		if e.kind == "pad" and (e.look == "checkpoint" or e.look == "landing" or e.look == "treasury") then
+			return false
+		end
+		return not nearSecret(e)
+	end
+	local function extent(e: El): (number, number)
+		local lo, hi = e.at.X - e.size.X / 2, e.at.X + e.size.X / 2
+		if e.b then
+			lo = math.min(lo, e.b.X - e.size.X / 2)
+			hi = math.max(hi, e.b.X + e.size.X / 2)
+		end
+		return lo, hi
+	end
+	for n = 1, Basement.STAGES do
+		local C: { El } = {}
+		local La, Ra, Lc, Rc = math.huge, -math.huge, math.huge, -math.huge
+		local landing: El? = nil
+		for i = 1, base do
+			local e = E[i]
+			if e.stage == n and e.kind ~= "pit" then
+				local lo, hi = extent(e)
+				La, Ra = math.min(La, lo), math.max(Ra, hi)
+				if copyable(e) then
+					table.insert(C, e)
+					Lc, Rc = math.min(Lc, lo), math.max(Rc, hi)
+				end
+				if e.runUp and (not landing or (e.runUp :: number) > ((landing :: El).runUp :: number)) then
+					landing = e
+				end
+			end
+		end
+		local finish = Basement.Checkpoints[n]
+		if #C == 0 or not landing or not finish then
+			continue
+		end
+		Basement.Lanes[n] = {}
+		local lanes: { { side: number, d: number } } = {}
+		local right = Ra + GAP - Lc -- (the lane's nearest edge GAP beyond everything else)
+		if Rc + right <= WALL then
+			table.insert(lanes, { side = 1, d = right })
+		end
+		local left = Rc - (La - GAP)
+		if Lc - left >= -WALL then
+			table.insert(lanes, { side = -1, d = left })
+		end
+		stage = n
+		for _, lane in lanes do
+			local off = lane.side * lane.d
+			table.insert(Basement.Lanes[n], off)
+			for _, e in C do
+				local c = table.clone(e) :: any
+				c.at = e.at + v(off, 0, 0)
+				if e.b then
+					c.b = (e.b :: Vector3) + v(off, 0, 0)
+				end
+				if e.period then
+					c.phase = ((e.phase or 0) + (if lane.side > 0 then 1 / 3 else 2 / 3)) % 1
+				end
+				c.lane = lane.side
+				table.insert(E, c)
+			end
+			-- The bridges: off the landing at the start, onto the checkpoint at the end.
+			local far = if lane.side > 0 then Rc + off else Lc + off
+			local function bridge(at: Vector3, half: number, depth: number, look: string?)
+				local inner = lane.side * half
+				local width = math.abs(far - inner)
+				local p = pad(v(inner + lane.side * width / 2, at.Y + 0.5, at.Z), width, depth, look)
+				p.lane = lane.side
+				p.bridge = true
+			end
+			local l = landing :: El
+			bridge(l.at, l.size.X / 2, l.size.Z, l.look)
+			bridge(finish.at, finish.size.X / 2, finish.size.Z, if n == 16 then "gold" elseif n % 4 == 0 then "landing" else "checkpoint")
+		end
+	end
 end
 
 -- The pits: under each stage, a floor to fall to (and from it, back to the checkpoint).

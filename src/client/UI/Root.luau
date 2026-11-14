@@ -208,8 +208,15 @@ end
 -- from the bottom it reaches in the UI's own units: notices in the corner sit above it.
 local bottomEdges: { [string]: number? } = {}
 
+-- (A change here fires TopChanged too: every HUD that places its keys along the foot already
+-- listens to it, so the keys rise above the hotbar the moment it appears, a pistol handed over
+-- mid-run included. Until Build 86 they stayed where they were placed, under the hotbar.)
 function Root.setBottom(key: string, height: number?)
+	if bottomEdges[key] == height then
+		return
+	end
 	bottomEdges[key] = height
+	topChanged:Fire()
 end
 
 function Root.bottomClear(): number
