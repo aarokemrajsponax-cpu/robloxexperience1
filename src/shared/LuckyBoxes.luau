@@ -1,12 +1,15 @@
 --!strict
--- The Luxe Lucky Boxes: three boxes sold for Robux, each opening to one brainrot, rarer the
--- dearer the box. Everything a guest needs to decide is shown before they buy and is exactly what
+-- The Luxe Lucky Boxes: three boxes opened for Gems (or, far dearer, for Gilt), each opening to
+-- one brainrot, rarer the dearer the box. (Build 85: Gems and Gilt instead of Robux. A box's Gems
+-- are what its old Robux price buys at the Gem Pouch's rate, 250 Gems for 199 Robux; its Gilt is
+-- 250 Gilt a Gem, far above what Gilt costs in Robux, so a Gilt open is something saved up for.)
+-- Everything a guest needs to decide is shown before they open one and is exactly what
 -- the server rolls with:
 --   * the odds of every brainrot in the box (they add up to 100%; every open gives one, there is
 --     no empty result), and the odds of it coming Gold, Diamond or Rainbow;
 --   * the guarantee (pity): if this many opens in a row bring nothing of a rarity or better, the
 --     next one does, picked by the same odds among those. Its counter is on the box;
---   * the price, on the key, from Roblox.
+--   * the price, on the key, in Gems and in Gilt.
 -- Only brainrots that are also found free at the tables are in the boxes (never a Secret, never
 -- an auction or attraction one): a box is a quicker way to them, never the only way. And they're
 -- only sold where Roblox's policy for the guest allows paid random items (server/Policy).
@@ -18,11 +21,12 @@ local LuckyBoxes = {}
 
 export type Box = {
 	id: string,
-	key: string, -- its ProductConfig key
 	name: string,
 	short: string,
 	line: string,
-	price: number, -- the reference price (Roblox's own price is shown when it's known)
+	price: number, -- what it was in Robux (Build 83), the measure its Gems are worked from
+	gems: number, -- an open for Gems
+	gilt: number, -- an open for Gilt (much dearer)
 	colour: Color3, -- the box
 	ribbon: Color3,
 	glow: Color3,
@@ -35,14 +39,19 @@ local rgb = Color3.fromRGB
 
 LuckyBoxes.Order = { "gilded", "velvet", "noir" }
 
+-- Gems for a Robux at the Gem Pouch (250 for 199), and Gilt for a Gem in a box.
+LuckyBoxes.GEMS_PER_ROBUX = 250 / 199
+LuckyBoxes.GILT_PER_GEM = 250
+
 LuckyBoxes.Boxes = {
 	gilded = {
 		id = "gilded",
-		key = "luckyGilded",
 		name = "The Gilded Box",
 		short = "Gilded",
 		line = "Rare or better, every time.",
 		price = 79,
+		gems = 100,
+		gilt = 25000,
 		colour = rgb(222, 172, 70),
 		ribbon = rgb(160, 18, 40),
 		glow = rgb(255, 210, 120),
@@ -57,11 +66,12 @@ LuckyBoxes.Boxes = {
 	},
 	velvet = {
 		id = "velvet",
-		key = "luckyVelvet",
 		name = "The Velvet Box",
 		short = "Velvet",
 		line = "Epic or better, every time.",
 		price = 199,
+		gems = 250,
+		gilt = 62500,
 		colour = rgb(178, 24, 56),
 		ribbon = rgb(255, 204, 90),
 		glow = rgb(255, 96, 130),
@@ -75,11 +85,12 @@ LuckyBoxes.Boxes = {
 	},
 	noir = {
 		id = "noir",
-		key = "luckyNoir",
 		name = "The Noir Box",
 		short = "Noir",
 		line = "Legendary or better, every time.",
 		price = 449,
+		gems = 565,
+		gilt = 140000,
 		colour = rgb(20, 18, 24),
 		ribbon = rgb(255, 214, 110),
 		glow = rgb(196, 150, 255),
@@ -92,10 +103,6 @@ LuckyBoxes.Boxes = {
 	},
 } :: { [string]: Box }
 
-LuckyBoxes.byKey = {} :: { [string]: Box }
-for _, b in LuckyBoxes.Boxes do
-	LuckyBoxes.byKey[b.key] = b
-end
 
 -- The brainrots of a rarity that a box can hold: those found free at the tables, by id.
 function LuckyBoxes.pool(rarity: string): { string }

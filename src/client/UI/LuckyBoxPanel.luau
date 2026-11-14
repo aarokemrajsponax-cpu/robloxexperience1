@@ -6,26 +6,26 @@
 --   * the odds of every brainrot in it (grouped by rarity, adding up to 100%), and how many of
 --     each the guest already holds;
 --   * the odds of it coming Gold, Diamond or Rainbow;
---   * the price, from Roblox, on the key.
+--   * the price on each key: in Gems, or (far dearer) in Gilt, with what the guest holds of each.
+--     Too few Gems: the key says Insufficient Gems and opens the Gem Shop.
 -- Every open gives a brainrot: there is no empty result. The reveal is honest: the box glows in
 -- the colour of the rarity that actually came, from the first moment, then opens to it (the
 -- house's own find reveal, CurioReveal). A guest Roblox's policy restricts from paid random items
 -- sees only why they're closed and where else brainrots come from.
 
-local MarketplaceService = game:GetService("MarketplaceService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Boxes = require(ReplicatedStorage.Shared.LuckyBoxes)
 local Brainrots = require(ReplicatedStorage.Shared.Brainrots)
 local Brand = require(ReplicatedStorage.Shared.Brand)
-local Caps = require(ReplicatedStorage.Shared.Caps)
 local CurioList = require(ReplicatedStorage.Shared.Curios)
 local Ease = require(ReplicatedStorage.Shared.Ease)
 local CurioState = require(script.Parent.Parent.CurioState)
 local Sound = require(script.Parent.Parent.Sound)
 local CurioArt = require(script.Parent.CurioArt)
 local CurioReveal = require(script.Parent.CurioReveal)
+local GemShopPanel = require(script.Parent.GemShopPanel)
 local Root = require(script.Parent.Root)
 local Theme = require(script.Parent.Theme)
 local Toast = require(script.Parent.Toast)
@@ -33,13 +33,11 @@ local Toast = require(script.Parent.Toast)
 local LuckyBoxPanel = {}
 
 local NAME = "LuckyBoxes"
-local ROBUX = utf8.char(0xE002)
 local C = Brand.Colours
 
 local chosen = "gilded"
 local state: { [string]: any }? = nil
-local waiting = false -- Roblox's purchase window is open, or the box's receipt is on its way
-local openKey: TextButton? = nil
+local waiting = false -- an open has been asked for and the server hasn't answered yet
 local bodyRef: ScrollingFrame? = nil
 local keysRef: Frame? = nil
 local art: { [string]: Frame } = {}
@@ -166,13 +164,18 @@ local function oddsRow(parent: Instance, o: { [string]: any }, order: number)
 	})
 end
 
-local function openText(b: { [string]: any }?): string
-	if waiting then
-		return "Waiting for Roblox"
-	elseif not b or not b.ready then
-		return "Not on sale yet"
+-- A key's words: what an open costs in Gems or Gilt, or that there's too little of it.
+local function openText(b: { [string]: any }?, pay: string): string
+	local st: { [string]: any } = state or {}
+	if not b then
+		return "One moment"
 	end
-	return string.format("Open  %s %s", ROBUX, number(tonumber(b.price) or 0))
+	if pay == "gems" then
+		local price = tonumber(b.gems) or 0
+		return if (tonumber(st.gems) or 0) >= price then string.format("Open  ·  %s Gems", number(price)) else "Insufficient Gems"
+	end
+	local price = tonumber(b.gilt) or 0
+	return if (tonumber(st.gilt) or 0) >= price then string.format("Open  ·  %s Gilt", number(price)) else "Insufficient Gilt"
 end
 
 local render: () -> ()
@@ -186,19 +189,36 @@ local function pick(id: string)
 	render()
 end
 
-local function buy()
+local function buy(pay: string)
 	local b = boxState(chosen)
-	if waiting or not b or not b.ready then
+	local st = state
+	if waiting or not b or not st then
 		return
 	end
-	local r = CurioState.ask({ op = "luckyOpen", id = chosen })
-	if type(r) == "table" and r.prompted then
-		waiting = true
-		if openKey then
-			openKey.Text = Caps(openText(b))
+	local price = tonumber(if pay == "gems" then b.gems else b.gilt) or 0
+	local have = tonumber(if pay == "gems" then st.gems else st.gilt) or 0
+	if have < price then
+		if pay == "gems" then
+			-- Too few Gems: the Gem Shop, where they're bought.
+			LuckyBoxPanel.close()
+			GemShopPanel.open()
+		else
+			Toast.show("Insufficient Gilt", string.format("%s more Gilt opens the %s.", number(price - have), Boxes.Boxes[chosen].name), 4)
 		end
+		return
+	end
+	waiting = true
+	local r = CurioState.ask({ op = "luckyOpen", id = chosen, key = pay })
+	waiting = false
+	if type(r) == "table" and r.ok and type(r.result) == "table" then
+		st.gems = tonumber(r.gems) or st.gems
+		st.gilt = tonumber(r.gilt) or st.gilt
+		render()
+		LuckyBoxPanel.reveal(r.result)
 	elseif type(r) == "table" and type(r.why) == "string" then
 		Toast.show("Luxe Lucky Boxes", r.why, 5)
+	else
+		Toast.show("Luxe Lucky Boxes", "One moment: try again.", 4)
 	end
 end
 
@@ -214,16 +234,35 @@ render = function()
 	body:ClearAllChildren()
 	local list = Theme.list(body, 10)
 	list.VerticalAlignment = Enum.VerticalAlignment.Top
-	local keys = keysRef
-	if keys then
-		keys:ClearAllChildren()
-		Theme.list(keys, 10, true).HorizontalAlignment = Enum.HorizontalAlignment.Center
+	-- The keys: Gems and Gilt side by side, Close beneath them.
+	local keys: Frame? = nil
+	local lower: Frame? = nil
+	local keyWidth = 200
+	if keysRef then
+		keysRef:ClearAllChildren()
+		Theme.list(keysRef, 8).HorizontalAlignment = Enum.HorizontalAlignment.Center
+		local upper = Instance.new("Frame")
+		upper.Name = "Pay"
+		upper.BackgroundTransparency = 1
+		upper.Size = UDim2.new(1, 0, 0, 44)
+		upper.LayoutOrder = 1
+		upper.Parent = keysRef
+		Theme.list(upper, 10, true).HorizontalAlignment = Enum.HorizontalAlignment.Center
+		local closeRow = Instance.new("Frame")
+		closeRow.Name = "CloseRow"
+		closeRow.BackgroundTransparency = 1
+		closeRow.Size = UDim2.new(1, 0, 0, 40)
+		closeRow.LayoutOrder = 2
+		closeRow.Parent = keysRef
+		Theme.list(closeRow, 10, true).HorizontalAlignment = Enum.HorizontalAlignment.Center
+		keys, lower = upper, closeRow
+		keyWidth = math.clamp(math.floor((Root.panelWidth(560) - 70) / 2), 120, 220)
 	end
 	local function closeKey()
-		if keys then
-			Theme.key(keys, "Close", false, function()
+		if lower then
+			Theme.key(lower, "Close", false, function()
 				LuckyBoxPanel.close()
-			end, 120).LayoutOrder = 2
+			end, 120).LayoutOrder = 1
 		end
 	end
 	if not s.allowed then
@@ -265,7 +304,7 @@ render = function()
 		a.Position = UDim2.new(0.5, 0, 0, 4)
 		art[id] = a
 		Theme.text(card, def.short, 15, "display", { Name = "Name", Position = UDim2.fromOffset(0, 76), Size = UDim2.new(1, 0, 0, 18), TextColor3 = if id == chosen then def.glow else C.bone })
-		Theme.text(card, if bs and bs.ready then string.format("%s %s", ROBUX, number(tonumber(bs.price) or def.price)) else "Not on sale yet", 12, "bodyBold", { Name = "Price", Position = UDim2.fromOffset(0, 96), Size = UDim2.new(1, 0, 0, 14), TextColor3 = C.lightGold })
+		Theme.text(card, string.format("%s Gems", number(tonumber(bs and bs.gems) or def.gems)), 12, "bodyBold", { Name = "Price", Position = UDim2.fromOffset(0, 96), Size = UDim2.new(1, 0, 0, 14), TextColor3 = C.lightGold })
 		local tier = Theme.text(card, string.format("%s or better", def.odds[1].rarity), 11, "body", { Name = "Line", Position = UDim2.fromOffset(4, 113), Size = UDim2.new(1, -8, 0, 14), TextColor3 = C.smoke })
 		Theme.fit(tier, 11, 8)
 		card.Activated:Connect(function()
@@ -367,10 +406,19 @@ render = function()
 		TextWrapped = true,
 		TextColor3 = C.smoke,
 	})
+	Theme.text(body, string.format("You hold %s Gems and %s Gilt.", number(tonumber(s.gems) or 0), number(tonumber(s.gilt) or 0)), 11, "bodyBold", {
+		Name = "Purse",
+		LayoutOrder = 7,
+		TextColor3 = C.lightGold,
+	})
 	if keys then
-		local ok = Theme.key(keys, openText(b), true, buy, 220)
+		local ok = Theme.key(keys, openText(b, "gems"), true, function()
+			buy("gems")
+		end, keyWidth)
 		ok.LayoutOrder = 1
-		openKey = ok
+		Theme.key(keys, openText(b, "gilt"), false, function()
+			buy("gilt")
+		end, keyWidth).LayoutOrder = 2
 	end
 	closeKey()
 end
@@ -392,7 +440,7 @@ function LuckyBoxPanel.open()
 	body.Name = "Body"
 	body.BackgroundTransparency = 1
 	body.BorderSizePixel = 0
-	body.Size = UDim2.new(1, 0, 0, math.clamp(Root.viewport().Y - 310, 150, 460))
+	body.Size = UDim2.new(1, 0, 0, math.clamp(Root.viewport().Y - 360, 130, 440))
 	body.CanvasSize = UDim2.new()
 	body.AutomaticCanvasSize = Enum.AutomaticSize.Y
 	body.ScrollBarThickness = 4
@@ -403,13 +451,12 @@ function LuckyBoxPanel.open()
 	local keys = Instance.new("Frame")
 	keys.Name = "Keys"
 	keys.BackgroundTransparency = 1
-	keys.Size = UDim2.new(1, 0, 0, 44)
+	keys.Size = UDim2.new(1, 0, 0, 92)
 	keys.LayoutOrder = 11
 	keys.Parent = content
 	keysRef = keys
 	Theme.text(body, "One moment", 13, "body", { TextColor3 = C.smoke })
 	Root.open(NAME, group, function()
-		openKey = nil
 		bodyRef = nil
 		keysRef = nil
 		art = {}
@@ -650,13 +697,6 @@ function LuckyBoxPanel.pulled(m: { [string]: any })
 	end
 end
 
--- Roblox's purchase window closed without a purchase: the key is ready again.
-local function promptClosed(_userId: number, _productId: number, purchased: boolean)
-	if not purchased and waiting then
-		waiting = false
-		render()
-	end
-end
 
 function LuckyBoxPanel.isOpen(): boolean
 	return Root.isOpen(NAME)
@@ -669,7 +709,7 @@ function LuckyBoxPanel.close()
 end
 
 function LuckyBoxPanel.start()
-	MarketplaceService.PromptProductPurchaseFinished:Connect(promptClosed)
+	-- (Nothing to listen for since Build 85: an open is answered at once, in Gems or Gilt.)
 end
 
 return LuckyBoxPanel

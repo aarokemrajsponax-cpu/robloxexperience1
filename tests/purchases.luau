@@ -1966,34 +1966,38 @@ do
 	check("no answer from Roblox: not sold (fail safe)", Policy.paidRandomAllowed(cal) == false and cal:GetAttribute("PaidRandomAllowed") ~= true)
 	Policy.lookup = lookup
 
-	for _, p in {
-		{ Name = "Luxe Lucky Box: Gilded", ProductId = 5701, PriceInRobux = 79 },
-		{ Name = "Luxe Lucky Box: Velvet", ProductId = 5702, PriceInRobux = 199 },
-		{ Name = "Luxe Lucky Box: Noir", ProductId = 5703, PriceInRobux = 449 },
-	} do
-		table.insert(MarketplaceService.devProducts, p)
-	end
-	run(Catalog.discover)
-	local problems = ProductConfig.validate(Grants.names())
-	check("the three boxes are valid products, never offered in the Shop", problems.luckyGilded == nil and problems.luckyVelvet == nil and problems.luckyNoir == nil and ProductConfig.byKey.luckyNoir.UX.Offer == false)
+	check("the boxes are no longer Robux products", ProductConfig.byKey.luckyGilded == nil and ProductConfig.byKey.luckyNoir == nil)
+	check("a box's Gems are its old Robux price at the Gem Pouch's rate, and its Gilt far dearer", (function()
+		for _, id in LB.Order do
+			local b = LB.Boxes[id]
+			if math.abs(b.gems - b.price * LB.GEMS_PER_ROBUX) > b.gems * 0.02 or b.gilt < b.gems * 200 then
+				return false
+			end
+		end
+		return LB.Boxes.gilded.gems < LB.Boxes.velvet.gems and LB.Boxes.velvet.gems < LB.Boxes.noir.gems
+	end)())
 
+	local aData = profiles[ann].Data
+	local bData = profiles[ben].Data
+	bData.gems = 5000
 	local st = curio(ben, { op = "luckyState" })
 	check("a restricted guest is told why, and where else brainrots come from", st.ok == true and st.allowed == false and type(st.why) == "string" and st.why:find("Cabinet") ~= nil)
-	local before = #prompts
-	local r = curio(ben, { op = "luckyOpen", id = "gilded" })
-	check("...and can't open a box", r.ok == false and r.closed == true and #prompts == before)
-	local ok = Store.prompt(ben, "luckyGilded", "test")
-	check("...not even by the purchase system directly", ok == false and #prompts == before)
+	local r = curio(ben, { op = "luckyOpen", id = "gilded", key = "gems" })
+	check("...and can't open a box, even holding the Gems", r.ok == false and r.closed == true and bData.gems == 5000)
 
+	aData.gems = 0
+	aData.gilt = 0
 	st = curio(ann, { op = "luckyState" })
-	check("the showroom shows each box with Roblox's price, its odds and its guarantee", st.allowed == true and #st.boxes == 3 and st.boxes[1].price == 79 and st.boxes[3].price == 449 and st.boxes[1].ready == true and #st.boxes[1].odds == #LB.odds("gilded") and st.boxes[1].pity.at == 20 and st.boxes[1].pity.left == 20)
-	r = curio(ann, { op = "luckyOpen", id = "noir" })
-	check("an allowed guest's key opens Roblox's purchase window", r.ok == true and #prompts == before + 1)
-	r = curio(ann, { op = "luckyOpen", id = "diamonds" })
+	check("the showroom shows each box's Gems and Gilt, its odds, its guarantee and the purse", st.allowed == true and #st.boxes == 3 and st.boxes[1].gems == 100 and st.boxes[3].gems == 565 and st.boxes[1].gilt == 25000 and #st.boxes[1].odds == #LB.odds("gilded") and st.boxes[1].pity.at == 20 and st.boxes[1].pity.left == 20 and st.gems == 0)
+	r = curio(ann, { op = "luckyOpen", id = "gilded", key = "gems" })
+	check("too few Gems: Insufficient Gems, nothing opened", r.ok == false and r.why == "Insufficient Gems" and r.short == 100 and (aData.luckyBoxes == nil or (aData.luckyBoxes.opened.gilded or 0) == 0))
+	r = curio(ann, { op = "luckyOpen", id = "diamonds", key = "gems" })
 	check("a box that isn't one is refused", r.ok == false)
+	aData.gems = 3000
+	r = curio(ann, { op = "luckyOpen", id = "gilded", key = "robux" })
+	check("...and so is any way to pay but Gems or Gilt", r.ok == false and aData.gems == 3000)
 
-	-- Opening: the server's roll, once per receipt.
-	local aData = profiles[ann].Data
+	-- Opening: the server's roll, the box's own price.
 	local seq, at = {}, 0
 	local realRandom = LBS.random
 	LBS.random = { NextNumber = function()
@@ -2001,44 +2005,59 @@ do
 		return seq[((at - 1) % #seq) + 1]
 	end }
 	seq = { 0.99, 0.99, 0.0001 } -- Mythic, the last of them, Rainbow
-	local result = receipt(ann, 5701, "lucky-1", 79)
-	local got = lastOp(ann, "luckyBox")
+	r = curio(ann, { op = "luckyOpen", id = "gilded", key = "gems" })
 	local mythics = LB.pool("Mythic")
-	check("a box gives one brainrot, the one the roll says", result == GRANTED and got ~= nil and got.result.id == mythics[#mythics] and CuriosS.count(aData, mythics[#mythics]) == 1)
-	check("...told to the screen with its rarity, mutation and that it's new", got.result.rarity == "Mythic" and got.result.mut == "rainbow" and got.result.new == true)
+	check("a box for Gems: its price taken, one brainrot given, the one the roll says", r.ok == true and aData.gems == 2900 and r.gems == 2900 and r.result.id == mythics[#mythics] and CuriosS.count(aData, mythics[#mythics]) == 1)
+	check("...told with its rarity, mutation and that it's new", r.result.rarity == "Mythic" and r.result.mut == "rainbow" and r.result.new == true and r.result.pay == "gems" and r.result.price == 100)
 	check("...its mutation kept with that brainrot", aData.curios.squad.mut[mythics[#mythics]] == "rainbow")
-	receipt(ann, 5701, "lucky-1", 79)
-	check("the same receipt twice opens nothing more", CuriosS.count(aData, mythics[#mythics]) == 1 and aData.luckyBoxes.opened.gilded == 1)
+	r = curio(ann, { op = "luckyOpen", id = "gilded", key = "gems" })
+	check("one box at a time", r.ok == false and aData.gems == 2900)
 	check("a Mythic resets the Gilded box's guarantee", aData.luckyBoxes.since.gilded == 0)
 
 	-- The guarantee: 19 opens without a Legendary, then the 20th is one.
 	seq = { 0, 0, 0.99 } -- Rare, the first of them, plain
-	for i = 1, 19 do
-		receipt(ann, 5701, "lucky-p" .. i, 79)
+	aData.gems = 100 * 19
+	for _ = 1, 19 do
+		advance(1.2)
+		curio(ann, { op = "luckyOpen", id = "gilded", key = "gems" })
 	end
 	st = curio(ann, { op = "luckyState" })
-	check("the counter: 19 opens without a Legendary, so the next one is", aData.luckyBoxes.since.gilded == 19 and st.boxes[1].pity.left == 1)
-	receipt(ann, 5701, "lucky-p20", 79)
-	got = lastOp(ann, "luckyBox")
-	check("...and it is: a Legendary or better, by the same odds among those", got.result.forced == true and LB.rank(got.result.rarity) >= LB.rank("Legendary") and aData.luckyBoxes.since.gilded == 0)
+	check("the counter: 19 opens without a Legendary, so the next one is", aData.luckyBoxes.since.gilded == 19 and st.boxes[1].pity.left == 1 and aData.gems == 0)
+	-- That one for Gilt (far dearer).
+	aData.gilt = 24999
+	advance(1.2)
+	r = curio(ann, { op = "luckyOpen", id = "gilded", key = "gilt" })
+	check("too little Gilt: Insufficient Gilt", r.ok == false and r.why == "Insufficient Gilt" and aData.gilt == 24999)
+	aData.gilt = 30000
+	advance(1.2)
+	r = curio(ann, { op = "luckyOpen", id = "gilded", key = "gilt" })
+	local got = r
+	check("for Gilt: its Gilt taken, and the guarantee kept: a Legendary or better", r.ok == true and aData.gilt == 5000 and r.result.forced == true and LB.rank(r.result.rarity) >= LB.rank("Legendary") and aData.luckyBoxes.since.gilded == 0)
 	check("every open gave a brainrot", aData.luckyBoxes.opened.gilded == 21 and #aData.luckyBoxes.log <= 8)
+	-- An open that fails gives the price back.
+	local open = LBS.open
+	LBS.open = function()
+		error("a broken box")
+	end
+	aData.gems = 500
+	advance(1.2)
+	r = curio(ann, { op = "luckyOpen", id = "velvet", key = "gems" })
+	check("a box that won't open takes nothing", r.ok == false and aData.gems == 500)
+	LBS.open = open
 	st = curio(ann, { op = "luckyState" })
 	check("the showroom lists this server's latest real opens", #st.lately == 5 and st.lately[1].name == ann.DisplayName and st.lately[1].id == got.result.id)
-	check("a Mythic was told to the others here who may buy, never to a restricted guest", (function()
-		for _, m in cal.inbox do
-			if m.op == "luckyPull" then
-				return false
-			end
-		end
-		for _, m in ben.inbox do
-			if m.op == "luckyPull" then
-				return false
+	check("a Mythic was told to the others here who may open boxes, never to a restricted guest", (function()
+		for _, g in { ben, cal } do
+			for _, m in g.inbox do
+				if m.op == "luckyPull" then
+					return false
+				end
 			end
 		end
 		return true
 	end)())
 	st = curio(ben, { op = "luckyState" })
-	check("...and a restricted guest isn't shown the boxes' opens", #st.lately == 0 and #st.boxes == 0)
+	check("...and a restricted guest isn't shown the boxes or their opens", #st.lately == 0 and #st.boxes == 0)
 	LBS.random = realRandom
 
 	-- AFK mode: out of the game the squad earns a fifth of its rate, for at most twelve hours.

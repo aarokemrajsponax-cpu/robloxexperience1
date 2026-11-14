@@ -9895,11 +9895,11 @@ end)()
 				for _, o in LB.odds(id) do
 					table.insert(odds, { id = o.id, rarity = o.rarity, chance = o.chance, held = if o.rarity == "Rare" then 2 else 0 })
 				end
-				table.insert(boxes, { id = id, key = b.key, price = b.price, ready = true, odds = odds, mut = { gold = b.mut.gold, diamond = b.mut.diamond, rainbow = b.mut.rainbow, plain = LB.plain(id) }, pity = { at = b.pity.at, rarity = b.pity.rarity, left = b.pity.at - 3 }, opened = 3 })
+				table.insert(boxes, { id = id, gems = b.gems, gilt = b.gilt, odds = odds, mut = { gold = b.mut.gold, diamond = b.mut.diamond, rainbow = b.mut.rainbow, plain = LB.plain(id) }, pity = { at = b.pity.at, rarity = b.pity.rarity, left = b.pity.at - 3 }, opened = 3 })
 			end
-			return { ok = true, allowed = true, boxes = boxes, log = {}, lately = { { name = "Bo", id = LB.pool("Legendary")[1], rarity = "Legendary", mut = "gold", box = "velvet" } } }
+			return { ok = true, allowed = true, boxes = boxes, log = {}, gems = 1000, gilt = 0, lately = { { name = "Bo", id = LB.pool("Legendary")[1], rarity = "Legendary", mut = "gold", box = "velvet" } } }
 		elseif req.op == "luckyOpen" then
-			return { ok = true, prompted = true }
+			return { ok = true, gems = 435, gilt = 0, result = { box = "noir", id = LB.pool("Mythic")[1], rarity = "Mythic", mut = "gold", new = true, count = 1, stars = 1, pityLeft = 4, pay = "gems", price = 565 } }
 		end
 		if type(curioWas) == "function" then
 			return curioWas(req)
@@ -9933,7 +9933,8 @@ end)()
 	services.ProximityPromptService.PromptTriggered:Fire(prompt)
 	advance(0.8)
 	check("its prompt opens the boxes", Panel.isOpen() and textOnScreen("Pick a box") ~= nil)
-	check("...the three boxes, each with its price", textOnScreen("Gilded") ~= nil and textOnScreen("Velvet") ~= nil and textOnScreen("Noir") ~= nil and textOnScreen("79") ~= nil)
+	check("...the three boxes, each with its price in Gems", textOnScreen("Gilded") ~= nil and textOnScreen("Velvet") ~= nil and textOnScreen("Noir") ~= nil and textOnScreen("100 Gems") ~= nil and textOnScreen("565 Gems") ~= nil)
+	check("...a key for Gems and one for Gilt, saying when there's too little", textOnScreen("Open  ·  100 Gems") ~= nil and textOnScreen("Insufficient Gilt") ~= nil and textOnScreen("You hold 1,000 Gems and 0 Gilt") ~= nil)
 	check("...every brainrot's chance, before the key", textOnScreen("10%") ~= nil and textOnScreen("7.5%") ~= nil and textOnScreen("0.5%") ~= nil and textOnScreen("You hold 2") ~= nil)
 	check("...the mutation odds", textOnScreen("Gold 8%") ~= nil and textOnScreen("Rainbow 0.5%") ~= nil)
 	check("...and the guarantee counter", textOnScreen("guaranteed within 17 opens") ~= nil)
@@ -9942,15 +9943,11 @@ end)()
 	pressNamed("Box_noir")
 	advance(0.4)
 	check("choosing the Noir shows its own odds", textOnScreen("23%") ~= nil and textOnScreen("15.5%") ~= nil and textOnScreen("guaranteed within 1 opens") == nil)
-	local before = #asked
-	check("its key names the price", press("Open  " .. utf8.char(0xE002) .. " 449"))
-	advance(0.4)
-	check("...and opens Roblox's purchase window for that box", asked[before + 1] ~= nil and asked[before + 1].op == "luckyOpen" and asked[before + 1].id == "noir")
-	check("...then waits for Roblox", textOnScreen("Waiting for Roblox") ~= nil)
-	services.MarketplaceService.PromptProductPurchaseFinished:Fire(1, 5703, false)
+	press("Insufficient Gilt")
 	advance(0.3)
-	check("closed without buying: the key is back", textOnScreen("Waiting for Roblox") == nil)
-	-- The reveal: the box glows in the colour of what came, then the find's reveal.
+	check("too little Gilt: says how much more, opens nothing", textOnScreen("140,000 more Gilt") ~= nil and asked[#asked].op ~= "luckyOpen")
+	pressNamed("Box_noir")
+	advance(0.4)
 	-- The reel: the result where it stops, everything else drawn by the box's odds.
 	local seq = 0
 	local strip = Panel.reel("gilded", "frogKing", function()
@@ -9969,7 +9966,9 @@ end)()
 		end
 		return true
 	end)())
-	Panel.reveal({ box = "noir", id = LB.pool("Mythic")[1], rarity = "Mythic", mut = "gold", new = true, count = 1, stars = 1, pityLeft = 4 })
+	local before = #asked
+	check("its Gems key names the price", press("Open  ·  565 Gems"))
+	check("...and opens that box for Gems", asked[before + 1] ~= nil and asked[before + 1].op == "luckyOpen" and asked[before + 1].id == "noir" and asked[before + 1].key == "gems")
 	advance(0.6)
 	check("an open runs on the reel", find(playerGui, function(d)
 		return d.Name == "Reel"

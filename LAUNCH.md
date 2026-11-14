@@ -128,8 +128,8 @@ and alcohol pieces replaced (§19 #2):
 - **Alcohol:** none, once the Hip Flask and Champagne Coupe are replaced. The Terrace's drinks
   cart and the Suite's drinks cabinet show plain bottles; swap them for a flower cart and a
   curio cabinet if you want to be certain.
-- **Paid random items:** **yes** (Build 83: the Luxe Lucky Boxes). Each box's odds are shown in
-  full before buying (they add up to 100%; every open gives a brainrot), and the game checks each
+- **Paid random items:** **yes** (the Luxe Lucky Boxes, opened for Gems or Gilt, both of which are
+  sold for Robux). Each box's odds are shown in full before opening (they add up to 100%; every open gives a brainrot), and the game checks each
   guest's policy (`PolicyService`, `ArePaidRandomItemsRestricted`): until Roblox says paid random
   items aren't restricted for that guest, the showroom's prompt is hidden and the purchase is
   refused on the server. Tick this box, or the experience can be restricted.

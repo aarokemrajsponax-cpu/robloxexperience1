@@ -4,6 +4,6 @@
 -- see whether Studio has the latest code from GitHub.
 
 return {
-	number = 84,
-	label = "Build 84 · 14 Nov · Lucky Boxes in the Grand Ballroom, on a reel",
+	number = 85,
+	label = "Build 85 · 14 Nov · Lucky Boxes for Gems or Gilt",
 }

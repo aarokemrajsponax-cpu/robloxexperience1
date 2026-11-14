@@ -377,6 +377,22 @@ a Nightly attempt or a Mythic's odds.
 - **The launch kit**: page text, icon, thumbnails and the gameplay video's shot list are in
   [`LAUNCH.md`](LAUNCH.md).
 
+## Build 85 — Lucky Boxes for Gems or Gilt
+
+- **No more Robux products for the boxes.** Each box opens for Gems, worked out from its old Robux
+  price at the Gem Pouch's rate (250 Gems for 199 Robux): **Gilded 100 Gems** (was 79 R$),
+  **Velvet 250 Gems** (199 R$), **Noir 565 Gems** (449 R$). Or for Gilt, far dearer, at 250 Gilt
+  a Gem: **25,000 / 62,500 / 140,000 Gilt** (a Gilt Vault, 18,000 Gilt, is 799 R$). The prices
+  live in `shared/LuckyBoxes` (`gems`, `gilt`).
+- **On the server** (`server/LuckyBoxes.buy`): the box's own price is taken and the box opened in
+  one step with nothing between them that yields, one open a second at most, and if the open fails
+  the purse is put back as it was. Too few: "Insufficient Gems" (the key opens the Gem Shop) or
+  "Insufficient Gilt" (how much more). The panel shows what the guest holds of each.
+- **Still paid random items** (Gems and Gilt are both sold for Robux), so the policy gate stays:
+  no showroom prompt and no open for a guest Roblox restricts. The questionnaire answer stays yes.
+- The three `Luxe Lucky Box: …` developer products are no longer used: don't create them (any
+  already made can be left off sale).
+
 ## Build 84 — Lucky Boxes in the Grand Ballroom, on a reel
 
 - **The showroom moved** from the Foyer to the Grand Ballroom's Entrance Hall, right of the way
@@ -412,9 +428,8 @@ a Nightly attempt or a Mythic's odds.
   read for every guest and published as `PaidRandomAllowed`. Until Roblox says they aren't
   restricted, that guest sees no showroom prompt, and `Store.eligibility` refuses the purchase.
   Creator Hub's questionnaire must now answer **Paid random items: yes** (see `LAUNCH.md` §5).
-- **To sell them**, create three developer products with these exact names (prices are yours):
-  `Luxe Lucky Box: Gilded`, `Luxe Lucky Box: Velvet`, `Luxe Lucky Box: Noir`. Until they exist
-  the panel says "Not on sale yet" and nothing can be bought.
+- **(Build 83 only)** they were three developer products; since Build 85 they open for Gems or
+  Gilt, and those products aren't needed.
 - **AFK mode.** Out of the game, a guest's brainrots keep earning at a fifth of their rate, for up
   to 12 hours (`shared/Brainrots.offline`); in the game the squad still earns its full rate,
   resting or not. When they were last in the game is saved once a minute, so the first settle of
