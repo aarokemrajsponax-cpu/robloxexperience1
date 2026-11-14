@@ -210,7 +210,10 @@ function AuctionPanel.open()
 			return
 		end
 		Theme.text(rows, string.format("This week's lots  ·  %d", #lots), 11, "caps", { LayoutOrder = 0, TextXAlignment = Enum.TextXAlignment.Left })
-		local width = rows.AbsoluteSize.X
+		local okWidth, measured = pcall(function()
+			return rows.AbsoluteSize.X
+		end)
+		local width = if okWidth and type(measured) == "number" then measured else 0
 		if width < 50 then
 			width = Root.panelWidth(560) - 40
 		end

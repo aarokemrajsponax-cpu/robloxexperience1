@@ -352,12 +352,12 @@ Voice.WelcomeBack = {
 -- What's new in this build, told once to each returning guest (Welcome back). Only shown while
 -- `build` is the build that's playing, so old news never shows as new.
 Voice.WhatsNew = {
-	build = 81,
+	build = 82,
 	lines = {
-		"Lights Out is party games on the dance floor now: the Chairs, the dark and the Spinner's duel. Press Join in the Ballroom; the last lamp lit takes the pot.",
-		"The Executive Suite's hallway is a maze: hide behind its walls, and every guard and camera shows on the floor where it's looking.",
-		"The Flex Studio in the Grand Ballroom: shoot a reel of something you own, and like other guests' reels on the Flex Wall.",
-		"A grander Home Screen, a Concierge who keeps pace on the tour, and a clearer Quartermaster.",
+		"The Executive Suite: wider halls, armoured security, and a revive when you're caught, so your run can go on.",
+		"Steal a Luxe: security sleeps until you lift something. Bank every piece of a wing for its set reward, and climb eight heist ranks.",
+		"The Maison Basement is more than twice as long, in a far bigger hall, and no stage can be skipped by dropping ahead.",
+		"Every brainrot is in 3D now, beside you and on Steal a Luxe's plinths. The Vault shows eight of your curios.",
 	},
 }
 
