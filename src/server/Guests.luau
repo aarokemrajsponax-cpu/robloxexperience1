@@ -299,6 +299,10 @@ local function welcome(player: Player, data: Profiles.Data)
 		data.nights.lastDay = today
 		data.nights.count += 1
 	end
+	-- (Build 93) The funnel's last step: a new guest back on a later day than their first.
+	if not visit.firstVisit and (tonumber(data.firstVisit) or 0) > 0 and today > math.floor(data.firstVisit / 86400) then
+		Analytics.step(player, 10)
+	end
 	player:SetAttribute("FirstVisit", visit.firstVisit)
 	guestEvent:FireClient(player, payload(player, data, visit))
 	;(data :: any).seenBuild = Build.number

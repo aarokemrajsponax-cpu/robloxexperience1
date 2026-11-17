@@ -241,6 +241,56 @@ check("...and off the house's own list", (function()
 end)())
 check("...while their own screen still shows their Fortune, and says so", askAs(old, { op = "fortune" }).shown == false and askAs(old, { op = "fortune" }).total == old:GetAttribute("Fortune"))
 
+-- (Build 93) The Wealthiest boards in the Foyer, in sight of the front door: this house now and of
+-- all time, earned Fortune only, nobody who keeps theirs to themselves, written only on a change.
+do
+	local WealthBoards = module("ServerScriptService", "Server", "WealthBoards")
+	local CS = H.game:GetService("CollectionService")
+	local roblox = require("@lune/roblox")
+	local function face(kind)
+		local p = roblox.Instance.new("Part")
+		p.Name = "Face"
+		p:SetAttribute("Kind", kind)
+		p.Parent = H.game:GetService("Workspace")
+		CS:AddTag(p, "MaisonBoard")
+		return p
+	end
+	local hereFace, allFace = face("wealthHere"), face("wealthAll")
+	run(WealthBoards.refresh)
+	local function texts(f)
+		local out = {}
+		local gui = f:FindFirstChild("WealthGui")
+		if gui then
+			for _, d in gui:GetDescendants() do
+				if d:IsA("TextLabel") then
+					table.insert(out, d.Text)
+				end
+			end
+		end
+		return table.concat(out, "\n")
+	end
+	local hereText, allText = texts(hereFace), texts(allFace)
+	check("the Foyer's boards are written: the wealthiest here, and of all time", string.find(hereText, "In this house now", 1, true) ~= nil and string.find(allText, "Of all time", 1, true) ~= nil)
+	check("...here: who's in this house, richest first, by name", string.find(hereText, "I   Ada", 1, true) ~= nil)
+	check("...nobody who keeps their Fortune to themselves", string.find(hereText, Names.of(old), 1, true) == nil and string.find(allText, Names.of(old), 1, true) == nil)
+	check("...the earned Fortune, the same number the boards rank", string.find(hereText, Rules.short(select(2, Fortune.of(d))), 1, true) ~= nil)
+	check("...and it says so plainly: what's bought with Robux doesn't count", string.find(hereText, "bought with Robux don't count", 1, true) ~= nil)
+	local gui = hereFace:FindFirstChild("WealthGui")
+	run(WealthBoards.refresh)
+	check("written again only when something on it changes", hereFace:FindFirstChild("WealthGui") == gui)
+	local boughtBefore = Fortune.page(d).bought
+	Fortune.bought(d, 50000, 0)
+	d.gilt += 50000
+	run(WealthBoards.refresh)
+	check("Gilt bought with Robux moves nobody up the board", hereFace:FindFirstChild("WealthGui") == gui)
+	d.gilt -= 50000
+	Fortune.page(d).bought = boughtBefore
+	for _, f in { hereFace, allFace } do
+		CS:RemoveTag(f, "MaisonBoard")
+		f.Parent = nil
+	end
+end
+
 ---------------------------------------------------------------------------------------------------
 -- 7. The herald
 ---------------------------------------------------------------------------------------------------

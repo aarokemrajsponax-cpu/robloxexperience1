@@ -57,6 +57,7 @@ Remotes.Functions = {
 	"AuctionAsk", -- client -> server: the Grand Auction (the lots, a bid)
 	"RacingAsk", -- client -> server: the racing card (the boards, your bests and your friends'), join the next race
 	"ShowcaseAsk", -- client -> server: the Vault's and the Suite's displays (featured, arrangement, privacy, themes, invitations)
+	"WelcomeGiftAsk", -- client -> server: the house's welcome gift (choose your first brainrot)
 }
 
 local folder: Folder? = nil

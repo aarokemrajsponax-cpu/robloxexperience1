@@ -428,4 +428,107 @@ do
 	Concierge.autoTour = auto
 end
 
+---------------------------------------------------------------------------------------------------
+-- 14. (Build 93) The house's welcome gift: a new guest's first brainrot, their choice of three,
+-- before the first tour; chosen once, never twice; the tour waits for it, but not for ever.
+---------------------------------------------------------------------------------------------------
+do
+	local WelcomeGift = module("ServerScriptService", "Server", "WelcomeGift")
+	local Brainrots = module("ServerScriptService", "Server", "Brainrots")
+	local CuriosS = module("ServerScriptService", "Server", "Curios")
+	CuriosS.arrived = Brainrots.arrived
+	CuriosS.changing = Brainrots.settle
+	run(WelcomeGift.start)
+	Concierge.offerGift = WelcomeGift.offer
+	Concierge.giftSettled = WelcomeGift.settled
+	local auto = Concierge.autoTour
+	local dueFor = {}
+	Concierge.autoTour = function(p)
+		local d = dueFor[p] == true
+		dueFor[p] = false
+		return d
+	end
+	local function count(p, op)
+		local n = 0
+		for _, m in p.inbox do
+			if m.op == op then
+				n += 1
+			end
+		end
+		return n
+	end
+	local function last(p, op)
+		for i = #p.inbox, 1, -1 do
+			if p.inbox[i].op == op then
+				return p.inbox[i]
+			end
+		end
+		return nil
+	end
+	local function ask(p, request)
+		advance(1.2)
+		local r
+		run(function()
+			r = Remotes.funcs.WelcomeGiftAsk.OnServerInvoke(p, request)
+		end)
+		return r
+	end
+	local ola = H.guest("Ola", 811)
+	dueFor[ola] = true
+	run(function()
+		Concierge.greet(ola, true)
+	end)
+	local offer = last(ola, "welcomeGift")
+	check("14. a brand-new guest is offered the house's welcome gift at once: three brainrots to choose from", offer ~= nil and type(offer.choices) == "table" and #offer.choices == 3)
+	local named = offer ~= nil
+	for _, o in (offer and offer.choices or {}) do
+		if type(o.name) ~= "string" or type(o.rate) ~= "number" or o.rate <= 0 then
+			named = false
+		end
+	end
+	check("...each with its name and the Gilt it earns an hour (the server's own numbers)", named)
+	local said = lastLine(ola)
+	check("...the Concierge says what it is, by name, plainly", said ~= nil and string.find(said.line, "Ola", 1, true) ~= nil and string.find(said.line, "gift", 1, true) ~= nil and string.find(said.line, "!", 1, true) == nil, said and said.line)
+	advance(8)
+	check("...the tour waits while they choose", count(ola, "start") == 0)
+	local od = profiles[ola].Data
+	check("a brainrot that isn't one of the three is refused", ask(ola, { op = "claim", id = "moonCheese" }).ok == false and (CuriosS.bag(od).items.moonCheese or 0) == 0)
+	local got = ask(ola, { op = "claim", id = "pigeonetto" })
+	check("choosing one: it's theirs", got.ok == true and CuriosS.bag(od).items.pigeonetto == 1)
+	check("...straight into their squad, so its jar starts filling", table.find(Brainrots.squadOf(od).ids, "pigeonetto") ~= nil and Brainrots.rate(od) > 0)
+	check("...and its reveal plays on their screen", last(ola, "found") ~= nil and last(ola, "found").id == "pigeonetto")
+	check("a second gift is never given", ask(ola, { op = "claim", id = "croissantino" }).ok == false and (CuriosS.bag(od).items.croissantino or 0) == 0 and CuriosS.bag(od).items.pigeonetto == 1)
+	advance(7)
+	check("...then the tour begins", count(ola, "start") == 1)
+	run(function()
+		Concierge.greet(ola, false)
+	end)
+	check("...and the gift is never offered again", count(ola, "welcomeGift") == 1)
+
+	local pax = H.guest("Pax", 812)
+	dueFor[pax] = true
+	run(function()
+		Concierge.greet(pax, true)
+	end)
+	advance(20)
+	check("a guest who doesn't choose: the tour still waits a little", count(pax, "start") == 0)
+	advance(20)
+	check("...but never for ever: it begins all the same", count(pax, "start") == 1)
+	check("...and the gift stays theirs to choose later", WelcomeGift.eligible(profiles[pax].Data))
+
+	local quin = H.guest("Quin", 813)
+	CuriosS.give(nil, profiles[quin].Data, "croissantino", 1, "tables")
+	run(function()
+		Concierge.greet(quin, false)
+	end)
+	check("a guest who already has a brainrot is never offered it", count(quin, "welcomeGift") == 0 and ask(quin, { op = "claim", id = "bananino" }).ok == false)
+	local rae = H.guest("Rae", 814)
+	run(function()
+		Concierge.greet(rae, false)
+	end)
+	check("a returning guest with no brainrot yet is offered it as they come in", count(rae, "welcomeGift") == 1)
+	check("nonsense from a screen is refused", ask(rae, { op = "grant", id = "pigeonetto", n = 99 }).ok == false and WelcomeGift.eligible(profiles[rae].Data))
+	Concierge.autoTour = auto
+end
+
 H.finish()

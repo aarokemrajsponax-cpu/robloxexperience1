@@ -10,19 +10,27 @@ local Config = require(ReplicatedStorage.Shared.Config)
 
 local Analytics = {}
 
--- The first evening (Appendix J). Order matters: Roblox reads these as funnel steps.
+-- The first session (Appendix J). Order matters: Roblox reads these as funnel steps.
+-- (Build 93) Steps 5 to 10 follow the house as it is now (the welcome gift, the attractions, the
+-- Gilt, the Levels, a return), no longer the tables' sorting game they were written for: the
+-- funnel in the Creator Hub shows where a new guest's first session stops.
 Analytics.FirstEvening = {
 	"Intro shown", -- 1  client
 	"Play pressed", -- 2  client
 	"Control given", -- 3  client
 	"Foyer entered", -- 4
-	"Seated", -- 5
-	"First piece lifted", -- 6
-	"First piece filed", -- 7
-	"Round I complete", -- 8
-	"Round III complete", -- 9
-	"Run banked", -- 10
+	"Welcome gift chosen", -- 5  server/WelcomeGift
+	"First attraction entered", -- 6  Attractions.go
+	"First attraction reward", -- 7  Gilt or Estate from an attraction
+	"First Gilt spent", -- 8  Analytics.sink
+	"Level 2 reached", -- 9  Progress
+	"Back another day", -- 10  Guests, on a later day's visit
 }
+-- Whether a guest is new enough for the funnel's later steps (set by Main: in their first week).
+-- (Steps 1 to 4 are as they always were.)
+Analytics.isNew = function(_player: Player): boolean
+	return true
+end
 Analytics.ClientSteps = { [1] = true, [2] = true, [3] = true }
 
 local logged: { [Player]: { [number]: boolean } } = {}
@@ -40,6 +48,12 @@ function Analytics.step(player: Player, step: number)
 	end
 	if done[step] then
 		return
+	end
+	if step >= 5 then
+		local okNew, isNew = pcall(Analytics.isNew, player)
+		if not okNew or isNew ~= true then
+			return
+		end
 	end
 	done[step] = true
 	local name = Analytics.FirstEvening[step]
@@ -125,6 +139,9 @@ function Analytics.source(player: Player, currency: string, amount: number, bala
 end
 
 function Analytics.sink(player: Player, currency: string, amount: number, balance: number, sku: string)
+	if currency == "Gilt" and amount > 0 then
+		Analytics.step(player, 8)
+	end
 	if not enabled() or amount <= 0 then
 		return
 	end

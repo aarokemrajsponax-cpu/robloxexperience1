@@ -565,6 +565,72 @@ check("server problems reach the owner's screen from the very start (before the 
 local project = serde.decode("json", fs.readFile("default.project.json"))
 check("Rojo tells Studio not to spawn anyone by itself", project.tree.Players and project.tree.Players["$properties"] and project.tree.Players["$properties"].CharacterAutoLoads == false)
 
+---------------------------------------------------------------------------------------------------
+-- 5. (Build 93) The first-session funnel follows the house as it is now: each step logged once, in
+-- order of the first session, the later ones only for a guest in their first week
+---------------------------------------------------------------------------------------------------
+do
+	local logged = {}
+	local fakeAnalytics = {
+		LogOnboardingFunnelStepEvent = function(_, player, step, name)
+			table.insert(logged, { player = player, step = step, name = name })
+		end,
+		LogEconomyEvent = function() end,
+		LogCustomEvent = function() end,
+	}
+	local fakePlayers = { PlayerRemoving = { Connect = function() end } }
+	local env = {
+		game = {
+			GetService = function(_, name)
+				if name == "AnalyticsService" then
+					return fakeAnalytics
+				elseif name == "Players" then
+					return fakePlayers
+				end
+				return { Shared = {} }
+			end,
+		},
+		script = { Parent = {} },
+		require = function()
+			return { data = { Analytics = { enabled = true } } }
+		end,
+		Enum = Enum,
+	}
+	local A = luau.load(fs.readFile("src/server/Analytics.luau"), { debugName = "Analytics", environment = env, injectGlobals = true })()
+	local names = A.FirstEvening
+	check("the funnel's steps are the house as it is now", names[4] == "Foyer entered" and names[5] == "Welcome gift chosen" and names[6] == "First attraction entered" and names[7] == "First attraction reward" and names[8] == "First Gilt spent" and names[9] == "Level 2 reached" and names[10] == "Back another day" and #names == 10)
+	local newcomer, veteran = { Name = "New" }, { Name = "Old" }
+	A.isNew = function(p)
+		return p == newcomer
+	end
+	A.step(newcomer, 6)
+	A.step(newcomer, 6)
+	A.sink(newcomer, "Gilt", 100, 0, "a rug")
+	A.sink(newcomer, "Gems", 5, 0, "a pack")
+	A.step(veteran, 4)
+	A.step(veteran, 6)
+	A.sink(veteran, "Gilt", 100, 0, "a rug")
+	local function steps(p)
+		local out = {}
+		for _, l in logged do
+			if l.player == p then
+				table.insert(out, l.step)
+			end
+		end
+		return out
+	end
+	local n, v = steps(newcomer), steps(veteran)
+	check("each step is logged once, by its number and name", #n == 2 and n[1] == 6 and n[2] == 8 and logged[1].name == "First attraction entered")
+	check("...spending Gilt is the 'First Gilt spent' step (Gems aren't)", table.find(n, 8) ~= nil)
+	check("...a guest past their first week only reaches the steps every visit has", #v == 1 and v[1] == 4)
+	-- Where each step is logged from.
+	local function has(path, text)
+		return string.find(fs.readFile(path), text, 1, true) ~= nil
+	end
+	check("...the gift, the first attraction, its first reward, Level 2 and a later day each log theirs", has("src/server/WelcomeGift.luau", "Analytics.step(player, 5)") and has("src/server/Attractions/init.luau", "Analytics.step(player, 6)") and has("src/server/Attractions/init.luau", "Analytics.step(player, 7)") and has("src/server/Main.server.luau", "Analytics.step(player, 9)") and has("src/server/Guests.luau", "Analytics.step(player, 10)"))
+	check("...and the tables' old sorting steps no longer do", not has("src/server/TableService.luau", "Analytics.step("))
+end
+
 print(string.format("%d passed, %d failed", passed, failed))
 if failed > 0 then
 	process.exit(1)

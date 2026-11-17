@@ -143,6 +143,12 @@ task.spawn(Tailor.spawn, staffFolder)
 task.spawn(Pianist.spawn, staffFolder)
 
 local Analytics = require(script.Parent.Analytics)
+-- (Build 93) The first-session funnel's later steps are for guests in their first week only.
+Analytics.isNew = function(player)
+	local data = require(script.Parent.Profiles).get(player)
+	local first = if data then tonumber(data.firstVisit) or 0 else 0
+	return first > 0 and os.time() - first <= 7 * 86400
+end
 boot("Analytics", Analytics.start)
 -- Trend Watch (the owner's LIVE OPERATIONS page): the house's own counts of what guests do, from
 -- every server, and the owner's ideas. No outside trend source.
@@ -811,6 +817,9 @@ Progress.levelUp = function(player, level, gilt)
 	if not data then
 		return
 	end
+	if level >= 2 then
+		Analytics.step(player, 9)
+	end
 	data.gilt += gilt
 	Analytics.source(player, "Gilt", gilt, data.gilt, "Level " .. tostring(level))
 	GiltService.changed(player)
@@ -910,6 +919,25 @@ HourlyDrop.tally = function(player, stat, n, once)
 	return counted
 end
 boot("The Hourly Drop", HourlyDrop.start)
+-- (Build 93) The house's welcome gift: a new guest's first brainrot, their choice of three, offered
+-- by the Concierge as they first come in (server/WelcomeGift); the first tour waits for it.
+local WelcomeGift = require(script.Parent.WelcomeGift)
+Concierge.offerGift = WelcomeGift.offer
+Concierge.giftSettled = WelcomeGift.settled
+boot("The welcome gift", WelcomeGift.start)
+-- (Build 93) Showtime: every half hour one of the Grand Ballroom's party games is called for eight
+-- minutes; a round of it played then pays its bonus once (server/Showtime). Its XP comes with the
+-- count, like everything else's.
+local Showtime = require(script.Parent.Showtime)
+Showtime.tally = function(player, stat, n, once)
+	local counted = Achievements.tally(player, stat, n, once)
+	if counted then
+		Progress.forStat(player, stat, n)
+	end
+	return counted
+end
+require(script.Parent.Attractions.Gala).played = Showtime.played
+boot("Showtime", Showtime.start)
 -- A new guest's welcome: double Gilt for their first half hour of play.
 local Newcomer = require(script.Parent.Newcomer)
 GiltService.welcome = Newcomer.mult

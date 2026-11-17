@@ -4248,6 +4248,42 @@ do
 	snapshot("gems")
 	Root2.close()
 	advance(0.5)
+	-- (Build 93) The house's welcome gift: three brainrots to choose from, the chosen one named to
+	-- the server and nothing else.
+	serverSays("Curio", {
+		op = "welcomeGift",
+		choices = {
+			{ id = "croissantino", name = "Croissantino Furioso", line = "A croissant with a temper. Do not call him a pastry.", rarity = "Common", rate = 60 },
+			{ id = "pigeonetto", name = "Pigeonetto Parisiano", line = "Has seen every street in Paris. Judges all of them.", rarity = "Common", rate = 60 },
+			{ id = "bananino", name = "Bananino Ballerino", line = "Pirouettes until peeled. Has never once slipped.", rarity = "Common", rate = 60 },
+		},
+	})
+	advance(0.6)
+	check("the welcome gift: three to choose from, each with what it earns an hour", textOnScreen("A welcome gift from the house") ~= nil and textOnScreen("Pigeonetto Parisiano") ~= nil and textOnScreen("Bananino Ballerino") ~= nil and textOnScreen("+60 Gilt an hour") ~= nil)
+	check("...free, and said so plainly", textOnScreen("Free, and yours to keep") ~= nil)
+	snapshot("welcome-gift")
+	local giftAsks = {}
+	invokeResults.WelcomeGiftAsk = function(request)
+		table.insert(giftAsks, request)
+		return { ok = true, id = request.id }
+	end
+	local chooseKey
+	for _, d in playerGui:GetDescendants() do
+		if d:IsA("TextButton") and d.Name == "Key_Choose" then
+			local card = d.Parent
+			if card and card.Name == "Gift_pigeonetto" then
+				chooseKey = d
+			end
+		end
+	end
+	check("each brainrot has its own Choose key", chooseKey ~= nil)
+	if chooseKey then
+		signalOf(chooseKey, "Activated"):Fire()
+	end
+	advance(0.6)
+	check("...which names only the chosen one to the server", #giftAsks == 1 and giftAsks[1].op == "claim" and giftAsks[1].id == "pigeonetto" and giftAsks[1].n == nil)
+	check("...and the card goes", textOnScreen("A welcome gift from the house") == nil)
+	invokeResults.WelcomeGiftAsk = nil
 	-- A find: the reveal.
 	serverSays("Curio", { op = "found", id = "goldenGoose", line = "Among the pieces, a curio.", gilt = 400 })
 	advance(0.8)
@@ -8832,6 +8868,64 @@ coroutine.wrap(function()
 end)()
 
 ---------------------------------------------------------------------------------------------------
+-- 7c5. (Build 93) Showtime's call: a card at the top as a Ballroom party game is called, its real
+-- time left, and a key straight there
+---------------------------------------------------------------------------------------------------
+coroutine.wrap(function()
+	local errorsBefore = #errors
+	local Banner = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "ShowtimeBanner")
+	local SPlan = module("ReplicatedStorage", "Shared", "Showtime")
+	local t = workspace:GetServerTimeNow()
+	local slot = SPlan.slotOf(t)
+	if t >= SPlan.closesAt(slot) then
+		slot += 1
+	end
+	while SPlan.gameOf(slot).kind ~= "trivia" do
+		slot += 1
+	end
+	local taken = 0
+	local takeWas = Banner.take
+	Banner.take = function()
+		taken += 1
+	end
+	workspace:SetAttribute("ShowtimeSlot", slot)
+	workspace:SetAttribute("ShowtimeGame", "trivia")
+	workspace:SetAttribute("ShowtimeOpen", true)
+	signalOf(workspace, "attr:ShowtimeOpen"):Fire()
+	advance(1.2)
+	check("Showtime: a card names the game it's called, where, and what a round pays", textOnScreen("Luxury Trivia") ~= nil and textOnScreen("the Salon of Wits") ~= nil and textOnScreen("+" .. tostring(Config.data.Showtime.gilt) .. " Gilt, once") ~= nil)
+	check("...how long it has left, by the server's clock", textOnScreen("SHOWTIME  ·  CLOSES IN") ~= nil)
+	snapshot("showtime")
+	-- (Its own key: the card of what to do next has a Take me there of its own.)
+	local takeKey
+	for _, d in playerGui:GetDescendants() do
+		if d:IsA("TextButton") and d.Name == "Key_Take me there" then
+			local p = d.Parent
+			while p and p.Name ~= "ShowtimeBanner" do
+				p = p.Parent
+			end
+			if p then
+				takeKey = d
+			end
+		end
+	end
+	check("...and a key that takes the guest there", takeKey ~= nil)
+	if takeKey then
+		signalOf(takeKey, "Activated"):Fire()
+	end
+	advance(0.3)
+	check("...which sends them on its way, and the card goes", taken == 1 and textOnScreen("SHOWTIME  ·  CLOSES IN") == nil)
+	signalOf(workspace, "attr:ShowtimeOpen"):Fire()
+	advance(0.5)
+	check("once each Showtime: it doesn't come back for the same one", textOnScreen("SHOWTIME  ·  CLOSES IN") == nil)
+	workspace:SetAttribute("ShowtimeOpen", false)
+	signalOf(workspace, "attr:ShowtimeOpen"):Fire()
+	Banner.take = takeWas
+	advance(0.5)
+	check("no errors with Showtime's call", #errors == errorsBefore, errors[errorsBefore + 1])
+end)()
+
+---------------------------------------------------------------------------------------------------
 -- 7d. The Maison Basement: its screen only inside, the clock, checkpoints and falls, the skip (its
 -- cost said before anything is spent), the Treasury, the best times, the machinery moving
 ---------------------------------------------------------------------------------------------------
@@ -9207,7 +9301,25 @@ coroutine.wrap(function()
 	LocalPlayer:SetAttribute("Attraction", nil)
 	signalOf(LocalPlayer, "attr:Attraction"):Fire()
 	advance(0.5)
-	check("down from the Suite, its screen is gone at once", textOnScreen("THE EXECUTIVE SUITE") == nil and textOnScreen("Fire") == nil)
+	-- (The rotating tip at the foot of the screen can name the Executive Suite at any moment: it
+	-- isn't the Suite's own screen, so it's left out.)
+	local function suiteScreenShows(text)
+		local wanted = norm(text)
+		return find(playerGui, function(d)
+			if not (d:IsA("TextLabel") or d:IsA("TextButton")) or d.Visible == false then
+				return false
+			end
+			local p = d.Parent
+			while p do
+				if p.Name == "Tip" then
+					return false
+				end
+				p = p.Parent
+			end
+			return string.find(norm(d.Text), wanted, 1, true) ~= nil
+		end) ~= nil
+	end
+	check("down from the Suite, its screen is gone at once", not suiteScreenShows("THE EXECUTIVE SUITE") and not suiteScreenShows("Fire"))
 	-- (Build 81) The Suite's eyes: in the hallway, every camera's and guard's sight on the floor
 	-- and a laser from its eye; with a decoy out, every eye on the decoy; the Scanner marks guards
 	-- and terminals through the walls; and nothing drawn once down from the Suite.

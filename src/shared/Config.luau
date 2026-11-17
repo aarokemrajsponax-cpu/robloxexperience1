@@ -357,6 +357,7 @@ local defaults = {
 		holidayAsk = { rate = 4, burst = 10 },
 		calendarAsk = { rate = 1, burst = 4 },
 		hourlyDrop = { rate = 1, burst = 4 },
+		welcomeGift = { rate = 1, burst = 3 }, -- (Build 93)
 		race = { rate = 3, burst = 8 },
 		travel = { rate = 1, burst = 3 },
 		empireAsk = { rate = 3, burst = 8 },
@@ -397,6 +398,7 @@ local defaults = {
 			executiveWins = 300, -- the Executive beaten
 			executiveChallenges = 120, -- (Build 90) a run's challenge met
 			hourlyDrops = 60, -- (Build 91) an Hourly Drop opened
+			showtimes = 60, -- (Build 93) a round played at Showtime
 			executiveExtractions = 60, -- a clean getaway
 			races = 25, -- a Grand Prix finished
 			podiums = 40, -- on the podium
@@ -1060,6 +1062,16 @@ local defaults = {
 		openMinutes = 15,
 		gilt = 250,
 		reach = 14, -- studs from the case (in the Grand house) a guest opens it from
+	},
+
+	-- (Build 93) Showtime (shared/Showtime, server/Showtime): every half hour, at twenty past and ten
+	-- to, one of the Grand Ballroom's party games is called for eight minutes (Luxury Trivia, the
+	-- Runway, the Daily Arena, in turn), with a banner on every screen and a key that takes guests
+	-- there. A round of it played while it's on pays `gilt`, once each Showtime (outside the
+	-- Ballroom's own daily cap). Free; nothing is sold.
+	Showtime = {
+		enabled = true,
+		gilt = 400,
 	},
 
 	Gilt = {

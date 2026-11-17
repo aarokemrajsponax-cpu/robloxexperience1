@@ -30,6 +30,11 @@ local Gala = {}
 
 -- The clocks (tests set them): phases run on `now`, the day on `time`.
 Gala.now = os.clock
+-- (Build 93) A guest finished a round of one of the party games (trivia, runway or arena): set
+-- by Main for Showtime (server/Showtime), which decides whether it pays its bonus.
+Gala.played = function(_player: Player, _kind: string): number
+	return 0
+end
 Gala.time = os.time
 
 local built: GalaBuild.Built? = nil
@@ -472,6 +477,7 @@ local function triviaResults(ctx: Types.Ctx)
 		local won = contest and s.score == top
 		table.insert(standings, { name = Names.of(s.player), userId = s.player.UserId, score = s.score, right = s.right, won = won, place = i })
 		ctx.progress(s.player, "trivia", 1)
+		pcall(Gala.played, s.player, "trivia")
 		if won then
 			table.insert(winners, Names.of(s.player))
 			pay(ctx, s.player, R(ctx, "triviaWin"), "Luxury Trivia win")
@@ -714,6 +720,7 @@ local function runwayResults(ctx: Types.Ctx)
 		table.insert(rows, { name = Names.of(m.player), userId = m.player.UserId, votes = tally[m.player.UserId] or 0, won = m == winner })
 		pay(ctx, m.player, R(ctx, "runwayWalk"), "The Runway")
 		ctx.progress(m.player, "runway", 1)
+		pcall(Gala.played, m.player, "runway")
 	end
 	table.sort(rows, function(a, b)
 		return a.votes > b.votes
@@ -992,6 +999,7 @@ local function arenaResults(ctx: Types.Ctx)
 			local points = math.min(row.points, R(ctx, "arenaPoints"))
 			row.paid = pay(ctx, player, R(ctx, "arenaTakePart") + points * R(ctx, "arenaPoint"), "The Daily Arena")
 			ctx.progress(player, "arena", 1)
+			pcall(Gala.played, player, "arena")
 			if contest and row.points == top then
 				row.won = true
 				table.insert(winners, row.name)

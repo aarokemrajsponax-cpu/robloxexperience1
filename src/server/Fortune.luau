@@ -245,6 +245,29 @@ function Fortune.refreshBoards()
 	boards.at = os.time()
 end
 
+-- The Wealthiest in this server now: the earned Fortune of every guest here who shows theirs (the
+-- same number the all-time board ranks), highest first. (The Fortune screen's list, and from Build
+-- 93 the Foyer's board too.)
+function Fortune.here(): { Entry }
+	local here: { Entry } = {}
+	for _, p in Players:GetPlayers() do
+		local d = Profiles.get(p)
+		if d and shown(d) then
+			local _, e = Fortune.of(d)
+			table.insert(here, { userId = p.UserId, name = Names.of(p), score = e })
+		end
+	end
+	table.sort(here, function(a, b)
+		return if a.score ~= b.score then a.score > b.score else a.userId < b.userId
+	end)
+	return here
+end
+
+-- Whether the all-time board has been read at least once.
+function Fortune.boardsRead(): boolean
+	return boards.available
+end
+
 -- The Wealthiest board of all time as last read (the Grand Ballroom's Hall of Fame shows it too).
 function Fortune.top(): { Entry }
 	return boards.all
@@ -302,17 +325,7 @@ function Fortune.view(player: Player): { [string]: any }
 	local parts = Fortune.parts(data)
 	local total, earned = Fortune.of(data)
 	local _, number = Rules.rank(total)
-	local here: { Entry } = {}
-	for _, p in Players:GetPlayers() do
-		local d = Profiles.get(p)
-		if d and shown(d) then
-			local _, e = Fortune.of(d)
-			table.insert(here, { userId = p.UserId, name = Names.of(p), score = e })
-		end
-	end
-	table.sort(here, function(a, b)
-		return if a.score ~= b.score then a.score > b.score else a.userId < b.userId
-	end)
+	local here = Fortune.here()
 	return {
 		ok = true,
 		total = total,

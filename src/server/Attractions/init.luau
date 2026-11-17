@@ -259,6 +259,9 @@ local ctx: Types.Ctx = {
 	end,
 	saved = saved,
 	estate = function(player: Player, worth: number, source: string, cash: boolean?): number
+		if worth > 0 then
+			Analytics.step(player, 7)
+		end
 		return Fortune.estate(player, worth, source, cash)
 	end,
 	gilt = function(player: Player, amount: number, source: string): number
@@ -266,6 +269,7 @@ local ctx: Types.Ctx = {
 		if not data or amount <= 0 then
 			return 0
 		end
+		Analytics.step(player, 7)
 		return Gilt.pay(player, data, math.floor(amount), source)
 	end,
 	-- A prize paid in full, outside the day's soft cap: only for what's limited by design (once a
@@ -406,6 +410,7 @@ function Attractions.go(player: Player, id: string): { [string]: any }
 		return { ok = false, why = "Not just now." }
 	end
 	Analytics.custom(player, "Attraction entered", 1, { attraction = id })
+	Analytics.step(player, 6)
 	-- (Build 82) The tuned attractions: held still on arrival while the place is made ready (their
 	-- root anchored here, so nobody walks off a floor that isn't there yet on their screen).
 	local hold: number? = nil

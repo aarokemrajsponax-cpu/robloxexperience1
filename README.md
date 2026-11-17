@@ -377,6 +377,46 @@ a Nightly attempt or a Mythic's odds.
 - **The launch kit**: page text, icon, thumbnails and the gameplay video's shot list are in
   [`LAUNCH.md`](LAUNCH.md).
 
+## Build 93 — Showtime, the Wealthiest boards in the Foyer, a welcome gift
+
+What the two articles on street-luxury Roblox games ask for, checked against the house as it was,
+and the gaps built:
+
+- **A welcome gift in the first minute** (`server/WelcomeGift`, `UI/WelcomeGiftPanel`). As a new
+  guest first comes into the Foyer, the Concierge offers the house's welcome gift: their first
+  brainrot, their own choice of three (Croissantino Furioso, Pigeonetto Parisiano, Bananino
+  Ballerino). It goes straight into their squad, so its tip jar starts filling with Gilt at once
+  and it walks beside them. Free, the same three for everyone, chosen and never drawn at random,
+  never sold; once a guest ever, and only while they hold no brainrot. The first tour waits for the
+  choice (half a minute at most) and then starts as before. "Not now" keeps it for their next
+  visit. The server checks the choice (only one of the three, only once).
+- **The Wealthiest boards in the Foyer** (`World/WealthWall`, `server/WealthBoards`). Two tall
+  boards high on the back wall, either side of the Grand Stair, over the Vault's door and the
+  Boutique's: in sight of the front door. *In this house now* ranks the guests in this server;
+  *Of all time* is the board every server shares. Both rank earned Fortune only (Gilt and Gems
+  bought with Robux don't count, and the boards say so), and a guest who turns "Show my Fortune"
+  off is on neither. Built at the grown size after the Grand Scale, in black lacquer and brass with
+  their own picture lights; written by the server only when a name or a number on them changes.
+  (The Fortune screen's *here* list now comes from the same place, `Fortune.here`.)
+- **Showtime** (`shared/Showtime`, `server/Showtime`, `UI/ShowtimeBanner`). Every half hour, at
+  twenty past and ten to (UTC, the same moment in every server, clear of the Hourly Drop on the
+  hour), one of the Grand Ballroom's party games is called for eight minutes: Luxury Trivia, the
+  Runway, the Daily Arena, in turn. A card at the top of every screen names it, where it's
+  played, what it pays and the time left by the server's clock, with *Take me there* (to the
+  Ballroom and in through its doors; a guest at a table or inside another attraction is told to
+  finish up first). A round of the called game played while it's on (or under way as it closed)
+  pays `Config.Showtime.gilt` (400) once each Showtime, outside the Ballroom's own daily cap, and
+  counts for XP. The games are open the rest of the time as always. The Concierge answers
+  *What is Showtime?*.
+- **The first-session funnel** (`server/Analytics`). The onboarding funnel's steps 5 to 10 were
+  still the tables' old sorting game. They now follow the house: the welcome gift chosen, the first
+  attraction entered, its first reward, the first Gilt spent, Level 2, back on a later day; logged
+  only for a guest in their first week. Where to read it: `LAUNCH.md` §8 (with a suggested server
+  size of 20 to try).
+- **Not built, on purpose**: anything that would need a paid random reward beyond the Lucky
+  Boxes' shown odds, made-up scarcity or countdowns that aren't real, or Suites that others can see
+  into (they stay private). Server size is a Creator Hub setting, not code.
+
 ## Build 92 — House Trophies, a HUD you can read on a phone
 
 - **House Trophies** (`shared/Trophies`). Six Suite pieces that aren't sold for Gilt, Gems or Robux:

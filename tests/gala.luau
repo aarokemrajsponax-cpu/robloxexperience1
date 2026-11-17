@@ -36,6 +36,12 @@ end
 Attractions.progress = function(p, kind, n)
 	progress[p.UserId .. ":" .. kind] = (progress[p.UserId .. ":" .. kind] or 0) + n
 end
+-- (Build 93) Each round a guest finishes is told to Showtime (Main sets the real one at the end).
+local playedLog = {}
+Game.played = function(p, kind)
+	table.insert(playedLog, p.Name .. ":" .. kind)
+	return 0
+end
 local function awarded(g, key)
 	for _, a in awards do
 		if a.p == g and a.key == key then
@@ -273,6 +279,7 @@ local res = last(bo, "trivia", "results")
 check("the results: Ada, quickest and right every time, wins", res ~= nil and res.winners[1] == "Ada" and res.standings[1].name == "Ada" and res.standings[1].right == 7 and res.standings[2].right == 2, res)
 check("a little Gilt for every right answer, more for the win", gilt(ada) - adaGilt == 7 * Plan.REWARDS.triviaCorrect + Plan.REWARDS.triviaWin and gilt(bo) - boGilt == 2 * Plan.REWARDS.triviaCorrect, gilt(ada) - adaGilt, gilt(bo) - boGilt)
 check("the win counts for the Badge Book; the round for both guests' objectives", tallies["1101:triviaWins"] == 1 and tallies["1102:triviaWins"] == nil and progress["1101:trivia"] == 1 and progress["1102:trivia"] == 1)
+check("...and each guest's finished round is told to Showtime", table.find(playedLog, "Ada:trivia") ~= nil and table.find(playedLog, "Bo:trivia") ~= nil)
 advance(Plan.TRIVIA_RESULTS + 0.5)
 check("then the podiums are free for the next round", I().trivia.phase == "idle" and next(I().trivia.seats) == nil)
 -- A guest who leaves the hall leaves the podium.
@@ -536,5 +543,69 @@ check("the Gilt and Gems moved, both ways, all at once", data(ada).gilt == 20000
 check("every screen's Gems are up to date", ada:GetAttribute("Gems") == data(ada).gems and bo:GetAttribute("Gems") == data(bo).gems)
 check("and the history says what changed hands", data(ada).trades[1].gave[1] == "5,000 Gilt" and data(ada).trades[1].gave[2] == "10 Gems" and data(ada).trades[1].got[1] == "300 Gilt" and data(ada).trades[1].got[2] == "90 Gems", data(ada).trades[1])
 check("a day's trades may send only so many Gems", TradeService.gemsLeft(bo) == TradeService.Settings.gemsADay - 90 and TradeService.gemsLeft(ada) == TradeService.Settings.gemsADay - 10)
+
+---------------------------------------------------------------------------------------------------
+-- (Build 93) Showtime: every half hour one party game is called for eight minutes; a round of it
+-- played while it's on pays its bonus, once each Showtime, by the server's clock and record.
+---------------------------------------------------------------------------------------------------
+do
+	local SPlan = module("ReplicatedStorage", "Shared", "Showtime")
+	local Showtime = module("ServerScriptService", "Server", "Showtime")
+	local day = 1800000000 - (1800000000 % 86400) -- a midnight, UTC
+	local function at(h, m, sec)
+		return day + h * 3600 + m * 60 + (sec or 0)
+	end
+	check("Showtime: at twenty past and ten to, for eight minutes", SPlan.isOpen(at(14, 20)) and SPlan.isOpen(at(14, 27, 59)) and not SPlan.isOpen(at(14, 28)) and SPlan.isOpen(at(14, 50)) and not SPlan.isOpen(at(14, 19, 59)) and not SPlan.isOpen(at(15, 0)))
+	check("...clear of the Hourly Drop on the hour", not SPlan.isOpen(at(15, 0)) and not SPlan.isOpen(at(15, 10)))
+	local s1 = SPlan.slotOf(at(14, 20))
+	local kinds = { SPlan.gameOf(s1).kind, SPlan.gameOf(s1 + 1).kind, SPlan.gameOf(s1 + 2).kind, SPlan.gameOf(s1 + 3).kind }
+	check("...Luxury Trivia, the Runway and the Daily Arena in turn", kinds[1] ~= kinds[2] and kinds[2] ~= kinds[3] and kinds[1] ~= kinds[3] and kinds[4] == kinds[1])
+	check("...the next one's time, plainly", SPlan.nextAt(at(14, 21)) == at(14, 50) and SPlan.nextAt(at(14, 30)) == at(14, 50))
+	-- A time in a Showtime that called Luxury Trivia.
+	local slot = s1
+	while SPlan.gameOf(slot).kind ~= "trivia" do
+		slot += 1
+	end
+	local open = SPlan.startOf(slot) + 60
+	Showtime.now = function()
+		return open
+	end
+	Showtime.publish()
+	check("what's on is published for every screen", workspace:GetAttribute("ShowtimeOpen") == true and workspace:GetAttribute("ShowtimeSlot") == slot and workspace:GetAttribute("ShowtimeGame") == "trivia")
+	local before = data(cy).gilt
+	local paid = Showtime.played(cy, "trivia")
+	check("a round of the called game while it's on: the Showtime bonus", paid > 0 and data(cy).gilt == before + paid)
+	check("...and the guest is told, plainly", (function()
+		for i = #cy.inbox, 1, -1 do
+			local m = cy.inbox[i]
+			if m.op == "notice" and m.title == "Showtime" then
+				return string.find(m.line, "Luxury Trivia", 1, true) ~= nil and string.find(m.line, "!", 1, true) == nil
+			end
+		end
+		return false
+	end)())
+	check("...once each Showtime, however many rounds", Showtime.played(cy, "trivia") == 0 and data(cy).gilt == before + paid)
+	check("another game than the one called pays no bonus", Showtime.played(bo, "runway") == 0 and Showtime.played(bo, "arena") == 0)
+	Showtime.now = function()
+		return SPlan.closesAt(slot) + 60
+	end
+	check("a round under way as it closed still counts", Showtime.played(bo, "trivia") > 0)
+	Showtime.now = function()
+		return SPlan.closesAt(slot) + SPlan.GRACE + 1
+	end
+	Showtime.publish()
+	check("...but not long after: Showtime is over", Showtime.played(ada, "trivia") == 0 and workspace:GetAttribute("ShowtimeOpen") == false)
+	Showtime.now = function()
+		return SPlan.startOf(slot + 3) + 10
+	end
+	check("the next time it calls the same game, a new bonus", Showtime.played(cy, "trivia") > 0)
+	Config.data.Showtime.enabled = false
+	Showtime.now = function()
+		return SPlan.startOf(slot + 6) + 10
+	end
+	Showtime.publish()
+	check("turned off: no Showtime, no bonus", Showtime.played(ada, "trivia") == 0 and workspace:GetAttribute("ShowtimeOpen") == false)
+	Config.data.Showtime.enabled = true
+end
 
 H.finish()

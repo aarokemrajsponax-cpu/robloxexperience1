@@ -65,6 +65,13 @@ Layout.Foyer = {
 	-- (Build 91) The Hourly Drop's plinth: west of the runner, between the stair and the west
 	-- columns, clear of the way to the doors (server/HourlyDrop). On the floor.
 	dropPlinth = Vector3.new(-15, 3, 31),
+	-- (Build 93) The Wealthiest boards: high on the back wall either side of the Grand Stair, over
+	-- the Vault's door and the Boutique's, facing the front door (what a guest sees as they arrive).
+	-- Built at the grown size (World/WealthWall): their middles, and their size as drawn.
+	wealthHere = Vector3.new(-3, 21, 42),
+	wealthAll = Vector3.new(19, 21, 42),
+	wealthW = 10,
+	wealthH = 9,
 }
 
 -- The Boutique: a narrow mirrored shop through the Foyer's back wall, under the Club Floor.

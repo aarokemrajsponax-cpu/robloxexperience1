@@ -88,6 +88,10 @@ function Empire.start()
 		end
 		Fortune.start()
 	end)
+	-- (Build 93) The Wealthiest boards on the Foyer's back wall, in sight of the front door.
+	part("The Wealthiest boards", function()
+		require(script.Parent.WealthBoards).start()
+	end)
 	part("The herald", Herald.start)
 	part("Prestige", Prestige.start)
 	-- The Grand Ballroom's Hall of Fame: the house's best on six boards, from every server.

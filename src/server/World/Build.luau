@@ -179,6 +179,8 @@ function Build.run(options: Options?): Folder
 	step("the Grand Scale", function() Grand.apply(root, require(ReplicatedStorage.Shared.Layout).SCALE) end)
 	-- Built at the grown size: the Suite's fireplace and its front doors.
 	step("the Suite's fireplace and doors", function() SuiteFinish.build(root) end)
+	-- (Build 93) Built at the grown size: the Wealthiest boards on the Foyer's back wall.
+	step("the Wealthiest boards", function() require(script.Parent.WealthWall).build(root) end)
 	-- Built at the grown size: the attractions' rooms off the Foyer (their entrances, the Luxe
 	-- Lounge's treadmills).
 	step("the attractions' rooms", function() Lobbies.build(root) end)

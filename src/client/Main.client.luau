@@ -354,6 +354,9 @@ start("Curios", function()
 	CurioState.Message:Connect(function(op: string, m: any)
 		if op == "found" and type(m.id) == "string" then
 			CurioReveal.show(m.id, tostring(m.line or ""), if type(m.gilt) == "number" then m.gilt else 0, if type(m.mut) == "string" then m.mut else nil)
+		elseif op == "welcomeGift" then
+			-- (Build 93) The house's welcome gift: choose your first brainrot.
+			require(script.Parent.UI.WelcomeGiftPanel).offer(m)
 		elseif op == "luckyBox" and type(m.result) == "table" then
 			require(script.Parent.UI.LuckyBoxPanel).reveal(m.result)
 		elseif op == "luckyPull" then
@@ -1057,6 +1060,57 @@ do
 		return TableClient.isSeated()
 	end
 end
+-- (Build 93) Showtime's call: a card at the top of every screen as one of the Grand Ballroom's
+-- party games is called, with a key straight there: into the Grand Ballroom from the Ballroom, or
+-- to the Ballroom first from anywhere else in the house (the server checks each step).
+start("Showtime", function()
+	local ShowtimeBanner = require(script.Parent.UI.ShowtimeBanner)
+	local AttractionList = require(ReplicatedStorage.Shared.Attractions)
+	local Layout = require(ReplicatedStorage.Shared.Layout)
+	local DirectoryPanel = require(script.Parent.UI.DirectoryPanel)
+	local function inside(): string?
+		local a = Players.LocalPlayer:GetAttribute(AttractionList.ATTRIBUTE)
+		return if type(a) == "string" and a ~= "" then a else nil
+	end
+	local function zone(): string?
+		local character = Players.LocalPlayer.Character
+		local root = character and character:FindFirstChild("HumanoidRootPart")
+		return if root and root:IsA("BasePart") then Layout.zoneAt(root.Position) else nil
+	end
+	ShowtimeBanner.inBallroom = function(): boolean
+		return inside() == "gala"
+	end
+	ShowtimeBanner.take = function()
+		local def = AttractionList.byId.gala
+		local now = inside()
+		if now == "gala" then
+			return
+		elseif now ~= nil then
+			Toast.show("Showtime", "Finish up here first, then head for the Grand Ballroom.", 4)
+			return
+		elseif TableClient.isSeated() then
+			Toast.show("Showtime", "Leave your table first, then head for the Grand Ballroom.", 4)
+			return
+		end
+		if zone() == def.room then
+			DirectoryPanel.enter("gala")
+			return
+		end
+		-- To the Ballroom first, then in through its great doors as soon as they're there.
+		HowToPlay.go(def.room)
+		task.spawn(function()
+			for _ = 1, 40 do
+				task.wait(0.25)
+				if zone() == def.room then
+					task.wait(0.4)
+					DirectoryPanel.enter("gala")
+					return
+				end
+			end
+		end)
+	end
+	ShowtimeBanner.start()
+end)
 travelEvent.OnClientEvent:Connect(function(message: any)
 	if type(message) ~= "table" then
 		return

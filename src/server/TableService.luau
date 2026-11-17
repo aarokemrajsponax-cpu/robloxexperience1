@@ -481,7 +481,6 @@ local function bank(s: Session, reason: string?): { [string]: any }
 		-- (Tonight's table has its own board; its rules' old room boards take nothing new.)
 		Boards.submit(player, s.room.id, boardScore)
 	end
-	Analytics.step(player, 10)
 	Analytics.custom(player, "Run banked", s.score, { room = s.room.id, rounds = s.roundsCleared, grade = grade })
 	return summary
 end
@@ -612,11 +611,6 @@ local function roundComplete(s: Session)
 	local tableId = s.model:GetAttribute("TableId")
 	TableService.onRound(s.player, s.room.id, grade, if type(tableId) == "string" then tableId else nil)
 	local last = s.mode ~= "room" and s.round >= Config.data.Nightly.rounds
-	if s.round == 1 then
-		Analytics.step(s.player, 8)
-	elseif s.round == 3 then
-		Analytics.step(s.player, 9)
-	end
 	local card = {
 		op = "roundEnd",
 		round = s.round,
@@ -762,7 +756,6 @@ local function file(s: Session, uid: number, caseId: string, queued: boolean?)
 			goldenPaid = Gilt.pay(s.player, data, Config.data.Admin.table.goldenGilt, "Golden piece")
 		end
 		if s.runCorrect == 1 then
-			Analytics.step(s.player, 7)
 			local pressed = Analytics.stamp(s.player, "Play pressed")
 			if pressed then
 				Analytics.custom(s.player, "Seconds from Play to first filing", now - pressed)
@@ -993,7 +986,6 @@ function TableService.seat(player: Player, model: Model, teleport: boolean?, wan
 		endSession(player, "died")
 	end))
 	send(player, { op = "seated", table = model:GetAttribute("TableId"), room = s.room.id, mode = s.mode, centre = model:GetAttribute("Centre") })
-	Analytics.step(player, 5)
 	TableService.onSeated(player)
 	task.delay(0.6, function()
 		if sessions[player] == s then
@@ -1052,7 +1044,6 @@ local function onMessage(player: Player, message: unknown)
 		end
 		if not s.lifted then
 			s.lifted = true
-			Analytics.step(player, 6)
 		end
 		if s.clock and not s.clock.running and s.state == "playing" then
 			s.clock.running = true

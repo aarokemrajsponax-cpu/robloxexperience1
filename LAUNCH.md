@@ -289,4 +289,30 @@ US$4.99 a month, description *"The Leather-Bound Ledger while you hold it, a car
 each month to keep, and a black-lacquer nameplate."* Copy its id (`EXP-…`) into
 `Products.blackCard`.
 
+## 8. (Build 93) Server size, and reading the first session
+
+**Server size.** Creator Hub → your experience → **Places** → the start place → **Server Size**.
+A guide on player retention suggests about **20** guests a server: enough for the Grand Ballroom's
+Showtime games and the Foyer's *In this house now* board to feel busy, while keeping phones
+smooth. That is a starting point to try, not something the game has measured; change it if the
+numbers below say otherwise.
+
+**The first-session funnel.** Creator Hub → your experience → **Analytics** → **Funnels**
+(onboarding). From Build 93 its ten steps follow the house as it is now; steps 5 to 10 are
+logged only for a guest in their first week:
+
+| Step | What it means |
+| --- | --- |
+| 1–3 | The intro shown, Play pressed, control given (as before) |
+| 4 | Into the Foyer |
+| 5 | The welcome gift chosen (their first brainrot) |
+| 6 | The first attraction entered |
+| 7 | The first Gilt or Estate from an attraction |
+| 8 | The first Gilt spent |
+| 9 | Level 2 reached |
+| 10 | Back on a later day than their first |
+
+Where the drop between two steps is largest is the first thing to look at. (Before Build 93 the
+steps 5 to 10 were the tables' old sorting game; compare only days from Build 93 on.)
+
 © AJKR

@@ -186,6 +186,15 @@ Concierge.toured = function(_player: Player) end
 Concierge.autoTour = function(_player: Player): boolean
 	return false
 end
+-- Set by Main (Build 93): the house's welcome gift (server/WelcomeGift). `offerGift` offers it to a
+-- guest who may have it (true if offered); `giftSettled` says whether they've nothing left to choose.
+Concierge.offerGift = function(_player: Player): boolean
+	return false
+end
+Concierge.giftSettled = function(_player: Player): boolean
+	return true
+end
+Concierge.GIFT_WAIT = 30 -- seconds the first tour waits for the gift to be chosen, at most
 
 function Concierge.tour(player: Player)
 	Concierge.markNews(player)
@@ -300,6 +309,7 @@ function Concierge.answer(id: string): string?
 					:gsub("{galaGilt}", commas(tonumber((a.gala or {}).dailyGilt) or 2500))
 					:gsub("{dropGilt}", commas(tonumber(((settings :: any).HourlyDrop or {}).gilt) or 250))
 					:gsub("{dropMinutes}", tostring(tonumber(((settings :: any).HourlyDrop or {}).openMinutes) or 15))
+					:gsub("{showtimeGilt}", commas(tonumber(((settings :: any).Showtime or {}).gilt) or 400))
 			)
 		end
 	end
@@ -472,14 +482,38 @@ function Concierge.greet(player: Player, firstVisit: boolean, nightlyPending: bo
 		-- (Build 87) A brand-new guest: welcomed by name, told what's about to happen and how to
 		-- end it, and then shown round without a click. Never again by itself after this.
 		Concierge.markNews(player)
-		Dialogue.say(player, V.speaker, (V.firstTour:gsub("{name}", Names.of(player))), nil, nil, 5)
-		task.delay(5, function()
+		-- (Build 93) First the house's welcome gift (their first brainrot, their choice); the tour
+		-- starts once it's chosen, or after a short wait whatever happens.
+		local okGift, gifted = pcall(Concierge.offerGift, player)
+		if okGift and gifted == true then
+			Dialogue.say(player, V.speaker, (V.giftFirst:gsub("{name}", Names.of(player))), nil, nil, 6)
+		else
+			Dialogue.say(player, V.speaker, (V.firstTour:gsub("{name}", Names.of(player))), nil, nil, 5)
+		end
+		task.spawn(function()
+			local waited = 0
+			if okGift and gifted == true then
+				while waited < Concierge.GIFT_WAIT and player.Parent == Players do
+					local okS, done = pcall(Concierge.giftSettled, player)
+					if not okS or done == true then
+						break
+					end
+					task.wait(0.5)
+					waited += 0.5
+				end
+				if player.Parent == Players then
+					Dialogue.say(player, V.speaker, (V.firstTour:gsub("{name}", Names.of(player))), nil, nil, 5)
+				end
+			end
+			task.wait(5)
 			if player.Parent == Players and not Concierge.isSeated(player) and not Concierge.isTouring(player) then
 				Concierge.tour(player)
 			end
 		end)
 		return
 	end
+	-- (Build 93) Anyone else who may still have the welcome gift is offered it as they come in.
+	pcall(Concierge.offerGift, player)
 	local ok, new = pcall(Concierge.needsTour, player)
 	if firstVisit or (ok and new == true) then
 		-- (A new guest's tour shows them everything new too.)

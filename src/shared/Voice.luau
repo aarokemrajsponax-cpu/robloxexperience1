@@ -119,6 +119,7 @@ Voice.Concierge = {
 		{ id = "luxeHow", cat = "attractions", place = "velvet", q = "How do I play Steal a Luxe?", a = "Through the Luxe Lounge. Inside, hold E on a treasure to lift it: the fuller your bag, the slower you walk. Security sleeps until you lift something; then a guard comes after you. Carry it out to the getaway car to bank it for good." },
 		{ id = "execChallenge", cat = "attractions", place = "midnight", q = "What's the Executive Suite's challenge?", a = "Each run of the Suite has one, the same for everyone in it, said as you go up: Ghost (beat him never seen in the hallway), Steady Hand (no wrong try of yours at the vault door), Untouchable (lose no composure, and no revive) or Swift Takeover (beat him within three minutes of the door opening). Meet it and it pays its own Gilt when he's beaten. Each run has its own look too, and some walk his guards the other way round." },
 		{ id = "islandStanding", cat = "attractions", place = "terrace", q = "What is Island Standing?", a = "Everything you do on Luxury Island, counted: a pearl is a point, a sunset toasted three, each postcard spot two, each flight one. Each rank (Weekender, Islander, Patron of the Island, The Island's Own) pays its Gilt once. Islanders earn the Starlit lights and Patrons the Island Patron livery: never sold. Your standing is on the Jet Lounge's board." },
+		{ id = "showtime", cat = "house", place = "ballroom", q = "What is Showtime?", a = "Every half hour, at twenty past and ten to, one of the Grand Ballroom's party games has its Showtime for eight minutes: Luxury Trivia, then the Runway, then the Daily Arena, in turn. A card on your screen says which, with a key that takes you there. Play a round of it while it's on and it pays {showtimeGilt} Gilt, once each Showtime. The games are open the rest of the time too: Showtime just brings everyone together." },
 		{ id = "hourlyDrop", cat = "house", place = "hourlyDrop", q = "What is the Hourly Drop?", a = "Every hour, on the hour, a courier's case comes down onto the black marble plinth in the Foyer, west of the red runner, and stays {dropMinutes} minutes. Stand by it and open it, once each hour: {dropGilt} Gilt, and the first time you open a case holding that hour's piece, the piece is yours too. Six pieces take turns, each back every six hours. The sign over the plinth counts down to the next by the house's clock." },
 		{ id = "luxeSleepers", cat = "attractions", place = "velvet", q = "Who's asleep in Steal a Luxe?", a = "The night staff: eight of them, each asleep beside a treasure, from the footman in the Garden Hall to the master of the house in his bedroom. Get close and they stir, quicker if you're moving, carrying something or lifting a piece near them; Quiet Shoes from the Luxe Lounge help. Wake one after you've lifted something and they call the guards (the master locks his bedroom down); wake one empty-handed and they only grumble. Step away and they settle again." },
 		{ id = "basementHow", cat = "attractions", place = "obsidian", q = "How does the Basement work?", a = "Down the Basement Stair: thirty-two stages of jumps, steam and lasers to the Treasury. Step on every checkpoint pad; fall, and you're back at the last one. The gold chevrons on each pad point the way on. Each chamber pays at its way out, and the Treasury's chest pays the most." },
@@ -144,6 +145,8 @@ Voice.Concierge = {
 	newsYes = "Show me",
 	newsLater = "Later",
 	newsLaterLine = "Of course. Ask me for the tour any time.",
+	-- (Build 93) Before the first tour: the house's welcome gift.
+	giftFirst = "Good evening, {name}, and welcome to the Maison. Before anything else, a gift from the house: choose your first brainrot. It earns you Gilt every hour from tonight on.",
 	firstTour = "Good evening, {name}, and welcome to the Maison. I'm the Concierge. Everyone here is out to become the richest guest; let me show you round first. Follow me and the gold trail. You can end the tour whenever you like.",
 	tourOffer = "Welcome to the Maison, where everyone is here to become the richest guest. Shall I show you round? It's quick.",
 	tourYes = "Show me the house",
@@ -419,10 +422,11 @@ Voice.Afk = {
 -- What's new in this build, told once to each returning guest (Welcome back). Only shown while
 -- `build` is the build that's playing, so old news never shows as new.
 Voice.WhatsNew = {
-	build = 92,
+	build = 93,
 	lines = {
+		"Showtime: every half hour, at twenty past and ten to, one of the Grand Ballroom's party games is called for eight minutes. Play a round while it's on for a Showtime bonus.",
+		"The Wealthiest boards now hang in the Foyer, either side of the Grand Stair: this house now, and of all time.",
 		"House Trophies: six pieces for your Suite, each earned by playing one of the house's games. Never sold. Ask me which.",
-		"On a phone, the names under the keys, your Fortune and your Level are easier to read.",
 	},
 }
 
