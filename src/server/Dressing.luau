@@ -15,6 +15,7 @@ local Ledger = require(ReplicatedStorage.Shared.Ledger)
 local Levels = require(ReplicatedStorage.Shared.Levels)
 local PrestigeRules = require(ReplicatedStorage.Shared.Prestige)
 local Rating = require(ReplicatedStorage.Shared.Rating)
+local Trophies = require(ReplicatedStorage.Shared.Trophies)
 local Wardrobe = require(ReplicatedStorage.Shared.Wardrobe)
 
 local Profiles = require(script.Parent.Profiles)
@@ -384,6 +385,9 @@ function Dressing.canWear(data: Profiles.Data, item: Wardrobe.Item): boolean
 		return data.goldKey
 	elseif item.source == "blackCard" and item.kind == "nameplate" then
 		return data.blackCard.active
+	elseif item.source == "trophy" then
+		-- (Build 92: a House Trophy is had the moment the guest's own count of its feat reaches it.)
+		return Trophies.earned(data, item.id)
 	elseif item.source == "prestige" then
 		-- (Maison Prestige's pieces come with their laurel, and stay with it.)
 		local p = (data :: any).prestige

@@ -555,6 +555,88 @@ check("clearing a spot brings back the house's piece", askAs(ivy, { op = "place"
 check("Suite pieces aren't worn", not askAs(ivy, { op = "equip", kind = "suite", id = "suite_rug_black" }).ok)
 check("Patrons' pieces wait for Patrons", not askAs(ivy, { op = "buyGilt", item = "suite_bar_walnut" }).ok)
 
+-- (Build 92) House Trophies: Suite pieces earned by playing each attraction, never sold, never
+-- claimed by a guest's screen, told once.
+do
+	local Trophies = module("ReplicatedStorage", "Shared", "Trophies")
+	local Ach = module("ServerScriptService", "Server", "Achievements")
+	local DressingS = module("ServerScriptService", "Server", "Dressing")
+	local WardrobeS = module("ReplicatedStorage", "Shared", "Wardrobe")
+	local SuiteS = module("ReplicatedStorage", "Shared", "Suite")
+	check("six House Trophies, one for each attraction played", #Trophies.List == 6)
+	local everyOne = true
+	for _, t in Trophies.List do
+		local item = WardrobeS.get(t.item)
+		if not item or item.source ~= "trophy" or SuiteS.spotOf(item) == nil or item.robux or item.gilt then
+			everyOne = false
+		end
+	end
+	check("each is a real Suite piece with its own spot, and has no price", everyOne)
+	local told = {}
+	local toldWas = Ach.trophyEarned
+	Ach.trophyEarned = function(p, t)
+		table.insert(told, { p = p, t = t.item })
+	end
+	local tom = guest("Tom", 9)
+	local td = profiles[tom].Data
+	td.gilt = 1000000
+	local jewels = WardrobeS.get("suite_trophy_jewels")
+	check("not yet earned: not yours", not DressingS.canWear(td, jewels))
+	check("not sold for Gilt", not askAs(tom, { op = "buyGilt", item = "suite_trophy_jewels" }).ok and td.gilt == 1000000)
+	check("not sold for Robux", not askAs(tom, { op = "buy", item = "suite_trophy_jewels" }).ok)
+	check("can't be placed before it's earned", not askAs(tom, { op = "place", spot = "display", id = "suite_trophy_jewels" }).ok)
+	td.owned.suite_trophy_jewels = true -- (a screen can't make it so: ownership here is the count)
+	check("a stray 'owned' flag doesn't count: only playing does", not DressingS.canWear(td, jewels))
+	td.owned.suite_trophy_jewels = nil
+	local view0 = askAs(tom, { op = "suite" })
+	local row
+	for _, sp in view0.spots do
+		for _, o in sp.options do
+			if o.id == "suite_trophy_jewels" then
+				row = o
+			end
+		end
+	end
+	check("its row says how it's earned", row and row.owned == false and row.source == "trophy" and type(row.how) == "string" and string.find(row.how, "Steal a Luxe", 1, true) ~= nil)
+	run(function()
+		Ach.tally(tom, "crownJewels", 1)
+	end)
+	check("a crown jewel carried out: the Vitrine is earned", DressingS.canWear(td, jewels))
+	check("told once, to that guest", #told == 1 and told[1].p == tom and told[1].t == "suite_trophy_jewels")
+	run(function()
+		Ach.tally(tom, "crownJewels", 1)
+	end)
+	check("...and never told again", #told == 1)
+	check("placed in the display case", askAs(tom, { op = "place", spot = "display", id = "suite_trophy_jewels" }).ok and td.suite.display == "suite_trophy_jewels")
+	check("still not sold, once earned", not askAs(tom, { op = "buyGilt", item = "suite_trophy_jewels" }).ok and td.gilt == 1000000)
+	check("another guest's trophy is still theirs to earn", not DressingS.canWear(profiles[ivy].Data, jewels))
+	for _, t in Trophies.List do
+		if t.stat ~= "crownJewels" then
+			run(function()
+				Ach.tally(tom, t.stat, t.need)
+			end)
+		end
+	end
+	local placedAll = true
+	for _, t in Trophies.List do
+		local item = WardrobeS.get(t.item)
+		local spot = SuiteS.spotOf(item)
+		if not (DressingS.canWear(td, item) and askAs(tom, { op = "place", spot = spot, id = t.item }).ok) then
+			placedAll = false
+		end
+	end
+	check("all six, each earned in its own game, each placed in its spot", placedAll and #told == 6)
+	Ach.trophyEarned = toldWas
+	local ShopS = module("ServerScriptService", "Server", "Shop")
+	tom.inbox = {}
+	run(function()
+		ShopS.trophy(tom, Trophies.byItem.suite_trophy_executive)
+	end)
+	local note = lastOp(tom, "notice")
+	check("the guest is told by name, and where to place it", note and note.title == "A trophy for your Suite" and string.find(note.line, "The Executive in Bronze, from The Executive Suite", 1, true) ~= nil and string.find(note.line, "!", 1, true) == nil)
+	check("...and their Suite's list is sent fresh", lastOp(tom, "state") ~= nil)
+end
+
 ---------------------------------------------------------------------------------------------------
 -- Circles: found one at the Livre d'Or, invite, ask and be welcomed, the week's points, leave
 ---------------------------------------------------------------------------------------------------

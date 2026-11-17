@@ -4018,6 +4018,7 @@ invokeResults.ShopAsk = {
 				{ id = "suite_rug_black", name = "Black Deco Rug", line = "Black wool, a gold fan in the middle.", owned = true, source = "gilt", gilt = 400 },
 				{ id = "suite_rug_persian", name = "Night Garden Rug", line = "Deep reds, knotted by hand.", owned = false, source = "gilt", gilt = 800 },
 				{ id = "suite_rug_moon", name = "Moonlit Rug", line = "Ink blue, a silver ring.", owned = false, source = "boutique", robux = 149, onSale = true, robuxOnSale = true, giltAlt = 5960 },
+				{ id = "suite_trophy_chequered", name = "The Chequered Flag", line = "Black and white, edged in gold: a Grand Prix won.", owned = false, source = "trophy", how = "Win a race in the Grand Prix" },
 			},
 		},
 		{ id = "sofa", name = "The sofa", room = "main", open = true, house = { model = "chesterfield" }, placed = "", options = {} },
@@ -4046,6 +4047,7 @@ check("how far along you are", textOnScreen("Your pieces in 1 of 2 places") ~= n
 check("a piece for Gilt can be bought right there", textOnScreen("Night Garden Rug") ~= nil and textOnScreen("800 Gilt") ~= nil)
 check("a Robux piece, its price plain", textOnScreen("Moonlit Rug") ~= nil and textOnScreen(utf8.char(0xE002) .. " 149") ~= nil)
 check("and it can be had for Gilt instead", textOnScreen("5,960 Gilt") ~= nil)
+check("a House Trophy: no price, just how it's earned", textOnScreen("The Chequered Flag") ~= nil and textOnScreen("Earned by playing") ~= nil and textOnScreen("Win a race in the Grand Prix") ~= nil)
 check("each spot shows a picture of what stands there", (function()
 	for _, d in playerGui:GetDescendants() do
 		if d:IsA("ViewportFrame") and d.Name == "Picture" and d:FindFirstChildWhichIsA("Model") then

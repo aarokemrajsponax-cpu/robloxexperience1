@@ -172,6 +172,11 @@ SoireeService.notice = function(player, title, line)
 	Remotes.event("Shop"):FireClient(player, { op = "notice", title = title, line = line })
 end
 SoireeService.board = Boards.setSoiree
+-- (Build 92) A House Trophy earned at one of the house's games: said to the guest, and their
+-- Suite's furnishing list shows it as theirs (shared/Trophies).
+Achievements.trophyEarned = function(player, t)
+	require(script.Parent.Shop).trophy(player, t)
+end
 boot("The Soirée", SoireeService.start)
 
 local TableService = require(script.Parent.TableService)

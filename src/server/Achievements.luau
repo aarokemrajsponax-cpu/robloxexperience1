@@ -12,6 +12,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local BadgeBook = require(ReplicatedStorage.Shared.BadgeBook)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Levels = require(ReplicatedStorage.Shared.Levels)
+local Trophies = require(ReplicatedStorage.Shared.Trophies)
 local Analytics = require(script.Parent.Analytics)
 local Profiles = require(script.Parent.Profiles)
 
@@ -214,6 +215,9 @@ function Achievements.check(player: Player, quiet: boolean?)
 	end
 end
 
+-- (Build 92) A House Trophy just earned (set by Main: tell the guest, refresh their Suite's list).
+Achievements.trophyEarned = function(_player: Player, _trophy: Trophies.Trophy) end
+
 -- Adds to one of the guest's own counts (things picked up at events, trades...). `once`: counted
 -- only once for that key (one Admin Abuse Night, however often you rejoin during it).
 -- (Build 87: says whether it counted, so XP is given only for what really counted.)
@@ -229,7 +233,15 @@ function Achievements.tally(player: Player, stat: string, n: number, once: strin
 		end
 		d.tallyOnce[stat] = once
 	end
-	d.tally[stat] = (d.tally[stat] or 0) + n
+	local before = d.tally[stat] or 0
+	d.tally[stat] = before + n
+	-- (Build 92) A House Trophy reached by this count: told to the guest (shared/Trophies).
+	local reached: { Trophies.Trophy } = Trophies.byStat[stat] or {}
+	for _, t in reached do
+		if before < t.need and before + n >= t.need then
+			pcall(Achievements.trophyEarned, player, t)
+		end
+	end
 	Achievements.check(player)
 	return true
 end

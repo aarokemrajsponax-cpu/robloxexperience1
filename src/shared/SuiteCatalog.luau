@@ -45,6 +45,10 @@ end
 local function island(): { [string]: any }
 	return { source = "island" }
 end
+-- (Build 92) A House Trophy: earned by playing one of the house's games (shared/Trophies).
+local function trophy(): { [string]: any }
+	return { source = "trophy" }
+end
 -- With a laurel of Maison Prestige (shared/Prestige.SuitePieces says which).
 local function prestige(level: number): { [string]: any }
 	return { source = "prestige", prestige = level }
@@ -241,6 +245,14 @@ add("lamp", "suite_shelllamp", "The Seashell Lamp", "Mother-of-pearl, a soft whi
 add("loungers", "suite_palmlounger", "The Palm Loungers", "White canvas and teak, straight from the South Beach.", { colour = rgb(246, 242, 232), accent = rgb(60, 150, 160) }, island())
 add("chair", "suite_coralthrone", "The Coral Throne", "Coral velvet on a gilt frame: the island's own seat.", { model = "wing", colour = rgb(232, 112, 104), accent = PALE_GOLD }, island())
 add("chandelier", "suite_pearlchandelier", "The Pearl Chandelier", "Three tiers of island pearls, catching every light.", { model = "crystal", accent = rgb(246, 238, 230) }, island())
+-- (Build 92) The House Trophies: one from each of the house's games, earned by playing it
+-- (shared/Trophies says how each is had).
+add("display", "suite_trophy_jewels", "The Crown Jewel Vitrine", "Black lacquer and red velvet, lit within: a crown jewel carried out of Steal a Luxe.", { colour = rgb(16, 14, 16), accent = rgb(200, 34, 60), lining = rgb(110, 14, 28), crown = true }, trophy())
+add("chandelier", "suite_trophy_treasury", "The Treasury Chandelier", "Gold from the Basement's deepest vault, falling in strands of light.", { model = "cascade", accent = rgb(255, 196, 70) }, trophy())
+add("statue", "suite_trophy_executive", "The Executive in Bronze", "The man himself, cast in bronze. You beat him.", { metal = true, colour = rgb(150, 98, 52) }, trophy())
+add("rug", "suite_trophy_chequered", "The Chequered Flag", "Black and white, edged in gold: a Grand Prix won.", { model = "chequer", colour = rgb(236, 232, 224), accent = GOLD }, trophy())
+add("lamp", "suite_trophy_arena", "The Arena Lamp", "A gold arc of light for the Daily Arena's winner.", { model = "arc", colour = rgb(255, 226, 170), accent = GOLD }, trophy())
+add("painting", "suite_trophy_auction", "The Auction Room", "The salesroom at the moment the hammer fell your way, in a gilt frame.", { art = "still", colour = rgb(70, 30, 34), accent = GOLD }, trophy())
 add("statue", "suite_laurelbust", "The Laurel Muse", "A white marble figure, a gold laurel raised. For the Silver Laurel.", { colour = rgb(240, 236, 228) }, prestige(3))
 add("statue", "suite_sapphirelaurel", "The Sapphire Laurel", "A figure in sapphire light. For the Sapphire Laurel.", { metal = true, colour = rgb(84, 140, 255) }, prestige(6))
 add("statue", "suite_diamondlaurel", "The Diamond Laurel", "Cut from light itself. For the Diamond Laurel.", { metal = true, colour = rgb(214, 244, 255) }, prestige(9))

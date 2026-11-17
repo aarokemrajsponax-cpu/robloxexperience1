@@ -377,6 +377,33 @@ a Nightly attempt or a Mythic's odds.
 - **The launch kit**: page text, icon, thumbnails and the gameplay video's shot list are in
   [`LAUNCH.md`](LAUNCH.md).
 
+## Build 92 — House Trophies, a HUD you can read on a phone
+
+- **House Trophies** (`shared/Trophies`). Six Suite pieces that aren't sold for Gilt, Gems or Robux:
+  each is earned by playing one of the house's games, so what you do in the attractions shows in
+  your Suite. A crown jewel carried out of Steal a Luxe earns the Crown Jewel Vitrine (the display
+  case, lined in red velvet, a small gold crown on top); reaching the Treasury in the Basement, the Treasury Chandelier; beating the Executive, the
+  Executive in Bronze (the Terrace statue); a Grand Prix won, the Chequered Flag (a rug, a new
+  chequered model in `Furniture/Decor`); the Daily Arena won, the Arena Lamp; a lot won at the Grand
+  Auction, the Auction Room (over the fireplace). Ownership is the guest's own count on the server
+  (`data.tally`, the same counts the badges read): a screen can't claim one, a stray `owned` flag
+  doesn't count, and neither shop path sells them. The moment a count first reaches its mark the
+  guest is told once (*A trophy for your Suite*) and their furnishing list is sent fresh; guests who
+  already have the count find theirs waiting. In the Suite's furnishing panel an unearned trophy
+  shows *Earned by playing* and the one line that earns it, never a price (Prestige and island
+  pieces now say how they're had, too). The Concierge answers *What are House Trophies?*.
+- **The HUD on a phone** (`Theme.phonePx`). On a small screen the whole interface is scaled down
+  (to 0.62 on a 390-pt-tall phone), which left the hand-made HUD labels at about 6 to 7 pt. They
+  now keep to at least about 9.6 pt after scaling: the dock's names under each key (the keys are
+  a little wider on touch to hold them), the dock's live tags, the Fortune caption and rank, the
+  Level disc and its title. The Gilt bar drops its own level on a phone (the Level disc beside it
+  already shows it). This applies only where the interface is scaled below 0.95 (phones, small
+  windows); on a full-size screen every size is as it was.
+- **Fixed: Trend Watch ideas under their writer's name.** Build 91 put the host's name on
+  everything the owners start, and that reached the owners' private Trend Watch ideas too (the
+  staff suite caught it). Ideas are kept under who wrote them again; public events still go out
+  under Tyler.
+
 ## Build 91 — The Hourly Drop, the Executive's Reception, Tyler hosts, studs underfoot
 
 - **The Hourly Drop** (`shared/HourlyDrop`, `server/HourlyDrop`, `World/HourlyDropView`). On the

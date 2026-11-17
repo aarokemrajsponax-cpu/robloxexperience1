@@ -72,6 +72,18 @@ return function(F: any)
 					box(b, "Stripe", Vector3.new(w - 0.6, 0.02, (d - 0.6) / n), CFrame.new(0, 0.05, -(d - 0.6) / 2 + (i - 0.5) * (d - 0.6) / n), look(accent:Lerp(field, 0.3), Enum.Material.Fabric), trim)
 				end
 			end
+		elseif model == "chequer" then
+			-- (Build 92) A chequered flag: black squares on the field, a border in the accent.
+			local cols, rows = math.max(2, math.floor((w - 1.2) / 1.6)), math.max(2, math.floor((d - 1.2) / 1.6))
+			local cw, cd = (w - 1.2) / cols, (d - 1.2) / rows
+			for ix = 0, cols - 1 do
+				for iz = 0, rows - 1 do
+					if (ix + iz) % 2 == 0 then
+						box(b, "Square", Vector3.new(cw, 0.02, cd), CFrame.new(-(w - 1.2) / 2 + (ix + 0.5) * cw, 0.05, -(d - 1.2) / 2 + (iz + 0.5) * cd), look(rgb(18, 18, 20), Enum.Material.Fabric), trim)
+					end
+				end
+			end
+			frameOf(b, "RugBorder", w - 0.6, d - 0.6, 0.3, 3, accent)
 		elseif model == "deco" then
 			frameOf(b, "RugBorder", w - 1.2, d - 1.2, 0.18, 2, accent)
 			frameOf(b, "RugBorder2", w - 2, d - 2, 0.1, 2, accent)
@@ -424,7 +436,7 @@ return function(F: any)
 		local w, d, h = 4.4, 1.6, 7
 		box(b, "Plinth", Vector3.new(w, 1.2, d), CFrame.new(0, 0.6, 0), wood)
 		box(b, "Crown", Vector3.new(w + 0.2, 0.4, d + 0.2), CFrame.new(0, h - 0.2, 0), wood)
-		box(b, "Back", Vector3.new(w, h - 1.6, 0.12), CFrame.new(0, (h + 0.8) / 2, d / 2 - 0.06), look(rgb(30, 22, 20), Enum.Material.Fabric))
+		box(b, "Back", Vector3.new(w, h - 1.6, 0.12), CFrame.new(0, (h + 0.8) / 2, d / 2 - 0.06), look(if typeof(st.lining) == "Color3" then st.lining else rgb(30, 22, 20), Enum.Material.Fabric))
 		for _, x in { -w / 2 + 0.08, w / 2 - 0.08 } do
 			box(b, "Post", Vector3.new(0.16, h - 1.6, 0.16), CFrame.new(x, (h + 0.8) / 2, -d / 2 + 0.08), metal)
 		end
@@ -439,6 +451,16 @@ return function(F: any)
 		end
 		local glow = box(b, "CaseLight", Vector3.new(w - 0.5, 0.06, 0.2), CFrame.new(0, h - 0.47, -0.3), L.warmGlow, trim)
 		F.spotLight(b, glow, Enum.NormalId.Bottom, 1.1, 8, 90, rgb(255, 230, 200))
+		-- (Build 92) A House Trophy's case wears a small gold crown, one red stone at its front.
+		if st.crown then
+			local gold = look(rgb(232, 188, 84), Enum.Material.Metal, 0.3)
+			box(b, "CrownBand", Vector3.new(1.3, 0.36, 0.9), CFrame.new(0, h + 0.18, 0), gold, trim)
+			for _, x in { -0.5, 0, 0.5 } do
+				ball(b, "CrownPoint", 0.24, Vector3.new(x, h + 0.56, -0.3), gold, trim)
+				ball(b, "CrownPoint", 0.24, Vector3.new(x, h + 0.56, 0.3), gold, trim)
+			end
+			ball(b, "CrownStone", 0.3, Vector3.new(0, h + 0.2, -0.47), look(st.accent or rgb(200, 34, 60), Enum.Material.Glass, 0.6, 0.1), trim)
+		end
 	end)
 
 	-------------------------------------------------------------------------------------------

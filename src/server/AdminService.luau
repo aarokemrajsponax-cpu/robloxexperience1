@@ -2330,7 +2330,8 @@ local function handle(player: Player, request: unknown): any
 		-- Trend Watch: the house's own numbers (the staff may read them); the ideas are the
 		-- owner's alone (checked above: only "trends" is the staff's).
 		if op == "trendNote" then
-			local ok, why = TrendWatch.addNote(if type(r.text) == "string" then r.text else "", byName)
+			-- (A private note for the owners: kept under who really wrote it, never the host name.)
+			local ok, why = TrendWatch.addNote(if type(r.text) == "string" then r.text else "", Names.of(player))
 			if not ok then
 				return { ok = false, why = why or "That idea couldn't be kept." }
 			end

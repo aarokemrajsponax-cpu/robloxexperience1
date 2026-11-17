@@ -4,6 +4,6 @@
 -- see whether Studio has the latest code from GitHub.
 
 return {
-	number = 91,
-	label = "Build 91 · 17 Nov · The Hourly Drop, the Executive's Reception, Tyler hosts, studs underfoot",
+	number = 92,
+	label = "Build 92 · 17 Nov · House Trophies, a HUD you can read on a phone",
 }

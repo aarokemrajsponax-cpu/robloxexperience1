@@ -20,6 +20,7 @@ local Boutique = require(ReplicatedStorage.Shared.Boutique)
 local Config = require(ReplicatedStorage.Shared.Config)
 local ProductConfig = require(ReplicatedStorage.Shared.ProductConfig)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Trophies = require(ReplicatedStorage.Shared.Trophies)
 local Standing = require(ReplicatedStorage.Shared.Standing)
 local Salutes = require(ReplicatedStorage.Shared.Salutes)
 local Suite = require(ReplicatedStorage.Shared.Suite)
@@ -926,6 +927,11 @@ function Shop.suite(data: Profiles.Data): { [string]: any }
 				onSale = item.robux ~= nil and Boutique.onSale(item.id, Season.current().id) and Wardrobe.deliverable(item),
 				robuxOnSale = item.robux ~= nil and Catalog.enabled("tier" .. tostring(Wardrobe.tierFor(item.robux))),
 				giltAlt = giltAlt(item),
+				-- (Build 92) How a piece that isn't sold is had, said on its row.
+				how = if item.source == "trophy" then (Trophies.byItem[item.id] and Trophies.byItem[item.id].how)
+					elseif item.source == "prestige" then "With a laurel of Maison Prestige"
+					elseif item.source == "island" then "For pearls, at the Pearl Exchange on Luxury Island"
+					else nil,
 			})
 		end
 		table.insert(spots, {
@@ -942,6 +948,18 @@ function Shop.suite(data: Profiles.Data): { [string]: any }
 end
 
 -- Puts a piece in a spot of the guest's Suite ("" takes it away).
+-- (Build 92) A House Trophy just earned: said to the guest, and their Suite's list shows it theirs.
+function Shop.trophy(player: Player, t: Trophies.Trophy)
+	local item = Wardrobe.get(t.item)
+	local name = if item then item.name else "A trophy"
+	shopEvent:FireClient(player, {
+		op = "notice",
+		title = "A trophy for your Suite",
+		line = string.format("%s, from %s. Ring the bell in your Suite to place it.", name, t.game),
+	})
+	Shop.push(player)
+end
+
 function Shop.place(player: Player, data: Profiles.Data, spotId: string, id: string): { [string]: any }
 	local item = if id ~= "" then Wardrobe.get(id) else nil
 	if id ~= "" and not item then

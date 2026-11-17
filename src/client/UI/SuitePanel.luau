@@ -424,6 +424,10 @@ function SuitePanel.open(start: string?)
 					priceKey(keys, 1, "With the Gold Key", false, true, goldKey)
 				elseif o.source == "introduction" then
 					Theme.text(keys, "With the Introduction", 13, "body", { LayoutOrder = 1, TextColor3 = C.dim })
+				elseif type(o.how) == "string" then
+					-- (Build 92) A trophy, a laurel's piece, the island's: how it's had, plainly.
+					Theme.text(keys, if o.source == "trophy" then "🏆  Earned by playing" else "How it's had", 12, "caps", { LayoutOrder = 1, TextColor3 = C.lightGold })
+					Theme.text(keys, o.how, 12, "body", { LayoutOrder = 2, TextColor3 = C.smoke, TextWrapped = true, AutomaticSize = Enum.AutomaticSize.Y, Size = UDim2.new(1, 0, 0, 0) })
 				end
 				-- Hover a piece to see it in the picture.
 				row.MouseEnter:Connect(function()

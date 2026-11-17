@@ -107,6 +107,7 @@ Voice.Concierge = {
 		{ id = "luckyBoxes", cat = "collection", place = "ballroom", q = "What are Luxe Lucky Boxes?", a = "Three gift boxes on a gold-lit dais in the Grand Ballroom's Entrance Hall, just inside its doors. Each opens to one brainrot: Rare or better, Epic or better, or Legendary or better. Open one for Gems (100, 250 or 565), or save up Gilt for one (25,000, 62,500 or 140,000). The odds of every brainrot are shown before you open it and add up to 100%, and a counter shows how many opens until a rarer one is certain. Everything in them is also found free at the tables. (Only where Roblox allows paid random items.)" },
 		{ id = "hotbar", cat = "collection", q = "What's in my hotbar?", a = "What you carry: the stun pistol once the Quartermaster gives it you (it fires only in the Executive Suite's fight), a decoy you've packed, the brainrots in your squad and the curios you've starred. Hold a brainrot or a curio and click to flex it for everyone near you." },
 		{ id = "suite", cat = "house", place = "suite", q = "How do I make my Suite mine?", a = "Ring the bell inside your Suite to furnish it, piece by piece, where you like. Its cases show off your finest curios, and friends can visit from the Suites list." },
+		{ id = "trophies", cat = "house", place = "suite", q = "What are House Trophies?", a = "Six pieces for your Suite that aren't sold for Gilt, Gems or Robux: each is earned by playing one of the house's games. A crown jewel carried out of Steal a Luxe, the Treasury reached in the Basement, the Executive beaten, a Grand Prix won, the Daily Arena won, a lot won at the Grand Auction. Once earned it's yours for good: ring the bell in your Suite to place it." },
 		{ id = "looks", cat = "house", place = "boutique", q = "What are looks and trails for?", a = "Style, never score: looks, trails, nameplates, lamps, chimes and victory flourishes from the Boutique. Wear them at the Wardrobe. Your flourish even colours your flexes." },
 		-- (Build 87: more, each from how the house really works, in five kinds; "place" is where
 		-- Guide me there walks the guest.)
@@ -418,12 +419,10 @@ Voice.Afk = {
 -- What's new in this build, told once to each returning guest (Welcome back). Only shown while
 -- `build` is the build that's playing, so old news never shows as new.
 Voice.WhatsNew = {
-	build = 91,
+	build = 92,
 	lines = {
-		"The Hourly Drop: on the hour, every hour, a courier's case comes down in the Foyer for fifteen minutes. Open it once an hour for Gilt and that hour's piece.",
-		"The Executive Suite has a Reception behind the lobby, through either arch: a lounge, a bar and the city at night, and tonight's challenge on the board.",
-		"Admin Abuse nights are hosted by Tyler now.",
-		"Every jumping stone in the Maison Basement has the house's studs underfoot.",
+		"House Trophies: six pieces for your Suite, each earned by playing one of the house's games. Never sold. Ask me which.",
+		"On a phone, the names under the keys, your Fortune and your Level are easier to read.",
 	},
 }
 

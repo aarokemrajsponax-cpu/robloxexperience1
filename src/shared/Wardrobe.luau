@@ -12,7 +12,7 @@ local SoundSheet = require(script.Parent.SoundSheet)
 local Wardrobe = {}
 
 export type Kind = "look" | "table" | "lamp" | "chime" | "trail" | "gesture" | "flourish" | "nameplate" | "card" | "suite"
-export type Source = "blackCard" | "boutique" | "gilt" | "goldKey" | "introduction" | "ledger" | "season" | "standing" | "island" | "prestige"
+export type Source = "blackCard" | "boutique" | "gilt" | "goldKey" | "introduction" | "ledger" | "season" | "standing" | "island" | "prestige" | "trophy"
 
 export type Item = {
 	id: string,

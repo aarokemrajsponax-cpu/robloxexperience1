@@ -193,6 +193,13 @@ if process.args[1] == "suite" then
 				placed[spot.id] = best.id
 			end
 		end
+	elseif mode == "trophies" then
+		-- (Build 92) The six House Trophies, each in its own spot.
+		local Wardrobe = module("ReplicatedStorage", "Shared", "Wardrobe")
+		for _, t in module("ReplicatedStorage", "Shared", "Trophies").List do
+			local item = Wardrobe.get(t.item)
+			placed[Suite.spotOf(item)] = t.item
+		end
 	end
 	local pieces = Suite.pieces(placed, goldKey)
 	local furniture = Instance.new("Folder")
