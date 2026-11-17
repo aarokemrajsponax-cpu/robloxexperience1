@@ -149,6 +149,12 @@ local function element(parent: Instance, o: Vector3, i: number, e: Plan.El, zone
 			-- (Build 90) Every checkpoint in the house's studs: the safe ground, known at a glance.
 			Kit.studs(p)
 			p.Color = if e.look == "landing" then rgb(64, 54, 40) else rgb(50, 46, 56)
+		elseif kind == "pad" and (e.look == nil or e.look == "stone") then
+			-- (Build 91) Every plain jumping stone in studs too, the course's own colour kept: the
+			-- classic obby underfoot. (The themed ones, barrels, grates, steel, gold, planks, the
+			-- vanishing tiles and the machinery, keep what they're made of.)
+			Kit.studs(p)
+			p.Color = rgb(66, 57, 52)
 		end
 		guides(parent, cf, e.size, kind == "beam")
 		if e.look == "barrel" then

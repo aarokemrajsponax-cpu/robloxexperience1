@@ -94,7 +94,16 @@ return function(workspace, lighting, path)
 				if mesh and mesh.MeshType == Enum.MeshType.Sphere then
 					shape = "Ellipsoid"
 				end
-				table.insert(out.parts, { d.Name, shape, v3(d.Size), { d.CFrame:GetComponents() }, rgb(d.Color), d.Material.Name, d.Transparency, d.Reflectance, d.CastShadow })
+				-- (The faces with Roblox's studs: only on Plastic, as Roblox draws them. T B F K L R.)
+				local studs = ""
+				if d.Material == Enum.Material.Plastic then
+					for code, face in { T = "TopSurface", B = "BottomSurface", F = "FrontSurface", K = "BackSurface", L = "LeftSurface", R = "RightSurface" } do
+						if (d :: any)[face] == Enum.SurfaceType.Studs then
+							studs ..= code
+						end
+					end
+				end
+				table.insert(out.parts, { d.Name, shape, v3(d.Size), { d.CFrame:GetComponents() }, rgb(d.Color), d.Material.Name, d.Transparency, d.Reflectance, d.CastShadow, studs })
 			end
 		elseif d:IsA("Light") then
 			local p = d.Parent

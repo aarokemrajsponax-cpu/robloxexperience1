@@ -432,6 +432,25 @@ do
 		every = every and studdedAt[n] == true
 	end
 	check("(Build 90) every checkpoint pad in the house's studs: the safe ground, known at a glance", every)
+	-- (Build 91) Every plain jumping stone in studs too; the themed pieces keep what they're made of.
+	local Color3 = require("@lune/roblox").Color3
+	local stones, studdedStones, themedStudded = 0, 0, 0
+	for _, d in workspace.Attractions.MaisonBasement:GetDescendants() do
+		if d:IsA("BasePart") and d.Name == "Pad" then
+			local studded = d.TopSurface == H.Enum.SurfaceType.Studs and d.Material == H.Enum.Material.Plastic
+			if d.Color == Color3.fromRGB(66, 57, 52) then
+				stones += 1
+				if studded then
+					studdedStones += 1
+				end
+			elseif studded and d.Color ~= Color3.fromRGB(64, 54, 40) and d.Color ~= Color3.fromRGB(50, 46, 56) then
+				themedStudded += 1
+			end
+		elseif d:IsA("BasePart") and (d.Name == "Beam" or d.Name == "Tile" or d.Name == "Belt" or d.Name == "Piston") and d.TopSurface == H.Enum.SurfaceType.Studs then
+			themedStudded += 1
+		end
+	end
+	check("(Build 91) every plain jumping stone in studs, the themed pieces as they were", stones >= 50 and studdedStones == stones and themedStudded == 0, stones, studdedStones, themedStudded)
 	local kinds = {}
 	for _, tag in { "BasementMover", "BasementVanish", "BasementSteam", "BasementLaser", "BasementSpinner" } do
 		kinds[tag] = #(H.tagged[tag] or {})

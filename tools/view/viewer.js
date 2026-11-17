@@ -96,6 +96,54 @@ function materialFor(color, matName, transparency, reflectance) {
 	return m;
 }
 
+// Roblox's studs: a raised round stud on every square stud of a Plastic face that has them (the
+// texture and its bump, tiled one to a stud), so a preview shows what the studs do to a surface.
+let studTexture = null;
+function studMaps() {
+	if (studTexture) return studTexture;
+	const n = 64;
+	const c = document.createElement("canvas");
+	c.width = c.height = n;
+	const g = c.getContext("2d");
+	g.fillStyle = "rgb(226,226,226)";
+	g.fillRect(0, 0, n, n);
+	// The stud's shadow, its side, its lit top.
+	g.fillStyle = "rgb(150,150,150)";
+	g.beginPath(); g.arc(n / 2 + 2.5, n / 2 + 3, n * 0.3, 0, Math.PI * 2); g.fill();
+	g.fillStyle = "rgb(236,236,236)";
+	g.beginPath(); g.arc(n / 2, n / 2, n * 0.3, 0, Math.PI * 2); g.fill();
+	const grad = g.createRadialGradient(n / 2 - 5, n / 2 - 5, 2, n / 2, n / 2, n * 0.3);
+	grad.addColorStop(0, "rgb(255,255,255)");
+	grad.addColorStop(1, "rgb(228,228,228)");
+	g.fillStyle = grad;
+	g.beginPath(); g.arc(n / 2 - 0.5, n / 2 - 0.5, n * 0.27, 0, Math.PI * 2); g.fill();
+	const b = document.createElement("canvas");
+	b.width = b.height = n;
+	const h = b.getContext("2d");
+	h.fillStyle = "rgb(0,0,0)";
+	h.fillRect(0, 0, n, n);
+	h.fillStyle = "rgb(255,255,255)";
+	h.beginPath(); h.arc(n / 2, n / 2, n * 0.3, 0, Math.PI * 2); h.fill();
+	studTexture = { map: new THREE.CanvasTexture(c), bump: new THREE.CanvasTexture(b) };
+	studTexture.map.colorSpace = THREE.SRGBColorSpace;
+	return studTexture;
+}
+function studded(base, repeatU, repeatV) {
+	const maps = studMaps();
+	const m = base.clone();
+	const map = maps.map.clone();
+	const bump = maps.bump.clone();
+	for (const t of [map, bump]) {
+		t.wrapS = t.wrapT = THREE.RepeatWrapping;
+		t.repeat.set(Math.max(1, repeatU), Math.max(1, repeatV));
+		t.needsUpdate = true;
+	}
+	m.map = map;
+	m.bumpMap = bump;
+	m.bumpScale = 1.2;
+	return m;
+}
+
 function cframe(c) {
 	return new THREE.Matrix4().set(c[3], c[4], c[5], c[0], c[6], c[7], c[8], c[1], c[9], c[10], c[11], c[2], 0, 0, 0, 1);
 }
@@ -121,9 +169,15 @@ async function build() {
 	for (const key of ["parts", "lights", "guis"]) if (!Array.isArray(world[key])) world[key] = [];
 	const L = world.lighting;
 	for (const p of world.parts) {
-		const [name, shape, size, cf, color, mat, t, refl, castShadow] = p;
+		const [name, shape, size, cf, color, mat, t, refl, castShadow, studs] = p;
 		const geo = geometries[shape] || geometries.Block;
-		const mesh = new THREE.Mesh(geo, materialFor(color, mat, t, refl));
+		let material = materialFor(color, mat, t, refl);
+		if (studs && (shape === "Block" || !shape)) {
+			// BoxGeometry's faces: +X (Right), -X (Left), +Y (Top), -Y (Bottom), +Z (Back), -Z (Front).
+			const faces = [["R", size[2], size[1]], ["L", size[2], size[1]], ["T", size[0], size[2]], ["B", size[0], size[2]], ["K", size[0], size[1]], ["F", size[0], size[1]]];
+			material = faces.map(([code, u, v]) => (studs.includes(code) ? studded(material, u, v) : material));
+		}
+		const mesh = new THREE.Mesh(geo, material);
 		const m = cframe(cf);
 		let sx = size[0], sy = size[1], sz = size[2];
 		if (shape === "Ball") {
