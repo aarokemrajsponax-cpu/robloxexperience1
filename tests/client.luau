@@ -8722,8 +8722,9 @@ coroutine.wrap(function()
 		end
 	end
 	check("...the Menu has it, for any guest", tile)
+	HandHints.stop()
 	advance(4)
-	GuideHandM.clear()
+	check("...and a stop ends the sequence: nothing more points", not GuideHandM.active() and not HandHints.running())
 	HandHints.isBusy, HandHints.GAP = busyWas, gapWas
 	invokeResults.AttractionAsk = nil
 	check("no errors with the hand's hints", #errors == errorsBefore, errors[errorsBefore + 1])

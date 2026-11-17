@@ -24,6 +24,7 @@ export type Hint = { id: string, title: string, line: string, target: () -> GuiO
 local hints: { Hint } = {}
 local noted: { [string]: boolean } = {}
 local running = false
+local generation = 0 -- (a stop ends the sequence that's running)
 -- (How long between one hint done and the next: none crowds the last.)
 HandHints.GAP = 20
 HandHints.WAIT = 120 -- seconds a hint waits for a clear screen before it's left for another time
@@ -71,8 +72,11 @@ local function first(id: string): boolean
 end
 
 -- Points at one hint when the screen's clear and its target is there. Whether it was shown.
-local function show(h: Hint, keep: boolean): boolean
+local function show(h: Hint, keep: boolean, gen: number): boolean
 	for _ = 1, HandHints.WAIT * 2 do
+		if gen ~= generation then
+			return false
+		end
 		local busy = false
 		pcall(function()
 			busy = HandHints.isBusy()
@@ -103,18 +107,25 @@ local function run(list: { Hint }, keep: boolean)
 		return
 	end
 	running = true
+	generation += 1
+	local gen = generation
 	task.spawn(function()
 		for _, h in list do
+			if gen ~= generation then
+				break
+			end
 			if not keep or first(h.id) then
-				if show(h, keep) then
-					while GuideHand.active() do
+				if show(h, keep, gen) then
+					while GuideHand.active() and gen == generation do
 						task.wait(0.5)
 					end
 					task.wait(HandHints.GAP)
 				end
 			end
 		end
-		running = false
+		if gen == generation then
+			running = false
+		end
 	end)
 end
 
@@ -142,6 +153,13 @@ end
 
 function HandHints.running(): boolean
 	return running
+end
+
+-- Ends the sequence now (the hand, if it's pointing for it, goes too).
+function HandHints.stop()
+	generation += 1
+	running = false
+	GuideHand.clear()
 end
 
 return HandHints
