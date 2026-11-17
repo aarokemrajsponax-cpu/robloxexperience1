@@ -10,6 +10,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
+local AttractionList = require(ReplicatedStorage.Shared.Attractions)
 local GemList = require(ReplicatedStorage.Shared.GemShop)
 
 local Companions = {}
@@ -65,6 +66,11 @@ end
 
 local function build(p: Player)
 	clear(p)
+	-- (Build 94) Put away inside Steal a Luxe, the Basement and the Executive Suite, unless its
+	-- guest called it back in.
+	if AttractionList.companionsHidden(p) then
+		return
+	end
 	local id = p:GetAttribute("Companion")
 	local item = if type(id) == "string" then GemList.byId[id] else nil
 	local character = p.Character
@@ -196,9 +202,11 @@ local function build(p: Player)
 end
 
 local function watch(p: Player)
-	p:GetAttributeChangedSignal("Companion"):Connect(function()
-		build(p)
-	end)
+	for _, key in { "Companion", AttractionList.ATTRIBUTE, AttractionList.COMPANIONS_IN } do
+		p:GetAttributeChangedSignal(key):Connect(function()
+			build(p)
+		end)
+	end
 	p.CharacterAdded:Connect(function()
 		task.wait(0.5)
 		build(p)

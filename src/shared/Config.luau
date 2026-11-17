@@ -989,8 +989,8 @@ local defaults = {
 			maxInvites = 5, -- the most invitations a guest holds
 			invitePrice = 25000, -- an invitation for Gilt, at the Quartermaster's desk
 			inviteHaul = 8000, -- a haul banked in Steal a Luxe worth this much brings an invitation
-			prize = 25000, -- beating the Executive: to the Estate of everyone in the Office
-			prizeGilt = 1500, -- and this much Gilt to each of them
+			prize = 40000, -- beating the Executive: to the Estate of everyone in the Office (Build 94: was 25,000)
+			prizeGilt = 3000, -- and this much Gilt to each of them (Build 94: was 1,500)
 			-- Build 78: his wind-ups (seconds of warning before each attack: calm, at half his
 			-- composure, and in his finale), when the finale comes, his dash, and the extraction.
 			windup = 1.1,
@@ -999,8 +999,24 @@ local defaults = {
 			finaleAt = 0.3, -- of his composure left
 			dash = 18, -- composure, to whoever is still in his dash's lane
 			extractSeconds = 60, -- after he's beaten: the lift down within this long...
-			extractGilt = 2500, -- ...for a clean getaway's bonus (once a run)
-			safe = 6000, -- the safe, once each, after he's beaten
+			extractGilt = 4000, -- ...for a clean getaway's bonus (once a run; Build 94: was 2,500)
+			safe = 10000, -- the safe, once each, after he's beaten (Build 94: was 6,000)
+			-- (Build 94) The rest of the Office's loot, once each a run (shared/Executive.Loot):
+			-- to the Estate, and a little Gilt.
+			loot = {
+				drawers = { estate = 4000, gilt = 400 },
+				bullion = { estate = 9000, gilt = 600 },
+				watches = { estate = 6000, gilt = 500 },
+				briefcase = { estate = 3000, gilt = 800 },
+			},
+			-- (Build 94) Harder: his composure, his bodyguards' and the generators' (scaled by
+			-- how many are in the Office), and the pause between his attacks.
+			bossHp = 560,
+			guardHp = 75,
+			generatorHp = 120,
+			attackGap = 2.1,
+			attackGapEnraged = 1.4,
+			attackGapFinale = 1.0,
 			damage = 10, -- a sidearm's stun
 			fireGap = 0.3,
 			range = 140,

@@ -264,7 +264,7 @@ function GalaHud.resetCamera()
 		end
 	end)
 	pcall(function()
-		(require(script.Parent.Parent.Camera) :: any).follow()
+		(require(script.Parent.Parent.Camera) :: any).reset()
 	end)
 end
 

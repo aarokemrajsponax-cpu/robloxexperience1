@@ -186,6 +186,26 @@ function CameraRig.handoff(seconds: number?): ()
 	CameraRig.follow()
 end
 
+-- (Build 94) The camera put back behind the guest, level, at a walking distance, and following
+-- them: for after a moment that left it somewhere odd (a reel's low hero shot, a pose). Roblox's
+-- own camera carries on from wherever the camera was, angle and all, so it's placed first.
+function CameraRig.reset()
+	local c = cam()
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if root and root:IsA("BasePart") then
+		local look = root.CFrame.LookVector
+		local flat = Vector3.new(look.X, 0, look.Z)
+		if flat.Magnitude < 0.05 then
+			flat = Vector3.new(0, 0, -1)
+		end
+		local at = root.Position + Vector3.new(0, 1.5, 0)
+		c.CameraType = Enum.CameraType.Scriptable
+		c.CFrame = CFrame.lookAt(at - flat.Unit * 12 + Vector3.new(0, 4, 0), at)
+	end
+	CameraRig.follow()
+end
+
 function CameraRig.follow()
 	stopTweens()
 	handoffId += 1

@@ -2,7 +2,7 @@
 -- The Executive Suite's own screen, shown only while a guest is up there: in the hallway, the alert
 -- (how near security is to showing you out) and the door's code as you've found it; in the Office,
 -- the phase, what's left of it (the generators, the bodyguards, the Executive's own bar) and your
--- composure. Keys: Leave, the Decoy (once, if packed), and Fire (or click) in the Office. The keypad
+-- composure. Keys: Leave and the Decoy (once, if packed); in the Office a click or a tap fires (Build 94: no Fire key). The keypad
 -- at the door. What's thrown, the shockwave and the shots are drawn here, where the server says.
 -- Everything shown is what the server last said; the server decides every hit.
 -- Build 78: the Executive's wind-ups drawn where everyone can see them (a ring for a shockwave, a
@@ -21,6 +21,7 @@ local Workspace = game:GetService("Workspace")
 
 local AttractionList = require(ReplicatedStorage.Shared.Attractions)
 local Brand = require(ReplicatedStorage.Shared.Brand)
+local Config = require(ReplicatedStorage.Shared.Config)
 local Ease = require(ReplicatedStorage.Shared.Ease)
 local Plan = require(ReplicatedStorage.Shared.Executive)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
@@ -239,10 +240,6 @@ local function draw()
 		parts.second.Size = UDim2.new(comp, 0, 1, 0)
 		parts.label2.Text = string.format("COMPOSURE %d", tonumber(view.composure) or 0)
 		parts.label2.TextColor3 = C.smoke
-	end
-	local fire = parts.fireKey :: TextButton?
-	if fire then
-		fire.Visible = fighting()
 	end
 	local decoy = parts.decoyKey :: TextButton?
 	if decoy then
@@ -982,9 +979,6 @@ function ExecutiveHud.mount()
 		end)
 	end, 120)
 	parts.decoyKey = Theme.key(k, "Decoy", false, throwDecoy, 120)
-	parts.fireKey = Theme.key(k, "Fire", true, function()
-		shoot(aimFromScreen(nil))
-	end, 120)
 	keys = k
 	place()
 	draw()
@@ -1006,7 +1000,8 @@ function ExecutiveHud.mount()
 			end
 		end
 	end))
-	-- A click aims where it lands (a tap on the Fire key aims at the middle).
+	-- A click aims where it lands; so does a tap on a touch screen (a tap, not a drag of the
+	-- camera or the thumbstick: Roblox says which).
 	table.insert(conns, UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: boolean)
 		if gameProcessed or not fighting() then
 			return
@@ -1015,6 +1010,12 @@ function ExecutiveHud.mount()
 		if input.UserInputType == Enum.UserInputType.MouseButton1 and not pistolInHand() then
 			shoot(aimFromScreen(Vector2.new(input.Position.X, input.Position.Y)))
 		end
+	end))
+	table.insert(conns, UserInputService.TouchTapInWorld:Connect(function(position: Vector2, processedByUI: boolean)
+		if processedByUI or not fighting() then
+			return
+		end
+		shoot(aimFromScreen(position))
 	end))
 end
 
@@ -1083,6 +1084,28 @@ local function fly(m: { [string]: any }, kind: string)
 		part.Size = Vector3.new(2, 1.4, 0.6)
 		part.Color = Color3.fromRGB(90, 56, 30)
 		part.Material = Enum.Material.Leather
+		-- (Build 94) A gold streak behind each one, so it reads from across the room.
+		pcall(function()
+			local a0 = Instance.new("Attachment")
+			a0.Position = Vector3.new(-0.9, 0, 0)
+			a0.Parent = part
+			local a1 = Instance.new("Attachment")
+			a1.Position = Vector3.new(0.9, 0, 0)
+			a1.Parent = part
+			local trail = Instance.new("Trail")
+			trail.Attachment0 = a0
+			trail.Attachment1 = a1
+			trail.Lifetime = 0.25
+			trail.LightEmission = 0.8
+			trail.Color = ColorSequence.new(GOLD, RED)
+			trail.Transparency = NumberSequence.new(0.2, 1)
+			trail.Parent = part
+			local glow = Instance.new("PointLight")
+			glow.Color = GOLD
+			glow.Brightness = 1.5
+			glow.Range = 6
+			glow.Parent = part
+		end)
 	else
 		part.Name = "Shockwave"
 		part.Shape = Enum.PartType.Cylinder
@@ -1109,6 +1132,8 @@ local function fly(m: { [string]: any }, kind: string)
 			local r = math.max(0.5, (tonumber(m.speed) or 26) * age)
 			part.Size = Vector3.new(0.3, r * 2, r * 2)
 			part.CFrame = CFrame.new(m.at + Vector3.new(0, 0.3, 0)) * CFrame.Angles(0, 0, math.rad(90))
+			-- (Build 94) It thins as it goes, and the room shakes as it passes.
+			part.Transparency = 0.35 + 0.55 * math.clamp(age / life, 0, 1)
 		end
 	end)
 end
@@ -1135,28 +1160,230 @@ local function hitMark(target: string)
 	pcall(Sound.play, "chime", 0.25)
 end
 
+-- (Build 94) The fight's effects, all on this screen only and all where the server said: sparks,
+-- a puff of smoke, a number off what was hit, the room shaking, a red edge when you're hurt.
+local function spark(at: Vector3, colour: Color3, count: number, speed: number?, size: number?)
+	local go = speed or 22
+	for _ = 1, count do
+		local p = Instance.new("Part")
+		p.Name = "Spark"
+		p.Anchored = true
+		p.CanCollide = false
+		p.CanQuery = false
+		p.CanTouch = false
+		p.CastShadow = false
+		p.Material = Enum.Material.Neon
+		p.Color = colour
+		local z = (size or 0.35) * (0.6 + math.random() * 0.8)
+		p.Size = Vector3.new(z, z, z * 2.2)
+		local dir = Vector3.new(math.random() - 0.5, math.random() * 0.8, math.random() - 0.5)
+		dir = if dir.Magnitude > 1e-3 then dir.Unit else Vector3.yAxis
+		p.CFrame = CFrame.lookAt(at, at + dir)
+		p.Parent = Workspace
+		table.insert(effects, p)
+		local life = 0.25 + math.random() * 0.3
+		TweenService:Create(p, TweenInfo.new(life, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			CFrame = CFrame.lookAt(at + dir * go * life, at + dir * (go * life + 1)),
+			Size = Vector3.new(0.05, 0.05, 0.05),
+			Transparency = 1,
+		}):Play()
+		task.delay(life + 0.05, function()
+			p:Destroy()
+		end)
+	end
+end
+ExecutiveHud.spark = spark
+
+local function puff(at: Vector3, colour: Color3, radius: number, life: number?)
+	local p = Instance.new("Part")
+	p.Name = "Puff"
+	p.Anchored = true
+	p.CanCollide = false
+	p.CanQuery = false
+	p.CanTouch = false
+	p.CastShadow = false
+	p.Shape = Enum.PartType.Ball
+	p.Material = Enum.Material.SmoothPlastic
+	p.Color = colour
+	p.Transparency = 0.25
+	p.Size = Vector3.new(1, 1, 1)
+	p.CFrame = CFrame.new(at)
+	p.Parent = Workspace
+	table.insert(effects, p)
+	local t = life or 0.6
+	TweenService:Create(p, TweenInfo.new(t, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), { Size = Vector3.new(radius * 2, radius * 2, radius * 2), Transparency = 1 }):Play()
+	task.delay(t + 0.05, function()
+		p:Destroy()
+	end)
+end
+
+-- The camera shaken for a moment (by the guest's own camera offset, so it's never left moved).
+local shakeUntil = 0
+local shakeHard = 0
+local function shake(strength: number, seconds: number)
+	shakeHard = math.max(if os.clock() < shakeUntil then shakeHard else 0, strength)
+	local was = shakeUntil
+	shakeUntil = math.max(shakeUntil, os.clock() + seconds)
+	if was > os.clock() then
+		return
+	end
+	local conn: RBXScriptConnection? = nil
+	conn = RunService.RenderStepped:Connect(function()
+		local character = Players.LocalPlayer.Character
+		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+		local left = shakeUntil - os.clock()
+		if left <= 0 or not humanoid then
+			if humanoid then
+				humanoid.CameraOffset = Vector3.zero
+			end
+			if conn then
+				conn:Disconnect()
+			end
+			return
+		end
+		local k = shakeHard * math.clamp(left / 0.25, 0, 1)
+		humanoid.CameraOffset = Vector3.new((math.random() - 0.5) * k, (math.random() - 0.5) * k, 0)
+	end)
+	table.insert(conns, conn :: RBXScriptConnection)
+end
+ExecutiveHud.shake = shake
+
+-- A red edge round the screen, gone in a moment: you've been hit.
+local function flash(colour: Color3, strength: number)
+	local f = Instance.new("Frame")
+	f.Name = "HurtFlash"
+	f.BackgroundTransparency = 1
+	f.Size = UDim2.fromScale(1, 1)
+	f.ZIndex = 30
+	f.Parent = Root.hud
+	local edge = Instance.new("UIStroke")
+	edge.Color = colour
+	edge.Thickness = 28
+	edge.Transparency = 1 - strength
+	edge.Parent = f
+	local fill = Instance.new("Frame")
+	fill.BackgroundColor3 = colour
+	fill.BackgroundTransparency = 1 - strength * 0.3
+	fill.BorderSizePixel = 0
+	fill.Size = UDim2.fromScale(1, 1)
+	fill.Parent = f
+	TweenService:Create(edge, TweenInfo.new(0.5, Enum.EasingStyle.Quad), { Transparency = 1 }):Play()
+	TweenService:Create(fill, TweenInfo.new(0.35, Enum.EasingStyle.Quad), { BackgroundTransparency = 1 }):Play()
+	task.delay(0.55, function()
+		f:Destroy()
+	end)
+end
+
+-- Where a target stands now, from what the server tagged (its "ExecTarget").
+local function targetAt(target: string): Vector3?
+	for _, inst in CollectionService:GetTagged("ExecHp") do
+		if inst:GetAttribute("ExecTarget") == target or (inst:IsA("Model") and target == "boss" and inst.Name == "TheExecutive") then
+			if inst:IsA("BasePart") then
+				return inst.Position
+			elseif inst:IsA("Model") then
+				local ok, cf = pcall(function()
+					return inst:GetPivot()
+				end)
+				if ok then
+					return cf.Position
+				end
+			end
+		end
+	end
+	return nil
+end
+
+-- A number off what was hit, rising and fading where it was hit.
+local function popNumber(at: Vector3, text: string, colour: Color3)
+	local anchor = Instance.new("Part")
+	anchor.Name = "HitNumber"
+	anchor.Anchored = true
+	anchor.CanCollide = false
+	anchor.CanQuery = false
+	anchor.CanTouch = false
+	anchor.Transparency = 1
+	anchor.Size = Vector3.new(0.2, 0.2, 0.2)
+	anchor.CFrame = CFrame.new(at + Vector3.new((math.random() - 0.5) * 2, 3, 0))
+	anchor.Parent = Workspace
+	table.insert(effects, anchor)
+	local gui = Instance.new("BillboardGui")
+	gui.Size = UDim2.fromOffset(120, 44)
+	gui.AlwaysOnTop = true
+	gui.LightInfluence = 0
+	gui.Parent = anchor
+	local label = Instance.new("TextLabel")
+	label.BackgroundTransparency = 1
+	label.Size = UDim2.fromScale(1, 1)
+	label.FontFace = Brand.Fonts.heavy
+	label.TextSize = 30
+	label.TextColor3 = colour
+	label.TextStrokeTransparency = 0.2
+	label.Text = text
+	label.Parent = gui
+	TweenService:Create(anchor, TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { CFrame = anchor.CFrame + Vector3.new(0, 4, 0) }):Play()
+	TweenService:Create(label, TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { TextTransparency = 1, TextStrokeTransparency = 1 }):Play()
+	task.delay(0.85, function()
+		anchor:Destroy()
+	end)
+end
+
+local function damage(): number
+	local c = (((Config.data :: any).Attractions or {}).executive or {}) :: { [string]: any }
+	return math.floor(tonumber(c.damage) or 10)
+end
+
 local function tracer(m: { [string]: any })
 	if typeof(m.from) ~= "Vector3" or typeof(m.dir) ~= "Vector3" then
 		return
 	end
-	if m.by == Players.LocalPlayer.UserId and type(m.hit) == "string" then
+	local mine = m.by == Players.LocalPlayer.UserId
+	if mine and type(m.hit) == "string" then
 		hitMark(m.hit)
 	end
-	local length = 60
-	local beam = Instance.new("Part")
-	beam.Name = "Tracer"
-	beam.Anchored = true
-	beam.CanCollide = false
-	beam.CanQuery = false
-	beam.CastShadow = false
-	beam.Material = Enum.Material.Neon
-	beam.Color = BLUE
-	beam.Size = Vector3.new(0.12, 0.12, length)
-	beam.CFrame = CFrame.lookAt(m.from + m.dir * length / 2, m.from + m.dir * length)
-	beam.Parent = Workspace
-	task.delay(0.08, function()
-		beam:Destroy()
-	end)
+	-- (Build 94) How far it went: to what it hit, or its full range.
+	local length = 80
+	local hitAt = if type(m.hit) == "string" then targetAt(m.hit) else nil
+	if hitAt then
+		length = math.clamp((hitAt - m.from):Dot(m.dir), 4, 160)
+	end
+	local tip = m.from + m.dir * length
+	local function bolt(width: number, colour: Color3, transparency: number, life: number)
+		local beam = Instance.new("Part")
+		beam.Name = "Tracer"
+		beam.Anchored = true
+		beam.CanCollide = false
+		beam.CanQuery = false
+		beam.CanTouch = false
+		beam.CastShadow = false
+		beam.Material = Enum.Material.Neon
+		beam.Color = colour
+		beam.Transparency = transparency
+		beam.Size = Vector3.new(width, width, length)
+		beam.CFrame = CFrame.lookAt(m.from + m.dir * length / 2, tip)
+		beam.Parent = Workspace
+		table.insert(effects, beam)
+		TweenService:Create(beam, TweenInfo.new(life, Enum.EasingStyle.Quad), { Transparency = 1, Size = Vector3.new(width * 0.2, width * 0.2, length) }):Play()
+		task.delay(life + 0.02, function()
+			beam:Destroy()
+		end)
+	end
+	-- A white-hot core inside a blue glow, and a flash where it left the muzzle.
+	bolt(0.14, Color3.fromRGB(235, 248, 255), 0, 0.09)
+	bolt(0.5, BLUE, 0.55, 0.16)
+	puff(m.from + m.dir * 2, BLUE, 1.2, 0.12)
+	if hitAt then
+		-- On target: a burst of sparks, a ring of light, the stun's number off it.
+		local colour = if string.sub(m.hit, 1, 4) == "boss" then RED elseif string.sub(m.hit, 1, 3) == "gen" then BLUE else GOLD
+		spark(tip, colour, if mine then 10 else 5, 24, 0.35)
+		spark(tip, Color3.fromRGB(255, 255, 255), 3, 14, 0.25)
+		puff(tip, colour, 2.2, 0.25)
+		if mine then
+			popNumber(tip, "-" .. damage(), colour)
+			shake(0.12, 0.08)
+		end
+	else
+		spark(tip, BLUE, 3, 10, 0.2)
+	end
 end
 
 -- (Build 90) Tonight's look and challenge, said once a run; a challenge missed, said once.
@@ -1276,6 +1503,48 @@ function ExecutiveHud.on(m: { [string]: any })
 		end
 	elseif op == "safe" then
 		Toast.show("The safe", Rules.format(tonumber(m.worth) or 0) .. " to your Estate.", 3)
+		pcall(Sound.play, "crystal", 0.7)
+	elseif op == "loot" then
+		local line = Rules.format(tonumber(m.worth) or 0) .. " to your Estate"
+		if (tonumber(m.gilt) or 0) > 0 then
+			line ..= "  ·  +" .. Rules.format(tonumber(m.gilt) or 0) .. " Gilt"
+		end
+		Toast.show(tostring(m.name or "Loot"), line .. ".", 3)
+		pcall(Sound.play, "crystal", 0.6)
+		local spot = Plan.lootById[tostring(m.loot)]
+		if spot then
+			local at = AttractionList.origin("executive") + spot.at + Vector3.new(0, 3, 0)
+			spark(at, GOLD, 16, 16, 0.4)
+			puff(at, GOLD, 3, 0.4)
+		end
+	elseif op == "hurt" then
+		-- (Build 94) Hit: the screen's edge flashes red and the room jolts, harder for a bigger hit.
+		local amount = tonumber(m.amount) or 10
+		flash(RED, math.clamp(0.35 + amount / 50, 0.35, 0.8))
+		shake(math.clamp(amount / 12, 0.6, 2.2), 0.3)
+		pcall(Sound.play, "lowHit", 0.5)
+	elseif op == "attack" then
+		-- (Build 94) His attacks land with weight: the room shakes, the dash leaves a streak.
+		local kind = tostring(m.kind)
+		shake(if kind == "dash" then 1.2 elseif kind == "spin" then 0.9 else 0.5, 0.35)
+		local at = targetAt("boss")
+		if at then
+			spark(at, if kind == "dash" then RED else GOLD, if kind == "spin" then 18 else 10, 26, 0.4)
+			if kind == "dash" or kind == "spin" then
+				puff(at, RED, 4, 0.35)
+			end
+		end
+		pcall(Sound.play, "lowHit", 0.45)
+	elseif op == "bossGone" then
+		-- (Build 94) Through the door and gone: a puff of smoke where he went, a door slammed.
+		local at = if typeof(m.door) == "Vector3" then m.door elseif typeof(m.at) == "Vector3" then m.at else nil
+		if at then
+			puff(at + Vector3.new(0, 3, 0), Color3.fromRGB(70, 70, 76), 5, 0.9)
+			spark(at + Vector3.new(0, 3, 0), GOLD, 12, 14, 0.3)
+		end
+		shake(0.6, 0.25)
+		pcall(Sound.play, "lowHit", 0.6)
+		Toast.show("He's gone", "Out through his bodyguards' door. The Office is yours to raid: the safe, the drawers, the bullion, the watches, his briefcase.", 5)
 	elseif op == "throw" then
 		fly(m, "throw")
 	elseif op == "wave" then

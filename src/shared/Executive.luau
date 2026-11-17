@@ -91,6 +91,19 @@ Executive.OfficeEntry = Vector3.new(0, 0, -14) -- just in through the door (wher
 Executive.Desk = Vector3.new(0, 0, 44)
 Executive.Lift = Vector3.new(0, 0, 58) -- the way down, behind the desk
 Executive.Safe = Vector3.new(26, 0, 50)
+-- (Build 94) More to raid once he's run off, each once a guest a run, beside the safe: where each
+-- is (in the Office), what its prompt says and how long it's held. What each pays is the house's
+-- (Config executive.loot), never the screen's.
+Executive.Loot = {
+	{ id = "drawers", name = "The desk drawers", action = "Rifle through", at = Vector3.new(5.6, 0, 40.6), hold = 1.5 },
+	{ id = "bullion", name = "The bullion trolley", action = "Load up", at = Vector3.new(-22, 0, 48), hold = 2.5 },
+	{ id = "watches", name = "The watch case", action = "Open the case", at = Vector3.new(16, 0, 12), hold = 2 },
+	{ id = "briefcase", name = "His dropped briefcase", action = "Pick it up", at = Vector3.new(-8, 0, 34), hold = 1 },
+} :: { { id: string, name: string, action: string, at: Vector3, hold: number } }
+Executive.lootById = {} :: { [string]: { id: string, name: string, action: string, at: Vector3, hold: number } }
+for _, l in Executive.Loot do
+	Executive.lootById[l.id] = l
+end
 Executive.HEIGHT = 16
 
 -- The hallway's terminals (each gives one digit, in order), cameras and guards' rounds.
@@ -166,15 +179,20 @@ Executive.BossSpots = {
 Executive.Phases = {
 	{ id = "shield", name = "The Shield", line = "His shield is powered by the three blue generators around the Office. Shoot all three and it falls: then his bodyguards come.", say = "You've come a long way up. Let's see what you're worth." },
 	{ id = "detail", name = "The Security Detail", line = "His bodyguards. Stun all four.", say = "Gentlemen. Show our guests out." },
-	{ id = "boss", name = "The Executive", line = "Watch for his wind-up: a ring is a shockwave (jump it), a lane is his dash (step aside), a raised hand is briefcases (move).", say = "If you want something done properly, you do it yourself." },
+	{ id = "boss", name = "The Executive", line = "Watch for his wind-up: a ring is a shockwave (jump it), a lane is his dash (step aside), a raised hand is briefcases (move). At half his composure he spins cases out all round: stand in a gap.", say = "If you want something done properly, you do it yourself." },
 } :: { { id: string, name: string, line: string, say: string } }
 Executive.FINALE_SAY = "A hostile takeover, then."
 Executive.WON_SAY = "Well played. The lift is yours. For now."
+-- (Build 94) Beaten, he doesn't stand about: he says this and runs for the nearest bodyguards' door.
+Executive.EXIT_SAY = "Alright, alright, you got me. Until next time..."
+Executive.EXIT_SPEED = 34 -- studs a second: a proper sprint
+Executive.EXIT_SECONDS = 5 -- out of sight by then, wherever he got to
 -- What each wind-up means, said on every screen while it lasts.
 Executive.Windups = {
 	volley = "BRIEFCASES  ·  KEEP MOVING",
 	wave = "SHOCKWAVE  ·  JUMP AS THE RING REACHES YOU",
 	dash = "HIS DASH  ·  STEP OUT OF THE LANE",
+	spin = "CASES ALL ROUND  ·  STAND IN A GAP",
 } :: { [string]: string }
 
 -- Where a camera looks at time t (its sweep, back and forth): a direction on the level.
@@ -300,9 +318,27 @@ Executive.SWIFT_SECONDS = 180
 
 -- The season the Suite is dressed for: a holiday that's open (shared/HolidayGames), or high summer
 -- (June to August) when none is. Nil otherwise.
-function Executive.seasonOf(holiday: string?, month: number): string?
+-- (Build 94) With the house's own season (shared/Seasons, as server/Season publishes it, the owner
+-- panel's choice included), the Suite is dressed all year round: a holiday that's open first, then
+-- the house's season. Without it, as before.
+Executive.HouseSeasons = {
+	hallows = "halloween",
+	harvest = "autumn",
+	longtable = "thanksgiving",
+	yule = "christmas",
+	toast = "newYear",
+	frost = "winter",
+	rose = "valentine",
+	emerald = "stPatrick",
+	bloom = "spring",
+	summer = "summer",
+} :: { [string]: string }
+function Executive.seasonOf(holiday: string?, month: number, house: string?): string?
 	if holiday then
 		return holiday
+	end
+	if house and Executive.HouseSeasons[house] then
+		return Executive.HouseSeasons[house]
 	end
 	if month >= 6 and month <= 8 then
 		return "summer"

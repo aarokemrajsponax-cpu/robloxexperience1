@@ -192,6 +192,8 @@ local function release(player: Player, why: string)
 	setSpeed(player, nil)
 	if player.Parent then
 		player:SetAttribute(AttractionList.ATTRIBUTE, nil)
+		-- (Build 94: a brainrot called back in was for that visit only.)
+		player:SetAttribute(AttractionList.COMPANIONS_IN, nil)
 		event:FireClient(player, { op = "left", id = id, why = why })
 	end
 end

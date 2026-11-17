@@ -15,6 +15,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local AttractionList = require(ReplicatedStorage.Shared.Attractions)
 local BrainrotList = require(ReplicatedStorage.Shared.Brainrots)
 local ProductConfig = require(ReplicatedStorage.Shared.ProductConfig)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
@@ -407,7 +408,17 @@ end
 local function onOp(player: Player, data: Profiles.Data, r: { [string]: any }): { [string]: any }
 	local op = r.op
 	local id = if type(r.id) == "string" and #r.id <= 40 then r.id else nil
-	if op == "squadAdd" then
+	if op == "summon" then
+		-- (Build 94) In Steal a Luxe, the Basement or the Executive Suite the brainrot and the
+		-- companion step aside; this calls them back in (on = true) for this visit, or sends them
+		-- away again. Only there: anywhere else they're always beside the guest.
+		local a = player:GetAttribute(AttractionList.ATTRIBUTE)
+		if type(a) ~= "string" or not AttractionList.HIDES_COMPANIONS[a] then
+			return { ok = false, why = "Your brainrot is already beside you here." }
+		end
+		player:SetAttribute(AttractionList.COMPANIONS_IN, if r.on == true then a else nil)
+		return { ok = true, shown = r.on == true }
+	elseif op == "squadAdd" then
 		if not id or not BrainrotList.is(id) or held(data, id) <= 0 then
 			return { ok = false, why = "You don't hold that brainrot." }
 		end
@@ -477,7 +488,7 @@ function Brainrots.start()
 		end
 		return true, nil
 	end
-	for _, op in { "squadAdd", "squadRemove", "walk", "collect", "brainrotBuy", "boost" } do
+	for _, op in { "squadAdd", "squadRemove", "walk", "collect", "brainrotBuy", "boost", "summon" } do
 		Curios.ops[op] = onOp
 	end
 	Curios.squadState = Brainrots.state

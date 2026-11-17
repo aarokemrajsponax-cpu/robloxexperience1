@@ -297,9 +297,14 @@ function FlexReel.play(reel: { [string]: any })
 	local previous = camera.CameraType
 	camera.CameraType = Enum.CameraType.Scriptable
 	local started = os.clock()
+	local moving: Tween? = nil
 	local function shot(from: Vector3, to: Vector3, look: Vector3, seconds: number)
+		if moving then
+			moving:Cancel()
+		end
 		camera.CFrame = CFrame.lookAt(from, look)
-		TweenService:Create(camera, TweenInfo.new(seconds, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { CFrame = CFrame.lookAt(to, look) }):Play()
+		moving = TweenService:Create(camera, TweenInfo.new(seconds, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { CFrame = CFrame.lookAt(to, look) })
+		;(moving :: Tween):Play()
 	end
 	sound("shimmer", 0.8)
 	task.spawn(function()
@@ -355,14 +360,24 @@ function FlexReel.play(reel: { [string]: any })
 				hudGui.Enabled = hudWas
 			end
 		end)
-		pcall(function()
-			camera.CameraType = if previous == Enum.CameraType.Scriptable then Enum.CameraType.Custom else previous
-			local character = Players.LocalPlayer.Character
-			local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-			if humanoid then
-				camera.CameraSubject = humanoid
-			end
+		if moving then
+			moving:Cancel()
+		end
+		-- (Build 94) Back behind the guest, level, and following them: the last shot was low and
+		-- looking up, and Roblox's camera would otherwise carry on from there.
+		local okReset = pcall(function()
+			(require(script.Parent.Parent.Camera) :: any).reset()
 		end)
+		if not okReset then
+			pcall(function()
+				camera.CameraType = if previous == Enum.CameraType.Scriptable then Enum.CameraType.Custom else previous
+				local character = Players.LocalPlayer.Character
+				local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+				if humanoid then
+					camera.CameraSubject = humanoid
+				end
+			end)
+		end
 		local _ = started
 		playing = false
 	end)

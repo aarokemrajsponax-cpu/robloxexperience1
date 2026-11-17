@@ -17,6 +17,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
+local AttractionList = require(ReplicatedStorage.Shared.Attractions)
 local BrainrotFigure = require(ReplicatedStorage.Shared.BrainrotFigure)
 local Brainrots = require(ReplicatedStorage.Shared.Brainrots)
 local Brand = require(ReplicatedStorage.Shared.Brand)
@@ -146,6 +147,11 @@ end
 
 local function build(p: Player)
 	clear(p)
+	-- (Build 94) Put away inside Steal a Luxe, the Basement and the Executive Suite, unless its
+	-- guest called it back in: everyone sees the way.
+	if AttractionList.companionsHidden(p) then
+		return
+	end
 	local id = p:GetAttribute("Brainrot")
 	local c = if type(id) == "string" then Curios.byId[id] else nil
 	local character = p.Character
@@ -408,7 +414,7 @@ local function cheer(p: Player)
 end
 
 local function watch(p: Player)
-	for _, key in { "Brainrot", "BrainrotMut", "BrainrotStars", "BrainrotRate" } do
+	for _, key in { "Brainrot", "BrainrotMut", "BrainrotStars", "BrainrotRate", AttractionList.ATTRIBUTE, AttractionList.COMPANIONS_IN } do
 		p:GetAttributeChangedSignal(key):Connect(function()
 			build(p)
 		end)

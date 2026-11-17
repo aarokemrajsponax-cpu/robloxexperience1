@@ -1787,6 +1787,18 @@ do
 	local r2 = curio(zed, { op = "squadAdd", id = "fromaggio" })
 	st = squad(zed)
 	check("take one out, put another in", r.ok == true and r2.ok == true and table.find(st.ids, "fromaggio") ~= nil and table.find(st.ids, "pigeonetto") == nil)
+	-- (Build 94) Inside Steal a Luxe, the Basement or the Executive Suite the brainrot steps aside;
+	-- the guest can call it back in for that visit, and only there.
+	r = curio(zed, { op = "summon", on = true })
+	check("out in the house, there's nothing to call back: it's already beside you", r.ok == false and zed:GetAttribute("CompanionsIn") == nil)
+	zed:SetAttribute("Attraction", "luxe")
+	r = curio(zed, { op = "summon", on = true })
+	check("in Steal a Luxe: called back in, for this visit", r.ok == true and zed:GetAttribute("CompanionsIn") == "luxe")
+	r = curio(zed, { op = "summon", on = false })
+	check("...and sent away again", r.ok == true and zed:GetAttribute("CompanionsIn") == nil)
+	zed:SetAttribute("Attraction", "gala")
+	check("in the Grand Ballroom it never steps aside", curio(zed, { op = "summon", on = true }).ok == false)
+	zed:SetAttribute("Attraction", nil)
 	r = curio(zed, { op = "walk", id = "fromaggio" })
 	check("choose who walks with you (every screen draws it)", r.ok == true and zed:GetAttribute("Brainrot") == "fromaggio" and zed:GetAttribute("BrainrotStars") == 1 and zed:GetAttribute("BrainrotRate") == 40)
 	r = curio(zed, { op = "walk", id = "pigeonetto" })

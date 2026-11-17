@@ -22,6 +22,22 @@ local Attractions = {}
 
 Attractions.ATTRIBUTE = "Attraction"
 
+-- (Build 94) Where the brainrot walking beside a guest, and their Gem Shop companion, step aside so
+-- everyone can see the way: Steal a Luxe, the Maison Basement and the Executive Suite. A guest can
+-- call theirs back in for that visit ("CompanionsIn" on them names the attraction it was called
+-- into; the server sets it), and it's beside them again as soon as they leave.
+Attractions.HIDES_COMPANIONS = { luxe = true, basement = true, executive = true } :: { [string]: boolean }
+Attractions.COMPANIONS_IN = "CompanionsIn"
+
+-- Whether `player`'s brainrot and companion are put away just now (on every screen alike).
+function Attractions.companionsHidden(player: Player): boolean
+	local a = player:GetAttribute(Attractions.ATTRIBUTE)
+	if type(a) ~= "string" or not Attractions.HIDES_COMPANIONS[a] then
+		return false
+	end
+	return player:GetAttribute(Attractions.COMPANIONS_IN) ~= a
+end
+
 export type Def = {
 	id: string,
 	name: string,

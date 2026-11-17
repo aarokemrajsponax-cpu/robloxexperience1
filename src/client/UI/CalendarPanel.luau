@@ -267,14 +267,27 @@ function CalendarPanel.state(): { [string]: any }?
 end
 
 -- On arrival: open by itself only if tonight's present is waiting and nothing else is up.
+-- (Build 94: waits up to ten minutes for a clear screen rather than giving up at once, so a guest
+-- who was busy as they arrived still gets tonight's present.)
+local offering = false
 function CalendarPanel.offer()
-	if Root.isOpen() or CalendarPanel.isBusy() then
+	if offering then
 		return
 	end
-	local s = ask({ op = "state" })
-	if s and s.ready and not Root.isOpen() and not CalendarPanel.isBusy() then
-		draw(s)
-	end
+	offering = true
+	task.spawn(function()
+		for _ = 1, 1200 do
+			if not Root.isOpen() and not CalendarPanel.isBusy() then
+				local s = ask({ op = "state" })
+				if s and s.ready and not Root.isOpen() and not CalendarPanel.isBusy() then
+					draw(s)
+				end
+				break
+			end
+			task.wait(0.5)
+		end
+		offering = false
+	end)
 end
 
 return CalendarPanel

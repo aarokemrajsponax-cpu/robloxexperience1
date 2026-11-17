@@ -25,6 +25,7 @@ local Workspace = game:GetService("Workspace")
 
 local HolidayGames = require(ReplicatedStorage.Shared.HolidayGames)
 local HouseEvents = require(ReplicatedStorage.Shared.HouseEvents)
+local LiveCalendar = require(ReplicatedStorage.Shared.LiveCalendar)
 local Layout = require(ReplicatedStorage.Shared.Layout)
 local Flakes = require(script.Parent.Flakes)
 local HolidayKit = require(script.Parent.HolidayKit)
@@ -770,7 +771,38 @@ local clock = 0
 -- A holiday is on while its event is (the owner's, or the house's own on the day), and for all of
 -- its holiday game's days (shared/HolidayGames): the house stays dressed while there's trick or
 -- treating, a sleigh at the kerb, eggs to find.
+-- (Build 94) And on the house's calendar (shared/LiveCalendar) for the holidays with no game of
+-- their own: Valentine's and New Year's are dressed through their days by themselves, without an
+-- owner's event (just the dressing: no hunt, no countdown, no title over the screen).
+local CALENDAR_DRESS: { [string]: string } = { valentines = "valentine", newYear = "newYear" }
+local calendarId: string? = nil
+local calendarAt = -math.huge
+local function byCalendar(id: string): boolean
+	if os.clock() - calendarAt > 30 then
+		calendarAt = os.clock()
+		local ok, w = pcall(LiveCalendar.active, Workspace:GetServerTimeNow())
+		calendarId = if ok and w then CALENDAR_DRESS[w.id] else nil
+	end
+	return calendarId == id
+end
+HolidayFX.byCalendar = byCalendar
+-- (For tests: look again now.)
+function HolidayFX.recheckCalendar()
+	calendarAt = -math.huge
+end
+
+local function eventOn(id: string): boolean
+	if Workspace:GetAttribute("HolidayGame") == id then
+		return true
+	end
+	local ends = Workspace:GetAttribute(HouseEvents.attribute(id))
+	return type(ends) == "number" and ends > Workspace:GetServerTimeNow()
+end
+
 local function on(id: string): boolean
+	if byCalendar(id) then
+		return true
+	end
 	if Workspace:GetAttribute("HolidayGame") == id then
 		return true
 	end
@@ -825,11 +857,13 @@ local function update()
 	local anyHunt = false
 	for _, id in HouseEvents.Holidays do
 		local isOn = on(id)
-		if isOn and id ~= "newYear" then
+		local hunting = isOn and eventOn(id)
+		if hunting and id ~= "newYear" then
 			anyHunt = true
 		end
 		if isOn and not running[id] then
-			begin(id, not booted)
+			-- (Dressed by the calendar alone: no arrival title, since there's no event to name.)
+			begin(id, not booted or not hunting)
 		elseif not isOn and running[id] then
 			finish(id)
 		end

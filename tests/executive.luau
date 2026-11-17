@@ -28,6 +28,7 @@ H.stubs["ServerScriptService.Server.Staff.Rig"] = function()
 end
 
 local Layout = module("ReplicatedStorage", "Shared", "Layout")
+local Seasons = module("ReplicatedStorage", "Shared", "Seasons")
 local Plan = module("ReplicatedStorage", "Shared", "Executive")
 local CurioList = module("ReplicatedStorage", "Shared", "Curios")
 local Attractions = module("ServerScriptService", "Server", "Attractions")
@@ -677,6 +678,18 @@ T = Game.run.pending.fireAt + 0.01
 steps(1)
 check("...and two rings at a time", #Game.run.waves == 2 and Game.run.waves[2].born > Game.run.waves[1].born)
 Game.run.waves = {}
+-- (Build 94) At half his composure, his spin: briefcases flung out all round.
+Game.run.attackIndex = 3
+Game.run.nextAttack = T
+Game.run.shots = {}
+T += 0.01
+steps(1)
+check("Build 94: at half his composure, his spin, wound up first", Game.run.pending ~= nil and Game.run.pending.kind == "spin" and last(ada, "windup").line == Plan.Windups.spin)
+T = Game.run.pending.fireAt + 0.01
+steps(1)
+check("...briefcases flung out all round him (ten in his finale)", #Game.run.shots == 10 and last(ada, "attack").kind == "spin")
+Game.run.shots = {}
+Game.run.pending = nil
 -- He falls.
 local estateWas = Fortune.page(data(ada)).estate
 local gemsWas, giltWas = data(ada).gems, data(ada).gilt
@@ -710,6 +723,52 @@ r = askAs(ada, { op = "act", id = "executive", act = "safe" })
 check("the safe, once each: to the Estate", r.ok == true and Fortune.page(data(ada)).estate == estateWas + C.safe)
 r = askAs(ada, { op = "act", id = "executive", act = "safe" })
 check("...only once", r.ok == false)
+-- (Build 94) He doesn't stand about: his line, a sprint for the nearest door, and he's gone.
+local beaten = Game.run.actors.boss
+local exitPhase = last(ada, "phase")
+check("Build 94 beaten: he says so on every screen", exitPhase ~= nil and exitPhase.phase == "won" and exitPhase.say == Plan.EXIT_SAY)
+check("...stops being a target, and runs for a door", beaten ~= nil and beaten.leaving == true and beaten.root:GetAttribute("ExecTarget") == nil and Game.run.exit ~= nil and Game.run.exit.actor == beaten)
+check("...one of his bodyguards' doors", (function()
+	for _, at in Plan.GuardDoors do
+		if (Vector3.new(Game.run.exit.door.X, 0, Game.run.exit.door.Z) - Vector3.new(O.X + at.X, 0, O.Z + at.Z)).Magnitude < 2 then
+			return true
+		end
+	end
+	return false
+end)())
+T = Game.run.wonAt + Plan.EXIT_SECONDS + 0.1
+steps(1)
+check("...and through it, gone (every screen told)", Game.run.actors.boss == nil and beaten.model.Parent == nil and Game.run.exit == nil and last(ada, "bossGone") ~= nil)
+-- (Build 94) The rest of the Office to raid, once each.
+check("the Office's loot: each spot's prompt open now, its light on, his briefcase on the floor", (function()
+	local b = Game.built()
+	for _, l in Plan.Loot do
+		if not b.loot[l.id] or b.loot[l.id].Enabled ~= true then
+			return false
+		end
+	end
+	return b.lootGlow[1].Enabled == true and b.dropped.Parent ~= nil
+end)())
+local bullion = Plan.lootById.bullion
+standIn(ada, Vector3.new(0, 0, 10))
+r = askAs(ada, { op = "act", id = "executive", act = "loot", what = "bullion" })
+check("...from afar: closer", r.ok == false and r.why == "Get closer to it.", r.why)
+standIn(ada, bullion.at + Vector3.new(4, 0, 0))
+estateWas = Fortune.page(data(ada)).estate
+local giltWas2 = data(ada).gilt
+r = askAs(ada, { op = "act", id = "executive", act = "loot", what = "bullion" })
+check("...the bullion: the house's figure to the Estate, and its Gilt", r.ok == true and Fortune.page(data(ada)).estate == estateWas + C.loot.bullion.estate and r.gilt == C.loot.bullion.gilt and data(ada).gilt >= giltWas2 + C.loot.bullion.gilt and last(ada, "loot").loot == "bullion")
+r = askAs(ada, { op = "act", id = "executive", act = "loot", what = "bullion" })
+check("...once a run", r.ok == false)
+r = askAs(ada, { op = "act", id = "executive", act = "loot", what = "theCrownJewels" })
+check("...and nothing the house doesn't have", r.ok == false)
+for _, l in Plan.Loot do
+	if l.id ~= "bullion" then
+		standIn(ada, l.at + Vector3.new(0, 0, -4))
+		r = askAs(ada, { op = "act", id = "executive", act = "loot", what = l.id })
+		check("..." .. l.name, r.ok == true and r.worth == C.loot[l.id].estate)
+	end
+end
 check("the lift down is open", Game.built().liftDown.Enabled == true)
 local ex = last(ada, "extract")
 check("beaten: the extraction's minute, said to everyone in the Office (with its bonus)", ex ~= nil and ex.seconds == C.extractSeconds and ex.gilt == C.extractGilt and math.abs(Game.run.extractUntil - (Game.run.wonAt + C.extractSeconds)) < 1e-6 and last(ada, "executive").extractUntil ~= nil)
@@ -722,6 +781,7 @@ check("and takes them home", Attractions.inside(ada) == nil and Layout.zoneAt(ad
 -- Empty: a new run.
 check("the Suite empty: a new run, with a new code", Game.run.phase == "hall" and Game.run.open == false and Game.built().door.CanCollide == true)
 check("...and the vault door shut again, dressed as it was", Game.built().door.Transparency == 0 and Game.built().doorDressing[1].Transparency == 0)
+check("Build 94: ...the Office's loot shut away again, his briefcase gone", Game.built().loot.bullion.Enabled == false and Game.built().lootGlow[1].Enabled == false and Game.built().dropped.Parent == nil)
 check("the Office's decoration never stops a shot or a guard's eye", (function()
 	local root = Game.built().root
 	local dressing = root:FindFirstChild("Dressing")
@@ -992,6 +1052,29 @@ do
 	check("another run, another look: The Emerald Study, its guards walking their rounds the other way", suite:GetAttribute("SuiteLook") == "emerald" and (first - (Game.origin() + round[#round])).Magnitude < 1e-3)
 	check("...out of season, the season's dressing is gone", suite:FindFirstChild("SeasonDressing") == nil and suite:GetAttribute("SuiteSeason") == nil)
 	check("every look and challenge said in plain words, each its own", #Plan.Looks == 4 and #Plan.Challenges == 4 and Plan.seasonOf(nil, 7) == "summer" and Plan.seasonOf(nil, 11) == nil and Plan.seasonOf("halloween", 10) == "halloween")
+check("Build 94: with the house's own season, the Suite is dressed all year (a holiday window first)", Plan.seasonOf(nil, 11, "longtable") == "thanksgiving" and Plan.seasonOf(nil, 1, "frost") == "winter" and Plan.seasonOf(nil, 4, "bloom") == "spring" and Plan.seasonOf(nil, 9, "harvest") == "autumn" and Plan.seasonOf("christmas", 12, "yule") == "christmas" and (function()
+	for _, s in Seasons.List do
+		if not Plan.HouseSeasons[s.id] then
+			return false
+		end
+	end
+	return true
+end)())
+for _, season in { "autumn", "winter", "spring" } do
+	Game.seasonNow = function()
+		return season
+	end
+	Game.fresh(Attractions.ctx)
+	local dressing = Game.built().root:FindFirstChild("SeasonDressing")
+	check("..." .. season .. ": its own dressing, never solid", Game.built().root:GetAttribute("SuiteSeason") == season and dressing ~= nil and #dressing:GetChildren() > 6 and (function()
+		for _, d in dressing:GetDescendants() do
+			if d:IsA("BasePart") and (d.CanCollide or d.CanQuery) then
+				return false
+			end
+		end
+		return true
+	end)())
+end
 	Game.pick, Game.seasonNow = pickWas, seasonWas
 end
 

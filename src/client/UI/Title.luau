@@ -12,6 +12,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
+local Names = require(ReplicatedStorage.Shared.Names)
 local Ease = require(ReplicatedStorage.Shared.Ease)
 local Fortune = require(ReplicatedStorage.Shared.Fortune)
 local Layout = require(ReplicatedStorage.Shared.Layout)
@@ -853,7 +854,7 @@ function Title.show(choices: Choices)
 		line.Parent = caption
 		roomName, roomLine = room, line
 
-		-- The AJKR mark, top right.
+		-- The owner's mark, top right (the house's host: Tyler).
 		if not small then
 			local mark = Instance.new("Frame")
 			mark.Name = "Mark"
@@ -865,7 +866,7 @@ function Title.show(choices: Choices)
 			mark.Parent = layout
 			local markList = Theme.list(mark, 3)
 			markList.HorizontalAlignment = Enum.HorizontalAlignment.Right
-			Theme.text(mark, Brand.Owner, 14, "display", { LayoutOrder = 1, TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = C.lightGold })
+			Theme.text(mark, Names.host(), 14, "display", { LayoutOrder = 1, TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = C.lightGold })
 			Theme.hairline(mark, UDim.new(0, 40), 2)
 			Theme.text(mark, "© " .. Brand.year(), 11, "body", { LayoutOrder = 3, TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = C.dim })
 		end

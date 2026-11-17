@@ -36,6 +36,11 @@ export type Built = {
 	shield: BasePart,
 	generators: { BasePart },
 	safe: ProximityPrompt,
+	-- (Build 94) The Office's other loot (shared/Executive.Loot): each one's prompt, the light that
+	-- marks it once he's gone, and the briefcase he drops (shown only then).
+	loot: { [string]: ProximityPrompt },
+	lootGlow: { PointLight },
+	dropped: Model,
 	liftDown: ProximityPrompt,
 	cameras: { BasePart },
 	actors: Folder, -- where the guards and the Executive stand
@@ -855,6 +860,85 @@ function ExecutiveBuild.build(parent: Instance, o: Vector3, goHome: (player: Pla
 	local safe = prompt(safeBody, "Safe", "Crack it", "The Executive's safe", 3, 9)
 	safe.Enabled = false
 
+	-- (Build 94) The rest of the loot, for once he's run off: the desk's drawers, a trolley of
+	-- bullion, a glass case of watches, and the briefcase he drops on his way out. Each has its
+	-- prompt (off until he's gone) and a warm light that comes on with it.
+	local loot: { [string]: ProximityPrompt } = {}
+	local lootGlow: { PointLight } = {}
+	local function mark(part: BasePart, id: string)
+		local spot = Plan.lootById[id]
+		local glow = Instance.new("PointLight")
+		glow.Name = "LootGlow"
+		glow.Color = GOLD
+		glow.Brightness = 2.2
+		glow.Range = 12
+		glow.Enabled = false
+		glow.Parent = part
+		table.insert(lootGlow, glow)
+		local pr = prompt(part, "Loot_" .. id, spot.action, spot.name, spot.hold, 9)
+		pr:SetAttribute("Loot", id)
+		pr.Enabled = false
+		loot[id] = pr
+	end
+	do
+		-- The drawers: the right pedestal's, on the guests' side.
+		local at = o + Plan.lootById.drawers.at
+		local drawer = Kit.part(arch, "LootDrawer", V(3.8, 2.6, 0.3), CFrame.new(at + V(0, 1.5, 0)), DARK_WALNUT, GHOST_DARK)
+		drawer.Transparency = 1
+		mark(drawer, "drawers")
+	end
+	do
+		-- The bullion trolley: brass rails on castors, three layers of gold bars.
+		local at = o + Plan.lootById.bullion.at
+		local m = Kit.model(arch, "BullionTrolley")
+		local bed = Kit.part(m, "Bed", V(5, 0.3, 3), CFrame.new(at + V(0, 1.4, 0)), DARK_STEEL)
+		for _, x in { -2.3, 2.3 } do
+			for _, z in { -1.3, 1.3 } do
+				Kit.part(m, "Leg", V(0.2, 1.2, 0.2), CFrame.new(at + V(x, 0.7, z)), BRASS, GHOST_DARK)
+				Kit.ball(m, "Castor", 0.4, at + V(x, 0.2, z), DARK_STEEL, GHOST_DARK)
+			end
+		end
+		Kit.part(m, "Handle", V(0.2, 0.2, 3), CFrame.new(at + V(-2.6, 2.6, 0)), BRASS, GHOST_DARK)
+		local BAR = look(rgb(240, 190, 70), Enum.Material.Metal, 0.35)
+		for layer = 0, 2 do
+			local n = 4 - layer
+			for k = 0, n - 1 do
+				local x = (k - (n - 1) / 2) * 1.1
+				for _, z in { -0.6, 0.6 } do
+					Kit.part(m, "Bar", V(0.95, 0.42, 1.0), CFrame.new(at + V(x, 1.76 + layer * 0.42, z)), BAR, GHOST_DARK)
+				end
+			end
+		end
+		mark(bed, "bullion")
+	end
+	do
+		-- The watch case: a walnut plinth, a glass top, gold and steel watches on velvet.
+		local at = o + Plan.lootById.watches.at
+		local m = Kit.model(arch, "WatchCase")
+		local base = Kit.part(m, "Plinth", V(4.4, 3, 2.4), CFrame.new(at + V(0, 1.5, 0)), DARK_WALNUT)
+		Kit.part(m, "Velvet", V(4, 0.1, 2), CFrame.new(at + V(0, 3.05, 0)), RUG_RED, GHOST_DARK)
+		Kit.part(m, "Glass", V(4.2, 1.2, 2.2), CFrame.new(at + V(0, 3.7, 0)), CRYSTAL, GHOST_DARK)
+		Kit.part(m, "Trim", V(4.5, 0.12, 2.5), CFrame.new(at + V(0, 3.04, 0)), BRASS, GHOST_DARK)
+		for k = 0, 4 do
+			local x = (k - 2) * 0.8
+			local watch = Kit.cylinder(m, "Watch", 0.12, 0.55, CFrame.new(at + V(x, 3.2, 0)) * CFrame.Angles(0, 0, math.rad(90)), look(if k % 2 == 0 then GOLD else rgb(200, 205, 214), Enum.Material.Metal, 0.3), GHOST_DARK)
+			watch.Name = "Watch"
+		end
+		mark(base, "watches")
+	end
+	-- The briefcase he drops: kept aside, shown on the floor once he's gone.
+	local dropped = Kit.model(arch, "DroppedBriefcase")
+	do
+		local at = o + Plan.lootById.briefcase.at
+		local case = Kit.part(dropped, "Case", V(2.2, 0.7, 1.6), CFrame.new(at + V(0, 0.36, 0)) * CFrame.Angles(0, math.rad(28), 0), LEATHER, GHOST)
+		Kit.part(dropped, "Clasp", V(0.5, 0.2, 0.1), CFrame.new(at + V(0, 0.55, 0)) * CFrame.Angles(0, math.rad(28), 0) * CFrame.new(0, 0, -0.82), BRASS, GHOST_DARK)
+		for k = 0, 3 do
+			Kit.part(dropped, "Note", V(0.9, 0.04, 0.45), CFrame.new(at + V(1.4 + k * 0.3, 0.05, -0.4 + k * 0.35)) * CFrame.Angles(0, math.rad(k * 37), 0), look(rgb(120, 170, 110), Enum.Material.SmoothPlastic), GHOST_DARK)
+		end
+		mark(case, "briefcase")
+	end
+	dropped.Parent = nil
+
 	local actors = Kit.folder(root, "Actors")
 	-- The arch home, by the lift you came up in.
 	pcall(function()
@@ -869,6 +953,9 @@ function ExecutiveBuild.build(parent: Instance, o: Vector3, goHome: (player: Pla
 		shield = shieldWall,
 		generators = generators,
 		safe = safe,
+		loot = loot,
+		lootGlow = lootGlow,
+		dropped = dropped,
 		liftDown = liftDown,
 		cameras = cameras,
 		sight = { sightModel, door },
@@ -960,9 +1047,15 @@ function ExecutiveBuild.season(b: Built, o: Vector3, season: string?)
 		stPatrick = { rgb(40, 150, 80), rgb(232, 182, 72), rgb(220, 240, 220) },
 		easter = { rgb(250, 182, 206), rgb(170, 220, 250), rgb(255, 240, 160) },
 		summer = { rgb(255, 196, 60), rgb(60, 190, 210), rgb(255, 120, 90) },
+		autumn = { rgb(200, 96, 34), rgb(232, 170, 60), rgb(140, 46, 26) },
+		winter = { rgb(236, 242, 250), rgb(170, 200, 236), rgb(200, 206, 216) },
+		spring = { rgb(250, 190, 210), rgb(200, 230, 170), rgb(255, 236, 170) },
 	}
 	local colours = GARLAND[season] or GARLAND.christmas
-	local leaf = if season == "summer" then look(rgb(70, 150, 70), Enum.Material.Grass) else look(rgb(30, 70, 40), Enum.Material.Grass)
+	local leaf = if season == "summer" or season == "spring" then look(rgb(70, 150, 70), Enum.Material.Grass)
+		elseif season == "autumn" then look(rgb(150, 76, 30), Enum.Material.Grass)
+		elseif season == "winter" then look(rgb(214, 226, 236), Enum.Material.Snow)
+		else look(rgb(30, 70, 40), Enum.Material.Grass)
 	local function garland(x: number, z0: number, z1: number, y: number)
 		Kit.part(m, "Garland", V(0.5, 0.5, z1 - z0), CFrame.new(o + V(x, y, (z0 + z1) / 2)), leaf, GHOST_DARK)
 		local k = 0
@@ -1013,6 +1106,20 @@ function ExecutiveBuild.season(b: Built, o: Vector3, season: string?)
 		elseif season == "easter" then
 			for e = 1, 3 do
 				HolidayProps.egg(m, CFrame.new(base + V(math.cos(e * 2.1) * 1.6, 0, math.sin(e * 2.1) * 1.6)), 1.6 + rng:NextNumber() * 0.6, HolidayProps.EGGS[(i + e) % #HolidayProps.EGGS + 1])
+			end
+		elseif season == "autumn" then
+			HolidayProps.autumnTree(m, base, 9, rng)
+			HolidayProps.pumpkin(m, base + V(2, 0, 1.2), 1.6, (Vector3.new(o.X, base.Y, base.Z) - base).Unit, false, false)
+		elseif season == "winter" then
+			HolidayProps.fir(m, base, 9, true)
+			if i % 2 == 0 then
+				HolidayProps.snowman(m, base + V(2.6, 0, 1.6), 4, (Vector3.new(o.X, base.Y, base.Z) - base).Unit)
+			end
+		elseif season == "spring" then
+			piece(m, "plant", CFrame.new(base), { model = "olive" }, 1.1, false)
+			for f = 1, 5 do
+				local a = f * math.pi * 2 / 5
+				Kit.ball(m, "Blossom", 0.9, base + V(math.cos(a) * 1.8, 0.45, math.sin(a) * 1.8), look(colours[f % #colours + 1], Enum.Material.SmoothPlastic), GHOST_DARK)
 			end
 		elseif season == "summer" then
 			piece(m, "plant", CFrame.new(base), { model = "palm" }, 1.1, false)

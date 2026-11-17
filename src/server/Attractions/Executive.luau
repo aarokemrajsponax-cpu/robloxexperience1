@@ -242,6 +242,7 @@ type Guest = {
 	lastShot: number,
 	paid: boolean,
 	safe: boolean,
+	looted: { [string]: boolean }?, -- (Build 94) the Office's other loot, raided this run
 	hits: { [string]: boolean },
 	out: boolean,
 	extracted: boolean?, -- (Build 78) away down the lift within the extraction's minute
@@ -286,6 +287,8 @@ local run = {
 	look = "midnight",
 	challenge = "ghost",
 	openedAt = 0,
+	-- (Build 94) The beaten Executive on his way out (Executive.step).
+	exit = nil :: { actor: Actor, door: Vector3, goneAt: number }?,
 }
 local rng = Random.new()
 
@@ -296,7 +299,8 @@ end
 -- The season now (tests set their own).
 Executive.seasonNow = function(): string?
 	local t = os.date("!*t") :: any
-	return Plan.seasonOf(HolidayGames.byCalendar(), t.month)
+	local house = Workspace:GetAttribute("Season")
+	return Plan.seasonOf(HolidayGames.byCalendar(), t.month, if type(house) == "string" then house else nil)
 end
 
 local function cfg(ctx: Types.Ctx): { [string]: any }
@@ -434,6 +438,7 @@ local function fresh(_ctx: Types.Ctx)
 	run.finale = false
 	run.extractUntil = 0
 	run.openedAt = 0
+	run.exit = nil
 	-- (Build 90) A look and a challenge for this run, and the season's dressing.
 	local lookId, challengeId = Executive.pick()
 	local theme = Plan.lookById[lookId] or Plan.Looks[1]
@@ -458,6 +463,14 @@ local function fresh(_ctx: Types.Ctx)
 	b.shield.Transparency = 0.3
 	b.safe.Enabled = false
 	b.liftDown.Enabled = false
+	-- (Build 94) The rest of the loot shut away again until he's next beaten.
+	for _, pr in b.loot do
+		pr.Enabled = false
+	end
+	for _, glow in b.lootGlow do
+		glow.Enabled = false
+	end
+	b.dropped.Parent = nil
 	-- The hallway's guards, on their rounds.
 	for _, a in run.hallGuards do
 		if a.model then
@@ -648,7 +661,7 @@ local function startPhase(ctx: Types.Ctx, phase: string)
 	local s = scale()
 	if phase == "shield" then
 		for id in run.generators do
-			run.generators[id] = math.floor(100 * s)
+			run.generators[id] = math.floor((tonumber(cfg(ctx).generatorHp) or 120) * s)
 			run.genMax[id] = run.generators[id]
 			showHp(id)
 		end
@@ -660,13 +673,13 @@ local function startPhase(ctx: Types.Ctx, phase: string)
 			local model, root, humanoid = Executive.makeFigure(b.actors, "Bodyguard" .. i, CFrame.new(origin + at), "guard")
 			root:SetAttribute("ExecTarget", "guard" .. i)
 			model:SetAttribute("ExecTarget", "guard" .. i)
-			run.actors["guard" .. i] = { id = "guard" .. i, kind = "guard", model = model, root = root, humanoid = humanoid, hp = math.floor(60 * s), max = math.floor(60 * s), index = 1, lastHit = 0 }
+			run.actors["guard" .. i] = { id = "guard" .. i, kind = "guard", model = model, root = root, humanoid = humanoid, hp = math.floor((tonumber(cfg(ctx).guardHp) or 75) * s), max = math.floor((tonumber(cfg(ctx).guardHp) or 75) * s), index = 1, lastHit = 0 }
 			showHp("guard" .. i)
 		end
 	elseif phase == "boss" then
 		local boss = run.actors.boss
 		if boss then
-			boss.hp = math.floor(400 * s)
+			boss.hp = math.floor((tonumber(cfg(ctx).bossHp) or 560) * s)
 			boss.max = boss.hp
 			showHp("boss")
 		end
@@ -679,6 +692,34 @@ local function startPhase(ctx: Types.Ctx, phase: string)
 		run.extractUntil = run.wonAt + (tonumber(cfg(ctx).extractSeconds) or 60)
 		b.safe.Enabled = true
 		b.liftDown.Enabled = true
+		for _, pr in b.loot do
+			pr.Enabled = true
+		end
+		for _, glow in b.lootGlow do
+			glow.Enabled = true
+		end
+		b.dropped.Parent = b.root
+		-- (Build 94) He's had enough: no more attacks, no more targets. He runs for the nearest of
+		-- his bodyguards' doors and is gone through it (Executive.step finishes the exit).
+		local boss = run.actors.boss
+		if boss and boss.model.Parent then
+			boss.hp = 0
+			;(boss :: any).leaving = true
+			boss.root:SetAttribute("ExecTarget", nil)
+			boss.model:SetAttribute("ExecTarget", nil)
+			local from = boss.root.CFrame.Position
+			local best, bestD = Plan.GuardDoors[1], math.huge
+			for _, at in Plan.GuardDoors do
+				local d = Vector2.new(origin.X + at.X - from.X, origin.Z + at.Z - from.Z).Magnitude
+				if d < bestD then
+					best, bestD = at, d
+				end
+			end
+			-- (Right up to the doors' leaves, a stud inside the wall's face.)
+			local door = origin + best + Vector3.new(if best.X < 0 then -1.5 else 1.5, 0, 0)
+			run.exit = { actor = boss, door = door, goneAt = run.wonAt + Plan.EXIT_SECONDS }
+			Executive.walk(boss, door, Plan.EXIT_SPEED)
+		end
 	end
 	local def = nil
 	for _, p in Plan.Phases do
@@ -686,7 +727,7 @@ local function startPhase(ctx: Types.Ctx, phase: string)
 			def = p
 		end
 	end
-	broadcast(ctx, { op = "phase", phase = phase, name = def and def.name, line = def and def.line, say = if def then def.say elseif phase == "won" then Plan.WON_SAY else nil })
+	broadcast(ctx, { op = "phase", phase = phase, name = def and def.name, line = def and def.line, say = if def then def.say elseif phase == "won" then Plan.EXIT_SAY else nil })
 	for player, g in guests do
 		if not g.out then
 			note(player, "Executive phase", { phase = phase })
@@ -1109,6 +1150,17 @@ local function officeStep(ctx: Types.Ctx, _dt: number, t: number)
 					throw(ctx, pending.from + Vector3.new(0, 2, 0), here[i].at, tonumber(c.briefcase) or 15, t)
 				end
 				broadcast(ctx, { op = "attack", kind = "volley" })
+			elseif pending.kind == "spin" then
+				-- (Build 94) Briefcases flung out all round him, eight (ten in his finale): stand in
+				-- the gap between two, or well back where the gaps are wide.
+				local turn = rng:NextNumber(0, math.pi * 2)
+				local n = if run.finale then 10 else 8
+				local from = pending.from + Vector3.new(0, 2, 0)
+				for k = 0, n - 1 do
+					local a = turn + k * math.pi * 2 / n
+					throw(ctx, from, from + Vector3.new(math.cos(a), 0, math.sin(a)) * 10, tonumber(c.briefcase) or 15, t)
+				end
+				broadcast(ctx, { op = "attack", kind = "spin" })
 			elseif pending.kind == "wave" then
 				-- (In the finale, a second ring behind the first.)
 				for k = 0, if run.finale then 1 else 0 do
@@ -1135,8 +1187,9 @@ local function officeStep(ctx: Types.Ctx, _dt: number, t: number)
 		elseif not pending and t >= run.nextAttack then
 			-- The next attack, wound up first where everyone can see it.
 			run.attackIndex += 1
-			local kinds = { "volley", "wave", "dash" }
-			local kind = kinds[(run.attackIndex - 1) % 3 + 1]
+			-- (Build 94) At half his composure he adds his spin: briefcases flung out all round.
+			local kinds = if enraged then { "volley", "wave", "dash", "spin" } else { "volley", "wave", "dash" }
+			local kind = kinds[(run.attackIndex - 1) % #kinds + 1]
 			local windup = if run.finale then (tonumber(c.windupFinale) or 0.7) elseif enraged then (tonumber(c.windupEnraged) or 0.85) else (tonumber(c.windup) or 1.1)
 			local bpos = boss.root.CFrame.Position - origin
 			local next: { kind: string, fireAt: number, from: Vector3, to: Vector3?, at: Vector3? } = { kind = kind, fireAt = t + windup, from = bpos }
@@ -1150,7 +1203,7 @@ local function officeStep(ctx: Types.Ctx, _dt: number, t: number)
 				next.to = spot
 			end
 			run.pending = next
-			run.nextAttack = t + windup + (if run.finale then 1.4 elseif enraged then 1.8 else 2.6)
+			run.nextAttack = t + windup + (if run.finale then (tonumber(c.attackGapFinale) or 1.0) elseif enraged then (tonumber(c.attackGapEnraged) or 1.4) else (tonumber(c.attackGap) or 2.1))
 			broadcast(ctx, { op = "windup", kind = kind, seconds = windup, from = origin + bpos, at = if next.at then origin + next.at else nil, to = if next.to then origin + next.to else nil, line = Plan.Windups[kind], finale = run.finale })
 		end
 	end
@@ -1195,6 +1248,11 @@ function Executive.build(ctx: Types.Ctx, parent: Instance)
 	b.safe.Triggered:Connect(function(player: Player)
 		answered(player, "The safe", Executive.ask(ctx, player, { act = "safe" }))
 	end)
+	for id, pr in b.loot do
+		pr.Triggered:Connect(function(player: Player)
+			answered(player, Plan.lootById[id].name, Executive.ask(ctx, player, { act = "loot", what = id }))
+		end)
+	end
 	b.liftDown.Triggered:Connect(function(player: Player)
 		Executive.extract(ctx, player)
 	end)
@@ -1309,6 +1367,23 @@ function Executive.step(ctx: Types.Ctx, dt: number)
 		ctx.sendHome(player, ID)
 	end
 	hallStep(ctx, dt, t)
+	-- (Build 94) The beaten Executive's exit: at the door (or out of time), he's gone through it.
+	local ex = run.exit
+	if ex then
+		local a = ex.actor
+		local there = a.root.Parent ~= nil and flat(a.root.CFrame.Position - ex.door).Magnitude <= 3
+		if t >= ex.goneAt or there or a.model.Parent == nil then
+			run.exit = nil
+			local at = if a.root.Parent then a.root.CFrame.Position else ex.door
+			if a.model.Parent then
+				a.model:Destroy()
+			end
+			if run.actors.boss == a then
+				(run.actors :: any).boss = nil
+			end
+			broadcast(ctx, { op = "bossGone", at = at, door = ex.door })
+		end
+	end
 	-- Into the Office through the open door: the Executive is waiting.
 	if run.phase == "hall" and run.open and #playersInOffice(ctx) > 0 then
 		startPhase(ctx, "shield")
@@ -1500,10 +1575,38 @@ function Executive.ask(ctx: Types.Ctx, player: Player, r: { [string]: unknown })
 			return { ok = false, why = "Get closer to it." }
 		end
 		g.safe = true
-		local worth = tonumber(c.safe) or 6000
+		local worth = tonumber(c.safe) or 10000
 		ctx.estate(player, worth, "The Executive Suite")
 		ctx.send(player, { op = "safe", worth = worth })
 		return { ok = true, worth = worth }
+	elseif act == "loot" then
+		-- (Build 94) The rest of the Office, raided: once each a guest a run, close enough to it,
+		-- and only once he's gone. What it pays is the house's figure.
+		local spot = Plan.lootById[tostring(r.what)]
+		if not spot then
+			return { ok = false, why = "That isn't something the house does." }
+		end
+		if run.phase ~= "won" then
+			return { ok = false, why = "Not while the Executive is watching." }
+		end
+		local looted = g.looted or {}
+		g.looted = looted
+		if looted[spot.id] then
+			return { ok = false, why = "You've already been through that." }
+		end
+		if not at or flat(at - spot.at).Magnitude > 10 then
+			return { ok = false, why = "Get closer to it." }
+		end
+		looted[spot.id] = true
+		local table_ = (c.loot or {})[spot.id] or {}
+		local worth = math.max(0, math.floor(tonumber(table_.estate) or 0))
+		local giltWant = math.max(0, math.floor(tonumber(table_.gilt) or 0))
+		if worth > 0 then
+			ctx.estate(player, worth, "The Executive Suite")
+		end
+		local gilt = if giltWant > 0 then ctx.prize(player, giltWant, "The Executive Suite: " .. spot.name) else 0
+		ctx.send(player, { op = "loot", loot = spot.id, name = spot.name, worth = worth, gilt = gilt })
+		return { ok = true, worth = worth, gilt = gilt }
 	end
 	return { ok = false, why = "That isn't something the house does." }
 end

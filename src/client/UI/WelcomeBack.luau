@@ -351,7 +351,9 @@ function WelcomeBack.offer(news: boolean, nights: number, fallback: (() -> ())?)
 	end
 	shown = true
 	task.spawn(function()
-		for _ = 1, 120 do
+		-- (Build 94: up to ten minutes for the screen to be clear, not one: a guest busy at first still
+		-- gets the card when they're free.)
+		for _ = 1, 1200 do
 			if not Root.isOpen() and not WelcomeBack.isBusy() then
 				-- (Build 88) What AFK mode earned, revealed first, on a screen of its own.
 				if not revealed and offlineGilt >= 1 and awayGilt >= 1 then

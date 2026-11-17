@@ -8,8 +8,10 @@ Brand.Name = "BECOME THE RICHEST GUEST"
 Brand.Title = "Become The Richest Guest"
 Brand.House = "THE MAISON"
 Brand.Tagline = "Build your Fortune. Master the Maison. Become the richest guest."
-Brand.Credit = "development of AJKR"
-Brand.Owner = "AJKR"
+-- (Build 94) The house's owner as every screen names it: Tyler (Config.Admin.hostName; the
+-- owner's account keeps its own name in the audit and the Owner Console).
+Brand.Credit = "development of Tyler"
+Brand.Owner = "Tyler"
 
 Brand.Colours = {
 	nearBlack = Color3.fromHex("060709"),

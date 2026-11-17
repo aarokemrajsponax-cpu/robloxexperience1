@@ -755,7 +755,9 @@ local function welcome()
 	local first = guest ~= nil and State.isFirstVisit()
 	-- (Still new to the house: a first evening, or no tour yet and fewer than two rounds played.)
 	local new = guest ~= nil and (first or guest.guide == true)
-	local limit = os.clock() + 12
+	-- (Build 94: waits for the guest to press Play however long they stay on the Home Screen, not
+	-- twelve seconds: the calendar and what AFK mode earned were otherwise missed behind it.)
+	local limit = os.clock() + 900
 	local function clear(): boolean
 		local gui = player:FindFirstChild("PlayerGui")
 		local show = gui and gui:FindFirstChild("MaisonAbuseShow")
@@ -766,16 +768,20 @@ local function welcome()
 	end
 	task.wait(0.3)
 	-- (Checked last: in Studio the stand-in owner's mark can arrive a moment after the character.)
-	if TableClient.isSeated() or Names.isOwner(player) then
+	if TableClient.isSeated() then
 		return
 	end
-	start("The welcome", function()
-		Welcome.show(Names.of(player), first)
-	end)
+	-- (Build 94) The owner has their own welcome, so no WELCOME card; but tonight's present and what
+	-- their brainrots earned while they were away are theirs like anyone's.
+	if not Names.isOwner(player) then
+		start("The welcome", function()
+			Welcome.show(Names.of(player), first)
+		end)
+	end
 	-- The Evening Calendar: tonight's present, offered once the welcome has had its moment (after
 	-- the Concierge's walk, for a first visit). It waits if anything else is on the screen.
 	CalendarPanel.isBusy = function(): boolean
-		return TableClient.isSeated() or Tour.active() or Welcome.showing()
+		return TableClient.isSeated() or Tour.active() or Welcome.showing() or Title.isShowing()
 	end
 	-- (A returning guest: one Welcome back card instead, with tonight's present on it, what
 	-- their brainrots earned while they were away, and what's new in the house.)
@@ -789,7 +795,7 @@ local function welcome()
 		end
 		start("Welcome back", function()
 			WelcomeBack.isBusy = function(): boolean
-				return TableClient.isSeated() or Tour.active() or Welcome.showing()
+				return TableClient.isSeated() or Tour.active() or Welcome.showing() or Title.isShowing()
 			end
 			WelcomeBack.openCalendar = CalendarPanel.open
 			WelcomeBack.calendar = CalendarPanel.state
@@ -1063,6 +1069,11 @@ end
 -- (Build 93) Showtime's call: a card at the top of every screen as one of the Grand Ballroom's
 -- party games is called, with a key straight there: into the Grand Ballroom from the Ballroom, or
 -- to the Ballroom first from anywhere else in the house (the server checks each step).
+-- (Build 94) Inside Steal a Luxe, the Basement and the Executive Suite: a key to call the brainrot
+-- (and companion) back in for the visit.
+start("The companion key", function()
+	require(script.Parent.UI.CompanionKey).start()
+end)
 start("Showtime", function()
 	local ShowtimeBanner = require(script.Parent.UI.ShowtimeBanner)
 	local AttractionList = require(ReplicatedStorage.Shared.Attractions)

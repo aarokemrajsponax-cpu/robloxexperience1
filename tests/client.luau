@@ -692,6 +692,7 @@ local UserInputService = {
 	InputBegan = signal(),
 	InputChanged = signal(),
 	InputEnded = signal(),
+	TouchTapInWorld = signal(),
 	LastInputTypeChanged = signal(),
 	GetLastInputType = function()
 		return roblox.Enum.UserInputType.MouseMovement
@@ -5966,6 +5967,22 @@ do
 	check("a Mythic wears a crown", Walkers.of(LocalPlayer) ~= nil and Walkers.of(LocalPlayer):FindFirstChild("Crown", true) ~= nil)
 	check("...and the new one is built in the round too (the old figure gone)", Walkers.figure(LocalPlayer) ~= nil and Walkers.figure(LocalPlayer):GetAttribute("Brainrot") == "moonCheese")
 	snapshot("brainrot-walker")
+	-- (Build 94) Inside Steal a Luxe it steps aside, unless called back in; a key says which.
+	LocalPlayer:SetAttribute("Attraction", "luxe")
+	signalOf(LocalPlayer, "attr:Attraction"):Fire()
+	advance(0.3)
+	check("in Steal a Luxe the brainrot steps aside, so everyone sees the way", Walkers.of(LocalPlayer) == nil)
+	check("...and a key calls it back in", textOnScreen("Call my brainrot in") ~= nil)
+	LocalPlayer:SetAttribute("CompanionsIn", "luxe")
+	signalOf(LocalPlayer, "attr:CompanionsIn"):Fire()
+	advance(0.3)
+	check("called back in: beside you again, and the key sends it away", Walkers.of(LocalPlayer) ~= nil and textOnScreen("Send my brainrot away") ~= nil)
+	LocalPlayer:SetAttribute("CompanionsIn", nil)
+	LocalPlayer:SetAttribute("Attraction", nil)
+	signalOf(LocalPlayer, "attr:CompanionsIn"):Fire()
+	signalOf(LocalPlayer, "attr:Attraction"):Fire()
+	advance(0.3)
+	check("out of the attraction: beside you again by itself, and the key gone", Walkers.of(LocalPlayer) ~= nil and textOnScreen("Call my brainrot in") == nil and textOnScreen("Send my brainrot away") == nil)
 	LocalPlayer:SetAttribute("Brainrot", nil)
 	advance(0.3)
 	check("...and goes back to the squad when it stops walking", Walkers.of(LocalPlayer) == nil and Walkers.figure(LocalPlayer) == nil)
@@ -6074,6 +6091,19 @@ end)()
 	check("...and not when tonight's is already open", find(playerGui, function(d)
 		return d.Name == "Calendar" and d:IsA("Frame")
 	end) == nil)
+	-- (Build 94) Busy as they arrive (a panel up): it waits, and comes once the screen is clear.
+	advance(1)
+	state = { ok = true, op = "calendar", step = 4, weeks = 0, total = 4, ready = true, nextIn = 3600 }
+	local busyPanel = Instance.new("Frame")
+	Root2.open("TestBusy", busyPanel)
+	CalendarPanel.offer()
+	advance(2)
+	check("busy on arrival: tonight's present waits, never over another panel", textOnScreen("Tonight's present is waiting") == nil)
+	Root2.close("TestBusy")
+	advance(1.2)
+	check("...and comes once the screen is clear", textOnScreen("Tonight's present is waiting") ~= nil)
+	Root2.close()
+	advance(0.5)
 	invokeResults.CalendarAsk = nil
 end)()
 -- Holidays and auras on this screen.
@@ -9258,13 +9288,38 @@ coroutine.wrap(function()
 	local SoundM = module("StarterPlayer", "StarterPlayerScripts", "Client", "Sound")
 	check("the Executive steps out: his own score takes over", SoundM.mood() == "boss")
 	check("each attraction has its own music (never the table's jazz trio): a heist, a course, the Suite, the boss", SoundM.trackFor("attraction_luxe") == "luxe" and SoundM.trackFor("attraction_basement") == "basement" and SoundM.trackFor("attraction_executive") == "executive" and SoundM.trackFor("attraction_executive_boss") == "executiveBoss" and SoundM.trackFor("attraction_luxe_alarm") == "luxeAlarm")
-	check("...the Fire key", textOnScreen("Fire") ~= nil)
+	check("Build 94: no Fire key (a click or a tap fires)", textOnScreen("Fire") == nil)
 	snapshot("executive-boss")
 	local firedBefore = #sent
-	press("Fire")
+	if DEVICE.touch then
+		UserInputService.TouchTapInWorld:Fire(Vector2.new(640, 360), false)
+	else
+		UserInputService.InputBegan:Fire({ UserInputType = roblox.Enum.UserInputType.MouseButton1, Position = Vector3.new(640, 360, 0) }, false)
+	end
 	advance(0.2)
 	local fired = sent[#sent]
-	check("Fire sends only where it was aimed (the server decides what it hits)", #sent > firedBefore and fired.remote == "AttractionFire" and typeof(fired.message) == "Vector3" and math.abs(fired.message.Magnitude - 1) < 1e-3)
+	check("a click (or a tap) sends only where it was aimed (the server decides what it hits)", #sent > firedBefore and fired.remote == "AttractionFire" and typeof(fired.message) == "Vector3" and math.abs(fired.message.Magnitude - 1) < 1e-3)
+	if DEVICE.touch then
+		local before = #sent
+		UserInputService.TouchTapInWorld:Fire(Vector2.new(640, 360), true)
+		advance(0.2)
+		check("...a tap on a key never fires", #sent == before)
+	end
+	-- Build 94: the fight's effects.
+	serverSays("Attraction", { op = "shot", from = Vector3.new(0, 5, 0), dir = Vector3.new(0, 0, 1), by = 1, hit = nil })
+	advance(0.03)
+	check("a shot: its tracer drawn", workspace:FindFirstChild("Tracer") ~= nil)
+	serverSays("Attraction", { op = "hurt", amount = 18, why = "dash", composure = 54 })
+	advance(0.05)
+	check("hurt: the screen's edge flashes red", (function()
+		for _, d in game:GetDescendants() do
+			if d.Name == "HurtFlash" then
+				return true
+			end
+		end
+		return false
+	end)())
+	advance(1)
 	-- Build 78: his wind-ups drawn where they'll come and said plainly; his lines; his finale.
 	local base = module("ReplicatedStorage", "Shared", "Attractions").origin("executive")
 	serverSays("Attraction", { op = "windup", kind = "dash", seconds = 1.1, from = base + Vector3.new(0, 3, 40), to = base + Vector3.new(-18, 3, 24), line = "HIS DASH  ·  STEP OUT OF THE LANE", finale = false })
@@ -9891,6 +9946,14 @@ coroutine.wrap(function()
 	snapshot("flex-reel")
 	advance(6)
 	check("at the end: the set gone, the camera given back, the keys back", not FlexReel.playing() and workspace:FindFirstChild("FlexReelSet") == nil and workspace.CurrentCamera.CameraType ~= roblox.Enum.CameraType.Scriptable and playerGui:FindFirstChild("MaisonReel") == nil and RootM.hud.Enabled == true)
+	do
+		-- (Build 94) ...and put back behind the guest, above them and level: never left below them
+		-- looking up from the last shot (Roblox's camera carries on from wherever it's left).
+		local cf = workspace.CurrentCamera.CFrame
+		local character = LocalPlayer.Character
+		local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+		check("...the camera back behind the guest, above them, looking level", rootPart ~= nil and cf.Position.Y > rootPart.Position.Y + 1 and cf.LookVector.Y < 0.1, cf.Position.Y, rootPart and rootPart.Position.Y, cf.LookVector.Y)
+	end
 	-- The Flex Wall: someone else's reel, liked once.
 	invokeResults.AttractionAsk = list
 	serverSays("Attraction", { op = "panel", id = "gala", which = "feed" })

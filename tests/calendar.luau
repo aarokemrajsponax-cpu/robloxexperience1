@@ -259,4 +259,47 @@ do
 	Config.data.HourlyDrop.enabled = true
 end
 
+-- (Build 94) The holiday calendar, end to end: on each holiday's days the right game (or, for the
+-- holidays with no game, the right dressing) and the right season for the house and the Suite.
+do
+	local HolidayGames = module("ReplicatedStorage", "Shared", "HolidayGames")
+	local LiveCalendar = module("ReplicatedStorage", "Shared", "LiveCalendar")
+	local Seasons = module("ReplicatedStorage", "Shared", "Seasons")
+	local Plan = module("ReplicatedStorage", "Shared", "Executive")
+	local function utc(y, m, d)
+		return os.time({ year = y, month = m, day = d, hour = 18 }) -- (evening, UTC: inside every zone's day)
+	end
+	local cases = {
+		{ 2026, 10, 30, game = "halloween", season = "hallows", suite = "halloween" },
+		{ 2026, 11, 17, game = nil, season = "longtable", suite = "thanksgiving" },
+		{ 2026, 11, 25, game = "thanksgiving", season = "longtable", suite = "thanksgiving" },
+		{ 2026, 12, 24, game = "christmas", season = "yule", suite = "christmas" },
+		{ 2027, 1, 20, game = nil, season = "frost", suite = "winter" },
+		{ 2027, 2, 14, game = nil, season = "rose", suite = "valentine", live = "valentines" },
+		{ 2027, 3, 17, game = "stPatrick", season = "emerald", suite = "stPatrick" },
+		{ 2027, 3, 28, game = "easter", season = "bloom", suite = "easter" },
+		{ 2027, 7, 4, game = nil, season = "summer", suite = "summer" },
+		{ 2026, 12, 31, game = nil, season = "toast", suite = "newYear", live = "newYear" },
+	}
+	local wrong = {}
+	for _, c in cases do
+		local y, m, d = c[1], c[2], c[3]
+		local g = HolidayGames.openOn(y, m, d)
+		local s = Seasons.forDate(m, d).id
+		local suite = Plan.seasonOf(g, m, s)
+		local live = LiveCalendar.active(utc(y, m, d), "UTC")
+		local label = string.format("%d-%02d-%02d", y, m, d)
+		if g ~= c.game then
+			table.insert(wrong, label .. " game " .. tostring(g))
+		elseif s ~= c.season then
+			table.insert(wrong, label .. " season " .. tostring(s))
+		elseif suite ~= c.suite then
+			table.insert(wrong, label .. " suite " .. tostring(suite))
+		elseif c.live and (live == nil or live.id ~= c.live) then
+			table.insert(wrong, label .. " calendar " .. tostring(live and live.id))
+		end
+	end
+	check("Build 94: the holiday calendar, a year of it: each holiday's game, the house's season and the Suite's dressing on the right days", #wrong == 0, wrong[1])
+end
+
 H.finish()
