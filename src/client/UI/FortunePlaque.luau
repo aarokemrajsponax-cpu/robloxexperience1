@@ -162,9 +162,10 @@ function FortunePlaque.start()
 		l.Parent = row
 		return l
 	end
-	word("Caption", "FORTUNE", 12, Brand.Fonts.heavy, GOLD, 1)
+	-- (Build 92: the small words set larger on a phone, where the whole screen is scaled down.)
+	word("Caption", "FORTUNE", Theme.phonePx(12), Brand.Fonts.heavy, GOLD, 1)
 	figure = word("Figure", "0", 18, Brand.Fonts.figures, Color3.new(1, 1, 1), 2)
-	rankLabel = word("Rank", "NEWCOMER", 11, Brand.Fonts.bodyBold, GOLD, 3)
+	rankLabel = word("Rank", "NEWCOMER", Theme.phonePx(11), Brand.Fonts.bodyBold, GOLD, 3)
 	-- How far through the rank, as a hair of gold along the foot of the plaque.
 	local track = Instance.new("Frame")
 	track.Name = "Track"
@@ -224,7 +225,11 @@ function FortunePlaque.start()
 	disc.Size = UDim2.fromOffset(HEIGHT - 8, HEIGHT - 8)
 	disc.BackgroundColor3 = Color3.fromRGB(26, 22, 18)
 	disc.FontFace = Brand.Fonts.heavy
-	disc.TextSize = 12
+	disc.TextSize = Theme.phonePx(12)
+	disc.TextScaled = true -- (a level of three figures still inside its disc)
+	local discFit = Instance.new("UITextSizeConstraint")
+	discFit.MaxTextSize = Theme.phonePx(12)
+	discFit.Parent = disc
 	disc.Text = "1"
 	disc.LayoutOrder = 1
 	disc.Parent = lrow
@@ -242,7 +247,7 @@ function FortunePlaque.start()
 	title.AutomaticSize = Enum.AutomaticSize.X
 	title.Size = UDim2.fromOffset(0, HEIGHT)
 	title.FontFace = Brand.Fonts.bodyBold
-	title.TextSize = 11
+	title.TextSize = Theme.phonePx(11)
 	title.TextColor3 = Color3.fromRGB(236, 228, 214)
 	title.Text = "LEVEL 1"
 	title.LayoutOrder = 2

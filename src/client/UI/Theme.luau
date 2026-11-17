@@ -437,6 +437,19 @@ function Theme.measureAs(text: string, size: number, kind: TextKind?, width: num
 	return Theme.measure(if k == "caps" then Caps(text) else text, Theme.textSize(size, k), face, width)
 end
 
+-- (Build 92) A hand-sized label on the HUD (the dock's names, the Fortune's and the level's
+-- captions), on a scaled-down screen: set large enough to come out at least PHONE_MIN_PX tall (a
+-- phone, where the whole screen is drawn at about 0.6), never more than 1.6 times its own size.
+-- At full size, its own size.
+local PHONE_MIN_PX = 9.6
+function Theme.phonePx(size: number): number
+	local s = math.max(0.05, uiScale)
+	if s >= 0.95 then
+		return size
+	end
+	return math.max(size, math.min(math.floor(size * 1.6), math.ceil(PHONE_MIN_PX / s)))
+end
+
 function Theme.refresh()
 	for i = #registry, 1, -1 do
 		local r = registry[i]

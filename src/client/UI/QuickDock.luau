@@ -147,8 +147,11 @@ local SIZE = 64
 -- Each key a little wider than it is tall, so the longest names (Collection, Wardrobe) sit whole
 -- on the foot of the key at a size you can read.
 local WIDE = 1.22
+-- (Build 92) On a touch screen a little wider again: the names are set larger there (a phone draws
+-- the whole screen at about 0.6), and the longest still sit whole.
+local WIDE_TOUCH = 1.6
 local function keyWidth(): number
-	return math.floor(SIZE * WIDE + 0.5)
+	return math.floor(SIZE * (if UserInputService.TouchEnabled then WIDE_TOUCH else WIDE) + 0.5)
 end
 local KEYS = 6
 local GAP = 10
@@ -317,14 +320,17 @@ local function tile(parent: Instance, order: number, glyph: string, label: strin
 	name.Text = label
 	name.ZIndex = 5
 	if UserInputService.TouchEnabled then
-		-- (On a phone the keys are small: the name at a set size you can read, a step smaller
-		-- only if it wouldn't fit the key.)
+		-- (On a phone the keys are small: the name at a set size you can read once the screen is
+		-- scaled down (Theme.phonePx), on a line tall enough for it, a step smaller only if it
+		-- wouldn't fit the key.)
 		name.TextScaled = false
-		local px = math.max(10, math.floor(SIZE * 0.2))
+		local px = Theme.phonePx(math.max(10, math.floor(SIZE * 0.2)))
 		while px > 8 and Theme.measure(label, px, Brand.Fonts.bodyBold).X > keyWidth() - 8 do
 			px -= 1
 		end
 		name.TextSize = px
+		name.Position = UDim2.new(0.5, 0, 1, -4)
+		name.Size = UDim2.new(1, -6, 0, math.max(math.floor(SIZE * 0.2), px + 2))
 	else
 		-- (Scaled to fit the key's foot, and never cut short.)
 		name.TextScaled = true
@@ -421,7 +427,8 @@ local function liveTag(holder: Frame)
 	tag.Name = "Live"
 	tag.AnchorPoint = Vector2.new(0, 0)
 	tag.Position = UDim2.fromOffset(-6, -7)
-	local h = math.max(16, math.floor(SIZE * 0.26))
+	-- (Build 92: read at a glance on a phone, where the screen is drawn small.)
+	local h = Theme.phonePx(math.max(16, math.floor(SIZE * 0.26)))
 	tag.Size = UDim2.fromOffset(math.floor(h * 2.4), h)
 	tag.BackgroundColor3 = Color3.fromRGB(222, 40, 58)
 	tag.TextColor3 = Color3.new(1, 1, 1)

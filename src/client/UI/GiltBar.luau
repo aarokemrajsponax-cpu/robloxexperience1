@@ -80,7 +80,9 @@ local function fit()
 	local fkW = if fk then fk.Size.X.Offset else 30
 	local keys = Hud.width()
 	local need = (12 + FULL_W + 8 + fkW + 10) * Root.scale
-	local compact = keys > 0 and need + keys > Root.viewport().X
+	-- (Build 92: on a phone, where the screen is scaled down, always: the level pill under the
+	-- Fortune shows the level already, and the same thing twice is clutter on a small screen.)
+	local compact = (keys > 0 and need + keys > Root.viewport().X) or Root.scale < 0.95
 	local w = if compact then SHORT_W else FULL_W
 	local level = b:FindFirstChild("Level")
 	if level and level:IsA("GuiObject") then
