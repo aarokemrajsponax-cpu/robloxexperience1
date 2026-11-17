@@ -1,8 +1,9 @@
 --!strict
 -- Admin Abuse as a show, on the server:
---   the owner     AJKR's own avatar, built here (only a server can) and kept in ReplicatedStorage
---                 for the few nights made for it (AJKR's giant over the house, AJKR's army). It's
---                 never a stored picture: it's built again from AJKR's look as it is now: from what
+--   the host      the night's host's own avatar (Tyler: Config.Admin.hostName, a co-owner; else the
+--                 owner's), built here (only a server can) and kept in ReplicatedStorage for the few
+--                 nights made for it (the giant over the house, the army). It's
+--                 never a stored picture: it's built again from the host's look as it is now: from what
 --                 they're wearing in this server if they're here, else from their Roblox avatar
 --                 (fetched again at the start of every night, and every few minutes), so a change of
 --                 outfit shows up by itself.
@@ -36,6 +37,13 @@ local function cfg(): { [string]: any }
 	return (Config.data.Admin :: any).show
 end
 
+-- (Build 91) Whose avatar the show's giant wears: the night's host (Tyler, Config.Admin.hostName,
+-- a co-owner), else the experience's owner.
+function AbuseShow.hostId(): number
+	local Names = require(ReplicatedStorage.Shared.Names)
+	return Names.hostId() or require(script.Parent.Ownership).ownerId() or Config.data.Admin.ownerUserId
+end
+
 -- Admin Abuse's night: when it began (Workspace's AbuseSince), while it's on.
 local function night(): number?
 	local ends = Workspace:GetAttribute("AbuseUntil")
@@ -54,7 +62,7 @@ AbuseShow.home = function(): Instance
 	return ReplicatedStorage
 end
 
--- AJKR's look as it is now: what they're wearing here if they're in this server, else their
+-- The host's look as it is now: what they're wearing here if they're in this server, else their
 -- Roblox avatar. (Set for tests.)
 AbuseShow.describeOwner = function(userId: number): HumanoidDescription
 	local here = Players:GetPlayerByUserId(userId)
@@ -78,7 +86,7 @@ end
 
 local building = false
 local builtAt = -math.huge
--- Builds AJKR's avatar for every screen from their look now. `fresh`: again even if one is there
+-- Builds the host's avatar for every screen from their look now. `fresh`: again even if one is there
 -- (replacing it once the new one is ready; not more than once a minute). False if Roblox couldn't
 -- give it just now (tried again later).
 function AbuseShow.buildAvatar(fresh: boolean?): boolean
@@ -91,7 +99,7 @@ function AbuseShow.buildAvatar(fresh: boolean?): boolean
 		return false
 	end
 	building = true
-	local ok, model = pcall(AbuseShow.makeAvatar, require(script.Parent.Ownership).ownerId() or Config.data.Admin.ownerUserId)
+	local ok, model = pcall(AbuseShow.makeAvatar, AbuseShow.hostId())
 	building = false
 	if not ok or typeof(model) ~= "Instance" or not (model :: Instance):IsA("Model") then
 		return old ~= nil
@@ -122,7 +130,7 @@ function AbuseShow.buildAvatar(fresh: boolean?): boolean
 		end
 	end
 	m.Name = AbuseShow.AVATAR
-	m:SetAttribute("UserId", require(script.Parent.Ownership).ownerId() or Config.data.Admin.ownerUserId)
+	m:SetAttribute("UserId", AbuseShow.hostId())
 	m:SetAttribute("BuiltAt", os.time())
 	-- (The new one in, then the old one out: a screen copying it always finds one.)
 	m.Parent = home
@@ -286,8 +294,8 @@ function AbuseShow.start()
 		open[player] = nil
 		opened[player] = nil
 	end)
-	-- AJKR's avatar: now, and again every few minutes (their look as it is then), so it's never
-	-- out of date; and as soon as AJKR's own character appears here (what they're wearing now).
+	-- The host's avatar: now, and again every few minutes (their look as it is then), so it's never
+	-- out of date; and as soon as the host's own character appears here (what they're wearing now).
 	task.spawn(function()
 		local first = true
 		while true do
@@ -297,7 +305,7 @@ function AbuseShow.start()
 		end
 	end)
 	local function watch(p: Player)
-		if require(script.Parent.Ownership).isOwner(p) then
+		if p.UserId == AbuseShow.hostId() then
 			pcall(function()
 				p.CharacterAppearanceLoaded:Connect(function()
 					task.delay(1, AbuseShow.buildAvatar, true)

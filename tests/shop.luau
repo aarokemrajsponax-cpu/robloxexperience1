@@ -2444,7 +2444,7 @@ do
 	run(AbuseShow.start)
 	advance(1)
 	local avatar = home:FindFirstChild(AbuseShow.AVATAR)
-	check("the owner's avatar is built from the owner's own UserId", asked == Config.data.Admin.ownerUserId)
+	check("the giant's avatar is the night's host's: Tyler's own UserId (Config.Admin.hostName, a co-owner)", asked == 11988396018 and asked == Config.data.Admin.coOwners[1].userId)
 	check("...kept for every screen: no scripts in it, nothing to bump into, standing still", avatar ~= nil and avatar:FindFirstChild("Animate") == nil and avatar.HumanoidRootPart.Anchored == true and avatar.Head.CanCollide == false and avatar:FindFirstChildOfClass("Humanoid"):FindFirstChildOfClass("Animator") ~= nil)
 	AdminService.showBegan = AbuseShow.began
 	AdminService.showStopped = AbuseShow.stopped
@@ -3022,7 +3022,7 @@ do
 	run(function()
 		AbuseShowS.buildAvatar()
 	end)
-	check("AJKR's avatar is built for the nights that show it", built == 1 and home:FindFirstChild("MaisonOwnerAvatar") ~= nil)
+	check("the host's avatar is built for the nights that show it", built == 1 and home:FindFirstChild("MaisonOwnerAvatar") ~= nil)
 	advance(61)
 	run(function()
 		AbuseShowS.buildAvatar(true)

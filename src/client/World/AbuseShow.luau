@@ -84,7 +84,12 @@ local function sound(name: string, volume: number?, pitch: number?)
 	pcall(Sound.play, name, volume or 1, pitch)
 end
 
+-- (Build 91) The night's host, whose show this is: Tyler (Config.Admin.hostName).
 local function ownerName(): string
+	local ok, n = pcall(Names.host)
+	if ok and type(n) == "string" and n ~= "" then
+		return n
+	end
 	return tostring(Config.data.Admin.ownerName or "The owner")
 end
 

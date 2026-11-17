@@ -126,7 +126,8 @@ local function face(parent: Instance, f: Friend, size: number, order: number): F
 	edge.Thickness = 1.5
 	edge.Parent = ring
 	if f.owner then
-		local crest = OwnerCameo.crest(ring)
+		-- (The owner themselves, by their own house name: this is a friend, not a night's host.)
+		local crest = OwnerCameo.crest(ring, nil, f.name)
 		crest.ZIndex = ring.ZIndex
 	else
 		local image = Instance.new("ImageLabel")

@@ -6343,13 +6343,13 @@ end
 	LocalPlayer:SetAttribute("Gilt", 1000)
 	advance(1)
 	-- The opening.
-	serverSays("Salute", { op = "abuseShow", stage = "intro", mega = false, by = "AJKR", seed = classicSeed, night = "classic" })
+	serverSays("Salute", { op = "abuseShow", stage = "intro", mega = false, by = "Tyler", seed = classicSeed, night = "classic" })
 	abuse(true, false)
 	realm("gilded")
 	advance(1.2)
 	check("the opening: the screen goes cinematic, bars top and bottom", part("Opening") ~= nil and part("Opening"):FindFirstChild("BarTop") ~= nil)
-	check("...a transmission from AJKR: their name, and what they're doing", textOnScreen("AJKR") ~= nil and textOnScreen("IS ABUSING THEIR POWERS") ~= nil and textOnScreen("INCOMING TRANSMISSION") ~= nil and textOnScreen("XXXXXXX") == nil)
-	check("...AJKR's crest in the ring, never a picture of their avatar", find(part("Opening"), function(d)
+	check("...a transmission from Tyler: their name, and what they're doing", textOnScreen("TYLER") ~= nil and textOnScreen("IS ABUSING THEIR POWERS") ~= nil and textOnScreen("INCOMING TRANSMISSION") ~= nil and textOnScreen("XXXXXXX") == nil)
+	check("...Tyler's crest (the night's host) in the ring, never a picture of their avatar", find(part("Opening"), function(d)
 		return d.Name == "Crest"
 	end) ~= nil and find(playerGui, function(d)
 		return d:IsA("ViewportFrame")
@@ -6362,20 +6362,20 @@ end
 	check("...and tonight's night by name over it", textOnScreen("TONIGHT:  THE CLASSIC") ~= nil)
 	check("...the transmission gone", textOnScreen("INCOMING TRANSMISSION") == nil)
 	advance(0.8)
-	check("...and what it brings, typed out under it", textOnScreen("GIFTS FROM AJKR") ~= nil)
+	check("...and what it brings, typed out under it", textOnScreen("GIFTS FROM TYLER") ~= nil)
 	snapshot("abuse-drop")
 	advance(Config.data.Admin.show.seconds)
 	check("after the opening the screen is the house's again", part("Opening") == nil)
-	check("and AJKR says what tonight is", textOnScreen("Tonight: THE CLASSIC!") ~= nil)
+	check("and Tyler says what tonight is", textOnScreen("Tonight: THE CLASSIC!") ~= nil)
 	check("the gilded night's colours are over the house", Lighting:FindFirstChild("AbuseRealm") ~= nil)
 	advance(6)
 	-- A surprise cast by the owner: the hologram.
-	serverSays("Salute", { op = "abuseFX", id = "meteor", by = "AJKR", seconds = 18, v = 2, line = "Heads up! ☄️" })
+	serverSays("Salute", { op = "abuseFX", id = "meteor", by = "Tyler", seconds = 18, v = 2, line = "Heads up! ☄️" })
 	advance(1.2)
 	local cardLine = find(playerGui, function(d)
 		return d:IsA("TextLabel") and d.Name == "Line" and d.Parent ~= nil and d.Parent.Name == "Cameo"
 	end)
-	check("a surprise: AJKR's card says it, in tonight's looks, with their line", cardLine ~= nil and string.find(cardLine.Text, "ICE COMETS!", 1, true) ~= nil and string.find(cardLine.Text, "Heads up!", 1, true) ~= nil and textOnScreen("THE OWNER") ~= nil, cardLine and cardLine.Text)
+	check("a surprise: Tyler's card says it, in tonight's looks, with their line", cardLine ~= nil and string.find(cardLine.Text, "ICE COMETS!", 1, true) ~= nil and string.find(cardLine.Text, "Heads up!", 1, true) ~= nil and textOnScreen("THE OWNER") ~= nil, cardLine and cardLine.Text)
 	check("...and the effect wears those looks (ice comets, not plain meteors)", textOnScreen("ICE COMETS!") ~= nil)
 	snapshot("owner-cameo")
 	advance(5)
@@ -6383,7 +6383,7 @@ end
 	invokeResults.AbuseGiftAsk = { ok = true, gilt = 120, crown = true, count = 3 }
 	serverSays("Salute", { op = "abuseGift", id = 7, gilt = 40, crown = true, number = 3, seconds = 25 })
 	advance(1)
-	check("a gift from AJKR: a card to open, saying what's in it", part("Gift") ~= nil and textOnScreen("A GIFT FROM AJKR") ~= nil and textOnScreen("+40 GILT") ~= nil and textOnScreen("THE ADMIN'S CROWN") ~= nil)
+	check("a gift from Tyler: a card to open, saying what's in it", part("Gift") ~= nil and textOnScreen("A GIFT FROM TYLER") ~= nil and textOnScreen("+40 GILT") ~= nil and textOnScreen("THE ADMIN'S CROWN") ~= nil)
 	snapshot("abuse-gift")
 	local before = #sent
 	check("the gift opens with a press", press("OPEN IT!"))
@@ -6407,7 +6407,7 @@ end
 	-- Mega Abuse: the realms.
 	abuse(false)
 	advance(12)
-	serverSays("Salute", { op = "abuseShow", stage = "intro", mega = true, by = "AJKR", seed = classicSeed, night = "classic" })
+	serverSays("Salute", { op = "abuseShow", stage = "intro", mega = true, by = "Tyler", seed = classicSeed, night = "classic" })
 	abuse(true, true)
 	realm("cosmos")
 	advance(1.2)
@@ -6470,7 +6470,10 @@ end
 	end
 	OwnerCameo.say("☄️ METEOR SHOWER!", "point", 4)
 	advance(1)
-	check("the card shows AJKR's crest, never a picture of their avatar (even with the avatar there)", find(playerGui, function(d)
+	check("the card's crest says TYLER, the night's host (Config.Admin.hostName)", find(playerGui, function(d)
+		local n = d.Name == "Crest" and d:FindFirstChild("Name"); return n ~= nil and n ~= false and (n :: any).Text == "TYLER"
+	end) ~= nil)
+	check("the card shows Tyler's crest (the night's host), never a picture of their avatar (even with the avatar there)", find(playerGui, function(d)
 		return d:IsA("ViewportFrame")
 	end) == nil and find(playerGui, function(d)
 		return d.Name == "Crest"
@@ -6478,15 +6481,15 @@ end
 	advance(5)
 	abuse(true, true, classicSeed, "classic")
 	advance(2.5)
-	check("on a night not made for it, no giant (AJKR's avatar is kept for a few nights)", workspace.MaisonLocal:FindFirstChild("OwnerColossus") == nil)
+	check("on a night not made for it, no giant (the host's avatar is kept for a few nights)", workspace.MaisonLocal:FindFirstChild("OwnerColossus") == nil)
 	abuse(false)
 	advance(12)
 	abuse(true, true, 77, "kingOfTheHouse")
 	advance(2.5)
 	local giant = workspace.MaisonLocal:FindFirstChild("OwnerColossus")
-	check("on KING OF THE HOUSE, AJKR stands giant over the house, with ADMIN ABUSE in the sky over them", giant ~= nil and giant:FindFirstChild("Marquee", true) ~= nil)
-	check("...and their name over it is AJKR", textOnScreen("👑 AJKR 👑") ~= nil or find(workspace.MaisonLocal, function(d)
-		return d:IsA("TextLabel") and d.Text == "👑 AJKR 👑"
+	check("on KING OF THE HOUSE, Tyler, the night's host, stands giant over the house, with ADMIN ABUSE in the sky over them", giant ~= nil and giant:FindFirstChild("Marquee", true) ~= nil)
+	check("...and their name over it is Tyler", textOnScreen("👑 Tyler 👑") ~= nil or find(workspace.MaisonLocal, function(d)
+		return d:IsA("TextLabel") and d.Text == "👑 Tyler 👑"
 	end) ~= nil)
 	AbuseFX.play("ownerArmy", 6)
 	advance(2.5)
@@ -6583,7 +6586,7 @@ end)()
 			return p.opening == opening
 		end)
 		if seed then
-			serverSays("Salute", { op = "abuseShow", stage = "intro", mega = false, by = "AJKR", seed = seed, night = night })
+			serverSays("Salute", { op = "abuseShow", stage = "intro", mega = false, by = "Tyler", seed = seed, night = night })
 			abuse(true, false, seed, night)
 			advance(1.5)
 			local root = show() and show():FindFirstChild("Opening")
@@ -6618,7 +6621,7 @@ end)()
 			return p.title == style
 		end)
 		if seed then
-			serverSays("Salute", { op = "abuseShow", stage = "intro", mega = true, by = "AJKR", seed = seed, night = night })
+			serverSays("Salute", { op = "abuseShow", stage = "intro", mega = true, by = "Tyler", seed = seed, night = night })
 			abuse(true, true, seed, night)
 			advance(Config.data.Admin.show.dropAt + 1)
 			local root = show() and show():FindFirstChild("Opening")
@@ -6650,7 +6653,7 @@ end)()
 		end
 		abuse(true, false, 11, night)
 		advance(3)
-		serverSays("Salute", { op = "abuseFX", id = "confetti", by = "AJKR", seconds = 4, v = 2, line = "Confetti budget: unlimited. 🎉" })
+		serverSays("Salute", { op = "abuseFX", id = "confetti", by = "Tyler", seconds = 4, v = 2, line = "Confetti budget: unlimited. 🎉" })
 		advance(5)
 		-- (Each night earns its own Gilt.)
 		LocalPlayer:SetAttribute("Gilt", (tonumber(LocalPlayer:GetAttribute("Gilt")) or 0) + 4000)
@@ -6664,7 +6667,7 @@ end)()
 		if finale == "credits" then
 			advance(2)
 			waited += 2
-			check("the credits roll: starring the guest, and AJKR as the owner", textOnScreen("STARRING") ~= nil and textOnScreen("as  THE GUEST") ~= nil and textOnScreen("AJKR  as  THE OWNER") ~= nil)
+			check("the credits roll: starring the guest, and Tyler as the owner", textOnScreen("STARRING") ~= nil and textOnScreen("as  THE GUEST") ~= nil and textOnScreen("TYLER  as  THE OWNER") ~= nil)
 			check("...with the Gilt the guest earned tonight", textOnScreen("GILT EARNED TONIGHT") ~= nil)
 			local window = find(playerGui, function(d)
 				return d.Name == "Window" and d.Parent ~= nil and d.Parent.Name == "FinaleShow"
@@ -6694,7 +6697,7 @@ end)()
 		endings += 1
 	end
 	check("every one of the six finales ends on the guest's haul (with the effects they saw)", endings == #AbuseNights.Finales, endings)
-	-- On AJKR's own screen the credits never name AJKR twice; and Gilt that didn't change isn't
+	-- On an owner's own screen the credits never name the host twice; and Gilt that didn't change isn't
 	-- read out as "+0".
 	do
 		local creditsNight
@@ -6708,7 +6711,7 @@ end)()
 		advance(8)
 		abuse(false)
 		advance(3.5)
-		check("on AJKR's screen: AJKR as the owner, and every guest as themselves", textOnScreen("AJKR  as  THE OWNER") ~= nil and textOnScreen("EVERY GUEST  as  THEMSELVES") ~= nil and textOnScreen("as  THE GUEST") == nil)
+		check("on the owner's screen: Tyler as the owner, and every guest as themselves", textOnScreen("TYLER  as  THE OWNER") ~= nil and textOnScreen("EVERY GUEST  as  THEMSELVES") ~= nil and textOnScreen("as  THE GUEST") == nil)
 		check("...and no '+0' Gilt line when none was earned", textOnScreen("GILT EARNED TONIGHT") == nil and textOnScreen("+0") == nil)
 		advance(26)
 	end

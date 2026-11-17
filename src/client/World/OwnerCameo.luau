@@ -1,5 +1,5 @@
 --!strict
--- AJKR, on every screen, during Admin Abuse:
+-- The night's host (Tyler: Config.Admin.hostName), on every screen, during Admin Abuse:
 --   the card      AJKR's crest (their name in gold under a crown: never a picture of their avatar,
 --                 which they change all the time) slides up at the foot of the screen with a line
 --                 ("Heads up! ☄️") every time a surprise lands. It sits above any panel, and over
@@ -38,8 +38,12 @@ local function cfg(): { [string]: any }
 	return (Config.data.Admin :: any).show
 end
 
+-- (Build 91) The night's host, whose crest and giant these are: Tyler (Config.Admin.hostName).
 local function ownerName(): string
-	return tostring(Config.data.Admin.ownerName or "The owner")
+	local ok, n = pcall(function()
+		return require(ReplicatedStorage.Shared.Names).host()
+	end)
+	return if ok and type(n) == "string" and n ~= "" then n else tostring(Config.data.Admin.ownerName or "The owner")
 end
 
 -- The owner's avatar as the server built it, or nil (not built yet, or Roblox couldn't).
@@ -108,9 +112,10 @@ local function corner(parent: Instance, radius: UDim)
 	c.Parent = parent
 end
 
--- AJKR's crest: their name in gold under a crown, in a dark disc with a gold ring, a gleam of light
--- crossing it now and then. Fills `parent`. (In place of a picture of their avatar.)
-function OwnerCameo.crest(parent: GuiObject, tint: Color3?): Frame
+-- A crest: a name in gold under a crown (the night's host's, unless `who` says whose), in a dark
+-- disc with a gold ring, a gleam of light crossing it now and then. Fills `parent`. (In place of a
+-- picture of their avatar.)
+function OwnerCameo.crest(parent: GuiObject, tint: Color3?, who: string?): Frame
 	local colour = tint or GOLD
 	local disc = Instance.new("Frame")
 	disc.Name = "Crest"
@@ -155,7 +160,7 @@ function OwnerCameo.crest(parent: GuiObject, tint: Color3?): Frame
 	name.Size = UDim2.fromScale(0.78, 0.34)
 	name.FontFace = HEAVY
 	name.TextScaled = true
-	name.Text = string.upper(ownerName())
+	name.Text = string.upper(if who and who ~= "" then who else ownerName())
 	name.TextColor3 = Color3.new(1, 1, 1)
 	name.TextStrokeColor3 = rgb(30, 18, 4)
 	name.TextStrokeTransparency = 0.2

@@ -45,6 +45,32 @@ function Names.owner(): string
 	return if type(n) == "string" and n ~= "" then n else "AJKR"
 end
 
+-- (Build 91) The house's host: the name everything started from the owner's panel goes out under
+-- (Config.Admin.hostName: Tyler), or the owner's house name when none is set.
+function Names.host(): string
+	local h = (Config.data.Admin :: any).hostName
+	if type(h) == "string" and h ~= "" then
+		return string.sub(h, 1, 40)
+	end
+	return Names.owner()
+end
+
+-- The host's own account, when the host is a co-owner (by their house name in Config.Admin
+-- coOwners), else nil: whose avatar the Abuse show's giant wears.
+function Names.hostId(): number?
+	local h = (Config.data.Admin :: any).hostName
+	local list = (Config.data.Admin :: any).coOwners
+	if type(h) ~= "string" or h == "" or type(list) ~= "table" then
+		return nil
+	end
+	for _, c in list do
+		if type(c) == "table" and c.name == h and type(c.userId) == "number" and c.userId > 0 then
+			return c.userId
+		end
+	end
+	return nil
+end
+
 -- Letters and digits only, lower case (so "A.J.K.R" and "ajkr_" read the same as "AJKR").
 local function plain(s: string): string
 	return (string.gsub(string.lower(s), "[^%w]", ""))
