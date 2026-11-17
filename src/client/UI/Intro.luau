@@ -16,7 +16,7 @@ local Root = require(script.Parent.Root)
 
 local Intro = {}
 
-local NAME = "Maison Noir"
+local NAME = "The Maison"
 
 local function tween(obj: Instance, seconds: number, goal: { [string]: any }, style: Enum.EasingStyle?, delay: number?): Tween
 	local t = TweenService:Create(obj, TweenInfo.new(seconds, style or Enum.EasingStyle.Quint, Enum.EasingDirection.Out, 0, false, delay or 0), goal)

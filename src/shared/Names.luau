@@ -21,6 +21,20 @@ local function told(name: string): any
 	return if ok then value else nil
 end
 
+-- A co-owner's house name (Config.Admin.coOwners: by UserId only), or nil.
+function Names.coOwner(userId: number): string?
+	local list = (Config.data.Admin :: any).coOwners
+	if type(list) ~= "table" then
+		return nil
+	end
+	for _, c in list do
+		if type(c) == "table" and c.userId == userId and userId > 0 then
+			return if type(c.name) == "string" and c.name ~= "" then c.name else nil
+		end
+	end
+	return nil
+end
+
 -- The owner's house name.
 function Names.owner(): string
 	local name = told("MaisonOwnerName")
@@ -51,6 +65,9 @@ function Names.isOwner(player: Player): boolean
 	if id > 0 and player.UserId == id then
 		return true
 	end
+	if Names.coOwner(player.UserId) ~= nil then
+		return true
+	end
 	if not RunService:IsStudio() then
 		return false
 	end
@@ -67,16 +84,33 @@ function Names.forUser(userId: number, displayName: string?, username: string?):
 	if id > 0 and userId == id then
 		return Names.owner()
 	end
+	local co = Names.coOwner(userId)
+	if co then
+		return co
+	end
 	local shown = if displayName and displayName ~= "" then displayName else (username or "A guest")
 	local mine = plain(Names.owner())
 	if #mine > 0 and string.find(plain(shown), mine, 1, true) then
 		return "@" .. (if username and username ~= "" then username else shown)
+	end
+	-- (Nobody passes for a co-owner either: a display name that is exactly a co-owner's house name.)
+	local list = (Config.data.Admin :: any).coOwners
+	if type(list) == "table" then
+		for _, c in list do
+			if type(c) == "table" and type(c.name) == "string" and plain(shown) == plain(c.name) then
+				return "@" .. (if username and username ~= "" then username else shown)
+			end
+		end
 	end
 	return shown
 end
 
 -- The name to show for a guest in the house.
 function Names.of(player: Player): string
+	local co = Names.coOwner(player.UserId)
+	if co then
+		return co
+	end
 	if Names.isOwner(player) then
 		return Names.owner()
 	end

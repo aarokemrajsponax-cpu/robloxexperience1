@@ -58,7 +58,7 @@ Directory.List = {
 		intro = {
 			"Pick up what you can carry. The fuller the bag, the slower you go.",
 			"Keep out of the guards' sight. Caught, the bag is lost, but what's banked is safe.",
-			"Bank it at the getaway car. Upgrades and Stride are at the Luxe Lounge.",
+			"Bank it at the getaway car. Upgrades and Speed training are at the Luxe Lounge.",
 		},
 	},
 	{
@@ -286,8 +286,11 @@ function Directory.figures(cards: { [string]: any }?): { [string]: string }
 end
 
 -- The guide cards the server keeps a note of (shown once, ever): the attractions and the rooms.
+-- (Build 87) The guiding hand's notes, each shown until the guest has done it once.
+Directory.Hints = { hint_collection = true }
+
 function Directory.isGuide(id: string): boolean
-	return Directory.byAttraction[id] ~= nil or Directory.Rooms[id] ~= nil or id == "auction"
+	return Directory.byAttraction[id] ~= nil or Directory.Rooms[id] ~= nil or id == "auction" or Directory.Hints[id] == true
 end
 
 return Directory

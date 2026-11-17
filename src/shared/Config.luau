@@ -421,6 +421,11 @@ local defaults = {
 		arriveWithin = 24, -- at a stop, the card shows once the guest is this close
 		lostBeyond = 140, -- a guest this far away for lostAfter seconds has left the tour
 		lostAfter = 40,
+		-- (Build 87: never stuck.)
+		fetchAfter = 3, -- a guest hanging back this long: he walks back the way he came for them
+		holdAfterFetch = 6, -- and once he's with them, he waits beside them this long (or till they move)
+		cardAfter = 6, -- at a stop, the card shows after this long even if the guest isn't close
+		homeWithin = 25, -- after the tour, his walk back to the lectern takes no longer than this
 	},
 
 	-- Circles (§9.7, Appendix H7): clubs of up to twenty. One switch turns them off.
@@ -1063,6 +1068,14 @@ local defaults = {
 		-- giveaways, gifts, the nameplate, chat, boards), never the Roblox username; and no other
 		-- guest can pass for it (shared/Names).
 		ownerName = "AJKR",
+		-- Co-owners (Build 87): accounts with the owner's panel and every owner's power as well as the
+		-- owner of the experience on Roblox. Checked on the server by UserId only (never a name), set
+		-- here in the code and never changeable live (LOCKED below). Each goes by their house name.
+		-- TylerJefferyEvander (display name Tyler7): UserId checked with Roblox's users service,
+		-- November 2026.
+		coOwners = {
+			{ userId = 11988396018, name = "Tyler", username = "TylerJefferyEvander" },
+		},
 		studioFirstPlayer = true, -- Studio only: the first pretend test player (no real account) counts as the owner
 		announceOwner = true, -- a headline in the owner's server when they arrive ("the owner is here!")
 		consoleOnJoin = true, -- the Owner Console opens by itself when the owner joins
@@ -1498,9 +1511,11 @@ local defaults = {
 				{ id = "rbxassetid://1839931160", gain = 0.65 }, -- 8 Bit Dubstep, 2:25
 				{ id = "rbxassetid://1846368080", gain = 0.79 }, -- Stadium Rave (A), 2:34
 			},
+			-- (Build 87) The Suite's search for the codes: mysterious, cinematic tension (the old
+			-- Barren Planet and Galactron's buzzing drone is gone). Same library, levels measured.
 			executive = {
-				{ id = "rbxassetid://74182710760944", gain = 0.61 }, -- Barren Planet, 2:16
-				{ id = "rbxassetid://9045959116", gain = 1.33 }, -- Galactron, 2:57
+				{ id = "rbxassetid://121885898352841", gain = 1.46 }, -- Cinematic Tension 5 B · Cinematic Tension Vol.1, 3:14
+				{ id = "rbxassetid://119650156685164", gain = 2.00 }, -- Cinematic Tension 1 F · Cinematic Tension Vol.1, 3:12
 			},
 			-- The Executive himself (Build 82): the beats that played in the Salon, which never suited
 			-- the Salon, saved for the fight in his office.
@@ -1536,6 +1551,28 @@ local defaults = {
 				{ id = "rbxassetid://1837681287", gain = 0.60 }, -- Untouchable · Richard Brown (FASHION FUNK 3), 3:10
 				{ id = "rbxassetid://9043997901", gain = 0.58 }, -- High-end Lifestyle A · Sonoton Vanguard (NU CATWALK FASHION), 2:50
 				{ id = "rbxassetid://1842713154", gain = 0.63 }, -- LDN Street Theme · Alex Christopher Mui Cho Khoo (URBAN GROOVES), 2:45
+			},
+			-- (Build 87) Calm rooms of their own, from the same licensed library (APM Music, uploaded by
+			-- APMOfficial; no piano: piano is the Foyer's), each evened to the house's level (measured,
+			-- about -16.7 dBFS). The street-luxury beats below now play at the Executive Suite's door
+			-- and the lounges, never here.
+			-- The Salon: a gentle jazz guitar trio, swinging softly.
+			salon = {
+				{ id = "rbxassetid://9046232509", gain = 0.74 }, -- It Is What It Is A · JAZZ LOUNGE - Alvin Dyers Trio, 3:22
+				{ id = "rbxassetid://9046232704", gain = 0.72 }, -- Jazz Lounge A · JAZZ LOUNGE - Alvin Dyers Trio, 2:31
+				{ id = "rbxassetid://9046232766", gain = 0.76 }, -- Jazz Lounge B · JAZZ LOUNGE - Alvin Dyers Trio, 1:43
+			},
+			-- The Luxe Lounge (the treadmills, before Steal a Luxe): smooth, stylish, relaxed.
+			luxeLounge = {
+				{ id = "rbxassetid://9042293112", gain = 0.63 }, -- Feelings of Time · SUNRISE: Chill Ambient Electronic Vibes, 3:03
+				{ id = "rbxassetid://9044564329", gain = 0.94 }, -- Softest Touch (a) · Chill Hop, 2:12
+				{ id = "rbxassetid://9047104336", gain = 0.51 }, -- Sunday In Bed · LOFI HIP HOP, 2:50
+			},
+			-- The Basement Stair (before the course): calm and atmospheric.
+			cellarDoor = {
+				{ id = "rbxassetid://9042293396", gain = 0.92 }, -- Feelings of Time (Underscore Version) · SUNRISE, 3:03
+				{ id = "rbxassetid://1837111186", gain = 0.86 }, -- Mars in Orbit · ANALOGUE UNDERSCORES: INVESTIGATION, 3:26
+				{ id = "rbxassetid://9042294697", gain = 0.54 }, -- Fragments of Reflection (Underscore Version) · SUNRISE, 2:31
 			},
 			-- The lounges (the Suite, the Vault, the Terrace, the Boutique, the Club Floor, the street
 			-- outside and Luxury Island): late-night lo-fi, trip hop and chrome-plated downtempo.
@@ -1798,7 +1835,7 @@ end
 -- Sets one value by path. Only existing leaves can be overridden, the type must match, and who
 -- the owner is can't be (LOCKED).
 function Config.set(path: string, value: any): boolean
-	if LOCKED[path] then
+	if LOCKED[path] or string.sub(path, 1, 15) == "Admin.coOwners." or path == "Admin.coOwners" then
 		return false
 	end
 	local node: any = defaults

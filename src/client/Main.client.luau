@@ -370,6 +370,8 @@ start("Curios", function()
 	-- The quick dock: Collection, Trade, Wardrobe, Gems and Invite, one tap away (C, T, V).
 	local QuickDock = require(script.Parent.UI.QuickDock)
 	QuickDock.openCollection = function()
+		-- (Build 87: opening it is what the guiding hand asked for: noted as done.)
+		pcall(require(script.Parent.UI.CollectionHint).opened)
 		CuriosPanel.open("squad")
 	end
 	QuickDock.openTrades = function()
@@ -397,7 +399,8 @@ start("Curios", function()
 	pcall(function()
 		local Satchel = require(script.Parent.Satchel)
 		Satchel.hidden = function(): boolean
-			return QuickDock.isSorting() or Root.isOpen()
+			-- (Build 87: and under an attraction's loading screen.)
+			return QuickDock.isSorting() or Root.isOpen() or require(script.Parent.UI.LoadIn).active()
 		end
 		Satchel.start()
 	end)
@@ -778,7 +781,16 @@ local function welcome()
 			end)
 		end)
 	end)
+	-- (Build 87: when the Concierge is about to start the tour himself, a brand-new guest's first
+	-- evening, neither the arrow to him nor Start here; they're for a guest still new otherwise.)
 	if new then
+		task.delay(120, function()
+			if not Tour.active() then
+				require(script.Parent.UI.CollectionHint).offer()
+			end
+		end)
+	end
+	if new and not (guest and guest.autoTour == true) then
 		task.delay(1.6, function()
 			start("The arrow to the Concierge", function()
 				ConciergeGuide.start()
@@ -890,10 +902,16 @@ Tour.toDirectory = function()
 end
 -- (A guest shown the house is new no longer: the Concierge's key says Speak again.)
 Tour.ended = function()
+	local wasNew = State.guest ~= nil and (State.guest.guide == true or State.guest.autoTour == true or State.isFirstVisit())
 	if State.guest then
 		State.guest.guide = false
 	end
 	Objective.refresh()
+	if wasNew then
+		task.delay(2, function()
+			require(script.Parent.UI.CollectionHint).offer()
+		end)
+	end
 end
 -- While the gold arrow leads a new guest, the card under the keys says so; the Concierge's key
 -- says what to pick ("Show me the house").
@@ -909,6 +927,25 @@ Prompts.actionFor = function(prompt: ProximityPrompt): string?
 end
 Tour.isSeated = function(): boolean
 	return TableClient.isSeated()
+end
+-- (The tour begins once the title, the intro and the welcome have had their moment.)
+Tour.isClear = function(): boolean
+	return not Intro.playing() and not Title.isShowing() and not Welcome.showing()
+end
+-- (Build 87) The guiding hand at the Collection key: on the tour's Collection card, and once for
+-- a guest new to the house after the tour (or a couple of minutes in, without it).
+do
+	local CollectionHint = require(script.Parent.UI.CollectionHint)
+	CollectionHint.isBusy = function(): boolean
+		return Tour.active() or TableClient.isSeated() or Welcome.showing() or Title.isShowing()
+	end
+	Tour.pointAt = function(what: string?)
+		if what == "collection" then
+			CollectionHint.point()
+		else
+			CollectionHint.clear()
+		end
+	end
 end
 start("Tour", Tour.listen)
 -- The Grand Prix: the house's cars out front, and races round the circuit (an extra, like the
@@ -1013,6 +1050,9 @@ end)
 Remotes.event("Guest").OnClientEvent:Connect(function(message: any)
 	if type(message) == "table" and message.op == "howto" then
 		HowToPlay.open()
+	elseif type(message) == "table" and message.op == "ask" then
+		-- (Build 87: the Concierge's question book, searchable.)
+		require(script.Parent.UI.AskPanel).open(message)
 	elseif type(message) == "table" and message.op == "directory" then
 		-- (The Concierge's "Show me every game".)
 		local DirectoryPanel = require(script.Parent.UI.DirectoryPanel)

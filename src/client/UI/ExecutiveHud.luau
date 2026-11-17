@@ -10,6 +10,7 @@
 -- as captions; the way into the Office a moment's look at him (letterboxed); his finale in a red
 -- grade; and after he's beaten, the extraction's minute counting down to the lift.
 
+local CollectionService = game:GetService("CollectionService")
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -223,8 +224,13 @@ local function draw()
 			parts.under.Text = w.line
 			parts.under.TextColor3 = RED
 		else
-			parts.under.Text = if view.finale then "HIS FINALE  ·  HE'S QUICKER NOW" else ""
-			parts.under.TextColor3 = if view.finale then RED else C.smoke
+			-- (Build 87: what to do now, plainly, whenever he isn't winding up.)
+			parts.under.Text = if view.finale then "HIS FINALE  ·  HE'S QUICKER NOW"
+				elseif phase == "shield" then "SHOOT THE BLUE GENERATORS  ·  THEY POWER HIS SHIELD"
+				elseif phase == "detail" then "THE SHIELD IS DOWN  ·  STUN HIS BODYGUARDS"
+				elseif phase == "boss" then "STUN THE EXECUTIVE  ·  WATCH FOR HIS WIND-UPS"
+				else ""
+			parts.under.TextColor3 = if view.finale then RED else GOLD
 		end
 		local boss = if phase == "boss" then math.clamp((tonumber(view.boss) or 0) / math.max(1, tonumber(view.bossMax) or 1), 0, 1) else 0
 		parts.fill.Size = UDim2.new(boss, 0, 1, 0)
@@ -248,11 +254,168 @@ local function draw()
 	end
 end
 
+-- (Build 87) A health bar over each thing this phase is about (the generators, the bodyguards, the
+-- Executive), filled to what the server says is left of it (its "Hp" and "HpMax"), with its name and
+-- a small gold marker over it that bobs: what to shoot, at a glance. Only in the fight, only over
+-- what this phase is about; gone with it.
+local bars: { [Instance]: BillboardGui } = {}
+local function barColour(id: string): Color3
+	if string.sub(id, 1, 3) == "gen" then
+		return BLUE
+	elseif id == "boss" then
+		return RED
+	end
+	return Color3.fromRGB(255, 150, 70)
+end
+local function barName(id: string): string
+	if string.sub(id, 1, 3) == "gen" then
+		return "GENERATOR " .. string.sub(id, 4)
+	elseif id == "boss" then
+		return "THE EXECUTIVE"
+	end
+	return "BODYGUARD"
+end
+function ExecutiveHud.clearBars()
+	for _, b in bars do
+		b:Destroy()
+	end
+	bars = {}
+end
+function ExecutiveHud.bars()
+	local phase = tostring(view.phase or "hall")
+	local want = if phase == "shield" then "gen" elseif phase == "detail" then "guard" elseif phase == "boss" then "boss" else nil
+	local seen: { [Instance]: boolean } = {}
+	if want then
+		for _, inst in CollectionService:GetTagged("ExecHp") do
+			local id = inst:GetAttribute("ExecTarget")
+			local hp = tonumber(inst:GetAttribute("Hp")) or 0
+			local most = math.max(1, tonumber(inst:GetAttribute("HpMax")) or 1)
+			if type(id) == "string" and string.sub(id, 1, #want) == want and hp > 0 and inst.Parent then
+				seen[inst] = true
+				local b = bars[inst]
+				if not b then
+					local big = id == "boss"
+					local g = Instance.new("BillboardGui")
+					g.Name = "MaisonHpBar"
+					g.Size = UDim2.fromOffset(if big then 200 else 130, 44)
+					g.StudsOffset = Vector3.new(0, if string.sub(id, 1, 3) == "gen" then 5 else 4, 0)
+					g.AlwaysOnTop = true
+					g.MaxDistance = 200
+					g.LightInfluence = 0
+					local adornee: Instance? = inst
+					if inst:IsA("Model") then
+						adornee = inst:FindFirstChild("Head") or inst:FindFirstChild("HumanoidRootPart") or inst.PrimaryPart
+					end
+					g.Adornee = adornee :: any
+					local marker = Instance.new("TextLabel")
+					marker.Name = "Marker"
+					marker.BackgroundTransparency = 1
+					marker.AnchorPoint = Vector2.new(0.5, 0)
+					marker.Position = UDim2.fromScale(0.5, 0)
+					marker.Size = UDim2.fromOffset(20, 14)
+					marker.FontFace = Brand.Fonts.heavy
+					marker.TextSize = 14
+					marker.TextColor3 = GOLD
+					marker.Text = "▼"
+					marker.Parent = g
+					local name = Instance.new("TextLabel")
+					name.Name = "Name"
+					name.BackgroundTransparency = 1
+					name.Position = UDim2.fromOffset(0, 13)
+					name.Size = UDim2.new(1, 0, 0, 13)
+					name.FontFace = Brand.Fonts.heavy
+					name.TextSize = 11
+					name.TextColor3 = Color3.fromRGB(240, 232, 218)
+					name.TextStrokeTransparency = 0.4
+					name.Text = barName(id)
+					name.Parent = g
+					local track = Instance.new("Frame")
+					track.Name = "Track"
+					track.Position = UDim2.fromOffset(0, 29)
+					track.Size = UDim2.new(1, 0, 0, if big then 12 else 9)
+					track.BackgroundColor3 = Color3.fromRGB(16, 14, 18)
+					track.BackgroundTransparency = 0.15
+					track.Parent = g
+					local tc = Instance.new("UICorner")
+					tc.CornerRadius = UDim.new(1, 0)
+					tc.Parent = track
+					local ts = Instance.new("UIStroke")
+					ts.Color = Color3.fromRGB(0, 0, 0)
+					ts.Transparency = 0.3
+					ts.Parent = track
+					local fill = Instance.new("Frame")
+					fill.Name = "Fill"
+					fill.BackgroundColor3 = barColour(id)
+					fill.Size = UDim2.fromScale(1, 1)
+					fill.Parent = track
+					local fc = Instance.new("UICorner")
+					fc.CornerRadius = UDim.new(1, 0)
+					fc.Parent = fill
+					g.Parent = Players.LocalPlayer:FindFirstChildOfClass("PlayerGui") or Root.hud
+					bars[inst] = g
+					b = g
+				end
+				local bar = b :: BillboardGui
+				local fill = bar:FindFirstChild("Track") and (bar :: any).Track:FindFirstChild("Fill")
+				if fill then
+					fill.Size = UDim2.fromScale(math.clamp(hp / most, 0, 1), 1)
+				end
+				local marker = bar:FindFirstChild("Marker")
+				if marker and marker:IsA("TextLabel") then
+					marker.Position = UDim2.new(0.5, 0, 0, math.floor(math.abs(math.sin(os.clock() * 4)) * 3))
+				end
+			end
+		end
+	end
+	for inst, b in bars do
+		if not seen[inst] then
+			b:Destroy()
+			bars[inst] = nil
+		end
+	end
+end
+ExecutiveHud.barsFor = function(): { [Instance]: BillboardGui }
+	return bars
+end
+
 -- A shot from this guest's sidearm, toward where they aim (the server decides what it hits).
+-- (Build 87) The shot on the guest's own body: the arm kicks up and back, a flash at the muzzle.
+local function recoil()
+	pcall(function()
+		local character = Players.LocalPlayer.Character
+		if not character then
+			return
+		end
+		local shoulder = character:FindFirstChild("RightShoulder", true) or character:FindFirstChild("Right Shoulder", true)
+		if shoulder and shoulder:IsA("Motor6D") then
+			local base = shoulder:GetAttribute("BaseC0") or shoulder.C0
+			shoulder:SetAttribute("BaseC0", base)
+			shoulder.C0 = (base :: CFrame) * CFrame.Angles(math.rad(14), 0, 0)
+			TweenService:Create(shoulder, TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { C0 = base }):Play()
+		end
+		local tool = character:FindFirstChildOfClass("Tool")
+		local muzzle = tool and tool:FindFirstChild("Muzzle", true)
+		if muzzle and muzzle:IsA("BasePart") then
+			local flash = Instance.new("PointLight")
+			flash.Color = BLUE
+			flash.Brightness = 6
+			flash.Range = 8
+			flash.Parent = muzzle
+			local was = muzzle.Transparency
+			muzzle.Transparency = 0
+			task.delay(0.07, function()
+				flash:Destroy()
+				muzzle.Transparency = was
+			end)
+		end
+	end)
+end
+
 local function shoot(direction: Vector3)
 	if not fighting() then
 		return
 	end
+	recoil()
 	pcall(function()
 		Remotes.event("AttractionFire"):FireServer(direction.Unit)
 	end)
@@ -290,10 +453,32 @@ end
 ExecutiveHud.throwDecoy = throwDecoy
 
 function aimFromScreen(position: Vector2?): Vector3
+	-- (Build 87: the shot leaves from the guest's head, as the server fires it, toward the point
+	-- under the aim: the camera's own ray started behind the guest, so a shot along it from the
+	-- head passed beside what was aimed at, wider the nearer it was.)
 	local ok, direction = pcall(function()
 		local camera = Workspace.CurrentCamera :: Camera
 		local at = position or (camera.ViewportSize / 2)
-		return camera:ViewportPointToRay(at.X, at.Y).Direction
+		local ray = camera:ViewportPointToRay(at.X, at.Y)
+		local character = Players.LocalPlayer.Character
+		local root = character and character:FindFirstChild("HumanoidRootPart")
+		if not root or not root:IsA("BasePart") then
+			return ray.Direction
+		end
+		local params = RaycastParams.new()
+		params.FilterType = Enum.RaycastFilterType.Exclude
+		local skip: { Instance } = {}
+		for _, p in Players:GetPlayers() do
+			if p.Character then
+				table.insert(skip, p.Character)
+			end
+		end
+		params.FilterDescendantsInstances = skip
+		local hit = Workspace:Raycast(ray.Origin, ray.Direction * 400, params)
+		local point = if hit then hit.Position else ray.Origin + ray.Direction * 400
+		local head = root.Position + Vector3.new(0, 1.5, 0)
+		local d = point - head
+		return if d.Magnitude > 1 then d.Unit else ray.Direction
 	end)
 	if ok and typeof(direction) == "Vector3" and direction.Magnitude > 0.5 then
 		return direction
@@ -810,6 +995,7 @@ function ExecutiveHud.mount()
 		tick += dt
 		if tick >= 0.2 then
 			tick = 0
+			pcall(ExecutiveHud.bars)
 			tickCaught()
 			if windup or view.phase == "won" then
 				draw()
@@ -833,6 +1019,7 @@ function ExecutiveHud.mount()
 end
 
 function ExecutiveHud.unmount()
+	ExecutiveHud.clearBars()
 	hideCaught()
 	Sound.setMood(nil)
 	grade(false)
@@ -926,9 +1113,34 @@ local function fly(m: { [string]: any }, kind: string)
 	end)
 end
 
+-- (Build 87) A hit: a small gold X on the crosshair for a moment (the shooter's own only).
+local function hitMark(target: string)
+	local layer = Root.hud
+	local mark = Instance.new("TextLabel")
+	mark.Name = "HitMark"
+	mark.AnchorPoint = Vector2.new(0.5, 0.5)
+	mark.Position = UDim2.fromScale(0.5, 0.5)
+	mark.Size = UDim2.fromOffset(44, 44)
+	mark.BackgroundTransparency = 1
+	mark.FontFace = Brand.Fonts.heavy
+	mark.TextSize = 30
+	mark.TextColor3 = if string.sub(target, 1, 4) == "boss" then RED else GOLD
+	mark.Text = "✕"
+	mark.ZIndex = 40
+	mark.Parent = layer
+	TweenService:Create(mark, TweenInfo.new(0.35, Enum.EasingStyle.Quad), { TextTransparency = 1, Size = UDim2.fromOffset(60, 60) }):Play()
+	task.delay(0.4, function()
+		mark:Destroy()
+	end)
+	pcall(Sound.play, "chime", 0.25)
+end
+
 local function tracer(m: { [string]: any })
 	if typeof(m.from) ~= "Vector3" or typeof(m.dir) ~= "Vector3" then
 		return
+	end
+	if m.by == Players.LocalPlayer.UserId and type(m.hit) == "string" then
+		hitMark(m.hit)
 	end
 	local length = 60
 	local beam = Instance.new("Part")

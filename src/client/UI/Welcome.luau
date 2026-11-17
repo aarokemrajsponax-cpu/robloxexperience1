@@ -342,7 +342,7 @@ function Welcome.show(name: string, first: boolean)
 	-- A first evening: the Concierge shows new guests round.
 	local line: TextLabel? = nil
 	if first then
-		local l = text(holder, "Line", "The Concierge shows new guests round  ·  follow the gold arrow", Brand.Fonts.body, C.smoke)
+		local l = text(holder, "Line", "The Concierge will show you round  ·  follow him and the gold trail", Brand.Fonts.body, C.smoke)
 		l.AnchorPoint = Vector2.new(0.5, 0)
 		l.Position = UDim2.new(0.5, 0, 0, nameY + 22 * u)
 		l.Size = UDim2.new(0, math.min(vp.X - 48, 560 * u), 0, lineH)

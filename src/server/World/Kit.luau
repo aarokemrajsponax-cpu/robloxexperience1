@@ -191,12 +191,29 @@ function Kit.engrave(part: BasePart, face: Enum.NormalId, lines: { { text: strin
 	list.SortOrder = Enum.SortOrder.LayoutOrder
 	list.Parent = holder
 
+	-- (Build 87) opts.oneLine: each line kept to one line. Scaled text wraps whenever wrapping lets
+	-- it grow, so a long line on a narrow board broke in two and spilled off it ("THE LUXE / LOUNGE"
+	-- cut at the edge); a line's band is made no taller than its words fit across in one line.
+	local faceW, faceH = part.Size.X, part.Size.Y
+	if face == Enum.NormalId.Top or face == Enum.NormalId.Bottom then
+		faceW, faceH = part.Size.X, part.Size.Z
+	elseif face == Enum.NormalId.Left or face == Enum.NormalId.Right then
+		faceW, faceH = part.Size.Z, part.Size.Y
+	end
 	for i, line in lines do
 		local label = Instance.new("TextLabel")
 		label.Name = "Line" .. i
 		label.LayoutOrder = i
 		label.BackgroundTransparency = 1
-		label.Size = UDim2.new(0.94, 0, line.size, 0)
+		local size = line.size
+		if opts and opts.oneLine and faceH > 0 then
+			local n = math.max(1, utf8.len(line.text) or #line.text)
+			-- (A capital is about 0.8 of its height wide in the house's heavy face, less in the
+			-- body face; the band a little taller than the letters.)
+			local wide = if line.font == Brand.Fonts.body or line.font == Brand.Fonts.bodyBold then 0.62 else 0.8
+			size = math.min(size, faceW * 0.94 / (n * wide) * 1.15 / faceH)
+		end
+		label.Size = UDim2.new(0.94, 0, size, 0)
 		label.FontFace = line.font or Brand.Fonts.display
 		label.Text = line.text
 		label.TextColor3 = line.color or C.gold

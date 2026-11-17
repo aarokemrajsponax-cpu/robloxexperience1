@@ -87,7 +87,7 @@ HouseEvents.Announcements = {
 	"Everyone to the Ballroom: the next evening is a big one.",
 	"Golden Hour is on. Every table pays double Gilt.",
 	"A treasure hunt has begun. Look everywhere.",
-	"Thank you for spending your evening at Maison Noir.",
+	"Thank you for spending your evening at the Maison.",
 	"The Terrace is open. Come and see the fireworks.",
 }
 
@@ -102,7 +102,7 @@ HouseEvents.Headlines = {
 	"HOLIDAY HUNT STARTING NOW! LOOK EVERYWHERE!",
 	"NEW UPDATE IS LIVE! GO EXPLORE!",
 	"BIGGEST ADMIN ABUSE EVER, TONIGHT!",
-	"THANK YOU FOR PLAYING MAISON NOIR!",
+	"THANK YOU FOR PLAYING BECOME THE RICHEST GUEST!",
 	"HAVING FUN? LIKE THE GAME AND TELL A FRIEND!",
 }
 

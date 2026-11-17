@@ -195,6 +195,7 @@ check("a flex from a guest with nothing in hand is refused, and nothing is sent"
 -- 4. The tools themselves
 ---------------------------------------------------------------------------------------------------
 local pistol = Satchel.make(Satchel.wanted(d, carried)[1])
+check("Build 87: a name with a word too long for a hotbar slot is broken with a hyphen, not mid-letter", Satchel.hotbarName("Spaghettone Spettacolo") == "Spaghet-\ntone Spettacolo" and Satchel.hotbarName("Stun Pistol") == "Stun Pistol" and Satchel.hotbarName("Gelato Grandioso") == "Gelato Grandioso", Satchel.hotbarName("Spaghettone Spettacolo"))
 check("the pistol: a tool with a handle, a chrome slide and an ice muzzle, never dropped", pistol:IsA("Tool") and pistol:FindFirstChild("Handle") ~= nil and pistol:FindFirstChild("Muzzle") ~= nil and pistol.CanBeDropped == false and pistol:GetAttribute("SatchelId") == "sidearm" and pistol.Name == "Stun Pistol")
 local medal = Satchel.make(w[2])
 local held = medal:FindFirstChild("Handle") and medal.Handle:FindFirstChild("Held")

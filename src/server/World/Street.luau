@@ -91,7 +91,7 @@ local function facade(parent: Instance)
 	-- A part's Front face is -Z, which here faces the street.
 	local plaque = Kit.part(m, "Plaque", Vector3.new(3.4, 2.2, 0.15), CFrame.new(dh + 3.6, floor + 6.2, z - 0.12), L.brass)
 	Kit.engrave(plaque, Enum.NormalId.Front, {
-		{ text = "MAISON NOIR", size = 0.36, font = Brand.Fonts.display, color = Color3.fromRGB(40, 30, 12) },
+		{ text = "THE MAISON", size = 0.36, font = Brand.Fonts.display, color = Color3.fromRGB(40, 30, 12) },
 		{ text = "MEMBERS", size = 0.18, font = Brand.Fonts.bodyMedium, color = Color3.fromRGB(60, 46, 18) },
 	}, { ppu = 90, brightness = 1 })
 	local plaqueLamp = Kit.part(m, "PlaqueLamp", Vector3.new(0.5, 0.5, 0.4), CFrame.new(dh + 3.6, floor + 8.3, z - 0.4), L.brass, { collide = false })
@@ -239,7 +239,7 @@ local function streetLuxury(parent: Instance)
 	local mcf = CFrame.new(0, y, z - 0.32)
 	local board = Kit.part(m, "Marquee", Vector3.new(11.6, 1.9, 0.24), mcf, L.blackLacquer, { collide = false, shadow = false })
 	Kit.engrave(board, Enum.NormalId.Front, {
-		{ text = "MAISON NOIR", size = 0.8, font = Brand.Lettering.Space, color = pink },
+		{ text = "THE MAISON", size = 0.8, font = Brand.Lettering.Space, color = pink },
 	}, { ppu = 90, lit = false, brightness = 2.4, maxDistance = 220 })
 	neonFrame(m, mcf * CFrame.new(0, 0, -0.14), 11.9, 2.15, PINK)
 	Kit.pointLight(board, 1.1, 14, Color3.fromRGB(255, 80, 180))

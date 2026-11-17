@@ -476,13 +476,22 @@ local function roomDoor(m: Model, roomId: string)
 	-- And at eye level, beside the door, where a guest walking across the Foyer reads it: a black
 	-- lacquer board on a brass easel, the room's name in gold, how hard it is, a pip a step.
 	if room then
-		local stand = base * CFrame.new(w / 2 + 2.9, 0, -3.4)
+		-- (Beside the door on whichever side has the room: the Luxe Lounge's right-hand side ran
+		-- into the Foyer's north wall and the board stood half inside it. Build 87.)
+		local F = Layout.Foyer
+		local function clearance(c: CFrame): number
+			local p = c.Position
+			return math.min(p.X - F.minX, F.maxX - p.X, p.Z - F.minZ, F.maxZ - p.Z)
+		end
+		local right = base * CFrame.new(w / 2 + 3.4, 0, -3.4)
+		local left = base * CFrame.new(-(w / 2 + 3.4), 0, -3.4)
+		local stand = if clearance(right) >= 4.5 or clearance(right) >= clearance(left) then right else left
 		for _, sx in { -0.9, 0.9 } do
 			Kit.post(model, "EaselLeg", 4.4, 0.22, (stand * CFrame.new(sx, 0, 0.35)).Position, L.brass, { collide = false, query = false })
 		end
 		Kit.part(model, "EaselFoot", Vector3.new(2.6, 0.2, 1.2), stand * CFrame.new(0, 0.1, 0.35), L.brass, { collide = false, query = false })
-		local board = Kit.part(model, "RoomSign", Vector3.new(4.6, 2.9, 0.18), stand * CFrame.new(0, 4.3, 0) * CFrame.Angles(math.rad(6), 0, 0), L.blackLacquer, { collide = false, query = false })
-		Kit.part(model, "RoomSignEdge", Vector3.new(4.8, 3.1, 0.12), board.CFrame * CFrame.new(0, 0, 0.06), L.brass, { collide = false, query = false, shadow = false })
+		local board = Kit.part(model, "RoomSign", Vector3.new(5.4, 3.1, 0.18), stand * CFrame.new(0, 4.4, 0) * CFrame.Angles(math.rad(6), 0, 0), L.blackLacquer, { collide = false, query = false })
+		Kit.part(model, "RoomSignEdge", Vector3.new(5.6, 3.3, 0.12), board.CFrame * CFrame.new(0, 0, 0.06), L.brass, { collide = false, query = false, shadow = false })
 		local pips = string.rep("●", room.level) .. string.rep("○", 4 - room.level)
 		Kit.engrave(board, Enum.NormalId.Front, if attraction
 			then {
@@ -494,7 +503,7 @@ local function roomDoor(m: Model, roomId: string)
 				{ text = string.upper(room.name), size = 0.62, font = Brand.Fonts.display, color = Brand.Colours.brightGold },
 				{ text = string.upper(room.tag), size = 0.34, font = Brand.Fonts.bodyBold, color = Brand.Colours.bone },
 				{ text = pips, size = 0.34, font = Brand.Fonts.bodyBold, color = Brand.Colours.gold },
-			}, { ppu = 90, lit = false, brightness = 1.5, maxDistance = 160 })
+			}, { ppu = 90, lit = false, brightness = 1.5, maxDistance = 160, oneLine = true })
 		CollectionService:AddTag(board, "RoomSign")
 	end
 	-- A room that's earned is roped until it is (none now: the Executive Suite's invitation is

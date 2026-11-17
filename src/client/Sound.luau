@@ -708,19 +708,23 @@ end
 -- Foyer's alone; every other lounge (and the street, and the island) plays street luxury.
 local TRACK_FOR: { [string]: string } = {
 	foyer = "lounge",
-	vault = "street",
-	suite = "street",
-	terrace = "street",
-	street = "street",
-	club = "street",
-	boutique = "street",
+	-- (Build 87: the street-luxury beats play at the Executive Suite's door and nowhere else in
+	-- the house; the other rooms have the jazz trio or the lounge's downtempo.)
+	vault = "luxeLounge",
+	suite = "salon",
+	terrace = "luxeLounge",
+	street = "luxeLounge",
+	club = "salon",
+	boutique = "luxeLounge",
 	-- (Build 82: the Salon's old beats are the Executive's fight now; the Salon, the Library and the
 	-- attractions' anterooms play street luxury with the rest of the house.)
-	salon = "street",
-	velvet = "street",
-	obsidian = "street",
+	-- (Build 87: each anteroom a sound of its own. The street-luxury beats the guests love play at
+	-- the Executive Suite's door, never in the Salon, the Luxe Lounge or on the Basement Stair.)
+	salon = "salon",
+	velvet = "luxeLounge",
+	obsidian = "cellarDoor",
 	midnight = "street",
-	library = "street",
+	library = "salon",
 	ballroom = "ballroom",
 	-- The attractions (away from the house), each with a sound of its own (Build 78): lo-fi and
 	-- downtempo on Luxury Island (Build 80: no more piano there); a tense, stylish heist score in Steal a Luxe (and a harder one when
@@ -773,7 +777,7 @@ end
 
 -- Whether the house has any music to play (for telling the owner, in Studio, when it hasn't).
 function Sound.hasMusic(): boolean
-	for _, track in { "lounge", "ballroom", "street" } do
+	for _, track in { "lounge", "ballroom", "street", "salon", "luxeLounge", "cellarDoor" } do
 		if asset("Tracks", track) ~= "" or #playlist(track) > 0 or findUploaded("maison-" .. track) ~= "" then
 			return true
 		end

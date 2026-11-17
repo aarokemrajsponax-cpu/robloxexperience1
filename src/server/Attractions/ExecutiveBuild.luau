@@ -629,6 +629,8 @@ function ExecutiveBuild.build(parent: Instance, o: Vector3, goHome: (player: Pla
 		Kit.cylinder(m, "Collar", 0.4, 3.4, CFrame.new(g + V(0, 1.2, 0)) * CFrame.Angles(0, 0, math.rad(90)), BRASS, DECO)
 		local heart = Kit.part(m, "Core", V(2.2, 4.4, 2.2), CFrame.new(g + V(0, 3.2, 0)), look(rgb(120, 200, 255), Enum.Material.Neon), {})
 		heart:SetAttribute("ExecTarget", "gen" .. i)
+		-- (Build 87: a shot on any part of it counts, its steel base too, not only the core.)
+		m:SetAttribute("ExecTarget", "gen" .. i)
 		for k = 0, 3 do
 			local a = k * math.pi / 2 + math.pi / 4
 			Kit.part(m, "Cage", V(0.2, 5.2, 0.2), CFrame.new(g + V(math.cos(a) * 1.75, 3.6, math.sin(a) * 1.75)), BRASS, GHOST_DARK)

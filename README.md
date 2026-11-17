@@ -377,6 +377,55 @@ a Nightly attempt or a Mythic's odds.
 - **The launch kit**: page text, icon, thumbnails and the gameplay video's shot list are in
   [`LAUNCH.md`](LAUNCH.md).
 
+## Build 87 — Become The Richest Guest
+
+- **The name.** The game is *Become The Richest Guest*, played in *the Maison* (`shared/Brand`,
+  the Home Screen, the Concierge, signs, the photo watermark). **Tyler** (TylerJefferyEvander,
+  UserId 11988396018, checked against Roblox's users service) is a co-owner: the existing Owner
+  panel opens for him too, and the house shows his house name. `Config.Admin.coOwners` is locked
+  (no live config can change it) and checked by UserId only, never by a name a client sends.
+- **Music.** The Salon plays a calm jazz trio, the Luxe Lounge and the Basement Stair their own
+  calm sets; the street-luxury beats play only at the Executive Suite's door. The Suite's search
+  for the code plays cinematic tension instead of the droning track. (APM library tracks, levels
+  measured.)
+- **The Basement's hazards, fixed at the root.** The server judged 10 times a second with a
+  1.3-stud laser and wanted two looks in a row, so a runner could pass straight through a burning
+  beam. Now each step is swept between where the guest was and is, allowing for the round trip:
+  on is always dangerous, off is always safe. Gold chevrons on every pad point the way on.
+- **The Concierge's tour never sticks** (`World/Tour`): a guest who hangs back is fetched (he walks
+  back the way he came, never through a wall); at a stop the card shows when the guest is near
+  the stop or him, or after six seconds whatever; *Skip ahead* is always on the way line; a gold
+  trail on the floor runs to the next stop (`World/GoldTrail`); and when it ends, however it ends,
+  he walks back to the lectern before the house's Concierge reappears. The card rises above the
+  hotbar, so *End the tour* is never under it.
+- **First evening: the tour starts by itself**, once ever. A brand-new guest (`flags.newcomer`) is
+  welcomed by name and shown round with no click; `flags.onboarded` is saved the moment it starts,
+  so leaving, skipping or ending it never brings it back by itself (the tour is always at the
+  Concierge). A returning guest who never had it is shown the way one more evening, then never
+  again: the *Start here* card and the arrow no longer come back every visit.
+- **Speed** (was Stride): a big card on the treadmills with the level, a bar and the points.
+- **Your Collection**, in gold on the dock, with a gleam; folded away, it keeps its own gold key.
+  For a guest new to the house a ringed, gloved hand (`UI/GuideHand`) points at it once (and on
+  the tour's new Collection card), saved only when they open it or press Got it.
+- **Loading screens with their own identity** (`UI/LoadIn`): Steal a Luxe in velvet crimson with
+  sweeping security lasers and a vault dial; the Basement in dark stone with copper brickwork and
+  chevrons going down; the Executive Suite on a blueprint grid with a scanning line and the code's
+  four lights. They cover the house's keys now, and the hotbar steps aside under them.
+- **The Executive's fight**: health bars over the generators, the bodyguards and the Executive
+  (from the server's own figures), what to do next under the top line, shots aimed from the head
+  to the point under the crosshair (no more camera offset), a near miss with nothing in between
+  still lands, any part of a generator counts, a recoil and a muzzle flash, a hit marker. A *Before
+  you go up* sign by the lift says what's needed.
+- **The Concierge's questions** by kind (Getting started, The attractions, Gilt and Gems, Brainrots
+  and your collection, Around the house), with *Guide me there*, *Another question*, and a
+  searchable question book (`UI/AskPanel`). Ten new answers, each from how the house works.
+- **Fixes**: the Luxe Lounge's sign beside its door stood half inside the Foyer's wall and its
+  words broke over two lines (`Kit.engrave` gains `oneLine`); hotbar names break a long word with a
+  hyphen; the hotbar's tip for the pistol now says where it fires.
+- **Product icons** (`assets/product-icons`, `tools/art/product_icons.py`): a 512 px icon for every
+  product and pass, circle-safe, with `MAPPING.md`. **None is uploaded or assigned**: upload each in
+  Creator Hub yourself.
+
 ## Build 86 — Twin lanes in the Basement, a clearer heist card, keys above the hotbar
 
 - **Keys above the hotbar.** `Root.setBottom` now fires `Root.TopChanged`, which every attraction

@@ -94,7 +94,9 @@ function Guests.needsGuide(data: Profiles.Data): boolean
 	local flags = if type(d.flags) == "table" then d.flags else {}
 	local stats = if type(d.stats) == "table" then d.stats else {}
 	local rounds = if type(stats.rounds) == "number" then stats.rounds else 0
-	if flags.toured == true or rounds >= 2 then
+	-- (Build 87: and once a guest has been through the first evening's welcome, or been shown the
+	-- way once on a later one, they're never sent to it again: flags.onboarded, saved.)
+	if flags.toured == true or flags.onboarded == true or rounds >= 2 then
 		return false
 	end
 	-- (Nor is a guest who has played an attraction: the house is no longer only its tables.)
@@ -106,15 +108,41 @@ function Guests.needsGuide(data: Profiles.Data): boolean
 	return true
 end
 
+-- (Build 87) Whether the Concierge starts the tour himself for this guest when they come into the
+-- Foyer: only a guest whose very first evening began on Build 87 or later (flags.newcomer, set
+-- then) and who hasn't had it yet (flags.onboarded, set the moment it starts: a guest who leaves
+-- halfway, skips it or ends it is never sent round again; the tour is always at the Concierge).
+-- A guest who left before reaching the Foyer still has it next time.
+function Guests.autoTourDue(data: Profiles.Data): boolean
+	local flags = (data :: any).flags
+	return type(flags) == "table" and flags.newcomer == true and flags.onboarded ~= true and Guests.needsGuide(data)
+end
+
+-- (Called as the tour starts by itself: never again, on any server.)
+function Guests.markOnboarded(data: Profiles.Data)
+	local flags = (data :: any).flags
+	if type(flags) == "table" then
+		flags.onboarded = true
+	end
+end
+
 local function payload(player: Player, data: Profiles.Data, visit: Visit): { [string]: any }
 	local registered = 0
 	for _ in data.register do
 		registered += 1
 	end
+	local guide = Guests.needsGuide(data)
+	local auto = Guests.autoTourDue(data)
+	if guide and not auto and type(data.flags) == "table" then
+		-- (A guest from before Build 87 who never had the tour: shown the way this evening, once;
+		-- after that they come in like anyone else. The tour is always at the Concierge.)
+		data.flags.onboarded = true
+	end
 	return {
 		op = "welcome",
 		firstVisit = visit.firstVisit,
-		guide = Guests.needsGuide(data),
+		guide = guide,
+		autoTour = auto,
 		displayName = Names.of(player),
 		settings = data.settings,
 		overrides = LiveConfig.overrides,
@@ -259,6 +287,10 @@ local function welcome(player: Player, data: Profiles.Data)
 	visit.firstVisit = data.visits == 0
 	if data.visits == 0 then
 		data.firstVisit = os.time()
+		-- (Build 87: a brand-new guest, whom the Concierge will show round by himself.)
+		if type(data.flags) == "table" then
+			data.flags.newcomer = true
+		end
 	end
 	data.visits += 1
 	-- Nights attended: every UTC day with a visit counts. It never resets.

@@ -3,7 +3,7 @@
 -- and only while, the server says they're in it (the "Attraction" attribute), and goes the moment
 -- they're out. What the server tells them about it (the Attraction event) comes here first: going
 -- in and out, the house's notices, the board at the Luxe Lounge's lectern, and Stride while they
--- walk a treadmill in the Lounge (a small count at the foot of the screen). Luxury Island's jet
+-- walk a treadmill in the Lounge (Speed: a card at the foot of the screen). Luxury Island's jet
 -- flies them in and home (World/IslandView), and the Jet Lounge's card opens from its arch. The
 -- Grand Ballroom's screen, cards and hall (UI/GalaHud, UI/GalaPanel, World/GalaView) too.
 
@@ -39,43 +39,107 @@ local Attraction = {}
 local player = Players.LocalPlayer
 local GOLD = Color3.fromRGB(255, 204, 90)
 
-local chip: TextLabel? = nil
+local chip: Frame? = nil
 local chipUntil = 0
 
+-- (Build 87) Speed, on a treadmill in the Luxe Lounge: a card at the foot of the screen, over the
+-- keys, big enough to read while walking: SPEED and the level, a gold bar filling to the next
+-- level with the points, and GOLDEN ×2 on the golden treadmill. (It was a small chip called Stride.)
 local function strideChip(m: { [string]: any })
 	local c = chip
 	if not c then
-		local l = Instance.new("TextLabel")
-		l.Name = "StrideChip"
-		l.AnchorPoint = Vector2.new(0.5, 1)
-		l.Size = UDim2.fromOffset(0, 30)
-		l.AutomaticSize = Enum.AutomaticSize.X
-		l.BackgroundColor3 = Color3.fromRGB(16, 13, 9)
-		l.BackgroundTransparency = 0.08
-		l.FontFace = Brand.Fonts.bodyBold
-		l.TextSize = 13
-		l.TextColor3 = GOLD
-		l.Parent = Root.hud
+		local card = Instance.new("Frame")
+		card.Name = "SpeedCard"
+		card.AnchorPoint = Vector2.new(0.5, 1)
+		card.BackgroundColor3 = Color3.fromRGB(14, 11, 8)
+		card.BackgroundTransparency = 0.04
+		card.Parent = Root.hud
 		local corner = Instance.new("UICorner")
-		corner.CornerRadius = UDim.new(0, 15)
-		corner.Parent = l
-		local pad = Instance.new("UIPadding")
-		pad.PaddingLeft = UDim.new(0, 14)
-		pad.PaddingRight = UDim.new(0, 14)
-		pad.Parent = l
+		corner.CornerRadius = UDim.new(0, 16)
+		corner.Parent = card
 		local edge = Instance.new("UIStroke")
 		edge.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 		edge.Color = GOLD
-		edge.Transparency = 0.3
-		edge.Parent = l
-		chip = l
-		c = l
+		edge.Thickness = 2
+		edge.Transparency = 0.15
+		edge.Parent = card
+		local shade = Instance.new("UIGradient")
+		shade.Rotation = 90
+		shade.Color = ColorSequence.new(Color3.fromRGB(255, 255, 255), Color3.fromRGB(150, 140, 130))
+		shade.Parent = card
+		local title = Instance.new("TextLabel")
+		title.Name = "Title"
+		title.BackgroundTransparency = 1
+		title.Position = UDim2.fromOffset(18, 10)
+		title.Size = UDim2.new(1, -36, 0, 28)
+		title.FontFace = Brand.Fonts.display
+		title.TextSize = 24
+		title.TextColor3 = Color3.fromRGB(255, 244, 222)
+		title.TextXAlignment = Enum.TextXAlignment.Left
+		title.TextTruncate = Enum.TextTruncate.AtEnd
+		title.Parent = card
+		local badge = Instance.new("TextLabel")
+		badge.Name = "Golden"
+		badge.AnchorPoint = Vector2.new(1, 0)
+		badge.Position = UDim2.new(1, -14, 0, 12)
+		badge.Size = UDim2.fromOffset(96, 24)
+		badge.BackgroundColor3 = GOLD
+		badge.FontFace = Brand.Fonts.bodyBold
+		badge.TextSize = 13
+		badge.TextColor3 = Color3.fromRGB(28, 20, 8)
+		badge.Text = "GOLDEN  ×2"
+		badge.Parent = card
+		local bc = Instance.new("UICorner")
+		bc.CornerRadius = UDim.new(1, 0)
+		bc.Parent = badge
+		local track = Instance.new("Frame")
+		track.Name = "Track"
+		track.Position = UDim2.new(0, 18, 0, 46)
+		track.Size = UDim2.new(1, -136, 0, 10)
+		track.BackgroundColor3 = Color3.fromRGB(58, 48, 34)
+		track.Parent = card
+		local tc = Instance.new("UICorner")
+		tc.CornerRadius = UDim.new(1, 0)
+		tc.Parent = track
+		local fill = Instance.new("Frame")
+		fill.Name = "Fill"
+		fill.Size = UDim2.fromScale(0, 1)
+		fill.BackgroundColor3 = GOLD
+		fill.Parent = track
+		local fc = Instance.new("UICorner")
+		fc.CornerRadius = UDim.new(1, 0)
+		fc.Parent = fill
+		local count = Instance.new("TextLabel")
+		count.Name = "Count"
+		count.AnchorPoint = Vector2.new(1, 0)
+		count.BackgroundTransparency = 1
+		count.Position = UDim2.new(1, -16, 0, 40)
+		count.Size = UDim2.fromOffset(108, 22)
+		count.FontFace = Brand.Fonts.figures
+		count.TextSize = 16
+		count.TextColor3 = GOLD
+		count.TextXAlignment = Enum.TextXAlignment.Right
+		count.Parent = card
+		chip = card
+		c = card
 	end
-	local label = c :: TextLabel
-	label.Position = UDim2.new(0.5, 0, 1, -(70 + Root.bottomClear()))
+	local card = c :: Frame
+	local vp = Root.size()
+	card.Size = UDim2.fromOffset(math.min(380, vp.X - 32), 72)
+	card.Position = UDim2.new(0.5, 0, 1, -(76 + Root.bottomClear()))
 	local nextAt = tonumber(m.next)
-	label.Text = string.format("%sSTRIDE  ·  LEVEL %d  ·  %s", if m.golden then "GOLDEN  ·  " else "", tonumber(m.level) or 1, if nextAt then string.format("%d / %d", tonumber(m.points) or 0, nextAt) else "THE TOP")
-	label.Visible = true
+	local points = tonumber(m.points) or 0
+	local title = card:FindFirstChild("Title") :: TextLabel
+	local count = card:FindFirstChild("Count") :: TextLabel
+	local badge = card:FindFirstChild("Golden") :: TextLabel
+	local track = card:FindFirstChild("Track") :: Frame
+	local fill = track:FindFirstChild("Fill") :: Frame
+	title.Text = string.format("SPEED  ·  LEVEL %d", tonumber(m.level) or 1)
+	title.Size = UDim2.new(1, if m.golden then -140 else -36, 0, 28)
+	badge.Visible = m.golden == true
+	count.Text = if nextAt then string.format("%d / %d", points, nextAt) else "THE TOP"
+	fill.Size = UDim2.fromScale(if nextAt and nextAt > 0 then math.clamp(points / nextAt, 0, 1) else 1, 1)
+	card.Visible = true
 	chipUntil = os.clock() + 2.5
 	task.delay(2.6, function()
 		if chip and os.clock() >= chipUntil then
@@ -265,7 +329,7 @@ function Attraction.start()
 			local held = tonumber(m.invites) or 1
 			Toast.show("An invitation earned", string.format("To the Executive Suite (you hold %d). Its lift is in the Executive's Anteroom, off the Foyer.", held), 5)
 		elseif op == "strideUp" then
-			Toast.show(string.format("Stride level %d", tonumber(m.level) or 1), string.format("%d%% faster in Steal a Luxe", tonumber(m.faster) or 0), 3)
+			Toast.show(string.format("Speed level %d", tonumber(m.level) or 1), string.format("%d%% faster in Steal a Luxe", tonumber(m.faster) or 0), 3)
 		elseif LuxeHud.mounted() then
 			LuxeHud.on(m)
 		elseif BasementHud.mounted() then

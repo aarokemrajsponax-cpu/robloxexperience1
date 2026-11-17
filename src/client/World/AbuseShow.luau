@@ -2749,7 +2749,7 @@ FINALES.credits = function(n: Night, stopped: boolean, P: AbuseNights.Palette)
 	end
 	table.sort(seen)
 	local lines: { { text: string, big: boolean? } } = {
-		{ text = "MAISON NOIR PRESENTS", big = false },
+		{ text = "THE MAISON PRESENTS", big = false },
 		{ text = string.upper(n.name), big = true },
 		{ text = " " },
 		{ text = "STARRING" },

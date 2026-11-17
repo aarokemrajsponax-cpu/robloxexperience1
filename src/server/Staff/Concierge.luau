@@ -181,6 +181,11 @@ Concierge.needsTour = function(_player: Player): boolean
 	return false
 end
 Concierge.toured = function(_player: Player) end
+-- Set by Main (Build 87): whether to start the tour by himself for this guest (a brand-new guest
+-- who hasn't had it), and if so noted at once so it never starts by itself again.
+Concierge.autoTour = function(_player: Player): boolean
+	return false
+end
 
 function Concierge.tour(player: Player)
 	Concierge.markNews(player)
@@ -393,23 +398,7 @@ local function menu(player: Player)
 				findPlace(player, id)
 			end)
 		elseif choice == "ask" then
-			local list = {}
-			for _, q in V.questions do
-				table.insert(list, { id = q.id, text = q.q })
-			end
-			Dialogue.say(player, V.speaker, V.whichQuestion, list, function(id: string)
-				local a = Concierge.answer(id)
-				if a then
-					Dialogue.say(player, V.speaker, a, {
-						{ id = "more", text = V.choices.ask },
-						{ id = "fine", text = V.choices.thanks },
-					}, function(next: string)
-						if next == "more" then
-							menu(player)
-						end
-					end)
-				end
-			end)
+			Concierge.askMenu(player)
 		elseif choice == "tour" then
 			Concierge.tour(player)
 		elseif choice == "evening" then
@@ -476,6 +465,19 @@ end
 -- (a first evening, or no tour yet and fewer than two rounds) is offered the tour; returning
 -- guests hear the one thing that matters tonight.
 function Concierge.greet(player: Player, firstVisit: boolean, nightlyPending: boolean?, remembered: string?)
+	local okAuto, auto = pcall(Concierge.autoTour, player)
+	if okAuto and auto == true then
+		-- (Build 87) A brand-new guest: welcomed by name, told what's about to happen and how to
+		-- end it, and then shown round without a click. Never again by itself after this.
+		Concierge.markNews(player)
+		Dialogue.say(player, V.speaker, (V.firstTour:gsub("{name}", Names.of(player))), nil, nil, 5)
+		task.delay(5, function()
+			if player.Parent == Players and not Concierge.isSeated(player) and not Concierge.isTouring(player) then
+				Concierge.tour(player)
+			end
+		end)
+		return
+	end
 	local ok, new = pcall(Concierge.needsTour, player)
 	if firstVisit or (ok and new == true) then
 		-- (A new guest's tour shows them everything new too.)
@@ -571,6 +573,113 @@ end
 
 Concierge.menu = function(player: Player)
 	menu(player)
+end
+
+---------------------------------------------------------------------------------------------------
+-- (Build 87) Questions, by kind: pick a kind, then a question; the answer has Guide me there (when
+-- it's about a place: the gold arrows, walking), Another question (back to that kind) and Thank
+-- you. Or every question at once in the house's question book on the guest's screen, with a
+-- search (UI/AskPanel), filled with the same answers.
+---------------------------------------------------------------------------------------------------
+local function questionById(id: string): any
+	for _, q in V.questions do
+		if q.id == id then
+			return q
+		end
+	end
+	return nil
+end
+
+local askCategory: (player: Player, cat: string) -> ()
+
+local function answerQuestion(player: Player, id: string, cat: string?)
+	local q = questionById(id)
+	local a = Concierge.answer(id)
+	if not q or not a then
+		return
+	end
+	local choices = {}
+	if type(q.place) == "string" then
+		table.insert(choices, { id = "guide", text = V.qaGuide })
+	end
+	table.insert(choices, { id = "another", text = V.qaAnother })
+	table.insert(choices, { id = "fine", text = V.choices.thanks })
+	Dialogue.say(player, V.speaker, a, choices, function(next: string)
+		if player.Parent ~= Players then
+			return
+		end
+		if next == "guide" and type(q.place) == "string" then
+			if Concierge.showWay(player, q.place) then
+				Dialogue.say(player, V.speaker, V.find.showing, nil, nil, 3)
+			end
+		elseif next == "another" then
+			if cat then
+				askCategory(player, cat)
+			else
+				Concierge.askMenu(player)
+			end
+		end
+	end)
+end
+Concierge.answerQuestion = answerQuestion
+
+askCategory = function(player: Player, cat: string)
+	local name = cat
+	for _, c in V.qaCategories do
+		if c.id == cat then
+			name = c.name
+		end
+	end
+	local list = {}
+	for _, q in V.questions do
+		if q.cat == cat then
+			table.insert(list, { id = q.id, text = q.q })
+		end
+	end
+	table.insert(list, { id = "back", text = V.qaBack })
+	Dialogue.say(player, V.speaker, name .. ".", list, function(id: string)
+		if id == "back" then
+			Concierge.askMenu(player)
+		else
+			answerQuestion(player, id, cat)
+		end
+	end)
+end
+
+-- Every question with its answer, for the question book on the guest's screen.
+function Concierge.questionBook(): { [string]: any }
+	local items = {}
+	for _, q in V.questions do
+		local at: Vector3? = nil
+		if type(q.place) == "string" then
+			local _, p = Concierge.placeAt(q.place)
+			at = p
+		end
+		table.insert(items, { id = q.id, cat = q.cat, q = q.q, a = Concierge.answer(q.id), place = if at then q.place else nil })
+	end
+	return { op = "ask", cats = V.qaCategories, items = items }
+end
+
+function Concierge.askMenu(player: Player)
+	local list = {}
+	for _, c in V.qaCategories do
+		table.insert(list, { id = "cat:" .. c.id, text = c.name })
+	end
+	table.insert(list, { id = "search", text = V.qaSearch })
+	Dialogue.say(player, V.speaker, V.whichQuestion, list, function(id: string)
+		if player.Parent ~= Players then
+			return
+		end
+		if id == "search" then
+			Dialogue.close(player)
+			Remotes.event("Guest"):FireClient(player, Concierge.questionBook())
+			return
+		end
+		local cat = string.match(id, "^cat:(.+)$")
+		if cat then
+			askCategory(player, cat)
+		end
+	end)
 end
 
 function Concierge.line(player: Player, line: string, hold: number?)

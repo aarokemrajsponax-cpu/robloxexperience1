@@ -272,7 +272,7 @@ function OwnerConsole.open(startPage: string?)
 	tg.Color = ColorSequence.new(rgb(255, 236, 170), rgb(230, 160, 50))
 	tg.Rotation = 90
 	tg.Parent = title
-	local status = label(header, "Welcome back, " .. Names.owner() .. ". Only you can see this.", 12, BODY, rgb(200, 190, 170), {
+	local status = label(header, "Welcome back, " .. Names.of(player) .. ". Only you can see this.", 12, BODY, rgb(200, 190, 170), {
 		Name = "Status",
 		Position = UDim2.fromOffset(18, 44),
 		Size = UDim2.new(if narrow then 1 else 0.55, -24, 0, 18),
@@ -1087,7 +1087,7 @@ function OwnerConsole.welcome()
 	dim.Size = UDim2.fromScale(1, 1)
 	dim.Parent = s
 	local crown = label(dim, "👑", 90, BOLD, Color3.new(1, 1, 1), { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.36), Size = UDim2.fromOffset(160, 120), TextScaled = true })
-	local words = label(dim, "WELCOME BACK, " .. string.upper(Names.owner()), 40, HEAVY, Color3.new(1, 1, 1), { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.52), Size = UDim2.new(0.9, 0, 0, 56), TextScaled = true })
+	local words = label(dim, "WELCOME BACK, " .. string.upper(Names.of(player)), 40, HEAVY, Color3.new(1, 1, 1), { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.52), Size = UDim2.new(0.9, 0, 0, 56), TextScaled = true })
 	local wg = Instance.new("UIGradient")
 	wg.Color = ColorSequence.new(rgb(255, 240, 180), rgb(230, 150, 40))
 	wg.Rotation = 90

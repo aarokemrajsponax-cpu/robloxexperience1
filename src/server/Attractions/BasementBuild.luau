@@ -296,6 +296,18 @@ function BasementBuild.build(parent: Instance, o: Vector3, goHome: (player: Play
 		Kit.cylinder(course, "CheckpointMedallion", 0.1, math.min(w, d) * 0.32, CFrame.new(top + Vector3.new(0, 0.1, 0)) * CFrame.Angles(0, 0, math.rad(90)), look(Color3.fromRGB(196, 156, 74), Enum.Material.Metal, 0.3), glow)
 		ring:SetAttribute("Checkpoint", n)
 		checkpoints[n] = ring
+		if n < Plan.STAGES then
+			-- (Build 87: gold chevrons on the pad's far half, pointing on down the course, the way
+			-- forward; this screen's BasementMotion runs a soft pulse through them, front last.)
+			local gold = look(rgb(255, 206, 110), Enum.Material.Neon, nil, 0.2)
+			for k, zc in { 0.9, 2.2 } do
+				for _, side in { -1, 1 } do
+					local bar = Kit.part(course, "ForwardArrow", Vector3.new(1.56, 0.1, 0.3), CFrame.new(top + Vector3.new(side * 0.55, 0.12, zc + 0.05)) * CFrame.Angles(0, math.rad(side * 45), 0), gold, glow)
+					bar:SetAttribute("Phase", k)
+					CollectionService:AddTag(bar, "BasementArrow")
+				end
+			end
+		end
 		if n > 0 and n < Plan.STAGES then
 			sign(course, top + Vector3.new(0, 9, c.size.Z / 2 + 0.4), top + Vector3.new(0, 9, c.size.Z / 2 + 40), string.format("%d  ·  %s", n + 1, string.upper(Plan.StageNames[n + 1])), zone.name, zone.colour)
 		elseif n == 0 then

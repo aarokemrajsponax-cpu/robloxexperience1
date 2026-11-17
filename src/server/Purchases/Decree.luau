@@ -219,7 +219,7 @@ local function post(player: Player, data: Profiles.Data): boolean
 	lastBy[player.UserId] = os.clock()
 	-- (The owner proclaims as AJKR alone: never their Roblox username. Everyone else: display
 	-- name and @username, always.)
-	local q: Queued = { player = player, userId = player.UserId, name = Names.of(player), user = if Names.isOwner(player) then Names.owner() else player.Name, text = p.text }
+	local q: Queued = { player = player, userId = player.UserId, name = Names.of(player), user = if Names.isOwner(player) then (Names.coOwner(player.UserId) or Names.owner()) else player.Name, text = p.text }
 	table.insert(queue, q)
 	audit(q)
 	Perks.push(player)

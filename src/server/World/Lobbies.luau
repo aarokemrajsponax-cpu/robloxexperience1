@@ -129,7 +129,7 @@ local function treadmill(parent: Instance, cf: CFrame, golden: boolean): BasePar
 	end
 	local console = Kit.part(m, "Console", Vector3.new(5, 2.6, 0.8), cf * CFrame.new(0, 4.6, 5.2) * CFrame.Angles(math.rad(-20), 0, 0), L.blackLacquer, { collide = false })
 	Kit.engrave(console, Enum.NormalId.Back, {
-		{ text = if golden then "GOLDEN · DOUBLE STRIDE" else "STRIDE", size = 0.45, font = Brand.Fonts.display, color = rgb(255, 214, 120) },
+		{ text = if golden then "GOLDEN · SPEED ×2" else "SPEED TRAINING", size = 0.45, font = Brand.Fonts.display, color = rgb(255, 214, 120) },
 		{ text = "keep walking", size = 0.3, font = Brand.Fonts.body, color = rgb(230, 220, 200) },
 	}, { ppu = 80, lit = false, brightness = 1.5 })
 	Kit.part(m, "Glow", Vector3.new(4.4, 0.12, 0.3), cf * CFrame.new(0, 1.25, -4.9), { color = if golden then GOLD else rgb(214, 62, 92), material = Enum.Material.Neon }, { collide = false, query = false, shadow = false })
@@ -155,7 +155,7 @@ local function luxeLounge(parent: Instance)
 	local goldSign = Kit.part(m, "GoldenSign", Vector3.new(8, 2.4, 0.25), CFrame.lookAt(Vector3.new(gx, y + 10, R.minZ + 1.4), Vector3.new(gx, y + 10, R.maxZ)), L.blackLacquer, { collide = false })
 	Kit.engrave(goldSign, Enum.NormalId.Front, {
 		{ text = "THE GOLDEN TREADMILL", size = 0.45, font = Brand.Fonts.display, color = rgb(255, 214, 120) },
-		{ text = "double Stride · yours for Gems at the board", size = 0.3, font = Brand.Fonts.body, color = rgb(230, 220, 200) },
+		{ text = "Speed trains twice as fast · yours for Gems at the board", size = 0.3, font = Brand.Fonts.body, color = rgb(230, 220, 200) },
 	}, { ppu = 70, lit = false, brightness = 1.5 })
 	-- The board: a brass lectern with the upgrades, and a sign over the treadmills.
 	local lx = R.minX + 14
@@ -168,7 +168,7 @@ local function luxeLounge(parent: Instance)
 	local sign = Kit.part(m, "LoungeSign", Vector3.new(26, 3.2, 0.3), CFrame.lookAt(Vector3.new((R.minX + R.maxX) / 2, y + 15, R.maxZ - 1.4), Vector3.new((R.minX + R.maxX) / 2, y + 15, R.minZ)), L.blackLacquer, { collide = false })
 	Kit.engrave(sign, Enum.NormalId.Front, {
 		{ text = "THE LUXE LOUNGE", size = 0.55, font = Brand.Fonts.display, color = rgb(255, 214, 120) },
-		{ text = "run the treadmills for Stride: faster in the residence, where it matters", size = 0.28, font = Brand.Fonts.body, color = rgb(230, 220, 200) },
+		{ text = "run the treadmills to train your Speed: faster in the residence, where it matters", size = 0.28, font = Brand.Fonts.body, color = rgb(230, 220, 200) },
 	}, { ppu = 50, lit = false, brightness = 1.5, maxDistance = 180 })
 end
 
@@ -220,6 +220,15 @@ local function anteroom(parent: Instance)
 		{ text = "THE EXECUTIVE SUITE", size = 0.55, font = Brand.Fonts.display, color = rgb(255, 214, 120) },
 		{ text = "you need an invitation and your free stun pistol · ask the Quartermaster", size = 0.28, font = Brand.Fonts.body, color = rgb(230, 220, 200) },
 	}, { ppu = 50, lit = false, brightness = 1.5, maxDistance = 180 })
+	-- (Build 87) Beside the lift, at eye level, what's needed before going up, so nobody is
+	-- surprised at the doors: the lift won't take a guest without both.
+	local check = Kit.sign(m, "BeforeYouGoUp", CFrame.lookAt(Vector3.new(midX + 13, y, R.minZ + 4.5), Vector3.new(midX + 13, y, R.maxZ)), 7.2, 3.6, {
+		{ text = "BEFORE YOU GO UP", size = 0.2, font = Brand.Fonts.display, color = rgb(255, 214, 120) },
+		{ text = "1 · An invitation", size = 0.17, font = Brand.Fonts.bodyBold, color = rgb(236, 228, 214) },
+		{ text = "2 · Your stun pistol: free at the Quartermaster's desk", size = 0.15, font = Brand.Fonts.bodyBold, color = rgb(236, 228, 214) },
+		{ text = "it fires in the Office's fight: the generators, his bodyguards, then him", size = 0.12, font = Brand.Fonts.body, color = rgb(200, 190, 176) },
+	}, 4.4)
+	check.Name = "BeforeYouGoUpBoard"
 end
 
 -- The auction house round the rostrum: a velvet backdrop under a brass pelmet, two lots on marble

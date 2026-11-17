@@ -20,6 +20,8 @@
 --                 everyone in the Office is paid (the Estate, Gems within the day's cap, his brainrot
 --                 the first time), the safe opens (once each) and the lift down.
 
+local CollectionService = game:GetService("CollectionService")
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
@@ -262,6 +264,7 @@ local run = {
 	open = false,
 	phase = "hall" :: string, -- "hall", "shield", "detail", "boss", "won"
 	generators = {} :: { [string]: number },
+	genMax = {} :: { [string]: number }, -- (Build 87) each generator's full charge, for its bar
 	actors = {} :: { [string]: Actor },
 	shots = {} :: { Shot },
 	waves = {} :: { Wave },
@@ -391,9 +394,13 @@ local function fresh(_ctx: Types.Ctx)
 	run.extractUntil = 0
 	clearActors()
 	run.generators = {}
+	run.genMax = {}
 	for i, part in b.generators do
 		run.generators["gen" .. i] = 100
+		run.genMax["gen" .. i] = 100
 		part.Transparency = 0
+		part:SetAttribute("Hp", nil)
+		part:SetAttribute("HpMax", nil)
 	end
 	ExecutiveBuild.door(b, true)
 	b.shield.CanCollide = true
@@ -553,6 +560,29 @@ local function hurt(ctx: Types.Ctx, player: Player, g: Guest, amount: number, wh
 	end
 end
 
+-- (Build 87) What's left of a target, on the target itself (its part's or model's "Hp" and "HpMax"
+-- attributes), for every screen's health bar over it. Only the server writes them.
+local function showHp(target: string)
+	local b = built
+	if string.sub(target, 1, 3) == "gen" then
+		local part = b and b.generators[tonumber(string.sub(target, 4)) or 0]
+		if part then
+			part:SetAttribute("Hp", run.generators[target] or 0)
+			part:SetAttribute("HpMax", run.genMax[target] or 100)
+			part:SetAttribute("ExecTarget", target)
+			CollectionService:AddTag(part, "ExecHp")
+		end
+	else
+		local a = run.actors[target]
+		if a and a.model and a.model.Parent then
+			a.model:SetAttribute("Hp", a.hp)
+			a.model:SetAttribute("HpMax", a.max)
+			CollectionService:AddTag(a.model, "ExecHp")
+		end
+	end
+end
+Executive.showHp = showHp
+
 local function startPhase(ctx: Types.Ctx, phase: string)
 	run.phase = phase
 	local b = built :: ExecutiveBuild.Built
@@ -560,6 +590,8 @@ local function startPhase(ctx: Types.Ctx, phase: string)
 	if phase == "shield" then
 		for id in run.generators do
 			run.generators[id] = math.floor(100 * s)
+			run.genMax[id] = run.generators[id]
+			showHp(id)
 		end
 		run.nextAttack = Executive.clock() + 3
 	elseif phase == "detail" then
@@ -570,12 +602,14 @@ local function startPhase(ctx: Types.Ctx, phase: string)
 			root:SetAttribute("ExecTarget", "guard" .. i)
 			model:SetAttribute("ExecTarget", "guard" .. i)
 			run.actors["guard" .. i] = { id = "guard" .. i, kind = "guard", model = model, root = root, humanoid = humanoid, hp = math.floor(60 * s), max = math.floor(60 * s), index = 1, lastHit = 0 }
+			showHp("guard" .. i)
 		end
 	elseif phase == "boss" then
 		local boss = run.actors.boss
 		if boss then
 			boss.hp = math.floor(400 * s)
 			boss.max = boss.hp
+			showHp("boss")
 		end
 		run.nextAttack = Executive.clock() + 2
 		run.attackIndex = 0
@@ -651,6 +685,7 @@ local function strike(ctx: Types.Ctx, target: string, damage: number)
 			return
 		end
 		run.generators[target] = math.max(0, hp - damage)
+		showHp(target)
 		if run.generators[target] <= 0 then
 			local b = built :: ExecutiveBuild.Built
 			local part = b.generators[tonumber(string.sub(target, 4)) or 0]
@@ -679,6 +714,7 @@ local function strike(ctx: Types.Ctx, target: string, damage: number)
 			return
 		end
 		a.hp = math.max(0, a.hp - damage)
+		showHp(target)
 		if a.hp <= 0 then
 			broadcast(ctx, { op = "down", target = target })
 			if a.kind == "guard" then
@@ -700,6 +736,42 @@ local function strike(ctx: Types.Ctx, target: string, damage: number)
 		end
 		pushAll(ctx)
 	end
+end
+
+-- (Build 87) The target this phase is about that a shot from `from` along `dir` passes closest to,
+-- within a little of it (more for a big target, and a touch more the further it is) and with no wall
+-- in between; nil if none.
+function Executive.assist(from: Vector3, dir: Vector3, range: number, ignore: { Instance }?): string?
+	local best, bestAlong = nil, math.huge
+	local function consider(id: string, at: Vector3, radius: number)
+		local rel = at - from
+		local along = rel:Dot(dir)
+		if along <= 0 or along > range then
+			return
+		end
+		local miss = (rel - dir * along).Magnitude
+		-- (And the straight line to it really reaches it: nothing solid, his shield included, between.)
+		if miss <= radius + along * 0.02 and along < bestAlong and Executive.ray(from, (at - from) * 1.02, ignore or {}) == id then
+			best, bestAlong = id, along
+		end
+	end
+	if run.phase == "shield" then
+		local b = built
+		for id, hp in run.generators do
+			local part = b and b.generators[tonumber(string.sub(id, 4)) or 0]
+			if hp > 0 and part then
+				consider(id, part.CFrame.Position, math.max(part.Size.X, part.Size.Z) / 2 + 1.5)
+			end
+		end
+	else
+		local wanted = if run.phase == "detail" then "guard" elseif run.phase == "boss" then "boss" else nil
+		for id, a in run.actors do
+			if a.kind == wanted and a.hp > 0 and a.root.Parent then
+				consider(id, a.root.CFrame.Position, 2.5)
+			end
+		end
+	end
+	return best
 end
 
 -- A guest fires their sidearm toward `dir` (from their own head, as the server sees it).
@@ -729,11 +801,22 @@ function Executive.fire(ctx: Types.Ctx, player: Player, dir: unknown): boolean
 	end
 	g.lastShot = now
 	local from = root.CFrame.Position + Vector3.new(0, 1.5, 0)
+	-- (Build 87: a shot passes through every guest, not only the one firing: another guest
+	-- stepping in front never swallows it.)
 	local ignore: { Instance } = {}
-	if player.Character then
-		table.insert(ignore, player.Character)
+	for _, p in Players:GetPlayers() do
+		if p.Character then
+			table.insert(ignore, p.Character)
+		end
 	end
-	local target = Executive.ray(from, d.Unit * (tonumber(cfg(ctx).range) or 140), ignore)
+	local range = tonumber(cfg(ctx).range) or 140
+	local target = Executive.ray(from, d.Unit * range, ignore)
+	if not target then
+		-- (Build 87) A near miss on what this phase is about (a generator, a bodyguard, the
+		-- Executive) still counts when the shot passes close by with no wall in between: a hand
+		-- on a phone, or a target moving, shouldn't make a fair shot miss.
+		target = Executive.assist(from, d.Unit, range, ignore)
+	end
 	broadcast(ctx, { op = "shot", from = from, dir = d.Unit, by = player.UserId, hit = target })
 	if target then
 		strike(ctx, target, tonumber(cfg(ctx).damage) or 10)

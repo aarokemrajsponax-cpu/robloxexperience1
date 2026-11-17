@@ -131,6 +131,15 @@ function BasementMotion.apply(t: number, v: number?)
 			part.Color = if warns or Plan.burning(e, tv) then WARN else GREY
 		end
 	end
+	-- (Build 87) The way forward: a soft pulse running through each pad's gold chevrons, the
+	-- front one last, so the eye follows them on down the course.
+	for _, part in CollectionService:GetTagged("BasementArrow") do
+		if part:IsA("BasePart") then
+			local k = part:GetAttribute("Phase")
+			local wave = math.sin(t * 4 - (if type(k) == "number" then k else 1) * 1.4)
+			part.Transparency = 0.15 + 0.45 * (0.5 - 0.5 * wave)
+		end
+	end
 	-- The secrets this guest hasn't found, turning slowly where they wait.
 	for _, part in CollectionService:GetTagged("BasementSecret") do
 		local e = elementOf(part)

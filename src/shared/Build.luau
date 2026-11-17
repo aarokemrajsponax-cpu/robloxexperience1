@@ -4,6 +4,6 @@
 -- see whether Studio has the latest code from GitHub.
 
 return {
-	number = 86,
-	label = "Build 86 · 14 Nov · Twin lanes in the Basement, a clearer heist card",
+	number = 87,
+	label = "Build 87 · 17 Nov · Become The Richest Guest: the tour that never sticks, a fairer Basement, the Executive's fight",
 }

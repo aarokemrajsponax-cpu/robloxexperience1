@@ -136,7 +136,7 @@ function LuxePanel.open()
 		local st = if type(u.stride) == "table" then u.stride else {}
 		local level, top = tonumber(st.level) or 1, tonumber(st.top) or 1
 		local points, nextAt = tonumber(st.points) or 0, tonumber(st.next)
-		Theme.text(rows, string.format("Stride  ·  level %d of %d", level, top), 14, "bodyBold", { LayoutOrder = 11, TextXAlignment = Enum.TextXAlignment.Left })
+		Theme.text(rows, string.format("Speed  ·  level %d of %d", level, top), 14, "bodyBold", { LayoutOrder = 11, TextXAlignment = Enum.TextXAlignment.Left })
 		Theme.text(rows, string.format("%d%% faster in the residence  ·  %s", tonumber(st.faster) or 0, if nextAt then string.format("%d of %d points to the next level", points, nextAt) else "the highest level"), 12, "body", { LayoutOrder = 12, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = C.smoke })
 		Theme.text(rows, "Walk the treadmills in the Luxe Lounge to train it: a point a second.", 12, "body", { LayoutOrder = 13, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = C.smoke })
 		local gems = tonumber(u.goldenGems) or 0
@@ -146,7 +146,7 @@ function LuxePanel.open()
 		golden.Size = UDim2.new(1, 0, 0, 46)
 		golden.LayoutOrder = 14
 		golden.Parent = rows
-		local gw = Theme.text(golden, "The golden treadmill: double Stride, for good", 13, "bodyBold", { TextXAlignment = Enum.TextXAlignment.Left, Size = UDim2.new(1, -150, 1, 0), AutomaticSize = Enum.AutomaticSize.None, TextColor3 = GOLD })
+		local gw = Theme.text(golden, "The golden treadmill: Speed trains twice as fast, for good", 13, "bodyBold", { TextXAlignment = Enum.TextXAlignment.Left, Size = UDim2.new(1, -150, 1, 0), AutomaticSize = Enum.AutomaticSize.None, TextColor3 = GOLD })
 		gw.Position = UDim2.fromOffset(0, 0)
 		local gk = Theme.key(golden, if u.golden then "Yours" else string.format("%d Gems", gems), not u.golden, function()
 			if not u.golden then

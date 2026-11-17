@@ -143,11 +143,11 @@ function Circuit.build(parent: Instance): Model
 	local beam = Kit.part(gantry, "Beam", Vector3.new(2.2, 3.4, beamLen), CFrame.new(flatAt(gx, nearZ, 17.6)), LOOK.black)
 	-- The name, facing the cars coming up to the line (they come from the west).
 	Kit.engrave(beam, Enum.NormalId.Left, {
-		{ text = "MAISON NOIR GRAND PRIX", size = 0.62, font = Brand.Fonts.display, color = C.gold },
+		{ text = "THE MAISON GRAND PRIX", size = 0.62, font = Brand.Fonts.display, color = C.gold },
 		{ text = "three laps · first home takes the purse", size = 0.26, font = Brand.Fonts.body, color = C.bone },
 	}, { ppu = 24, maxDistance = 260, lit = false })
 	Kit.engrave(beam, Enum.NormalId.Right, {
-		{ text = "MAISON NOIR GRAND PRIX", size = 0.62, font = Brand.Fonts.display, color = C.gold },
+		{ text = "THE MAISON GRAND PRIX", size = 0.62, font = Brand.Fonts.display, color = C.gold },
 		{ text = "get in a car, press Race", size = 0.26, font = Brand.Fonts.body, color = C.bone },
 	}, { ppu = 24, maxDistance = 260, lit = false })
 	local lights = Kit.model(gantry, "Lights")

@@ -95,6 +95,8 @@ type Run = {
 	done: boolean,
 	variant: number, -- the version of the course this run is on (Build 78)
 	launchGrace: number, -- (os.clock) the movement watch was last told of a launch pad
+	lastAt: Vector3?, -- (Build 87) where they were at the last look, and the course's time then
+	lastTv: number?,
 }
 
 local origin = Vector3.zero
@@ -308,6 +310,7 @@ local function fall(ctx: Types.Ctx, player: Player, run: Run, why: string)
 	run.falls += 1
 	run.grace = os.clock() + (tonumber(cfg(ctx).fallGrace) or 1.5)
 	run.touching = {}
+	run.lastAt, run.lastTv = nil, nil
 	ctx.teleport(player, checkpointFrame(run.checkpoint))
 	ctx.send(player, { op = "fell", why = why, checkpoint = run.checkpoint })
 	push(ctx, player, run)
@@ -498,6 +501,7 @@ local function judge(ctx: Types.Ctx, player: Player, run: Run, at: Vector3, t: n
 		end
 	end
 	if os.clock() < run.grace then
+		run.lastAt, run.lastTv = nil, nil -- (a teleport: the way from before it is no way at all)
 		return
 	end
 	-- (Build 82) Well below their stage's floor: fallen, wherever to (a pit, the hall's floor, or a
@@ -507,6 +511,27 @@ local function judge(ctx: Types.Ctx, player: Player, run: Run, at: Vector3, t: n
 		fall(ctx, player, run, "fall")
 		return
 	end
+	-- (Build 87) The way they came since the last look (a tenth of a second ago): a running guest
+	-- covers two studs or more in that time, more than a laser is thick, so the path between is
+	-- checked too, each point against the hazard as it was at that moment. Until now only where
+	-- they stood was checked, twice running: walking into a laser or steam already burning was
+	-- seldom caught, while standing still as it lit always was.
+	local prev, prevT = run.lastAt, run.lastTv
+	run.lastAt, run.lastTv = at, tv
+	local samples: { { p: Vector3, t: number } } = { { p = at, t = tv } }
+	if prev and prevT and (at - prev).Magnitude < 14 then
+		local n = math.clamp(math.ceil((at - prev).Magnitude / 0.5), 1, 28)
+		local top = math.max(prev.Y, at.Y) -- (in between, the higher of the two: a jump is given the benefit)
+		for k = 0, n - 1 do
+			local f = k / n
+			local flat = prev:Lerp(at, f)
+			table.insert(samples, { p = if k == 0 then prev else Vector3.new(flat.X, top, flat.Z), t = prevT + (tv - prevT) * f })
+		end
+	end
+	-- Where the guest's own screen showed them is a beat behind the server: each hazard is judged as
+	-- it was then (LAG), and only once it had been burning a moment (so the very start of a burn,
+	-- or its very end, never catches someone the screen showed clear of it).
+	local LAG = 0.1
 	-- What can send them back: in the stage they're on, and the one behind (on this run's course).
 	for _, n in { run.checkpoint + 1, run.checkpoint } do
 		local list = byStage[n]
@@ -514,31 +539,30 @@ local function judge(ctx: Types.Ctx, player: Player, run: Run, at: Vector3, t: n
 			continue
 		end
 		for _, item in list do
-			local e, i = item.e, item.i
+			local e = item.e
 			if not Plan.inVariant(e, run.variant) then
 				continue
 			end
-			local hit = false
 			if e.kind == "pit" then
 				if Plan.inBox(at, e.at + Vector3.new(0, 3, 0), e.size + Vector3.new(0, 6, 0), 0) then
 					fall(ctx, player, run, "fall")
 					return
 				end
 			elseif e.kind == "steam" or e.kind == "laser" or e.kind == "crusher" then
-				-- (Burning a moment already, so a screen a beat behind isn't caught by its start.)
-				hit = Plan.burning(e, tv) and Plan.burning(e, tv - 0.15) and bodyIn(at, e.at, e.size)
-			elseif e.kind == "spinner" then
-				hit = bodyIn(at, e.at, e.size, Plan.spinnerFrame(e, tv))
-			end
-			if hit then
-				local k = (run.touching[i] or 0) + 1
-				run.touching[i] = k
-				if k >= 2 then
-					fall(ctx, player, run, if e.kind == "spinner" then "valve" else e.kind)
-					return
+				for _, sm in samples do
+					local when = sm.t - LAG
+					if Plan.burning(e, when) and Plan.burning(e, when - 0.15) and bodyIn(sm.p, e.at, e.size) then
+						fall(ctx, player, run, e.kind)
+						return
+					end
 				end
-			else
-				run.touching[i] = nil
+			elseif e.kind == "spinner" then
+				for _, sm in samples do
+					if bodyIn(sm.p, e.at, e.size, Plan.spinnerFrame(e, sm.t - LAG)) then
+						fall(ctx, player, run, "valve")
+						return
+					end
+				end
 			end
 		end
 	end
@@ -664,6 +688,7 @@ local function skip(ctx: Types.Ctx, player: Player, run: Run, how: string): { [s
 	local n = run.checkpoint + 1
 	run.assisted = true
 	run.touching = {}
+	run.lastAt, run.lastTv = nil, nil
 	run.grace = os.clock() + 2
 	ctx.teleport(player, checkpointFrame(n))
 	reach(ctx, player, run, n, true)

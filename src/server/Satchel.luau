@@ -264,9 +264,30 @@ local function medallion(tool: Tool, e: Entry)
 	tool.Grip = CFrame.new(0, 0, 0)
 end
 
+-- (Build 87) The name on the hotbar's slot: Roblox's hotbar wraps a word too long for the slot
+-- wherever it runs out ("Spaghetton / e Spettacolo"), so a word longer than the slot is broken with
+-- a hyphen where it reads right. Names with no such word are as they are.
+local SLOT = 10
+function Satchel.hotbarName(name: string): string
+	local words = string.split(name, " ")
+	local out = {}
+	for _, w in words do
+		local n = utf8.len(w) or #w
+		if n > SLOT then
+			local cut = math.ceil(n / 2) + 2
+			local first = string.sub(w, 1, (utf8.offset(w, cut) or (cut + 1)) - 1)
+			local rest = string.sub(w, utf8.offset(w, cut) or (cut + 1))
+			table.insert(out, first .. "-\n" .. rest)
+		else
+			table.insert(out, w)
+		end
+	end
+	return table.concat(out, " ")
+end
+
 local function make(e: Entry): Tool
 	local tool = Instance.new("Tool")
-	tool.Name = e.name
+	tool.Name = Satchel.hotbarName(e.name)
 	tool.ToolTip = e.tip
 	tool.CanBeDropped = false
 	tool.RequiresHandle = true
@@ -321,7 +342,7 @@ function Satchel.reconcile(player: Player)
 				local key = if t:IsA("Tool") then t:GetAttribute("SatchelKey") else nil
 				if type(key) == "string" then
 					local e = byKey[key]
-					if have[key] or not e or t.Name ~= e.name then
+					if have[key] or not e or t.Name ~= Satchel.hotbarName(e.name) then
 						t:Destroy()
 					else
 						have[key] = t :: Tool

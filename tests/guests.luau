@@ -452,6 +452,20 @@ advance(5)
 check("the welcome reaches the owner's screen", owner.inbox[1] ~= nil and owner.inbox[1].op == "welcome")
 check("a guest new to the house (no tour yet, no rounds) is marked to be led to the Concierge", owner.inbox[1] ~= nil and owner.inbox[1].guide == true)
 local Build = module("ReplicatedStorage", "Shared", "Build")
+check("Build 87: a brand-new guest is marked a newcomer, and the Concierge will show them round by himself", profiles[owner].flags.newcomer == true and owner.inbox[1] ~= nil and owner.inbox[1].autoTour == true and Guests.autoTourDue(profiles[owner]))
+do
+	-- (Their welcome came; they left before reaching the Foyer: still due next time.)
+	local again = profile(false)
+	again.flags = { newcomer = true }
+	check("...a newcomer who left before the Foyer still has it next time", Guests.autoTourDue(again))
+	Guests.markOnboarded(again)
+	check("...once it starts it's saved, and never starts by itself again (any server: it's in their record)", again.flags.onboarded == true and not Guests.autoTourDue(again) and not Guests.needsGuide(again))
+	local returning = profile(false)
+	check("...a guest from before Build 87 is never sent round by himself", not Guests.autoTourDue(returning))
+	local toured = profile(false)
+	toured.flags = { newcomer = true, toured = true }
+	check("...nor a newcomer who has had the tour", not Guests.autoTourDue(toured))
+end
 check("a first visit has no news to be told (and this build's is marked seen)", owner.inbox[1] ~= nil and owner.inbox[1].news == false and profiles[owner].seenBuild == Build.number)
 check("a guest who already has a character isn't given another", owner.loads == 0 and owner.Character == early)
 -- Which of the house's games they've been into (the objective card suggests the next to try).
@@ -489,6 +503,21 @@ check("a returning guest who hasn't seen this build's news is told it (Welcome b
 loaded:Fire(ben, profiles[ben])
 advance(1)
 check("...once: the next visit, no news", lastWelcome(ben) ~= nil and lastWelcome(ben).news == false)
+do
+	-- (Build 87) A guest from before who never had the tour is shown the way one evening, then
+	-- comes in like anyone else: no arrow, no Start here, no offer, every visit after.
+	local old = newPlayer("Olga", 7, nil)
+	PlayersService.PlayerAdded:Fire(old)
+	profiles[old] = profile(false)
+	loaded:Fire(old, profiles[old])
+	advance(1.5)
+	local first = lastWelcome(old)
+	check("Build 87: a returning guest still new to the house is shown the way once (guide, not sent round)", first ~= nil and first.guide == true and first.autoTour == false and profiles[old].flags.onboarded == true)
+	loaded:Fire(old, profiles[old])
+	advance(1.5)
+	local second = lastWelcome(old)
+	check("...and the next visit, nothing again (the repeated welcome-popup fix)", second ~= nil and second ~= first and second.guide == false and second.autoTour == false)
+end
 
 -- Both asking at the same moment: still one.
 local cy = newPlayer("Cy", 3, nil)

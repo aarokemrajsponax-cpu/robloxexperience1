@@ -107,7 +107,8 @@ function AdminService.isAdmin(player: Player): boolean
 	-- display name anyone can copy): the user who owns it, or the owner of the group that does.
 	-- Not a group's admins or ranks, not a Studio collaborator, not a UserId written into the game.
 	-- Not known (Roblox didn't answer): nobody, until it is.
-	local yes = Ownership.isOwner(player)
+	-- (Build 87) And the co-owners written in Config.Admin.coOwners, by UserId, locked in the code.
+	local yes = Ownership.isOwner(player) or Names.coOwner(player.UserId) ~= nil
 	if not yes and RunService:IsStudio() and cfg().studioFirstPlayer and player.UserId <= 0 and (studioOwner == nil or studioOwner == player or studioOwner.Parent ~= Players) then
 		-- (Testing in Studio with its pretend players, Player1 and Player2, who have no real
 		-- account: the first one in plays the owner. A real account never stands in, even in
@@ -2708,7 +2709,7 @@ function AdminService.start()
 				if cfg().announceOwner then
 					task.delay(4, function()
 						if player.Parent == Players then
-							AdminService.headline("👑 " .. string.upper(Names.owner()) .. " IS IN THE SERVER! 👑", Names.owner(), "rainbow", 7)
+							AdminService.headline("👑 " .. string.upper(Names.of(player)) .. " IS IN THE SERVER! 👑", Names.of(player), "rainbow", 7)
 						end
 					end)
 				end

@@ -755,7 +755,7 @@ local function build()
 		Size = UDim2.fromScale(1, 1),
 		ZIndex = 4,
 	})
-	header.mark = label(head, Brand.Name, 24, F.display, BONE, {
+	header.mark = label(head, Brand.House, 24, F.display, BONE, {
 		Name = "Mark",
 		AnchorPoint = Vector2.new(0, 0.5),
 		TextXAlignment = Enum.TextXAlignment.Left,

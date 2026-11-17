@@ -6,7 +6,7 @@ local Voice = {}
 
 Voice.Concierge = {
 	speaker = "THE CONCIERGE",
-	firstVisit = "Good evening. Build your fortune, master the Maison, become the wealthiest.",
+	firstVisit = "Good evening. Build your Fortune, master the Maison, become the richest guest.",
 	returning = "Good to see you again, {name}.",
 	rare = "Now that one I'd keep an eye on.",
 	mythic = "Nobody touch anything.",
@@ -25,7 +25,7 @@ Voice.Concierge = {
 	arrived = "The Salon. Any table you like.",
 	arrivedIn = {
 		salon = "The Salon. Any table you like.",
-		velvet = "The Luxe Lounge. Train your Stride, then through the arch to Steal a Luxe.",
+		velvet = "The Luxe Lounge. Train your Speed, then through the arch to Steal a Luxe.",
 		obsidian = "The Basement Stair. Sixteen stages down to the Treasury.",
 		midnight = "The Executive's Anteroom. The Quartermaster will see to your sidearm.",
 	},
@@ -91,31 +91,56 @@ Voice.Concierge = {
 	},
 	-- Answers, from how the house really works (the numbers are filled in from its settings).
 	questions = {
-		{ id = "rich", q = "How do I get rich?", a = "Everything you own counts toward your Fortune: Gilt, Gems, your collection, your Suite and your Estate. The attractions grow your Estate fastest." },
-		{ id = "estate", q = "What is my Estate?", a = "What you've banked and won in the attractions. It only ever grows, and a fifth of every haul comes to your purse in Gilt as well." },
-		{ id = "invite", q = "How do I get into the Executive Suite?", a = "You need an invitation. Each of these gets you one: finish the Maison Basement; carry loot worth {inviteHaul} or more out of Steal a Luxe in a single trip; or buy one from the Quartermaster in the Anteroom for {invitePrice} Gilt. Take your free stun pistol from him too, then ride the lift up." },
-		{ id = "stride", q = "What does Stride do?", a = "It makes you faster in Steal a Luxe, and only there: {stride}% a level. Walk the treadmills in the Luxe Lounge to train it." },
-		{ id = "caught", q = "What if a guard catches me?", a = "Everything in your bag is lost and you're shown out to the courtyard. What you've already banked is safe." },
-		{ id = "skip", q = "Can I skip a Basement stage?", a = "Yes, and the deeper the stage, the more it costs: {skipGems} Gems for the first, {skipStep} more for each stage after it. Skips bought with Robux work too, more of them further down. A skipped run isn't timed for the boards, and the stage you skip pays nothing." },
-		{ id = "island", q = "How do I get to Luxury Island?", a = "By the private jet, from the Jet Lounge on the Terrace. The Island Key is for a Tycoon: {islandGilt} Gilt or {islandGems} Gems, yours for good. Five pearls lie in its lagoon every day." },
-		{ id = "gala", q = "What's in the Grand Ballroom?", a = "Through the great doors at the far end of the Ballroom: the Flex Studio (shoot a reel of something you own; guests like it on the Flex Wall), the dance floor and its jukebox, Luxury Trivia, the Runway's themed shows, the Daily Arena, three photo sets, the Exchange and the Hall of Fame. A little Gilt for all of it, up to {galaGilt} a day." },
-		{ id = "trade", q = "How do I trade?", a = "At the Exchange's stands in the Grand Ballroom, or the Trade key on a guest's card: Gilt, Gems, brainrots and curios. You both see every offer, and nothing changes hands until you both confirm the very same trade." },
-		{ id = "boards", q = "Where are the boards?", a = "Tap your Fortune, under your Gilt: the Wealthiest in this house, this week and of all time. The Basement's best times are at the lectern on the Basement Stair." },
-		{ id = "auction", q = "What is the Grand Auction?", a = "In the Library: the week's rare lots, bid for in Gilt or Gems by guests in every server at once. A bid is held from your purse while it stands; outbid, it comes straight back. The highest bid when the week closes wins, and the piece is delivered to you wherever you are." },
-		{ id = "brainrots", q = "What are brainrots?", a = "The meme set of curios, each a character of its own. Put up to three in your squad (three more with the Penthouse): they fill a tip jar with Gilt every hour, and the one you choose walks beside you. Out of the game they keep earning (AFK mode): a fifth as fast, for up to 12 hours, so there's Gilt waiting when you come back. More of the same one gives it stars." },
-		{ id = "afk", q = "Do I earn while I'm away?", a = "Yes, with brainrots. Put them in your squad: in the house they fill their tip jar every hour, resting or not. Out of the game they keep earning a fifth as fast, for up to 12 hours. Come back and collect it from Welcome back." },
-		{ id = "luckyBoxes", q = "What are Luxe Lucky Boxes?", a = "Three gift boxes on a gold-lit dais in the Grand Ballroom's Entrance Hall, just inside its doors. Each opens to one brainrot: Rare or better, Epic or better, or Legendary or better. Open one for Gems (100, 250 or 565), or save up Gilt for one (25,000, 62,500 or 140,000). The odds of every brainrot are shown before you open it and add up to 100%, and a counter shows how many opens until a rarer one is certain. Everything in them is also found free at the tables. (Only where Roblox allows paid random items.)" },
-		{ id = "hotbar", q = "What's in my hotbar?", a = "What you carry: the stun pistol once the Quartermaster gives it you (it fires only in the Executive Suite's fight), a decoy you've packed, the brainrots in your squad and the curios you've starred. Hold a brainrot or a curio and click to flex it for everyone near you." },
-		{ id = "suite", q = "How do I make my Suite mine?", a = "Ring the bell inside your Suite to furnish it, piece by piece, where you like. Its cases show off your finest curios, and friends can visit from the Suites list." },
-		{ id = "looks", q = "What are looks and trails for?", a = "Style, never score: looks, trails, nameplates, lamps, chimes and victory flourishes from the Boutique. Wear them at the Wardrobe. Your flourish even colours your flexes." },
-		{ id = "gems", q = "What are Gems for?", a = "The Gem Shop, the golden treadmill, a Basement skip and the Cabinet's curios. Gems come only from a Gem pack in the shop (Robux) or a trade with another guest: nothing in the house pays them out, so every game pays Gilt." },
+		{ id = "rich", cat = "money", q = "How do I get rich?", a = "Everything you own counts toward your Fortune: Gilt, Gems, your collection, your Suite and your Estate. The attractions grow your Estate fastest." },
+		{ id = "estate", cat = "money", q = "What is my Estate?", a = "What you've banked and won in the attractions. It only ever grows, and a fifth of every haul comes to your purse in Gilt as well." },
+		{ id = "invite", cat = "attractions", place = "midnight", q = "How do I get into the Executive Suite?", a = "You need an invitation. Each of these gets you one: finish the Maison Basement; carry loot worth {inviteHaul} or more out of Steal a Luxe in a single trip; or buy one from the Quartermaster in the Anteroom for {invitePrice} Gilt. Take your free stun pistol from him too, then ride the lift up." },
+		{ id = "stride", cat = "attractions", place = "velvet", q = "What does Speed do?", a = "It makes you faster in Steal a Luxe, and only there: {stride}% a level. Walk the treadmills in the Luxe Lounge to train it." },
+		{ id = "caught", cat = "attractions", place = "velvet", q = "What if a guard catches me?", a = "Everything in your bag is lost and you're shown out to the courtyard. What you've already banked is safe." },
+		{ id = "skip", cat = "attractions", place = "obsidian", q = "Can I skip a Basement stage?", a = "Yes, and the deeper the stage, the more it costs: {skipGems} Gems for the first, {skipStep} more for each stage after it. Skips bought with Robux work too, more of them further down. A skipped run isn't timed for the boards, and the stage you skip pays nothing." },
+		{ id = "island", cat = "house", place = "terrace", q = "How do I get to Luxury Island?", a = "By the private jet, from the Jet Lounge on the Terrace. The Island Key is for a Tycoon: {islandGilt} Gilt or {islandGems} Gems, yours for good. Five pearls lie in its lagoon every day." },
+		{ id = "gala", cat = "house", place = "ballroom", q = "What's in the Grand Ballroom?", a = "Through the great doors at the far end of the Ballroom: the Flex Studio (shoot a reel of something you own; guests like it on the Flex Wall), the dance floor and its jukebox, Luxury Trivia, the Runway's themed shows, the Daily Arena, three photo sets, the Exchange and the Hall of Fame. A little Gilt for all of it, up to {galaGilt} a day." },
+		{ id = "trade", cat = "collection", place = "ballroom", q = "How do I trade?", a = "At the Exchange's stands in the Grand Ballroom, or the Trade key on a guest's card: Gilt, Gems, brainrots and curios. You both see every offer, and nothing changes hands until you both confirm the very same trade." },
+		{ id = "boards", cat = "money", q = "Where are the boards?", a = "Tap your Fortune, under your Gilt: the Wealthiest in this house, this week and of all time. The Basement's best times are at the lectern on the Basement Stair." },
+		{ id = "auction", cat = "house", place = "library", q = "What is the Grand Auction?", a = "In the Library: the week's rare lots, bid for in Gilt or Gems by guests in every server at once. A bid is held from your purse while it stands; outbid, it comes straight back. The highest bid when the week closes wins, and the piece is delivered to you wherever you are." },
+		{ id = "brainrots", cat = "collection", q = "What are brainrots?", a = "The meme set of curios, each a character of its own. Put up to three in your squad (three more with the Penthouse): they fill a tip jar with Gilt every hour, and the one you choose walks beside you. Out of the game they keep earning (AFK mode): a fifth as fast, for up to 12 hours, so there's Gilt waiting when you come back. More of the same one gives it stars." },
+		{ id = "afk", cat = "collection", q = "Do I earn while I'm away?", a = "Yes, with brainrots. Put them in your squad: in the house they fill their tip jar every hour, resting or not. Out of the game they keep earning a fifth as fast, for up to 12 hours. Come back and collect it from Welcome back." },
+		{ id = "luckyBoxes", cat = "collection", place = "ballroom", q = "What are Luxe Lucky Boxes?", a = "Three gift boxes on a gold-lit dais in the Grand Ballroom's Entrance Hall, just inside its doors. Each opens to one brainrot: Rare or better, Epic or better, or Legendary or better. Open one for Gems (100, 250 or 565), or save up Gilt for one (25,000, 62,500 or 140,000). The odds of every brainrot are shown before you open it and add up to 100%, and a counter shows how many opens until a rarer one is certain. Everything in them is also found free at the tables. (Only where Roblox allows paid random items.)" },
+		{ id = "hotbar", cat = "collection", q = "What's in my hotbar?", a = "What you carry: the stun pistol once the Quartermaster gives it you (it fires only in the Executive Suite's fight), a decoy you've packed, the brainrots in your squad and the curios you've starred. Hold a brainrot or a curio and click to flex it for everyone near you." },
+		{ id = "suite", cat = "house", place = "suite", q = "How do I make my Suite mine?", a = "Ring the bell inside your Suite to furnish it, piece by piece, where you like. Its cases show off your finest curios, and friends can visit from the Suites list." },
+		{ id = "looks", cat = "house", place = "boutique", q = "What are looks and trails for?", a = "Style, never score: looks, trails, nameplates, lamps, chimes and victory flourishes from the Boutique. Wear them at the Wardrobe. Your flourish even colours your flexes." },
+		-- (Build 87: more, each from how the house really works, in five kinds; "place" is where
+		-- Guide me there walks the guest.)
+		{ id = "first", cat = "start", q = "What should I do first?", a = "Steal a Luxe, through the Luxe Lounge, is a good first: it grows your Estate quickest. Or ask me what to do next, and I'll look at what you've done so far." , place = "velvet" },
+		{ id = "everyGame", cat = "start", q = "How do I see every game?", a = "Press Play at the top of your screen: the Maison Directory shows every attraction, what it pays and how to get in." },
+		{ id = "tourAgain", cat = "start", q = "Can I see the tour again?", a = "Any time: speak to me and choose Show me the house. I'll walk you round again, and you can end it whenever you like." },
+		{ id = "collectionKey", cat = "start", q = "Where is my Collection?", a = "The gold Collection key on the left of your screen (C on a keyboard): your brainrots, every curio you own, your Gems and your trades. Fold the other keys away and the Collection keeps a key of its own." },
+		{ id = "salon", cat = "house", place = "salon", q = "What happens in the Salon?", a = "Sort fine things into their cases for Gilt, at your own pace: sit at a table and press E. Right ones in a row raise your combo; bank the run for Gilt. Tonight's table is there too: one try a day, the same pieces for every guest." },
+		{ id = "luxeHow", cat = "attractions", place = "velvet", q = "How do I play Steal a Luxe?", a = "Through the Luxe Lounge. Inside, hold E on a treasure to lift it: the fuller your bag, the slower you walk. Security sleeps until you lift something; then a guard comes after you. Carry it out to the getaway car to bank it for good." },
+		{ id = "basementHow", cat = "attractions", place = "obsidian", q = "How does the Basement work?", a = "Down the Basement Stair: sixteen stages of jumps, steam and lasers to the Treasury. Step on every checkpoint pad; fall, and you're back at the last one. The gold chevrons on each pad point the way on. Each chamber pays at its way out, and the Treasury's chest pays the most." },
+		{ id = "executiveHow", cat = "attractions", place = "midnight", q = "How does the Executive's fight work?", a = "Through the code door, in his Office: shoot the three blue generators to bring his shield down, stun his four bodyguards, then stun the Executive. A ring under him is a shockwave (jump it), a lane is his dash (step aside), a raised hand is briefcases (keep moving)." },
+		{ id = "pistol", cat = "attractions", place = "midnight", q = "Where do I get the stun pistol?", a = "Free, from the Quartermaster at his desk in the Executive's Anteroom. It goes in your hotbar, and the lift up won't take you without it. It fires only in the Office's fight." },
+		{ id = "gilt", cat = "money", q = "What is Gilt for?", a = "Gilt is the house's money, and every game pays it: the Boutique's looks, bigger bags in the Luxe Lounge, an invitation upstairs from the Quartermaster, the Island Key and more." },
+		{ id = "gems", cat = "money", q = "What are Gems for?", a = "The Gem Shop, the golden treadmill, a Basement skip and the Cabinet's curios. Gems come only from a Gem pack in the shop (Robux) or a trade with another guest: nothing in the house pays them out, so every game pays Gilt." },
 	},
-	whichQuestion = "Ask me anything.",
+	whichQuestion = "Ask me anything. What's it about?",
+	-- (Build 87) The kinds of question, in order.
+	qaCategories = {
+		{ id = "start", name = "Getting started" },
+		{ id = "attractions", name = "The attractions" },
+		{ id = "money", name = "Gilt, Gems and your Fortune" },
+		{ id = "collection", name = "Brainrots and your collection" },
+		{ id = "house", name = "Around the house" },
+	},
+	qaSearch = "Search every question",
+	qaGuide = "Guide me there",
+	qaAnother = "Another question",
+	qaBack = "Back",
 	newsOffer = "The house has changed since you were last here: your Fortune, and three new attractions. Shall I show you?",
 	newsYes = "Show me",
 	newsLater = "Later",
 	newsLaterLine = "Of course. Ask me for the tour any time.",
-	tourOffer = "Welcome to Maison Noir, where everyone is here to become the wealthiest. Shall I show you round? It's quick.",
+	firstTour = "Good evening, {name}, and welcome to the Maison. I'm the Concierge. Everyone here is out to become the richest guest; let me show you round first. Follow me and the gold trail. You can end the tour whenever you like.",
+	tourOffer = "Welcome to the Maison, where everyone is here to become the richest guest. Shall I show you round? It's quick.",
 	tourYes = "Show me the house",
 	tourSkip = "Show me the attractions",
 	tourLater = "I'll look around",
@@ -129,7 +154,7 @@ Voice.Tour = {
 	{
 		stop = "lectern",
 		title = "Welcome",
-		line = "Build your fortune, master the Maison, become the wealthiest. Everything you own counts: your Fortune is under your Gilt.",
+		line = "Build your Fortune, master the Maison, become the richest guest. Everything you own counts: your Fortune is under your Gilt.",
 	},
 	{
 		stop = "salon",
@@ -147,7 +172,7 @@ Voice.Tour = {
 		stop = "salon",
 		place = "velvetDoor",
 		title = "Steal a Luxe",
-		line = "Through the Luxe Lounge: slip into a great residence, carry out what you can and bank it at the car before the guards catch you. Train your Stride on the treadmills first.",
+		line = "Through the Luxe Lounge: slip into a great residence, carry out what you can and bank it at the car before the guards catch you. Train your Speed on the treadmills first.",
 	},
 	{
 		stop = "salon",
@@ -172,6 +197,14 @@ Voice.Tour = {
 		place = "vault",
 		title = "The Vault",
 		line = "Your collection, kept and shown: every piece and brainrot here counts toward your Fortune. The Archivist keeps your badges.",
+	},
+	{
+		-- (Build 87: the guiding hand points at the Collection key while this card is up.)
+		stop = "vault",
+		place = "vault",
+		title = "Your Collection",
+		line = "Everything you own is a tap away too: the gold Collection key on the left of your screen. Your brainrots, every curio you own, your Gems and your trades.",
+		hand = "collection",
 	},
 	{
 		stop = "boutique",
@@ -273,7 +306,7 @@ Voice.TourPlaces = {
 	suiteDoor = "Your Suite",
 }
 
-Voice.TourKeys = { next = "Next", back = "Back", done = "End the tour", attractions = "Show me the attractions", explore = "I'll explore" }
+Voice.TourKeys = { next = "Next", back = "Back", done = "End the tour", skip = "Skip ahead", attractions = "Show me the attractions", explore = "I'll explore" }
 
 -- A Private Evening (a private server).
 Voice.Private = {
@@ -317,7 +350,7 @@ Voice.Table = {
 -- and the three steps of the game, said plainly.
 Voice.StartHere = {
 	title = "Start here",
-	heading = "Welcome to Maison Noir",
+	heading = "Welcome to the Maison",
 	arrowFar = "Follow the gold arrow to him",
 	arrowNear = {
 		mouse = "Press E: Show me the house",
@@ -370,12 +403,13 @@ Voice.Afk = {
 -- What's new in this build, told once to each returning guest (Welcome back). Only shown while
 -- `build` is the build that's playing, so old news never shows as new.
 Voice.WhatsNew = {
-	build = 86,
+	build = 87,
 	lines = {
-		"The Maison Basement fills its wide hall: most stages now have twin lanes either side, the very same obstacles, so a crowd spreads out.",
-		"Steal a Luxe's card is clearer: your bag, what it's worth and the guards, at a glance.",
-		"The keys at the foot of the screen now rise above your hotbar, so the Executive Suite's Fire key is always in reach.",
-		"Luxe Lucky Boxes open with Gems, or with Gilt if you save up for one, just inside the Grand Ballroom.",
+		"The house has a new name: Become The Richest Guest. You still play in the Maison.",
+		"The Concierge's tour never sticks now: he comes back for you, Skip ahead is always there, a gold trail on the floor shows the way, and he walks home afterwards.",
+		"The Basement's lasers and steam catch you whenever they're on, even running through; when they're off, they're safe. Gold chevrons on every pad point the way on.",
+		"The Executive's fight: health bars over the generators, his bodyguards and him, what to do next under the top, and shots that land where you aim.",
+		"Your Collection stands out in gold, and keeps its own key when you fold the others away.",
 	},
 }
 
@@ -388,6 +422,14 @@ export type GuideItem = { title: string, line: string, how: string?, win: string
 -- times the guest has sat at a table first; `every`: seconds before it may show again (0: once a
 -- visit). What decides each one is in UI/Hints.
 export type Hint = { id: string, line: string, after: number?, sat: number?, every: number? }
+-- (Build 87) The guiding hand's notes: a ringed, gloved hand pointing at the thing on the screen.
+Voice.GuideHand = {
+	collection = {
+		title = "Your Collection",
+		line = "Your brainrots, every curio you own, your Gems and your trades, all in one place. Open it any time.",
+	},
+}
+
 Voice.Hints = {
 	label = "TIP",
 	list = {
@@ -433,7 +475,7 @@ Voice.Guide = {
 		{ "extras", "Extras" },
 	},
 	basics = {
-		lead = "Maison Noir is a grand house full of games. Play them to earn Gilt (the house's gold coins), grow your Fortune and become the wealthiest guest in the house. Spend what you earn on looks, your Suite and your collection.",
+		lead = "Become The Richest Guest is played in the Maison, a grand house full of games. Play them to earn Gilt (the house's gold coins), grow your Fortune and become the wealthiest guest in the house. Spend what you earn on looks, your Suite and your collection.",
 		heading = "Your first five minutes",
 		steps = {
 			{ title = "See every game", line = "Press the gold Play key at the top right. Each game has a card: what it is, how to play it, and a key that takes you there.", key = "Open it", action = "directory" },

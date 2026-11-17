@@ -65,7 +65,7 @@ local function goal(key: string, size: Size): Goal
 		local n = if big then 3 else 1
 		return { id = key, kind = kind, target = n, text = if n == 1 then "Get away from Steal a Luxe by the van or the helicopter" else string.format("Get away from Steal a Luxe by the van or the helicopter %s times", words(n)) }
 	elseif kind == "stride" then
-		return { id = key, kind = kind, target = 2, text = "Train two levels of Stride on the Luxe Lounge's treadmills" }
+		return { id = key, kind = kind, target = 2, text = "Train two levels of Speed on the Luxe Lounge's treadmills" }
 	elseif kind == "basementClear" then
 		local n = if size == "season" then 15 elseif big then 3 else 1
 		return { id = key, kind = kind, target = n, text = if n == 1 then "Reach the Treasury at the foot of the Maison Basement" else string.format("Reach the Maison Basement's Treasury %s times", words(n)) }

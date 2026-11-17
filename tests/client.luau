@@ -1578,7 +1578,7 @@ do
 		signalOf(LocalPlayer, "attr:" .. a):Fire()
 	end
 	advance(0.3)
-	check("the Home Screen: WELCOME TO MAISON NOIR", TitleM.isShowing() and textOnScreen("Welcome to") ~= nil and textOnScreen("Maison Noir") ~= nil)
+	check("the Home Screen: WELCOME TO MAISON NOIR", TitleM.isShowing() and textOnScreen("Welcome to the Maison") ~= nil and textOnScreen("BECOME THE") ~= nil)
 	check("...the guest's own Gilt, Gems and level, live", textOnScreen("40,350") ~= nil and textOnScreen("120") ~= nil and textOnScreen("LV 24") ~= nil)
 	local function key(text)
 		return find(playerGui, function(d)
@@ -1685,7 +1685,7 @@ do
 		end
 		return true
 	end)())
-	check("...and on a first evening, the line about the Concierge and the gold arrow", textOnScreen("The Concierge shows new guests round") ~= nil)
+	check("...and on a first evening, the line about the Concierge and the gold arrow", textOnScreen("The Concierge will show you round") ~= nil)
 	check("...drawn on this guest's screen only (their own PlayerGui; the ring of light in their own camera)", welcomeGui and welcomeGui.Parent == playerGui)
 	advance(1)
 	snapshot("welcome")
@@ -1786,7 +1786,7 @@ do
 	advance(2)
 	local back = playerGui:FindFirstChild("MaisonWelcome")
 	check("a returning guest: WELCOME BACK and their name", back ~= nil and spelled(back) == "WELCOME BACK" and textOnScreen("BEN") ~= nil and sameSize(back), spelled(back))
-	check("...without the Concierge's line", textOnScreen("The Concierge shows new guests round") == nil)
+	check("...without the Concierge's line", textOnScreen("The Concierge will show you round") == nil)
 	snapshot("welcome-back")
 	advance(2.2)
 	check("...and it goes sooner", playerGui:FindFirstChild("MaisonWelcome") == nil)
@@ -1965,6 +1965,14 @@ do
 	local _, _, waitState, waitAt = Tour.where()
 	check("the Concierge waits when you fall behind", waitState == "walking" and (waitAt - Vector3.new(9, 3, 12) * GRAND()).Magnitude < Config.data.Tour.waitBeyond + 4, waitAt)
 	check("on the way: where to, a pin there, and a key to end the tour", textOnScreen("This way, to the Salon") ~= nil and textOnScreen("End the tour") ~= nil and workspace:FindFirstChild("MaisonWaypoint") ~= nil and workspace.MaisonWaypoint.Pin.Label.Text == "The Salon")
+	do
+		-- (Build 87: never stuck.)
+		local GoldTrail = module("StarterPlayer", "StarterPlayerScripts", "Client", "World", "GoldTrail")
+		local apartNow = (waitAt - Vector3.new(9, 3, 12) * GRAND()).Magnitude
+		check("Build 87: hanging back, he comes back for you the way he came (not left waiting on you)", apartNow <= Config.data.Tour.resumeWithin + 2, apartNow)
+		check("...a key to skip on to the stop, always", textOnScreen("Skip ahead") ~= nil)
+		check("...and a gold trail on the floor from him to the stop", GoldTrail.count() >= 2 and workspace:FindFirstChild("MaisonGoldTrail") ~= nil, GoldTrail.count())
+	end
 	-- Follow the Concierge to every stop and read every card.
 	local visited = {}
 	local climbed = false
@@ -2008,6 +2016,14 @@ do
 			end
 			placed += 1
 		end
+		if Voice.Tour[i].hand == "collection" then
+			local GuideHandM = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "GuideHand")
+			local QuickDockM = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "QuickDock")
+			check("Build 87: on the tour's Collection card, the ringed hand points at the Collection key", GuideHandM.active() and GuideHandM.target() ~= nil and GuideHandM.target() == QuickDockM.collectionTarget() and find(playerGui, function(d)
+				return d.Name == "Ring" and d.Parent and d.Parent.Name == "Hand"
+			end) ~= nil)
+			snapshot("guide-hand")
+		end
 		if Voice.Tour[i].title == "The Wardrobe" then
 			-- Back shows the card before, where you stand (the Boutique's, at the same stop).
 			press("Back")
@@ -2033,16 +2049,46 @@ do
 	check("the last card offers the attractions", textOnScreen("Show me the attractions") ~= nil and textOnScreen("I'll explore") ~= nil)
 	press("I'll explore")
 	advance(1)
-	check("ending it: your guide goes and the Concierge is back at the lectern", workspace:FindFirstChild("MaisonTourGuide") == nil and chead.LocalTransparencyModifier == 0 and speak.Enabled == true)
+	check("Build 87: ending it, he walks back to the lectern (not gone in a blink)", Tour.homeward() and workspace:FindFirstChild("MaisonTourGuide") ~= nil and chead.LocalTransparencyModifier == 1)
+	advance(Config.data.Tour.homeWithin + 1)
+	check("...then your guide goes and the Concierge is back at the lectern", not Tour.homeward() and workspace:FindFirstChild("MaisonTourGuide") == nil and chead.LocalTransparencyModifier == 0 and speak.Enabled == true)
 	check("the pin goes with it", workspace:FindFirstChild("MaisonWaypoint") == nil)
 	check("and the server hears it's over", sentOps("Tour", "end") == 1)
 	-- Wandering off ends it too, kindly.
 	moveGuest(Vector3.new(9, 5, 12) * GRAND())
 	serverSays("Tour", { op = "start" })
 	advance(1)
+	-- (Build 87) Skip ahead: on to the stop at once, the card wherever you are.
+	press("Next")
+	advance(0.5)
+	press("Skip ahead")
+	advance(0.3)
+	local skipStop, skipCard, skipState = Tour.where()
+	check("Build 87: Skip ahead takes you on to the next stop's card at once", skipState == "card" and skipCard == 2 and skipStop == Voice.Tour[2].stop and textOnScreen(Voice.Tour[2].title) ~= nil, skipState)
 	moveGuest(Vector3.new(0, 5, -200))
 	advance(45)
-	check("a guest who wanders off has left the tour", Tour.active() == false and workspace:FindFirstChild("MaisonTourGuide") == nil)
+	check("a guest who wanders off has left the tour", Tour.active() == false)
+	advance(Config.data.Tour.homeWithin + 1)
+	check("...and he's walked back to the lectern", workspace:FindFirstChild("MaisonTourGuide") == nil and chead.LocalTransparencyModifier == 0)
+	-- (A tour asked for while he's still walking home: he's simply there to start again.)
+	moveGuest(Vector3.new(9, 5, 12) * GRAND())
+	serverSays("Tour", { op = "start" })
+	advance(1)
+	press("End the tour")
+	advance(0.5)
+	serverSays("Tour", { op = "start" })
+	advance(1)
+	check("...a tour asked for while he's on his way back starts at once, with one guide", Tour.active() and #(function()
+		local n = {}
+		for _, c in workspace:GetChildren() do
+			if c.Name == "MaisonTourGuide" then
+				table.insert(n, c)
+			end
+		end
+		return n
+	end)() == 1)
+	press("End the tour")
+	advance(Config.data.Tour.homeWithin + 1)
 	check("no errors on the tour", #errors == 0, errors[1])
 	concierge:Destroy()
 	moveGuest(was)
@@ -2684,9 +2730,9 @@ do
 
 	-- A room with no music of its own plays one of the house's tracks.
 	assets.Tracks.street = "rbxassetid://777"
-	SoundModule.enterZone("velvet")
+	SoundModule.enterZone("midnight")
 	advance(3)
-	local velvet = loopNamed("Music_velvet")
+	local velvet = loopNamed("Music_midnight")
 	check("music: a room with no track of its own plays the house's street track", velvet ~= nil and velvet.SoundId == "rbxassetid://777" and velvet.Volume > 0, velvet and velvet.SoundId)
 	SoundModule.enterZone("salon")
 	advance(3)
@@ -2702,9 +2748,9 @@ do
 		end
 		return nil
 	end
-	SoundModule.enterZone("velvet")
+	SoundModule.enterZone("midnight")
 	advance(3)
-	velvet = loopNamed("Music_velvet")
+	velvet = loopNamed("Music_midnight")
 	local at = velvet and songIndex(velvet.SoundId)
 	check("music: with nothing to upload, a room plays the house's playlist", at ~= nil and velvet.Looped == false and velvet.Volume > 0, velvet and velvet.SoundId)
 	-- The room's level, before each song's own gain.
@@ -2726,7 +2772,16 @@ do
 		end
 	end
 	check("music: four playlists of at least five songs, each with its level", wellFormed and assets.Playlists.table == nil)
-	check("music (Build 82): the Salon plays street luxury; its old beats are the Executive's fight", SoundModule.trackFor("salon") == "street" and SoundModule.trackFor("library") == "street" and assets.Playlists.executiveBoss[1].id == "rbxassetid://9044976005")
+	check("music (Build 87): calm rooms of their own: the Salon, the Luxe Lounge and the Basement Stair; the street beats only at the Executive Suite's door", SoundModule.trackFor("salon") == "salon" and SoundModule.trackFor("velvet") == "luxeLounge" and SoundModule.trackFor("obsidian") == "cellarDoor" and SoundModule.trackFor("midnight") == "street" and (function()
+		-- (...and nowhere else in the house.)
+		for _, z in { "foyer", "vault", "suite", "terrace", "street", "club", "boutique", "library", "salon", "velvet", "obsidian", "ballroom" } do
+			if SoundModule.trackFor(z) == "street" then
+				return false
+			end
+		end
+		return true
+	end)() and #assets.Playlists.salon >= 3 and #assets.Playlists.luxeLounge >= 3 and #assets.Playlists.cellarDoor >= 3 and assets.Playlists.executiveBoss[1].id == "rbxassetid://9044976005")
+	check("...and the Suite's search for the codes: cinematic tension, the buzzing drone gone", assets.Playlists.executive[1].id == "rbxassetid://121885898352841")
 	-- (Build 80: the grand piano is the lobby's alone; every other room plays street luxury.)
 	local pianoLists = {}
 	for _, track in { "ballroom", "street", "executiveBoss" } do
@@ -2749,9 +2804,9 @@ do
 	uploaded.SoundId = "rbxassetid://888"
 	uploaded.Parent = game:GetService("SoundService")
 	advance(6)
-	SoundModule.enterZone("velvet")
+	SoundModule.enterZone("midnight")
 	advance(3)
-	local found = loopNamed("Music_velvet")
+	local found = loopNamed("Music_midnight")
 	check("music: a track dropped into SoundService by name plays, no id needed", found ~= nil and found.SoundId == "rbxassetid://888" and found.Volume > 0, found and found.SoundId)
 	check("and the house knows it has music", SoundModule.hasMusic())
 	uploaded:Destroy()
@@ -5216,6 +5271,20 @@ do
 	end
 	advance(0.5)
 	check("folded: the keys go, a small KEYS › tab stays, and it's remembered", dockFrame ~= nil and dockFrame.Visible == false and unfoldTab ~= nil and unfoldTab.Visible == true and StateM.get("sideKeys") == "Hidden")
+	do
+		-- (Build 87) The Collection stays, in gold, under the tab.
+		local ck = find(playerGui, function(d)
+			return d.Name == "DockCollection" and d:IsA("TextButton")
+		end)
+		check("Build 87: folded, the Collection keeps its own gold key under the tab, and it opens the Collection", ck ~= nil and ck.Visible == true and ck.Position.Y.Offset > unfoldTab.Position.Y.Offset and (function()
+			signalOf(ck, "Activated"):Fire()
+			advance(0.6)
+			local open = textOnScreen("Your Collection") ~= nil
+			module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "Root").close()
+			advance(0.4)
+			return open
+		end)())
+	end
 	-- The event keys never fold away: Watch the fireworks, and the holiday's key.
 	QuickDockM.setWatch(true, false)
 	QuickDockM.setHoliday("🦃", "Turkeys", nil)
@@ -8389,7 +8458,7 @@ coroutine.wrap(function()
 	check("...every upgrade with what it does now, next, and its price", textOnScreen("A bigger bag  ·  2 of 6") ~= nil and textOnScreen("Next: carries 5 pieces") ~= nil and textOnScreen("4,000 Gilt") ~= nil and textOnScreen("2,500 Gilt") ~= nil)
 	check("...at the top, no price", textOnScreen("At its best") ~= nil)
 	check("...and Quick hands: lifts that take less holding", textOnScreen("Quick hands  ·  1 of 4") ~= nil and textOnScreen("Next: lift 15% quicker") ~= nil and textOnScreen("3,000 Gilt") ~= nil)
-	check("...Stride, and where to train it", textOnScreen("Stride  ·  level 3 of 11") ~= nil and textOnScreen("7% faster in the residence  ·  120 of 180 points to the next level") ~= nil and textOnScreen("Walk the treadmills in the Luxe Lounge to train it: a point a second.") ~= nil)
+	check("...Stride, and where to train it", textOnScreen("Speed  ·  level 3 of 11") ~= nil and textOnScreen("7% faster in the residence  ·  120 of 180 points to the next level") ~= nil and textOnScreen("Walk the treadmills in the Luxe Lounge to train it: a point a second.") ~= nil)
 	check("...the golden treadmill, for its price in Gems", textOnScreen("150 Gems") ~= nil)
 	check("...and the records", textOnScreen("Hauls banked: 12  ·  in all: 48,200  ·  best: 9,100") ~= nil)
 	check("...the Collection: the rank and what the next one takes", textOnScreen("Rank: Gentleman Thief") ~= nil and textOnScreen("48,200 banked of the 100,000 for Gallery Ghost") ~= nil)
@@ -8415,13 +8484,18 @@ coroutine.wrap(function()
 	-- The Lounge: Stride on the treadmills, and the lectern's board.
 	serverSays("Attraction", { op = "stride", level = 2, points = 61, next = 100, from = 40, golden = false })
 	advance(0.3)
-	check("on a treadmill, Stride counts up at the foot of the screen", textOnScreen("STRIDE  ·  LEVEL 2  ·  61 / 100") ~= nil)
+	check("on a treadmill, Speed counts up at the foot of the screen (Build 87: a big card, SPEED and the level, a bar, the points)", textOnScreen("SPEED  ·  LEVEL 2") ~= nil and textOnScreen("61 / 100") ~= nil)
 	snapshot("luxe-stride")
 	advance(3.5)
-	check("...and goes when they step off", textOnScreen("STRIDE  ·  LEVEL 2") == nil)
+	check("...and goes when they step off", (function()
+		local sc = find(playerGui, function(d)
+			return d.Name == "SpeedCard"
+		end)
+		return sc ~= nil and sc.Visible == false
+	end)())
 	serverSays("Attraction", { op = "strideUp", level = 3, faster = 7 })
 	advance(0.3)
-	check("a new Stride level is told", textOnScreen("Stride level 3") ~= nil and textOnScreen("7% faster in Steal a Luxe") ~= nil)
+	check("a new Speed level is told", textOnScreen("Speed level 3") ~= nil and textOnScreen("7% faster in Steal a Luxe") ~= nil)
 	advance(4)
 	invokeResults.AttractionAsk = { ok = false, why = "nope" }
 	serverSays("Attraction", { op = "panel", id = "luxe" })

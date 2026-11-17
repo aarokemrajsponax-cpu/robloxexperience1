@@ -41,7 +41,7 @@ end
 
 -- "Invite a friend" after a Grand Prix: to the house, to race on the street out front.
 function Invite.race()
-	prompt("grandPrix", "Race me in the Maison Noir Grand Prix: ultra-luxury cars, three laps, the winner takes the purse.")
+	prompt("grandPrix", "Race me in the Maison Grand Prix: ultra-luxury cars, three laps, the winner takes the purse.")
 end
 
 -- "Come and watch": a friend lands in the Ballroom's Gallery (§9.8).

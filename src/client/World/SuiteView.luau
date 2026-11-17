@@ -272,7 +272,7 @@ local USES: { [string]: (model: Model, prompt: ProximityPrompt) -> () } = {
 		local screen = screenOf(model)
 		if screen then
 			Toast.show("The screening room", "Tonight's film: lights down, curtains back.", 4)
-			showOn(screen, "Maison Noir presents", { Color3.fromRGB(255, 210, 150), Color3.fromRGB(120, 60, 30), Color3.fromRGB(40, 50, 90) }, 45)
+			showOn(screen, "The Maison presents", { Color3.fromRGB(255, 210, 150), Color3.fromRGB(120, 60, 30), Color3.fromRGB(40, 50, 90) }, 45)
 		end
 	end,
 	arcade = function(model)

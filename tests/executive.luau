@@ -515,6 +515,20 @@ run(function()
 	fire.OnServerEvent:Fire(ada, "everything")
 end)
 check("a shot that isn't one is ignored", Game.run.generators.gen1 == genHp - 2 * C.damage)
+do
+	-- (Build 87) Health bars: each generator carries what's left of it, for every screen's bar.
+	local core = Game.built().generators[1]
+	check("Build 87: a generator carries what's left of it for its health bar (only the server writes it)", core:GetAttribute("Hp") == Game.run.generators.gen1 and core:GetAttribute("HpMax") == Game.run.genMax.gen1 and Game.run.genMax.gen1 > 0)
+	-- (Build 87) A near miss on a generator, with nothing between, still counts; a wide one doesn't.
+	local g2 = Game.built().generators[2].CFrame.Position
+	local from = g2 + Vector3.new(0, 0, -40)
+	aimAt = "gen2"
+	local near = Game.assist(from, ((g2 + Vector3.new(1.8, 0, 0)) - from).Unit, 140, {})
+	local wide = Game.assist(from, ((g2 + Vector3.new(14, 0, 0)) - from).Unit, 140, {})
+	aimAt = nil
+	local blocked = Game.assist(from, ((g2 + Vector3.new(1.8, 0, 0)) - from).Unit, 140, {})
+	check("Build 87: a shot just beside a generator still hits it; a wide one misses; and never through a wall or his shield", near == "gen2" and wide == nil and blocked == nil, tostring(near) .. "/" .. tostring(wide) .. "/" .. tostring(blocked))
+end
 for _, gen in { "gen1", "gen2", "gen3" } do
 	while Game.run.generators[gen] > 0 do
 		shoot(ada, gen)

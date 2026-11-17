@@ -183,7 +183,7 @@ local function buildOverlay()
 	rule.BorderSizePixel = 0
 	rule.Size = UDim2.new(1, 0, 0, 1)
 	rule.Parent = m
-	Theme.text(m, "MAISON NOIR", 11, "caps", { Position = UDim2.fromOffset(0, 5), AutomaticSize = Enum.AutomaticSize.None, Size = UDim2.new(1, 0, 0, 18), TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = Brand.Colours.lightGold })
+	Theme.text(m, "BECOME THE RICHEST GUEST", 11, "caps", { Position = UDim2.fromOffset(0, 5), AutomaticSize = Enum.AutomaticSize.None, Size = UDim2.new(1, 0, 0, 18), TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = Brand.Colours.lightGold })
 	mark = m
 end
 

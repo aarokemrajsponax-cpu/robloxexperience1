@@ -3,8 +3,11 @@
 
 local Brand = {}
 
-Brand.Name = "MAISON NOIR"
-Brand.Tagline = "Build your fortune. Master the Maison. Become the wealthiest."
+-- (Build 87) The game is "Become The Richest Guest"; the house it's played in is the Maison.
+Brand.Name = "BECOME THE RICHEST GUEST"
+Brand.Title = "Become The Richest Guest"
+Brand.House = "THE MAISON"
+Brand.Tagline = "Build your Fortune. Master the Maison. Become the richest guest."
 Brand.Credit = "development of AJKR"
 Brand.Owner = "AJKR"
 

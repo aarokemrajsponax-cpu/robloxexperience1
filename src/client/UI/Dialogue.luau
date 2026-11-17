@@ -122,8 +122,11 @@ function Dialogue.show(speaker: string, line: string, choices: { Choice }?, onCh
 	end
 	current = group
 	Fade.set(group, 1)
-	group.Position = UDim2.new(0.5, 0, 1, -26)
-	Fade.to(group, Ease.scaled(Ease.panel), 0, { Position = UDim2.new(0.5, 0, 1, -34) })
+	-- (Build 87: over the hotbar and anything else along the foot, so its keys are never under
+	-- the guest's items: "End the tour" sat behind the hotbar on a phone.)
+	local lift = Root.bottomClear()
+	group.Position = UDim2.new(0.5, 0, 1, -26 - lift)
+	Fade.to(group, Ease.scaled(Ease.panel), 0, { Position = UDim2.new(0.5, 0, 1, -34 - lift) })
 	if not hasChoices then
 		task.delay(hold or 3.2, function()
 			if serial == mine and current == group then

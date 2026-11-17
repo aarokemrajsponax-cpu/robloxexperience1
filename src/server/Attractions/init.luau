@@ -536,6 +536,12 @@ local function onAsk(player: Player, request: unknown): any
 		if not data then
 			return { ok = false, why = "Your ledger is still being opened." }
 		end
+		if r.peek == true then
+			-- (Build 87: whether it's still to be shown, without noting it: the guiding hand
+			-- notes a hint only once the guest has done what it shows.)
+			local flags = (data :: any).flags
+			return { ok = true, first = not (type(flags) == "table" and flags["guide_" .. what] == true) }
+		end
 		return { ok = true, first = firstLook(data, what) }
 	elseif op == "act" then
 		local g = id and GAMES[id]

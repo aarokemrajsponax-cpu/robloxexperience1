@@ -393,6 +393,36 @@ do
 	end
 	check("its machinery is tagged for every screen to move: pistons, tiles, steam, lasers, valves (the twin lanes' too)", kinds.BasementMover == planned.mover and kinds.BasementVanish == planned.vanish and kinds.BasementSteam == planned.steam and kinds.BasementLaser == planned.laser and kinds.BasementSpinner == planned.spinner and planned.vanish > 12, kinds)
 	check("and the courses' own: the crushers, the launch pads, eight secrets (never copied), every edge's glow", #(H.tagged.BasementCrusher or {}) == planned.crusher and #(H.tagged.BasementBouncer or {}) == planned.bouncer and #(H.tagged.BasementSecret or {}) == 8 and #(H.tagged.BasementGuide or {}) > 60)
+	do
+		-- (Build 87) The way forward: two gold chevrons on every pad but the Treasury's, each
+		-- pointing on down the course (its two bars meet further along than they start).
+		local arrows = H.tagged.BasementArrow or {}
+		local byPad: { [number]: number } = {}
+		local forward = true
+		for _, a in arrows do
+			local nearest, best = -1, math.huge
+			for n = 0, Plan.STAGES - 1 do
+				local d = (a.CFrame.Position - (O + Plan.Checkpoints[n].at)).Magnitude
+				if d < best then
+					nearest, best = n, d
+				end
+			end
+			byPad[nearest] = (byPad[nearest] or 0) + 1
+			-- (Each bar's inner end, toward the pad's middle line, is further down the course.)
+			local mid = O.X + Plan.Checkpoints[nearest].at.X
+			local inner = a.CFrame * Vector3.new(if a.CFrame.Position.X > mid then -0.78 else 0.78, 0, 0)
+			if inner.Z <= a.CFrame.Position.Z + 0.3 then
+				forward = false
+			end
+		end
+		local every = true
+		for n = 0, Plan.STAGES - 1 do
+			if byPad[n] ~= 4 then
+				every = false
+			end
+		end
+		check("gold chevrons on every pad show the way forward", #arrows == 4 * Plan.STAGES and every and forward, #arrows)
+	end
 	local versions = H.tagged.BasementVariant or {}
 	local each = {}
 	for _, m in versions do
@@ -517,14 +547,50 @@ for _, e in Plan.Elements do
 end
 -- (Back to the valve's stage: their checkpoint is 7, so the stage behind is judged too.)
 fallsWas = Game.runs[ada].falls
-local frame = Plan.spinnerFrame(bar, T)
+local frame = Plan.spinnerFrame(bar, T - 0.1) -- (judged as the guest's screen saw it, a beat behind: Build 87)
 standIn(ada, (frame * CFrame.new(bar.size.X / 2 - 1, 0, 0)).Position - Vector3.new(0, 3, 0))
 steps(2)
 check("swept by the valve's bar: back to the checkpoint", Game.runs[ada].falls == fallsWas + 1 and last(ada, "fell").why == "valve")
 
 -- On down: the parts' purses, the lasers' hall, to the Treasury.
 steps(20)
-for n = 8, 15 do
+local beam
+for _, e in Plan.Elements do
+	if e.kind == "laser" and e.variant == nil and e.lane == nil and not beam then
+		beam = e
+	end
+end
+for n = 8, beam.stage - 1 do
+	onCheckpoint(ada, n)
+end
+-- (Build 87) A hazard already burning catches a guest who walks or runs into it, between two looks
+-- as much as at one; one that's off never does.
+steps(20)
+fallsWas = Game.runs[ada].falls
+local cycleStart = math.ceil(T / beam.period) * beam.period - beam.phase * beam.period
+-- (Feet a little under the beam: it crosses their legs. Two looks before it, one past it.)
+local function runThrough()
+	standIn(ada, beam.at + Vector3.new(0, -1.4, -2.4))
+	steps(2)
+	standIn(ada, beam.at + Vector3.new(0, -1.4, 2.4))
+	steps(1)
+end
+T = cycleStart + beam.period * (beam.on + (1 - beam.on) * 0.5) -- (the beam is off)
+runThrough()
+check("running through a laser while it's off: nothing", Game.runs[ada].falls == fallsWas)
+T = cycleStart + beam.period * beam.on * 0.6 -- (burning a while already)
+runThrough()
+check("running through a laser that's already burning: back to the checkpoint", Game.runs[ada].falls == fallsWas + 1 and last(ada, "fell").why == "laser")
+steps(20)
+fallsWas = Game.runs[ada].falls
+T = cycleStart + beam.period * beam.on * 0.6
+standIn(ada, beam.at + Vector3.new(0, -1.4, -2.4))
+steps(2)
+standIn(ada, beam.at + Vector3.new(0, -1.4, 0))
+steps(1)
+check("stepping into a laser that's already burning, and stopping there: caught at once", Game.runs[ada].falls == fallsWas + 1)
+steps(20)
+for n = beam.stage, 15 do
 	onCheckpoint(ada, n)
 end
 check("(at the Falling Coins' end)", Game.runs[ada].checkpoint == 15)

@@ -662,11 +662,11 @@ function Title.show(choices: Choices)
 		tag.LayoutOrder = 1
 		tag.BackgroundColor3 = GRAPHITE
 		tag.BackgroundTransparency = 0.1
-		tag.Size = UDim2.fromOffset(if small then 118 else 138, if small then 22 else 26)
+		tag.Size = UDim2.fromOffset(if small then 176 else 212, if small then 22 else 26)
 		tag.Parent = column
 		corner(tag, 13)
 		stroke(tag, NEON, 1.2, 0.2)
-		local welcome = Theme.text(tag, "WELCOME TO", if small then 11 else 12, "caps", {
+		local welcome = Theme.text(tag, "WELCOME TO THE MAISON", if small then 11 else 12, "caps", {
 			AutomaticSize = Enum.AutomaticSize.None,
 			Size = UDim2.fromScale(1, 1),
 			TextColor3 = ICE,
@@ -675,8 +675,9 @@ function Title.show(choices: Choices)
 		welcome.Name = "Welcome"
 
 		-- The name, stacked and heavy, in gold that catches the light now and then.
-		local nameSize = math.floor(math.max(30, math.min(if small then 54 else 80, width / 5.6, size.Y * 0.11)))
-		local name = Theme.text(column, "MAISON\nNOIR", nameSize, "display", { LayoutOrder = 2, TextColor3 = Color3.new(1, 1, 1), TextXAlignment = Enum.TextXAlignment.Left, LineHeight = 0.88 })
+		-- (Build 87: the game's own name, Become The Richest Guest, in three heavy lines.)
+		local nameSize = math.floor(math.max(26, math.min(if small then 44 else 66, width / 8.4, size.Y * 0.085)))
+		local name = Theme.text(column, "BECOME THE\nRICHEST\nGUEST", nameSize, "display", { LayoutOrder = 2, TextColor3 = Color3.new(1, 1, 1), TextXAlignment = Enum.TextXAlignment.Left, LineHeight = 0.88 })
 		name.Name = "Name"
 		local sheen = Instance.new("UIGradient")
 		sheen.Rotation = 90

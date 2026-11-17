@@ -154,7 +154,7 @@ Executive.BossSpots = {
 } :: { Vector3 }
 
 Executive.Phases = {
-	{ id = "shield", name = "The Shield", line = "Shoot out the three generators behind his shield.", say = "You've come a long way up. Let's see what you're worth." },
+	{ id = "shield", name = "The Shield", line = "His shield is powered by the three blue generators around the Office. Shoot all three and it falls: then his bodyguards come.", say = "You've come a long way up. Let's see what you're worth." },
 	{ id = "detail", name = "The Security Detail", line = "His bodyguards. Stun all four.", say = "Gentlemen. Show our guests out." },
 	{ id = "boss", name = "The Executive", line = "Watch for his wind-up: a ring is a shockwave (jump it), a lane is his dash (step aside), a raised hand is briefcases (move).", say = "If you want something done properly, you do it yourself." },
 } :: { { id: string, name: string, line: string, say: string } }

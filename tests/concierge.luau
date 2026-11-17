@@ -101,7 +101,7 @@ run(function()
 	Concierge.greet(ada, true)
 end)
 local said = lastLine(ada)
-check("1. a first visit: welcomed at once, with the house's aim, and offered the tour", said ~= nil and string.find(said.line, "wealthiest", 1, true) ~= nil and choiceIds(said).tour ~= nil)
+check("1. a first visit: welcomed at once, with the house's aim, and offered the tour", said ~= nil and string.find(said.line, "richest guest", 1, true) ~= nil and choiceIds(said).tour ~= nil)
 check("...a new guest's tour covers what's new (they won't be offered it again)", profiles[ada].Data.flags.news72 == true)
 
 ---------------------------------------------------------------------------------------------------
@@ -195,10 +195,64 @@ do
 	end)
 	choose(ada, "ask")
 	said = lastLine(ada)
-	check("the questions are offered", #(said.choices or {}) == #Voice.Concierge.questions)
+	-- (Build 87) By kind first, and every question in the book to search.
+	check("Build 87: the questions come by kind, with the question book to search", #(said.choices or {}) == #Voice.Concierge.qaCategories + 1 and choiceIds(said)["cat:attractions"] ~= nil and choiceIds(said).search ~= nil)
+	local everyKind = true
+	for _, q in Voice.Concierge.questions do
+		local found = false
+		for _, c in Voice.Concierge.qaCategories do
+			if c.id == q.cat then
+				found = true
+			end
+		end
+		if not found then
+			everyKind = false
+		end
+	end
+	check("...every question has its kind", everyKind)
+	choose(ada, "cat:attractions")
+	said = lastLine(ada)
+	check("...a kind lists its questions, and Back", choiceIds(said).caught ~= nil and choiceIds(said).back ~= nil and choiceIds(said).rich == nil)
 	choose(ada, "caught")
 	said = lastLine(ada)
 	check("...and answered", said.line == Concierge.answer("caught"))
+	check("...an answer about a place offers Guide me there, and Another question", choiceIds(said).guide ~= nil and choiceIds(said).another ~= nil)
+	local waysBefore = 0
+	for _, m in ada.inbox do
+		if m.op == "way" then
+			waysBefore += 1
+		end
+	end
+	choose(ada, "guide")
+	local waysAfter = 0
+	for _, m in ada.inbox do
+		if m.op == "way" then
+			waysAfter += 1
+		end
+	end
+	check("...Guide me there: the gold arrows, walking", waysAfter == waysBefore + 1 and lastWay(ada).place == "velvet")
+	run(function()
+		Concierge.menu(ada)
+	end)
+	choose(ada, "ask")
+	choose(ada, "search")
+	local book
+	for i = #ada.inbox, 1, -1 do
+		if ada.inbox[i].op == "ask" then
+			book = ada.inbox[i]
+			break
+		end
+	end
+	check("...the question book: every question with its answer filled in, to search on the guest's screen", book ~= nil and #book.items == #Voice.Concierge.questions and #book.cats == #Voice.Concierge.qaCategories and (function()
+		for _, it in book.items do
+			if type(it.a) ~= "string" or string.find(it.a, "{", 1, true) then
+				return false
+			end
+		end
+		return true
+	end)())
+	-- (A breath, so the next choices aren't taken for a guest pressing too fast.)
+	advance(5)
 end
 
 ---------------------------------------------------------------------------------------------------
@@ -334,6 +388,44 @@ do
 		end
 		return true
 	end)())
+end
+
+---------------------------------------------------------------------------------------------------
+-- 13. Build 87: a brand-new guest is shown round without a click, once
+---------------------------------------------------------------------------------------------------
+do
+	local nia = H.guest("Nia", 803)
+	profiles[nia].Data.flags = profiles[nia].Data.flags or {}
+	local auto = Concierge.autoTour
+	local due = true
+	Concierge.autoTour = function()
+		local d = due
+		due = false
+		return d
+	end
+	local function starts()
+		local n = 0
+		for _, m in nia.inbox do
+			if m.op == "start" then
+				n += 1
+			end
+		end
+		return n
+	end
+	run(function()
+		Concierge.greet(nia, true)
+	end)
+	local said = lastLine(nia)
+	check("13. a brand-new guest: welcomed by name, told the tour is starting and how to end it, nothing to press", said ~= nil and string.find(said.line, "Nia", 1, true) ~= nil and string.find(said.line, "end the tour", 1, true) ~= nil and next(choiceIds(said)) == nil and string.find(said.line, "!", 1, true) == nil, said and said.line)
+	check("...not yet: the welcome has its moment first", starts() == 0)
+	advance(5.5)
+	check("...then the tour begins by itself", starts() == 1)
+	run(function()
+		Concierge.greet(nia, false)
+	end)
+	advance(6)
+	check("...and never by itself again (the next visit: no tour unless asked)", starts() == 1)
+	Concierge.autoTour = auto
 end
 
 H.finish()

@@ -66,7 +66,7 @@ local function used(tool: Tool)
 			return
 		end
 		if inSuite() then
-			toast("Hold your fire", "The pistol fires once the guards are onto you, in the Suite's fight.")
+			toast("Hold your fire", "The pistol fires in the Office's fight, once you're through the code door: the generators, his bodyguards, then him.")
 		else
 			toast("The Stun Pistol", "It fires only in the Executive Suite. Take it up there with an invitation.")
 		end

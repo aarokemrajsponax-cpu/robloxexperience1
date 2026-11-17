@@ -114,7 +114,7 @@ function VaultRoom.dress(m: Model, top: number)
 		Kit.cylinder(works, "VaultBolt", 0.3, 0.45, CFrame.new(c + Vector3.new(-0.85, math.cos(a) * 4.3, math.sin(a) * 4.3)), POLISHED, off)
 	end
 	local vplate = Kit.part(works, "VaultPlate", Vector3.new(0.05, 0.6, 3), CFrame.lookAt(c + Vector3.new(-1, -5.6, 0), c + Vector3.new(-10, -5.6, 0)), L.brass, off)
-	Kit.engrave(vplate, Enum.NormalId.Front, { { text = "MAISON NOIR · 1889", size = 0.3, font = Brand.Fonts.display, color = Color3.fromRGB(40, 30, 12) } }, { ppu = 80, lit = false })
+	Kit.engrave(vplate, Enum.NormalId.Front, { { text = "THE MAISON · 1889", size = 0.3, font = Brand.Fonts.display, color = Color3.fromRGB(40, 30, 12) } }, { ppu = 80, lit = false })
 	-- A soft laser grid before the door (light only: nothing to trip on).
 	local lx = c.X - 2.2
 	local laser = led(Color3.fromRGB(255, 70, 96), 0.3)

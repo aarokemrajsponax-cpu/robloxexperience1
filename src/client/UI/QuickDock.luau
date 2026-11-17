@@ -627,6 +627,8 @@ end
 local foldKey: TextButton? = nil -- the ‹ beside the dock's top corner
 local unfoldTab: TextButton? = nil -- KEYS ›, while it's folded away
 local special: Frame? = nil -- the event keys' place under the tab, while the rest is folded
+local collectionKey: TextButton? = nil -- (Build 87) the Collection, kept while the rest is folded
+local collectionTile: TextButton? = nil -- the dock's own Collection key
 local TOP = 94 -- under the Gilt bar and the Fortune plaque (UI/FortunePlaque: 58 to 86)
 
 local function folded(): boolean
@@ -690,6 +692,10 @@ refreshVisible = function()
 	if t then
 		t.Visible = not away and fold
 	end
+	local ck = collectionKey
+	if ck then
+		ck.Visible = not away and fold
+	end
 	-- (The event keys: in the dock, or under the tab while the rest is folded away.)
 	local s = special
 	local home: Instance = if fold and s then s else f
@@ -701,9 +707,12 @@ refreshVisible = function()
 	-- (Centred panels and the big moments keep clear of what's down the left: the whole dock, or
 	-- only the tab and the event keys while it's folded away.)
 	local events = watchTile ~= nil or holidayTile ~= nil
-	Root.left = if fold and t then 16 + math.max(t.Size.X.Offset, if events then keyWidth() else 0) else QuickDock.right()
+	Root.left = if fold and t then 16 + math.max(t.Size.X.Offset, if events then keyWidth() else 0, if ck then ck.Size.X.Offset else 0) else QuickDock.right()
 	-- (And how far down it reaches: the attractions' cards sit under it when there's room.)
 	local reach = if fold and t then t.Position.Y.Offset + t.Size.Y.Offset else f.Position.Y.Offset + f.Size.Y.Offset
+	if fold and ck then
+		reach = math.max(reach, ck.Position.Y.Offset + ck.Size.Y.Offset)
+	end
 	if fold and events and s then
 		reach = math.max(reach, s.Position.Y.Offset + s.Size.Y.Offset)
 	end
@@ -723,6 +732,19 @@ end
 
 function QuickDock.isFolded(): boolean
 	return folded()
+end
+
+-- (Build 87) The Collection key showing now (the dock's, or its own while the dock is folded
+-- away), for the guiding hand to point at; nil while the keys are stepped aside.
+function QuickDock.collectionTarget(): GuiObject?
+	local f = dock
+	if not f or (not f.Visible and not (collectionKey and collectionKey.Visible)) then
+		return nil
+	end
+	if folded() then
+		return collectionKey
+	end
+	return collectionTile
 end
 
 function QuickDock.start()
@@ -753,8 +775,49 @@ function QuickDock.start()
 	grid.FillDirectionMaxCells = COLUMNS
 	grid.SortOrder = Enum.SortOrder.LayoutOrder
 	grid.Parent = f
-	tile(f, 1, "🏺", "Collection", "C", function()
+	local col = tile(f, 1, "🏺", "Collection", "C", function()
 		QuickDock.openCollection()
+	end)
+	collectionTile = col
+	-- (Build 87: the Collection stands out from the other keys, so nobody misses what's in it:
+	-- a gold edge, its name in gold, and a slow gleam across it now and then.)
+	local cs = col:FindFirstChildOfClass("UIStroke")
+	if cs then
+		cs.Color = C.gold
+		cs.Thickness = 2
+		cs.Transparency = 0.05
+	end
+	col.MouseLeave:Connect(function()
+		-- (Pointed away from, its edge goes back to gold, not the others' grey.)
+		task.delay(0.16, function()
+			if cs then
+				cs.Color = C.gold
+				cs.Transparency = 0.05
+			end
+		end)
+	end)
+	local cl = col:FindFirstChild("Label")
+	if cl and cl:IsA("TextLabel") then
+		cl.TextColor3 = Color3.fromRGB(255, 214, 120)
+		cl.FontFace = Brand.Fonts.bodyBold
+	end
+	local gleam = Instance.new("Frame")
+	gleam.Name = "Gleam"
+	gleam.BorderSizePixel = 0
+	gleam.BackgroundColor3 = Color3.fromRGB(255, 236, 190)
+	gleam.BackgroundTransparency = 0.82
+	gleam.Rotation = 20
+	gleam.Size = UDim2.new(0, math.floor(SIZE * 0.22), 2, 0)
+	gleam.AnchorPoint = Vector2.new(0.5, 0.5)
+	gleam.Position = UDim2.new(-0.4, 0, 0.5, 0)
+	gleam.ZIndex = 3
+	gleam.Parent = col
+	task.spawn(function()
+		while gleam.Parent do
+			gleam.Position = UDim2.new(-0.4, 0, 0.5, 0)
+			TweenService:Create(gleam, TweenInfo.new(1.1, Enum.EasingStyle.Sine), { Position = UDim2.new(1.4, 0, 0.5, 0) }):Play()
+			task.wait(7)
+		end
 	end)
 	tile(f, 2, "🤝", "Trade", "T", QuickDock.openTrade)
 	tile(f, 3, "👔", "Wardrobe", "V", function()
@@ -787,10 +850,27 @@ function QuickDock.start()
 	ut.TextSize = tabSize
 	ut.Position = UDim2.fromOffset(16, top)
 	unfoldTab = ut
+	-- (Build 87) The Collection stays while the rest is folded away: its own gold key under the
+	-- KEYS › tab, so what's in it is never out of reach.
+	local ckText = "YOUR COLLECTION"
+	local ckSize = math.floor(tabHeight * 0.36)
+	local ck = smallKey("DockCollection", ckText, Theme.measure(ckText, ckSize, Brand.Fonts.heavy).X + 34, tabHeight, function()
+		QuickDock.openCollection()
+	end)
+	ck.TextSize = ckSize
+	ck.BackgroundColor3 = Color3.fromRGB(214, 160, 52)
+	ck.TextColor3 = Color3.fromRGB(26, 18, 6)
+	local ckFill = Instance.new("UIGradient")
+	ckFill.Rotation = 90
+	ckFill.Color = ColorSequence.new(Color3.fromRGB(255, 236, 170), Color3.fromRGB(200, 140, 40))
+	ckFill.Parent = ck
+	ck.Position = UDim2.fromOffset(16, top + tabHeight + GAP)
+	ck.Visible = false
+	collectionKey = ck
 	local sp = Instance.new("Frame")
 	sp.Name = "DockEvents"
 	sp.BackgroundTransparency = 1
-	sp.Position = UDim2.fromOffset(16, top + tabHeight + GAP)
+	sp.Position = UDim2.fromOffset(16, top + 2 * (tabHeight + GAP))
 	sp.Size = UDim2.fromOffset(keyWidth(), 2 * SIZE + GAP)
 	sp.Visible = false
 	sp.Parent = Root.hud

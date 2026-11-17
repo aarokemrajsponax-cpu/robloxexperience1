@@ -454,7 +454,7 @@ local function farBoards(parent: Instance)
 		local gold = i % 2 == 0
 		local board = piece(parent, "Board", Vector3.new(len - 0.4, 2.6, 0.5), CFrame.new(x, 1.3, z), if gold then rgb(196, 158, 82) else rgb(12, 12, 14), Enum.Material.SmoothPlastic)
 		local g = face(board, Enum.NormalId.Back, 12)
-		words(g, if gold then "GRAND PRIX" else "MAISON NOIR", Brand.Fonts.display, if gold then rgb(14, 12, 10) else GOLD, UDim2.fromScale(0.8, 0.62), UDim2.fromScale(0.1, 0.19))
+		words(g, if gold then "GRAND PRIX" else "THE MAISON", Brand.Fonts.display, if gold then rgb(14, 12, 10) else GOLD, UDim2.fromScale(0.8, 0.62), UDim2.fromScale(0.1, 0.19))
 	end
 	piece(parent, "BoardRail", Vector3.new(2 * T.half, 0.18, 0.6), CFrame.new(T.centre.X, 2.68, z), GOLD, Enum.Material.Metal).Reflectance = 0.25
 end
@@ -474,7 +474,7 @@ local function infield(parent: Instance)
 	local sign = piece(parent, "InfieldName", Vector3.new(130, 0.02, 30), CFrame.new(T.centre.X, T.y + 0.13, T.centre.Z - 10), C.gold)
 	sign.Transparency = 1
 	local g = face(sign, Enum.NormalId.Top, 6)
-	words(g, "MAISON NOIR", Brand.Fonts.display, GOLD, UDim2.fromScale(1, 0.58), UDim2.fromScale(0, 0))
+	words(g, "THE MAISON", Brand.Fonts.display, GOLD, UDim2.fromScale(1, 0.58), UDim2.fromScale(0, 0))
 	words(g, "G R A N D   P R I X", Brand.Fonts.bodyBold, rgb(240, 232, 214), UDim2.fromScale(0.6, 0.3), UDim2.fromScale(0.2, 0.66))
 end
 
@@ -526,7 +526,7 @@ local function buildPodium(parent: Instance)
 	podium.confetti = e
 	local back = piece(parent, "PodiumBoard", Vector3.new(22, 7, 0.6), CFrame.new(x0, 8.2, z0 - 4), rgb(12, 12, 14), Enum.Material.SmoothPlastic)
 	local g = face(back, Enum.NormalId.Back, 14)
-	words(g, "MAISON NOIR GRAND PRIX", Brand.Fonts.display, GOLD, UDim2.fromScale(0.9, 0.36), UDim2.fromScale(0.05, 0.14))
+	words(g, "THE MAISON GRAND PRIX", Brand.Fonts.display, GOLD, UDim2.fromScale(0.9, 0.36), UDim2.fromScale(0.05, 0.14))
 	words(g, "THE PODIUM", Brand.Fonts.bodyBold, rgb(236, 232, 224), UDim2.fromScale(0.5, 0.22), UDim2.fromScale(0.25, 0.6))
 	for _, sx in { -1, 1 } do
 		piece(parent, "PodiumPost", Vector3.new(0.5, 11.7, 0.5), CFrame.new(x0 + sx * 11.2, 5.85, z0 - 4), GOLD, Enum.Material.Metal).Reflectance = 0.3
@@ -580,7 +580,7 @@ local function timingTower(parent: Instance)
 	grad.Rotation = 90
 	grad.Color = ColorSequence.new(rgb(34, 28, 20), rgb(8, 8, 10))
 	grad.Parent = bg
-	words(bg, "MAISON NOIR GRAND PRIX", Brand.Fonts.display, GOLD, UDim2.fromScale(0.6, 0.11), UDim2.fromScale(0.04, 0.05), Enum.TextXAlignment.Left)
+	words(bg, "THE MAISON GRAND PRIX", Brand.Fonts.display, GOLD, UDim2.fromScale(0.6, 0.11), UDim2.fromScale(0.04, 0.05), Enum.TextXAlignment.Left)
 	tower.state = words(bg, "", Brand.Fonts.bodyBold, rgb(236, 232, 224), UDim2.fromScale(0.34, 0.08), UDim2.fromScale(0.62, 0.065), Enum.TextXAlignment.Right)
 	local rule = Instance.new("Frame")
 	rule.BorderSizePixel = 0

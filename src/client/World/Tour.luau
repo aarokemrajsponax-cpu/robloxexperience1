@@ -10,6 +10,14 @@
 -- number of guests can take the tour at once and nobody waits. It walks a fixed route at an easy
 -- pace (Layout.Tour), waits when the guest falls behind, and passes through nothing solid, so it
 -- never gets stuck.
+--
+-- Build 87, never stuck: a guest who hangs back is fetched (he walks back the way he came, never
+-- through a wall, until they're close, then on again); at a stop the card shows once the guest is
+-- near the stop or near him, or after a few seconds whatever (its pin shows what's meant); and the
+-- way line always has a key to skip on to the stop. A gold trail on the floor runs from him to the
+-- next stop (World/GoldTrail). When the tour ends, however it ends, he walks back to the lectern the
+-- way he came (quickly, and never longer than Config.Tour.homeWithin seconds) and only then is the
+-- house's Concierge back in his place on this screen.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -22,6 +30,7 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Voice = require(ReplicatedStorage.Shared.Voice)
 local Dialogue = require(script.Parent.Parent.UI.Dialogue)
 local Toast = require(script.Parent.Parent.UI.Toast)
+local GoldTrail = require(script.Parent.GoldTrail)
 local Waypoint = require(script.Parent.Waypoint)
 
 local Tour = {}
@@ -37,8 +46,16 @@ Tour.toDirectory = function() end
 Tour.isSeated = function(): boolean
 	return false
 end
+-- Set by Main: the screen is clear for the tour to begin (no title, intro or welcome on it).
+Tour.isClear = function(): boolean
+	return true
+end
 
-type Card = { stop: string, title: string, line: string, place: string? }
+type Card = { stop: string, title: string, line: string, place: string?, hand: string? }
+
+-- Set by Main (Build 87): the guiding hand pointed at something on the screen for a card (`what`:
+-- "collection"), or put away (nil).
+Tour.pointAt = function(_what: string?) end
 
 local player = Players.LocalPlayer
 local V = Voice.Concierge
@@ -71,6 +88,18 @@ local hidden: { { inst: Instance, prop: string, value: any } } = {}
 local connection: RBXScriptConnection? = nil
 local rayParams: RaycastParams? = nil
 local rayRefresh = 0
+-- (Build 87) The way he's come (each corner of the route he's passed, from the lectern on), for
+-- fetching a guest who hangs back and for the walk home; how long he's waited for them, or stood
+-- at a stop; where home is; and the walk home after the tour (its own frame loop).
+local crumbs: { Vector3 } = {}
+local fetching = false
+local waitedFor = 0
+local arrivedFor = 0
+local home = Vector3.zero
+local trailRefresh = 0
+local holdFor = 0 -- after fetching a guest: a moment beside them before walking on
+local holdFrom = Vector3.zero
+local returning: RBXScriptConnection? = nil
 
 local function guestRoot(): BasePart?
 	local character = player.Character
@@ -378,9 +407,15 @@ local showCard: (i: number) -> ()
 
 -- While walking: where we're going, with the pin on ahead at the next stop (and the line of
 -- light from the guest to it), and a key to end the tour on the way.
+local skipAhead: () -> ()
+
 local function wayLine(line: string, stop: Layout.TourStop)
-	Dialogue.show(V.speaker, line, { { id = "done", text = Voice.TourKeys.done } }, function()
-		Tour.stop("done")
+	Dialogue.show(V.speaker, line, { { id = "skip", text = Voice.TourKeys.skip }, { id = "done", text = Voice.TourKeys.done } }, function(id: string)
+		if id == "skip" then
+			skipAhead()
+		else
+			Tour.stop("done")
+		end
 	end, nil, { point = stop.stand, pointName = stop.name, sticky = true })
 end
 
@@ -391,7 +426,10 @@ local function walkTo(index: number)
 	table.insert(path, stop.stand)
 	pathIndex = 1
 	paused = false
+	fetching = false
+	waitedFor, arrivedFor, holdFor = 0, 0, 0
 	state = "walking"
+	pcall(Tour.pointAt, nil)
 	wayLine((Voice.TourWalk :: any)[stop.id] or "This way.", stop)
 end
 
@@ -423,6 +461,7 @@ end
 showCard = function(i: number)
 	cardIndex = i
 	state = "card"
+	GoldTrail.clear()
 	local card = cards[i]
 	local K = Voice.TourKeys
 	local choices: { Dialogue.Choice }
@@ -436,6 +475,7 @@ showCard = function(i: number)
 		table.insert(choices, { id = "done", text = K.done })
 	end
 	local point = if card.place then Layout.Tour.points[card.place] else nil
+	pcall(Tour.pointAt, card.hand)
 	Dialogue.show(V.speaker, card.line, choices, function(id: string)
 		choose(i, id)
 	end, nil, {
@@ -445,6 +485,41 @@ showCard = function(i: number)
 		pointName = if point and card.place then (Voice.TourPlaces :: any)[card.place] else nil,
 		sticky = true,
 	})
+end
+
+-- On to the stop at once (the way line's Skip key): he's there, the corners on the way are
+-- passed, and the card shows wherever the guest is (its pin shows what's meant).
+skipAhead = function()
+	if not active or state == "card" then
+		return
+	end
+	for k = pathIndex, #path do
+		table.insert(crumbs, path[k])
+	end
+	pathIndex = #path + 1
+	local stop = stops[stopIndex]
+	pos = stop.stand
+	feetY = stop.stand.Y
+	walking(false)
+	fetching, paused = false, false
+	showCard(cardIndex)
+end
+
+-- The gold trail on the floor: from him along the rest of the way to the stop.
+local function layTrail()
+	if state == "card" then
+		GoldTrail.clear()
+		return
+	end
+	local points = { pos }
+	for k = pathIndex, #path do
+		table.insert(points, path[k])
+	end
+	if #points < 2 then
+		GoldTrail.clear()
+		return
+	end
+	GoldTrail.set(points, floorAt)
 end
 
 ---------------------------------------------------------------------------------------------------
@@ -480,16 +555,70 @@ local function step(dt: number)
 		lostFor = 0
 	end
 	local stop = stops[stopIndex]
+	trailRefresh -= dt
+	if trailRefresh <= 0 then
+		trailRefresh = 0.25
+		layTrail()
+	end
 	if state == "walking" then
+		local behind = false
 		if guest then
-			if paused then
-				paused = apart > T.resumeWithin
+			if paused or fetching then
+				behind = apart > T.resumeWithin
 			else
 				-- Behind, not ahead: further from where we're going than the Concierge is.
-				paused = apart > T.waitBeyond and (guest - stop.stand).Magnitude > (pos - stop.stand).Magnitude
+				behind = apart > T.waitBeyond and (guest - stop.stand).Magnitude > (pos - stop.stand).Magnitude
 			end
 		end
-		if paused and guest then
+		local wasFetching = fetching
+		waitedFor = if behind then waitedFor + dt else 0
+		-- (He waits a moment; then, if they're still hanging back, he goes back for them the way
+		-- he came, as long as that brings him nearer to them.)
+		fetching = false
+		if behind and guest and waitedFor > T.fetchAfter and #crumbs > 0 then
+			-- (Only while the corner behind him is nearer to them than he is.)
+			fetching = (flat(guest - crumbs[#crumbs])).Magnitude < (flat(guest - pos)).Magnitude
+		end
+		paused = behind and not fetching
+		if wasFetching and not fetching and not behind and guest then
+			-- (He's with them again: a moment beside them, on again as soon as they move.)
+			holdFor, holdFrom = T.holdAfterFetch, guest
+		end
+		if holdFor > 0 and guest then
+			holdFor -= dt
+			if (flat(guest - holdFrom)).Magnitude > 4 then
+				holdFor = 0
+			end
+		end
+		if holdFor > 0 and guest and not behind then
+			walking(false)
+			gait(dt, false)
+			turnTo(guest - feet, dt)
+		elseif fetching and guest then
+			pace = math.max(T.speed, pace)
+			walking(true)
+			gait(dt, true)
+			local left = pace * dt
+			while left > 0 and #crumbs > 0 do
+				local target = crumbs[#crumbs]
+				local d = target - pos
+				local dist = d.Magnitude
+				turnTo(d, dt)
+				if dist <= left then
+					pos = target
+					left -= dist
+					-- (Back past this corner: the way on goes through it again.)
+					table.remove(crumbs)
+					table.insert(path, pathIndex, target)
+					if #crumbs == 0 or (flat(guest - crumbs[#crumbs])).Magnitude >= (flat(guest - pos)).Magnitude then
+						left = 0
+					end
+				else
+					pos += d / dist * left
+					left = 0
+				end
+			end
+		elseif paused and guest then
 			walking(false)
 			gait(dt, false)
 			turnTo(guest - feet, dt)
@@ -517,6 +646,7 @@ local function step(dt: number)
 				if dist <= left then
 					pos = target
 					left -= dist
+					table.insert(crumbs, target)
 					pathIndex += 1
 				else
 					pos += d / dist * left
@@ -525,17 +655,22 @@ local function step(dt: number)
 			end
 			if pathIndex > #path then
 				state = "arriving"
+				arrivedFor = 0
 				walking(false)
 			end
 		end
 	elseif state == "arriving" then
 		gait(dt, false)
-		-- At the stop: face the guest until they're close, then the card.
+		arrivedFor += dt
+		-- At the stop: face the guest; the card once they're near the stop or near him, or after
+		-- a few seconds whatever (never a wait on a guest who can't find the spot).
 		if guest then
 			turnTo(guest - feet, dt)
-			if (guest - stop.stand).Magnitude <= T.arriveWithin then
+			if (guest - stop.stand).Magnitude <= T.arriveWithin or apart <= T.arriveWithin or arrivedFor > T.cardAfter then
 				showCard(cardIndex)
 			end
+		elseif arrivedFor > T.cardAfter then
+			showCard(cardIndex)
 		end
 	elseif state == "card" then
 		gait(dt, false)
@@ -552,6 +687,16 @@ end
 -- Start and stop
 ---------------------------------------------------------------------------------------------------
 
+-- Home at once: the walk back (if he's on it) ends, his copy goes, the house's Concierge is back.
+local function homeNow()
+	if returning then
+		returning:Disconnect()
+		returning = nil
+	end
+	removeGuide()
+	unhide()
+end
+
 function Tour.start()
 	if active then
 		-- Already on the tour: the card where we are, again.
@@ -560,12 +705,14 @@ function Tour.start()
 		end
 		return
 	end
+	homeNow()
 	local root = guestRoot()
 	if not root or Tour.isSeated() then
 		return
 	end
 	active = true
 	stopIndex, cardIndex, lostFor, paused = 1, 1, 0, false
+	fetching, waitedFor, arrivedFor, trailRefresh, holdFor = false, 0, 0, 0, 0
 	local params = RaycastParams.new()
 	pcall(function()
 		params.FilterType = Enum.RaycastFilterType.Exclude
@@ -590,6 +737,8 @@ function Tour.start()
 	end
 	pos = startAt
 	feetY = startAt.Y
+	home = startAt
+	crumbs = { startAt }
 	facing = if flat(root.Position - startAt).Magnitude > 0.1 then flat(root.Position - startAt).Unit else Vector3.new(0, 0, 1)
 	refreshRays()
 	rayRefresh = 1
@@ -617,8 +766,9 @@ function Tour.stop(reason: string?)
 	end
 	Dialogue.close()
 	Waypoint.clear()
-	removeGuide()
-	unhide()
+	GoldTrail.clear()
+	pcall(Tour.pointAt, nil)
+	Tour.walkHome()
 	pcall(function()
 		Remotes.event("Tour"):FireServer({ op = "end" })
 	end)
@@ -634,11 +784,68 @@ function Tour.stop(reason: string?)
 	end
 end
 
--- The server says when (the guest asked the Concierge to show them round).
+-- After the tour (however it ended): he turns and walks back to the lectern the way he came,
+-- briskly, and fades there (or wherever he is when Config.Tour.homeWithin seconds are up); then the
+-- house's Concierge is in his place again on this screen. (Without a copy, he's simply back.)
+function Tour.walkHome()
+	if returning then
+		returning:Disconnect()
+		returning = nil
+	end
+	if not guide then
+		unhide()
+		return
+	end
+	local T = Config.data.Tour
+	local way = table.clone(crumbs)
+	table.insert(way, 1, home)
+	local started = os.clock()
+	local speed = math.max(T.speed, 30)
+	pace = speed
+	walking(true)
+	returning = RunService.RenderStepped:Connect(function(dt: number)
+		local left = speed * dt
+		while left > 0 and #way > 0 do
+			local target = way[#way]
+			local d = target - pos
+			local dist = d.Magnitude
+			turnTo(d, dt)
+			if dist <= left then
+				pos = target
+				left -= dist
+				table.remove(way)
+			else
+				pos += d / dist * left
+				left = 0
+			end
+		end
+		gait(dt, #way > 0)
+		place(dt)
+		if #way == 0 or os.clock() - started > T.homeWithin then
+			homeNow()
+		end
+	end)
+end
+
+-- Whether he's on his way back to the lectern after a tour (for tests).
+function Tour.homeward(): boolean
+	return returning ~= nil
+end
+
+-- The server says when (the guest asked the Concierge to show them round, or it's their very
+-- first evening). It begins once the screen is clear: no title, intro or welcome on it.
 function Tour.listen()
 	Remotes.event("Tour").OnClientEvent:Connect(function(message: any)
 		if type(message) == "table" and message.op == "start" then
-			Tour.start()
+			task.spawn(function()
+				for _ = 1, 60 do
+					if Tour.isClear() then
+						break
+					end
+					task.wait(0.25)
+				end
+				Tour.start()
+			end)
 		end
 	end)
 end

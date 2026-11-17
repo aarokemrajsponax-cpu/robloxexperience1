@@ -80,7 +80,7 @@ function NightlyCard.show(card: { [string]: any }, actions: Actions)
 	local room = Rooms.get(card.room)
 
 	if not short then
-		Theme.text(content, Brand.Name, 11, "caps", { LayoutOrder = 1 })
+		Theme.text(content, Brand.House, 11, "caps", { LayoutOrder = 1 })
 	end
 	Theme.text(content, if card.scored then "Tonight's Table" else "Tonight's Table · Rehearsal", 22, "display", { LayoutOrder = 2 })
 	Theme.text(content, dateText(card.key) .. "  ·  " .. Rooms.pace(if room then room.id else nil), 13, "body", { LayoutOrder = 3, TextColor3 = Brand.Colours.smoke })
