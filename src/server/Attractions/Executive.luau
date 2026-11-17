@@ -440,6 +440,7 @@ local function fresh(_ctx: Types.Ctx)
 	run.look = theme.id
 	run.challenge = if Plan.challengeById[challengeId] then challengeId else Plan.Challenges[1].id
 	pcall(ExecutiveBuild.style, b, origin, theme)
+	pcall(ExecutiveBuild.tonight, b, theme, Plan.challengeById[run.challenge])
 	pcall(ExecutiveBuild.season, b, origin, Executive.seasonNow())
 	b.root:SetAttribute("SuiteChallenge", run.challenge)
 	clearActors()

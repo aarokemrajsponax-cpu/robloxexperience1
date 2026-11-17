@@ -119,7 +119,7 @@ end
 Attractions.BOUNDS = {
 	luxe = { min = Vector3.new(-260, -140, -260), max = Vector3.new(260, 140, 260) },
 	basement = { min = Vector3.new(-90, -300, -60), max = Vector3.new(90, 80, 3950) }, -- (Build 89: thirty-two stages, twice as long again)
-	executive = { min = Vector3.new(-320, -120, -240), max = Vector3.new(320, 120, 160) },
+	executive = { min = Vector3.new(-320, -120, -280), max = Vector3.new(320, 120, 160) }, -- (Build 91: the Reception, behind the lobby)
 	island = { min = Vector3.new(-520, -80, -420), max = Vector3.new(420, 260, 440) },
 	gala = { min = Vector3.new(-160, -40, -140), max = Vector3.new(160, 90, 140) },
 } :: { [string]: { min: Vector3, max: Vector3 } }

@@ -185,6 +185,195 @@ local function chandelier(parent: Instance, top: Vector3, size: number, brightne
 	Kit.pointLight(body, brightness, range, rgb(255, 230, 196))
 end
 
+-- A frame standing at `at`, its front turned to face `dir` (+X, -X, +Z or -Z). (Built from
+-- angles, not lookAt: the same in Studio and in every test.)
+local function facingDir(at: Vector3, dir: Vector3): CFrame
+	local yaw = if dir.X > 0.5 then -math.pi / 2 elseif dir.X < -0.5 then math.pi / 2 elseif dir.Z > 0.5 then math.pi else 0
+	return CFrame.new(at) * CFrame.Angles(0, yaw, 0)
+end
+
+-- (Build 91) The Reception, behind the lift's lobby (shared/Executive Reception): safe, as the
+-- lobby is. Black marble with a brass compass, silk walls in the night's colour, a reception desk
+-- under the Executive's name, a lounge, a bar, two chandeliers, and a window wall over the city.
+local function reception(arch: Instance, dress: Instance, o: Vector3)
+	local R = Plan.Reception
+	local H = Plan.HEIGHT
+	local x0, x1, z0, z1 = R.minX, R.maxX, R.minZ, R.maxZ
+	local room = Kit.model(dress, "Reception")
+	-- The floor: black marble, a bone border, a brass compass in the middle.
+	box(arch, "ReceptionFloor", o, V(x0, -1, z0), V(x1, 0, z1 + 1), BLACK_MARBLE)
+	box(room, "ReceptionBorder", o, V(x0 + 2, 0, z0 + 2), V(x1 - 2, 0.03, z0 + 3), BONE_MARBLE, GHOST)
+	box(room, "ReceptionBorder", o, V(x0 + 2, 0, z1 - 3), V(x1 - 2, 0.03, z1 - 2), BONE_MARBLE, GHOST)
+	box(room, "ReceptionBorder", o, V(x0 + 2, 0, z0 + 2), V(x0 + 3, 0.03, z1 - 2), BONE_MARBLE, GHOST)
+	box(room, "ReceptionBorder", o, V(x1 - 3, 0, z0 + 2), V(x1 - 2, 0.03, z1 - 2), BONE_MARBLE, GHOST)
+	local mid = V(-4, 0, (z0 + z1) / 2)
+	local up = CFrame.Angles(0, 0, math.rad(90))
+	Kit.cylinder(room, "CompassRing", 0.05, 11, CFrame.new(o + mid + V(0, 0.03, 0)) * up, BRASS, GHOST_DARK)
+	Kit.cylinder(room, "Compass", 0.06, 10.2, CFrame.new(o + mid + V(0, 0.04, 0)) * up, BONE_MARBLE, GHOST_DARK)
+	Kit.cylinder(room, "CompassHeart", 0.07, 4, CFrame.new(o + mid + V(0, 0.05, 0)) * up, BLACK_MARBLE, GHOST_DARK)
+	for i = 0, 3 do
+		Kit.part(room, "CompassPoint", V(0.5, 0.08, 9.6), CFrame.new(o + mid + V(0, 0.06, 0)) * CFrame.Angles(0, math.rad(i * 45), 0), look(GOLD, Enum.Material.Metal, 0.3), GHOST_DARK)
+	end
+	-- The walls, in the night's silk (named as the hallway's, so each night's look colours them),
+	-- panelled as the hallway is.
+	box(arch, "HallWall", o, V(x0 - 1, 0, z0 - 1), V(x0, H, z1 + 1), SILK)
+	box(arch, "HallWall", o, V(x1, 0, z0 - 1), V(x1 + 1, H, z1 + 1), SILK)
+	for _, side in { -1, 1 } do
+		local inner = if side < 0 then x0 else x1
+		box(room, "Wainscot", o, V(inner, 0, z0), V(inner - side * 0.3, 4.2, z1), WALNUT, DECO)
+		box(room, "Skirting", o, V(inner, 0, z0), V(inner - side * 0.42, 0.55, z1), DARK_WALNUT, DECO)
+		box(room, "ChairRail", o, V(inner, 4.2, z0), V(inner - side * 0.45, 4.48, z1), BRASS, DECO)
+		box(room, "Cornice", o, V(inner, H - 0.9, z0), V(inner - side * 0.55, H, z1), WALNUT, DECO)
+		box(room, "CorniceGilt", o, V(inner, H - 1.08, z0), V(inner - side * 0.6, H - 0.9, z1), BRASS, DECO)
+	end
+	-- The arches from the lobby: brass jambs and a head, on both faces, and the room's name over
+	-- each on the lobby's side (a plain frame faces -Z; these turn to +Z).
+	local AH = Plan.ARCH_HEIGHT
+	for _, a in Plan.Arches do
+		local ax0, ax1 = a[1], a[2]
+		for _, zf in { z1 - 0.05, z1 + 1.05 } do
+			box(room, "ArchJamb", o, V(ax0 - 0.6, 0, zf - 0.3), V(ax0, AH + 0.4, zf + 0.3), BRASS, DECO)
+			box(room, "ArchJamb", o, V(ax1, 0, zf - 0.3), V(ax1 + 0.6, AH + 0.4, zf + 0.3), BRASS, DECO)
+			box(room, "ArchHead", o, V(ax0 - 0.6, AH - 0.2, zf - 0.3), V(ax1 + 0.6, AH + 0.6, zf + 0.3), BRASS, DECO)
+		end
+		local over = Kit.part(room, "ReceptionSign", V(ax1 - ax0 + 1, 1.7, 0.2), CFrame.new(o + V((ax0 + ax1) / 2, AH + 2.1, z1 + 1.12)) * CFrame.Angles(0, math.pi, 0), L.blackLacquer, GHOST_DARK)
+		Kit.engrave(over, Enum.NormalId.Front, {
+			{ text = "THE RECEPTION", size = 0.48, font = Brand.Fonts.display, color = rgb(236, 196, 112) },
+			{ text = "no security this side", size = 0.3, font = Brand.Fonts.body, color = rgb(214, 206, 190) },
+		}, { ppu = 60, lit = false, brightness = 1.4, oneLine = true })
+	end
+	-- The window wall: a marble sill, brass mullions, glass, and the city at night beyond it.
+	box(arch, "WindowSill", o, V(x0 - 1, 0, z0 - 1), V(x1 + 1, 2.2, z0), BONE_MARBLE)
+	box(arch, "WindowHead", o, V(x0 - 1, 13, z0 - 1), V(x1 + 1, H, z0), WALNUT)
+	local bays = 5
+	for i = 0, bays do
+		local x = x0 + (x1 - x0) * i / bays
+		box(room, "Mullion", o, V(x - 0.35, 2.2, z0 - 0.9), V(x + 0.35, 13, z0 - 0.1), BRASS, DECO)
+	end
+	box(arch, "WindowGlass", o, V(x0, 2.2, z0 - 0.6), V(x1, 13, z0 - 0.4), look(rgb(110, 140, 180), Enum.Material.Glass, 0.25, 0.82))
+	box(room, "Transom", o, V(x0, 9.4, z0 - 0.75), V(x1, 9.7, z0 - 0.25), BRASS, DECO)
+	local city = Kit.model(room, "City")
+	local towers = {
+		{ -150, 70, 60 }, { -112, 120, 40 }, { -78, 90, 36 }, { -46, 150, 44 }, { -10, 104, 30 },
+		{ 22, 168, 42 }, { 58, 96, 34 }, { 92, 132, 40 }, { 128, 80, 46 }, { 164, 110, 50 },
+	}
+	for i, t in towers do
+		local x, h, w = t[1], t[2], t[3]
+		local z = z0 - 120 - (i % 3) * 36
+		local base = -140
+		box(city, "Tower", o, V(x - w / 2, base, z - w / 2), V(x + w / 2, base + h, z + w / 2), look(rgb(14, 16, 24), Enum.Material.SmoothPlastic), GHOST_DARK)
+		-- Its lit windows, facing the Suite.
+		for row = 0, math.floor(h / 9) - 1 do
+			for col = 0, math.floor(w / 6) - 1 do
+				if (row * 7 + col * 3 + i) % 4 ~= 0 then
+					local wx = x - w / 2 + 3 + col * 6
+					local wy = base + 6 + row * 9
+					Kit.part(city, "Lit", V(2.6, 3.4, 0.2), CFrame.new(o + V(wx, wy, z + w / 2 + 0.1)), look(rgb(255, 212, 150), Enum.Material.Neon, nil, (row + col) % 3 * 0.2), GHOST_DARK)
+				end
+			end
+		end
+		-- A red light on the tallest.
+		if h >= 150 then
+			Kit.ball(city, "Beacon", 1.4, o + V(x, base + h + 1.2, z), look(rgb(255, 60, 60), Enum.Material.Neon), GHOST_DARK)
+		end
+	end
+	Kit.ball(city, "Moon", 26, o + V(-60, 120, z0 - 420), look(rgb(236, 232, 214), Enum.Material.Neon), GHOST_DARK)
+	-- The ceiling: black lacquer, walnut beams, two crystal chandeliers.
+	box(arch, "ReceptionCeiling", o, V(x0 - 1, H, z0 - 1), V(x1 + 1, H + 1, z1 + 1), L.blackLacquer, { shadow = false })
+	for _, x in { -10, 10 } do
+		box(room, "Beam", o, V(x - 0.5, H - 0.8, z0), V(x + 0.5, H, z1), WALNUT, GHOST_DARK)
+	end
+	for z = z0 + 12, z1 - 4, 12 do
+		box(room, "Beam", o, V(x0, H - 0.8, z - 0.5), V(x1, H, z + 0.5), WALNUT, GHOST_DARK)
+	end
+	chandelier(room, o + V(-10, H, (z0 + z1) / 2), 1.2, 1.5, 44)
+	chandelier(room, o + V(14, H, (z0 + z1) / 2), 1.2, 1.5, 44)
+	-- The reception desk, on the west side, under the Executive's name.
+	local dz0, dz1 = -233, -215
+	box(room, "Desk", o, V(-24, 0, dz0), V(-20.6, 3.3, dz1), WALNUT, DECO)
+	box(room, "DeskTop", o, V(-24.3, 3.3, dz0 - 0.3), V(-20.3, 3.65, dz1 + 0.3), BONE_MARBLE, DECO)
+	box(room, "DeskKick", o, V(-20.75, 0, dz0), V(-20.5, 0.5, dz1), BRASS, DECO)
+	for z = dz0 + 1.5, dz1 - 1.4, 1.5 do
+		box(room, "DeskFlute", o, V(-20.62, 0.7, z - 0.07), V(-20.48, 3.0, z + 0.07), BRASS, GHOST_DARK)
+	end
+	box(room, "DeskBand", o, V(-20.7, 3.0, dz0), V(-20.45, 3.3, dz1), BRASS, DECO)
+	Kit.cylinder(room, "BellBase", 0.12, 0.7, CFrame.new(o + V(-21.4, 3.71, -219)) * up, BRASS, GHOST_DARK)
+	Kit.ball(room, "Bell", 0.6, o + V(-21.4, 3.92, -219), look(GOLD, Enum.Material.Metal, 0.35), GHOST_DARK)
+	box(room, "Ledger", o, V(-23, 3.65, -227.5), V(-21.4, 3.85, -225.3), look(rgb(70, 16, 26), Enum.Material.Leather), GHOST_DARK)
+	piece(room, "lamp", facingDir(o + V(-23.2, 3.65, -230.8), V(1, 0, 0)), { model = "brass" }, 0.8, false)
+	-- The backdrop: a walnut panel on the west wall, the name in gold, and tonight on the board.
+	box(room, "Backdrop", o, V(x0, 0, -236), V(x0 + 0.5, 12.6, -212), WALNUT, DECO)
+	box(room, "BackdropGilt", o, V(x0 + 0.5, 12.2, -236), V(x0 + 0.7, 12.6, -212), BRASS, DECO)
+	local board = Kit.part(room, "ReceptionBoard", V(16, 6.4, 0.2), CFrame.new(o + V(x0 + 0.62, 8.2, -224)) * CFrame.Angles(0, -math.pi / 2, 0), L.blackLacquer, GHOST_DARK)
+	Kit.engrave(board, Enum.NormalId.Front, {
+		{ text = "THE EXECUTIVE", size = 0.2, font = Brand.Fonts.display, color = rgb(236, 196, 112) },
+		{ text = "Reception", size = 0.11, font = Brand.Fonts.displayItalic, color = rgb(222, 214, 198) },
+		{ text = "Tonight: the Suite as he keeps it", size = 0.12, font = Brand.Fonts.bodyBold, color = rgb(236, 230, 214) },
+		{ text = "The challenge is on the screen as you go in", size = 0.09, font = Brand.Fonts.body, color = rgb(214, 186, 120) },
+	}, { ppu = 60, lit = false, brightness = 1.35, oneLine = true, gap = 0.05 })
+	box(room, "BoardFrame", o, V(x0 + 0.5, 4.8, -232.3), V(x0 + 0.72, 11.6, -215.7), BRASS, GHOST_DARK)
+	-- The lounge, on the east side: a rug, two chesterfields face to face, armchairs, a table.
+	local lx, lz = 16, (z0 + z1) / 2
+	box(room, "LobbyRug", o, V(lx - 10, 0, lz - 13), V(lx + 10, 0.05, lz + 13), RUG, GHOST_DARK)
+	box(room, "LobbyRugBorder", o, V(lx - 10, 0, lz - 13), V(lx + 10, 0.07, lz - 12.2), RUG_GOLD, GHOST_DARK)
+	box(room, "LobbyRugBorder", o, V(lx - 10, 0, lz + 12.2), V(lx + 10, 0.07, lz + 13), RUG_GOLD, GHOST_DARK)
+	local leather = { model = "chesterfield", colour = rgb(84, 40, 24), material = "Leather" }
+	piece(room, "sofa", facingDir(o + V(lx, 0, lz - 7), V(0, 0, 1)), leather, 1.1, true)
+	piece(room, "sofa", facingDir(o + V(lx, 0, lz + 7), V(0, 0, -1)), leather, 1.1, true)
+	piece(room, "coffeeTable", facingDir(o + V(lx, 0, lz), V(0, 0, 1)), { model = "marble" }, 1.1, true)
+	piece(room, "chair", facingDir(o + V(lx - 8.5, 0, lz), V(1, 0, 0)), { model = "club", material = "Leather", colour = rgb(84, 40, 24) }, 1.2, true)
+	piece(room, "chair", facingDir(o + V(lx + 8.5, 0, lz), V(-1, 0, 0)), { model = "club", material = "Leather", colour = rgb(84, 40, 24) }, 1.2, true)
+	piece(room, "lamp", facingDir(o + V(lx + 10.5, 0, lz - 9), V(-1, 0, 0)), { model = "arc" }, 1.1, false)
+	-- The bar in the south-east corner, by the window.
+	piece(room, "bar", facingDir(o + V(x1 - 3, 0, z0 + 7), V(-1, 0, 0)), { model = "walnut" }, 1.2, true, true)
+	-- The Executive's orb: a gold sphere in a brass ring on a black marble plinth, lit from above.
+	local orb = V(-4, 0, z0 + 12)
+	box(room, "OrbPlinth", o, orb + V(-1.4, 0, -1.4), orb + V(1.4, 3.4, 1.4), BLACK_MARBLE, DECO)
+	box(room, "OrbPlinthCap", o, orb + V(-1.6, 3.4, -1.6), orb + V(1.6, 3.65, 1.6), BRASS, DECO)
+	Kit.ball(room, "Orb", 2, o + orb + V(0, 4.9, 0), look(GOLD, Enum.Material.Metal, 0.45), GHOST_DARK)
+	Kit.cylinder(room, "OrbRing", 0.18, 3, CFrame.new(o + orb + V(0, 4.9, 0)) * CFrame.Angles(math.rad(70), 0, math.rad(20)), BRASS, GHOST_DARK)
+	local spot = Kit.part(room, "OrbLight", V(0.3, 0.3, 0.3), CFrame.new(o + orb + V(0, H - 1.5, 0)), look(rgb(0, 0, 0), Enum.Material.SmoothPlastic, nil, 1), GHOST_DARK)
+	Kit.spotLight(spot, Enum.NormalId.Bottom, 1.8, 18, 30, rgb(255, 222, 170), false)
+	-- Palms in the corners, paintings on the east wall and by the arch, sconces on both walls.
+	for _, at in { V(x0 + 2.6, 0, z0 + 2.6), V(x0 + 2.6, 0, z1 - 3.4), V(x1 - 2.6, 0, z1 - 3.4) } do
+		piece(room, "plant", CFrame.new(o + at), { model = "palm" }, 1.2, true)
+	end
+	painting(room, o + V(x1 - 0.15, 8.8, lz - 7), V(-1, 0, 0), 7, 4.4, ART[2])
+	painting(room, o + V(x1 - 0.15, 8.8, lz + 7), V(-1, 0, 0), 7, 4.4, ART[5])
+	painting(room, o + V(0, 7.6, z1 - 0.15), V(0, 0, -1), 10, 5.4, ART[3])
+	for _, z in { z0 + 10, z1 - 10 } do
+		sconce(room, o + V(x1 - 0.2, 7.2, z), V(-1, 0, 0), 0.6, 18)
+	end
+	sconce(room, o + V(x0 + 0.7, 7.2, -240), V(1, 0, 0), 0.6, 18)
+	sconce(room, o + V(x0 + 0.7, 7.2, -208), V(1, 0, 0), 0.6, 18)
+end
+
+-- (Build 91) Tonight on the Reception's board: the night's look and its challenge (shared/Executive).
+function ExecutiveBuild.tonight(b: Built, theme: Plan.Look?, challenge: Plan.Challenge?)
+	local board = b.root:FindFirstChild("ReceptionBoard", true)
+	local gui = board and board:FindFirstChildOfClass("SurfaceGui")
+	if not gui then
+		return
+	end
+	local function set(i: number, text: string)
+		local l = gui:FindFirstChild("Line" .. i, true)
+		if l and l:IsA("TextLabel") then
+			l.Text = text
+		end
+	end
+	if theme then
+		set(3, "Tonight: " .. theme.name)
+	end
+	if challenge then
+		local n = tostring(math.floor(challenge.gilt))
+		local commas = n:reverse():gsub("(%d%d%d)", "%1,"):reverse()
+		if commas:sub(1, 1) == "," then
+			commas = commas:sub(2)
+		end
+		set(4, string.format("The challenge: %s, +%s Gilt", challenge.name, commas))
+	end
+end
+
 -- Shows the vault door (and its dressing), or opens it.
 function ExecutiveBuild.door(b: Built, shut: boolean)
 	b.door.CanCollide = shut
@@ -221,7 +410,17 @@ function ExecutiveBuild.build(parent: Instance, o: Vector3, goHome: (player: Pla
 		box(dress, "Cornice", o, V(inner, H - 0.9, hall.minZ), V(inner - side * 0.55, H, hall.maxZ), WALNUT, DECO)
 		box(dress, "CorniceGilt", o, V(inner, H - 1.08, hall.minZ), V(inner - side * 0.6, H - 0.9, hall.maxZ), BRASS, DECO)
 	end
-	box(sightModel, "HallEnd", o, V(hall.minX - 1, 0, hall.minZ - 1), V(hall.maxX + 1, H, hall.minZ), SILK)
+	-- (Build 91) The lobby's back wall, with two arches through to the Reception, either side of
+	-- the way home (which stands in the middle, in front of it).
+	do
+		local cursor = hall.minX - 1
+		for _, a in Plan.Arches do
+			box(sightModel, "HallEnd", o, V(cursor, 0, hall.minZ - 1), V(a[1], H, hall.minZ), SILK)
+			box(sightModel, "HallEnd", o, V(a[1], Plan.ARCH_HEIGHT, hall.minZ - 1), V(a[2], H, hall.minZ), SILK)
+			cursor = a[2]
+		end
+		box(sightModel, "HallEnd", o, V(cursor, 0, hall.minZ - 1), V(hall.maxX + 1, H, hall.minZ), SILK)
+	end
 	-- The coffered ceiling: walnut beams over black lacquer.
 	box(arch, "HallCeiling", o, V(hall.minX - 1, H, hall.minZ - 1), V(hall.maxX + 1, H + 1, hall.maxZ), L.blackLacquer, { shadow = false })
 	for _, x in { -12 * Plan.WIDEN, 0, 12 * Plan.WIDEN } do
@@ -322,6 +521,9 @@ function ExecutiveBuild.build(parent: Instance, o: Vector3, goHome: (player: Pla
 		{ text = "SECURITY BEYOND THIS DOOR", size = 0.42, font = Brand.Fonts.bodyBold, color = rgb(255, 120, 110) },
 		{ text = "STAY OUT OF THE RED LIGHT", size = 0.3, font = Brand.Fonts.bodyBold, color = rgb(214, 176, 100) },
 	}, { ppu = 60, lit = false, brightness = 1.4 })
+
+	-- (Build 91) The Reception, through the arch behind the lobby.
+	reception(arch, dress, o)
 
 	-- Sconces over every terminal.
 	for _, t in Plan.Terminals do

@@ -78,6 +78,14 @@ Executive.Partitions = {
 	{ 9, -44, 13, -40 },
 } :: { { number } }
 Executive.Door = { z = -22, minX = -4, maxX = 4 } -- the code door across the hall's end
+-- (Build 91) The Reception: through the arch in the lobby's back wall, behind the lift's lobby, so
+-- as safe as it (nothing watches anyone there, no guard walks there). A reception desk, a lounge,
+-- a bar and a window wall over the city at night; tonight's look and challenge on the board.
+Executive.Reception = { minX = -30, maxX = 30, minZ = -248, maxZ = -201 }
+-- The two arches in the lobby's back wall (from x, to x), either side of the way home, which
+-- stands in the middle in front of it: nobody walks through that on the way to the Reception.
+Executive.Arches = { { -23, -15 }, { 15, 23 } } :: { { number } }
+Executive.ARCH_HEIGHT = 11
 Executive.Office = { minX = -32, maxX = 32, minZ = -20, maxZ = 62 }
 Executive.OfficeEntry = Vector3.new(0, 0, -14) -- just in through the door (where a revive in the Office puts you)
 Executive.Desk = Vector3.new(0, 0, 44)
@@ -300,6 +308,11 @@ function Executive.seasonOf(holiday: string?, month: number): string?
 		return "summer"
 	end
 	return nil
+end
+
+function Executive.inReception(p: Vector3): boolean
+	local r = Executive.Reception
+	return p.X >= r.minX and p.X <= r.maxX and p.Z >= r.minZ and p.Z <= r.maxZ
 end
 
 function Executive.inOffice(p: Vector3): boolean

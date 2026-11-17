@@ -736,6 +736,45 @@ check("the Office's decoration never stops a shot or a guard's eye", (function()
 	return true
 end)())
 
+-- (Build 91) The Reception, behind the lobby: safe, open from the lobby, never past the way home.
+do
+	local root = Game.built().root
+	local room = root:FindFirstChild("Reception", true)
+	check("the Reception stands behind the lobby: a desk, a lounge, a window over the city", room ~= nil and room:FindFirstChild("Desk") ~= nil and room:FindFirstChild("City") ~= nil and room:FindFirstChild("ReceptionBoard") ~= nil)
+	local board = room and room:FindFirstChild("ReceptionBoard")
+	local gui = board and board:FindFirstChildOfClass("SurfaceGui")
+	local line3 = gui and gui:FindFirstChild("Line3", true)
+	local line4 = gui and gui:FindFirstChild("Line4", true)
+	local theme = Plan.lookById and Plan.lookById[Game.run.look] or nil
+	local ch = Plan.challengeById[Game.run.challenge]
+	check("...its board says tonight's look and the run's challenge, truly", line3 ~= nil and line4 ~= nil and (theme == nil or line3.Text == "Tonight: " .. theme.name) and string.find(line4.Text, ch.name, 1, true) ~= nil and string.find(line4.Text, "Gilt", 1, true) ~= nil, line3 and line3.Text, line4 and line4.Text)
+	local mid = Vector3.new(0, 0, (Plan.Reception.minZ + Plan.Reception.maxZ) / 2)
+	check("...inside the Suite's place, and nobody watches anyone there (not the hallway)", module("ReplicatedStorage", "Shared", "Attractions").areaAt(O + mid) == "executive" and Plan.inReception(mid) and not Plan.inHall(mid))
+	-- The arches: nothing solid in either doorway, and both well clear of the way home.
+	local blocked = false
+	for _, a in Plan.Arches do
+		local cx = (a[1] + a[2]) / 2
+		for _, d in root:GetDescendants() do
+			if d:IsA("BasePart") and d.CanCollide then
+				local rel = d.CFrame:Inverse() * (O + Vector3.new(cx, 3, Plan.Hall.minZ - 0.5))
+				if math.abs(rel.X) < d.Size.X / 2 and math.abs(rel.Y) < d.Size.Y / 2 and math.abs(rel.Z) < d.Size.Z / 2 then
+					blocked = true
+				end
+			end
+		end
+	end
+	local portal = root:FindFirstChild("WayHomeArch", true)
+	local clear = true
+	if portal then
+		for _, d in portal:GetDescendants() do
+			if d:IsA("BasePart") and math.abs(d.CFrame.Position.X - O.X) > 9 then
+				clear = false
+			end
+		end
+	end
+	check("...both arches open, either side of the way home (never through it)", not blocked and portal ~= nil and clear and Plan.Arches[1][2] < -9 and Plan.Arches[2][1] > 9)
+end
+
 ---------------------------------------------------------------------------------------------------
 -- 4. The alarm
 ---------------------------------------------------------------------------------------------------
