@@ -1168,7 +1168,12 @@ check("only the offered amounts", adminAs(owner, { op = "gift", userId = ned.Use
 check("a gift to everyone", adminAs(owner, { op = "giftAll", amount = 100 }).ok and nd.gilt == giltBeforeGift + 600)
 check("crowning a guest makes them the Guest of Honour", adminAs(owner, { op = "crown", userId = ned.UserId }).ok ~= false and ned:GetAttribute("GuestOfHonour") == true and string.find(lastBroadcast("salute").line, "Guest of Honour", 1, true) ~= nil)
 check("the owner can't remove themselves", adminAs(owner, { op = "kick", userId = owner.UserId }).ok == false)
-check("free salutes from the house, given as AJKR (never the owner's Roblox name)", adminAs(owner, { op = "salute", id = "fireworks" }).ok and salutesGiven[#salutesGiven].id == "fireworks" and salutesGiven[#salutesGiven].by == "AJKR", salutesGiven[#salutesGiven].by)
+check("free salutes from the house, given under the house's host name, Tyler (never anyone's Roblox name)", adminAs(owner, { op = "salute", id = "fireworks" }).ok and salutesGiven[#salutesGiven].id == "fireworks" and salutesGiven[#salutesGiven].by == "Tyler", salutesGiven[#salutesGiven].by)
+check("...while the audit log keeps who really pressed it (the owner, AJKR)", (function()
+	local log = AdminService.audit
+	local last = log[#log]
+	return last ~= nil and last.by == "AJKR" and last.op == "salute"
+end)())
 -- Announcements.
 check("a ready line is announced", adminAs(owner, { op = "announce", preset = 1 }).ok and lastBroadcast("announce").text == st.announcements[1])
 local typed = adminAs(owner, { op = "announce", text = "a rude line", everywhere = true })
@@ -1713,7 +1718,7 @@ do
 	run(function()
 		remote({ Data = '{"op":"headline","text":"rude remote words","style":"ice"}' })
 	end)
-	check("a remote headline is filtered by Roblox first", lastCast("headline") ~= nil and lastCast("headline").text == "#### remote words" and lastCast("headline").style == "ice" and lastCast("headline").by == "AJKR")
+	check("a remote headline is filtered by Roblox first", lastCast("headline") ~= nil and lastCast("headline").text == "#### remote words" and lastCast("headline").style == "ice" and lastCast("headline").by == "Tyler")
 	-- Nothing outside the lists does anything.
 	local giltBefore = {}
 	for _, g in guests do
@@ -2776,7 +2781,7 @@ do
 	for i = before + 1, #broadcasts do
 		local m = broadcasts[i].message
 		if type(m) == "table" and m.by ~= nil then
-			if m.by == "AJKR" then
+			if m.by == Config.data.Admin.hostName then
 				named += 1
 			else
 				wrong += 1
@@ -2786,7 +2791,7 @@ do
 			wrong += 1
 		end
 	end
-	check("what the owner does goes out as AJKR (headlines, the Owner's Token)", named >= 2 and wrong == 0, wrong)
+	check("what the owner does goes out under the house's host name, Tyler (headlines, the Owner's Token), never a Roblox name", Config.data.Admin.hostName == "Tyler" and named >= 2 and wrong == 0, wrong)
 
 	-- 2. The nights: fifty-odd, each made only of what the house has.
 	check("fifty-odd nights", #AbuseNights.List >= 50, #AbuseNights.List)

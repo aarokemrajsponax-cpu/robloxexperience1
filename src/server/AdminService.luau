@@ -1282,6 +1282,14 @@ local function nameOf(v: any): string
 	return string.sub(tostring(v or "The owner"), 1, 40)
 end
 
+-- (Build 91) The name the house's events go out under (Config.Admin.hostName), or nil for each
+-- owner's own.
+local function hostName(): string?
+	local h = (cfg() :: any).hostName
+	return if type(h) == "string" and h ~= "" then string.sub(h, 1, 40) else nil
+end
+AdminService.hostName = hostName
+
 local function cleanLive(v: any): Live
 	local now = os.time()
 	local out: Live = { fx = {}, events = {}, marks = {}, log = {} }
@@ -1531,7 +1539,7 @@ local function syncLive()
 	local live = cleanLive(value)
 	local now = os.time()
 	-- The Owner Remote's commands this server hasn't carried out, in the order given.
-	local ownerName = nameOf(cfg().ownerName)
+	local ownerName = hostName() or nameOf(cfg().ownerName)
 	for _, e in live.log do
 		if not seenRemote[e.rid] then
 			seenRemote[e.rid] = true
@@ -2265,7 +2273,7 @@ local function onRemote(message: any)
 		return
 	end
 	table.insert(remoteTimes, now)
-	if not apply(m, nameOf(cfg().ownerName), true, stampOf(m)) then
+	if not apply(m, hostName() or nameOf(cfg().ownerName), true, stampOf(m)) then
 		warn("[Maison] The Owner Remote's command wasn't one the house knows: " .. tostring(m.op))
 	end
 end
@@ -2304,7 +2312,9 @@ local function handle(player: Player, request: unknown): any
 	lastAsk[player] = now
 	local r = request :: { [string]: any }
 	local op = r.op
-	local byName = Names.of(player)
+	-- (What the owners start goes out under the house's host name: Config.Admin.hostName. The
+	-- audit log below keeps who really pressed it.)
+	local byName = if rank == "owner" then hostName() or Names.of(player) else Names.of(player)
 	if rank ~= "owner" and not STAFF_OPS[tostring(op)] then
 		return { ok = false, why = "That's for the owner." }
 	end

@@ -1116,6 +1116,11 @@ local defaults = {
 		coOwners = {
 			{ userId = 11988396018, name = "Tyler", username = "TylerJefferyEvander" },
 		},
+		-- (Build 91) The name the house's events are presented under: everything started from the
+		-- owner's panel or the Owner Remote (Admin Abuse, Mega Abuse, the effects, headlines,
+		-- giveaways, the token, countdowns) says it's from Tyler, whichever owner pressed it. The
+		-- audit log still keeps who really did. Empty: each owner's own house name.
+		hostName = "Tyler",
 		studioFirstPlayer = true, -- Studio only: the first pretend test player (no real account) counts as the owner
 		announceOwner = true, -- a headline in the owner's server when they arrive ("the owner is here!")
 		consoleOnJoin = true, -- the Owner Console opens by itself when the owner joins
