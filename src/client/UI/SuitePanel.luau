@@ -117,10 +117,16 @@ local function show(p: Preview, kind: string?, style: { [string]: any }?)
 	(camera :: Camera).CFrame = CFrame.lookAt(centre + Vector3.new(-dist * 0.55, dist * 0.42, -dist * 0.8), centre)
 end
 
+-- (Build 93) On a small screen (a phone: everything drawn at about 0.6) the picture is shorter,
+-- so a spot's pieces and prices show without scrolling past it.
+local function compact(): boolean
+	return Root.scale < 0.95
+end
+
 local function newPreview(parent: Instance, order: number): Preview
 	local vp = Instance.new("ViewportFrame")
 	vp.Name = "Picture"
-	vp.Size = UDim2.new(1, 0, 0, 150)
+	vp.Size = UDim2.new(1, 0, 0, if compact() then 92 else 150)
 	vp.BackgroundColor3 = Color3.fromRGB(34, 30, 32)
 	vp.BackgroundTransparency = 0
 	vp.Ambient = Color3.fromRGB(150, 140, 130)
@@ -193,7 +199,18 @@ function SuitePanel.open(start: string?)
 	scroll.BackgroundTransparency = 1
 	scroll.BorderSizePixel = 0
 	scroll.LayoutOrder = 4
-	scroll.Size = UDim2.new(1, 0, 1, -(26 + 40 + 46 + 44 + 8))
+	-- (Build 93) Its height is what's left once the title, the summary, the tabs and the keys are
+	-- measured as they really come out (on a phone the small words are set larger, and the
+	-- summary can take two lines): never running under the keys.
+	local function fitScroll()
+		local textW = w - 48
+		local titleH = Theme.measureAs("Your Suite", 26, "display", textW).Y
+		local sumH = Theme.measureAs(summary.Text, 13, "body", textW).Y
+		local keyH = Theme.textSize(16, "bodyMedium") + 28
+		local used = math.max(26, titleH) + math.max(40, sumH + 4) + 46 + math.max(44, keyH) + 8
+		scroll.Size = UDim2.new(1, 0, 1, -math.ceil(used))
+	end
+	fitScroll()
 	scroll.CanvasSize = UDim2.new()
 	scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
 	scroll.ScrollBarThickness = 3
@@ -294,6 +311,7 @@ function SuitePanel.open(start: string?)
 			end
 		end
 		summary.Text = string.format("Your pieces in %d of %d places  ·  %s Gilt to spend  ·  only you see your Suite", mine, open, RoundPanel.number(gilt))
+		fitScroll()
 		local order = 0
 		local function add(): number
 			order += 1

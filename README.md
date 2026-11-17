@@ -399,6 +399,11 @@ a Nightly attempt or a Mythic's odds.
   Level disc and its title. The Gilt bar drops its own level on a phone (the Level disc beside it
   already shows it). This applies only where the interface is scaled below 0.95 (phones, small
   windows); on a full-size screen every size is as it was.
+- **The Suite's furnishing panel on a phone.** The picture of each spot is shorter there (92
+  instead of 150), so a spot's choices and prices show without scrolling past it, and the list
+  of rooms is sized from the title, summary, tabs and keys as they really come out (on a phone
+  the small words are set larger and the summary takes two lines), so it never runs under the
+  keys at the bottom.
 - **Fixed: Trend Watch ideas under their writer's name.** Build 91 put the host's name on
   everything the owners start, and that reached the owners' private Trend Watch ideas too (the
   staff suite caught it). Ideas are kept under who wrote them again; public events still go out
