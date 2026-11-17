@@ -5,5 +5,5 @@
 
 return {
 	number = 90,
-	label = "Build 90 · 17 Nov · The Executive Suite in four looks with a challenge each run, Island Standing, the guiding hand",
+	label = "Build 90 · 17 Nov · The Executive's four looks and a challenge each run, Island Standing, the guiding hand",
 }
