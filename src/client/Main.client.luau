@@ -1223,7 +1223,11 @@ if RunService:IsStudio() then
 		stamp.TextSize = 12
 		stamp.TextColor3 = Color3.fromRGB(200, 190, 160)
 		stamp.TextTransparency = 0.3
-		stamp.Text = Build.label
+		-- (Build 91) The build and its date only, ending in "…" if it's still too long: the whole
+			-- line is in Studio's Output. The corner never runs into anything beside it.
+			stamp.TextTruncate = Enum.TextTruncate.AtEnd
+			stamp.Size = UDim2.fromOffset(200, 16)
+			stamp.Text = (string.match(Build.label, "^(Build %d+ · [^·]+)") or Build.label):gsub("%s+$", "")
 		stamp.Parent = Root.hud
 		-- For the owner, in Studio: say so plainly when the music hasn't been brought in yet.
 		task.delay(6, function()

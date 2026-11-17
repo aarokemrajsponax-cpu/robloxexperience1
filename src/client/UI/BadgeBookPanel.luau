@@ -78,7 +78,8 @@ function BadgeBookPanel.open()
 	scroll.ScrollBarImageColor3 = Brand.Colours.gold
 	scroll.Parent = content
 	local grid = Instance.new("UIGridLayout")
-	grid.CellSize = UDim2.fromOffset(if w < 520 then 150 else 180, 104)
+	-- (Build 91: room for a three-line badge at its own size, never squeezed small.)
+	grid.CellSize = UDim2.fromOffset(if w < 520 then 150 else 180, 118)
 	grid.CellPadding = UDim2.fromOffset(8, 8)
 	grid.SortOrder = Enum.SortOrder.LayoutOrder
 	grid.Parent = scroll
@@ -205,7 +206,7 @@ function BadgeBookPanel.open()
 			local line = Instance.new("TextLabel")
 			line.BackgroundTransparency = 1
 			line.Position = UDim2.fromOffset(8, 52)
-			line.Size = UDim2.new(1, -16, 0, 28)
+			line.Size = UDim2.new(1, -16, 0, 41)
 			line.FontFace = BODY
 			line.TextSize = 11
 			line.TextWrapped = true

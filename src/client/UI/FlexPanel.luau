@@ -157,7 +157,7 @@ local function maker(body: GuiObject, w: number)
 		local kind = Plan.KindNames[tostring(it.kind)] or ""
 		table.insert(list, { id = tostring(it.key), glyph = tostring(it.glyph or "✨"), name = tostring(it.name), small = string.upper(if it.rarity then tostring(it.rarity) else kind), colour = rarityColour(it.rarity) })
 	end
-	tiles(body, 2, cols, if tight then 74 else 60, list, view.item, function(id: string)
+	tiles(body, 2, cols, if tight then 78 else 66, list, view.item, function(id: string) -- (Build 91: two lines of a name, whole)
 		view.item = id
 		if refresh then
 			refresh()

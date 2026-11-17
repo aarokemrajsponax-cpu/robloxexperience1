@@ -377,6 +377,46 @@ a Nightly attempt or a Mythic's odds.
 - **The launch kit**: page text, icon, thumbnails and the gameplay video's shot list are in
   [`LAUNCH.md`](LAUNCH.md).
 
+## Build 91 — The Hourly Drop, the Executive's Reception, Tyler hosts, studs underfoot
+
+- **The Hourly Drop** (`shared/HourlyDrop`, `server/HourlyDrop`, `World/HourlyDropView`). On the
+  hour, every hour, by the clock (UTC: the same moment in every server), a courier's case comes down
+  onto a black marble plinth in the Foyer, west of the runner, and stays fifteen minutes. Each guest
+  opens it once an hour, standing by it: 250 Gilt (`Config.HourlyDrop`) and, the first time they
+  open a case with it, that hour's piece. Six new curios take turns, each back every six hours: the
+  Courier's Seal, the Midnight Ribbon, the Courier's Pocket Watch, the Monogrammed Card, the Hour's
+  Champagne, the Velvet Ring Box; never sold, never random. The server checks the clock, the guest's
+  distance and the once-an-hour mark in their own record (rejoining or another server never opens
+  it twice); screens only ask how it stands. The sign over the plinth counts down by the server's
+  clock; the case comes down in a shaft of light and its lid lifts on the opener's screen. The
+  Concierge answers *What is the Hourly Drop?* and walks guests there. Each case counts toward XP
+  (`Config.Levels.stats.hourlyDrops`).
+- **The Executive Suite's Reception** (`shared/Executive.Reception`): two arches in the lobby's back
+  wall, either side of the way home, open onto a Reception as safe as the lobby (nothing watches
+  anyone there): black marble and a brass compass, silk walls in the night's colour, a reception
+  desk under the Executive's name with tonight's look and the run's challenge on its board, a
+  chesterfield lounge, a bar, two crystal chandeliers, a gold orb and a window wall over the city at
+  night. No guard, camera, terminal or partition moved; the Suite's place reaches back to take it in.
+- **Tyler hosts** (`Config.Admin.hostName`). Everything started from the owner's panel or the Owner
+  Remote goes out under Tyler's name, whichever owner pressed it: Admin and Mega Abuse (the crest,
+  the opening, the gifts, the credits and the nights' own lines), the effects, headlines, giveaways,
+  the token and countdowns. The giant over the house on the nights made for it wears Tyler's own
+  avatar. The audit log still records who really pressed it. The friend booster's crest keeps a
+  friend's own name.
+- **Studs underfoot**: every plain jumping stone in the Maison Basement now has the house's studs, in
+  the course's own colour, like the checkpoints; the themed pieces (barrels, grates, steel, gold,
+  planks, the vanishing tiles and the machinery) keep their materials. Studs stay off the luxury
+  rooms. The 3D preview tools now draw Roblox's studs, so renders show what studs do to a surface.
+- **UI and text audit**: every client screen rendered and checked by a new layout audit (overflowing
+  or squeezed text, text off the screen, text over text). Fixed: Gem Shop and Badge Book cards had
+  room for too few lines (their words shrank to 8 px), the Island board's rows cut a third line, the
+  brainrot shelf's explanation was cut off, Flex Studio names ended in "…", and Studio's build
+  stamp ran into the screen beside it. Words checked for repeats, stray spaces and spelling, and the
+  Concierge's lines for "!".
+- Not in this build, said plainly: nothing new was uploaded to Roblox (no badges, no images); the six
+  new curios are drawn as the house's emoji medallions, like every curio. The Owner's panel itself
+  wasn't redesigned: only the name its events go out under.
+
 ## Build 90 — The Executive Suite each run its own, Island Standing, the guiding hand
 
 - **The Executive Suite, each run its own** (`shared/Executive` Looks and Challenges,

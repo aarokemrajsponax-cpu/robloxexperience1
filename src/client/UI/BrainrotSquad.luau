@@ -439,7 +439,7 @@ function BrainrotSquad.draw(shelf: Instance, width: number)
 			heldCard(held, id, i, #ids >= slots)
 		end
 	end
-	label(shelf, "How", "★ More copies of a brainrot give it stars: each star earns half again. Found at the tables, one may come Gold (×2), Diamond (×3) or Rainbow (×5). The one walking with you adds its bonus to every run you bank. Each one in your squad has a booster too: call on it once a day for 15 minutes (Quick Study: more XP; Light Feet: faster round the house; Full Jar: a fuller tip jar). The rarer, the stronger. Scores are never touched.", 12, Brand.Fonts.body, C.dim, { LayoutOrder = 6, Size = UDim2.fromOffset(width, 64), TextWrapped = true, TextYAlignment = Enum.TextYAlignment.Top })
+	label(shelf, "How", "★ More copies of a brainrot give it stars: each star earns half again. Found at the tables, one may come Gold (×2), Diamond (×3) or Rainbow (×5). The one walking with you adds its bonus to every run you bank. Each one in your squad has a booster too: call on it once a day for 15 minutes (Quick Study: more XP; Light Feet: faster round the house; Full Jar: a fuller tip jar). The rarer, the stronger. Scores are never touched.", 12, Brand.Fonts.body, C.dim, { LayoutOrder = 6, Size = UDim2.fromOffset(width, 0), AutomaticSize = Enum.AutomaticSize.Y, TextWrapped = true, TextYAlignment = Enum.TextYAlignment.Top })
 	task.defer(function()
 		pcall(BrainrotSquad.drawn)
 	end)

@@ -10038,7 +10038,7 @@ coroutine.wrap(function()
 		ok = true,
 		cards = {
 			luxe = { open = true, hauls = 12, best = 9400, banked = 84000, stride = 3 },
-			basement = { open = true, stages = 16, deepest = 9, clears = 0 },
+			basement = { open = true, stages = 32, deepest = 9, clears = 0 },
 			executive = { open = false, invites = 0, sidearm = false, inviteHaul = 8000, invitePrice = 25000, most = 5 },
 			gala = { open = true, galaGilt = 2500, giltToday = 600 },
 			island = { open = false, keyRank = "Tycoon", keyRankAt = 100000, keyGilt = 25000, keyGems = 250, rankReady = false },
@@ -10101,7 +10101,7 @@ coroutine.wrap(function()
 		end
 	end
 	check("it asks the server which are open (nothing else: no claim, no price)", asked ~= nil and asked.id == nil and asked.what == nil)
-	check("how far you've come: hauls and the best, the deepest stage, today's Gilt in the hall", textOnScreen("12 hauls  ·  best 9,400") ~= nil and textOnScreen("Deepest: stage 9 of 16") ~= nil and textOnScreen("Today: 600 of 2,500 Gilt") ~= nil)
+	check("how far you've come: hauls and the best, the deepest stage, today's Gilt in the hall", textOnScreen("12 hauls  ·  best 9,400") ~= nil and textOnScreen("Deepest: stage 9 of 32") ~= nil and textOnScreen("Today: 600 of 2,500 Gilt") ~= nil)
 	local ex, isl, lux = cards.executive, cards.island, cards.luxe
 	local function has(b, name)
 		return b ~= nil and find(b, function(d)
@@ -10143,7 +10143,7 @@ coroutine.wrap(function()
 	advance(0.8)
 	check("a tap: its closer look, over the cards", RootM.isOpen("DirectoryCard") and textOnScreen("How it plays") ~= nil and textOnScreen("What it pays") ~= nil)
 	check("...how to get in: every way numbered, with the house's own figures", textOnScreen("How to get in") ~= nil and textOnScreen("Finish the Maison Basement: reach the Treasury") ~= nil and textOnScreen("carry loot worth 8,000 or more to the getaway car in a single trip") ~= nil and textOnScreen("for 25,000 Gilt") ~= nil)
-	check("...with how far this guest has come towards each (the deepest stage, the best trip, Gilt in hand)", textOnScreen("Your deepest so far: stage 9 of 16.") ~= nil and textOnScreen("Your best trip: 9,400. Every trip like it earns another.") ~= nil and (textOnScreen("more to go") ~= nil or textOnScreen("enough for one") ~= nil))
+	check("...with how far this guest has come towards each (the deepest stage, the best trip, Gilt in hand)", textOnScreen("Your deepest so far: stage 9 of 32.") ~= nil and textOnScreen("Your best trip: 9,400. Every trip like it earns another.") ~= nil and (textOnScreen("more to go") ~= nil or textOnScreen("enough for one") ~= nil))
 	check("...and what comes after: the free stun pistol, the lift", textOnScreen("Then take your free stun pistol from the Quartermaster") ~= nil)
 	check("...the three steps of how it plays", textOnScreen("four terminals in the hallway each show one digit of the door's code") ~= nil)
 	check("...and the ways there: Take me there, Walk me there, Back", textOnScreen("Take me there") ~= nil and textOnScreen("Walk me there") ~= nil and textOnScreen("Back") ~= nil)

@@ -56,7 +56,8 @@ local function row(parent: Instance, order: number, swatch: { Color3 }?, name: s
 	f.Name = "Row"
 	f.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 	f.BackgroundTransparency = 0.965
-	f.Size = UDim2.new(1, 0, 0, 62)
+	-- (Build 91: tall enough for a three-line description at its own size, the words centred.)
+	f.Size = UDim2.new(1, 0, 0, 74)
 	f.LayoutOrder = order
 	f.Parent = parent
 	corner(f, 10)
@@ -99,7 +100,7 @@ local function row(parent: Instance, order: number, swatch: { Color3 }?, name: s
 	words.Parent = f
 	Theme.list(words, 1).VerticalAlignment = Enum.VerticalAlignment.Center
 	Theme.text(words, name, 14, "bodyBold", { LayoutOrder = 1, TextXAlignment = Enum.TextXAlignment.Left, Size = UDim2.new(1, 0, 0, 18), AutomaticSize = Enum.AutomaticSize.None, TextTruncate = Enum.TextTruncate.AtEnd })
-	Theme.text(words, line, 12, "body", { LayoutOrder = 2, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = C.smoke, Size = UDim2.new(1, 0, 0, 30), AutomaticSize = Enum.AutomaticSize.None, TextWrapped = true, TextYAlignment = Enum.TextYAlignment.Top })
+	Theme.text(words, line, 12, "body", { LayoutOrder = 2, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = C.smoke, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, TextWrapped = true, TextYAlignment = Enum.TextYAlignment.Top })
 	local key = Theme.key(f, keyText, primary and enabled, function()
 		if enabled then
 			onPress()

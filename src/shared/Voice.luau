@@ -418,12 +418,12 @@ Voice.Afk = {
 -- What's new in this build, told once to each returning guest (Welcome back). Only shown while
 -- `build` is the build that's playing, so old news never shows as new.
 Voice.WhatsNew = {
-	build = 90,
+	build = 91,
 	lines = {
-		"The Executive Suite changes every run: four looks, his guards' rounds, and a challenge with its own Gilt. It's dressed for the season too.",
-		"Island Standing: pearls, sunsets, postcards and flights count toward island ranks, each with its Gilt, and the Starlit lights and a Patron's livery to earn.",
-		"The Maison Basement goes twice as deep: thirty-two stages, through the Clockworks, the Flooded Cistern, the Furnace Heart and the Vault of Kings.",
-		"Steal a Luxe has a Library and a Master Bedroom, off the Long Gallery, and night staff asleep beside the treasures. Don't wake them.",
+		"The Hourly Drop: on the hour, every hour, a courier's case comes down in the Foyer for fifteen minutes. Open it once an hour for Gilt and that hour's piece.",
+		"The Executive Suite has a Reception behind the lobby, through either arch: a lounge, a bar and the city at night, and tonight's challenge on the board.",
+		"Admin Abuse nights are hosted by Tyler now.",
+		"Every jumping stone in the Maison Basement has the house's studs underfoot.",
 	},
 }
 

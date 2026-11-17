@@ -117,7 +117,8 @@ function GemShopPanel.open(start: string?)
 	scroll.ScrollBarImageColor3 = Brand.Colours.gold
 	scroll.Parent = content
 	local grid = Instance.new("UIGridLayout")
-	grid.CellSize = UDim2.fromOffset(if w < 520 then 150 else 176, 196)
+	-- (Build 91: taller, so a line that says when it's on sale reads at its own size, never squeezed.)
+	grid.CellSize = UDim2.fromOffset(if w < 520 then 150 else 176, 214)
 	grid.CellPadding = UDim2.fromOffset(10, 10)
 	grid.SortOrder = Enum.SortOrder.LayoutOrder
 	grid.Parent = scroll
@@ -304,7 +305,7 @@ function GemShopPanel.open(start: string?)
 		local l = Instance.new("TextLabel")
 		l.BackgroundTransparency = 1
 		l.Position = UDim2.fromOffset(8, 102)
-		l.Size = UDim2.new(1, -16, 0, 44)
+		l.Size = UDim2.new(1, -16, 0, 60)
 		l.FontFace = BODY
 		l.TextSize = 11
 		l.TextWrapped = true
