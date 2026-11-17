@@ -1159,10 +1159,23 @@ local function tracer(m: { [string]: any })
 	end)
 end
 
+-- (Build 90) Tonight's look and challenge, said once a run; a challenge missed, said once.
+local toldRun: string? = nil
+local toldMissed = false
+
 function ExecutiveHud.on(m: { [string]: any })
 	local op = m.op
 	if op == "executive" then
 		local before = fighting()
+		local key = tostring(m.look) .. ":" .. tostring(m.challenge)
+		if type(m.challengeName) == "string" and m.phase == "hall" and toldRun ~= key then
+			toldRun = key
+			toldMissed = false
+			Toast.show("Tonight: " .. tostring(m.lookName or "the Suite"), string.format("Challenge: %s. %s +%s Gilt.", m.challengeName, tostring(m.challengeLine or ""), Rules.format(tonumber(m.challengeGilt) or 0)), 6)
+		elseif type(m.challengeName) == "string" and m.onCourse == false and not toldMissed and m.phase ~= "won" then
+			toldMissed = true
+			Toast.show("Challenge missed", string.format("%s is out of reach this run. Beat him all the same.", m.challengeName), 3.5)
+		end
 		view = m
 		sight("status", m)
 		draw()
@@ -1255,6 +1268,12 @@ function ExecutiveHud.on(m: { [string]: any })
 			line ..= "  ·  Il Dirigente Supremo for your collection"
 		end
 		Toast.show("The Executive, beaten", line .. ". The safe is open, and the lift down.", 6)
+		if type(m.challenge) == "string" and m.challengeMet then
+			task.delay(2, function()
+				Sound.play("crystal", 0.7)
+				Toast.show("Challenge met: " .. m.challenge, "+" .. Rules.format(tonumber(m.challengeGilt) or 0) .. " Gilt", 4)
+			end)
+		end
 	elseif op == "safe" then
 		Toast.show("The safe", Rules.format(tonumber(m.worth) or 0) .. " to your Estate.", 3)
 	elseif op == "throw" then

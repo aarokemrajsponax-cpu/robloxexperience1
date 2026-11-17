@@ -674,4 +674,157 @@ function ExecutiveBuild.build(parent: Instance, o: Vector3, goHome: (player: Pla
 	}
 end
 
+---------------------------------------------------------------------------------------------------
+-- (Build 90) Each run's look, and the season
+---------------------------------------------------------------------------------------------------
+-- The lamps a look restyles (never the cameras' eyes, the terminals, the generators or the shield).
+local LAMPS = { Globe = true, Shade = true, Crystal = true, NicheLight = true }
+
+-- Dresses the Suite in `theme` (a look) for a run: the hallway's silk, the runner and the rugs, every lamp's
+-- colour and how bright, and fresh flowers in the look's colour in the lobby, by the vault door and
+-- round the Office (never solid: nothing to walk into). Nothing that blocks sight, or is stood on,
+-- moves or changes its shape.
+function ExecutiveBuild.style(b: Built, o: Vector3, theme: Plan.Look)
+	for _, d in b.root:GetDescendants() do
+		if d:IsA("BasePart") then
+			local n = d.Name
+			if n == "HallWall" or n == "HallEnd" then
+				d.Color = theme.silk
+			elseif n == "Runner" then
+				d.Color = theme.runner
+			elseif n == "Rug" or n == "LobbyRug" then
+				d.Color = theme.rug
+			end
+		elseif d:IsA("PointLight") and d.Parent and LAMPS[d.Parent.Name] then
+			local base = d:GetAttribute("BaseBrightness")
+			if type(base) ~= "number" then
+				base = d.Brightness
+				d:SetAttribute("BaseBrightness", base)
+			end
+			d.Brightness = (base :: number) * theme.bright
+			d.Color = theme.light
+		end
+	end
+	b.root:SetAttribute("SuiteLook", theme.id)
+	local old = b.root:FindFirstChild("LookDressing")
+	if old then
+		old:Destroy()
+	end
+	local m = Kit.model(b.root, "LookDressing")
+	local hall, office = Plan.Hall, Plan.Office
+	local spots = {
+		V(hall.minX + 3, 0, hall.minZ + 3), V(hall.maxX - 3, 0, hall.minZ + 3),
+		V(-14 * Plan.WIDEN, 0, Plan.Door.z - 2.5), V(14 * Plan.WIDEN, 0, Plan.Door.z - 2.5),
+		V(office.minX + 3, 0, office.minZ + 3), V(office.maxX - 3, 0, office.minZ + 3),
+		V(office.minX + 3, 0, office.maxZ - 3), V(office.maxX - 3, 0, office.maxZ - 3),
+	}
+	for i, at in spots do
+		local base = o + at
+		Kit.post(m, "Vase", 2.6, 1.3, base, BONE_MARBLE, GHOST)
+		Kit.post(m, "VaseRim", 0.2, 1.5, base + V(0, 2.6, 0), BRASS, GHOST_DARK)
+		for k = 0, 6 do
+			local a = k * math.pi * 2 / 7 + i
+			local r = if k == 0 then 0 else 0.55
+			Kit.ball(m, "Bloom", 0.7, base + V(math.cos(a) * r, 3.3 + (if k == 0 then 0.35 else 0), math.sin(a) * r), look(theme.flowers, Enum.Material.SmoothPlastic), GHOST_DARK)
+		end
+		Kit.ball(m, "Leaves", 1.6, base + V(0, 2.9, 0), look(rgb(36, 74, 44), Enum.Material.Grass), GHOST_DARK)
+	end
+end
+
+-- The season's dressing through the whole Suite (shared/Executive seasonOf), or none: along both
+-- hallway walls at the chair rail, in the lobby, by the vault door and round the Office. Never
+-- solid, never in a guard's or a camera's way (nothing here blocks sight).
+function ExecutiveBuild.season(b: Built, o: Vector3, season: string?)
+	if b.root:GetAttribute("SuiteSeason") == season and (season == nil or b.root:FindFirstChild("SeasonDressing")) then
+		return
+	end
+	local old = b.root:FindFirstChild("SeasonDressing")
+	if old then
+		old:Destroy()
+	end
+	b.root:SetAttribute("SuiteSeason", season)
+	if not season then
+		return
+	end
+	local m = Kit.model(b.root, "SeasonDressing")
+	local hall, office = Plan.Hall, Plan.Office
+	-- A garland along each hallway wall (and the Office's), its baubles in the season's colours.
+	local GARLAND: { [string]: { Color3 } } = {
+		christmas = { rgb(176, 26, 44), rgb(232, 182, 72), rgb(236, 240, 246) },
+		halloween = { rgb(255, 120, 30), rgb(120, 60, 170), rgb(30, 30, 34) },
+		thanksgiving = { rgb(214, 110, 40), rgb(176, 56, 30), rgb(222, 176, 70) },
+		valentine = { rgb(214, 30, 70), rgb(255, 150, 190), rgb(250, 236, 240) },
+		newYear = { rgb(232, 182, 72), rgb(250, 236, 200), rgb(30, 30, 34) },
+		stPatrick = { rgb(40, 150, 80), rgb(232, 182, 72), rgb(220, 240, 220) },
+		easter = { rgb(250, 182, 206), rgb(170, 220, 250), rgb(255, 240, 160) },
+		summer = { rgb(255, 196, 60), rgb(60, 190, 210), rgb(255, 120, 90) },
+	}
+	local colours = GARLAND[season] or GARLAND.christmas
+	local leaf = if season == "summer" then look(rgb(70, 150, 70), Enum.Material.Grass) else look(rgb(30, 70, 40), Enum.Material.Grass)
+	local function garland(x: number, z0: number, z1: number, y: number)
+		Kit.part(m, "Garland", V(0.5, 0.5, z1 - z0), CFrame.new(o + V(x, y, (z0 + z1) / 2)), leaf, GHOST_DARK)
+		local k = 0
+		for z = z0 + 2, z1 - 2, 4 do
+			k += 1
+			Kit.ball(m, "Bauble", 0.55, o + V(x, y - 0.45, z), look(colours[k % #colours + 1], Enum.Material.SmoothPlastic, 0.2), GHOST_DARK)
+		end
+	end
+	for _, side in { -1, 1 } do
+		local x = if side < 0 then hall.minX + 0.7 else hall.maxX - 0.7
+		garland(x, hall.minZ + 1, Plan.Door.z - 1, 9.6)
+		local ox = if side < 0 then office.minX + 0.9 else office.maxX - 0.9
+		garland(ox, office.minZ + 1, office.maxZ - 1, 13.6)
+	end
+	-- The season's own pieces: in the lobby's corners, either side of the vault door, and in the
+	-- Office's corners by the window.
+	local corners = {
+		V(hall.minX + 4, 0, hall.minZ + 7), V(hall.maxX - 4, 0, hall.minZ + 7),
+		V(-19 * Plan.WIDEN, 0, Plan.Door.z - 6), V(19 * Plan.WIDEN, 0, Plan.Door.z - 6),
+		V(office.minX + 4, 0, office.maxZ - 7), V(office.maxX - 4, 0, office.maxZ - 7),
+	}
+	local rng = Random.new(#season * 7919)
+	for i, at in corners do
+		local base = o + at
+		local cf = CFrame.lookAt(base, Vector3.new(o.X, base.Y, base.Z))
+		if season == "christmas" then
+			HolidayProps.fir(m, base, 9, false)
+			for g = 1, 3 do
+				local wrap = HolidayProps.WRAPS[(i + g) % #HolidayProps.WRAPS + 1]
+				HolidayProps.gift(m, CFrame.new(base + V(math.cos(g * 2.1) * 2.4, 0.6, math.sin(g * 2.1) * 2.4)), V(1.2, 1.2, 1.2), wrap[1], wrap[2])
+			end
+		elseif season == "halloween" then
+			HolidayProps.pumpkin(m, base, 2.4, (Vector3.new(o.X, base.Y, base.Z) - base).Unit, true, true)
+			HolidayProps.pumpkin(m, base + V(1.8, 0, 1.4), 1.4, (Vector3.new(o.X, base.Y, base.Z) - base).Unit, true, true)
+		elseif season == "thanksgiving" then
+			HolidayProps.hayBale(m, cf * CFrame.new(0, 0.9, 0), V(3, 1.8, 2))
+			HolidayProps.cornShock(m, base + V(0, 0, 2.6), 5)
+			HolidayProps.pumpkin(m, base + V(1.6, 1.8, 0), 1.2, Vector3.new(0, 0, 1), false, false)
+		elseif season == "valentine" then
+			local hm = Kit.model(m, "Heart")
+			HolidayProps.heart(hm, "Heart", cf * CFrame.new(0, 3.4, 0), 3, 0.6, rgb(214, 30, 70), Enum.Material.SmoothPlastic)
+			HolidayProps.heartOfGold(m, cf * CFrame.new(1.6, 0.8, 0), 1.2)
+		elseif season == "newYear" then
+			HolidayProps.goldenBell(m, cf * CFrame.new(0, 2, 0), 2.4)
+		elseif season == "stPatrick" then
+			HolidayProps.potOfGold(m, cf * CFrame.new(0, 0.9, 0), 2)
+			HolidayProps.clover(m, cf * CFrame.new(1.8, 2.2, 0), 1.6, true)
+		elseif season == "easter" then
+			for e = 1, 3 do
+				HolidayProps.egg(m, CFrame.new(base + V(math.cos(e * 2.1) * 1.6, 0, math.sin(e * 2.1) * 1.6)), 1.6 + rng:NextNumber() * 0.6, HolidayProps.EGGS[(i + e) % #HolidayProps.EGGS + 1])
+			end
+		elseif season == "summer" then
+			piece(m, "plant", CFrame.new(base), { model = "palm" }, 1.1, false)
+			Kit.ball(m, "Lemon", 0.8, base + V(1.6, 0.4, 0), look(rgb(255, 214, 60), Enum.Material.SmoothPlastic), GHOST_DARK)
+		end
+	end
+	-- (Nothing in it is solid or seen through: switch every part so, whatever made it.)
+	for _, d in m:GetDescendants() do
+		if d:IsA("BasePart") then
+			d.CanCollide = false
+			d.CanQuery = false
+			d.CanTouch = false
+		end
+	end
+end
+
 return ExecutiveBuild

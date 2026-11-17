@@ -28,6 +28,8 @@
 
 local Executive = {}
 
+local rgb = Color3.fromRGB
+
 export type Gear = { id: string, name: string, line: string, price: number, glyph: string, free: boolean? }
 
 Executive.Gear = {
@@ -251,6 +253,53 @@ function Executive.inPartition(p: Vector3, margin: number?): boolean
 		end
 	end
 	return false
+end
+
+---------------------------------------------------------------------------------------------------
+-- (Build 90) Each run its own: the Suite's look, its guards' rounds, and a challenge
+---------------------------------------------------------------------------------------------------
+-- The look the Executive keeps the Suite in for a run (chosen as each run is made ready): its silk,
+-- its runner and rugs, its light, the flowers about the place, and which way his guards walk their
+-- rounds. Every look keeps the same walls, partitions, cameras, terminals and door: what decides
+-- the run never moves.
+export type Look = { id: string, name: string, line: string, silk: Color3, runner: Color3, rug: Color3, light: Color3, bright: number, flowers: Color3, reverse: boolean }
+Executive.Looks = {
+	{ id = "midnight", name = "Midnight Navy", line = "Navy silk and opal light: the Suite as he keeps it.", silk = rgb(24, 30, 54), runner = rgb(96, 16, 30), rug = rgb(18, 26, 54), light = rgb(255, 226, 184), bright = 1, flowers = rgb(246, 242, 232), reverse = false },
+	{ id = "emerald", name = "The Emerald Study", line = "Green silk, brass lamps turned warm; his guards walk the other way round.", silk = rgb(18, 52, 38), runner = rgb(120, 84, 30), rug = rgb(16, 48, 34), light = rgb(255, 206, 140), bright = 0.9, flowers = rgb(250, 214, 120), reverse = true },
+	{ id = "crimson", name = "Crimson Gala", line = "Oxblood silk and candlelight: he's entertaining tonight.", silk = rgb(70, 14, 24), runner = rgb(28, 22, 18), rug = rgb(60, 12, 22), light = rgb(255, 170, 120), bright = 0.82, flowers = rgb(200, 24, 48), reverse = false },
+	{ id = "ice", name = "The Ice Penthouse", line = "Pale silk and cold white light; his guards walk the other way round.", silk = rgb(150, 160, 176), runner = rgb(40, 60, 90), rug = rgb(120, 134, 156), light = rgb(220, 236, 255), bright = 1.2, flowers = rgb(210, 230, 255), reverse = true },
+} :: { Look }
+Executive.lookById = {} :: { [string]: Look }
+for _, l in Executive.Looks do
+	Executive.lookById[l.id] = l
+end
+
+-- A run's challenge (one each run, chosen with its look, the same for everyone in it): done when
+-- the Executive is beaten, it pays its Gilt to each guest who met it, once. Nothing bought counts
+-- toward one: a guest revived by Chronos Defiance can't be Untouchable.
+export type Challenge = { id: string, name: string, line: string, gilt: number }
+Executive.Challenges = {
+	{ id = "ghost", name = "Ghost", line = "Beat him without once being seen in the hallway.", gilt = 1500 },
+	{ id = "steady", name = "Steady Hand", line = "Beat him without a wrong try of yours at the vault door.", gilt = 1000 },
+	{ id = "untouchable", name = "Untouchable", line = "Beat him without losing any composure (no revive).", gilt = 2500 },
+	{ id = "swift", name = "Swift Takeover", line = "Beat him within three minutes of the vault door opening.", gilt = 1500 },
+} :: { Challenge }
+Executive.challengeById = {} :: { [string]: Challenge }
+for _, c in Executive.Challenges do
+	Executive.challengeById[c.id] = c
+end
+Executive.SWIFT_SECONDS = 180
+
+-- The season the Suite is dressed for: a holiday that's open (shared/HolidayGames), or high summer
+-- (June to August) when none is. Nil otherwise.
+function Executive.seasonOf(holiday: string?, month: number): string?
+	if holiday then
+		return holiday
+	end
+	if month >= 6 and month <= 8 then
+		return "summer"
+	end
+	return nil
 end
 
 function Executive.inOffice(p: Vector3): boolean

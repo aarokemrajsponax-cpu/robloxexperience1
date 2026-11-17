@@ -27,6 +27,7 @@ local Workspace = game:GetService("Workspace")
 
 local AttractionList = require(ReplicatedStorage.Shared.Attractions)
 local Fortune = require(ReplicatedStorage.Shared.Fortune)
+local HolidayGames = require(ReplicatedStorage.Shared.HolidayGames)
 local Plan = require(ReplicatedStorage.Shared.Executive)
 local RemoteGuard = require(script.Parent.Parent.RemoteGuard)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
@@ -244,6 +245,8 @@ type Guest = {
 	hits: { [string]: boolean },
 	out: boolean,
 	extracted: boolean?, -- (Build 78) away down the lift within the extraction's minute
+	everSeen: boolean?, -- (Build 90) seen at all in the hallway this run (the Ghost challenge)
+	wrongs: number?, -- (Build 90) wrong tries at the vault door this run, never reset (Steady Hand)
 	seen: string?, -- (Build 81) who has eyes on them right now: "camera", "guard", or nil
 	sentAlert: number?, -- the alert their screen was last told
 	-- (Build 82) Chronos Defiance: the moment after being caught (where, until when, whether
@@ -279,8 +282,22 @@ local run = {
 	pending = nil :: { kind: string, fireAt: number, from: Vector3, to: Vector3?, at: Vector3? }?,
 	finale = false,
 	extractUntil = 0,
+	-- (Build 90) This run's look and challenge, and when the vault door opened.
+	look = "midnight",
+	challenge = "ghost",
+	openedAt = 0,
 }
 local rng = Random.new()
+
+-- (Build 90) Which look and challenge the next run has (tests set their own).
+Executive.pick = function(): (string, string)
+	return Plan.Looks[rng:NextInteger(1, #Plan.Looks)].id, Plan.Challenges[rng:NextInteger(1, #Plan.Challenges)].id
+end
+-- The season now (tests set their own).
+Executive.seasonNow = function(): string?
+	local t = os.date("!*t") :: any
+	return Plan.seasonOf(HolidayGames.byCalendar(), t.month)
+end
 
 local function cfg(ctx: Types.Ctx): { [string]: any }
 	return ctx.cfg(ID)
@@ -310,6 +327,22 @@ local function broadcast(ctx: Types.Ctx, message: { [string]: any })
 	for player in guests do
 		ctx.send(player, message)
 	end
+end
+
+-- (Build 90) Whether a guest still meets (or, once he's beaten, met) this run's challenge.
+function Executive.onCourse(g: Guest, t: number): boolean
+	local id = run.challenge
+	if id == "ghost" then
+		return g.everSeen ~= true
+	elseif id == "steady" then
+		return (g.wrongs or 0) == 0
+	elseif id == "untouchable" then
+		return g.composure >= g.max and (g.revives or 0) == 0
+	elseif id == "swift" then
+		local done = if run.phase == "won" then run.wonAt else t
+		return run.openedAt <= 0 or done - run.openedAt <= Plan.SWIFT_SECONDS
+	end
+	return false
 end
 
 local function status(ctx: Types.Ctx, player: Player): { [string]: any }
@@ -353,6 +386,14 @@ local function status(ctx: Types.Ctx, player: Player): { [string]: any }
 		finale = run.finale,
 		extractUntil = if run.phase == "won" then run.extractUntil else nil,
 		seen = if g then g.seen else nil,
+		-- (Build 90) Tonight's look and challenge, and whether this guest is still on course for it.
+		look = run.look,
+		lookName = (Plan.lookById[run.look] or Plan.Looks[1]).name,
+		challenge = run.challenge,
+		challengeName = (Plan.challengeById[run.challenge] or Plan.Challenges[1]).name,
+		challengeLine = (Plan.challengeById[run.challenge] or Plan.Challenges[1]).line,
+		challengeGilt = (Plan.challengeById[run.challenge] or Plan.Challenges[1]).gilt,
+		onCourse = if g then Executive.onCourse(g, Executive.clock()) else false,
 	}
 end
 
@@ -392,6 +433,15 @@ local function fresh(_ctx: Types.Ctx)
 	run.pending = nil
 	run.finale = false
 	run.extractUntil = 0
+	run.openedAt = 0
+	-- (Build 90) A look and a challenge for this run, and the season's dressing.
+	local lookId, challengeId = Executive.pick()
+	local theme = Plan.lookById[lookId] or Plan.Looks[1]
+	run.look = theme.id
+	run.challenge = if Plan.challengeById[challengeId] then challengeId else Plan.Challenges[1].id
+	pcall(ExecutiveBuild.style, b, origin, theme)
+	pcall(ExecutiveBuild.season, b, origin, Executive.seasonNow())
+	b.root:SetAttribute("SuiteChallenge", run.challenge)
 	clearActors()
 	run.generators = {}
 	run.genMax = {}
@@ -418,6 +468,14 @@ local function fresh(_ctx: Types.Ctx)
 		local points = {}
 		for _, p in round do
 			table.insert(points, origin + p)
+		end
+		if theme.reverse and #points > 1 then
+			-- (This look: the same round, walked the other way.)
+			local back = {}
+			for k = #points, 1, -1 do
+				table.insert(back, points[k])
+			end
+			points = back
 		end
 		local model, root, humanoid = Executive.makeFigure(b.actors, "HallGuard" .. i, CFrame.lookAt(points[1], points[2]), "guard")
 		table.insert(run.hallGuards, { id = "hall" .. i, kind = "hallGuard", model = model, root = root, humanoid = humanoid, hp = 1, max = 1, index = 2, lastHit = 0, points = points })
@@ -667,7 +725,16 @@ local function win(ctx: Types.Ctx)
 				ctx.award(player, "executiveBoss")
 				ctx.tally(player, "executiveWins", 1)
 				ctx.progress(player, "executiveWin", 1)
-				ctx.send(player, { op = "won", worth = worth, gilt = gilt, brainrot = brainrot, first = first })
+				-- (Build 90) This run's challenge, met: its Gilt, once.
+				local ch = Plan.challengeById[run.challenge]
+				local met = ch ~= nil and run.openedAt > 0 and Executive.onCourse(g, Executive.clock())
+				local chGilt = 0
+				if ch and met then
+					chGilt = ctx.prize(player, ch.gilt, "The Executive Suite: " .. ch.name)
+					ctx.tally(player, "executiveChallenges", 1)
+					note(player, "Executive challenge", { challenge = ch.id })
+				end
+				ctx.send(player, { op = "won", worth = worth, gilt = gilt, brainrot = brainrot, first = first, challenge = if ch then ch.name else nil, challengeMet = met, challengeGilt = chGilt })
 			end
 		end
 	end
@@ -904,6 +971,10 @@ local function hallStep(ctx: Types.Ctx, dt: number, t: number)
 		end
 		local changed = seen ~= g.seen
 		g.seen = seen
+		if seen and not g.everSeen then
+			g.everSeen = true
+			changed = true
+		end
 		local before = g.alert
 		if seen then
 			local rate = 1 / (tonumber(c.noticeSeconds) or 2.2)
@@ -1387,6 +1458,7 @@ function Executive.ask(ctx: Types.Ctx, player: Player, r: { [string]: unknown })
 		end
 		if code ~= run.code then
 			g.tries += 1
+			g.wrongs = (g.wrongs or 0) + 1
 			if g.tries >= 3 then
 				g.tries = 0
 				g.alert = math.min(0.99, g.alert + 0.5)
@@ -1396,6 +1468,7 @@ function Executive.ask(ctx: Types.Ctx, player: Player, r: { [string]: unknown })
 			return { ok = false, why = "That's not the code." }
 		end
 		run.open = true
+		run.openedAt = Executive.clock()
 		local b = built :: ExecutiveBuild.Built
 		ExecutiveBuild.door(b, false)
 		broadcast(ctx, { op = "doorOpen" })

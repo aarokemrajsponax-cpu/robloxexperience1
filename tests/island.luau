@@ -293,12 +293,20 @@ standOn(ada, Vector3.new(0, 6, 0))
 r = act(ada, { act = "postcard", what = "jet" })
 check("a postcard from far off: refused", r.ok == false)
 giltBefore = data(ada).gilt
+local inboxAt = #ada.inbox
 for _, p in Plan.Postcards do
 	standOn(ada, p.at, 2)
 	r = act(ada, { act = "postcard", what = p.id })
 end
 local sent = last(ada, "postcard")
-check("every postcard spot: the set, Gilt once (the day's soft cap applies, as everywhere), and the badge", r.ok == true and r.count == 6 and sent.paid > 0 and data(ada).gilt == giltBefore + sent.paid and (function()
+-- (Build 90: an Island Standing rank reached on the way pays its own Gilt, told on its own.)
+local standingGilt = 0
+for i = inboxAt + 1, #ada.inbox do
+	if ada.inbox[i].op == "islandStanding" then
+		standingGilt += tonumber(ada.inbox[i].gilt) or 0
+	end
+end
+check("every postcard spot: the set, Gilt once (the day's soft cap applies, as everywhere), and the badge", r.ok == true and r.count == 6 and sent.paid > 0 and data(ada).gilt == giltBefore + sent.paid + standingGilt and (function()
 	for _, a in awards do
 		if a.p == ada and a.key == "postcards" then
 			return true
@@ -334,6 +342,43 @@ r = act(ada, { act = "exchange", what = "suite_shelllamp" })
 check("enough: the island's piece, in the Suite's collection", r.ok == true and data(ada).owned.suite_shelllamp == true and page(ada).pearls == 5)
 r = act(ada, { act = "exchange", what = "suite_shelllamp" })
 check("...once", r.ok == false)
+-- (Build 90) Island Standing: what's done on the island, counted toward a rank.
+do
+	local pg = page(ada)
+	local pts = Plan.standingPoints(pg.pearlsAll, pg.sunsetsAll, (function()
+		local n = 0
+		for _ in pg.postcards do
+			n += 1
+		end
+		return n
+	end)(), pg.flights)
+	check("Build 90: Island Standing counts pearls, sunsets, postcards and flights", pts > 0 and Plan.standingPoints(2, 1, 1, 1) == 2 + 3 + 2 + 1 and Plan.standingOf(0) == 1 and Plan.standingOf(35) == 3 and select(2, Plan.standingOf(35)) == 80 and select(2, Plan.standingOf(500)) == nil)
+	local st = askAs(ada, { op = "state", id = "island" }).standing
+	check("...the guest's board says their rank and how far to the next", st ~= nil and st.points == pts and st.name == Plan.Standing[Plan.standingOf(pts)].name)
+	r = act(ada, { act = "theme", what = "starlit" })
+	check("the Starlit lights can't be bought: they come with Islander", r.ok == false and r.why == "Starlit comes with Island Standing: Islander." and page(ada).themes.starlit == nil and data(ada).gilt == 0, r.why)
+	r = act(ada, { act = "livery", what = "patron" })
+	check("...nor the Island Patron livery: it comes with Patron of the Island", r.ok == false and r.why == "Island Patron comes with Island Standing: Patron of the Island." and page(ada).liveries.patron == nil, r.why)
+	-- Up to Patron of the Island at once: every rank on the way paid, once each.
+	pg.pearlsAll = 80
+	local giltWas = data(ada).gilt
+	local before = #ada.inbox
+	Game.standingCheck(Attractions.ctx, ada, pg)
+	local told = 0
+	for i = before + 1, #ada.inbox do
+		if ada.inbox[i].op == "islandStanding" then
+			told += 1
+		end
+	end
+	local paidTo = pg.standingPaid
+	check("a rank reached pays its Gilt, every rank on the way, each told", told >= 2 and paidTo >= 4 and data(ada).gilt > giltWas, told, paidTo)
+	check("...and opens what comes with it: the Starlit lights, the Patron's livery", pg.themes.starlit == true and pg.liveries.patron == true)
+	local giltNow = data(ada).gilt
+	Game.standingCheck(Attractions.ctx, ada, pg)
+	check("...once: never paid again", data(ada).gilt == giltNow and pg.standingPaid == paidTo)
+	r = act(ada, { act = "theme", what = "starlit" })
+	check("earned: chosen like any other", r.ok == true and ada:GetAttribute("IslandTheme") == "starlit")
+end
 check("every Exchange piece is a real piece for the Suite", (function()
 	for _, e in Plan.Exchange do
 		local item = Wardrobe.get(e.id)

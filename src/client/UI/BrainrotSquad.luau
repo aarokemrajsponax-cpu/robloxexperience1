@@ -17,6 +17,11 @@ local CurioState = require(script.Parent.Parent.CurioState)
 
 local BrainrotSquad = {}
 
+-- (Build 90) The last squad card's Boost key that can be pressed now (for the guiding hand).
+BrainrotSquad.lastBoost = nil :: TextButton?
+-- Set by Main: called each time the squad is drawn (the guiding hand at a Boost key, once).
+BrainrotSquad.drawn = function() end
+
 local rgb = Color3.fromRGB
 local C = Brand.Colours
 local ROBUX = utf8.char(0xE002)
@@ -277,6 +282,9 @@ local function slotCard(parent: Instance, id: string?, order: number, locked: bo
 	boost.Parent = card
 	corner(boost, 8)
 	if not on and not usedToday then
+		BrainrotSquad.lastBoost = boost
+	end
+	if not on and not usedToday then
 		stroke(boost, ab.colour, 1, 0.4)
 		boost.Activated:Connect(function()
 			task.spawn(function()
@@ -363,6 +371,7 @@ end
 
 -- Draws the whole tab into `shelf` (a vertical list), `width` across.
 function BrainrotSquad.draw(shelf: Instance, width: number)
+	BrainrotSquad.lastBoost = nil
 	local s = info()
 	local list = Theme.list(shelf, 12)
 	list.VerticalAlignment = Enum.VerticalAlignment.Top
@@ -431,6 +440,9 @@ function BrainrotSquad.draw(shelf: Instance, width: number)
 		end
 	end
 	label(shelf, "How", "★ More copies of a brainrot give it stars: each star earns half again. Found at the tables, one may come Gold (×2), Diamond (×3) or Rainbow (×5). The one walking with you adds its bonus to every run you bank. Each one in your squad has a booster too: call on it once a day for 15 minutes (Quick Study: more XP; Light Feet: faster round the house; Full Jar: a fuller tip jar). The rarer, the stronger. Scores are never touched.", 12, Brand.Fonts.body, C.dim, { LayoutOrder = 6, Size = UDim2.fromOffset(width, 64), TextWrapped = true, TextYAlignment = Enum.TextYAlignment.Top })
+	task.defer(function()
+		pcall(BrainrotSquad.drawn)
+	end)
 end
 
 return BrainrotSquad

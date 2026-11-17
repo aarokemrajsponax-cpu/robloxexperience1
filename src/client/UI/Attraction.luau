@@ -328,6 +328,10 @@ function Attraction.start()
 		elseif op == "invited" then
 			local held = tonumber(m.invites) or 1
 			Toast.show("An invitation earned", string.format("To the Executive Suite (you hold %d). Its lift is in the Executive's Anteroom, off the Foyer.", held), 5)
+		elseif op == "islandStanding" then
+			-- (Build 90) A new Island Standing rank: what it paid, and what came with it.
+			local gilt = tonumber(m.gilt) or 0
+			Toast.show("Island Standing: " .. tostring(m.name or ""), tostring(m.line or "") .. (if gilt > 0 then string.format("  ·  +%s Gilt", Rules.format(gilt)) else ""), 5)
 		elseif op == "strideUp" then
 			Toast.show(string.format("Speed level %d", tonumber(m.level) or 1), string.format("%d%% faster in Steal a Luxe", tonumber(m.faster) or 0), 3)
 		elseif LuxeHud.mounted() then

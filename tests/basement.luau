@@ -417,6 +417,21 @@ do
 		return built.lifts[32] == nil
 	end)())
 	check("the Treasury's chest", built.chest ~= nil)
+	local studdedAt = {}
+	for _, d in workspace.Attractions.MaisonBasement:GetDescendants() do
+		if d:IsA("BasePart") and d.Name == "Pad" and d.TopSurface == H.Enum.SurfaceType.Studs and d.Material == H.Enum.Material.Plastic then
+			for n = 0, Plan.STAGES - 1 do
+				if (d.CFrame.Position - (O + Plan.Checkpoints[n].at)).Magnitude < 0.6 then
+					studdedAt[n] = true
+				end
+			end
+		end
+	end
+	local every = true
+	for n = 0, Plan.STAGES - 1 do
+		every = every and studdedAt[n] == true
+	end
+	check("(Build 90) every checkpoint pad in the house's studs: the safe ground, known at a glance", every)
 	local kinds = {}
 	for _, tag in { "BasementMover", "BasementVanish", "BasementSteam", "BasementLaser", "BasementSpinner" } do
 		kinds[tag] = #(H.tagged[tag] or {})

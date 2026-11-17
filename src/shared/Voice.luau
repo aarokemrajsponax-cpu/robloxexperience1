@@ -116,6 +116,8 @@ Voice.Concierge = {
 		{ id = "collectionKey", cat = "start", q = "Where is my Collection?", a = "The gold Collection key on the left of your screen (C on a keyboard): your brainrots, every curio you own, your Gems and your trades. Fold the other keys away and the Collection keeps a key of its own." },
 		{ id = "salon", cat = "house", place = "salon", q = "What happens in the Salon?", a = "Sort fine things into their cases for Gilt, at your own pace: sit at a table and press E. Right ones in a row raise your combo; bank the run for Gilt. Tonight's table is there too: one try a day, the same pieces for every guest." },
 		{ id = "luxeHow", cat = "attractions", place = "velvet", q = "How do I play Steal a Luxe?", a = "Through the Luxe Lounge. Inside, hold E on a treasure to lift it: the fuller your bag, the slower you walk. Security sleeps until you lift something; then a guard comes after you. Carry it out to the getaway car to bank it for good." },
+		{ id = "execChallenge", cat = "attractions", place = "midnight", q = "What's the Executive Suite's challenge?", a = "Each run of the Suite has one, the same for everyone in it, said as you go up: Ghost (beat him never seen in the hallway), Steady Hand (no wrong try of yours at the vault door), Untouchable (lose no composure, and no revive) or Swift Takeover (beat him within three minutes of the door opening). Meet it and it pays its own Gilt when he's beaten. Each run has its own look too, and some walk his guards the other way round." },
+		{ id = "islandStanding", cat = "attractions", place = "terrace", q = "What is Island Standing?", a = "Everything you do on Luxury Island, counted: a pearl is a point, a sunset toasted three, each postcard spot two, each flight one. Each rank (Weekender, Islander, Patron of the Island, The Island's Own) pays its Gilt once. Islanders earn the Starlit lights and Patrons the Island Patron livery: never sold. Your standing is on the Jet Lounge's board." },
 		{ id = "luxeSleepers", cat = "attractions", place = "velvet", q = "Who's asleep in Steal a Luxe?", a = "The night staff: eight of them, each asleep beside a treasure, from the footman in the Garden Hall to the master of the house in his bedroom. Get close and they stir, quicker if you're moving, carrying something or lifting a piece near them; Quiet Shoes from the Luxe Lounge help. Wake one after you've lifted something and they call the guards (the master locks his bedroom down); wake one empty-handed and they only grumble. Step away and they settle again." },
 		{ id = "basementHow", cat = "attractions", place = "obsidian", q = "How does the Basement work?", a = "Down the Basement Stair: thirty-two stages of jumps, steam and lasers to the Treasury. Step on every checkpoint pad; fall, and you're back at the last one. The gold chevrons on each pad point the way on. Each chamber pays at its way out, and the Treasury's chest pays the most." },
 		{ id = "executiveHow", cat = "attractions", place = "midnight", q = "How does the Executive's fight work?", a = "Through the code door, in his Office: shoot the three blue generators to bring his shield down, stun his four bodyguards, then stun the Executive. A ring under him is a shockwave (jump it), a lane is his dash (step aside), a raised hand is briefcases (keep moving)." },
@@ -415,12 +417,12 @@ Voice.Afk = {
 -- What's new in this build, told once to each returning guest (Welcome back). Only shown while
 -- `build` is the build that's playing, so old news never shows as new.
 Voice.WhatsNew = {
-	build = 89,
+	build = 90,
 	lines = {
+		"The Executive Suite changes every run: four looks, his guards' rounds, and a challenge with its own Gilt. It's dressed for the season too.",
+		"Island Standing: pearls, sunsets, postcards and flights count toward island ranks, each with its Gilt, and the Starlit lights and a Patron's livery to earn.",
 		"The Maison Basement goes twice as deep: thirty-two stages, through the Clockworks, the Flooded Cistern, the Furnace Heart and the Vault of Kings.",
 		"Steal a Luxe has a Library and a Master Bedroom, off the Long Gallery, and night staff asleep beside the treasures. Don't wake them.",
-		"Lifting a piece now shows what's coming off the plinth, its worth, and how the security round you stands.",
-		"Everything you do earns XP, your level stands beside your Fortune, and your brainrots can boost you once a day.",
 	},
 }
 
@@ -439,6 +441,25 @@ Voice.GuideHand = {
 		title = "Your Collection",
 		line = "Your brainrots, every curio you own, your Gems and your trades, all in one place. Open it any time.",
 	},
+	-- (Build 90)
+	fortune = {
+		title = "Your Fortune",
+		line = "Everything you own and earn adds up here: your Estate, your Gilt and your collection. The richest guest tops the boards. Tap it to see how yours is made.",
+	},
+	play = {
+		title = "Every game in the house",
+		line = "Steal a Luxe, the Basement, the Executive Suite, the island and more, each on its own card. Pick one and go.",
+	},
+	level = {
+		title = "Your level",
+		line = "Everything you do in the house earns XP toward your next level. Tap it for your badges.",
+	},
+	boost = {
+		title = "Boost",
+		line = "Once a day, each brainrot in your squad can give you a quarter hour of its ability. Its card says what it does.",
+	},
+	menuTitle = "Show me round",
+	menuLine = "The guiding hand points out the keys again.",
 }
 
 Voice.Hints = {

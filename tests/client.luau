@@ -8658,6 +8658,78 @@ coroutine.wrap(function()
 end)()
 
 ---------------------------------------------------------------------------------------------------
+-- 7c3. (Build 90) The guiding hand round the screen: the Fortune, the Play key, the level, a Boost
+---------------------------------------------------------------------------------------------------
+coroutine.wrap(function()
+	local errorsBefore = #errors
+	local HandHints = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "HandHints")
+	local GuideHandM = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "GuideHand")
+	local Plaque = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "FortunePlaque")
+	local HudM = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "Hud")
+	local RootM = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "Root")
+	local MenuM = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "MenuPanel")
+	local Voice = module("ReplicatedStorage", "Shared", "Voice")
+	local Directory = module("ReplicatedStorage", "Shared", "Directory")
+	RootM.close()
+	GuideHandM.clear()
+	advance(0.5)
+	local ids = {}
+	for _, h in HandHints.list() do
+		ids[h.id] = true
+	end
+	check("Build 90: the hand's hints: the Fortune, the Play key, the level, a Boost, each a note the server keeps", ids.hint_fortune and ids.hint_play and ids.hint_level and ids.hint_boost and Directory.isGuide("hint_fortune") and Directory.isGuide("hint_boost"))
+	local busyWas = HandHints.isBusy
+	HandHints.isBusy = function()
+		return false
+	end
+	local gapWas = HandHints.GAP
+	HandHints.GAP = 1
+	invokeResults.AttractionAsk = { ok = true, first = true }
+	local sentBefore = #sent
+	HandHints.offer({ "hint_fortune" })
+	advance(1)
+	check("...for a guest new to it: the hand at the Fortune, with what it is", GuideHandM.active() and GuideHandM.target() == Plaque.target() and textOnScreen(string.upper(Voice.GuideHand.fortune.title)) ~= nil and textOnScreen(Voice.GuideHand.fortune.line) ~= nil)
+	snapshot("hand-fortune")
+	press("Got it")
+	advance(0.5)
+	local notedIt = false
+	for i = sentBefore + 1, #sent do
+		local m = sent[i]
+		if m.remote == "AttractionAsk" and type(m.message[1]) == "table" and m.message[1].what == "hint_fortune" and m.message[1].peek == nil then
+			notedIt = true
+		end
+	end
+	check("...Got it: gone, and noted in the guest's record (the server's note, once)", not GuideHandM.active() and notedIt)
+	advance(2)
+	invokeResults.AttractionAsk = { ok = true, first = false }
+	HandHints.offer({ "hint_play" })
+	advance(1)
+	check("one already seen through (the server says so): never shown again", not GuideHandM.active())
+	advance(1)
+	HandHints.replay()
+	advance(1)
+	check("Show me round, from the Menu: the hand again, nothing noted", GuideHandM.active() and GuideHandM.target() == Plaque.target())
+	press("Got it")
+	advance(2)
+	check("...then the next: the Play key", GuideHandM.active() and GuideHandM.target() == HudM.playTarget())
+	press("Got it")
+	advance(2)
+	GuideHandM.clear()
+	local tile = false
+	for _, t in MenuM.tiles do
+		if t.id == "showRound" and t.title == Voice.GuideHand.menuTitle then
+			tile = true
+		end
+	end
+	check("...the Menu has it, for any guest", tile)
+	advance(4)
+	GuideHandM.clear()
+	HandHints.isBusy, HandHints.GAP = busyWas, gapWas
+	invokeResults.AttractionAsk = nil
+	check("no errors with the hand's hints", #errors == errorsBefore, errors[errorsBefore + 1])
+end)()
+
+---------------------------------------------------------------------------------------------------
 -- 7d. The Maison Basement: its screen only inside, the clock, checkpoints and falls, the skip (its
 -- cost said before anything is spent), the Treasury, the best times, the machinery moving
 ---------------------------------------------------------------------------------------------------
@@ -8885,9 +8957,13 @@ coroutine.wrap(function()
 	advance(0.5)
 	LocalPlayer:SetAttribute("Attraction", "executive")
 	signalOf(LocalPlayer, "attr:Attraction"):Fire()
-	serverSays("Attraction", { op = "executive", phase = "hall", open = false, alert = 0.42, composure = 100, max = 100, gear = { sidearm = true, decoy = true }, decoy = true, digits = "4 _ 7 _", generators = 3, guards = 0, boss = 1, bossMax = 1 })
+	serverSays("Attraction", { op = "executive", phase = "hall", open = false, alert = 0.42, composure = 100, max = 100, gear = { sidearm = true, decoy = true }, decoy = true, digits = "4 _ 7 _", generators = 3, guards = 0, boss = 1, bossMax = 1, look = "emerald", lookName = "The Emerald Study", challenge = "ghost", challengeName = "Ghost", challengeLine = "Beat him without once being seen in the hallway.", challengeGilt = 1500, onCourse = true })
 	advance(0.4)
 	check("up there, its screen: the hallway, the alert and the code as found", textOnScreen("THE EXECUTIVE SUITE") ~= nil and textOnScreen("CODE  4 _ 7 _") ~= nil and textOnScreen("ALERT 42%") ~= nil)
+	check("Build 90: tonight's look and challenge, said once as the run begins", textOnScreen("Tonight: The Emerald Study") ~= nil and textOnScreen("Challenge: Ghost. Beat him without once being seen in the hallway. +1,500 Gilt.") ~= nil)
+	serverSays("Attraction", { op = "executive", phase = "hall", open = false, alert = 0.42, composure = 100, max = 100, gear = { sidearm = true, decoy = true }, decoy = true, digits = "4 _ 7 _", generators = 3, guards = 0, boss = 1, bossMax = 1, look = "emerald", lookName = "The Emerald Study", challenge = "ghost", challengeName = "Ghost", challengeLine = "Beat him without once being seen in the hallway.", challengeGilt = 1500, onCourse = false, seen = "camera" })
+	advance(0.4)
+	check("...and when it's out of reach, said once", textOnScreen("Ghost is out of reach this run. Beat him all the same.") ~= nil)
 	check("...the decoy key, and no Fire key in the hallway", textOnScreen("Decoy") ~= nil and textOnScreen("Fire") == nil)
 	local strip = find(playerGui, function(d)
 		return d.Name == "CodeStrip"
@@ -9009,10 +9085,12 @@ coroutine.wrap(function()
 	serverSays("Attraction", { op = "finale", say = "A hostile takeover, then." })
 	advance(0.3)
 	check("his finale: his line as a caption, the room in a red grade", textOnScreen("A hostile takeover, then.") ~= nil and game:GetService("Lighting"):FindFirstChild("ExecutiveFinale") ~= nil)
-	serverSays("Attraction", { op = "won", worth = 25000, gilt = 600, brainrot = "dirigenteSupremo", first = true })
+	serverSays("Attraction", { op = "won", worth = 25000, gilt = 600, brainrot = "dirigenteSupremo", first = true, challenge = "Swift Takeover", challengeMet = true, challengeGilt = 1500 })
 	serverSays("Attraction", { op = "phase", phase = "won", say = "Well played. The lift is yours. For now." })
 	advance(0.3)
 	check("beaten: what's paid, plainly", textOnScreen("25,000 to your Estate  ·  +600 Gilt  ·  Il Dirigente Supremo for your collection. The safe is open, and the lift down.") ~= nil)
+	advance(2.2)
+	check("Build 90: the run's challenge met, and what it paid", textOnScreen("Challenge met: Swift Takeover") ~= nil and textOnScreen("+1,500 Gilt") ~= nil)
 	check("...the red grade lifts, and he has the last word", game:GetService("Lighting"):FindFirstChild("ExecutiveFinale") == nil and textOnScreen("Well played. The lift is yours. For now.") ~= nil)
 	local untilAt = workspace:GetServerTimeNow() + 45.5
 	serverSays("Attraction", { op = "executive", phase = "won", open = true, alert = 0, composure = 60, max = 100, gear = { sidearm = true }, decoy = false, digits = "4 1 7 2", generators = 0, guards = 0, boss = 0, bossMax = 600, extractUntil = untilAt })

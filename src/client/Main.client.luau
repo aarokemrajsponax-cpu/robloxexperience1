@@ -799,6 +799,10 @@ local function welcome()
 				require(script.Parent.UI.CollectionHint).offer()
 			end
 		end)
+		-- (Build 90) The rest of the hand's hints, after the Collection's.
+		task.delay(170, function()
+			require(script.Parent.UI.HandHints).offer({ "hint_fortune", "hint_play", "hint_level" })
+		end)
 	end
 	if new and not (guest and guest.autoTour == true) then
 		task.delay(1.6, function()
@@ -921,6 +925,9 @@ Tour.ended = function()
 		task.delay(2, function()
 			require(script.Parent.UI.CollectionHint).offer()
 		end)
+		task.delay(40, function()
+			require(script.Parent.UI.HandHints).offer({ "hint_fortune", "hint_play", "hint_level" })
+		end)
 	end
 end
 -- While the gold arrow leads a new guest, the card under the keys says so; the Concierge's key
@@ -956,6 +963,31 @@ do
 			CollectionHint.clear()
 		end
 	end
+end
+-- (Build 90) The guiding hand round the rest of the screen: the Fortune, the Play key, the level,
+-- and a brainrot's Boost the first time the squad is open; each once, saved in the guest's record.
+do
+	local HandHints = require(script.Parent.UI.HandHints)
+	local FortunePlaqueM = require(script.Parent.UI.FortunePlaque)
+	local V = require(ReplicatedStorage.Shared.Voice).GuideHand
+	HandHints.isBusy = function(): boolean
+		return Tour.active() or TableClient.isSeated() or Welcome.showing() or Title.isShowing()
+	end
+	HandHints.add({ id = "hint_fortune", title = V.fortune.title, line = V.fortune.line, target = FortunePlaqueM.target })
+	HandHints.add({ id = "hint_play", title = V.play.title, line = V.play.line, target = Hud.playTarget })
+	HandHints.add({ id = "hint_level", title = V.level.title, line = V.level.line, target = FortunePlaqueM.levelTarget })
+	HandHints.add({ id = "hint_boost", title = V.boost.title, line = V.boost.line, target = function(): GuiObject?
+		return BrainrotSquad.lastBoost
+	end, ready = function(): boolean
+		local b = BrainrotSquad.lastBoost
+		return b ~= nil and b.Parent ~= nil
+	end })
+	BrainrotSquad.drawn = function()
+		if BrainrotSquad.lastBoost then
+			HandHints.offer({ "hint_boost" })
+		end
+	end
+	MenuPanel.add({ id = "showRound", title = V.menuTitle, line = V.menuLine, glyph = "👉", open = HandHints.replay } :: any)
 end
 start("Tour", Tour.listen)
 -- The Grand Prix: the house's cars out front, and races round the circuit (an extra, like the

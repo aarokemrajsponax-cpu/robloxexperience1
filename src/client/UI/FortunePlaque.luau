@@ -29,7 +29,16 @@ FortunePlaque.TOP = 58 -- under the Gilt bar (10 + 44 + 4)
 FortunePlaque.BOTTOM = FortunePlaque.TOP + HEIGHT
 
 local plaque: TextButton? = nil
-local levelPill: TextButton? = nil
+local levelPill: TextButton? = nil -- (the level pill beside it)
+
+-- (Build 90) What the guiding hand points at: the plaque, and the level pill beside it.
+function FortunePlaque.target(): GuiObject?
+	return plaque
+end
+function FortunePlaque.levelTarget(): GuiObject?
+	local p = levelPill
+	return if p and p.Visible then p else nil
+end
 local figure: TextLabel? = nil
 local rankLabel: TextLabel? = nil
 local fill: Frame? = nil

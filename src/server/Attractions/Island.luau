@@ -88,6 +88,8 @@ local function page(ctx: Types.Ctx, data: any): { [string]: any }
 	p.pearls = num(p.pearls, 0)
 	p.pearlsAll = num(p.pearlsAll, 0)
 	p.flights = num(p.flights, 0)
+	p.sunsetsAll = num(p.sunsetsAll, 0) -- (Build 90) sunsets toasted, all told (counted from Build 90)
+	p.standingPaid = math.max(1, num(p.standingPaid, 1)) -- the highest Island Standing rank paid
 	-- (A new day: the day's pearls are new.)
 	local today = Plan.day(Island.now())
 	if p.pearlDay ~= today then
@@ -108,6 +110,45 @@ local function publish(player: Player, p: { [string]: any })
 end
 
 ---------------------------------------------------------------------------------------------------
+-- (Build 90) Island Standing
+---------------------------------------------------------------------------------------------------
+local function postcardCount(p: { [string]: any }): number
+	local n = 0
+	for _ in p.postcards do
+		n += 1
+	end
+	return n
+end
+
+local function standingPoints(p: { [string]: any }): number
+	return Plan.standingPoints(p.pearlsAll, p.sunsetsAll, postcardCount(p), p.flights)
+end
+
+-- After any island deed: a rank reached pays its Gilt (each rank once, ever) and opens what comes
+-- with it, and the guest's screen is told.
+local function standingCheck(ctx: Types.Ctx, player: Player, p: { [string]: any })
+	local rank = Plan.standingOf(standingPoints(p))
+	while p.standingPaid < rank do
+		p.standingPaid += 1
+		local r = Plan.Standing[p.standingPaid]
+		local gilt = if r.gilt > 0 then ctx.prize(player, r.gilt, "Island Standing: " .. r.name) else 0
+		ctx.send(player, { op = "islandStanding", rank = p.standingPaid, name = r.name, line = r.line, gilt = gilt })
+	end
+	-- (What standing alone opens.)
+	for _, t in Plan.Themes do
+		if t.standing and rank >= t.standing then
+			p.themes[t.id] = true
+		end
+	end
+	for _, l in Plan.Liveries do
+		if l.standing and rank >= l.standing then
+			p.liveries[l.id] = true
+		end
+	end
+end
+Island.standingCheck = standingCheck
+
+---------------------------------------------------------------------------------------------------
 -- What a guest's screen is told
 ---------------------------------------------------------------------------------------------------
 function Island.state(ctx: Types.Ctx, player: Player): { [string]: any }
@@ -124,11 +165,11 @@ function Island.state(ctx: Types.Ctx, player: Player): { [string]: any }
 	end
 	local liveries = {}
 	for _, l in Plan.Liveries do
-		table.insert(liveries, { id = l.id, name = l.name, line = l.line, owned = p.liveries[l.id] == true, gilt = l.gilt, gems = l.gems, product = l.product, onSale = if l.product then Island.liveryOnSale(l.product) else nil })
+		table.insert(liveries, { id = l.id, name = l.name, line = l.line, owned = p.liveries[l.id] == true, gilt = l.gilt, gems = l.gems, product = l.product, onSale = if l.product then Island.liveryOnSale(l.product) else nil, standing = if l.standing then Plan.Standing[l.standing].name else nil })
 	end
 	local themes = {}
 	for _, t in Plan.Themes do
-		table.insert(themes, { id = t.id, name = t.name, line = t.line, owned = p.themes[t.id] == true, gilt = t.gilt, gems = t.gems })
+		table.insert(themes, { id = t.id, name = t.name, line = t.line, owned = p.themes[t.id] == true, gilt = t.gilt, gems = t.gems, standing = if t.standing then Plan.Standing[t.standing].name else nil })
 	end
 	local exchange = {}
 	for _, e in Plan.Exchange do
@@ -163,6 +204,12 @@ function Island.state(ctx: Types.Ctx, player: Player): { [string]: any }
 		theme = p.theme,
 		exchange = exchange,
 		flights = p.flights,
+		-- (Build 90) Island Standing.
+		standing = (function()
+			local pts = standingPoints(p)
+			local rank, nextAt = Plan.standingOf(pts)
+			return { points = pts, rank = rank, name = Plan.Standing[rank].name, nextAt = nextAt, nextName = if Plan.Standing[rank + 1] then Plan.Standing[rank + 1].name else nil }
+		end)(),
 	}
 end
 
@@ -235,6 +282,7 @@ local function pearl(ctx: Types.Ctx, player: Player, data: any, p: { [string]: a
 		set = ctx.prize(player, num(cfg(ctx).pearlSetGilt, Plan.PEARL_SET_GILT), "island pearls: all five")
 	end
 	local _ = data
+	standingCheck(ctx, player, p)
 	return { ok = true, pearl = n, got = got, of = #today, gilt = gilt, set = set, balance = p.pearls }
 end
 
@@ -268,6 +316,8 @@ local function toast(ctx: Types.Ctx, player: Player, p: { [string]: any }): { [s
 	local gilt = ctx.gilt(player, Plan.TOAST_GILT + friends * Plan.TOAST_FRIEND, "island sunset")
 	ctx.tally(player, "sunsets", 1)
 	ctx.progress(player, "toast", 1)
+	p.sunsetsAll += 1
+	standingCheck(ctx, player, p)
 	local line = if friends > 0 then string.format("%d Gilt, with %d friend%s toasting beside you.", gilt, friends, if friends == 1 then "" else "s") else string.format("%d Gilt. Bring friends tomorrow: a little more for each who toasts with you.", gilt)
 	ctx.send(player, { op = "toasted", gilt = gilt, friends = friends })
 	return { ok = true, title = "To the sunset", line = line, gilt = gilt, friends = friends }
@@ -300,6 +350,7 @@ local function postcard(ctx: Types.Ctx, player: Player, p: { [string]: any }, id
 		ctx.award(player, "postcards")
 	end
 	ctx.send(player, { op = "postcard", id = id, name = spot.name, count = count, total = #Plan.Postcards, first = first, paid = paid })
+	standingCheck(ctx, player, p)
 	return { ok = true, count = count, total = #Plan.Postcards }
 end
 
@@ -313,6 +364,11 @@ local function choose(ctx: Types.Ctx, player: Player, p: { [string]: any }, kind
 	end
 	local owned = if kind == "livery" then p.liveries else p.themes
 	if not owned[id] then
+		if def.standing then
+			-- (Earned with Island Standing only: never sold.)
+			local r = Plan.Standing[def.standing]
+			return { ok = false, why = string.format("%s comes with Island Standing: %s.", def.name, if r then r.name else "a higher rank") }
+		end
 		if def.product then
 			local ok, why = Island.offerLivery(player, def.product)
 			return { ok = false, prompted = ok, why = if ok then nil else why }
@@ -437,6 +493,7 @@ function Island.enter(ctx: Types.Ctx, player: Player): (CFrame?, string?)
 	end
 	p.flights += 1
 	ctx.tally(player, "flights", 1)
+	standingCheck(ctx, player, p)
 	publish(player, p)
 	return Plan.Arrival, nil
 end

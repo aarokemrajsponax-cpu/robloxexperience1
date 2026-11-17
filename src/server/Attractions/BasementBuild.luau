@@ -145,6 +145,11 @@ local function element(parent: Instance, o: Vector3, i: number, e: Plan.El, zone
 			return disc
 		end
 		local p = Kit.part(parent, if kind == "beam" then "Beam" else "Pad", e.size, cf, lk)
+		if e.look == "checkpoint" or e.look == "landing" then
+			-- (Build 90) Every checkpoint in the house's studs: the safe ground, known at a glance.
+			Kit.studs(p)
+			p.Color = if e.look == "landing" then rgb(64, 54, 40) else rgb(50, 46, 56)
+		end
 		guides(parent, cf, e.size, kind == "beam")
 		if e.look == "barrel" then
 			-- The barrel under its lid.

@@ -680,11 +680,14 @@ Game.run.waves = {}
 -- He falls.
 local estateWas = Fortune.page(data(ada)).estate
 local gemsWas, giltWas = data(ada).gems, data(ada).gilt
+-- (Build 90) This run's challenge: Steady Hand, which Ada can't have met (she tried wrong codes).
+Game.run.challenge = "steady"
 standIn(ada, Vector3.new(-10, 0, 10))
 while Game.run.actors.boss.hp > 0 do
 	shoot(ada, "boss")
 end
 local won = last(ada, "won")
+check("Build 90: the run's challenge, told with the win: not met by a guest who tried a wrong code, and nothing paid for it", won ~= nil and won.challenge == "Steady Hand" and won.challengeMet == false and won.challengeGilt == 0 and (Game.guests[ada].wrongs or 0) >= 1)
 check("the Executive beaten: everyone in the Office is paid", Game.run.phase == "won" and won ~= nil and Fortune.page(data(ada)).estate == estateWas + C.prize)
 check("...the prize's Gilt, in full (once an invitation: outside the day's soft cap)", won.gilt == C.prizeGilt and data(ada).gilt >= giltWas + C.prizeGilt, won.gilt)
 check("...and never a Gem: those come only from Robux", won.gems == nil and data(ada).gems == gemsWas)
@@ -855,6 +858,102 @@ Game.revives.held = function()
 end
 Game.revives.onSale = function()
 	return false
+end
+
+---------------------------------------------------------------------------------------------------
+-- 6. (Build 90) Each run its own look, guards' rounds and challenge; the season through the Suite
+---------------------------------------------------------------------------------------------------
+do
+	local suite = workspace.Attractions:FindFirstChild("ExecutiveSuite", true)
+	local function each(name)
+		local out = {}
+		for _, d in suite:GetDescendants() do
+			if d.Name == name then
+				table.insert(out, d)
+			end
+		end
+		return out
+	end
+	local function partitions()
+		local out = {}
+		for _, d in each("Partition") do
+			table.insert(out, tostring(d.CFrame.Position) .. tostring(d.Size))
+		end
+		table.sort(out)
+		return table.concat(out, ";")
+	end
+	local before = partitions()
+	local pickWas, seasonWas = Game.pick, Game.seasonNow
+	Game.pick = function()
+		return "crimson", "untouchable"
+	end
+	Game.seasonNow = function()
+		return "christmas"
+	end
+	Game.fresh(Attractions.ctx)
+	local crimson = Plan.lookById.crimson
+	local silkOk = #each("HallWall") > 0
+	for _, w in each("HallWall") do
+		silkOk = silkOk and w.Color == crimson.silk
+	end
+	check("a run made ready in its look: the hall's silk in its colour, the Suite marked for every screen", suite:GetAttribute("SuiteLook") == "crimson" and Game.run.look == "crimson" and silkOk)
+	local lit, warm = 0, true
+	for _, g in each("Globe") do
+		local l = g:FindFirstChildOfClass("PointLight")
+		if l then
+			lit += 1
+			warm = warm and l.Color == crimson.light and math.abs(l.Brightness - l:GetAttribute("BaseBrightness") * crimson.bright) < 1e-6
+		end
+	end
+	check("...every lamp in its light, dimmed or brightened from its own", lit > 0 and warm)
+	local blooms = each("Bloom")
+	local soft = #blooms > 0
+	for _, b in blooms do
+		soft = soft and b.Color == crimson.flowers and b.CanCollide == false
+	end
+	check("...fresh flowers in its colour about the place, never in anyone's way", soft)
+	check("...and nothing that hides a guest from security has moved", partitions() == before)
+	local dressing = suite:FindFirstChild("SeasonDressing")
+	local firs, solid = 0, false
+	if dressing then
+		for _, d in dressing:GetDescendants() do
+			if d:IsA("Model") and d.Name == "Fir" then
+				firs += 1
+			elseif d:IsA("BasePart") and (d.CanCollide or d.CanQuery) then
+				solid = true
+			end
+		end
+	end
+	check("the season through the whole Suite (Christmas: trees and presents, garlands down the walls), never solid", suite:GetAttribute("SuiteSeason") == "christmas" and firs >= 4 and #each("Garland") >= 4 and not solid, firs)
+	check("...this run's challenge for everyone in it", Game.run.challenge == "untouchable" and suite:GetAttribute("SuiteChallenge") == "untouchable")
+	-- The challenges, judged.
+	local g = { composure = 100, max = 100, revives = 0 }
+	check("Untouchable: met at full composure", Game.onCourse(g, 0) == true)
+	g.composure = 99
+	check("...not after a single hit", Game.onCourse(g, 0) == false)
+	g.composure, g.revives = 100, 1
+	check("...and never with a revive bought (nothing bought counts toward a challenge)", Game.onCourse(g, 0) == false)
+	Game.run.challenge = "ghost"
+	check("Ghost: met only by a guest never seen in the hallway", Game.onCourse({ everSeen = false }, 0) == true and Game.onCourse({ everSeen = true }, 0) == false)
+	Game.run.challenge = "steady"
+	check("Steady Hand: no wrong tries of theirs at the door", Game.onCourse({ wrongs = 0 }, 0) == true and Game.onCourse({ wrongs = 1 }, 0) == false)
+	Game.run.challenge = "swift"
+	Game.run.openedAt = 1000
+	check("Swift Takeover: within three minutes of the door opening", Game.onCourse({}, 1000 + Plan.SWIFT_SECONDS - 1) == true and Game.onCourse({}, 1000 + Plan.SWIFT_SECONDS + 1) == false)
+	-- Another look walks its guards the other way round; out of season, no dressing.
+	Game.pick = function()
+		return "emerald", "ghost"
+	end
+	Game.seasonNow = function()
+		return nil
+	end
+	Game.fresh(Attractions.ctx)
+	local round = Plan.GuardRounds[1]
+	local first = Game.run.hallGuards[1].points[1]
+	check("another run, another look: The Emerald Study, its guards walking their rounds the other way", suite:GetAttribute("SuiteLook") == "emerald" and (first - (Game.origin() + round[#round])).Magnitude < 1e-3)
+	check("...out of season, the season's dressing is gone", suite:FindFirstChild("SeasonDressing") == nil and suite:GetAttribute("SuiteSeason") == nil)
+	check("every look and challenge said in plain words, each its own", #Plan.Looks == 4 and #Plan.Challenges == 4 and Plan.seasonOf(nil, 7) == "summer" and Plan.seasonOf(nil, 11) == nil and Plan.seasonOf("halloween", 10) == "halloween")
+	Game.pick, Game.seasonNow = pickWas, seasonWas
 end
 
 -- Security's armour (on the staff rig's figure): helmet and visor, a plate carrier marked SECURITY,

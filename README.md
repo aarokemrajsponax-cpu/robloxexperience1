@@ -377,6 +377,42 @@ a Nightly attempt or a Mythic's odds.
 - **The launch kit**: page text, icon, thumbnails and the gameplay video's shot list are in
   [`LAUNCH.md`](LAUNCH.md).
 
+## Build 90 — The Executive Suite each run its own, Island Standing, the guiding hand
+
+- **The Executive Suite, each run its own** (`shared/Executive` Looks and Challenges,
+  `ExecutiveBuild.style` and `.season`). Every run is made ready in one of four looks, the same for
+  everyone in it: Midnight Navy, the Emerald Study, Crimson Gala, the Ice Penthouse. A look restyles
+  the hallway's silk, the runner and rugs, every lamp's colour and brightness, and puts fresh flowers
+  in its colour in the lobby, by the vault door and round the Office; two of them walk the guards'
+  rounds the other way round. Nothing that blocks sight, nothing stood on, no camera, terminal or
+  door moves (the tests compare the partitions before and after).
+- **A challenge each run**, said as you go up and paid when he's beaten, once each: Ghost (never
+  seen in the hallway, 1,500 Gilt), Steady Hand (no wrong try of yours at the vault door, 1,000),
+  Untouchable (no composure lost and no revive: nothing bought counts toward one, 2,500), Swift
+  Takeover (within three minutes of the door opening, 1,500). The Suite's screen says when it's out
+  of reach. Each one met counts toward XP (`Config.Levels.stats.executiveChallenges`).
+- **The season through the whole Suite**: garlands down the hallway and the Office in the season's
+  colours, and its pieces in the lobby, by the vault door and in the Office (trees and presents,
+  carved pumpkins, hay and corn, hearts, golden bells, clovers, eggs; palms and lemons in high
+  summer, June to August). From the house's own holiday calendar (`HolidayGames.byCalendar`), made
+  again each run; never solid, never in anyone's line of sight.
+- **Island Standing** (`shared/Island.Standing`, `Island.standingCheck`): a pearl is a point, a
+  sunset toasted three, each postcard spot two, each flight one. Weekender, Islander, Patron of the
+  Island, The Island's Own: each rank pays its Gilt once (1,500 to 15,000). Islanders earn the
+  *Starlit* island lights and Patrons the *Island Patron* jet livery, both never sold (the board
+  refuses to sell them and says which rank brings them). The Jet Lounge's board shows the rank and
+  how far to the next. Sunsets count toward it from this build on (earlier ones weren't recorded).
+- **The guiding hand round the screen** (`UI/HandHints`): after the Collection key, the ringed hand
+  points out the Fortune, the Play key and the level for a guest new to the house, and a brainrot's
+  Boost key the first time their squad is open; each once, kept in the guest's record only once
+  pressed or "Got it" (shown again next evening otherwise). The Menu's *Show me round* replays them.
+- **Studs**: every checkpoint pad in the Basement (and its run-up landings) in the house's studs,
+  the safe ground known at a glance, alongside the street, the lounges and the residence's
+  street-luxury wings that already had them.
+- Not in this build, said plainly: the Executive Suite isn't larger than before; Admin and Mega
+  Abuse weren't changed; the house-wide text and UI audit wasn't redone; no Roblox badges were
+  created (see `assets/badge-icons/MAPPING.md`).
+
 ## Build 89 — The Basement thirty-two stages deep, the residence's night staff
 
 - **The Maison Basement: 32 stages in 8 parts** (`shared/Basement`, `Attractions/BasementBuild`).

@@ -394,6 +394,7 @@ local defaults = {
 			basementSecrets = 50, -- a secret found
 			basementClears = 250, -- the Treasury reached
 			executiveWins = 300, -- the Executive beaten
+			executiveChallenges = 120, -- (Build 90) a run's challenge met
 			executiveExtractions = 60, -- a clean getaway
 			races = 25, -- a Grand Prix finished
 			podiums = 40, -- on the podium

@@ -197,6 +197,13 @@ function IslandPanel.open(which: string?)
 			Theme.hairline(body, UDim.new(0, 120), 3)
 			Theme.text(body, string.format("Today: %d of %d pearls  ·  %s  ·  %d of %d postcards", taken, Plan.PEARLS_A_DAY, if s.toasted then "the sunset toasted" else "the sunset to toast", tonumber(s.postcardCount) or 0, tonumber(s.postcardTotal) or 6), 13, "bodyBold", { LayoutOrder = 4, TextColor3 = GOLD, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left })
 			Theme.text(body, string.format("Pearls kept for the Exchange: %d  ·  brought up in all: %d  ·  flights: %d", tonumber(s.pearlBalance) or 0, tonumber(s.pearlsAll) or 0, tonumber(s.flights) or 0), 12, "body", { LayoutOrder = 5, TextColor3 = C.smoke, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left })
+			-- (Build 90) Island Standing: the rank, and how far to the next.
+			local st = if type(s.standing) == "table" then s.standing else nil
+			if st then
+				local nextLine = if st.nextAt then string.format("  ·  %d of %d to %s", tonumber(st.points) or 0, tonumber(st.nextAt) or 0, tostring(st.nextName or "")) else "  ·  the highest there is"
+				Theme.text(body, "Island Standing: " .. tostring(st.name or "Visitor") .. nextLine, 13, "bodyBold", { LayoutOrder = 6, TextColor3 = Color3.fromRGB(120, 220, 214), TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left })
+				Theme.text(body, "A pearl is a point, a sunset toasted three, each postcard spot two, each flight one. Each rank pays Gilt once; Islanders earn the Starlit lights and Patrons the Island Patron livery, never sold.", 12, "body", { LayoutOrder = 7, TextColor3 = C.smoke, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left })
+			end
 			return
 		end
 		Theme.text(body, "The Island Key", 18, "display", { LayoutOrder = 1, TextColor3 = GOLD, TextXAlignment = Enum.TextXAlignment.Left })
@@ -237,12 +244,14 @@ function IslandPanel.open(which: string?)
 					keyText, primary, enabled = "Worn", false, false
 				elseif l.owned then
 					keyText, primary, enabled = "Wear", true, true
+				elseif type(l.standing) == "string" then
+					keyText, primary, enabled = l.standing, false, false
 				elseif l.product then
 					keyText, primary, enabled = if l.onSale then "Robux" else "Not on sale", false, l.onSale == true
 				else
 					keyText, primary, enabled = price(l.gilt, l.gems), true, true
 				end
-				local line = def.line .. (if l.product and not l.owned then "  Robux, for good: the window shows its price." else "")
+				local line = def.line .. (if l.product and not l.owned then "  Robux, for good: the window shows its price." elseif type(l.standing) == "string" and not l.owned then "  Earned with Island Standing: " .. l.standing .. "." else "")
 				row(body, 1 + i, { def.body, def.trim, def.stripe }, def.name, line, keyText, primary, enabled, function()
 					act({ act = "livery", what = def.id }, def.name)
 				end)
@@ -257,13 +266,16 @@ function IslandPanel.open(which: string?)
 			azure = { Color3.fromRGB(70, 170, 230), Color3.fromRGB(220, 240, 255) },
 			dawn = { Color3.fromRGB(240, 160, 180), Color3.fromRGB(255, 220, 200) },
 			moonlit = { Color3.fromRGB(40, 50, 100), Color3.fromRGB(190, 200, 255) },
+			starlit = { Color3.fromRGB(14, 18, 44), Color3.fromRGB(240, 236, 200) },
 		}
 		for i, t in (if type(s.themes) == "table" then s.themes else {}) do
 			local def = Plan.themeById[tostring(t.id)]
 			if def then
 				local on = s.theme == t.id
-				local keyText = if on then "Chosen" elseif t.owned then "Choose" else price(t.gilt, t.gems)
-				row(body, 1 + i, swatches[def.id], def.name, def.line, keyText, not on, not on, function()
+				local earned = type(t.standing) == "string" and not t.owned
+				local keyText = if on then "Chosen" elseif t.owned then "Choose" elseif earned then t.standing else price(t.gilt, t.gems)
+				local line = def.line .. (if earned then "  Earned with Island Standing: " .. t.standing .. "." else "")
+				row(body, 1 + i, swatches[def.id] or swatches.golden, def.name, line, keyText, not on and not earned, not on and not earned, function()
 					act({ act = "theme", what = def.id }, def.name)
 				end)
 			end

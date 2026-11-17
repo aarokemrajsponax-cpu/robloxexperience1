@@ -287,7 +287,7 @@ end
 
 -- The guide cards the server keeps a note of (shown once, ever): the attractions and the rooms.
 -- (Build 87) The guiding hand's notes, each shown until the guest has done it once.
-Directory.Hints = { hint_collection = true }
+Directory.Hints = { hint_collection = true, hint_fortune = true, hint_play = true, hint_level = true, hint_boost = true } -- (Build 90: the rest)
 
 function Directory.isGuide(id: string): boolean
 	return Directory.byAttraction[id] ~= nil or Directory.Rooms[id] ~= nil or id == "auction" or Directory.Hints[id] == true

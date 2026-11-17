@@ -122,9 +122,45 @@ Island.POSTCARD_REACH = 12
 Island.POSTCARDS_GILT = 1000
 
 ---------------------------------------------------------------------------------------------------
+-- (Build 90) Island Standing: everything a guest has done on the island, counted toward a rank.
+-- A pearl brought up is a point, a sunset toasted three, each postcard spot two (the first time),
+-- each flight in one. Each rank pays its Gilt once, the moment it's reached; the Islander's
+-- Starlit lights and the Patron's jet livery are earned this way only, never sold.
+---------------------------------------------------------------------------------------------------
+export type StandingRank = { name: string, at: number, gilt: number, line: string }
+Island.Standing = {
+	{ name = "Visitor", at = 0, gilt = 0, line = "Welcome to the island." },
+	{ name = "Weekender", at = 12, gilt = 1500, line = "The island knows your face." },
+	{ name = "Islander", at = 35, gilt = 4000, line = "The Starlit lights are yours." },
+	{ name = "Patron of the Island", at = 80, gilt = 8000, line = "The Island Patron livery is yours." },
+	{ name = "The Island's Own", at = 160, gilt = 15000, line = "There's nobody the island knows better." },
+} :: { StandingRank }
+Island.STANDING_PEARL = 1
+Island.STANDING_SUNSET = 3
+Island.STANDING_POSTCARD = 2
+Island.STANDING_FLIGHT = 1
+
+-- A guest's standing points from their island record's counts.
+function Island.standingPoints(pearlsAll: number, sunsetsAll: number, postcards: number, flights: number): number
+	return pearlsAll * Island.STANDING_PEARL + sunsetsAll * Island.STANDING_SUNSET + postcards * Island.STANDING_POSTCARD + flights * Island.STANDING_FLIGHT
+end
+
+-- The rank for `points` (its number), and the points the next one takes (nil at the top).
+function Island.standingOf(points: number): (number, number?)
+	local at = 1
+	for i, r in Island.Standing do
+		if points >= r.at then
+			at = i
+		end
+	end
+	local nextRank = Island.Standing[at + 1]
+	return at, if nextRank then nextRank.at else nil
+end
+
+---------------------------------------------------------------------------------------------------
 -- Liveries for your jet, and the island's lights (each guest's own choice, on their own screen)
 ---------------------------------------------------------------------------------------------------
-export type Livery = { id: string, name: string, line: string, body: Color3, trim: Color3, stripe: Color3, cabin: Color3, gilt: number?, gems: number?, product: string? }
+export type Livery = { id: string, name: string, line: string, body: Color3, trim: Color3, stripe: Color3, cabin: Color3, gilt: number?, gems: number?, product: string?, standing: number? }
 Island.Liveries = {
 	{ id = "ivory", name = "Ivory & Gold", line = "Ivory lacquer and a gold cheat line: the classic private jet.", body = rgb(244, 240, 230), trim = rgb(206, 166, 84), stripe = rgb(196, 152, 66), cabin = rgb(214, 200, 176) },
 	{ id = "noir", name = "Maison Noir", line = "Black lacquer and gold: the house's own.", body = rgb(16, 16, 20), trim = rgb(214, 176, 96), stripe = rgb(240, 206, 120), cabin = rgb(84, 46, 30) },
@@ -134,18 +170,22 @@ Island.Liveries = {
 	{ id = "rose", name = "Rosé", line = "Blush and rose gold.", body = rgb(236, 196, 196), trim = rgb(196, 132, 120), stripe = rgb(255, 226, 214), cabin = rgb(240, 222, 214), gems = 180 },
 	{ id = "aurora", name = "Midnight Aurora", line = "Navy, with violet light along its flanks.", body = rgb(18, 22, 54), trim = rgb(150, 110, 255), stripe = rgb(120, 220, 255), cabin = rgb(40, 34, 70), product = "jetAurora" },
 	{ id = "sovereign", name = "Sovereign Gold", line = "Gold leaf over black, for a Sovereign's arrival.", body = rgb(200, 158, 70), trim = rgb(20, 18, 16), stripe = rgb(255, 230, 150), cabin = rgb(30, 24, 18), product = "jetSovereign" },
+	-- (Build 90) Earned only with Island Standing: never sold.
+	{ id = "patron", name = "Island Patron", line = "Lagoon teal and pearl, for a Patron of the Island.", body = rgb(26, 120, 128), trim = rgb(240, 236, 226), stripe = rgb(160, 230, 226), cabin = rgb(236, 226, 206), standing = 4 },
 } :: { Livery }
 Island.liveryById = {} :: { [string]: Livery }
 for _, l in Island.Liveries do
 	Island.liveryById[l.id] = l
 end
 
-export type Theme = { id: string, name: string, line: string, clock: number, gilt: number?, gems: number? }
+export type Theme = { id: string, name: string, line: string, clock: number, gilt: number?, gems: number?, standing: number? }
 Island.Themes = {
 	{ id = "golden", name = "Golden Hour", line = "The sun low over the sea, everything warm.", clock = 17.55 },
 	{ id = "azure", name = "Azure Noon", line = "High sun, clear water, the brightest blue.", clock = 13.2, gilt = 8000 },
 	{ id = "dawn", name = "Rosé Dawn", line = "First light in pink and gold.", clock = 6.35, gems = 60 },
 	{ id = "moonlit", name = "Moonlit", line = "A full moon on the lagoon, and the lanterns lit.", clock = 0.6, gilt = 20000 },
+	-- (Build 90) Earned only with Island Standing: never sold.
+	{ id = "starlit", name = "Starlit", line = "Deep night, every star out over the sea. An Islander's own.", clock = 23.2, standing = 3 },
 } :: { Theme }
 Island.themeById = {} :: { [string]: Theme }
 for _, t in Island.Themes do

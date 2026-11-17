@@ -208,6 +208,10 @@ end
 -- The Play key: the Maison Directory, every game in the house on a card (UI/DirectoryPanel). First
 -- in the row, in gold, where a guest looking for something to do looks first.
 local playKey: TextButton? = nil
+-- (Build 90) What the guiding hand points at.
+function Hud.playTarget(): GuiObject?
+	return playKey
+end
 function Hud.setPlayKey(onPress: () -> ())
 	if playKey then
 		return
