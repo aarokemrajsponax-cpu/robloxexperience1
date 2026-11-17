@@ -893,6 +893,18 @@ Calendar.opened = function(player: Player)
 	Achievements.check(player)
 end
 boot("The Evening Calendar", Calendar.start)
+-- (Build 91) The Hourly Drop: on the hour, every hour, the courier's case in the Foyer, once an
+-- hour for each guest (server/HourlyDrop). Its XP comes with the count, like everything else's.
+local HourlyDrop = require(script.Parent.HourlyDrop)
+HourlyDrop.trusted = Integrity.trusted
+HourlyDrop.tally = function(player, stat, n, once)
+	local counted = Achievements.tally(player, stat, n, once)
+	if counted then
+		Progress.forStat(player, stat, n)
+	end
+	return counted
+end
+boot("The Hourly Drop", HourlyDrop.start)
 -- A new guest's welcome: double Gilt for their first half hour of play.
 local Newcomer = require(script.Parent.Newcomer)
 GiltService.welcome = Newcomer.mult

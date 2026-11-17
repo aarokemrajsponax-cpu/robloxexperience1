@@ -2,7 +2,7 @@
 -- Admin Abuse as a show, on this screen. Every Admin Abuse is one of the house's nights (shared/
 -- AbuseNights: fifty-odd of them), worked out here from its seed exactly as every server worked it
 -- out, so every screen in every server sees the same night. The server says when it begins, which
--- realm the house is in and when AJKR sends a gift; everything is drawn here:
+-- realm the house is in and when the night's host (Tyler) sends a gift; everything is drawn here:
 --   the opening   the night's own: a transmission, a countdown, the lights going out, the sky
 --                 cracking, a vault door, a hyperspace jump, a hijacked signal, velvet curtains,
 --                 BREAKING NEWS, a hacker's terminal, a portal, the bass pumping. The camera flies
@@ -14,10 +14,10 @@
 --   the realms    each night its own (fifteen in all); Mega Abuse moves from realm to realm: a
 --                 glitch, a flash, "ENTERING · THE COSMOS", then the house in its colours, its own
 --                 air round the guest (stars, sweets, embers, petals, rain, code...).
---   the cameos    AJKR's card (their crest, never a picture of their avatar) whenever a surprise
---                 lands, with their line for it; AJKR's giant over the house only on the few nights
+--   the cameos    the host's card (their crest, never a picture of their avatar) whenever a surprise
+--                 lands, with their line for it; the host's giant over the house only on the few nights
 --                 made for it (World/OwnerCameo).
---   the gifts     AJKR's gift: a card to open (and a golden box falling beside the guest, opened
+--   the gifts     the host's gift: a card to open (and a golden box falling beside the guest, opened
 --                 by walking into it); the server checks it and pays.
 --   the finale    the night's own: fireworks, a shower of gold, a film's closing credits (starring
 --                 the guest), a supernova, a confetti storm, or a curtain call; then the guest's

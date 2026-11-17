@@ -62,6 +62,9 @@ Layout.Foyer = {
 	stair = { x = 8, fromZ = 24, toZ = 38, topY = 17 },
 	stairRopeZ = 22.5,
 	boutiqueDoor = CFrame.lookAt(Vector3.new(19, 3, 41.5), Vector3.new(19, 3, 0)),
+	-- (Build 91) The Hourly Drop's plinth: west of the runner, between the stair and the west
+	-- columns, clear of the way to the doors (server/HourlyDrop). On the floor.
+	dropPlinth = Vector3.new(-15, 3, 31),
 }
 
 -- The Boutique: a narrow mirrored shop through the Foyer's back wall, under the Club Floor.

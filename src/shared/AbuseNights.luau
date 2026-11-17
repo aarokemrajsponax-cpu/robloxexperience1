@@ -15,9 +15,22 @@
 -- night out of it with the same arithmetic. So whatever night it is, it's the same night, in the
 -- same order, at the same moments, in every server of the game.
 
+local Config = require(script.Parent.Config)
+
 local AbuseNights = {}
 
 local rgb = Color3.fromRGB
+-- (Build 91) The night's host, by name, in the nights' own words: Tyler (Config.Admin.hostName).
+local HOST = (function(): string
+	local h = (Config.data.Admin :: any).hostName
+	if type(h) == "string" and h ~= "" then
+		return string.sub(h, 1, 40)
+	end
+	local o = Config.data.Admin.ownerName
+	return if type(o) == "string" and o ~= "" then o else "The owner"
+end)()
+local HOST_CAPS = string.upper(HOST)
+AbuseNights.HOST = HOST
 
 ---------------------------------------------------------------------------------------------------
 -- The same numbers from the same seed, everywhere (Park and Miller's generator: whole numbers
@@ -184,12 +197,12 @@ export type Night = {
 	body: string,
 	hunts: string,
 	gifts: number?, -- the owner's gifts this much more often (1: as usual)
-	giant: boolean?, -- AJKR's giant stands over the house (a few nights only)
+	giant: boolean?, -- the host's giant stands over the house (a few nights only)
 }
 
 AbuseNights.List = {
 	{ id = "classic", name = "THE CLASSIC", glyph = "👑", line = "The original. Everything you came for.", opening = { "transmission", "countdown" }, title = { "slam" }, palette = "gold", realm = "gilded", pool = { "confetti", "meteor", "fireworks", "dance", "goldWave", "storm", "titan", "galaxy" }, pace = "normal", combo = 0.1, music = "abuse", finale = "fireworks", body = "classic", hunts = "all" },
-	{ id = "midasHeist", name = "THE MIDAS HEIST", glyph = "👑", line = "AJKR cracked the vault. Everything is gold.", opening = { "vault" }, title = { "stamp", "slam" }, palette = "gold", realm = "midas", pool = { "goldWave", "confetti", "fireworks", "shockwave", "blackout", "rainbow" }, pace = "normal", combo = 0.15, music = "gold", finale = "goldShower", body = "speed", hunts = "goldKeys", gifts = 1.3 },
+	{ id = "midasHeist", name = "THE MIDAS HEIST", glyph = "👑", line = HOST .. " cracked the vault. Everything is gold.", opening = { "vault" }, title = { "stamp", "slam" }, palette = "gold", realm = "midas", pool = { "goldWave", "confetti", "fireworks", "shockwave", "blackout", "rainbow" }, pace = "normal", combo = 0.15, music = "gold", finale = "goldShower", body = "speed", hunts = "goldKeys", gifts = 1.3 },
 	{ id = "cosmicTakeover", name = "COSMIC TAKEOVER", glyph = "🚀", line = "The house has left the planet.", opening = { "warp", "portal" }, title = { "zoom" }, palette = "cosmic", realm = "cosmos", pool = { "galaxy", "aurora", "blackHole", "ufo", "meteor", "zeroG" }, pace = "normal", combo = 0.2, music = "cosmic", finale = "supernova", body = "moon", hunts = "keys" },
 	{ id = "brainrotApocalypse", name = "BRAINROT APOCALYPSE", glyph = "🗿", line = "The memes have escaped. Nobody is safe.", opening = { "hijack" }, title = { "split", "slam" }, palette = "toxic", realm = "neon", pool = { "memeRain", "titan", "spin", "dance", "confetti", "rainbow" }, pace = "wild", combo = 0.3, music = "party", finale = "confettiStorm", body = "classic", hunts = "memes" },
 	{ id = "hotDisco", name = "HOT HOT DISCO", glyph = "🕺", line = "The dance floor is on fire. Keep dancing.", opening = { "pulse" }, title = { "flicker", "drop" }, palette = "inferno", realm = "inferno", pool = { "dance", "fireIce", "fireworks", "confetti", "rainbow", "blackout" }, pace = "normal", combo = 0.2, music = "party", finale = "fireworks", body = "speed", hunts = "all" },
@@ -224,8 +237,8 @@ AbuseNights.List = {
 	{ id = "endOfTheWorld", name = "END OF THE WORLD PARTY", glyph = "🌋", line = "If it's the end, we're ending it dancing.", opening = { "breaking", "skyCrack" }, title = { "slam" }, palette = "crimson", realm = "inferno", pool = { "meteor", "earthquake", "storm", "blackHole", "tornado", "fireworks" }, pace = "wild", combo = 0.3, music = "epic", finale = "fireworks", body = "classic", hunts = "all" },
 	{ id = "galaxyBrain", name = "GALAXY BRAIN", glyph = "🧠", line = "Big thoughts. Bigger effects.", opening = { "portal", "terminal" }, title = { "zoom" }, palette = "neon", realm = "cosmos", pool = { "galaxy", "titan", "ufo", "memeRain", "zeroG" }, pace = "normal", combo = 0.2, music = "scifi", finale = "supernova", body = "tiny", hunts = "memes" },
 	{ id = "wizardsTower", name = "THE WIZARD'S TOWER", glyph = "🧙", line = "Somebody read the spellbook out loud.", opening = { "portal", "curtain" }, title = { "stamp", "zoom" }, palette = "royal", realm = "heaven", pool = { "aurora", "storm", "zeroG", "bubbles", "galaxy", "shockwave" }, pace = "calm", combo = 0.2, music = "hero", finale = "supernova", body = "moon", hunts = "keys" },
-	{ id = "kingOfTheHouse", name = "KING OF THE HOUSE", glyph = "👑", line = "AJKR, standing over the house. Bow.", opening = { "curtain", "transmission" }, title = { "slam" }, palette = "gold", realm = "gilded", pool = { "goldWave", "fireworks", "confetti", "shockwave", "titan" }, pace = "normal", combo = 0.15, music = "hero", finale = "curtainCall", body = "giants", hunts = "all", giant = true },
-	{ id = "ajkrsArmy", name = "AJKR'S ARMY", glyph = "🕺", line = "One AJKR wasn't enough.", opening = { "breaking", "transmission" }, title = { "split" }, palette = "gold", realm = "gilded", pool = { "ownerArmy", "dance", "confetti", "fireworks", "ownerArmy" }, pace = "normal", combo = 0.15, music = "party", finale = "confettiStorm", body = "classic", hunts = "all", giant = true },
+	{ id = "kingOfTheHouse", name = "KING OF THE HOUSE", glyph = "👑", line = HOST .. ", standing over the house. Bow.", opening = { "curtain", "transmission" }, title = { "slam" }, palette = "gold", realm = "gilded", pool = { "goldWave", "fireworks", "confetti", "shockwave", "titan" }, pace = "normal", combo = 0.15, music = "hero", finale = "curtainCall", body = "giants", hunts = "all", giant = true },
+	{ id = "ajkrsArmy", name = HOST_CAPS .. "'S ARMY", glyph = "🕺", line = "One " .. HOST .. " wasn't enough.", opening = { "breaking", "transmission" }, title = { "split" }, palette = "gold", realm = "gilded", pool = { "ownerArmy", "dance", "confetti", "fireworks", "ownerArmy" }, pace = "normal", combo = 0.15, music = "party", finale = "confettiStorm", body = "classic", hunts = "all", giant = true },
 	{ id = "colossusRises", name = "THE COLOSSUS RISES", glyph = "🗽", line = "Something enormous is standing behind the house.", opening = { "skyCrack", "transmission" }, title = { "slam" }, palette = "gold", realm = "thunder", pool = { "earthquake", "shockwave", "titan", "meteor", "fireworks" }, pace = "normal", combo = 0.2, music = "hero", finale = "fireworks", body = "giants", hunts = "keys", giant = true },
 	{ id = "arcadeMode", name = "ARCADE MODE", glyph = "🕹️", line = "Insert coin. Actually, it's free. Go.", opening = { "countdown", "terminal" }, title = { "flicker", "drop" }, palette = "neon", realm = "synthwave", pool = { "spin", "rainbow", "launch", "confetti", "zeroG", "memeRain" }, pace = "wild", combo = 0.25, music = "mega", finale = "credits", body = "tiny", hunts = "all" },
 	{ id = "stormChasers", name = "STORM CHASERS", glyph = "🌩️", line = "Breaking: every weather, at once, indoors.", opening = { "breaking" }, title = { "drop" }, palette = "ocean", realm = "thunder", pool = { "storm", "tornado", "blizzard", "earthquake", "aurora" }, pace = "normal", combo = 0.25, music = "epic", finale = "fireworks", body = "giants", hunts = "keys" },
@@ -237,7 +250,7 @@ AbuseNights.List = {
 	{ id = "snowGlobe", name = "THE SNOW GLOBE", glyph = "🔮", line = "Someone picked up the house and shook it.", opening = { "portal" }, title = { "drop" }, palette = "ice", realm = "frost", pool = { "blizzard", "bubbles", "aurora", "zeroG", "fireworks", "blizzard" }, pace = "calm", combo = 0.1, music = "winter", finale = "goldShower", body = "tiny", hunts = "keys" },
 	{ id = "dreamland", name = "DREAMLAND", glyph = "💤", line = "You fell asleep at the table. This is the dream.", opening = { "warp", "portal" }, title = { "zoom" }, palette = "candy", realm = "heaven", pool = { "bubbles", "aurora", "zeroG", "galaxy", "confetti" }, pace = "calm", combo = 0.15, music = "cosmic", finale = "supernova", body = "moon", hunts = "goldKeys" },
 	{ id = "finalBoss", name = "THE FINAL BOSS", glyph = "⚔️", line = "BOSS INCOMING. It's a meme. It's enormous.", opening = { "countdown", "breaking" }, title = { "slam" }, palette = "crimson", realm = "thunder", pool = { "titan", "shockwave", "earthquake", "meteor", "blackHole" }, pace = "normal", combo = 0.25, music = "epic", finale = "credits", body = "giants", hunts = "keys" },
-	{ id = "theHack", name = "THE HACK", glyph = "💻", line = "AJKR typed one command. The house did the rest.", opening = { "terminal" }, title = { "flicker", "stamp" }, palette = "toxic", realm = "matrix", pool = { "blackout", "spin", "ufo", "memeRain", "rainbow" }, pace = "wild", combo = 0.25, music = "scifi", finale = "credits", body = "speed", hunts = "memes" },
+	{ id = "theHack", name = "THE HACK", glyph = "💻", line = HOST .. " typed one command. The house did the rest.", opening = { "terminal" }, title = { "flicker", "stamp" }, palette = "toxic", realm = "matrix", pool = { "blackout", "spin", "ufo", "memeRain", "rainbow" }, pace = "wild", combo = 0.25, music = "scifi", finale = "credits", body = "speed", hunts = "memes" },
 	{ id = "goldenAge", name = "THE GOLDEN AGE", glyph = "🏛️", line = "The house at its most magnificent.", opening = { "curtain", "vault" }, title = { "stamp" }, palette = "gold", realm = "gilded", pool = { "goldWave", "aurora", "fireworks", "confetti", "bubbles" }, pace = "calm", combo = 0.1, music = "hero", finale = "goldShower", body = "free", hunts = "goldKeys", gifts = 1.2 },
 	{ id = "chaosTheory", name = "CHAOS THEORY", glyph = "🎲", line = "No plan. No order. Everything.", opening = { "hijack", "pulse", "skyCrack" }, title = { "split", "slam", "zoom" }, palette = "rainbow", realm = "neon", pool = { "meteor", "blackHole", "ufo", "tornado", "memeRain", "titan", "rainbow", "galaxy", "storm", "spin", "launch", "fireIce" }, pace = "wild", combo = 0.4, music = "mega", finale = "confettiStorm", body = "classic", hunts = "all" },
 	{ id = "masquerade", name = "MIDNIGHT MASQUERADE", glyph = "🎭", line = "Masks on. Lights low. Music loud.", opening = { "curtain", "blackout" }, title = { "stamp" }, palette = "royal", realm = "gilded", pool = { "dance", "blackout", "fireworks", "aurora", "confetti" }, pace = "calm", combo = 0.1, music = "spy", finale = "curtainCall", body = "free", hunts = "keys" },
@@ -403,8 +416,8 @@ AbuseNights.Variants = {
 		{ banner = "SPACE WALK", colour = rgb(150, 140, 255), colours = { rgb(170, 150, 255) }, gravity = 6, hop = 18 },
 	},
 	ownerArmy = {
-		{ banner = "AJKR'S ARMY!", colour = rgb(255, 204, 110), colours = GOLDS },
-		{ banner = "AJKR'S RAINBOW ARMY!", colour = rgb(255, 150, 220), colours = RAINBOW },
+		{ banner = HOST_CAPS .. "'S ARMY!", colour = rgb(255, 204, 110), colours = GOLDS },
+		{ banner = HOST_CAPS .. "'S RAINBOW ARMY!", colour = rgb(255, 150, 220), colours = RAINBOW },
 	},
 } :: { [string]: { Variant } }
 

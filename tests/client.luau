@@ -8734,6 +8734,102 @@ coroutine.wrap(function()
 end)()
 
 ---------------------------------------------------------------------------------------------------
+-- 7c4. (Build 91) The Hourly Drop in the Foyer: its sign, the case coming down, its lid lifting
+---------------------------------------------------------------------------------------------------
+coroutine.wrap(function()
+	local errorsBefore = #errors
+	local View = module("StarterPlayer", "StarterPlayerScripts", "Client", "World", "HourlyDropView")
+	local Plan = module("ReplicatedStorage", "Shared", "HourlyDrop")
+	-- The sign's words, by the clock (an hour's case: down for its first fifteen minutes).
+	local base = 497300 * 3600
+	local w = View.words(base + 20, true, nil, nil, "courierSeal", "midnightRibbon", false, {})
+	check("the sign while the case is down: how long it stays, by the clock, and the hour's piece", w.time == "14:40" and string.find(w.timeWord, "GOES IN", 1, true) ~= nil and string.find(w.piece, "This hour: The Courier's Seal", 1, true) ~= nil and w.state == "Open it for Gilt and the piece", w.time)
+	w = View.words(base + 1000, false, nil, nil, "courierSeal", "midnightRibbon", false, {})
+	check("...and after it: how long to the next, and what's in it", w.time == "43:20" and string.find(w.timeWord, "NEXT CASE", 1, true) ~= nil and string.find(w.piece, "Next: The Midnight Ribbon", 1, true) ~= nil, w.time)
+	w = View.words(base + 20, true, nil, nil, "courierSeal", "midnightRibbon", true, { courierSeal = true })
+	check("...opened: it says so, and when the next comes", string.find(w.state, "Opened", 1, true) ~= nil and string.find(w.state, "top of the hour", 1, true) ~= nil)
+	w = View.words(base + 20, true, nil, nil, "courierSeal", "midnightRibbon", false, { courierSeal = true })
+	check("...the piece already held: Gilt only, said plainly", string.find(w.state, "already yours", 1, true) ~= nil)
+	-- The plinth and the case, as the server builds them.
+	local m = Instance.new("Model")
+	m.Name = "HourlyDrop"
+	local top = Instance.new("Part")
+	top.Name = "Top"
+	top.Anchored = true
+	top.CFrame = CFrame.new(-24, 9.5, 62)
+	top.Parent = m
+	local at = Instance.new("Attachment")
+	at.Name = "SignAt"
+	at.Parent = top
+	local function makeCase()
+		local c = Instance.new("Model")
+		c.Name = "Case"
+		local body = Instance.new("Part")
+		body.Name = "Body"
+		body.Anchored = true
+		body.Size = Vector3.new(3.4, 1.4, 2.3)
+		body.CFrame = CFrame.new(-24, 10.5, 62)
+		body.Parent = c
+		local lid = Instance.new("Part")
+		lid.Name = "Lid"
+		lid.Anchored = true
+		lid.Size = Vector3.new(3.46, 0.34, 2.36)
+		lid.CFrame = body.CFrame * CFrame.new(0, 0.87, 0)
+		lid:SetAttribute("Hinge", body.CFrame * CFrame.new(0, 0.7, 1.18))
+		lid.Parent = c
+		local glow = Instance.new("Part")
+		glow.Name = "Glow"
+		glow.Transparency = 1
+		glow.Anchored = true
+		glow.CFrame = body.CFrame
+		glow.Parent = c
+		local prompt = Instance.new("ProximityPrompt")
+		prompt.Name = "OpenPrompt"
+		prompt.Parent = body
+		c.PrimaryPart = body
+		return c
+	end
+	workspace:SetAttribute("DropOpen", true)
+	workspace:SetAttribute("DropPiece", "courierSeal")
+	workspace:SetAttribute("DropNextPiece", "midnightRibbon")
+	m.Parent = workspace
+	signalOf(workspace, "ChildAdded"):Fire(m)
+	advance(1)
+	local case = makeCase()
+	case.Parent = m
+	signalOf(m, "ChildAdded"):Fire(case)
+	advance(0.4)
+	local body = case.PrimaryPart
+	check("on the hour the case comes down from high over the plinth, in a shaft of light", View.mine().case == true and body.CFrame.Position.Y > 10.5 + 8 and workspace:FindFirstChild("DropShaft") ~= nil, body.CFrame.Position.Y)
+	advance(3)
+	check("...and settles on it, turning slowly, breathing (never far from where the server put it)", math.abs(body.CFrame.Position.Y - 10.5) < 0.6 and (body.CFrame.Position - Vector3.new(-24, 10.5, 62)).Magnitude < 0.7, body.CFrame.Position)
+	advance(1.5)
+	check("...the shaft of light gone once it's down", workspace:FindFirstChild("DropShaft") == nil)
+	check("the sign over the plinth: THE HOURLY DROP, the hour's piece", View.mine().sign == true and textOnScreen("THE HOURLY DROP") ~= nil and textOnScreen("This hour: The Courier's Seal") ~= nil)
+	local lid = case:FindFirstChild("Lid")
+	local closedUp = lid.CFrame.UpVector:Dot(body.CFrame.UpVector)
+	serverSays("Salute", { op = "hourlyDrop", stage = "opened", paid = 250, piece = "courierSeal", new = true, count = 1, have = { courierSeal = true } })
+	advance(1.4)
+	check("opened (the server said): its lid lifts on this screen, light pours out", View.mine().lidOpen == true and closedUp > 0.99 and lid.CFrame.UpVector:Dot(body.CFrame.UpVector) < 0.2 and case.Glow.Transparency < 0.5, lid.CFrame.UpVector:Dot(body.CFrame.UpVector))
+	check("...its prompt gone for this guest", body.OpenPrompt.Enabled == false)
+	check("...and what it gave, in a quiet line", textOnScreen("+250 Gilt, and The Courier's Seal for your collection.") ~= nil)
+	check("...the sign says it's opened", textOnScreen("Opened") ~= nil)
+	-- The case goes at a quarter past.
+	workspace:SetAttribute("DropOpen", false)
+	case.Parent = nil
+	signalOf(m, "ChildRemoved"):Fire(case)
+	advance(1)
+	check("when the case goes, the sign counts to the next", View.mine().case == false and textOnScreen("THE NEXT CASE COMES DOWN IN") ~= nil and textOnScreen("Next: The Midnight Ribbon") ~= nil)
+	-- The next hour's case: a new one, not opened yet.
+	serverSays("Salute", { op = "hourlyDrop", stage = "down", hour = Plan.hourOf(workspace:GetServerTimeNow()) + 1, piece = "midnightRibbon", closes = 0 })
+	advance(0.5)
+	check("a quiet line when the next case comes down: what's in it, for how long", textOnScreen("The courier's case is down in the Foyer: The Midnight Ribbon inside, for 15 minutes.") ~= nil)
+	m:Destroy()
+	advance(4)
+	check("no errors with the Hourly Drop", #errors == errorsBefore, errors[errorsBefore + 1])
+end)()
+
+---------------------------------------------------------------------------------------------------
 -- 7d. The Maison Basement: its screen only inside, the clock, checkpoints and falls, the skip (its
 -- cost said before anything is spent), the Treasury, the best times, the machinery moving
 ---------------------------------------------------------------------------------------------------

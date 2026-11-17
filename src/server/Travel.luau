@@ -55,6 +55,9 @@ local function places(): { [string]: Place }
 	out.foyer = { name = "The Foyer", at = Layout.Foyer.spawn }
 	-- (The Concierge: where guests arrive, in front of the desk, facing the Concierge.)
 	out.concierge = { name = "The Concierge", at = Layout.Foyer.spawn }
+	-- (Build 91) The Hourly Drop: in front of its plinth, facing it.
+	local plinth = Layout.Foyer.dropPlinth
+	out.hourlyDrop = { name = "The Hourly Drop", at = facing(Vector3.new(plinth.X, Layout.Foyer.spawn.Position.Y, plinth.Z - 10), Vector3.new(plinth.X, Layout.Foyer.spawn.Position.Y, plinth.Z)) }
 	out.salon = { name = "The Salon", at = facing(Layout.Salon.arrival, Layout.Salon.arrival - Vector3.new(10, 0, 0)) }
 	out.velvet = { name = "The Luxe Lounge", at = facing(Layout.Velvet.arrival, Layout.Velvet.arrival - Vector3.new(10, 0, 0)) }
 	out.obsidian = { name = "The Basement Stair", at = facing(Layout.Obsidian.arrival, Layout.Obsidian.arrival + Vector3.new(10, 0, 0)) }

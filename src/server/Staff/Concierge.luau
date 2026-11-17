@@ -298,6 +298,8 @@ function Concierge.answer(id: string): string?
 					:gsub("{islandGilt}", commas(tonumber(island.keyGilt) or 25000))
 					:gsub("{islandGems}", tostring(tonumber(island.keyGems) or 250))
 					:gsub("{galaGilt}", commas(tonumber((a.gala or {}).dailyGilt) or 2500))
+					:gsub("{dropGilt}", commas(tonumber(((settings :: any).HourlyDrop or {}).gilt) or 250))
+					:gsub("{dropMinutes}", tostring(tonumber(((settings :: any).HourlyDrop or {}).openMinutes) or 15))
 			)
 		end
 	end

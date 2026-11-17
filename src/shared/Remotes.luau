@@ -51,6 +51,7 @@ Remotes.Functions = {
 	"AbuseGiftAsk", -- client -> server: open the owner's gift during Admin Abuse
 	"HolidayAsk", -- client -> server: the holiday games (go there, go home, board the sleigh, open a gift)
 	"CalendarAsk", -- client -> server: the Evening Calendar (what's waiting, open today's present)
+	"HourlyDropAsk", -- client -> server: the Hourly Drop (this hour's case: opened yet, the pieces held)
 	"EmpireAsk", -- client -> server: your Fortune and the Wealthiest boards, the objectives, the Concierge's answers
 	"AttractionAsk", -- client -> server: the attractions (go in, go home, pick up, bank, a checkpoint, train, upgrade)
 	"AuctionAsk", -- client -> server: the Grand Auction (the lots, a bid)

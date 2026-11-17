@@ -9,6 +9,8 @@
 -- and New Year's countdown. The owner starts any of them at any time; on the real day the house
 -- starts its own for a few minutes every hour (Config.Admin.holidayAuto).
 
+local Config = require(script.Parent.Config)
+
 local HouseEvents = {}
 
 export type Event = { id: string, name: string, line: string, glyph: string?, holiday: boolean? }
@@ -95,7 +97,8 @@ HouseEvents.Announcements = {
 -- each (or the owner's own words, filtered by Roblox first).
 HouseEvents.Headlines = {
 	"ADMIN ABUSE IN 5 MINUTES! DON'T LEAVE!",
-	"AJKR IS IN THE SERVER! SAY HI!",
+	-- (Build 91: the house's host, Tyler: Config.Admin.hostName.)
+	string.upper(tostring((Config.data.Admin :: any).hostName or "The owner")) .. " IS IN THE SERVER! SAY HI!",
 	"DOUBLE GILT FOR EVERYONE RIGHT NOW!",
 	"GIVEAWAY TIME! STAY IN THE SERVER!",
 	"WHO'S READY FOR CHAOS?!",

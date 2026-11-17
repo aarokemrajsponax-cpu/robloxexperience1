@@ -356,6 +356,7 @@ local defaults = {
 		abuseGift = { rate = 1, burst = 3 },
 		holidayAsk = { rate = 4, burst = 10 },
 		calendarAsk = { rate = 1, burst = 4 },
+		hourlyDrop = { rate = 1, burst = 4 },
 		race = { rate = 3, burst = 8 },
 		travel = { rate = 1, burst = 3 },
 		empireAsk = { rate = 3, burst = 8 },
@@ -395,6 +396,7 @@ local defaults = {
 			basementClears = 250, -- the Treasury reached
 			executiveWins = 300, -- the Executive beaten
 			executiveChallenges = 120, -- (Build 90) a run's challenge met
+			hourlyDrops = 60, -- (Build 91) an Hourly Drop opened
 			executiveExtractions = 60, -- a clean getaway
 			races = 25, -- a Grand Prix finished
 			podiums = 40, -- on the podium
@@ -1046,6 +1048,18 @@ local defaults = {
 		kindGap = 45,
 		queue = 6,
 		seconds = 5, -- how long a feat stays on every screen
+	},
+
+	-- (Build 91) The Hourly Drop (server/HourlyDrop): on the hour, every hour (the same moment in
+	-- every server, by the clock), a courier's case comes down onto its plinth in the Foyer and stays
+	-- open for `openMinutes`. Each guest opens it once an hour, in person: Gilt (the quick-pickup end
+	-- of the ladder) and, the first time, that hour's piece (shared/HourlyDrop: six, in turn, each
+	-- back every six hours). Free, never random, never sold.
+	HourlyDrop = {
+		enabled = true,
+		openMinutes = 15,
+		gilt = 250,
+		reach = 14, -- studs from the case (in the Grand house) a guest opens it from
 	},
 
 	Gilt = {

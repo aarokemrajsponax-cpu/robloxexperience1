@@ -80,6 +80,7 @@ function AbuseParty.tiles(): { Tile }
 		{ 22, 28, 3 }, -- the columns
 		{ -19, 36, 3 }, -- the guest book
 		{ 0, -8, 6 }, -- the front door
+		{ -15, 31, 2.7 }, -- (Build 91) the Hourly Drop's plinth (its disc: 2.6 round, as drawn)
 	}
 	local st = F.stair
 	local out: { Tile } = {}

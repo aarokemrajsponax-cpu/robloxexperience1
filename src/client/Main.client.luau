@@ -276,6 +276,14 @@ start("The island", require(script.Parent.World.IslandView).start)
 start("The attractions", require(script.Parent.UI.Attraction).start)
 start("The Basement's machinery", require(script.Parent.World.BasementMotion).start)
 start("Steal a Luxe's night staff", require(script.Parent.World.LuxeSleepers).start)
+-- (Build 91) The Hourly Drop in the Foyer: its sign, the case coming down, its lid lifting.
+start("The Hourly Drop", function()
+	local HourlyDropView = require(script.Parent.World.HourlyDropView)
+	HourlyDropView.toast = function(title: string, line: string)
+		Toast.show(title, line, 4)
+	end
+	HourlyDropView.start()
+end)
 -- The Grand Auction's notices (outbid, a lot won).
 start("The Grand Auction", require(script.Parent.UI.AuctionPanel).start)
 -- The Concierge's way to a place: gold arrows on the floor, walking.
