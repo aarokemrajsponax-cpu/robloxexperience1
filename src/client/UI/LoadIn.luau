@@ -25,6 +25,13 @@ local GOLD = Color3.fromRGB(255, 204, 90)
 local GREEN = Color3.fromRGB(120, 220, 150)
 local NAME = "MaisonLoadIn"
 
+-- (Build 88) What it does for the guest's Fortune: the one aim of the whole house.
+LoadIn.FORTUNE = {
+	luxe = "Everything you bank at the car goes to your Estate, and your Fortune grows with it.",
+	basement = "Every chamber's purse, and the Treasury's chest, add to your Fortune.",
+	executive = "Beat him and the biggest prize in the house goes to your Estate: your Fortune leaps.",
+} :: { [string]: string }
+
 -- A tip for each, before the first step.
 LoadIn.TIPS = {
 	luxe = "Security sleeps until you lift something. Then a guard comes after you: get to a way out.",
@@ -87,7 +94,7 @@ end
 type Theme = { top: Color3, bottom: Color3, accent: Color3, tag: string, motif: string }
 LoadIn.THEMES = {
 	luxe = { top = Color3.fromRGB(46, 8, 20), bottom = Color3.fromRGB(8, 3, 6), accent = Color3.fromRGB(255, 92, 124), tag = "THE HEIST", motif = "lasers" },
-	basement = { top = Color3.fromRGB(10, 32, 32), bottom = Color3.fromRGB(3, 9, 10), accent = Color3.fromRGB(226, 152, 92), tag = "SIXTEEN STAGES DOWN", motif = "bricks" },
+	basement = { top = Color3.fromRGB(10, 32, 32), bottom = Color3.fromRGB(3, 9, 10), accent = Color3.fromRGB(226, 152, 92), tag = "THIRTY-TWO STAGES DOWN", motif = "bricks" },
 	executive = { top = Color3.fromRGB(10, 20, 46), bottom = Color3.fromRGB(2, 4, 12), accent = Color3.fromRGB(110, 200, 255), tag = "BY INVITATION ONLY", motif = "grid" },
 } :: { [string]: Theme }
 local PLAIN: Theme = { top = Color3.fromRGB(28, 22, 14), bottom = Color3.fromRGB(6, 5, 4), accent = GOLD, tag = "", motif = "" }
@@ -373,6 +380,13 @@ function LoadIn.start(id: string, seconds: number, after: (() -> ())?)
 		tl.Size = UDim2.new(1, 0, 0, 0)
 		tl.AutomaticSize = Enum.AutomaticSize.Y
 		tl.TextXAlignment = Enum.TextXAlignment.Left
+	end
+	-- (Build 88) Its part in the guest's Fortune, in gold, under the tip.
+	local fortune = LoadIn.FORTUNE[id]
+	if fortune then
+		local fl = label(col, "Fortune", "◆  " .. fortune, 13, Brand.Fonts.bodyBold, GOLD, top + 128)
+		fl.Size = UDim2.new(1, 0, 0, 36)
+		fl.TextXAlignment = align
 	end
 	-- The house's name, small, at the foot.
 	local mark = label(shade, "Brand", string.upper(Brand.Title), 11, Brand.Fonts.heavy, Color3.fromRGB(200, 186, 160), size.Y - 30)

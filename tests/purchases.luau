@@ -1864,6 +1864,58 @@ do
 	clock += 1800
 	st = squad(zed)
 	check("...a quarter hour at double, then a quarter hour as usual", math.abs(st.held - (held0 + rate0 * 2 * 0.25 + rate0 * 0.25)) <= 1 and st.frenzy == nil, string.format("%s vs %s", tostring(st.held), tostring(held0 + rate0 * 0.75)))
+	-- (Build 88) Boosters: each in the squad, once a day, a quarter of an hour of its ability.
+	do
+		local BR = module("ReplicatedStorage", "Shared", "Brainrots")
+		local ids = squad(zed).ids
+		local byKind = {}
+		for _, id in ids do
+			local kind = BR.ability(id)
+			byKind[kind] = byKind[kind] or id
+		end
+		local anyId = ids[1]
+		local kind, pct = BR.ability(anyId)
+		r = curio(zed, { op = "boost", id = "moonCheese" })
+		check("Build 88: only a brainrot you hold, in your squad, can boost you", r.ok == false)
+		r = curio(zed, { op = "boost", id = anyId })
+		st = squad(zed)
+		local listed = false
+		for _, b in st.boosts or {} do
+			if b.kind == kind and b.id == anyId and b.pct == pct and b.left == BR.BOOST_SECONDS then
+				listed = true
+			end
+		end
+		check("...its booster comes on, for 15 minutes at its rarity's strength, and the screen is told", r.ok == true and r.kind == kind and r.pct == pct and listed and st.boosted[anyId] == true)
+		r = curio(zed, { op = "boost", id = anyId })
+		check("...once a day each", r.ok == false and r.why ~= nil)
+		if kind == "feet" then
+			check("...Light Feet: the house's pace reads it", zed:GetAttribute("BoostFeet") == 1 + pct / 100)
+		elseif kind == "study" then
+			check("...Quick Study: XP comes faster", BrainrotsS.boostOf(zData, "study") == pct)
+		else
+			check("...Full Jar: the jar fills faster for its quarter hour", st.frenzyMult == 1 + pct / 100 and st.frenzy == BR.BOOST_SECONDS)
+		end
+		clock += BR.BOOST_SECONDS + 1
+		st = squad(zed)
+		check("...and it ends on time (nothing listed, nothing left on)", #(st.boosts or {}) == 0 and BrainrotsS.boostOf(zData, kind) == 0)
+		BrainrotsS.applyBoosts(zed, zData)
+		check("...Light Feet comes off the character with it", zed:GetAttribute("BoostFeet") == nil)
+		clock += 86400
+		r = curio(zed, { op = "boost", id = anyId })
+		check("...and the next day it can again", r.ok == true)
+		local Speed = module("ReplicatedStorage", "Shared", "Speed")
+		zed:SetAttribute("BoostFeet", 1.2)
+		check("Build 88: Light Feet quickens the house's pace, never an attraction's", Speed.perkOf(zed) == 1.2 and Speed.resolve(false, nil, Speed.perkOf(zed), nil, nil, nil) > Speed.resolve(false, nil, nil, nil, nil, nil) and Speed.resolve(false, nil, Speed.perkOf(zed), nil, nil, "luxe") == Speed.resolve(false, nil, nil, nil, nil, "luxe"))
+		zed:SetAttribute("BoostFeet", nil)
+		local every = true
+		for _, id in BR.all() do
+			local k, p = BR.ability(id)
+			if not BR.Abilities[k] or p <= 0 or p > 60 then
+				every = false
+			end
+		end
+		check("Build 88: every brainrot has an ability, never stronger than 60%", every)
+	end
 	BrainrotsS.now = function()
 		return os.time()
 	end

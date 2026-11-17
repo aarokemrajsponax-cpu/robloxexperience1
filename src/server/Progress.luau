@@ -88,6 +88,47 @@ function Progress.give(player: Player, what: string, grade: string?): number
 	return Progress.add(player, amount, what)
 end
 
+-- (Build 88) XP for what a guest does all over the house, from the same counts the badges keep
+-- (each one the server saw happen: a haul banked, a checkpoint reached, the Executive beaten, a
+-- race finished, a pearl found). Config.Levels.stats gives the XP for each; Config.Levels.daily
+-- Cap is the most any one of them gives in a day, so nothing done over and over levels anyone
+-- up (repeating it still counts for its badge). Nothing bought is ever on the list.
+local function today(data: Profiles.Data): { [string]: number }
+	local L = rec(data) :: any
+	local day = os.time() // 86400
+	if type(L.today) ~= "table" or L.today.day ~= day then
+		L.today = { day = day, by = {} }
+	end
+	if type(L.today.by) ~= "table" then
+		L.today.by = {}
+	end
+	return L.today.by
+end
+
+function Progress.forStat(player: Player, stat: string, n: number): number
+	local c = cfg()
+	local each = type(c.stats) == "table" and tonumber((c.stats :: any)[stat]) or nil
+	if not each or each <= 0 or type(n) ~= "number" or n <= 0 then
+		return 0
+	end
+	local data = Profiles.get(player)
+	if not data then
+		return 0
+	end
+	local by = today(data)
+	local cap = tonumber(c.dailyCap) or 1500
+	local room = cap - (by[stat] or 0)
+	if room <= 0 then
+		return 0
+	end
+	local amount = math.min(room, math.floor(each * math.min(n, 1000) + 0.5))
+	if amount <= 0 then
+		return 0
+	end
+	by[stat] = (by[stat] or 0) + amount
+	return Progress.add(player, amount, stat)
+end
+
 -- The first visit of the day: a little XP for coming back.
 function Progress.daily(player: Player)
 	local data = Profiles.get(player)

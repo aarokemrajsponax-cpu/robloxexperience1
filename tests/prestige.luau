@@ -198,4 +198,30 @@ for _, b in broadcasts do
 end
 check("...the house hears of it", told)
 
+---------------------------------------------------------------------------------------------------
+-- (Build 88) XP for what's done all over the house, from the counts the badges keep, capped a day
+---------------------------------------------------------------------------------------------------
+do
+	local Progress = module("ServerScriptService", "Server", "Progress")
+	local Config = module("ReplicatedStorage", "Shared", "Config")
+	local xp = H.guest("Xavi", 6601)
+	local data = profiles[xp].Data
+	local function total()
+		return (data.level and data.level.xp) or 0
+	end
+	local before = total()
+	local counted = Achievements.tally(xp, "luxeHauls", 1)
+	local gave = Progress.forStat(xp, "luxeHauls", 1)
+	check("Build 88: a haul banked counts for its badge and gives its XP", counted == true and gave == Config.data.Levels.stats.luxeHauls and total() == before + gave)
+	check("...a count that isn't on the list (anything bought) gives none", Progress.forStat(xp, "gemsSpent", 500) == 0 and Progress.forStat(xp, "basementSkips", 3) == 0)
+	local cap = Config.data.Levels.dailyCap
+	local sum = gave
+	for _ = 1, 200 do
+		sum += Progress.forStat(xp, "luxeHauls", 1)
+	end
+	check("...and no one count gives more than the day's cap, however often it's done", sum == cap, sum)
+	check("...another count still gives (each has its own cap)", Progress.forStat(xp, "raceWins", 1) == Config.data.Levels.stats.raceWins)
+	check("...a count already counted once (its once key) isn't counted again", Achievements.tally(xp, "basementClears", 1, "run1") == true and Achievements.tally(xp, "basementClears", 1, "run1") == false)
+end
+
 H.finish()

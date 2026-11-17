@@ -40,15 +40,18 @@ end
 local awayGilt = 0
 local offlineGilt = 0 -- of it, what AFK mode earned while they were out of the game
 local offlineSeconds = 0
+local offlineRate = 0 -- (Build 88) the squad's rate away from the house, Gilt an hour
 local shown = false
+local revealed = false
 
 -- What the brainrots earned while the guest was away (the server says so as they arrive): the jar
 -- now, and of it, what AFK mode earned out of the game, over how long.
-function WelcomeBack.noteAway(gilt: number, offline: number?, seconds: number?)
+function WelcomeBack.noteAway(gilt: number, offline: number?, seconds: number?, rate: number?)
 	awayGilt = math.max(awayGilt, math.floor(gilt))
 	if offline and offline >= 1 then
 		offlineGilt = math.floor(offline)
 		offlineSeconds = seconds or 0
+		offlineRate = if type(rate) == "number" and rate > 0 then rate else 0
 	end
 end
 
@@ -147,6 +150,95 @@ local function row(parent: Instance, order: number, icon: string, title: string,
 end
 
 -- The card. `news`: the server says this guest hasn't seen this build's news yet.
+-- (Build 88) The reveal: when AFK mode earned something while the guest was out of the game, a
+-- moment of its own before anything else. WELCOME BACK, the Gilt counting up to exactly what the
+-- server says AFK mode earned, how long they were away (and that only so many hours count), the
+-- squad's rate away, and Collect: the tip jar collected there and then, by the server (the same
+-- collect as the card's; nothing is paid on this screen). Only when there's something to collect,
+-- once a visit. `onDone` runs when it closes.
+local REVEAL = "AfkReveal"
+function WelcomeBack.revealing(): boolean
+	return Root.isOpen(REVEAL)
+end
+function WelcomeBack.reveal(onDone: (() -> ())?): boolean
+	if revealed or offlineGilt < 1 or awayGilt < 1 then
+		return false
+	end
+	revealed = true
+	local R = V.reveal
+	local w = Root.panelWidth(520)
+	local group, content = Theme.glass(Root.panels, REVEAL, UDim2.fromOffset(w, 420), nil, nil, "gold")
+	local list = Theme.list(content, 10)
+	list.VerticalAlignment = Enum.VerticalAlignment.Top
+	list.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	Theme.text(content, R.kicker, 12, "caps", { LayoutOrder = 1, TextColor3 = C.lightGold })
+	Theme.text(content, R.heading, 24, "display", { LayoutOrder = 2, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Center })
+	Theme.text(content, R.earned, 12, "caps", { LayoutOrder = 3, TextColor3 = C.smoke })
+	local big = Theme.text(content, "+0 GILT", 46, "display", { Name = "Amount", LayoutOrder = 4, TextColor3 = Color3.fromRGB(255, 214, 110), TextXAlignment = Enum.TextXAlignment.Center })
+	local hours = require(ReplicatedStorage.Shared.Brainrots).OFFLINE_HOURS
+	Theme.text(content, string.format(R.away, awayFor(offlineSeconds), hours), 14, "body", { Name = "Away", LayoutOrder = 5, TextColor3 = C.bone, TextXAlignment = Enum.TextXAlignment.Center })
+	if offlineRate > 0 then
+		Theme.text(content, string.format(R.rate, commas(offlineRate)), 14, "body", { Name = "Rate", LayoutOrder = 6, TextColor3 = C.smoke, TextXAlignment = Enum.TextXAlignment.Center })
+	end
+	if awayGilt > offlineGilt then
+		Theme.text(content, string.format(R.jar, commas(awayGilt)), 14, "body", { Name = "Jar", LayoutOrder = 7, TextColor3 = C.smoke, TextXAlignment = Enum.TextXAlignment.Center })
+	end
+	local keys = Instance.new("Frame")
+	keys.Name = "Keys"
+	keys.BackgroundTransparency = 1
+	keys.AutomaticSize = Enum.AutomaticSize.Y
+	keys.Size = UDim2.new(1, 0, 0, 0)
+	keys.LayoutOrder = 10
+	keys.Parent = content
+	local kl = Theme.list(keys, 10, true)
+	kl.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	local function finish()
+		Root.close(REVEAL)
+		if onDone then
+			task.defer(onDone)
+		end
+	end
+	local collect = Theme.key(keys, string.format(R.collect, commas(awayGilt)), true, function() end, 240)
+	collect.LayoutOrder = 1
+	collect.Activated:Connect(function()
+		if collect:GetAttribute("Done") then
+			return
+		end
+		collect:SetAttribute("Done", true)
+		local r = CurioState.ask({ op = "collect" })
+		if type(r) == "table" and r.ok and type(r.gilt) == "number" then
+			awayGilt = 0
+			pcall(Sound.play, "coinDrop", 0.7)
+			Toast.show("Your brainrots", "+" .. commas(r.gilt) .. " Gilt", 3)
+			finish()
+		else
+			collect:SetAttribute("Done", nil)
+			Toast.show("Your brainrots", if type(r) == "table" and type(r.why) == "string" then r.why else "One moment: try again.", 3)
+		end
+	end)
+	local later = Theme.key(keys, R.later, false, finish, 120)
+	later.LayoutOrder = 2
+	Theme.fitHeight(group, content)
+	Root.open(REVEAL, group)
+	-- The figure counts up to exactly what the server said, with a chime as it lands.
+	local target = offlineGilt
+	task.spawn(function()
+		local t0 = os.clock()
+		local span = 1.6
+		while big.Parent do
+			local k = math.clamp((os.clock() - t0) / span, 0, 1)
+			local eased = 1 - (1 - k) ^ 3
+			big.Text = "+" .. commas(math.floor(target * eased + 0.5)) .. " GILT"
+			if k >= 1 then
+				break
+			end
+			task.wait()
+		end
+		pcall(Sound.play, "chime", 0.5)
+	end)
+	return true
+end
+
 function WelcomeBack.open(name: string, nights: number, news: boolean, present: boolean, jar: number): boolean
 	local hasNews = news and Voice.WhatsNew.build == Build.number and #Voice.WhatsNew.lines > 0
 	if not (present or jar > 0 or hasNews) then
@@ -261,8 +353,34 @@ function WelcomeBack.offer(news: boolean, nights: number, fallback: (() -> ())?)
 	task.spawn(function()
 		for _ = 1, 120 do
 			if not Root.isOpen() and not WelcomeBack.isBusy() then
+				-- (Build 88) What AFK mode earned, revealed first, on a screen of its own.
+				if not revealed and offlineGilt >= 1 and awayGilt >= 1 then
+					local closed = false
+					if WelcomeBack.reveal(function()
+						closed = true
+					end) then
+						for _ = 1, 600 do
+							if closed or not Root.isOpen(REVEAL) then
+								break
+							end
+							task.wait(0.25)
+						end
+					end
+				end
 				local cal = WelcomeBack.calendar()
 				local present = type(cal) == "table" and cal.ready == true
+				-- (Build 88) Tonight's present waiting: the calendar opens by itself, and the card
+				-- doesn't repeat it.
+				if present then
+					WelcomeBack.openCalendar()
+					present = false
+					for _ = 1, 600 do
+						task.wait(0.25)
+						if not Root.isOpen() then
+							break
+						end
+					end
+				end
 				local jar = awayGilt
 				local ok, held = pcall(CurioState.jar)
 				if ok and type(held) == "number" then

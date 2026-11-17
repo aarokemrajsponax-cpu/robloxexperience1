@@ -251,6 +251,44 @@ local function slotCard(parent: Instance, id: string?, order: number, locked: bo
 	label(card, "Rarity", tag, 11, Brand.Fonts.heavy, if mut then Brainrots.Mutations[mut].colour else rarityColour, { TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(0, 102), Size = UDim2.new(1, 0, 0, 14) })
 	label(card, "Stars", Brainrots.starText(Brainrots.stars(n)), 15, Brand.Fonts.heavy, rgb(255, 210, 80), { TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(0, 118), Size = UDim2.new(1, 0, 0, 18) })
 	label(card, "Rate", string.format("+%s Gilt/hr", commas(Brainrots.rate(id, n, mut))), 14, Brand.Fonts.heavy, GREEN, { TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(0, 138), Size = UDim2.new(1, 0, 0, 18) })
+	-- (Build 88) Its booster: what it does, and the key to call on it (once a day, a quarter of
+	-- an hour), or how long it has left, or that it's given it today.
+	local kind, pct = Brainrots.ability(id)
+	local ab = Brainrots.Abilities[kind]
+	label(card, "Ability", ab.glyph .. "  " .. ab.name .. ": " .. string.format(ab.line, pct), 11, Brand.Fonts.bodyBold, ab.colour, { TextXAlignment = Enum.TextXAlignment.Center, TextWrapped = true, Position = UDim2.fromOffset(6, 158), Size = UDim2.new(1, -12, 0, 28) })
+	local on: { [string]: any }? = nil
+	for _, b in (if type(s.boosts) == "table" then s.boosts else {}) :: { any } do
+		if type(b) == "table" and b.id == id then
+			on = b
+		end
+	end
+	local usedToday = type(s.boosted) == "table" and s.boosted[id] == true
+	local boost = Instance.new("TextButton")
+	boost.Name = "Boost_" .. id
+	boost.AutoButtonColor = not usedToday
+	boost.Position = UDim2.fromOffset(8, 190)
+	boost.Size = UDim2.new(1, -16, 0, 26)
+	boost.BackgroundColor3 = if on then ab.colour elseif usedToday then rgb(34, 32, 38) else rgb(48, 40, 22)
+	boost.FontFace = Brand.Fonts.heavy
+	boost.TextSize = 12
+	boost.TextColor3 = if on then rgb(16, 14, 10) elseif usedToday then C.dim else ab.colour
+	local left = if on then math.max(0, math.floor((tonumber(on.left) or 0) - (os.clock() - CurioState.squadAt))) else 0
+	boost.Text = if on then string.format("BOOSTING  ·  %d:%02d LEFT", left // 60, left % 60) elseif usedToday then "BOOSTED TODAY" else string.format("BOOST  ·  %d MIN", Brainrots.BOOST_SECONDS // 60)
+	boost.Parent = card
+	corner(boost, 8)
+	if not on and not usedToday then
+		stroke(boost, ab.colour, 1, 0.4)
+		boost.Activated:Connect(function()
+			task.spawn(function()
+				local r = ask({ op = "boost", id = id }, ab.name)
+				if r and r.ok then
+					pcall(function()
+						require(script.Parent.Toast).show(ab.name, string.format(ab.line, pct) .. string.format(", for %d minutes.", Brainrots.BOOST_SECONDS // 60), 4)
+					end)
+				end
+			end)
+		end)
+	end
 	local keys = box(card, "Keys", 0, UDim2.new(1, -16, 0, 34))
 	keys.Position = UDim2.new(0, 8, 1, -42)
 	local walk = Instance.new("TextButton")
@@ -355,7 +393,7 @@ function BrainrotSquad.draw(shelf: Instance, width: number)
 	row.AutomaticSize = Enum.AutomaticSize.Y
 	local grid = Instance.new("UIGridLayout")
 	local cell = math.floor((width - 2 * 10) / 3)
-	grid.CellSize = UDim2.fromOffset(cell, 204)
+	grid.CellSize = UDim2.fromOffset(cell, 262)
 	grid.CellPadding = UDim2.fromOffset(10, 10)
 	grid.SortOrder = Enum.SortOrder.LayoutOrder
 	grid.Parent = row
@@ -392,7 +430,7 @@ function BrainrotSquad.draw(shelf: Instance, width: number)
 			heldCard(held, id, i, #ids >= slots)
 		end
 	end
-	label(shelf, "How", "★ More copies of a brainrot give it stars: each star earns half again. Found at the tables, one may come Gold (×2), Diamond (×3) or Rainbow (×5). The one walking with you adds its bonus to every run you bank. Scores are never touched.", 12, Brand.Fonts.body, C.dim, { LayoutOrder = 6, Size = UDim2.fromOffset(width, 48), TextWrapped = true, TextYAlignment = Enum.TextYAlignment.Top })
+	label(shelf, "How", "★ More copies of a brainrot give it stars: each star earns half again. Found at the tables, one may come Gold (×2), Diamond (×3) or Rainbow (×5). The one walking with you adds its bonus to every run you bank. Each one in your squad has a booster too: call on it once a day for 15 minutes (Quick Study: more XP; Light Feet: faster round the house; Full Jar: a fuller tip jar). The rarer, the stronger. Scores are never touched.", 12, Brand.Fonts.body, C.dim, { LayoutOrder = 6, Size = UDim2.fromOffset(width, 64), TextWrapped = true, TextYAlignment = Enum.TextYAlignment.Top })
 end
 
 return BrainrotSquad

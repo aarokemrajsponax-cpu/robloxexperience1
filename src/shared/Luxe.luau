@@ -12,6 +12,16 @@
 --                     chains, art toys; a loft up the stairs, and the roof's helicopter out
 --   The Garage        wing 5: supercars, keys and rims; the garage van is a way out too
 --   The Secret Stash  wing 6: behind the Strongroom's back wall, one-of-one finds
+--   The Library       wing 7 (Build 89): off the Long Gallery's west wall: rare books, the globe,
+--                     the astrolabe, the Codex of the House on the librarian's desk
+--   The Master Bedroom wing 8: off the Long Gallery's east wall: the master of the house asleep
+--                     beside his jewellery box, his valet dozing by the door
+-- The night staff (Build 89, Sleepers): a footman, a curator, a DJ, a chauffeur, a librarian, a
+-- housekeeper, the master and his valet, each asleep beside a piece. A guest near them stirs
+-- them (more the nearer, the quicker and the louder: a lift beside them is noisy, quiet shoes
+-- help); stirred enough, they wake, get up and look round. One who wakes to a guest who has lifted
+-- something this trip calls for the guards (each in their own way); one who wakes to an empty-
+-- handed guest only grumbles. Left alone a while, they doze off again.
 -- Security (Build 78): every wing has cameras that sweep; a guest seen by one puts the wing on
 -- Alert (its guards come looking where they were seen); seen again on Alert, a laser crossed, or the
 -- Crown Jewel lifted, and the wing locks down (red light, the alarm, two more guards for a while).
@@ -65,6 +75,9 @@ Luxe.Wings = {
 	{ id = 4, name = "The Drop Room", line = "Sneakers, chains and art toys. A loft upstairs, the roof above.", minX = -124, maxX = -61, minZ = -60, maxZ = 20, sharp = 1.1, colour = rgb(255, 70, 180) },
 	{ id = 5, name = "The Garage", line = "Supercars, their keys and rims. The van is a way out.", minX = 61, maxX = 132, minZ = -60, maxZ = 30, sharp = 1.2, colour = rgb(80, 220, 255) },
 	{ id = 6, name = "The Secret Stash", line = "Behind the Strongroom's back wall. One-of-one finds.", minX = -16, maxX = 16, minZ = 131, maxZ = 150, sharp = 1.3, colour = rgb(110, 255, 225) },
+	-- (Build 89)
+	{ id = 7, name = "The Library", line = "Rare books, the globe, the astrolabe. Two of the staff asleep at their posts.", minX = -110, maxX = -61, minZ = 22, maxZ = 68, sharp = 1.32, colour = rgb(214, 150, 80) },
+	{ id = 8, name = "The Master Bedroom", line = "The master of the house asleep beside his jewels. Tread softly.", minX = 61, maxX = 110, minZ = 32, maxZ = 68, sharp = 1.36, colour = rgb(210, 120, 220) },
 } :: { Wing }
 
 Luxe.Pieces = {
@@ -105,6 +118,19 @@ Luxe.Pieces = {
 	{ id = "stashCash", name = "A Duffel of Cash", rarity = "Legendary", worth = 8000, glyph = "💰", look = "duffel", wing = 6, weight = 70, size = "medium", mass = 6 },
 	{ id = "goldGrail", name = "The Golden Grail", rarity = "Exclusive", worth = 25000, glyph = "👟", look = "sneaker", wing = 6, weight = 15, size = "small", mass = 1.5, tint = rgb(255, 196, 60) },
 	{ id = "blackChain", name = "Black Diamond Chain", rarity = "Exclusive", worth = 18000, glyph = "⛓️", look = "chain", wing = 6, weight = 15, size = "small", mass = 0.9, tint = rgb(30, 30, 36) },
+	-- The Library (Build 89): books, instruments, and the Codex on the librarian's desk.
+	{ id = "quill", name = "Golden Quill", rarity = "Uncommon", worth = 650, glyph = "✒️", look = "quill", wing = 7, weight = 26, size = "tiny", mass = 0.1 },
+	{ id = "firstEdition", name = "First Edition", rarity = "Rare", worth = 1700, glyph = "📕", look = "book", wing = 7, weight = 24, size = "small", mass = 1.2, tint = rgb(130, 24, 34) },
+	{ id = "globe", name = "Antique Globe", rarity = "Rare", worth = 2000, glyph = "🌍", look = "globe", wing = 7, weight = 18, size = "large", mass = 8 },
+	{ id = "astrolabe", name = "Brass Astrolabe", rarity = "Epic", worth = 3900, glyph = "🧭", look = "astrolabe", wing = 7, weight = 14, size = "medium", mass = 3 },
+	{ id = "manuscript", name = "Illuminated Manuscript", rarity = "Epic", worth = 4500, glyph = "📜", look = "book", wing = 7, weight = 10, size = "medium", mass = 2.5, tint = rgb(30, 70, 150) },
+	{ id = "codex", name = "The Codex of the House", rarity = "Legendary", worth = 9800, glyph = "📖", look = "codex", wing = 7, weight = 0, size = "medium", mass = 4 },
+	-- The Master Bedroom: the master's own things, and his jewellery box by the bed.
+	{ id = "cufflinks", name = "Diamond Cufflinks", rarity = "Uncommon", worth = 850, glyph = "🔷", look = "cufflinks", wing = 8, weight = 26, size = "tiny", mass = 0.05 },
+	{ id = "perfume", name = "Crystal Perfume", rarity = "Rare", worth = 1700, glyph = "🧴", look = "perfume", wing = 8, weight = 22, size = "small", mass = 0.5 },
+	{ id = "brooch", name = "Sapphire Brooch", rarity = "Epic", worth = 4700, glyph = "🔵", look = "brooch", wing = 8, weight = 14, size = "tiny", mass = 0.1 },
+	{ id = "signet", name = "The Master's Signet Ring", rarity = "Legendary", worth = 8800, glyph = "💍", look = "ring", wing = 8, weight = 10, size = "tiny", mass = 0.05 },
+	{ id = "jewelBox", name = "The Master's Jewellery Box", rarity = "Legendary", worth = 12000, glyph = "💠", look = "jewelBox", wing = 8, weight = 0, size = "medium", mass = 3 },
 	-- Limited: set out in the Drop Room only while their holiday is open.
 	{ id = "phantomMask", name = "Phantom Mask", rarity = "Limited", worth = 5000, glyph = "🎭", look = "mask", wing = 4, weight = 0, size = "small", mass = 0.4, limited = "halloween" },
 	{ id = "harvestChain", name = "Harvest Gold Chain", rarity = "Limited", worth = 5000, glyph = "⛓️", look = "chain", wing = 4, weight = 0, size = "small", mass = 0.8, limited = "thanksgiving", tint = rgb(230, 150, 60) },
@@ -166,6 +192,20 @@ Luxe.Spots = {
 	{ id = 37, wing = 6, at = Vector3.new(-9, 0, 142) },
 	{ id = 38, wing = 6, at = Vector3.new(0, 0, 146) },
 	{ id = 39, wing = 6, at = Vector3.new(9, 0, 142) },
+	-- The Library (Build 89): along its shelves, by the fire, and the Codex on the librarian's desk.
+	{ id = 40, wing = 7, at = Vector3.new(-72, 0, 30) },
+	{ id = 41, wing = 7, at = Vector3.new(-100, 0, 28) },
+	{ id = 42, wing = 7, at = Vector3.new(-100, 0, 62) },
+	{ id = 43, wing = 7, at = Vector3.new(-78, 0, 62) },
+	{ id = 44, wing = 7, at = Vector3.new(-97, 0, 47) },
+	{ id = 45, wing = 7, at = Vector3.new(-77, 0, 34), fixed = "codex" },
+	-- The Master Bedroom: by the door, the dresser, the window, and the jewellery box by the bed.
+	{ id = 46, wing = 8, at = Vector3.new(71, 0, 36) },
+	{ id = 47, wing = 8, at = Vector3.new(72, 0, 63) },
+	{ id = 48, wing = 8, at = Vector3.new(88, 0, 64) },
+	{ id = 49, wing = 8, at = Vector3.new(88, 0, 36) },
+	{ id = 50, wing = 8, at = Vector3.new(106, 0, 42) },
+	{ id = 51, wing = 8, at = Vector3.new(106, 0, 58), fixed = "jewelBox" },
 } :: { Spot }
 
 -- The guards' rounds: each walks his points in order and back to the first, in his wing.
@@ -182,6 +222,9 @@ Luxe.Patrols = {
 	{ wing = 4, points = { Vector3.new(-106, 10, -56), Vector3.new(-106, 10, 16) } },
 	{ wing = 5, points = { Vector3.new(70, 0, -36), Vector3.new(70, 0, 26), Vector3.new(128, 0, 26), Vector3.new(128, 0, -36) } },
 	{ wing = 5, points = { Vector3.new(86, 0, -28), Vector3.new(122, 0, -28) } },
+	-- (Build 89)
+	{ wing = 7, points = { Vector3.new(-66, 0, 26), Vector3.new(-66, 0, 65), Vector3.new(-91, 0, 65), Vector3.new(-91, 0, 26) } },
+	{ wing = 8, points = { Vector3.new(66, 0, 46), Vector3.new(94, 0, 46), Vector3.new(94, 0, 60), Vector3.new(66, 0, 60) } },
 } :: { { wing: number, points: { Vector3 } } }
 
 -- The cameras: where each hangs, which way it faces (degrees: 0 is +Z, 90 is +X), how far it sweeps
@@ -200,6 +243,8 @@ Luxe.Cameras = {
 	{ wing = 5, at = Vector3.new(63, 12, 27), yaw = 135, sweep = 35, period = 7 },
 	{ wing = 5, at = Vector3.new(129, 12, -57), yaw = 315, sweep = 35, period = 7.5 },
 	{ wing = 6, at = Vector3.new(-15, 8, 149), yaw = 135, sweep = 25, period = 5 },
+	{ wing = 7, at = Vector3.new(-109, 12, 23), yaw = 45, sweep = 30, period = 7 },
+	{ wing = 8, at = Vector3.new(109, 12, 33), yaw = 315, sweep = 30, period = 7.5 },
 } :: { Camera }
 
 -- The Strongroom's laser grid, across the whole room before the Crown Jewel: each beam is on for
@@ -241,6 +286,10 @@ Luxe.Objectives = {
 	{ id = "unseen", line = "Bank 3 pieces in one trip, never spotted", gilt = 1000 },
 	{ id = "crown", line = "Lift the Crown Jewel", gilt = 2000 },
 	{ id = "big", line = "Bank a haul worth 6,000 or more", gilt = 900 },
+	-- (Build 89)
+	{ id = "library", line = "Lift something in the Library", gilt = 600 },
+	{ id = "bedroom", line = "Lift something in the Master Bedroom", gilt = 800 },
+	{ id = "sleeper", line = "Lift a piece right beside someone asleep, and let them sleep", gilt = 900 },
 } :: { Objective }
 Luxe.objectiveOf = {} :: { [string]: Objective }
 for _, o in Luxe.Objectives do
@@ -265,6 +314,35 @@ Luxe.SideDoors = {
 	{ -30, -22, -60 }, -- to the Drop Room
 	{ -30, -22, 60 }, -- to the Garage
 }
+-- (Build 89) The Long Gallery's own side doors, between its paintings: { z from, z to, x }.
+Luxe.GalleryDoors = {
+	{ 51, 57, -60 }, -- to the Library
+	{ 45, 51, 60 }, -- to the Master Bedroom
+}
+
+-- The night staff (Build 89), each asleep beside a piece: where (on the ground), which way they
+-- face (degrees: 0 is +Z, 90 is +X), how they sleep (in a chair, at a desk, slumped on a sofa, on
+-- a stool against the wall, in bed), the piece beside them, how far they hear, how deeply they
+-- sleep (more is deeper: slower to stir) and what they do when they wake to a thief: ring for the
+-- guards (bell: the wing on Alert), send the nearest guard straight after them (guard), or, the
+-- master himself, lock the wing down (lockdown).
+export type Sleeper = { id: number, wing: number, who: string, name: string, pose: string, at: Vector3, yaw: number, spot: number, hear: number, deep: number, call: string }
+Luxe.Sleepers = {
+	{ id = 1, wing = 1, who = "footman", name = "the footman", pose = "chair", at = Vector3.new(-14, 0, -40.5), yaw = 180, spot = 7, hear = 13, deep = 1, call = "bell" },
+	{ id = 2, wing = 2, who = "curator", name = "the night curator", pose = "chair", at = Vector3.new(-26, 0, 62), yaw = 90, spot = 12, hear = 13, deep = 1.1, call = "bell" },
+	{ id = 3, wing = 4, who = "dj", name = "the DJ", pose = "slump", at = Vector3.new(-92, 0, 6), yaw = 90, spot = 25, hear = 12, deep = 1.4, call = "bell" },
+	{ id = 4, wing = 5, who = "chauffeur", name = "the chauffeur", pose = "chair", at = Vector3.new(78, 0, -46), yaw = 90, spot = 35, hear = 13, deep = 1, call = "guard" },
+	{ id = 5, wing = 7, who = "librarian", name = "the librarian", pose = "desk", at = Vector3.new(-84, 0, 38), yaw = 180, spot = 45, hear = 14, deep = 0.9, call = "bell" },
+	{ id = 6, wing = 7, who = "housekeeper", name = "the housekeeper", pose = "chair", at = Vector3.new(-102, 0, 41), yaw = 270, spot = 44, hear = 13, deep = 1.2, call = "guard" },
+	{ id = 7, wing = 8, who = "master", name = "the master of the house", pose = "bed", at = Vector3.new(102, 0, 50), yaw = 270, spot = 51, hear = 11, deep = 1.6, call = "lockdown" },
+	{ id = 8, wing = 8, who = "valet", name = "the valet", pose = "stool", at = Vector3.new(62.6, 0, 40), yaw = 90, spot = 46, hear = 14, deep = 0.8, call = "guard" },
+} :: { Sleeper }
+
+-- Which way a sleeper faces, as a unit vector on the ground.
+function Luxe.facing(yaw: number): Vector3
+	local r = math.rad(yaw)
+	return Vector3.new(math.sin(r), 0, math.cos(r))
+end
 -- The Drop Room's stairs: up to the loft (10 studs), and from the loft to the roof.
 Luxe.LOFT = 10
 Luxe.ROOF = 19
@@ -274,7 +352,7 @@ Luxe.HEIGHT = 18 -- the residence's walls
 -- (its pieces that are always out: never the Limited ones, which come and go with their holiday)
 -- pays its reward the first time it's complete, and the ranks climb with everything ever banked.
 -- Nothing in it is bought or left to chance: it's the pieces a guest has carried out.
-Luxe.SetGilt = { 2000, 5000, 12000, 6000, 8000, 15000 } :: { number } -- by wing
+Luxe.SetGilt = { 2000, 5000, 12000, 6000, 8000, 15000, 9000, 12000 } :: { number } -- by wing
 Luxe.Ranks = {
 	{ name = "Pickpocket", banked = 0 },
 	{ name = "Cat Burglar", banked = 10000 },

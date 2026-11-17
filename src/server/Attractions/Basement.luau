@@ -4,12 +4,12 @@
 -- machinery (shared/Basement), by the server's clock.
 --
 --   Checkpoints   reached in order, standing on each one's pad: the first time in a run, a little
---                 Gilt; at the end of each of the four parts, its purse to the Estate. Leave by a lift
+--                 Gilt; at the end of each of the eight parts, its purse to the Estate. Leave by a lift
 --                 or the arch at any time: everything already paid is yours.
 --   Falling       into a pit, or caught in steam, a laser or the valve's sweep (a moment's touch, so a
 --                 screen a little behind the server is never sent back for nothing): back to the last
 --                 checkpoint, and a few seconds' grace.
---   The Treasury  the last checkpoint: the chest pays its Gems (more the first time each day), the
+--   The Treasury  the last checkpoint: the chest pays its Gilt (more the first time each day), the
 --                 last purse, the brainrot Topo Tesoriere the first time ever, and the run's time.
 --   Times         from leaving the start to the Treasury. The best is kept, and goes to the boards
 --                 (all time and this week); a run with a skipped stage is never timed for them.
@@ -151,8 +151,9 @@ local function page(ctx: Types.Ctx, data: any): { [string]: any }
 		p.secrets = {} -- a secret's id -> true, once found
 	end
 	-- (Build 82) The course more than doubled: times on the old one are kept as they were, under
-	-- their own names, and the new course's bests start afresh.
-	if p.course ~= 2 then
+	-- their own names, and the new course's bests start afresh. (Build 89: and again, sixteen
+	-- stages to thirty-two: the sixteen's times kept as bestV2, the new course's fresh.)
+	if type(p.course) ~= "number" or p.course < 2 then
 		if p.best or next(p.bests) ~= nil then
 			p.bestV1 = p.best
 			p.bestsV1 = p.bests
@@ -161,6 +162,16 @@ local function page(ctx: Types.Ctx, data: any): { [string]: any }
 		p.weekBest = nil
 		p.bests = {}
 		p.course = 2
+	end
+	if p.course == 2 then
+		if p.best or next(p.bests) ~= nil then
+			p.bestV2 = p.best
+			p.bestsV2 = p.bests
+		end
+		p.best = nil
+		p.weekBest = nil
+		p.bests = {}
+		p.course = 3
 	end
 	return p
 end
@@ -409,11 +420,15 @@ local function reach(ctx: Types.Ctx, player: Player, run: Run, n: number, skippe
 	end
 	local zone = Plan.Zones[Plan.zoneOf(n)]
 	local purse = 0
-	if zone.to == n then
+	-- (Build 89: a stage skipped, a bought way past it, pays no purse and counts no checkpoint: the
+	-- Estate and XP are only ever for what the guest did.)
+	if zone.to == n and not skipped then
 		purse = zone.purse
 		ctx.estate(player, purse, "The Maison Basement")
 	end
-	ctx.tally(player, "basementCheckpoints", 1)
+	if not skipped then
+		ctx.tally(player, "basementCheckpoints", 1)
+	end
 	ctx.send(player, { op = "checkpoint", n = n, gilt = gilt, purse = purse, zone = zone.name, skipped = skipped == true })
 	if n >= Plan.STAGES then
 		finish(ctx, player, run, data, p)

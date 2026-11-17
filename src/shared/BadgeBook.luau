@@ -149,10 +149,11 @@ moment("tables", "midnight", "After Midnight", "Reach round IV of tonight's tabl
 
 -- Nights at the house
 ladder("nights", "nights", "🌙", "Spend %d nights at the house.", {
-	{ 1, "First Night" }, { 3, "Back Again" }, { 7, "A Week of Evenings" }, { 14, "Fortnight" },
+	-- (Build 88: the first is the welcome badge, for every guest's first evening.)
+	{ 1, "Welcome to the Maison" }, { 3, "Back Again" }, { 7, "A Week of Evenings" }, { 14, "Fortnight" },
 	{ 30, "A Month at the House" }, { 60, "Two Months" }, { 100, "A Hundred Nights" }, { 200, "Part of the Furniture" },
 	{ 365, "A Year at the House" },
-}, "Spend your first night at the house.")
+}, "Join the Maison for the first time: welcome.")
 ladder("nights", "nightlies", "📜", "Play the Nightly %d times.", {
 	{ 1, "Tonight's Table", "firstNightly" }, { 7, "Nightly Habit" }, { 30, "Every Night" }, { 100, "The Hundredth Night" },
 }, "Play the Nightly for the first time.")
@@ -267,7 +268,7 @@ moment("attractions", "crownJewel", "The Crown Jewel", "Carry the Crown Jewel ou
 moment("attractions", "basementClear", "The Treasury", "Reach the Treasury at the foot of the Maison Basement.", "🗝️", "silver")
 moment("attractions", "executiveBoss", "The Corner Office", "Beat the Executive in his own office.", "🕴️", "gold")
 moment("attractions", "auctionWin", "Sold to You", "Win a lot at the Grand Auction.", "🔨", "gold")
-moment("attractions", "basementQuick", "Under Eight Minutes", "Clear the Basement in under eight minutes, no skips.", "⏱️", "gold")
+moment("attractions", "basementQuick", "Under Sixteen Minutes", "Clear all thirty-two stages of the Basement in under sixteen minutes, no skips.", "⏱️", "gold")
 moment("attractions", "basementSecrets", "Every Secret", "Find all eight secrets in the Maison Basement's four courses.", "🔎", "gold")
 
 -- Luxury Island

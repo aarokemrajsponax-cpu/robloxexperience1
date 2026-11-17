@@ -137,7 +137,7 @@ end
 ---------------------------------------------------------------------------------------------------
 -- 1. The course can be run
 ---------------------------------------------------------------------------------------------------
-check("sixteen stages in four parts, a checkpoint after each", Plan.STAGES == 16 and #Plan.Zones == 4 and Plan.Checkpoints[0] ~= nil and Plan.Checkpoints[16] ~= nil)
+check("thirty-two stages in eight parts, a checkpoint after each", Plan.STAGES == 32 and #Plan.Zones == 8 and Plan.Checkpoints[0] ~= nil and Plan.Checkpoints[32] ~= nil)
 do
 	local covered = {}
 	for _, z in Plan.Zones do
@@ -146,25 +146,52 @@ do
 		end
 	end
 	local ok = true
-	for n = 1, 16 do
+	for n = 1, Plan.STAGES do
 		if covered[n] ~= 1 then
 			ok = false
 		end
 	end
 	check("every stage is in exactly one part", ok)
-	check("each part's purse is bigger than the last", Plan.Zones[1].purse < Plan.Zones[2].purse and Plan.Zones[2].purse < Plan.Zones[3].purse and Plan.Zones[3].purse < Plan.Zones[4].purse)
+	local rising = true
+	for z = 2, #Plan.Zones do
+		if Plan.Zones[z].purse <= Plan.Zones[z - 1].purse then
+			rising = false
+		end
+	end
+	check("each part's purse is bigger than the last", rising)
+	check("each of the eight parts its own place, four stages each", (function()
+		local names = {}
+		for i, z in Plan.Zones do
+			if names[z.name] or z.to - z.from ~= 3 or z.from ~= (i - 1) * 4 + 1 then
+				return false
+			end
+			names[z.name] = true
+		end
+		return true
+	end)())
+	check("every stage has its own name", (function()
+		local names = {}
+		for n = 1, Plan.STAGES do
+			local name = Plan.StageNames[n]
+			if type(name) ~= "string" or names[name] then
+				return false
+			end
+			names[name] = true
+		end
+		return true
+	end)())
 	local downhill = true
-	for n = 1, 16 do
+	for n = 1, Plan.STAGES do
 		if Plan.Checkpoints[n].at.Y > Plan.Checkpoints[n - 1].at.Y + 0.01 then
 			downhill = false
 		end
 	end
 	check("the course only goes down, checkpoint to checkpoint", downhill)
-	check("the Treasury is far below the start", Plan.Checkpoints[16].at.Y < -30)
+	check("the Treasury is far below the start", Plan.Checkpoints[32].at.Y < -60)
 	-- Every jump within reach: from each thing to stand on to the next (in the order of the run),
 	-- the gap across is at most 5 studs and the step up at most 2 (the truss is climbed).
 	local worst, worstWhere, rise, riseWhere = 0, "", 0, ""
-	for n = 1, 16 do
+	for n = 1, Plan.STAGES do
 		local list = { { at = Plan.Checkpoints[n - 1].at - Vector3.new(0, 0.5, 0), size = Vector3.new(12, 1, 8), kind = "pad" } }
 		for _, e in Plan.Elements do
 			if e.stage == n and e.variant == nil and e.lane == nil and (e.kind == "pad" or e.kind == "beam" or e.kind == "vanish" or e.kind == "mover" or e.kind == "conveyor") then
@@ -195,7 +222,7 @@ do
 			if gap > worst then
 				worst, worstWhere = gap, string.format("stage %d, step %d", n, k)
 			end
-			if up > rise and n ~= 10 then
+			if up > rise and n ~= 10 and n ~= 20 then
 				rise, riseWhere = up, string.format("stage %d, step %d", n, k)
 			end
 		end
@@ -204,7 +231,7 @@ do
 	-- (Build 86) The twin lanes: each the same way through, from its bridge off the landing to its
 	-- bridge onto the checkpoint, every hop as makeable; and clear of the course and the walls.
 	local laneWorst, laneWhere, laneRise, lanes, clash = 0, "", 0, 0, ""
-	for n = 1, 16 do
+	for n = 1, Plan.STAGES do
 		for _, side in { -1, 1 } do
 			local list = {}
 			for _, e in Plan.Elements do
@@ -245,7 +272,7 @@ do
 					laneWorst, laneWhere = gap, string.format("stage %d, side %d, step %d", n, side, k)
 				end
 				local up = (b.at.Y + b.size.Y / 2) - (a.at.Y + a.size.Y / 2)
-				if n ~= 10 then
+				if n ~= 10 and n ~= 20 then
 					laneRise = math.max(laneRise, up)
 				end
 			end
@@ -313,15 +340,15 @@ do
 	end
 	check("each course's own ledges are a short hop from the way through (or the launch pad throws you there)", farLedge == "", farLedge)
 	check("no step up higher than 2 studs (a guest jumps about 3)", rise <= 2.01, string.format("%.2f at %s", rise, riseWhere))
-	local truss = nil
+	local climbs = {}
 	for _, e in Plan.Elements do
-		if e.kind == "truss" then
-			truss = e
+		if e.kind == "truss" and e.lane == nil then
+			climbs[e.stage] = true
 		end
 	end
-	check("the one climb is up a truss", truss ~= nil and truss.stage == 10)
+	check("the climbs are up a truss: the Truss, and the Clock Tower below it", climbs[10] == true and climbs[20] == true)
 	local under = true
-	for n = 1, 16 do
+	for n = 1, Plan.STAGES do
 		local pit = Plan.Pits[n]
 		for _, e in Plan.Elements do
 			if e.stage == n and e.kind ~= "pit" and e.at.Y - e.size.Y / 2 < pit.at.Y + pit.size.Y / 2 + 4 then
@@ -380,8 +407,15 @@ do
 	for _ in built.checkpoints do
 		n += 1
 	end
-	check("seventeen checkpoints (the start, fifteen, the Treasury)", n == 17, n)
-	check("a lift up at the end of the first three parts", built.lifts[4] ~= nil and built.lifts[8] ~= nil and built.lifts[12] ~= nil and built.lifts[16] == nil)
+	check("thirty-three checkpoints (the start, thirty-one, the Treasury)", n == 33, n)
+	check("a lift up at the end of the first seven parts", (function()
+		for z = 1, 7 do
+			if built.lifts[z * 4] == nil then
+				return false
+			end
+		end
+		return built.lifts[32] == nil
+	end)())
 	check("the Treasury's chest", built.chest ~= nil)
 	local kinds = {}
 	for _, tag in { "BasementMover", "BasementVanish", "BasementSteam", "BasementLaser", "BasementSpinner" } do
@@ -590,19 +624,26 @@ standIn(ada, beam.at + Vector3.new(0, -1.4, 0))
 steps(1)
 check("stepping into a laser that's already burning, and stopping there: caught at once", Game.runs[ada].falls == fallsWas + 1)
 steps(20)
-for n = beam.stage, 15 do
+for n = beam.stage, Plan.STAGES - 1 do
 	onCheckpoint(ada, n)
 end
-check("(at the Falling Coins' end)", Game.runs[ada].checkpoint == 15)
-check("each part's purse paid at its end", Fortune.page(data(ada)).estate == estateWas + Plan.Zones[1].purse + Plan.Zones[2].purse + Plan.Zones[3].purse)
+check("(at the Last Corridor's end)", Game.runs[ada].checkpoint == Plan.STAGES - 1)
+local function purses(upTo: number): number
+	local t = 0
+	for z = 1, upTo do
+		t += Plan.Zones[z].purse
+	end
+	return t
+end
+check("each part's purse paid at its end", Fortune.page(data(ada)).estate == estateWas + purses(7))
 local gemsWas, giltWas = data(ada).gems, data(ada).gilt
 -- (The day's soft cap set aside, to see the chest's own amount.)
 data(ada).giltDay.earned = 0
 T = 1000 + 205.5
-onCheckpoint(ada, 16)
+onCheckpoint(ada, Plan.STAGES)
 local tr = last(ada, "treasury")
 check("the Treasury: the run's time, from leaving the start", tr ~= nil and math.abs(tr.seconds - 205.5) < 1e-6 and tr.timed == true, tr and tr.seconds)
-check("...the last purse", Fortune.page(data(ada)).estate == estateWas + Plan.Zones[1].purse + Plan.Zones[2].purse + Plan.Zones[3].purse + Plan.Zones[4].purse)
+check("...the last purse", Fortune.page(data(ada)).estate == estateWas + purses(8))
 check("...the chest's Gilt, the first clear of the day", tr.chest == C.chestGilt and data(ada).gilt >= giltWas + C.chestGilt, tr.chest)
 check("...and the chests after it are Gilt as everywhere in the house: under the day's soft cap", (function()
 	local was = data(ada).gilt
@@ -634,7 +675,7 @@ end
 check("the first time down to the Treasury is told to the house", told)
 check("the run is over: nothing more is judged", (function()
 	local was = Game.runs[ada].falls
-	standIn(ada, Plan.Pits[16].at + Vector3.new(0, 1, 0))
+	standIn(ada, Plan.Pits[Plan.STAGES].at + Vector3.new(0, 1, 0))
 	steps(2)
 	return Game.runs[ada].falls == was
 end)())
@@ -650,13 +691,13 @@ check("(down again)", r.ok == true)
 T = 5000
 standIn(ada, Vector3.new(0, -1, 10.5))
 steps(1)
-for n = 1, 15 do
+for n = 1, Plan.STAGES - 1 do
 	onCheckpoint(ada, n)
 end
 T = 5000 + 300
 gemsWas = data(ada).gems
 data(ada).giltDay.earned = 0
-onCheckpoint(ada, 16)
+onCheckpoint(ada, Plan.STAGES)
 tr = last(ada, "treasury")
 check("a slower run isn't a record, and the best stands", tr.record == false and Game.page(Attractions.ctx, data(ada)).best == 205.5)
 check("the day's second chest pays its smaller Gilt (no Gems)", tr.chest == C.chestGiltAgain and data(ada).gems == gemsWas, tr.chest)
@@ -687,8 +728,8 @@ held[ada] = 1
 r = askAs(ada, { op = "act", id = "basement", act = "skip" })
 check("a skip held is used", r.ok == true and Game.runs[ada].checkpoint == 2 and held[ada] == 0)
 -- The deeper the stage, the more a skip costs.
-check("the price rises with every stage: 25 Gems at the first, 15 more each stage after", Plan.skipGems(1) == C.skipGems and Plan.skipGems(2) == C.skipGems + C.skipGemsStep and Plan.skipGems(15) == C.skipGems + 14 * C.skipGemsStep and Plan.skipGems(15) == 235)
-check("...and skips held: one in the first part, then two, three and four", Plan.skipsNeeded(1) == 1 and Plan.skipsNeeded(4) == 1 and Plan.skipsNeeded(5) == 2 and Plan.skipsNeeded(9) == 3 and Plan.skipsNeeded(13) == 4 and Plan.skipsNeeded(15) == 4)
+check("the price rises with every stage: 25 Gems at the first, 15 more each stage after", Plan.skipGems(1) == C.skipGems and Plan.skipGems(2) == C.skipGems + C.skipGemsStep and Plan.skipGems(15) == C.skipGems + 14 * C.skipGemsStep and Plan.skipGems(15) == 235 and Plan.skipGems(31) == 475)
+check("...and skips held: one in the first part, then two, three, and four from the fourth part down", Plan.skipsNeeded(1) == 1 and Plan.skipsNeeded(4) == 1 and Plan.skipsNeeded(5) == 2 and Plan.skipsNeeded(9) == 3 and Plan.skipsNeeded(13) == 4 and Plan.skipsNeeded(15) == 4 and Plan.skipsNeeded(21) == 4 and Plan.skipsNeeded(31) == 4)
 check("the guest's screen is told this stage's price", last(ada, "basement").stage == 3 and last(ada, "basement").skipGems == Plan.skipGems(3) and last(ada, "basement").skipNeed == 1)
 for n = 3, 8 do
 	onCheckpoint(ada, n)
@@ -709,14 +750,14 @@ check("with enough: all three used, one stage on", r.ok == true and Game.runs[ad
 data(ada).gems = Plan.skipGems(10)
 r = askAs(ada, { op = "act", id = "basement", act = "skip", what = "gems" })
 check("...or Gems, for exactly that stage's price", r.ok == true and Game.runs[ada].checkpoint == 10 and data(ada).gems == 0)
-for n = 11, 15 do
+for n = 11, Plan.STAGES - 1 do
 	onCheckpoint(ada, n)
 end
 held[ada] = 1
 r = askAs(ada, { op = "act", id = "basement", act = "skip" })
-check("the Treasury can never be skipped to", r.ok == false and Game.runs[ada].checkpoint == 15 and held[ada] == 1, r.why)
+check("the Treasury can never be skipped to", r.ok == false and Game.runs[ada].checkpoint == Plan.STAGES - 1 and held[ada] == 1, r.why)
 T = 9000 + 100
-onCheckpoint(ada, 16)
+onCheckpoint(ada, Plan.STAGES)
 tr = last(ada, "treasury")
 check("a run with a skip isn't timed for the boards (even a fast one)", tr.timed == false and Game.page(Attractions.ctx, data(ada)).best == 205.5)
 r = askAs(ada, { op = "act", id = "basement", act = "skip", what = "gems", price = 0 })
@@ -761,7 +802,7 @@ check("friends: only their friends, and themselves", #bd.entries == 2 and bd.ent
 bd = askAs(ada, { op = "act", id = "basement", act = "boards", what = "week" })
 check("this week: their week's best", bd.ok == true and bd.weekBest == 205.5)
 local st = askAs(ada, { op = "state", id = "basement" })
-check("the board is told their best, clears and deepest", st.ok == true and st.best == 205.5 and st.clears == 3 and st.deepest == 16)
+check("the board is told their best, clears and deepest", st.ok == true and st.best == 205.5 and st.clears == 3 and st.deepest == Plan.STAGES)
 
 ---------------------------------------------------------------------------------------------------
 -- 8. Build 78: the course turns over every five minutes; a run keeps its own course
@@ -894,9 +935,9 @@ standIn(bo, other.at - Vector3.new(0, 3, 0))
 steps(2)
 check("another course's secret isn't there to find", count(bo, "secret") == 1)
 -- Each course keeps its own best.
-Game.runs[bo].checkpoint = 15
+Game.runs[bo].checkpoint = Plan.STAGES - 1
 Game.runs[bo].started = T - 222.5
-onCheckpoint(bo, 16)
+onCheckpoint(bo, Plan.STAGES)
 local tr = last(bo, "treasury")
 check("at the Treasury: the course it was run on, and that course's own best", tr ~= nil and tr.course == "The Gauntlet" and math.abs(tr.coursePb - 222.5) < 1e-6 and Game.page(Attractions.ctx, data(bo)).bests.gauntlet ~= nil and tr.secretsOf == 8)
 local dir = Game.directory(Attractions.ctx, bo)
@@ -993,10 +1034,20 @@ do
 	pg.best = 300
 	pg.bests = { house = 300 }
 	pg = Game.page(Attractions.ctx, data(bo))
-	check("the old course's times are kept as they were (bestV1), and the new course's bests start afresh", pg.bestV1 == 300 and pg.bestsV1.house == 300 and pg.best == nil and next(pg.bests) == nil and pg.course == 2)
+	check("the old course's times are kept as they were (bestV1), and the new course's bests start afresh", pg.bestV1 == 300 and pg.bestsV1.house == 300 and pg.best == nil and next(pg.bests) == nil and pg.course == 3)
 	pg.best = 400
 	pg = Game.page(Attractions.ctx, data(bo))
 	check("...once: a best on the new course stays", pg.best == 400 and pg.bestV1 == 300)
+	-- (Build 89) Times on the sixteen-stage course: kept as bestV2; the thirty-two's start afresh.
+	pg.course = 2
+	pg.best = 350
+	pg.bests = { gauntlet = 350 }
+	pg = Game.page(Attractions.ctx, data(bo))
+	check("the sixteen-stage course's times are kept too (bestV2), the thirty-two's start afresh", pg.bestV2 == 350 and pg.bestsV2.gauntlet == 350 and pg.bestV1 == 300 and pg.best == nil and next(pg.bests) == nil and pg.course == 3)
+	pg.best = 900
+	pg = Game.page(Attractions.ctx, data(bo))
+	check("...once", pg.best == 900 and pg.bestV2 == 350)
+	check("the boards are the new course's own", C.store == "Basement_v3")
 end
 
 H.finish()

@@ -94,6 +94,51 @@ Luxe.makeGuard = function(parent: Instance, name: string, at: CFrame): (Model, B
 	return m, root, nil
 end
 
+-- (Build 89) How one of the night staff is made (set by tests; in the game, a dressed rig like the
+-- house's staff, still: every screen poses them asleep, waking or up, from their attributes).
+local SLEEPER_COAT: { [string]: Color3 } = {
+	footman = Color3.fromRGB(22, 46, 34),
+	curator = Color3.fromRGB(92, 72, 52),
+	dj = Color3.fromRGB(34, 30, 40),
+	chauffeur = Color3.fromRGB(46, 48, 56),
+	librarian = Color3.fromRGB(110, 62, 50),
+	housekeeper = Color3.fromRGB(26, 26, 30),
+	master = Color3.fromRGB(112, 30, 62),
+	valet = Color3.fromRGB(16, 16, 20),
+}
+Luxe.makeSleeper = function(parent: Instance, name: string, at: CFrame, def: Plan.Sleeper): (Model, BasePart)
+	local ok, staff = pcall(function()
+		local Rig = require(script.Parent.Parent.Staff.Rig) :: any
+		local spec = Rig.look("Guard")
+		spec.coat = SLEEPER_COAT[def.who] or Color3.fromRGB(18, 18, 22)
+		if def.who == "master" or def.who == "dj" then
+			spec.gloves = Color3.fromRGB(120, 84, 62) -- (no gloves at night)
+		end
+		return Rig.build(name, spec, at, parent)
+	end)
+	if ok and staff then
+		if staff.idle then
+			staff.idle:Stop(0)
+		end
+		staff.humanoid.AutoRotate = false
+		staff.root.Anchored = true
+		return staff.model, staff.root
+	end
+	local m = Instance.new("Model")
+	m.Name = name
+	local root = Instance.new("Part")
+	root.Name = "HumanoidRootPart"
+	root.Size = Vector3.new(2, 2, 1)
+	root.Anchored = true
+	root.CanCollide = false
+	root.CFrame = at + Vector3.new(0, 3, 0)
+	root.Color = SLEEPER_COAT[def.who] or Color3.fromRGB(18, 18, 22)
+	root.Parent = m
+	m.PrimaryPart = root
+	m.Parent = parent
+	return m, root
+end
+
 type Guard = {
 	id: number,
 	wing: number,
@@ -405,14 +450,13 @@ end
 
 local stopChasing: (Player) -> ()
 
--- Security wakes (Build 82): a guest lifted a piece in `wing`, standing at `at`. The wing goes on
--- Alert (its guards come to look) and its nearest guard not already after someone comes after
--- them, setting off after Config luxe.wakeStart seconds.
-local function wake(ctx: Types.Ctx, player: Player, run: Run, wing: number, at: Vector3)
-	local first = not run.awake
-	run.awake = true
-	local c = cfg(ctx)
-	raise(ctx, wing, 1, at)
+local function flat(v: Vector3): Vector3
+	return Vector3.new(v.X, 0, v.Z)
+end
+
+-- The nearest guard of `wing` not already after someone comes after `player`, setting off after
+-- `start` seconds. Whether one was sent.
+local function sendGuard(player: Player, wing: number, at: Vector3, start: number): boolean
 	local best: Guard? = nil
 	local bestGap = math.huge
 	for _, g in guards do
@@ -428,10 +472,184 @@ local function wake(ctx: Types.Ctx, player: Player, run: Run, wing: number, at: 
 		best.state = "chase"
 		best.target = player
 		best.lastSeen = now
-		best.startAt = now + (tonumber(c.wakeStart) or 2)
+		best.startAt = now + start
 		best.searchAt, best.searchUntil = nil, 0
+		return true
 	end
-	ctx.send(player, { op = "woke", wing = wing, first = first, chased = best ~= nil, start = tonumber(c.wakeStart) or 2 })
+	return false
+end
+
+-- Security wakes (Build 82): a guest lifted a piece in `wing`, standing at `at`. The wing goes on
+-- Alert (its guards come to look) and its nearest guard not already after someone comes after
+-- them, setting off after Config luxe.wakeStart seconds.
+local function wake(ctx: Types.Ctx, player: Player, run: Run, wing: number, at: Vector3)
+	local first = not run.awake
+	run.awake = true
+	local c = cfg(ctx)
+	raise(ctx, wing, 1, at)
+	local chased = sendGuard(player, wing, at, tonumber(c.wakeStart) or 2)
+	ctx.send(player, { op = "woke", wing = wing, first = first, chased = chased, start = tonumber(c.wakeStart) or 2 })
+end
+
+---------------------------------------------------------------------------------------------------
+-- The night staff (Build 89): asleep beside the pieces
+---------------------------------------------------------------------------------------------------
+-- Each sleeps until a guest comes near: the nearer, the quicker, the louder (a guest with things in
+-- the bag clinks), the more they stir; quiet shoes soften every step. Stirred past `stir` they
+-- mutter and turn over; all the way, they wake (sit up, stretch, get up: `waking` seconds) and
+-- look round. Waking to a guest who has lifted something this trip, they call for the guards (as
+-- a camera's sighting: the wing on Alert, or locked down if it already is), and some do more: a
+-- guard sent straight after them, or the master locking the wing down. Waking to an empty-handed
+-- guest they only grumble. Left alone `awake` seconds, they doze off again.
+type Sleeper = { def: Plan.Sleeper, model: Model, root: BasePart, state: string, since: number, stir: number, alone: number }
+local sleepers: { Sleeper } = {}
+
+local function serverTime(): number
+	local ok, t = pcall(function()
+		return Workspace:GetServerTimeNow()
+	end)
+	return if ok and type(t) == "number" then t else os.clock()
+end
+
+local function sleepCfg(ctx: Types.Ctx): { [string]: any }
+	local c = cfg(ctx).sleep
+	return if type(c) == "table" then c else {}
+end
+
+local function setSleep(s: Sleeper, state: string, lasts: number?)
+	s.state = state
+	s.since = now
+	s.model:SetAttribute("Sleep", state)
+	s.model:SetAttribute("SleepAt", serverTime())
+	s.model:SetAttribute("SleepFor", lasts) -- (how long waking or dozing takes: every screen's pace)
+end
+
+local function setStir(s: Sleeper, v: number)
+	s.stir = math.clamp(v, 0, 1)
+	local shown = math.floor(s.stir * 20 + 0.5) / 20
+	if s.model:GetAttribute("Stir") ~= shown then
+		s.model:SetAttribute("Stir", shown)
+	end
+end
+
+-- How quietly a guest moves: their quiet shoes (less is quieter).
+local function quietOf(ctx: Types.Ctx, player: Player): number
+	local data = ctx.data(player)
+	return if data then (cfg(ctx).quiet[page(ctx, data).quiet] or 1) else 1
+end
+
+-- A sleeper just woke: who's there, and what they do about it.
+local function sleeperWoke(ctx: Types.Ctx, s: Sleeper)
+	local d = s.def
+	local who: Player? = nil
+	local whoRun: Run? = nil
+	local whoAt: Vector3? = nil
+	local best = math.huge
+	for player, run in runs do
+		local root = ctx.rootOf(player)
+		if root then
+			local gap = flat(root.CFrame.Position - s.root.CFrame.Position).Magnitude
+			if gap < d.hear * 2 and gap < best then
+				who, whoRun, whoAt, best = player, run, root.CFrame.Position, gap
+			end
+		end
+	end
+	if not who or not whoRun or not whoAt then
+		return
+	end
+	if whoRun.awake or #whoRun.bag > 0 then
+		s.model:SetAttribute("Calling", d.call)
+		note(who, "Luxe sleeper woke", { who = d.who, call = d.call })
+		local sent = false
+		spotted(ctx, who, whoRun, d.wing, whoAt, d.name)
+		if d.call == "lockdown" then
+			raise(ctx, d.wing, 2, whoAt)
+		elseif d.call == "guard" then
+			sent = sendGuard(who, d.wing, whoAt, 1)
+		end
+		ctx.send(who, { op = "sleeper", id = d.id, name = d.name, call = d.call, sent = sent, wing = d.wing })
+	else
+		ctx.send(who, { op = "sleeper", id = d.id, name = d.name, grumble = true, wing = d.wing })
+	end
+end
+
+local function sleeperStep(ctx: Types.Ctx, dt: number)
+	local c = sleepCfg(ctx)
+	local wakeIn = tonumber(c.seconds) or 3
+	for _, s in sleepers do
+		local d = s.def
+		local here = s.root.CFrame.Position
+		local stirBy, anyone = 0, false
+		for player, run in runs do
+			local root = ctx.rootOf(player)
+			if root and run.grace <= now then
+				local at = root.CFrame.Position
+				local gap = flat(at - here).Magnitude
+				if gap < d.hear and math.abs(at.Y - here.Y) < 8 then
+					anyone = true
+					local okV, v = pcall(function()
+						return root.AssemblyLinearVelocity
+					end)
+					local moving = okV and typeof(v) == "Vector3" and Vector3.new(v.X, 0, v.Z).Magnitude > 2
+					local rate = (1 - gap / d.hear) * (if moving then 1 else tonumber(c.still) or 0.3) * quietOf(ctx, player) * (if #run.bag > 0 then tonumber(c.carrying) or 1.4 else 1)
+					stirBy += dt * rate / (wakeIn * d.deep)
+				end
+			end
+		end
+		if s.state == "asleep" or s.state == "stirring" then
+			setStir(s, if stirBy > 0 then s.stir + stirBy else s.stir - dt * (tonumber(c.fade) or 0.12))
+			if s.stir >= 1 then
+				setSleep(s, "waking", tonumber(c.waking) or 1.6)
+			elseif s.state == "asleep" and s.stir >= (tonumber(c.stir) or 0.45) then
+				setSleep(s, "stirring")
+			elseif s.state == "stirring" and s.stir < (tonumber(c.settle) or 0.3) then
+				setSleep(s, "asleep")
+			end
+		elseif s.state == "waking" then
+			if now - s.since >= (tonumber(c.waking) or 1.6) then
+				setSleep(s, "awake")
+				s.alone = 0
+				sleeperWoke(ctx, s)
+			end
+		elseif s.state == "awake" then
+			s.alone = if anyone then 0 else s.alone + dt
+			if s.alone >= (tonumber(c.awake) or 10) then
+				s.model:SetAttribute("Calling", nil)
+				setSleep(s, "dozing", tonumber(c.dozing) or 2.4)
+			end
+		elseif s.state == "dozing" then
+			if now - s.since >= (tonumber(c.dozing) or 2.4) then
+				setStir(s, 0)
+				setSleep(s, "asleep")
+			end
+		end
+	end
+end
+
+-- A lift is noisy: everyone asleep within earshot of it in its wing stirs (quiet shoes soften it).
+-- Whether one of them was asleep right beside it, and still is.
+local function liftNoise(ctx: Types.Ctx, player: Player, spotId: number, wing: number, at: Vector3): boolean
+	local c = sleepCfg(ctx)
+	local quiet = quietOf(ctx, player)
+	local beside = false
+	for _, sl in sleepers do
+		if sl.def.wing == wing and (sl.state == "asleep" or sl.state == "stirring") then
+			local woken = false
+			if flat(sl.root.CFrame.Position - at).Magnitude <= sl.def.hear * 1.2 then
+				setStir(sl, sl.stir + (tonumber(c.lift) or 0.35) * quiet / sl.def.deep)
+				if sl.stir >= 1 then
+					woken = true
+					setSleep(sl, "waking", tonumber(c.waking) or 1.6)
+				elseif sl.state == "asleep" and sl.stir >= (tonumber(c.stir) or 0.45) then
+					setSleep(sl, "stirring")
+				end
+			end
+			if sl.def.spot == spotId and not woken then
+				beside = true
+			end
+		end
+	end
+	return beside
 end
 
 -- A guest takes the piece on plinth `spotId`. Returns { ok, why }.
@@ -494,6 +712,14 @@ function Luxe.take(ctx: Types.Ctx, player: Player, spotId: number): { [string]: 
 		end
 	elseif wing == 5 then
 		complete(ctx, player, run, "garage")
+	elseif wing == 7 then
+		complete(ctx, player, run, "library")
+	elseif wing == 8 then
+		complete(ctx, player, run, "bedroom")
+	end
+	-- (Build 89) The noise of it: the night staff nearby stir.
+	if liftNoise(ctx, player, spotId, wing, top) then
+		complete(ctx, player, run, "sleeper")
 	end
 	-- Security wakes, and a guard comes after them.
 	wake(ctx, player, run, wing, root.CFrame.Position)
@@ -702,9 +928,6 @@ end
 ---------------------------------------------------------------------------------------------------
 -- The guards
 ---------------------------------------------------------------------------------------------------
-local function flat(v: Vector3): Vector3
-	return Vector3.new(v.X, 0, v.Z)
-end
 
 -- How far a guard sees `player` this moment (0: not at all), and how near (0 to 1).
 local function sees(ctx: Types.Ctx, g: Guard, player: Player, run: Run): (boolean, number)
@@ -1165,6 +1388,23 @@ function Luxe.build(ctx: Types.Ctx, parent: Instance)
 			extra = false,
 		})
 	end
+	-- (Build 89) The night staff, each asleep beside their piece.
+	local staffFolder = Instance.new("Folder")
+	staffFolder.Name = "NightStaff"
+	staffFolder.Parent = b.root
+	for _, def in Plan.Sleepers do
+		local at = origin + def.at
+		local model, root = Luxe.makeSleeper(staffFolder, "Sleeper_" .. def.who, CFrame.lookAt(at, at + Plan.facing(def.yaw)), def)
+		model:SetAttribute("LuxeSleeper", def.id)
+		model:SetAttribute("Pose", def.pose)
+		model:SetAttribute("Who", def.name)
+		model:SetAttribute("Wing", def.wing)
+		CollectionService:AddTag(model, "LuxeSleeper")
+		local sl: Sleeper = { def = def, model = model, root = root, state = "asleep", since = now, stir = 0, alone = 0 }
+		setSleep(sl, "asleep")
+		setStir(sl, 0)
+		table.insert(sleepers, sl)
+	end
 end
 
 function Luxe.enter(ctx: Types.Ctx, player: Player): (CFrame?, string?)
@@ -1251,6 +1491,7 @@ function Luxe.step(ctx: Types.Ctx, dt: number)
 	for _, g in guards do
 		guardStep(ctx, g, dt)
 	end
+	sleeperStep(ctx, dt)
 	cameraStep(ctx, dt)
 	laserStep(ctx)
 	alarmStep(ctx)
@@ -1405,6 +1646,7 @@ end
 -- For tests.
 Luxe.spots = spots
 Luxe.guards = guards
+Luxe.sleepers = sleepers
 Luxe.runs = runs
 Luxe.origin = function(): Vector3
 	return origin

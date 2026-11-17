@@ -770,7 +770,7 @@ local services = {
 			table.insert(preloads, { list = list, callback = callback })
 		end,
 	},
-	ProximityPromptService = { PromptShown = signal(), PromptHidden = signal(), PromptTriggered = signal() },
+	ProximityPromptService = { PromptShown = signal(), PromptHidden = signal(), PromptTriggered = signal(), PromptButtonHoldBegan = signal(), PromptButtonHoldEnded = signal() },
 	MarketplaceService = { PromptProductPurchaseFinished = signal() },
 	TeleportService = {
 		GetLocalPlayerTeleportData = function()
@@ -817,6 +817,7 @@ roblox.implementMethod("ProximityPrompt", "InputHoldBegin", function(self)
 	local token = {}
 	promptHolds[self] = token
 	signalOf(self, "PromptButtonHoldBegan"):Fire()
+	services.ProximityPromptService.PromptButtonHoldBegan:Fire(self, LocalPlayer)
 	local function finish()
 		if promptHolds[self] == token then
 			promptHolds[self] = nil
@@ -834,6 +835,7 @@ end)
 roblox.implementMethod("ProximityPrompt", "InputHoldEnd", function(self)
 	services.ProximityPromptService.holds[self] = nil
 	signalOf(self, "PromptButtonHoldEnded"):Fire()
+	services.ProximityPromptService.PromptButtonHoldEnded:Fire(self, LocalPlayer)
 end)
 
 ---------------------------------------------------------------------------------------------------
@@ -8418,6 +8420,63 @@ coroutine.wrap(function()
 	serverSays("Attraction", { op = "luxe", bag = {}, capacity = 4, worth = 0, bonus = 0, wing = "The Strongroom", watched = 1, chased = true, speed = 1, grace = false, awake = true })
 	advance(0.3)
 	check("chased: run", textOnScreen("Run, a guard is after you") ~= nil)
+	-- (Build 89) The lift as it happens: a card with the piece, its hold, and the security round it.
+	do
+		local piece = Instance.new("Model")
+		piece.Name = "Piece"
+		piece:SetAttribute("Piece", "codex")
+		piece:SetAttribute("Rarity", "Legendary")
+		piece:SetAttribute("Worth", 9800)
+		local proot = Instance.new("Part")
+		proot.Name = "Root"
+		proot.Parent = piece
+		local take = Instance.new("ProximityPrompt")
+		take.Name = "Take"
+		take.HoldDuration = 1
+		take.Parent = proot
+		piece.Parent = workspace
+		local function liftCard()
+			return find(playerGui, function(d)
+				return d.Name == "LuxeLift"
+			end)
+		end
+		check("no lift card until a piece is held", liftCard() ~= nil and liftCard().Visible == false)
+		take:InputHoldBegin()
+		advance(0.5)
+		local lc = liftCard()
+		check("holding a piece's Take: the card, with the piece, its grade and worth", lc ~= nil and lc.Visible and textOnScreen("The Codex of the House") ~= nil and textOnScreen("Legendary  ·  worth 9,800") ~= nil and textOnScreen("LIFTING") ~= nil)
+		check("...its bar filling for exactly the hold the prompt asks", lc ~= nil and math.abs(lc.Track.Fill.Size.X.Scale - 0.5) < 0.12, lc and lc.Track.Fill.Size.X.Scale)
+		check("...the security round them said (awake: a piece was lifted this trip)", textOnScreen("SECURITY AWAKE") ~= nil)
+		check("...the screen's edges darkened for the moment", find(playerGui, function(d)
+			return d.Name == "LiftEdges" and d.Visible == true
+		end) ~= nil)
+		snapshot("luxe-lift")
+		take:InputHoldEnd()
+		advance(0.2)
+		check("let go early: said, and it's gone", textOnScreen("LET GO") ~= nil)
+		advance(1)
+		check("...a moment later, nothing on the screen", liftCard().Visible == false and find(playerGui, function(d)
+			return d.Name == "LiftEdges" and d.Visible == true
+		end) == nil)
+		take:InputHoldBegin()
+		advance(1.3)
+		serverSays("Attraction", { op = "took", piece = "codex", name = "The Codex of the House", glyph = "📖", rarity = "Legendary", worth = 9800, at = Vector3.new(0, 0, 0), mass = 4 })
+		advance(0.3)
+		check("held all the way and the server lifts it: the card says so, with its worth", textOnScreen("LIFTED") ~= nil and textOnScreen("Legendary  ·  +9,800 to carry out") ~= nil)
+		snapshot("luxe-lifted")
+		advance(2)
+		check("...and then goes", liftCard().Visible == false)
+		piece:Destroy()
+	end
+	-- (Build 89) One of the night staff wakes: said plainly, what they do.
+	serverSays("Attraction", { op = "sleeper", id = 4, name = "the chauffeur", call = "guard", sent = true, wing = 5 })
+	advance(0.3)
+	check("a sleeper woken by a thief: who, and what they've done", textOnScreen("The chauffeur is awake") ~= nil and textOnScreen("They've sent a guard straight after you. Get to a way out.") ~= nil)
+	advance(4.5)
+	serverSays("Attraction", { op = "sleeper", id = 1, name = "the footman", grumble = true, wing = 1 })
+	advance(0.3)
+	check("...woken by an empty-handed guest: only a grumble, said so", textOnScreen("The footman is awake") ~= nil and textOnScreen("They grumble and look round. You haven't taken anything, so they don't call anyone.") ~= nil)
+	advance(4)
 	serverSays("Attraction", { op = "caught", lost = 1960, n = 2 })
 	advance(0.3)
 	check("caught: what was lost, plainly", textOnScreen("The guards took back 2 pieces (1,960). You're shown out to the courtyard.") ~= nil)
@@ -8507,6 +8566,98 @@ coroutine.wrap(function()
 end)()
 
 ---------------------------------------------------------------------------------------------------
+-- 7c2. (Build 89) Steal a Luxe's night staff, posed from what the server says
+---------------------------------------------------------------------------------------------------
+coroutine.wrap(function()
+	local errorsBefore = #errors
+	local Sleepers = module("StarterPlayer", "StarterPlayerScripts", "Client", "World", "LuxeSleepers")
+	local rig = Instance.new("Model")
+	rig.Name = "Sleeper_test"
+	local function part(name, size, at)
+		local p = Instance.new("Part")
+		p.Name = name
+		p.Size = size
+		p.CFrame = CFrame.new(at)
+		p.Parent = rig
+		return p
+	end
+	local base = Vector3.new(500, 0, 500)
+	local hrp = part("HumanoidRootPart", Vector3.new(2, 2, 1), base + Vector3.new(0, 3, 0))
+	local lower = part("LowerTorso", Vector3.new(2, 0.4, 1), base + Vector3.new(0, 2.8, 0))
+	local upper = part("UpperTorso", Vector3.new(2, 1.6, 1), base + Vector3.new(0, 3.8, 0))
+	local head = part("Head", Vector3.new(1.2, 1.2, 1.2), base + Vector3.new(0, 5.2, 0))
+	local thigh = part("LeftUpperLeg", Vector3.new(1, 1.4, 1), base + Vector3.new(-0.5, 1.9, 0))
+	local shin = part("LeftLowerLeg", Vector3.new(1, 1.2, 1), base + Vector3.new(-0.5, 0.6, 0))
+	local hum = Instance.new("Humanoid")
+	hum.HipHeight = 2
+	hum.Parent = rig
+	local function motor(name, p0, p1, c0)
+		local m = Instance.new("Motor6D")
+		m.Name = name
+		m.Part0 = p0
+		m.Part1 = p1
+		m.C0 = c0
+		m.Parent = p1
+		return m
+	end
+	local rootJ = motor("Root", hrp, lower, CFrame.new(0, -0.2, 0))
+	motor("Waist", lower, upper, CFrame.new(0, 0.2, 0))
+	local neck = motor("Neck", upper, head, CFrame.new(0, 0.8, 0))
+	local hip = motor("LeftHip", lower, thigh, CFrame.new(-0.5, -0.2, 0))
+	motor("LeftKnee", thigh, shin, CFrame.new(0, -0.7, 0))
+	local function serverNow()
+		local ok, t = pcall(function()
+			return workspace:GetServerTimeNow()
+		end)
+		return if ok and type(t) == "number" then t else os.clock()
+	end
+	local function set(pose, state, ago, extra)
+		rig:SetAttribute("Pose", pose)
+		rig:SetAttribute("Sleep", state)
+		rig:SetAttribute("SleepAt", serverNow() - ago)
+		rig:SetAttribute("SleepFor", if state == "waking" then 1.6 elseif state == "dozing" then 2.4 else nil)
+		rig:SetAttribute("Stir", extra and extra.stir or 0)
+		rig:SetAttribute("Calling", extra and extra.calling or nil)
+		rig:SetAttribute("Who", "the footman")
+		Sleepers.step(nil)
+	end
+	local function xOf(m)
+		local x = m.Transform:ToEulerAnglesXYZ()
+		return math.deg(x)
+	end
+	rig.Parent = workspace
+	CollectionService:AddTag(rig, "LuxeSleeper")
+	local drops = Sleepers.measure(rig, { Root = rootJ, LeftHip = hip })
+	check("how far down onto a chair, measured from the rig itself", drops ~= nil and drops.chair > 0.3 and drops.lie > 0 and drops.stool < drops.chair, drops and drops.chair)
+	set("chair", "asleep", 0)
+	check("asleep in an armchair: sat down (thighs out), let down onto the seat, chin on the chest", math.abs(xOf(hip) - 90) < 2 and rootJ.Transform.Position.Y < -0.3 and xOf(neck) < -20, xOf(hip), rootJ.Transform.Position.Y)
+	local mark = head:FindFirstChild("SleepMark")
+	check("...z z z over their head", mark ~= nil and mark.Mark.Text == "z z z")
+	set("chair", "stirring", 1, { stir = 0.8 })
+	local _, y1 = neck.Transform:ToEulerAnglesXYZ()
+	set("chair", "stirring", 2, { stir = 0.8 })
+	local _, y2 = neck.Transform:ToEulerAnglesXYZ()
+	check("stirring: restless, the head turning (the z z z amber)", math.abs(y1 - y2) > math.rad(3) and mark.Mark.TextColor3.G < 0.85)
+	check("...and the HUD can say who stirs near the guest", Sleepers.restless(base + Vector3.new(3, 3, 0), 20) == "the footman" and Sleepers.restless(base + Vector3.new(60, 3, 0), 20) == nil)
+	set("chair", "waking", 0.4)
+	check("waking: still sitting a moment, sitting up, the arms going up to stretch", math.abs(xOf(hip) - 90) < 2 and xOf(neck) > -20)
+	set("chair", "waking", 1.5)
+	check("...then nearly on their feet", xOf(hip) < 20 and xOf(hip) >= 0 and rootJ.Transform.Position.Y > -0.2, xOf(hip))
+	set("chair", "awake", 3, { calling = "bell" })
+	check("awake: standing, looking round", math.abs(xOf(hip)) < 1 and math.abs(rootJ.Transform.Position.Y) < 1e-3)
+	check("...calling for the guards: a bell over their head", mark.Mark.Text == "🔔")
+	set("chair", "dozing", 1.2)
+	check("dozing: on the way back down", xOf(hip) > 20 and xOf(hip) < 80, xOf(hip))
+	set("bed", "asleep", 0)
+	check("in bed: on their back (tipped back a quarter turn), let down onto the mattress", math.abs(xOf(rootJ) - 90) < 2 and math.abs(xOf(hip)) < 1)
+	set("bed", "awake", 2)
+	check("...woken: sat up in bed, legs out along it", math.abs(xOf(rootJ)) < 1 and math.abs(xOf(hip) - 90) < 2)
+	rig:Destroy()
+	Sleepers.step(nil)
+	check("no errors with the night staff", #errors == errorsBefore, errors[errorsBefore + 1])
+end)()
+
+---------------------------------------------------------------------------------------------------
 -- 7d. The Maison Basement: its screen only inside, the clock, checkpoints and falls, the skip (its
 -- cost said before anything is spent), the Treasury, the best times, the machinery moving
 ---------------------------------------------------------------------------------------------------
@@ -8529,7 +8680,7 @@ coroutine.wrap(function()
 	serverSays("Attraction", { op = "entered", id = "basement" })
 	serverSays("Attraction", { op = "basement", checkpoint = 4, stage = 5, stageName = "The Pipes", zone = "The Boiler Room", started = 4917.5, assisted = false, falls = 2, best = 205.5, done = false, skips = 0, skipGems = 85, skipNeed = 2, skipOnSale = true })
 	advance(0.4)
-	check("inside, its screen is up: the stage and its part", textOnScreen("THE MAISON BASEMENT") ~= nil and textOnScreen("Stage 5 of 16  ·  The Pipes") ~= nil and textOnScreen("THE BOILER ROOM") ~= nil)
+	check("inside, its screen is up: the stage and its part", textOnScreen("THE MAISON BASEMENT") ~= nil and textOnScreen("Stage 5 of 32  ·  The Pipes") ~= nil and textOnScreen("THE BOILER ROOM") ~= nil)
 	check("...no running clock on the screen (hard to read mid-jump: the time is told at the Treasury)", textOnScreen("1:22.50") == nil)
 	check("...the best time and the falls", textOnScreen("BEST 3:25.50") ~= nil and textOnScreen("FALLS 2") ~= nil)
 	snapshot("basement-hud")

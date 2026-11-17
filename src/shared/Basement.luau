@@ -2,12 +2,16 @@
 -- The Maison Basement: the obby under the house (shared by the server, which builds and judges it,
 -- and every screen, which moves its machinery and draws its HUD). All positions are from the
 -- Basement's origin (shared/Attractions.origin("basement")); the course runs down and away along +Z,
--- sixteen stages in four parts, a checkpoint at the end of each, the Treasury at the foot.
+-- thirty-two stages in eight parts (Build 89), a checkpoint at the end of each, the Treasury at the foot.
 --
 --   The Wine Cellar        barrel tops, the racks' narrow plank, tiles that sink, a belt of barrels
 --   The Boiler Room        pipes, steam vents, pistons that carry you, the great valve that sweeps
 --   The Old Vaults         the laser hall, a truss to climb, sinking tiles and a lift, the safe door
---   The Treasury Depths    gold steps, the counting belt, falling coins, the last leap
+--   The Treasury Depths    gold steps, the counting belt, falling coins, the strongroom's narrow way
+--   The Clockworks         (Build 89) brass gears that sweep, shuttles, the escapement, the clock tower
+--   The Flooded Cistern    tiles sinking into the water, the sluice, the drowned pipes, the pump house
+--   The Furnace Heart      grates over the fire, the bellows' lasers, the slag run, the forge wheel
+--   The Vault of Kings     the kings' steps, the crown room, the last corridor, the Treasury
 --
 -- Everything that moves, moves by the server's clock (workspace:GetServerTimeNow()): every screen
 -- moves it the same way, and the server judges by the same sums. Fall, or touch steam, a laser or
@@ -49,19 +53,29 @@ Basement.Zones = {
 	{ id = 1, name = "The Wine Cellar", line = "Barrel tops and a narrow plank. Mind the tiles that sink.", from = 1, to = 4, colour = rgb(170, 40, 70), purse = 600 },
 	{ id = 2, name = "The Boiler Room", line = "Steam, pistons, and the great valve that sweeps the floor.", from = 5, to = 8, colour = rgb(230, 120, 50), purse = 1500 },
 	{ id = 3, name = "The Old Vaults", line = "The laser hall, the truss, the safe door.", from = 9, to = 12, colour = rgb(90, 150, 230), purse = 3000 },
-	{ id = 4, name = "The Treasury Depths", line = "Gold steps, falling coins, and the last leap to the Treasury.", from = 13, to = 16, colour = rgb(255, 196, 70), purse = 5000 },
+	{ id = 4, name = "The Treasury Depths", line = "Gold steps, falling coins, and the strongroom's narrow way.", from = 13, to = 16, colour = rgb(255, 196, 70), purse = 5000 },
+	-- (Build 89: thirty-two stages. Four deeper parts, each its own place, each harder: the same
+	-- jumps a guest has learned above, faster, with more in the way, and new combinations.)
+	{ id = 5, name = "The Clockworks", line = "Gears that sweep, shuttles that slide, belts that pull you back.", from = 17, to = 20, colour = rgb(214, 170, 96), purse = 6500 },
+	{ id = 6, name = "The Flooded Cistern", line = "Tiles that sink into black water, sluices and jets of steam.", from = 21, to = 24, colour = rgb(60, 180, 196), purse = 8000 },
+	{ id = 7, name = "The Furnace Heart", line = "Crushers, lasers and the bellows of the great furnace.", from = 25, to = 28, colour = rgb(255, 92, 48), purse = 9500 },
+	{ id = 8, name = "The Vault of Kings", line = "Every trick in the house at once, and the Treasury at the very bottom.", from = 29, to = 32, colour = rgb(196, 130, 255), purse = 12000 },
 } :: { Zone }
 
-Basement.STAGES = 16
+Basement.STAGES = 32
 Basement.StageNames = {
 	"The Cellar Steps", "The Racks", "The Tasting Tiles", "The Barrel Belt",
 	"The Pipes", "The Pistons", "The Great Valve", "The Furnace Walk",
 	"The Laser Hall", "The Truss", "The Combination", "The Safe Door",
-	"The Gold Steps", "The Counting House", "The Falling Coins", "The Treasury",
+	"The Gold Steps", "The Counting House", "The Falling Coins", "The Strongroom",
+	"The Gear Walk", "The Shuttles", "The Escapement", "The Clock Tower",
+	"The Cistern Steps", "The Sluice", "The Drowned Pipes", "The Pump House",
+	"The Grates of the Furnace", "The Bellows", "The Slag Run", "The Forge Wheel",
+	"The Kings' Steps", "The Crown Room", "The Last Corridor", "The Treasury",
 } :: { string }
 
 Basement.Elements = {} :: { El }
-Basement.Checkpoints = {} :: { [number]: Checkpoint } -- 0: the start, 16: the Treasury
+Basement.Checkpoints = {} :: { [number]: Checkpoint } -- 0: the start, 32: the Treasury
 Basement.Pits = {} :: { [number]: El } -- under each stage
 
 local E = Basement.Elements
@@ -165,7 +179,8 @@ function Basement.skipGems(stage: number, base: number?, step: number?): number
 	return math.floor((base or Basement.SKIP_GEMS) + (step or Basement.SKIP_GEMS_STEP) * (n - 1))
 end
 function Basement.skipsNeeded(stage: number): number
-	return zoneOf(math.clamp(math.floor(stage), 1, Basement.STAGES))
+	-- (Build 89: four at most, for the deepest parts too.)
+	return math.min(4, zoneOf(math.clamp(math.floor(stage), 1, Basement.STAGES)))
 end
 
 ---------------------------------------------------------------------------------------------------
@@ -184,7 +199,7 @@ Basement.HALF_WIDTH = 30 -- the hall's walls stand this far either side of the c
 Basement.HEADROOM = 32 -- the ceiling over a stage's highest platform
 local RUN_LOOK = { "barrel", "grate", "steel", "gold" }
 function Basement.runUpOf(n: number): (number, number, number)
-	local count = 1 + math.floor(n / 2) -- 1 to 9 platforms
+	local count = 1 + math.floor(math.min(n, 16) / 2) -- 1 to 9 platforms (no more below the 16th)
 	local gap = math.min(4.8, 2.6 + n * 0.14) -- 2.7 to 4.8 studs between them
 	local size = math.max(3.6, 6.4 - n * 0.18) -- 6.2 to 3.6 studs across
 	return count, gap, size
@@ -395,16 +410,222 @@ do
 	s = checkpoint(15, s + v(0, -3.5, 4 + 3.5 + 4.5 + 32 + 3.5 + 4), 4)
 end
 
--- 16. The Treasury: a narrow way, the last leap, and the Treasury itself.
+-- 16. The Strongroom: a narrow way and the last leap of the old Treasury Depths (Build 89: the
+-- Treasury itself is at the very bottom now, sixteen stages further down).
 stage = 16
 do
 	runUp(16)
 	beam(s + v(0, 0, 4 + 2 + 7), 1.6, 14, "gold")
 	only(4, crusher(s + v(0, 0, 4 + 2 + 7), 3, 3, 2.8, 0.25, 0.3)) -- (The Gauntlet: a crusher on the narrow way)
 	pad(s + v(0, -1, 4 + 2 + 14 + 5 + 2.5), 5, 5, "gold")
+	s = checkpoint(16, s + v(0, -2, 4 + 2 + 14 + 5 + 5 + 4 + 4), 4)
+end
+
+---------------------------------------------------------------------------------------------------
+-- (Build 89) The deep Basement: stages 17 to 32. Each is laid on the shape of a jump a guest has
+-- already learned above (the same gaps and steps, so every one is as fair), and made its own: the
+-- machines faster, more of them, new combinations, and each version of the course with its own
+-- extra in most stages.
+---------------------------------------------------------------------------------------------------
+
+-- 17. The Gear Walk: a brass floor with two gears' arms sweeping it, quicker than the Safe Door's.
+stage = 17
+do
+	runUp(17)
+	local c = s + v(0, 0, 4 + 3 + 10)
+	pad(c, 20, 20, "safe")
+	spinner(c + v(0, 0, -5), 9, 110, 0)
+	spinner(c + v(0, 0, 5), 9, -110, 0.25)
+	only(2, spinner(c, 9, 70, 0.5)) -- (Double Time: a third, at the hub)
+	beam(s + v(0, -1, 4 + 3 + 20 + 2 + 7), 1.8, 14, "steel")
+	only(4, crusher(s + v(0, -1, 4 + 3 + 20 + 2 + 7), 3, 3, 2.6, 0.4, 0.3))
+	s = checkpoint(17, s + v(0, -2, 4 + 3 + 20 + 2 + 14 + 3 + 4), 5)
+end
+
+-- 18. The Shuttles: four platforms sliding across, each a beat quicker than the last.
+stage = 18
+do
+	runUp(18)
+	for i = 1, 4 do
+		local z = 4 + 4 + 3 + (i - 1) * 10
+		mover(s + v(-7, -i * 0.5, z), s + v(7, -i * 0.5, z), 6, 6, 4.2 - i * 0.2, (i - 1) * 0.27)
+	end
+	only(3, laser(s + v(0, -2, 4 + 4 + 3 + 15), 16, 2.2, 2.6, 0, 0.4)) -- (Blackout: a beam between them)
+	s = checkpoint(18, s + v(0, -2.5, 4 + 4 + 3 + 30 + 3 + 4 + 4), 5)
+end
+
+-- 19. The Escapement: the belt runs back at you, faster, and steam rises from it in turn.
+stage = 19
+do
+	runUp(19)
+	conveyor(s + v(0, 0, 4 + 12), 7, 24, 12)
+	steam(s + v(0, 0, 4 + 6), 7, 3, 2.6, 0, 0.32)
+	steam(s + v(0, 0, 4 + 18), 7, 3, 2.6, 0.5, 0.32)
+	only(4, crusher(s + v(0, 0, 4 + 12), 7, 3, 2.8, 0.25, 0.28))
+	s = checkpoint(19, s + v(0, -1, 4 + 24 + 4 + 4), 5)
+end
+
+-- 20. The Clock Tower: up the truss to the clock's walk, a laser crossing it.
+stage = 20
+do
+	runUp(20)
+	pad(s + v(0, 0, 4 + 2 + 3), 8, 6, "vault")
+	truss(s + v(0, 0, 4 + 2 + 6 + 1), 9)
+	pad(s + v(0, 8, 4 + 2 + 6 + 2 + 3), 6, 6, "vault")
+	beam(s + v(0, 8, 4 + 2 + 6 + 2 + 6 + 8), 1.8, 16, "steel")
+	laser(s + v(0, 8, 4 + 2 + 6 + 2 + 6 + 8), 4, 2.2, 2.8, 0, 0.4)
+	only(2, laser(s + v(0, 8, 4 + 2 + 6 + 2 + 6 + 4), 4, 2.2, 2.8, 0.5, 0.4))
+	pad(s + v(0, 8, 4 + 2 + 6 + 2 + 6 + 16 + 3), 6, 6, "vault")
+	s = checkpoint(20, s + v(0, -2, 4 + 2 + 6 + 2 + 6 + 16 + 6 + 3 + 4), 5)
+end
+
+-- 21. The Cistern Steps: five tiles sinking into the water, quicker than the Tasting Tiles.
+stage = 21
+do
+	runUp(21)
+	for i = 1, 5 do
+		vanish(s + v(if i % 2 == 0 then 1.5 else -1.5, -0.5 * i, 4 + 3 + 2.5 + (i - 1) * 8), 5, 5, 2.8, (i - 1) * 0.2, 0.6)
+	end
+	only(4, steam(s + v(-1.5, -1.5, 4 + 3 + 2.5 + 16), 5, 5, 2.8, 0.6, 0.3))
+	s = checkpoint(21, s + v(0, -3, 4 + 3 + 2.5 + 32 + 2.5 + 3 + 4), 6)
+end
+
+-- 22. The Sluice: a long belt pulling back, two jets of steam over it, and a sweeping arm.
+stage = 22
+do
+	runUp(22)
+	conveyor(s + v(0, 0, 4 + 13), 7, 26, 13)
+	steam(s + v(0, 0, 4 + 8), 7, 3, 2.4, 0, 0.32)
+	steam(s + v(0, 0, 4 + 18), 7, 3, 2.4, 0.5, 0.32)
+	only(3, steam(s + v(0, 0, 4 + 13), 7, 3, 2.4, 0.25, 0.25))
+	s = checkpoint(22, s + v(0, -1, 4 + 26 + 4 + 4), 6)
+end
+
+-- 23. The Drowned Pipes: two pipes to walk, the vent between them quicker, a crusher over it.
+stage = 23
+do
+	runUp(23)
+	beam(s + v(-2, 0, 4 + 8), 1.6, 16, "pipe")
+	pad(s + v(-2, -1, 4 + 16 + 3 + 3), 6, 6, "grate")
+	steam(s + v(-2, -1, 4 + 16 + 3 + 3), 6, 6, 2.4, 0, 0.35)
+	only(4, crusher(s + v(-2, -1, 4 + 16 + 3 + 3), 6, 6, 3.2, 0.5, 0.25))
+	beam(s + v(2, -1, 4 + 16 + 3 + 6 + 3 + 8), 1.6, 16, "pipe")
+	only(2, laser(s + v(2, -1, 4 + 16 + 3 + 6 + 3 + 8), 3, 2.4, 2.6, 0.3, 0.35))
+	s = checkpoint(23, s + v(0, -2, 4 + 16 + 3 + 6 + 3 + 16 + 3 + 4), 6)
+end
+
+-- 24. The Pump House: three sinking tiles, then a pump's piston sliding across, faster.
+stage = 24
+do
+	runUp(24)
+	for i = 1, 3 do
+		vanish(s + v(0, -0.5 * i, 4 + 3 + 2.5 + (i - 1) * 8), 5, 5, 2.4, (i - 1) * 0.3, 0.6)
+	end
+	mover(s + v(-6, -2, 4 + 3 + 21 + 4 + 3), s + v(6, -2, 4 + 3 + 21 + 4 + 3), 6, 6, 3.4, 0)
+	only(3, steam(s + v(0, -1, 4 + 3 + 2.5 + 8), 5, 5, 2.8, 0.5, 0.3))
+	s = checkpoint(24, s + v(0, -2, 4 + 3 + 21 + 4 + 6 + 3 + 4), 6)
+end
+
+-- 25. The Grates of the Furnace: grates over the fire, two vents breathing under them.
+stage = 25
+do
+	runUp(25)
+	for i = 1, 5 do
+		pad(s + v(if i % 2 == 0 then -2.5 else 2.5, -i * 0.8, 4 + 4 + 2 + (i - 1) * 8), 4, 4, "grate")
+	end
+	steam(s + v(-2.5, -1.6, 4 + 4 + 2 + 8), 4, 4, 2.4, 0.5, 0.35)
+	steam(s + v(-2.5, -3.2, 4 + 4 + 2 + 24), 4, 4, 2.4, 0, 0.35)
+	only(4, crusher(s + v(2.5, -2.4, 4 + 4 + 2 + 16), 4, 4, 3, 0.25, 0.3))
+	s = checkpoint(25, s + v(0, -5, 4 + 4 + 2 + 32 + 2 + 4 + 4), 7)
+end
+
+-- 26. The Bellows: the long hall, its lasers quicker and closer together, a crusher at its heart.
+stage = 26
+do
+	runUp(26)
+	pad(s + v(0, 0, 4 + 2 + 16), 8, 32, "vault")
+	for i = 1, 4 do
+		laser(s + v(0, 0, 4 + 2 + 4 + (i - 1) * 8), 8, 1.4 + (i % 2) * 1.6, 2.0, (i - 1) * 0.2, 0.5)
+	end
+	crusher(s + v(0, 0, 4 + 2 + 24), 8, 3, 3, 0.5, 0.3)
+	only(2, laser(s + v(0, 0, 4 + 2 + 30), 8, 1.4, 2.0, 0.8, 0.45))
+	s = checkpoint(26, s + v(0, 0, 4 + 2 + 32 + 2 + 4), 7)
+end
+
+-- 27. The Slag Run: the narrow plank with a crusher always over it, then two hot barrels.
+stage = 27
+do
+	runUp(27)
+	beam(s + v(0, 0, 4 + 2 + 10), 1.8, 20, "steel")
+	crusher(s + v(0, 0, 4 + 2 + 10), 3, 3, 2.6, 0, 0.3)
+	pad(s + v(3, -1, 4 + 2 + 20 + 4 + 2.5), 5, 5, "grate")
+	steam(s + v(3, -1, 4 + 2 + 20 + 4 + 2.5), 5, 5, 2.6, 0.5, 0.3)
+	pad(s + v(-3, -2, 4 + 2 + 20 + 4 + 5 + 4 + 2.5), 5, 5, "grate")
+	only(3, steam(s + v(-3, -2, 4 + 2 + 20 + 4 + 5 + 4 + 2.5), 5, 5, 2.6, 0, 0.3))
+	s = checkpoint(27, s + v(0, -3, 4 + 2 + 20 + 4 + 5 + 4 + 5 + 4 + 4), 7)
+end
+
+-- 28. The Forge Wheel: the great wheel's two bars, sweeping opposite ways, quicker.
+stage = 28
+do
+	runUp(28)
+	local c = s + v(0, -1, 4 + 3 + 9)
+	pad(c, 18, 18, "valve")
+	spinner(c, 16, 90, 0)
+	spinner(c, 16, -60, 0.5)
+	only(4, steam(c + v(0, 0, 6), 4, 4, 2.6, 0.25, 0.3))
+	s = checkpoint(28, s + v(0, -1, 4 + 3 + 18 + 3 + 4), 7)
+end
+
+-- 29. The Kings' Steps: small gold steps, a stud lower each, steam on two of them.
+stage = 29
+do
+	runUp(29)
+	for i = 1, 6 do
+		pad(s + v(if i % 2 == 0 then 3 else -3, -i, 4 + 4 + 1.75 + (i - 1) * 7.5), 3.5, 3.5, "gold")
+	end
+	steam(s + v(-3, -3, 4 + 4 + 1.75 + 15), 3.5, 3.5, 2.2, 0.3, 0.3)
+	steam(s + v(3, -4, 4 + 4 + 1.75 + 22.5), 3.5, 3.5, 2.2, 0.8, 0.3)
+	only(2, steam(s + v(-3, -5, 4 + 4 + 1.75 + 30), 3.5, 3.5, 2.2, 0.55, 0.3))
+	s = checkpoint(29, s + v(0, -7, 4 + 4 + 3.5 + 37.5 + 4 + 4), 8)
+end
+
+-- 30. The Crown Room: the vault floor, its two bars quicker, a laser at the door.
+stage = 30
+do
+	runUp(30)
+	local c = s + v(0, 0, 4 + 3 + 10)
+	pad(c, 20, 20, "safe")
+	spinner(c + v(0, 0, -5), 9, 120, 0)
+	spinner(c + v(0, 0, 5), 9, -120, 0.25)
+	beam(s + v(0, -1, 4 + 3 + 20 + 2 + 7), 1.8, 14, "gold")
+	laser(s + v(0, -1, 4 + 3 + 20 + 2 + 7), 3, 2.2, 2.4, 0.5, 0.4)
+	only(3, crusher(s + v(0, -1, 4 + 3 + 20 + 2 + 11), 3, 3, 2.8, 0, 0.3))
+	s = checkpoint(30, s + v(0, -2, 4 + 3 + 20 + 2 + 14 + 3 + 4), 8)
+end
+
+-- 31. The Last Corridor: gold tiles falling fast, and the crushers of the strongroom.
+stage = 31
+do
+	runUp(31)
+	for i = 1, 5 do
+		vanish(s + v(if i % 2 == 0 then 1.5 else -1.5, -0.6 * i, 4 + 3.5 + 2.25 + (i - 1) * 8), 4.5, 4.5, 2.1, (i - 1) * 0.2, 0.62)
+	end
+	only(4, crusher(s + v(1.5, -1.2, 4 + 3.5 + 2.25 + 8), 4.5, 4.5, 3, 0.5, 0.25))
+	s = checkpoint(31, s + v(0, -3.5, 4 + 3.5 + 4.5 + 32 + 3.5 + 4), 8)
+end
+
+-- 32. The Treasury: the narrowest way, a laser across it, the last leap, and the Treasury itself.
+stage = 32
+do
+	runUp(32)
+	beam(s + v(0, 0, 4 + 2 + 7), 1.6, 14, "gold")
+	laser(s + v(0, 0, 4 + 2 + 7), 3, 2.2, 2.4, 0.25, 0.4)
+	only(4, crusher(s + v(0, 0, 4 + 2 + 7), 3, 3, 2.8, 0.75, 0.3))
+	pad(s + v(0, -1, 4 + 2 + 14 + 5 + 2.5), 5, 5, "gold")
 	local t = s + v(0, -2, 4 + 2 + 14 + 5 + 5 + 4 + 8)
 	pad(t, 24, 16, "treasury")
-	Basement.Checkpoints[16] = { n = 16, at = t, size = v(24, 8, 16), zone = 4 }
+	Basement.Checkpoints[32] = { n = 32, at = t, size = v(24, 8, 16), zone = 8 }
 	add({ kind = "chest", at = t + v(0, 1.5, 4), size = v(5, 3, 3.5) })
 end
 
@@ -509,7 +730,7 @@ do
 			end
 			local l = landing :: El
 			bridge(l.at, l.size.X / 2, l.size.Z, l.look)
-			bridge(finish.at, finish.size.X / 2, finish.size.Z, if n == 16 then "gold" elseif n % 4 == 0 then "landing" else "checkpoint")
+			bridge(finish.at, finish.size.X / 2, finish.size.Z, if n == Basement.STAGES then "gold" elseif n % 4 == 0 then "landing" else "checkpoint")
 		end
 	end
 end
@@ -560,7 +781,7 @@ for _, e in E do
 end
 
 -- How long the whole course runs (for the walls and the lights).
-Basement.LENGTH = Basement.Checkpoints[16].at.Z + 12
+Basement.LENGTH = Basement.Checkpoints[Basement.STAGES].at.Z + 12
 Basement.Arrival = CFrame.new(v(0, 0, -1)) -- on the start landing, facing down the course (+Z: see lookToward)
 Basement.ARRIVAL_AT = v(0, 0, -1)
 
@@ -569,10 +790,10 @@ Basement.ARRIVAL_AT = v(0, 0, -1)
 ---------------------------------------------------------------------------------------------------
 export type Variant = { id: string, name: string, line: string, pace: number, tint: Color3, bright: number, glow: boolean }
 Basement.Variants = {
-	{ id = "house", name = "The House Course", line = "The course as the house built it. Two secrets off the beaten way.", pace = 1, tint = rgb(255, 214, 160), bright = 1, glow = false },
-	{ id = "doubleTime", name = "Double Time", line = "Every machine runs faster, and steam on the Gold Steps. Time your steps.", pace = 1.4, tint = rgb(255, 120, 70), bright = 1.1, glow = false },
-	{ id = "blackout", name = "Blackout", line = "The lights are down and every edge glows. The machines run a little slower.", pace = 0.85, tint = rgb(120, 160, 255), bright = 0.3, glow = true },
-	{ id = "gauntlet", name = "The Gauntlet", line = "Crushers, a second sweep on the Valve, and a launch pad to a hidden ledge.", pace = 1, tint = rgb(200, 255, 120), bright = 0.9, glow = false },
+	{ id = "house", name = "The House Course", line = "All thirty-two stages as the house built them. Two secrets off the beaten way.", pace = 1, tint = rgb(255, 214, 160), bright = 1, glow = false },
+	{ id = "doubleTime", name = "Double Time", line = "Every machine runs faster: steam on the Gold Steps, a third gear in the Clockworks, more lasers below.", pace = 1.4, tint = rgb(255, 120, 70), bright = 1.1, glow = false },
+	{ id = "blackout", name = "Blackout", line = "The lights are down and every edge glows. Slower machines, but more steam and lasers in the deep.", pace = 0.85, tint = rgb(120, 160, 255), bright = 0.3, glow = true },
+	{ id = "gauntlet", name = "The Gauntlet", line = "Crushers all the way down, a second sweep on the Valve, and a launch pad to a hidden ledge.", pace = 1, tint = rgb(200, 255, 120), bright = 0.9, glow = false },
 } :: { Variant }
 Basement.VARIANT_SECONDS = 300
 

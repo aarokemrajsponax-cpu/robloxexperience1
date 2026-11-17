@@ -383,6 +383,31 @@ local defaults = {
 		daily = 50, -- the first visit of the day
 		surge = 2, -- an XP Surge (the Gem Shop) multiplies XP this much
 		announceEvery = 10, -- every guest in the house hears when someone reaches a level this round
+		-- (Build 88) XP for what's done all over the house, for each one counted (server/Progress:
+		-- the counts the badges keep, each seen by the server). Never anything bought.
+		stats = {
+			luxeHauls = 40, -- a haul banked at the getaway car
+			luxeObjectives = 25, -- a side job done
+			crownJewels = 80, -- a crown jewel carried out
+			luxeTaken = 3, -- a piece lifted
+			basementCheckpoints = 8, -- a checkpoint reached (new ones only)
+			basementSecrets = 50, -- a secret found
+			basementClears = 250, -- the Treasury reached
+			executiveWins = 300, -- the Executive beaten
+			executiveExtractions = 60, -- a clean getaway
+			races = 25, -- a Grand Prix finished
+			podiums = 40, -- on the podium
+			raceWins = 80, -- and won
+			trialLaps = 6, -- a time-trial lap
+			pearls = 15, -- a pearl from the lagoon
+			sunsets = 20, -- a sunset toast on the Island
+			flights = 10, -- a flight to the Island
+			arenaWins = 60, -- the Daily Arena won
+			auctionWins = 100, -- a lot won at the Grand Auction
+			stride = 15, -- a level of Speed trained
+			trades = 10, -- a trade completed
+		},
+		dailyCap = 1500, -- the most XP any one of those gives in a day
 	},
 
 	-- The Grand Prix (server/GrandPrixService, Shared/GrandPrix): races round the circuit on the
@@ -737,7 +762,7 @@ local defaults = {
 	-- one before its id was set are given it the next time they come in.
 	Badges = {
 		-- The first five (free to make: Roblox lets a game make a few each day at no cost).
-		nights_1 = 0, -- First Night: welcome to the house
+		nights_1 = 0, -- Welcome to the Maison: every guest's first evening (Build 88: its icon is assets/badge-icons/nights_1.png)
 		firstRound = 0,
 		firstFlawless = 0,
 		midnight = 0,
@@ -920,23 +945,37 @@ local defaults = {
 			searchSeconds = 4, -- how long a guard looks round where someone was seen
 			reinforcements = 2, -- extra guards in a wing while it's locked down
 			wakeStart = 2, -- (Build 82) seconds' start a guest gets on the guard sent after them when they lift a piece
+			-- (Build 89) The night staff asleep beside the pieces (shared/Luxe Sleepers).
+			sleep = {
+				seconds = 3, -- standing right beside one this long, moving, wakes them (a deep sleeper takes longer)
+				still = 0.3, -- ...standing still stirs them this much as fast
+				carrying = 1.4, -- ...and a guest with something in the bag this much faster
+				stir = 0.45, -- stirred this far, they mutter and turn over
+				settle = 0.3, -- ...and settle again below this
+				fade = 0.12, -- how fast a stir fades with nobody near (of the whole, per second)
+				lift = 0.35, -- a lift within earshot stirs them this much at once (quiet shoes soften it)
+				waking = 1.6, -- seconds to sit up, stretch and get up
+				awake = 10, -- seconds awake with nobody near before they doze off again
+				dozing = 2.4, -- seconds to settle back down to sleep
+			},
 			objectives = 3, -- side jobs given at the start of each run
 			goldenGems = 150, -- the golden treadmill (double Stride), for good
 			greatHaul = 8000, -- a haul worth this much is told to the whole house
 		},
 		-- The Maison Basement (server/Attractions/Basement): the obby under the house.
 		basement = {
-			origin = { 3000, 0, -3000 },
+			origin = { 3000, 0, -5200 }, -- (Build 89: further out, for thirty-two stages)
 			skipGems = 25, -- skipping the first stage, for Gems (a skipped run is never timed for the boards)
-			skipGemsStep = 15, -- ...and this much more for each stage deeper (stage 15: 235)
+			skipGemsStep = 15, -- ...and this much more for each stage deeper (stage 15: 235, stage 31: 475)
 			chestGilt = 800, -- the Treasury's chest, the first clear of the day
 			chestGiltAgain = 250, -- and each clear after it that day
 			-- (Build 82: the course is over twice as long, so its times are too.)
-			quick = 480, -- seconds: the Under Eight Minutes badge
-			heraldUnder = 360, -- a record under six minutes is told to the house
+			-- (Build 89: thirty-two stages, twice the sixteen, so twice the times again.)
+			quick = 960, -- seconds: the Under Sixteen Minutes badge
+			heraldUnder = 720, -- a record under twelve minutes is told to the house
 			fallGrace = 1.5, -- seconds back at a checkpoint before anything can send you back again
 			boardSeconds = 120,
-			store = "Basement_v2", -- (Build 82: the longer course's own boards; the old course's stay in Basement_v1)
+			store = "Basement_v3", -- (Build 89: the thirty-two stage course's own boards; the sixteen's stay in Basement_v2, the first course's in Basement_v1)
 			secretGilt = 300, -- each of the four courses' secrets, the first time it's found (once, for good)
 		},
 		-- The Executive Suite (server/Attractions/Executive): by invitation, the boss at the top.

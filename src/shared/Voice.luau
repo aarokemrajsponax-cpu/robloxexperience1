@@ -26,7 +26,7 @@ Voice.Concierge = {
 	arrivedIn = {
 		salon = "The Salon. Any table you like.",
 		velvet = "The Luxe Lounge. Train your Speed, then through the arch to Steal a Luxe.",
-		obsidian = "The Basement Stair. Sixteen stages down to the Treasury.",
+		obsidian = "The Basement Stair. Thirty-two stages down to the Treasury.",
 		midnight = "The Executive's Anteroom. The Quartermaster will see to your sidearm.",
 	},
 	whichRoom = "Which room this evening?",
@@ -116,7 +116,8 @@ Voice.Concierge = {
 		{ id = "collectionKey", cat = "start", q = "Where is my Collection?", a = "The gold Collection key on the left of your screen (C on a keyboard): your brainrots, every curio you own, your Gems and your trades. Fold the other keys away and the Collection keeps a key of its own." },
 		{ id = "salon", cat = "house", place = "salon", q = "What happens in the Salon?", a = "Sort fine things into their cases for Gilt, at your own pace: sit at a table and press E. Right ones in a row raise your combo; bank the run for Gilt. Tonight's table is there too: one try a day, the same pieces for every guest." },
 		{ id = "luxeHow", cat = "attractions", place = "velvet", q = "How do I play Steal a Luxe?", a = "Through the Luxe Lounge. Inside, hold E on a treasure to lift it: the fuller your bag, the slower you walk. Security sleeps until you lift something; then a guard comes after you. Carry it out to the getaway car to bank it for good." },
-		{ id = "basementHow", cat = "attractions", place = "obsidian", q = "How does the Basement work?", a = "Down the Basement Stair: sixteen stages of jumps, steam and lasers to the Treasury. Step on every checkpoint pad; fall, and you're back at the last one. The gold chevrons on each pad point the way on. Each chamber pays at its way out, and the Treasury's chest pays the most." },
+		{ id = "luxeSleepers", cat = "attractions", place = "velvet", q = "Who's asleep in Steal a Luxe?", a = "The night staff: eight of them, each asleep beside a treasure, from the footman in the Garden Hall to the master of the house in his bedroom. Get close and they stir, quicker if you're moving, carrying something or lifting a piece near them; Quiet Shoes from the Luxe Lounge help. Wake one after you've lifted something and they call the guards (the master locks his bedroom down); wake one empty-handed and they only grumble. Step away and they settle again." },
+		{ id = "basementHow", cat = "attractions", place = "obsidian", q = "How does the Basement work?", a = "Down the Basement Stair: thirty-two stages of jumps, steam and lasers to the Treasury. Step on every checkpoint pad; fall, and you're back at the last one. The gold chevrons on each pad point the way on. Each chamber pays at its way out, and the Treasury's chest pays the most." },
 		{ id = "executiveHow", cat = "attractions", place = "midnight", q = "How does the Executive's fight work?", a = "Through the code door, in his Office: shoot the three blue generators to bring his shield down, stun his four bodyguards, then stun the Executive. A ring under him is a shockwave (jump it), a lane is his dash (step aside), a raised hand is briefcases (keep moving)." },
 		{ id = "pistol", cat = "attractions", place = "midnight", q = "Where do I get the stun pistol?", a = "Free, from the Quartermaster at his desk in the Executive's Anteroom. It goes in your hotbar, and the lift up won't take you without it. It fires only in the Office's fight." },
 		{ id = "gilt", cat = "money", q = "What is Gilt for?", a = "Gilt is the house's money, and every game pays it: the Boutique's looks, bigger bags in the Luxe Lounge, an invitation upstairs from the Quartermaster, the Island Key and more." },
@@ -222,13 +223,13 @@ Voice.Tour = {
 		stop = "boutique",
 		place = "obsidianDoor",
 		title = "The Maison Basement",
-		line = "Down the Basement Stair: sixteen stages of jumps, steam and lasers to the Treasury. Each part's end pays its purse, and your best time goes on the boards.",
+		line = "Down the Basement Stair: thirty-two stages of jumps, steam and lasers to the Treasury. Each part's end pays its purse, and your best time goes on the boards.",
 	},
 	{
 		stop = "boutique",
 		place = "obsidianDoor",
 		title = "How to play the Basement",
-		line = "Jump, climb and dodge down sixteen stages. Step on every checkpoint pad: fall, and you're back at the last one. Each chamber pays at its way out, the Treasury's chest pays the most, and clearing it earns an invitation upstairs.",
+		line = "Jump, climb and dodge down thirty-two stages. Step on every checkpoint pad: fall, and you're back at the last one. Each chamber pays at its way out, the Treasury's chest pays the most, and clearing it earns an invitation upstairs.",
 	},
 	{
 		stop = "boutique",
@@ -375,6 +376,17 @@ Voice.StartHere = {
 -- for them (tonight's present, their brainrots' tip jar) and what's new in the house since they
 -- were last here.
 Voice.WelcomeBack = {
+	-- (Build 88) The reveal, when AFK mode earned something while the guest was away.
+	reveal = {
+		kicker = "WELCOME BACK",
+		heading = "Your Fortune grew while you were away",
+		earned = "YOU EARNED",
+		away = "Away %s  ·  counted up to %d hours",
+		rate = "Your squad away from the house: %s Gilt an hour",
+		jar = "In your tip jar now: %s Gilt",
+		collect = "Collect %s Gilt",
+		later = "Later",
+	},
 	title = "Welcome back",
 	heading = "Good to see you, %s",
 	night = "Your %s night at the house.",
@@ -403,13 +415,12 @@ Voice.Afk = {
 -- What's new in this build, told once to each returning guest (Welcome back). Only shown while
 -- `build` is the build that's playing, so old news never shows as new.
 Voice.WhatsNew = {
-	build = 87,
+	build = 89,
 	lines = {
-		"The house has a new name: Become The Richest Guest. You still play in the Maison.",
-		"The Concierge's tour never sticks now: he comes back for you, Skip ahead is always there, a gold trail on the floor shows the way, and he walks home afterwards.",
-		"The Basement's lasers and steam catch you whenever they're on, even running through; when they're off, they're safe. Gold chevrons on every pad point the way on.",
-		"The Executive's fight: health bars over the generators, his bodyguards and him, what to do next under the top, and shots that land where you aim.",
-		"Your Collection stands out in gold, and keeps its own key when you fold the others away.",
+		"The Maison Basement goes twice as deep: thirty-two stages, through the Clockworks, the Flooded Cistern, the Furnace Heart and the Vault of Kings.",
+		"Steal a Luxe has a Library and a Master Bedroom, off the Long Gallery, and night staff asleep beside the treasures. Don't wake them.",
+		"Lifting a piece now shows what's coming off the plinth, its worth, and how the security round you stands.",
+		"Everything you do earns XP, your level stands beside your Fortune, and your brainrots can boost you once a day.",
 	},
 }
 
@@ -447,6 +458,11 @@ Voice.Hints = {
 		{ id = "collection", line = "Brainrots you find earn Gilt every hour. See them in Collection, and put your best in your squad.", after = 600 },
 		{ id = "afk", line = "You earn Gilt offline with brainrots: your squad keeps filling its tip jar while you're away. Come back tomorrow and collect it.", after = 1200, every = 2400 },
 		{ id = "tonight", line = "Tonight's table: one try a day, the same pieces for every guest. The card at the top of your screen seats you at it.", after = 900 },
+		-- (Build 88) The house's one aim, and what feeds it.
+		{ id = "fortune", line = "Your Fortune, under your Gilt, is everything you own and have won. Become the richest guest: tap it to see what it's made of and who's ahead.", after = 150 },
+		{ id = "level", line = "Everything you do earns XP: the attractions, races, the tables. Your level is beside your Fortune; every tenth pays well.", after = 330 },
+		{ id = "boosters", line = "Each brainrot in your squad has a booster: Collection, Brainrots, then Boost. Once a day each, for 15 minutes.", after = 480 },
+		{ id = "badges", line = "There are over two hundred badges to earn. Tap your level to see the Badge Book and how close you are to the next.", after = 720 },
 	} :: { Hint },
 }
 
@@ -563,7 +579,7 @@ Voice.Objective = {
 	-- (The house's games a guest hasn't been into yet, one at a time, in this order.)
 	try = {
 		{ id = "luxe", place = "velvet", line = "Play Steal a Luxe: carry out a fortune and bank it", how = "Its way in is the Luxe Lounge, off the Foyer. Press Play at the top right for every game." },
-		{ id = "basement", place = "obsidian", line = "Go down the Maison Basement: sixteen stages to the Treasury", how = "Its stair is off the Foyer. Clear it for an invitation to the Executive Suite." },
+		{ id = "basement", place = "obsidian", line = "Go down the Maison Basement: thirty-two stages to the Treasury", how = "Its stair is off the Foyer. Clear it for an invitation to the Executive Suite." },
 		{ id = "gala", place = "ballroom", line = "Visit the Grand Ballroom: the Flex Studio, trivia, the Runway", how = "Through the great doors at the far end of the Ballroom." },
 	},
 	best = "Beat your best run in {room}: {points} points",

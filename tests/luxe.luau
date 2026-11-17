@@ -176,7 +176,8 @@ end
 ---------------------------------------------------------------------------------------------------
 -- 1. The plan
 ---------------------------------------------------------------------------------------------------
-check("six wings: the house's three each sharper than the last, and the three beyond them too", #Plan.Wings == 6 and Plan.Wings[1].sharp < Plan.Wings[2].sharp and Plan.Wings[2].sharp < Plan.Wings[3].sharp and Plan.Wings[4].sharp < Plan.Wings[5].sharp and Plan.Wings[5].sharp < Plan.Wings[6].sharp)
+check("eight wings: the house's three each sharper than the last, and the three beyond them too", #Plan.Wings == 8 and Plan.Wings[1].sharp < Plan.Wings[2].sharp and Plan.Wings[2].sharp < Plan.Wings[3].sharp and Plan.Wings[4].sharp < Plan.Wings[5].sharp and Plan.Wings[5].sharp < Plan.Wings[6].sharp)
+check("(Build 89) the Library and the Master Bedroom, off the Long Gallery, sharper than it", Plan.Wings[7].name == "The Library" and Plan.Wings[8].name == "The Master Bedroom" and Plan.Wings[7].sharp > Plan.Wings[2].sharp and Plan.Wings[8].sharp > Plan.Wings[7].sharp)
 do
 	local ok = true
 	for _, s in Plan.Spots do
@@ -200,8 +201,8 @@ do
 		end
 	end
 	check("a plinth in the Strongroom is never given the Crown Jewel by chance", never)
-	local worth = { 0, 0, 0, 0, 0, 0 }
-	local n = { 0, 0, 0, 0, 0, 0 }
+	local worth = { 0, 0, 0, 0, 0, 0, 0, 0 }
+	local n = { 0, 0, 0, 0, 0, 0, 0, 0 }
 	for _, p in Plan.Pieces do
 		if p.weight > 0 then
 			worth[p.wing] += p.worth
@@ -209,6 +210,7 @@ do
 		end
 	end
 	check("the deeper the wing, the more its pieces are worth (and the Secret Stash's the most)", worth[1] / n[1] < worth[2] / n[2] and worth[2] / n[2] < worth[3] / n[3] and worth[4] / n[4] < worth[5] / n[5] and worth[5] / n[5] < worth[6] / n[6] and worth[6] / n[6] > worth[3] / n[3])
+	check("...the Library's above the Long Gallery's, the Master Bedroom's above the Library's", worth[7] / n[7] > worth[2] / n[2] and worth[8] / n[8] > worth[7] / n[7])
 	local labels = true
 	for _, r in Plan.Rarities do
 		if r.label ~= (r.order >= 3) then
@@ -271,7 +273,7 @@ do
 			goalsOk = false
 		end
 	end
-	check("ten side jobs, each paying its Gilt", #Plan.Objectives == 10 and goalsOk)
+	check("thirteen side jobs, each paying its Gilt", #Plan.Objectives == 13 and goalsOk)
 	check("Stride: no points is level 1; the last step is the top", Plan.strideLevel(0, C.stride) == 1 and Plan.strideLevel(C.stride[#C.stride], C.stride) == #C.stride and select(2, Plan.strideLevel(C.stride[#C.stride], C.stride)) == nil)
 end
 
@@ -288,7 +290,7 @@ do
 	end
 	check("every plinth has a piece on it when the house opens (" .. #Plan.Spots .. ")", full == #Plan.Spots, full)
 	check("the Crown Jewel is on its plinth", Luxe.spots[21].piece and Luxe.spots[21].piece.id == "crownJewel")
-	check("a guard for every round walks the residence", #Luxe.guards == #Plan.Patrols and #Plan.Patrols == 12, #Luxe.guards)
+	check("a guard for every round walks the residence", #Luxe.guards == #Plan.Patrols and #Plan.Patrols == 14, #Luxe.guards)
 	local torches = 0
 	for _, g in Luxe.guards do
 		if g.model:FindFirstChild("Torch", true) then
@@ -1320,6 +1322,135 @@ check("the residence keeps the pace its guards were set for", Speed.resolve(fals
 check("...while the house (drawn grander) is walked faster", Speed.resolve(false, nil, nil, nil, nil, nil) == m.walkSpeed and m.walkSpeed > m.tunedWalkSpeed and Speed.resolve(true, 3, 3, nil, nil) == m.maxSpeed)
 check("...and so are the island and the Grand Ballroom", Speed.resolve(false, nil, nil, nil, nil, "island") == m.walkSpeed and Speed.resolve(false, nil, nil, nil, nil, "gala") == m.walkSpeed)
 check("a bag never slows anyone below the slowest", Luxe.speedOf(Attractions.ctx, page(ben), 100) >= C.slowest * expect - 1e-6)
+
+---------------------------------------------------------------------------------------------------
+-- 11. (Build 89) The Library, the Master Bedroom, and the night staff asleep beside the pieces
+---------------------------------------------------------------------------------------------------
+do
+	local SleepPose = module("ReplicatedStorage", "Shared", "SleepPose")
+	local okPlan, odd = true, ""
+	for _, d in Plan.Sleepers do
+		local spot = Plan.Spots[d.spot]
+		local near = if spot then (spot.at - d.at).Magnitude else math.huge
+		if not spot or spot.wing ~= d.wing or Plan.wingAt(d.at) ~= d.wing or near > 10 or not (SleepPose.SEAT[d.pose] or d.pose == "bed") or not (d.call == "bell" or d.call == "guard" or d.call == "lockdown") then
+			okPlan, odd = false, d.who
+		end
+	end
+	check("eight of the night staff, each asleep beside a piece in their own wing", #Plan.Sleepers == 8 and okPlan, odd)
+	check("the Codex on the librarian's desk, the jewellery box by the master's bed, each on its own plinth", Plan.Spots[45].fixed == "codex" and Plan.Spots[51].fixed == "jewelBox" and Plan.Sleepers[5].spot == 45 and Plan.Sleepers[7].spot == 51)
+	local tagged = H.tagged.LuxeSleeper or {}
+	local asleep = 0
+	for _, m in tagged do
+		if m:GetAttribute("Sleep") == "asleep" and m:GetAttribute("Pose") ~= nil then
+			asleep += 1
+		end
+	end
+	check("all of them in the residence, asleep, tagged for every screen to pose", #tagged == 8 and asleep == 8 and #Luxe.sleepers == 8, #tagged)
+	local res = workspace.Attractions:FindFirstChild("StealALuxe")
+	check("the Library and the Master Bedroom built, and what each one sleeps on", res ~= nil and res:FindFirstChild("Library", true) ~= nil and res:FindFirstChild("MasterBedroom", true) ~= nil and res:FindFirstChild("Bed_master", true) ~= nil and res:FindFirstChild("Bed_librarian", true) ~= nil and res:FindFirstChild("Bed_dj", true) ~= nil)
+	local libPieces, bedPieces = 0, 0
+	for id = 40, 51 do
+		local sp = Luxe.spots[id]
+		if sp and sp.piece then
+			if sp.piece.wing == 7 then
+				libPieces += 1
+			elseif sp.piece.wing == 8 then
+				bedPieces += 1
+			end
+		end
+	end
+	check("their plinths hold their own wings' pieces, the Codex and the jewellery box on theirs", libPieces == 6 and bedPieces == 6 and Luxe.spots[45].piece.id == "codex" and Luxe.spots[51].piece.id == "jewelBox", libPieces, bedPieces)
+
+	-- (Ben in the residence, nothing lifted; the guards parked, the alarms calm.)
+	steps(25)
+	parkGuards()
+	calm()
+	local run = Luxe.runs[ben]
+	run.awake = false
+	local footman = Luxe.sleepers[1]
+	local fd = footman.def
+	standIn(ben, fd.at + Vector3.new(3, 0, 0))
+	steps(20)
+	check("a guest close by stirs them a little", footman.state == "asleep" and footman.stir > 0.1, footman.stir)
+	steps(50)
+	check("...longer, and they turn over, muttering (every screen told)", footman.state == "stirring" and footman.model:GetAttribute("Sleep") == "stirring", footman.stir)
+	standIn(ben, Vector3.new(0, 0, -60))
+	steps(45)
+	check("left alone, they settle again", footman.state == "asleep" and footman.stir < 0.3, footman.stir)
+	standIn(ben, fd.at + Vector3.new(2.5, 0, 0))
+	steps(160)
+	local said = last(ben, "sleeper")
+	check("right beside them long enough: they wake, sit up and get up", footman.state == "awake" and footman.model:GetAttribute("Sleep") == "awake")
+	check("...to an empty-handed guest they only grumble: no alarm", said ~= nil and said.grumble == true and said.name == "the footman" and Luxe.alarms[1].level == 0)
+	standIn(ben, Vector3.new(0, 0, -60))
+	steps(105)
+	check("left alone a while, they doze off", footman.state == "dozing" and footman.model:GetAttribute("SleepFor") ~= nil)
+	steps(26)
+	check("...and are asleep again", footman.state == "asleep" and footman.stir == 0)
+
+	-- A thief wakes the valet: he sends the nearest guard straight after them.
+	parkGuards()
+	calm()
+	run.awake = true
+	local valet = Luxe.sleepers[8]
+	standIn(ben, valet.def.at + Vector3.new(2.5, 0, 0))
+	steps(130)
+	said = last(ben, "sleeper")
+	local chasing = false
+	for _, g in Luxe.guards do
+		if g.wing == 8 and g.state == "chase" and g.target == ben then
+			chasing = true
+		end
+	end
+	check("the valet wakes to a thief: seen, the wing on Alert, a guard sent after them", valet.state == "awake" and said ~= nil and said.call == "guard" and said.sent == true and chasing and Luxe.alarms[8].level >= 1 and last(ben, "spotted").by == "the valet")
+	check("...calling, for every screen (a bell over his head)", valet.model:GetAttribute("Calling") == "guard")
+
+	-- The master of the house, woken: the Master Bedroom locked down.
+	parkGuards()
+	calm()
+	local master = Luxe.sleepers[7]
+	standIn(ben, master.def.at + Vector3.new(0, 0, 2))
+	steps(260)
+	said = last(ben, "sleeper")
+	check("the master wakes, and locks his wing down", master.state == "awake" and said ~= nil and said.call == "lockdown" and Luxe.alarms[8].level == 2)
+
+	-- Quiet shoes: the same wait stirs a sleeper less.
+	local curator = Luxe.sleepers[2]
+	local function listen(quiet)
+		page(ben).quiet = quiet
+		curator.stir, curator.state = 0, "asleep"
+		standIn(ben, curator.def.at + Vector3.new(0, 0, 3))
+		steps(30)
+		local got = curator.stir
+		standIn(ben, Vector3.new(0, 0, -60))
+		return got
+	end
+	local loud = listen(1)
+	local soft = listen(#C.quiet)
+	page(ben).quiet = 1
+	check("quiet shoes: the same wait beside a sleeper stirs them less", soft > 0 and soft < loud * 0.75, loud, soft)
+
+	-- Lifting a piece right beside one asleep: noisy, but they sleep on, and the side job is done.
+	parkGuards()
+	calm()
+	local chauffeur = Luxe.sleepers[4]
+	chauffeur.stir, chauffeur.state = 0, "asleep"
+	local spot = Luxe.spots[chauffeur.def.spot]
+	if not spot.piece then
+		spot.back = 0
+		steps(1)
+	end
+	run.goals = { { id = "sleeper", done = false } }
+	run.awake = false
+	standIn(ben, Plan.Spots[chauffeur.def.spot].at + Vector3.new(4, 0, 0))
+	holdOn(ben, spot)
+	r = askAs(ben, { op = "act", id = "luxe", act = "take", n = chauffeur.def.spot })
+	local job = last(ben, "objective")
+	check("a lift right beside a sleeper: they stir with the noise, but sleep on", r.ok == true and chauffeur.state ~= "waking" and chauffeur.state ~= "awake" and chauffeur.stir >= 0.3, r.why, chauffeur.stir)
+	check("...and the side job is done, paid", job ~= nil and job.id == "sleeper" and job.gilt == Plan.objectiveOf.sleeper.gilt)
+	parkGuards()
+	calm()
+end
 
 -- A malformed request.
 r = askAs(ben, "go")

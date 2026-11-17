@@ -4,6 +4,6 @@
 -- see whether Studio has the latest code from GitHub.
 
 return {
-	number = 87,
-	label = "Build 87 · 17 Nov · Become The Richest Guest: the tour that never sticks, a fairer Basement, the Executive's fight",
+	number = 89,
+	label = "Build 89 · 17 Nov · The Basement thirty-two stages deep, the residence's night staff, a Library and a Master Bedroom",
 }

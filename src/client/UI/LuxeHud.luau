@@ -24,6 +24,8 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Rules = require(ReplicatedStorage.Shared.Fortune)
 local Sound = require(script.Parent.Parent.Sound)
 local HudCard = require(script.Parent.HudCard)
+local LuxeLift = require(script.Parent.LuxeLift)
+local Sleepers = require(script.Parent.Parent.World.LuxeSleepers)
 local Root = require(script.Parent.Root)
 local Theme = require(script.Parent.Theme)
 local Toast = require(script.Parent.Toast)
@@ -468,6 +470,21 @@ function LuxeHud.mount()
 	if card then
 		return
 	end
+	-- (Build 89) The lift as it happens: what's coming off the plinth, and the security round it.
+	LuxeLift.mount()
+	LuxeLift.alarm = function(): number
+		return tonumber(view.alarm) or 0
+	end
+	LuxeLift.awake = function(): boolean
+		return view.awake == true
+	end
+	LuxeLift.restless = function(): string?
+		local hrp = Players.LocalPlayer.Character and Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+		if hrp and hrp:IsA("BasePart") then
+			return (Sleepers.restless(hrp.CFrame.Position, 20))
+		end
+		return nil
+	end
 	local c = Instance.new("Frame")
 	c.Name = "LuxeCard"
 	c.AnchorPoint = Vector2.new(0, 1)
@@ -652,6 +669,7 @@ function LuxeHud.mount()
 end
 
 function LuxeHud.unmount()
+	LuxeLift.unmount()
 	if beat then
 		beat:Disconnect()
 		beat = nil
@@ -707,6 +725,7 @@ function LuxeHud.on(m: { [string]: any })
 		if typeof(m.at) == "Vector3" then
 			pcall(flash, m.at, colour, "+" .. Rules.format(tonumber(m.worth) or 0))
 		end
+		pcall(LuxeLift.took, m)
 		Toast.show("Lifted: " .. tostring(m.name), string.format("%s  ·  %s  ·  worth %s", tostring(m.glyph or ""), tostring(m.rarity or ""), Rules.format(tonumber(m.worth) or 0)), 2.5)
 	elseif op == "banked" then
 		Sound.play("kaching", 0.8)
@@ -753,6 +772,25 @@ function LuxeHud.on(m: { [string]: any })
 		Sound.play("stinger", 0.6)
 		if type(m.by) == "string" and m.by ~= "a guard" then
 			Toast.show("Seen", "Seen by " .. m.by .. ". The guards are on their way.", 3)
+		end
+		LuxeHud.draw()
+	elseif op == "sleeper" then
+		-- (Build 89) One of the night staff woke: what they do about it, plainly.
+		local who = tostring(m.name or "someone")
+		local Who = string.upper(string.sub(who, 1, 1)) .. string.sub(who, 2)
+		if m.grumble then
+			Sound.play("low", 0.5)
+			Toast.show(Who .. " is awake", "They grumble and look round. You haven't taken anything, so they don't call anyone.", 3.5)
+		else
+			if Sound.has("bellStrike") then
+				Sound.play("bellStrike", 0.6)
+			else
+				Sound.play("stinger", 0.6)
+			end
+			local line = if m.call == "lockdown" then "The Master Bedroom is locked down. Get to a way out."
+				elseif m.call == "guard" and m.sent then "They've sent a guard straight after you. Get to a way out."
+				else "They're ringing for the guards. Get to a way out."
+			Toast.show(Who .. " is awake", line, 4)
 		end
 		LuxeHud.draw()
 	elseif op == "objective" then

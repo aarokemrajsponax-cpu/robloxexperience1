@@ -10,6 +10,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
+local Levels = require(ReplicatedStorage.Shared.Levels)
 local Rules = require(ReplicatedStorage.Shared.Fortune)
 local GiltBar = require(script.Parent.GiltBar)
 local Root = require(script.Parent.Root)
@@ -17,16 +18,18 @@ local Theme = require(script.Parent.Theme)
 
 local FortunePlaque = {}
 
--- Set by Main: open the Fortune screen.
+-- Set by Main: open the Fortune screen, and the Badge Book (where the level is explained).
 FortunePlaque.open = function() end
+FortunePlaque.openLevel = function() end
 
 local player = Players.LocalPlayer
 local GOLD = Color3.fromRGB(255, 204, 90)
-local HEIGHT = 28
+local HEIGHT = 32 -- (Build 88: a little bigger: the Fortune is what the house is about)
 FortunePlaque.TOP = 58 -- under the Gilt bar (10 + 44 + 4)
 FortunePlaque.BOTTOM = FortunePlaque.TOP + HEIGHT
 
 local plaque: TextButton? = nil
+local levelPill: TextButton? = nil
 local figure: TextLabel? = nil
 local rankLabel: TextLabel? = nil
 local fill: Frame? = nil
@@ -40,6 +43,9 @@ end
 
 local function draw()
 	local f, r, bar = figure, rankLabel, fill
+	pcall(function()
+		(FortunePlaque :: any).placePill()
+	end)
 	if f then
 		f.Text = Rules.format(shownValue)
 	end
@@ -59,7 +65,42 @@ local function follow()
 	end
 	local bar = Root.hud:FindFirstChild("GiltBar")
 	p.Visible = if bar and bar:IsA("GuiObject") then bar.Visible else not Root.isOpen()
+	local lp = levelPill
+	if lp then
+		lp.Visible = p.Visible
+	end
 end
+
+-- (Build 88) The level, always in sight beside the Fortune (the Gilt bar's own level key steps
+-- aside on most screens): a disc in the level's tier colour, its title, and a hair of XP to the
+-- next along its foot. Tap it for the Badge Book.
+local levelDisc: TextLabel? = nil
+local levelTitle: TextLabel? = nil
+local levelFill: Frame? = nil
+local function drawLevel()
+	local level = math.clamp(math.floor(attr("Level")), 1, Levels.MAX)
+	local into = attr("LevelXP")
+	local said = player:GetAttribute("LevelNeed")
+	local need = if type(said) == "number" then said elseif level < Levels.MAX then Levels.total(level + 1) - Levels.total(level) else 0
+	local colour = Levels.colour(level)
+	local d, t, f = levelDisc, levelTitle, levelFill
+	if d then
+		d.Text = tostring(level)
+		d.TextColor3 = colour
+		local stroke = d:FindFirstChildOfClass("UIStroke")
+		if stroke then
+			stroke.Color = colour
+		end
+	end
+	if t then
+		t.Text = "LEVEL " .. level .. "  ·  " .. string.upper(Levels.title(level))
+	end
+	if f then
+		f.BackgroundColor3 = colour
+		f.Size = UDim2.new(if need > 0 then math.clamp(into / need, 0, 1) else 1, 0, 1, 0)
+	end
+end
+FortunePlaque.drawLevel = drawLevel
 
 function FortunePlaque.start()
 	local b = Instance.new("TextButton")
@@ -112,8 +153,8 @@ function FortunePlaque.start()
 		l.Parent = row
 		return l
 	end
-	word("Caption", "FORTUNE", 11, Brand.Fonts.bodyBold, Brand.Colours.smoke, 1)
-	figure = word("Figure", "0", 15, Brand.Fonts.figures, Color3.new(1, 1, 1), 2)
+	word("Caption", "FORTUNE", 12, Brand.Fonts.heavy, GOLD, 1)
+	figure = word("Figure", "0", 18, Brand.Fonts.figures, Color3.new(1, 1, 1), 2)
 	rankLabel = word("Rank", "NEWCOMER", 11, Brand.Fonts.bodyBold, GOLD, 3)
 	-- How far through the rank, as a hair of gold along the foot of the plaque.
 	local track = Instance.new("Frame")
@@ -136,6 +177,104 @@ function FortunePlaque.start()
 		Theme.haptic()
 		FortunePlaque.open()
 	end)
+	-- The level pill, just right of the plaque (placed each time the plaque's width changes).
+	local lp = Instance.new("TextButton")
+	lp.Name = "LevelPill"
+	lp.AutoButtonColor = false
+	lp.Text = ""
+	lp.BackgroundColor3 = Color3.fromRGB(16, 13, 9)
+	lp.BackgroundTransparency = 0.08
+	lp.Size = UDim2.fromOffset(0, HEIGHT)
+	lp.AutomaticSize = Enum.AutomaticSize.X
+	lp.Parent = Root.hud
+	local lc = Instance.new("UICorner")
+	lc.CornerRadius = UDim.new(0, HEIGHT / 2)
+	lc.Parent = lp
+	local ls = Instance.new("UIStroke")
+	ls.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	ls.Color = Color3.fromRGB(150, 140, 124)
+	ls.Transparency = 0.4
+	ls.Parent = lp
+	local lrow = Instance.new("Frame")
+	lrow.BackgroundTransparency = 1
+	lrow.AutomaticSize = Enum.AutomaticSize.X
+	lrow.Size = UDim2.fromOffset(0, HEIGHT)
+	lrow.Parent = lp
+	local lpad = Instance.new("UIPadding")
+	lpad.PaddingLeft = UDim.new(0, 4)
+	lpad.PaddingRight = UDim.new(0, 12)
+	lpad.Parent = lrow
+	local llist = Instance.new("UIListLayout")
+	llist.FillDirection = Enum.FillDirection.Horizontal
+	llist.VerticalAlignment = Enum.VerticalAlignment.Center
+	llist.Padding = UDim.new(0, 7)
+	llist.SortOrder = Enum.SortOrder.LayoutOrder
+	llist.Parent = lrow
+	local disc = Instance.new("TextLabel")
+	disc.Name = "Disc"
+	disc.Size = UDim2.fromOffset(HEIGHT - 8, HEIGHT - 8)
+	disc.BackgroundColor3 = Color3.fromRGB(26, 22, 18)
+	disc.FontFace = Brand.Fonts.heavy
+	disc.TextSize = 12
+	disc.Text = "1"
+	disc.LayoutOrder = 1
+	disc.Parent = lrow
+	local dc = Instance.new("UICorner")
+	dc.CornerRadius = UDim.new(1, 0)
+	dc.Parent = disc
+	local ds = Instance.new("UIStroke")
+	ds.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	ds.Thickness = 2
+	ds.Parent = disc
+	levelDisc = disc
+	local title = Instance.new("TextLabel")
+	title.Name = "Title"
+	title.BackgroundTransparency = 1
+	title.AutomaticSize = Enum.AutomaticSize.X
+	title.Size = UDim2.fromOffset(0, HEIGHT)
+	title.FontFace = Brand.Fonts.bodyBold
+	title.TextSize = 11
+	title.TextColor3 = Color3.fromRGB(236, 228, 214)
+	title.Text = "LEVEL 1"
+	title.LayoutOrder = 2
+	title.Parent = lrow
+	levelTitle = title
+	local ltrack = Instance.new("Frame")
+	ltrack.Name = "Track"
+	ltrack.AnchorPoint = Vector2.new(0, 1)
+	ltrack.Position = UDim2.new(0, HEIGHT, 1, -3)
+	ltrack.Size = UDim2.new(1, -HEIGHT - 12, 0, 2)
+	ltrack.BackgroundColor3 = Color3.fromRGB(56, 50, 42)
+	ltrack.BorderSizePixel = 0
+	ltrack.Parent = lp
+	local lfill = Instance.new("Frame")
+	lfill.Name = "Fill"
+	lfill.Size = UDim2.new(0, 0, 1, 0)
+	lfill.BorderSizePixel = 0
+	lfill.Parent = ltrack
+	levelFill = lfill
+	levelPill = lp
+	lp.Activated:Connect(function()
+		Theme.haptic()
+		FortunePlaque.openLevel()
+	end)
+	-- (Placed by the width of the plaque's own words, measured: it grows as the figure does.)
+	local function placePill()
+		local w = 24 + 16
+		for _, name in { "Caption", "Figure", "Rank" } do
+			local l = row:FindFirstChild(name)
+			if l and l:IsA("TextLabel") then
+				w += Theme.measure(l.Text, l.TextSize, l.FontFace).X
+			end
+		end
+		lp.Position = UDim2.fromOffset(12 + math.ceil(w) + 8, FortunePlaque.TOP)
+	end
+	FortunePlaque.placePill = placePill
+	placePill()
+	for _, a in { "Level", "LevelXP", "LevelNeed" } do
+		player:GetAttributeChangedSignal(a):Connect(drawLevel)
+	end
+	drawLevel()
 
 	target = attr("Fortune")
 	shownValue = target

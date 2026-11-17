@@ -629,7 +629,7 @@ local unfoldTab: TextButton? = nil -- KEYS ›, while it's folded away
 local special: Frame? = nil -- the event keys' place under the tab, while the rest is folded
 local collectionKey: TextButton? = nil -- (Build 87) the Collection, kept while the rest is folded
 local collectionTile: TextButton? = nil -- the dock's own Collection key
-local TOP = 94 -- under the Gilt bar and the Fortune plaque (UI/FortunePlaque: 58 to 86)
+local TOP = 98 -- under the Gilt bar and the Fortune plaque (UI/FortunePlaque: 58 to 90)
 
 local function folded(): boolean
 	return State.get("sideKeys") == "Hidden"

@@ -191,7 +191,7 @@ local function basementStair(parent: Instance)
 	local sign = Kit.part(m, "StairSign", Vector3.new(22, 3.2, 0.3), CFrame.lookAt(Vector3.new(lx, y + 9, R.maxZ - 1.4), Vector3.new(lx, y + 9, R.minZ)), L.blackLacquer, { collide = false })
 	Kit.engrave(sign, Enum.NormalId.Front, {
 		{ text = "THE MAISON BASEMENT", size = 0.55, font = Brand.Fonts.display, color = rgb(255, 214, 120) },
-		{ text = "sixteen stages down to the Treasury · best times at the lectern", size = 0.28, font = Brand.Fonts.body, color = rgb(230, 220, 200) },
+		{ text = "thirty-two stages down to the Treasury · best times at the lectern", size = 0.28, font = Brand.Fonts.body, color = rgb(230, 220, 200) },
 	}, { ppu = 50, lit = false, brightness = 1.5, maxDistance = 180 })
 end
 

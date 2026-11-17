@@ -377,6 +377,81 @@ a Nightly attempt or a Mythic's odds.
 - **The launch kit**: page text, icon, thumbnails and the gameplay video's shot list are in
   [`LAUNCH.md`](LAUNCH.md).
 
+## Build 89 — The Basement thirty-two stages deep, the residence's night staff
+
+- **The Maison Basement: 32 stages in 8 parts** (`shared/Basement`, `Attractions/BasementBuild`).
+  Below the Treasury Depths now: the Clockworks (17-20), the Flooded Cistern (21-24), the Furnace
+  Heart (25-28) and the Vault of Kings (29-32), the Treasury at the very bottom. Each new stage is
+  laid on a jump already learned above (same gaps and steps, every hop checked by the tests: no
+  gap over 5 studs, no step up over 2 but the two trusses) and made harder: quicker machines, more
+  of them, new combinations. Each part has its own walls, pit (machine oil, cistern water, slag,
+  amethysts), light and dressing (brass gears, stone pillars with a water line, ember grates,
+  royal banners), and a bigger purse. A lift up at the end of every part but the last.
+- **The five-minute courses** go all the way down: each version adds its own extras in the deep
+  stages too (a third gear, more lasers, crushers, steam). As before, a run keeps the course it
+  started on to the Treasury, everyone down there is told 30 seconds before a turn and when it
+  comes, and only a run not yet begun takes the new one.
+- **Times start afresh for the longer course**: the sixteen-stage course's bests are kept in each
+  guest's record as `bestV2`, the boards move to `Basement_v3`. The quick badge is now *Under Sixteen
+  Minutes* (960 s, the same pace per stage); a record under twelve minutes is told to the house.
+  Skips: still one stage at a time, never the Treasury; the price keeps rising a stage at a time
+  (stage 31: 475 Gems), never more than four skips held.
+- **Steal a Luxe: the Library and the Master Bedroom** (wings 7 and 8, off the Long Gallery's side
+  doors, signed over each). The Library: shelves up every wall, the fire, a rolling ladder, rare
+  books, a globe, an astrolabe, and the Codex of the House on the librarian's desk. The Master
+  Bedroom: a four-poster, the moon in the window, cufflinks, perfume, a sapphire brooch, the master's
+  signet ring and his jewellery box by the bed. Each wing has a guard and a camera, and a set reward
+  in the Collection (9,000 and 12,000 Gilt). Three new side jobs: lift something in each, and lift a
+  piece right beside someone asleep without waking them.
+- **The night staff** (`Luxe.Sleepers`, `World/LuxeSleepers`, `shared/SleepPose`): eight of them,
+  each really asleep beside a piece: slumped in an armchair, head on the arms at a desk, sprawled on
+  a sofa, tipped back on a stool, on their back in bed, breathing. Every screen poses the rig's own
+  joints from the server's state, smoothly: stirring (restless, the head turning), waking (sitting
+  up, a stretch, on their feet; the master sits up in bed), awake (looking round), dozing off again.
+  The server decides it all: the nearer a guest, the quicker they stir (moving, carrying something,
+  and a lift nearby all louder; Quiet Shoes softer). Waking to a guest who has lifted something this
+  trip they call the guards like a camera sighting; the chauffeur, the housekeeper and the valet also
+  send the nearest guard straight after them; the master locks the bedroom down. Waking to an
+  empty-handed guest they only grumble. "z z z" over their heads (amber while stirring), a bell
+  while they call.
+- **The lift, as it happens** (`UI/LuxeLift`): holding a piece's Take shows a card above the keys:
+  its glyph in its grade's colour, name, grade and worth, a bar for exactly the prompt's hold, and
+  the security round you (asleep, awake, Alert, Lockdown, or who's stirring nearby). The screen's
+  edges darken a little, the camera closes in a touch (not with reduced motion), a clock ticks
+  faster; an Epic and up in its own colour with a riser. Lifted: the card says so with its worth.
+- Checked: the Basement and Steal a Luxe server suites, the client suite (desktop and phone), the
+  whole set of server suites, and 3D renders of the Library, the Master Bedroom and the gallery's
+  door. The sleepers' poses are checked on a test rig (angles, drops); in Roblox they're R15 staff
+  rigs, which this can't render, so how they look sitting in each chair is worth a look in Studio.
+
+## Build 88 — Levels from everything, brainrot boosters, your Fortune up front
+
+- **Levels from every activity** (`server/Progress.forStat`, `Config.Levels.stats`): XP now comes from
+  the same server-seen counts the badges keep: hauls banked, side jobs, crown jewels, checkpoints,
+  secrets, the Treasury, the Executive beaten, clean getaways, races, podiums, wins, timed laps,
+  pearls, sunsets, flights, the Arena, auction wins, Speed levels, trades. Each count gives at most
+  `Config.Levels.dailyCap` (1,500) a day, so nothing repeated levels anyone up; a count already
+  counted (its once key) gives nothing; nothing bought is on the list.
+- **Fortune and level up front**: the Fortune plaque is bigger, FORTUNE in gold; the level stands
+  beside it in a pill of its own (disc in the tier's colour, title, a hair of XP), always in sight.
+  Tap it for the Badge Book. New tips explain the Fortune, levels, boosters and badges; each loading
+  screen says what that attraction does for your Fortune.
+- **Brainrot boosters** (`shared/Brainrots.ability`, `server/Brainrots.boost`): every brainrot has
+  one ability: Quick Study (+XP), Light Feet (faster walking in the house only, never past its top
+  speed, never in an attraction) or Full Jar (its tip jar fills faster). Each brainrot in the squad
+  can give its booster once a day for 15 minutes; rarer is stronger (10% to 60%, Light Feet half);
+  one of each kind at a time, a weaker one never replaces a stronger. Squad cards show the ability
+  and a Boost key; chips at the side count down what's on. Nothing touches a score or the boards.
+- **Welcome back, in gold** (`WelcomeBack.reveal`): when AFK mode earned something while you were
+  out, a screen of its own first: the Gilt counting up to exactly what the server says, how long you
+  were away (12 hours count at most), the squad's rate away, and Collect (the server's collect).
+  Only when there's something to collect, once a visit.
+- **The Evening Calendar opens by itself** for a returning guest when tonight's present is waiting.
+- **Badges**: the first is now *Welcome to the Maison*. A medal icon for each of the 207 badges
+  (`assets/badge-icons`, `tools/art/badge_icons.py`) with `MAPPING.md`. **No badge has been created in
+  Roblox by this build**: make each in Creator Hub (steps in MAPPING.md) and paste its id into
+  `Config.Badges`; the game awards it from then on, and to guests who earned it before.
+
 ## Build 87 — Become The Richest Guest
 
 - **The name.** The game is *Become The Richest Guest*, played in *the Maison* (`shared/Brand`,

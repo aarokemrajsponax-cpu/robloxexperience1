@@ -130,6 +130,54 @@ function Brainrots.rate(id: string, count: number, mut: string?): number
 	return math.floor(base * Brainrots.STAR_FACTOR ^ (stars - 1) * mutMult(mut) + 0.5)
 end
 
+-- (Build 88) Boosters: every brainrot has one ability, and once a day each one in your squad can
+-- be called on for a quarter of an hour of it. The rarer, the stronger. Three kinds, and only one
+-- of each kind at a time (a stronger one takes over; a weaker one waits):
+--   Quick Study  more XP from everything you do;
+--   Light Feet   faster walking round the house (never in the attractions, where everyone moves
+--                at one pace, and never past the house's top speed);
+--   Full Jar     the squad's tip jar fills faster (a Meme Frenzy, double, is stronger).
+-- Nothing here touches a score, the Wealthiest boards or anything bought.
+Brainrots.BOOST_SECONDS = 15 * 60
+Brainrots.BoostPct = {
+	Common = 10,
+	Uncommon = 15,
+	Rare = 20,
+	Epic = 30,
+	Legendary = 40,
+	Mythic = 50,
+	Secret = 60,
+} :: { [string]: number }
+Brainrots.ABILITY_ORDER = { "study", "feet", "jar" }
+Brainrots.Abilities = {
+	study = { name = "Quick Study", line = "+%d%% XP from everything you do", glyph = "📚", colour = rgb(150, 200, 255) },
+	feet = { name = "Light Feet", line = "+%d%% walking speed round the house", glyph = "👟", colour = rgb(140, 240, 170) },
+	jar = { name = "Full Jar", line = "Your squad's tip jar fills %d%% faster", glyph = "🍯", colour = rgb(255, 204, 90) },
+} :: { [string]: { name: string, line: string, glyph: string, colour: Color3 } }
+
+-- A brainrot's ability (always the same for the same brainrot) and how strong (percent).
+function Brainrots.ability(id: string): (string, number)
+	local c = Curios.byId[id]
+	local sum = 0
+	for i = 1, #id do
+		sum += string.byte(id, i) * i
+	end
+	local kind = Brainrots.ABILITY_ORDER[sum % #Brainrots.ABILITY_ORDER + 1]
+	local pct = if c then Brainrots.BoostPct[c.rarity] or 10 else 10
+	-- (Light Feet at half strength: walking is felt more than a figure is.)
+	if kind == "feet" then
+		pct = math.floor(pct / 2 + 0.5)
+	end
+	return kind, pct
+end
+
+-- Its ability in words: "Quick Study: +20% XP from everything you do".
+function Brainrots.abilityText(id: string): string
+	local kind, pct = Brainrots.ability(id)
+	local a = Brainrots.Abilities[kind]
+	return a.name .. ": " .. string.format(a.line, pct)
+end
+
 -- The walking one's bonus on a banked run's Gilt (0.25 is +25%).
 function Brainrots.runBonus(id: string, count: number, mut: string?): number
 	local c = Curios.byId[id]

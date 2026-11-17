@@ -43,7 +43,21 @@ local DOTS: { [string]: Color3 } = {
 	Revive = Color3.fromRGB(150, 200, 255),
 	Rain = Color3.fromRGB(255, 196, 92),
 	Piano = Color3.fromRGB(230, 180, 255),
+	Boost_study = Color3.fromRGB(150, 200, 255),
+	Boost_feet = Color3.fromRGB(140, 240, 170),
+	Boost_jar = Color3.fromRGB(255, 204, 90),
 }
+
+-- (Build 88) The brainrots' boosters on now, each with the moment it ends (this screen's clock).
+local boosts: { [string]: { pct: number, ends: number } } = {}
+function PerkChips.setBoosts(list: { any }?)
+	boosts = {}
+	for _, b in (list or {}) :: { any } do
+		if type(b) == "table" and type(b.kind) == "string" and type(b.left) == "number" then
+			boosts[b.kind] = { pct = tonumber(b.pct) or 0, ends = os.clock() + b.left }
+		end
+	end
+end
 local hidden = false
 
 local function clock(seconds: number): string
@@ -142,6 +156,14 @@ local function refresh()
 	chip("Piano", 5, if held > 0 then string.format("PIANO TIME %s · THE FOYER  ›", clock(held)) else nil, function()
 		PerkChips.openPiano()
 	end)
+	-- (Build 88) Each brainrot booster on, with its time left (it ends exactly then).
+	local Brainrots = require(ReplicatedStorage.Shared.Brainrots)
+	for i, kind in Brainrots.ABILITY_ORDER do
+		local b = boosts[kind]
+		local left = if b then math.max(0, b.ends - os.clock()) else 0
+		local a = Brainrots.Abilities[kind]
+		chip("Boost_" .. kind, 5 + i, if left > 0 and b then string.format("%s +%d%%  ·  %s", string.upper(a.name), b.pct, clock(left)) else nil)
+	end
 end
 
 -- Hidden at the table (the sorting screen keeps its header clear).
@@ -160,7 +182,7 @@ function PerkChips.start()
 		acc += dt
 		if acc >= 1 then
 			acc = 0
-			if Perks.luckLeft() > 0 or chips.Luck then
+			if Perks.luckLeft() > 0 or chips.Luck or next(boosts) ~= nil then
 				refresh()
 			end
 		end

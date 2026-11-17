@@ -331,9 +331,12 @@ AdminService.isSeated = function(player)
 end
 AdminService.award = Achievements.award
 AdminService.tally = function(player, stat, n, once)
-	Achievements.tally(player, stat, n, once)
+	local counted = Achievements.tally(player, stat, n, once)
 	if stat == "pickups" then
 		Progress.give(player, "pickup")
+	elseif counted then
+		-- (Build 88: XP for what's done all over the house, capped a day.)
+		Progress.forStat(player, stat, n)
 	end
 end
 LedgerService.boost = AdminService.ledgerBoost
@@ -780,6 +783,14 @@ end)
 -- Levels: the boosts (Double XP, an XP Surge) and what a new level brings.
 Progress.boost = function(player)
 	local b = 1
+	-- (Build 88) A brainrot's Quick Study.
+	local okStudy, study = pcall(function()
+		local data = require(script.Parent.Profiles).get(player)
+		return if data then require(script.Parent.Brainrots).boostOf(data, "study") else 0
+	end)
+	if okStudy and type(study) == "number" and study > 0 then
+		b *= 1 + study / 100
+	end
 	if AdminService.active("doubleXP") then
 		b *= ConfigData.Admin.doubleXP
 	end
@@ -892,7 +903,7 @@ GiltService.streak = Streak.mult
 boot("The daily streak", Streak.start)
 -- Moments the Badge Book counts.
 require(script.Parent.TradeService).traded = function(player)
-	Achievements.tally(player, "trades", 1)
+	AdminService.tally(player, "trades", 1)
 end
 SuiteVisits.visited = function(player)
 	Achievements.award(player, "suiteVisit")

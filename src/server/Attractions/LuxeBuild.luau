@@ -14,6 +14,7 @@ local BrainrotFigure = require(ReplicatedStorage.Shared.BrainrotFigure)
 local HolidayProps = require(ReplicatedStorage.Shared.HolidayProps)
 local Fortune = require(ReplicatedStorage.Shared.Fortune)
 local LuxePlan = require(ReplicatedStorage.Shared.Luxe)
+local SleepPose = require(ReplicatedStorage.Shared.SleepPose)
 local Kit = require(script.Parent.Parent.World.Kit)
 local Portal = require(script.Parent.Parent.Holidays.Portal)
 
@@ -246,7 +247,17 @@ local function plinth(parent: Instance, o: Vector3, spot: LuxePlan.Spot): BasePa
 	Kit.part(m, "Column", Vector3.new(w, 3, w), CFrame.new(at + Vector3.new(0, 2, 0)), if grand then CREAM else L.blackMarble)
 	local top = Kit.part(m, "Top", Vector3.new(w + 0.5, 0.35, w + 0.5), CFrame.new(at + Vector3.new(0, 3.65, 0)), L.brass)
 	top:SetAttribute("SpotId", spot.id)
-	if spot.wing >= 4 then
+	if spot.wing >= 7 then
+		-- (Build 89) The Library's and the Master Bedroom's: walnut, a brass top, a soft glow in the
+		-- wing's colour under its lip.
+		for _, d in m:GetChildren() do
+			if d:IsA("BasePart") and d.Name == "Column" then
+				d.Material = Enum.Material.Wood
+				d.Color = rgb(70, 44, 28)
+			end
+		end
+		Kit.part(m, "Glow", Vector3.new(w + 0.1, 0.12, w + 0.1), CFrame.new(at + Vector3.new(0, 3.42, 0)), look(LuxePlan.Wings[spot.wing].colour, Enum.Material.Neon, nil, 0.3), SOFT)
+	elseif spot.wing >= 4 then
 		-- The new wings' pedestals: black chrome, a stud-textured top in the wing's colour, a lit edge.
 		local accent = LuxePlan.Wings[spot.wing].colour
 		top.Material = Enum.Material.Plastic
@@ -261,7 +272,7 @@ local function plinth(parent: Instance, o: Vector3, spot: LuxePlan.Spot): BasePa
 		end
 		Kit.part(m, "Glow", Vector3.new(w + 0.1, 0.12, w + 0.1), CFrame.new(at + Vector3.new(0, 3.42, 0)), look(accent, Enum.Material.Neon), SOFT)
 	end
-	if grand then
+	if grand and spot.wing <= 6 then
 		-- The Crown Jewel's own: under a glass dome's frame, with velvet ropes round it.
 		for i = 0, 5 do
 			local a = i * math.pi / 3
@@ -594,6 +605,105 @@ local BUILDERS: { [string]: (m: Model, cf: CFrame, piece: LuxePlan.Piece) -> () 
 		gold(m, "Badge", Vector3.new(0.7, 0.06, 0.7), fob * CFrame.new(-0.2, 0.38, 0))
 		P(m, "Button", Vector3.new(0.4, 0.06, 0.4), fob * CFrame.new(0.8, 0.38, 0), rgb(255, 50, 60), Enum.Material.Neon)
 		P(m, "Ring", Vector3.new(0.14, 1.2, 1.2), fob * CFrame.new(-1.7, 0, 0) * CFrame.Angles(0, 0, math.rad(90)), rgb(214, 218, 226), Enum.Material.Metal, Enum.PartType.Cylinder)
+	end,
+	-- (Build 89) The Library's and the Master Bedroom's pieces.
+	quill = function(m, cf)
+		P(m, "Inkwell", Vector3.new(1.2, 1.2, 1.2), cf * CFrame.new(0, 0.6, 0), rgb(18, 18, 22), Enum.Material.Glass)
+		gold(m, "Collar", Vector3.new(1.3, 0.2, 1.3), cf * CFrame.new(0, 1.25, 0))
+		P(m, "Feather", Vector3.new(0.12, 3.4, 0.7), cf * CFrame.new(0.4, 2.6, 0) * CFrame.Angles(0, 0, math.rad(-18)), rgb(250, 246, 236), Enum.Material.SmoothPlastic)
+		gold(m, "Nib", Vector3.new(0.14, 0.7, 0.2), cf * CFrame.new(0.05, 1.1, 0) * CFrame.Angles(0, 0, math.rad(-18)))
+	end,
+	book = function(m, cf, piece)
+		local leather = piece.tint or rgb(120, 28, 36)
+		local open = cf * CFrame.new(0, 0.9, 0)
+		P(m, "Stand", Vector3.new(2.6, 0.5, 1.6), cf * CFrame.new(0, 0.25, 0), rgb(70, 44, 28), Enum.Material.Wood)
+		for _, side in { -1, 1 } do
+			local half = open * CFrame.new(side * 0.85, 0, 0) * CFrame.Angles(0, 0, math.rad(side * -12))
+			P(m, "Cover", Vector3.new(1.8, 0.16, 2.5), half, leather, Enum.Material.Leather)
+			P(m, "Pages", Vector3.new(1.65, 0.24, 2.3), half * CFrame.new(0, 0.18, 0), rgb(244, 234, 208), Enum.Material.SmoothPlastic)
+			gold(m, "Corner", Vector3.new(0.3, 0.18, 0.3), half * CFrame.new(side * 0.78, 0.02, 1.1))
+		end
+		gold(m, "Ribbon", Vector3.new(0.12, 0.04, 2.8), open * CFrame.new(0, 0.32, -0.2))
+	end,
+	globe = function(m, cf)
+		local wood = rgb(70, 44, 28)
+		P(m, "Foot", Vector3.new(2.4, 0.4, 2.4), cf * CFrame.new(0, 0.2, 0), wood, Enum.Material.Wood)
+		P(m, "Stem", Vector3.new(0.4, 1.4, 0.4), cf * CFrame.new(0, 1.1, 0), wood, Enum.Material.Wood)
+		local centre = cf * CFrame.new(0, 3.1, 0)
+		HolidayProps.ball(m, "Sea", 2.8, centre.Position, rgb(40, 96, 140), Enum.Material.SmoothPlastic)
+		for i, at in { Vector3.new(0.6, 0.5, -1.15), Vector3.new(-0.9, -0.2, -1.0), Vector3.new(0.2, -0.9, -1.1), Vector3.new(1.2, 0.1, 0.4) } do
+			P(m, "Land" .. i, Vector3.new(0.9, 0.6, 0.3), centre * CFrame.new(at) * CFrame.lookAt(Vector3.zero, at).Rotation, rgb(196, 170, 110), Enum.Material.SmoothPlastic)
+		end
+		-- (Its axis, tilted as the earth's, through a brass cap at either pole.)
+		local axis = centre * CFrame.Angles(0, 0, math.rad(23))
+		gold(m, "Axis", Vector3.new(0.16, 3.5, 0.16), axis)
+		gold(m, "Pole", Vector3.new(0.4, 0.2, 0.4), axis * CFrame.new(0, 1.75, 0))
+	end,
+	astrolabe = function(m, cf)
+		local face = cf * CFrame.new(0, 2.2, 0) * CFrame.Angles(0, math.rad(90), 0)
+		P(m, "Stand", Vector3.new(1.6, 0.4, 1.0), cf * CFrame.new(0, 0.2, 0), rgb(40, 30, 22), Enum.Material.Wood)
+		P(m, "Mater", Vector3.new(0.3, 3.2, 3.2), face, GOLD, Enum.Material.Metal, Enum.PartType.Cylinder).Reflectance = 0.25
+		P(m, "Plate", Vector3.new(0.34, 2.6, 2.6), face, rgb(170, 124, 56), Enum.Material.Metal, Enum.PartType.Cylinder)
+		gold(m, "Rete", Vector3.new(0.4, 2.8, 0.14), face * CFrame.Angles(math.rad(35), 0, 0))
+		gold(m, "Rule", Vector3.new(0.44, 3.0, 0.12), face * CFrame.Angles(math.rad(-60), 0, 0))
+		gold(m, "Throne", Vector3.new(0.3, 0.7, 0.9), cf * CFrame.new(0, 3.9, 0))
+	end,
+	codex = function(m, cf)
+		local open = cf * CFrame.new(0, 1.2, 0)
+		P(m, "Lectern", Vector3.new(2.8, 0.8, 2.0), cf * CFrame.new(0, 0.4, 0), rgb(54, 34, 22), Enum.Material.Wood)
+		for _, side in { -1, 1 } do
+			local half = open * CFrame.new(side * 1.05, 0, 0) * CFrame.Angles(0, 0, math.rad(side * -10))
+			P(m, "Board", Vector3.new(2.2, 0.3, 3.0), half, rgb(60, 14, 20), Enum.Material.Leather)
+			P(m, "Pages", Vector3.new(2.0, 0.4, 2.8), half * CFrame.new(0, 0.3, 0), rgb(240, 226, 190), Enum.Material.SmoothPlastic)
+			gold(m, "Clasp", Vector3.new(0.4, 0.34, 0.6), half * CFrame.new(side * 1.05, 0, 0))
+			gold(m, "Boss", Vector3.new(0.5, 0.36, 0.5), half * CFrame.new(side * 0.2, 0.02, 1.2))
+		end
+		P(m, "Glow", Vector3.new(1.4, 0.06, 1.8), open * CFrame.new(0, 0.54, 0), rgb(255, 210, 120), Enum.Material.Neon)
+	end,
+	cufflinks = function(m, cf)
+		P(m, "Box", Vector3.new(2.6, 0.8, 1.8), cf * CFrame.new(0, 0.4, 0), rgb(16, 16, 20), Enum.Material.Leather)
+		P(m, "Lining", Vector3.new(2.3, 0.1, 1.5), cf * CFrame.new(0, 0.84, 0), rgb(240, 236, 228), Enum.Material.Fabric)
+		for _, x in { -0.6, 0.6 } do
+			gold(m, "Link", Vector3.new(0.7, 0.3, 0.7), cf * CFrame.new(x, 1.05, 0))
+			local stone = P(m, "Diamond", Vector3.new(0.5, 0.3, 0.5), cf * CFrame.new(x, 1.25, 0) * CFrame.Angles(0, math.rad(45), 0), rgb(220, 240, 255), Enum.Material.Glass)
+			stone.Reflectance = 0.5
+		end
+	end,
+	perfume = function(m, cf)
+		local glass = P(m, "Bottle", Vector3.new(1.6, 2.0, 1.0), cf * CFrame.new(0, 1.0, 0), rgb(255, 196, 220), Enum.Material.Glass)
+		glass.Transparency = 0.25
+		glass.Reflectance = 0.3
+		P(m, "Scent", Vector3.new(1.3, 1.2, 0.7), cf * CFrame.new(0, 0.75, 0), rgb(255, 150, 190), Enum.Material.Neon)
+		gold(m, "Neck", Vector3.new(0.5, 0.4, 0.5), cf * CFrame.new(0, 2.2, 0))
+		local stopper = P(m, "Stopper", Vector3.new(1.0, 1.0, 0.4), cf * CFrame.new(0, 2.85, 0) * CFrame.Angles(0, 0, math.rad(45)), rgb(240, 250, 255), Enum.Material.Glass)
+		stopper.Reflectance = 0.4
+	end,
+	brooch = function(m, cf)
+		P(m, "Cushion", Vector3.new(2.6, 0.6, 2.6), cf * CFrame.new(0, 0.3, 0), rgb(30, 22, 60), Enum.Material.Fabric)
+		local face = cf * CFrame.new(0, 1.3, 0) * CFrame.Angles(0, math.rad(90), math.rad(90))
+		gold(m, "Setting", Vector3.new(0.2, 2.0, 1.6), face)
+		local stone = P(m, "Sapphire", Vector3.new(0.4, 1.5, 1.1), face * CFrame.new(-0.08, 0, 0), rgb(40, 80, 220), Enum.Material.Glass)
+		stone.Reflectance = 0.45
+		for i = 0, 7 do
+			local a = i * math.pi / 4
+			HolidayProps.ball(m, "Pave", 0.24, (cf * CFrame.new(math.cos(a) * 0.95, 1.3 + math.sin(a) * 0.75, -0.25)).Position, rgb(236, 246, 255), Enum.Material.Glass)
+		end
+	end,
+	jewelBox = function(m, cf)
+		local box = cf * CFrame.new(0, 0.9, 0)
+		P(m, "Box", Vector3.new(3.2, 1.6, 2.2), box, rgb(60, 14, 30), Enum.Material.Leather)
+		gold(m, "Trim", Vector3.new(3.26, 0.2, 2.26), box * CFrame.new(0, 0.8, 0))
+		local lid = box * CFrame.new(0, 0.9, 1.0) * CFrame.Angles(math.rad(-65), 0, 0) * CFrame.new(0, 0, -1.0)
+		P(m, "Lid", Vector3.new(3.2, 0.3, 2.2), lid, rgb(60, 14, 30), Enum.Material.Leather)
+		P(m, "Mirror", Vector3.new(2.8, 0.06, 1.8), lid * CFrame.new(0, -0.18, 0), rgb(220, 230, 240), Enum.Material.Glass).Reflectance = 0.6
+		P(m, "Velvet", Vector3.new(2.9, 0.1, 1.9), box * CFrame.new(0, 0.82, 0), rgb(150, 20, 50), Enum.Material.Fabric)
+		for i, c in { rgb(255, 60, 90), rgb(80, 220, 140), rgb(90, 140, 255), rgb(255, 214, 90), rgb(240, 248, 255) } do
+			local stone = P(m, "Jewel" .. i, Vector3.new(0.5, 0.5, 0.5), box * CFrame.new(-1.1 + (i - 1) * 0.55, 1.05, (i % 2) * 0.4 - 0.2) * CFrame.Angles(0, math.rad(45), math.rad(45)), c, Enum.Material.Glass)
+			stone.Reflectance = 0.4
+		end
+		for i = 0, 9 do
+			HolidayProps.ball(m, "Pearl", 0.26, (box * CFrame.new(-1.2 + i * 0.27, 1.0, 0.65 + math.sin(i) * 0.08)).Position, rgb(246, 240, 232), Enum.Material.SmoothPlastic)
+		end
 	end,
 	duffel = function(m, cf)
 		local bag = cf * CFrame.new(0, 1.1, 0)
@@ -1044,6 +1154,209 @@ local function laserGrid(arch: Instance, o: Vector3): { BasePart }
 end
 
 ---------------------------------------------------------------------------------------------------
+-- Build 89: the Library, the Master Bedroom, and what the night staff sleep on
+---------------------------------------------------------------------------------------------------
+local BOOK_COLOURS = { rgb(120, 28, 36), rgb(30, 60, 110), rgb(40, 80, 50), rgb(130, 90, 40), rgb(70, 40, 90), rgb(160, 130, 80), rgb(24, 24, 28) }
+local WALNUT_DARK = look(rgb(54, 34, 22), Enum.Material.Wood)
+
+-- A walnut bookcase `w` wide, its back to a wall, facing along cf's look: four shelves of books
+-- in leather colours, a brass rail along its top.
+local function bookcase(parent: Instance, cf: CFrame, w: number, seed: number)
+	local m = Kit.model(parent, "Bookcase")
+	Kit.part(m, "Back", Vector3.new(w, 12, 0.3), cf * CFrame.new(0, 6, 0.65), WALNUT_DARK)
+	for _, side in { -1, 1 } do
+		Kit.part(m, "Side", Vector3.new(0.3, 12, 1.6), cf * CFrame.new(side * (w / 2 - 0.15), 6, 0), WALNUT_DARK)
+	end
+	Kit.part(m, "Top", Vector3.new(w + 0.4, 0.5, 1.9), cf * CFrame.new(0, 12.1, 0), L.walnut)
+	Kit.part(m, "Rail", Vector3.new(w, 0.14, 0.14), cf * CFrame.new(0, 11.2, -0.85), L.brass, SOFT)
+	for shelf = 0, 3 do
+		local y = 0.3 + shelf * 2.8
+		Kit.part(m, "Shelf", Vector3.new(w - 0.6, 0.2, 1.4), cf * CFrame.new(0, y, 0), L.walnut, { collide = shelf == 0 })
+		-- (Three runs of books on each, each its own height and leather.)
+		local runW = (w - 1) / 3
+		for k = 0, 2 do
+			local c = BOOK_COLOURS[(seed + shelf * 3 + k) % #BOOK_COLOURS + 1]
+			local h = 1.7 + ((seed + shelf + k) % 3) * 0.25
+			local x = -(w - 1) / 2 + runW * (k + 0.5)
+			P(m, "Books", Vector3.new(runW - 0.25, h, 1.1), cf * CFrame.new(x, y + 0.1 + h / 2, 0.05), c, Enum.Material.Leather)
+			P(m, "Spines", Vector3.new(runW - 0.3, 0.12, 0.06), cf * CFrame.new(x, y + 0.1 + h * 0.7, -0.52), GOLD, Enum.Material.Metal)
+		end
+	end
+end
+
+-- The Library (wing 7), off the Long Gallery's west door: shelves up every wall, the fire with its
+-- clock on the mantel and a painting over it, the librarian's desk under a green lamp (built with
+-- the librarian's chair), a reading chair by the fire, a rug, a rolling ladder, a chandelier.
+local function library(arch: Instance, o: Vector3)
+	local m = Kit.model(arch, "Library")
+	local w = LuxePlan.Wings[7]
+	local PANEL = look(rgb(58, 36, 24), Enum.Material.Wood)
+	wall(m, o, w.minX, w.minZ, -60, w.minZ, H, PANEL)
+	wall(m, o, w.minX, w.maxZ, -60, w.maxZ, H, PANEL)
+	wall(m, o, w.minX, w.minZ, w.minX, w.maxZ, H, PANEL)
+	Kit.span(m, "LibraryFloor", o + Vector3.new(w.minX + 1, 0, w.minZ + 1), o + Vector3.new(-61, 0.2, w.maxZ - 1), PARQUET)
+	Kit.span(m, "Ceiling", o + Vector3.new(w.minX - 1, H, w.minZ - 1), o + Vector3.new(-60, H + 1, w.maxZ + 1), L.blackLacquer)
+	-- The shelves.
+	local seed = 0
+	for _, x in { -104, -94, -84, -74, -66 } do
+		seed += 1
+		bookcase(m, CFrame.lookAt(o + Vector3.new(x, 0.2, w.maxZ - 1.8), o + Vector3.new(x, 0.2, 0)), 7.6, seed)
+		bookcase(m, CFrame.lookAt(o + Vector3.new(x, 0.2, w.minZ + 1.8), o + Vector3.new(x, 0.2, 100)), 7.6, seed + 3)
+	end
+	for _, z in { 28, 35.5, 54.5, 62 } do
+		seed += 1
+		bookcase(m, CFrame.lookAt(o + Vector3.new(w.minX + 1.8, 0.2, z), o + Vector3.new(0, 0.2, z)), 7.2, seed)
+	end
+	-- The rolling ladder, against the north cases.
+	local lx = -70
+	for _, dx in { -0.9, 0.9 } do
+		Kit.part(m, "LadderRail", Vector3.new(0.2, 12.4, 0.2), CFrame.new(o + Vector3.new(lx + dx, 6.2, w.maxZ - 4.2)) * CFrame.Angles(math.rad(-14), 0, 0), L.walnut, SOFT)
+	end
+	for k = 1, 9 do
+		Kit.part(m, "Rung", Vector3.new(1.8, 0.15, 0.15), CFrame.new(o + Vector3.new(lx, k * 1.3, w.maxZ - 4.2 + (k * 1.3 - 6.2) * math.tan(math.rad(14)))), L.brass, SOFT)
+	end
+	-- The fire, in the west wall.
+	local fz = 45
+	Kit.span(m, "Hearth", o + Vector3.new(w.minX + 1, 0.2, fz - 6), o + Vector3.new(w.minX + 3.4, 0.5, fz + 6), CREAM)
+	Kit.span(m, "Surround", o + Vector3.new(w.minX + 1, 0.5, fz - 5), o + Vector3.new(w.minX + 2, 7, fz + 5), CREAM)
+	Kit.span(m, "Firebox", o + Vector3.new(w.minX + 1.9, 0.5, fz - 2.6), o + Vector3.new(w.minX + 2.1, 4.2, fz + 2.6), look(rgb(14, 12, 12), Enum.Material.Slate), SOFT)
+	local flame = Kit.span(m, "Fire", o + Vector3.new(w.minX + 2.2, 0.6, fz - 1.8), o + Vector3.new(w.minX + 2.6, 2.4, fz + 1.8), look(rgb(255, 120, 40), Enum.Material.Neon, nil, 0.15), SOFT)
+	Kit.pointLight(flame, 1.4, 26, rgb(255, 140, 60))
+	for _, dz in { -0.7, 0.7 } do
+		Kit.cylinder(m, "Log", 3.4, 0.6, CFrame.new(o + Vector3.new(w.minX + 2.4, 0.9, fz + dz)) * CFrame.Angles(0, math.rad(90), 0), L.walnut, SOFT)
+	end
+	Kit.span(m, "Mantel", o + Vector3.new(w.minX + 1, 7, fz - 5.6), o + Vector3.new(w.minX + 3, 7.5, fz + 5.6), L.walnut)
+	local clock = Kit.part(m, "MantelClock", Vector3.new(0.8, 1.6, 1.4), CFrame.new(o + Vector3.new(w.minX + 2, 8.3, fz)), L.brass, SOFT)
+	Kit.part(m, "ClockFace", Vector3.new(0.1, 0.9, 0.9), clock.CFrame * CFrame.new(0.42, 0.1, 0), look(rgb(246, 240, 226), Enum.Material.SmoothPlastic), SOFT)
+	painting(m, CFrame.lookAt(o + Vector3.new(w.minX + 1.3, 11.6, fz), o + Vector3.new(0, 11.6, fz)), 6, 4, rgb(40, 50, 80), rgb(255, 200, 140))
+	-- The rug, the reading lamp by the chair, the chandelier.
+	Kit.span(m, "Rug", o + Vector3.new(-98, 0.2, 33), o + Vector3.new(-72, 0.26, 57), look(rgb(110, 26, 30), Enum.Material.Fabric), SOFT)
+	Kit.span(m, "RugBorder", o + Vector3.new(-97, 0.2, 34), o + Vector3.new(-73, 0.27, 56), look(rgb(170, 120, 60), Enum.Material.Fabric), SOFT)
+	Kit.span(m, "RugField", o + Vector3.new(-96, 0.2, 35), o + Vector3.new(-74, 0.28, 55), look(rgb(110, 26, 30), Enum.Material.Fabric), SOFT)
+	Kit.post(m, "LampPole", 6, 0.25, o + Vector3.new(-104.5, 0.2, 36.5), L.brass)
+	local shade = Kit.part(m, "LampShade", Vector3.new(1.6, 1.2, 1.6), CFrame.new(o + Vector3.new(-104.5, 6.6, 36.5)), look(rgb(255, 226, 180), Enum.Material.Neon, nil, 0.35), SOFT)
+	Kit.pointLight(shade, 0.8, 18, rgb(255, 214, 160))
+	chandelier(m, o + Vector3.new(-86, H - 2, 45), rgb(255, 214, 160), 0.9)
+end
+
+-- The Master Bedroom (wing 8), off the Long Gallery's east door: silk-papered walls, a deep carpet,
+-- the four-poster (built with the master in it), a dresser and its mirror, a wardrobe, the window
+-- with the moon in it, the lamps turned low.
+local function bedroom(arch: Instance, o: Vector3)
+	local m = Kit.model(arch, "MasterBedroom")
+	local w = LuxePlan.Wings[8]
+	local SILK = look(rgb(66, 34, 58), Enum.Material.Fabric)
+	wall(m, o, 60, w.minZ, w.maxX, w.minZ, H, SILK)
+	wall(m, o, 60, w.maxZ, w.maxX, w.maxZ, H, SILK)
+	wall(m, o, w.maxX, w.minZ, w.maxX, w.maxZ, H, SILK)
+	Kit.span(m, "BedroomFloor", o + Vector3.new(61, 0, w.minZ + 1), o + Vector3.new(w.maxX - 1, 0.2, w.maxZ - 1), look(rgb(74, 30, 58), Enum.Material.Fabric))
+	Kit.span(m, "Ceiling", o + Vector3.new(60, H, w.minZ - 1), o + Vector3.new(w.maxX + 1, H + 1, w.maxZ + 1), L.blackLacquer)
+	-- The dresser and its mirror, on the north wall.
+	Kit.span(m, "Dresser", o + Vector3.new(76, 0.2, w.maxZ - 3), o + Vector3.new(84, 3.6, w.maxZ - 1), L.walnut)
+	for k = 0, 2 do
+		Kit.span(m, "DrawerPull", o + Vector3.new(79.4, 0.9 + k * 1.1, w.maxZ - 3.1), o + Vector3.new(80.6, 1.05 + k * 1.1, w.maxZ - 2.95), L.brass, SOFT)
+	end
+	Kit.span(m, "MirrorFrame", o + Vector3.new(77, 4, w.maxZ - 1.3), o + Vector3.new(83, 10, w.maxZ - 1.0), L.brass, SOFT)
+	local mirror = Kit.span(m, "Mirror", o + Vector3.new(77.4, 4.4, w.maxZ - 1.45), o + Vector3.new(82.6, 9.6, w.maxZ - 1.3), look(rgb(200, 210, 220), Enum.Material.Glass, 0.6), SOFT)
+	mirror.CastShadow = false
+	-- The wardrobe, on the south wall.
+	Kit.span(m, "Wardrobe", o + Vector3.new(76, 0.2, w.minZ + 1), o + Vector3.new(86, 11, w.minZ + 3.6), L.walnut)
+	Kit.span(m, "WardrobeSeam", o + Vector3.new(80.9, 0.4, w.minZ + 3.6), o + Vector3.new(81.1, 10.6, w.minZ + 3.7), L.brass, SOFT)
+	-- The window, the moon in it, its curtains.
+	local glass = Kit.span(m, "Window", o + Vector3.new(94, 4, w.maxZ - 1.2), o + Vector3.new(102, 13, w.maxZ - 1.0), look(rgb(90, 120, 180), Enum.Material.Neon, nil, 0.45), SOFT)
+	Kit.pointLight(glass, 0.6, 24, rgb(140, 170, 230))
+	Kit.ball(m, "Moon", 1.6, o + Vector3.new(100, 11, w.maxZ - 1.25), look(rgb(240, 240, 226), Enum.Material.Neon), SOFT)
+	for _, x in { 92.6, 102.4 } do
+		Kit.span(m, "Curtain", o + Vector3.new(x - 1.2, 2, w.maxZ - 1.6), o + Vector3.new(x + 1.2, 14.4, w.maxZ - 1.2), look(rgb(120, 30, 70), Enum.Material.Fabric), SOFT)
+	end
+	Kit.span(m, "CurtainRod", o + Vector3.new(91, 14.4, w.maxZ - 1.5), o + Vector3.new(104, 14.7, w.maxZ - 1.2), L.brass, SOFT)
+	-- The lamps, turned low: a sconce either side of the bed, a dim chandelier.
+	for _, z in { 45, 55 } do
+		local sconce = Kit.part(m, "BedSconce", Vector3.new(0.6, 1, 0.8), CFrame.new(o + Vector3.new(w.maxX - 1.3, 7.4, z)), look(rgb(255, 210, 170), Enum.Material.Neon, nil, 0.35), SOFT)
+		Kit.pointLight(sconce, 0.5, 14, rgb(255, 196, 150))
+	end
+	chandelier(m, o + Vector3.new(82, H - 2, 50), rgb(255, 200, 170), 0.55)
+	Kit.span(m, "Rug", o + Vector3.new(90, 0.2, 42), o + Vector3.new(108, 0.26, 58), look(rgb(210, 190, 160), Enum.Material.Fabric), SOFT)
+end
+
+-- What one of the night staff sleeps on (shared/SleepPose's heights): an armchair, a desk and its
+-- chair, a sofa, a stool against the wall, or a four-poster bed.
+function LuxeBuild.furniture(parent: Instance, o: Vector3, def: LuxePlan.Sleeper)
+	local at = o + def.at
+	local cf = CFrame.lookAt(at, at + LuxePlan.facing(def.yaw))
+	local m = Kit.model(parent, "Bed_" .. def.who)
+	local VELVET = look(if def.wing == 1 then rgb(30, 80, 56) else rgb(120, 28, 40), Enum.Material.Fabric)
+	if def.pose == "chair" then
+		local seat = SleepPose.SEAT.chair
+		Kit.part(m, "ChairBase", Vector3.new(3, seat - 0.35, 2.8), cf * CFrame.new(0, (seat - 0.35) / 2, -0.2), L.walnut)
+		Kit.part(m, "Cushion", Vector3.new(2.8, 0.35, 2.6), cf * CFrame.new(0, seat - 0.175, -0.3), VELVET)
+		Kit.part(m, "ChairBack", Vector3.new(3, 3.8, 0.5), cf * CFrame.new(0, seat + 1.6, 1.05), VELVET)
+		for _, side in { -1, 1 } do
+			Kit.part(m, "ChairArm", Vector3.new(0.5, 1, 2.8), cf * CFrame.new(side * 1.55, seat + 0.4, -0.2), VELVET)
+			Kit.part(m, "ChairWing", Vector3.new(0.4, 1.6, 1), cf * CFrame.new(side * 1.45, seat + 2.6, 0.7), VELVET)
+		end
+	elseif def.pose == "desk" then
+		local seat = SleepPose.SEAT.desk
+		Kit.part(m, "ChairSeat", Vector3.new(2.4, 0.25, 2.2), cf * CFrame.new(0, seat - 0.125, -0.2), L.walnut)
+		Kit.part(m, "ChairBack", Vector3.new(2.4, 2.6, 0.25), cf * CFrame.new(0, seat + 1.3, 0.95), L.walnut)
+		for _, dx in { -1, 1 } do
+			for _, dz in { -1, 1 } do
+				Kit.part(m, "ChairLeg", Vector3.new(0.2, seat - 0.25, 0.2), cf * CFrame.new(dx * 1.05, (seat - 0.25) / 2, -0.2 + dz * 0.9), L.walnut)
+			end
+		end
+		-- The desk in front of the chair, its green lamp, its papers.
+		local top = 2.55
+		Kit.part(m, "DeskTop", Vector3.new(5.6, 0.3, 2.6), cf * CFrame.new(0, top - 0.15, -2.6), L.walnut)
+		Kit.part(m, "DeskFront", Vector3.new(5.4, 2, 0.2), cf * CFrame.new(0, top - 1.3, -3.8), WALNUT_DARK)
+		for _, dx in { -1, 1 } do
+			Kit.part(m, "DeskPedestal", Vector3.new(1.4, top - 0.3, 2.4), cf * CFrame.new(dx * 2.0, (top - 0.3) / 2, -2.6), WALNUT_DARK)
+		end
+		Kit.part(m, "Blotter", Vector3.new(2.4, 0.04, 1.6), cf * CFrame.new(0, top + 0.02, -2.4), look(rgb(30, 70, 50), Enum.Material.Leather), SOFT)
+		Kit.part(m, "Papers", Vector3.new(1.2, 0.05, 1.5), cf * CFrame.new(-1.5, top + 0.04, -2.5) * CFrame.Angles(0, math.rad(12), 0), look(rgb(240, 232, 214), Enum.Material.SmoothPlastic), SOFT)
+		Kit.part(m, "LampBase", Vector3.new(0.6, 0.6, 0.6), cf * CFrame.new(2.0, top + 0.3, -3.1), L.brass, SOFT)
+		local shade = Kit.part(m, "LampShade", Vector3.new(1.4, 0.5, 0.7), cf * CFrame.new(2.0, top + 1.2, -3.0), look(rgb(40, 160, 90), Enum.Material.Glass, 0.2, 0.15), SOFT)
+		Kit.pointLight(shade, 0.9, 14, rgb(200, 255, 200))
+	elseif def.pose == "stool" then
+		local seat = SleepPose.SEAT.stool
+		Kit.cylinder(m, "StoolSeat", 0.3, 1.9, cf * CFrame.new(0, seat - 0.15, -0.1) * CFrame.Angles(0, 0, math.rad(90)), VELVET)
+		for i = 0, 2 do
+			local a = i * math.pi * 2 / 3
+			Kit.part(m, "StoolLeg", Vector3.new(0.18, seat - 0.3, 0.18), cf * CFrame.new(math.cos(a) * 0.6, (seat - 0.3) / 2, -0.1 + math.sin(a) * 0.6), L.brass)
+		end
+	elseif def.pose == "slump" then
+		local seat = SleepPose.SEAT.slump
+		local SOFA = look(rgb(36, 34, 42), Enum.Material.Fabric)
+		Kit.part(m, "SofaBase", Vector3.new(6, seat - 0.3, 3), cf * CFrame.new(0, (seat - 0.3) / 2, 0), SOFA)
+		Kit.part(m, "SofaCushion", Vector3.new(5.6, 0.3, 2.6), cf * CFrame.new(0, seat - 0.15, -0.1), SOFA)
+		Kit.part(m, "SofaBack", Vector3.new(6, 2.4, 0.8), cf * CFrame.new(0, seat + 1, 1.2), SOFA)
+		for _, side in { -1, 1 } do
+			Kit.part(m, "SofaArm", Vector3.new(0.7, 1.3, 3), cf * CFrame.new(side * 3.2, seat + 0.3, 0), SOFA)
+		end
+		neonStrip(m, (cf * CFrame.new(-3, 0.1, -1.55)).Position, (cf * CFrame.new(3, 0.25, -1.45)).Position, PINK)
+	elseif def.pose == "bed" then
+		local top = SleepPose.BED_TOP
+		local SHEET = look(rgb(242, 236, 226), Enum.Material.Fabric)
+		Kit.part(m, "BedFrame", Vector3.new(6.2, 1.4, 7.4), cf * CFrame.new(0, 0.7, 0), L.walnut)
+		Kit.part(m, "Mattress", Vector3.new(6, top - 1.4, 7), cf * CFrame.new(0, 1.4 + (top - 1.4) / 2, 0), SHEET)
+		Kit.part(m, "Duvet", Vector3.new(6.1, 0.14, 3.8), cf * CFrame.new(0, top + 0.05, -1.6), look(rgb(120, 30, 70), Enum.Material.Fabric), SOFT)
+		Kit.part(m, "Throw", Vector3.new(6.2, 0.18, 1.1), cf * CFrame.new(0, top + 0.1, -3.0), look(rgb(214, 170, 80), Enum.Material.Fabric), SOFT)
+		for _, x in { -1.4, 1.4 } do
+			Kit.part(m, "Pillow", Vector3.new(2.3, 0.5, 1.2), cf * CFrame.new(x, top + 0.2, 2.9), SHEET, SOFT)
+		end
+		Kit.part(m, "Headboard", Vector3.new(6.6, 5.6, 0.5), cf * CFrame.new(0, 2.8, 3.85), look(rgb(110, 26, 64), Enum.Material.Fabric))
+		Kit.part(m, "HeadboardTrim", Vector3.new(6.8, 0.3, 0.6), cf * CFrame.new(0, 5.7, 3.85), L.brass, SOFT)
+		for _, dx in { -1, 1 } do
+			for _, dz in { -1, 1 } do
+				Kit.part(m, "BedPost", Vector3.new(0.4, 9, 0.4), cf * CFrame.new(dx * 3.2, 4.5, dz * 3.8), L.walnut)
+				Kit.ball(m, "PostFinial", 0.6, (cf * CFrame.new(dx * 3.2, 9.2, dz * 3.8)).Position, L.brass, SOFT)
+			end
+			Kit.part(m, "Drape", Vector3.new(0.1, 7.4, 1.6), cf * CFrame.new(dx * 3.3, 5.2, -3.0), look(rgb(150, 40, 90), Enum.Material.Fabric, nil, 0.25), SOFT)
+		end
+		Kit.part(m, "Canopy", Vector3.new(6.8, 0.3, 8), cf * CFrame.new(0, 9, 0), look(rgb(110, 26, 64), Enum.Material.Fabric), SOFT)
+	end
+end
+
+---------------------------------------------------------------------------------------------------
 -- The whole residence
 ---------------------------------------------------------------------------------------------------
 export type Built = {
@@ -1084,8 +1397,8 @@ function LuxeBuild.build(parent: Instance, o: Vector3, goHome: (player: Player) 
 	-- The residence: its facade, walls and floors, and a ceiling over each wing.
 	local F = L.facade
 	wall(arch, o, -60, -70, 60, -70, H, F, { { LuxePlan.FrontDoor.minX, LuxePlan.FrontDoor.maxX } })
-	wall(arch, o, -60, -70, -60, 70, H, L.wall, { { LuxePlan.SideDoors[1][1], LuxePlan.SideDoors[1][2] } })
-	wall(arch, o, 60, -70, 60, 70, H, L.wall, { { LuxePlan.SideDoors[2][1], LuxePlan.SideDoors[2][2] } })
+	wall(arch, o, -60, -70, -60, 70, H, L.wall, { { LuxePlan.SideDoors[1][1], LuxePlan.SideDoors[1][2] }, { LuxePlan.GalleryDoors[1][1], LuxePlan.GalleryDoors[1][2] } })
+	wall(arch, o, 60, -70, 60, 70, H, L.wall, { { LuxePlan.SideDoors[2][1], LuxePlan.SideDoors[2][2] }, { LuxePlan.GalleryDoors[2][1], LuxePlan.GalleryDoors[2][2] } })
 	wall(arch, o, -60, 0, 60, 0, H, L.wall, { { LuxePlan.Doors[1][1], LuxePlan.Doors[1][2] }, { LuxePlan.Doors[2][1], LuxePlan.Doors[2][2] } })
 	wall(arch, o, -60, 70, 60, 70, H, L.wall, { { LuxePlan.Doors[3][1], LuxePlan.Doors[3][2] } })
 	wall(arch, o, -40, 70, -40, 130, H, STEEL)
@@ -1158,10 +1471,18 @@ function LuxeBuild.build(parent: Instance, o: Vector3, goHome: (player: Player) 
 	local soft = { collide = false, query = false, shadow = false }
 	for _, side in { -1, 1 } do
 		local wx = side * 58.8
-		Kit.span(arch, "Wainscot", o + Vector3.new(wx, 0.2, 1), o + Vector3.new(wx - side * 0.4, 4, 69), L.walnut, soft)
-		Kit.span(arch, "ChairRail", o + Vector3.new(wx, 4, 1), o + Vector3.new(wx - side * 0.5, 4.3, 69), L.brass, soft)
+		-- (Build 89: broken at the door to the Library or the Master Bedroom.)
+		local door = LuxePlan.GalleryDoors[if side < 0 then 1 else 2]
+		for _, run in { { 1, door[1] }, { door[2], 69 } } do
+			Kit.span(arch, "Wainscot", o + Vector3.new(wx, 0.2, run[1]), o + Vector3.new(wx - side * 0.4, 4, run[2]), L.walnut, soft)
+			Kit.span(arch, "ChairRail", o + Vector3.new(wx, 4, run[1]), o + Vector3.new(wx - side * 0.5, 4.3, run[2]), L.brass, soft)
+		end
 		for z = 6, 66, 12 do
-			local at = o + Vector3.new(wx - side * 0.3, 9.6, z + (if side > 0 then 6 else 0))
+			local sz = z + (if side > 0 then 6 else 0)
+			if sz >= door[1] - 1 and sz <= door[2] + 1 then
+				continue
+			end
+			local at = o + Vector3.new(wx - side * 0.3, 9.6, sz)
 			Kit.part(arch, "SconcePlate", Vector3.new(0.2, 1.4, 0.7), CFrame.new(at), L.brass, soft)
 			local shade = Kit.part(arch, "SconceShade", Vector3.new(0.8, 0.9, 0.8), CFrame.new(at + Vector3.new(-side * 0.6, 0.3, 0)), look(rgb(255, 214, 160), Enum.Material.Neon, nil, 0.3), soft)
 			Kit.pointLight(shade, 0.6, 16, rgb(255, 214, 170))
@@ -1197,6 +1518,9 @@ function LuxeBuild.build(parent: Instance, o: Vector3, goHome: (player: Player) 
 		-- (The side doors' signs face the Garden Hall: read on the way to them.)
 		{ name = LuxePlan.Wings[4].name, at = Vector3.new(-58.6, 13.6, -26), toward = Vector3.new(0, 13.6, -26) },
 		{ name = LuxePlan.Wings[5].name, at = Vector3.new(58.6, 13.6, -26), toward = Vector3.new(0, 13.6, -26) },
+		-- (Build 89: over the Long Gallery's side doors, read from the gallery.)
+		{ name = LuxePlan.Wings[7].name, at = Vector3.new(-58.6, 13.6, 54), toward = Vector3.new(0, 13.6, 54) },
+		{ name = LuxePlan.Wings[8].name, at = Vector3.new(58.6, 13.6, 48), toward = Vector3.new(0, 13.6, 48) },
 	}
 	for _, sign in signs do
 		local board = Kit.part(arch, "WingSign", Vector3.new(12, 1.6, 0.2), CFrame.lookAt(o + sign.at, o + sign.toward), L.blackLacquer, { collide = false })
@@ -1206,6 +1530,12 @@ function LuxeBuild.build(parent: Instance, o: Vector3, goHome: (player: Player) 
 	-- Build 78's wings, the cameras and the laser grid.
 	dropRoom(arch, o)
 	garage(arch, o)
+	library(arch, o)
+	bedroom(arch, o)
+	local beds = Kit.model(arch, "NightStaffFurniture")
+	for _, def in LuxePlan.Sleepers do
+		LuxeBuild.furniture(beds, o, def)
+	end
 	local stashDoor, stashLever = stash(arch, o)
 	local cameras = securityCameras(arch, o)
 	local lasers = laserGrid(arch, o)

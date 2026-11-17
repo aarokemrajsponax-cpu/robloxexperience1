@@ -216,20 +216,22 @@ end
 
 -- Adds to one of the guest's own counts (things picked up at events, trades...). `once`: counted
 -- only once for that key (one Admin Abuse Night, however often you rejoin during it).
-function Achievements.tally(player: Player, stat: string, n: number, once: string?)
+-- (Build 87: says whether it counted, so XP is given only for what really counted.)
+function Achievements.tally(player: Player, stat: string, n: number, once: string?): boolean
 	local data = Profiles.get(player)
 	if not data then
-		return
+		return false
 	end
 	local d = record(data)
 	if once then
 		if d.tallyOnce[stat] == once then
-			return
+			return false
 		end
 		d.tallyOnce[stat] = once
 	end
 	d.tally[stat] = (d.tally[stat] or 0) + n
 	Achievements.check(player)
+	return true
 end
 
 -- Adds to a count without checking the ladders (for counts that change very often: Gilt earned).

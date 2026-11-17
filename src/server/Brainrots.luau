@@ -41,8 +41,11 @@ export type Squad = {
 	at: number, -- when that was
 	wing: boolean, -- the Brainrot Penthouse
 	full: boolean?, -- told the jar is full (so it's said once)
-	boostUntil: number?, -- a Meme Frenzy, until then
+	boostUntil: number?, -- a Meme Frenzy (or a Full Jar booster), until then
 	boostMult: number?,
+	boosts: { [string]: { untilAt: number, pct: number, id: string } }?, -- (Build 88) boosters on
+	boostDay: number?, -- the day boostUsed is for
+	boostUsed: { [string]: boolean }?, -- which brainrots have given their boost today
 	seen: number?, -- the last minute the guest was known to be in the game
 }
 
@@ -164,6 +167,87 @@ function Brainrots.dress(player: Player, data: Profiles.Data)
 end
 
 -- What the guest's screen shows (inside the curio state): the squad, the jar and the prices.
+-- (Build 88) A booster of `kind` on now: its strength (percent), or 0.
+function Brainrots.boostOf(data: Profiles.Data, kind: string): number
+	local s = squadOf(data) :: any
+	local b = type(s.boosts) == "table" and s.boosts[kind] or nil
+	if type(b) == "table" and type(b.untilAt) == "number" and b.untilAt > Brainrots.now() then
+		return tonumber(b.pct) or 0
+	end
+	return 0
+end
+
+-- The boosters on now, for the guest's screen: { kind, pct, id, left }.
+local function boostList(data: Profiles.Data): { { [string]: any } }
+	local s = squadOf(data) :: any
+	local out = {}
+	local now = Brainrots.now()
+	for _, kind in BrainrotList.ABILITY_ORDER do
+		local b = type(s.boosts) == "table" and s.boosts[kind] or nil
+		if type(b) == "table" and type(b.untilAt) == "number" and b.untilAt > now then
+			table.insert(out, { kind = kind, pct = b.pct, id = b.id, left = b.untilAt - now })
+		end
+	end
+	return out
+end
+
+-- Which brainrots have given their boost today.
+local function usedToday(data: Profiles.Data): { [string]: boolean }
+	local s = squadOf(data) :: any
+	local day = Brainrots.now() // 86400
+	if s.boostDay ~= day or type(s.boostUsed) ~= "table" then
+		s.boostDay = day
+		s.boostUsed = {}
+	end
+	return s.boostUsed
+end
+
+-- What the boosters do to the guest's character: Light Feet as their "BoostFeet" attribute (the
+-- house's pace reads it; the attractions never do). Called on arrival and as boosters end.
+function Brainrots.applyBoosts(player: Player, data: Profiles.Data)
+	local feet = Brainrots.boostOf(data, "feet")
+	player:SetAttribute("BoostFeet", if feet > 0 then 1 + feet / 100 else nil)
+end
+
+-- Calls on a brainrot in the squad for its booster: once a day each, never a weaker one over a
+-- stronger one of its kind.
+function Brainrots.boost(player: Player, data: Profiles.Data, id: string?): { [string]: any }
+	if not id or not BrainrotList.is(id) or held(data, id) <= 0 then
+		return { ok = false, why = "You don't hold that brainrot." }
+	end
+	local s = squadOf(data) :: any
+	if not table.find(s.ids, id) then
+		return { ok = false, why = "Only a brainrot in your squad can boost you: put it in first." }
+	end
+	local used = usedToday(data)
+	if used[id] then
+		return { ok = false, why = "It has given its boost today. Tomorrow it can again." }
+	end
+	local kind, pct = BrainrotList.ability(id)
+	local a = BrainrotList.Abilities[kind]
+	local now = Brainrots.now()
+	if type(s.boosts) ~= "table" then
+		s.boosts = {}
+	end
+	local cur = s.boosts[kind]
+	if type(cur) == "table" and type(cur.untilAt) == "number" and cur.untilAt > now and (tonumber(cur.pct) or 0) >= pct then
+		return { ok = false, why = string.format("A %s as strong or stronger is on already: save this one for later.", a.name) }
+	end
+	if kind == "jar" then
+		Brainrots.settle(data)
+		local mult = 1 + pct / 100
+		if s.boostUntil and s.boostUntil > now and (s.boostMult or 1) >= mult then
+			return { ok = false, why = "A Meme Frenzy is filling the jar faster already: save this one for later." }
+		end
+		s.boostUntil = now + BrainrotList.BOOST_SECONDS
+		s.boostMult = mult
+	end
+	s.boosts[kind] = { untilAt = now + BrainrotList.BOOST_SECONDS, pct = pct, id = id }
+	used[id] = true
+	Brainrots.applyBoosts(player, data)
+	return { ok = true, kind = kind, pct = pct, seconds = BrainrotList.BOOST_SECONDS }
+end
+
 function Brainrots.state(data: Profiles.Data): { [string]: any }
 	Brainrots.settle(data)
 	local s = squadOf(data)
@@ -185,6 +269,8 @@ function Brainrots.state(data: Profiles.Data): { [string]: any }
 		prices = prices,
 		frenzy = if s.boostUntil then math.max(0, s.boostUntil - Brainrots.now()) else nil,
 		frenzyMult = s.boostMult,
+		boosts = boostList(data),
+		boosted = table.clone(usedToday(data)),
 	}
 end
 
@@ -203,7 +289,9 @@ function Brainrots.frenzy(player: Player)
 	Brainrots.settle(data)
 	local s = squadOf(data)
 	local now = Brainrots.now()
-	local untilTime = math.max(now, s.boostUntil or now) + BrainrotList.FRENZY_SECONDS
+	-- (A frenzy runs on from another frenzy; over a weaker Full Jar it starts now.)
+	local from = if (s.boostMult or 0) >= BrainrotList.FRENZY_MULT then math.max(now, s.boostUntil or now) else now
+	local untilTime = from + BrainrotList.FRENZY_SECONDS
 	s.boostUntil = untilTime
 	s.boostMult = BrainrotList.FRENZY_MULT
 	push(player, data)
@@ -358,6 +446,12 @@ local function onOp(player: Player, data: Profiles.Data, r: { [string]: any }): 
 		return { ok = true }
 	elseif op == "collect" then
 		return Brainrots.collect(player, data)
+	elseif op == "boost" then
+		local r2 = Brainrots.boost(player, data, id)
+		if r2.ok then
+			push(player, data)
+		end
+		return r2
 	elseif op == "brainrotBuy" then
 		local key = if r.key == "brainrotFeast" or r.key == "brainrotPenthouse" then r.key else nil
 		if not key then
@@ -383,7 +477,7 @@ function Brainrots.start()
 		end
 		return true, nil
 	end
-	for _, op in { "squadAdd", "squadRemove", "walk", "collect", "brainrotBuy" } do
+	for _, op in { "squadAdd", "squadRemove", "walk", "collect", "brainrotBuy", "boost" } do
 		Curios.ops[op] = onOp
 	end
 	Curios.squadState = Brainrots.state
@@ -400,6 +494,7 @@ function Brainrots.start()
 			end
 			Brainrots.settle(data)
 			Brainrots.dress(player, data)
+			Brainrots.applyBoosts(player, data)
 			local s = squadOf(data)
 			local away = Brainrots.away(data)
 			local rate = Brainrots.rate(data)
@@ -419,6 +514,18 @@ function Brainrots.start()
 	for _, p in Players:GetPlayers() do
 		hello(p)
 	end
+	-- (Build 88) Boosters end on time: Light Feet comes off the character the moment it's over.
+	task.spawn(function()
+		while true do
+			task.wait(5)
+			for _, p in Players:GetPlayers() do
+				local data = Profiles.get(p)
+				if data and p:GetAttribute("BoostFeet") ~= nil then
+					pcall(Brainrots.applyBoosts, p, data)
+				end
+			end
+		end
+	end)
 	-- Once a minute: a full jar is said, once, so nothing is wasted.
 	task.spawn(function()
 		while true do

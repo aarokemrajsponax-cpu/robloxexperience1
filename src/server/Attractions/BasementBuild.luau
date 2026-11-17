@@ -1,7 +1,8 @@
 --!strict
 -- The Maison Basement, built (shared/Basement says where everything is): the entry hall with the
--- arch home, sixteen stages down through the Wine Cellar, the Boiler Room, the Old Vaults and the
--- Treasury Depths, walls and a ceiling over each, a pit under each, the checkpoints (a lift up to
+-- arch home, thirty-two stages down through the Wine Cellar, the Boiler Room, the Old Vaults, the
+-- Treasury Depths and (Build 89) the Clockworks, the Flooded Cistern, the Furnace Heart and the
+-- Vault of Kings, walls and a ceiling over each, a pit under each, the checkpoints (a lift up to
 -- the Maison at the end of each part), and the Treasury's chest at the foot.
 --
 -- What moves (the pistons, the sinking tiles, the steam, the lasers, the valve's bars) is built
@@ -67,14 +68,23 @@ local PIT: { [number]: Kit.Look } = {
 	look(rgb(255, 104, 28), Enum.Material.CrackedLava), -- the furnace
 	look(rgb(12, 20, 40), Enum.Material.Glass, 0.3, 0.08), -- the vault's depths
 	look(rgb(214, 162, 52), Enum.Material.Foil, 0.35), -- a sea of coins
+	-- (Build 89: the four deeper parts.)
+	look(rgb(20, 16, 10), Enum.Material.Glass, 0.4, 0.05), -- black machine oil under the Clockworks
+	look(rgb(30, 110, 120), Enum.Material.Glass, 0.3, 0.15), -- the cistern's cold water
+	look(rgb(255, 64, 20), Enum.Material.CrackedLava), -- the furnace's white-hot slag
+	look(rgb(130, 44, 190), Enum.Material.Foil, 0.35), -- a sea of amethysts under the Vault of Kings
 }
 -- (The light each gives off.)
-local PIT_GLOW: { [number]: Color3 } = { rgb(150, 20, 50), rgb(255, 110, 30), rgb(60, 110, 220), rgb(240, 180, 60) }
+local PIT_GLOW: { [number]: Color3 } = { rgb(150, 20, 50), rgb(255, 110, 30), rgb(60, 110, 220), rgb(240, 180, 60), rgb(200, 150, 60), rgb(60, 200, 210), rgb(255, 70, 20), rgb(170, 80, 240) }
 local WALL: { [number]: Kit.Look } = {
 	look(rgb(48, 30, 26), Enum.Material.Brick),
 	look(rgb(60, 44, 34), Enum.Material.CorrodedMetal),
 	look(rgb(44, 50, 58), Enum.Material.Concrete),
 	look(rgb(40, 32, 20), Enum.Material.Marble),
+	look(rgb(70, 52, 30), Enum.Material.DiamondPlate), -- the Clockworks' brass plate
+	look(rgb(40, 58, 60), Enum.Material.Slate), -- the cistern's wet stone
+	look(rgb(50, 26, 18), Enum.Material.Basalt), -- the furnace's black rock
+	look(rgb(46, 22, 54), Enum.Material.Marble), -- the Vault of Kings' purple marble
 }
 
 local function tag(part: Instance, name: string, index: number)
@@ -233,7 +243,7 @@ local function element(parent: Instance, o: Vector3, i: number, e: Plan.El, zone
 		return find
 	elseif kind == "pit" then
 		local p = Kit.part(parent, "Pit", e.size, cf, PIT[zone] or PIT[1], { shadow = false })
-		Kit.pointLight(p, if zone == 2 then 1.1 else 0.7, 30, PIT_GLOW[zone] or PIT_GLOW[1])
+		Kit.pointLight(p, if zone == 2 or zone == 7 then 1.1 else 0.7, 30, PIT_GLOW[zone] or PIT_GLOW[1])
 		return p
 	end
 	return nil
@@ -311,7 +321,7 @@ function BasementBuild.build(parent: Instance, o: Vector3, goHome: (player: Play
 		if n > 0 and n < Plan.STAGES then
 			sign(course, top + Vector3.new(0, 9, c.size.Z / 2 + 0.4), top + Vector3.new(0, 9, c.size.Z / 2 + 40), string.format("%d  ·  %s", n + 1, string.upper(Plan.StageNames[n + 1])), zone.name, zone.colour)
 		elseif n == 0 then
-			sign(course, top + Vector3.new(0, 9, c.size.Z / 2 + 0.4), top + Vector3.new(0, 9, c.size.Z / 2 + 40), "1  ·  " .. string.upper(Plan.StageNames[1]), "The Maison Basement  ·  sixteen stages down to the Treasury", zone.colour)
+			sign(course, top + Vector3.new(0, 9, c.size.Z / 2 + 0.4), top + Vector3.new(0, 9, c.size.Z / 2 + 40), "1  ·  " .. string.upper(Plan.StageNames[1]), "The Maison Basement  ·  thirty-two stages down to the Treasury", zone.colour)
 		end
 		if n > 0 and n % 4 == 0 and n < Plan.STAGES then
 			-- A lift up to the Maison: everything you've earned is yours.
@@ -342,6 +352,9 @@ function BasementBuild.build(parent: Instance, o: Vector3, goHome: (player: Play
 	local BOXES = look(rgb(96, 104, 116), Enum.Material.Metal, 0.15)
 	local BRASS = look(rgb(196, 156, 74), Enum.Material.Metal, 0.25)
 	local BAR = look(rgb(236, 186, 64), Enum.Material.Metal, 0.35)
+	local STONE = look(rgb(84, 96, 98), Enum.Material.Slate)
+	local IRON = look(rgb(36, 32, 30), Enum.Material.Metal, 0.1)
+	local VELVET = look(rgb(96, 28, 120), Enum.Material.Fabric)
 	local dressing = Kit.model(arch, "Dressing")
 	local function dress(n: number, z0: number, z1: number, y: number)
 		local zone = Plan.zoneOf(n)
@@ -374,6 +387,34 @@ function BasementBuild.build(parent: Instance, o: Vector3, goHome: (player: Play
 							Kit.ball(dressing, "Knob", 0.28, o + Vector3.new(x + inward * 0.25, y + 2.2 + r * 1.8, z - 2.7 + c * 1.8), BRASS, DRESS)
 						end
 					end
+				end
+			elseif zone == 5 then
+				-- (The Clockworks: great brass gears on the walls, each on its hub.)
+				for z = z0 + 6, z1 - 6, 11 do
+					local big = (z // 11) % 2 == 0
+					Kit.cylinder(dressing, "Gear", 0.4, if big then 5 else 3.4, CFrame.new(o + Vector3.new(x + inward * 0.4, y + (if big then 6 else 4), z)), BRASS, DRESS)
+					Kit.cylinder(dressing, "GearHub", 0.5, 1, CFrame.new(o + Vector3.new(x + inward * 0.7, y + (if big then 6 else 4), z)), COPPER, DRESS)
+				end
+			elseif zone == 6 then
+				-- (The Cistern: stone pillars, a cold water line glowing low along the walls.)
+				for z = z0 + 4, z1 - 4, 12 do
+					Kit.part(dressing, "Pillar", Vector3.new(1.4, 12, 1.4), CFrame.new(o + Vector3.new(x + inward * 0.2, y + 6, z)), STONE, DRESS)
+				end
+				Kit.part(dressing, "WaterLine", Vector3.new(0.2, 0.3, z1 - z0), CFrame.new(o + Vector3.new(x + inward * 0.15, y + 1.2, (z0 + z1) / 2)), look(rgb(90, 220, 230), Enum.Material.Neon, nil, 0.35), DRESS)
+			elseif zone == 7 then
+				-- (The Furnace Heart: iron grates over ember slots.)
+				for z = z0 + 6, z1 - 6, 10 do
+					Kit.part(dressing, "Ember", Vector3.new(0.2, 3, 4), CFrame.new(o + Vector3.new(x + inward * 0.1, y + 3, z)), look(rgb(255, 110, 30), Enum.Material.Neon, nil, 0.2), DRESS)
+					for k = -1, 1 do
+						Kit.part(dressing, "Grate", Vector3.new(0.3, 3.4, 0.3), CFrame.new(o + Vector3.new(x + inward * 0.3, y + 3, z + k * 1.3)), IRON, DRESS)
+					end
+				end
+			elseif zone == 8 then
+				-- (The Vault of Kings: royal banners trimmed in gold.)
+				for z = z0 + 6, z1 - 6, 10 do
+					Kit.part(dressing, "Banner", Vector3.new(0.2, 6, 3), CFrame.new(o + Vector3.new(x + inward * 0.2, y + 7, z)), VELVET, DRESS)
+					Kit.part(dressing, "BannerRod", Vector3.new(0.3, 0.3, 3.6), CFrame.new(o + Vector3.new(x + inward * 0.3, y + 10.1, z)), BAR, DRESS)
+					Kit.part(dressing, "BannerHem", Vector3.new(0.24, 0.3, 3), CFrame.new(o + Vector3.new(x + inward * 0.22, y + 4.1, z)), BAR, DRESS)
 				end
 			else
 				for z = z0 + 5, z1 - 5, 10 do

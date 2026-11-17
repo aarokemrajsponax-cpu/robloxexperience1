@@ -22,6 +22,16 @@ function Speed.tuned(away: any): boolean
 	return type(away) == "string" and type(m.tuned) == "table" and m.tuned[away] == true
 end
 
+-- (Build 88) A guest's own pace in the house: the bought perk times a brainrot's Light Feet (both
+-- only where nobody competes; Speed.resolve leaves them out in the attractions).
+function Speed.perkOf(player: Player): number
+	local perk = player:GetAttribute("SpeedPerk")
+	local feet = player:GetAttribute("BoostFeet")
+	local p = if type(perk) == "number" and perk > 0 and perk == perk then perk else 1
+	local f = if type(feet) == "number" and feet > 0 and feet == feet then feet else 1
+	return p * f
+end
+
 function Speed.resolve(running: boolean, event: any, perk: any, owner: any, trained: any, away: any): number
 	local m = Config.data.Movement :: any
 	local tuned = Speed.tuned(away)

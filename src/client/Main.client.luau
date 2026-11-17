@@ -275,6 +275,7 @@ start("The island", require(script.Parent.World.IslandView).start)
 -- The attractions: each one's own screen while (and only while) a guest is in it.
 start("The attractions", require(script.Parent.UI.Attraction).start)
 start("The Basement's machinery", require(script.Parent.World.BasementMotion).start)
+start("Steal a Luxe's night staff", require(script.Parent.World.LuxeSleepers).start)
 -- The Grand Auction's notices (outbid, a lot won).
 start("The Grand Auction", require(script.Parent.UI.AuctionPanel).start)
 -- The Concierge's way to a place: gold arrows on the floor, walking.
@@ -355,7 +356,7 @@ start("Curios", function()
 		elseif op == "away" and type(m.gilt) == "number" then
 			-- (Told on the Welcome back card, with its Collect key; a toast only if no card comes.)
 			awayGilt = math.max(awayGilt, math.floor(m.gilt))
-			WelcomeBack.noteAway(m.gilt, tonumber(m.offline), tonumber(m.seconds))
+			WelcomeBack.noteAway(m.gilt, tonumber(m.offline), tonumber(m.seconds), tonumber(m.offlineRate))
 		elseif op == "jarFull" and type(m.gilt) == "number" then
 			Toast.show("Tip jar full", string.format("%s Gilt waiting. Collect it so your squad keeps earning.", BrainrotSquad.commas(m.gilt)), 6)
 		elseif op == "feast" and type(m.gilt) == "number" then
@@ -512,6 +513,13 @@ start("Perks", function()
 		require(script.Parent.UI.QuickDock).setPiano(on)
 	end
 	PerkChips.start()
+	-- (Build 88) The brainrots' boosters, as the server last said.
+	local function boostsNow()
+		local sq = CurioState.squad
+		PerkChips.setBoosts(if type(sq) == "table" then sq.boosts else nil)
+	end
+	CurioState.Changed:Connect(boostsNow)
+	boostsNow()
 end)
 -- At a table the sorting screen is the whole picture: the strip of events, the Gilt bar and the
 -- perk chips step aside (and come back on leaving). On its own, so nothing that fails to start
@@ -560,7 +568,7 @@ local function applySpeed()
 	if humanoid then
 		-- One speed from every effect (Shared/Speed): the house's Quickstep event and VIP Velocity
 		-- Elite (the server sets "SpeedPerk" only for a guest who owns it and hasn't switched it off).
-		humanoid.WalkSpeed = Speed.resolve(running, Workspace:GetAttribute("SpeedBoost"), player:GetAttribute("SpeedPerk"), player:GetAttribute("AdminSpeed"), player:GetAttribute("SpeedTrained"), player:GetAttribute("Attraction"))
+		humanoid.WalkSpeed = Speed.resolve(running, Workspace:GetAttribute("SpeedBoost"), Speed.perkOf(player), player:GetAttribute("AdminSpeed"), player:GetAttribute("SpeedTrained"), player:GetAttribute("Attraction"))
 	end
 end
 -- In or out of an attraction: the few with their own pace keep it (Shared/Speed).
@@ -641,6 +649,8 @@ local function startHud()
 			BoutiquePanel.open("buyGilt")
 		end
 		GiltBar.openBadges = BadgeBookPanel.open
+		-- (Build 88: the level beside the Fortune opens the same Badge Book.)
+		require(script.Parent.UI.FortunePlaque).openLevel = BadgeBookPanel.open
 		GiltBar.isBusy = function(): boolean
 			return TableClient.isSeated() or State.phase ~= "play"
 		end
