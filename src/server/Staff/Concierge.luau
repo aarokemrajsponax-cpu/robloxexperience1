@@ -217,7 +217,7 @@ local PLACES: { Place } = {
 	{ id = "vault", text = "The Vault" },
 	{ id = "boutique", text = "The Boutique" },
 	{ id = "library", text = "The Grand Auction  ·  the Library" },
-	{ id = "ballroom", text = "The Ballroom  ·  the Grand Ballroom" },
+	{ id = "ballroom", text = "The Grand Ballroom  ·  the Grand Ballroom" },
 	{ id = "terrace", text = "The Terrace  ·  the Jet Lounge" },
 	{ id = "suite", text = "Your Suite" },
 	{ id = "grandPrix", text = "The Grand Prix" },

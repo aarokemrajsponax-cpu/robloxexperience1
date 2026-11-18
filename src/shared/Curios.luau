@@ -76,7 +76,7 @@ Curios.List = {
 	{ id = "chatCouture", name = "Le Chat Couture", line = "A cat in a better coat than yours.", rarity = "Rare", family = "meme", glyph = "🐈", accent = "👗", colour = rgb(60, 50, 70), source = "tables", tradeable = true, how = tables("Rare") },
 	{ id = "macaronMaestro", name = "Macaron Maestro", line = "Conducts the dessert trolley. Tempo: allegro.", rarity = "Rare", family = "meme", glyph = "🧁", accent = "🎼", colour = rgb(240, 150, 180), source = "tables", tradeable = true, how = tables("Rare") },
 	{ id = "snailExpress", name = "L'Escargot Express", line = "The fastest snail in France. Still late.", rarity = "Rare", family = "meme", glyph = "🐌", accent = "🚀", colour = rgb(150, 120, 90), source = "tables", tradeable = true, how = tables("Rare") },
-	{ id = "lobsterLuxe", name = "Homard de Luxe", line = "A lobster in pearls who only eats at the Ballroom.", rarity = "Epic", family = "meme", glyph = "🦞", accent = "📿", colour = rgb(220, 70, 60), source = "tables", tradeable = true, how = tables("Epic") },
+	{ id = "lobsterLuxe", name = "Homard de Luxe", line = "A lobster in pearls who only eats at the Grand Ballroom.", rarity = "Epic", family = "meme", glyph = "🦞", accent = "📿", colour = rgb(220, 70, 60), source = "tables", tradeable = true, how = tables("Epic") },
 	{ id = "pianoPanda", name = "Panda Pianissimo", line = "Plays the Foyer's piano at three in the morning. Softly.", rarity = "Epic", family = "meme", glyph = "🐼", accent = "🎹", colour = rgb(230, 230, 230), source = "tables", tradeable = true, how = tables("Epic") },
 	{ id = "goldenGoose", name = "L'Oie d'Or", line = "A goose that lays nothing, but in gold.", rarity = "Legendary", family = "meme", glyph = "🦆", accent = "✨", colour = rgb(240, 190, 60), source = "tables", tradeable = true, how = tables("Legendary") },
 	{ id = "frogKing", name = "Le Roi Grenouille", line = "Crowned at a lily pond in 1789. Never abdicated.", rarity = "Legendary", family = "meme", glyph = "🐸", accent = "👑", colour = rgb(90, 170, 80), source = "tables", tradeable = true, how = tables("Legendary") },
@@ -95,7 +95,7 @@ Curios.List = {
 	{ id = "unicornetto", name = "Unicornetto Uragano", line = "A unicorn in a hurricane of glitter. Mostly glitter.", rarity = "Legendary", family = "meme", glyph = "🦄", accent = "🌪️", colour = rgb(220, 170, 250), source = "tables", tradeable = true, how = tables("Legendary") },
 	{ id = "dragoDorato", name = "Drago Dorato", line = "A dragon who hoards Gilt. Yours, mostly. It shares.", rarity = "Mythic", family = "meme", glyph = "🐉", accent = "💰", colour = rgb(230, 170, 40), source = "tables", tradeable = true, how = tables("Mythic") },
 	-- The Ballroom's own Secret: for winning an evening against three or more guests.
-	{ id = "reginaBallo", name = "La Regina del Ballo", line = "The Ballroom's queen. She curtsies only to winners.", rarity = "Secret", family = "meme", glyph = "👸", accent = "💃", colour = rgb(120, 40, 90), source = "event", tradeable = false, how = "A secret: win a Ballroom evening against three or more guests" },
+	{ id = "reginaBallo", name = "La Regina del Ballo", line = "The Grand Ballroom's queen. She curtsies only to winners.", rarity = "Secret", family = "meme", glyph = "👸", accent = "💃", colour = rgb(120, 40, 90), source = "event", tradeable = false, how = "A secret: win a Ballroom evening against three or more guests" },
 	-- The Secret: found only by a flawless run at the Midnight Room's table
 	-- The attractions' own brainrots: carried out of Steal a Luxe, won in the Maison Basement, taken
 	-- from the Executive's office. Earned by playing them, never sold.
@@ -122,7 +122,7 @@ Curios.List = {
 	-- Relics: events and achievements
 	{ id = "rainCoin", name = "A Coin from the Gold Rain", line = "Caught in the air during a Gilt Rain.", rarity = "Uncommon", family = "relic", glyph = "🏅", accent = "🌧️", colour = rgb(220, 180, 80), source = "event", tradeable = true, how = "Gilt Rain events" },
 	{ id = "paradeBalloon", name = "A Parade Balloon", line = "From the Brainrot Parade. Still floating.", rarity = "Rare", family = "relic", glyph = "🎈", accent = "🥐", colour = rgb(240, 90, 110), source = "event", tradeable = true, how = "The Brainrot Parade" },
-	{ id = "discoBall", name = "The Disco Ball", line = "From the night the Ballroom became a disco.", rarity = "Epic", family = "relic", glyph = "🔮", accent = "🕺", colour = rgb(200, 200, 220), source = "event", tradeable = true, how = "Ballroom Disco Night" },
+	{ id = "discoBall", name = "The Disco Ball", line = "From the night the Grand Ballroom became a disco.", rarity = "Epic", family = "relic", glyph = "🔮", accent = "🕺", colour = rgb(200, 200, 220), source = "event", tradeable = true, how = "Ballroom Disco Night" },
 	{ id = "firstKey", name = "The First Key", line = "For a guest's first hundred rounds.", rarity = "Rare", family = "relic", glyph = "🗝️", accent = "", colour = rgb(170, 130, 60), source = "achievement", tradeable = false, how = "Achievement: clear 100 rounds" },
 	{ id = "hallmark", name = "The House Hallmark", line = "For a thousand pieces put away correctly.", rarity = "Epic", family = "relic", glyph = "⚜️", accent = "", colour = rgb(200, 160, 80), source = "achievement", tradeable = false, how = "Achievement: 1,000 correct filings" },
 	-- The Cabinet's newer pieces, for Gems (the exact one you choose).

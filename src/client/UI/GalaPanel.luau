@@ -138,7 +138,7 @@ local function dance(content: Frame, body: ScrollingFrame)
 	local juke = if type(st.juke) == "table" then st.juke else {}
 	Theme.text(body, "Your moves", 12, "caps", { LayoutOrder = 1, TextXAlignment = Enum.TextXAlignment.Left })
 	moveGrid(body, 2, 64)
-	Theme.text(body, "A dance keeps going while you walk about, until you press Stop dancing or leave the Ballroom. Everyone in the hall sees it. A minute on the dance floor pays a little Gilt, ten minutes a day.", 12, "body", { LayoutOrder = 3, TextColor3 = C.smoke, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left })
+	Theme.text(body, "A dance keeps going while you walk about, until you press Stop dancing or leave the Grand Ballroom. Everyone in the hall sees it. A minute on the dance floor pays a little Gilt, ten minutes a day.", 12, "body", { LayoutOrder = 3, TextColor3 = C.smoke, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left })
 	Theme.hairline(body, UDim.new(0, 120), 4)
 	Theme.text(body, "The jukebox", 12, "caps", { LayoutOrder = 5, TextXAlignment = Enum.TextXAlignment.Left })
 	local left = math.max(0, math.floor(tonumber(juke.changeIn) or 0))

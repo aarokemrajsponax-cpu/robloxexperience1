@@ -317,9 +317,11 @@ roblox.implementMethod("Sound", "Play", function(self)
 	self:SetAttribute("TestPlays", (self:GetAttribute("TestPlays") or 0) + 1)
 end)
 roblox.implementMethod("ParticleEmitter", "Emit", function() end)
--- The server's clock, running with the fake one.
+-- The server's clock, running with the fake one. (Its base can be lowered for a check that needs
+-- a time kept precisely in an attribute: see the sleepers.)
+SERVER_BASE = 1790000000 -- (a global: this chunk is at its limit of locals)
 roblox.implementMethod("Workspace", "GetServerTimeNow", function()
-	return 1790000000 + now
+	return SERVER_BASE + now
 end)
 roblox.implementMethod("ParticleEmitter", "Clear", function() end)
 
@@ -1228,6 +1230,9 @@ preload(sourcemap)
 ---------------------------------------------------------------------------------------------------
 -- 1. Build the house, then boot the client
 ---------------------------------------------------------------------------------------------------
+-- (Build 94: the old Ballroom room isn't built in the game; its sorting screens, kept behind the
+-- switch, are still tested here, so this run builds it.)
+module("ReplicatedStorage", "Shared", "Config").data.Ballroom.room = true
 local ok, err = pcall(function()
 	module("ServerScriptService", "Server", "World", "Build").run()
 end)
@@ -3429,7 +3434,7 @@ do
 	workspace:SetAttribute("BallroomAt", t(600))
 	Floor.roomKeys()
 	advance(0.3)
-	check("closed: the pad says when it opens, Open it now with its price on the key, and Remind me", textOnScreen("The Ballroom is closed") ~= nil and textOnScreen("opens in 10:00") ~= nil and textOnScreen("Open it now") ~= nil and textOnScreen("49") ~= nil and textOnScreen("Remind me") ~= nil)
+	check("closed: the pad says when it opens, Open it now with its price on the key, and Remind me", textOnScreen("The Grand Ballroom is closed") ~= nil and textOnScreen("opens in 10:00") ~= nil and textOnScreen("Open it now") ~= nil and textOnScreen("49") ~= nil and textOnScreen("Remind me") ~= nil)
 	check("...the top row of keys gains nothing (it never runs under the Gilt)", textOnScreen("Leave Lights Out") == nil and find(playerGui, function(d)
 		return d.Name == "LightsOutPad"
 	end) ~= nil)
@@ -3549,7 +3554,7 @@ do
 	check("opened again: back on the page last read", textOnScreen("Every place in the house") ~= nil)
 	press("Extras")
 	advance(0.6)
-	check("Extras: the Grand Prix, the Ballroom, the Library, curios and brainrots, holidays, events", textOnScreen("The Grand Prix") ~= nil and textOnScreen("The Ballroom") ~= nil and textOnScreen("The Library") ~= nil and textOnScreen("Curios and brainrots") ~= nil and textOnScreen("Holiday games") ~= nil and textOnScreen("Events") ~= nil)
+	check("Extras: the Grand Prix, the Grand Ballroom, the Library, curios and brainrots, holidays, events", textOnScreen("The Grand Prix") ~= nil and textOnScreen("The Grand Ballroom") ~= nil and textOnScreen("The Library") ~= nil and textOnScreen("Curios and brainrots") ~= nil and textOnScreen("Holiday games") ~= nil and textOnScreen("Events") ~= nil)
 	check("...each saying how it works and what you get", textOnScreen("press E to drive") ~= nil and textOnScreen("five lights") ~= nil and textOnScreen("lamp goes out") ~= nil and textOnScreen("You get: Gilt for the top three, the most for the winner.") ~= nil and textOnScreen("You get: The last lamp still lit wins the whole pot of Gilt.") ~= nil)
 	snapshot("howto-extras")
 	press("Gilt & Shop")
@@ -5988,11 +5993,14 @@ do
 	check("...and goes back to the squad when it stops walking", Walkers.of(LocalPlayer) == nil and Walkers.figure(LocalPlayer) == nil)
 end
 -- The Badge Book.
-invokeResults.BadgeAsk = { ok = true, earned = { firstRound = 1790000000, metOwner = 1790000100 }, stats = { rounds = 7, level = 12 }, count = 2, total = 151 }
+invokeResults.BadgeAsk = { ok = true, earned = { firstRound = 1790000000, metOwner = 1790000100 }, stats = { rounds = 7, level = 12 }, count = 2, total = 151, icons = { metOwner = "rbxassetid://777123" } }
 local BadgeBookPanel = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "BadgeBookPanel")
 BadgeBookPanel.open()
 advance(1)
 check("the Badge Book: what's earned, and how far along the rest are", textOnScreen("The Badge Book") ~= nil and textOnScreen("2 of 151 badges earned") ~= nil and textOnScreen("Met the Owner") ~= nil and textOnScreen("7 / 10") ~= nil)
+check("Build 94: a badge made on Roblox shows its own picture", find(playerGui, function(d)
+	return d.Name == "BadgeIcon" and d.Parent ~= nil and d.Parent.Name == "Badge_metOwner" and d.Image == "rbxassetid://777123"
+end) ~= nil)
 snapshot("badge-book")
 check("its groups", press("HOLIDAYS") and (function()
 	advance(0.3)
@@ -8700,6 +8708,9 @@ coroutine.wrap(function()
 	CollectionService:AddTag(rig, "LuxeSleeper")
 	local drops = Sleepers.measure(rig, { Root = rootJ, LeftHip = hip })
 	check("how far down onto a chair, measured from the rig itself", drops ~= nil and drops.chair > 0.3 and drops.lie > 0 and drops.stool < drops.chair, drops and drops.chair)
+	-- (The harness keeps attributes less precisely than Roblox: at this server clock, about 1.79
+	-- billion, a "SleepAt" can come back a minute out. For these poses the clock runs small.)
+	SERVER_BASE = 1000
 	set("chair", "asleep", 0)
 	check("asleep in an armchair: sat down (thighs out), let down onto the seat, chin on the chest", math.abs(xOf(hip) - 90) < 2 and rootJ.Transform.Position.Y < -0.3 and xOf(neck) < -20, xOf(hip), rootJ.Transform.Position.Y)
 	local mark = head:FindFirstChild("SleepMark")
@@ -8711,7 +8722,7 @@ coroutine.wrap(function()
 	check("stirring: restless, the head turning (the z z z amber)", math.abs(y1 - y2) > math.rad(3) and mark.Mark.TextColor3.G < 0.85)
 	check("...and the HUD can say who stirs near the guest", Sleepers.restless(base + Vector3.new(3, 3, 0), 20) == "the footman" and Sleepers.restless(base + Vector3.new(60, 3, 0), 20) == nil)
 	set("chair", "waking", 0.4)
-	check("waking: still sitting a moment, sitting up, the arms going up to stretch", math.abs(xOf(hip) - 90) < 2 and xOf(neck) > -20)
+	check("waking: still sitting a moment, sitting up, the arms going up to stretch", math.abs(xOf(hip) - 90) < 2 and xOf(neck) > -20, string.format("hip %.1f neck %.1f", xOf(hip), xOf(neck)))
 	set("chair", "waking", 1.5)
 	check("...then nearly on their feet", xOf(hip) < 20 and xOf(hip) >= 0 and rootJ.Transform.Position.Y > -0.2, xOf(hip))
 	set("chair", "awake", 3, { calling = "bell" })
@@ -8724,6 +8735,7 @@ coroutine.wrap(function()
 	set("bed", "awake", 2)
 	check("...woken: sat up in bed, legs out along it", math.abs(xOf(rootJ)) < 1 and math.abs(xOf(hip) - 90) < 2)
 	rig:Destroy()
+	SERVER_BASE = 1790000000
 	Sleepers.step(nil)
 	check("no errors with the night staff", #errors == errorsBefore, errors[errorsBefore + 1])
 end)()
@@ -9311,14 +9323,9 @@ coroutine.wrap(function()
 	check("a shot: its tracer drawn", workspace:FindFirstChild("Tracer") ~= nil)
 	serverSays("Attraction", { op = "hurt", amount = 18, why = "dash", composure = 54 })
 	advance(0.05)
-	check("hurt: the screen's edge flashes red", (function()
-		for _, d in game:GetDescendants() do
-			if d.Name == "HurtFlash" then
-				return true
-			end
-		end
-		return false
-	end)())
+	check("hurt: the screen's edge flashes red", find(playerGui, function(d)
+		return d.Name == "HurtFlash"
+	end) ~= nil)
 	advance(1)
 	-- Build 78: his wind-ups drawn where they'll come and said plainly; his lines; his finale.
 	local base = module("ReplicatedStorage", "Shared", "Attractions").origin("executive")

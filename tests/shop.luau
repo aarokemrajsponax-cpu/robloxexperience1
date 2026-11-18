@@ -2073,6 +2073,26 @@ do
 	check("a night counts once, however often you rejoin during it", bd.tally.abuseNights == 1)
 	local view = Achievements.view(bd)
 	check("the Badge Book shows what's earned and how far along", view.count >= 4 and view.total == BadgeBook.count and view.stats.rounds == 60)
+	-- (Build 94) A badge made on Roblox: its own picture in the Badge Book, once Roblox has said it.
+	do
+	local infoWas = Achievements.badgeInfo
+	local askedFor = {}
+	Achievements.badgeInfo = function(id)
+		table.insert(askedFor, id)
+		return { Name = "Welcome to the Maison", IconImageId = 777123 }
+	end
+	Config.data.Badges.nights_1 = 4242
+	run(function()
+		Achievements.view(bd)
+	end)
+	advance(0.1)
+	view = Achievements.view(bd)
+	check("Build 94: a badge made on Roblox shows its own picture in the Badge Book", view.icons.nights_1 == "rbxassetid://777123" and table.find(askedFor, 4242) ~= nil, view.icons.nights_1)
+	check("...asked for once a server, not every time the book opens", #askedFor == 1)
+	check("...and one not made on Roblox has none (its glyph instead)", view.icons.level_10 == nil)
+	Config.data.Badges.nights_1 = 0
+	Achievements.badgeInfo = infoWas
+	end
 
 	-- The Gem Shop.
 	local gemmy = guest("Gem", 304)

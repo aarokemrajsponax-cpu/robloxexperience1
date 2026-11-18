@@ -128,6 +128,10 @@ local defaults = {
 
 	-- Lights Out in the Ballroom (Appendix H3). Seconds unless noted.
 	Ballroom = {
+		-- (Build 94) One ballroom: the old Ballroom room (its twenty tables and Gallery) isn't built;
+		-- its doorway off the Club hall is the Grand Ballroom's doors, and Lights Out is played on
+		-- the Grand Ballroom's dance floor. True brings the old room back (its tests use it).
+		room = false,
 		tables = 20,
 		-- Lights Out on the dance floor (Build 81, server/FloorShow): party games inside the ring of
 		-- tables, each guest's lamp lit at a table and put out when they're out. `enabled` false

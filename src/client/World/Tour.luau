@@ -51,7 +51,14 @@ Tour.isClear = function(): boolean
 	return true
 end
 
-type Card = { stop: string, title: string, line: string, place: string?, hand: string? }
+type Card = { stop: string, title: string, line: string, place: string?, hand: string?, attraction: string?, live: string?, quick: boolean? }
+
+-- (Build 94) Set by Main: a card's "Try it now" (into that attraction), and what's true right now
+-- for a card (its `live` key), said after its line.
+Tour.tryNow = function(_attraction: string) end
+Tour.liveLine = function(_key: string): string?
+	return nil
+end
 
 -- Set by Main (Build 87): the guiding hand pointed at something on the screen for a card (`what`:
 -- "collection"), or put away (nil).
@@ -60,7 +67,10 @@ Tour.pointAt = function(_what: string?) end
 local player = Players.LocalPlayer
 local V = Voice.Concierge
 local stops = Layout.Tour.stops
-local cards = Voice.Tour :: { Card }
+local fullDeck = Voice.Tour :: { Card }
+-- (Build 94) The cards this tour shows: all of them, or (chosen at the first card) just the
+-- attractions and the way round to them.
+local cards = fullDeck
 
 local active = false
 local state = "walking" -- "walking" | "arriving" | "card"
@@ -447,6 +457,22 @@ local function choose(i: number, id: string)
 			cardIndex = i + 1
 			walkTo(stopIndexOf(nextCard.stop))
 		end
+	elseif id == "quick" then
+		-- (Build 94) Just the attractions: the welcome, then only the cards marked for it.
+		local quick: { Card } = { cards[1] }
+		for k = 2, #fullDeck do
+			if fullDeck[k].quick then
+				table.insert(quick, fullDeck[k])
+			end
+		end
+		cards = quick
+		choose(1, "next")
+	elseif id == "try" then
+		local a = cards[i].attraction
+		Tour.stop("try")
+		if a then
+			Tour.tryNow(a)
+		end
 	elseif id == "back" then
 		showCard(math.max(1, i - 1))
 	elseif id == "attractions" then
@@ -469,14 +495,27 @@ showCard = function(i: number)
 		choices = { { id = "attractions", text = K.attractions }, { id = "explore", text = K.explore } }
 	else
 		choices = { { id = "next", text = K.next } }
+		if i == 1 and cards == fullDeck then
+			table.insert(choices, { id = "quick", text = K.quick })
+		end
+		if card.attraction then
+			table.insert(choices, { id = "try", text = K.try })
+		end
 		if i > 1 then
 			table.insert(choices, { id = "back", text = K.back })
 		end
 		table.insert(choices, { id = "done", text = K.done })
 	end
+	local line = card.line
+	if card.live then
+		local ok, extra = pcall(Tour.liveLine, card.live)
+		if ok and type(extra) == "string" and extra ~= "" then
+			line ..= "\n\n" .. extra
+		end
+	end
 	local point = if card.place then Layout.Tour.points[card.place] else nil
 	pcall(Tour.pointAt, card.hand)
-	Dialogue.show(V.speaker, card.line, choices, function(id: string)
+	Dialogue.show(V.speaker, line, choices, function(id: string)
 		choose(i, id)
 	end, nil, {
 		title = card.title,
@@ -711,6 +750,7 @@ function Tour.start()
 		return
 	end
 	active = true
+	cards = fullDeck
 	stopIndex, cardIndex, lostFor, paused = 1, 1, 0, false
 	fetching, waitedFor, arrivedFor, trailRefresh, holdFor = false, 0, 0, 0, 0
 	local params = RaycastParams.new()

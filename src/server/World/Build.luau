@@ -2,6 +2,7 @@
 -- Builds the Maison into the Workspace when the server starts.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Config = require(ReplicatedStorage.Shared.Config)
 local Workspace = game:GetService("Workspace")
 
 local Breathe = require(ReplicatedStorage.Shared.Breathe)
@@ -161,7 +162,9 @@ function Build.run(options: Options?): Folder
 	step("the Obsidian Room", function() Obsidian.build(root) end)
 	step("the Midnight Room", function() Midnight.build(root) end)
 	step("the Library", function() Library.build(root) end)
-	step("the Ballroom", function() Ballroom.build(root) end)
+	if (Config.data.Ballroom :: any).room ~= false then
+		step("the Ballroom", function() Ballroom.build(root) end)
+	end
 	step("the Boutique", function() BoutiqueRoom.build(root) end)
 	step("the Vault", function() VaultRoom.build(root) end)
 	step("the Terrace", function() Terrace.build(root) end)

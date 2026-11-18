@@ -460,7 +460,7 @@ check("62 collectable pieces", Catalogue.totalCollectable() == 62, Catalogue.tot
 ---------------------------------------------------------------------------------------------------
 local Layout = module("ReplicatedStorage", "Shared", "Layout")
 local tables = CollectionService.GetTagged(CollectionService, "MaisonTable")
-check("30 tables: six in the Salon, four duel halves in the Library, twenty in the Ballroom", #tables == 30, #tables)
+check("Build 94: 10 tables, six in the Salon and four duel halves in the Library (the old Ballroom's twenty are gone)", #tables == 10, #tables)
 do
 	local gone = 0
 	for _, t in tables do
@@ -707,7 +707,12 @@ for _, dw in Layout.Doorways do
 			end
 		end
 	end
-	check("nothing stands in " .. dw.name, #blocking == 0, table.concat(blocking, ", "))
+	if dw.closed then
+		-- (Build 94: closed on purpose, behind the doors that stand in it.)
+		check(dw.name .. " is closed behind its doors", #blocking > 0)
+	else
+		check("nothing stands in " .. dw.name, #blocking == 0, table.concat(blocking, ", "))
+	end
 end
 
 -- Surfaces that flicker (z-fighting): two visible faces of different-looking parts lying in the
@@ -951,8 +956,9 @@ do
 	for _ in ring do
 		n += 1
 	end
-	check("the Ballroom has twenty tables", n == 20, n)
+	check("Build 94, one ballroom: the old Ballroom's ring of tables isn't built", n == 0, n)
 	local B = Layout.Ballroom
+	if n > 0 then -- (Build 94: with the old room built only)
 	for i, t in ring do
 		local frame = t:GetAttribute("Frame")
 		local forward = frame:VectorToWorldSpace(Vector3.new(0, 0, 1))
@@ -1021,6 +1027,7 @@ do
 	check("a guest can climb to the Gallery and walk along it", whyStair == nil, whyStair)
 	check("the Gallery arrival is clear", blocked(B.galleryArrival, 0.9, B.gallery.floorY + 1.2, B.gallery.floorY + 5) == nil)
 	check("the Ballroom arrival is clear", blocked(B.arrival, 0.9, Layout.CLUB + 1.2, Layout.CLUB + 5) == nil)
+	end
 end
 
 -- The Boutique: open to walk into, with its counter, mirror and Ledger.
@@ -1099,8 +1106,6 @@ do
 		{ "the Boutique arrival", Layout.Boutique.arrival, "floor" },
 		{ "the Vault arrival", Layout.Vault.arrival, "floor" },
 		{ "the Library arrival", Layout.Library.arrival, "floor" },
-		{ "the Ballroom arrival", Layout.Ballroom.arrival, "floor" },
-		{ "the Gallery arrival", Layout.Ballroom.galleryArrival, "floor" },
 		{ "the Terrace arrival", Layout.Terrace.arrival, "floor" },
 		{ "the Suite arrival", Layout.Suite.arrival, "floor" },
 	}

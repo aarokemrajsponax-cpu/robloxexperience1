@@ -118,8 +118,9 @@ for _, p in H.tagged.AttractionPrompt or {} do
 		end
 	end
 end
-check("the Grand Ballroom is one of the attractions, entered from the Ballroom", AttractionList.byId.gala ~= nil and AttractionList.byId.gala.room == "ballroom")
-check("its great doors stand at the far end of the Ballroom, on the room's axis", doorAt ~= nil and Layout.zoneAt(doorAt) == "ballroom" and math.abs(doorAt.X - Layout.Ballroom.centre.X) < 0.5 and doorAt.Z > Layout.Ballroom.maxZ - 4, doorAt)
+check("Build 94, one ballroom: the Grand Ballroom is entered from the Club hall", AttractionList.byId.gala ~= nil and AttractionList.byId.gala.room == "club")
+check("its doors stand in the Club hall's doorway where the old Ballroom's door was", doorAt ~= nil and Layout.zoneAt(doorAt) == "club" and math.abs(doorAt.X - Layout.Club.ballroomDoor.X) < 0.5 and math.abs(doorAt.Z - Layout.Club.ballroomDoor.Z) < 4, doorAt)
+check("...the old Ballroom room isn't built (no tables of its own), and its doorway is closed", #(H.tagged.BallroomTable or {}) == 0 and workspace:FindFirstChild("DoorwaySeal", true) ~= nil)
 check("its prompts: the doors in and home, the jukebox, four Exchange stands, three photo sets, eight podiums, the Arena's gate, the models' book",
 	kinds["go:"] == 1 and kinds["home:"] == 1 and kinds["panel:dance"] == 1 and kinds["panel:exchange"] == 4 and kinds["act:frame"] == 1 and kinds["act:rose"] == 1 and kinds["act:moon"] == 1
 		and kinds["act:trivia"] == 8 and kinds["act:arena"] == 1 and kinds["act:runway"] == 1, kinds)
@@ -178,18 +179,18 @@ end)(), #Plan.Questions)
 -- 2. In, and home
 ---------------------------------------------------------------------------------------------------
 local function goIn(g)
-	stand(g, Layout.Ballroom.galaHome)
+	stand(g, Layout.Club.galaHome)
 	return askAs(g, { op = "go", id = "gala" })
 end
 local r = goIn(ada)
-check("a guest in the Ballroom goes in through the great doors", r and r.ok == true and inside(ada), r)
+check("a guest in the Club hall goes in through the doors", r and r.ok == true and inside(ada), r)
 check("and arrives inside the doors home, facing up the hall", (ada.root.CFrame.Position - (O + Plan.ARRIVAL.Position)).Magnitude < 4, ada.root.CFrame.Position)
 advance(3)
 r = askAs(ada, { op = "home" })
-check("home again: back in the Ballroom, before the great doors", r and r.ok == true and not inside(ada) and Layout.zoneAt(ada.root.CFrame.Position) == "ballroom" and (ada.root.CFrame.Position - Layout.Ballroom.galaHome).Magnitude < 4, ada.root.CFrame.Position)
+check("home again: back in the Club hall, before the doors", r and r.ok == true and not inside(ada) and Layout.zoneAt(ada.root.CFrame.Position) == "club" and (ada.root.CFrame.Position - Layout.Club.galaHome).Magnitude < 4, ada.root.CFrame.Position)
 stand(cy, Vector3.new(0, 3, 0))
 r = askAs(cy, { op = "go", id = "gala" })
-check("from anywhere else, the house says where the doors are", r and r.ok == false and tostring(r.why):find("Ballroom") ~= nil, r)
+check("from anywhere else, the house says where the doors are", r and r.ok == false and tostring(r.why):find("Club hall") ~= nil, r)
 advance(3)
 check("Ada in again", goIn(ada).ok == true)
 advance(3)

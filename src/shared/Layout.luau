@@ -203,6 +203,11 @@ Layout.Club = {
 	ballroomDoor = Vector3.new(12, 20, 66),
 	doorWidth = 8,
 	doorHeight = 11,
+	-- (Build 94) One ballroom: the old Ballroom is gone and its doorway is the Grand Ballroom's
+	-- doors, opening off this hall; a guest comes home from it just in front of them.
+	galaDoors = Vector3.new(12, 20, 65.4),
+	galaHome = Vector3.new(12, 20, 59),
+	centre = Vector3.new(2, 20, 55),
 }
 
 -- The Terrace (§3): the Obsidian Room's roof, through French doors in the Club hall's east wall
@@ -368,7 +373,7 @@ end
 -- floor runs on through. The others have their own floor through the wall (a landing, a step, a
 -- corridor).
 -- `height` is the clear height a guest walks through; `rise`, how far steps climb within it.
-export type Doorway = { name: string, centre: Vector3, axis: "x" | "z", width: number, height: number, floorY: number, wall: { number }?, sill: boolean, reach: number?, rise: number? }
+export type Doorway = { name: string, centre: Vector3, axis: "x" | "z", width: number, height: number, floorY: number, wall: { number }?, sill: boolean, reach: number?, rise: number?, closed: boolean? }
 Layout.Doorways = {
 	-- (The front steps fall away outside, so only the threshold itself is looked at; the fanlight
 	-- glass above head height is part of the doors.)
@@ -380,7 +385,8 @@ Layout.Doorways = {
 	{ name = "the Vault door", centre = Layout.Vault.door, axis = "z", width = Layout.Vault.doorWidth, height = 10, floorY = Layout.FLOOR, wall = { 42, 44 }, sill = true },
 	{ name = "the Boutique door", centre = Vector3.new(Layout.Foyer.boutiqueDoor.Position.X, Layout.FLOOR, 43), axis = "z", width = 8, height = 10, floorY = Layout.FLOOR, wall = { 42, 44 }, sill = true },
 	{ name = "the Library door", centre = Layout.Club.libraryDoor, axis = "z", width = Layout.Club.doorWidth, height = Layout.Club.doorHeight, floorY = Layout.CLUB, wall = { 66, 68 }, sill = true },
-	{ name = "the Ballroom door", centre = Layout.Club.ballroomDoor, axis = "z", width = Layout.Club.doorWidth, height = Layout.Club.doorHeight, floorY = Layout.CLUB, wall = { 66, 68 }, sill = true },
+	-- (Build 94: closed behind the Grand Ballroom's own doors, World/Lobbies: one ballroom.)
+	{ name = "the Grand Ballroom door", centre = Layout.Club.ballroomDoor, axis = "z", width = Layout.Club.doorWidth, height = Layout.Club.doorHeight, floorY = Layout.CLUB, wall = { 66, 68 }, sill = true, closed = true },
 	{ name = "the landing door at the top of the stair", centre = Vector3.new(Layout.Foyer.stair.x, Layout.CLUB, 43), axis = "z", width = 8, height = 10, floorY = Layout.CLUB, sill = false },
 	{ name = "the Suite door", centre = Layout.Suite.door, axis = "x", width = Layout.Suite.doorWidth, height = Layout.Suite.doorHeight, floorY = Layout.CLUB, sill = false, rise = 2 },
 	{ name = "the Terrace doors", centre = Layout.Terrace.door, axis = "x", width = Layout.Terrace.doorWidth, height = Layout.Terrace.doorHeight, floorY = Layout.CLUB, sill = false, rise = 2 },
@@ -431,6 +437,8 @@ Layout.Tour = {
 		{ id = "lectern", name = "The Concierge", stand = Vector3.new(9, 3, 6.5), face = Vector3.new(9, 3, 16), via = {} },
 		{ id = "salon", name = "The Salon", stand = Vector3.new(-21, 3, 5), face = Vector3.new(-30, 3, 4), via = { Vector3.new(-2, 3, 8) } },
 		{ id = "tonight", name = "Tonight's table", stand = Vector3.new(-22, 3, 15), face = Vector3.new(-29.4, 3, 17), via = {} },
+		-- (Build 94) The attractions' own doors, so the tour walks you to each.
+		{ id = "luxe", name = "The Luxe Lounge", stand = Vector3.new(-22, 3, 31), face = Vector3.new(-30, 3, 35), via = { Vector3.new(-14, 3, 24) } },
 		{ id = "vault", name = "The Vault", stand = Vector3.new(-3, 3, 47), face = Vector3.new(-8, 3, 53), via = { Vector3.new(-6, 3, 26), Vector3.new(-3, 3, 38) } },
 		{
 			id = "boutique",
@@ -439,6 +447,8 @@ Layout.Tour = {
 			face = Vector3.new(21, 3, 56),
 			via = { Vector3.new(-3, 3, 38), Vector3.new(-3, 3, 13), Vector3.new(25, 3, 13), Vector3.new(25, 3, 38), Vector3.new(19, 3, 40.5) },
 		},
+		{ id = "basement", name = "The Basement Stair", stand = Vector3.new(22, 3, 33), face = Vector3.new(30, 3, 35), via = { Vector3.new(19, 3, 40.5), Vector3.new(25, 3, 38) } },
+		{ id = "executive", name = "The Executive's Anteroom", stand = Vector3.new(21, 3, 6), face = Vector3.new(30, 3, 4), via = { Vector3.new(26, 3, 28), Vector3.new(26, 3, 12) } },
 		{
 			id = "library",
 			name = "The Library",
@@ -455,7 +465,7 @@ Layout.Tour = {
 				Vector3.new(-6, 20, 57),
 			},
 		},
-		{ id = "ballroom", name = "The Ballroom", stand = Vector3.new(12, 20, 61), face = Vector3.new(12, 20, 66), via = { Vector3.new(0, 20, 61) } },
+		{ id = "ballroom", name = "The Grand Ballroom", stand = Vector3.new(12, 20, 61), face = Vector3.new(12, 20, 66), via = { Vector3.new(0, 20, 61) } },
 		{ id = "terrace", name = "The Terrace", stand = Vector3.new(19, 20, 54), face = Vector3.new(25, 20, 54), via = {} },
 		{ id = "suite", name = "Your Suite", stand = Vector3.new(-15, 20, 54), face = Vector3.new(-21, 20, 54), via = { Vector3.new(2, 20, 54) } },
 	} :: { TourStop },

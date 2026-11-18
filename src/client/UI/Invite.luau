@@ -46,7 +46,7 @@ end
 
 -- "Come and watch": a friend lands in the Ballroom's Gallery (§9.8).
 function Invite.ballroom()
-	prompt("ballroom", "Lights Out in the Ballroom. Come and watch from the Gallery, or take a chair.")
+	prompt("ballroom", "Lights Out in the Grand Ballroom. Come and watch from the Gallery, or take a chair.")
 end
 
 return Invite

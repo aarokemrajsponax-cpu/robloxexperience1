@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Ease = require(ReplicatedStorage.Shared.Ease)
 local Fade = require(script.Parent.Fade)
+local Flourish = require(script.Parent.Flourish)
 local Root = require(script.Parent.Root)
 local Theme = require(script.Parent.Theme)
 
@@ -97,6 +98,10 @@ function Toast.show(title: string, line: string?, seconds: number?)
 	current = group
 	Fade.set(group, 1)
 	Fade.to(group, Ease.scaled(Ease.settle), 0)
+	-- (Build 94) It pops in, and the light sweeps across it.
+	Flourish.pop(group, 0.8)
+	local fill = group:FindFirstChild("Fill")
+	Flourish.sheen(if fill and fill:IsA("GuiObject") then fill else group, 0.1)
 	task.delay(seconds or 4, function()
 		if current == group then
 			current = nil

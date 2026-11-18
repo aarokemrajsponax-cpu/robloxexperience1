@@ -246,12 +246,14 @@ end)
 BallroomService.say = function(player, line)
 	Concierge.line(player, line, 4)
 end
-boot("The Ballroom", function()
+boot("The Grand Ballroom", function()
 	if ConfigData.Ballroom.floor and ConfigData.Ballroom.floor.enabled == true then
 		FloorShow.isBusy = function(player: Player): boolean
 			local inside = false
 			pcall(function()
-				inside = require(script.Parent.Attractions).inside(player) ~= nil
+				-- (Build 94: Lights Out is played in the Grand Ballroom: being there isn't busy.)
+				local at = require(script.Parent.Attractions).inside(player)
+				inside = at ~= nil and at ~= "gala"
 			end)
 			return TableService.isSeated(player) or DuelService.isSeated(player) or inside
 		end
@@ -273,7 +275,7 @@ VaultAccess.isSeated = Concierge.isSeated
 -- guests count), and the weekly board of points.
 BallroomService.onFinished = function(player, place, keys, counted)
 	if place == 1 then
-		Memory.highlight(player, "you kept the last lamp in the Ballroom")
+		Memory.highlight(player, "you kept the last lamp in the Grand Ballroom")
 	end
 	LedgerService.add(player, "ballroom", place)
 	if counted then
@@ -538,7 +540,7 @@ Purchases.Sabotage.open = function(by: string?)
 		ok, why = BallroomService.openNow(by)
 	end
 	if ok and by then
-		Remotes.event("Salute"):FireAllClients({ op = "salute", id = "ballroomOpened", by = by, effects = {}, seconds = 6, title = "The Ballroom is open", line = by .. " opened the Ballroom for everyone. Lights Out: press Join in the Ballroom." })
+		Remotes.event("Salute"):FireAllClients({ op = "salute", id = "ballroomOpened", by = by, effects = {}, seconds = 6, title = "The Grand Ballroom is open", line = by .. " opened the Grand Ballroom for everyone. Lights Out: press Join in the Grand Ballroom." })
 	end
 	return ok, why
 end

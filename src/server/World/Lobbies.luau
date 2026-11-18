@@ -324,12 +324,17 @@ local function jetLounge(parent: Instance)
 	Lobbies.entrance(m, "island", CFrame.lookAt(at, at - Vector3.new(1, 0, 0)), true)
 end
 
--- The Ballroom's far end: the great doors to the Grand Ballroom, on the axis of the room, past the
--- marble floor and the chandelier (between the two tables nearest the north wall).
+-- (Build 94) The Grand Ballroom's doors, in the Club hall's doorway where the old Ballroom's door
+-- was, facing into the hall: one ballroom, one way in. The doorway behind them is closed with a
+-- lacquered panel (nothing on the far side now).
 local function grandDoors(parent: Instance)
 	local m = Kit.model(parent, "GrandBallroomDoors")
-	local at = Layout.Ballroom.galaDoors
-	Lobbies.entrance(m, "gala", CFrame.lookAt(at, at + Vector3.new(0, 0, -1)), true)
+	local C = Layout.Club
+	local at = C.galaDoors
+	Lobbies.entrance(m, "gala", CFrame.lookAt(at, at + Vector3.new(0, 0, -1)), false)
+	local wall = C.ballroomDoor
+	local seal = Kit.part(m, "DoorwaySeal", Vector3.new(C.doorWidth + 2, C.doorHeight + 2, 1.2), CFrame.new(wall.X, at.Y + (C.doorHeight + 2) / 2 - 0.5, wall.Z + 1.4), L.blackLacquer)
+	seal.CanQuery = false
 end
 
 function Lobbies.build(parent: Instance)

@@ -3,17 +3,44 @@
 207 medals, one for every badge in the Badge Book (`src/shared/BadgeBook.luau`), made by
 `python3 tools/art/badge_icons.py`. The ring is the tier, the enamel the group, the chip the count.
 
-**None of these has been created, uploaded or assigned in Roblox.** The game already earns every
-badge in the Badge Book by itself; to make one a real Roblox profile badge too:
+**Roblox ids so far:** only `basementSecrets` (Every Secret) has one in `Config.Badges`.
+Every other badge is earned in the game's own Badge Book but isn't a Roblox badge yet, so it isn't
+on players' profiles. `created.json` (written by the tool below) lists each one made with it.
 
-1. Creator Hub -> your experience -> Engagement (or Associated Items) -> Badges -> Create a Badge.
-2. Name and description: copy them from the table below. Image: the file below.
-3. Copy the new badge's id and paste it into `src/shared/Config.luau` -> `Badges`, under the same key
-   (add the key if it isn't listed). Sync and publish. Guests who already earned it get it on their
-   next visit (`Achievements.syncRoblox`).
+### Getting them onto players' profiles, with these pictures
 
-Roblox limits how many badges can be made free each day; check Creator Hub for the current cost.
-Start with `nights_1` (Welcome to the Maison, every guest's first evening).
+A Roblox badge shows in the Badges section of a player's Roblox inventory and profile as soon as the
+game awards it. The game already awards every Badge Book badge whose id is in `Config.Badges`
+(as it's earned, and on the next visit for anyone who earned it before), and the in-game Badge Book
+switches to the badge's real Roblox picture once it exists. So the only step left is making each
+badge on Roblox. Roblox's rules (Creator Hub documentation): **5 badges free per experience every
+24 hours (GMT); each one after that costs 100 Robux.** Pictures: 512 x 512, cropped to a circle
+(these medals are drawn for that). The 206 left would take about six weeks free, or about 20,000 Robux
+at once; the headline ones first is the sensible start.
+
+**The quick way: `tools/badges/create_badges.py`** (needs Python 3). Five a day, free, with the
+right picture, name and description, checked with Roblox afterwards and written into
+`Config.Badges` for you:
+
+1. Creator Hub -> Open Cloud -> API Keys -> Create API Key: add the badges API system
+   (legacy-universe.badge) with **manage-and-spend-robux** (and write) for this experience.
+2. In PowerShell, in the project folder: `$env:ROBLOX_API_KEY = "<your key>"` (this window only;
+   never paste the key anywhere else, and never into a file).
+3. Your Universe ID: Creator Hub -> the experience -> the "..." menu -> Copy Universe ID.
+4. `python tools/badges/create_badges.py --universe <id>` shows today's five (nothing is sent).
+   `python tools/badges/create_badges.py --universe <id> --go` makes them.
+5. Sync and publish (play.ps1, Rojo Connect, Publish). Run step 4 again tomorrow for the next five.
+
+It never pays unless you add `--pay --robux-each 100 --max-robux <your limit>`. Without that, once
+today's free ones are used Roblox refuses and nothing is charged. The order: welcome, the Crown
+Jewel, the Treasury, the Corner Office, Wheels Up; then the Grand Prix, the auction, Admin Abuse,
+Thanksgiving and Christmas; then the fortunes; then the rest. Roblox marks this API "experimental".
+`python tools/badges/test_create_badges.py` checks the tool against a stand-in for Roblox.
+
+**By hand instead:** Creator Hub -> the experience -> Engagement -> Badges -> Create a Badge. Name
+and description from the table below, the picture from this folder. Copy its id into
+`src/shared/Config.luau` -> `Badges` under the same key (add the key if it isn't listed), then sync
+and publish.
 
 | Key | Name | Description | Tier | File |
 |---|---|---|---|---|

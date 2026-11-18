@@ -377,6 +377,69 @@ a Nightly attempt or a Mythic's odds.
 - **The launch kit**: page text, icon, thumbnails and the gameplay video's shot list are in
   [`LAUNCH.md`](LAUNCH.md).
 
+## Build 94 — One Grand Ballroom, the Executive runs, a smarter tour
+
+From the owner's eleven notes after playing Build 93:
+
+- **The Executive leaves when he's beaten** (`server/Attractions/Executive`). He stops being a
+  target, says "Alright, alright, you got me. Until next time..." on every screen, sprints for
+  the nearest of his bodyguards' doors and is gone through it in a puff of smoke (at most five
+  seconds). Every screen is told (`bossGone`).
+- **The Executive fight, harder and louder.** No Fire key: a click (or a tap on a phone) fires.
+  Tracers with a white-hot core and a blue glow, a muzzle flash, sparks and a ring of light on a
+  hit, the stun's number off the target, the room shaking under his attacks, a red flash round the
+  screen when you're hit, a gold streak behind every briefcase. Harder: more composure for him
+  (560), his bodyguards (75) and the generators (120), shorter pauses between attacks, and at half
+  his composure a new attack, his spin (eight briefcases flung out all round, ten in his finale:
+  stand in a gap). Pays more: the prize 40,000 to the Estate and 3,000 Gilt (was 25,000 and
+  1,500), the safe 10,000 (was 6,000), the clean getaway 4,000 Gilt (was 2,500). More to raid
+  once he's gone, each once a guest a run, checked by the server: the desk drawers, a bullion
+  trolley, a watch case and the briefcase he drops (figures in `Config.Attractions.executive.loot`).
+- **The Suite dressed all year.** Its seasonal dressing follows the house's own season (shared
+  `Seasons`, the owner panel's choice included) when no holiday is open: autumn, Thanksgiving,
+  Christmas, New Year, winter, Valentine's, St Patrick's, spring, Easter, summer.
+- **The holiday calendar.** Checked end to end for a year of dates (`tests/calendar`): each
+  holiday's game, the house's season and the Suite's dressing land on the right days. Valentine's
+  and New Year's (which have no holiday game) now dress the house on their calendar days by
+  themselves (`World/HolidayFX`): just the dressing, no hunt or countdown unless the owner runs
+  the event.
+- **One ballroom.** The old Ballroom room (its twenty sorting tables and Gallery) isn't built
+  (`Config.Ballroom.room = false`). Its doorway off the Club hall is now the Grand Ballroom's
+  doors, with their sign; the doorway behind them is closed. Lights Out (the Chairs, the dark, the
+  Spinner) is played on the Grand Ballroom's dance floor, and being in the Grand Ballroom no
+  longer counts as busy for joining it. The words through the house say the Grand Ballroom.
+- **Brainrots step aside** in Steal a Luxe, the Basement and the Executive Suite, so everyone can
+  see the way; a key on the right ("Call my brainrot in") brings them back for the visit, set by
+  the server. Back beside you as you leave.
+- **Show me the house, smarter.** The Concierge now walks you to each attraction's own door (the
+  Luxe Lounge, the Basement Stair, the Executive's Anteroom) for its cards. The first card offers
+  *Just the attractions* (a short tour of them alone). Each attraction's card has *Try it now*
+  (the tour ends and you're taken in). The Grand Ballroom's card says what's true right now
+  (Showtime on, Lights Out open, or when it next opens, by the server's clock).
+- **Steal a Luxe, glowing up.** Every piece shows its grade in light: a ring round its plinth, a
+  pool of colour on the floor and, for the Legendary and finer, a column of light rising from it.
+  On every screen the pieces turn slowly on their plinths (`World/LuxeShowcase`: only near the
+  guest, looks only).
+- **Pop-ups arrive properly** (`UI/Flourish`): panels spring up a touch past full size and settle,
+  notices pop in, cards arrive with a spring, and a band of light sweeps once across each. Calmer
+  with the motion setting turned down.
+- **Badges on players' Roblox profiles, with their pictures.** The game already awards every
+  Badge Book badge that has a Roblox id in `Config.Badges`; what was missing is making the badges
+  on Roblox. `tools/badges/create_badges.py` does that through Roblox's Open Cloud badges API with
+  each badge's own medal (`assets/badge-icons`), five a day free (Roblox's limit; after that 100
+  Robux each, and the tool never pays unless told to, with a limit), reads each back from Roblox and
+  writes its id into `Config.Badges`. The key is read only from the `ROBLOX_API_KEY` environment
+  variable. Steps in `assets/badge-icons/MAPPING.md`. The in-game Badge Book now shows a badge's
+  real Roblox picture once it exists. Not run against Roblox here (no key in this session): it's
+  checked against a stand-in for the API (`tools/badges/test_create_badges.py`).
+- **Fixes.** Reset camera after the flex reel puts the camera back level behind you (the reel had
+  left it low). The title screen's corner names Tyler. The daily calendar and the AFK reveal now
+  come up for the owner too, and wait for the title screen and any open panel instead of being
+  skipped.
+
+Not changed: the "PlayerModule isn't in PlayerScripts" warning in the owner's Output. Walking
+works; this needs a look in Studio.
+
 ## Build 93 — Showtime, the Wealthiest boards in the Foyer, a welcome gift
 
 What the two articles on street-luxury Roblox games ask for, checked against the house as it was,

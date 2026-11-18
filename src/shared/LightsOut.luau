@@ -76,7 +76,7 @@ function LightsOut.room(t: number): Rooms.Room
 	local cases = LightsOut.casesOpen(t)
 	return {
 		id = "ballroom",
-		name = "The Ballroom",
+		name = "The Grand Ballroom",
 		line = "",
 		tag = "",
 		level = 2,

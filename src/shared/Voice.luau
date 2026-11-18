@@ -56,7 +56,7 @@ Voice.Concierge = {
 		takeMe = "Take me to a room",
 		how = "How does this work",
 		library = "The Library",
-		ballroom = "The Ballroom",
+		ballroom = "The Grand Ballroom",
 		inviteFriend = "Invite a friend to the Library",
 		thanks = "Thank you",
 		fine = "I'm fine, thank you",
@@ -86,7 +86,7 @@ Voice.Concierge = {
 		executive = "You hold an invitation. Take your free stun pistol from the Quartermaster, then ride his lift up: it's in the Executive's Anteroom, off the Foyer.",
 		quartermaster = "The Executive Suite needs an invitation. Finish the Maison Basement, carry {inviteHaul} of loot out of Steal a Luxe in one trip, or buy one from the Quartermaster for {invitePrice} Gilt.",
 		island = "You've the Fortune for Luxury Island now. The Island Key is at the Jet Lounge, on the Terrace.",
-		gala = "Bring a friend to the Grand Ballroom, through the great doors at the far end of the Ballroom: the Flex Studio, trivia, the Runway, the Daily Arena and the dance floor.",
+		gala = "Bring a friend to the Grand Ballroom, through its doors in the Club hall, up the Grand Stair: the Flex Studio, trivia, the Runway, the Daily Arena and the dance floor.",
 		climb = "{gap} more and you'll be {rank}. Every haul, purse and prize counts.",
 	},
 	-- Answers, from how the house really works (the numbers are filled in from its settings).
@@ -98,7 +98,7 @@ Voice.Concierge = {
 		{ id = "caught", cat = "attractions", place = "velvet", q = "What if a guard catches me?", a = "Everything in your bag is lost and you're shown out to the courtyard. What you've already banked is safe." },
 		{ id = "skip", cat = "attractions", place = "obsidian", q = "Can I skip a Basement stage?", a = "Yes, and the deeper the stage, the more it costs: {skipGems} Gems for the first, {skipStep} more for each stage after it. Skips bought with Robux work too, more of them further down. A skipped run isn't timed for the boards, and the stage you skip pays nothing." },
 		{ id = "island", cat = "house", place = "terrace", q = "How do I get to Luxury Island?", a = "By the private jet, from the Jet Lounge on the Terrace. The Island Key is for a Tycoon: {islandGilt} Gilt or {islandGems} Gems, yours for good. Five pearls lie in its lagoon every day." },
-		{ id = "gala", cat = "house", place = "ballroom", q = "What's in the Grand Ballroom?", a = "Through the great doors at the far end of the Ballroom: the Flex Studio (shoot a reel of something you own; guests like it on the Flex Wall), the dance floor and its jukebox, Luxury Trivia, the Runway's themed shows, the Daily Arena, three photo sets, the Exchange and the Hall of Fame. A little Gilt for all of it, up to {galaGilt} a day." },
+		{ id = "gala", cat = "house", place = "ballroom", q = "What's in the Grand Ballroom?", a = "Through its doors in the Club hall, up the Grand Stair: the Flex Studio (shoot a reel of something you own; guests like it on the Flex Wall), the dance floor and its jukebox, Luxury Trivia, the Runway's themed shows, the Daily Arena, three photo sets, the Exchange and the Hall of Fame. A little Gilt for all of it, up to {galaGilt} a day." },
 		{ id = "trade", cat = "collection", place = "ballroom", q = "How do I trade?", a = "At the Exchange's stands in the Grand Ballroom, or the Trade key on a guest's card: Gilt, Gems, brainrots and curios. You both see every offer, and nothing changes hands until you both confirm the very same trade." },
 		{ id = "boards", cat = "money", q = "Where are the boards?", a = "Tap your Fortune, under your Gilt: the Wealthiest in this house, this week and of all time. The Basement's best times are at the lectern on the Basement Stair." },
 		{ id = "auction", cat = "house", place = "library", q = "What is the Grand Auction?", a = "In the Library: the week's rare lots, bid for in Gilt or Gems by guests in every server at once. A bid is held from your purse while it stands; outbid, it comes straight back. The highest bid when the week closes wins, and the piece is delivered to you wherever you are." },
@@ -177,18 +177,6 @@ Voice.Tour = {
 		line = "Sit and press E: pieces are dealt to your felt. Drag or tap each into its case, watches in Watches, rings in Jewelry, gold in Money. Right ones in a row raise your combo; then bank the run for Gilt.",
 	},
 	{
-		stop = "salon",
-		place = "velvetDoor",
-		title = "Steal a Luxe",
-		line = "Through the Luxe Lounge: slip into a great residence, carry out what you can and bank it at the car before the guards catch you. Train your Speed on the treadmills first.",
-	},
-	{
-		stop = "salon",
-		place = "velvetDoor",
-		title = "How to play Steal a Luxe",
-		line = "Inside, hold E on a treasure to lift it: the fuller your bag, the slower you walk. Keep out of the guards' and cameras' sight, or the bag is lost. Carry it out to the getaway car to bank it for good.",
-	},
-	{
 		stop = "tonight",
 		place = "tonightBoard",
 		title = "Tonight's table",
@@ -199,6 +187,22 @@ Voice.Tour = {
 		place = "livreDOr",
 		title = "The guest book",
 		line = "Sign it once a night. You can start a Circle here too: a club of up to twenty friends.",
+	},
+	{
+		stop = "luxe",
+		place = "velvetDoor",
+		title = "Steal a Luxe",
+		line = "Through the Luxe Lounge: slip into a great residence, carry out what you can and bank it at the car before the guards catch you. Train your Speed on the treadmills first.",
+		attraction = "luxe",
+		quick = true,
+	},
+	{
+		stop = "luxe",
+		place = "velvetDoor",
+		title = "How to play Steal a Luxe",
+		line = "Inside, hold E on a treasure to lift it: the fuller your bag, the slower you walk. Keep out of the guards' and cameras' sight, or the bag is lost. Carry it out to the getaway car to bank it for good.",
+		attraction = "luxe",
+		quick = true,
 	},
 	{
 		stop = "vault",
@@ -227,46 +231,59 @@ Voice.Tour = {
 		line = "Wear what you own: your look, your nameplate, your table, your lamp and your trail.",
 	},
 	{
-		stop = "boutique",
+		stop = "basement",
 		place = "obsidianDoor",
 		title = "The Maison Basement",
 		line = "Down the Basement Stair: thirty-two stages of jumps, steam and lasers to the Treasury. Each part's end pays its purse, and your best time goes on the boards.",
+		attraction = "basement",
+		quick = true,
 	},
 	{
-		stop = "boutique",
+		stop = "basement",
 		place = "obsidianDoor",
 		title = "How to play the Basement",
 		line = "Jump, climb and dodge down thirty-two stages. Step on every checkpoint pad: fall, and you're back at the last one. Each chamber pays at its way out, the Treasury's chest pays the most, and clearing it earns an invitation upstairs.",
+		attraction = "basement",
+		quick = true,
 	},
 	{
-		stop = "boutique",
+		stop = "executive",
 		place = "midnightDoor",
 		title = "The Executive Suite",
 		line = "By invitation only: clear the Basement, bank a great haul, or buy one from the Quartermaster for Gilt. Take your free stun pistol from him too: it goes in your hotbar, and fires in the Suite's fight.",
+		attraction = "executive",
+		quick = true,
 	},
 	{
-		stop = "boutique",
+		stop = "executive",
 		place = "midnightDoor",
 		title = "How to play the Executive Suite",
 		line = "Ride the lift up. Read one digit at each of the four terminals, out of the cameras' and guards' sight, and type the code at the door. Inside, shoot the three generators, stun his bodyguards, then stun the Executive.",
+		attraction = "executive",
+		quick = true,
 	},
 	{
 		stop = "library",
 		place = "libraryDoor",
 		title = "The Grand Auction",
 		line = "Up here in the Library: the week's rare lots, bid for in Gilt or Gems by guests in every server at once. Outbid, your bid comes straight back; the highest when the week closes wins.",
+		quick = true,
 	},
 	{
 		stop = "ballroom",
 		place = "ballroomDoor",
-		title = "The Ballroom",
-		line = "Lights Out every 20 minutes or so: party games on the dance floor (the Chairs, the dark, the Spinner's duel), and the last lamp lit takes the pot. Through the great doors at the far end, the Grand Ballroom: the Flex Studio, dancing, trivia, the Runway and more, best with friends.",
+		title = "The Grand Ballroom",
+		line = "Through these doors, the Grand Ballroom: the Flex Studio, the dance floor, trivia, the Runway and more, best with friends. Every 20 minutes or so, Lights Out on its dance floor: the Chairs, the dark, the Spinner's duel, and the last lamp lit takes the pot.",
+		attraction = "gala",
+		live = "ballroom",
+		quick = true,
 	},
 	{
 		stop = "terrace",
 		place = "terraceDoor",
 		title = "The Terrace",
 		line = "A bar, a fire pit and loungers under the stars, and the Jet Lounge: the private jet to Luxury Island.",
+		quick = true,
 	},
 	{
 		stop = "suite",
@@ -278,6 +295,7 @@ Voice.Tour = {
 		stop = "suite",
 		title = "Off you go",
 		line = "Earn in the attractions, grow your Estate, climb the wealth ranks and the Wealthiest boards. Ask me anything at my lectern.",
+		quick = true,
 	},
 }
 
@@ -286,6 +304,9 @@ Voice.TourWalk = {
 	start = "Come with me. I'll show you round.",
 	salon = "This way, to the Salon.",
 	tonight = "Over here, by the wall.",
+	luxe = "To the Luxe Lounge: Steal a Luxe is through here.",
+	basement = "Across to the Basement Stair.",
+	executive = "And the Executive's Anteroom, by the front.",
 	vault = "Now the Vault, at the back.",
 	boutique = "Round to the Boutique.",
 	library = "Up the Grand Stair. Mind the step.",
@@ -309,18 +330,27 @@ Voice.TourPlaces = {
 	mirror = "The Wardrobe",
 	ledger = "The Ledger",
 	libraryDoor = "The Library",
-	ballroomDoor = "The Ballroom",
+	ballroomDoor = "The Grand Ballroom",
 	terraceDoor = "The Terrace",
 	suiteDoor = "Your Suite",
 }
 
-Voice.TourKeys = { next = "Next", back = "Back", done = "End the tour", skip = "Skip ahead", attractions = "Show me the attractions", explore = "I'll explore" }
+Voice.TourKeys = { next = "Next", back = "Back", done = "End the tour", skip = "Skip ahead", attractions = "Show me the attractions", explore = "I'll explore", quick = "Just the attractions", try = "Try it now" }
+-- (Build 94) The tour's live words, said with a card when they're true right now (what the house
+-- says on every screen: never a guess). {t} is a clock from the server's own time.
+Voice.TourLive = {
+	ballroomOpen = "Right now: Lights Out is open. Go in and press Join.",
+	ballroomGathering = "Right now: Lights Out is about to start. Go in and press Join before it does.",
+	ballroomPlaying = "Right now: a game of Lights Out is on the dance floor.",
+	ballroomClosed = "Lights Out opens again in {t}.",
+	showtime = "Showtime is on in there now.",
+}
 
 -- A Private Evening (a private server).
 Voice.Private = {
 	title = "A Private Evening",
 	line = "Your own house tonight. Nothing here counts for records.",
-	setEvening = "How would you like the Ballroom tonight?",
+	setEvening = "How would you like the Grand Ballroom tonight?",
 	pace = "The pace",
 	standIns = "The empty chairs",
 	paces = { gentle = "Gentle", house = "The house's pace", brisk = "Brisk" },
@@ -422,11 +452,11 @@ Voice.Afk = {
 -- What's new in this build, told once to each returning guest (Welcome back). Only shown while
 -- `build` is the build that's playing, so old news never shows as new.
 Voice.WhatsNew = {
-	build = 93,
+	build = 94,
 	lines = {
-		"Showtime: every half hour, at twenty past and ten to, one of the Grand Ballroom's party games is called for eight minutes. Play a round while it's on for a Showtime bonus.",
-		"The Wealthiest boards now hang in the Foyer, either side of the Grand Stair: this house now, and of all time.",
-		"House Trophies: six pieces for your Suite, each earned by playing one of the house's games. Never sold. Ask me which.",
+		"One ballroom: the Grand Ballroom's doors are in the Club hall now, and Lights Out is played on its dance floor.",
+		"The Executive Suite fights harder and pays more. Beaten, he runs for the door, and the Office is yours to raid.",
+		"Show me the house now walks you to every attraction's door, with Just the attractions and Try it now.",
 	},
 }
 
@@ -476,7 +506,7 @@ Voice.Hints = {
 		{ id = "rooms", line = "Steal a Luxe, the Basement and the Executive Suite grow your Fortune fastest. Press Play to see every game.", sat = 3 },
 		{ id = "abuse", line = "Admin Abuse: everything pays double. Find the Gold Tile and the Piñata in the Foyer.", every = 600 },
 		{ id = "grandPrix", line = "The Grand Prix is open: get in any car on the street and press Race.", every = 720 },
-		{ id = "ballroom", line = "The Ballroom is open: up the Grand Stair, one winner takes the pot.", every = 900 },
+		{ id = "ballroom", line = "The Grand Ballroom is open: up the Grand Stair, one winner takes the pot.", every = 900 },
 		{ id = "holiday", line = "A holiday game is on. Its key is at the foot of the left dock.", every = 900 },
 		{ id = "shop", line = "You have Gilt to spend: Shop, top right, has table styles, auras and more.", after = 240, every = 1200 },
 		{ id = "suite", line = "Your Suite is yours to decorate. The Suites key on the left takes you there.", after = 420 },
@@ -570,7 +600,7 @@ Voice.Guide = {
 		lead = "Big games and fun on the side. All optional, all worth a try.",
 		items = {
 			{ place = "grandPrix", title = "The Grand Prix", line = "Ultra-luxury cars on the street outside.", how = "Walk up to any car and press E to drive (or F to ride along with a friend). Every 10 minutes a race opens: press Race, line up on the grid, wait for the five lights, then three laps. Reset puts a stuck car right.", win = "Gilt for the top three, the most for the winner." },
-			{ place = "ballroom", title = "The Ballroom", line = "Lights Out: party games on the dance floor.", how = "When it opens, press Join before the countdown ends. Then round after round: the Chairs (when the music stops, stand on a gold seat), Lights Out (be in a circle of light when it goes dark) and, at the end, the Spinner (shove the other guest out of the ring). Out of a round, your lamp goes out.", win = "The last lamp still lit wins the whole pot of Gilt." },
+			{ place = "ballroom", title = "The Grand Ballroom", line = "Lights Out: party games on the dance floor.", how = "When it opens, press Join before the countdown ends. Then round after round: the Chairs (when the music stops, stand on a gold seat), Lights Out (be in a circle of light when it goes dark) and, at the end, the Spinner (shove the other guest out of the ring). Out of a round, your lamp goes out.", win = "The last lamp still lit wins the whole pot of Gilt." },
 			{ place = "library", title = "The Library", line = "Tête-à-Tête: one on one.", how = "Sit at a Library table to face another player. You both get exactly the same pieces; three in a row sends a parcel of lookalikes across to them.", win = "First to win three hands wins the match." },
 			{ title = "Curios and brainrots", line = "Collectibles found as you play.", how = "They turn up at the tables. Open Collection (left of the screen) to see them, and Trade to swap with friends safely.", win = "Brainrots earn you Gilt every hour, and a little while you're offline too (AFK mode)." },
 			{ title = "Luxe Lucky Boxes", line = "Three gift boxes just inside the Grand Ballroom.", how = "Walk up and press E. Open one with Gems, or save up Gilt for one. Every box gives one brainrot; the odds of each are shown first, with a counter to a guaranteed rarer one. Only where Roblox allows paid random items.", win = "A brainrot every time, Rare or better." },
@@ -605,7 +635,7 @@ Voice.Objective = {
 	try = {
 		{ id = "luxe", place = "velvet", line = "Play Steal a Luxe: carry out a fortune and bank it", how = "Its way in is the Luxe Lounge, off the Foyer. Press Play at the top right for every game." },
 		{ id = "basement", place = "obsidian", line = "Go down the Maison Basement: thirty-two stages to the Treasury", how = "Its stair is off the Foyer. Clear it for an invitation to the Executive Suite." },
-		{ id = "gala", place = "ballroom", line = "Visit the Grand Ballroom: the Flex Studio, trivia, the Runway", how = "Through the great doors at the far end of the Ballroom." },
+		{ id = "gala", place = "ballroom", line = "Visit the Grand Ballroom: the Flex Studio, trivia, the Runway", how = "Through its doors in the Club hall, up the Grand Stair." },
 	},
 	best = "Beat your best run in {room}: {points} points",
 	bestHow = "Any table in the Salon.",
@@ -671,7 +701,7 @@ Voice.Ballroom = {
 	closingTime = "Closing Time",
 	closingLine = "The pace tightens until someone breaks.",
 	sixthCase = "The sixth case opens.",
-	queued = "You'll be told the moment the Ballroom opens again.",
+	queued = "You'll be told the moment the Grand Ballroom opens again.",
 	outTitle = "Your lamp is out",
 	outBy = "{place} of {of} · a parcel from {name}",
 	outByName = "A parcel from {name} put it out.",
@@ -705,15 +735,15 @@ Voice.Ballroom = {
 	outRing = "Pushed out of the ring by {name}.",
 	outBell = "{name} was nearer the middle at the bell.",
 	outLeft = "You left the floor.",
-	joinHow = "Press Join in the Ballroom: party games on the dance floor, and the last lamp lit takes the pot.",
+	joinHow = "Press Join in the Grand Ballroom: party games on the dance floor, and the last lamp lit takes the pot.",
 	-- The pad at the foot of the screen in the Ballroom: what Lights Out is, and its keys.
 	padKicker = "Lights Out · on the dance floor",
 	padOpen = "Musical chairs, the dark and the Spinner's duel. The last lamp lit wins {pot} Gilt.",
 	padGathering = "Starts in {time}. The last lamp lit wins {pot} Gilt.",
-	padJoined = "Stay in the Ballroom: when it starts, you're brought onto the floor.",
+	padJoined = "Stay in the Grand Ballroom: when it starts, you're brought onto the floor.",
 	padOnKicker = "Lights Out is on",
 	padPlaying = "Watch the floor. Ask to be reminded, and you'll be told when the next one opens.",
-	padClosedKicker = "The Ballroom is closed",
+	padClosedKicker = "The Grand Ballroom is closed",
 	padClosed = "It opens in {time}. Ask to be reminded, or open it now for everyone.",
 	padClosedFree = "It opens in {time}. Ask to be reminded, and you'll be told when it does.",
 	openHeld = "1 held",

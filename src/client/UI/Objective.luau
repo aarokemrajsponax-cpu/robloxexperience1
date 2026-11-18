@@ -110,9 +110,9 @@ function Objective.current(): Goal?
 		local pot = Workspace:GetAttribute("BallroomPot")
 		local potText = if type(pot) == "number" then number(pot) else "a pot of"
 		if ballroom == "gathering" then
-			return { key = "ballroom:gathering", title = "Lights Out · last call", line = "An evening in the Ballroom is about to begin", how = string.format("Take any chair before it starts: the last lamp wins %s Gilt.", potText), go = "ballroom" }
+			return { key = "ballroom:gathering", title = "Lights Out · last call", line = "An evening in the Grand Ballroom is about to begin", how = string.format("Take any chair before it starts: the last lamp wins %s Gilt.", potText), go = "ballroom" }
 		end
-		return { key = "ballroom:open", title = "The Ballroom is open", line = "Lights Out: sit, sort, keep your lamp lit", how = string.format("The last lamp wins %s Gilt or more. It closes soon.", potText), go = "ballroom" }
+		return { key = "ballroom:open", title = "The Grand Ballroom is open", line = "Lights Out: sit, sort, keep your lamp lit", how = string.format("The last lamp wins %s Gilt or more. It closes soon.", potText), go = "ballroom" }
 	end
 	-- The house's games not yet tried, one at a time (the server says which, and each one gone into
 	-- since is crossed off here).

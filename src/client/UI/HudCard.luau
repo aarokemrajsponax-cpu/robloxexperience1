@@ -12,6 +12,7 @@
 
 local UserInputService = game:GetService("UserInputService")
 
+local Flourish = require(script.Parent.Flourish)
 local Root = require(script.Parent.Root)
 
 local HudCard = {}
@@ -23,6 +24,13 @@ HudCard.MARGIN = 16
 
 -- Dresses `f` as a status card in `accent`. Returns its edge (a card may tint it for an alarm).
 function HudCard.style(f: Frame, accent: Color3): UIStroke
+	-- (Build 94) A card arrives with a little spring and a sweep of light (once: restyling a card
+	-- that's already up doesn't replay it).
+	if f:GetAttribute("Arrived") ~= true then
+		f:SetAttribute("Arrived", true)
+		Flourish.pop(f, 0.9)
+		Flourish.sheen(f, 0.15)
+	end
 	f.BackgroundColor3 = HudCard.BACKGROUND
 	f.BackgroundTransparency = 0.06
 	f.BorderSizePixel = 0

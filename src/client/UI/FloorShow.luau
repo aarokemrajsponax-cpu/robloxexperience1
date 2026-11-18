@@ -328,6 +328,10 @@ end
 local function inBallroom(): boolean
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
+	-- (Build 94: the dance floor is the Grand Ballroom's; with the old room built, in that.)
+	if player:GetAttribute("Attraction") == "gala" then
+		return true
+	end
 	return root ~= nil and root:IsA("BasePart") and Layout.zoneAt(root.Position) == "ballroom"
 end
 
@@ -614,7 +618,7 @@ function FloorShow.handle(m: { [string]: any })
 			Toast.show(V.title, m.why, 3.5)
 		end
 	elseif op == "ballroomOpen" or op == "reminder" then
-		Toast.show("The Ballroom is open", V.joinHow, 4)
+		Toast.show("The Grand Ballroom is open", V.joinHow, 4)
 	elseif op == "ballroomCountdown" and not view.joined then
 		Toast.show(V.title, "A show starts in a minute. " .. V.joinHow, 4)
 	end

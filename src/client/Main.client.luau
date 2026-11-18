@@ -202,7 +202,7 @@ start("The Black Card", BlackCardPanel.start)
 start("The counter", Counter.start)
 start("Tables", TableClient.start)
 start("The house around you", Ambient.start)
-start("The Ballroom", BallroomView.start)
+start("The Grand Ballroom", BallroomView.start)
 -- Lights Out on the dance floor (Build 81): its own screen, when it's the Ballroom's evening.
 start("Lights Out on the floor", function()
 	local floor = (require(ReplicatedStorage.Shared.Config).data :: any).Ballroom.floor
@@ -276,6 +276,7 @@ start("The island", require(script.Parent.World.IslandView).start)
 start("The attractions", require(script.Parent.UI.Attraction).start)
 start("The Basement's machinery", require(script.Parent.World.BasementMotion).start)
 start("Steal a Luxe's night staff", require(script.Parent.World.LuxeSleepers).start)
+start("Steal a Luxe's pieces on show", require(script.Parent.World.LuxeShowcase).start)
 -- (Build 91) The Hourly Drop in the Foyer: its sign, the case coming down, its lid lifting.
 start("The Hourly Drop", function()
 	local HourlyDropView = require(script.Parent.World.HourlyDropView)
@@ -725,8 +726,8 @@ local function startHud()
 				Remotes.event("Travel"):FireServer({ op = "go", place = string.sub(mode, 7) })
 				return
 			elseif mode == "ballroom" then
-				-- (To the Ballroom's door, while it's open.)
-				Remotes.event("Table"):FireServer({ op = "goBallroom" })
+				-- (Build 94: to the Grand Ballroom's doors in the Club hall, where Lights Out is played.)
+				Remotes.event("Travel"):FireServer({ op = "go", place = "ballroom" })
 				return
 			end
 			quickSit(mode)
@@ -931,6 +932,63 @@ end
 Tour.toDirectory = function()
 	require(script.Parent.UI.DirectoryPanel).open()
 end
+-- (Build 94) A tour card's "Try it now": to the attraction's room, then straight in (the server
+-- checks each step, as for the Directory's own keys).
+Tour.tryNow = function(id: string)
+	local AttractionList = require(ReplicatedStorage.Shared.Attractions)
+	local LayoutM = require(ReplicatedStorage.Shared.Layout)
+	local def = AttractionList.byId[id]
+	if not def then
+		return
+	end
+	local function zone(): string?
+		local character = Players.LocalPlayer.Character
+		local root = character and character:FindFirstChild("HumanoidRootPart")
+		return if root and root:IsA("BasePart") then LayoutM.zoneAt(root.Position) else nil
+	end
+	local DirectoryPanel = require(script.Parent.UI.DirectoryPanel)
+	if zone() == def.room then
+		DirectoryPanel.enter(id)
+		return
+	end
+	Remotes.event("Travel"):FireServer({ op = "go", place = if def.room == "club" then "ballroom" else def.room })
+	task.spawn(function()
+		for _ = 1, 40 do
+			task.wait(0.25)
+			if zone() == def.room then
+				task.wait(0.4)
+				DirectoryPanel.enter(id)
+				return
+			end
+		end
+	end)
+end
+-- (Build 94) What's true right now for a tour card (shared/Voice.TourLive), or nil.
+Tour.liveLine = function(key: string): string?
+	local L = Voice.TourLive
+	if key ~= "ballroom" then
+		return nil
+	end
+	local parts = {}
+	if Workspace:GetAttribute("ShowtimeOpen") == true then
+		table.insert(parts, L.showtime)
+	end
+	local state = Workspace:GetAttribute("BallroomState")
+	if state == "open" then
+		table.insert(parts, L.ballroomOpen)
+	elseif state == "gathering" then
+		table.insert(parts, L.ballroomGathering)
+	elseif state == "playing" or state == "round" then
+		table.insert(parts, L.ballroomPlaying)
+	elseif state == "closed" then
+		local at = Workspace:GetAttribute("BallroomAt")
+		if type(at) == "number" and at > Workspace:GetServerTimeNow() then
+			local t = math.ceil(at - Workspace:GetServerTimeNow())
+			table.insert(parts, Voice.fill(L.ballroomClosed, { t = string.format("%d:%02d", t // 60, t % 60) }))
+		end
+	end
+	return if #parts > 0 then table.concat(parts, " ") else nil
+end
 -- (A guest shown the house is new no longer: the Concierge's key says Speak again.)
 Tour.ended = function()
 	local wasNew = State.guest ~= nil and (State.guest.guide == true or State.guest.autoTour == true or State.isFirstVisit())
@@ -1107,8 +1165,8 @@ start("Showtime", function()
 			DirectoryPanel.enter("gala")
 			return
 		end
-		-- To the Ballroom first, then in through its great doors as soon as they're there.
-		HowToPlay.go(def.room)
+		-- To its doors in the Club hall first (Build 94), then in through them as soon as they're there.
+		HowToPlay.go("ballroom")
 		task.spawn(function()
 			for _ = 1, 40 do
 				task.wait(0.25)

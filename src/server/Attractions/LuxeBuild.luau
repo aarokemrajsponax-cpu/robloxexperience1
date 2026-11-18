@@ -734,6 +734,40 @@ function LuxeBuild.piece(parent: Instance, top: BasePart, piece: LuxePlan.Piece,
 	if finest or piece.rarity == "Legendary" or piece.rarity == "Epic" then
 		HolidayProps.sparkle(root, colour, if finest then 10 else 4, 0.5)
 	end
+	-- (Build 94) Its grade in light: a ring in the grade's colour round the plinth's top, a soft
+	-- pool of it on the floor below, and for the Legendary and finer a column of light rising
+	-- from it. All of it goes with the piece; none of it is solid or stops a look or a shot.
+	do
+		local w = top.Size.X
+		local halo = Instance.new("Part")
+		halo.Name = "Halo"
+		halo.Shape = Enum.PartType.Cylinder
+		halo.Size = Vector3.new(0.08, w + 0.9, w + 0.9)
+		halo.CFrame = base * CFrame.new(0, 0.05, 0) * CFrame.Angles(0, 0, math.rad(90))
+		halo.Color = colour
+		halo.Material = Enum.Material.Neon
+		halo.Transparency = 0.35
+		halo.Anchored = true
+		halo.CanCollide = false
+		halo.CanQuery = false
+		halo.CanTouch = false
+		halo.CastShadow = false
+		halo.Parent = m
+		local pool = halo:Clone()
+		pool.Name = "FloorGlow"
+		pool.Size = Vector3.new(0.05, w + 4, w + 4)
+		pool.CFrame = CFrame.new(top.CFrame.Position.X, top.CFrame.Position.Y - 3.6, top.CFrame.Position.Z) * CFrame.Angles(0, 0, math.rad(90))
+		pool.Transparency = 0.82
+		pool.Parent = m
+		if finest or piece.rarity == "Legendary" then
+			local column = halo:Clone()
+			column.Name = "LightColumn"
+			column.Size = Vector3.new(22, 2.4, 2.4)
+			column.CFrame = base * CFrame.new(0, 11, 0) * CFrame.Angles(0, 0, math.rad(90))
+			column.Transparency = 0.86
+			column.Parent = m
+		end
+	end
 	-- Its grade over it, readable across the room (Rare and up): <RARE>, <EPIC>, <LEGENDARY>...
 	local grade = LuxePlan.rarityOf[piece.rarity]
 	if grade and grade.label then
@@ -769,6 +803,8 @@ function LuxeBuild.piece(parent: Instance, top: BasePart, piece: LuxePlan.Piece,
 		pad.Parent = chip
 	end
 	m:SetAttribute("SpotId", spotId)
+	-- (Build 94: every screen turns it slowly on its plinth, World/LuxeShowcase.)
+	game:GetService("CollectionService"):AddTag(m, "LuxePiece")
 	m:SetAttribute("Piece", piece.id)
 	m:SetAttribute("Rarity", piece.rarity)
 	m:SetAttribute("Worth", piece.worth)

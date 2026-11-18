@@ -257,6 +257,38 @@ end
 
 -- The Badge Book as the guest's screen shows it: every badge, which are earned (and when), and how
 -- far along each ladder they are.
+-- (Build 94) Each Roblox badge's own picture (its icon on Roblox, as BadgeService reports it), for
+-- the Badge Book: asked for once a server, in the background, for every key with an id in
+-- Config.Badges; nil until Roblox has answered. A badge not yet made on Roblox has none, and the
+-- Badge Book shows its glyph instead.
+local icons: { [string]: string } = {}
+local asked: { [string]: boolean } = {}
+-- (How a badge's details are looked up: set by tests.)
+Achievements.badgeInfo = function(id: number): any
+	return BadgeService:GetBadgeInfoAsync(id)
+end
+local function fetchIcons()
+	for key in BadgeBook.byKey do
+		local id = robloxId(key)
+		if id and not asked[key] then
+			asked[key] = true
+			task.spawn(function()
+				local ok, info = pcall(Achievements.badgeInfo, id)
+				local image = if ok and type(info) == "table" then tonumber(info.IconImageId) else nil
+				if image and image > 0 then
+					icons[key] = "rbxassetid://" .. tostring(math.floor(image))
+				else
+					-- (Asked again later in the server's life, in case Roblox was busy.)
+					task.delay(120, function()
+						asked[key] = nil
+					end)
+				end
+			end)
+		end
+	end
+end
+Achievements.icons = icons
+
 function Achievements.view(data: Profiles.Data): { [string]: any }
 	local d = record(data)
 	local stats = Achievements.stats(data)
@@ -268,7 +300,12 @@ function Achievements.view(data: Profiles.Data): { [string]: any }
 			count += 1
 		end
 	end
-	return { earned = earned, stats = stats, count = count, total = BadgeBook.count }
+	fetchIcons()
+	local pictures = {}
+	for key, image in icons do
+		pictures[key] = image
+	end
+	return { earned = earned, stats = stats, count = count, total = BadgeBook.count, icons = pictures }
 end
 
 return Achievements

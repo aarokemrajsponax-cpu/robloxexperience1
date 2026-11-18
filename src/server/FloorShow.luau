@@ -21,7 +21,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
+local AttractionList = require(ReplicatedStorage.Shared.Attractions)
 local Config = require(ReplicatedStorage.Shared.Config)
+local Gala = require(ReplicatedStorage.Shared.Gala)
 local Layout = require(ReplicatedStorage.Shared.Layout)
 local LightsOut = require(ReplicatedStorage.Shared.LightsOut)
 local Names = require(ReplicatedStorage.Shared.Names)
@@ -140,9 +142,9 @@ local function rootOf(player: Player?): BasePart?
 	return if root and root:IsA("BasePart") then root else nil
 end
 
+-- (Build 94) In the Grand Ballroom, where the dance floor is.
 local function inBallroom(player: Player): boolean
-	local root = rootOf(player)
-	return root ~= nil and Layout.zoneAt(root.Position) == "ballroom"
+	return player:GetAttribute("Attraction") == "gala"
 end
 
 -- Everyone in the show, and everyone in the room watching it.
@@ -180,10 +182,15 @@ local function broadcastAll(message: { [string]: any })
 	end
 end
 
--- The dance floor: the middle of the ring, and how far from it the games are played.
+-- The dance floor: (Build 94) the Grand Ballroom's own, its middle and how far from it the games
+-- are played (a little inside its edge). With the old Ballroom room built (its tests), the middle
+-- of its ring.
 function FloorShow.arena(): (Vector3, number)
-	local B = Layout.Ballroom
-	return B.centre, math.min(B.radius * 0.62, 60)
+	if (Config.data.Ballroom :: any).room == true then
+		local B = Layout.Ballroom
+		return B.centre, math.min(B.radius * 0.62, 60)
+	end
+	return AttractionList.origin("gala") + Gala.DANCE.centre, Gala.DANCE.radius - 2
 end
 
 local function flatDistance(a: Vector3, b: Vector3): number
@@ -880,7 +887,7 @@ function FloorShow.join(player: Player): (boolean, string?)
 	end
 	if doorState == "closed" and not s then
 		queued[player] = true
-		return false, string.format("The Ballroom is closed: it opens in %s. You'll be told when it does.", clockText(doorUntil - now))
+		return false, string.format("The Grand Ballroom is closed: it opens in %s. You'll be told when it does.", clockText(doorUntil - now))
 	end
 	if s and s.state ~= "gathering" then
 		-- (Asked to be reminded: they are, when it next opens.)
@@ -967,7 +974,7 @@ end
 
 function FloorShow.openNow(by: string?): (boolean, string?)
 	if show or doorState == "open" then
-		return false, "The Ballroom is open already."
+		return false, "The Grand Ballroom is open already."
 	end
 	doorState = "open"
 	doorUntil = FloorShow.clock() + cfg().openSeconds
@@ -1026,7 +1033,7 @@ local function onMessage(player: Player, request: unknown)
 		end
 	elseif op == "openNow" then
 		if not FloorShow.isClosed() then
-			send(player, { op = "refused", why = "The Ballroom is open already." })
+			send(player, { op = "refused", why = "The Grand Ballroom is open already." })
 			return
 		end
 		local ok, why = FloorShow.requestOpen(player)

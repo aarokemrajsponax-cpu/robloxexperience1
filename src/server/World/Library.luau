@@ -121,7 +121,7 @@ local function hall(root: Model)
 	Kit.pointLight(glow, 1.4, 30, Color3.fromRGB(255, 200, 130), true)
 
 	-- Door names
-	local doors: { { at: Vector3, name: string } } = { { at = C.libraryDoor, name = "THE LIBRARY" }, { at = C.ballroomDoor, name = "THE BALLROOM" } }
+	local doors: { { at: Vector3, name: string } } = { { at = C.libraryDoor, name = "THE LIBRARY" }, { at = C.ballroomDoor, name = "THE GRAND BALLROOM" } }
 	for _, spec in doors do
 		local pos = spec.at + Vector3.new(0, C.doorHeight + 1.4, -0.3)
 		local plate = Kit.part(m, "DoorName", Vector3.new(C.doorWidth, 1.2, 0.1), CFrame.new(pos), INVISIBLE, { collide = false, query = false, shadow = false })

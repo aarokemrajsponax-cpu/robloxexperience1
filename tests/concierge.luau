@@ -122,7 +122,7 @@ do
 	end
 	check("2. every tour card stands at a real stop and points at a real place", ok)
 	local every = true
-	for _, want in { "Steal a Luxe", "The Maison Basement", "The Executive Suite", "The Salon", "The Vault", "The Boutique", "The Ballroom", "The Terrace", "Your Suite" } do
+	for _, want in { "Steal a Luxe", "The Maison Basement", "The Executive Suite", "The Salon", "The Vault", "The Boutique", "The Grand Ballroom", "The Terrace", "Your Suite" } do
 		if not titles[want] then
 			every = false
 			print("   (missing from the tour: " .. want .. ")")

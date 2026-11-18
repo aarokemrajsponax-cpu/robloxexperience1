@@ -181,16 +181,34 @@ function BadgeBookPanel.open()
 			edge.Thickness = if got then 2 else 1
 			edge.Transparency = if got then 0 else 0.6
 			edge.Parent = card
-			local glyph = Instance.new("TextLabel")
-			glyph.BackgroundColor3 = if got then colour else rgb(40, 40, 44)
-			glyph.BackgroundTransparency = if got then 0.15 else 0.2
-			glyph.Position = UDim2.fromOffset(8, 8)
-			glyph.Size = UDim2.fromOffset(40, 40)
-			glyph.TextScaled = true
-			glyph.Text = b.glyph
-			glyph.TextTransparency = if got then 0 else 0.55
-			glyph.Parent = card
-			corner(glyph, 20)
+			-- (Build 94) A badge made on Roblox shows its own picture (the server says which);
+			-- the rest, their glyph.
+			local shownIcons = view and view.icons
+			local picture = if type(shownIcons) == "table" then shownIcons[b.key] else nil
+			if type(picture) == "string" and string.sub(picture, 1, 13) == "rbxassetid://" then
+				local icon = Instance.new("ImageLabel")
+				icon.Name = "BadgeIcon"
+				icon.BackgroundColor3 = rgb(20, 20, 24)
+				icon.BackgroundTransparency = if got then 1 else 0.4
+				icon.Position = UDim2.fromOffset(6, 6)
+				icon.Size = UDim2.fromOffset(44, 44)
+				icon.Image = picture
+				icon.ImageTransparency = if got then 0 else 0.6
+				icon.ScaleType = Enum.ScaleType.Fit
+				icon.Parent = card
+				corner(icon, 22)
+			else
+				local glyph = Instance.new("TextLabel")
+				glyph.BackgroundColor3 = if got then colour else rgb(40, 40, 44)
+				glyph.BackgroundTransparency = if got then 0.15 else 0.2
+				glyph.Position = UDim2.fromOffset(8, 8)
+				glyph.Size = UDim2.fromOffset(40, 40)
+				glyph.TextScaled = true
+				glyph.Text = b.glyph
+				glyph.TextTransparency = if got then 0 else 0.55
+				glyph.Parent = card
+				corner(glyph, 20)
+			end
 			local name = Instance.new("TextLabel")
 			name.BackgroundTransparency = 1
 			name.Position = UDim2.fromOffset(54, 6)

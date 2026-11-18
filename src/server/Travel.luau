@@ -66,7 +66,7 @@ local function places(): { [string]: Place }
 	fromStop("vault", "The Vault")
 	fromStop("boutique", "The Boutique")
 	fromStop("library", "The Library")
-	fromStop("ballroom", "The Ballroom")
+	fromStop("ballroom", "The Grand Ballroom")
 	fromStop("terrace", "The Terrace")
 	fromStop("suite", "Your Suite")
 	-- The Grand Prix: on the pavement by the garage, looking at the cars.

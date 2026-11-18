@@ -12,6 +12,7 @@ local Workspace = game:GetService("Workspace")
 
 local Ease = require(ReplicatedStorage.Shared.Ease)
 local Fade = require(script.Parent.Fade)
+local Flourish = require(script.Parent.Flourish)
 
 local Root = {}
 
@@ -267,17 +268,20 @@ local function show(group: Frame)
 	group.Visible = true
 	Fade.set(group, 1)
 	local startPos = group.Position
-	group.Position = startPos + UDim2.fromOffset(0, 10)
-	local s = openScale(group)
-	s.Scale = 0.965
-	Fade.to(group, Ease.scaled(Ease.panel), 0, { Position = startPos })
-	Ease.play(s, Ease.scaled(Ease.info(0.42, Enum.EasingStyle.Quint)), { Scale = 1 })
+	-- (Build 94) It springs up into place, a touch past full size, and a band of light sweeps
+	-- across its glass as it lands (UI/Flourish; calmer with the motion setting turned down).
+	group.Position = startPos + UDim2.fromOffset(0, 24)
+	openScale(group)
+	Fade.to(group, Ease.scaled(Ease.info(0.3, Enum.EasingStyle.Quad)), 0, { Position = startPos })
+	Flourish.pop(group, 0.86)
+	local fill = group:FindFirstChild("Fill")
+	Flourish.sheen(if fill and fill:IsA("GuiObject") then fill else group, 0.18)
 end
 
 local function hide(group: Frame, destroy: boolean)
 	local startPos = group.Position
-	Ease.play(openScale(group), Ease.scaled(Ease.quick), { Scale = 0.98 })
-	local t = Fade.to(group, Ease.scaled(Ease.quick), 1, { Position = startPos + UDim2.fromOffset(0, 6) })
+	Ease.play(openScale(group), Ease.scaled(Ease.info(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In)), { Scale = 0.9 })
+	local t = Fade.to(group, Ease.scaled(Ease.quick), 1, { Position = startPos + UDim2.fromOffset(0, 14) })
 	t.Completed:Once(function()
 		group.Position = startPos
 		if destroy then

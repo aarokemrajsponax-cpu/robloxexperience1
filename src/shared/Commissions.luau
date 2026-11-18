@@ -100,7 +100,7 @@ local function goal(key: string, size: Size): Goal
 		local n = if big then 6 else 2
 		return { id = key, kind = kind, target = n, text = string.format("Take part in %s rounds of the Daily Arena", words(n)) }
 	end
-	return { id = key, kind = "ballroom", target = 3, text = "Sit three Lights Out evenings in the Ballroom" }
+	return { id = key, kind = "ballroom", target = 3, text = "Sit three Lights Out evenings in the Grand Ballroom" }
 end
 
 function Commissions.day(time: number?): number

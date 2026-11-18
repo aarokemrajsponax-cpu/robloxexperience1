@@ -123,7 +123,7 @@ Directory.List = {
 		id = "gala",
 		attraction = "gala",
 		place = "ballroom",
-		room = "the Ballroom",
+		room = "the Grand Ballroom",
 		name = "The Grand Ballroom",
 		tagline = "The Flex Studio, the dance floor, Luxury Trivia, the Runway, the Daily Arena and the Hall of Fame.",
 		short = "Flex reels, trivia, the Runway, the Arena.",
@@ -133,7 +133,7 @@ Directory.List = {
 		deep = rgb(40, 22, 30),
 		mood = "amethyst",
 		steps = {
-			"Through the great doors at the far end of the Ballroom.",
+			"Through its doors in the Club hall, up the Grand Stair.",
 			"Shoot a flex reel in the Flex Studio, play Luxury Trivia, walk the Runway or join the Daily Arena.",
 			"Dance to the jukebox, pose on the photo sets, and trade at the Exchange.",
 		},

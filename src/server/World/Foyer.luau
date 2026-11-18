@@ -427,7 +427,7 @@ local function stair(m: Model)
 	local signAt = Vector3.new(st.x - 6.6, FLOOR, st.fromZ - 1.2)
 	Kit.sign(model, "StairSign", CFrame.lookAt(signAt, signAt + Vector3.new(0, 0, -1)), 3, 1.5, {
 		{ text = "The Club Floor", size = 0.42, font = Brand.Fonts.display, color = Brand.Colours.lightGold },
-		{ text = "The Library  ·  The Ballroom", size = 0.22, font = Brand.Fonts.body, color = Brand.Colours.bone },
+		{ text = "The Library  ·  The Grand Ballroom", size = 0.22, font = Brand.Fonts.body, color = Brand.Colours.bone },
 	}, 3.3)
 end
 

@@ -85,8 +85,9 @@ Attractions.List = {
 	{
 		id = "gala",
 		name = "The Grand Ballroom",
-		room = "ballroom",
-		roomName = "The Ballroom",
+		-- (Build 94: its doors are in the Club hall now, where the old Ballroom's were.)
+		room = "club",
+		roomName = "the Club hall, up the Grand Stair",
 		tag = "DANCE · TRIVIA · THE RUNWAY · THE ARENA",
 		line = "The house's hall of entertainments: the dance floor, Luxury Trivia, the Runway, the Daily Arena, the photo sets, the Exchange and the Hall of Fame.",
 		glyph = "💃",

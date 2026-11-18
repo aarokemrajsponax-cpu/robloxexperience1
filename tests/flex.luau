@@ -97,7 +97,7 @@ check("...and the Flex Wall, written by the server: nobody's shot one yet", wall
 ---------------------------------------------------------------------------------------------------
 for _, g in { ada, bo, cy } do
 	data(g).gilt = 0
-	stand(g, Layout.Ballroom.galaHome)
+	stand(g, Layout.Club.galaHome)
 	check(g.Name .. " goes into the Grand Ballroom", askAs(g, { op = "go", id = "gala" }).ok == true)
 	advance(3)
 end
@@ -173,7 +173,7 @@ check("the feed: newest first, each with its likes, and whether this guest liked
 local before = data(ada).gilt
 Game.page(Attractions.ctx, data(ada)).likesPaid = Plan.REWARDS.likesPaid
 local dee = H.guest("Dee", 1204)
-stand(dee, Layout.Ballroom.galaHome)
+stand(dee, Layout.Club.galaHome)
 askAs(dee, { op = "go", id = "gala" })
 advance(3)
 r = flex(dee, "like", { n = second.id })

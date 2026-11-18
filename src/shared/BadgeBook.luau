@@ -25,7 +25,7 @@ BadgeBook.Groups = {
 	{ id = "tables", name = "The tables" },
 	{ id = "nights", name = "Nights at the house" },
 	{ id = "library", name = "The Library" },
-	{ id = "ballroom", name = "The Ballroom" },
+	{ id = "ballroom", name = "The Grand Ballroom" },
 	{ id = "collection", name = "Your collection" },
 	{ id = "wealth", name = "Gilt and Gems" },
 	{ id = "events", name = "Events and Admin Abuse" },
@@ -48,9 +48,9 @@ BadgeBook.Stats = {
 	nightlies = "Nightlies played",
 	libraryWins = "Wins in the Library",
 	libraryMatches = "Matches in the Library",
-	ballroomEvenings = "Evenings in the Ballroom",
+	ballroomEvenings = "Evenings in the Grand Ballroom",
 	lastLamps = "Last Lamps kept",
-	topFive = "Top-five finishes in the Ballroom",
+	topFive = "Top-five finishes in the Grand Ballroom",
 	register = "Pieces in your Register",
 	mythics = "Mythics found",
 	curiosFound = "Curios found at the tables",
@@ -172,14 +172,14 @@ ladder("library", "libraryMatches", "♟️", "Play %d matches in the Library.",
 moment("library", "mark", "A Mark of Your Own", "Finish your placement evenings and earn a Mark.", "🏷️", "silver")
 
 -- The Ballroom
-ladder("ballroom", "ballroomEvenings", "💃", "Play %d evenings in the Ballroom.", {
+ladder("ballroom", "ballroomEvenings", "💃", "Play %d evenings in the Grand Ballroom.", {
 	{ 1, "First Dance" }, { 10, "Ballroom Regular" }, { 50, "Fifty Evenings" }, { 100, "Belle of the Ball" },
-}, "Play your first evening in the Ballroom.")
+}, "Play your first evening in the Grand Ballroom.")
 ladder("ballroom", "lastLamps", "🕯️", "Keep the last lamp %d times.", {
 	{ 1, "The Last Lamp", "firstLastLamp" }, { 5, "Lamplighter" }, { 25, "Keeper of the Light" },
 }, "Keep the last lamp for the first time.")
 ladder("ballroom", "topFive", "🏅", "Finish in the top five %d times.", {
-	{ 1, "Top Five" }, { 10, "Always Near the Top" }, { 50, "The Ballroom's Own" },
+	{ 1, "Top Five" }, { 10, "Always Near the Top" }, { 50, "The Grand Ballroom's Own" },
 }, "Finish in the top five for the first time.")
 
 -- Your collection
@@ -226,7 +226,7 @@ ladder("events", "pickups", "🎯", "Pick up %d things at the house's events.", 
 }, "Pick up something at one of the house's events.")
 moment("events", "goldenKey", "The Golden Key", "Find a golden key in a Treasure Hunt.", "🗝️", "silver")
 moment("events", "paradeCatch", "Caught One!", "Catch a meme in the Brainrot Parade.", "🎈", "bronze")
-moment("events", "discoNight", "Disco Fever", "Be in the Ballroom on Disco Night.", "🕺", "bronze")
+moment("events", "discoNight", "Disco Fever", "Be in the Grand Ballroom on Disco Night.", "🕺", "bronze")
 moment("events", "giveawayWinner", "Winner!", "Win one of the owner's giveaways.", "🎁", "gold")
 moment("events", "headline", "Breaking News", "Be in the house for one of the owner's headlines.", "📣", "bronze")
 moment("events", "fx_blackHole", "Event Horizon", "Be pulled up into a black hole.", "🕳️", "silver")

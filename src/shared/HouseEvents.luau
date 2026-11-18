@@ -27,7 +27,7 @@ HouseEvents.List = {
 	{ id = "goldRain", name = "Gold Rain", line = "Gold coins are scattered through the house. Walk over them for Gilt.", glyph = "💰" },
 	{ id = "treasure", name = "The Treasure Hunt", line = "Golden keys are hidden around the house. The finder of each wins Gilt.", glyph = "🗝️" },
 	{ id = "parade", name = "The Brainrot Parade", line = "The meme curios are loose in the house. Catch them for Gilt, and a Parade Balloon to keep.", glyph = "🎈" },
-	{ id = "disco", name = "Disco Night", line = "The Ballroom turns disco. Everyone in it gets the Disco Ball curio.", glyph = "🕺" },
+	{ id = "disco", name = "Disco Night", line = "The Grand Ballroom turns disco. Everyone in it gets the Disco Ball curio.", glyph = "🕺" },
 	{ id = "discoHouse", name = "The House Party", line = "Every lamp in the house turns disco, colours chasing round every room.", glyph = "🕺" },
 	{ id = "curioHour", name = "A Night of Curios", line = "Curios turn up among the pieces twice as often.", glyph = "🏺" },
 	-- The holidays.
@@ -86,7 +86,7 @@ end
 -- Lines the owner can announce with one tap (anything typed is filtered by Roblox first).
 HouseEvents.Announcements = {
 	"The owner is in the house tonight. Come and say good evening.",
-	"Everyone to the Ballroom: the next evening is a big one.",
+	"Everyone to the Grand Ballroom: the next evening is a big one.",
 	"Golden Hour is on. Every table pays double Gilt.",
 	"A treasure hunt has begun. Look everywhere.",
 	"Thank you for spending your evening at the Maison.",
