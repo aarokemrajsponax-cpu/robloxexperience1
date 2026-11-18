@@ -1,6 +1,6 @@
 # Badge icons (Build 88)
 
-207 medals, one for every badge in the Badge Book (`src/shared/BadgeBook.luau`), made by
+208 medals, one for every badge in the Badge Book (`src/shared/BadgeBook.luau`), made by
 `python3 tools/art/badge_icons.py`. The ring is the tier, the enamel the group, the chip the count.
 
 **Roblox ids so far:** `nights_1` (Welcome to the Maison) and `basementSecrets` (Every Secret) have one in `Config.Badges`.
@@ -181,6 +181,7 @@ and publish.
 | `abuseNight` | Admin Abuse! | Be in the house for an Admin Abuse Night. | bronze | `abuseNight.png` |
 | `abuseNights_5` | Abuse Veteran | Be in the house for 5 Admin Abuse Nights. | silver | `abuseNights_5.png` |
 | `abuseNights_25` | Survivor of Chaos | Be in the house for 25 Admin Abuse Nights. | platinum | `abuseNights_25.png` |
+| `megaAbuse` | Mega Abuse! | Be in the house for a Mega Abuse. | gold | `megaAbuse.png` |
 | `pickups_1` | Finders Keepers | Pick up something at one of the house's events. | bronze | `pickups_1.png` |
 | `pickups_25` | Quick Hands | Pick up 25 things at the house's events. | silver | `pickups_25.png` |
 | `pickups_100` | Hoarder | Pick up 100 things at the house's events. | gold | `pickups_100.png` |

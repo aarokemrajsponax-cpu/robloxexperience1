@@ -1078,6 +1078,7 @@ function AdminService.abuse(seconds: number, byName: string, mega: boolean?, opt
 		AdminService.tally(p, "abuseNights", 1, "night:" .. tostring(ends))
 		if mega then
 			Curios.forEvent(p, "abuseMedal", "mega:" .. tostring(ends))
+			AdminService.award(p, "megaAbuse")
 		end
 	end
 	-- The surprises, at the night's own moments (counted from when it began, so every server lands
@@ -2739,6 +2740,10 @@ function AdminService.start()
 				if type(until_) == "number" and until_ > os.time() then
 					AdminService.award(player, "abuseNight")
 					AdminService.tally(player, "abuseNights", 1, "night:" .. tostring(until_))
+					-- (Build 94) In the middle of a Mega Abuse: that badge too.
+					if Workspace:GetAttribute("AbuseMega") == true then
+						AdminService.award(player, "megaAbuse")
+					end
 				end
 				-- Arriving while a black hole (say) is switched on: they're there for it too.
 				for id in fxOn do

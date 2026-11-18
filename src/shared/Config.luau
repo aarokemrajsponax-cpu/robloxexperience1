@@ -799,6 +799,10 @@ local defaults = {
 		goldenTurkeyCaught = 0,
 		santasHelper = 0,
 		basementSecrets = 2281422215983983, -- Every Secret: all eight of the Basement's secrets
+		-- (Build 94) To be made on Roblox next (the owner's picks): paste each id here.
+		megaAbuse = 0, -- Mega Abuse!: in the house for a Mega Abuse
+		islandKey = 0, -- The Island Key: Luxury Island unlocked at the Jet Lounge
+		executiveBoss = 0, -- The Corner Office: beat the Executive in his own office
 		register50 = 0,
 		seasonSet = 0,
 		foundingTerm = 0,

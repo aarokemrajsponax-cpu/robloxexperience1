@@ -224,6 +224,8 @@ ladder("events", "abuseNights", "💥", "Be in the house for %d Admin Abuse Nigh
 ladder("events", "pickups", "🎯", "Pick up %d things at the house's events.", {
 	{ 1, "Finders Keepers" }, { 25, "Quick Hands" }, { 100, "Hoarder" }, { 500, "Vacuum Cleaner" },
 }, "Pick up something at one of the house's events.")
+-- (Build 94) Mega Abuse: the owner's biggest event (several realms, one after another).
+moment("events", "megaAbuse", "Mega Abuse!", "Be in the house for a Mega Abuse.", "🌋", "gold")
 moment("events", "goldenKey", "The Golden Key", "Find a golden key in a Treasure Hunt.", "🗝️", "silver")
 moment("events", "paradeCatch", "Caught One!", "Catch a meme in the Brainrot Parade.", "🎈", "bronze")
 moment("events", "discoNight", "Disco Fever", "Be in the Grand Ballroom on Disco Night.", "🕺", "bronze")

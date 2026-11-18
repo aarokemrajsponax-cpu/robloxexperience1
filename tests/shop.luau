@@ -1950,6 +1950,7 @@ do
 	adminAs(owner, { op = "mega", minutes = 5 })
 	check("Mega Abuse: every event at once, marked as Mega", services.Workspace:GetAttribute("AbuseMega") == true and services.Workspace:GetAttribute("Event_doubleXP") ~= nil)
 	check("everyone there gets the Mega Abuse Medal, and Admin Abuse counted", CuriosS.count(hd, "abuseMedal") == 1 and hd.badges.abuseNight == true and (hd.tally.abuseNights or 0) == 1)
+	check("Build 94: ...and the Mega Abuse! badge", hd.badges.megaAbuse == true)
 	local fxBefore = 0
 	for _, b in broadcasts do
 		if b.message.op == "abuseFX" then
