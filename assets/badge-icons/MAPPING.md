@@ -7,6 +7,20 @@
 Every other badge is earned in the game's own Badge Book but isn't a Roblox badge yet, so it isn't
 on players' profiles. `created.json` (written by the tool below) lists each one made with it.
 
+### Just the welcome badge (free, about two minutes, no tools)
+
+1. Creator Hub -> your experience -> Engagement -> Badges -> Create a Badge.
+2. Image: `nights_1.png` (this folder). Name: **Welcome to the Maison**. Description:
+   **Join the Maison for the first time: welcome.** Create it (one badge is within Roblox's free
+   five a day).
+3. Open the new badge and copy its id (the number in its page's address).
+4. In `src/shared/Config.luau`, under `Badges`, change `nights_1 = 0` to `nights_1 = <that id>`.
+5. Sync and publish (play.ps1, Rojo Connect, Publish).
+
+Every guest then gets it on their first visit, and everyone who has been before gets it on their
+next visit; it shows in the Badges on their Roblox profile, and the in-game Badge Book shows its
+picture.
+
 ### Getting them onto players' profiles, with these pictures
 
 A Roblox badge shows in the Badges section of a player's Roblox inventory and profile as soon as the

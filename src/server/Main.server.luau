@@ -763,6 +763,11 @@ end
 boot("Rivals", Rivals.start)
 
 Guests.joinLibrary = DuelService.joinFriend
+-- (Build 94) A night counted: its badges now (the welcome badge on a first visit, on Roblox too
+-- once it has its id in Config.Badges).
+Guests.nightCounted = function(player)
+	Achievements.check(player, true)
+end
 Guests.onSettingChanged = function(player, key)
 	if key == "showMark" or key == "showCrest" then
 		Dressing.nameplate(player)

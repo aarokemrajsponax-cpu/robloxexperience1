@@ -2065,6 +2065,20 @@ do
 		advance(0.5)
 		check("...and only once", #awarded == beforeSync + 1)
 	end
+	-- (Build 94) The welcome badge: a guest's first night counted, and it's on their Roblox profile.
+	do
+		local newcomer = guest("Newcomer", 309)
+		local nd = profiles[newcomer].Data
+		nd.nights.count = 1
+		Config.data.Badges.nights_1 = 5550009
+		local beforeWelcome = #awarded
+		run(function()
+			Achievements.check(newcomer, true)
+		end)
+		advance(0.5)
+		check("Build 94: the welcome badge, on a guest's first night: earned, and awarded on Roblox", nd.badges ~= nil and nd.badges.nights_1 ~= nil and #awarded == beforeWelcome + 1 and awarded[#awarded].id == 5550009 and awarded[#awarded].userId == newcomer.UserId, #awarded - beforeWelcome)
+		Config.data.Badges.nights_1 = 0
+	end
 	Config.data.Badges.firstRound = 0
 	run(function()
 		Achievements.tally(bb, "abuseNights", 1, "night:1")

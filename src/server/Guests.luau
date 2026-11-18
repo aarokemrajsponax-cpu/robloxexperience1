@@ -30,6 +30,9 @@ local Guests = {}
 
 -- Called after a guest changes a setting (set by Main: the nameplate redraws for showMark).
 Guests.onSettingChanged = function(_player: Player, _key: string) end
+-- (Build 94) Told when a night at the house has just been counted (set by Main: the badges are
+-- checked then, so the welcome badge comes on the very first visit, whichever arrival step runs first).
+Guests.nightCounted = function(_player: Player) end
 
 -- Seats a friend opposite the guest who invited them to the Library (set by Main).
 Guests.joinLibrary = function(_player: Player, _inviterId: number): boolean
@@ -298,6 +301,9 @@ local function welcome(player: Player, data: Profiles.Data)
 	if data.nights.lastDay ~= today then
 		data.nights.lastDay = today
 		data.nights.count += 1
+		task.defer(function()
+			pcall(Guests.nightCounted, player)
+		end)
 	end
 	-- (Build 93) The funnel's last step: a new guest back on a later day than their first.
 	if not visit.firstVisit and (tonumber(data.firstVisit) or 0) > 0 and today > math.floor(data.firstVisit / 86400) then
