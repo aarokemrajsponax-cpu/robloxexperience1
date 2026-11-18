@@ -3,6 +3,7 @@
 -- Wardrobe by the date so every server shows the same shelves. Days turn at 00:00 UTC; weeks on
 -- Monday.
 
+local Curios = require(script.Parent.Curios)
 local Seed = require(script.Parent.Seed)
 local Wardrobe = require(script.Parent.Wardrobe)
 
@@ -59,6 +60,10 @@ end
 function Boutique.onSale(itemId: string, seasonId: string, time: number?): boolean
 	-- The Suite's pieces are always to be had, at the Suite's bell.
 	local piece = Wardrobe.get(itemId)
+	-- (Build 96) The sorting tables' pieces aren't sold any more (kept by whoever has them).
+	if piece and Wardrobe.retired(piece) then
+		return false
+	end
 	if piece and piece.kind == "suite" then
 		return Wardrobe.deliverable(piece)
 	end
@@ -80,5 +85,56 @@ function Boutique.onSale(itemId: string, seasonId: string, time: number?): boole
 	local item = Wardrobe.get(itemId)
 	return item ~= nil and item.source == "season" and item.season == seasonId and Wardrobe.deliverable(item)
 end
+
+-- Seconds until the shelves turn (00:00 UTC): the real time, the same in every server.
+function Boutique.secondsToTurn(time: number?): number
+	local t = time or os.time()
+	return 86400 - (t % 86400)
+end
+
+-- (Build 96) The Brainrot Market: four brainrots a day for Gilt, chosen by the date so every
+-- server shows the same four (one Common or Uncommon, one Rare, one Epic, one Legendary). Each is
+-- the exact one shown, never a random pick, at a fixed price by its rarity; a guest can buy each
+-- of the day's four once a day. Mythics and Secrets are never sold: they're found.
+Boutique.MarketBands = { { "Common", "Uncommon" }, { "Rare" }, { "Epic" }, { "Legendary" } }
+Boutique.MarketPrice = { Common = 3000, Uncommon = 6000, Rare = 12000, Epic = 25000, Legendary = 60000 } :: { [string]: number }
+
+export type MarketPick = { id: string, rarity: string, gilt: number }
+
+-- The day's four.
+function Boutique.market(time: number?): { MarketPick }
+	local rng = Random.new(Seed.hash("brainrot-market-" .. day(time)))
+	local out: { MarketPick } = {}
+	for _, band in Boutique.MarketBands do
+		local pool = {}
+		for _, c in Curios.List do
+			-- (Only the meme set's own, found in play and tradeable: no event or season pieces.)
+			if c.family == "meme" and c.tradeable == true and (c.source == "tables" or c.source == "attraction") and table.find(band, c.rarity) then
+				table.insert(pool, c)
+			end
+		end
+		table.sort(pool, function(a, b)
+			return a.id < b.id
+		end)
+		if #pool > 0 then
+			local c = pool[rng:NextInteger(1, #pool)]
+			table.insert(out, { id = c.id, rarity = c.rarity :: string, gilt = Boutique.MarketPrice[c.rarity] })
+		end
+	end
+	return out
+end
+
+-- The Gilt price of `id` at the Market today, or nil if it isn't one of today's four.
+function Boutique.marketPrice(id: string, time: number?): number?
+	for _, m in Boutique.market(time) do
+		if m.id == id then
+			return m.gilt
+		end
+	end
+	return nil
+end
+
+-- The day number the shelves are on (for once-a-day limits).
+Boutique.day = day
 
 return Boutique

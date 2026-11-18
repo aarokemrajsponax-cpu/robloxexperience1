@@ -291,6 +291,8 @@ start("The Grand Auction", require(script.Parent.UI.AuctionPanel).start)
 start("The way about the house", require(script.Parent.World.Wayfinder).start)
 start("Holidays", require(script.Parent.World.HolidayFX).start)
 start("Auras", require(script.Parent.World.Auras).start)
+start("PlateShine", require(script.Parent.World.PlateShine).start)
+start("EmoteFX", require(script.Parent.World.EmoteFX).start)
 start("Companions", require(script.Parent.World.Companions).start)
 start("BrainrotWalkers", require(script.Parent.World.BrainrotWalkers).start)
 -- Admin Abuse and the owner's effects drawn on the screen too (over the house as you walk; the
@@ -376,7 +378,7 @@ start("Curios", function()
 		elseif op == "penthouse" then
 			Toast.show("Brainrot Penthouse", "Six places in your squad now, for good.", 5)
 		elseif op == "frenzy" and type(m.seconds) == "number" then
-			Toast.show("Meme Frenzy", string.format("Your squad earns ×%d for the next %d minutes.", if type(m.mult) == "number" then m.mult else 2, math.floor(m.seconds / 60 + 0.5)), 6)
+			Toast.show(if m.overtime then "Squad Overtime" else "Meme Frenzy", string.format("Your squad earns ×%d for the next %d minutes.", if type(m.mult) == "number" then m.mult else 2, math.floor(m.seconds / 60 + 0.5)), 6)
 		end
 	end)
 	AdmireCard.trade = TradePanel.invite
@@ -449,7 +451,7 @@ start("Curios", function()
 		{ id = "badges", title = "The Badge Book", line = "Every badge, and how far along you are.", glyph = "🏅", open = function()
 			BadgeBookPanel.open()
 		end },
-		{ id = "boutique", title = "The Boutique", line = "Looks, table styles and lamps.", glyph = "🛍️", open = function()
+		{ id = "boutique", title = "The Boutique", line = "Boosters, brainrots, showpiece nameplates, money moves, auras and titles.", glyph = "🛍️", open = function()
 			BoutiquePanel.open()
 		end },
 		{ id = "wardrobe", title = "Your Wardrobe", line = "Wear what you own.", glyph = "👔", open = WardrobePanel.open },
@@ -639,6 +641,10 @@ local function startHud()
 		Hud.setShopKey(function()
 			BoutiquePanel.open()
 		end)
+		-- (Build 96: the first haul's celebration has a key to the Boutique's front page.)
+		require(script.Parent.UI.Celebrate).openBoutique = function()
+			BoutiquePanel.open("featured")
+		end
 		Hud.setHelpKey(HowToPlay.open)
 		Hud.setMenuKey(MenuPanel.open)
 		-- (The Maison Directory: every game in the house on a card, first in the row.)
@@ -1250,6 +1256,29 @@ end)
 -- A gesture from the Wardrobe: G, or up on the D-pad, while walking (and in photo mode).
 local function playGesture(): boolean
 	local style = Closet.style("gesture")
+	-- (Build 96) A money move: Roblox's own emote, and the server asked to show its effect to
+	-- everyone near (it checks the guest owns and wears it).
+	local base = if style and type(style.base) == "string" then (Config.data.Assets.OwnerEmotes :: any)[style.base] else nil
+	if style and type(style.fx) == "string" then
+		local c = player.Character
+		local h = c and c:FindFirstChildOfClass("Humanoid")
+		local an = h and h:FindFirstChildOfClass("Animator")
+		if type(base) == "string" and base ~= "" and an then
+			local anim = Instance.new("Animation")
+			anim.AnimationId = base
+			local ok, track = pcall(function()
+				return an:LoadAnimation(anim)
+			end)
+			if ok and track then
+				track:Play(0.15)
+				task.delay(math.max(2, tonumber(style.seconds) or 4), function()
+					track:Stop(0.3)
+				end)
+			end
+		end
+		Remotes.event("Emote"):FireServer({ op = "play" })
+		return true
+	end
 	local id = if style then (Config.data.Assets.Animations :: any)[style.animation] else nil
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
@@ -1273,6 +1302,41 @@ ContextActionService:BindAction("MaisonGesture", function(_, state)
 	end
 	return if playGesture() then Enum.ContextActionResult.Sink else Enum.ContextActionResult.Pass
 end, false, Enum.KeyCode.G, Enum.KeyCode.DPadUp)
+-- (Build 96) On a phone, a money move worn gets its own touch key (Roblox's, beside Jump); with
+-- none worn there's no key at all.
+do
+	local bound = false
+	local lastWorn = Closet.equipped.gesture
+	local function bindEmote()
+		local style = Closet.style("gesture")
+		-- (A money move just put on: said once how to play it.)
+		local worn = Closet.equipped.gesture
+		if worn ~= lastWorn then
+			lastWorn = worn
+			local item = Closet.wearing("gesture")
+			if item and type(item.style.fx) == "string" then
+				Toast.show(item.name .. " is ready", if game:GetService("UserInputService").TouchEnabled then "Tap the Emote key to play it. Everyone near sees it." else "Press G to play it. Everyone near sees it.", 5)
+			end
+		end
+		local want = game:GetService("UserInputService").TouchEnabled and style ~= nil and type(style.fx) == "string"
+		if want and not bound then
+			bound = true
+			ContextActionService:BindAction("MaisonEmote", function(_, state)
+				if state ~= Enum.UserInputState.Begin or TableClient.isSeated() or Root.isOpen() then
+					return Enum.ContextActionResult.Pass
+				end
+				return if playGesture() then Enum.ContextActionResult.Sink else Enum.ContextActionResult.Pass
+			end, true)
+			ContextActionService:SetTitle("MaisonEmote", "Emote")
+			ContextActionService:SetPosition("MaisonEmote", UDim2.new(1, -170, 1, -60))
+		elseif not want and bound then
+			bound = false
+			ContextActionService:UnbindAction("MaisonEmote")
+		end
+	end
+	Closet.Changed:Connect(bindEmote)
+	bindEmote()
+end
 
 -- Photo mode (from Settings): the character stands still while the camera roams.
 local PhotoMode = require(script.Parent.UI.PhotoMode)

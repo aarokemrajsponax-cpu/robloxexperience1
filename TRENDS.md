@@ -75,9 +75,9 @@ before relying on any of them.
 | Fashion runways | **The Grand Ballroom's runway**: twelve of the house's own themes, guests vote |
 | Collect and show off | **Curios** and the **Vault's display**: four domes, completion, history, privacy |
 | Racing and chases | **The Grand Prix** and timed laps on two circuits, with server-checked gates |
-| Obbies | **The Maison Basement**: sixteen stages down to the Treasury |
+| Obbies | **The Maison Basement**: thirty-two stages in eight chambers, down to the Treasury |
 | Co-play | More Gilt while a friend is in the house, Suite invitations, trading, the Ballroom's group games |
-| Coming back daily | **The daily streak**: a little more Gilt each day in a row, Gems at milestones |
+| Coming back daily | **The daily streak**: a little more Gilt each day in a row, Gilt at milestones (Gems come only from Robux) |
 | Seasons | Holidays that dress the house *and* the inside of every attraction |
 
 ## Ideas for the TREND IDEAS list (not in the game)

@@ -467,6 +467,12 @@ function GiltBar.start()
 	end
 	local giltSurge = surgeChip("GiltSurge", "", rgb(255, 214, 110))
 	local xpSurge = surgeChip("XPSurge", "", rgb(150, 220, 255))
+	-- (Build 96) The Boutique's boosters, each with the time it really has left.
+	local BoosterList = require(game:GetService("ReplicatedStorage").Shared.Boosters)
+	local boosterChips: { [string]: TextLabel } = {}
+	for kind in BoosterList.Attribute do
+		boosterChips[kind] = surgeChip("Booster_" .. kind, "", if kind == "gilt" then rgb(255, 190, 70) elseif kind == "squad" then rgb(150, 250, 150) else rgb(210, 180, 255))
+	end
 
 	-- The numbers, counting to where the server says.
 	local shownGilt = attr("Gilt")
@@ -530,6 +536,18 @@ function GiltBar.start()
 			if xpSurge.Visible then
 				local left = math.floor((x :: number) - now)
 				xpSurge.Text = string.format("⭐ ×2 XP  %d:%02d", left // 60, left % 60)
+			end
+			for kind, chip in boosterChips do
+				local a = BoosterList.Attribute[kind]
+				local u = player:GetAttribute(a)
+				local id = player:GetAttribute(a .. "Id")
+				local b = if type(id) == "string" then BoosterList.byId[id] else nil
+				chip.Visible = b ~= nil and type(u) == "number" and u > now
+				if chip.Visible and b then
+					local left = math.floor((u :: number) - now)
+					local what = if kind == "gilt" then "GILT" elseif kind == "squad" then "SQUAD" else "XP"
+					chip.Text = string.format("%s ×%s %s  %d:%02d", b.glyph, tostring(b.mult), what, left // 60, left % 60)
+				end
 			end
 			task.wait(1)
 		end

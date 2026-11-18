@@ -39,7 +39,9 @@ export type Item = {
 
 local rgb = Color3.fromRGB
 
-GemShop.Kinds = { "companion", "felt", "trail", "aura", "title", "boost", "exchange", "curio" }
+-- (Build 96) Table felts aren't sold any more (the sorting tables' own pieces): whoever has one
+-- keeps it. Their shelf is gone from the shop.
+GemShop.Kinds = { "companion", "trail", "aura", "title", "boost", "exchange", "curio" }
 GemShop.KindNames = { companion = "Companions", felt = "Table Felts", trail = "Guide Trails", aura = "Auras", title = "Titles", boost = "Surges", exchange = "Gilt", curio = "Curios", season = "In Season" }
 
 -- The holidays things can be in season for: what each is called on the shop's cards.
@@ -139,6 +141,9 @@ GemShop.SURGE_CAP = 3 * 3600 -- a Surge never runs more than three hours ahead
 -- Whether an item may be bought while `open` (the holiday game open now, or nil) is on: anything
 -- not in season always; a seasonal thing only in its own season.
 function GemShop.onSale(item: Item, open: string?): boolean
+	if item.kind == "felt" then
+		return false
+	end
 	return item.season == nil or item.season == open
 end
 

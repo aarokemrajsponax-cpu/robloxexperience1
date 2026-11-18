@@ -293,10 +293,33 @@ function Brainrots.frenzy(player: Player)
 	-- (A frenzy runs on from another frenzy; over a weaker Full Jar it starts now.)
 	local from = if (s.boostMult or 0) >= BrainrotList.FRENZY_MULT then math.max(now, s.boostUntil or now) else now
 	local untilTime = from + BrainrotList.FRENZY_SECONDS
+	-- (Build 96: over a stronger boost still running, a Squad Overtime, it keeps that strength.)
+	local stronger = if s.boostUntil and s.boostUntil > now then s.boostMult or 0 else 0
 	s.boostUntil = untilTime
-	s.boostMult = BrainrotList.FRENZY_MULT
+	s.boostMult = math.max(BrainrotList.FRENZY_MULT, stronger)
 	push(player, data)
 	curioEvent:FireClient(player, { op = "frenzy", seconds = untilTime - now, mult = BrainrotList.FRENZY_MULT })
+end
+
+-- (Build 96) Squad Overtime, a Gilt booster (server/Boosters): the squad fills its jar `mult`
+-- times as fast for `seconds`. Over the same strength it runs on from where that ends (at most
+-- `cap` seconds ahead); over a weaker one it starts now; while a stronger one runs it's refused
+-- (nil). Returns when it ends.
+function Brainrots.overtime(player: Player, data: Profiles.Data, mult: number, seconds: number, cap: number): number?
+	Brainrots.settle(data)
+	local s = squadOf(data)
+	local now = Brainrots.now()
+	local running = s.boostUntil ~= nil and (s.boostUntil :: number) > now
+	if running and (s.boostMult or 0) > mult then
+		return nil
+	end
+	local from = if running and (s.boostMult or 0) == mult then s.boostUntil :: number else now
+	local untilTime = math.min(now + cap, from + seconds)
+	s.boostUntil = untilTime
+	s.boostMult = mult
+	push(player, data)
+	curioEvent:FireClient(player, { op = "frenzy", seconds = untilTime - now, mult = mult, overtime = true })
+	return untilTime
 end
 
 -- A brainrot just came to a guest (a find, a parade, a trade): into the squad if there's room.

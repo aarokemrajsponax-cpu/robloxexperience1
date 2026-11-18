@@ -33,9 +33,22 @@ end
 -- How wide a notice may be: at the top, up to 420; with a panel open, as wide as the room beside
 -- the panel allows (and no wider than 250), so it never sits over the panel itself. (On a screen
 -- the panel fills, there is no room beside it: 250, over the panel's foot.)
+-- (Build 96) On a phone a notice stands between the left column (the Gilt bar, the Fortune and
+-- the level under it) and the What-to-do-next card on the right, never over either.
+local PHONE_LEFT = 420
+local PHONE_RIGHT = 330
+local function phoneSpan(): (number, number)
+	local w = Root.size().X
+	return PHONE_LEFT, math.max(PHONE_LEFT + 260, w - PHONE_RIGHT)
+end
+
 local function widest(low: boolean): number
 	local room = Root.size().X - 24
 	if not low then
+		if Root.phone() then
+			local a, b = phoneSpan()
+			return math.min(420, b - a, room)
+		end
 		return math.min(420, room)
 	end
 	local beside = Root.rightOfTop() - 14 - 10
@@ -48,6 +61,10 @@ end
 local function shown(): (UDim2, Vector2)
 	if Root.topClear() > 0 then
 		return UDim2.new(0.5, 0, 1, -110), Vector2.new(0.5, 1)
+	end
+	if Root.phone() then
+		local a, b = phoneSpan()
+		return UDim2.new(0, (a + b) / 2, 0, 58), Vector2.new(0.5, 0)
 	end
 	return UDim2.new(0.5, 0, 0, 58), Vector2.new(0.5, 0)
 end

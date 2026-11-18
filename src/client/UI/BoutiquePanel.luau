@@ -198,6 +198,10 @@ local function row(parent: Instance, card: Card, order: number, mode: "robux" | 
 	Theme.text(texts, card.kindName or "", 10, "caps", { LayoutOrder = 1, TextXAlignment = Enum.TextXAlignment.Left })
 	Theme.text(texts, card.name, 17, "display", { LayoutOrder = 2, TextXAlignment = Enum.TextXAlignment.Left })
 	Theme.text(texts, card.line or "", 12, "body", { LayoutOrder = 3, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Brand.Colours.smoke })
+	-- (Build 96) A money move says how it's played.
+	if card.kind == "gesture" and type(card.style) == "table" and type(card.style.fx) == "string" then
+		Theme.text(texts, "Wear it, then press G (on a phone, the Emote key).", 11, "bodyMedium", { LayoutOrder = 3, Name = "HowToPlay", TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Brand.Colours.lightGold })
+	end
 	-- (Every piece in the house is for good: said plainly, on every one.)
 	Theme.text(texts, PERMANENT, 10, "bodyBold", { LayoutOrder = 4, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(255, 196, 160) })
 	local actions = Instance.new("Frame")
@@ -342,6 +346,259 @@ local function offerRow(frame: Instance, o: { [string]: any }, order: number)
 	k.Size = UDim2.fromOffset(150, 40)
 end
 
+
+---------------------------------------------------------------------------------------------------
+-- (Build 96) Boosters, the Brainrot Market, auras and titles, and the Featured front page.
+---------------------------------------------------------------------------------------------------
+local RARITY = {
+	Common = Color3.fromRGB(200, 200, 205),
+	Uncommon = Color3.fromRGB(110, 220, 120),
+	Rare = Color3.fromRGB(90, 160, 255),
+	Epic = Color3.fromRGB(190, 110, 255),
+	Legendary = Color3.fromRGB(255, 196, 60),
+	Mythic = Color3.fromRGB(255, 90, 120),
+}
+
+-- "5 h 12 min" (the real time left, from the server's clock).
+local function hm(seconds: number): string
+	local h = math.floor(seconds / 3600)
+	local m = math.floor((seconds % 3600) / 60)
+	return if h > 0 then string.format("%d h %d min", h, m) else string.format("%d min", math.max(1, m))
+end
+BoutiquePanel.hm = hm
+
+-- A heading between shelves on the Featured page: its words, and a key to see the whole shelf.
+local function section(parent: Instance, title: string, order: number, seeAll: string?, seeLabel: string?)
+	local bar = Instance.new("Frame")
+	bar.Name = "Section"
+	bar.BackgroundTransparency = 1
+	bar.Size = UDim2.new(1, 0, 0, 34)
+	bar.LayoutOrder = order
+	bar.Parent = parent
+	Theme.text(bar, title, 12, "caps", { Size = UDim2.new(1, -160, 1, 0), AutomaticSize = Enum.AutomaticSize.None, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Brand.Colours.lightGold })
+	if seeAll then
+		local k = Theme.key(bar, seeLabel or "See them all", false, function()
+			currentTab = seeAll
+			BoutiquePanel.render()
+		end, 150)
+		k.Name = "SeeAll"
+		k.AnchorPoint = Vector2.new(1, 0.5)
+		k.Position = UDim2.new(1, 0, 0.5, 0)
+		k.Size = UDim2.fromOffset(150, 30)
+	end
+end
+
+-- A plain confirmation before a big Gilt spend: what it is, the price, what you hold after.
+local function confirm(title: string, line: string, gilt: number, onYes: () -> ())
+	local CARD = "BoutiqueConfirm"
+	if Root.isOpen(CARD) then
+		Root.close(CARD)
+	end
+	local size = Root.size()
+	local group, content = Theme.glass(Root.panels, CARD, UDim2.fromOffset(math.min(420, size.X - 24), math.min(280, size.Y - 40)), nil, nil, "ruby")
+	Theme.list(content, 8).VerticalAlignment = Enum.VerticalAlignment.Top
+	Theme.text(content, "Confirm your purchase", 11, "caps", { LayoutOrder = 1 })
+	Theme.text(content, title, 22, "display", { LayoutOrder = 2 })
+	Theme.text(content, line, 13, "body", { LayoutOrder = 3, TextColor3 = Brand.Colours.smoke, TextWrapped = true })
+	local left = Closet.gilt - gilt
+	Theme.text(content, string.format("%s Gilt  ·  you hold %s%s", RoundPanel.number(gilt), RoundPanel.number(Closet.gilt), if left >= 0 then string.format(", %s after", RoundPanel.number(left)) else ""), 14, "bodyBold", { LayoutOrder = 4, TextColor3 = if left >= 0 then Brand.Colours.lightGold else Color3.fromRGB(240, 120, 120) })
+	local keys = Instance.new("Frame")
+	keys.BackgroundTransparency = 1
+	keys.Size = UDim2.new(1, 0, 0, 46)
+	keys.LayoutOrder = 5
+	keys.Parent = content
+	Theme.list(keys, 10, true).HorizontalAlignment = Enum.HorizontalAlignment.Center
+	local enough = left >= 0
+	Theme.key(keys, if enough then "Buy for " .. RoundPanel.number(gilt) .. " Gilt" else "Not enough Gilt", enough, function()
+		if not enough then
+			return
+		end
+		Root.close(CARD)
+		onYes()
+	end, 230).LayoutOrder = 1
+	Theme.key(keys, "Not now", false, function()
+		Root.close(CARD)
+	end, 130).LayoutOrder = 2
+	Root.open(CARD, group)
+end
+
+-- A row with a big glyph on the left in its colour, words in the middle and one key on the right.
+local function glyphRow(parent: Instance, name: string, order: number, glyph: string, colour: Color3, caps: string, title: string, line: string, extra: string?, keyText: string?, keyOn: boolean, onKey: (() -> ())?, aside: string?)
+	local r = Instance.new("Frame")
+	r.Name = name
+	r.BackgroundColor3 = colour:Lerp(Color3.fromRGB(10, 10, 14), 0.86)
+	r.BackgroundTransparency = 0.1
+	grows(r, 86)
+	r.LayoutOrder = order
+	r.Parent = parent
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 3)
+	corner.Parent = r
+	local edge = Instance.new("UIStroke")
+	edge.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	edge.Color = colour
+	edge.Transparency = 0.35
+	edge.Thickness = 1.5
+	edge.Parent = r
+	local disc = Instance.new("TextLabel")
+	disc.Name = "Glyph"
+	disc.BackgroundColor3 = colour:Lerp(Color3.fromRGB(0, 0, 0), 0.7)
+	disc.Size = UDim2.fromOffset(62, 62)
+	disc.TextScaled = true
+	disc.Text = glyph
+	disc.Parent = r
+	local dc = Instance.new("UICorner")
+	dc.CornerRadius = UDim.new(1, 0)
+	dc.Parent = disc
+	local ds = Instance.new("UIStroke")
+	ds.Color = colour
+	ds.Thickness = 2
+	ds.Parent = disc
+	local dp = Instance.new("UIPadding")
+	dp.PaddingTop = UDim.new(0, 10)
+	dp.PaddingBottom = UDim.new(0, 10)
+	dp.PaddingLeft = UDim.new(0, 10)
+	dp.PaddingRight = UDim.new(0, 10)
+	dp.Parent = disc
+	local texts = Instance.new("Frame")
+	texts.BackgroundTransparency = 1
+	texts.Position = UDim2.fromOffset(74, -2)
+	texts.Size = UDim2.new(1, -74 - 166, 0, 0)
+	texts.AutomaticSize = Enum.AutomaticSize.Y
+	texts.Parent = r
+	Theme.list(texts, 2).HorizontalAlignment = Enum.HorizontalAlignment.Left
+	Theme.text(texts, caps, 10, "caps", { LayoutOrder = 1, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = colour })
+	Theme.text(texts, title, 18, "display", { LayoutOrder = 2, TextXAlignment = Enum.TextXAlignment.Left })
+	Theme.text(texts, line, 12, "body", { LayoutOrder = 3, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Brand.Colours.smoke, TextWrapped = true })
+	if extra then
+		Theme.text(texts, extra, 11, "bodyBold", { LayoutOrder = 4, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(255, 196, 160), TextWrapped = true }).Name = "Term"
+	end
+	if aside then
+		Theme.text(texts, aside, 11, "bodyMedium", { LayoutOrder = 5, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Brand.Colours.lightGold, TextWrapped = true }).Name = "Aside"
+	end
+	if keyText then
+		local k = Theme.key(r, keyText, keyOn, function()
+			if onKey then
+				onKey()
+			end
+		end, 150)
+		k.Name = "Buy"
+		k.AnchorPoint = Vector2.new(1, 0.5)
+		k.Position = UDim2.new(1, 0, 0.5, 0)
+		k.Size = UDim2.fromOffset(150, 40)
+	end
+end
+
+-- "3,600 more Gilt to go" (what's still needed), or nil when it's affordable.
+local function toGo(price: number): string?
+	local short = price - Closet.gilt
+	return if short > 0 then string.format("%s more Gilt to go.", RoundPanel.number(short)) else nil
+end
+
+local function boosterRow(parent: Instance, b: { [string]: any }, order: number)
+	local colour = if typeof(b.colour) == "Color3" then b.colour else Brand.Colours.gold
+	local aside = if type(b.running) == "number" then string.format("Running: %s left. Buying again adds %s.", hm(b.running), hm(b.seconds)) elseif type(b.blockedBy) == "string" then string.format("%s is running: this one can start when it's done.", b.blockedBy) else toGo(b.gilt)
+	-- (What it would add, from the guest's own play: the server's sum, said as a pace.)
+	if type(b.estimate) == "number" and b.estimate > 0 and not b.running then
+		local pace = if b.kind == "squad" then string.format("Your squad earns %s Gilt an hour: about +%s more.", RoundPanel.number(b.squadRate or 0), RoundPanel.number(b.estimate)) else string.format("At your pace this visit: about +%s Gilt.", RoundPanel.number(b.estimate))
+		aside = if aside then pace .. " " .. aside else pace
+	end
+	glyphRow(parent, "Booster_" .. tostring(b.id), order, b.glyph or "✨", colour, string.format("Booster · ×%s · %s", tostring(b.mult), hm(b.seconds)), b.name, b.line or "", "For a time: from the moment you buy it. Gilt only.", RoundPanel.number(b.gilt) .. " Gilt", b.blockedBy == nil and Closet.gilt >= b.gilt, function()
+		confirm(b.name, (b.line or "") .. " It starts as soon as you buy it.", b.gilt, function()
+			after(Closet.ask({ op = "booster", id = b.id }), b.name .. " is running.")
+		end)
+	end, aside)
+end
+
+local function marketRow(parent: Instance, m: { [string]: any }, order: number)
+	local colour = RARITY[m.rarity] or Brand.Colours.gold
+	local extra = string.format("Earns %s Gilt an hour in your squad. Yours for good.", RoundPanel.number(m.rate or 0))
+	glyphRow(parent, "Market_" .. tostring(m.id), order, m.glyph or "🗿", colour, string.upper(tostring(m.rarity)) .. " BRAINROT", m.name, m.line or "", extra, if m.bought then "Yours today" else RoundPanel.number(m.gilt) .. " Gilt", not m.bought and Closet.gilt >= m.gilt, function()
+		if m.bought then
+			return
+		end
+		confirm(m.name, string.format("The exact one shown, never a random pick: a %s brainrot for your collection and squad.", tostring(m.rarity)), m.gilt, function()
+			after(Closet.ask({ op = "market", id = m.id }))
+		end)
+	end, if m.bought then nil else toGo(m.gilt))
+end
+
+local function gemAsk(request: { [string]: any }): any
+	local ok, result = pcall(function()
+		return require(ReplicatedStorage.Shared.Remotes).func("GemAsk"):InvokeServer(request)
+	end)
+	return if ok then result else nil
+end
+
+local function gemRow(parent: Instance, g: { [string]: any }, order: number, gems: number)
+	local colour = if typeof(g.colour) == "Color3" then g.colour else Color3.fromRGB(190, 150, 255)
+	local caps = if g.kind == "aura" then "Aura · round you, seen by everyone" elseif g.kind == "title" then "Title · above your name" else "Companion · at your shoulder"
+	local keyText = if g.worn then "Wearing" elseif g.owned then "Wear it" else tostring(g.gems) .. " Gems"
+	glyphRow(parent, "Gem_" .. tostring(g.id), order, g.glyph or "✨", colour, caps, g.name, g.line or "", "Permanent: yours for good. Gems only.", keyText, not g.worn and (g.owned or gems >= g.gems), function()
+		if g.worn then
+			return
+		end
+		local result = if g.owned then gemAsk({ op = "equip", kind = g.kind, id = g.id }) else gemAsk({ op = "buy", id = g.id })
+		if type(result) == "table" and result.ok then
+			Toast.show("The Boutique", if g.owned then "Worn." else g.name .. " is yours, and worn.", 3)
+			BoutiquePanel.refresh()
+		else
+			after(result)
+		end
+	end)
+end
+
+-- The front page: what's new today and the strongest things on sale, each with its own key.
+local function featured(frame: Instance, s: { [string]: any }, add: () -> number)
+	local turns = if type(s.turnsIn) == "number" then hm(s.turnsIn) else nil
+	note(frame, "New pieces and new brainrots every day at midnight (UTC)" .. (if turns then ": the next in " .. turns .. "." else "."), add())
+	local boosters = s.boosters and s.boosters.list or {}
+	if #boosters > 0 then
+		section(frame, "Boosters · for Gilt", add(), "boosters")
+		for i, b in boosters do
+			if b.kind == "gilt" and i <= 3 then
+				boosterRow(frame, b, add())
+			end
+		end
+	end
+	if #(s.market or {}) > 0 then
+		section(frame, "Today's brainrots · for Gilt", add(), "market")
+		for _, m in s.market do
+			marketRow(frame, m, add())
+		end
+	end
+	local shown = 0
+	local pieces = {}
+	for _, list in { s.featured or {}, s.today or {}, s.always or {} } do
+		for _, c in list do
+			local st = c.style or {}
+			if (c.kind == "nameplate" and st.shine) or (c.kind == "gesture" and type(st.fx) == "string") then
+				table.insert(pieces, c)
+			end
+		end
+	end
+	if #pieces > 0 then
+		section(frame, "Showpieces · nameplates and money moves", add(), "today", "Today's six")
+		for _, c in pieces do
+			if shown < 4 then
+				row(frame, c, add(), "robux")
+				shown += 1
+			end
+		end
+	end
+	local gp = s.gemPicks
+	if gp and #(gp.items or {}) > 0 then
+		section(frame, "Auras and titles · for Gems", add(), "style")
+		local seen: { [string]: boolean } = {}
+		for _, g in gp.items do
+			if not seen[g.kind] and not g.owned then
+				seen[g.kind] = true
+				gemRow(frame, g, add(), gp.gems or 0)
+			end
+		end
+	end
+end
+
 local function render()
 	local frame = list
 	local s = shelves
@@ -360,7 +617,39 @@ local function render()
 		order += 1
 		return order
 	end
-	if currentTab == "offers" then
+	if currentTab == "featured" then
+		featured(frame, s, add)
+	elseif currentTab == "boosters" then
+		note(frame, "Boosters for Gilt: each starts the moment you buy it.", add())
+		note(frame, "One of each kind runs at a time.", add())
+		local sess = s.boosters and s.boosters.session
+		if type(sess) == "table" and (sess.gilt or 0) > 0 then
+			note(frame, string.format("This visit you've earned %s Gilt in %d min.", RoundPanel.number(sess.gilt), sess.minutes or 1), add())
+		end
+		for _, b in (s.boosters and s.boosters.list or {}) do
+			boosterRow(frame, b, add())
+		end
+	elseif currentTab == "market" then
+		note(frame, "Four brainrots a day for Gilt, a fixed price by rarity.", add())
+		note(frame, "The exact one shown, never a random pick. One of each a day.", add())
+		if type(s.turnsIn) == "number" then
+			note(frame, "New brainrots in " .. hm(s.turnsIn) .. ".", add())
+		end
+		for _, m in s.market or {} do
+			marketRow(frame, m, add())
+		end
+	elseif currentTab == "style" then
+		local gp = s.gemPicks or { gems = 0, items = {} }
+		note(frame, string.format("Auras, titles and companions everyone in the house sees. You hold %s Gems.", RoundPanel.number(gp.gems or 0)), add())
+		for _, kind in { "aura", "title", "companion" } do
+			section(frame, if kind == "aura" then "Auras" elseif kind == "title" then "Titles" else "Companions", add())
+			for _, g in gp.items or {} do
+				if g.kind == kind then
+					gemRow(frame, g, add(), gp.gems or 0)
+				end
+			end
+		end
+	elseif currentTab == "offers" then
 		local offers = s.offers or {}
 		if #offers == 0 then
 			note(frame, "Nothing on offer just now.", add())
@@ -515,6 +804,8 @@ local function render()
 	end
 end
 
+BoutiquePanel.render = render
+
 local function refresh()
 	task.spawn(function()
 		local s = Closet.ask({ op = "shelves" })
@@ -525,11 +816,17 @@ local function refresh()
 	end)
 end
 
+BoutiquePanel.refresh = refresh
+
 function BoutiquePanel.open(tab: string?, forGuest: { userId: number, name: string }?)
 	if Root.isOpen(NAME) then
 		return
 	end
-	currentTab = tab or (if forGuest then "today" else "offers")
+	-- (Build 96: it opens on the Featured page; opening it marks today's shelves as seen.)
+	currentTab = tab or (if forGuest then "today" else "featured")
+	if not forGuest then
+		task.spawn(Closet.ask, { op = "seen" })
+	end
 	giftFor = forGuest
 	local size = Root.size()
 	local w = Root.panelWidth(620)
@@ -537,14 +834,18 @@ function BoutiquePanel.open(tab: string?, forGuest: { userId: number, name: stri
 	local group, content = Theme.glass(Root.panels, NAME, UDim2.fromOffset(w, h))
 	Theme.list(content, 8).VerticalAlignment = Enum.VerticalAlignment.Top
 	Theme.text(content, "The Boutique", 26, "display", { LayoutOrder = 1 })
-	Theme.text(content, if forGuest then "Choosing a gift for " .. forGuest.name .. ". They'll hear it's from you." else "Style, never score. Prices are Roblox's own.", 12, "body", { LayoutOrder = 2, TextColor3 = if forGuest then Brand.Colours.lightGold else Brand.Colours.dim })
+	Theme.text(content, if forGuest then "Choosing a gift for " .. forGuest.name .. ". They'll hear it's from you." else "Every price shown before you buy. Robux prices are Roblox's own.", 12, "body", { LayoutOrder = 2, TextColor3 = if forGuest then Brand.Colours.lightGold else Brand.Colours.dim })
 
 	local specs = {
-		{ "buyGilt", "Buy Gilt" },
-		{ "offers", "Offers" },
-		{ "always", "Always here" },
+		{ "featured", "Featured" },
+		{ "boosters", "Boosters" },
+		{ "market", "Brainrots" },
+		{ "style", "Auras & Titles" },
 		{ "today", "Today" },
 		{ "week", "This week" },
+		{ "always", "Always here" },
+		{ "buyGilt", "Buy Gilt" },
+		{ "offers", "Offers" },
 		{ "season", "In season" },
 		{ "gilt", "For Gilt" },
 		{ "goldKey", "The Gold Key" },
@@ -610,7 +911,7 @@ function BoutiquePanel.open(tab: string?, forGuest: { userId: number, name: stri
 				b.show("introduction", s.introduction ~= nil)
 				b.show("offers", #(s.offers or {}) > 0)
 				if currentTab == "offers" and #(s.offers or {}) == 0 then
-					currentTab = "today"
+					currentTab = "featured"
 				end
 			end
 			render()

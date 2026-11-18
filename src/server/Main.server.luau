@@ -815,6 +815,8 @@ Progress.boost = function(player)
 	if GemShop.xpSurge(player) then
 		b *= ConfigData.Levels.surge
 	end
+	-- (Build 96) An XP Rush, bought with Gilt in the Boutique.
+	b *= require(script.Parent.Boosters).xpMult(player)
 	-- The Friend Booster: more XP with a friend in the house.
 	b *= Friends.xpBoost(player)
 	return b
@@ -865,8 +867,12 @@ Achievements.notify = function(player, badge, extra)
 end
 -- Gilt: a Gilt Surge counts, every payment is counted, and the number on screen follows.
 GiltService.surge = GemShop.giltBoost
-GiltService.earned = function(player, paid)
+GiltService.rush = require(script.Parent.Boosters).giltMult
+GiltService.earned = function(player, paid, fromPlay)
 	Achievements.add(player, "giltEarned", paid)
+	if fromPlay then
+		require(script.Parent.Boosters).earned(player, paid)
+	end
 end
 do
 	local changed = GiltService.changed
@@ -904,6 +910,19 @@ GemShop.tally = function(player, stat, n)
 	end
 end
 boot("The Gem Shop", GemShop.start)
+-- (Build 96) Boosters for Gilt (the Boutique): more Gilt, more XP, or a squad on Overtime.
+do
+	local Boosters = require(script.Parent.Boosters)
+	Boosters.squad = function(player, data, mult, seconds, cap)
+		return require(script.Parent.Brainrots).overtime(player, data, mult, seconds, cap)
+	end
+	Boosters.squadRate = function(data)
+		return require(script.Parent.Brainrots).rate(data)
+	end
+	boot("Boosters", Boosters.start)
+end
+-- (Build 96) Money moves: the Boutique's emotes, their effects shown to everyone near.
+boot("Money moves", require(script.Parent.Emotes).start)
 -- The Evening Calendar: a present a day for coming back, seven to a week, none ever lost to a
 -- missed day (server/Calendar). Its XP and the Badge Book's count follow each present opened.
 local Calendar = require(script.Parent.Calendar)

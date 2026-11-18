@@ -579,6 +579,7 @@ check("its whole worth goes to the Estate", Fortune.page(data(ava)).estate == es
 check("and a fifth of it to the purse in Gilt", giltOf(ava) - giltWas == banked.gilt and banked.gilt > 0 and banked.gilt <= math.floor(worth * Config.data.Fortune.cashShare + 0.5) * 2)
 check("the haul is kept: one haul, its worth, the best", page(ava).hauls == 1 and page(ava).banked == worth and page(ava).best == worth)
 check("the first haul is a record", banked.record == true)
+check("(Build 96) the very first haul is marked first, for the big celebration, and not big or massive", banked.first == true and banked.size == nil)
 check("speed is back to the guest's own with the bag empty", ava:GetAttribute("SpeedTrained") == nil)
 check("tallied for the house's records", tallies["501:luxeHauls"] == 1 and tallies["501:luxeWorth"] == worth and tallies["501:luxeTaken"] == 3)
 local n = count(ava, "banked")
@@ -776,6 +777,7 @@ end
 local gemsWas = data(ava).gems
 local res, b2 = bankOne(ava, spotC, nil)
 check("the Crown Jewel can be taken and banked", res.ok == true and b2 ~= nil and b2.worth == Plan.byId.crownJewel.worth and b2.pieces[1].id == "crownJewel", res.why)
+check("(Build 96) a later haul isn't marked first; the Crown Jewel is massive once three are banked", b2 and b2.first == false and (page(ava).hauls <= 3 or b2.size == "massive"), b2 and b2.size)
 check("it pays its worth, and never a Gem (those come only from Robux)", b2.gems == nil and data(ava).gems == gemsWas, b2.gems)
 check("and earns its achievement", #awards > 0 and awards[#awards].key == "crownJewel")
 steps(80)
@@ -830,6 +832,23 @@ check("at the top, no further", r.ok == false and r.why == "That's as good as it
 local res3, b4 = bankOne(ava, Luxe.spots[1], Plan.byId.notes)
 check("the banker's cut is added to what's banked", res3.ok == true and b4.worth == math.floor(Plan.byId.notes.worth * (1 + C.banker[#C.banker]) + 0.5) and b4.base == Plan.byId.notes.worth, b4 and b4.worth)
 page(ava).banker = 1
+-- (Build 96) Big and massive hauls: by the guest's own average, once they've banked three.
+do
+	local pg = page(ava)
+	local notes = Plan.byId.notes.worth
+	pg.hauls, pg.banked, pg.best = 10, 10 * math.floor(notes / 3), notes * 100
+	pg.lifted = {}
+	local r1, plain = bankOne(ava, Luxe.spots[1], Plan.byId.notes)
+	check("a haul three times the guest's average (and no record) is big", plain and plain.size == "big" and plain.first == false and plain.record == false, (r1 and r1.why) or (plain and plain.size))
+	pg.hauls, pg.banked = 10, 10 * math.floor(notes / 5)
+	pg.lifted = {}
+	local _, huge = bankOne(ava, Luxe.spots[1], Plan.byId.notes)
+	check("five times the average is massive", huge and huge.size == "massive", huge and huge.size)
+	pg.hauls, pg.banked = 10, 10 * notes
+	pg.lifted = {}
+	local _, usual = bankOne(ava, Luxe.spots[1], Plan.byId.notes)
+	check("a usual haul is no moment at all (just the toast)", usual and usual.size == nil and usual.first == false and usual.record == false, usual and usual.size)
+end
 data(ava).gems = 10
 r = askAs(ava, { op = "act", id = "luxe", act = "golden" })
 check("the golden treadmill without the Gems is refused, with its price", r.ok == false and r.why == "That's " .. C.goldenGems .. " Gems.", r.why)

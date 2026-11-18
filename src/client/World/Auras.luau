@@ -29,7 +29,7 @@ local RAINBOW = ColorSequence.new({
 	ColorSequenceKeypoint.new(1, rgb(190, 100, 255)),
 })
 
-type Worn = { id: string, attachment: Attachment?, orbit: { BasePart }, crown: boolean, root: BasePart }
+type Worn = { id: string, attachment: Attachment?, halo: Attachment?, orbit: { BasePart }, crown: boolean, root: BasePart }
 local worn: { [Player]: Worn } = {}
 
 local function holder(): Instance
@@ -44,6 +44,9 @@ local function clear(p: Player)
 	worn[p] = nil
 	if w.attachment then
 		w.attachment:Destroy()
+	end
+	if w.halo then
+		w.halo:Destroy()
 	end
 	for _, part in w.orbit do
 		part:Destroy()
@@ -60,7 +63,7 @@ local function build(p: Player)
 		return
 	end
 	local style = item.style
-	local w: Worn = { id = item.id, attachment = nil, orbit = {}, crown = style.crown == true, root = root }
+	local w: Worn = { id = item.id, attachment = nil, halo = nil, orbit = {}, crown = style.crown == true, root = root }
 	if style.particle then
 		local att = Instance.new("Attachment")
 		att.Name = "MaisonAura"
@@ -70,13 +73,14 @@ local function build(p: Player)
 		local e = Instance.new("ParticleEmitter")
 		e.Name = "Aura"
 		e.Texture = TEXTURES[style.particle] or TEXTURES.sparkles
-		e.Rate = style.rate or 16
+		-- (Build 96: a size up, half again as many, glowing harder: seen across a room.)
+		e.Rate = (style.rate or 16) * 1.6
 		e.Lifetime = NumberRange.new(1.2, 2.2)
 		e.Speed = NumberRange.new(0.6, 2.2)
 		e.SpreadAngle = Vector2.new(180, 180)
 		e.Acceleration = Vector3.new(0, if style.particle == "fire" then 3 else 1.2, 0)
-		e.LightEmission = if style.particle == "smoke" then 0 else 0.8
-		e.Size = if style.particle == "smoke" then NumberSequence.new(1.6, 3) elseif style.particle == "fire" then NumberSequence.new(0.6, 0) else NumberSequence.new(0.45, 0)
+		e.LightEmission = if style.particle == "smoke" then 0 else 1
+		e.Size = if style.particle == "smoke" then NumberSequence.new(2, 3.6) elseif style.particle == "fire" then NumberSequence.new(0.85, 0) else NumberSequence.new(0.65, 0)
 		e.Transparency = if style.particle == "smoke" then NumberSequence.new(0.55, 1) else NumberSequence.new(0, 1)
 		if style.rainbow then
 			e.Color = RAINBOW
@@ -115,7 +119,7 @@ local function build(p: Player)
 			part.Size = Vector3.new(0.2, 0.2, 0.2)
 			part.CFrame = root.CFrame
 			local bb = Instance.new("BillboardGui")
-			bb.Size = UDim2.fromScale(1.1, 1.1)
+			bb.Size = UDim2.fromScale(1.5, 1.5)
 			bb.LightInfluence = 0
 			bb.MaxDistance = 80
 			bb.Parent = part
@@ -129,6 +133,35 @@ local function build(p: Player)
 			table.insert(w.orbit, part)
 		end
 	end
+	-- (Build 96) Every aura also glows: a light in its colour round the guest, and a soft ring of
+	-- light turning at their feet.
+	local main = if style.rainbow then rgb(255, 200, 240) elseif type(style.colours) == "table" and typeof(style.colours[1]) == "Color3" then style.colours[1] elseif typeof(style.mist) == "Color3" then style.mist else rgb(255, 220, 150)
+	local feet = Instance.new("Attachment")
+	feet.Name = "MaisonAuraHalo"
+	feet.Position = Vector3.new(0, -2.9, 0)
+	feet.Parent = root
+	local light = Instance.new("PointLight")
+	light.Color = main
+	light.Range = 10
+	light.Brightness = 1.4
+	light.Shadows = false
+	light.Parent = feet
+	local halo = Instance.new("ParticleEmitter")
+	halo.Name = "Halo"
+	halo.Texture = TEXTURES.sparkles
+	halo.Orientation = Enum.ParticleOrientation.VelocityPerpendicular
+	halo.EmissionDirection = Enum.NormalId.Top
+	halo.Speed = NumberRange.new(0.02)
+	halo.SpreadAngle = Vector2.new(0, 0)
+	halo.Lifetime = NumberRange.new(1.4)
+	halo.Rate = 2.5
+	halo.Size = NumberSequence.new(4.6, 6)
+	halo.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.3, 0.55), NumberSequenceKeypoint.new(1, 1) })
+	halo.RotSpeed = NumberRange.new(40)
+	halo.LightEmission = 1
+	halo.Color = if style.rainbow then RAINBOW else ColorSequence.new(main)
+	halo.Parent = feet
+	w.halo = feet
 	worn[p] = w
 end
 

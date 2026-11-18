@@ -60,7 +60,14 @@ function Hud.start(openSettings: () -> (), leave: () -> ())
 	leaveButton.Visible = false
 	leaveKey = leaveButton
 	local settingsButton = Theme.key(bar, "Settings", false, openSettings, 120)
+	settingsButton.Name = "SettingsKey"
 	settingsButton.LayoutOrder = 2
+	-- (Build 96) On a phone: Settings lives in the Menu (its own tile there), so the top row is
+	-- Play, Shop and Menu, and the screen stays clear.
+	settingsButton.Visible = not Root.phone()
+	table.insert(Root.rescaled, function()
+		settingsButton.Visible = not Root.phone()
+	end)
 end
 
 -- How much of the top-right corner the keys take, in screen pixels (the sorting screen keeps its
@@ -92,6 +99,29 @@ function Hud.setShopKey(onPress: () -> ())
 	key.Name = "ShopKey"
 	key.LayoutOrder = -20
 	shopKey = key
+	-- (Build 96) A small NEW mark on its corner when the Boutique's shelves (and the Brainrot
+	-- Market) have turned since the guest last looked: a real change, once a day, gone on opening.
+	local pip = Instance.new("TextLabel")
+	pip.Name = "NewPip"
+	pip.AnchorPoint = Vector2.new(1, 0)
+	pip.Position = UDim2.new(1, 6, 0, -6)
+	pip.Size = UDim2.fromOffset(38, 16)
+	pip.BackgroundColor3 = Color3.fromRGB(220, 40, 70)
+	pip.FontFace = Brand.Fonts.bodyBold
+	pip.TextSize = 11
+	pip.TextColor3 = Color3.new(1, 1, 1)
+	pip.Text = "NEW"
+	pip.ZIndex = (key.ZIndex or 1) + 2
+	local pc = Instance.new("UICorner")
+	pc.CornerRadius = UDim.new(1, 0)
+	pc.Parent = pip
+	pip.Parent = key
+	local me = game:GetService("Players").LocalPlayer
+	local function paint()
+		pip.Visible = me:GetAttribute("BoutiqueNew") == true
+	end
+	me:GetAttributeChangedSignal("BoutiqueNew"):Connect(paint)
+	paint()
 end
 
 -- The How to play key: the whole game in plain words, a Go key for every room (between Shop and
@@ -110,12 +140,24 @@ function Hud.setHelpKey(onPress: () -> ())
 	key.Name = "HowToPlayKey"
 	key.LayoutOrder = -15
 	helpKey = key
+	-- (Build 96) On a phone How to play lives in the Menu (its own tile there).
+	key.Visible = not Root.phone()
+	table.insert(Root.rescaled, function()
+		key.Visible = not Root.phone()
+	end)
 end
 
+local menuKey: TextButton? = nil
+
 -- A small gold note under the How to play key, once, for someone new: where to look when lost.
--- It goes when the key is pressed, when it's tapped, or after `seconds`.
+-- It goes when the key is pressed, when it's tapped, or after `seconds`. (Build 96: on a phone,
+-- where How to play is a tile in the Menu, the note points at the Menu key and says so.)
 function Hud.coachHelp(text: string, seconds: number?)
 	local key = helpKey
+	if key and not key.Visible and menuKey and menuKey.Visible then
+		key = menuKey
+		text = Voice.Guide.coachPhone or text
+	end
 	if coach or not key or not key.Visible then
 		return
 	end
@@ -223,7 +265,6 @@ function Hud.setPlayKey(onPress: () -> ())
 end
 
 -- The Menu key: everything else in the house (Main fills it), just after Shop.
-local menuKey: TextButton? = nil
 function Hud.setMenuKey(onPress: () -> ())
 	if menuKey then
 		return
@@ -280,7 +321,8 @@ function Hud.setSeated(seated: boolean)
 		shopKey.Visible = not seated
 	end
 	if helpKey then
-		helpKey.Visible = not seated
+		-- (Build 96: never on a phone, where How to play is a tile in the Menu.)
+		helpKey.Visible = not seated and not Root.phone()
 	end
 	-- (The Directory's ways there wait until the guest stands up: its key steps aside too.)
 	if playKey then

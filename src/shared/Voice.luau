@@ -108,7 +108,7 @@ Voice.Concierge = {
 		{ id = "hotbar", cat = "collection", q = "What's in my hotbar?", a = "What you carry: the stun pistol once the Quartermaster gives it you (it fires only in the Executive Suite's fight), a decoy you've packed, the brainrots in your squad and the curios you've starred. Hold a brainrot or a curio and click to flex it for everyone near you." },
 		{ id = "suite", cat = "house", place = "suite", q = "How do I make my Suite mine?", a = "Ring the bell inside your Suite to furnish it, piece by piece, where you like. Its cases show off your finest curios, and friends can visit from the Suites list." },
 		{ id = "trophies", cat = "house", place = "suite", q = "What are House Trophies?", a = "Six pieces for your Suite that aren't sold for Gilt, Gems or Robux: each is earned by playing one of the house's games. A crown jewel carried out of Steal a Luxe, the Treasury reached in the Basement, the Executive beaten, a Grand Prix won, the Daily Arena won, a lot won at the Grand Auction. Once earned it's yours for good: ring the bell in your Suite to place it." },
-		{ id = "looks", cat = "house", place = "boutique", q = "What are looks and trails for?", a = "Style, never score: looks, trails, nameplates, lamps, chimes and victory flourishes from the Boutique. Wear them at the Wardrobe. Your flourish even colours your flexes." },
+		{ id = "looks", cat = "house", place = "boutique", q = "What are looks and trails for?", a = "Style, never score: nameplates, trails, emotes and victory flourishes from the Boutique (auras and titles from the Gem Shop). Wear them at the Wardrobe. Your flourish even colours your flexes." },
 		-- (Build 87: more, each from how the house really works, in five kinds; "place" is where
 		-- Guide me there walks the guest.)
 		{ id = "first", cat = "start", q = "What should I do first?", a = "Steal a Luxe, through the Luxe Lounge, is a good first: it grows your Estate quickest. Or ask me what to do next, and I'll look at what you've done so far." , place = "velvet" },
@@ -125,7 +125,7 @@ Voice.Concierge = {
 		{ id = "basementHow", cat = "attractions", place = "obsidian", q = "How does the Basement work?", a = "Down the Basement Stair: thirty-two stages of jumps, steam and lasers to the Treasury. Step on every checkpoint pad; fall, and you're back at the last one. The gold chevrons on each pad point the way on. Each chamber pays at its way out, and the Treasury's chest pays the most." },
 		{ id = "executiveHow", cat = "attractions", place = "midnight", q = "How does the Executive's fight work?", a = "Through the code door, in his Office: shoot the three blue generators to bring his shield down, stun his four bodyguards, then stun the Executive. A ring under him is a shockwave (jump it), a lane is his dash (step aside), a raised hand is briefcases (keep moving)." },
 		{ id = "pistol", cat = "attractions", place = "midnight", q = "Where do I get the stun pistol?", a = "Free, from the Quartermaster at his desk in the Executive's Anteroom. It goes in your hotbar, and the lift up won't take you without it. It fires only in the Office's fight." },
-		{ id = "gilt", cat = "money", q = "What is Gilt for?", a = "Gilt is the house's money, and every game pays it: the Boutique's looks, bigger bags in the Luxe Lounge, an invitation upstairs from the Quartermaster, the Island Key and more." },
+		{ id = "gilt", cat = "money", q = "What is Gilt for?", a = "Gilt is the house's money, and every game pays it: the Boutique's boosters, brainrots and nameplates, bigger bags in the Luxe Lounge, an invitation upstairs from the Quartermaster, the Island Key and more." },
 		{ id = "gems", cat = "money", q = "What are Gems for?", a = "The Gem Shop, the golden treadmill, a Basement skip and the Cabinet's curios. Gems come only from a Gem pack in the shop (Robux) or a trade with another guest: nothing in the house pays them out, so every game pays Gilt." },
 	},
 	whichQuestion = "Ask me anything. What's it about?",
@@ -223,7 +223,7 @@ Voice.Tour = {
 		stop = "boutique",
 		place = "counter",
 		title = "The Boutique",
-		line = "Spend your Gilt on new looks here. The gold Shop key at the top of your screen opens it from anywhere.",
+		line = "Spend your Gilt here: boosters, four new brainrots a day, nameplates that shine. The gold Shop key at the top of your screen opens it from anywhere.",
 	},
 	{
 		stop = "boutique",
@@ -455,11 +455,11 @@ Voice.Afk = {
 -- What's new in this build, told once to each returning guest (Welcome back). Only shown while
 -- `build` is the build that's playing, so old news never shows as new.
 Voice.WhatsNew = {
-	build = 94,
+	build = 96,
 	lines = {
-		"One ballroom: the Grand Ballroom's doors are in the Club hall now, and Lights Out is played on its dance floor.",
-		"The Executive Suite fights harder and pays more. Beaten, he runs for the door, and the Office is yours to raid.",
-		"Show me the house now walks you to every attraction's door, with Show me the games and Try it now.",
+		"The Boutique is new: boosters for Gilt, four brainrots a day, showpiece nameplates and money moves everyone sees.",
+		"Auras glow brighter and titles wear their colours. Your first haul in Steal a Luxe gets a real celebration.",
+		"The tour leads with the games: Show me the games, then Try it now.",
 	},
 }
 
@@ -582,7 +582,7 @@ Voice.Guide = {
 		heading2 = "Around the house",
 		visit = {
 			{ place = "concierge", title = "The Concierge", line = "Stands by the front door, ready to help.", how = "Speak to him and pick Show me the house: he walks you round every room and explains it." },
-			{ place = "boutique", title = "The Boutique", line = "The house's shop for looks.", how = "Looks, table styles, lamps and trails for Gilt (a few for Robux, always with the price shown first). The Wardrobe beside it is where you wear what you own." },
+			{ place = "boutique", title = "The Boutique", line = "The house's shop for looks.", how = "Boosters and brainrots for Gilt, nameplates, trails and emotes for Gilt or Robux (always with the price shown first). The Wardrobe beside it is where you wear what you own." },
 			{ place = "vault", title = "The Vault", line = "Your collection, kept for good.", how = "Every piece you've sorted stands on its shelves. The console under the eight domes shows your curios, how complete your collection is, and who may look round. The Archivist at the desk keeps your badges and records." },
 			{ place = "terrace", title = "The Terrace", line = "A rooftop to relax on, and the jet to the island.", how = "A bar with treats, a fire pit and loungers under the stars. The Jet Lounge's arch flies Island Key holders to Luxury Island." },
 			{ place = "suite", title = "Your Suite", line = "Your own private rooms upstairs.", how = "Ring the bell inside to furnish them. Only you can go in, unless you invite friends with the Suites key." },
@@ -616,6 +616,8 @@ Voice.Guide = {
 	tour = "Show me the house",
 	arrived = "You're here",
 	coach = "New here? Everything is explained in How to play, with a Go key for every room.",
+	-- (Build 96) On a phone, where How to play is a tile in the Menu.
+	coachPhone = "New here? Menu, then How to play: everything explained, with a Go key for every room.",
 }
 
 -- The one line under the keys while you walk: what to do next.

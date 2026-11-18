@@ -35,7 +35,7 @@ Wardrobe.KindNames = {
 	lamp = "Lamp styles",
 	chime = "Chimes",
 	trail = "Guide trails",
-	gesture = "Gestures",
+	gesture = "Emotes",
 	flourish = "Victory flourishes",
 	nameplate = "Nameplate frames",
 	card = "Round-card backs",
@@ -44,6 +44,16 @@ Wardrobe.KindNames = {
 
 -- The price tiers the Boutique sells at (one developer product each).
 Wardrobe.Tiers = { 49, 79, 99, 149, 199, 249, 299, 399, 499, 599 }
+
+-- (Build 96) The sorting tables' own pieces (felts, lamps, round-card backs and chimes) are no
+-- longer sold anywhere: the house is played in its attractions now. Whoever has one keeps it and
+-- can still wear it; nothing is taken away.
+Wardrobe.Retired = { table = true, lamp = true, card = true, chime = true } :: { [string]: boolean }
+
+-- Whether an item is one of the retired kinds (not sold).
+function Wardrobe.retired(item: Item): boolean
+	return Wardrobe.Retired[item.kind] == true
+end
 
 local rgb = Color3.fromRGB
 local GOLD = rgb(198, 160, 82)
@@ -133,6 +143,25 @@ local items: { Item } = {
 	{ id = "gesture_clap", name = "Slow Applause", kind = "gesture", source = "boutique", robux = 79, line = "Three slow claps.", style = { animation = "applause" } },
 	{ id = "gesture_bow", name = "The Bow", kind = "gesture", source = "boutique", robux = 99, line = "Unhurried, from the waist.", style = { animation = "bow" } },
 
+	-- (Build 96) Money moves: emotes everyone in the house sees. Each is one of Roblox's own R15
+	-- emotes (`base`, Config.Assets.OwnerEmotes: free to every avatar with /e) with the house's own
+	-- effect over it (`fx`, drawn on every screen near you): the effect is what's sold, and the
+	-- card says so.
+	{ id = "emote_makeitrain", name = "Make It Rain", kind = "gesture", source = "boutique", robux = 149, always = true, line = "Roblox's cheer, with a storm of cash raining round you that everyone near sees.", style = { base = "cheer", fx = "cash", colour = rgb(110, 220, 120), seconds = 4 } },
+	{ id = "emote_goldflex", name = "Gold Flex", kind = "gesture", source = "boutique", robux = 99, line = "Roblox's point, with a burst of gold and a shower of coins over your head.", style = { base = "point", fx = "gold", colour = rgb(255, 206, 80), seconds = 3 } },
+	{ id = "emote_dripcheck", name = "Drip Check", kind = "gesture", source = "boutique", robux = 199, line = "Roblox's dance, inside a spinning ring of chrome sparkle and a camera-flash finish.", style = { base = "dance2", fx = "drip", colour = rgb(214, 226, 255), seconds = 5 } },
+	{ id = "emote_bigbag", name = "Big Bag", kind = "gesture", source = "boutique", robux = 249, line = "Roblox's laugh, as a gold bag bursts over your head and coins pour down.", style = { base = "laugh", fx = "bag", colour = rgb(255, 190, 60), seconds = 4 } },
+	{ id = "emote_diamondrain", name = "Diamond Rain", kind = "gesture", source = "boutique", robux = 299, line = "Roblox's dance, under a fall of diamonds and a blue-white glow.", style = { base = "dance3", fx = "diamond", colour = rgb(170, 230, 255), seconds = 5 } },
+
+	-- (Build 96) Showpiece nameplates: a wider plate, a thick frame, and a sheen that sweeps
+	-- across it on every screen (`sweep`, the frame's colours; `shine`, the light that runs over it).
+	{ id = "plate_molten", name = "Molten Gold", kind = "nameplate", source = "boutique", robux = 199, always = true, line = "A thick frame of molten gold with light running round it. Seen from across the room.", style = { frame = rgb(255, 196, 60), fill = rgb(28, 18, 4), line = rgb(255, 236, 170), sweep = { rgb(255, 170, 30), rgb(255, 246, 200), rgb(220, 140, 20) }, shine = true } },
+	{ id = "plate_money", name = "Money Green", kind = "nameplate", source = "boutique", robux = 149, always = true, line = "Banknote green and gold, a sheen sweeping over it.", style = { frame = rgb(80, 210, 110), fill = rgb(6, 26, 12), line = rgb(200, 255, 190), sweep = { rgb(60, 190, 90), rgb(255, 220, 110), rgb(40, 150, 70) }, shine = true } },
+	{ id = "plate_diamond", name = "Diamond Ice", kind = "nameplate", source = "boutique", robux = 249, line = "Ice-white and blue, glittering as the light runs over it.", style = { frame = rgb(190, 236, 255), fill = rgb(8, 18, 34), line = rgb(230, 248, 255), sweep = { rgb(140, 210, 255), rgb(255, 255, 255), rgb(90, 160, 240) }, shine = true } },
+	{ id = "plate_royal", name = "Royal Velvet", kind = "nameplate", source = "boutique", robux = 199, line = "Deep purple velvet framed in gold, the gold always moving.", style = { frame = rgb(170, 90, 255), fill = rgb(24, 8, 40), line = rgb(255, 220, 140), sweep = { rgb(150, 70, 240), rgb(255, 210, 100), rgb(110, 40, 200) }, shine = true } },
+	{ id = "plate_inferno", name = "Inferno", kind = "nameplate", source = "boutique", robux = 249, line = "Red into orange into gold, like a frame on fire.", style = { frame = rgb(255, 110, 40), fill = rgb(30, 6, 4), line = rgb(255, 210, 150), sweep = { rgb(230, 40, 30), rgb(255, 170, 40), rgb(255, 240, 160) }, shine = true } },
+	{ id = "plate_prism", name = "Prism", kind = "nameplate", source = "boutique", robux = 299, line = "Every colour at once, turning round your name. The loudest plate in the house.", style = { frame = rgb(255, 120, 200), fill = rgb(12, 10, 18), line = rgb(255, 255, 255), sweep = { rgb(255, 70, 120), rgb(255, 210, 60), rgb(90, 240, 140), rgb(80, 170, 255), rgb(190, 100, 255) }, shine = true } },
+
 	-- House looks (need clothing in Config.Assets.Looks).
 	{ id = "look_velvet", name = "Velvet Evening Jacket", kind = "look", source = "introduction", robux = 199, line = "Black velvet, satin lapels.", style = { outfit = "velvet" } },
 	{ id = "look_gown", name = "Silk Evening Gown", kind = "look", source = "boutique", robux = 299, line = "Midnight silk to the floor.", style = { outfit = "gown" } },
@@ -163,10 +192,13 @@ for _, item in require(script.Parent.SuiteCatalog) :: { any } do
 	table.insert(items, item)
 end
 
--- Season collections: a look, a table style and a trail for each season, sold only in it.
+-- Season collections: a look, a nameplate and a trail for each season, sold only in it (each
+-- season's felt from before Build 96 stays registered for whoever has it, and isn't sold).
 for _, season in Seasons.List do
 	local key = season.key
 	table.insert(items, { id = "season_" .. season.id .. "_table", name = season.name .. " Felt", kind = "table", source = "season", season = season.id, line = "Only in " .. season.name .. ".", style = { felt = key:Lerp(rgb(12, 12, 14), 0.55), rim = GOLD } })
+	-- (Build 96) The season's nameplate, in the felt's place (the felt is kept for its owners).
+	table.insert(items, { id = "season_" .. season.id .. "_plate", name = season.name .. " Nameplate", kind = "nameplate", source = "season", season = season.id, line = "Only in " .. season.name .. ".", style = { frame = key, fill = key:Lerp(rgb(8, 8, 10), 0.85), line = key:Lerp(rgb(255, 255, 255), 0.6), sweep = { key, key:Lerp(rgb(255, 255, 255), 0.7), key }, shine = true } })
 	table.insert(items, { id = "season_" .. season.id .. "_trail", name = season.name .. " Thread", kind = "trail", source = "season", season = season.id, line = "Only in " .. season.name .. ".", style = { colour = key } })
 	table.insert(items, { id = "season_" .. season.id .. "_look", name = season.name .. " Look", kind = "look", source = "season", season = season.id, line = "Only in " .. season.name .. ".", style = { outfit = "season_" .. season.id } })
 end
@@ -231,6 +263,10 @@ function Wardrobe.deliverable(item: Item): boolean
 		local sheet = (assets.SoundSheet or "") ~= "" and SoundSheet.cues["chime_" .. tostring(item.style.sound)] ~= nil
 		return own or sheet
 	elseif item.kind == "gesture" then
+		if type(item.style.base) == "string" then
+			-- (A money move: one of Roblox's own emotes, with the house's effect.)
+			return ((assets.OwnerEmotes and assets.OwnerEmotes[item.style.base]) or "") ~= ""
+		end
 		return ((assets.Animations and assets.Animations[item.style.animation]) or "") ~= ""
 	elseif item.kind == "suite" then
 		return true -- kept for the Suite
@@ -245,7 +281,7 @@ function Wardrobe.alwaysPool(): { Item }
 		if item.kind == "suite" then
 			continue -- sold at the Suite's bell
 		end
-		if item.source == "boutique" and item.robux and item.always and Wardrobe.deliverable(item) then
+		if item.source == "boutique" and item.robux and item.always and not Wardrobe.retired(item) and Wardrobe.deliverable(item) then
 			table.insert(out, item)
 		end
 	end
@@ -259,7 +295,7 @@ function Wardrobe.boutiquePool(): { Item }
 		if item.kind == "suite" then
 			continue -- sold at the Suite's bell
 		end
-		if item.source == "boutique" and item.robux and not item.always and Wardrobe.deliverable(item) then
+		if item.source == "boutique" and item.robux and not item.always and not Wardrobe.retired(item) and Wardrobe.deliverable(item) then
 			table.insert(out, item)
 		end
 	end
@@ -275,7 +311,7 @@ function Wardrobe.giltPool(): { Item }
 		if item.kind == "suite" then
 			continue -- sold at the Suite's bell
 		end
-		if (item.source == "gilt" or item.source == "standing") and item.gilt and Wardrobe.deliverable(item) then
+		if (item.source == "gilt" or item.source == "standing") and item.gilt and not Wardrobe.retired(item) and Wardrobe.deliverable(item) then
 			table.insert(out, item)
 		end
 	end
@@ -288,7 +324,7 @@ end
 function Wardrobe.seasonPieces(seasonId: string): { Item }
 	local out = {}
 	for _, item in items do
-		if item.source == "season" and item.season == seasonId then
+		if item.source == "season" and item.season == seasonId and not Wardrobe.retired(item) then
 			table.insert(out, item)
 		end
 	end

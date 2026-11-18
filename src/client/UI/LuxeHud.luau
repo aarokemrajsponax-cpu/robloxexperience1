@@ -743,7 +743,16 @@ function LuxeHud.on(m: { [string]: any })
 		if fresh > 0 and tonumber(m.total) then
 			line ..= string.format("  ·  %d new for your collection (%d of %d)", fresh, tonumber(m.collected) or 0, tonumber(m.total) or 0)
 		end
-		Toast.show(if m.record then "A record haul: " .. Rules.format(tonumber(m.worth) or 0) else "Banked: " .. Rules.format(tonumber(m.worth) or 0), line, 5)
+		-- (Build 96) A first haul, a new best, or one far above the usual: celebrated big, and the
+		-- notice with its details after it, not under it.
+		local Celebrate = require(script.Parent.Celebrate)
+		local okC, kind = pcall(Celebrate.haul, m)
+		local title = if m.record then "A record haul: " .. Rules.format(tonumber(m.worth) or 0) else "Banked: " .. Rules.format(tonumber(m.worth) or 0)
+		if okC and type(kind) == "string" then
+			task.delay(Celebrate.haulSeconds(kind) + 0.4, Toast.show, title, line, 5)
+		else
+			Toast.show(title, line, 5)
+		end
 		-- (Build 82) A wing's set made whole, or a new rank: said after, each on its own.
 		task.delay(2.5, function()
 			for _, set in (if type(m.sets) == "table" then m.sets else {}) :: { any } do

@@ -27,10 +27,10 @@ house full of different games. The genre can be changed only once every three mo
 > A grand private house at midnight, full of games, and one question: who is the wealthiest guest?
 >
 > Slip into a great residence in Steal a Luxe and carry out what you can before the guards see
-> you. Climb down the sixteen stages of the Maison Basement to its Treasury. Earn an invitation to
-> the Executive Suite and get past its security. Bid at the Grand Auction, keep your lamp lit in
-> the Ballroom's Lights Out, race the Grand Prix on the street outside, or sort treasures at the
-> Salon's tables at your own pace.
+> you. Climb down the thirty-two stages of the Maison Basement to its Treasury. Earn an invitation
+> to the Executive Suite and beat the Executive himself. Bid at the Grand Auction, play Lights Out
+> on the Grand Ballroom's dance floor, race the Grand Prix on the street outside, and build a squad
+> of brainrots that earn while you play.
 >
 > Everything you win grows your Fortune. Fill your Vault, furnish your Suite, and take the private
 > jet to Luxury Island.

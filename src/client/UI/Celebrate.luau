@@ -176,6 +176,188 @@ function Celebrate.levelUp(level: number, title: string, gilt: number)
 	end)
 end
 
+
+-- (Build 96) A haul worth celebrating, in Steal a Luxe (the server decides which: server
+-- Attractions/Luxe):
+--   first    a new guest's very first haul, whatever it's worth: the biggest moment, words to
+--            the middle of the screen, the worth counting up, a long burst of gold, a fanfare,
+--            and a key to the Boutique (a key only: it opens nothing by itself)
+--   record   a new best haul; big / massive: one far above the guest's usual
+-- Every other haul is the plain toast, as before. Returns the kind shown, or nil.
+Celebrate.openBoutique = function() end
+
+function Celebrate.haulKind(m: { [string]: any }): string?
+	if m.first == true then
+		return "first"
+	elseif m.size == "massive" then
+		return "massive"
+	elseif m.record == true then
+		return "record"
+	elseif m.size == "big" then
+		return "big"
+	end
+	return nil
+end
+
+-- How long a haul's moment stays up (the notice with its details waits until it's gone).
+function Celebrate.haulSeconds(kind: string): number
+	return if kind == "first" then 7 else 3.6
+end
+
+local HAUL_WORDS = {
+	first = { head = "YOUR FIRST HAUL!", line = "Banked to your Estate. Every haul makes you richer." },
+	record = { head = "NEW BEST HAUL!", line = "Your biggest haul yet." },
+	big = { head = "BIG HAUL!", line = "Twice your usual." },
+	massive = { head = "MASSIVE HAUL!", line = "Far above your usual." },
+}
+
+function Celebrate.haul(m: { [string]: any }): string?
+	local kind = Celebrate.haulKind(m)
+	if not kind then
+		return nil
+	end
+	local words = HAUL_WORDS[kind]
+	local worth = tonumber(m.worth) or 0
+	local gilt = tonumber(m.gilt) or 0
+	local gui = screen()
+	local old = gui:FindFirstChild("Haul")
+	if old then
+		old:Destroy()
+	end
+	local big = kind == "first" or kind == "massive"
+	-- (On a short screen, a phone held sideways, it sits lower and a size down: clear of the keys
+	-- along the top.)
+	local camera = workspace.CurrentCamera
+	local tall = if camera then camera.ViewportSize.Y else 720
+	local short = tall < 500
+	local finalScale = if short then math.clamp((tall - 150) / 268, 0.6, 0.85) else 1
+	local box = Instance.new("Frame")
+	box.Name = "Haul"
+	box:SetAttribute("Kind", kind)
+	box.BackgroundTransparency = 1
+	box.AnchorPoint = Vector2.new(0.5, 0.5)
+	box.Position = UDim2.fromScale(0.5, if short then 0.62 else 0.36)
+	box.Size = UDim2.fromOffset(if big then 560 else 480, if kind == "first" then 268 else 200)
+	box.Parent = gui
+	local fit = Instance.new("UISizeConstraint")
+	fit.MaxSize = Vector2.new(if big then 560 else 480, 268)
+	fit.Parent = box
+	local scale = Instance.new("UIScale")
+	scale.Scale = 0.3
+	scale.Parent = box
+	local head = Instance.new("TextLabel")
+	head.Name = "Head"
+	head.BackgroundTransparency = 1
+	head.Size = UDim2.new(1, 0, 0, if big then 60 else 48)
+	head.FontFace = IMPACT
+	head.TextScaled = true
+	head.TextColor3 = Color3.new(1, 1, 1)
+	head.TextStrokeTransparency = 0.2
+	head.TextStrokeColor3 = rgb(36, 22, 4)
+	head.Text = words.head
+	local metal = Instance.new("UIGradient")
+	metal.Rotation = 90
+	metal.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, rgb(255, 250, 226)),
+		ColorSequenceKeypoint.new(0.5, rgb(255, 214, 120)),
+		ColorSequenceKeypoint.new(1, rgb(214, 150, 50)),
+	})
+	metal.Parent = head
+	head.Parent = box
+	local amount = Instance.new("TextLabel")
+	amount.Name = "Worth"
+	amount.BackgroundTransparency = 1
+	amount.Position = UDim2.fromOffset(0, if big then 68 else 54)
+	amount.Size = UDim2.new(1, 0, 0, if big then 70 else 56)
+	amount.FontFace = HEAVY
+	amount.TextScaled = true
+	amount.TextColor3 = rgb(255, 236, 160)
+	amount.TextStrokeTransparency = 0.3
+	amount.Text = "+0"
+	amount.Parent = box
+	local line = Instance.new("TextLabel")
+	line.Name = "Line"
+	line.BackgroundTransparency = 1
+	line.Position = UDim2.fromOffset(0, if big then 144 else 116)
+	line.Size = UDim2.new(1, 0, 0, 26)
+	line.FontFace = BODY
+	line.TextScaled = true
+	line.TextColor3 = Color3.new(1, 1, 1)
+	line.TextStrokeTransparency = 0.4
+	line.Text = string.format("%s  ·  +%s Gilt", words.line, format(gilt))
+	line.Parent = box
+	if kind == "first" then
+		local key = Instance.new("TextButton")
+		key.Name = "Boutique"
+		key.AnchorPoint = Vector2.new(0.5, 0)
+		key.Position = UDim2.new(0.5, 0, 0, 186)
+		key.Size = UDim2.fromOffset(300, 44)
+		key.BackgroundColor3 = rgb(255, 206, 90)
+		key.FontFace = HEAVY
+		key.TextSize = 17
+		key.TextColor3 = rgb(36, 22, 4)
+		key.Text = "Spend it in the Boutique ›"
+		key.Parent = box
+		corner(key, 22)
+		key.Activated:Connect(function()
+			box:Destroy()
+			Celebrate.openBoutique()
+		end)
+		local hint = Instance.new("TextLabel")
+		hint.Name = "Hint"
+		hint.BackgroundTransparency = 1
+		hint.Position = UDim2.fromOffset(0, 236)
+		hint.Size = UDim2.new(1, 0, 0, 22)
+		hint.FontFace = BODY
+		hint.TextScaled = true
+		hint.TextColor3 = rgb(230, 220, 200)
+		hint.TextStrokeTransparency = 0.5
+		hint.Text = "Boosters, brainrots and nameplates. Or keep stealing: bigger bags, bigger hauls."
+		hint.Parent = box
+	end
+	TweenService:Create(scale, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = finalScale }):Play()
+	sound(if big then "regalFanfare" else "kaching", 0.9)
+	task.delay(0.2, sound, "shimmerFall", 0.8)
+	-- The worth, counting up to what the server said.
+	task.spawn(function()
+		local steps = 24
+		for i = 1, steps do
+			if not box.Parent then
+				return
+			end
+			amount.Text = "+" .. format(worth * i / steps)
+			task.wait(0.04)
+		end
+		amount.Text = "+" .. format(worth)
+	end)
+	Flakes.fall({
+		seconds = if big then 4.5 else 3,
+		centre = function(): Vector3?
+			local r = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+			return if r and r:IsA("BasePart") then r.Position else nil
+		end,
+		colours = { rgb(255, 214, 110), rgb(255, 240, 200), rgb(120, 220, 130) },
+		material = Enum.Material.SmoothPlastic,
+		size = Vector3.new(0.34, 0.02, 0.18),
+		count = if kind == "first" then 140 elseif kind == "massive" then 110 else 60,
+		radius = 10,
+		height = 11,
+		fall = 3,
+		flutter = 3,
+		burst = true,
+	})
+	task.delay(Celebrate.haulSeconds(kind), function()
+		if box.Parent then
+			local t = TweenService:Create(scale, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Scale = 0.01 })
+			t:Play()
+			t.Completed:Once(function()
+				box:Destroy()
+			end)
+		end
+	end)
+	return kind
+end
+
 -- Badges wait their turn, one card at a time.
 local queue: { { [string]: any } } = {}
 local showing = false

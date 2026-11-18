@@ -11,6 +11,7 @@ local Names = require(ReplicatedStorage.Shared.Names)
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local Caps = require(ReplicatedStorage.Shared.Caps)
 local Config = require(ReplicatedStorage.Shared.Config)
+local GemList = require(ReplicatedStorage.Shared.GemShop)
 local Ledger = require(ReplicatedStorage.Shared.Ledger)
 local Levels = require(ReplicatedStorage.Shared.Levels)
 local PrestigeRules = require(ReplicatedStorage.Shared.Prestige)
@@ -175,18 +176,34 @@ function Dressing.nameplate(player: Player)
 		title = player:GetAttribute("PrestigeTitle")
 	end
 	if owner or type(title) == "string" then
+		-- (Build 96) A title from the Gem Shop stands out: its own colour, its glyph either side,
+		-- a sheen of white running into that colour, a dark outline, a size up.
+		local worn = if data and not owner then GemList.byId[(data :: any).gemShop and (data :: any).gemShop.title or ""] else nil
+		local gemTitle = worn ~= nil and worn.kind == "title" and worn.name == title
 		local line = Instance.new("TextLabel")
 		line.Name = "Title"
 		line.BackgroundTransparency = 1
 		line.AnchorPoint = Vector2.new(0.5, 1)
 		line.Position = UDim2.new(0.5, 0, 0, -1)
-		line.Size = UDim2.new(1, 0, 0.6, 0)
+		line.Size = UDim2.new(1, 0, if gemTitle then 0.8 else 0.6, 0)
 		line.FontFace = Brand.Fonts.bodyBold
 		line.TextScaled = true
-		line.TextStrokeTransparency = 0.4
-		line.TextColor3 = if owner then Color3.fromRGB(255, 214, 90) else Brand.Colours.lightGold
-		line.Text = if owner then "👑 OWNER 👑" else Caps(title :: string)
+		line.TextStrokeTransparency = if gemTitle then 0.1 else 0.4
+		line.TextStrokeColor3 = Color3.fromRGB(10, 8, 6)
+		line.TextColor3 = if owner then Color3.fromRGB(255, 214, 90) elseif gemTitle and worn and typeof(worn.style.colour) == "Color3" then worn.style.colour else Brand.Colours.lightGold
+		line.Text = if owner then "👑 OWNER 👑" elseif gemTitle and worn then worn.glyph .. " " .. Caps(title :: string) .. " " .. worn.glyph else Caps(title :: string)
 		line.Parent = plate
+		if gemTitle and worn and typeof(worn.style.colour) == "Color3" then
+			line.TextColor3 = Color3.new(1, 1, 1)
+			local g = Instance.new("UIGradient")
+			g.Color = ColorSequence.new({
+				ColorSequenceKeypoint.new(0, worn.style.colour),
+				ColorSequenceKeypoint.new(0.5, worn.style.colour:Lerp(Color3.new(1, 1, 1), 0.65)),
+				ColorSequenceKeypoint.new(1, worn.style.colour),
+			})
+			g.Parent = line
+			gui:SetAttribute("TitleShine", true)
+		end
 		if owner then
 			plate.BackgroundColor3 = Color3.fromRGB(26, 18, 4)
 			plate.BackgroundTransparency = 0.1
@@ -212,12 +229,75 @@ function Dressing.nameplate(player: Player)
 		end
 		if frame then
 			plate.BackgroundColor3 = frame.style.fill or plate.BackgroundColor3
-			plate.BackgroundTransparency = 0.15
-			stroke.Color = frame.style.frame or stroke.Color
-			stroke.Thickness = 2
+			plate.BackgroundTransparency = 0.1
+			stroke.Color = Color3.new(1, 1, 1)
+			stroke.Thickness = 2.5
 			stroke.Transparency = 0
 			if frame.style.line then
 				name.TextColor3 = frame.style.line
+			end
+			-- (Build 96) A worn frame stands out: a wider plate, a thick frame in its colours
+			-- (running from one to the next), a soft glow round it; a showpiece frame's sheen
+			-- sweeps across it on every screen (client World/PlateShine).
+			local main = typeof(frame.style.frame) == "Color3" and frame.style.frame or Brand.Colours.gold
+			local second = typeof(frame.style.line) == "Color3" and frame.style.line or main
+			local stops = {}
+			if type(frame.style.sweep) == "table" and #frame.style.sweep >= 2 then
+				for i, c in frame.style.sweep do
+					table.insert(stops, ColorSequenceKeypoint.new((i - 1) / (#frame.style.sweep - 1), c))
+				end
+			else
+				stops = { ColorSequenceKeypoint.new(0, main), ColorSequenceKeypoint.new(0.5, second), ColorSequenceKeypoint.new(1, main) }
+			end
+			local sg = Instance.new("UIGradient")
+			sg.Name = "Sweep"
+			sg.Color = ColorSequence.new(stops)
+			sg.Parent = stroke
+			gui.Size = UDim2.fromOffset(if frame.style.shine then 236 else 216, if frame.style.shine then 40 else 36)
+			if frame.style.shine then
+				stroke.Thickness = 3.5
+				local glow = Instance.new("Frame")
+				glow.Name = "Glow"
+				glow.BackgroundTransparency = 1
+				glow.AnchorPoint = Vector2.new(0.5, 0.5)
+				glow.Position = UDim2.fromScale(0.5, 0.5)
+				glow.Size = UDim2.new(1, 8, 1, 8)
+				glow.ZIndex = 0
+				local gc = Instance.new("UICorner")
+				gc.CornerRadius = UDim.new(0, 6)
+				gc.Parent = glow
+				local gs = Instance.new("UIStroke")
+				gs.Thickness = 4
+				gs.Transparency = 0.55
+				gs.Color = main
+				gs.Parent = glow
+				glow.Parent = plate
+				-- The sheen: a band of light the client sweeps across the plate.
+				local sheen = Instance.new("UIGradient")
+				sheen.Name = "Sheen"
+				sheen.Color = ColorSequence.new(Color3.new(1, 1, 1))
+				sheen.Transparency = NumberSequence.new({
+					NumberSequenceKeypoint.new(0, 1),
+					NumberSequenceKeypoint.new(0.42, 1),
+					NumberSequenceKeypoint.new(0.5, 0.65),
+					NumberSequenceKeypoint.new(0.58, 1),
+					NumberSequenceKeypoint.new(1, 1),
+				})
+				sheen.Rotation = 20
+				sheen.Offset = Vector2.new(-1, 0)
+				local band = Instance.new("Frame")
+				band.Name = "SheenBand"
+				band.BackgroundColor3 = Color3.new(1, 1, 1)
+				band.BackgroundTransparency = 0
+				band.BorderSizePixel = 0
+				band.Size = UDim2.fromScale(1, 1)
+				band.ZIndex = 2
+				local bc = Instance.new("UICorner")
+				bc.CornerRadius = UDim.new(0, 2)
+				bc.Parent = band
+				sheen.Parent = band
+				band.Parent = plate
+				gui:SetAttribute("Shine", true)
 			end
 		end
 		-- The Mark, as a small stamped word beside the name (after the placement evenings).

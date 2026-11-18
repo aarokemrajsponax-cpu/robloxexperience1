@@ -869,6 +869,17 @@ local function bank(ctx: Types.Ctx, player: Player, run: Run, way: Plan.Bank?)
 	run.awake = false
 	local gilt = ctx.estate(player, worth, "Steal a Luxe")
 	local record = worth > p.best
+	-- (Build 96) How big a moment this is, decided here from the guest's own record: their very
+	-- first haul (whatever it's worth), or one far above their usual (twice their average haul is
+	-- big, four times or the Crown Jewel massive, once they've banked three).
+	local first = p.hauls == 0
+	local average = if p.hauls >= 3 then p.banked / p.hauls else nil
+	local size: string? = nil
+	if not first and (crown or (average and worth >= average * 4)) then
+		size = "massive"
+	elseif not first and average and worth >= average * 2 then
+		size = "big"
+	end
 	p.hauls += 1
 	p.banked += worth
 	p.best = math.max(p.best, worth)
@@ -883,7 +894,7 @@ local function bank(ctx: Types.Ctx, player: Player, run: Run, way: Plan.Bank?)
 			end
 		end
 	end
-	ctx.send(player, { op = "banked", worth = worth, base = base, bonus = bonus, gilt = gilt, pieces = pieces, brainrots = brainrots, record = record, route = route.id, routeName = route.name, finds = finds, fresh = fresh, collected = have, total = total, sets = sets, rankUp = if rankNow > rankBefore then Plan.Ranks[rankNow].name else nil })
+	ctx.send(player, { op = "banked", worth = worth, base = base, bonus = bonus, gilt = gilt, pieces = pieces, brainrots = brainrots, record = record, route = route.id, routeName = route.name, finds = finds, fresh = fresh, collected = have, total = total, sets = sets, rankUp = if rankNow > rankBefore then Plan.Ranks[rankNow].name else nil, first = first, size = size })
 	note(player, "Luxe banked", { route = route.id, worth = worth, pieces = count })
 	if route.id == "van" then
 		complete(ctx, player, run, "van")

@@ -333,7 +333,7 @@ end)())
 -- 10. The season's collection, and the Introduction
 ---------------------------------------------------------------------------------------------------
 receipt(ben, 2002, "P-6")
-check("a season collection grants its pieces", profiles[ben].Data.owned.season_harvest_table and profiles[ben].Data.owned.season_harvest_trail)
+check("a season collection grants its pieces (a nameplate in the felt's place since Build 96)", profiles[ben].Data.owned.season_harvest_plate and profiles[ben].Data.owned.season_harvest_trail and not profiles[ben].Data.owned.season_harvest_table)
 Config.set("Assets.Looks.velvet.shirt", 77)
 Config.set("Assets.Sounds.chimes.celesta", "rbxassetid://1")
 local newcomer = guest("Evie", 5)
@@ -2182,8 +2182,13 @@ do
 	check("a second companion takes the first one's place at your shoulder", dragon.ok and gemmy:GetAttribute("Companion") == "comp_dragon" and gd.gemShop.owned.comp_fox == true)
 	check("...and the first can be worn again, free (it's yours for good)", gemAs({ op = "equip", kind = "companion", id = "comp_fox" }).ok and gemmy:GetAttribute("Companion") == "comp_fox" and gd.gems == 4750 - GemList.byId.comp_dragon.gems)
 	check("...or none at all", gemAs({ op = "equip", kind = "companion", id = "" }).ok and gemmy:GetAttribute("Companion") == nil)
+	-- (Build 96) Table felts aren't sold any more; one already had is still worn.
+	local before96 = gd.gems
 	local felt = gemAs({ op = "buy", id = "felt_aurora" })
-	check("a table felt, worn at your own table", felt.ok and gemmy:GetAttribute("GemFelt") == "felt_aurora")
+	check("a table felt isn't sold any more (Build 96), and nothing is taken", felt.ok == false and string.find(felt.why, "aren't sold any more", 1, true) ~= nil and gd.gems == before96 and gd.gemShop.owned.felt_aurora == nil)
+	check("...and its shelf is gone from the Gem Shop", table.find(GemList.Kinds, "felt") == nil and not GemList.onSale(GemList.byId.felt_aurora, nil))
+	gd.gemShop.owned.felt_aurora = true
+	check("a table felt already had is still worn at your own table", gemAs({ op = "equip", kind = "felt", id = "felt_aurora" }).ok and gemmy:GetAttribute("GemFelt") == "felt_aurora")
 	local trail = gemAs({ op = "buy", id = "gtrail_prism" })
 	check("a guide trail, worn too", trail.ok and gemmy:GetAttribute("GemTrail") == "gtrail_prism")
 	check("you can't wear a felt you don't own", gemAs({ op = "equip", kind = "felt", id = "felt_inferno" }).ok == false and gemmy:GetAttribute("GemFelt") == "felt_aurora")

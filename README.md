@@ -377,6 +377,47 @@ a Nightly attempt or a Mythic's odds.
 - **The launch kit**: page text, icon, thumbnails and the gameplay video's shot list are in
   [`LAUNCH.md`](LAUNCH.md).
 
+## Build 96 — the new Boutique, boosters for Gilt, a first haul to remember
+
+- **No more sorting-table pieces on sale** (`shared/Wardrobe` `Retired`, `shared/GemShop`). Table
+  felts, lamps, round-card backs and chimes are off every shelf: the Boutique's rotation, its
+  permanent shelf, the Gilt shelf, the season collections (a season nameplate takes the felt's
+  place) and the Gem Shop's felts. Anyone who has one keeps it and can still wear it.
+- **Boosters, for Gilt** (`shared/Boosters`, `server/Boosters`): Gilt Rush (×2 Gilt, 15 min,
+  7,500), Grand Rush (×3, 15 min, 20,000), Midas Hour (×3, an hour, 60,000), Squad Overtime (the
+  brainrot squad's jar ×3 for an hour, 6,000) and XP Rush (×2 XP, 30 min, 4,000). The screen sends
+  a booster's id only; price, strength and time are the server's. One of each kind at a time; the
+  same one again adds its time, two hours ahead at most. Kept in the guest's record, shown as chips
+  with their real time left. Gilt boosts still sit under the house's cap on every boost together;
+  the Wealthiest boards still leave out Gilt bought with Robux.
+- **The Brainrot Market, for Gilt** (`shared/Boutique.market`): four brainrots a day, the same in
+  every server (one Common or Uncommon, one Rare, one Epic, one Legendary), the exact one shown,
+  at a fixed price by rarity (3,000 to 60,000), each once a day. Mythics and Secrets are never sold.
+- **Showpiece nameplates and money moves** at the house's existing Robux tiers (or their Gilt
+  price): six nameplates with a thick frame in moving colours and a sheen that sweeps across them
+  (`World/PlateShine`), and five emotes: one of Roblox's own R15 emotes with the house's effect
+  over it (cash rain, a gold burst, a chrome ring, a bursting bag, falling diamonds), checked and
+  relayed by the server to everyone near (`server/Emotes`, `World/EmoteFX`). Each card says the
+  emote is Roblox's and the effect is the house's. Phones get an Emote key only when one is worn.
+- **Auras and titles stand out**: auras are bigger and brighter with a light and a ring of light
+  at the feet (`World/Auras`); a Gem Shop title wears its own colour, its glyph either side and a
+  sheen (`server/Dressing`). Auras, titles and companions are on the Boutique's own Auras & Titles
+  page too (bought through the Gem Shop's counter).
+- **The Boutique, promoted**: it opens on a Featured page (boosters, today's brainrots,
+  showpieces, an aura and a title) with when the shelves really turn (midnight UTC). The Shop key
+  wears NEW when the shelves have turned since the guest last looked (once a day, cleared on
+  opening). What's New tells returning guests once.
+- **A first haul to remember** (`Attractions/Luxe`, `UI/Celebrate.haul`): a guest's very first
+  haul in Steal a Luxe, whatever it's worth, gets YOUR FIRST HAUL! in the middle of the screen,
+  the worth counting up, a long burst of gold and a key to the Boutique (a key only). After that a
+  haul is the usual toast, unless it's a new best, big (twice the guest's average once they've
+  banked three) or massive (four times, or the Crown Jewel).
+- **The phone screen**: the top row is Play, Shop and Menu (How to play and Settings are tiles in
+  the Menu, and the "New here?" note points at Menu there); notices stand between the left column
+  and the What-to-do-next card instead of over the Fortune and level.
+- **Stage counts**: LAUNCH.md's description and TRENDS.md said sixteen stages; thirty-two now, as
+  the course is, and a test reads every guest-facing mention of the Basement's stages.
+
 ## Build 95 — a new guest's first minutes, from a playtest
 
 From a read-through of the game as three new players would meet it (a young phone player, a

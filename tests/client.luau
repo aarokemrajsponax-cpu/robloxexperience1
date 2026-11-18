@@ -3652,7 +3652,16 @@ do
 	local helpKey = find(playerGui, function(d)
 		return d.Name == "HowToPlayKey"
 	end)
-	check("How to play: a key at the top right, beside Shop and Menu", helpKey ~= nil and helpKey.Visible == true and helpKey.Parent and helpKey.Parent.Name == "TopRight")
+	if module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "Root").phone() then
+		-- (Build 96) On a phone the top row is Play, Shop and Menu: How to play is a Menu tile.
+		module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "MenuPanel").open()
+		advance(0.8)
+		check("How to play on a phone: not on the top row, a tile in the Menu (with Settings)", helpKey ~= nil and helpKey.Visible == false and textOnScreen("How to play") ~= nil and textOnScreen("Settings") ~= nil)
+		module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "Root").close()
+		advance(0.5)
+	else
+		check("How to play: a key at the top right, beside Shop and Menu", helpKey ~= nil and helpKey.Visible == true and helpKey.Parent and helpKey.Parent.Name == "TopRight")
+	end
 	if helpKey then
 		signalOf(helpKey, "Activated"):Fire()
 	end
@@ -3770,6 +3779,9 @@ serverSays("Shop", { op = "state", owned = {}, equipped = {}, gilt = 1200, goldK
 serverSays("Shop", { op = "open", panel = "boutique" })
 advance(1)
 check("the Boutique opens from the counter", textOnScreen("The Boutique") ~= nil)
+-- (Build 96: it opens on Featured; today's six are a tab away.)
+press("Today")
+advance(0.3)
 snapshot("boutique")
 check("today's piece is on the shelf with its live price", textOnScreen("Oxblood Felt") ~= nil and textOnScreen("249") ~= nil)
 check("the Gilt balance shows", textOnScreen("1,200 Gilt") ~= nil)
@@ -3896,6 +3908,8 @@ do
 	}
 	serverSays("Shop", { op = "open", panel = "boutique" })
 	advance(1)
+	press("Offers")
+	advance(0.3)
 	check("the Offers show the new products with Roblox's prices", textOnScreen("Luck Booster") ~= nil and textOnScreen(robux .. " 199") ~= nil and textOnScreen("VIP Velocity Elite") ~= nil)
 	do
 		-- Every offer row as tall as its words: none runs into the next.
@@ -6059,14 +6073,8 @@ do
 	advance(1)
 	check("the Gem Shop opens on its Gem-only companions, each with its price", textOnScreen("Fox Kit") ~= nil and textOnScreen("The Crown Jewel") ~= nil and textOnScreen("💎 250") ~= nil and textOnScreen("Only Gems buy these") ~= nil)
 	snapshot("gem-companions")
-	check("table felts, each drawn as a swatch of its leather", press("TABLE FELTS") and (function()
-		advance(0.3)
-		local swatch = find(playerGui, function(d)
-			return d.Name == "Swatch" and d:FindFirstChildOfClass("UIGradient") ~= nil
-		end)
-		return textOnScreen("Aurora Silk") ~= nil and swatch ~= nil
-	end)())
-	snapshot("gem-felts")
+	-- (Build 96: table felts aren't sold any more: their shelf is gone.)
+	check("Build 96: no Table Felts shelf in the Gem Shop", not press("TABLE FELTS") and textOnScreen("Aurora Silk") == nil)
 	check("guide trails, each drawn as its thread", press("GUIDE TRAILS") and (function()
 		advance(0.3)
 		return textOnScreen("Prism") ~= nil and find(playerGui, function(d)
@@ -8738,8 +8746,10 @@ coroutine.wrap(function()
 	check("caught: what was lost, plainly", textOnScreen("The guards took back 2 pieces (1,960). You're shown out to the courtyard.") ~= nil)
 	advance(6)
 	serverSays("Attraction", { op = "banked", worth = 4820, base = 4382, bonus = 0.1, gilt = 964, pieces = {}, brainrots = { "ladroLussuoso" }, record = true })
-	advance(0.3)
-	check("banked: to the Estate, the Gilt to the purse, and the brainrot", textOnScreen("A record haul: 4,820") ~= nil and textOnScreen("4,820 to your Estate  ·  964 Gilt to your purse  ·  a brainrot for your collection") ~= nil)
+	advance(0.8)
+	check("Build 96: a new best haul is celebrated in the middle of the screen", textOnScreen("NEW BEST HAUL!") ~= nil)
+	advance(4)
+	check("banked: to the Estate, the Gilt to the purse, and the brainrot (said after the celebration, not under it)", textOnScreen("A record haul: 4,820") ~= nil and textOnScreen("4,820 to your Estate  ·  964 Gilt to your purse  ·  a brainrot for your collection") ~= nil and textOnScreen("NEW BEST HAUL!") == nil)
 	advance(6)
 	-- The board.
 	invokeResults.AttractionAsk = {
@@ -10782,6 +10792,217 @@ end)()
 	GuiService.MenuClosed:Fire()
 	advance(0.5)
 	check("no errors with the Lucky Boxes or AFK mode", #errors == errorsBefore, errors[errorsBefore + 1])
+end)()
+
+
+---------------------------------------------------------------------------------------------------
+-- 7z. (Build 96) The Boutique's new front page, boosters, the Brainrot Market, auras and titles,
+-- the Shop key's New mark, booster chips, a first haul's celebration, money moves, the
+-- showpiece nameplate's sheen, and the phone's lighter top row
+---------------------------------------------------------------------------------------------------
+;(function()
+	local errorsBefore = #errors
+	local RootB = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "Root")
+	RootB.close()
+	advance(1)
+	local rgb = roblox.Color3.fromRGB
+	local R = utf8.char(0xE002)
+	local molten = { id = "plate_molten", name = "Molten Gold", kind = "nameplate", kindName = "Nameplate frames", line = "A thick frame of molten gold with light running round it.", robux = 199, giltAlt = 7960, owned = false, style = { frame = rgb(255, 196, 60), fill = rgb(28, 18, 4), line = rgb(255, 236, 170), sweep = { rgb(255, 170, 30), rgb(255, 246, 200) }, shine = true } }
+	local rain = { id = "emote_makeitrain", name = "Make It Rain", kind = "gesture", kindName = "Emotes", line = "Roblox's cheer, with a storm of cash raining round you that everyone near sees.", robux = 149, giltAlt = 5960, owned = false, style = { base = "cheer", fx = "cash", colour = rgb(110, 220, 120), seconds = 4 } }
+	invokeResults.ShopAsk = {
+		today = { rain }, featured = {}, always = { molten },
+		season = { id = "harvest", name = "Harvest Nights", price = 599, pieces = {} },
+		gilt = {}, goldKey = { owned = false, price = 499 }, ledger = { view = { term = "2026-autumn", page = 2, pages = 50, progress = 0.1, leather = false }, price = 399 },
+		guests = {}, standing = "Guest", balance = 50000, credits = {}, offers = {},
+		turnsIn = 3 * 3600 + 600,
+		boosters = {
+			list = {
+				{ id = "rush", name = "Gilt Rush", kind = "gilt", mult = 2, seconds = 900, gilt = 5000, estimate = 4200, glyph = "💰", line = "Double Gilt from everything you play, for 15 minutes.", colour = rgb(255, 206, 80) },
+				{ id = "grand", name = "Grand Rush", kind = "gilt", mult = 3, seconds = 900, gilt = 15000, glyph = "💎", line = "Three times the Gilt from everything you play, for 15 minutes.", colour = rgb(150, 220, 255) },
+				{ id = "midas", name = "Midas Hour", kind = "gilt", mult = 3, seconds = 3600, gilt = 65000, glyph = "👑", line = "Three times the Gilt from everything you play, for a whole hour.", colour = rgb(255, 170, 40) },
+				{ id = "overtime", name = "Squad Overtime", kind = "squad", mult = 3, seconds = 3600, gilt = 5000, estimate = 2400, squadRate = 1200, glyph = "🗿", line = "Your brainrot squad fills its tip jar three times as fast, for an hour.", colour = rgb(140, 255, 140), running = 1800 },
+			},
+			session = { gilt = 4200, minutes = 25 },
+		},
+		market = {
+			{ id = "bananino", name = "Bananino Ballerino", line = "Pirouettes until peeled.", glyph = "🍌", rarity = "Common", gilt = 3000, rate = 40, bought = false },
+			{ id = "pizzaVolante", name = "Pizza Volante", line = "A pizza with wings.", glyph = "🍕", rarity = "Rare", gilt = 12000, rate = 200, bought = true },
+			{ id = "fenicottero", name = "Fenicottero Finanziere", line = "A flamingo who only invests in pink.", glyph = "🦢", rarity = "Epic", gilt = 25000, rate = 450, bought = false },
+			{ id = "frogKing", name = "Le Roi Grenouille", line = "Crowned at a lily pond in 1789.", glyph = "🐸", rarity = "Legendary", gilt = 60000, rate = 1000, bought = false },
+		},
+		gemPicks = { gems = 300, items = {
+			{ id = "aura_golddust", name = "Gold Dust", kind = "aura", gems = 120, glyph = "✨", line = "A drift of gold dust, always.", owned = false, worn = false },
+			{ id = "title_legend", name = "Certified Legend", kind = "title", gems = 400, glyph = "🏆", line = "The house has checked. It's official.", owned = false, worn = false, colour = rgb(255, 200, 60) },
+			{ id = "comp_fox", name = "Fox Kit", kind = "companion", gems = 250, glyph = "🦊", line = "A little fox at your shoulder.", owned = true, worn = true },
+		} },
+		ok = true,
+	}
+	serverSays("Shop", { op = "state", owned = {}, equipped = {}, gilt = 50000, goldKey = false, credits = {}, ledger = { page = 2, pages = 50, progress = 0.1, leather = false, term = "2026-autumn" } })
+	local sentBefore = #sent
+	serverSays("Shop", { op = "open", panel = "boutique" })
+	advance(1)
+	check("Build 96: the Boutique opens on its Featured page", textOnScreen("Featured") ~= nil and textOnScreen("Gilt Rush") ~= nil)
+	check("...saying when the shelves really turn (midnight UTC, the server's clock)", textOnScreen("the next in 3 h 10 min") ~= nil)
+	check("...boosters, today's brainrots, showpieces and an aura and a title, each with its price", textOnScreen("Le Roi Grenouille") ~= nil and textOnScreen("60,000 Gilt") ~= nil and textOnScreen("Molten Gold") ~= nil and textOnScreen("Make It Rain") ~= nil and textOnScreen("Gold Dust") ~= nil and textOnScreen("120 Gems") ~= nil)
+	check("...a companion already worn isn't pushed again", textOnScreen("Fox Kit") == nil)
+	local seen = false
+	for i = sentBefore + 1, #sent do
+		if sent[i].remote == "ShopAsk" and sent[i].message[1] and sent[i].message[1].op == "seen" then
+			seen = true
+		end
+	end
+	check("...and opening it tells the server today's shelves are seen", seen)
+	snapshot("boutique-featured")
+	-- A booster: confirmed first (price, what you hold, what's left), then only its id is sent.
+	check("a booster says what it would add at the guest's own pace (the server's sum, as 'about')", textOnScreen("At your pace this visit: about +4,200 Gilt.") ~= nil)
+	check("...and one they can't afford yet says how much more is needed", textOnScreen("15,000 more Gilt to go.") ~= nil)
+	check("a booster's key asks first, with the price and what you'll hold after", press("5,000 Gilt") and textOnScreen("Confirm your purchase") ~= nil and textOnScreen("45,000 after") ~= nil)
+	snapshot("boutique-confirm")
+	local asked = nil
+	press("Buy for 5,000 Gilt")
+	for i = #sent, 1, -1 do
+		if sent[i].remote == "ShopAsk" and sent[i].message[1] and sent[i].message[1].op == "booster" then
+			asked = sent[i].message[1]
+			break
+		end
+	end
+	check("...and the purchase sends the booster's id only (no price, no time)", asked ~= nil and asked.id == "rush" and asked.gilt == nil and asked.seconds == nil and asked.mult == nil)
+	advance(0.5)
+	check("the Boosters tab: every booster, one running with its time left, and this visit's Gilt", press("Boosters") and textOnScreen("Squad Overtime") ~= nil and textOnScreen("Running: 30 min left") ~= nil and textOnScreen("This visit you've earned 4,200 Gilt in 25 min.") ~= nil)
+	check("...a money move on the shelf says how it's played", textOnScreen("Wear it, then press G (on a phone, the Emote key).") ~= nil or (press("Featured") and textOnScreen("Wear it, then press G (on a phone, the Emote key).") ~= nil and press("Boosters")))
+	snapshot("boutique-boosters")
+	check("the Brainrots tab: today's four, the one had today marked, what each earns", press("Brainrots") and textOnScreen("Pizza Volante") ~= nil and textOnScreen("Yours today") ~= nil and textOnScreen("Earns 1,000 Gilt an hour in your squad") ~= nil)
+	check("...never a random pick, said plainly", textOnScreen("never a random pick") ~= nil)
+	snapshot("boutique-market")
+	invokeResults.GemAsk = { ok = true }
+	check("the Auras & Titles tab: what's held in Gems, each kind", press("Auras & Titles") and textOnScreen("You hold 300 Gems.") ~= nil and textOnScreen("Certified Legend") ~= nil and textOnScreen("Wearing") ~= nil)
+	snapshot("boutique-style")
+	local gemAsked = nil
+	press("120 Gems")
+	for i = #sent, 1, -1 do
+		if sent[i].remote == "GemAsk" and sent[i].message[1] and sent[i].message[1].op == "buy" then
+			gemAsked = sent[i].message[1]
+			break
+		end
+	end
+	check("...buying an aura goes to the Gem Shop's own counter, by its id", gemAsked ~= nil and gemAsked.id == "aura_golddust")
+	check("a title you can't afford: its key is there but does nothing", press("400 Gems") and textOnScreen("Confirm your purchase") == nil)
+	RootB.close()
+	advance(1)
+	-- The Shop key's New mark.
+	local shopKey = find(playerGui, function(d)
+		return d.Name == "ShopKey"
+	end)
+	local pip = shopKey and shopKey:FindFirstChild("NewPip")
+	LocalPlayer:SetAttribute("BoutiqueNew", true)
+	advance(0.1)
+	check("the Shop key wears NEW when the shelves have turned since the guest last looked", pip ~= nil and pip.Visible == true)
+	LocalPlayer:SetAttribute("BoutiqueNew", nil)
+	advance(0.1)
+	check("...and not once they have", pip ~= nil and pip.Visible == false)
+	-- A booster's chip, with its real time left.
+	LocalPlayer:SetAttribute("BoosterGiltUntil", workspace:GetServerTimeNow() + 600)
+	LocalPlayer:SetAttribute("BoosterGiltUntilId", "rush")
+	advance(1.2)
+	local chip = find(playerGui, function(d)
+		return d.Name == "Booster_gilt"
+	end)
+	check("a Gilt booster running shows its chip and the time it has left", chip ~= nil and chip.Visible and string.find(chip.Text, "×2 GILT", 1, true) ~= nil)
+	snapshot("booster-chip")
+	LocalPlayer:SetAttribute("BoosterGiltUntil", nil)
+	LocalPlayer:SetAttribute("BoosterGiltUntilId", nil)
+	advance(1.2)
+	check("...gone when it's done", chip ~= nil and not chip.Visible)
+	-- A first haul: the big moment; a usual one: just the toast.
+	local CelebrateB = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "Celebrate")
+	local boutiqueOpened = 0
+	local was = CelebrateB.openBoutique
+	CelebrateB.openBoutique = function()
+		boutiqueOpened += 1
+	end
+	check("which haul is a moment: first, massive, a new best, big; a usual one isn't", CelebrateB.haulKind({ first = true, record = true }) == "first" and CelebrateB.haulKind({ size = "massive", record = true }) == "massive" and CelebrateB.haulKind({ record = true }) == "record" and CelebrateB.haulKind({ size = "big" }) == "big" and CelebrateB.haulKind({}) == nil)
+	-- (Said to Steal a Luxe's own screen, as inside it.)
+	local LuxeHudB = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "LuxeHud")
+	LuxeHudB.on({ op = "banked", worth = 780, base = 780, bonus = 0, gilt = 156, pieces = {}, brainrots = {}, record = true, first = true })
+	advance(1.5) -- (the worth counts up for about a second)
+	check("a new guest's first haul: YOUR FIRST HAUL! in the middle of the screen, its worth counted up", textOnScreen("YOUR FIRST HAUL!") ~= nil and textOnScreen("+780") ~= nil)
+	check("...with a key to the Boutique (a key only: nothing opens by itself)", boutiqueOpened == 0 and textOnScreen("Spend it in the Boutique ›") ~= nil)
+	snapshot("haul-first")
+	press("Spend it in the Boutique ›")
+	check("...which opens the Boutique when pressed", boutiqueOpened == 1 and textOnScreen("YOUR FIRST HAUL!") == nil)
+	CelebrateB.openBoutique = was
+	advance(8)
+	LuxeHudB.on({ op = "banked", worth = 900, base = 900, bonus = 0, gilt = 180, pieces = {}, brainrots = {}, record = false })
+	advance(0.8)
+	check("a usual haul: the toast only, no celebration", textOnScreen("Banked: 900") ~= nil and find(playerGui, function(d)
+		return d.Name == "Haul"
+	end) == nil)
+	advance(6)
+	LuxeHudB.on({ op = "banked", worth = 9000, base = 9000, bonus = 0, gilt = 1800, pieces = {}, brainrots = {}, record = false, size = "massive" })
+	advance(0.8)
+	check("a massive haul: MASSIVE HAUL!", textOnScreen("MASSIVE HAUL!") ~= nil)
+	snapshot("haul-massive")
+	advance(5)
+	-- A money move, drawn round whoever played it.
+	local function moneyMoves()
+		local n = 0
+		for _, d in workspace:GetDescendants() do
+			if d.Name == "MoneyMove" then
+				n += 1
+			end
+		end
+		return n
+	end
+	local before = moneyMoves()
+	serverSays("Emote", { op = "emote", userId = LocalPlayer.UserId, id = "emote_makeitrain" })
+	advance(1.5)
+	check("a money move: cash rains round the guest who played it", moneyMoves() > before)
+	advance(8)
+	check("...and it's all gone after", moneyMoves() == before)
+	serverSays("Emote", { op = "emote", userId = LocalPlayer.UserId, id = "gesture_bow" })
+	advance(0.5)
+	check("an emote with no effect draws nothing", moneyMoves() == before)
+	-- The showpiece nameplate's sheen.
+	local Shine = module("StarterPlayer", "StarterPlayerScripts", "Client", "World", "PlateShine")
+	local gui = roblox.Instance.new("BillboardGui")
+	gui:SetAttribute("Shine", true)
+	local band = roblox.Instance.new("Frame")
+	band.Name = "SheenBand"
+	band.Parent = gui
+	local sheen = roblox.Instance.new("UIGradient")
+	sheen.Name = "Sheen"
+	sheen.Parent = band
+	Shine.animate(gui, 0.1)
+	local a = sheen.Offset.X
+	Shine.animate(gui, 1.7)
+	check("a showpiece frame's sheen sweeps across it", sheen.Offset.X > a)
+	-- The phone's top row.
+	local how = find(playerGui, function(d)
+		return d.Name == "HowToPlayKey"
+	end)
+	local settingsKey = find(playerGui, function(d)
+		return d.Name == "SettingsKey"
+	end)
+	if RootB.phone() then
+		check("on a phone the top row is Play, Shop and Menu: How to play and Settings are in the Menu", how ~= nil and not how.Visible and settingsKey ~= nil and not settingsKey.Visible)
+	else
+		check("on a computer How to play and Settings stay on the top row", how ~= nil and how.Visible and settingsKey ~= nil and settingsKey.Visible)
+	end
+	-- The "New here?" note: under How to play, or on a phone (where it's a Menu tile) under Menu.
+	local HudB = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "Hud")
+	local VoiceB = module("ReplicatedStorage", "Shared", "Voice")
+	HudB.hideCoach()
+	advance(0.5)
+	HudB.coachHelp(VoiceB.Guide.coach, 3)
+	advance(0.5)
+	if RootB.phone() then
+		check("on a phone the New here? note points at the Menu and says so", textOnScreen(VoiceB.Guide.coachPhone) ~= nil)
+	else
+		check("on a computer the New here? note points at How to play", textOnScreen(VoiceB.Guide.coach) ~= nil)
+	end
+	HudB.hideCoach()
+	advance(0.5)
+	check("no errors on the Boutique's new pages", #errors == errorsBefore, errors[errorsBefore + 1])
 end)()
 
 ---------------------------------------------------------------------------------------------------

@@ -86,6 +86,12 @@ Workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
 	rescale()
 end)
 
+-- (Build 96) A phone held sideways: a short screen, everything drawn small (Root.scale is set
+-- from the screen's short side). The HUD keeps less on it.
+function Root.phone(): boolean
+	return Root.scale < 0.75
+end
+
 -- Usable size of a layer in unscaled pixels.
 -- Usable size of a layer in unscaled pixels: below Roblox's top bar, which panels sit under.
 function Root.size(): Vector2

@@ -243,6 +243,84 @@ function Shop.offers(player: Player, data: Profiles.Data): { { [string]: any } }
 	return out
 end
 
+
+-- (Build 96) The Brainrot Market's page in a guest's record: what they've had from today's four.
+local function marketPage(data: Profiles.Data): { day: number, bought: { [string]: boolean } }
+	local d = data :: any
+	local today = Boutique.day()
+	if type(d.brainrotMarket) ~= "table" or d.brainrotMarket.day ~= today or type(d.brainrotMarket.bought) ~= "table" then
+		d.brainrotMarket = { day = today, bought = {} }
+	end
+	return d.brainrotMarket
+end
+
+-- Today's four, as the Boutique shows them (the price is the server's own).
+local function marketView(data: Profiles.Data): { { [string]: any } }
+	local CurioList = require(ReplicatedStorage.Shared.Curios)
+	local BrainrotList = require(ReplicatedStorage.Shared.Brainrots)
+	local page = marketPage(data)
+	local out = {}
+	for _, m in Boutique.market() do
+		local c = CurioList.byId[m.id]
+		if c then
+			table.insert(out, {
+				id = m.id,
+				name = c.name,
+				line = c.line,
+				glyph = c.glyph,
+				accent = c.accent,
+				rarity = m.rarity,
+				colour = c.colour,
+				gilt = m.gilt,
+				rate = BrainrotList.rate(m.id, 1, nil),
+				bought = page.bought[m.id] == true,
+			})
+		end
+	end
+	return out
+end
+
+-- Buys one of today's four for Gilt: the exact one shown, at its fixed price, once a day each.
+local function buyMarket(player: Player, data: Profiles.Data, id: string): { [string]: any }
+	local cost = Boutique.marketPrice(id)
+	local CurioList = require(ReplicatedStorage.Shared.Curios)
+	local c = CurioList.byId[id]
+	if not cost or not c then
+		return { ok = false, why = "That brainrot isn't at the Market today." }
+	end
+	local page = marketPage(data)
+	if page.bought[id] then
+		return { ok = false, why = "You've had this one from today's Market. New brainrots come at midnight (UTC)." }
+	end
+	if data.gilt < cost then
+		return { ok = false, short = "Gilt", why = string.format("Insufficient Gilt: %s more.", Gilt.format(cost - data.gilt)) }
+	end
+	data.gilt -= cost
+	page.bought[id] = true
+	Analytics.sink(player, "Gilt", cost, data.gilt, "market_" .. id)
+	local Curios = require(script.Parent.Curios)
+	Curios.give(player, data, id, 1, "market")
+	Curios.push(player)
+	Gilt.changed(player)
+	Shop.push(player)
+	return { ok = true, notice = { title = c.name, line = "It's yours: in your collection, and in your squad if there's a place for it." } }
+end
+
+-- The Gem Shop's auras, titles and companions, shown in the Boutique too (bought through the Gem
+-- Shop's own counter: GemAsk). Only what's on sale now.
+local function gemPicks(data: Profiles.Data): { [string]: any }
+	local GemList = require(ReplicatedStorage.Shared.GemShop)
+	local s = require(script.Parent.GemShop).shop(data)
+	local open = Workspace:GetAttribute("HolidayGame")
+	local out = {}
+	for _, item in GemList.List do
+		if (item.kind == "aura" or item.kind == "title" or item.kind == "companion") and GemList.onSale(item, if type(open) == "string" then open else nil) then
+			table.insert(out, { id = item.id, name = item.name, kind = item.kind, gems = item.gems, glyph = item.glyph, line = item.line, owned = s.owned[item.id] == true, worn = (s :: any)[item.kind] == item.id, colour = item.style.colour or item.style.glow })
+		end
+	end
+	return { gems = data.gems, items = out }
+end
+
 local function shelves(player: Player, data: Profiles.Data): { [string]: any }
 	local season = Season.current()
 	local offers = Shop.offers(player, data)
@@ -308,6 +386,13 @@ local function shelves(player: Player, data: Profiles.Data): { [string]: any }
 		},
 		introduction = intro,
 		offers = offers,
+		-- (Build 96) Boosters for Gilt, the Brainrot Market, auras and titles, and when the
+		-- shelves turn (00:00 UTC: a real time, the same in every server).
+		boosters = require(script.Parent.Boosters).state(player, data),
+		market = marketView(data),
+		gemPicks = gemPicks(data),
+		turnsIn = Boutique.secondsToTurn(),
+		day = Boutique.day(),
 		guests = guests,
 		standing = standingOf(data),
 		balance = data.gilt,
@@ -707,7 +792,7 @@ end
 
 local function buyWithGilt(player: Player, data: Profiles.Data, itemId: string): { [string]: any }
 	local item = Wardrobe.get(itemId)
-	if not item then
+	if not item or Wardrobe.retired(item) then
 		return { ok = false, why = "That isn't sold for Gilt." }
 	end
 	-- The house's own pieces have a Gilt price; a Boutique piece can be had for Gilt on the days
@@ -762,6 +847,19 @@ onAsk = function(player: Player, request: unknown): any
 		return buy(player, data, r.item :: string, recipient)
 	elseif op == "buyGilt" and type(r.item) == "string" then
 		return buyWithGilt(player, data, r.item :: string)
+	elseif op == "booster" and type(r.id) == "string" and #(r.id :: string) <= 24 then
+		local result = require(script.Parent.Boosters).buy(player, data, r.id :: string)
+		if result.ok then
+			Shop.push(player)
+		end
+		return result
+	elseif op == "market" and type(r.id) == "string" and #(r.id :: string) <= 40 then
+		return buyMarket(player, data, r.id :: string)
+	elseif op == "seen" then
+		-- (The Boutique was opened: today's shelves are seen, and its key's New mark goes.)
+		(data :: any).boutiqueSeen = Boutique.day()
+		player:SetAttribute("BoutiqueNew", nil)
+		return { ok = true }
 	elseif op == "equip" and r.kind == "suite" then
 		return { ok = false, why = "Suite pieces are placed from the bell in your Suite." }
 	elseif op == "equip" and type(r.kind) == "string" and type(r.id) == "string" then
@@ -1093,10 +1191,31 @@ function Shop.start()
 		end
 	end
 	BlackCard.start()
+	-- (Build 96) The Boutique key's New mark: the day's shelves (and the Brainrot Market) turned
+	-- since the guest last opened it. A real change, once a day; never a timer.
+	local function markNew(player: Player, data: Profiles.Data)
+		player:SetAttribute("BoutiqueNew", if (data :: any).boutiqueSeen ~= Boutique.day() then true else nil)
+	end
 	Profiles.Loaded:Connect(function(player: Player, data: Profiles.Data)
 		LedgerService.claim(player, data)
 		task.spawn(syncGoldKey, player)
 		Shop.push(player)
+		markNew(player, data)
+	end)
+	task.spawn(function()
+		local last = Boutique.day()
+		while true do
+			task.wait(30)
+			if Boutique.day() ~= last then
+				last = Boutique.day()
+				for _, p in Players:GetPlayers() do
+					local data = Profiles.get(p)
+					if data then
+						markNew(p, data)
+					end
+				end
+			end
+		end
 	end)
 	LedgerService.changed = function(player: Player, pages: { number }?)
 		if pages then

@@ -113,6 +113,9 @@ function GemShop.buy(player: Player, data: Profiles.Data, id: string): { [string
 	if wearable and s.owned[id] then
 		return { ok = false, why = "You already have it: wear it from here." }
 	end
+	if item.kind == "felt" then
+		return { ok = false, why = "Table felts aren't sold any more. Any you have are still yours to wear." }
+	end
 	-- In season only (the holiday game the house has open, the server's own word).
 	local open = Workspace:GetAttribute("HolidayGame")
 	if not GemList.onSale(item, if type(open) == "string" then open else nil) then
@@ -123,7 +126,7 @@ function GemShop.buy(player: Player, data: Profiles.Data, id: string): { [string
 		return { ok = false, why = string.format("Not enough Gems yet: %d more.", item.gems - data.gems) }
 	end
 	spend(player, data, item.gems, "gemShop_" .. id)
-	if item.kind == "companion" or item.kind == "felt" or item.kind == "trail" then
+	if item.kind == "companion" or item.kind == "trail" then
 		-- Kept for good, and worn at once.
 		s.owned[id] = true
 		;(s :: any)[item.kind] = id

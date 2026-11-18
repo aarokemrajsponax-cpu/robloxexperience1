@@ -1099,4 +1099,41 @@ do
 	check("Build 95: the Basement's card and sign say " .. tostring(n) .. " chambers, as the course has", n ~= nil and string.find(all, n .. " chambers", 1, true) ~= nil and string.find(all, "four chambers", 1, true) == nil, all)
 end
 
+-- (Build 96) Every number the house says about the Basement is the course's own: its stages
+-- (Plan.STAGES) in every word a guest reads, and on the game's page (LAUNCH.md), the trends doc
+-- and the README's current section; never the old sixteen.
+do
+	local fs = require("@lune/fs")
+	local words = { [16] = "sixteen", [24] = "twenty-four", [32] = "thirty-two", [40] = "forty" }
+	local stages = words[Plan.STAGES]
+	local found, stale = {}, {}
+	local function scan(path)
+		for _, name in fs.readDir(path) do
+			local full = path .. "/" .. name
+			if fs.isDir(full) then
+				scan(full)
+			elseif string.sub(name, -5) == ".luau" then
+				local text = string.lower(fs.readFile(full))
+				for line in string.gmatch(text, "[^\n]+") do
+					-- (Player-facing words only: what's in quotes, not the code's own comments.)
+					local said = string.match(line, "\"([^\"]*stages[^\"]*)\"")
+					if said and string.find(said, "%a+ stages") then
+						local count = string.match(said, "([%a%-]+) stages")
+						if count == stages then
+							table.insert(found, full)
+						elseif count == "sixteen" or count == "twelve" or count == "twenty-four" then
+							table.insert(stale, full .. ": " .. said)
+						end
+					end
+				end
+			end
+		end
+	end
+	scan("src")
+	check("Build 96: the Basement's stages are said as " .. tostring(stages) .. " wherever a guest reads them", stages ~= nil and #found >= 6 and #stale == 0, table.concat(stale, " | "))
+	local launch = string.lower(fs.readFile("LAUNCH.md"))
+	local trends = string.lower(fs.readFile("TRENDS.md"))
+	check("...and on the game's page and in the trends doc", string.find(launch, stages .. " stages", 1, true) ~= nil and string.find(launch, "sixteen stages", 1, true) == nil and string.find(trends, "sixteen stages", 1, true) == nil)
+end
+
 H.finish()
