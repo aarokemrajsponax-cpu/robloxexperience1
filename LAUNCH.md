@@ -66,6 +66,16 @@ by traffic source in Creator Analytics before and after any change.
 
 ## 3. Thumbnails (1920 × 1080), five real shots
 
+**Build 94, the new set (upload these first):** `marketing/thumbnails-94/` holds five, rendered in
+3D from the game's own builds (the Maison's front, Steal a Luxe's gallery, the Executive's office,
+the Basement's wine cellar, the Grand Ballroom's dance floor) with the house's poster guest (a
+blocky avatar in a cream blazer, gold chains and shades, made from parts by
+`tools/view/hero.py`) posed in each, and the titles set in gold:
+`01-become-the-richest-guest.jpg` (the cover), `02-steal-a-luxe.jpg`,
+`03-the-executive-suite.jpg`, `04-the-maison-basement.jpg`, `05-the-grand-ballroom.jpg`. Every
+place and thing in them is in the game. Run them through Roblox's thumbnail testing and keep the
+winner as the first.
+
 **Ready to upload:** `marketing/thumbnails/` holds seven, rendered from this build of the house
 (the cover, the sorting screen itself, the Ballroom, the Terrace, the Library, the Vault, the
 house at night), in that order. They show only what's in the game. Real screenshots with guests
