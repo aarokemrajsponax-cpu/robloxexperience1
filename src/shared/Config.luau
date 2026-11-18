@@ -775,7 +775,7 @@ local defaults = {
 		firstRound = 0,
 		firstFlawless = 0,
 		midnight = 0,
-		metOwner = 0,
+		metOwner = 3889940543120376, -- Met the Owner
 		-- Then these.
 		firstNightly = 0,
 		firstLibraryWin = 0,
@@ -799,10 +799,10 @@ local defaults = {
 		goldenTurkeyCaught = 0,
 		santasHelper = 0,
 		basementSecrets = 2281422215983983, -- Every Secret: all eight of the Basement's secrets
-		-- (Build 94) To be made on Roblox next (the owner's picks): paste each id here.
-		megaAbuse = 0, -- Mega Abuse!: in the house for a Mega Abuse
-		islandKey = 0, -- The Island Key: Luxury Island unlocked at the Jet Lounge
-		executiveBoss = 0, -- The Corner Office: beat the Executive in his own office
+		-- (Build 94) Made on Roblox by the owner.
+		megaAbuse = 1086526592362510, -- Mega Abuse!: in the house for a Mega Abuse
+		islandKey = 1585966535492327, -- The Island Key: Luxury Island unlocked at the Jet Lounge
+		executiveBoss = 613835960793843, -- The Corner Office: beat the Executive in his own office
 		register50 = 0,
 		seasonSet = 0,
 		foundingTerm = 0,
