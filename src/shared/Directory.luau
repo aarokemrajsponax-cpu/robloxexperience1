@@ -77,7 +77,7 @@ Directory.List = {
 		steps = {
 			"Jump, climb and dodge down thirty-two stages, one after another.",
 			"Step on each stage's checkpoint pad. If you fall, you go back to the last pad you reached.",
-			"Each of the four chambers pays when you reach its way out, and the Treasury at the bottom pays the most.",
+			"Each of the eight chambers pays when you reach its way out, and the Treasury at the bottom pays the most.",
 		},
 		rewards = "A little Gilt at each new checkpoint, a purse to your Estate at the end of each chamber, the Treasury's chest of Gilt, and an invitation to the Executive Suite when you clear it.",
 		intro = {

@@ -35,6 +35,9 @@ end
 
 export type Choice = { id: string, text: string }
 
+-- (Build 95) How wide the last titled card's line of keys may be (what they're fitted to).
+Dialogue.keysWidth = 540
+
 export type Extra = { title: string?, step: string?, point: Vector3?, pointName: string?, sticky: boolean? }
 
 function Dialogue.show(speaker: string, line: string, choices: { Choice }?, onChoice: ((id: string) -> ())?, hold: number?, extra: Extra?)
@@ -95,16 +98,54 @@ function Dialogue.show(speaker: string, line: string, choices: { Choice }?, onCh
 		row.Parent = content
 		local rowList = Theme.list(row, 6, wide)
 		rowList.HorizontalAlignment = Enum.HorizontalAlignment.Left
+		-- (Build 95) A titled card's keys stand side by side, as many to a line as fit the card;
+		-- the rest go on a line below. In one line, three or four keys ran off the card's edge
+		-- and the last (End the tour) was cut off, on a phone and a computer alike.
+		local lineFor: (width: number) -> Instance = function(_width: number): Instance
+			return row
+		end
+		if wide then
+			rowList.FillDirection = Enum.FillDirection.Vertical
+			local pad = content:FindFirstChildOfClass("UIPadding")
+			local inner = math.min(panelWidth, Root.size().X - 24) - (if pad then pad.PaddingLeft.Offset + pad.PaddingRight.Offset else 0)
+			local keyLine: Frame? = nil
+			local used = 0
+			local lines = 0
+			lineFor = function(width: number): Instance
+				local l = keyLine
+				if l == nil or used + 6 + width > inner then
+					lines += 1
+					local f = Instance.new("Frame")
+					f.Name = "KeyLine"
+					f.BackgroundTransparency = 1
+					f.AutomaticSize = Enum.AutomaticSize.Y
+					f.Size = UDim2.new(1, 0, 0, 0)
+					f.LayoutOrder = lines
+					f.Parent = row
+					Theme.list(f, 6, true).HorizontalAlignment = Enum.HorizontalAlignment.Left
+					keyLine = f
+					used = width
+					return f
+				end
+				used += 6 + width
+				return l
+			end
+			Dialogue.keysWidth = inner
+		end
 		local first: TextButton? = nil
 		for i, c in choices :: { Choice } do
-			local key = Theme.key(row, c.text, i == 1, function()
+			local width = 300
+			if wide then
+				width = math.min(math.clamp(#c.text * 13 + 48, 150, 280), Dialogue.keysWidth)
+			end
+			local key = Theme.key(lineFor(width), c.text, i == 1, function()
 				if current == group then
 					dismiss(group)
 				end
 				if onChoice then
 					onChoice(c.id)
 				end
-			end, if wide then math.clamp(#c.text * 13 + 48, 150, 280) else 300)
+			end, width)
 			key.LayoutOrder = i
 			key.TextXAlignment = if wide then Enum.TextXAlignment.Center else Enum.TextXAlignment.Left
 			local pad = Instance.new("UIPadding")

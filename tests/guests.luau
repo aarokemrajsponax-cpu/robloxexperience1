@@ -235,6 +235,7 @@ local services = {
 local profiles = {}
 local loaded = signal()
 local greeted = {}
+local funcs = {}
 local stubs = {
 	["ReplicatedStorage.Shared.Remotes"] = function()
 		local events = {}
@@ -250,8 +251,10 @@ local stubs = {
 					}
 				return events[name]
 			end,
-			func = function()
-				return {}
+			-- (Each function kept by name, so a test can ask what the server answers.)
+			func = function(name)
+				funcs[name] = funcs[name] or {}
+				return funcs[name]
 			end,
 		}
 	end,
@@ -517,6 +520,25 @@ do
 	advance(1.5)
 	local second = lastWelcome(old)
 	check("...and the next visit, nothing again (the repeated welcome-popup fix)", second ~= nil and second ~= first and second.guide == false and second.autoTour == false)
+end
+
+-- (Build 95) An invite to Lights Out, or a Soiree's notification ("ballroom"): the old Ballroom
+-- room isn't built (Build 94), so its Gallery is empty air. The guest is shown to the Grand
+-- Ballroom's doors in the Club hall instead, where Take me there leads.
+do
+	local Config = module("ReplicatedStorage", "Shared", "Config")
+	local Travel = module("ServerScriptService", "Server", "Travel")
+	local quickSit = funcs.QuickSit and funcs.QuickSit.OnServerInvoke
+	check("Build 95: the server answers QuickSit", type(quickSit) == "function")
+	if type(quickSit) == "function" then
+		advance(2)
+		local said = quickSit(ben, "ballroom")
+		local at = ben.Character and ben.Character:GetPivot().Position
+		local doors = Travel.places().ballroom
+		local gallery = Layout.Ballroom.galleryArrival
+		check("Build 95: with the old Ballroom room not built, an invite to Lights Out lands at the Grand Ballroom's doors", Config.data.Ballroom.room == false and said == true and at ~= nil and doors ~= nil and near(at, doors.at.Position + Vector3.new(0, 1, 0), 0.5), at)
+		check("...in the Club hall, never in the old Gallery's empty air", at ~= nil and Layout.zoneAt(at) == "club" and (at - gallery).Magnitude > 20, at and Layout.zoneAt(at))
+	end
 end
 
 -- Both asking at the same moment: still one.

@@ -68,7 +68,7 @@ Attractions.List = {
 		room = "obsidian",
 		roomName = "The Basement Stair",
 		tag = "JUMP · CLIMB · CLAIM",
-		line = "An obstacle course under the house: four chambers, a chest at every way out, and the Treasury at the very bottom.",
+		line = "An obstacle course under the house: thirty-two stages in eight chambers, a purse at every way out, and the Treasury at the very bottom.",
 		glyph = "🏁",
 		colour = rgb(240, 176, 60),
 	},

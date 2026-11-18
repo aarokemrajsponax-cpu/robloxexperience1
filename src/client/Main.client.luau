@@ -721,7 +721,12 @@ local function startHud()
 			return MemeTakeover.isRunning() or Midas.isRunning() or Stagecraft.titleUp() or AbuseFX.bannerUp() or AbuseShow.cardUp() or AbuseShow.openingUp() or Headline.showing() or Celebrate.badgeUp() or SleighRide.riding()
 		end
 		Objective.start(function(mode: string)
-			if string.sub(mode, 1, 6) == "place:" then
+			if string.sub(mode, 1, 4) == "try:" then
+				-- (Build 95: a game still to try: to its room and straight in, as the tour's Try it
+				-- now does; the server checks each step. It used to stop at the room's door.)
+				Tour.tryNow(string.sub(mode, 5))
+				return
+			elseif string.sub(mode, 1, 6) == "place:" then
 				-- (To one of the house's games: the house takes you to its room.)
 				Remotes.event("Travel"):FireServer({ op = "go", place = string.sub(mode, 7) })
 				return

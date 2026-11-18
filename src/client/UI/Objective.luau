@@ -3,16 +3,19 @@
 -- to take a seat; then tonight's table, if it's waiting (with a key that takes you there); then a
 -- holiday game, while one is open (and first of all while you're playing it); then the next of the
 -- house's games to try (Steal a Luxe, the Basement, the Grand Ballroom); then your best run to
--- beat. It is never shown at a table. It comes up bright
+-- beat. It is never shown at a table, nor inside one of the house's games. It comes up bright
 -- when it changes and settles back after a few seconds, so it's there whenever you look for it.
 -- It steps aside while something bigger holds the screen, and comes back quietly after. Its –
 -- key folds it away; the choice is kept, like a setting, and Settings brings it back (The room →
 -- What-to-do-next card).
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
+local Attractions = require(ReplicatedStorage.Shared.Attractions)
 local Brand = require(ReplicatedStorage.Shared.Brand)
+local Config = require(ReplicatedStorage.Shared.Config)
 local Ease = require(ReplicatedStorage.Shared.Ease)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Rooms = require(ReplicatedStorage.Shared.Rooms)
@@ -87,7 +90,7 @@ function Objective.current(): Goal?
 	if guest.firstVisit == true and not seatedOnce and tried then
 		for _, t in V.try do
 			if tried[t.id] ~= true then
-				return { key = "try:" .. t.id, title = V.next, line = t.line, how = t.how, go = "place:" .. t.place }
+				return { key = "try:" .. t.id, title = V.next, line = t.line, how = t.how, go = "try:" .. t.id }
 			end
 		end
 	end
@@ -109,17 +112,21 @@ function Objective.current(): Goal?
 	if ballroom == "open" or ballroom == "gathering" then
 		local pot = Workspace:GetAttribute("BallroomPot")
 		local potText = if type(pot) == "number" then number(pot) else "a pot of"
+		-- (Build 95) Lights Out as it's played: party games on the Grand Ballroom's dance floor,
+		-- joined with its Join key (the old sorting evening's "sit, sort" only while that's on).
+		local floor = (Config.data.Ballroom :: any).floor
+		local L = if type(floor) == "table" and floor.enabled == false then V.lightsOutTables else V.lightsOut
 		if ballroom == "gathering" then
-			return { key = "ballroom:gathering", title = "Lights Out · last call", line = "An evening in the Grand Ballroom is about to begin", how = string.format("Take any chair before it starts: the last lamp wins %s Gilt.", potText), go = "ballroom" }
+			return { key = "ballroom:gathering", title = L.gatheringTitle, line = L.gathering, how = string.format(L.gatheringHow, potText), go = "ballroom" }
 		end
-		return { key = "ballroom:open", title = "The Grand Ballroom is open", line = "Lights Out: sit, sort, keep your lamp lit", how = string.format("The last lamp wins %s Gilt or more. It closes soon.", potText), go = "ballroom" }
+		return { key = "ballroom:open", title = L.openTitle, line = L.open, how = string.format(L.openHow, potText), go = "ballroom" }
 	end
 	-- The house's games not yet tried, one at a time (the server says which, and each one gone into
 	-- since is crossed off here).
 	if tried then
 		for _, t in V.try do
 			if tried[t.id] ~= true then
-				return { key = "try:" .. t.id, title = V.next, line = t.line, how = t.how, go = "place:" .. t.place }
+				return { key = "try:" .. t.id, title = V.next, line = t.line, how = t.how, go = "try:" .. t.id }
 			end
 		end
 	end
@@ -273,7 +280,11 @@ function Objective.refresh()
 	if not started then
 		return
 	end
-	local goal = if seated or State.phase ~= "play" or Root.isOpen() then nil else Objective.current()
+	-- (Build 95) Not inside one of the house's games either: there its own screen says what to do,
+	-- and on a phone this card sat over it, pointing somewhere else mid-run.
+	local inside = Players.LocalPlayer:GetAttribute(Attractions.ATTRIBUTE)
+	local away = type(inside) == "string" and inside ~= ""
+	local goal = if seated or away or State.phase ~= "play" or Root.isOpen() then nil else Objective.current()
 	if goal and folded() and not busy() then
 		-- (Folded: nothing at all on screen. The card comes back from Settings: The room →
 		-- What-to-do-next card.)
@@ -310,6 +321,9 @@ function Objective.start(go: (mode: string) -> ())
 		task.defer(Objective.refresh)
 	end)
 	Workspace:GetAttributeChangedSignal("BallroomState"):Connect(function()
+		task.defer(Objective.refresh)
+	end)
+	Players.LocalPlayer:GetAttributeChangedSignal(Attractions.ATTRIBUTE):Connect(function()
 		task.defer(Objective.refresh)
 	end)
 	-- (Into one of the house's games: crossed off what's still to try.)

@@ -493,11 +493,12 @@ showCard = function(i: number)
 	local choices: { Dialogue.Choice }
 	if i == #cards then
 		choices = { { id = "attractions", text = K.attractions }, { id = "explore", text = K.explore } }
+	elseif i == 1 and cards == fullDeck then
+		-- (Build 95) The first card leads with the games, the gold key: Steal a Luxe is the next
+		-- card that way, with Try it now. The whole house, every room, is the second key.
+		choices = { { id = "quick", text = K.quick }, { id = "next", text = K.whole }, { id = "done", text = K.done } }
 	else
 		choices = { { id = "next", text = K.next } }
-		if i == 1 and cards == fullDeck then
-			table.insert(choices, { id = "quick", text = K.quick })
-		end
 		if card.attraction then
 			table.insert(choices, { id = "try", text = K.try })
 		end

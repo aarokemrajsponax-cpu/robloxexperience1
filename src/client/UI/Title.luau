@@ -11,7 +11,11 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
+local Attractions = require(ReplicatedStorage.Shared.Attractions)
 local Brand = require(ReplicatedStorage.Shared.Brand)
+local Config = require(ReplicatedStorage.Shared.Config)
+local Gala = require(ReplicatedStorage.Shared.Gala)
+local Luxe = require(ReplicatedStorage.Shared.Luxe)
 local Names = require(ReplicatedStorage.Shared.Names)
 local Ease = require(ReplicatedStorage.Shared.Ease)
 local Fortune = require(ReplicatedStorage.Shared.Fortune)
@@ -41,30 +45,51 @@ local function slide(name: string, line: string, a: Vector3, b: Vector3, look: V
 	return { name = name, line = line, from = CFrame.lookAt(a, look), to = CFrame.lookAt(b, look2 or look), seconds = seconds or 8, at = (a + look) / 2 }
 end
 
--- The walk through the house, room by room (the Foyer first: it's where Play leads).
+-- The walk through the house, room by room (the Foyer first: it's where Play leads), with the
+-- house's games among them (Build 95): Steal a Luxe's courtyard, its getaway car before the
+-- residence, and the Grand Ballroom's hall. (The old Ballroom room, which this walk once filmed,
+-- isn't built since Build 94: its shot showed empty air. It's back only with that room.)
 function Title.shots(): { Shot }
 	local F, S, B, L, T = Layout.Foyer, Layout.Salon, Layout.Ballroom, Layout.Library, Layout.Terrace
 	local floor, club = Layout.FLOOR, Layout.CLUB
-	return {
+	local shots = {
 		slide("THE FOYER", "Where every evening starts: the Concierge, the grand piano, every door.",
 			Vector3.new(F.minX + 34, floor + 13, F.minZ + 6), Vector3.new(F.minX + 58, floor + 15, F.minZ + 4),
 			Vector3.new(F.maxX - 26, floor + 18, F.maxZ - 26), Vector3.new(F.maxX - 18, floor + 20, F.maxZ - 30), 9),
-		slide("THE STREET", "Ultra-luxury cars at the kerb, and the Grand Prix on the street.",
-			Vector3.new(F.minX, floor + 12, Layout.Street.kerbZ - 20), Vector3.new(F.maxX - 8, floor + 16, Layout.Street.kerbZ - 16),
-			Vector3.new(0, floor + 14, Layout.Street.facadeZ), Vector3.new(10, floor + 16, Layout.Street.facadeZ), 9),
-		slide("THE SALON", "The tables, and the calmest room: sit anywhere and sort at your own pace.",
-			Vector3.new(S.maxX - 6, floor + 10, S.maxZ - 6), Vector3.new(S.maxX - 10, floor + 12, S.minZ + 22),
-			Vector3.new(S.minX + 20, floor + 2, S.minZ + 12), Vector3.new(S.minX + 20, floor + 2, S.maxZ - 26), 8),
-		slide("THE BALLROOM", "Lights Out: party games on the floor, the last lamp lit takes the pot.",
-			Vector3.new(B.minX + 12, club + 34, B.minZ + 10), Vector3.new(B.minX + 36, club + 30, B.minZ + 8),
-			Vector3.new(B.centre.X, club + 2, B.centre.Z + 20), Vector3.new(B.centre.X + 18, club + 2, B.centre.Z + 30), 9),
-		slide("THE LIBRARY", "The Grand Auction: rare lots, bid for in every server at once.",
-			Vector3.new(L.minX + 6, club + 12, L.minZ + 6), Vector3.new(L.minX + 12, club + 10, L.maxZ - 6),
-			Vector3.new(L.maxX - 14, club + 4, L.maxZ - 10), Vector3.new(L.maxX - 8, club + 4, L.minZ + 14), 8),
-		slide("THE TERRACE", "A rooftop under the stars, and the jet to Luxury Island.",
-			Vector3.new(T.minX + 6, T.floorY + 14, T.minZ + 6), Vector3.new(T.maxX - 10, T.floorY + 14, T.minZ + 6),
-			Vector3.new(T.maxX - 20, T.floorY + 4, T.maxZ - 8), Vector3.new(T.minX + 30, T.floorY + 4, T.maxZ - 8), 9),
 	}
+	-- Steal a Luxe: from the courtyard's corner, past the getaway car to the residence's front door.
+	local lx = Attractions.origin("luxe")
+	local car = Luxe.Car.Position
+	local door = Luxe.FrontDoor
+	table.insert(shots, slide("STEAL A LUXE", "Slip into a great residence, carry out what you can, bank it at the car.",
+		lx + Vector3.new(Luxe.Courtyard.minX + 18, 18, Luxe.Courtyard.minZ + 4), lx + Vector3.new(Luxe.Courtyard.minX + 40, 20, Luxe.Courtyard.minZ + 3),
+		lx + Vector3.new(car.X, 6, door.z - 4), lx + Vector3.new(car.X + 14, 8, door.z - 4), 9))
+	table.insert(shots, slide("THE STREET", "Ultra-luxury cars at the kerb, and the Grand Prix on the street.",
+		Vector3.new(F.minX, floor + 12, Layout.Street.kerbZ - 20), Vector3.new(F.maxX - 8, floor + 16, Layout.Street.kerbZ - 16),
+		Vector3.new(0, floor + 14, Layout.Street.facadeZ), Vector3.new(10, floor + 16, Layout.Street.facadeZ), 9))
+	if (Config.data.Ballroom :: any).room ~= false then
+		table.insert(shots, slide("THE BALLROOM", "Lights Out: party games on the floor, the last lamp lit takes the pot.",
+			Vector3.new(B.minX + 12, club + 34, B.minZ + 10), Vector3.new(B.minX + 36, club + 30, B.minZ + 8),
+			Vector3.new(B.centre.X, club + 2, B.centre.Z + 20), Vector3.new(B.centre.X + 18, club + 2, B.centre.Z + 30), 9))
+	else
+		-- The Grand Ballroom: from inside its doors, up the nave to the dance floor under the chandeliers.
+		local gx = Attractions.origin("gala")
+		local h = Gala.HALL
+		local dance = Gala.DANCE.centre
+		table.insert(shots, slide("THE GRAND BALLROOM", "The dance floor, trivia, the Runway, and Lights Out: the last lamp lit takes the pot.",
+			gx + Vector3.new(-18, 22, h.minZ + 14), gx + Vector3.new(18, 24, h.minZ + 12),
+			gx + Vector3.new(dance.X, 6, dance.Z + 30), gx + Vector3.new(dance.X, 8, dance.Z + 40), 9))
+	end
+	table.insert(shots, slide("THE SALON", "The tables, and the calmest room: sit anywhere and sort at your own pace.",
+		Vector3.new(S.maxX - 6, floor + 10, S.maxZ - 6), Vector3.new(S.maxX - 10, floor + 12, S.minZ + 22),
+		Vector3.new(S.minX + 20, floor + 2, S.minZ + 12), Vector3.new(S.minX + 20, floor + 2, S.maxZ - 26), 8))
+	table.insert(shots, slide("THE LIBRARY", "The Grand Auction: rare lots, bid for in every server at once.",
+		Vector3.new(L.minX + 6, club + 12, L.minZ + 6), Vector3.new(L.minX + 12, club + 10, L.maxZ - 6),
+		Vector3.new(L.maxX - 14, club + 4, L.maxZ - 10), Vector3.new(L.maxX - 8, club + 4, L.minZ + 14), 8))
+	table.insert(shots, slide("THE TERRACE", "A rooftop under the stars, and the jet to Luxury Island.",
+		Vector3.new(T.minX + 6, T.floorY + 14, T.minZ + 6), Vector3.new(T.maxX - 10, T.floorY + 14, T.minZ + 6),
+		Vector3.new(T.maxX - 20, T.floorY + 4, T.maxZ - 8), Vector3.new(T.minX + 30, T.floorY + 4, T.maxZ - 8), 9))
+	return shots
 end
 
 -- Asks for the house around `at` to be sent ahead (instance streaming): the room is there, lamps

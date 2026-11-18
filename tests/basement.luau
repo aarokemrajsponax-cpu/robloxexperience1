@@ -1084,4 +1084,19 @@ do
 	check("the boards are the new course's own", C.store == "Basement_v3")
 end
 
+-- (Build 95) The words count the course as it is: eight chambers (Plan.Zones), thirty-two stages.
+do
+	local Directory = module("ReplicatedStorage", "Shared", "Directory")
+	local words = { [4] = "four", [8] = "eight" }
+	local n = words[#Plan.Zones]
+	local entry
+	for _, e in Directory.List do
+		if e.id == "basement" then
+			entry = e
+		end
+	end
+	local all = AttractionList.byId.basement.line .. " " .. table.concat(entry and entry.steps or {}, " ") .. " " .. table.concat(entry and entry.intro or {}, " ")
+	check("Build 95: the Basement's card and sign say " .. tostring(n) .. " chambers, as the course has", n ~= nil and string.find(all, n .. " chambers", 1, true) ~= nil and string.find(all, "four chambers", 1, true) == nil, all)
+end
+
 H.finish()

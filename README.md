@@ -377,6 +377,46 @@ a Nightly attempt or a Mythic's odds.
 - **The launch kit**: page text, icon, thumbnails and the gameplay video's shot list are in
   [`LAUNCH.md`](LAUNCH.md).
 
+## Build 95 — a new guest's first minutes, from a playtest
+
+From a read-through of the game as three new players would meet it (a young phone player, a
+regular simulator player, a player who spends Robux), the problems that cost a first session most:
+
+- **The tour leads with the games** (`World/Tour`, `Voice.Tour`, `Voice.TourKeys`). The first card
+  says what the game is (become the richest guest by playing the house's games: Steal a Luxe, the
+  Basement, the Executive) and its gold key is now *Show me the games* (the short tour of the
+  attractions, Steal a Luxe next, each with *Try it now*); *The whole house* (every room, as
+  before) is the second key. A new guest tapping the gold key no longer starts a 21-card walk that
+  opens on the sorting tables.
+- **Every key on a tour card fits the card** (`UI/Dialogue`). A titled card's keys stood in one
+  line: on an attraction's card (Next, Try it now, Back, End the tour) and on the first, the last
+  ran off the card's edge and End the tour was cut off, on a phone and a computer alike. They
+  now fill a line and carry on below.
+- **What to do next takes you in** (`UI/Objective`, `Main`). The card's *Take me there* for a game
+  still to try now goes to its room and straight in through its entrance (as the tour's *Try it
+  now*, each step checked by the server); it used to stop at the room's door.
+- **The what-to-do-next card steps aside inside a game** (Steal a Luxe, the Basement, the Executive
+  Suite, the Grand Ballroom, the island). On a phone it sat over the game's own screen, suggesting
+  somewhere else mid-run.
+- **Lights Out, said as it's played** (`Voice.Objective.lightsOut`). The card said "sit, sort, keep
+  your lamp lit" and "take any chair": the old sorting evening's words. It now says the dance floor
+  and *Join Lights Out* (the old words stay for the sorting evening, if it's ever switched back on).
+- **An invite to Lights Out lands at the Grand Ballroom** (`server/Guests`). A friend following a
+  Lights Out invite (or a Soirée notification) was sent to the old Ballroom's Gallery, which isn't
+  built since Build 94: empty air. They're shown to the Grand Ballroom's doors in the Club hall
+  now (the place the house's own *Take me there* uses; the old Gallery only with that room built).
+- **The Home Screen shows the games** (`UI/Title`). Its walk through the house filmed the old
+  Ballroom room (not built: empty air). It now films Steal a Luxe's courtyard, the getaway car
+  before the residence, second after the Foyer, and the Grand Ballroom's hall in the old room's
+  place.
+- **Words put right.** The Basement has eight chambers, not four (the Directory's card and the
+  attraction's sign). The invite to the house names the games instead of "sorting tables, a
+  Ballroom"; the Lights Out invite asks friends to play, not to watch from a Gallery that's gone.
+
+Tests: `tests/guests` (the invite's landing), `tests/basement` (the chambers counted), the client
+suite (the first card's keys, every card's keys fitting it, Show me the games to Try it now, Take me there all the way in, the
+card stepping aside inside Steal a Luxe, Lights Out's words, the Home Screen's shots).
+
 ## Build 94 — One Grand Ballroom, the Executive runs, a smarter tour
 
 From the owner's eleven notes after playing Build 93:

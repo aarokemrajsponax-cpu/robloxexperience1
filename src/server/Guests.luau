@@ -420,12 +420,22 @@ function Guests.start()
 		if TableService.isSeated(player) then
 			return true
 		end
-		-- An invite to watch Lights Out: straight up to the Ballroom's Gallery.
+		-- An invite to Lights Out (or a Soirée's notification): straight up to it. With the old
+		-- Ballroom room built (its tests), its Gallery; otherwise (Build 94 on: that room isn't built,
+		-- and its Gallery is empty air) the Grand Ballroom's doors in the Club hall, where the house's
+		-- own "Take me there" leads.
 		if wanted == "ballroom" then
 			local character = player.Character
 			if character then
-				local B = Layout.Ballroom
-				Integrity.teleport(player, character, CFrame.lookAt(B.galleryArrival + Vector3.new(0, 3, 0), Vector3.new(B.centre.X, B.galleryArrival.Y + 3, B.centre.Z)))
+				if (Config.data.Ballroom :: any).room ~= false then
+					local B = Layout.Ballroom
+					Integrity.teleport(player, character, CFrame.lookAt(B.galleryArrival + Vector3.new(0, 3, 0), Vector3.new(B.centre.X, B.galleryArrival.Y + 3, B.centre.Z)))
+				else
+					local doors = require(script.Parent.Travel).places().ballroom
+					if doors then
+						Integrity.teleport(player, character, doors.at + Vector3.new(0, 1, 0))
+					end
+				end
 			end
 			return true
 		end

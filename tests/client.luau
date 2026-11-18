@@ -1604,6 +1604,29 @@ do
 		end)
 		return room and room.Text or nil
 	end
+	-- (Build 95) With the old Ballroom room not built (the game as it is), the walk never films its
+	-- empty air: the Grand Ballroom's hall instead, and Steal a Luxe's courtyard, the house's games.
+	do
+		local cfgB = module("ReplicatedStorage", "Shared", "Config").data.Ballroom
+		local AttractionsM = module("ReplicatedStorage", "Shared", "Attractions")
+		local LayoutT = module("ReplicatedStorage", "Shared", "Layout")
+		local was = cfgB.room
+		cfgB.room = false
+		local live = TitleM.shots()
+		cfgB.room = was
+		local byName, intoOld = {}, false
+		for _, shot in live do
+			byName[shot.name] = shot
+			local fromP, toP = shot.from.Position, shot.to.Position
+			if LayoutT.zoneAt(fromP) == "ballroom" or LayoutT.zoneAt(toP) == "ballroom" or LayoutT.zoneAt(shot.at) == "ballroom" then
+				intoOld = true
+			end
+		end
+		check("Build 95: the Home Screen's walk doesn't film the old Ballroom room, which isn't built", not intoOld and byName["THE BALLROOM"] == nil)
+		local luxe, gala = byName["STEAL A LUXE"], byName["THE GRAND BALLROOM"]
+		check("...it shows the house's games: Steal a Luxe and the Grand Ballroom, each from inside its own place", luxe ~= nil and gala ~= nil and AttractionsM.areaAt(luxe.from.Position) == "luxe" and AttractionsM.areaAt(luxe.to.Position) == "luxe" and AttractionsM.areaAt(gala.from.Position) == "gala" and AttractionsM.areaAt(gala.to.Position) == "gala")
+		check("...the Foyer still first (where Play leads), Steal a Luxe next", live[1].name == "THE FOYER" and live[2].name == "STEAL A LUXE")
+	end
 	local first = showing()
 	check("...and the room the camera is showing, named", first ~= nil and names[first] == true, first)
 	check("...the camera itself in the house (its own shot, not the guest's)", camera.CameraType == roblox.Enum.CameraType.Scriptable)
@@ -1967,8 +1990,47 @@ do
 	check("the house's Concierge is hidden from you meanwhile", chead.LocalTransparencyModifier == 1 and speak.Enabled == false)
 	check("the server knows you're on the tour", sentOps("Tour", "start") == 1)
 	check("the first card: the idea", textOnScreen(Voice.Tour[1].title) ~= nil and textOnScreen("1 of " .. #Voice.Tour) ~= nil)
-	-- Next, and stay put: the Concierge waits a little way ahead rather than leaving you behind.
-	press("Next")
+	-- (Build 95) The first card leads with the games, the gold key; the whole house is the second.
+	check("Build 95: the first card's gold key is Show me the games, then The whole house, then End the tour", (function()
+		local function keyOf(text)
+			return find(playerGui, function(d)
+				return d:IsA("TextButton") and norm(d.Text) == norm(text)
+			end)
+		end
+		local q, w, e = keyOf(Voice.TourKeys.quick), keyOf(Voice.TourKeys.whole), keyOf(Voice.TourKeys.done)
+		return q ~= nil and w ~= nil and e ~= nil and q:GetAttribute("KeyKind") == "gold" and w:GetAttribute("KeyKind") ~= "gold" and q.LayoutOrder < w.LayoutOrder and w.LayoutOrder < e.LayoutOrder
+	end)())
+	check("...and says what the game is: the richest guest, and the games that get you there", string.find(Voice.Tour[1].line, "richest guest", 1, true) ~= nil and string.find(Voice.Tour[1].line, "Steal a Luxe", 1, true) ~= nil and textOnScreen("Steal a Luxe") ~= nil)
+	-- (Build 95) Every key on the card fits it: as many to a line as fit, the rest on a line below
+	-- (in one line, the last keys ran off the card's edge and End the tour was cut off).
+	check("Build 95: the tour card's keys fit the card, line by line, End the tour among them", (function()
+		local DialogueM = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "Dialogue")
+		local lines, keys = 0, 0
+		for _, d in playerGui:GetDescendants() do
+			if d.Name == "KeyLine" and d:FindFirstAncestor("Dialogue") then
+				lines += 1
+				local used, n = 0, 0
+				for _, k in d:GetChildren() do
+					if k:IsA("TextButton") then
+						used += k.Size.X.Offset
+						n += 1
+					end
+				end
+				used += math.max(0, n - 1) * 6
+				keys += n
+				if used > DialogueM.keysWidth then
+					return false
+				end
+			end
+		end
+		local done = find(playerGui, function(d)
+			return d:IsA("TextButton") and norm(d.Text) == norm(Voice.TourKeys.done) and d.Parent ~= nil and d.Parent.Name == "KeyLine"
+		end)
+		return lines >= 2 and keys == 3 and done ~= nil
+	end)())
+	snapshot("tour-first")
+	-- The whole house, and stay put: the Concierge waits a little way ahead rather than leaving you behind.
+	press(Voice.TourKeys.whole)
 	advance(6)
 	local _, _, waitState, waitAt = Tour.where()
 	check("the Concierge waits when you fall behind", waitState == "walking" and (waitAt - Vector3.new(9, 3, 12) * GRAND()).Magnitude < Config.data.Tour.waitBeyond + 4, waitAt)
@@ -2032,6 +2094,21 @@ do
 			end) ~= nil)
 			snapshot("guide-hand")
 		end
+		if Voice.Tour[i].attraction == "luxe" and Voice.Tour[i - 1].attraction ~= "luxe" then
+			-- (Build 95) An attraction's card: Next, Try it now, Back and End the tour, all on the card.
+			check("Build 95: an attraction's card shows all four keys: Next, Try it now, Back, End the tour", (function()
+				for _, t in { "Next", Voice.TourKeys.try, "Back", Voice.TourKeys.done } do
+					local k = find(playerGui, function(d)
+						return d:IsA("TextButton") and norm(d.Text) == norm(t) and d.Parent ~= nil and d.Parent.Name == "KeyLine"
+					end)
+					if not k then
+						return false
+					end
+				end
+				return true
+			end)())
+			snapshot("tour-try")
+		end
 		if Voice.Tour[i].title == "The Wardrobe" then
 			-- Back shows the card before, where you stand (the Boutique's, at the same stop).
 			press("Back")
@@ -2067,7 +2144,7 @@ do
 	serverSays("Tour", { op = "start" })
 	advance(1)
 	-- (Build 87) Skip ahead: on to the stop at once, the card wherever you are.
-	press("Next")
+	press(Voice.TourKeys.whole)
 	advance(0.5)
 	press("Skip ahead")
 	advance(0.3)
@@ -2097,6 +2174,37 @@ do
 	end)() == 1)
 	press("End the tour")
 	advance(Config.data.Tour.homeWithin + 1)
+	-- (Build 95) Show me the games, the first card's gold key: the welcome, then the games' cards
+	-- only, Steal a Luxe next, with Try it now taking the guest there.
+	do
+		local quickCount = 1
+		for k = 2, #Voice.Tour do
+			if Voice.Tour[k].quick then
+				quickCount += 1
+			end
+		end
+		moveGuest(Vector3.new(9, 5, 12) * GRAND())
+		serverSays("Tour", { op = "start" })
+		advance(1)
+		check("Build 95: Show me the games is on the first card", press(Voice.TourKeys.quick))
+		advance(0.5)
+		press("Skip ahead")
+		advance(0.3)
+		local qStop, qCard, qState = Tour.where()
+		check("...on at once to Steal a Luxe's card, the games' cards only", qState == "card" and qCard == 2 and qStop == "luxe" and textOnScreen("Steal a Luxe") ~= nil and textOnScreen("2 of " .. quickCount) ~= nil and quickCount < #Voice.Tour, qStop)
+		local travelBefore = sentOps("Travel", "go")
+		check("...with Try it now", press(Voice.TourKeys.try))
+		advance(0.5)
+		local lastTravel = nil
+		for k = #sent, 1, -1 do
+			if sent[k].remote == "Travel" then
+				lastTravel = sent[k].message
+				break
+			end
+		end
+		check("...which ends the tour and asks the house to take the guest to Steal a Luxe's room", Tour.active() == false and sentOps("Travel", "go") == travelBefore + 1 and lastTravel ~= nil and lastTravel.place == "velvet", lastTravel and lastTravel.place)
+		advance(Config.data.Tour.homeWithin + 1)
+	end
 	check("no errors on the tour", #errors == 0, errors[1])
 	concierge:Destroy()
 	moveGuest(was)
@@ -3047,6 +3155,49 @@ serverSays("Table", { op = "left" })
 advance(2)
 check("no errors through the Nightly", #errors == 0, errors[1])
 check("after tonight's table, what's next is a game not yet tried: Steal a Luxe, with the way there", textOnScreen("Play Steal a Luxe") ~= nil and textOnScreen("Reach round IV") == nil and textOnScreen("Tonight's table is laid") == nil)
+-- (Build 95) Its Take me there goes all the way in: to the game's room first, then (once there)
+-- in through its entrance, each step asked of the server, as the tour's Try it now does.
+do
+	local function goalKey()
+		return find(playerGui, function(d)
+			return d:IsA("TextButton") and d.Name == "Key_Take me there" and d:FindFirstAncestor("Objective") ~= nil
+		end)
+	end
+	local LayoutG = module("ReplicatedStorage", "Shared", "Layout")
+	local wasAt = root.Position
+	local goes = sentOps("Travel", "go")
+	local key = goalKey()
+	if key then
+		signalOf(key, "Activated"):Fire()
+	end
+	advance(0.3)
+	local lastGo = nil
+	for k = #sent, 1, -1 do
+		if sent[k].remote == "Travel" then
+			lastGo = sent[k].message
+			break
+		end
+	end
+	check("Build 95: Take me there on Play Steal a Luxe asks to go to its room first", key ~= nil and sentOps("Travel", "go") == goes + 1 and lastGo ~= nil and lastGo.place == "velvet", lastGo and lastGo.place)
+	-- (The house moves the guest; here, the test does.)
+	local inRoom = LayoutG.Velvet.arrival + Vector3.new(0, 3, 0)
+	root.CFrame = CFrame.new(inRoom)
+	root.Position = inRoom
+	invokeResults.AttractionAsk = { ok = true }
+	advance(1.2)
+	local asked = nil
+	for k = #sent, 1, -1 do
+		if sent[k].remote == "AttractionAsk" then
+			asked = sent[k].message[1]
+			break
+		end
+	end
+	check("...and once there, asks to go in", asked ~= nil and asked.op == "go" and asked.id == "luxe", asked and asked.op)
+	invokeResults.AttractionAsk = nil
+	root.CFrame = CFrame.new(wasAt)
+	root.Position = wasAt
+	advance(0.5)
+end
 
 ---------------------------------------------------------------------------------------------------
 -- 6. The Library: a whole Tête-à-Tête on screen
@@ -3380,6 +3531,24 @@ do
 	workspace:SetAttribute("BallroomState", "open")
 	Floor.roomKeys()
 	advance(0.3)
+	-- (Build 95) The card of what to do next says Lights Out as it's played now: the dance floor and
+	-- its Join key, not the old evening's "sit, sort".
+	do
+		local ObjectiveM = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "Objective")
+		local StateM = module("StarterPlayer", "StarterPlayerScripts", "Client", "State")
+		local savedGuest, savedHoliday = StateM.guest, ObjectiveM.holiday
+		StateM.guest = { nightly = { played = true } }
+		ObjectiveM.holiday = function()
+			return nil
+		end
+		local open = ObjectiveM.current()
+		workspace:SetAttribute("BallroomState", "gathering")
+		local gathering = ObjectiveM.current()
+		workspace:SetAttribute("BallroomState", "open")
+		StateM.guest, ObjectiveM.holiday = savedGuest, savedHoliday
+		check("Build 95: what to do next while Lights Out is open: the dance floor and Join Lights Out, not sit and sort", open ~= nil and open.key == "ballroom:open" and string.find(open.line, "dance floor", 1, true) ~= nil and string.find(open.how or "", "Join Lights Out", 1, true) ~= nil and string.find(open.line .. (open.how or ""), "sort", 1, true) == nil, open and open.line)
+		check("...and while it gathers: Join before it starts, not take a chair", gathering ~= nil and gathering.key == "ballroom:gathering" and string.find(gathering.how or "", "Join Lights Out", 1, true) ~= nil and string.find(gathering.how or "", "chair", 1, true) == nil, gathering and gathering.how)
+	end
 	check("Lights Out on the floor: in the Ballroom while it's open, Join Lights Out", press("Join Lights Out") and sentOps("LightsOut", "join") == 1)
 	Floor.handle({ op = "joined", seat = 1, startsAt = t(58), pot = 210 })
 	Floor.handle({ op = "gathering", count = 3, startsAt = t(58), pot = 270 })
@@ -8434,6 +8603,13 @@ coroutine.wrap(function()
 	end
 	-- (Its screen, not its name: what to do next may well suggest playing it.)
 	check("no Steal a Luxe screen in the house", card() == nil and not module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "LuxeHud").mounted())
+	-- (Build 95) The card of what to do next, under the keys: in the house, not inside a game.
+	local function nextCard()
+		return find(playerGui, function(d)
+			return d.Name == "Objective" and d:IsA("Frame") and d.Parent ~= nil and d.Parent.Name == "MaisonHud"
+		end)
+	end
+	local nextBefore = nextCard() ~= nil
 	LocalPlayer:SetAttribute("Attraction", "luxe")
 	signalOf(LocalPlayer, "attr:Attraction"):Fire()
 	serverSays("Attraction", { op = "entered", id = "luxe", hold = 6.5 })
@@ -8457,6 +8633,7 @@ coroutine.wrap(function()
 	end) == nil)
 	check("inside, its screen is up", card() ~= nil and textOnScreen("STEAL A LUXE") ~= nil)
 	check("...with how it's played, said once on the way in", textOnScreen("Steal a Luxe") ~= nil)
+	check("Build 95: inside, the card of what to do next steps aside (it sat over the game's own screen on a phone)", nextBefore and nextCard() == nil, nextBefore)
 	serverSays("Attraction", { op = "luxe", bag = { { id = "ring", name = "Diamond Ring", glyph = "💍", rarity = "Rare", worth = 1700 }, { id = "pearls", name = "Pearl Necklace", glyph = "📿", rarity = "Common", worth = 260 } }, capacity = 4, worth = 1960, bonus = 0.1, wing = "The Long Gallery", watched = 0.4, chased = false, speed = 0.93, grace = false })
 	advance(0.3)
 	local c = card()
@@ -8619,6 +8796,7 @@ coroutine.wrap(function()
 	serverSays("Attraction", { op = "left", id = "luxe", why = "home" })
 	advance(0.5)
 	check("out of the residence, its screen is gone at once", card() == nil and textOnScreen("STEAL A LUXE") == nil and textOnScreen("Leave") == nil)
+	check("Build 95: ...and back in the house, the card of what to do next is back", not nextBefore or nextCard() ~= nil)
 	-- The Lounge: Stride on the treadmills, and the lectern's board.
 	serverSays("Attraction", { op = "stride", level = 2, points = 61, next = 100, from = 40, golden = false })
 	advance(0.3)

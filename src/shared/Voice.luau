@@ -162,7 +162,8 @@ Voice.Tour = {
 	{
 		stop = "lectern",
 		title = "Welcome",
-		line = "Build your Fortune, master the Maison, become the richest guest. Everything you own counts: your Fortune is under your Gilt.",
+		-- (Build 95: what the game is, in the guest's first minute: the games, then what they're for.)
+		line = "Everyone here is out to become the richest guest. Play the house's games for Gilt: carry treasure out of Steal a Luxe, run the Basement, beat the Executive. Everything you win adds to your Fortune, under your Gilt.",
 	},
 	{
 		stop = "salon",
@@ -335,7 +336,9 @@ Voice.TourPlaces = {
 	suiteDoor = "Your Suite",
 }
 
-Voice.TourKeys = { next = "Next", back = "Back", done = "End the tour", skip = "Skip ahead", attractions = "Show me the attractions", explore = "I'll explore", quick = "Just the attractions", try = "Try it now" }
+-- (Build 95) The first card leads with the games (`quick`, the gold key); `whole` is the full walk
+-- round every room, the first card's Next.
+Voice.TourKeys = { next = "Next", back = "Back", done = "End the tour", skip = "Skip ahead", attractions = "Show me the attractions", explore = "I'll explore", quick = "Show me the games", whole = "The whole house", try = "Try it now" }
 -- (Build 94) The tour's live words, said with a card when they're true right now (what the house
 -- says on every screen: never a guess). {t} is a clock from the server's own time.
 Voice.TourLive = {
@@ -456,7 +459,7 @@ Voice.WhatsNew = {
 	lines = {
 		"One ballroom: the Grand Ballroom's doors are in the Club hall now, and Lights Out is played on its dance floor.",
 		"The Executive Suite fights harder and pays more. Beaten, he runs for the door, and the Office is yours to raid.",
-		"Show me the house now walks you to every attraction's door, with Just the attractions and Try it now.",
+		"Show me the house now walks you to every attraction's door, with Show me the games and Try it now.",
 	},
 }
 
@@ -636,6 +639,25 @@ Voice.Objective = {
 		{ id = "luxe", place = "velvet", line = "Play Steal a Luxe: carry out a fortune and bank it", how = "Its way in is the Luxe Lounge, off the Foyer. Press Play at the top right for every game." },
 		{ id = "basement", place = "obsidian", line = "Go down the Maison Basement: thirty-two stages to the Treasury", how = "Its stair is off the Foyer. Clear it for an invitation to the Executive Suite." },
 		{ id = "gala", place = "ballroom", line = "Visit the Grand Ballroom: the Flex Studio, trivia, the Runway", how = "Through its doors in the Club hall, up the Grand Stair." },
+	},
+	-- (Build 95) Lights Out while it's open: the party games on the Grand Ballroom's dance floor
+	-- (Config Ballroom.floor), joined with Join; `lightsOutTables` is the old sorting evening's.
+	-- %s: the pot.
+	lightsOut = {
+		openTitle = "Lights Out is open",
+		open = "Party games on the Grand Ballroom's dance floor",
+		openHow = "Go in and press Join Lights Out: the last lamp lit wins %s Gilt or more.",
+		gatheringTitle = "Lights Out · last call",
+		gathering = "A game of Lights Out is about to start",
+		gatheringHow = "Go in and press Join Lights Out before it starts: the last lamp lit wins %s Gilt.",
+	},
+	lightsOutTables = {
+		openTitle = "The Grand Ballroom is open",
+		open = "Lights Out: sit, sort, keep your lamp lit",
+		openHow = "The last lamp wins %s Gilt or more. It closes soon.",
+		gatheringTitle = "Lights Out · last call",
+		gathering = "An evening in the Grand Ballroom is about to begin",
+		gatheringHow = "Take any chair before it starts: the last lamp wins %s Gilt.",
 	},
 	best = "Beat your best run in {room}: {points} points",
 	bestHow = "Any table in the Salon.",

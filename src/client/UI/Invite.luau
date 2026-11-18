@@ -36,7 +36,8 @@ end
 -- welcomed with a little Gilt, and you're thanked too if you're here when they arrive (Roblox's
 -- friend referrals: server/Referral).
 function Invite.house()
-	prompt("house", "Come to the Maison: a luxury house of sorting tables, a Ballroom, and your own Suite.")
+	-- (Build 95: the house as it is now, its games first; it read "sorting tables, a Ballroom".)
+	prompt("house", "Come and become the richest guest with me: Steal a Luxe, the Basement obby, the Executive's fight and the Grand Ballroom.")
 end
 
 -- "Invite a friend" after a Grand Prix: to the house, to race on the street out front.
@@ -44,9 +45,10 @@ function Invite.race()
 	prompt("grandPrix", "Race me in the Maison Grand Prix: ultra-luxury cars, three laps, the winner takes the purse.")
 end
 
--- "Come and watch": a friend lands in the Ballroom's Gallery (§9.8).
+-- "Come and play": a friend lands at the Grand Ballroom's doors (server Guests: the old Gallery
+-- isn't built since Build 94), where Lights Out is played on the dance floor.
 function Invite.ballroom()
-	prompt("ballroom", "Lights Out in the Grand Ballroom. Come and watch from the Gallery, or take a chair.")
+	prompt("ballroom", "Lights Out in the Grand Ballroom: come and play the next game on the dance floor with me.")
 end
 
 return Invite
