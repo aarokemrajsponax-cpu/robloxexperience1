@@ -377,6 +377,18 @@ a Nightly attempt or a Mythic's odds.
 - **The launch kit**: page text, icon, thumbnails and the gameplay video's shot list are in
   [`LAUNCH.md`](LAUNCH.md).
 
+## Build 97 — a faster first minute, plainer short-purse words, five badges ready
+
+- **One tap to Steal a Luxe**: the Concierge's first card is one short line (steal, bank, grow your
+  Fortune, the richest guest tops the boards) and its gold key is *Play Steal a Luxe*, straight in;
+  *Show me the games*, *The whole house* and *End the tour* follow. No "1 of 20" on that card. The
+  What-to-do-next card's tip for Steal a Luxe is one line.
+- **A short purse, said plainly**: *Insufficient Gilt* (or *Gems*) on top and *Gotta get more lol*
+  under it, on the Boutique's rows and on every refusal for want of Gilt or Gems (`Voice.Short`).
+- **Five badges ready to make on Roblox** (`assets/badge-icons/MAPPING.md`): The Crown Jewel, The
+  Treasury, Millionaire, Wheels Up and Turkey Catcher, each already earned in the game with its
+  medal. Their ids go in `Config.Badges` once made.
+
 ## Build 96 — the new Boutique, boosters for Gilt, a first haul to remember
 
 - **No more sorting-table pieces on sale** (`shared/Wardrobe` `Retired`, `shared/GemShop`). Table

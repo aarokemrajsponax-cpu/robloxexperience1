@@ -1662,7 +1662,7 @@ check("Shift runs", (function()
 end)())
 check("a first visit: no floating key over the screen (Play, top right, opens the attractions)", textOnScreen("Show me the attractions") == nil and textOnScreen("Straight to the table") == nil)
 check("what's next, while walking: an attraction to try, Steal a Luxe first", textOnScreen("Play Steal a Luxe") ~= nil and textOnScreen("Take a seat at any table in the Salon") == nil)
-check("and the way there", textOnScreen("Its way in is the Luxe Lounge") ~= nil)
+check("and the way there (Build 97: one short line)", textOnScreen("Tap Take me there: it walks you in.") ~= nil)
 check("no errors after Play", #errors == 0, errors[1])
 
 -- The welcome: WELCOME and the guest's name on their own screen (a first evening: a line about the
@@ -1989,18 +1989,18 @@ do
 	check("the tour: the Concierge sets off with you (your own guide, on your screen)", guide ~= nil and guide:FindFirstChildOfClass("ProximityPrompt", true) == nil)
 	check("the house's Concierge is hidden from you meanwhile", chead.LocalTransparencyModifier == 1 and speak.Enabled == false)
 	check("the server knows you're on the tour", sentOps("Tour", "start") == 1)
-	check("the first card: the idea", textOnScreen(Voice.Tour[1].title) ~= nil and textOnScreen("1 of " .. #Voice.Tour) ~= nil)
+	check("the first card: the idea (Build 97: no '1 of 20' on it)", textOnScreen(Voice.Tour[1].title) ~= nil and textOnScreen("1 of " .. #Voice.Tour) == nil)
 	-- (Build 95) The first card leads with the games, the gold key; the whole house is the second.
-	check("Build 95: the first card's gold key is Show me the games, then The whole house, then End the tour", (function()
+	check("Build 97: the first card's gold key is Play Steal a Luxe, then Show me the games, The whole house, End the tour", (function()
 		local function keyOf(text)
 			return find(playerGui, function(d)
 				return d:IsA("TextButton") and norm(d.Text) == norm(text)
 			end)
 		end
-		local q, w, e = keyOf(Voice.TourKeys.quick), keyOf(Voice.TourKeys.whole), keyOf(Voice.TourKeys.done)
-		return q ~= nil and w ~= nil and e ~= nil and q:GetAttribute("KeyKind") == "gold" and w:GetAttribute("KeyKind") ~= "gold" and q.LayoutOrder < w.LayoutOrder and w.LayoutOrder < e.LayoutOrder
+		local s, q, w, e = keyOf(Voice.TourKeys.steal), keyOf(Voice.TourKeys.quick), keyOf(Voice.TourKeys.whole), keyOf(Voice.TourKeys.done)
+		return s ~= nil and q ~= nil and w ~= nil and e ~= nil and s:GetAttribute("KeyKind") == "gold" and q:GetAttribute("KeyKind") ~= "gold" and s.LayoutOrder < q.LayoutOrder and q.LayoutOrder < w.LayoutOrder and w.LayoutOrder < e.LayoutOrder
 	end)())
-	check("...and says what the game is: the richest guest, and the games that get you there", string.find(Voice.Tour[1].line, "richest guest", 1, true) ~= nil and string.find(Voice.Tour[1].line, "Steal a Luxe", 1, true) ~= nil and textOnScreen("Steal a Luxe") ~= nil)
+	check("...and says what the game is in one short line: steal, bank, get rich, the richest guest", string.find(Voice.Tour[1].line, "richest guest", 1, true) ~= nil and string.find(Voice.Tour[1].line, "Steal a Luxe", 1, true) ~= nil and #Voice.Tour[1].line <= 120 and textOnScreen("Steal treasure. Bank it. Grow your Fortune.") ~= nil)
 	-- (Build 95) Every key on the card fits it: as many to a line as fit, the rest on a line below
 	-- (in one line, the last keys ran off the card's edge and End the tour was cut off).
 	check("Build 95: the tour card's keys fit the card, line by line, End the tour among them", (function()
@@ -2026,7 +2026,7 @@ do
 		local done = find(playerGui, function(d)
 			return d:IsA("TextButton") and norm(d.Text) == norm(Voice.TourKeys.done) and d.Parent ~= nil and d.Parent.Name == "KeyLine"
 		end)
-		return lines >= 2 and keys == 3 and done ~= nil
+		return lines >= 2 and keys == 4 and done ~= nil -- (Build 97: Play Steal a Luxe added)
 	end)())
 	snapshot("tour-first")
 	-- The whole house, and stay put: the Concierge waits a little way ahead rather than leaving you behind.
@@ -2203,6 +2203,24 @@ do
 			end
 		end
 		check("...which ends the tour and asks the house to take the guest to Steal a Luxe's room", Tour.active() == false and sentOps("Travel", "go") == travelBefore + 1 and lastTravel ~= nil and lastTravel.place == "velvet", lastTravel and lastTravel.place)
+		advance(Config.data.Tour.homeWithin + 1)
+	end
+	-- (Build 97) The first card's gold key: straight into Steal a Luxe, one tap.
+	do
+		moveGuest(Vector3.new(9, 5, 12) * GRAND())
+		serverSays("Tour", { op = "start" })
+		advance(1)
+		local travelBefore = sentOps("Travel", "go")
+		check("Build 97: Play Steal a Luxe on the first card", press(Voice.TourKeys.steal))
+		advance(0.5)
+		local lastTravel = nil
+		for k = #sent, 1, -1 do
+			if sent[k].remote == "Travel" then
+				lastTravel = sent[k].message
+				break
+			end
+		end
+		check("...ends the tour and takes the guest straight to Steal a Luxe, one tap from the welcome", Tour.active() == false and sentOps("Travel", "go") == travelBefore + 1 and lastTravel ~= nil and lastTravel.place == "velvet", lastTravel and lastTravel.place)
 		advance(Config.data.Tour.homeWithin + 1)
 	end
 	check("no errors on the tour", #errors == 0, errors[1])
@@ -10720,7 +10738,7 @@ end)()
 	check("choosing the Noir shows its own odds", textOnScreen("23%") ~= nil and textOnScreen("15.5%") ~= nil and textOnScreen("guaranteed within 1 opens") == nil)
 	press("Insufficient Gilt")
 	advance(0.3)
-	check("too little Gilt: says how much more, opens nothing", textOnScreen("140,000 more Gilt") ~= nil and asked[#asked].op ~= "luckyOpen")
+	check("too little Gilt: Insufficient Gilt, Gotta get more lol, opens nothing", textOnScreen("Gotta get more lol") ~= nil and asked[#asked].op ~= "luckyOpen")
 	pressNamed("Box_noir")
 	advance(0.4)
 	-- The reel: the result where it stops, everything else drawn by the box's odds.
@@ -10855,7 +10873,7 @@ end)()
 	snapshot("boutique-featured")
 	-- A booster: confirmed first (price, what you hold, what's left), then only its id is sent.
 	check("a booster says what it would add at the guest's own pace (the server's sum, as 'about')", textOnScreen("At your pace this visit: about +4,200 Gilt.") ~= nil)
-	check("...and one they can't afford yet says how much more is needed", textOnScreen("15,000 more Gilt to go.") ~= nil)
+	check("Build 97: one they can't afford says Insufficient Gilt on top and Gotta get more lol under it", textOnScreen("INSUFFICIENT GILT") ~= nil and textOnScreen("Gotta get more lol") ~= nil and textOnScreen("more Gilt to go") == nil)
 	check("a booster's key asks first, with the price and what you'll hold after", press("5,000 Gilt") and textOnScreen("Confirm your purchase") ~= nil and textOnScreen("45,000 after") ~= nil)
 	snapshot("boutique-confirm")
 	local asked = nil

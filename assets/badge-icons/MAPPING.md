@@ -7,6 +7,22 @@
 Every other badge is earned in the game's own Badge Book but isn't a Roblox badge yet, so it isn't
 on players' profiles. `created.json` (written by the tool below) lists each one made with it.
 
+### The next five (Build 97): good ones to show on a profile
+
+Each is already earned in the game (its Badge Book entry) and has its medal here. Make them the
+same way as the welcome badge below (five a day are free), then send the five ids.
+
+| Key | Name | Description | Image |
+|---|---|---|---|
+| `crownJewel` | The Crown Jewel | Carry the Crown Jewel out of Steal a Luxe and bank it. | `crownJewel.png` |
+| `basementClear` | The Treasury | Reach the Treasury at the foot of the Maison Basement. | `basementClear.png` |
+| `gilt_1000000` | Millionaire | Hold 1,000,000 Gilt at once. | `gilt_1000000.png` |
+| `firstFlight` | Wheels Up | Fly to Luxury Island. | `firstFlight.png` |
+| `holiday_thanksgiving` | Turkey Catcher | Catch a turkey in the Harvest Field. | `holiday_thanksgiving.png` |
+
+Or with the tool (below), in one go: `python tools/badges/create_badges.py --keys
+crownJewel,basementClear,gilt_1000000,firstFlight,holiday_thanksgiving --go`.
+
 ### Just the welcome badge (free, about two minutes, no tools)
 
 1. Creator Hub -> your experience -> Engagement -> Badges -> Create a Badge.

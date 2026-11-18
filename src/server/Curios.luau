@@ -294,7 +294,7 @@ function Curios.buy(player: Player, data: Profiles.Data, id: string): { [string]
 	end
 	local price = c.gems :: number
 	if data.gems < price then
-		return { ok = false, why = string.format("Not enough Gems yet: %d more.", price - data.gems) }
+		return { ok = false, short = "Gems", why = string.format("Not enough Gems yet: %d more.", price - data.gems) }
 	end
 	data.gems -= price
 	Curios.give(player, data, id, 1, "gems")

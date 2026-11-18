@@ -203,7 +203,7 @@ local function buy(pay: string)
 			LuckyBoxPanel.close()
 			GemShopPanel.open()
 		else
-			Toast.show("Insufficient Gilt", string.format("%s more Gilt opens the %s.", number(price - have), Boxes.Boxes[chosen].name), 4)
+			Toast.show("Insufficient Gilt", require(ReplicatedStorage.Shared.Voice).Short.line, 4)
 		end
 		return
 	end

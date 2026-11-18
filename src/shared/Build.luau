@@ -4,6 +4,6 @@
 -- see whether Studio has the latest code from GitHub.
 
 return {
-	number = 96,
-	label = "Build 96 · 18 Nov · The new Boutique, boosters for Gilt, a first haul to remember",
+	number = 97,
+	label = "Build 97 · 18 Nov · The new Boutique, boosters for Gilt, one tap to Steal a Luxe",
 }

@@ -473,6 +473,10 @@ local function choose(i: number, id: string)
 		if a then
 			Tour.tryNow(a)
 		end
+	elseif id == "steal" then
+		-- (Build 97) Straight into Steal a Luxe from the first card.
+		Tour.stop("try")
+		Tour.tryNow("luxe")
 	elseif id == "back" then
 		showCard(math.max(1, i - 1))
 	elseif id == "attractions" then
@@ -494,9 +498,10 @@ showCard = function(i: number)
 	if i == #cards then
 		choices = { { id = "attractions", text = K.attractions }, { id = "explore", text = K.explore } }
 	elseif i == 1 and cards == fullDeck then
-		-- (Build 95) The first card leads with the games, the gold key: Steal a Luxe is the next
-		-- card that way, with Try it now. The whole house, every room, is the second key.
-		choices = { { id = "quick", text = K.quick }, { id = "next", text = K.whole }, { id = "done", text = K.done } }
+		-- (Build 97) The first card's gold key goes straight into Steal a Luxe (a guest from a
+		-- short video gives a game seconds, not minutes); the games' cards and the whole house
+		-- are the next keys.
+		choices = { { id = "steal", text = K.steal }, { id = "quick", text = K.quick }, { id = "next", text = K.whole }, { id = "done", text = K.done } }
 	else
 		choices = { { id = "next", text = K.next } }
 		if card.attraction then
@@ -520,7 +525,8 @@ showCard = function(i: number)
 		choose(i, id)
 	end, nil, {
 		title = card.title,
-		step = string.format("%d of %d", i, #cards),
+		-- (Build 97: no count on the first card: "1 of 20" reads as a long lesson.)
+		step = if i == 1 and cards == fullDeck then nil else string.format("%d of %d", i, #cards),
 		point = point,
 		pointName = if point and card.place then (Voice.TourPlaces :: any)[card.place] else nil,
 		sticky = true,

@@ -123,7 +123,7 @@ function GemShop.buy(player: Player, data: Profiles.Data, id: string): { [string
 		return { ok = false, why = string.format("%s is on sale for %s: it comes back with the holiday.", item.name, if season then season.name else "its holiday") }
 	end
 	if data.gems < item.gems then
-		return { ok = false, why = string.format("Not enough Gems yet: %d more.", item.gems - data.gems) }
+		return { ok = false, short = "Gems", why = string.format("Not enough Gems yet: %d more.", item.gems - data.gems) }
 	end
 	spend(player, data, item.gems, "gemShop_" .. id)
 	if item.kind == "companion" or item.kind == "trail" then

@@ -423,7 +423,7 @@ local function confirm(title: string, line: string, gilt: number, onYes: () -> (
 end
 
 -- A row with a big glyph on the left in its colour, words in the middle and one key on the right.
-local function glyphRow(parent: Instance, name: string, order: number, glyph: string, colour: Color3, caps: string, title: string, line: string, extra: string?, keyText: string?, keyOn: boolean, onKey: (() -> ())?, aside: string?)
+local function glyphRow(parent: Instance, name: string, order: number, glyph: string, colour: Color3, caps: string, title: string, line: string, extra: string?, keyText: string?, keyOn: boolean, onKey: (() -> ())?, aside: string?, short: { string }?)
 	local r = Instance.new("Frame")
 	r.Name = name
 	r.BackgroundColor3 = colour:Lerp(Color3.fromRGB(10, 10, 14), 0.86)
@@ -476,6 +476,10 @@ local function glyphRow(parent: Instance, name: string, order: number, glyph: st
 	if aside then
 		Theme.text(texts, aside, 11, "bodyMedium", { LayoutOrder = 5, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Brand.Colours.lightGold, TextWrapped = true }).Name = "Aside"
 	end
+	if short then
+		Theme.text(texts, short[1], 10, "caps", { LayoutOrder = 6, Name = "Short", TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(255, 120, 120) })
+		Theme.text(texts, short[2], 12, "bodyBold", { LayoutOrder = 7, Name = "Nudge", TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(255, 220, 150) })
+	end
 	if keyText then
 		local k = Theme.key(r, keyText, keyOn, function()
 			if onKey then
@@ -489,15 +493,19 @@ local function glyphRow(parent: Instance, name: string, order: number, glyph: st
 	end
 end
 
--- "3,600 more Gilt to go" (what's still needed), or nil when it's affordable.
-local function toGo(price: number): string?
-	local short = price - Closet.gilt
-	return if short > 0 then string.format("%s more Gilt to go.", RoundPanel.number(short)) else nil
+-- (Build 97) Where the purse is short: "Insufficient Gilt" on top, "Gotta get more lol" under it
+-- (Voice.Short), or nil when it's affordable.
+local function shortOf(price: number, have: number, gems: boolean?): { string }?
+	if have >= price then
+		return nil
+	end
+	local V = require(ReplicatedStorage.Shared.Voice).Short
+	return { if gems then V.gems else V.gilt, V.line }
 end
 
 local function boosterRow(parent: Instance, b: { [string]: any }, order: number)
 	local colour = if typeof(b.colour) == "Color3" then b.colour else Brand.Colours.gold
-	local aside = if type(b.running) == "number" then string.format("Running: %s left. Buying again adds %s.", hm(b.running), hm(b.seconds)) elseif type(b.blockedBy) == "string" then string.format("%s is running: this one can start when it's done.", b.blockedBy) else toGo(b.gilt)
+	local aside = if type(b.running) == "number" then string.format("Running: %s left. Buying again adds %s.", hm(b.running), hm(b.seconds)) elseif type(b.blockedBy) == "string" then string.format("%s is running: this one can start when it's done.", b.blockedBy) else nil
 	-- (What it would add, from the guest's own play: the server's sum, said as a pace.)
 	if type(b.estimate) == "number" and b.estimate > 0 and not b.running then
 		local pace = if b.kind == "squad" then string.format("Your squad earns %s Gilt an hour: about +%s more.", RoundPanel.number(b.squadRate or 0), RoundPanel.number(b.estimate)) else string.format("At your pace this visit: about +%s Gilt.", RoundPanel.number(b.estimate))
@@ -507,7 +515,7 @@ local function boosterRow(parent: Instance, b: { [string]: any }, order: number)
 		confirm(b.name, (b.line or "") .. " It starts as soon as you buy it.", b.gilt, function()
 			after(Closet.ask({ op = "booster", id = b.id }), b.name .. " is running.")
 		end)
-	end, aside)
+	end, aside, if b.running or b.blockedBy then nil else shortOf(b.gilt, Closet.gilt))
 end
 
 local function marketRow(parent: Instance, m: { [string]: any }, order: number)
@@ -520,7 +528,7 @@ local function marketRow(parent: Instance, m: { [string]: any }, order: number)
 		confirm(m.name, string.format("The exact one shown, never a random pick: a %s brainrot for your collection and squad.", tostring(m.rarity)), m.gilt, function()
 			after(Closet.ask({ op = "market", id = m.id }))
 		end)
-	end, if m.bought then nil else toGo(m.gilt))
+	end, nil, if m.bought then nil else shortOf(m.gilt, Closet.gilt))
 end
 
 local function gemAsk(request: { [string]: any }): any
@@ -545,7 +553,7 @@ local function gemRow(parent: Instance, g: { [string]: any }, order: number, gem
 		else
 			after(result)
 		end
-	end)
+	end, nil, if g.owned or g.worn then nil else shortOf(g.gems, gems, true))
 end
 
 -- The front page: what's new today and the strongest things on sale, each with its own key.

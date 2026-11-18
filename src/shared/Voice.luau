@@ -162,8 +162,9 @@ Voice.Tour = {
 	{
 		stop = "lectern",
 		title = "Welcome",
-		-- (Build 95: what the game is, in the guest's first minute: the games, then what they're for.)
-		line = "Everyone here is out to become the richest guest. Play the house's games for Gilt: carry treasure out of Steal a Luxe, run the Basement, beat the Executive. Everything you win adds to your Fortune, under your Gilt.",
+		-- (Build 97: one line, read at a glance: what you do, and what for. The gold key under it
+		-- goes straight into Steal a Luxe.)
+		line = "Steal treasure. Bank it. Grow your Fortune. The richest guest tops the boards: start with Steal a Luxe.",
 	},
 	{
 		stop = "salon",
@@ -338,7 +339,7 @@ Voice.TourPlaces = {
 
 -- (Build 95) The first card leads with the games (`quick`, the gold key); `whole` is the full walk
 -- round every room, the first card's Next.
-Voice.TourKeys = { next = "Next", back = "Back", done = "End the tour", skip = "Skip ahead", attractions = "Show me the attractions", explore = "I'll explore", quick = "Show me the games", whole = "The whole house", try = "Try it now" }
+Voice.TourKeys = { next = "Next", back = "Back", done = "End the tour", skip = "Skip ahead", attractions = "Show me the attractions", explore = "I'll explore", quick = "Show me the games", whole = "The whole house", try = "Try it now", steal = "Play Steal a Luxe" }
 -- (Build 94) The tour's live words, said with a card when they're true right now (what the house
 -- says on every screen: never a guess). {t} is a clock from the server's own time.
 Voice.TourLive = {
@@ -454,12 +455,15 @@ Voice.Afk = {
 
 -- What's new in this build, told once to each returning guest (Welcome back). Only shown while
 -- `build` is the build that's playing, so old news never shows as new.
+-- (Build 97) When the purse is short: what's short on top, and a nudge under it.
+Voice.Short = { gilt = "Insufficient Gilt", gems = "Insufficient Gems", line = "Gotta get more lol" }
+
 Voice.WhatsNew = {
-	build = 96,
+	build = 97,
 	lines = {
 		"The Boutique is new: boosters for Gilt, four brainrots a day, showpiece nameplates and money moves everyone sees.",
 		"Auras glow brighter and titles wear their colours. Your first haul in Steal a Luxe gets a real celebration.",
-		"The tour leads with the games: Show me the games, then Try it now.",
+		"Steal a Luxe is one tap from the welcome: Play Steal a Luxe on the Concierge's first card.",
 	},
 }
 
@@ -638,7 +642,7 @@ Voice.Objective = {
 	},
 	-- (The house's games a guest hasn't been into yet, one at a time, in this order.)
 	try = {
-		{ id = "luxe", place = "velvet", line = "Play Steal a Luxe: carry out a fortune and bank it", how = "Its way in is the Luxe Lounge, off the Foyer. Press Play at the top right for every game." },
+		{ id = "luxe", place = "velvet", line = "Play Steal a Luxe: grab treasure, bank it at the car", how = "Tap Take me there: it walks you in." },
 		{ id = "basement", place = "obsidian", line = "Go down the Maison Basement: thirty-two stages to the Treasury", how = "Its stair is off the Foyer. Clear it for an invitation to the Executive Suite." },
 		{ id = "gala", place = "ballroom", line = "Visit the Grand Ballroom: the Flex Studio, trivia, the Runway", how = "Through its doors in the Club hall, up the Grand Stair." },
 	},

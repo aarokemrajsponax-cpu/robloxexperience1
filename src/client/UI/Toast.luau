@@ -74,8 +74,13 @@ end
 function Toast.refused(r: { [string]: any }?, fallback: string?)
 	local reply: { [string]: any } = r or {}
 	local short = reply.short
-	local title = if short == "Gilt" or short == "Gems" then "Insufficient " .. short else "Not yet"
-	Toast.show(title, tostring(reply.why or fallback or "Not just now."), 3)
+	-- (Build 97) A short purse: "Insufficient Gilt" (or Gems) on top, and a nudge under it.
+	if short == "Gilt" or short == "Gems" then
+		local V = require(game:GetService("ReplicatedStorage").Shared.Voice).Short
+		Toast.show(if short == "Gems" then V.gems else V.gilt, V.line, 3)
+		return
+	end
+	Toast.show("Not yet", tostring(reply.why or fallback or "Not just now."), 3)
 end
 
 function Toast.show(title: string, line: string?, seconds: number?)

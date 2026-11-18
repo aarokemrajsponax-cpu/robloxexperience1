@@ -803,6 +803,11 @@ local defaults = {
 		megaAbuse = 1086526592362510, -- Mega Abuse!: in the house for a Mega Abuse
 		islandKey = 1585966535492327, -- The Island Key: Luxury Island unlocked at the Jet Lounge
 		executiveBoss = 613835960793843, -- The Corner Office: beat the Executive in his own office
+		-- (Build 97) The next five to make on Roblox (assets/badge-icons/MAPPING.md): 0 until made.
+		crownJewel = 0, -- The Crown Jewel
+		basementClear = 0, -- The Treasury
+		gilt_1000000 = 0, -- Millionaire
+		firstFlight = 0, -- Wheels Up
 		register50 = 0,
 		seasonSet = 0,
 		foundingTerm = 0,
