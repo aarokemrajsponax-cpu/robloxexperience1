@@ -461,9 +461,10 @@ Voice.Short = { gilt = "Insufficient Gilt", gems = "Insufficient Gems", line = "
 Voice.WhatsNew = {
 	build = 97,
 	lines = {
-		"The Boutique is new: boosters for Gilt, four brainrots a day, showpiece nameplates and money moves everyone sees.",
-		"Auras glow brighter and titles wear their colours. Your first haul in Steal a Luxe gets a real celebration.",
-		"Steal a Luxe is one tap from the welcome: Play Steal a Luxe on the Concierge's first card.",
+		-- (Build 97: one short line each: read at a glance.)
+		"New Boutique: boosters, daily brainrots, shiny nameplates, emotes.",
+		"Brighter auras, louder titles, a party for your first haul.",
+		"Steal a Luxe is one tap from the welcome.",
 	},
 }
 
@@ -515,7 +516,7 @@ Voice.Hints = {
 		{ id = "grandPrix", line = "The Grand Prix is open: get in any car on the street and press Race.", every = 720 },
 		{ id = "ballroom", line = "The Grand Ballroom is open: up the Grand Stair, one winner takes the pot.", every = 900 },
 		{ id = "holiday", line = "A holiday game is on. Its key is at the foot of the left dock.", every = 900 },
-		{ id = "shop", line = "You have Gilt to spend: Shop, top right, has table styles, auras and more.", after = 240, every = 1200 },
+		{ id = "shop", line = "You have Gilt to spend: Shop, top right, has boosters, brainrots and more.", after = 240, every = 1200 },
 		{ id = "suite", line = "Your Suite is yours to decorate. The Suites key on the left takes you there.", after = 420 },
 		{ id = "collection", line = "Brainrots you find earn Gilt every hour. See them in Collection, and put your best in your squad.", after = 600 },
 		{ id = "afk", line = "You earn Gilt offline with brainrots: your squad keeps filling its tip jar while you're away. Come back tomorrow and collect it.", after = 1200, every = 2400 },
@@ -667,6 +668,9 @@ Voice.Objective = {
 	},
 	best = "Beat your best run in {room}: {points} points",
 	bestHow = "Any table in the Salon.",
+	-- (Build 97) Every game tried: the loop that grows a Fortune.
+	more = "Steal a bigger haul: every haul grows your Fortune",
+	moreHow = "Tap Take me there: straight into Steal a Luxe.",
 	takeMe = "Take me there",
 }
 

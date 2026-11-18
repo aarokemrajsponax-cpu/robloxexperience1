@@ -47,22 +47,33 @@ end
 
 -- One upgrade: its name and what it does now, what the next does, and its price on the key.
 local function upgradeRow(parent: Instance, order: number, name: string, u: { [string]: any }, buy: () -> ()): Frame
+	-- (Build 97: as tall as its words, at least 52: on a phone the words are drawn larger, and in
+	-- fixed 15-pixel lines they ran into each other.)
 	local f = Instance.new("Frame")
 	f.Name = "Upgrade"
 	f.BackgroundTransparency = 1
-	f.Size = UDim2.new(1, 0, 0, 52)
+	f.Size = UDim2.new(1, 0, 0, 0)
+	f.AutomaticSize = Enum.AutomaticSize.Y
 	f.LayoutOrder = order
 	f.Parent = parent
+	local least = Instance.new("UISizeConstraint")
+	least.MinSize = Vector2.new(0, 52)
+	least.Parent = f
 	local words = Instance.new("Frame")
 	words.Name = "Words"
 	words.BackgroundTransparency = 1
-	words.Size = UDim2.new(1, -150, 1, 0)
+	words.Size = UDim2.new(1, -150, 0, 0)
+	words.AutomaticSize = Enum.AutomaticSize.Y
 	words.Parent = f
-	Theme.list(words, 1).VerticalAlignment = Enum.VerticalAlignment.Center
-	Theme.text(words, string.format("%s  ·  %d of %d", name, tonumber(u.level) or 1, tonumber(u.top) or 1), 14, "bodyBold", { LayoutOrder = 1, TextXAlignment = Enum.TextXAlignment.Left, Size = UDim2.new(1, 0, 0, 18), AutomaticSize = Enum.AutomaticSize.None })
-	Theme.text(words, "Now: " .. tostring(u.now or ""), 12, "body", { LayoutOrder = 2, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = C.smoke, Size = UDim2.new(1, 0, 0, 15), AutomaticSize = Enum.AutomaticSize.None })
+	local pad = Instance.new("UIPadding")
+	pad.PaddingTop = UDim.new(0, 4)
+	pad.PaddingBottom = UDim.new(0, 4)
+	pad.Parent = words
+	Theme.list(words, 2).VerticalAlignment = Enum.VerticalAlignment.Top
+	Theme.text(words, string.format("%s  ·  %d of %d", name, tonumber(u.level) or 1, tonumber(u.top) or 1), 14, "bodyBold", { LayoutOrder = 1, TextXAlignment = Enum.TextXAlignment.Left })
+	Theme.text(words, "Now: " .. tostring(u.now or ""), 12, "body", { LayoutOrder = 2, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = C.smoke })
 	if u.nextLine then
-		Theme.text(words, "Next: " .. tostring(u.nextLine), 12, "body", { LayoutOrder = 3, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = C.lightGold, Size = UDim2.new(1, 0, 0, 15), AutomaticSize = Enum.AutomaticSize.None })
+		Theme.text(words, "Next: " .. tostring(u.nextLine), 12, "body", { LayoutOrder = 3, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = C.lightGold })
 	end
 	local price = tonumber(u.price)
 	local key = Theme.key(f, if price then Rules.format(price) .. " Gilt" else "At its best", price ~= nil, function()

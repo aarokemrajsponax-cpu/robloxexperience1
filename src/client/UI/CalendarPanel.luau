@@ -58,7 +58,7 @@ end
 local function face(p: Evenings.Present, seventh: boolean): (string, string, string?)
 	if seventh then
 		-- (The best of them: its whole present is said in full under the row.)
-		return "crown", "THE BEST", if p.curio then "+ A CURIO" else "+ " .. tostring(p.gilt) .. " GILT"
+		return "crown", "BEST", if p.curio then "+ CURIO" else "+ " .. tostring(p.gilt) .. " GILT" -- (Build 97: short enough for a phone's tile)
 	elseif p.gilt > 0 then
 		return "gilt", tostring(p.gilt), if p.xp > 0 then "+" .. tostring(p.xp) .. " XP" else "GILT"
 	end

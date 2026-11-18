@@ -18,7 +18,6 @@ local Brand = require(ReplicatedStorage.Shared.Brand)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Ease = require(ReplicatedStorage.Shared.Ease)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
-local Rooms = require(ReplicatedStorage.Shared.Rooms)
 local Voice = require(ReplicatedStorage.Shared.Voice)
 local Fade = require(script.Parent.Fade)
 local Root = require(script.Parent.Root)
@@ -130,16 +129,10 @@ function Objective.current(): Goal?
 			end
 		end
 	end
-	-- The best run at the Salon's tables.
-	local top, where = 0, nil
-	if type(guest.best) == "table" and type(guest.best.salon) == "number" and guest.best.salon > 0 then
-		top, where = guest.best.salon, "salon"
-	end
-	local room = if where then Rooms.get(where) else nil
-	if top > 0 and room then
-		local name = string.gsub(room.name, "^The ", "the ")
-		local line = string.gsub(string.gsub(V.best, "{points}", number(top)), "{room}", name)
-		return { key = "best:" .. top, title = V.next, line = line, how = V.bestHow }
+	-- (Build 97) Every game tried: back to the house's own loop, a bigger haul in Steal a Luxe,
+	-- one tap in. (It used to send them to beat a score at the Salon's sorting tables.)
+	if tried then
+		return { key = "more:luxe", title = V.next, line = V.more, how = V.moreHow, go = "try:luxe" }
 	end
 	return nil
 end
