@@ -3,7 +3,7 @@
 207 medals, one for every badge in the Badge Book (`src/shared/BadgeBook.luau`), made by
 `python3 tools/art/badge_icons.py`. The ring is the tier, the enamel the group, the chip the count.
 
-**Roblox ids so far:** only `basementSecrets` (Every Secret) has one in `Config.Badges`.
+**Roblox ids so far:** `nights_1` (Welcome to the Maison) and `basementSecrets` (Every Secret) have one in `Config.Badges`.
 Every other badge is earned in the game's own Badge Book but isn't a Roblox badge yet, so it isn't
 on players' profiles. `created.json` (written by the tool below) lists each one made with it.
 

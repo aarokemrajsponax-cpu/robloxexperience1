@@ -771,7 +771,7 @@ local defaults = {
 	-- one before its id was set are given it the next time they come in.
 	Badges = {
 		-- The first five (free to make: Roblox lets a game make a few each day at no cost).
-		nights_1 = 0, -- Welcome to the Maison: every guest's first evening (Build 88: its icon is assets/badge-icons/nights_1.png)
+		nights_1 = 3237541883464793, -- Welcome to the Maison: every guest's first evening (made on Roblox with assets/badge-icons/nights_1.png)
 		firstRound = 0,
 		firstFlawless = 0,
 		midnight = 0,
