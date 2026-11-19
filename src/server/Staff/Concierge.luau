@@ -270,7 +270,9 @@ function Concierge.recommend(player: Player): (string, string?)
 	-- (A Tycoon without the Island Key: the jet waits.)
 	local island = if type(pages.island) == "table" then pages.island else {}
 	local reached = if type(data.empire) == "table" then tonumber(data.empire.rank) or 1 else 1
-	if island.key ~= true and reached >= (tonumber(((settings.Attractions or {}).island or {}).keyRank) or 6) then
+	-- (Build 98: never while the island is closed, coming soon.)
+	local islandCfg = (settings.Attractions or {}).island or {}
+	if islandCfg.comingSoon ~= true and island.key ~= true and reached >= (tonumber(((settings.Attractions or {}).island or {}).keyRank) or 6) then
 		return R.island, "terrace"
 	end
 	local ex = (settings.Attractions or {}).executive or {}
@@ -591,7 +593,7 @@ function Concierge.offerHelp(player: Player)
 			{ id = "no", text = V.choices.fine },
 		}, function(choice)
 			if choice == "yes" then
-				Concierge.lead(player, "salon")
+				Concierge.lead(player, "velvet")
 			else
 				Dialogue.say(player, V.speaker, V.goodNight, nil, nil, 1.5)
 				if staff and not staff.busy then

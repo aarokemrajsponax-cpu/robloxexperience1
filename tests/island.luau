@@ -104,6 +104,29 @@ for _, p in H.tagged.AttractionPrompt or {} do
 end
 check("the island is one of the attractions, entered from the Terrace", AttractionList.byId.island ~= nil and AttractionList.byId.island.room == "terrace")
 check("its prompts: the arch, the way home, the Livery Desk, the Exchange, the toast, six postcards", kinds["go:"] == 1 and kinds["home:"] == 1 and kinds["panel:liveries"] == 1 and kinds["panel:exchange"] == 1 and kinds["act:toast"] == 1 and kinds["act:postcard"] == 6)
+---------------------------------------------------------------------------------------------------
+-- (Build 98) Closed for now: Coming soon. No way in, no key sold, the arch never opens the key's
+-- card, the Directory says Coming soon, even for a guest who holds the key.
+---------------------------------------------------------------------------------------------------
+do
+	check("Build 98: the island ships closed (comingSoon on)", Config.data.Attractions.island.comingSoon == true)
+	stand(ada, Layout.Terrace.arrival)
+	data(ada).gilt = 1000000
+	local soonGo = askAs(ada, { op = "go", id = "island" })
+	check("Build 98: coming soon: no flight, and it says so", soonGo.ok == false and string.find(soonGo.why, "coming soon", 1, true) ~= nil, soonGo.why)
+	local soonKey = act(ada, { act = "key" })
+	check("...no key sold for it (no Gilt taken)", soonKey.ok == false and string.find(soonKey.why, "coming soon", 1, true) ~= nil and data(ada).gilt == 1000000 and page(ada).key ~= true, soonKey.why)
+	check("...the arch doesn't open the key's card", Game.locked(Attractions.ctx, ada) == false)
+	local card = Game.directory(Attractions.ctx, ada)
+	check("...its Directory card: coming soon, not open", card.comingSoon == true and card.open == false)
+	page(ada).key = true
+	check("...even with the key: not open", Game.directory(Attractions.ctx, ada).open == false and askAs(ada, { op = "go", id = "island" }).ok == false)
+	page(ada).key = nil
+	data(ada).gilt = 0
+	-- (The rest of this suite tests the island as it plays once opened.)
+	Config.data.Attractions.island.comingSoon = false
+end
+
 -- Walking into the jet's arch without the Island Key: still locked, and what opens it is shown
 -- (once per walk-in), never a way round it.
 do

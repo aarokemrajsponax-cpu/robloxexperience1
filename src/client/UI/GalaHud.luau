@@ -214,7 +214,7 @@ local function drawKeys()
 			c:Destroy()
 		end
 	end
-	Theme.key(k, "Ballroom", false, function()
+	Theme.key(k, "Leave", false, function()
 		task.spawn(function()
 			local ok, r = pcall(function()
 				return Remotes.func("AttractionAsk"):InvokeServer({ op = "home" })

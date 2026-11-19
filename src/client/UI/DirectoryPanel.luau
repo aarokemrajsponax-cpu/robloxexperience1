@@ -166,7 +166,16 @@ local function happening(): (string?, string?, string?)
 end
 
 -- Why the ways there can't be used just now, if they can't.
+-- (Build 98) Closed for now by the house (the server's card says so): Luxury Island.
+local function soon(e: Directory.Entry): boolean
+	local c = cardOf(e)
+	return c ~= nil and c.comingSoon == true
+end
+
 local function blocked(e: Directory.Entry): string?
+	if soon(e) then
+		return "Coming soon: it isn't open yet."
+	end
 	if DirectoryPanel.isSeated() then
 		return "Leave your table first."
 	end
@@ -330,6 +339,9 @@ local function stateChip(art: Frame, e: Directory.Entry)
 		chip(art, "You're in it", GOLD, rgb(24, 20, 10))
 	elseif e.attraction and s and s.here == e.attraction and open == true then
 		chip(art, "You're here", GOLD, rgb(24, 20, 10))
+	elseif soon(e) then
+		chip(art, "Coming soon", GOLD, rgb(24, 20, 10))
+		lock(art)
 	elseif open == false then
 		chip(art, "Locked", C.bone, rgb(16, 16, 20))
 		lock(art)
@@ -446,9 +458,10 @@ local function card(parent: Instance, e: Directory.Entry, order: number, shape: 
 		Theme.fit(title, nameSize, 12)
 		-- (Closed to the guest: what opens it, in place of what it is.)
 		local locked = openNow == false and e.unlock ~= nil
+		local comingSoon = soon(e)
 		local lineRoom = math.max(0, shape.h - wordsTop - 8 - footH - 4 - nameH - 2)
 		local oneLine = math.ceil(Theme.textSize(13, "body") * 1.25)
-		local line = if locked then (progress(e) or "Locked") elseif Theme.measureAs(e.tagline, 13, "body", room).Y <= lineRoom then e.tagline else e.short
+		local line = if comingSoon then "Coming soon" elseif locked then (progress(e) or "Locked") elseif Theme.measureAs(e.tagline, 13, "body", room).Y <= lineRoom then e.tagline else e.short
 		-- (Two lines kept for it wherever the card has them, so a word is never lost to a font that
 		-- runs a little wider than measured.)
 		local lineH = if locked then oneLine else math.min(lineRoom, math.max(oneLine * 2, Theme.measureAs(line, 13, "body", room).Y + 2))
@@ -462,7 +475,7 @@ local function card(parent: Instance, e: Directory.Entry, order: number, shape: 
 			AutomaticSize = Enum.AutomaticSize.None,
 			Size = UDim2.new(1, 0, 0, math.max(oneLine, lineH)),
 		})
-		if locked then
+		if locked and not comingSoon then
 			-- (Closed: what opens it, in a few words more, where there's room for them.)
 			local hint = if e.id == "executive" then fill("Finish the Basement, carry {inviteHaul} of loot out of Steal a Luxe in one trip, or buy one for {invitePrice} Gilt.") elseif e.id == "island" then fill("Reach the rank of {keyRank}, then buy the key at the Jet Lounge.") else nil
 			local hintRoom = lineRoom - oneLine - 2
@@ -786,7 +799,9 @@ function DirectoryPanel.closer(id: string)
 	end
 	local left = column("Plays", if twoCols then 1 else 2)
 	local right = column("Pays", if twoCols then 2 else 3)
-	if open == false and e.unlock then
+	if soon(e) then
+		heading(left, "Coming soon", 0, GOLD)
+	elseif open == false and e.unlock then
 		-- What opens it, first, in a box of its own (in one column, before how it plays).
 		local box = Instance.new("Frame")
 		box.Name = "Unlock"

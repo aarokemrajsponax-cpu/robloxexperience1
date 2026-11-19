@@ -120,16 +120,41 @@ function StartHere.open()
 	keys.Parent = content
 	local kl = Theme.list(keys, 10, true)
 	kl.HorizontalAlignment = Enum.HorizontalAlignment.Center
-	Theme.key(keys, S.go, true, function()
+	local GuideHand = require(script.Parent.GuideHand)
+	local goKey = Theme.key(keys, S.go, true, function()
+		GuideHand.clear()
 		Root.close(NAME)
 		StartHere.showWay()
-	end, math.min(220, math.floor(inner / 2) - 5)).LayoutOrder = 1
+	end, math.min(220, math.floor(inner / 2) - 5))
+	goKey.Name = "ShowMeTheHouse"
+	goKey.LayoutOrder = 1
 	Theme.key(keys, S.attractions, false, function()
+		GuideHand.clear()
 		Root.close(NAME)
 		StartHere.toDirectory()
 	end, math.min(220, math.floor(inner / 2) - 5)).LayoutOrder = 2
 	Theme.fitHeight(group, content)
-	Root.open(NAME, group)
+	Root.open(NAME, group, function()
+		GuideHand.clear()
+	end)
+	-- (Build 98) Show me the house stands out: a glow round it and the house's gold-ringed hand
+	-- pointing at it. (The whole house first: the game makes sense before it's played.)
+	pcall(function()
+		local ring = Instance.new("UIStroke")
+		ring.Name = "GoldGlow"
+		ring.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		ring.Color = Color3.fromRGB(255, 214, 120)
+		ring.Thickness = 3
+		ring.Transparency = 0.1
+		ring.Parent = goKey
+		-- (A slow breath of light round it, never a flash.)
+		game:GetService("TweenService"):Create(ring, TweenInfo.new(0.9, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Thickness = 5, Transparency = 0.45 }):Play()
+	end)
+	task.defer(function()
+		if goKey.Parent then
+			pcall(GuideHand.point, goKey, S.handTitle, S.handLine)
+		end
+	end)
 end
 
 -- On arrival: once a session, only if nothing else is on the screen (it waits a little for that).

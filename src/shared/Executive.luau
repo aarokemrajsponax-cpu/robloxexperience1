@@ -37,7 +37,7 @@ Executive.Gear = {
 	{ id = "disguise", name = "A Disguise", line = "Cameras and guards take longer to notice you.", price = 4000, glyph = "🎭" },
 	{ id = "decoy", name = "A Decoy", line = "Once a run: every camera and guard in the hallway watches it for eight seconds.", price = 2500, glyph = "🎈" },
 	{ id = "scanner", name = "A Scanner", line = "Shows every guard and every code terminal through the walls, all run long.", price = 3000, glyph = "📡" },
-	{ id = "vest", name = "An Armoured Vest", line = "Half as much composure again in the Office.", price = 5000, glyph = "🛡️" },
+	{ id = "vest", name = "An Armoured Vest", line = "Half as much health again in the Office.", price = 5000, glyph = "🛡️" },
 } :: { Gear }
 Executive.byGear = {} :: { [string]: Gear }
 for _, g in Executive.Gear do
@@ -179,7 +179,7 @@ Executive.BossSpots = {
 Executive.Phases = {
 	{ id = "shield", name = "The Shield", line = "His shield is powered by the three blue generators around the Office. Shoot all three and it falls: then his bodyguards come.", say = "You've come a long way up. Let's see what you're worth." },
 	{ id = "detail", name = "The Security Detail", line = "His bodyguards. Stun all four.", say = "Gentlemen. Show our guests out." },
-	{ id = "boss", name = "The Executive", line = "Watch for his wind-up: a ring is a shockwave (jump it), a lane is his dash (step aside), a raised hand is briefcases (move). At half his composure he spins cases out all round: stand in a gap.", say = "If you want something done properly, you do it yourself." },
+	{ id = "boss", name = "The Executive", line = "Watch for his wind-up: a ring is a shockwave (jump it), a lane is his dash (step aside), a raised hand is briefcases (move). At half his health he spins cases out all round: stand in a gap.", say = "If you want something done properly, you do it yourself." },
 } :: { { id: string, name: string, line: string, say: string } }
 Executive.FINALE_SAY = "A hostile takeover, then."
 Executive.WON_SAY = "Well played. The lift is yours. For now."
@@ -307,7 +307,7 @@ export type Challenge = { id: string, name: string, line: string, gilt: number }
 Executive.Challenges = {
 	{ id = "ghost", name = "Ghost", line = "Beat him without once being seen in the hallway.", gilt = 1500 },
 	{ id = "steady", name = "Steady Hand", line = "Beat him without a wrong try of yours at the vault door.", gilt = 1000 },
-	{ id = "untouchable", name = "Untouchable", line = "Beat him without losing any composure (no revive).", gilt = 2500 },
+	{ id = "untouchable", name = "Untouchable", line = "Beat him without losing any of your health (no revive).", gilt = 2500 },
 	{ id = "swift", name = "Swift Takeover", line = "Beat him within three minutes of the vault door opening.", gilt = 1500 },
 } :: { Challenge }
 Executive.challengeById = {} :: { [string]: Challenge }

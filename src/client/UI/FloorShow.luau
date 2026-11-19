@@ -388,7 +388,9 @@ end
 
 -- (Rebuilt only when its keys change; the line, with its countdown, is set in place.)
 function FloorShow.roomKeys()
-	if view.playing or not inBallroom() or Root.isOpen() then
+	-- (Build 98: no card at all while the floor games are closed. It only steered guests away;
+	-- when the floor opens, the card comes with Join.)
+	if view.playing or not inBallroom() or Root.isOpen() or (not view.joined and Workspace:GetAttribute("BallroomState") == "closed") then
 		clearPad()
 		return
 	end

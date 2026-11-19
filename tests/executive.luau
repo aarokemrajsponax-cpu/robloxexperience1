@@ -893,6 +893,7 @@ check("caught, with Chronos Defiance on sale: the moment for a revive, still in 
 check("...its price shown, nothing held, where it puts you back, and how long it stands", moment.price == 89 and moment.onSale == true and moment.held == 0 and moment.where == "hall" and math.abs(moment.left - Game.REVIVE.window) < 0.01 and moment.usesLeft == Game.REVIVE.most)
 r = askAs(ada, { op = "act", id = "executive", act = "terminal", n = 3 })
 check("while caught, nothing else in the Suite works", r.ok == false and r.why == "You were caught: security is showing you out.")
+check("Build 98: caught, they're held still (their character anchored by the server: no walking on)", ada.root.Anchored == true and Game.guests[ada].held == true)
 r = askAs(ada, { op = "act", id = "executive", act = "revive" })
 local upd = last(ada, "caughtUpdate")
 check("revive with none held: Roblox's purchase window, for the Suite", r.ok == true and r.prompting == true and rv.offered == 1 and rv.context == "executive" and upd ~= nil and upd.prompting == true)
@@ -905,6 +906,7 @@ rv.held = 1 -- (the receipt's credit)
 check("the receipt revives the run (Purchases/Revive asks the Suite)", Game.reviveOpen(ada) == true and Game.reviveNow(ada) == true and rv.spent == 1 and rv.held == 0)
 local back = last(ada, "revived")
 check("...back at the lift, the alert down, composure full, the digits read kept", back ~= nil and back.where == "hall" and Game.guests[ada].out == false and Game.guests[ada].alert == 0 and Game.guests[ada].composure == Game.guests[ada].max and Game.guests[ada].digits[1] == true and Game.guests[ada].digits[2] == true and (ada.root.CFrame.Position - (O + Plan.Arrival + Vector3.new(0, 3, 0))).Magnitude < 0.01)
+check("Build 98: revived, they can move again", ada.root.Anchored == false and Game.guests[ada].held == nil)
 check("...and one credit revives once", Game.reviveOpen(ada) == false and Game.reviveNow(ada) == false and rv.spent == 1)
 -- Caught again, a revive held: used at once, with no purchase.
 rv.held = 2
@@ -922,6 +924,7 @@ rv.offerOk = true
 T += Game.REVIVE.window + 1
 steps(1)
 check("the moment passes: security shows them out", Attractions.inside(ada) == nil and last(ada, "caughtEnd") ~= nil)
+check("Build 98: ...and shown out, they can move again", ada.root.Anchored == false)
 -- Leave, at once.
 page(ada).invites = 1
 stand(ada, Layout.Midnight.arrival)

@@ -498,15 +498,12 @@ showCard = function(i: number)
 	if i == #cards then
 		choices = { { id = "attractions", text = K.attractions }, { id = "explore", text = K.explore } }
 	elseif i == 1 and cards == fullDeck then
-		-- (Build 97) The first card's gold key goes straight into Steal a Luxe (a guest from a
-		-- short video gives a game seconds, not minutes); the games' cards and the whole house
-		-- are the next keys.
-		choices = { { id = "steal", text = K.steal }, { id = "quick", text = K.quick }, { id = "next", text = K.whole }, { id = "done", text = K.done } }
+		-- (Build 98) The whole house first, the gold key: a guest sees every part of the game
+		-- before playing any of it. The games are chosen at the end (Show me the attractions).
+		choices = { { id = "next", text = K.whole }, { id = "done", text = K.done } }
 	else
+		-- (Build 98: no "go to this game" on the way round; the last card offers them all.)
 		choices = { { id = "next", text = K.next } }
-		if card.attraction then
-			table.insert(choices, { id = "try", text = K.try })
-		end
 		if i > 1 then
 			table.insert(choices, { id = "back", text = K.back })
 		end

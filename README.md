@@ -377,6 +377,23 @@ a Nightly attempt or a Mythic's odds.
 - **The launch kit**: page text, icon, thumbnails and the gameplay video's shot list are in
   [`LAUNCH.md`](LAUNCH.md).
 
+## Build 98 — the whole house first, fair fights, Luxury Island coming soon
+
+- **The whole house first**: the Concierge's first card offers *The whole house* (or *End the
+  tour*); no game keys on the way round; the last card offers every attraction to pick from.
+  *Show me the house* from How to play or Start here takes you to him and starts the tour itself.
+- **Start here only for brand-new guests**, its *Show me the house* key glowing with the pointing
+  hand on it. Wander far from the Concierge while the arrow is up and a quiet note says to head
+  back. The Concierge and the next-step card no longer send anyone to the Salon's tables.
+- **The calendar on every return**: a returning guest gets tonight's present a few seconds after
+  the welcome (it used to wait 150 s for anyone the house still thought of as new).
+- **Executive Suite**: *Your Health* instead of composure. Caught or out of health, the server
+  holds your character still until a revive or until you're shown out. The stun pistol draws a
+  box round what a shot would hit: gold on a target, red on whatever is in the way.
+- **Grand Ballroom**: no "closed" card (it only steered guests away); its key is now *Leave*.
+- **Luxury Island: coming soon** (`Config.Attractions.island.comingSoon`): no way in, no key sold,
+  "Coming soon" on its Directory card, the Concierge doesn't recommend it. Set it false to open.
+
 ## Build 97 — a faster first minute, plainer short-purse words, five badges ready
 
 - **One tap to Steal a Luxe**: the Concierge's first card is one short line (steal, bank, grow your

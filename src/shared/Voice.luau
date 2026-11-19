@@ -39,8 +39,9 @@ Voice.Concierge = {
 	friendAway = "Your friend isn't at a table just now. Take any chair in the Library.",
 	libraryWay = "Up the Grand Stair, first door on your left.",
 	ballroomWay = "Up the Grand Stair, the tall doors on your right. Press Join for Lights Out.",
-	closedRoom = "Not tonight. The Salon is open.",
-	lost = "The Salon is through there, if you'd like me to walk you.",
+	closedRoom = "Not tonight. Steal a Luxe is open.",
+	-- (Build 98: never a nudge to the Salon: the games first.)
+	lost = "Steal a Luxe is through the Luxe Lounge, if you'd like me to walk you.",
 	goodNight = "Good night.",
 	-- The house remembers you (Memory.luau).
 	memory = {
@@ -97,7 +98,7 @@ Voice.Concierge = {
 		{ id = "stride", cat = "attractions", place = "velvet", q = "What does Speed do?", a = "It makes you faster in Steal a Luxe, and only there: {stride}% a level. Walk the treadmills in the Luxe Lounge to train it." },
 		{ id = "caught", cat = "attractions", place = "velvet", q = "What if a guard catches me?", a = "Everything in your bag is lost and you're shown out to the courtyard. What you've already banked is safe." },
 		{ id = "skip", cat = "attractions", place = "obsidian", q = "Can I skip a Basement stage?", a = "Yes, and the deeper the stage, the more it costs: {skipGems} Gems for the first, {skipStep} more for each stage after it. Skips bought with Robux work too, more of them further down. A skipped run isn't timed for the boards, and the stage you skip pays nothing." },
-		{ id = "island", cat = "house", place = "terrace", q = "How do I get to Luxury Island?", a = "By the private jet, from the Jet Lounge on the Terrace. The Island Key is for a Tycoon: {islandGilt} Gilt or {islandGems} Gems, yours for good. Five pearls lie in its lagoon every day." },
+		{ id = "island", cat = "house", place = "terrace", q = "How do I get to Luxury Island?", a = "It's coming soon: it isn't open yet. When it opens, it's by the private jet, from the Jet Lounge on the Terrace. The Island Key is for a Tycoon: {islandGilt} Gilt or {islandGems} Gems, yours for good. Five pearls lie in its lagoon every day." },
 		{ id = "gala", cat = "house", place = "ballroom", q = "What's in the Grand Ballroom?", a = "Through its doors in the Club hall, up the Grand Stair: the Flex Studio (shoot a reel of something you own; guests like it on the Flex Wall), the dance floor and its jukebox, Luxury Trivia, the Runway's themed shows, the Daily Arena, three photo sets, the Exchange and the Hall of Fame. A little Gilt for all of it, up to {galaGilt} a day." },
 		{ id = "trade", cat = "collection", place = "ballroom", q = "How do I trade?", a = "At the Exchange's stands in the Grand Ballroom, or the Trade key on a guest's card: Gilt, Gems, brainrots and curios. You both see every offer, and nothing changes hands until you both confirm the very same trade." },
 		{ id = "boards", cat = "money", q = "Where are the boards?", a = "Tap your Fortune, under your Gilt: the Wealthiest in this house, this week and of all time. The Basement's best times are at the lectern on the Basement Stair." },
@@ -117,7 +118,7 @@ Voice.Concierge = {
 		{ id = "collectionKey", cat = "start", q = "Where is my Collection?", a = "The gold Collection key on the left of your screen (C on a keyboard): your brainrots, every curio you own, your Gems and your trades. Fold the other keys away and the Collection keeps a key of its own." },
 		{ id = "salon", cat = "house", place = "salon", q = "What happens in the Salon?", a = "Sort fine things into their cases for Gilt, at your own pace: sit at a table and press E. Right ones in a row raise your combo; bank the run for Gilt. Tonight's table is there too: one try a day, the same pieces for every guest." },
 		{ id = "luxeHow", cat = "attractions", place = "velvet", q = "How do I play Steal a Luxe?", a = "Through the Luxe Lounge. Inside, hold E on a treasure to lift it: the fuller your bag, the slower you walk. Security sleeps until you lift something; then a guard comes after you. Carry it out to the getaway car to bank it for good." },
-		{ id = "execChallenge", cat = "attractions", place = "midnight", q = "What's the Executive Suite's challenge?", a = "Each run of the Suite has one, the same for everyone in it, said as you go up: Ghost (beat him never seen in the hallway), Steady Hand (no wrong try of yours at the vault door), Untouchable (lose no composure, and no revive) or Swift Takeover (beat him within three minutes of the door opening). Meet it and it pays its own Gilt when he's beaten. Each run has its own look too, and some walk his guards the other way round." },
+		{ id = "execChallenge", cat = "attractions", place = "midnight", q = "What's the Executive Suite's challenge?", a = "Each run of the Suite has one, the same for everyone in it, said as you go up: Ghost (beat him never seen in the hallway), Steady Hand (no wrong try of yours at the vault door), Untouchable (lose none of your health, and no revive) or Swift Takeover (beat him within three minutes of the door opening). Meet it and it pays its own Gilt when he's beaten. Each run has its own look too, and some walk his guards the other way round." },
 		{ id = "islandStanding", cat = "attractions", place = "terrace", q = "What is Island Standing?", a = "Everything you do on Luxury Island, counted: a pearl is a point, a sunset toasted three, each postcard spot two, each flight one. Each rank (Weekender, Islander, Patron of the Island, The Island's Own) pays its Gilt once. Islanders earn the Starlit lights and Patrons the Island Patron livery: never sold. Your standing is on the Jet Lounge's board." },
 		{ id = "showtime", cat = "house", place = "ballroom", q = "What is Showtime?", a = "Every half hour, at twenty past and ten to, one of the Grand Ballroom's party games has its Showtime for eight minutes: Luxury Trivia, then the Runway, then the Daily Arena, in turn. A card on your screen says which, with a key that takes you there. Play a round of it while it's on and it pays {showtimeGilt} Gilt, once each Showtime. The games are open the rest of the time too: Showtime just brings everyone together." },
 		{ id = "hourlyDrop", cat = "house", place = "hourlyDrop", q = "What is the Hourly Drop?", a = "Every hour, on the hour, a courier's case comes down onto the black marble plinth in the Foyer, west of the red runner, and stays {dropMinutes} minutes. Stand by it and open it, once each hour: {dropGilt} Gilt, and the first time you open a case holding that hour's piece, the piece is yours too. Six pieces take turns, each back every six hours. The sign over the plinth counts down to the next by the house's clock." },
@@ -284,7 +285,7 @@ Voice.Tour = {
 		stop = "terrace",
 		place = "terraceDoor",
 		title = "The Terrace",
-		line = "A bar, a fire pit and loungers under the stars, and the Jet Lounge: the private jet to Luxury Island.",
+		line = "A bar, a fire pit and loungers under the stars. Luxury Island, by the jet from here, is coming soon.",
 		quick = true,
 	},
 	{
@@ -409,8 +410,14 @@ Voice.StartHere = {
 		{ title = "Build your fortune", line = "Every run you bank pays Gilt. Spend it on your Suite and your look, flex your brainrots, and climb to the wealthiest.", short = "Every run you bank pays Gilt. Become the wealthiest." },
 	},
 	after = "For your first half hour, every Gilt you earn counts double. Spend it on your Suite, your look and more.",
-	go = "Show me the way",
+	-- (Build 98) The key takes the guest to the Concierge and starts the tour at once.
+	go = "Show me the house",
 	attractions = "Show me the attractions",
+	handTitle = "Start here",
+	handLine = "See the whole house first: then every game makes sense.",
+	-- (Build 98) Wandered far from the Concierge before the tour: a quiet note.
+	farTitle = "The Concierge is by the front door",
+	farLine = "Head back to him: Show me the house starts there.",
 }
 
 -- Welcome back (UI/WelcomeBack): a returning guest's one card, once they've arrived: what's waiting
@@ -459,12 +466,12 @@ Voice.Afk = {
 Voice.Short = { gilt = "Insufficient Gilt", gems = "Insufficient Gems", line = "Gotta get more lol" }
 
 Voice.WhatsNew = {
-	build = 97,
+	build = 98,
 	lines = {
-		-- (Build 97: one short line each: read at a glance.)
-		"New Boutique: boosters, daily brainrots, shiny nameplates, emotes.",
-		"Brighter auras, louder titles, a party for your first haul.",
-		"Steal a Luxe is one tap from the welcome.",
+		-- (One short line each: read at a glance.)
+		"The stun pistol boxes what it will hit.",
+		"Caught in the Executive Suite? You're held still.",
+		"Luxury Island: coming soon.",
 	},
 }
 
@@ -490,7 +497,7 @@ Voice.GuideHand = {
 	},
 	play = {
 		title = "Every game in the house",
-		line = "Steal a Luxe, the Basement, the Executive Suite, the island and more, each on its own card. Pick one and go.",
+		line = "Steal a Luxe, the Basement, the Executive Suite and more, each on its own card. Pick one and go.",
 	},
 	level = {
 		title = "Your level",
@@ -559,7 +566,6 @@ Voice.Guide = {
 		steps = {
 			{ title = "See every game", line = "Press the gold Play key at the top right. Each game has a card: what it is, how to play it, and a key that takes you there.", key = "Open it", action = "directory" },
 			{ title = "Start with Steal a Luxe", line = "Its door is the Luxe Lounge, off the Foyer. Pick up treasures, keep out of the guards' sight, and carry them to the getaway car. Every trip grows your Fortune.", place = "velvet", key = "Take me there" },
-			{ title = "Or sit at a table", line = "In the Salon, sort treasures into their cases for Gilt, with no clock. Walk up to any chair and press E. On a phone, tap Sit.", key = "See how", action = "sorting" },
 			{ title = "Spend it", line = "Press Shop at the top right for looks, cars and more. Upstairs, your own Suite is yours to furnish.", key = "Shop", action = "shop" },
 		} :: { GuideItem },
 		after = "Lost at any time? Press How to play or Play at the top right, or talk to the Concierge by the front door.",
@@ -589,14 +595,14 @@ Voice.Guide = {
 			{ place = "concierge", title = "The Concierge", line = "Stands by the front door, ready to help.", how = "Speak to him and pick Show me the house: he walks you round every room and explains it." },
 			{ place = "boutique", title = "The Boutique", line = "The house's shop for looks.", how = "Boosters and brainrots for Gilt, nameplates, trails and emotes for Gilt or Robux (always with the price shown first). The Wardrobe beside it is where you wear what you own." },
 			{ place = "vault", title = "The Vault", line = "Your collection, kept for good.", how = "Every piece you've sorted stands on its shelves. The console under the eight domes shows your curios, how complete your collection is, and who may look round. The Archivist at the desk keeps your badges and records." },
-			{ place = "terrace", title = "The Terrace", line = "A rooftop to relax on, and the jet to the island.", how = "A bar with treats, a fire pit and loungers under the stars. The Jet Lounge's arch flies Island Key holders to Luxury Island." },
+			{ place = "terrace", title = "The Terrace", line = "A rooftop to relax on. Luxury Island: coming soon.", how = "A bar with treats, a fire pit and loungers under the stars. Luxury Island, by the jet from the Jet Lounge, is coming soon: it isn't open yet." },
 			{ place = "suite", title = "Your Suite", line = "Your own private rooms upstairs.", how = "Ring the bell inside to furnish them. Only you can go in, unless you invite friends with the Suites key." },
 		} :: { GuideItem },
 	},
 	gilt = {
 		lead = "Gilt is the house's money. You earn it in every game, and spend it on things you keep.",
 		items = {
-			{ title = "Gilt", line = "Earned everywhere: the tables, Steal a Luxe, the Basement, the Grand Ballroom, the island and the races.", how = "Your Gilt is shown at the top left of the screen." },
+			{ title = "Gilt", line = "Earned everywhere: the tables, Steal a Luxe, the Basement, the Grand Ballroom and the races.", how = "Your Gilt is shown at the top left of the screen." },
 			{ title = "Gems", line = "Rarer than Gilt.", how = "Bought with Robux (a Gem pack in the shop), or traded with another guest. No game, race, present or streak pays them: those all pay Gilt. Spend Gems in the Gem Shop and the Cabinet." },
 			{ title = "Your Fortune", line = "Everything you own, added up.", how = "Your Gilt, Gems, collection, Suite and your Estate (all you've banked in the games). It's under your Gilt: tap it for the Wealthiest boards, which count only what you earned, never what was bought." },
 			{ title = "The Shop", line = "Everything for sale, in one place.", how = "Looks, table styles, lamps and more for Gilt. Some special things are for Robux, always with the price shown first.", key = "Shop", action = "shop" },

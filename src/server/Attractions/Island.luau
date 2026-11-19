@@ -408,6 +408,12 @@ local function exchange(ctx: Types.Ctx, player: Player, data: any, p: { [string]
 	return { ok = true, title = item.name, line = "Yours: ring the bell in your Suite to put it where you like.", balance = p.pearls }
 end
 
+-- (Build 98) Closed for now (Config's comingSoon): no way in, and no key sold for it.
+function Island.comingSoon(ctx: Types.Ctx): boolean
+	return cfg(ctx).comingSoon == true
+end
+local SOON = "Luxury Island is coming soon. It isn't open yet."
+
 function Island.ask(ctx: Types.Ctx, player: Player, r: { [string]: unknown }): any
 	local data = ctx.data(player)
 	if not data then
@@ -416,7 +422,9 @@ function Island.ask(ctx: Types.Ctx, player: Player, r: { [string]: unknown }): a
 	local p = page(ctx, data)
 	local act, what, n = r.act, r.what, r.n
 	local result: { [string]: any }
-	if act == "key" then
+	if act == "key" and Island.comingSoon(ctx) then
+		return { ok = false, why = SOON }
+	elseif act == "key" then
 		result = buyKey(ctx, player, data, p, if what == "gems" then "gems" else "gilt")
 	elseif act == "pearl" and type(n) == "number" and n == math.floor(n) then
 		result = pearl(ctx, player, data, p, n :: number)
@@ -483,6 +491,9 @@ function Island.build(ctx: Types.Ctx, parent: Instance)
 end
 
 function Island.enter(ctx: Types.Ctx, player: Player): (CFrame?, string?)
+	if Island.comingSoon(ctx) then
+		return nil, SOON
+	end
 	local data = ctx.data(player)
 	if not data then
 		return nil, "Your ledger is still being opened."
@@ -500,6 +511,10 @@ end
 
 -- Without the Island Key, the jet's arch opens the Jet Lounge's card instead (how to have it).
 function Island.locked(ctx: Types.Ctx, player: Player): boolean
+	-- (Build 98: closed for now, the arch never opens the key's card; the way in says why.)
+	if Island.comingSoon(ctx) then
+		return false
+	end
 	local data = ctx.data(player)
 	return data ~= nil and page(ctx, data).key ~= true
 end
@@ -511,6 +526,7 @@ function Island.directory(ctx: Types.Ctx, player: Player): { [string]: any }
 	local r = FortuneRules.Ranks[need] or FortuneRules.Ranks[#FortuneRules.Ranks]
 	local out: { [string]: any } = {
 		open = false,
+		comingSoon = Island.comingSoon(ctx),
 		keyRank = r.name,
 		keyRankAt = r.at,
 		keyGilt = keyGilt(ctx),
@@ -520,7 +536,7 @@ function Island.directory(ctx: Types.Ctx, player: Player): { [string]: any }
 	local data = ctx.data(player)
 	if data then
 		local p = page(ctx, data)
-		out.open = p.key == true
+		out.open = p.key == true and not out.comingSoon
 		out.rankReady = rankReached(data) >= need
 		out.flights = p.flights
 	end

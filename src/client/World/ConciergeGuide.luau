@@ -402,6 +402,12 @@ local function setNear(isNear: boolean)
 	end
 end
 
+-- (Build 98) A guest who wanders far off while the arrow is up: a quiet note, now and then, that
+-- the Concierge (and Show me the house) is back by the front door.
+ConciergeGuide.FAR = 90
+ConciergeGuide.NOTE_EVERY = 45
+local lastFarNote = -math.huge
+
 local function step(_dt: number)
 	if not active then
 		return
@@ -440,6 +446,10 @@ local function step(_dt: number)
 	end
 	if not isNear and apart.Magnitude > 0.1 then
 		placeFloor(root, apart.Unit, t, still)
+	end
+	if apart.Magnitude > ConciergeGuide.FAR and t - lastFarNote > ConciergeGuide.NOTE_EVERY then
+		lastFarNote = t
+		pcall(require(script.Parent.Parent.UI.Toast).show, Voice.StartHere.farTitle, Voice.StartHere.farLine, 4)
 	end
 end
 

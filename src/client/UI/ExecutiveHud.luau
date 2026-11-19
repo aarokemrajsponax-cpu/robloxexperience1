@@ -238,7 +238,7 @@ local function draw()
 		parts.fill.BackgroundColor3 = RED
 		local comp = math.clamp((tonumber(view.composure) or 0) / math.max(1, tonumber(view.max) or 100), 0, 1)
 		parts.second.Size = UDim2.new(comp, 0, 1, 0)
-		parts.label2.Text = string.format("COMPOSURE %d", tonumber(view.composure) or 0)
+		parts.label2.Text = string.format("YOUR HEALTH %d", tonumber(view.composure) or 0)
 		parts.label2.TextColor3 = C.smoke
 	end
 	local decoy = parts.decoyKey :: TextButton?
@@ -487,6 +487,155 @@ function aimFromScreen(position: Vector2?): Vector3
 		return root.CFrame.LookVector
 	end
 	return Vector3.new(0, 0, 1)
+end
+
+-- (Build 98) What a shot fired now would stun, boxed in the world before the click: the same line
+-- the shot takes (from the head toward the point under the aim, past every guest, as far as the
+-- pistol reaches), then the same near-miss allowance the server gives. Gold around a target this
+-- phase is about; red around anything else in the way (a wall, his shield, a briefcase), so a shot
+-- that would land on the wrong thing is seen as wrong before it's fired. The server still decides.
+local aimBox: SelectionBox? = nil
+local function want(): string?
+	local phase = tostring(view.phase or "")
+	return if phase == "shield" then "gen" elseif phase == "detail" then "guard" elseif phase == "boss" then "boss" else nil
+end
+local function taggedOf(inst: Instance?): (Instance?, string?)
+	local at = inst
+	while at and at ~= Workspace do
+		local tag = at:GetAttribute("ExecTarget")
+		if type(tag) == "string" then
+			-- (The whole figure, not the one limb: its model when it has one.)
+			local model = at:FindFirstAncestorWhichIsA("Model")
+			if model and model:GetAttribute("ExecTarget") == tag then
+				return model, tag
+			end
+			return at, tag
+		end
+		at = at.Parent
+	end
+	return nil, nil
+end
+function ExecutiveHud.aimAt(position: Vector2?): (Instance?, boolean)
+	local wanted = want()
+	if not wanted then
+		return nil, false
+	end
+	local character = Players.LocalPlayer.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if not root or not root:IsA("BasePart") then
+		return nil, false
+	end
+	local head = root.Position + Vector3.new(0, 1.5, 0)
+	local dir = aimFromScreen(position)
+	local range = tonumber((((Config.data :: any).Attractions or {}).executive or {}).range) or 140
+	local skip: { Instance } = {}
+	for _, p in Players:GetPlayers() do
+		if p.Character then
+			table.insert(skip, p.Character)
+		end
+	end
+	if aimBox then
+		table.insert(skip, aimBox)
+	end
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = skip
+	local hit = Workspace:Raycast(head, dir * range, params)
+	if hit then
+		local thing, tag = taggedOf(hit.Instance)
+		if thing and tag and string.sub(tag, 1, #wanted) == wanted then
+			return thing, true
+		end
+	end
+	-- (Nothing tagged on the line: the near miss the server allows, on what this phase is about.)
+	local best, bestAlong = nil, math.huge
+	for _, inst in CollectionService:GetTagged("ExecHp") do
+		local id = inst:GetAttribute("ExecTarget")
+		local hp = tonumber(inst:GetAttribute("Hp")) or 0
+		if type(id) == "string" and string.sub(id, 1, #wanted) == wanted and hp > 0 and inst.Parent then
+			local at: Vector3? = nil
+			local radius = 2.5
+			if inst:IsA("BasePart") then
+				at = inst.Position
+				if wanted == "gen" then
+					radius = math.max(inst.Size.X, inst.Size.Z) / 2 + 1.5
+				end
+			elseif inst:IsA("Model") then
+				at = inst:GetPivot().Position
+			end
+			if at then
+				local rel = at - head
+				local along = rel:Dot(dir)
+				local blocked = hit ~= nil and (hit.Position - head).Magnitude < along - radius
+				if along > 0 and along <= range and not blocked and (rel - dir * along).Magnitude <= radius + along * 0.02 and along < bestAlong then
+					best, bestAlong = inst, along
+				end
+			end
+		end
+	end
+	if best then
+		local thing = taggedOf(best)
+		return thing or best, true
+	end
+	if hit and hit.Instance and (hit.Position - head).Magnitude < range then
+		return hit.Instance, false
+	end
+	return nil, false
+end
+local function aimPoint(): Vector2?
+	if UserInputService.MouseEnabled and not UserInputService.TouchEnabled then
+		local ok, m = pcall(function()
+			return UserInputService:GetMouseLocation()
+		end)
+		return if ok and typeof(m) == "Vector2" then m else nil
+	end
+	return nil
+end
+function ExecutiveHud.updateAim()
+	local ok, thing, good = pcall(ExecutiveHud.aimAt, aimPoint())
+	if not ok or not thing or not fighting() then
+		local was = aimBox
+		if was then
+			was.Visible = false
+			pcall(function()
+				was.Adornee = nil
+			end)
+		end
+		local cross = parts.cross :: Frame?
+		if cross then
+			for _, line in cross:GetChildren() do
+				if line:IsA("Frame") then
+					line.BackgroundColor3 = Color3.new(1, 1, 1)
+				end
+			end
+		end
+		return
+	end
+	local box: SelectionBox = aimBox or (function()
+		local b = Instance.new("SelectionBox")
+		b.Name = "MaisonAimBox"
+		b.LineThickness = 0.09
+		b.SurfaceTransparency = 0.86
+		b.Parent = Root.hud
+		return b
+	end)()
+	aimBox = box
+	local colour = if good then GOLD else RED
+	box.Adornee = thing :: any
+	box.Color3 = colour
+	box.SurfaceColor3 = colour
+	box.Visible = true
+	local cross = parts.cross :: Frame?
+	if cross then
+		for _, line in cross:GetChildren() do
+			if line:IsA("Frame") then
+				line.BackgroundColor3 = if good then GOLD else Color3.new(1, 1, 1)
+			end
+		end
+	end
+end
+function ExecutiveHud.aimBox(): SelectionBox?
+	return aimBox
 end
 
 function ExecutiveHud.openKeypad()
@@ -819,8 +968,8 @@ local function showCaught(m: { [string]: any })
 	HudCard.style(c, RED)
 	local office = m.where == "office"
 	label(c, "Kicker", "SECURITY", 11, Brand.Fonts.heavy, RED, 0).ZIndex = 22
-	label(c, "Title", if office then "Out of composure" else "You've been seen", 24, Brand.Fonts.display, C.bone, 18).ZIndex = 22
-	local line = label(c, "Line", if office then "A revive puts you back just inside the Office, composure full." else "A revive puts you back at the lift, with every digit you've read.", 13, Brand.Fonts.body, C.smoke, 54)
+	label(c, "Title", if office then "Out of health" else "You've been seen", 24, Brand.Fonts.display, C.bone, 18).ZIndex = 22
+	local line = label(c, "Line", if office then "A revive puts you back just inside the Office, health full." else "A revive puts you back at the lift, with every digit you've read.", 13, Brand.Fonts.body, C.smoke, 54)
 	line.TextWrapped = true
 	line.TextTruncate = Enum.TextTruncate.None
 	line.Size = UDim2.new(1, 0, 0, 36)
@@ -987,6 +1136,9 @@ function ExecutiveHud.mount()
 	local tick = 0
 	table.insert(conns, RunService.Heartbeat:Connect(function(dt: number)
 		tick += dt
+		if fighting() or aimBox then
+			ExecutiveHud.updateAim()
+		end
 		if tick >= 0.2 then
 			tick = 0
 			pcall(ExecutiveHud.bars)
@@ -1021,6 +1173,10 @@ end
 
 function ExecutiveHud.unmount()
 	ExecutiveHud.clearBars()
+	if aimBox then
+		aimBox:Destroy()
+		aimBox = nil
+	end
 	hideCaught()
 	Sound.setMood(nil)
 	grade(false)
@@ -1475,14 +1631,14 @@ function ExecutiveHud.on(m: { [string]: any })
 		end
 	elseif op == "escorted" then
 		if not m.revive then
-			Toast.show("Escorted out", "No composure left. Try again with another invitation.", 5)
+			Toast.show("Escorted out", "No health left. Try again with another invitation.", 5)
 		end
 	elseif op == "caught" or op == "caughtUpdate" then
 		showCaught(m)
 		tickCaught()
 	elseif op == "revived" then
 		hideCaught()
-		Toast.show("Back in", if m.where == "office" then "Composure full. He's still waiting." else "The alert is down, and your digits are kept.", 3)
+		Toast.show("Back in", if m.where == "office" then "Health full. He's still waiting." else "The alert is down, and your digits are kept.", 3)
 		pcall(function()
 			Sound.play("chime", 0.8)
 		end)

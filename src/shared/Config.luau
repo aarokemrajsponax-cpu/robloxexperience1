@@ -1051,6 +1051,9 @@ local defaults = {
 		-- Luxury Island (server/Attractions/Island): the private island, by the jet from the Jet
 		-- Lounge on the Terrace. The Island Key: a wealth rank reached, then Gilt or Gems.
 		island = {
+			-- (Build 98) Closed for now: "Coming soon" on its card, the jet and the key not offered,
+			-- and the server refuses the way in. Set false to open it again; nothing else changes.
+			comingSoon = true,
 			origin = { 0, 0, 4200 },
 			keyRank = 6, -- Tycoon (shared/Fortune's ranks)
 			keyGilt = 25000,

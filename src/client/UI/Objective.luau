@@ -93,9 +93,7 @@ function Objective.current(): Goal?
 			end
 		end
 	end
-	if guest.firstVisit == true and not seatedOnce then
-		return { key = "sit", title = V.next, line = V.sit, how = byInput(V.sitHow), go = "room" }
-	end
+	-- (Build 98: never a nudge to the Salon's tables; the games are the house now.)
 	if holiday and rank == "gifts" then
 		return holiday
 	end

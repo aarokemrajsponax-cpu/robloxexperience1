@@ -256,6 +256,7 @@ type Guest = {
 	revive: { where: string, deadline: number, prompting: boolean, left: number }?,
 	revives: number?,
 	safeUntil: number?,
+	held: boolean?, -- (Build 98) anchored where they were caught, until a revive or leaving
 }
 type Shot = { id: string, from: Vector3, dir: Vector3, speed: number, born: number, radius: number, damage: number, life: number }
 type Wave = { id: string, at: Vector3, born: number, speed: number, width: number, damage: number, life: number }
@@ -554,9 +555,29 @@ end
 -- Caught (the alarm in the hall, or no composure left in the Office): the moment for a revive, if
 -- one can be had (one held, or Chronos Defiance on sale) and this run hasn't used its last;
 -- otherwise security shows them out at once.
+-- (Build 98) Held where they stand while caught: the server anchors their character (it replicates;
+-- no client asks), so nobody walks on, reads digits or lines up the Executive while the revive
+-- moment is open. Let go on a revive or on leaving the Suite.
+local function still(ctx: Types.Ctx, player: Player, g: Guest?, on: boolean)
+	local root = ctx.rootOf(player)
+	if g then
+		if not on and not g.held then
+			return
+		end
+		g.held = if on then true else nil
+	end
+	if root then
+		pcall(function()
+			root.Anchored = on
+			root.AssemblyLinearVelocity = Vector3.zero
+		end)
+	end
+end
+
 local function caught(ctx: Types.Ctx, player: Player, g: Guest, where: string)
 	g.out = true
 	g.seen = nil
+	still(ctx, player, g, true)
 	local used = g.revives or 0
 	local can = run.phase ~= "won" and used < Executive.REVIVE.most and (Executive.revives.held(player) > 0 or Executive.revives.onSale())
 	ctx.send(player, { op = if where == "office" then "escorted" else "alarm", revive = can })
@@ -591,6 +612,7 @@ local function revive(ctx: Types.Ctx, player: Player): boolean
 	g.safeUntil = Executive.clock() + 3
 	local back = if r.where == "office" then Plan.OfficeEntry else Plan.Arrival
 	ctx.teleport(player, CFrame.new(origin + back))
+	still(ctx, player, g, false)
 	ctx.send(player, { op = "revived", where = r.where, composure = g.composure, held = Executive.revives.held(player), used = used, usesLeft = Executive.REVIVE.most - used })
 	note(player, "Executive revived", { phase = run.phase, where = r.where })
 	push(ctx, player)
@@ -1320,6 +1342,9 @@ end
 
 function Executive.leave(ctx: Types.Ctx, player: Player, why: string)
 	local was = guests[player] ~= nil
+	if was then
+		still(ctx, player, guests[player], false)
+	end
 	if was then
 		note(player, "Executive left", { phase = run.phase, why = why })
 	end

@@ -765,8 +765,9 @@ end
 local function welcome()
 	local guest = State.waitForWelcome(10)
 	local first = guest ~= nil and State.isFirstVisit()
-	-- (Still new to the house: a first evening, or no tour yet and fewer than two rounds played.)
-	local new = guest ~= nil and (first or guest.guide == true)
+	-- (Build 98: new means a first visit only. Start here, the arrow to the Concierge and the
+	-- calendar's long wait are for brand-new guests; everyone else gets tonight's present at once.)
+	local new = first
 	-- (Build 94: waits for the guest to press Play however long they stay on the Home Screen, not
 	-- twelve seconds: the calendar and what AFK mode earned were otherwise missed behind it.)
 	local limit = os.clock() + 900
@@ -847,7 +848,7 @@ local function welcome()
 					return TableClient.isSeated() or Tour.active() or Welcome.showing()
 				end
 				StartHere.showWay = function()
-					ConciergeGuide.start()
+					HowToPlay.tour()
 				end
 				StartHere.toDirectory = function()
 					require(script.Parent.UI.DirectoryPanel).open()
@@ -1099,8 +1100,16 @@ local travelEvent = Remotes.event("Travel")
 HowToPlay.go = function(place: string)
 	travelEvent:FireServer({ op = "go", place = place })
 end
+-- (Build 98) Show me the house, from How to play or Start here: to the Concierge, and the tour
+-- starts by itself (no need to find him and ask again).
 HowToPlay.tour = function()
 	HowToPlay.go("concierge")
+	task.delay(1.2, function()
+		pcall(function()
+			require(script.Parent.World.ConciergeGuide).stop("tour")
+		end)
+		Tour.start()
+	end)
 end
 HowToPlay.tonight = function()
 	quickSit("nightly")
