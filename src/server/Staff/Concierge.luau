@@ -470,7 +470,13 @@ local function offerTour(player: Player)
 			Dialogue.close(player)
 			Concierge.openDirectory(player)
 		else
-			Dialogue.say(player, V.speaker, V.tourLaterLine, nil, nil, 3)
+			-- (Build 99: offered to everyone; a returning guest who says later gets his usual menu.)
+			local okNew, isNew = pcall(Concierge.needsTour, player)
+			if okNew and isNew ~= true then
+				menu(player)
+			else
+				Dialogue.say(player, V.speaker, V.tourLaterLine, nil, nil, 3)
+			end
 		end
 	end)
 end
@@ -771,12 +777,8 @@ function Concierge.spawn(parent: Instance)
 		end
 		Rig.face(s, (characterRoot(player) or s.root).Position)
 		-- (A guest still new to the house is offered the tour first, not the whole menu.)
-		local ok, new = pcall(Concierge.needsTour, player)
-		if ok and new == true then
-			offerTour(player)
-		else
-			menu(player)
-		end
+		-- (Build 99: Show me the house / Show me the attractions for every guest, every time.)
+		offerTour(player)
 		task.delay(6, function()
 			if not s.busy then
 				Rig.face(s, s.home.Position + s.home.LookVector * 10)

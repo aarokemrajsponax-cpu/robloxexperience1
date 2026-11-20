@@ -834,7 +834,8 @@ local function welcome()
 			require(script.Parent.UI.HandHints).offer({ "hint_fortune", "hint_play", "hint_level" })
 		end)
 	end
-	if new and not (guest and guest.autoTour == true) then
+	-- (Build 99: Start here and the arrow to the Concierge on every join, not only a first visit.)
+	if not (guest and guest.autoTour == true) then
 		task.delay(1.6, function()
 			start("The arrow to the Concierge", function()
 				ConciergeGuide.start()
@@ -1024,7 +1025,7 @@ ConciergeGuide.changed = function()
 	Objective.refresh()
 end
 Prompts.actionFor = function(prompt: ProximityPrompt): string?
-	if prompt.Name == "SpeakPrompt" and prompt.ObjectText == "The Concierge" and State.guest ~= nil and State.guest.guide == true then
+	if prompt.Name == "SpeakPrompt" and prompt.ObjectText == "The Concierge" then
 		return require(ReplicatedStorage.Shared.Voice).StartHere.promptAction
 	end
 	return nil
