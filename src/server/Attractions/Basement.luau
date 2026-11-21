@@ -416,6 +416,15 @@ local function reach(ctx: Types.Ctx, player: Player, run: Run, n: number, skippe
 		run.paid[n] = true
 		if not skipped then
 			gilt = ctx.gilt(player, 15 + 5 * n, "The Maison Basement")
+		else
+			-- (Build 100) A skipped stage pays its Gilt too. The skip was bought (Gems or Robux),
+			-- so that Gilt is marked as bought and never lifts anyone up the Wealthiest board.
+			gilt = ctx.gilt(player, 15 + 5 * n, "The Maison Basement: a skipped stage")
+			if gilt > 0 then
+				pcall(function()
+					require(script.Parent.Parent.Fortune).bought(data, gilt, 0)
+				end)
+			end
 		end
 	end
 	local zone = Plan.Zones[Plan.zoneOf(n)]

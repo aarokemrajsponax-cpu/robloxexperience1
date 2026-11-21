@@ -178,9 +178,9 @@ function Basement.skipGems(stage: number, base: number?, step: number?): number
 	local n = math.clamp(math.floor(stage), 1, Basement.STAGES)
 	return math.floor((base or Basement.SKIP_GEMS) + (step or Basement.SKIP_GEMS_STEP) * (n - 1))
 end
-function Basement.skipsNeeded(stage: number): number
-	-- (Build 89: four at most, for the deepest parts too.)
-	return math.min(4, zoneOf(math.clamp(math.floor(stage), 1, Basement.STAGES)))
+function Basement.skipsNeeded(_stage: number): number
+	-- (Build 100: one skip held is one stage, at any depth. The Gems price still rises with depth.)
+	return 1
 end
 
 ---------------------------------------------------------------------------------------------------

@@ -522,8 +522,8 @@ function Concierge.greet(player: Player, firstVisit: boolean, nightlyPending: bo
 	end
 	-- (Build 93) Anyone else who may still have the welcome gift is offered it as they come in.
 	pcall(Concierge.offerGift, player)
-	local ok, new = pcall(Concierge.needsTour, player)
-	if firstVisit or (ok and new == true) then
+	-- (Build 100: the tour offer on arrival is for a first visit only, never a returning guest.)
+	if firstVisit then
 		-- (A new guest's tour shows them everything new too.)
 		Concierge.markNews(player)
 		offerTour(player)
@@ -777,8 +777,13 @@ function Concierge.spawn(parent: Instance)
 		end
 		Rig.face(s, (characterRoot(player) or s.root).Position)
 		-- (A guest still new to the house is offered the tour first, not the whole menu.)
-		-- (Build 99: Show me the house / Show me the attractions for every guest, every time.)
-		offerTour(player)
+		-- (Build 100: Show me the house / Show me the attractions first only on a guest's first
+		-- visit, saved on the server; anyone else gets his usual menu.)
+		if player:GetAttribute("FirstVisit") == true then
+			offerTour(player)
+		else
+			menu(player)
+		end
 		task.delay(6, function()
 			if not s.busy then
 				Rig.face(s, s.home.Position + s.home.LookVector * 10)

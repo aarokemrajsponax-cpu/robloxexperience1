@@ -131,10 +131,16 @@ Satchel.tools = tools
 local function apply()
 	local want = State.phase == "play" and not Satchel.hidden()
 	local n = #tools()
+	-- (Build 100) Roblox's own hotbar stays put away: one gold Satchel key holds everything.
+	pcall(function()
+		local Panel = require(script.Parent.UI.SatchelPanel)
+		Panel.tools = tools
+		Panel.show(want, n)
+	end)
 	if want ~= shown then
 		shown = want
 		pcall(function()
-			StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, want)
+			StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
 		end)
 		if not want then
 			-- (Whatever was in hand goes back in the satchel.)
@@ -155,7 +161,7 @@ local function apply()
 	pcall(function()
 		local Root = require(script.Parent.UI.Root)
 		local small = Root.size().Y < 520 or Root.size().X < 760
-		Root.setBottom("Satchel", if want and n > 0 then (if small then 60 else 76) / math.max(0.1, Root.scale) else nil)
+		Root.setBottom("Satchel", if want then (if small then 70 else 80) / math.max(0.1, Root.scale) else nil)
 	end)
 end
 Satchel.apply = apply

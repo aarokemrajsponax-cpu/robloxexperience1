@@ -136,7 +136,7 @@ function BasementHud.offerSkip()
 	Theme.list(content, 8).VerticalAlignment = Enum.VerticalAlignment.Top
 	Theme.text(content, "The Maison Basement", 11, "caps", { LayoutOrder = 1 })
 	Theme.text(content, "Skip a stage", 24, "display", { LayoutOrder = 2 })
-	Theme.text(content, "On to the next checkpoint. A skipped run isn't timed for the boards, and the stage you skip pays nothing. The Treasury itself can't be skipped to.", 13, "body", { LayoutOrder = 3, TextColor3 = C.smoke })
+	Theme.text(content, "On to the next checkpoint. A skipped run isn't timed for the boards, but the stage you skip still pays its Gilt. The Treasury itself can't be skipped to.", 13, "body", { LayoutOrder = 3, TextColor3 = C.smoke })
 	-- This stage's price, plainly, before anything is spent: it rises with every stage.
 	local stage = tonumber(view.stage) or 1
 	local gems = tonumber(view.skipGems) or Plan.skipGems(stage)
@@ -146,9 +146,9 @@ function BasementHud.offerSkip()
 	if view.skipOnSale or heldNow > 0 then
 		price ..= string.format(", or %d skip%s (you hold %d)", need, if need == 1 then "" else "s", heldNow)
 	end
-	price ..= ". The deeper the stage, the more a skip costs."
-	if view.skipOnSale and heldNow < need and need > 1 then
-		price ..= string.format(" Each purchase is one skip: %d more for this stage.", need - heldNow)
+	price ..= ". The deeper the stage, the more Gems it costs."
+	if view.skipOnSale then
+		price ..= " Each skip bought is one stage, at any depth."
 	end
 	Theme.text(content, price, 13, "bodyBold", { LayoutOrder = 4, TextColor3 = C.lightGold })
 	local row = Instance.new("Frame")
@@ -176,7 +176,7 @@ function BasementHud.offerSkip()
 	Theme.key(row, string.format("%d Gems", gems), not enough, function()
 		go({ op = "act", id = "basement", act = "skip", what = "gems" })
 	end, 130)
-	if not enough and view.skipOnSale then
+	if view.skipOnSale then
 		Theme.key(row, "Buy a skip", false, function()
 			go({ op = "act", id = "basement", act = "skip" })
 		end, 130)
@@ -230,7 +230,18 @@ function BasementHud.mount()
 		end)
 	end, 130)
 	parts.skipKey = Theme.key(k, "Skip a stage", true, function()
-		BasementHud.offerSkip()
+		-- (Build 100) A skip held is used at once (it's already paid for); with none held, the
+		-- choice of Gems or buying one.
+		if (tonumber(view.skips) or 0) > 0 then
+			task.spawn(function()
+				local r = ask({ op = "act", id = "basement", act = "skip" })
+				if not r or r.ok ~= true then
+					BasementHud.offerSkip()
+				end
+			end)
+		else
+			BasementHud.offerSkip()
+		end
 	end, 160)
 	keys = k
 	place()
@@ -297,7 +308,7 @@ function BasementHud.on(m: { [string]: any })
 		if purse > 0 then
 			Toast.show(tostring(m.zone) .. ", done", string.format("%s to your Estate  ·  checkpoint %d", Rules.format(purse), n), 4)
 		elseif n < Plan.STAGES then
-			Toast.show(string.format("Checkpoint %d", n), if m.skipped then "Skipped to: this stage pays nothing." elseif (tonumber(m.gilt) or 0) > 0 then string.format("+%s Gilt", Rules.format(m.gilt)) else "Reached.", 2)
+			Toast.show(string.format("Checkpoint %d", n), if m.skipped then string.format("Skipped: +%s Gilt", Rules.format(tonumber(m.gilt) or 0)) elseif (tonumber(m.gilt) or 0) > 0 then string.format("+%s Gilt", Rules.format(m.gilt)) else "Reached.", 2)
 		end
 	elseif op == "fell" then
 		Toast.show(string.format("Back to checkpoint %d", tonumber(m.checkpoint) or 0), FELL[tostring(m.why)] or "Back you go.", 2)

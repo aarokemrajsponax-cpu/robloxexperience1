@@ -15,6 +15,7 @@ local Theme = require(script.Parent.Theme)
 local Toast = {}
 
 local current: Frame? = nil
+local currentLabels: { TextLabel } = {}
 
 local PAD_X, PAD_Y = 20, 12
 local LEAST = 150
@@ -83,6 +84,19 @@ function Toast.refused(r: { [string]: any }?, fallback: string?)
 	Toast.show("Not yet", tostring(reply.why or fallback or "Not just now."), 3)
 end
 
+-- (Build 100) Every line set to the height its words need at the notice's real width, so a long
+-- notice grows downward and never cuts its last words off (whatever the engine's auto-size does).
+local function heights(group: Frame, labels: { TextLabel }, low: boolean)
+	local width = math.min(group.Size.X.Offset, widest(low))
+	local inner = math.max(60, width - PAD_X * 2 - 4)
+	for _, l in labels do
+		local need = Theme.measure(l.Text, l.TextSize, l.FontFace, inner).Y
+		l.AutomaticSize = Enum.AutomaticSize.None
+		l.TextWrapped = true
+		l.Size = UDim2.new(1, 0, 0, math.ceil(need) + 4)
+	end
+end
+
 function Toast.show(title: string, line: string?, seconds: number?)
 	if current then
 		current:Destroy()
@@ -117,7 +131,9 @@ function Toast.show(title: string, line: string?, seconds: number?)
 	end
 	-- Exactly as wide as its longest line (and never wider than the room it has, where it wraps).
 	fit(group, labels)
+	heights(group, labels, low)
 	current = group
+	currentLabels = labels
 	Fade.set(group, 1)
 	Fade.to(group, Ease.scaled(Ease.settle), 0)
 	-- (Build 94) It pops in, and the light sweeps across it.
@@ -149,6 +165,7 @@ Root.PanelsChanged:Connect(function()
 	if limit then
 		limit.MaxSize = Vector2.new(widest(low), math.huge)
 	end
+	heights(g, currentLabels, low)
 end)
 
 -- The strip comes or goes while a notice is up: the notice moves with it.
