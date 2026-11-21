@@ -322,6 +322,11 @@ local function welcome(player: Player, data: Profiles.Data)
 		Analytics.step(player, 10)
 	end
 	player:SetAttribute("FirstVisit", visit.firstVisit)
+	-- (Build 101) In Studio, what the house decided, in the Output: new or returning, and whether
+	-- anything is being saved (without saving, every Play in Studio is a first visit).
+	if game:GetService("RunService"):IsStudio() then
+		print(string.format("[Maison] %s: %s (visits saved: %d)%s", player.Name, if visit.firstVisit then "FIRST VISIT: by the Concierge, Start here, the tour" else "RETURNING: arrives in their Suite, no tour", data.visits, if Profiles.isMock() then "  ·  NOT SAVING: Studio has no data access, so every Play here is a first visit. Turn on Game Settings → Security → Enable Studio Access to API Services." else ""))
+	end
 	guestEvent:FireClient(player, payload(player, data, visit))
 	;(data :: any).seenBuild = Build.number
 	-- (Build 101) A returning guest whose character came before their profile (it stood in the

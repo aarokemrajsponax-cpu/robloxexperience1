@@ -1432,6 +1432,18 @@ if RunService:IsStudio() then
 			stamp.Size = UDim2.fromOffset(200, 16)
 			stamp.Text = (string.match(Build.label, "^(Build %d+ · [^·]+)") or Build.label):gsub("%s+$", "")
 		stamp.Parent = Root.hud
+		-- (Build 101) Studio not saving: every Play is a first visit (Start here, the tour). Said
+		-- plainly, so it's never mistaken for the returning-guest welcome not working.
+		task.spawn(function()
+			local g = State.waitForWelcome(30)
+			if g and g.saved == false then
+				stamp.Size = UDim2.fromOffset(420, 16)
+				stamp.Text ..= "  ·  NOT SAVING (every Play = new player)"
+				task.delay(8, function()
+					Toast.show("Studio isn't saving", "So every Play here counts as a first visit. Game Settings → Security → Enable Studio Access to API Services, then test again.", 12)
+				end)
+			end
+		end)
 		-- For the owner, in Studio: say so plainly when the music hasn't been brought in yet.
 		task.delay(6, function()
 			if not Sound.hasMusic() then
