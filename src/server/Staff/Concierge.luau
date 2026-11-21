@@ -528,21 +528,10 @@ function Concierge.greet(player: Player, firstVisit: boolean, nightlyPending: bo
 		Concierge.markNews(player)
 		offerTour(player)
 	elseif not Concierge.newsSeen(player) then
-		-- A guest from before the house changed: shown what's new, once, if they'd like.
+		-- (Build 101: a returning guest is never offered a tour, not even of what's new. What's new
+		-- is on the Welcome back card; he just says hello.)
 		Concierge.markNews(player)
-		Dialogue.say(player, V.speaker, (V.returning:gsub("{name}", Names.of(player))) .. "  " .. V.newsOffer, {
-			{ id = "tour", text = V.newsYes },
-			{ id = "later", text = V.newsLater },
-		}, function(choice: string)
-			if player.Parent ~= Players or Concierge.isSeated(player) then
-				return
-			end
-			if choice == "tour" then
-				Concierge.tour(player)
-			else
-				Dialogue.say(player, V.speaker, V.newsLaterLine, nil, nil, 3)
-			end
-		end)
+		Dialogue.say(player, V.speaker, (V.returning:gsub("{name}", Names.of(player))), nil, nil, 3.5)
 	else
 		Dialogue.say(player, V.speaker, (V.returning:gsub("{name}", Names.of(player))), nil, nil, 3.5)
 		-- One thing the house remembers (last time, a milestone, being missed).

@@ -50,6 +50,7 @@ type Visit = {
 	foyerSince: number?,
 	offered: boolean,
 	clubShown: boolean,
+	known: boolean?, -- (Build 101) the saved profile has said whether this is a first visit
 }
 
 local visits: { [Player]: Visit } = {}
@@ -166,6 +167,12 @@ end
 -- Gives a guest their character, once (defined below).
 local spawnCharacter: (player: Player, respawn: boolean?) -> ()
 
+-- (Build 101) Where a returning guest arrives: inside their Suite, facing into the drawing room.
+local function suiteSpawn(): CFrame
+	local at = Layout.Suite.arrival
+	return CFrame.lookAt(at, at + Vector3.new(-10, 0, 0)) + Vector3.new(0, 2, 0)
+end
+
 local function place(player: Player, character: Model, visit: Visit)
 	-- Everyone arrives in the lit Foyer (or, with Movement.firstArrival = "street", a first-ever
 	-- visit starts outside the doors).
@@ -193,9 +200,13 @@ local function place(player: Player, character: Model, visit: Visit)
 			end)
 		end)
 	end
-	local target = if toStreet then Layout.Street.spawn else Layout.Foyer.spawn
+	-- (Build 101) New guests arrive by the Concierge (his tour is for them); a guest who has been
+	-- before arrives in their own Suite, with no tour. Unknown yet (a slow profile): the Foyer,
+	-- and welcome() moves a returning guest up once it knows.
+	local toSuite = not toStreet and visit.known == true and not visit.firstVisit
+	local target = if toStreet then Layout.Street.spawn elseif toSuite then suiteSpawn() else Layout.Foyer.spawn
 	Integrity.teleport(player, character, target + Vector3.new(0, 1, 0))
-	player:SetAttribute("Arrived", if toStreet then "street" else "foyer")
+	player:SetAttribute("Arrived", if toStreet then "street" elseif toSuite then "suite" else "foyer")
 	-- Drawn a little smaller than Roblox's default, so the house is roomier around everyone
 	-- (once their look has loaded, so hats and hair scale with them).
 	local scale = Config.data.Movement.guestScale
@@ -288,6 +299,7 @@ end
 local function welcome(player: Player, data: Profiles.Data)
 	local visit = provisional(player)
 	visit.firstVisit = data.visits == 0
+	visit.known = true
 	if data.visits == 0 then
 		data.firstVisit = os.time()
 		-- (Build 87: a brand-new guest, whom the Concierge will show round by himself.)
@@ -312,6 +324,13 @@ local function welcome(player: Player, data: Profiles.Data)
 	player:SetAttribute("FirstVisit", visit.firstVisit)
 	guestEvent:FireClient(player, payload(player, data, visit))
 	;(data :: any).seenBuild = Build.number
+	-- (Build 101) A returning guest whose character came before their profile (it stood in the
+	-- Foyer meanwhile) is taken up to their Suite now.
+	local early = player.Character
+	if not visit.firstVisit and early and player:GetAttribute("Arrived") == "foyer" and not TableService.isSeated(player) then
+		Integrity.teleport(player, early, suiteSpawn() + Vector3.new(0, 1, 0))
+		player:SetAttribute("Arrived", "suite")
+	end
 	spawnCharacter(player)
 end
 
