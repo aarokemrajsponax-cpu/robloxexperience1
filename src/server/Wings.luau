@@ -19,6 +19,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
+local Furniture = require(ReplicatedStorage.Shared.Furniture)
 local Layout = require(ReplicatedStorage.Shared.Layout)
 local Names = require(ReplicatedStorage.Shared.Names)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
@@ -90,6 +91,148 @@ local function wall(parent: Instance, name: string, from: Vector3, to: Vector3, 
 	return p
 end
 
+-- (Build 104) A wing's own grounds. In the house the Suite's terrace looks out over the house's roofs;
+-- up in a wing there's nothing round it, so each wing has a walled garden of its own: a lawn all
+-- round the Suite at its floor, a stone path along it, tall garden walls with lanterns and a row
+-- of cypresses inside them (high enough that nothing below the horizon can be seen over them:
+-- only sky, as from any walled garden), two benches, and an unseen barrier above the walls so
+-- nobody can leave over them. The Vault, below, sits on a floor of its own, walled in unseen.
+-- (Its size follows the Suite's own, as the house is laid out: the house is built at a scale.)
+local function gardenBounds(): { minX: number, maxX: number, minZ: number, maxZ: number, wall: number, s: number }
+	local z, gal = Layout.Suite.zone, Layout.Suite.galleryZone
+	local s = math.max(1, (z.max.X - z.min.X) / 47)
+	local margin = math.floor(12 * s + 0.5)
+	return {
+		minX = z.min.X - margin,
+		maxX = math.max(z.max.X, gal.max.X) + margin,
+		minZ = z.min.Z - margin,
+		maxZ = math.max(z.max.Z, gal.max.Z) + margin,
+		wall = math.floor(Layout.Suite.height + 4 * s + 0.5),
+		s = s,
+	}
+end
+local function gardenPart(parent: Instance, name: string, size: Vector3, cf: CFrame, colour: Color3, material: Enum.Material, collide: boolean?): Part
+	local p = Instance.new("Part")
+	p.Name = name
+	p.Anchored = true
+	p.CanCollide = collide ~= false
+	p.Size = size
+	p.CFrame = cf
+	p.Color = colour
+	p.Material = material
+	p.TopSurface = Enum.SurfaceType.Smooth
+	p.BottomSurface = Enum.SurfaceType.Smooth
+	p.Parent = parent
+	return p
+end
+local function garden(parent: Instance)
+	local G = gardenBounds()
+	local k = G.s
+	local y = Layout.Suite.floorY
+	local f = Instance.new("Folder")
+	f.Name = "Garden"
+	f.Parent = parent
+	local cx, cz = (G.minX + G.maxX) / 2, (G.minZ + G.maxZ) / 2
+	local w, d = G.maxX - G.minX, G.maxZ - G.minZ
+	local LAWN = Color3.fromRGB(78, 116, 62)
+	local STONE = Color3.fromRGB(214, 203, 182)
+	local COPING = Color3.fromRGB(236, 228, 212)
+	local HEDGE = Color3.fromRGB(46, 78, 44)
+	-- The lawn: just under the Suite's own floors, so it shows only where they don't reach.
+	gardenPart(f, "Lawn", Vector3.new(w, 1, d), CFrame.new(cx, y - 0.56, cz), LAWN, Enum.Material.Grass)
+	-- Beyond the walls, the estate's grounds as far as the eye goes: from anywhere high, open
+	-- country below, never empty sky.
+	-- (Drawn only on the screen of a guest standing in this wing: World/WingView.)
+	local grounds = gardenPart(f, "Grounds", Vector3.new(2000, 1, 2000), CFrame.new(cx, y - 1.6, cz), Color3.fromRGB(70, 104, 56), Enum.Material.Grass, false)
+	grounds.CastShadow = false
+	grounds.CanQuery = false
+	grounds.CanTouch = false
+	grounds.Transparency = 1
+	-- A stone path along the walls, a step in from them.
+	type Slab = { name: string, size: Vector3, at: Vector3 }
+	local paths: { Slab } = {
+		{ name = "PathN", size = Vector3.new(w - 6 * k, 0.2, 3 * k), at = Vector3.new(cx, y - 0.02, G.maxZ - 5 * k) },
+		{ name = "PathS", size = Vector3.new(w - 6 * k, 0.2, 3 * k), at = Vector3.new(cx, y - 0.02, G.minZ + 5 * k) },
+		{ name = "PathW", size = Vector3.new(3 * k, 0.2, d - 6 * k), at = Vector3.new(G.minX + 5 * k, y - 0.02, cz) },
+		{ name = "PathE", size = Vector3.new(3 * k, 0.2, d - 6 * k), at = Vector3.new(G.maxX - 5 * k, y - 0.02, cz) },
+	}
+	for _, side in paths do
+		gardenPart(f, side.name, side.size, CFrame.new(side.at), STONE, Enum.Material.Limestone)
+	end
+	-- The walls, their coping, a hedge at their foot, and the barrier above them.
+	local H = G.wall
+	type Wall = { name: string, size: Vector3, at: Vector3, inward: Vector3 }
+	local walls: { Wall } = {
+		{ name = "WallN", size = Vector3.new(w + 4, H, 2), at = Vector3.new(cx, y + H / 2, G.maxZ + 1), inward = Vector3.new(0, 0, -1) },
+		{ name = "WallS", size = Vector3.new(w + 4, H, 2), at = Vector3.new(cx, y + H / 2, G.minZ - 1), inward = Vector3.new(0, 0, 1) },
+		{ name = "WallW", size = Vector3.new(2, H, d), at = Vector3.new(G.minX - 1, y + H / 2, cz), inward = Vector3.new(1, 0, 0) },
+		{ name = "WallE", size = Vector3.new(2, H, d), at = Vector3.new(G.maxX + 1, y + H / 2, cz), inward = Vector3.new(-1, 0, 0) },
+	}
+	for _, wl in walls do
+		local size, at, inward = wl.size, wl.at, wl.inward
+		gardenPart(f, wl.name, size, CFrame.new(at), STONE, Enum.Material.Sandstone)
+		gardenPart(f, wl.name .. "Coping", Vector3.new(size.X + 0.8, 0.6, size.Z + 0.8), CFrame.new(at + Vector3.new(0, H / 2 + 0.3, 0)), COPING, Enum.Material.Marble)
+		local hedge = Vector3.new(if size.X > size.Z then size.X - 8 * k else 2 * k, 2.6 * k, if size.X > size.Z then 2 * k else size.Z - 8 * k)
+		gardenPart(f, wl.name .. "Hedge", hedge, CFrame.new(at + inward * 2.2 * k + Vector3.new(0, -H / 2 + 1.3 * k, 0)), HEDGE, Enum.Material.Grass)
+		local barrier = gardenPart(f, wl.name .. "Barrier", Vector3.new(size.X, 140, size.Z), CFrame.new(at + Vector3.new(0, H / 2 + 70, 0)), STONE, Enum.Material.SmoothPlastic)
+		barrier.Transparency = 1
+		barrier.CastShadow = false
+		barrier.CanQuery = false
+		-- Cypresses along it, and a lantern on every other one.
+		local long = math.max(size.X, size.Z) - 12 * k
+		-- (Pilasters in pale marble along its face, so it reads as a garden wall, not a cliff.)
+		local piers = math.max(2, math.floor(long / (16 * k)))
+		for i = 0, piers do
+			local along = -long / 2 + long * i / piers
+			gardenPart(f, "Pilaster", if size.X > size.Z then Vector3.new(1.8 * k, H, 0.8 * k) else Vector3.new(0.8 * k, H, 1.8 * k), CFrame.new(at + inward * 1.2 + (if size.X > size.Z then Vector3.new(along, 0, 0) else Vector3.new(0, 0, along))), COPING, Enum.Material.Marble, false)
+		end
+		local count = math.max(2, math.floor(long / (12 * k)))
+		for i = 0, count do
+			local along = -long / 2 + long * i / count
+			local base = at + inward * 4.6 * k + (if size.X > size.Z then Vector3.new(along, 0, 0) else Vector3.new(0, 0, along)) + Vector3.new(0, -H / 2, 0)
+			gardenPart(f, "CypressTrunk", Vector3.new(0.7 * k, 2 * k, 0.7 * k), CFrame.new(base + Vector3.new(0, k, 0)), Color3.fromRGB(92, 66, 44), Enum.Material.Wood, false)
+			local crown = gardenPart(f, "Cypress", Vector3.new(11 * k, 3.2 * k, 3.2 * k), CFrame.new(base + Vector3.new(0, 7.5 * k, 0)) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(38, 70, 40), Enum.Material.Grass, false)
+			crown.Shape = Enum.PartType.Cylinder
+			if i % 3 == 0 then
+				local lamp = gardenPart(f, "Lantern", Vector3.new(0.9 * k, 1.3 * k, 0.9 * k), CFrame.new(at + inward * 1.5 + (if size.X > size.Z then Vector3.new(along + 9 * k, 0, 0) else Vector3.new(0, 0, along + 9 * k)) + Vector3.new(0, 1.5 * k, 0)), Color3.fromRGB(255, 214, 150), Enum.Material.Neon, false)
+				local light = Instance.new("PointLight")
+				light.Color = Color3.fromRGB(255, 200, 140)
+				light.Brightness = 0.9
+				light.Range = 16 * k
+				light.Shadows = false
+				light.Parent = lamp
+			end
+		end
+	end
+	-- Two benches on the lawn by the north wall, to sit and look at the house.
+	for _, x in { cx - 14 * k, cx + 14 * k } do
+		local at = Vector3.new(x, y, G.maxZ - 9 * k)
+		gardenPart(f, "BenchSeat", Vector3.new(5, 0.4, 1.6), CFrame.new(at + Vector3.new(0, 1.4, 0)), Color3.fromRGB(110, 76, 48), Enum.Material.Wood)
+		gardenPart(f, "BenchBack", Vector3.new(5, 1.6, 0.3), CFrame.new(at + Vector3.new(0, 2.4, 0.75)), Color3.fromRGB(110, 76, 48), Enum.Material.Wood)
+		for _, sx in { -2.2, 2.2 } do
+			gardenPart(f, "BenchLeg", Vector3.new(0.3, 1.2, 1.4), CFrame.new(at + Vector3.new(sx, 0.6, 0)), Color3.fromRGB(40, 34, 30), Enum.Material.Metal)
+		end
+		local top = CFrame.lookAt(at + Vector3.new(0, 1.6, 0), at + Vector3.new(0, 1.6, -10))
+		Furniture.seatsOn(f, "BenchSeats", { top * CFrame.new(-1.2, 0, 0), top * CFrame.new(1.2, 0, 0) }, "The garden bench", 1.6)
+	end
+	-- The Vault, below: a floor under it all, and unseen walls round it.
+	local V = Layout.Vault
+	local vx, vz = (V.minX + V.maxX) / 2, (V.minZ + V.maxZ) / 2
+	gardenPart(f, "VaultFloor", Vector3.new(V.maxX - V.minX + 16, 1, V.maxZ - V.minZ + 16), CFrame.new(vx, Layout.FLOOR - 0.56, vz), Color3.fromRGB(30, 26, 24), Enum.Material.Slate)
+	local vaultSides: { Slab } = {
+		{ name = "S", size = Vector3.new(V.maxX - V.minX + 16, 22, 1), at = Vector3.new(vx, Layout.FLOOR + 11, V.minZ - 8) },
+		{ name = "N", size = Vector3.new(V.maxX - V.minX + 16, 22, 1), at = Vector3.new(vx, Layout.FLOOR + 11, V.maxZ + 8) },
+		{ name = "W", size = Vector3.new(1, 22, V.maxZ - V.minZ + 16), at = Vector3.new(V.minX - 8, Layout.FLOOR + 11, vz) },
+		{ name = "E", size = Vector3.new(1, 22, V.maxZ - V.minZ + 16), at = Vector3.new(V.maxX + 8, Layout.FLOOR + 11, vz) },
+	}
+	for _, side in vaultSides do
+		local b = gardenPart(f, "VaultBarrier" .. side.name, side.size, CFrame.new(side.at), Color3.new(0, 0, 0), Enum.Material.SmoothPlastic)
+		b.Transparency = 1
+		b.CastShadow = false
+		b.CanQuery = false
+	end
+end
+
 -- What the copies are made from: the house's own Suite, Vault and lift landings, with the
 -- house's doorways closed (in a wing they would open onto nothing) and the house's machinery off.
 function Wings.prepare(): boolean
@@ -131,6 +274,7 @@ function Wings.prepare(): boolean
 	wall(seals, "VaultSouth", Vector3.new(V.minX - 2, Layout.FLOOR - 1, 41.2), Vector3.new(V.maxX + 2, Layout.FLOOR + V.height + 1, 43.2), true)
 	local d = Layout.Suite.door
 	wall(seals, "GalleryEnd", Vector3.new(d.X - 0.4, d.Y - 1, d.Z - 5), Vector3.new(d.X + 0.6, Layout.Suite.floorY + Layout.Suite.height + 2, d.Z + 5), true)
+	garden(t)
 	-- (Kept out of the world: only copies of it stand anywhere.)
 	template = t
 	return true

@@ -62,6 +62,22 @@ function WingView.refresh()
 			m.Parent = holder
 		end
 	end
+	-- (Build 104) A wing's open grounds (the country beyond its garden walls) are drawn only while
+	-- standing in that wing: from the house below, nothing hangs in the sky.
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	local here = if root and root:IsA("BasePart") then Wing.slotAt(root.Position) else nil
+	for _, m in wings:GetChildren() do
+		local k = m:GetAttribute("Wing")
+		local garden = m:FindFirstChild("Garden")
+		local grounds = garden and garden:FindFirstChild("Grounds")
+		if grounds and grounds:IsA("BasePart") then
+			local want = if k == here then 0 else 1
+			if grounds.Transparency ~= want then
+				grounds.Transparency = want
+			end
+		end
+	end
 end
 
 function WingView.start()

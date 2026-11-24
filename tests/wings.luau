@@ -126,6 +126,43 @@ check("...and their screen is told which (so it keeps it drawn)", ada:GetAttribu
 local wa = Wings.ensure(Wings.slotOf(ada))
 check("a wing is a real copy of the Suite, the Vault and the lift's landings, up where it stands", wa ~= nil and wa:FindFirstChild("Suite") ~= nil and wa:FindFirstChild("Vault") ~= nil and wa:FindFirstChild("Passages") ~= nil and math.abs(wa.Suite.Floor.CFrame.Position.Y - (21.9 + Wing.offset(Wings.slotOf(ada)).Y)) < 1e-3)
 check("...without the house's Vault door to the Foyer, and with its open sides walled", wa.Passages:FindFirstChild("VaultDoor") == nil and wa:FindFirstChild("Seals") ~= nil and wa.Seals:FindFirstChild("VaultSouth") ~= nil and wa.Seals:FindFirstChild("GalleryEnd") ~= nil)
+-- (Build 104) A wing's own grounds: nothing to fall from, nothing below to see.
+do
+	local g = wa:FindFirstChild("Garden")
+	local up = Wing.offset(Wings.slotOf(ada)).Y
+	local lawn = g and g:FindFirstChild("Lawn")
+	local S = Layout.Suite
+	local top = lawn and (lawn.CFrame.Position.Y + lawn.Size.Y / 2)
+	check("Build 104: a wing has its own walled garden: a lawn just under the Suite's floor, all round it", lawn ~= nil and math.abs(top - (S.floorY + up)) < 0.1 and (function()
+		local c, half = lawn.CFrame.Position, lawn.Size / 2
+		return c.X - half.X <= S.zone.min.X and c.X + half.X >= S.galleryZone.max.X and c.Z - half.Z <= S.zone.min.Z and c.Z + half.Z >= S.zone.max.Z
+	end)())
+	local walls, tallEnough, barriers = 0, true, 0
+	for _, n in { "WallN", "WallS", "WallW", "WallE" } do
+		local w = g and g:FindFirstChild(n)
+		if w then
+			walls += 1
+			if w.CFrame.Position.Y + w.Size.Y / 2 < S.floorY + up + 12 then
+				tallEnough = false
+			end
+		end
+		local b = g and g:FindFirstChild(n .. "Barrier")
+		if b and b.CanCollide and b.Transparency == 1 and b.CFrame.Position.Y + b.Size.Y / 2 > S.floorY + up + 100 then
+			barriers += 1
+		end
+	end
+	check("...walled on all four sides, taller than a guest looking over (only sky beyond)", walls == 4 and tallEnough)
+	check("...and an unseen barrier above every wall, so nobody leaves over them", barriers == 4)
+	local seats = 0
+	for _, d in g:GetDescendants() do
+		if d.Name == "SitSpot" then
+			seats += 1
+		end
+	end
+	check("...two garden benches with real seats", seats == 4, seats)
+	local vf = g and g:FindFirstChild("VaultFloor")
+	check("...and the Vault below on a floor of its own, walled in unseen", vf ~= nil and g:FindFirstChild("VaultBarrierN") ~= nil and g:FindFirstChild("VaultBarrierS") ~= nil and g:FindFirstChild("VaultBarrierW") ~= nil and g:FindFirstChild("VaultBarrierE") ~= nil)
+end
 local inWing = Wings.arrival(Wings.slotOf(ada), "suite").Position
 check("in a wing, the house sees the Suite (and nothing else is up there)", Layout.zoneAt(inWing) == "suite" and Layout.zoneAt(Wings.arrival(Wings.slotOf(ada), "vault").Position) == "vault" and Layout.zoneAt(inWing + Vector3.new(500, 0, 0)) == "none")
 check("...and the house itself is just as it was", Layout.zoneAt(Layout.Foyer.spawn.Position) == "foyer" and Layout.zoneAt(Layout.Suite.arrival) == "suite")
