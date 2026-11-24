@@ -265,15 +265,16 @@ function Welcome.show(name: string, first: boolean)
 
 	-- (Build 102) The game's own name, between two diamonds.
 	local kicker = text(holder, "Kicker", Brand.Name, Brand.Fonts.display, C.lightGold)
-	kicker.Position = UDim2.new(0.5, 0, 0, 26 * u)
-	kicker.Size = UDim2.new(0, 300 * u, 0, 15 * u)
+	kicker.Position = UDim2.new(0.5, 0, 0, 24 * u)
+	-- (Build 102: a size up, so it reads on a phone.)
+	kicker.Size = UDim2.new(0, 360 * u, 0, 20 * u)
 	kicker.ZIndex = 5
 	local leftMark = diamond(holder, "MarkLeft", math.floor(6 * u + 0.5))
-	leftMark.Position = UDim2.new(0.5, -166 * u, 0, 26 * u)
+	leftMark.Position = UDim2.new(0.5, -196 * u, 0, 26 * u)
 	leftMark.ZIndex = 5
 	leftMark.BackgroundTransparency = 1
 	local rightMark = diamond(holder, "MarkRight", math.floor(6 * u + 0.5))
-	rightMark.Position = UDim2.new(0.5, 166 * u, 0, 26 * u)
+	rightMark.Position = UDim2.new(0.5, 196 * u, 0, 26 * u)
 	rightMark.ZIndex = 5
 	rightMark.BackgroundTransparency = 1
 

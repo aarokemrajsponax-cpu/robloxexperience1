@@ -377,6 +377,34 @@ a Nightly attempt or a Mythic's odds.
 - **The launch kit**: page text, icon, thumbnails and the gameplay video's shot list are in
   [`LAUNCH.md`](LAUNCH.md).
 
+## Build 102 — private Suites and Vaults, the elevator, the House Tour, exact Gilt
+
+- **Private wings** (`server/Wings`, `shared/Wing`): every guest gets a real copy of the Suite and the
+  Vault, high above the house, made when first needed and removed when they leave. Nobody can walk
+  there. The house's own Suite and Vault doors are sealed, and a watch every 0.3 s sends anyone in
+  a wing that isn't theirs (or in the sealed rooms) home. Other guests, their brainrots and pets are
+  somewhere else entirely, not hidden. Each screen draws only its own wing (`World/WingView`).
+- **The elevator** (`UI/Elevator`): Elevator prompts at the Vault's door (Foyer) and the Suite's door
+  (Club Floor), and the lift bell inside each wing. Your Suite 5.5 s, your Vault 5.5 s, a friend's
+  Suite 6.5 s (friends on Roblox only, only when the host allows it, asked again on arrival), back to
+  the house 5.5 s. One journey at a time, the server decides every arrival, and nobody rides along.
+  The Suites key and the Directory's Take me there use it too.
+- **Spawning**: new guests arrive in the Foyer; returning guests arrive in their own private Suite.
+- **No forced onboarding**: a HOUSE TOUR key for everyone (a gold pointing hand on it for 14 s, new
+  guests only, once). The tour now covers the Concierge, becoming the richest guest, the private
+  Vault and Suite with the elevator, and the Grand Prix, and is skippable and replayable.
+- **Quiet guide** (`UI/Guidance`): one next step at a time (Play, your Suite, the Shop, your
+  collection), each shown once ever (kept in the hidden `guideStep` setting), dismissible.
+- **Exact Gilt**: Steal a Luxe and the Basement show REWARD +N GILT and pay exactly that. "Estate"
+  and the "fifth to your purse" wording are gone from what guests read.
+- **Announcements** only after Play (`UI/Announce`), never stacked or repeated.
+- **Loading screens**: full screen, the house at night in each place's colours (`shared/Skyline`),
+  real progress, plus a first-load screen in ReplicatedFirst (`src/first/LoadScreen.client.luau`).
+- **Smoothness and quality**: a soft fade instead of camera snaps on long moves (`World/Smooth`);
+  richer night grade, bloom and reflections (`server/Season`); lighter bloom and half the particles
+  on phones and low graphics settings (`UI/Quality`).
+- Tests: `tests/wings.luau` (new), plus updated client, concierge, showcase, luxe and basement tests.
+
 ## Build 98 — the whole house first, fair fights, Luxury Island coming soon
 
 - **The whole house first**: the Concierge's first card offers *The whole house* (or *End the

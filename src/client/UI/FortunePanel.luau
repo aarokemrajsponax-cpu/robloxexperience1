@@ -26,7 +26,7 @@ local PARTS = {
 	{ key = "gems", label = "Gems" },
 	{ key = "collection", label = "Your collection (brainrots and curios)" },
 	{ key = "suite", label = "Your Suite and wardrobe" },
-	{ key = "estate", label = "Your Estate (hauls, chests and auctions)" },
+	{ key = "estate", label = "Everything banked in the games (hauls, chests, auctions)" },
 }
 
 local function row(parent: Instance, order: number, left: string, right: string, strong: boolean?, colour: Color3?): Frame

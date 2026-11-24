@@ -123,14 +123,14 @@ do
 	end
 	check("2. every tour card stands at a real stop and points at a real place", ok)
 	local every = true
-	for _, want in { "Steal a Luxe", "The Maison Basement", "The Executive Suite", "The Salon", "The Vault", "The Boutique", "The Grand Ballroom", "The Terrace", "Your Suite" } do
+	for _, want in { "Steal a Luxe", "The Maison Basement", "The Executive Suite", "The Salon", "Your private Vault", "The Boutique", "The Grand Ballroom", "The Terrace", "Your private Suite", "The Concierge", "The Grand Prix", "The Grand Auction", "Becoming the richest guest" } do
 		if not titles[want] then
 			every = false
 			print("   (missing from the tour: " .. want .. ")")
 		end
 	end
 	check("...and it shows every destination, the three attractions among them", every)
-	check("3. it teaches how the house works: the Fortune first, and the loop at the end", string.find(Voice.Tour[1].line, "Fortune", 1, true) ~= nil and string.find(Voice.Tour[#Voice.Tour].line, "Estate", 1, true) ~= nil)
+	check("3. it teaches how the house works: the Fortune first, and the loop at the end", string.find(Voice.Tour[1].line, "Fortune", 1, true) ~= nil and string.find(Voice.Tour[#Voice.Tour].line, "Fortune", 1, true) ~= nil and string.find(Voice.Tour[#Voice.Tour].line, "Estate", 1, true) == nil)
 	check("...each pin has its name", Voice.TourPlaces.velvetDoor == "The Luxe Lounge" and Voice.TourPlaces.obsidianDoor == "The Basement Stair" and Voice.TourPlaces.midnightDoor == "The Executive's Anteroom")
 end
 

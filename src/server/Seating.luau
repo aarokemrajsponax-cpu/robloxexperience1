@@ -16,6 +16,7 @@ local Workspace = game:GetService("Workspace")
 
 local Furniture = require(ReplicatedStorage.Shared.Furniture)
 local Layout = require(ReplicatedStorage.Shared.Layout)
+local Wing = require(ReplicatedStorage.Shared.Wing)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Suite = require(ReplicatedStorage.Shared.Suite)
 local Profiles = require(script.Parent.Profiles)
@@ -196,7 +197,9 @@ local function onAsk(player: Player, request: unknown): any
 		if not seatAt then
 			return { ok = false, why = "Nothing stands there to sit on." }
 		end
-		at = frame * seatAt
+		-- (Build 102) In a private wing: the same seat, up where that wing is.
+		local _, wing = Wing.toHouse(root.Position)
+		at = (if wing then frame + Wing.offset(wing) else frame) * seatAt
 	end
 	local target = at :: CFrame
 	if (target.Position - root.Position).Magnitude > REACH then

@@ -35,6 +35,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Ease = require(ReplicatedStorage.Shared.Ease)
 local Curios = require(ReplicatedStorage.Shared.Curios)
 local Layout = require(ReplicatedStorage.Shared.Layout)
+local Wing = require(ReplicatedStorage.Shared.Wing)
 local MemeTakeovers = require(ReplicatedStorage.Shared.MemeTakeovers)
 local CameraRig = require(script.Parent.Parent.Camera)
 local Quality = require(script.Parent.Parent.Quality)
@@ -443,7 +444,9 @@ function MemeTakeover.play(seconds: number?, editionId: string?)
 	local rootPart = character and character:FindFirstChild("HumanoidRootPart")
 	local centre: Vector3 = if rootPart and rootPart:IsA("BasePart") then rootPart.CFrame.Position else Vector3.new(-49 * Layout.SCALE, Layout.Suite.floorY + 3, 50 * Layout.SCALE)
 	local room = roomOf(centre)
-	local floorY = Layout.Suite.floorY
+	-- (Build 102) Up in the guest's private wing when that's where they are.
+	local _, wing = Wing.toHouse(centre)
+	local floorY = Layout.Suite.floorY + (if wing then Wing.offset(wing).Y else 0)
 	local ceiling = floorY + Layout.Suite.height - 1
 	local mid = Vector3.new((room.minX + room.maxX) / 2, floorY, (room.minZ + room.maxZ) / 2)
 	local T = seconds or cfg().memeSeconds

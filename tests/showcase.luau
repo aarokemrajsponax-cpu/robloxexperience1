@@ -41,6 +41,11 @@ local bo = H.guest("Bo", 1202)
 local cy = H.guest("Cy", 1203)
 friendsWith["1201:1202"] = true
 SuiteVisits.mayVisit = Showcase.mayVisitSuite
+-- (Build 102: a visit is a ride in the elevator, server/Wings, tested in tests/wings.luau; here,
+-- only who may visit.)
+SuiteVisits.ride = function(_player, _to, _host)
+	return true, nil
+end
 run(Showcase.start)
 run(SuiteVisits.start)
 

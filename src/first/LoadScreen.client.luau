@@ -1,6 +1,6 @@
 --!strict
--- (Build 102) The first thing anyone sees while the game loads: the whole screen, a dusk over the
--- city (Shared/Skyline), the game's name, and how far along it really is (what Roblox still has
+-- (Build 102) The first thing anyone sees while the game loads: the whole screen, the house at
+-- night (Shared/Skyline), the game's name, and how far along it really is (what Roblox still has
 -- queued to fetch, then the house itself saying it's up). It replaces Roblox's own loading screen
 -- straight away, and goes the moment the Home Screen (or play) is ready underneath: never later
 -- than a firm limit, so nobody is ever left on it.
@@ -55,7 +55,7 @@ pcall(function()
 	local sky = shared and shared:WaitForChild("Skyline", 8)
 	if sky and sky:IsA("ModuleScript") then
 		local Skyline = (require :: any)(sky)
-		local scene = Skyline.build(base, "house", pixels, short < 500)
+		local scene = Skyline.build(base, "house", pixels, short < 500, true)
 		step = scene.step
 	end
 	local brand = shared and shared:FindFirstChild("Brand")

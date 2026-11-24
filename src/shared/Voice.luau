@@ -81,8 +81,8 @@ Voice.Concierge = {
 	},
 	-- What to do next, from what the guest has done (server/Staff/Concierge).
 	recommend = {
-		luxe = "Start with Steal a Luxe, through the Luxe Lounge. It's the quickest way to grow your Estate.",
-		upgrade = "Your purse could buy a bigger bag in the Luxe Lounge. More in the bag, more in the Estate.",
+		luxe = "Start with Steal a Luxe, through the Luxe Lounge: every piece shows the exact Gilt it pays.",
+		upgrade = "Your Gilt could buy a bigger bag in the Luxe Lounge. More in the bag, more Gilt each time you bank.",
 		basement = "Try the Maison Basement, down the Basement Stair. The Treasury pays well, and brings an invitation upstairs.",
 		executive = "You hold an invitation. Take your free stun pistol from the Quartermaster, then ride his lift up: it's in the Executive's Anteroom, off the Foyer.",
 		quartermaster = "The Executive Suite needs an invitation. Finish the Maison Basement, carry {inviteHaul} of loot out of Steal a Luxe in one trip, or buy one from the Quartermaster for {invitePrice} Gilt.",
@@ -92,8 +92,8 @@ Voice.Concierge = {
 	},
 	-- Answers, from how the house really works (the numbers are filled in from its settings).
 	questions = {
-		{ id = "rich", cat = "money", q = "How do I get rich?", a = "Everything you own counts toward your Fortune: Gilt, Gems, your collection, your Suite and your Estate. The attractions grow your Estate fastest." },
-		{ id = "estate", cat = "money", q = "What is my Estate?", a = "What you've banked and won in the attractions. It only ever grows, and a fifth of every haul comes to your purse in Gilt as well." },
+		{ id = "rich", cat = "money", q = "How do I get rich?", a = "Everything you own counts toward your Fortune: your Gilt, Gems, collection, Suite, and all you've banked and won in the attractions. The attractions grow it fastest." },
+		{ id = "estate", cat = "money", q = "What is my Fortune made of?", a = "Your Gilt, your Gems, your collection, your Suite, and the worth of all you've banked and won in the attractions (that part only ever grows). Every reward shows the exact Gilt it pays before you earn it." },
 		{ id = "invite", cat = "attractions", place = "midnight", q = "How do I get into the Executive Suite?", a = "You need an invitation. Each of these gets you one: finish the Maison Basement; carry loot worth {inviteHaul} or more out of Steal a Luxe in a single trip; or buy one from the Quartermaster in the Anteroom for {invitePrice} Gilt. Take your free stun pistol from him too, then ride the lift up." },
 		{ id = "stride", cat = "attractions", place = "velvet", q = "What does Speed do?", a = "It makes you faster in Steal a Luxe, and only there: {stride}% a level. Walk the treadmills in the Luxe Lounge to train it." },
 		{ id = "caught", cat = "attractions", place = "velvet", q = "What if a guard catches me?", a = "Everything in your bag is lost and you're shown out to the courtyard. What you've already banked is safe." },
@@ -112,7 +112,7 @@ Voice.Concierge = {
 		{ id = "looks", cat = "house", place = "boutique", q = "What are looks and trails for?", a = "Style, never score: nameplates, trails, emotes and victory flourishes from the Boutique (auras and titles from the Gem Shop). Wear them at the Wardrobe. Your flourish even colours your flexes." },
 		-- (Build 87: more, each from how the house really works, in five kinds; "place" is where
 		-- Guide me there walks the guest.)
-		{ id = "first", cat = "start", q = "What should I do first?", a = "Steal a Luxe, through the Luxe Lounge, is a good first: it grows your Estate quickest. Or ask me what to do next, and I'll look at what you've done so far." , place = "velvet" },
+		{ id = "first", cat = "start", q = "What should I do first?", a = "Steal a Luxe, through the Luxe Lounge, is a good first: it grows your Fortune quickest. Or ask me what to do next, and I'll look at what you've done so far." , place = "velvet" },
 		{ id = "everyGame", cat = "start", q = "How do I see every game?", a = "Press Play at the top of your screen: the Maison Directory shows every attraction, what it pays and how to get in." },
 		{ id = "tourAgain", cat = "start", q = "Can I see the tour again?", a = "Any time: speak to me and choose Show me the house. I'll walk you round again, and you can end it whenever you like." },
 		{ id = "collectionKey", cat = "start", q = "Where is my Collection?", a = "The gold Collection key on the left of your screen (C on a keyboard): your brainrots, every curio you own, your Gems and your trades. Fold the other keys away and the Collection keeps a key of its own." },
@@ -170,6 +170,18 @@ Voice.Tour = {
 		line = "Steal treasure. Bank it. Grow your Fortune. The richest guest tops the boards: start with Steal a Luxe.",
 	},
 	{
+		-- (Build 102) The Concierge himself, and how the house's money works.
+		stop = "lectern",
+		title = "The Concierge",
+		line = "That's me, at this lectern. Press E by me any time: I'll answer anything, find any room, or take you round again. The House Tour key does the same.",
+	},
+	{
+		stop = "lectern",
+		title = "Becoming the richest guest",
+		line = "Gilt is what you earn and spend. Your Fortune is your Gilt and everything you own together, and the Wealthiest boards rank it (Gilt bought with Robux never counts there). Every reward shows its exact Gilt before you earn it.",
+		quick = true,
+	},
+	{
 		stop = "salon",
 		place = "salonDoor",
 		title = "The Salon",
@@ -212,8 +224,8 @@ Voice.Tour = {
 	{
 		stop = "vault",
 		place = "vault",
-		title = "The Vault",
-		line = "Your collection, kept and shown: every piece and brainrot here counts toward your Fortune. The Archivist keeps your badges.",
+		title = "Your private Vault",
+		line = "Behind this door, your own Vault: your collection, kept and shown, and every piece in it counts toward your Fortune. Nobody else can walk in. Press E at the elevator here: 5.5 seconds up to your Vault or your Suite.",
 	},
 	{
 		-- (Build 87: the guiding hand points at the Collection key while this card is up.)
@@ -268,6 +280,13 @@ Voice.Tour = {
 		quick = true,
 	},
 	{
+		-- (Build 102) Out of the front doors.
+		stop = "executive",
+		title = "The Grand Prix",
+		line = "Out of the front doors, on the street: ultra-luxury cars at the kerb, and the Grand Prix round the block when it opens. Your best times go on the boards.",
+		quick = true,
+	},
+	{
 		stop = "library",
 		place = "libraryDoor",
 		title = "The Grand Auction",
@@ -293,13 +312,13 @@ Voice.Tour = {
 	{
 		stop = "suite",
 		place = "suiteDoor",
-		title = "Your Suite",
-		line = "Your own private rooms. Ring the bell inside to furnish them, show off your finest pieces in its cases, and have your friends round.",
+		title = "Your private Suite",
+		line = "Your own rooms, high above the house: the elevator takes you up in 5.5 seconds, and nobody else can come in. Friends ride up in 6.5 seconds, only if you allow it (Suites key). Ring the bell inside to furnish it.",
 	},
 	{
 		stop = "suite",
 		title = "Off you go",
-		line = "Earn in the attractions, grow your Estate, climb the wealth ranks and the Wealthiest boards. Ask me anything at my lectern.",
+		line = "Earn Gilt in the attractions, grow your Fortune, climb the wealth ranks and the Wealthiest boards. Ask me anything at my lectern.",
 		quick = true,
 	},
 }
@@ -312,12 +331,12 @@ Voice.TourWalk = {
 	luxe = "To the Luxe Lounge: Steal a Luxe is through here.",
 	basement = "Across to the Basement Stair.",
 	executive = "And the Executive's Anteroom, by the front.",
-	vault = "Now the Vault, at the back.",
+	vault = "Now the Vault's door, at the back.",
 	boutique = "Round to the Boutique.",
 	library = "Up the Grand Stair. Mind the step.",
 	ballroom = "Along the hall.",
 	terrace = "And over here.",
-	suite = "One more door.",
+	suite = "One more door: your Suite's.",
 	waiting = "I'll wait for you.",
 	lost = "The tour can wait. Speak to me in the Foyer when you'd like to carry on.",
 }
@@ -502,7 +521,7 @@ Voice.GuideHand = {
 	-- (Build 90)
 	fortune = {
 		title = "Your Fortune",
-		line = "Everything you own and earn adds up here: your Estate, your Gilt and your collection. The richest guest tops the boards. Tap it to see how yours is made.",
+		line = "Everything you own and earn adds up here: your Gilt, your collection and all you've banked in the games. The richest guest tops the boards. Tap it to see how yours is made.",
 	},
 	play = {
 		title = "Every game in the house",
@@ -613,7 +632,7 @@ Voice.Guide = {
 		items = {
 			{ title = "Gilt", line = "Earned everywhere: the tables, Steal a Luxe, the Basement, the Grand Ballroom and the races.", how = "Your Gilt is shown at the top left of the screen." },
 			{ title = "Gems", line = "Rarer than Gilt.", how = "Bought with Robux (a Gem pack in the shop), or traded with another guest. No game, race, present or streak pays them: those all pay Gilt. Spend Gems in the Gem Shop and the Cabinet." },
-			{ title = "Your Fortune", line = "Everything you own, added up.", how = "Your Gilt, Gems, collection, Suite and your Estate (all you've banked in the games). It's under your Gilt: tap it for the Wealthiest boards, which count only what you earned, never what was bought." },
+			{ title = "Your Fortune", line = "Everything you own, added up.", how = "Your Gilt, Gems, collection, Suite and all you've banked in the games. It's under your Gilt: tap it for the Wealthiest boards, which count only what you earned, never what was bought." },
 			{ title = "The Shop", line = "Everything for sale, in one place.", how = "Looks, table styles, lamps and more for Gilt. Some special things are for Robux, always with the price shown first.", key = "Shop", action = "shop" },
 			{ title = "Levels and badges", line = "Everything you do counts.", how = "Sorting, racing and playing earn XP and raise your level. Badges in the Badge Book mark what you've done." },
 			{ place = "tonight", title = "Tonight's table", line = "Optional: once a day, everyone plays the same table.", how = "Press Play and you're seated at a free Salon table: five rounds against tonight's clock, with the same pieces for every guest in every server. One try a day; the best scores go up on the board in the Foyer.", key = "Play", action = "nightly" },

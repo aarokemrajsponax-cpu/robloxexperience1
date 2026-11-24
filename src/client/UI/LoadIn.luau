@@ -89,7 +89,7 @@ local function step(row: Frame?, done: boolean)
 end
 
 -- (Build 87) Each place's own loading screen: its colours and its words, on a screen of its own
--- that covers the house's keys. (Build 102: the whole screen, a dusk over the city in the place's
+-- that covers the house's keys. (Build 102: the whole screen, the house at night in the place's
 -- own colours, Shared/Skyline; `top`, `bottom` and `motif` are no longer drawn.)
 type Theme = { top: Color3, bottom: Color3, accent: Color3, tag: string, motif: string }
 LoadIn.THEMES = {
@@ -132,9 +132,9 @@ function LoadIn.start(id: string, seconds: number, after: (() -> ())?)
 	shade.ZIndex = 60
 	shade.Active = true
 	shade.Parent = gui
-	-- (Build 102) The place's own dusk over the city, edge to edge in the screen's real pixels
-	-- (Shared/Skyline): a sky, a low sun or the moon, the skyline, the water, palms and the
-	-- promenade's lights, all moving gently while it loads. Fewer lights on a phone.
+	-- (Build 102) The house at night in the place's own colours, edge to edge in the screen's real
+	-- pixels (Shared/Skyline): searchlights, the lit facade, its reflection in the marble and gold
+	-- dust, all moving gently while it loads. Less of it on a phone.
 	local camera = Workspace.CurrentCamera
 	local pixels = if camera then camera.ViewportSize else size * Root.scale
 	local scene = Skyline.build(shade, id, pixels, Root.phone())

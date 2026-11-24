@@ -109,7 +109,7 @@ function QuickDock.openSuites()
 		local group, content = Theme.glass(Root.panels, SUITES, UDim2.fromOffset(math.min(420, size.X - 24), math.min(200 + rows * 52, size.Y - 90)))
 		Theme.list(content, 8).VerticalAlignment = Enum.VerticalAlignment.Top
 		Theme.text(content, "Suites", 24, "display", { LayoutOrder = 1 })
-		Theme.text(content, "Your own, private Suite, or a friend's: friends on Roblox may visit each other's.", 13, "body", { LayoutOrder = 2, TextColor3 = C.smoke, TextWrapped = true })
+		Theme.text(content, "Your own private Suite and Vault, up the elevator. Friends on Roblox may visit your Suite when you allow it.", 13, "body", { LayoutOrder = 2, TextColor3 = C.smoke, TextWrapped = true })
 		local function go(request: { [string]: any })
 			Root.close(SUITES)
 			task.spawn(function()
@@ -124,6 +124,20 @@ function QuickDock.openSuites()
 		end, 320)
 		home.Name = "MySuite"
 		home.LayoutOrder = 3
+		-- (Build 102) Your Vault too: the same elevator, down to your own private Vault.
+		local vaultKey = Theme.key(content, "My Vault", false, function()
+			Root.close(SUITES)
+			task.spawn(function()
+				local ok, res = pcall(function()
+					return Remotes.func("ElevatorAsk"):InvokeServer({ op = "ride", to = "vault" })
+				end)
+				if ok and type(res) == "table" and res.ok == false and res.why then
+					QuickDock.say("Suites", tostring(res.why))
+				end
+			end)
+		end, 320)
+		vaultKey.Name = "MyVault"
+		vaultKey.LayoutOrder = 3
 		if #friends == 0 then
 			Theme.text(content, "No friends in the house just now. Invite one with the Invite key, then visit each other's Suites.", 13, "body", { LayoutOrder = 4, TextColor3 = C.smoke, TextWrapped = true })
 		end
@@ -898,6 +912,25 @@ local function buildTourKey(width: number, height: number): TextButton
 	end)
 	k.Parent = Root.hud
 	return k
+end
+
+-- (Build 102) The Suites key, for the guide's pointing hand (nil while the keys are folded away).
+function QuickDock.suitesTarget(): GuiObject?
+	local f = dock
+	if not f or not f.Visible or folded() then
+		return nil
+	end
+	local holder = f:FindFirstChild("Suites", true)
+	if holder then
+		local button = holder:FindFirstChildWhichIsA("TextButton", true)
+		if button then
+			return button
+		end
+		if holder:IsA("GuiObject") then
+			return holder
+		end
+	end
+	return nil
 end
 
 function QuickDock.collectionTarget(): GuiObject?

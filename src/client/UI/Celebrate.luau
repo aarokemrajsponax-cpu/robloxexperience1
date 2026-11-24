@@ -205,7 +205,7 @@ function Celebrate.haulSeconds(kind: string): number
 end
 
 local HAUL_WORDS = {
-	first = { head = "YOUR FIRST HAUL!", line = "Banked to your Estate. Every haul makes you richer." },
+	first = { head = "YOUR FIRST HAUL!", line = "Banked. Every haul makes you richer." },
 	record = { head = "NEW BEST HAUL!", line = "Your biggest haul yet." },
 	big = { head = "BIG HAUL!", line = "Twice your usual." },
 	massive = { head = "MASSIVE HAUL!", line = "Far above your usual." },

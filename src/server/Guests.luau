@@ -167,8 +167,19 @@ end
 -- Gives a guest their character, once (defined below).
 local spawnCharacter: (player: Player, respawn: boolean?) -> ()
 
+-- (Build 102) Set by Main: a returning guest's own Suite, in their private wing (server/Wings),
+-- made ready for them; nil if it can't be.
+Guests.suiteAt = function(_player: Player): CFrame?
+	return nil
+end
+
 -- (Build 101) Where a returning guest arrives: inside their Suite, facing into the drawing room.
-local function suiteSpawn(): CFrame
+-- (Build 102: their own private Suite, which nobody else can walk into.)
+local function suiteSpawn(player: Player): CFrame
+	local wing = Guests.suiteAt(player)
+	if wing then
+		return wing
+	end
 	local at = Layout.Suite.arrival
 	return CFrame.lookAt(at, at + Vector3.new(-10, 0, 0)) + Vector3.new(0, 2, 0)
 end
@@ -204,7 +215,7 @@ local function place(player: Player, character: Model, visit: Visit)
 	-- before arrives in their own Suite, with no tour. Unknown yet (a slow profile): the Foyer,
 	-- and welcome() moves a returning guest up once it knows.
 	local toSuite = not toStreet and visit.known == true and not visit.firstVisit
-	local target = if toStreet then Layout.Street.spawn elseif toSuite then suiteSpawn() else Layout.Foyer.spawn
+	local target = if toStreet then Layout.Street.spawn elseif toSuite then suiteSpawn(player) else Layout.Foyer.spawn
 	Integrity.teleport(player, character, target + Vector3.new(0, 1, 0))
 	player:SetAttribute("Arrived", if toStreet then "street" elseif toSuite then "suite" else "foyer")
 	-- Drawn a little smaller than Roblox's default, so the house is roomier around everyone
@@ -333,7 +344,7 @@ local function welcome(player: Player, data: Profiles.Data)
 	-- Foyer meanwhile) is taken up to their Suite now.
 	local early = player.Character
 	if not visit.firstVisit and early and player:GetAttribute("Arrived") == "foyer" and not TableService.isSeated(player) then
-		Integrity.teleport(player, early, suiteSpawn() + Vector3.new(0, 1, 0))
+		Integrity.teleport(player, early, suiteSpawn(player) + Vector3.new(0, 1, 0))
 		player:SetAttribute("Arrived", "suite")
 	end
 	spawnCharacter(player)

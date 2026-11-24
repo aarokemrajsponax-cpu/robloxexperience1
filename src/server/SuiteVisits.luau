@@ -11,12 +11,10 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Names = require(ReplicatedStorage.Shared.Names)
-local Layout = require(ReplicatedStorage.Shared.Layout)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Friends = require(script.Parent.Friends)
 local Profiles = require(script.Parent.Profiles)
 local RemoteGuard = require(script.Parent.RemoteGuard)
-local Integrity = require(script.Parent.Integrity)
 
 local SuiteVisits = {}
 
@@ -33,18 +31,18 @@ SuiteVisits.isSeated = function(_player: Player): boolean
 	return false
 end
 
-local GRACE = 3 -- seconds after a visit begins before leaving the Suite counts (the move in)
+-- (Build 102) Set by Main: the elevator (server/Wings), the only way into a Suite now: a ride to
+-- the guest's own Suite, or to a friend's. Returns whether it began, and why not.
+SuiteVisits.ride = function(_player: Player, _to: string, _host: Player?): (boolean, string?)
+	return false, "Not just now."
+end
+-- Set by Main: whose Suite the elevator has let this guest into (server/Wings), or nil.
+SuiteVisits.wingHost = function(_player: Player): Player?
+	return nil
+end
+
 local began: { [Player]: number } = {}
 
-local function notice(player: Player, title: string, line: string)
-	Remotes.event("Shop"):FireClient(player, { op = "notice", title = title, line = line })
-end
-
-local function inSuite(player: Player): boolean
-	local character = player.Character
-	local root = character and character:FindFirstChild("HumanoidRootPart")
-	return root ~= nil and root:IsA("BasePart") and Layout.zoneAt(root.Position) == "suite"
-end
 
 -- The friend whose Suite this guest is in, or nil (their own).
 function SuiteVisits.hostOf(player: Player): Player?
@@ -87,12 +85,12 @@ local function setHost(player: Player, host: Player?)
 	tell(player, host)
 end
 
-local function moveIn(player: Player)
-	local character = player.Character
-	if character then
-		local at = Layout.Suite.arrival + Vector3.new(0, 3, 0)
-		Integrity.teleport(player, character, CFrame.new(at))
+-- (Build 102) The elevator has let this guest into a friend's Suite (or taken them home).
+function SuiteVisits.setHost(player: Player, host: Player?)
+	if host == nil and player:GetAttribute("SuiteHost") == nil then
+		return
 	end
+	setHost(player, host)
 end
 
 -- Goes home: the guest's own Suite again.
@@ -129,9 +127,8 @@ local function onAsk(player: Player, request: unknown): any
 		return { ok = false, why = "Get up from the table first." }
 	end
 	if r.op == "home" then
-		setHost(player, nil)
-		moveIn(player)
-		return { ok = true }
+		local ok, why = SuiteVisits.ride(player, "suite", nil)
+		return { ok = ok, why = why }
 	elseif r.op == "visit" then
 		local id = RemoteGuard.number(r.userId, -1e15, 1e15, true)
 		local host = if id then Players:GetPlayerByUserId(id) else nil
@@ -139,9 +136,8 @@ local function onAsk(player: Player, request: unknown): any
 			return { ok = false, why = "That guest has left the house." }
 		end
 		if host == player then
-			setHost(player, nil)
-			moveIn(player)
-			return { ok = true }
+			local ok, why = SuiteVisits.ride(player, "suite", nil)
+			return { ok = ok, why = why }
 		end
 		if not Friends.are(player, host) then
 			return { ok = false, why = "Only friends on Roblox may visit each other's Suites." }
@@ -150,11 +146,9 @@ local function onAsk(player: Player, request: unknown): any
 		if not may then
 			return { ok = false, why = why or "Their Suite isn't open just now." }
 		end
-		setHost(player, host)
-		moveIn(player)
-		notice(host, "A visitor", Names.of(player) .. " is visiting your Suite.")
-		SuiteVisits.visited(player, host)
-		return { ok = true }
+		-- (Build 102) Up in the elevator, 6.5 seconds; the server lets them in at the door.
+		local ok, whyNot = SuiteVisits.ride(player, "friend", host)
+		return { ok = ok, why = whyNot }
 	end
 	return { ok = false }
 end
@@ -164,13 +158,10 @@ local function sweep()
 	for _, p in Players:GetPlayers() do
 		local id = p:GetAttribute("SuiteHost")
 		if id ~= nil then
+			-- (Build 102: the elevator lets visitors in and out; a visitor it no longer counts as
+			-- one, or whose host has closed their Suite or gone, is home again.)
 			local host = SuiteVisits.hostOf(p)
-			if not host then
-				setHost(p, nil)
-				if inSuite(p) then
-					notice(p, "Your Suite", "Your friend's Suite has closed to visitors, so this is your own Suite again.")
-				end
-			elseif not inSuite(p) and os.clock() - (began[p] or 0) > GRACE then
+			if not host or SuiteVisits.wingHost(p) ~= host then
 				setHost(p, nil)
 			end
 		end

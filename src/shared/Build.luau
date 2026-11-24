@@ -5,5 +5,5 @@
 
 return {
 	number = 102,
-	label = "Build 102 · 24 Nov · House Tour, exact Gilt rewards, full-screen loading",
+	label = "Build 102 · 24 Nov · private Suites and Vaults, the elevator, House Tour, exact Gilt",
 }

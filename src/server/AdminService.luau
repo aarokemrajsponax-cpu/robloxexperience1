@@ -41,6 +41,7 @@ local AbuseNights = require(ReplicatedStorage.Shared.AbuseNights)
 local Config = require(ReplicatedStorage.Shared.Config)
 local HouseEvents = require(ReplicatedStorage.Shared.HouseEvents)
 local Layout = require(ReplicatedStorage.Shared.Layout)
+local Wing = require(ReplicatedStorage.Shared.Wing)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Salutes = require(ReplicatedStorage.Shared.Salutes)
 local Seasons = require(ReplicatedStorage.Shared.Seasons)
@@ -1631,6 +1632,11 @@ end
 -- Where the owner can go in one tap.
 local PLACES = { "street", "foyer", "salon", "boutique", "vault", "library", "ballroom", "terrace", "suite" }
 
+-- (Build 102) Set by Main: the owner's own Suite or Vault (their private wing, server/Wings).
+AdminService.privatePlace = function(_player: Player, _name: string): CFrame?
+	return nil
+end
+
 local function placeAt(name: string): Vector3?
 	if name == "street" then
 		return Layout.Street.spawn.Position
@@ -1665,7 +1671,8 @@ end
 -- not guests to the owner standing in their own.
 local function inSuites(player: Player): boolean
 	local root = rootOf(player)
-	return root ~= nil and Layout.zoneAt(root.Position) == "suite"
+	-- (Build 102: anywhere in a private wing, the Vault there too.)
+	return root ~= nil and (Layout.zoneAt(root.Position) == "suite" or Wing.slotAt(root.Position) ~= nil)
 end
 
 local function humanoidOf(player: Player): Humanoid?
@@ -2554,6 +2561,15 @@ local function handle(player: Player, request: unknown): any
 				at = root.Position + Vector3.new(4, 0, 0)
 			end
 		elseif type(r.place) == "string" and table.find(PLACES, r.place) then
+			-- (Build 102) The Suite and the Vault: the owner's own, in their private wing.
+			if r.place == "suite" or r.place == "vault" then
+				local mine = AdminService.privatePlace(player, r.place)
+				local c = player.Character
+				if mine and c then
+					Integrity.teleport(player, c, mine)
+					return { ok = true }
+				end
+			end
 			at = placeAt(r.place)
 		end
 		local character = player.Character

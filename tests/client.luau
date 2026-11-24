@@ -8605,7 +8605,7 @@ coroutine.wrap(function()
 	check("...which asks the server for it (nothing else)", sent[#sent].remote == "EmpireAsk" and sent[#sent].message[1].op == "fortune")
 	check("...the Fortune and its rank, and how far to the next", textOnScreen("128,400") ~= nil and textOnScreen("TYCOON") ~= nil and textOnScreen("121,600 more to become Baron") ~= nil)
 	check("...the house's aim", textOnScreen(FortuneRules.TAGLINE) ~= nil)
-	check("...what it's made of, part by part", textOnScreen("Your Estate (hauls, chests and auctions)") ~= nil and textOnScreen("75,000") ~= nil and textOnScreen("31,000") ~= nil and textOnScreen("8,400") ~= nil)
+	check("...what it's made of, part by part", textOnScreen("Everything banked in the games (hauls, chests, auctions)") ~= nil and textOnScreen("75,000") ~= nil and textOnScreen("31,000") ~= nil and textOnScreen("8,400") ~= nil)
 	check("...the wealthiest in this house, richest first", textOnScreen("1.  Ada") ~= nil and textOnScreen("2.  Wren") ~= nil and textOnScreen("120K") ~= nil)
 	check("...and that the boards rank what was earned, not bought", textOnScreen("Gilt and Gems bought with Robux aren't counted") ~= nil)
 	snapshot("fortune")
@@ -9605,7 +9605,7 @@ coroutine.wrap(function()
 	serverSays("Attraction", { op = "won", worth = 25000, gilt = 600, brainrot = "dirigenteSupremo", first = true, challenge = "Swift Takeover", challengeMet = true, challengeGilt = 1500 })
 	serverSays("Attraction", { op = "phase", phase = "won", say = "Well played. The lift is yours. For now." })
 	advance(0.3)
-	check("beaten: what's paid, plainly", textOnScreen("25,000 to your Estate  ·  +600 Gilt  ·  Il Dirigente Supremo for your collection. The safe is open, and the lift down.") ~= nil)
+	check("beaten: what's paid, plainly", textOnScreen("+600 Gilt  ·  your Fortune +25,000  ·  Il Dirigente Supremo for your collection. The safe is open, and the lift down.") ~= nil)
 	advance(2.2)
 	check("Build 90: the run's challenge met, and what it paid", textOnScreen("Challenge met: Swift Takeover") ~= nil and textOnScreen("+1,500 Gilt") ~= nil)
 	check("...the red grade lifts, and he has the last word", game:GetService("Lighting"):FindFirstChild("ExecutiveFinale") == nil and textOnScreen("Well played. The lift is yours. For now.") ~= nil)
@@ -11088,6 +11088,69 @@ end)()
 	HudB.hideCoach()
 	advance(0.5)
 	check("no errors on the Boutique's new pages", #errors == errorsBefore, errors[errorsBefore + 1])
+end)()
+
+---------------------------------------------------------------------------------------------------
+-- 7c. (Build 102) The elevator to the private floors, and only the wings that matter drawn
+---------------------------------------------------------------------------------------------------
+;(function()
+	local errorsBefore = #errors
+	local RootM = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "Root")
+	serverSays("Guest", { op = "elevatorMenu", floors = { here = "house", seconds = { suite = 5.5, vault = 5.5, friend = 6.5, house = 5.5 }, friends = { { userId = 77, name = "Bo", open = true }, { userId = 78, name = "Cy", open = false } } } })
+	advance(0.6)
+	check("Build 102: the elevator's panel: your Suite and Vault with their exact times", textOnScreen("Your Suite  ·  5.5 s") ~= nil and textOnScreen("Your Vault  ·  5.5 s") ~= nil)
+	check("...a friend's Suite only when it's open to you (6.5 s), and how many are closed", textOnScreen("Bo's Suite  ·  6.5 s") ~= nil and textOnScreen("Cy's Suite  ·  6.5 s") == nil and textOnScreen("One friend here has their Suite closed to visitors.") ~= nil)
+	check("...and no 'Back to the house' while in the house", textOnScreen("Back to the house  ·  5.5 s") == nil)
+	snapshot("elevator-panel")
+	RootM.close("Elevator")
+	advance(0.6)
+	serverSays("Guest", { op = "elevator", to = "suite", seconds = 5.5, name = "Your Suite", floor = "PH" })
+	advance(0.8)
+	local car = find(playerGui, function(d)
+		return d.Name == "MaisonElevator"
+	end)
+	check("Build 102: the ride: the car over the whole screen, the doors shut, where it's going", car ~= nil and textOnScreen("YOUR SUITE") ~= nil and controls.enabled == false)
+	snapshot("elevator-ride")
+	advance(2.2)
+	check("...the floors counted on the way up, between the house and the penthouse", (function()
+		local floorLabel = car and find(car, function(d)
+			return d.Name == "Floor"
+		end)
+		return floorLabel ~= nil and floorLabel.Text ~= "L" and floorLabel.Text ~= "PH"
+	end)())
+	serverSays("Guest", { op = "elevatorArrived", to = "suite" })
+	advance(1.2)
+	check("...arrived: the doors part, the car goes, and you can move again", find(playerGui, function(d)
+		return d.Name == "MaisonElevator"
+	end) == nil and controls.enabled == true)
+	-- (A ride the server never finishes still opens, a little after its time.)
+	serverSays("Guest", { op = "elevator", to = "vault", seconds = 5.5, name = "Your Vault", floor = "V" })
+	advance(9.5)
+	check("...and never stuck: no word from the server, the doors open anyway", find(playerGui, function(d)
+		return d.Name == "MaisonElevator"
+	end) == nil and controls.enabled == true)
+	-- Only this guest's own wing (and the one they stand in) is drawn here.
+	local WingViewM = module("StarterPlayer", "StarterPlayerScripts", "Client", "World", "WingView")
+	local wings = Instance.new("Folder")
+	wings.Name = "PrivateWings"
+	wings.Parent = workspace
+	for k = 0, 2 do
+		local m = Instance.new("Model")
+		m.Name = "Wing" .. k
+		m:SetAttribute("Wing", k)
+		m.Parent = wings
+	end
+	LocalPlayer:SetAttribute("Wing", 1)
+	WingViewM.refresh()
+	check("Build 102: only this guest's own wing is drawn on their screen", wings:FindFirstChild("Wing1") ~= nil and wings:FindFirstChild("Wing0") == nil and wings:FindFirstChild("Wing2") == nil)
+	LocalPlayer:SetAttribute("WingVisit", 2)
+	WingViewM.refresh()
+	check("...and a friend's while riding up to it or visiting", wings:FindFirstChild("Wing2") ~= nil and wings:FindFirstChild("Wing0") == nil)
+	LocalPlayer:SetAttribute("WingVisit", nil)
+	LocalPlayer:SetAttribute("Wing", nil)
+	WingViewM.refresh()
+	wings:Destroy()
+	check("no errors from the elevator", #errors == errorsBefore, errors[errorsBefore + 1])
 end)()
 
 ---------------------------------------------------------------------------------------------------

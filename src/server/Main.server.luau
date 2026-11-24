@@ -109,6 +109,7 @@ boot("Seating", require(script.Parent.Seating).start)
 
 -- The Vault's door (it opens as you come near) and the lift between the Suite and the Vault.
 local VaultAccess = require(script.Parent.VaultAccess)
+VaultAccess.sealed = true
 boot("The Vault door and the lift", VaultAccess.start)
 
 local Season = require(script.Parent.Season)
@@ -624,6 +625,41 @@ boot("The displays", function()
 	end
 	Showcase.start()
 end)
+
+-- (Build 102) Private wings and the elevator: every guest's own Suite and Vault, a real copy of
+-- each high above the house, and the elevator (5.5 seconds to your own, 6.5 to a friend's) the
+-- only way in. The server decides every journey and keeps everyone where they may be.
+do
+	local Wings = require(script.Parent.Wings)
+	Wings.mayVisit = function(host: Player, visitor: Player)
+		return SuiteVisits.mayVisit(host, visitor)
+	end
+	Wings.busy = function(player: Player): string?
+		if AdminService.isSeated(player) then
+			return "Get up from the table first."
+		end
+		if type(player:GetAttribute("Attraction")) == "string" then
+			return "Leave the attraction first."
+		end
+		return nil
+	end
+	Wings.visited = function(visitor: Player, host: Player)
+		SuiteVisits.visited(visitor, host)
+	end
+	Wings.hostChanged = SuiteVisits.setHost
+	SuiteVisits.ride = Wings.ride
+	SuiteVisits.wingHost = Wings.hostOf
+	Guests.suiteAt = function(player: Player): CFrame?
+		return Wings.homeSpot(player, "suite")
+	end
+	Travel.private = function(player: Player, id: string): (boolean?, string?)
+		return Wings.ride(player, id, nil)
+	end
+	AdminService.privatePlace = function(player: Player, name: string): CFrame?
+		return Wings.homeSpot(player, name)
+	end
+	boot("Private wings and the elevator", Wings.start)
+end
 Archivist.onSpeak = function(player)
 	local V = require(ReplicatedStorage.Shared.Voice)
 	Dialogue.say(player, V.Archivist.speaker, V.Archivist.kept, nil, nil, 2.5)

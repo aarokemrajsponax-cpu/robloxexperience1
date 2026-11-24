@@ -1491,6 +1491,27 @@ local function ask(g, request)
 	end)
 	return r
 end
+-- (Build 102) A visit is a ride in the elevator now (server/Wings, tested in tests/wings.luau, with
+-- the host told who's arrived). Here a stand-in for it: up to the host's Suite, or home.
+local wingHosts = {}
+SuiteVisits.ride = function(player, to, host)
+	if to == "friend" and host then
+		wingHosts[player] = host
+		player.root.Position = inSuite
+		SuiteVisits.setHost(player, host)
+	else
+		wingHosts[player] = nil
+		SuiteVisits.setHost(player, nil)
+	end
+	return true, nil
+end
+SuiteVisits.wingHost = function(player)
+	local h = wingHosts[player]
+	if h and Layout.zoneAt(player.root.Position) == "suite" then
+		return h
+	end
+	return nil
+end
 local list = ask(pip, { op = "list" })
 check("the Suites key lists your friends in the house (only them)", list.ok and #list.friends == 1 and list.friends[1].userId == 202)
 check("someone who isn't a friend can't go into your Suite", ask(rook, { op = "visit", userId = 202 }).ok == false and rook:GetAttribute("SuiteHost") == nil)
@@ -1498,7 +1519,6 @@ profiles[quill].Data.suite = { rug = "suite_rug_black" }
 local went = ask(pip, { op = "visit", userId = 202 })
 local told = lastOp(pip, "suiteHost")
 check("a friend visits your Suite: they're at its door, shown it as you've furnished it", went.ok and pip:GetAttribute("SuiteHost") == 202 and told ~= nil and told.host == 202 and told.suite.rug == "suite_rug_black" and Layout.zoneAt(pip.root.Position) == "suite")
-check("...and you're told who's visiting", lastOp(quill, "notice") ~= nil and string.find(lastOp(quill, "notice").line, "Pip", 1, true) ~= nil)
 check("the seats there are the friend's Suite's", SuiteVisits.dataFor(pip) == profiles[quill].Data and SuiteVisits.dataFor(quill) == profiles[quill].Data)
 profiles[quill].Data.suite = { rug = "suite_rug_persian" }
 run(function()

@@ -91,6 +91,11 @@ end
 
 -- The Shop key: gold, first in the row, while walking (the sorting screen stays clean).
 local shopKey: TextButton? = nil
+-- (Build 102) The Shop key, for the guide's pointing hand.
+function Hud.shopTarget(): GuiObject?
+	local k = shopKey
+	return if k and k.Visible then k else nil
+end
 function Hud.setShopKey(onPress: () -> ())
 	if shopKey then
 		return

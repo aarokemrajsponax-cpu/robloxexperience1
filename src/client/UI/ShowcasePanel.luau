@@ -19,6 +19,7 @@ local Workspace = game:GetService("Workspace")
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local Curios = require(ReplicatedStorage.Shared.Curios)
 local Layout = require(ReplicatedStorage.Shared.Layout)
+local Wing = require(ReplicatedStorage.Shared.Wing)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Rules = require(ReplicatedStorage.Shared.Showcase)
 local CurioArt = require(script.Parent.CurioArt)
@@ -467,8 +468,13 @@ local function suite(body: GuiObject)
 			return
 		end
 		local S = Layout.Suite :: any
-		local from = if typeof(S.arrival) == "Vector3" then S.arrival + Vector3.new(0, 6, 0) else nil
-		local at = if typeof(S.centre) == "Vector3" then S.centre else nil
+		-- (Build 102) The guest's own Suite is up in their private wing.
+		local character = Players.LocalPlayer.Character
+		local hrp = character and character:FindFirstChild("HumanoidRootPart")
+		local _, wing = Wing.toHouse(if hrp and hrp:IsA("BasePart") then hrp.Position else Vector3.zero)
+		local up = if wing then Wing.offset(wing) else Vector3.zero
+		local from = if typeof(S.arrival) == "Vector3" then S.arrival + Vector3.new(0, 6, 0) + up else nil
+		local at = if typeof(S.centre) == "Vector3" then S.centre + up else nil
 		Root.close(NAME)
 		if from and at then
 			camera.CameraType = Enum.CameraType.Scriptable

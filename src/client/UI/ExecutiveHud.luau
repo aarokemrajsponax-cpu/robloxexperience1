@@ -1646,7 +1646,8 @@ function ExecutiveHud.on(m: { [string]: any })
 		hideCaught()
 		Toast.show("Security", "The moment passed: you've been shown out.", 4)
 	elseif op == "won" then
-		local line = string.format("%s to your Estate  ·  +%s Gilt", Rules.format(tonumber(m.worth) or 0), Rules.format(tonumber(m.gilt) or 0))
+		-- (Build 102) The Gilt to your balance first, then how much richer it makes you: no Estate.
+		local line = string.format("+%s Gilt  ·  your Fortune +%s", Rules.format(tonumber(m.gilt) or 0), Rules.format(tonumber(m.worth) or 0))
 		if m.brainrot then
 			line ..= "  ·  Il Dirigente Supremo for your collection"
 		end
@@ -1658,12 +1659,12 @@ function ExecutiveHud.on(m: { [string]: any })
 			end)
 		end
 	elseif op == "safe" then
-		Toast.show("The safe", Rules.format(tonumber(m.worth) or 0) .. " to your Estate.", 3)
+		Toast.show("The safe", "Your Fortune +" .. Rules.format(tonumber(m.worth) or 0) .. ".", 3)
 		pcall(Sound.play, "crystal", 0.7)
 	elseif op == "loot" then
-		local line = Rules.format(tonumber(m.worth) or 0) .. " to your Estate"
+		local line = "Your Fortune +" .. Rules.format(tonumber(m.worth) or 0)
 		if (tonumber(m.gilt) or 0) > 0 then
-			line ..= "  ·  +" .. Rules.format(tonumber(m.gilt) or 0) .. " Gilt"
+			line = "+" .. Rules.format(tonumber(m.gilt) or 0) .. " Gilt  ·  your Fortune +" .. Rules.format(tonumber(m.worth) or 0)
 		end
 		Toast.show(tostring(m.name or "Loot"), line .. ".", 3)
 		pcall(Sound.play, "crystal", 0.6)

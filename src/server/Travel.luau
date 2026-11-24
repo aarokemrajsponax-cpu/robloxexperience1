@@ -84,7 +84,19 @@ function Travel.places(): { [string]: Place }
 end
 
 -- Takes the guest to the place `id`. Returns whether it did, and why not.
+-- (Build 102) Set by Main: the Suite and the Vault are the guest's own, up in their private
+-- wing, and the elevator takes them there (server/Wings): whether it began, and why not.
+Travel.private = function(_player: Player, _id: string): (boolean?, string?)
+	return nil, nil
+end
+
 function Travel.go(player: Player, id: string): (boolean, string?)
+	if id == "suite" or id == "vault" then
+		local began, why = Travel.private(player, id)
+		if began ~= nil then
+			return began, why
+		end
+	end
 	local place = PLACES[id]
 	if not place then
 		return false, "There's no such place."

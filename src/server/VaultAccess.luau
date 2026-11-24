@@ -21,6 +21,10 @@ VaultAccess.isSeated = function(_player: Player): boolean
 	return false
 end
 
+-- (Build 102) The Vault is each guest's own now, up in their private wing (server/Wings): the
+-- house's door stays shut, and the elevator beside it is the way in.
+VaultAccess.sealed = false
+
 local D = Layout.VaultDoor
 local LIFT = Layout.Lift
 
@@ -194,7 +198,11 @@ function VaultAccess.start()
 	task.spawn(function()
 		local lastNear = 0
 		while true do
-			if someoneNear() then
+			if VaultAccess.sealed then
+				if doorOpen then
+					VaultAccess.setDoor(false)
+				end
+			elseif someoneNear() then
 				lastNear = os.clock()
 				VaultAccess.setDoor(true)
 			elseif doorOpen and os.clock() - lastNear > 1.5 then

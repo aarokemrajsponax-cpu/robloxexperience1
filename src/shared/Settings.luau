@@ -73,6 +73,9 @@ Settings.Definitions = {
 	choice("ambience", "Sound", "Ambience", { "On", "Off" }, true),
 	level("ambienceLevel", "Sound", "Ambience volume", 70, true),
 	choice("chime", "Sound", "Sorting chime", { "Bells", "Marimba", "Crystal", "Soft" }, true),
+	-- (Build 102) Not shown in Settings: how far the guide's one-at-a-time pointers have got
+	-- (UI/Guidance), kept so none is ever shown twice.
+	level("guideStep", "Kept", "Guide", 0, true),
 } :: { Definition }
 
 Settings.byKey = {} :: { [string]: Definition }

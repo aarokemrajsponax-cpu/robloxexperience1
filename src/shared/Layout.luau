@@ -3,6 +3,8 @@
 -- client uses the same ones for zones, cameras and doors, so the two can never disagree.
 -- +Z points from the street into the house. Street ground is y = 0; the house floor is y = 3.
 
+local Wing = require(script.Parent.Wing)
+
 local Layout = {}
 
 Layout.FLOOR = 3
@@ -439,7 +441,8 @@ Layout.Tour = {
 		{ id = "tonight", name = "Tonight's table", stand = Vector3.new(-22, 3, 15), face = Vector3.new(-29.4, 3, 17), via = {} },
 		-- (Build 94) The attractions' own doors, so the tour walks you to each.
 		{ id = "luxe", name = "The Luxe Lounge", stand = Vector3.new(-22, 3, 31), face = Vector3.new(-30, 3, 35), via = { Vector3.new(-14, 3, 24) } },
-		{ id = "vault", name = "The Vault", stand = Vector3.new(-3, 3, 47), face = Vector3.new(-8, 3, 53), via = { Vector3.new(-6, 3, 26), Vector3.new(-3, 3, 38) } },
+		-- (Build 102: at the Vault's door and its elevator, outside: the Vault itself is private.)
+		{ id = "vault", name = "The Vault", stand = Vector3.new(-3, 3, 36.5), face = Vector3.new(-3, 3, 42), via = { Vector3.new(-6, 3, 26) } },
 		{
 			id = "boutique",
 			name = "The Boutique",
@@ -502,6 +505,17 @@ end
 export type ZoneName = "street" | "foyer" | "salon" | "velvet" | "obsidian" | "midnight" | "club" | "library" | "ballroom" | "boutique" | "vault" | "terrace" | "suite" | "none"
 
 function Layout.zoneAt(p: Vector3): ZoneName
+	-- (Build 102) A guest's private wing, high above the house: its Suite and its Vault are the
+	-- Suite and the Vault (and nothing else is up there).
+	local house, wing = Wing.toHouse(p)
+	if wing then
+		if Layout.inBox(Layout.Suite.zone, house) or Layout.inBox(Layout.Suite.galleryZone, house) then
+			return "suite"
+		elseif Layout.inBox(Layout.Vault.zone, house) then
+			return "vault"
+		end
+		return "none"
+	end
 	if Layout.inBox(Layout.Terrace.zone, p) then
 		return "terrace"
 	elseif Layout.inBox(Layout.Suite.zone, p) or Layout.inBox(Layout.Suite.galleryZone, p) then

@@ -1,99 +1,89 @@
 --!strict
--- (Build 102) The house's loading scene: a city at dusk seen across the water, drawn with the
--- engine's own frames (no images to fetch, so it is there on the very first frame and never
--- blurry). A sky falling from night to the last of the sun, a low sun (or the moon) on the horizon
--- with its glow, a far and a near skyline with lit windows and neon on the tallest towers, the sun
--- laid across the water in broken gold, two palms in silhouette at the edges, and the lights of a
--- promenade road streaming along the foot. Each place has its own hour and colours.
+-- (Build 102) The house's loading scene: the Maison itself at night, drawn with the engine's own
+-- frames (nothing to fetch, so it's there on the very first frame and sharp at any size). A night
+-- sky with two searchlights sweeping it, as on a gala night; the great house across the
+-- forecourt, its portico and columns, its tall arched windows lit gold (a chandelier glowing in
+-- the middle one), light spilling from the open doors down the steps; the whole facade mirrored in
+-- the polished black marble of the forecourt; and gold dust drifting up through it all. Each place
+-- has its own colours (Steal a Luxe's crimson, the Basement's copper, the Executive Suite's midnight
+-- blue, the house's black and gold).
 --
---   local scene = Skyline.build(frame, "luxe", viewportPixels)
---   scene.step(secondsSinceShown)   -- each frame: stars, sun, clouds, water and the road move
+--   local scene = Skyline.build(frame, "luxe", viewportPixels, lite?, centred?)
+--   scene.step(secondsSinceShown)   -- each frame: the lights, the windows and the dust move
 --
--- It is built in real pixels (the screen's), so circles stay round and nothing is stretched at any
--- shape of screen; `lite` draws fewer windows, stars and lights for small or low-end devices.
+-- Built in the screen's real pixels, so arches and lights stay round and nothing is stretched at
+-- any shape of screen; `lite` draws less for small or low-end devices.
 
 local Skyline = {}
 
 export type Palette = {
 	sky: { { number | Color3 } },
-	sun: Color3,
-	sunEdge: Color3,
 	glow: Color3,
-	far: Color3,
-	near: Color3,
+	stone: Color3,
+	trim: Color3,
 	window: Color3,
-	neon: { Color3 },
-	waterTop: Color3,
-	waterBottom: Color3,
-	cloud: Color3,
-	moon: boolean?,
+	windowDeep: Color3,
+	floor: Color3,
+	beam: Color3,
+	dust: Color3,
 }
 
 local rgb = Color3.fromRGB
 
 Skyline.PALETTES = {
-	-- The house's own hour: the sun just going, magenta into gold.
+	-- The house: black and gold.
 	house = {
-		sky = { { 0, rgb(12, 8, 34) }, { 0.32, rgb(46, 18, 84) }, { 0.55, rgb(150, 46, 120) }, { 0.78, rgb(246, 112, 104) }, { 1, rgb(255, 178, 118) } },
-		sun = rgb(255, 236, 170),
-		sunEdge = rgb(255, 134, 96),
-		glow = rgb(255, 150, 110),
-		far = rgb(92, 40, 104),
-		near = rgb(22, 12, 38),
-		window = rgb(255, 208, 140),
-		neon = { rgb(255, 84, 178), rgb(96, 224, 255) },
-		waterTop = rgb(120, 48, 112),
-		waterBottom = rgb(10, 6, 24),
-		cloud = rgb(255, 140, 170),
+		sky = { { 0, rgb(6, 5, 10) }, { 0.55, rgb(22, 16, 22) }, { 0.85, rgb(58, 40, 26) }, { 1, rgb(96, 66, 34) } },
+		glow = rgb(255, 196, 110),
+		stone = rgb(20, 16, 18),
+		trim = rgb(214, 168, 84),
+		window = rgb(255, 214, 140),
+		windowDeep = rgb(196, 120, 52),
+		floor = rgb(8, 7, 9),
+		beam = rgb(255, 226, 170),
+		dust = rgb(255, 214, 140),
 	},
-	-- Steal a Luxe: rose and magenta, neon pink on the towers.
+	-- Steal a Luxe: velvet crimson.
 	luxe = {
-		sky = { { 0, rgb(16, 4, 26) }, { 0.35, rgb(70, 12, 66) }, { 0.6, rgb(196, 40, 116) }, { 0.82, rgb(255, 104, 136) }, { 1, rgb(255, 160, 150) } },
-		sun = rgb(255, 222, 196),
-		sunEdge = rgb(255, 86, 140),
-		glow = rgb(255, 90, 150),
-		far = rgb(96, 26, 82),
-		near = rgb(24, 6, 26),
-		window = rgb(255, 190, 210),
-		neon = { rgb(255, 70, 160), rgb(255, 150, 220) },
-		waterTop = rgb(130, 26, 92),
-		waterBottom = rgb(12, 3, 16),
-		cloud = rgb(255, 120, 170),
+		sky = { { 0, rgb(10, 3, 8) }, { 0.55, rgb(40, 8, 22) }, { 0.85, rgb(96, 18, 44) }, { 1, rgb(150, 36, 64) } },
+		glow = rgb(255, 110, 140),
+		stone = rgb(24, 8, 14),
+		trim = rgb(232, 170, 110),
+		window = rgb(255, 196, 180),
+		windowDeep = rgb(210, 60, 96),
+		floor = rgb(10, 4, 7),
+		beam = rgb(255, 170, 190),
+		dust = rgb(255, 190, 170),
 	},
-	-- The Basement: copper dusk over teal water.
+	-- The Basement: copper over deep teal.
 	basement = {
-		sky = { { 0, rgb(6, 14, 22) }, { 0.35, rgb(18, 44, 56) }, { 0.62, rgb(120, 78, 64) }, { 0.84, rgb(232, 144, 88) }, { 1, rgb(255, 196, 128) } },
-		sun = rgb(255, 230, 170),
-		sunEdge = rgb(240, 140, 70),
-		glow = rgb(255, 168, 96),
-		far = rgb(52, 60, 70),
-		near = rgb(10, 18, 22),
-		window = rgb(255, 196, 120),
-		neon = { rgb(255, 170, 80), rgb(80, 220, 200) },
-		waterTop = rgb(40, 74, 80),
-		waterBottom = rgb(4, 10, 14),
-		cloud = rgb(240, 160, 120),
+		sky = { { 0, rgb(3, 10, 12) }, { 0.55, rgb(10, 30, 34) }, { 0.85, rgb(54, 46, 34) }, { 1, rgb(110, 72, 40) } },
+		glow = rgb(240, 160, 90),
+		stone = rgb(10, 20, 22),
+		trim = rgb(214, 140, 80),
+		window = rgb(255, 200, 130),
+		windowDeep = rgb(190, 100, 50),
+		floor = rgb(4, 9, 10),
+		beam = rgb(240, 200, 150),
+		dust = rgb(255, 190, 120),
 	},
-	-- The Executive Suite: full night, the moon, cold blue neon.
+	-- The Executive Suite: midnight blue, cold light in the windows.
 	executive = {
-		sky = { { 0, rgb(3, 6, 22) }, { 0.38, rgb(12, 24, 70) }, { 0.66, rgb(52, 44, 132) }, { 0.86, rgb(128, 78, 180) }, { 1, rgb(190, 120, 200) } },
-		sun = rgb(236, 240, 255),
-		sunEdge = rgb(170, 190, 255),
-		glow = rgb(140, 160, 255),
-		far = rgb(40, 40, 96),
-		near = rgb(6, 8, 26),
-		window = rgb(170, 220, 255),
-		neon = { rgb(90, 200, 255), rgb(170, 120, 255) },
-		waterTop = rgb(40, 40, 110),
-		waterBottom = rgb(2, 4, 14),
-		cloud = rgb(150, 130, 230),
-		moon = true,
+		sky = { { 0, rgb(2, 4, 14) }, { 0.55, rgb(8, 16, 44) }, { 0.85, rgb(26, 34, 84) }, { 1, rgb(60, 60, 130) } },
+		glow = rgb(130, 190, 255),
+		stone = rgb(8, 12, 26),
+		trim = rgb(170, 200, 240),
+		window = rgb(196, 230, 255),
+		windowDeep = rgb(80, 140, 230),
+		floor = rgb(3, 5, 12),
+		beam = rgb(190, 220, 255),
+		dust = rgb(190, 220, 255),
 	},
 } :: { [string]: Palette }
 
 export type Scene = { step: (t: number) -> (), root: Frame }
 
--- A little seeded generator, so a place's skyline is the same every time it's seen.
+-- A seeded generator: a place's house is lit the same way every time.
 local function rng(seed: number): (number, number) -> number
 	local r = Random.new(seed)
 	return function(a: number, b: number): number
@@ -128,57 +118,40 @@ local function sequence(stops: { { number | Color3 } }): ColorSequence
 	return ColorSequence.new(keys)
 end
 
-local function fadeSides(f: GuiObject, edge: number, middle: number, rotation: number?)
+local function fade(f: GuiObject, stops: { { number } }, rotation: number?)
+	local keys = {}
+	for _, s in stops do
+		table.insert(keys, NumberSequenceKeypoint.new(s[1], s[2]))
+	end
 	local g = Instance.new("UIGradient")
 	g.Rotation = rotation or 0
-	g.Transparency = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 1),
-		NumberSequenceKeypoint.new(edge, middle),
-		NumberSequenceKeypoint.new(1 - edge, middle),
-		NumberSequenceKeypoint.new(1, 1),
-	})
+	g.Transparency = NumberSequence.new(keys)
 	g.Parent = f
+	return g
 end
 
--- A palm in silhouette: a leaning trunk in tapering pieces and drooping fronds from its crown.
--- Returns its crown, which sways.
-local function palm(parent: Instance, colour: Color3, baseX: number, baseY: number, height: number, lean: number, z: number): Frame
-	local crownX, crownY = baseX + lean, baseY - height
-	local pieces = 8
-	for i = 1, pieces do
-		local a, b = (i - 1) / pieces, i / pieces
-		-- (A gentle curve: the lean comes in more towards the top.)
-		local x1, y1 = baseX + lean * a * a, baseY - height * a
-		local x2, y2 = baseX + lean * b * b, baseY - height * b
-		local len = math.sqrt((x2 - x1) ^ 2 + (y2 - y1) ^ 2) + 2
-		local width = height * (0.05 - 0.022 * a)
-		local seg = frame(parent, "Trunk", colour, (x1 + x2) / 2, (y1 + y2) / 2, width, len, 0, z)
-		seg.AnchorPoint = Vector2.new(0.5, 0.5)
-		seg.Rotation = math.deg(math.atan2(x2 - x1, -(y2 - y1)))
-		round(seg, UDim.new(0, 2))
-	end
-	local crown = frame(parent, "Crown", colour, crownX, crownY, 1, 1, 1, z + 1)
-	crown.AnchorPoint = Vector2.new(0.5, 0.5)
-	local frond = height * 0.42
-	local thick = math.max(3, height * 0.05)
-	for k, angle in { -168, -142, -118, -92, -66, -40, -14, 10, -190 } do
-		-- Each frond in two pieces, the outer one drooping further.
-		local inner = frame(crown, "Frond", colour, 0, 0, frond * 0.55, thick, 0, z + 1)
-		inner.AnchorPoint = Vector2.new(0, 0.5)
-		inner.Position = UDim2.fromScale(0.5, 0.5)
-		inner.Rotation = angle
-		round(inner)
-		local droop = if math.cos(math.rad(angle)) >= 0 then 26 else -26
-		local outer = frame(inner, "Tip", colour, 0, 0, frond * 0.55, thick * 0.8, 0, z + 1)
-		outer.AnchorPoint = Vector2.new(0, 0.5)
-		outer.Position = UDim2.new(1, -thick * 0.6, 0.5, 0)
-		outer.Rotation = droop + (k % 3) * 4
-		round(outer)
-	end
-	return crown
+-- An arched window: a tall pane, round at the top, lit from below, with its glazing bars.
+local function window(parent: Instance, P: Palette, x: number, y: number, w: number, h: number, lit: boolean, z: number): Frame
+	local f = frame(parent, "Window", Color3.new(1, 1, 1), x, y, w, h, 0, z)
+	round(f, UDim.new(0, math.floor(w / 2)))
+	local g = Instance.new("UIGradient")
+	g.Rotation = 90
+	g.Color = if lit then ColorSequence.new(P.window, P.windowDeep) else ColorSequence.new(rgb(26, 22, 26), rgb(10, 9, 12))
+	g.Parent = f
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = P.trim
+	stroke.Thickness = math.max(1, w * 0.06)
+	stroke.Transparency = 0.25
+	stroke.Parent = f
+	-- The glazing: a bar down the middle and two across.
+	frame(f, "Mullion", P.stone, w / 2 - 1, w * 0.4, 2, h - w * 0.4, 0.2, z + 1)
+	frame(f, "Transom", P.stone, 0, h * 0.38, w, 2, 0.2, z + 1)
+	frame(f, "Transom", P.stone, 0, h * 0.7, w, 2, 0.2, z + 1)
+	f:SetAttribute("Lit", lit)
+	return f
 end
 
-function Skyline.build(parent: Instance, place: string?, size: Vector2, lite: boolean?): Scene
+function Skyline.build(parent: Instance, place: string?, size: Vector2, lite: boolean?, centred: boolean?): Scene
 	local P: Palette = Skyline.PALETTES[place or "house"] or Skyline.PALETTES.house
 	local W, H = math.max(320, size.X), math.max(240, size.Y)
 	local seed = 0
@@ -190,194 +163,173 @@ function Skyline.build(parent: Instance, place: string?, size: Vector2, lite: bo
 
 	local root = Instance.new("Frame")
 	root.Name = "Skyline"
-	root.BackgroundColor3 = P.waterBottom
+	root.BackgroundColor3 = P.floor
 	root.BorderSizePixel = 0
 	root.Size = UDim2.fromScale(1, 1)
 	root.ClipsDescendants = true
 	root.Parent = parent
 
-	local horizon = math.floor(H * 0.6)
-	local road = math.floor(H * 0.9)
-
-	-- The sky, night above to the last of the sun at the horizon.
-	local sky = frame(root, "Sky", Color3.new(1, 1, 1), 0, 0, W, horizon + 2, 0, 1)
+	local ground = math.floor(H * 0.72) -- where the house stands on the forecourt
+	-- The night sky.
+	local sky = frame(root, "Sky", Color3.new(1, 1, 1), 0, 0, W, ground + 2, 0, 1)
 	local sg = Instance.new("UIGradient")
 	sg.Rotation = 90
 	sg.Color = sequence(P.sky)
 	sg.Parent = sky
 
-	-- Stars, only up where it's dark.
+	-- A few stars.
 	local stars: { Frame } = {}
-	for i = 1, if few then 22 else 48 do
-		local d = R(1, 2.6)
-		local s = frame(root, "Star", Color3.fromRGB(255, 244, 230), R(0, W), R(0, horizon * 0.45), d, d, R(0.1, 0.6), 2)
+	for _ = 1, if few then 16 else 34 do
+		local d = R(1, 2.2)
+		local s = frame(root, "Star", rgb(255, 246, 230), R(0, W), R(0, ground * 0.5), d, d, R(0.2, 0.7), 2)
 		round(s)
 		table.insert(stars, s)
 	end
 
-	-- The sun (or the moon), low, with its glow and a haze along the horizon.
-	local sunD = math.floor(H * (if P.moon then 0.16 else 0.3))
-	local sunX = math.floor(W * 0.64)
-	local sunY = if P.moon then math.floor(H * 0.2) else horizon - math.floor(sunD * 0.28)
-	local glows: { Frame } = {}
-	local GLOW_T = { 0.94, 0.9, 0.82 }
-	for k, spec in { { 3.6, GLOW_T[1] }, { 2.4, GLOW_T[2] }, { 1.55, GLOW_T[3] } } do
-		local d = sunD * spec[1]
-		local g = frame(root, "Glow" .. k, P.glow, sunX, sunY, d, d, spec[2], 2)
-		g.AnchorPoint = Vector2.new(0.5, 0.5)
-		round(g)
-		table.insert(glows, g)
-	end
-	local sun = frame(root, if P.moon then "Moon" else "Sun", Color3.new(1, 1, 1), sunX, sunY, sunD, sunD, 0, 3)
-	sun.AnchorPoint = Vector2.new(0.5, 0.5)
-	round(sun)
-	local sunG = Instance.new("UIGradient")
-	sunG.Rotation = 90
-	sunG.Color = ColorSequence.new(P.sun, P.sunEdge)
-	sunG.Parent = sun
-	if P.moon then
-		-- (A crescent: the night's own colour over most of the disc.)
-		local bite = frame(sun, "Shadow", P.sky[2][2] :: Color3, sunD * 0.28, -sunD * 0.08, sunD, sunD, 0, 3)
-		round(bite)
-	end
-	local haze = frame(root, "Haze", P.glow, 0, horizon - H * 0.09, W, H * 0.18, 0, 3)
-	fadeSides(haze, 0.5, 0.55, 90)
+	-- The house's size and place: on the right, clear of the words (in the middle when centred).
+	local houseW = math.min(W * (if centred then 0.86 else 0.46), H * (if centred then 1.5 else 1.3))
+	local houseH = houseW * 0.42
+	local hx = if centred then (W - houseW) / 2 else W - houseW - W * 0.03
+	local hy = ground - houseH
 
-	-- Long thin clouds catching the light, drifting.
-	local clouds: { { f: Frame, x: number, speed: number } } = {}
-	for i = 1, if few then 4 else 7 do
-		local w = R(0.18, 0.42) * W
-		local y = R(0.12, 0.48) * horizon
-		local c = frame(root, "Cloud", P.cloud, R(-0.2, 1) * W, y, w, R(0.008, 0.022) * H, R(0.35, 0.6), 3)
-		round(c)
-		fadeSides(c, 0.35, 0)
-		table.insert(clouds, { f = c, x = c.Position.X.Offset, speed = R(4, 12) })
+	-- Two searchlights behind the house, sweeping the sky.
+	local beams: { { f: Frame, base: number, speed: number, phase: number } } = {}
+	for i, spec in { { hx + houseW * 0.22, -1 }, { hx + houseW * 0.78, 1 } } do
+		local b = frame(root, "Searchlight", P.beam, spec[1] :: number, ground, math.max(10, W * 0.05), H * 1.4, 0, 3)
+		b.AnchorPoint = Vector2.new(0.5, 1)
+		fade(b, { { 0, 1 }, { 0.15, 0.82 }, { 0.85, 0.9 }, { 1, 0.6 } }, 90)
+		table.insert(beams, { f = b, base = (spec[2] :: number) * 18, speed = 0.35 + i * 0.07, phase = i * 1.7 })
 	end
+	-- A warm glow behind the house, as if the whole forecourt were lit.
+	local halo = frame(root, "Halo", P.glow, hx - houseW * 0.1, hy - houseH * 0.5, houseW * 1.2, houseH * 1.4, 0.55, 4)
+	round(halo, UDim.new(0.5, 0))
+	fade(halo, { { 0, 1 }, { 0.5, 0.55 }, { 1, 1 } }, 90)
 
-	-- The far skyline, faint with distance.
-	local x = -R(0, 30)
-	while x < W do
-		local w = R(0.02, 0.05) * W
-		local h = R(0.04, 0.17) * H
-		frame(root, "Far", P.far, x, horizon - h, w + 1, h + 1, 0.12, 4)
-		x += w
-	end
-
-	-- The near towers: darker, taller, lit windows, neon up the edges of the tallest few.
-	local neonBars: { Frame } = {}
-	local reflections: { Frame } = {}
-	local windows = 0
-	local maxWindows = if few then 90 else 220
-	x = -R(0, 40)
-	local tall = 0
-	while x < W do
-		local w = R(0.035, 0.075) * W
-		local h = R(0.08, 0.36) * H
-		-- (A clear sky over the sun: the towers there stay low.)
-		if math.abs(x + w / 2 - sunX) < sunD * 0.6 then
-			h = R(0.04, 0.1) * H
+	-- The house: two wings and the raised centre with its portico.
+	local body = frame(root, "House", P.stone, hx, hy + houseH * 0.18, houseW, houseH * 0.82, 0, 6)
+	local bodyShade = Instance.new("UIGradient")
+	bodyShade.Rotation = 90
+	bodyShade.Color = ColorSequence.new(P.stone:Lerp(Color3.new(1, 1, 1), 0.06), P.stone:Lerp(Color3.new(0, 0, 0), 0.5))
+	bodyShade.Parent = body
+	local centreW = houseW * 0.34
+	local cx = hx + (houseW - centreW) / 2
+	local centre = frame(root, "Centre", P.stone, cx, hy, centreW, houseH, 0, 7)
+	local centreShade = bodyShade:Clone()
+	centreShade.Parent = centre
+	-- The pediment over the portico: a square turned on its corner, its lower half behind.
+	local ped = centreW * 0.52
+	local pediment = frame(root, "Pediment", P.stone, cx + centreW / 2, hy + 2, ped, ped, 0, 6)
+	pediment.AnchorPoint = Vector2.new(0.5, 0.5)
+	pediment.Rotation = 45
+	local pedEdge = Instance.new("UIStroke")
+	pedEdge.Color = P.trim
+	pedEdge.Thickness = 2
+	pedEdge.Transparency = 0.2
+	pedEdge.Parent = pediment
+	-- Gold cornices along the roofline and the floor line, and a balustrade on the wings.
+	frame(root, "Cornice", P.trim, hx - 4, hy + houseH * 0.18 - 3, houseW + 8, 3, 0.1, 8)
+	frame(root, "CorniceCentre", P.trim, cx - 4, hy - 3, centreW + 8, 3, 0.05, 8)
+	frame(root, "Plinth", P.trim, hx - 6, ground - 3, houseW + 12, 3, 0.2, 8)
+	local posts = if few then 10 else 18
+	for i = 0, posts do
+		local px = hx + houseW * (i / posts)
+		if px < cx - 2 or px > cx + centreW + 2 then
+			frame(root, "Baluster", P.trim, px - 1, hy + houseH * 0.18 - 12, 2, 10, 0.45, 8)
 		end
-		local tower = frame(root, "Tower", P.near, x, horizon - h, w + 1, h + 1, 0, 5)
-		if h > H * 0.27 and tall < 4 then
-			tall += 1
-			-- A spire, and a neon line down one edge, laid on the water too.
-			frame(tower, "Spire", P.near, w / 2 - 1, -h * 0.12, 2, h * 0.12, 0, 5)
-			local colour = P.neon[(tall % #P.neon) + 1]
-			local bar = frame(tower, "Neon", colour, if tall % 2 == 0 then 0 else w - 2, 0, 2, h, 0.1, 6)
-			table.insert(neonBars, bar)
-			for k = 0, 5 do
-				local r = frame(root, "NeonOnWater", colour, x + (if tall % 2 == 0 then 0 else w - 3), horizon + 4 + k * H * 0.035, 3, H * 0.022, 0.55 + k * 0.07, 7)
-				table.insert(reflections, r)
+	end
+	frame(root, "Rail", P.trim, hx, hy + houseH * 0.18 - 13, houseW, 2, 0.35, 8)
+
+	-- The windows: two rows on each wing, the portico's columns and its great doors between.
+	local windows: { Frame } = {}
+	local cols = if few then 3 else 4
+	local wingW = (houseW - centreW) / 2
+	local winW = wingW / (cols * 1.9)
+	for side = 0, 1 do
+		local x0 = if side == 0 then hx else cx + centreW
+		for row = 0, 1 do
+			local wy = hy + houseH * (0.3 + row * 0.33)
+			local wh = houseH * 0.24
+			for c = 0, cols - 1 do
+				local wx = x0 + wingW * ((c + 0.5) / cols) - winW / 2
+				table.insert(windows, window(root, P, wx, wy, winW, wh, R(0, 1) < 0.8, 9))
 			end
 		end
-		-- Windows: a few columns, some lit.
-		local cols = math.max(2, math.floor(w / 9))
-		local rows = math.max(2, math.floor(h / 11))
-		for cx = 1, cols - 1 do
-			for ry = 1, rows - 1 do
-				if windows < maxWindows and R(0, 1) < 0.16 then
-					windows += 1
-					frame(tower, "Window", P.window, cx * (w / cols) - 1, ry * (h / rows), 2, 2, R(0, 0.45), 6)
-				end
-			end
+	end
+	-- The middle window over the doors, with a chandelier's glow in it.
+	local midW = centreW * 0.22
+	local mid = window(root, P, cx + centreW / 2 - midW / 2, hy + houseH * 0.16, midW, houseH * 0.3, true, 9)
+	local chandelier = frame(mid, "Chandelier", rgb(255, 246, 220), midW / 2, houseH * 0.12, midW * 0.7, midW * 0.7, 0.15, 11)
+	chandelier.AnchorPoint = Vector2.new(0.5, 0.5)
+	round(chandelier)
+	fade(chandelier, { { 0, 0.1 }, { 1, 0.9 } }, 90)
+	-- Columns across the portico.
+	local n = 6
+	for i = 0, n - 1 do
+		local colX = cx + centreW * (0.08 + 0.84 * (i / (n - 1)))
+		local col = frame(root, "Column", P.trim, colX - 3, hy + houseH * 0.5, 6, houseH * 0.5, 0.15, 10)
+		fade(col, { { 0, 0.1 }, { 1, 0.6 } }, 90)
+	end
+	-- The great doors, open, the light pouring out and down the steps.
+	local doorW = centreW * 0.22
+	local door = frame(root, "Doors", P.window, cx + centreW / 2 - doorW / 2, ground - houseH * 0.36, doorW, houseH * 0.36, 0, 9)
+	round(door, UDim.new(0, math.floor(doorW / 2)))
+	local doorLight = Instance.new("UIGradient")
+	doorLight.Rotation = 90
+	doorLight.Color = ColorSequence.new(rgb(255, 250, 236), P.window)
+	doorLight.Parent = door
+	local spill = frame(root, "Spill", P.glow, cx + centreW / 2 - doorW * 1.6, ground, doorW * 3.2, (H - ground) * 0.7, 0.35, 5)
+	fade(spill, { { 0, 0.2 }, { 1, 1 } }, 90)
+	-- Steps.
+	for k = 1, 3 do
+		frame(root, "Step", P.trim, cx + centreW / 2 - doorW * (0.9 + k * 0.35), ground + k * 4, doorW * (1.8 + k * 0.7), 2, 0.55 + k * 0.1, 8)
+	end
+
+	-- The forecourt: polished black marble, the house mirrored in it.
+	local floor = frame(root, "Forecourt", P.floor, 0, ground, W, H - ground, 0, 4)
+	local fg = Instance.new("UIGradient")
+	fg.Rotation = 90
+	fg.Color = ColorSequence.new(P.floor:Lerp(P.glow, 0.08), P.floor)
+	fg.Parent = floor
+	local reflections: { { f: Frame, phase: number } } = {}
+	for _, w in windows do
+		if w:GetAttribute("Lit") then
+			local r = frame(root, "Reflection", P.window, w.Position.X.Offset + w.Size.X.Offset * 0.15, ground + (ground - w.Position.Y.Offset - w.Size.Y.Offset) * 0.6, w.Size.X.Offset * 0.7, w.Size.Y.Offset * 0.8, 0.8, 5)
+			fade(r, { { 0, 0.6 }, { 1, 1 } }, 90)
+			table.insert(reflections, { f = r, phase = R(0, 6.28) })
 		end
-		x += w + R(0, 0.012) * W
+	end
+	-- Fine joints in the marble, receding.
+	for k = 1, if few then 3 else 5 do
+		frame(root, "Joint", P.trim, 0, ground + (H - ground) * (k / 6) ^ 1.6, W, 1, 0.9, 5)
 	end
 
-	-- The water: the light on it at the horizon, darkening to the shore.
-	local water = frame(root, "Water", Color3.new(1, 1, 1), 0, horizon, W, road - horizon, 0, 4)
-	local wg = Instance.new("UIGradient")
-	wg.Rotation = 90
-	wg.Color = ColorSequence.new(P.waterTop, P.waterBottom)
-	wg.Parent = water
-	water.ZIndex = 4
-	-- The sun laid across it in broken gold.
-	local glints: { { f: Frame, w: number, phase: number } } = {}
-	for k = 0, if few then 9 else 16 do
-		local y = horizon + 4 + k * (road - horizon) / 18
-		local w = sunD * (0.9 - k * 0.035) * R(0.6, 1.1)
-		local g = frame(root, "Glint", P.sun, sunX, y, w, math.max(2, H * 0.006), 0.3, 7)
-		g.AnchorPoint = Vector2.new(0.5, 0.5)
-		round(g)
-		table.insert(glints, { f = g, w = w, phase = R(0, 6.28) })
+	-- Gold dust, drifting up.
+	local dust: { { f: Frame, x: number, y: number, speed: number, sway: number } } = {}
+	for _ = 1, if few then 18 else 40 do
+		local d = R(1.5, 3.5)
+		local m = frame(root, "Dust", P.dust, 0, 0, d, d, R(0.2, 0.6), 12)
+		round(m)
+		table.insert(dust, { f = m, x = R(0, W), y = R(0, H), speed = R(10, 34), sway = R(6, 20) })
 	end
-
-	-- The promenade along the foot, its lights streaming both ways.
-	local street = frame(root, "Road", Color3.fromRGB(8, 5, 14), 0, road, W, H - road + 2, 0, 8)
-	frame(street, "Kerb", P.glow, 0, 0, W, 2, 0.4, 9)
-	local trails: { { f: Frame, speed: number, x: number } } = {}
-	for i = 1, if few then 6 else 12 do
-		local leftward = i % 2 == 0
-		local colour = if leftward then Color3.fromRGB(255, 244, 220) else Color3.fromRGB(255, 70, 80)
-		local laneY = if leftward then (H - road) * 0.32 else (H - road) * 0.62
-		local t = frame(street, "Trail", colour, R(0, W), laneY, R(0.05, 0.11) * W, math.max(2, H * 0.005), 0.05, 9)
-		round(t)
-		local tg = Instance.new("UIGradient")
-		tg.Transparency = NumberSequence.new(if leftward then 0 else 1, if leftward then 1 else 0)
-		tg.Parent = t
-		table.insert(trails, { f = t, speed = (if leftward then -1 else 1) * R(0.12, 0.22) * W, x = t.Position.X.Offset })
-	end
-
-	-- Two palms at the edges, against everything.
-	local ink = Color3.fromRGB(6, 3, 12)
-	local crowns = {
-		palm(root, ink, W * 0.04, H + 4, H * 0.86, W * 0.05, 20),
-		palm(root, ink, W * 0.97, H + 4, H * 0.66, -W * 0.04, 20),
-	}
 
 	local function step(t: number)
+		for i, b in beams do
+			b.f.Rotation = b.base + math.sin(t * b.speed + b.phase) * 16
+			b.f.BackgroundTransparency = 0.05 * (0.5 + 0.5 * math.sin(t * 1.1 + i))
+		end
 		for i, s in stars do
-			if i % 3 == math.floor(t * 6) % 3 then
-				s.BackgroundTransparency = 0.25 + 0.5 * (0.5 + 0.5 * math.sin(t * 2.2 + i * 1.7))
+			if i % 3 == math.floor(t * 5) % 3 then
+				s.BackgroundTransparency = 0.25 + 0.5 * (0.5 + 0.5 * math.sin(t * 2.1 + i * 1.9))
 			end
 		end
-		for i, g in glows do
-			g.BackgroundTransparency = math.min(0.97, GLOW_T[i] + 0.02 * math.sin(t * 1.3 + i))
+		chandelier.BackgroundTransparency = 0.1 + 0.12 * (0.5 + 0.5 * math.sin(t * 2.6))
+		halo.BackgroundTransparency = 0.5 + 0.08 * math.sin(t * 0.9)
+		for _, r in reflections do
+			r.f.BackgroundTransparency = 0.74 + 0.08 * math.sin(t * 1.7 + r.phase)
 		end
-		for _, c in clouds do
-			local nx = c.x + t * c.speed
-			local w = c.f.Size.X.Offset
-			nx = ((nx + w) % (W + w)) - w
-			c.f.Position = UDim2.fromOffset(nx, c.f.Position.Y.Offset)
-		end
-		for _, g in glints do
-			local k = 0.5 + 0.5 * math.sin(t * 2.4 + g.phase)
-			g.f.Size = UDim2.fromOffset(g.w * (0.75 + 0.35 * k), g.f.Size.Y.Offset)
-			g.f.BackgroundTransparency = 0.2 + 0.45 * (1 - k)
-		end
-		for i, r in reflections do
-			r.BackgroundTransparency = math.clamp(0.55 + (i % 6) * 0.07 + 0.12 * math.sin(t * 3 + i), 0, 1)
-		end
-		for i, b in neonBars do
-			b.BackgroundTransparency = 0.05 + 0.15 * (0.5 + 0.5 * math.sin(t * 1.8 + i * 2))
-		end
-		for _, tr in trails do
-			local w = tr.f.Size.X.Offset
-			local nx = ((tr.x + tr.speed * t + w) % (W + w)) - w
-			tr.f.Position = UDim2.fromOffset(nx, tr.f.Position.Y.Offset)
-		end
-		for i, c in crowns do
-			c.Rotation = math.sin(t * 0.9 + i * 1.4) * 2.5
+		for _, m in dust do
+			local y = (m.y - t * m.speed) % (H + 10)
+			m.f.Position = UDim2.fromOffset(m.x + math.sin(t * 0.8 + m.y) * m.sway, y)
 		end
 	end
 

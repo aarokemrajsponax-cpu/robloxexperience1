@@ -47,8 +47,10 @@ local function setupLighting()
 	Lighting.Brightness = 1.4
 	Lighting.Ambient = BASE_AMBIENT
 	Lighting.OutdoorAmbient = BASE_OUTDOOR
-	Lighting.EnvironmentDiffuseScale = 0.45
-	Lighting.EnvironmentSpecularScale = 0.7
+	-- (Build 102) More of the room in every polished surface: the marble, the gold and the glass
+	-- catch the lamps.
+	Lighting.EnvironmentDiffuseScale = 0.55
+	Lighting.EnvironmentSpecularScale = 1
 	Lighting.ExposureCompensation = 0.35
 	Lighting.GlobalShadows = true
 	Lighting.ShadowSoftness = 0.3
@@ -62,17 +64,21 @@ local function setupLighting()
 	-- crisp (a heavy haze washes the interiors out grey).
 	air.Density = 0.26
 	air.Offset = 0.05
-	air.Color = Color3.fromRGB(46, 50, 64)
-	air.Decay = Color3.fromRGB(20, 22, 32)
+	-- (Build 102: a deeper, warmer night: violet over the street, the lamps' gold against it.)
+	air.Color = Color3.fromRGB(52, 46, 74)
+	air.Decay = Color3.fromRGB(24, 18, 38)
 	air.Glare = 0
 	air.Haze = 0.6
 	local bloom = effect("BloomEffect", "MaisonBloom") :: BloomEffect
-	bloom.Intensity = 0.4
-	bloom.Size = 30
-	bloom.Threshold = 1.1
+	-- (Build 102) The lamps, the gold and the neon glow a little more (each screen scales this to
+	-- what it can draw: UI/Quality).
+	bloom.Intensity = 0.55
+	bloom.Size = 34
+	bloom.Threshold = 0.98
 	local cc = effect("ColorCorrectionEffect", "MaisonGrade") :: ColorCorrectionEffect
-	cc.Contrast = 0.16
-	cc.Saturation = -0.12
+	-- (Build 102) Deeper blacks and richer colour: the velvet red, the emerald, the gold.
+	cc.Contrast = 0.2
+	cc.Saturation = 0.04
 	cc.Brightness = 0.01
 	cc.TintColor = Color3.new(1, 1, 1)
 	grade = cc

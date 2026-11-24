@@ -22,6 +22,7 @@ local Workspace = game:GetService("Workspace")
 local Furniture = require(ReplicatedStorage.Shared.Furniture)
 local Layout = require(ReplicatedStorage.Shared.Layout)
 local Suite = require(ReplicatedStorage.Shared.Suite)
+local Wing = require(ReplicatedStorage.Shared.Wing)
 local Closet = require(script.Parent.Parent.Closet)
 local Sound = require(script.Parent.Parent.Sound)
 local Toast = require(script.Parent.Parent.UI.Toast)
@@ -36,6 +37,9 @@ SuiteView.playPiano = function(_piano: Model) end
 
 local folder: Folder? = nil
 local inside = false
+-- (Build 102) The private wing this guest stands in (nil: the house), and where its Suite is.
+local wingNow: number? = nil
+local origin = Vector3.zero
 
 -- The friend's Suite this guest is visiting (sent by the server), or nil: their own.
 type Visit = { userId: number, name: string, suite: { [string]: string }, goldKey: boolean }
@@ -132,10 +136,11 @@ local function draw()
 			continue
 		end
 		local kind = Suite.kindOf(spotId, style)
-		local cf = S.spots[spotId]
-		if not kind or not cf then
+		local spot = S.spots[spotId]
+		if not kind or not spot then
 			continue
 		end
+		local cf = spot + origin
 		local ok, model = pcall(function()
 			local m = Furniture.build(kind, nil, cf, style, true, Layout.SUITE_FURNITURE)
 			return m
@@ -532,7 +537,16 @@ end
 local function elsewhere(other: Player, mine: number): boolean
 	local character = other.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
-	return root ~= nil and root:IsA("BasePart") and Layout.zoneAt(root.Position) == "suite" and suiteOf(other) ~= mine
+	if not root or not root:IsA("BasePart") then
+		return false
+	end
+	-- (Build 102) In a private wing: they're somewhere else entirely unless it's the very wing
+	-- this guest stands in (a friend they let in, or the friend they're visiting).
+	local _, theirs = Wing.toHouse(root.Position)
+	if theirs ~= nil then
+		return theirs ~= wingNow
+	end
+	return Layout.zoneAt(root.Position) == "suite" and suiteOf(other) ~= mine
 end
 
 local function privacy()
@@ -684,6 +698,14 @@ function SuiteView.start()
 			local character = player.Character
 			local root = character and character:FindFirstChild("HumanoidRootPart")
 			local now = root ~= nil and root:IsA("BasePart") and Layout.zoneAt(root.Position) == "suite"
+			local _, k = Wing.toHouse(if root and root:IsA("BasePart") then root.Position else Vector3.zero)
+			-- (Build 102) From one wing to another (the elevator to a friend's): drawn afresh there.
+			if inside and now and k ~= wingNow then
+				inside = false
+				clear()
+			end
+			wingNow = k
+			origin = if k then Wing.offset(k) else Vector3.zero
 			if now and not inside then
 				inside = true
 				task.spawn(draw)

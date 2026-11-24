@@ -123,6 +123,8 @@ function SatchelPanel.show(visible: boolean, count: number)
 		word.TextSize = 10
 		word.Font = Enum.Font.GothamBold
 		word.TextColor3 = GOLD
+		-- (Build 102) On a phone the key is too small for a readable word: the bag says it.
+		word.Visible = not Root.phone()
 		word.Parent = b
 		local n = Instance.new("TextLabel")
 		n.Name = "Count"

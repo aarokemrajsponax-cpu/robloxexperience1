@@ -388,6 +388,23 @@ start("Curios", function()
 	QuickDock.houseTour = function()
 		HowToPlay.tour()
 	end
+	-- (Build 102) The quiet guide: one next step at a time, each once ever (UI/Guidance).
+	do
+		local Guidance = require(script.Parent.UI.Guidance)
+		Guidance.targets = {
+			play = Hud.playTarget,
+			suites = QuickDock.suitesTarget,
+			shop = Hud.shopTarget,
+			collection = QuickDock.collectionTarget,
+		}
+		Guidance.busy = function(): boolean
+			local ok, busy = pcall(function()
+				return Tour.active() or require(script.Parent.UI.Elevator).riding() or require(script.Parent.UI.LoadIn).active() or Title.isShowing() or Intro.playing()
+			end)
+			return not ok or busy == true
+		end
+		Guidance.start()
+	end
 	QuickDock.openCollection = function()
 		-- (Build 87: opening it is what the guiding hand asked for: noted as done.)
 		pcall(require(script.Parent.UI.CollectionHint).opened)
@@ -499,6 +516,19 @@ start("The Terrace Bar", function()
 end)
 start("Salutes", SaluteView.start)
 start("The lift", require(script.Parent.World.LiftView).start)
+-- (Build 102) The elevator to the private floors, and only the wings that matter drawn here.
+start("The elevator", require(script.Parent.UI.Elevator).start)
+start("The private wings", require(script.Parent.World.WingView).start)
+-- (Build 102) No hard cuts: a long move fades up softly instead of the camera snapping.
+do
+	local Smooth = require(script.Parent.World.Smooth)
+	Smooth.covered = function(): boolean
+		return require(script.Parent.UI.Elevator).riding() or require(script.Parent.UI.LoadIn).active() or Title.isShowing() or Intro.playing()
+	end
+	start("Smooth moves", Smooth.start)
+end
+-- (Build 102) How much this screen draws, scaled to the device (UI/Quality).
+start("Quality", require(script.Parent.UI.Quality).start)
 start("Events", EventBanner.start)
 -- Purchases: the perks this guest holds, and what the whole house sees (decrees, rains).
 start("Perks", function()
