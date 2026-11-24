@@ -487,3 +487,39 @@ Design judgements, informed by the evidence above. Confidence reflects how much 
 5. Collection sets with cosmetic rewards; a seasonal Wealthiest board.
 6. An Admin Abuse cosmetic souvenir.
 7. Turn on Creator Hub analytics. Review D1, D7 and D30 and the onboarding funnel after launch.
+
+## 13. Addendum: Build 103 (moments, seats, Luxury Island, a full house)
+
+**Verification labels as in section 0.** Nothing here comes from real players; every result below is from the repository's own tests under Lune, or from renders.
+
+- **A full house [TESTED, simulated].** The new `tests/crowd.luau` runs 24 guests in one server for 150 rounds, each doing a random mix of everything: walking to an entrance and going in, lifting and banking in Steal a Luxe, Basement checkpoints in order, every attraction's actions, seats, the elevator, the Boutique, owner-only commands, junk requests, leaving and rejoining. After every round it checks:
+  - no request failed inside the server;
+  - Gilt and Gems stayed whole and non-negative;
+  - each guest was in at most one attraction, and their screen agreed;
+  - no seat and no wing was shared;
+  - no owner-only command worked for a guest.
+
+  At the end everyone goes home and leaves, and nothing is left behind. Result: 14 passed, 0 failed (33 lifts, 5 banks, 73 checkpoints). It is the real server code under a fake clock, not a load test on Roblox's servers.
+- **Seats [TESTED].** Sofas, benches and bar stools in the Grand Ballroom, the Executive Suite and the Island showed "Sit" but refused in silence: the server only registered seats inside the house's own folder. Fixed. Copies of seats in private wings get their own numbers, and refusals always say why. `tests/seats.luau`: 14 passed, 0 failed.
+- **Luxury Island [TESTED + RENDERED].** Open, and rebuilt as a resort after the owner's reference picture.
+  - Bugs fixed:
+    - Island Standing could be farmed by flying in and out (about 28,500 Gilt plus "never sold" rewards).
+    - Shown Gilt differed from paid Gilt past the daily cap.
+    - A pearl was hidden under a deck.
+    - Pearls had no in-water check.
+    - Postcard reach was too tight.
+    - Guests could be stranded at sea.
+    - The jet's airstair came down away from the carpet.
+    - The Lookout stair was blocked from the gardens.
+  - `tests/island.luau`: 143 passed, 0 failed.
+  - Rendered from 13 views.
+  - **Not verified:** real terrain smoothing, water and sky; fire, particles and string lights in motion; behaviour on a real phone.
+- **Moments, level up, Lucky reel [TESTED + RENDERED].**
+  - Centred glowing moments for lifts, banks, checkpoints, secrets, the Executive and Ballroom wins.
+  - Level up shows for about 6 s, and its fanfare plays its whole first phrase instead of cutting at 3.4 s.
+  - The Lucky reel eases and settles, and always stops inside the result's own tile.
+  - **Not heard here:** the music and sounds themselves.
+- **Test-only fix.** Two stand-in guests in `tests/shop.luau` shared a UserId, so a giveaway check failed at random. The test is fixed; the game code is unchanged.
+- **Final totals on this build:**
+  - All 31 server suites pass, including the bundled run (221/0), crowd (14/0), island (143/0), seats (14/0) and shop (594/0, four runs).
+  - Client suite: phone 1575/0, tablet 1575/0, desktop below.

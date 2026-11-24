@@ -1950,11 +1950,12 @@ do
 	check("only the amounts offered", adminAs(owner, { op = "giveaway", amount = 777 }).ok == false)
 	local gw = adminAs(owner, { op = "giveaway", amount = 250 })
 	check("the winner gets the Gilt and the badge", gw.ok and type(gw.winner) == "string" and (function()
-		-- (By their UserId: two guests in this test house can share a name.)
+		-- (By their UserId: two guests in this test house can share a name. Two of its stand-ins
+		-- also share a UserId (9), which real guests never do, so any of them may be the winner.)
 		local id = lastCast("giveaway").winnerId
 		for _, g in guests do
-			if g.UserId == id and profiles[g] then
-				return g.DisplayName == gw.winner and profiles[g].Data.badges.giveawayWinner == true
+			if g.UserId == id and profiles[g] and g.DisplayName == gw.winner and profiles[g].Data.badges.giveawayWinner == true then
+				return true
 			end
 		end
 		return false
