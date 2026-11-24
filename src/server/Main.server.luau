@@ -198,13 +198,8 @@ Concierge.needsTour = function(player)
 	local data = require(script.Parent.Profiles).get(player)
 	return data ~= nil and require(script.Parent.Guests).needsGuide(data)
 end
-Concierge.autoTour = function(player)
-	local data = require(script.Parent.Profiles).get(player)
-	local G = require(script.Parent.Guests)
-	if data and G.autoTourDue(data) then
-		G.markOnboarded(data)
-		return true
-	end
+-- (Build 102) The house tour is never started by itself: it's the HOUSE TOUR key's, by choice.
+Concierge.autoTour = function(_player)
 	return false
 end
 Concierge.toured = function(player)

@@ -384,6 +384,10 @@ start("Curios", function()
 	AdmireCard.trade = TradePanel.invite
 	-- The quick dock: Collection, Trade, Wardrobe, Gems and Invite, one tap away (C, T, V).
 	local QuickDock = require(script.Parent.UI.QuickDock)
+	-- (Build 102) HOUSE TOUR: the optional walk round the house with the Concierge.
+	QuickDock.houseTour = function()
+		HowToPlay.tour()
+	end
 	QuickDock.openCollection = function()
 		-- (Build 87: opening it is what the guiding hand asked for: noted as done.)
 		pcall(require(script.Parent.UI.CollectionHint).opened)
@@ -834,39 +838,27 @@ local function welcome()
 			require(script.Parent.UI.HandHints).offer({ "hint_fortune", "hint_play", "hint_level" })
 		end)
 	end
-	-- (Build 100: Start here, the arrow to the Concierge and the "New here?" note on a first visit
-	-- only; a returning guest never sees them.)
-	if new and not (guest and guest.autoTour == true) then
-		task.delay(1.6, function()
-			start("The arrow to the Concierge", function()
-				ConciergeGuide.start()
-			end)
-		end)
-		-- Start here: the game in three plain steps, once the welcome has had its moment.
-		task.delay(4.5, function()
-			start("Start here", function()
-				local StartHere = require(script.Parent.UI.StartHere)
-				StartHere.isBusy = function(): boolean
-					return TableClient.isSeated() or Tour.active() or Welcome.showing()
-				end
-				StartHere.showWay = function()
-					HowToPlay.tour()
-				end
-				StartHere.toDirectory = function()
-					require(script.Parent.UI.DirectoryPanel).open()
-				end
-				StartHere.offer()
-			end)
-		end)
-		-- Where to look whenever lost: a note under the How to play key, once, when the screen
-		-- is clear (not at a table, on the tour, or behind a panel).
-		task.delay(40, function()
-			for _ = 1, 24 do
-				if not TableClient.isSeated() and not Tour.active() and not Root.isOpen() and not Welcome.showing() then
-					Hud.coachHelp(Voice.Guide.coach, 14)
+	-- (Build 102) No Start here, no arrow to the Concierge, no forced tour: the old onboarding is
+	-- gone for everyone. The HOUSE TOUR key (down the left) is there for anyone who wants it; a
+	-- brand-new guest's first visit gets the gold hand pointing at it for exactly 14 seconds,
+	-- once, when the screen is clear. (A first visit is the server's saved count: never again.)
+	if new then
+		task.delay(3, function()
+			for _ = 1, 40 do
+				if not TableClient.isSeated() and not Tour.active() and not Root.isOpen() and not Welcome.showing() and not Title.isShowing() then
+					local target = require(script.Parent.UI.QuickDock).tourTarget()
+					if target and target.Visible then
+						local GuideHand = require(script.Parent.UI.GuideHand)
+						GuideHand.point(target, Voice.HouseTour.handTitle, Voice.HouseTour.handLine)
+						task.delay(Voice.HouseTour.handSeconds, function()
+							if GuideHand.target() == target then
+								GuideHand.clear()
+							end
+						end)
+					end
 					return
 				end
-				task.wait(5)
+				task.wait(1.5)
 			end
 		end)
 	end
@@ -1025,11 +1017,26 @@ Objective.guiding = ConciergeGuide.active
 ConciergeGuide.changed = function()
 	Objective.refresh()
 end
-Prompts.actionFor = function(prompt: ProximityPrompt): string?
-	if prompt.Name == "SpeakPrompt" and prompt.ObjectText == "The Concierge" and State.isFirstVisit() then
-		return require(ReplicatedStorage.Shared.Voice).StartHere.promptAction
-	end
+-- (Build 102: his key says what it always says; nothing pushes a tour.)
+Prompts.actionFor = function(_prompt: ProximityPrompt): string?
 	return nil
+end
+-- (Build 102) A Steal a Luxe piece names the exact Gilt it pays: the same sum the server locks
+-- in when it's lifted (its worth with the guest's banker's bonus, its Gilt share, every boost).
+Prompts.objectFor = function(prompt: ProximityPrompt): string?
+	if prompt.Name ~= "Take" then
+		return nil
+	end
+	local m = prompt:FindFirstAncestorWhichIsA("Model")
+	local worth = m and m:GetAttribute("Worth")
+	if not m or type(worth) ~= "number" or not game:GetService("CollectionService"):HasTag(m, "LuxePiece") then
+		return nil
+	end
+	local Rules = require(ReplicatedStorage.Shared.Fortune)
+	local bonus = require(script.Parent.UI.LuxeHud).bankerBonus()
+	local gilt = Rules.quoteFor(player, Rules.cash(math.floor(worth * (1 + bonus) + 0.5)))
+	local rarity = m:GetAttribute("Rarity")
+	return string.format("%s  ·  REWARD +%s GILT", if type(rarity) == "string" then rarity else "", Rules.format(gilt))
 end
 Tour.isSeated = function(): boolean
 	return TableClient.isSeated()

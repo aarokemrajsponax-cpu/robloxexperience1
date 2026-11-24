@@ -64,7 +64,7 @@ export type Theme = {
 	prestige: number?,
 }
 Showcase.Themes = {
-	{ id = "noir", name = "Maison Noir", line = "Black lacquer and antique gold: the house's own.", walls = rgb(22, 22, 26), trim = rgb(160, 122, 58), floor = rgb(18, 18, 21) },
+	{ id = "noir", name = "Black & Gold", line = "Black lacquer and antique gold: the house's own.", walls = rgb(22, 22, 26), trim = rgb(160, 122, 58), floor = rgb(18, 18, 21) },
 	{ id = "ivory", name = "Ivory Salon", line = "Cream walls, pale gold, bright mornings.", walls = rgb(226, 216, 196), trim = rgb(196, 160, 90), floor = rgb(196, 182, 156), gilt = 15000 },
 	{ id = "emerald", name = "Emerald Study", line = "Deep green, brass, the smell of old books.", walls = rgb(20, 48, 36), trim = rgb(176, 136, 64), floor = rgb(42, 28, 20), gilt = 20000 },
 	{ id = "rose", name = "Rosé", line = "Dusky pink and rose gold.", walls = rgb(122, 72, 78), trim = rgb(222, 172, 150), floor = rgb(62, 36, 40), gems = 120 },

@@ -7,6 +7,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local Rules = require(ReplicatedStorage.Shared.Fortune)
 local ProductConfig = require(ReplicatedStorage.Shared.ProductConfig)
 local Profiles = require(script.Parent.Profiles)
 local Analytics = require(script.Parent.Analytics)
@@ -62,31 +63,73 @@ function Gilt.format(n: number): string
 	return if out:sub(1, 1) == "," then out:sub(2) else out
 end
 
--- Pays `earned` Gilt to a profile and returns what was actually paid (after the soft cap).
-function Gilt.pay(player: Player, data: Profiles.Data, earned: number, source: string): number
+-- (Build 102) Everything that decides what earned Gilt pays a guest now: their boosts together,
+-- the Gold Key's share, the day's soft cap, what they've earned today and the rate past the cap.
+local function factors(player: Player, data: Profiles.Data): (number, number, number, number, number)
 	local g = Config.data.Gilt
 	local double = if data.doubleGilt then ProductConfig.byKey.doubleGilt.Reward.Multiplier else 1
 	local key = if data.goldKey then 1 + g.goldKeyBonus else 1
 	local cap = ProductConfig.Settings.MaxGiltMultiplier
 	local boost = math.min(cap / key, math.max(1, Gilt.boost()) * double * math.max(1, Gilt.personal(player)) * math.max(1, Gilt.friends(player)) * math.max(1, Gilt.surge(player)) * math.max(1, Gilt.rush(player)) * math.max(1, Gilt.welcome(player)) * math.max(1, Gilt.streak(player)))
-	earned = math.floor(earned * boost + 0.5)
-	if data.goldKey then
-		earned = math.floor(earned * key + 0.5)
-	end
 	local today = math.floor(os.time() / 86400)
 	if data.giltDay.day ~= today then
 		data.giltDay = { day = today, earned = 0 }
 	end
-	local full = math.max(0, math.min(earned, g.dailySoftCap * boost - data.giltDay.earned))
-	local reduced = math.floor((earned - full) * g.softCapRate)
-	local paid = full + reduced
+	return boost, key, g.dailySoftCap, data.giltDay.earned, g.softCapRate
+end
+
+-- (Build 102) Puts those on the guest ("GiltBoost" and the rest), so their screen can show a
+-- reward's exact Gilt before it's earned (shared/Fortune.quoteFor: the same sum as here).
+function Gilt.publish(player: Player, data: Profiles.Data?)
+	local d = data or Profiles.get(player)
+	if not d then
+		return
+	end
+	local boost, key, softCap, today, rate = factors(player, d)
+	player:SetAttribute("GiltBoost", boost)
+	player:SetAttribute("GiltKey", key)
+	player:SetAttribute("GiltCap", softCap)
+	player:SetAttribute("GiltToday", today)
+	player:SetAttribute("GiltRate", rate)
+end
+
+-- (Build 102) What `earned` Gilt would pay this guest now, exactly as Gilt.pay would: nothing paid.
+function Gilt.quote(player: Player, data: Profiles.Data, earned: number): number
+	local boost, key, softCap, today, rate = factors(player, data)
+	return Rules.giltPaid(earned, boost, key, softCap, today, rate)
+end
+
+-- Pays `earned` Gilt to a profile and returns what was actually paid (after the soft cap).
+function Gilt.pay(player: Player, data: Profiles.Data, earned: number, source: string): number
+	local paid = Gilt.quote(player, data, earned)
+	return Gilt.payExact(player, data, paid, source)
+end
+
+-- (Build 102) Pays exactly `amount` of earned Gilt (a reward already quoted to the guest with
+-- Gilt.quote and shown on their screen), counted toward the day like any earned Gilt.
+function Gilt.payExact(player: Player, data: Profiles.Data, amount: number, source: string): number
+	local paid = math.max(0, math.floor(amount))
+	factors(player, data)
 	data.giltDay.earned += paid
 	data.gilt += paid
 	Analytics.source(player, "Gilt", paid, data.gilt, source)
 	Gilt.changed(player)
 	Gilt.earned(player, paid, true)
+	pcall(Gilt.publish, player, data)
 	return paid
 end
+
+-- (Build 102) The figures above change with the time of day and the boosts running out: kept fresh
+-- on every guest every couple of seconds (an attribute only goes out when it changes).
+task.spawn(function()
+	local Players = game:GetService("Players")
+	while true do
+		task.wait(2)
+		for _, p in Players:GetPlayers() do
+			pcall(Gilt.publish, p, nil)
+		end
+	end
+end)
 
 -- Pays `amount` exactly, with no boost and outside the daily soft cap: what the brainrot squad
 -- earned on its own (server/Brainrots). Returns what was paid.

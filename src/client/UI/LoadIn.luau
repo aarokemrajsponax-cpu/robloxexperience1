@@ -17,6 +17,8 @@ local Ease = require(ReplicatedStorage.Shared.Ease)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Controls = require(script.Parent.Parent.Controls)
 local Root = require(script.Parent.Root)
+local Skyline = require(ReplicatedStorage.Shared.Skyline)
+local Toast = require(script.Parent.Toast)
 
 local LoadIn = {}
 
@@ -27,9 +29,9 @@ local NAME = "MaisonLoadIn"
 
 -- (Build 88) What it does for the guest's Fortune: the one aim of the whole house.
 LoadIn.FORTUNE = {
-	luxe = "Everything you bank at the car goes to your Estate, and your Fortune grows with it.",
-	basement = "Every chamber's purse, and the Treasury's chest, add to your Fortune.",
-	executive = "Beat him and the biggest prize in the house goes to your Estate: your Fortune leaps.",
+	luxe = "Every piece shows its exact Gilt reward. Bank it at the getaway car and exactly that is added to your Gilt.",
+	basement = "Every checkpoint shows its exact Gilt reward before you reach it, and pays exactly that.",
+	executive = "Beat him for the biggest prize in the house, and watch your Fortune leap.",
 } :: { [string]: string }
 
 -- A tip for each, before the first step.
@@ -86,11 +88,9 @@ local function step(row: Frame?, done: boolean)
 	end
 end
 
--- (Build 87) Each place's own loading screen: its colours, its pattern and its words, on a screen
--- of its own that covers the house's keys (they were showing through before). Steal a Luxe: velvet
--- crimson, security lasers sweeping across and a vault dial; the Basement: dark green stone, copper
--- courses of brick and gold chevrons going down; the Executive Suite: midnight blue, a blueprint
--- grid, a scanning line and the four lights of the door's code lighting as it loads.
+-- (Build 87) Each place's own loading screen: its colours and its words, on a screen of its own
+-- that covers the house's keys. (Build 102: the whole screen, a dusk over the city in the place's
+-- own colours, Shared/Skyline; `top`, `bottom` and `motif` are no longer drawn.)
 type Theme = { top: Color3, bottom: Color3, accent: Color3, tag: string, motif: string }
 LoadIn.THEMES = {
 	luxe = { top = Color3.fromRGB(46, 8, 20), bottom = Color3.fromRGB(8, 3, 6), accent = Color3.fromRGB(255, 92, 124), tag = "THE HEIST", motif = "lasers" },
@@ -99,153 +99,71 @@ LoadIn.THEMES = {
 } :: { [string]: Theme }
 local PLAIN: Theme = { top = Color3.fromRGB(28, 22, 14), bottom = Color3.fromRGB(6, 5, 4), accent = GOLD, tag = "", motif = "" }
 
-local function line(parent: Instance, x: number, y: number, w: number, h: number, colour: Color3, t: number, rot: number?): Frame
-	local f = Instance.new("Frame")
-	f.BorderSizePixel = 0
-	f.BackgroundColor3 = colour
-	f.BackgroundTransparency = t
-	f.AnchorPoint = Vector2.new(0.5, 0.5)
-	f.Position = UDim2.fromOffset(x, y)
-	f.Size = UDim2.fromOffset(w, h)
-	f.Rotation = rot or 0
-	f.ZIndex = 60
-	f.Parent = parent
-	return f
-end
-
--- The pattern behind the words, and what moves in it (called each frame with the time and the
--- progress, 0 to 1).
-local function motif(layer: Frame, theme: Theme, size: Vector2): (t: number, f: number) -> ()
-	local W, H = size.X, size.Y
-	local a = theme.accent
-	if theme.motif == "lasers" then
-		local beams = {}
-		for i = 1, 7 do
-			local b = line(layer, W * (i / 8), H / 2, 2, H * 1.6, a, 0.55, -28 + i * 9)
-			table.insert(beams, b)
-		end
-		-- The vault dial, faint, on the right.
-		local dial = Instance.new("Frame")
-		dial.Name = "Dial"
-		dial.AnchorPoint = Vector2.new(0.5, 0.5)
-		dial.Position = UDim2.fromOffset(W * 0.82, H * 0.5)
-		local d = math.floor(math.min(W, H) * 0.62)
-		dial.Size = UDim2.fromOffset(d, d)
-		dial.BackgroundTransparency = 1
-		dial.ZIndex = 60
-		dial.Parent = layer
-		local dc = Instance.new("UICorner")
-		dc.CornerRadius = UDim.new(1, 0)
-		dc.Parent = dial
-		local ds = Instance.new("UIStroke")
-		ds.Color = GOLD
-		ds.Thickness = 6
-		ds.Transparency = 0.82
-		ds.Parent = dial
-		for k = 0, 11 do
-			local n = line(dial, d / 2, d / 2, 4, d * 0.92, GOLD, 0.86, k * 15)
-			n.ZIndex = 60
-		end
-		return function(t: number, _f: number)
-			for i, b in beams do
-				b.Rotation = -28 + i * 9 + math.sin(t * 0.7 + i) * 6
-				b.BackgroundTransparency = 0.5 + 0.3 * (0.5 + 0.5 * math.sin(t * 2 + i * 1.3))
-			end
-			dial.Rotation = t * 12
-		end
-	elseif theme.motif == "bricks" then
-		local rowH = 40
-		local rows = math.ceil(H / rowH) + 1
-		for r = 0, rows do
-			line(layer, W / 2, r * rowH, W, 2, a, 0.86)
-			local shift = if r % 2 == 0 then 0 else 60
-			for x = shift, W, 120 do
-				line(layer, x, r * rowH + rowH / 2, 2, rowH, a, 0.9)
-			end
-		end
-		-- Gold chevrons, going down, on the right.
-		local chevrons = {}
-		for k = 1, 5 do
-			local y = H * 0.24 + k * 46
-			local l1 = line(layer, W * 0.86 - 13, y, 34, 6, GOLD, 0.4, 35)
-			local l2 = line(layer, W * 0.86 + 13, y, 34, 6, GOLD, 0.4, -35)
-			table.insert(chevrons, { l1, l2 })
-		end
-		return function(t: number, _f: number)
-			for k, pair in chevrons do
-				local glow = 0.15 + 0.7 * (0.5 - 0.5 * math.sin(t * 4 - k * 0.9))
-				pair[1].BackgroundTransparency = glow
-				pair[2].BackgroundTransparency = glow
-			end
-		end
-	elseif theme.motif == "grid" then
-		for x = 0, W, 48 do
-			line(layer, x, H / 2, 1, H, a, 0.88)
-		end
-		for y = 0, H, 48 do
-			line(layer, W / 2, y, W, 1, a, 0.88)
-		end
-		local scan = line(layer, W / 2, 0, W, 3, a, 0.35)
-		-- The door's four code lights, lighting as the Suite loads.
-		local lights = {}
-		for k = 1, 4 do
-			local box = line(layer, W * 0.82 + (k - 2.5) * 46, H * 0.5, 36, 48, Color3.fromRGB(8, 14, 30), 0.1)
-			local s = Instance.new("UIStroke")
-			s.Color = a
-			s.Thickness = 2
-			s.Transparency = 0.3
-			s.Parent = box
-			local c = Instance.new("UICorner")
-			c.CornerRadius = UDim.new(0, 6)
-			c.Parent = box
-			local dot = line(box, 18, 24, 12, 12, a, 0.85)
-			local dc = Instance.new("UICorner")
-			dc.CornerRadius = UDim.new(1, 0)
-			dc.Parent = dot
-			table.insert(lights, dot)
-		end
-		return function(t: number, f: number)
-			scan.Position = UDim2.fromOffset(W / 2, (t * 140) % H)
-			for k, dot in lights do
-				dot.BackgroundTransparency = if f >= k / 4.4 then 0 else 0.85
-			end
-		end
-	end
-	return function(_t: number, _f: number) end
-end
-
 -- Shows the card for `id` and starts making the place ready. `seconds`: the least the server holds.
 -- `after`: what to do once the guest can move (the first-visit card, a line).
 function LoadIn.start(id: string, seconds: number, after: (() -> ())?)
 	LoadIn.finish(true)
+	-- (Build 102) Notices wait until it's gone (they showed over it before).
+	Toast.hold(true)
 	local def = AttractionList.byId[id]
 	local size = Root.size()
 	local wasControls = Controls.wanted()
 	Controls.set(false)
 	local theme = LoadIn.THEMES[id] or PLAIN
 
-	-- The whole screen, the place's own colours, over everything of the house's.
+	-- (Build 102) The whole screen, truly: a layer of its own over everything (Roblox's top bar
+	-- and the phone's notch included), not the HUD's scaled layer, where a "full screen" frame came
+	-- out as a smaller card. The background fills it at any shape of screen; the words and the
+	-- pattern sit on a stage scaled like the rest of the house's lettering, centred, never stretched.
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "MaisonLoadScreen"
+	gui.IgnoreGuiInset = true
+	gui.ScreenInsets = Enum.ScreenInsets.None
+	gui.ResetOnSpawn = false
+	gui.DisplayOrder = 95
+	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	gui.Parent = Root.hud.Parent
 	local shade = Instance.new("Frame")
 	shade.Name = NAME
 	shade.Size = UDim2.fromScale(1, 1)
-	shade.BackgroundColor3 = Color3.new(1, 1, 1)
+	shade.BackgroundColor3 = Color3.fromRGB(6, 4, 12)
 	shade.BackgroundTransparency = 0
 	shade.BorderSizePixel = 0
 	shade.ZIndex = 60
 	shade.Active = true
-	shade.Parent = Root.hud
-	local fade = Instance.new("UIGradient")
-	fade.Rotation = 90
-	fade.Color = ColorSequence.new(theme.top, theme.bottom)
-	fade.Parent = shade
-	local layer = Instance.new("Frame")
-	layer.Name = "Motif"
-	layer.BackgroundTransparency = 1
-	layer.Size = UDim2.fromScale(1, 1)
-	layer.ClipsDescendants = true
-	layer.ZIndex = 60
-	layer.Parent = shade
-	local moving = motif(layer, theme, size)
+	shade.Parent = gui
+	-- (Build 102) The place's own dusk over the city, edge to edge in the screen's real pixels
+	-- (Shared/Skyline): a sky, a low sun or the moon, the skyline, the water, palms and the
+	-- promenade's lights, all moving gently while it loads. Fewer lights on a phone.
+	local camera = Workspace.CurrentCamera
+	local pixels = if camera then camera.ViewportSize else size * Root.scale
+	local scene = Skyline.build(shade, id, pixels, Root.phone())
+	-- The words' stage: the whole screen, its lettering a size up on a phone so every line reads.
+	local sc = if Root.phone() then math.max(Root.scale, 0.8) else Root.scale
+	size = Vector2.new(pixels.X / sc, pixels.Y / sc)
+	-- A shade down the left (and along the foot) so the words read over any part of the scene.
+	local scrim = Instance.new("Frame")
+	scrim.Name = "Scrim"
+	scrim.Size = UDim2.fromScale(1, 1)
+	scrim.BackgroundColor3 = Color3.new(0, 0, 0)
+	scrim.BorderSizePixel = 0
+	scrim.ZIndex = 59
+	scrim.Parent = shade
+	local sg = Instance.new("UIGradient")
+	sg.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.18), NumberSequenceKeypoint.new(0.45, 0.42), NumberSequenceKeypoint.new(0.75, 1), NumberSequenceKeypoint.new(1, 1) })
+	sg.Parent = scrim
+	local stage = Instance.new("Frame")
+	stage.Name = "Stage"
+	stage.BackgroundTransparency = 1
+	stage.AnchorPoint = Vector2.new(0.5, 0.5)
+	stage.Position = UDim2.fromScale(0.5, 0.5)
+	stage.Size = UDim2.fromOffset(size.X, size.Y)
+	stage.ZIndex = 60
+	stage.Parent = shade
+	local stageScale = Instance.new("UIScale")
+	stageScale.Scale = sc
+	stageScale.Parent = stage
+	local moving = scene.step
 
 	-- The words, on the left of the middle: what's coming, the name, the line.
 	local narrow = size.X < 700
@@ -257,14 +175,19 @@ function LoadIn.start(id: string, seconds: number, after: (() -> ())?)
 	col.Size = UDim2.fromOffset(w, 300)
 	col.BackgroundTransparency = 1
 	col.ZIndex = 61
-	col.Parent = shade
+	col.Parent = stage
 	local align = if narrow then Enum.TextXAlignment.Center else Enum.TextXAlignment.Left
 	local kicker = label(col, "Kicker", "NOW ENTERING" .. (if theme.tag ~= "" then "  ·  " .. theme.tag else ""), 12, Brand.Fonts.heavy, theme.accent, 0)
 	kicker.TextXAlignment = align
-	local titleSize = math.clamp(math.floor(w / math.max(8, #(if def then def.name else "")) * 1.5), 30, 52)
+	local titleSize = math.clamp(math.floor(w / math.max(8, #(if def then def.name else "")) * 1.6), 32, 64)
 	local title = label(col, "Title", string.upper(if def then def.name else ""), titleSize, Brand.Fonts.display, C.bone, 20)
 	title.TextScaled = false
 	title.TextXAlignment = align
+	-- (Build 102) The name in light gold, bright at the top, as if lit by the low sun.
+	local metal = Instance.new("UIGradient")
+	metal.Rotation = 90
+	metal.Color = ColorSequence.new(Color3.fromRGB(255, 248, 230), Color3.fromRGB(240, 200, 120))
+	metal.Parent = title
 	local bar = Instance.new("Frame")
 	bar.Name = "Rule"
 	bar.BorderSizePixel = 0
@@ -277,7 +200,8 @@ function LoadIn.start(id: string, seconds: number, after: (() -> ())?)
 	local lineLabel = label(col, "Line", if def then def.line else "", 15, Brand.Fonts.body, Color3.fromRGB(226, 218, 204), 42 + titleSize)
 	lineLabel.Size = UDim2.new(1, 0, 0, 42)
 	lineLabel.TextXAlignment = align
-	local top = 92 + titleSize
+	-- (Room above the line for how far along it is.)
+	local top = 112 + titleSize
 
 	-- The progress: a line in the place's colour filling over the hold.
 	local track = Instance.new("Frame")
@@ -388,19 +312,47 @@ function LoadIn.start(id: string, seconds: number, after: (() -> ())?)
 		fl.Size = UDim2.new(1, 0, 0, 36)
 		fl.TextXAlignment = align
 	end
-	-- The house's name, small, at the foot.
-	local mark = label(shade, "Brand", string.upper(Brand.Title), 11, Brand.Fonts.heavy, Color3.fromRGB(200, 186, 160), size.Y - 30)
-	mark.TextTransparency = 0.3
+	-- The game's name at the foot, with a turning ring of light beside how far along it is.
+	local mark = label(stage, "Brand", "◆  " .. Brand.Name, 13, Brand.Fonts.heavy, Color3.fromRGB(240, 214, 150), 22)
+	-- (At the top right: Roblox's own buttons sit at the top left.)
+	mark.AnchorPoint = Vector2.new(1, 0)
+	mark.Position = UDim2.fromOffset(size.X - math.max(32, size.X * 0.05), 22)
+	mark.Size = UDim2.fromOffset(math.min(420, size.X * 0.6), 22)
+	mark.TextXAlignment = Enum.TextXAlignment.Right
+	local percent = label(col, "Percent", "LOADING  0%", 11, Brand.Fonts.heavy, theme.accent, top - 18)
+	percent.TextXAlignment = if narrow then Enum.TextXAlignment.Center else Enum.TextXAlignment.Right
+	local ring = Instance.new("Frame")
+	ring.Name = "Spinner"
+	ring.AnchorPoint = Vector2.new(0.5, 0.5)
+	ring.Position = UDim2.new(1, -36, 1, -40)
+	ring.Size = UDim2.fromOffset(28, 28)
+	ring.BackgroundTransparency = 1
+	ring.ZIndex = 62
+	ring.Parent = stage
+	local rc = Instance.new("UICorner")
+	rc.CornerRadius = UDim.new(1, 0)
+	rc.Parent = ring
+	local rs = Instance.new("UIStroke")
+	rs.Color = theme.accent
+	rs.Thickness = 3
+	rs.Parent = ring
+	local arc = Instance.new("UIGradient")
+	arc.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.5, 0.2), NumberSequenceKeypoint.new(0.51, 1), NumberSequenceKeypoint.new(1, 1) })
+	arc.Parent = rs
 
-	local state: { [string]: any } = { id = id, shade = shade, fill = fill, rows = rows, from = os.clock(), seconds = math.max(0.5, seconds), after = after, controls = wasControls, ready = false }
+	-- (Build 102) Real progress, not a clock: what's actually ready moves the line. Finding the
+	-- place's model is the first third; each texture, mesh and sound as it arrives moves it on
+	-- through the second; the server letting the guest in fills it.
+	local state: { [string]: any } = { id = id, shade = shade, gui = gui, fill = fill, rows = rows, from = os.clock(), seconds = math.max(0.5, seconds), after = after, controls = wasControls, ready = false, target = 0.06, shownAt = 0, assets = 0 }
 	shown = state
 
-	-- The progress line, kept up to the moment (it waits short of the end until the server lets go),
-	-- and the place's pattern moving behind it.
-	state.beat = RunService.Heartbeat:Connect(function()
-		local f = math.clamp((os.clock() - state.from) / state.seconds, 0, 0.96)
-		fill.Size = UDim2.fromScale(f, 1)
-		pcall(moving, os.clock() - state.from, f)
+	state.beat = RunService.Heartbeat:Connect(function(dt: number)
+		local goal = math.clamp(state.target, 0, 1)
+		state.shownAt += (goal - state.shownAt) * math.min(1, dt * 6)
+		fill.Size = UDim2.fromScale(state.shownAt, 1)
+		percent.Text = string.format("LOADING  %d%%", math.floor(state.shownAt * 100 + 0.5))
+		arc.Rotation = (arc.Rotation + dt * 240) % 360
+		pcall(moving, os.clock() - state.from)
 	end)
 
 	-- Make the place ready: its model on this screen, then its assets; then say so to the server.
@@ -418,11 +370,15 @@ function LoadIn.start(id: string, seconds: number, after: (() -> ())?)
 			return
 		end
 		step(rows.rooms, model ~= nil)
+		state.target = 0.35
 		if model then
 			local done = false
 			task.spawn(function()
 				pcall(function()
-					ContentProvider:PreloadAsync({ model })
+					ContentProvider:PreloadAsync({ model }, function()
+						state.assets += 1
+						state.target = 0.35 + 0.5 * (1 - math.exp(-state.assets / 25))
+					end)
 				end)
 				done = true
 			end)
@@ -435,6 +391,7 @@ function LoadIn.start(id: string, seconds: number, after: (() -> ())?)
 			return
 		end
 		step(rows.assets, true)
+		state.target = 0.9
 		state.ready = true
 		pcall(function()
 			Remotes.func("AttractionAsk"):InvokeServer({ op = "ready", id = id })
@@ -452,16 +409,24 @@ function LoadIn.finish(quiet: boolean?)
 	if state.beat then
 		state.beat:Disconnect()
 	end
+	task.delay(if quiet then 0 else 0.6, Toast.hold, false)
 	Controls.set(state.controls ~= false)
 	local shade = state.shade :: Frame
+	local gui = state.gui :: ScreenGui
 	if quiet then
-		shade:Destroy()
+		gui:Destroy()
 		return
 	end
+	state.target = 1
 	step(state.rows.rooms, true)
 	step(state.rows.assets, true)
 	step(state.rows.ready, true)
 	state.fill.Size = UDim2.fromScale(1, 1)
+	for _, d in shade:GetDescendants() do
+		if d:IsA("UIStroke") then
+			Ease.play(d, Ease.info(0.45, Enum.EasingStyle.Quad), { Transparency = 1 })
+		end
+	end
 	Ease.play(shade, Ease.info(0.45, Enum.EasingStyle.Quad), { BackgroundTransparency = 1 })
 	for _, d in shade:GetDescendants() do
 		if d:IsA("TextLabel") then
@@ -471,7 +436,7 @@ function LoadIn.finish(quiet: boolean?)
 		end
 	end
 	task.delay(0.5, function()
-		shade:Destroy()
+		gui:Destroy()
 	end)
 	local after = state.after
 	if after then

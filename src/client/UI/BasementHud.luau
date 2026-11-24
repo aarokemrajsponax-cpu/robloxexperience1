@@ -27,7 +27,7 @@ local BasementHud = {}
 local C = Brand.Colours
 local GOLD = Color3.fromRGB(255, 204, 90)
 local CARD_W = 340
-local CARD_H = 96
+local CARD_H = 116
 local SKIP = "BasementSkip"
 
 local card: Frame? = nil
@@ -112,6 +112,15 @@ local function draw()
 	parts.best.Text = if tonumber(view.best) then "BEST " .. Plan.clock(view.best) else "NO BEST YET"
 	parts.falls.Text = string.format("FALLS %d", tonumber(view.falls) or 0) .. (if tonumber(view.secretsOf) then string.format("  ·  SECRETS %d / %d", tonumber(view.secrets) or 0, view.secretsOf) else "") .. (if view.assisted then "  ·  SKIPPED: NOT TIMED" else "")
 	BasementHud.courseLine()
+	local reward = parts.reward :: TextLabel?
+	if reward then
+		local raw = tonumber(view.nextRaw)
+		if raw and not view.done then
+			reward.Text = string.format("NEXT CHECKPOINT  ·  REWARD +%s GILT", Rules.format(Rules.quoteFor(game:GetService("Players").LocalPlayer, raw)))
+		else
+			reward.Text = ""
+		end
+	end
 	local skipKey = parts.skipKey :: TextButton?
 	if skipKey then
 		local heldNow = tonumber(view.skips) or 0
@@ -211,7 +220,9 @@ function BasementHud.mount()
 	-- server, and the time is told at the Treasury; the best time stays here.)
 	parts.best = label(c, "Best", "", 10, Brand.Fonts.bodyBold, GOLD, 44)
 	parts.falls = label(c, "Falls", "", 10, Brand.Fonts.bodyBold, C.smoke, 44, Enum.TextXAlignment.Right)
-	parts.course = label(c, "Course", "", 10, Brand.Fonts.bodyBold, C.bone, 64)
+	-- (Build 102) What the next checkpoint pays, exactly, in Gilt: the biggest thing on the card.
+	parts.reward = label(c, "Reward", "", 14, Brand.Fonts.heavy, Color3.fromRGB(255, 214, 120), 60)
+	parts.course = label(c, "Course", "", 10, Brand.Fonts.bodyBold, C.bone, 84)
 	card = c
 
 	local k = Instance.new("Frame")
@@ -306,7 +317,7 @@ function BasementHud.on(m: { [string]: any })
 		local n = tonumber(m.n) or 0
 		local purse = tonumber(m.purse) or 0
 		if purse > 0 then
-			Toast.show(tostring(m.zone) .. ", done", string.format("%s to your Estate  ·  checkpoint %d", Rules.format(purse), n), 4)
+			Toast.show(tostring(m.zone) .. ", done", string.format("+%s Gilt  ·  checkpoint %d", Rules.format(tonumber(m.gilt) or 0), n), 4)
 		elseif n < Plan.STAGES then
 			Toast.show(string.format("Checkpoint %d", n), if m.skipped then string.format("Skipped: +%s Gilt", Rules.format(tonumber(m.gilt) or 0)) elseif (tonumber(m.gilt) or 0) > 0 then string.format("+%s Gilt", Rules.format(m.gilt)) else "Reached.", 2)
 		end

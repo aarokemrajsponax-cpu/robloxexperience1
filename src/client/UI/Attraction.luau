@@ -264,10 +264,12 @@ function Attraction.start()
 					end
 				end)
 			elseif def then
+				local held = tonumber(m.hold) ~= nil
 				local function greet()
 					if first then
 						FirstVisit.attraction(def.id)
-					else
+					elseif not held then
+						-- (Build 102: not after its loading screen, which has just said the same.)
 						Toast.show(def.name, def.line, 6)
 					end
 				end

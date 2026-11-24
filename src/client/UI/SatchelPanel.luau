@@ -94,13 +94,15 @@ function SatchelPanel.show(visible: boolean, count: number)
 		local b = Instance.new("TextButton")
 		b.Name = "SatchelKey"
 		b.AnchorPoint = Vector2.new(0.5, 1)
-		b.Position = UDim2.new(0.5, 0, 1, -10)
-		b.Size = UDim2.fromOffset(64, 64)
+		b.Position = UDim2.new(0.5, 0, 1, -6)
+		-- (Smaller on a phone, where the foot of the screen is precious.)
+		local side = if Root.phone() then 50 else 64
+		b.Size = UDim2.fromOffset(side, side)
 		b.AutoButtonColor = true
 		b.BackgroundColor3 = GRAPHITE
 		b.BackgroundTransparency = 0.05
 		b.Text = "👜"
-		b.TextSize = 30
+		b.TextSize = if Root.phone() then 24 else 30
 		b.Font = Enum.Font.GothamBold
 		b.TextColor3 = GOLD
 		local corner = Instance.new("UICorner")

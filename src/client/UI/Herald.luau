@@ -127,6 +127,10 @@ function Herald.start()
 			return
 		end
 		if m.op == "feat" and type(m.line) == "string" then
+			-- (Build 102) Not over the Home Screen.
+			if not require(script.Parent.Announce).ready() then
+				return
+			end
 			table.insert(waiting, m)
 			while #waiting > 4 do
 				table.remove(waiting, 1)

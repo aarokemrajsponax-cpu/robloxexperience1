@@ -571,12 +571,28 @@ for _, p in bag do
 end
 local estateWas = Fortune.page(data(ava)).estate
 local giltWas = giltOf(ava)
+-- (Build 102) What each piece said it would pay, as it was lifted (and the HUD's bag total).
+local shownGilt = 0
+for _, m in ava.inbox do
+	if m.op == "took" then
+		shownGilt += tonumber(m.gilt) or 0
+	end
+end
+local hudGilt = nil
+for i = #ava.inbox, 1, -1 do
+	if ava.inbox[i].op == "luxe" then
+		hudGilt = ava.inbox[i].gilt
+		break
+	end
+end
 standIn(ava, Vector3.new(0, 0, -108))
 steps(2)
 local banked = last(ava, "banked")
 check("walking up to the car with the bag banks it", banked ~= nil and banked.worth == worth and #Luxe.runs[ava].bag == 0, banked and banked.worth)
 check("its whole worth goes to the Estate", Fortune.page(data(ava)).estate == estateWas + worth, Fortune.page(data(ava)).estate)
 check("and a fifth of it to the purse in Gilt", giltOf(ava) - giltWas == banked.gilt and banked.gilt > 0 and banked.gilt <= math.floor(worth * Config.data.Fortune.cashShare + 0.5) * 2)
+check("Build 102: the Gilt credited is exactly what the pieces showed as they were lifted (the car: no getaway bonus)", shownGilt > 0 and banked.giltPieces == shownGilt and banked.giltBonus == 0 and banked.gilt == shownGilt and giltOf(ava) - giltWas == shownGilt, shownGilt .. " / " .. tostring(banked.gilt))
+check("Build 102: ...and the HUD's bag total said the same before banking", hudGilt == shownGilt, tostring(hudGilt))
 check("the haul is kept: one haul, its worth, the best", page(ava).hauls == 1 and page(ava).banked == worth and page(ava).best == worth)
 check("the first haul is a record", banked.record == true)
 check("(Build 96) the very first haul is marked first, for the big celebration, and not big or massive", banked.first == true and banked.size == nil)

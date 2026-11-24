@@ -217,7 +217,6 @@ function Celebrate.haul(m: { [string]: any }): string?
 		return nil
 	end
 	local words = HAUL_WORDS[kind]
-	local worth = tonumber(m.worth) or 0
 	local gilt = tonumber(m.gilt) or 0
 	local gui = screen()
 	local old = gui:FindFirstChild("Haul")
@@ -284,7 +283,8 @@ function Celebrate.haul(m: { [string]: any }): string?
 	line.TextScaled = true
 	line.TextColor3 = Color3.new(1, 1, 1)
 	line.TextStrokeTransparency = 0.4
-	line.Text = string.format("%s  ·  +%s Gilt", words.line, format(gilt))
+	-- (Build 102) The big number is the exact Gilt credited; no Estate sums to work out.
+	line.Text = words.line
 	line.Parent = box
 	if kind == "first" then
 		local key = Instance.new("TextButton")
@@ -325,10 +325,10 @@ function Celebrate.haul(m: { [string]: any }): string?
 			if not box.Parent then
 				return
 			end
-			amount.Text = "+" .. format(worth * i / steps)
+			amount.Text = "+" .. format(gilt * i / steps) .. " GILT"
 			task.wait(0.04)
 		end
-		amount.Text = "+" .. format(worth)
+		amount.Text = "+" .. format(gilt) .. " GILT"
 	end)
 	Flakes.fall({
 		seconds = if big then 4.5 else 3,

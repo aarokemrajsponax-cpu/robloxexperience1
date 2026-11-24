@@ -161,6 +161,7 @@ type Spot = { spot: Plan.Spot, top: BasePart, piece: Plan.Piece?, model: Model?,
 type Goal = { id: string, done: boolean }
 type Run = {
 	bag: { Plan.Piece },
+	giltOf: { number }?, -- (Build 102) each piece's Gilt, quoted and locked as it was lifted
 	from: { number },
 	grace: number,
 	since: number,
@@ -347,8 +348,11 @@ local function summary(ctx: Types.Ctx, player: Player, run: Run): { [string]: an
 	local data = ctx.data(player)
 	local p = if data then page(ctx, data) else nil
 	local bag = {}
-	for _, piece in run.bag do
-		table.insert(bag, { id = piece.id, name = piece.name, glyph = piece.glyph, rarity = piece.rarity, worth = piece.worth })
+	local bagGilt = 0
+	for i, piece in run.bag do
+		local g = (run.giltOf or {})[i] or 0
+		bagGilt += g
+		table.insert(bag, { id = piece.id, name = piece.name, glyph = piece.glyph, rarity = piece.rarity, worth = piece.worth, gilt = g })
 	end
 	local at = ctx.at(player, ID)
 	local wing = if at then Plan.wingAt(at) else nil
@@ -370,6 +374,7 @@ local function summary(ctx: Types.Ctx, player: Player, run: Run): { [string]: an
 		bag = bag,
 		capacity = if p then c.bag[p.bag] else c.bag[1],
 		worth = worthOf(run.bag),
+		gilt = bagGilt, -- (Build 102) the bag's exact Gilt on banking
 		bonus = if p then c.banker[p.banker] else 0,
 		wing = if wing then Plan.Wings[wing].name else "The courtyard",
 		watched = math.floor(run.watched * 20 + 0.5) / 20,
@@ -697,11 +702,17 @@ function Luxe.take(ctx: Types.Ctx, player: Player, spotId: number): { [string]: 
 			return { ok = false, why = "Hold it a moment longer." }
 		end
 	end
+	-- (Build 102) Its Gilt, worked out now (the banker's bonus and every boost in it, the same sum
+	-- the screen showed) and kept: banking pays exactly this.
+	local bankerBonus = if data then (c.banker[page(ctx, data).banker] or 0) else 0
+	local gilt = ctx.giltQuote(player, Fortune.cash(math.floor(piece.worth * (1 + bankerBonus) + 0.5)))
+	run.giltOf = run.giltOf or {}
 	table.insert(run.bag, piece)
+	table.insert(run.giltOf :: { number }, gilt)
 	table.insert(run.from, spotId)
 	clearSpot(s, c.respawn)
 	resetSpeed(ctx, player, run)
-	ctx.send(player, { op = "took", piece = piece.id, name = piece.name, glyph = piece.glyph, rarity = piece.rarity, worth = piece.worth, at = top, mass = piece.mass or 0 })
+	ctx.send(player, { op = "took", piece = piece.id, name = piece.name, glyph = piece.glyph, rarity = piece.rarity, worth = piece.worth, gilt = gilt, at = top, mass = piece.mass or 0 })
 	ctx.tally(player, "luxeTaken", 1)
 	note(player, "Luxe taken", { piece = piece.id, rarity = piece.rarity, wing = s.spot.wing })
 	local wing = s.spot.wing
@@ -749,6 +760,7 @@ local function drop(ctx: Types.Ctx, run: Run)
 		end
 	end
 	run.bag = {}
+	run.giltOf = {}
 	run.from = {}
 end
 
@@ -803,13 +815,20 @@ local function bank(ctx: Types.Ctx, player: Player, run: Run, way: Plan.Bank?)
 	local bonus = (c.banker[p.banker] or 0) + (route.bonus or 0)
 	local base = worthOf(run.bag)
 	local worth = math.floor(base * (1 + bonus) + 0.5)
+	-- (Build 102) The Gilt: exactly what each piece said as it was lifted (shown on the screen
+	-- since), and the getaway's own bonus on top, said as such. The worth still goes to the Estate.
+	local lockedGilt = 0
+	for i in run.bag do
+		lockedGilt += (run.giltOf or {})[i] or 0
+	end
+	local routeGilt = if (route.bonus or 0) > 0 then ctx.giltQuote(player, Fortune.cash(math.floor(base * (route.bonus or 0) + 0.5))) else 0
 	local pieces = {}
 	local crown = false
 	local brainrots = {}
 	local finds = {}
 	local bestOrder = 0
 	for _, piece in run.bag do
-		table.insert(pieces, { id = piece.id, name = piece.name, glyph = piece.glyph, rarity = piece.rarity, worth = piece.worth })
+		table.insert(pieces, { id = piece.id, name = piece.name, glyph = piece.glyph, rarity = piece.rarity, worth = piece.worth, gilt = (run.giltOf or {})[#pieces + 1] or 0 })
 		if piece.id == "crownJewel" then
 			crown = true
 		end
@@ -862,12 +881,14 @@ local function bank(ctx: Types.Ctx, player: Player, run: Run, way: Plan.Bank?)
 		p.lifted[tostring(spotId)] = wall + c.respawn
 	end
 	run.bag = {}
+	run.giltOf = {}
 	run.from = {}
 	stopChasing(player)
 	run.chasedBy = 0
 	run.spotted = false
 	run.awake = false
-	local gilt = ctx.estate(player, worth, "Steal a Luxe")
+	ctx.estate(player, worth, "Steal a Luxe", false)
+	local gilt = ctx.giltExact(player, lockedGilt + routeGilt, "Steal a Luxe")
 	local record = worth > p.best
 	-- (Build 96) How big a moment this is, decided here from the guest's own record: their very
 	-- first haul (whatever it's worth), or one far above their usual (twice their average haul is
@@ -894,7 +915,7 @@ local function bank(ctx: Types.Ctx, player: Player, run: Run, way: Plan.Bank?)
 			end
 		end
 	end
-	ctx.send(player, { op = "banked", worth = worth, base = base, bonus = bonus, gilt = gilt, pieces = pieces, brainrots = brainrots, record = record, route = route.id, routeName = route.name, finds = finds, fresh = fresh, collected = have, total = total, sets = sets, rankUp = if rankNow > rankBefore then Plan.Ranks[rankNow].name else nil, first = first, size = size })
+	ctx.send(player, { op = "banked", worth = worth, base = base, bonus = bonus, gilt = gilt, giltPieces = lockedGilt, giltBonus = routeGilt, pieces = pieces, brainrots = brainrots, record = record, route = route.id, routeName = route.name, finds = finds, fresh = fresh, collected = have, total = total, sets = sets, rankUp = if rankNow > rankBefore then Plan.Ranks[rankNow].name else nil, first = first, size = size })
 	note(player, "Luxe banked", { route = route.id, worth = worth, pieces = count })
 	if route.id == "van" then
 		complete(ctx, player, run, "van")

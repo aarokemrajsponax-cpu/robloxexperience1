@@ -108,6 +108,10 @@ end
 function State.setPhase(phase: string)
 	State.phase = phase
 	phaseChanged:Fire(phase)
+	-- (Build 102) The house is up (the Home Screen, or play): the first loading screen may go.
+	pcall(function()
+		game:GetService("ReplicatedFirst"):SetAttribute("HouseReady", true)
+	end)
 end
 
 function State.isFirstVisit(): boolean

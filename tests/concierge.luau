@@ -101,7 +101,8 @@ run(function()
 	Concierge.greet(ada, true)
 end)
 local said = lastLine(ada)
-check("1. a first visit: welcomed at once, with the house's aim, and offered the tour", said ~= nil and string.find(said.line, "richest guest", 1, true) ~= nil and choiceIds(said).tour ~= nil)
+check("1. Build 102: a first visit: welcomed at once, told about House Tour, never pushed into a tour (no keys)", said ~= nil and string.find(said.line, "House Tour", 1, true) ~= nil and next(choiceIds(said)) == nil)
+check("...and no tour starts by itself", Concierge.autoTour(ada) == false and not Concierge.isTouring(ada))
 check("...a new guest's tour covers what's new (they won't be offered it again)", profiles[ada].Data.flags.news72 == true)
 
 ---------------------------------------------------------------------------------------------------

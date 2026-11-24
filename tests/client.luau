@@ -1586,7 +1586,7 @@ do
 		signalOf(LocalPlayer, "attr:" .. a):Fire()
 	end
 	advance(0.3)
-	check("the Home Screen: WELCOME TO MAISON NOIR", TitleM.isShowing() and textOnScreen("Welcome to the Maison") ~= nil and textOnScreen("BECOME THE") ~= nil)
+	check("the Home Screen: WELCOME TO, BECOME THE RICHEST GUEST (Build 102: no Maison Noir)", TitleM.isShowing() and textOnScreen("Welcome to") ~= nil and textOnScreen("BECOME THE") ~= nil and textOnScreen("Maison Noir") == nil)
 	check("...the guest's own Gilt, Gems and level, live", textOnScreen("40,350") ~= nil and textOnScreen("120") ~= nil and textOnScreen("LV 24") ~= nil)
 	local function key(text)
 		return find(playerGui, function(d)
@@ -1716,7 +1716,8 @@ do
 		end
 		return true
 	end)())
-	check("...and on a first evening, the line about the Concierge and the gold arrow", textOnScreen("The Concierge will show you round") ~= nil)
+	check("...and on a first evening, the line about House Tour (Build 102: no forced tour)", textOnScreen("Press House Tour for a walk round the house") ~= nil)
+	check("Build 102: its kicker is the game's name, never Maison Noir", textOnScreen("BECOME THE RICHEST GUEST") ~= nil and textOnScreen("MAISON  NOIR") == nil)
 	check("...drawn on this guest's screen only (their own PlayerGui; the ring of light in their own camera)", welcomeGui and welcomeGui.Parent == playerGui)
 	advance(1)
 	snapshot("welcome")
@@ -1750,35 +1751,44 @@ do
 	local spawnAt = Vector3.new(-20, 6, 12) * GRAND()
 	moveGuest(spawnAt)
 	advance(2.5)
-	check("a first evening: the gold arrow to the Concierge is up", Guide.active())
-	local bb = playerGui:FindFirstChild("MaisonConciergeGuide")
-	check("over the Concierge: THE CONCIERGE, follow the gold arrow to him, and a chevron", bb ~= nil and bb.Adornee == chead and bb.AlwaysOnTop == true and textOnScreen("Follow the gold arrow to him") ~= nil and bb:FindFirstChild("Chevron") ~= nil)
-	-- Start here: the whole game in three plain steps, and Show me the way.
-	advance(3)
-	check("a new guest gets Start here: the game in three plain steps (the attractions, not sorting)", textOnScreen("Meet the Concierge") ~= nil and textOnScreen("Pick an attraction") ~= nil and textOnScreen("Build your fortune") ~= nil and textOnScreen("Show me the house") ~= nil and textOnScreen("Sort the treasures") == nil, textOnScreen("Meet the Concierge") ~= nil)
+	-- (Build 102) No forced onboarding: no arrow by itself, no Start here, no tour pushed. The HOUSE
+	-- TOUR key is there, and on a first visit the gold hand points at it for exactly 14 seconds.
+	check("Build 102: a first visit: no arrow to the Concierge by itself, no Start here", not Guide.active() and textOnScreen("Meet the Concierge") == nil and textOnScreen("Start here") == nil)
 	do
-		-- (Build 98) Its gold key is Show me the house: glowing, with the hand pointing at it.
 		local HandM = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "GuideHand")
-		local goKey = find(playerGui, function(d)
-			return d:IsA("TextButton") and d.Name == "ShowMeTheHouse"
-		end)
-		advance(0.3)
-		check("Build 98: Start here's key is Show me the house, glowing", goKey ~= nil and find(goKey, function(d)
-			return d:IsA("UIStroke") and d.Name == "GoldGlow"
-		end) ~= nil)
-		check("Build 98: ...with the pointing hand on it", HandM.active() and HandM.target() == goKey and textOnScreen("Start here") ~= nil)
-		snapshot("start-here")
-		-- Pressed: the tour itself (How to play's Show me the house: there, then it starts).
+		local DockM = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "QuickDock")
+		local tourKey = DockM.tourTarget()
+		check("Build 102: the HOUSE TOUR key is there for everyone", tourKey ~= nil and tourKey.Name == "HouseTourKey" and textOnScreen("HOUSE TOUR") ~= nil)
+		local waited = 0
+		while not HandM.active() and waited < 40 do
+			advance(0.5)
+			waited += 0.5
+		end
+		check("Build 102: ...a new guest's gold hand points at it", HandM.active() and HandM.target() == tourKey, waited)
+		snapshot("house-tour-hand")
+		advance(13.4)
+		check("...still pointing just before 14 seconds", HandM.active() and HandM.target() == tourKey)
+		advance(1)
+		check("...and gone by itself at 14 seconds", not HandM.active())
 		local HowM = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "HowToPlay")
 		local realTour, toured = HowM.tour, 0
 		HowM.tour = function()
 			toured += 1
 		end
-		press("Show me the house")
-		advance(0.6)
+		if tourKey then
+			signalOf(tourKey, "Activated"):Fire()
+		end
+		advance(0.3)
 		HowM.tour = realTour
-		check("Build 98: ...pressed, it closes and starts the tour (no second trip to the Concierge)", textOnScreen("Meet the Concierge") == nil and toured == 1 and not HandM.active())
+		check("Build 102: pressing HOUSE TOUR starts the optional tour", toured == 1)
 	end
+	-- The gold arrow to the Concierge still works when something asks for it (it never starts by
+	-- itself any more).
+	Guide.start()
+	advance(0.5)
+	check("asked for, the gold arrow to the Concierge is up", Guide.active())
+	local bb = playerGui:FindFirstChild("MaisonConciergeGuide")
+	check("over the Concierge: THE CONCIERGE, follow the gold arrow to him, and a chevron", bb ~= nil and bb.Adornee == chead and bb.AlwaysOnTop == true and textOnScreen("Follow the gold arrow to him") ~= nil and bb:FindFirstChild("Chevron") ~= nil)
 	check("the card under the keys says the same: talk to the Concierge", textOnScreen("Talk to the Concierge") ~= nil)
 	-- (Build 98) Wandered far from him while the arrow is up: a quiet note to head back.
 	moveGuest(home + Vector3.new(160, 3, 0))
@@ -1790,7 +1800,7 @@ do
 	-- His key says what to pick, for a guest still new to the house.
 	local PromptsM = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "Prompts")
 	speak.ObjectText = "The Concierge"
-	check("the Concierge's key says Show me the house to a new guest", PromptsM.actionFor(speak) == "Show me the house")
+	check("Build 102: the Concierge's key says what it always says (no tour pushed)", PromptsM.actionFor(speak) == nil)
 	local folder = camera:FindFirstChild("MaisonConciergeGuide")
 	local arrows = {}
 	for _, p in (folder and folder:GetChildren() or {}) do
@@ -1888,7 +1898,9 @@ do
 	local backpack = LocalPlayer.Backpack
 	local coreGui = services.StarterGui.shown
 	advance(0.5)
-	check("the hotbar is out in play (Roblox's own inventory)", coreGui["Enum.CoreGuiType.Backpack"] == true, tostring(coreGui["Enum.CoreGuiType.Backpack"]))
+	check("Build 100: Roblox's hotbar stays away; one gold Satchel key in play instead", coreGui["Enum.CoreGuiType.Backpack"] ~= true and find(playerGui, function(d)
+		return d.Name == "SatchelKey" and d.Visible
+	end) ~= nil, tostring(coreGui["Enum.CoreGuiType.Backpack"]))
 	local function tool(key, kind, id, name)
 		local t = Instance.new("Tool")
 		t.Name = name
@@ -8670,12 +8682,12 @@ coroutine.wrap(function()
 	check("inside, its screen is up", card() ~= nil and textOnScreen("STEAL A LUXE") ~= nil)
 	check("...with how it's played, said once on the way in", textOnScreen("Steal a Luxe") ~= nil)
 	check("Build 95: inside, the card of what to do next steps aside (it sat over the game's own screen on a phone)", nextBefore and nextCard() == nil, nextBefore)
-	serverSays("Attraction", { op = "luxe", bag = { { id = "ring", name = "Diamond Ring", glyph = "💍", rarity = "Rare", worth = 1700 }, { id = "pearls", name = "Pearl Necklace", glyph = "📿", rarity = "Common", worth = 260 } }, capacity = 4, worth = 1960, bonus = 0.1, wing = "The Long Gallery", watched = 0.4, chased = false, speed = 0.93, grace = false })
+	serverSays("Attraction", { op = "luxe", bag = { { id = "ring", name = "Diamond Ring", glyph = "💍", rarity = "Rare", worth = 1700, gilt = 374 }, { id = "pearls", name = "Pearl Necklace", glyph = "📿", rarity = "Common", worth = 260, gilt = 57 } }, capacity = 4, worth = 1960, gilt = 431, bonus = 0.1, wing = "The Long Gallery", watched = 0.4, chased = false, speed = 0.93, grace = false })
 	advance(0.3)
 	local c = card()
 	check("the wing they're in", textOnScreen("THE LONG GALLERY") ~= nil)
 	check("the bag: a slot for each piece it holds, two of four filled", c ~= nil and c.Bag:FindFirstChild("Slot4") ~= nil and c.Bag:FindFirstChild("Slot5") == nil and c.Bag.Slot1:FindFirstChild("Glyph") ~= nil and c.Bag.Slot3:FindFirstChild("Glyph") == nil)
-	check("what it's worth and the banker's cut when it's banked", textOnScreen("1,960 Gilt") ~= nil and textOnScreen("+10% when banked") ~= nil and textOnScreen("2/4") ~= nil)
+	check("Build 102: the bag's exact Gilt reward, the biggest thing on the card (no Estate worth, no percentages)", textOnScreen("+431 GILT") ~= nil and textOnScreen("1,960") == nil and textOnScreen("+10% when banked") == nil and textOnScreen("2/4") ~= nil)
 	check("the card stands in the bottom-left corner: under the dock down the left when there's room, beside it otherwise, never over it", c ~= nil and c.AnchorPoint == Vector2.new(0, 1) and c.Position.Y.Scale == 1 and c.Position.X.Scale == 0 and (c.Position.X.Offset >= RootM.left + 12 - 1e-6 or (c.Position.X.Offset == 16 and RootM.size().Y + c.Position.Y.Offset - c.Size.Y.Offset >= RootM.leftBottom + 10 - 1e-6)), c and c.Position)
 	check("a guard noticing them, shown before he gives chase", textOnScreen("A GUARD IS NOTICING YOU") ~= nil and c ~= nil and math.abs(c.Track.Fill.Size.X.Scale - 0.4) < 1e-6)
 	check("their pace with the bag", textOnScreen("PACE 93%") ~= nil)
@@ -8689,7 +8701,13 @@ coroutine.wrap(function()
 	}
 	serverSays("Attraction", { op = "luxe", bag = { { id = "grails", name = "Grail Sneakers", glyph = "👟", rarity = "Rare", worth = 1600 } }, capacity = 4, worth = 1600, bonus = 0, wing = "The Drop Room", wingId = 4, watched = 0, chased = false, speed = 0.96, grace = false, alarm = 1, goals = goals, mass = 1, hands = 1 })
 	advance(0.3)
-	check("the run's side jobs, which are done, and what each pays", textOnScreen("SIDE JOBS") ~= nil and textOnScreen("1 of 3") ~= nil and textOnScreen("Lift something in the Drop Room") ~= nil and textOnScreen("Find the Secret Stash") ~= nil and textOnScreen("+1,500") ~= nil)
+	-- (Build 102: on a touch screen the card stays under the Gilt and the Fortune and clear of the
+	-- thumbstick, so the side jobs fold to the next one still to do.)
+	if DEVICE.touch then
+		check("the run's side jobs (folded on a touch screen): how many are done, and the next one with what it pays", textOnScreen("SIDE JOBS") ~= nil and textOnScreen("1 of 3") ~= nil and textOnScreen("Get away in the garage van") ~= nil and textOnScreen("+600") ~= nil)
+	else
+		check("the run's side jobs, which are done, and what each pays", textOnScreen("SIDE JOBS") ~= nil and textOnScreen("1 of 3") ~= nil and textOnScreen("Lift something in the Drop Room") ~= nil and textOnScreen("Find the Secret Stash") ~= nil and textOnScreen("+1,500") ~= nil)
+	end
 	check("the wing on Alert, said plainly", textOnScreen("Alert: the guards are looking for you") ~= nil and SoundM.mood() == nil)
 	serverSays("Attraction", { op = "luxe", bag = {}, capacity = 4, worth = 0, bonus = 0, wing = "The Drop Room", wingId = 4, watched = 0, chased = false, speed = 1, grace = false, alarm = 2, goals = goals, mass = 0, hands = 1 })
 	advance(0.3)
@@ -8771,13 +8789,13 @@ coroutine.wrap(function()
 	advance(4)
 	serverSays("Attraction", { op = "caught", lost = 1960, n = 2 })
 	advance(0.3)
-	check("caught: what was lost, plainly", textOnScreen("The guards took back 2 pieces (1,960). You're shown out to the courtyard.") ~= nil)
+	check("caught: what was lost, plainly (Build 102: no worth sums)", textOnScreen("The guards took back 2 pieces. You're shown out to the courtyard.") ~= nil)
 	advance(6)
-	serverSays("Attraction", { op = "banked", worth = 4820, base = 4382, bonus = 0.1, gilt = 964, pieces = {}, brainrots = { "ladroLussuoso" }, record = true })
+	serverSays("Attraction", { op = "banked", worth = 4820, base = 4382, bonus = 0.1, gilt = 964, giltPieces = 920, giltBonus = 44, pieces = {}, brainrots = { "ladroLussuoso" }, record = true })
 	advance(0.8)
 	check("Build 96: a new best haul is celebrated in the middle of the screen", textOnScreen("NEW BEST HAUL!") ~= nil)
 	advance(4)
-	check("banked: to the Estate, the Gilt to the purse, and the brainrot (said after the celebration, not under it)", textOnScreen("A record haul: 4,820") ~= nil and textOnScreen("4,820 to your Estate  ·  964 Gilt to your purse  ·  a brainrot for your collection") ~= nil and textOnScreen("NEW BEST HAUL!") == nil)
+	check("Build 102: banked: the exact Gilt credited, the getaway bonus said, the brainrot (after the celebration, not under it); no Estate sums", textOnScreen("A record haul: +964 Gilt") ~= nil and textOnScreen("+964 Gilt to your balance  ·  includes a +44 Gilt getaway bonus  ·  a brainrot for your collection") ~= nil and textOnScreen("to your Estate") == nil and textOnScreen("NEW BEST HAUL!") == nil)
 	advance(6)
 	-- The board.
 	invokeResults.AttractionAsk = {
@@ -9216,14 +9234,14 @@ coroutine.wrap(function()
 	advance(3)
 	serverSays("Attraction", { op = "checkpoint", n = 8, gilt = 55, purse = 1500, zone = "The Boiler Room", skipped = false })
 	advance(0.3)
-	check("a part's end: its purse to the Estate", textOnScreen("The Boiler Room, done") ~= nil and textOnScreen("1,500 to your Estate  ·  checkpoint 8") ~= nil)
+	check("Build 102: a part's end: its exact Gilt, no Estate sums", textOnScreen("The Boiler Room, done") ~= nil and textOnScreen("+55 Gilt  ·  checkpoint 8") ~= nil and textOnScreen("to your Estate") == nil)
 	advance(5)
 	serverSays("Attraction", { op = "fell", why = "steam", checkpoint = 8 })
 	advance(0.3)
 	check("a fall: back to the checkpoint, and why", textOnScreen("Back to checkpoint 8") ~= nil and textOnScreen("The steam caught you.") ~= nil)
 	advance(3)
-	check("Skip a stage says what it does and costs before anything is spent", press("Skip a stage") and (advance(0.5) or true) and textOnScreen("On to the next checkpoint. A skipped run isn't timed for the boards, and the stage you skip pays nothing. The Treasury itself can't be skipped to.") ~= nil and textOnScreen("85 Gems") ~= nil and textOnScreen("Buy a skip") ~= nil)
-	check("...this stage's own price, which rises with every stage, and how many skips it takes", textOnScreen("Stage 5: 85 Gems, or 2 skips (you hold 0). The deeper the stage, the more a skip costs.") ~= nil and textOnScreen("Each purchase is one skip: 2 more for this stage.") ~= nil)
+	check("Skip a stage says what it does and costs before anything is spent", press("Skip a stage") and (advance(0.5) or true) and textOnScreen("On to the next checkpoint. A skipped run isn't timed for the boards, but the stage you skip still pays its Gilt. The Treasury itself can't be skipped to.") ~= nil and textOnScreen("85 Gems") ~= nil and textOnScreen("Buy a skip") ~= nil)
+	check("...this stage's own Gems price, which rises with every stage; one skip is one stage", textOnScreen("The deeper the stage, the more Gems it costs.") ~= nil and textOnScreen("Each skip bought is one stage, at any depth.") ~= nil and textOnScreen("85 Gems") ~= nil)
 	snapshot("basement-skip")
 	local sentBefore = #sent
 	press("Cancel")
@@ -9903,7 +9921,7 @@ coroutine.wrap(function()
 	snapshot("island-key")
 	press("Liveries")
 	advance(0.4)
-	check("Liveries: each with its price, the house's own worn, the Robux ones not on sale until they are", textOnScreen("Maison Noir") ~= nil and textOnScreen("Worn") ~= nil and textOnScreen("12,000 Gilt") ~= nil and textOnScreen("120 Gems") ~= nil and textOnScreen("Not on sale") ~= nil)
+	check("Liveries: each with its price, the house's own worn, the Robux ones not on sale until they are", textOnScreen("Black & Gold") ~= nil and textOnScreen("Worn") ~= nil and textOnScreen("12,000 Gilt") ~= nil and textOnScreen("120 Gems") ~= nil and textOnScreen("Not on sale") ~= nil)
 	snapshot("island-liveries")
 	press("12,000 Gilt")
 	advance(0.4)
@@ -10992,7 +11010,7 @@ end)()
 	local LuxeHudB = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "LuxeHud")
 	LuxeHudB.on({ op = "banked", worth = 780, base = 780, bonus = 0, gilt = 156, pieces = {}, brainrots = {}, record = true, first = true })
 	advance(1.5) -- (the worth counts up for about a second)
-	check("a new guest's first haul: YOUR FIRST HAUL! in the middle of the screen, its worth counted up", textOnScreen("YOUR FIRST HAUL!") ~= nil and textOnScreen("+780") ~= nil)
+	check("a new guest's first haul: YOUR FIRST HAUL! in the middle of the screen, its exact Gilt counted up (Build 102)", textOnScreen("YOUR FIRST HAUL!") ~= nil and textOnScreen("+156 GILT") ~= nil)
 	check("...with a key to the Boutique (a key only: nothing opens by itself)", boutiqueOpened == 0 and textOnScreen("Spend it in the Boutique ›") ~= nil)
 	snapshot("haul-first")
 	press("Spend it in the Boutique ›")
@@ -11001,7 +11019,7 @@ end)()
 	advance(8)
 	LuxeHudB.on({ op = "banked", worth = 900, base = 900, bonus = 0, gilt = 180, pieces = {}, brainrots = {}, record = false })
 	advance(0.8)
-	check("a usual haul: the toast only, no celebration", textOnScreen("Banked: 900") ~= nil and find(playerGui, function(d)
+	check("a usual haul: the toast only, no celebration", textOnScreen("Banked: +180 Gilt") ~= nil and find(playerGui, function(d)
 		return d.Name == "Haul"
 	end) == nil)
 	advance(6)

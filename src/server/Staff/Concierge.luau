@@ -453,33 +453,7 @@ local function menu(player: Player)
 	end)
 end
 
--- The tour, offered first: the tour, the attractions (the Maison Directory), or left to look
--- around.
-local function offerTour(player: Player)
-	Dialogue.say(player, V.speaker, V.tourOffer, {
-		{ id = "tour", text = V.tourYes },
-		{ id = "attractions", text = V.tourSkip },
-		{ id = "later", text = V.tourLater },
-	}, function(choice)
-		if player.Parent ~= Players or Concierge.isSeated(player) then
-			return
-		end
-		if choice == "tour" then
-			Concierge.tour(player)
-		elseif choice == "attractions" then
-			Dialogue.close(player)
-			Concierge.openDirectory(player)
-		else
-			-- (Build 99: offered to everyone; a returning guest who says later gets his usual menu.)
-			local okNew, isNew = pcall(Concierge.needsTour, player)
-			if okNew and isNew ~= true then
-				menu(player)
-			else
-				Dialogue.say(player, V.speaker, V.tourLaterLine, nil, nil, 3)
-			end
-		end
-	end)
-end
+-- (Build 102: the tour is never offered by itself; it's the HOUSE TOUR key's, or his menu's.)
 
 -- Called once per visit when a guest first steps into the Foyer. A guest still new to the house
 -- (a first evening, or no tour yet and fewer than two rounds) is offered the tour; returning
@@ -522,11 +496,11 @@ function Concierge.greet(player: Player, firstVisit: boolean, nightlyPending: bo
 	end
 	-- (Build 93) Anyone else who may still have the welcome gift is offered it as they come in.
 	pcall(Concierge.offerGift, player)
-	-- (Build 100: the tour offer on arrival is for a first visit only, never a returning guest.)
+	-- (Build 102: nobody is offered a tour on arrival; the HOUSE TOUR key is there for anyone who
+	-- wants one. A first visit gets a short welcome that says so.)
 	if firstVisit then
-		-- (A new guest's tour shows them everything new too.)
 		Concierge.markNews(player)
-		offerTour(player)
+		Dialogue.say(player, V.speaker, (V.firstWelcome:gsub("{name}", Names.of(player))), nil, nil, 5)
 	elseif not Concierge.newsSeen(player) then
 		-- (Build 101: a returning guest is never offered a tour, not even of what's new. What's new
 		-- is on the Welcome back card; he just says hello.)
@@ -766,13 +740,8 @@ function Concierge.spawn(parent: Instance)
 		end
 		Rig.face(s, (characterRoot(player) or s.root).Position)
 		-- (A guest still new to the house is offered the tour first, not the whole menu.)
-		-- (Build 100: Show me the house / Show me the attractions first only on a guest's first
-		-- visit, saved on the server; anyone else gets his usual menu.)
-		if player:GetAttribute("FirstVisit") == true then
-			offerTour(player)
-		else
-			menu(player)
-		end
+		-- (Build 102: his menu for everyone; the tour is one of its choices, never pushed first.)
+		menu(player)
 		task.delay(6, function()
 			if not s.busy then
 				Rig.face(s, s.home.Position + s.home.LookVector * 10)

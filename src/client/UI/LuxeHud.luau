@@ -40,7 +40,10 @@ local GOLD = Color3.fromRGB(255, 204, 90)
 local RED = Color3.fromRGB(235, 70, 80)
 local AMBER = Color3.fromRGB(255, 176, 60)
 local GREEN = Color3.fromRGB(120, 220, 140)
-local CARD_W = 316
+-- (Build 102: a little wider on a big screen; on a phone as it was, so it never meets the keys.)
+local function cardW(): number
+	return if Root.phone() then 316 else 344
+end
 local SLOT = 34
 local PAD = 14
 
@@ -104,8 +107,10 @@ local function place()
 	-- (The bottom-left corner, like every attraction's card: UI/HudCard.)
 	HudCard.place(c, 150)
 	local x = c.Position.X.Offset
-	local bottom = -c.Position.Y.Offset
-	local roof = Root.topClearAt(x, x + CARD_W) + 8
+	-- (Build 102) Its room: from where it wants to stand (clear of a phone's thumbstick) up to
+	-- whatever is above it, the Gilt and the Fortune included; the side jobs fold when it's short.
+	local bottom = math.min(HudCard.lift, Root.bottomClear() + math.max(HudCard.MARGIN, size.Y * 0.2))
+	local roof = math.max(Root.topClearAt(x, x + cardW()) + 8, Root.leftTop + 6)
 	local room = size.Y - bottom - roof
 	local fold = (tonumber(parts.fullHeight) or 0) > room
 	if fold ~= (parts.folded == true) then
@@ -223,7 +228,7 @@ function LuxeHud.draw()
 	local capacity = math.max(1, math.floor(tonumber(view.capacity) or 3))
 	local bag = if type(view.bag) == "table" then view.bag else {}
 	-- (A big bag's slots are smaller, so they all fit on their row.)
-	local size = math.min(SLOT, math.floor((CARD_W - PAD * 2 - 56 + 6) / capacity) - 6)
+	local size = math.min(SLOT, math.floor((cardW() - PAD * 2 - 56 + 6) / capacity) - 6)
 	for i = 1, capacity do
 		local piece = bag[i]
 		local s = Instance.new("Frame")
@@ -243,6 +248,13 @@ function LuxeHud.draw()
 		edge.Transparency = if piece then 0 else 0.4
 		edge.Parent = s
 		if piece then
+			-- (Lit in its rarity's colour from the top, darkening to the foot.)
+			local lit = Instance.new("UIGradient")
+			lit.Rotation = 90
+			local rc = RARITY[tostring(piece.rarity)] or GOLD
+			lit.Color = ColorSequence.new(rc:Lerp(Color3.new(0, 0, 0), 0.45), Color3.fromRGB(26, 22, 16))
+			lit.Parent = s
+			s.BackgroundColor3 = Color3.new(1, 1, 1)
 			local g = Instance.new("TextLabel")
 			g.Name = "Glyph"
 			g.BackgroundTransparency = 1
@@ -254,34 +266,32 @@ function LuxeHud.draw()
 			g.Parent = s
 		end
 	end
-	local worth = tonumber(view.worth) or 0
-	local bonus = tonumber(view.bonus) or 0
+	-- (Build 102) The bag's reward: exactly the Gilt banking it pays (each piece's, locked as it
+	-- was lifted, with every boost in it). No Estate sums, nothing to work out.
+	local bagGilt = tonumber(view.gilt) or 0
 	parts.count.Text = string.format("%d/%d", #bag, capacity)
 	if #bag == 0 then
-		parts.worth.Text = "Your bag is empty"
+		parts.worth.Text = "LIFT A PIECE"
 		parts.worth.TextColor3 = C.smoke
-		parts.worth.FontFace = Brand.Fonts.body
+		parts.worth.FontFace = Brand.Fonts.bodyBold
 		parts.worth.TextSize = 13
-		parts.extra.Text = "Lift, then bank at a way out"
+		parts.extra.Text = "then bank it at a way out"
 	else
 		local mass = tonumber(view.mass) or 0
-		parts.worth.Text = Rules.format(worth) .. " Gilt"
+		parts.worth.Text = "+" .. Rules.format(bagGilt) .. " GILT"
 		parts.worth.TextColor3 = GOLD
 		parts.worth.FontFace = Brand.Fonts.display
-		parts.worth.TextSize = 18
-		local bits = {}
-		if bonus > 0 then
-			table.insert(bits, string.format("+%d%% when banked", math.floor(bonus * 100 + 0.5)))
-		end
+		parts.worth.TextSize = 20
+		local bits = { "when you bank it" }
 		if mass >= 1 then
 			table.insert(bits, if mass >= 10 then tostring(math.floor(mass + 0.5)) .. " kg" else string.format("%.1f kg", mass))
 		end
-		parts.extra.Text = table.concat(bits, ", ")
+		parts.extra.Text = table.concat(bits, "  ·  ")
 	end
 	-- The guards: one plain line with a coloured dot, and how near they are to noticing.
 	local watched = math.clamp(tonumber(view.watched) or 0, 0, 1)
 	parts.fill.Size = UDim2.new(watched, 0, 1, 0)
-	parts.fill.BackgroundColor3 = Color3.fromRGB(255, 196, 80):Lerp(RED, watched)
+	-- (Its colour runs gold to red along the track itself.)
 	local status, colour
 	if view.chased then
 		status, colour = "Run, a guard is after you", RED
@@ -318,7 +328,8 @@ function LuxeHud.draw()
 	-- Laid out top to bottom (the card grows upward from its foot).
 	local y = 0
 	parts.head.Position = UDim2.fromOffset(0, y)
-	y += 28
+	parts.headRule.Position = UDim2.fromOffset(0, y + 25)
+	y += if Root.phone() then 28 else 32
 	if alarm > 0 then
 		banner.Position = UDim2.fromOffset(0, y)
 		y += 30
@@ -327,13 +338,22 @@ function LuxeHud.draw()
 	parts.count.Position = UDim2.new(1, 0, 0, y)
 	y += SLOT + 8
 	parts.worthRow.Position = UDim2.fromOffset(0, y)
-	y += 26
+	-- (On a phone the panel is one line, no kicker: the screen is short and the side jobs come too.)
+	local compact = Root.phone()
+	local kick = parts.worthRow:FindFirstChild("Kicker")
+	if kick then
+		kick.Visible = not compact
+	end
+	parts.worthRow.Size = UDim2.new(1, 0, 0, if compact then 24 else 46)
+	parts.worth.Position = UDim2.fromOffset(0, if compact then 0 else 18)
+	parts.extra.Position = UDim2.fromOffset(0, if compact then 0 else 18)
+	y += if compact then 26 else 54
 	parts.seenRow.Position = UDim2.fromOffset(0, y)
 	y += 22
 	parts.track.Position = UDim2.fromOffset(0, y)
 	y += 5 + 6
 	local ends, unfolded = drawJobs(y)
-	c.Size = UDim2.fromOffset(CARD_W, ends + 12 + 10)
+	c.Size = UDim2.fromOffset(cardW(), ends + 12 + 10)
 	parts.fullHeight = unfolded + 12 + 10
 end
 
@@ -462,6 +482,11 @@ local function flash(at: Vector3, colour: Color3, text: string)
 	end)
 end
 
+-- (Build 102) The guest's banker's bonus (each piece's Gilt includes it), for a piece's prompt.
+function LuxeHud.bankerBonus(): number
+	return tonumber(view.bonus) or 0
+end
+
 function LuxeHud.mounted(): boolean
 	return card ~= nil
 end
@@ -488,7 +513,7 @@ function LuxeHud.mount()
 	local c = Instance.new("Frame")
 	c.Name = "LuxeCard"
 	c.AnchorPoint = Vector2.new(0, 1)
-	c.Size = UDim2.fromOffset(CARD_W, 160)
+	c.Size = UDim2.fromOffset(cardW(), 160)
 	c.Parent = Root.hud
 	local pad = Instance.new("UIPadding")
 	pad.PaddingLeft = UDim.new(0, PAD)
@@ -498,8 +523,23 @@ function LuxeHud.mount()
 	parts.edge = HudCard.style(c, GOLD)
 	-- Its heading: the attraction, and the wing as a badge in the wing's colour.
 	local head = row(c, "Head", 22, 1)
-	local title = label(head, "Title", "STEAL A LUXE", 12, Brand.Fonts.heavy, GOLD)
+	local title = label(head, "Title", "STEAL A LUXE", 13, Brand.Fonts.heavy, Color3.new(1, 1, 1))
 	title.Size = UDim2.new(0.5, 0, 1, 0)
+	-- (Build 102) Its name in metal: ivory to deep gold, with a hairline of gold under the heading.
+	local titleMetal = Instance.new("UIGradient")
+	titleMetal.Rotation = 90
+	titleMetal.Color = ColorSequence.new(Color3.fromRGB(255, 240, 200), Color3.fromRGB(214, 160, 64))
+	titleMetal.Parent = title
+	local headRule = Instance.new("Frame")
+	headRule.Name = "HeadRule"
+	headRule.BorderSizePixel = 0
+	headRule.BackgroundColor3 = GOLD
+	headRule.Size = UDim2.new(1, 0, 0, 1)
+	headRule.Parent = c
+	local ruleFade = Instance.new("UIGradient")
+	ruleFade.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(0.7, 0.75), NumberSequenceKeypoint.new(1, 1) })
+	ruleFade.Parent = headRule
+	parts.headRule = headRule
 	local badge = Instance.new("Frame")
 	badge.Name = "WingBadge"
 	badge.AnchorPoint = Vector2.new(1, 0.5)
@@ -543,13 +583,33 @@ function LuxeHud.mount()
 	parts.count.AnchorPoint = Vector2.new(1, 0)
 	parts.count.Size = UDim2.fromOffset(52, SLOT)
 	parts.count.TextXAlignment = Enum.TextXAlignment.Right
-	-- What's in the bag is worth, and what goes with it (the banker's cut, the weight).
-	local worthRow = row(c, "WorthRow", 22, 4)
-	parts.worth = label(worthRow, "Worth", "", 18, Brand.Fonts.display, GOLD)
-	parts.worth.Size = UDim2.new(0.55, 0, 1, 0)
+	-- (Build 102) The bag's reward, in its own gold-edged panel: a small kicker, then the exact
+	-- Gilt banking it pays, big; the weight beside it.
+	local worthRow = row(c, "WorthRow", 46, 4)
+	worthRow.BackgroundTransparency = 0.35
+	worthRow.BackgroundColor3 = Color3.fromRGB(38, 30, 16)
+	local wc = Instance.new("UICorner")
+	wc.CornerRadius = UDim.new(0, 10)
+	wc.Parent = worthRow
+	local ws = Instance.new("UIStroke")
+	ws.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	ws.Color = GOLD
+	ws.Transparency = 0.55
+	ws.Parent = worthRow
+	local wp = Instance.new("UIPadding")
+	wp.PaddingLeft = UDim.new(0, 10)
+	wp.PaddingRight = UDim.new(0, 10)
+	wp.Parent = worthRow
+	local kicker = label(worthRow, "Kicker", "BAG REWARD", 10, Brand.Fonts.heavy, C.smoke)
+	kicker.Position = UDim2.fromOffset(0, 4)
+	kicker.Size = UDim2.new(1, 0, 0, 14)
+	parts.worth = label(worthRow, "Worth", "", 20, Brand.Fonts.display, GOLD)
+	parts.worth.Position = UDim2.fromOffset(0, 18)
+	parts.worth.Size = UDim2.new(0.6, 0, 0, 24)
 	parts.extra = label(worthRow, "Extra", "", 11, Brand.Fonts.body, C.smoke)
 	parts.extra.TextXAlignment = Enum.TextXAlignment.Right
-	parts.extra.Size = UDim2.fromScale(1, 1)
+	parts.extra.Position = UDim2.fromOffset(0, 18)
+	parts.extra.Size = UDim2.new(1, 0, 0, 24)
 	parts.worthRow = worthRow
 	-- The guards: a dot in the state's colour, the state in plain words, the pace at the right.
 	local seenRow = row(c, "Seen", 18, 5)
@@ -583,8 +643,11 @@ function LuxeHud.mount()
 	fill.Name = "Fill"
 	fill.Size = UDim2.new(0, 0, 1, 0)
 	fill.BorderSizePixel = 0
-	fill.BackgroundColor3 = Color3.fromRGB(255, 196, 80)
+	fill.BackgroundColor3 = Color3.new(1, 1, 1)
 	fill.Parent = track
+	local fillShade = Instance.new("UIGradient")
+	fillShade.Color = ColorSequence.new(Color3.fromRGB(255, 214, 120), Color3.fromRGB(235, 70, 80))
+	fillShade.Parent = fill
 	local fc = Instance.new("UICorner")
 	fc.CornerRadius = UDim.new(1, 0)
 	fc.Parent = fill
@@ -723,13 +786,17 @@ function LuxeHud.on(m: { [string]: any })
 			Sound.play("crystal", 0.6)
 		end
 		if typeof(m.at) == "Vector3" then
-			pcall(flash, m.at, colour, "+" .. Rules.format(tonumber(m.worth) or 0))
+			pcall(flash, m.at, colour, "+" .. Rules.format(tonumber(m.gilt) or 0) .. " GILT")
 		end
 		pcall(LuxeLift.took, m)
-		Toast.show("Lifted: " .. tostring(m.name), string.format("%s  ·  %s  ·  worth %s", tostring(m.glyph or ""), tostring(m.rarity or ""), Rules.format(tonumber(m.worth) or 0)), 2.5)
+		Toast.show("Lifted: " .. tostring(m.name), string.format("%s  ·  %s  ·  REWARD +%s GILT when banked", tostring(m.glyph or ""), tostring(m.rarity or ""), Rules.format(tonumber(m.gilt) or 0)), 2.5)
 	elseif op == "banked" then
 		Sound.play("kaching", 0.8)
-		local line = string.format("%s to your Estate  ·  %s Gilt to your purse", Rules.format(tonumber(m.worth) or 0), Rules.format(tonumber(m.gilt) or 0))
+		-- (Build 102) The exact Gilt credited, and the getaway's own bonus when it had one.
+		local line = string.format("+%s Gilt to your balance", Rules.format(tonumber(m.gilt) or 0))
+		if (tonumber(m.giltBonus) or 0) > 0 then
+			line ..= string.format("  ·  includes a +%s Gilt getaway bonus", Rules.format(tonumber(m.giltBonus) or 0))
+		end
 		if type(m.brainrots) == "table" and #m.brainrots > 0 then
 			line ..= "  ·  a brainrot for your collection"
 		end
@@ -747,7 +814,7 @@ function LuxeHud.on(m: { [string]: any })
 		-- notice with its details after it, not under it.
 		local Celebrate = require(script.Parent.Celebrate)
 		local okC, kind = pcall(Celebrate.haul, m)
-		local title = if m.record then "A record haul: " .. Rules.format(tonumber(m.worth) or 0) else "Banked: " .. Rules.format(tonumber(m.worth) or 0)
+		local title = if m.record then "A record haul: +" .. Rules.format(tonumber(m.gilt) or 0) .. " Gilt" else "Banked: +" .. Rules.format(tonumber(m.gilt) or 0) .. " Gilt"
 		if okC and type(kind) == "string" then
 			task.delay(Celebrate.haulSeconds(kind) + 0.4, Toast.show, title, line, 5)
 		else
@@ -766,7 +833,7 @@ function LuxeHud.on(m: { [string]: any })
 		end)
 	elseif op == "caught" then
 		local n = tonumber(m.n) or 0
-		Toast.show("Caught", if n > 0 then string.format("The guards took back %d %s (%s). You're shown out to the courtyard.", n, if n == 1 then "piece" else "pieces", Rules.format(tonumber(m.lost) or 0)) else "You're shown out to the courtyard.", 5)
+		Toast.show("Caught", if n > 0 then string.format("The guards took back %d %s. You're shown out to the courtyard.", n, if n == 1 then "piece" else "pieces") else "You're shown out to the courtyard.", 5)
 	elseif op == "woke" then
 		-- Lifting a piece woke security: said once a trip, plainly; the card says the rest.
 		view.awake = true

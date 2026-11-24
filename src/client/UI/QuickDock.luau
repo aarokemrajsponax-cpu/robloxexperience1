@@ -33,6 +33,8 @@ QuickDock.openTrades = function() end
 QuickDock.openWardrobe = function() end
 QuickDock.openGems = function() end
 QuickDock.inviteFriend = function() end
+-- (Build 102) The HOUSE TOUR key's press: the optional tour (set by Main).
+QuickDock.houseTour = function() end
 QuickDock.invite = function(_userId: number, _name: string) end
 QuickDock.isSeated = function(): boolean
 	return false
@@ -677,6 +679,7 @@ end
 -- never sit under its glass). And folded away, if the guest put it away.
 local seatedNow = false
 local pianoNow = false
+local tourKey: TextButton? = nil
 local function rehome(t: Frame?, home: Instance)
 	if t and t.Parent ~= home then
 		t.Parent = home
@@ -723,7 +726,22 @@ refreshVisible = function()
 	if fold and events and s then
 		reach = math.max(reach, s.Position.Y.Offset + s.Size.Y.Offset)
 	end
+	-- (Build 102) HOUSE TOUR, just under whatever stands down the left, always there in play.
+	-- (Not inside an attraction: the tour starts in the house, and the attraction's card needs
+	-- the room down the left.)
+	local tk = tourKey
+	if tk then
+		local inAttraction = type(Players.LocalPlayer:GetAttribute("Attraction")) == "string"
+		tk.Visible = not away and not inAttraction
+		if tk.Visible then
+			tk.Position = UDim2.fromOffset(16, reach + GAP)
+			reach = reach + GAP + tk.Size.Y.Offset
+		end
+	end
 	Root.leftBottom = reach
+	-- (Build 102) ...and where it starts: under the Gilt and the Fortune along the top left, which
+	-- nothing laid beside the dock may cover.
+	Root.leftTop = if fold and t then t.Position.Y.Offset else f.Position.Y.Offset
 end
 
 function QuickDock.setSeated(seated: boolean)
@@ -743,6 +761,145 @@ end
 
 -- (Build 87) The Collection key showing now (the dock's, or its own while the dock is folded
 -- away), for the guiding hand to point at; nil while the keys are stepped aside.
+-- (Build 102) What the new guest's gold hand points at.
+function QuickDock.tourTarget(): GuiObject?
+	return tourKey
+end
+
+-- The HOUSE TOUR key: dark lacquer, a gold edge and a soft gold sheen through its face, a column
+-- icon in a gold ring, its name in the house's heavy capitals; it lifts and brightens under the
+-- pointer, presses in, and a slow gleam crosses it every few seconds so the eye finds it.
+local function buildTourKey(width: number, height: number): TextButton
+	local k = Instance.new("TextButton")
+	k.Name = "HouseTourKey"
+	k.AutoButtonColor = false
+	k.Text = ""
+	k.Size = UDim2.fromOffset(width, height)
+	k.BackgroundColor3 = Color3.fromRGB(20, 16, 10)
+	k.BackgroundTransparency = 0.04
+	k.ClipsDescendants = true
+	k.ZIndex = 6
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, math.floor(height * 0.32))
+	corner.Parent = k
+	local fill = Instance.new("UIGradient")
+	fill.Rotation = 90
+	fill.Color = ColorSequence.new(Color3.fromRGB(70, 52, 22), Color3.fromRGB(18, 14, 8))
+	fill.Parent = k
+	local edge = Instance.new("UIStroke")
+	edge.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	edge.Color = Color3.fromRGB(232, 190, 96)
+	edge.Thickness = 1.6
+	edge.Parent = k
+	local edgeSheen = Instance.new("UIGradient")
+	edgeSheen.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(168, 120, 44)),
+		ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 236, 170)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(168, 120, 44)),
+	})
+	edgeSheen.Parent = edge
+	local ring = Instance.new("Frame")
+	ring.Name = "Icon"
+	ring.AnchorPoint = Vector2.new(0, 0.5)
+	ring.Position = UDim2.new(0, math.floor(height * 0.18), 0.5, 0)
+	ring.Size = UDim2.fromOffset(math.floor(height * 0.68), math.floor(height * 0.68))
+	ring.BackgroundColor3 = Color3.fromRGB(28, 22, 12)
+	ring.ZIndex = 7
+	ring.Parent = k
+	local rc = Instance.new("UICorner")
+	rc.CornerRadius = UDim.new(1, 0)
+	rc.Parent = ring
+	local rs = Instance.new("UIStroke")
+	rs.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	rs.Color = Color3.fromRGB(240, 200, 110)
+	rs.Thickness = 1.2
+	rs.Parent = ring
+	local glyph = Instance.new("TextLabel")
+	glyph.Name = "Glyph"
+	glyph.BackgroundTransparency = 1
+	glyph.Size = UDim2.fromScale(1, 1)
+	glyph.Text = "🏛"
+	glyph.TextScaled = true
+	glyph.Font = Enum.Font.GothamBold
+	glyph.TextColor3 = Color3.fromRGB(255, 222, 140)
+	glyph.ZIndex = 8
+	glyph.Parent = ring
+	local gp = Instance.new("UIPadding")
+	gp.PaddingTop = UDim.new(0.18, 0)
+	gp.PaddingBottom = UDim.new(0.18, 0)
+	gp.PaddingLeft = UDim.new(0.18, 0)
+	gp.PaddingRight = UDim.new(0.18, 0)
+	gp.Parent = glyph
+	local left = math.floor(height * 0.18) + math.floor(height * 0.68) + 10
+	local word = Instance.new("TextLabel")
+	word.Name = "Label"
+	word.BackgroundTransparency = 1
+	word.AnchorPoint = Vector2.new(0, 0.5)
+	word.Position = UDim2.new(0, left, 0.5, 0)
+	word.Size = UDim2.new(1, -(left + 10), 0, math.floor(height * 0.5))
+	word.FontFace = Brand.Fonts.heavy
+	word.Text = "HOUSE TOUR"
+	word.TextScaled = true
+	word.TextXAlignment = Enum.TextXAlignment.Left
+	word.TextColor3 = Color3.fromRGB(255, 226, 150)
+	word.ZIndex = 8
+	word.Parent = k
+	local wl = Instance.new("UITextSizeConstraint")
+	wl.MinTextSize = 11
+	wl.MaxTextSize = math.floor(height * 0.4)
+	wl.Parent = word
+	local wordSheen = Instance.new("UIGradient")
+	wordSheen.Rotation = 90
+	wordSheen.Color = ColorSequence.new(Color3.fromRGB(255, 244, 210), Color3.fromRGB(226, 172, 72))
+	wordSheen.Parent = word
+	local gleam = Instance.new("Frame")
+	gleam.Name = "Gleam"
+	gleam.BorderSizePixel = 0
+	gleam.BackgroundColor3 = Color3.fromRGB(255, 240, 200)
+	gleam.BackgroundTransparency = 0.78
+	gleam.Rotation = 22
+	gleam.AnchorPoint = Vector2.new(0.5, 0.5)
+	gleam.Size = UDim2.new(0, math.floor(height * 0.5), 3, 0)
+	gleam.Position = UDim2.new(-0.3, 0, 0.5, 0)
+	gleam.ZIndex = 9
+	gleam.Parent = k
+	task.spawn(function()
+		while gleam.Parent do
+			gleam.Position = UDim2.new(-0.3, 0, 0.5, 0)
+			TweenService:Create(gleam, TweenInfo.new(1.2, Enum.EasingStyle.Sine), { Position = UDim2.new(1.3, 0, 0.5, 0) }):Play()
+			task.wait(9)
+		end
+	end)
+	local scale = Instance.new("UIScale")
+	scale.Parent = k
+	local over = false
+	k.MouseEnter:Connect(function()
+		over = true
+		TweenService:Create(scale, TweenInfo.new(0.16, Enum.EasingStyle.Quad), { Scale = 1.04 }):Play()
+		TweenService:Create(edge, TweenInfo.new(0.16), { Thickness = 2.4 }):Play()
+	end)
+	k.MouseLeave:Connect(function()
+		over = false
+		TweenService:Create(scale, TweenInfo.new(0.16, Enum.EasingStyle.Quad), { Scale = 1 }):Play()
+		TweenService:Create(edge, TweenInfo.new(0.16), { Thickness = 1.6 }):Play()
+	end)
+	k.MouseButton1Down:Connect(function()
+		TweenService:Create(scale, TweenInfo.new(0.08, Enum.EasingStyle.Quad), { Scale = 0.95 }):Play()
+	end)
+	k.MouseButton1Up:Connect(function()
+		TweenService:Create(scale, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = if over then 1.04 else 1 }):Play()
+	end)
+	k.Activated:Connect(function()
+		Theme.haptic()
+		pcall(function()
+			require(script.Parent.GuideHand).clear()
+		end)
+		QuickDock.houseTour()
+	end)
+	k.Parent = Root.hud
+	return k
+end
+
 function QuickDock.collectionTarget(): GuiObject?
 	local f = dock
 	if not f or (not f.Visible and not (collectionKey and collectionKey.Visible)) then
@@ -838,6 +995,7 @@ function QuickDock.start()
 		QuickDock.inviteFriend()
 	end)
 	dock = f
+	tourKey = buildTourKey(COLUMNS * keyWidth() + (COLUMNS - 1) * GAP, if touch then 50 else 52)
 	-- The ‹ key just right of the dock's top corner (clear of the T key's chip), and the KEYS ›
 	-- tab where the dock begins, for while it's folded away. Bigger to the touch on a phone.
 	local side = if touch then 40 else 30

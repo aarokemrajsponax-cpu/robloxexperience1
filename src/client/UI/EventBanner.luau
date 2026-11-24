@@ -19,6 +19,7 @@ local State = require(script.Parent.Parent.State)
 local Theme = require(script.Parent.Theme)
 local Voice = require(ReplicatedStorage.Shared.Voice)
 local Toast = require(script.Parent.Toast)
+local Announce = require(script.Parent.Announce)
 local NeoFX = require(script.Parent.Parent.World.NeoFX)
 
 local EventBanner = {}
@@ -386,7 +387,7 @@ local HUNT_AFTER = 6
 
 local function refresh()
 	-- (At a table the strip stays out of the way whatever told it so, or didn't.)
-	local atTable = seated or State.seated == true
+	local atTable = seated or State.seated == true or not Announce.ready()
 	if strip.Visible == atTable then
 		strip.Visible = not atTable
 	end
@@ -559,6 +560,13 @@ function EventBanner.start()
 			return
 		end
 		if m.op == "announce" and type(m.text) == "string" then
+			-- (Build 102) A message from the owner waits for Play (the latest one, never a pile).
+			if not Announce.ready() then
+				Announce.after("ownerMessage", function()
+					Toast.show("From " .. tostring(m.by), m.text, 7)
+				end)
+				return
+			end
 			Toast.show("From " .. tostring(m.by), m.text, 7)
 			-- (A message's arrival: the same quick two-note ping as a headline's.)
 			local Sound = require(script.Parent.Parent.Sound)

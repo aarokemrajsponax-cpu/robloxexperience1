@@ -72,6 +72,10 @@ end
 -- along the foot of the screen while the card is up (the attraction's Leave key and its friends).
 -- `above`: the height of anything that stands on top of the card (the Suite's code), kept clear
 -- of the keys down the left with it.
+-- (Build 102) How far up from the foot the last card placed wanted to stand (before it was let
+-- down to keep clear of the Gilt and the Fortune): a card that can fold measures its room by this.
+HudCard.lift = 0
+
 function HudCard.place(f: Frame, keysHalf: number?, above: number?)
 	local size = Root.size()
 	local w = f.Size.X.Offset
@@ -92,6 +96,12 @@ function HudCard.place(f: Frame, keysHalf: number?, above: number?)
 		if not touch and x + w > size.X / 2 - (keysHalf or 150) - 8 then
 			bottom = Root.bottomClear() + 14 + 44 + 12
 		end
+	end
+	-- (Build 102) Lifted clear of a phone's thumbstick, but never so high that it covers the Gilt
+	-- and the Fortune along the top left: it comes down as far as it must (to the foot at most).
+	HudCard.lift = bottom
+	if Root.leftTop > 0 and size.Y - bottom - h < Root.leftTop + 6 then
+		bottom = math.max(Root.bottomClear() + HudCard.MARGIN, size.Y - Root.leftTop - 6 - h)
 	end
 	f.AnchorPoint = Vector2.new(0, 1)
 	f.Position = UDim2.new(0, x, 1, -bottom)

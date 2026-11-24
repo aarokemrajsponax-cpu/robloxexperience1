@@ -488,7 +488,7 @@ function Theme.preloadFonts()
 	for _, font in Brand.Fonts do
 		local l = Instance.new("TextLabel")
 		l.FontFace = font :: Font
-		l.Text = "Maison Noir 0123456789"
+		l.Text = "Become the Richest Guest 0123456789"
 		table.insert(labels, l)
 	end
 	task.spawn(function()

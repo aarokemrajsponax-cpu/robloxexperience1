@@ -97,7 +97,61 @@ local function heights(group: Frame, labels: { TextLabel }, low: boolean)
 	end
 end
 
+-- (Build 102) While a loading screen is up, notices wait (it would cover them, or they it) and
+-- come once it has gone, one after another, the same one never twice.
+local holding = false
+local waiting: { { title: string, line: string?, seconds: number? } } = {}
+
+-- (Build 102) The engine's own word on whether a line's words fit: if a line still can't show all
+-- of them at its height (a face measured a hair narrower than it draws), it grows until they do.
+local function guard(label: TextLabel)
+	task.defer(function()
+		for _ = 1, 12 do
+			local ok, fits = pcall(function()
+				return label.TextFits
+			end)
+			if not ok or fits ~= false or label.Parent == nil then
+				return
+			end
+			label.Size = UDim2.new(label.Size.X.Scale, label.Size.X.Offset, 0, label.Size.Y.Offset + math.ceil(label.TextSize * 0.6))
+			task.wait()
+		end
+	end)
+end
+
+function Toast.hold(on: boolean)
+	holding = on
+	if on then
+		return
+	end
+	local list = waiting
+	waiting = {}
+	if #list == 0 then
+		return
+	end
+	task.spawn(function()
+		for i, n in list do
+			Toast.show(n.title, n.line, n.seconds)
+			if i < #list then
+				task.wait((n.seconds or 4) + 0.6)
+			end
+		end
+	end)
+end
+
 function Toast.show(title: string, line: string?, seconds: number?)
+	if holding then
+		for _, n in waiting do
+			if n.title == title and n.line == line then
+				return
+			end
+		end
+		table.insert(waiting, { title = title, line = line, seconds = seconds })
+		if #waiting > 3 then
+			table.remove(waiting, 1)
+		end
+		return
+	end
 	if current then
 		current:Destroy()
 		current = nil
@@ -132,6 +186,9 @@ function Toast.show(title: string, line: string?, seconds: number?)
 	-- Exactly as wide as its longest line (and never wider than the room it has, where it wraps).
 	fit(group, labels)
 	heights(group, labels, low)
+	for _, l in labels do
+		guard(l)
+	end
 	current = group
 	currentLabels = labels
 	Fade.set(group, 1)

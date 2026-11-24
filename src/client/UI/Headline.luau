@@ -418,6 +418,10 @@ function Headline.start()
 			return
 		end
 		if m.op == "headline" and type(m.text) == "string" then
+			-- (Build 102) Not over the Home Screen: a headline is for guests already in the game.
+			if not require(script.Parent.Announce).ready() then
+				return
+			end
 			Headline.show(m.text, tostring(m.by or ""), if type(m.style) == "string" then m.style else nil, if type(m.seconds) == "number" then m.seconds else nil)
 		elseif m.op == "countdown" then
 			if m.stop == true then

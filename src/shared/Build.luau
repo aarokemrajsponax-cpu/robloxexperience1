@@ -4,6 +4,6 @@
 -- see whether Studio has the latest code from GitHub.
 
 return {
-	number = 101,
-	label = "Build 101 · 21 Nov · New guests by the Concierge, returning guests in their Suite",
+	number = 102,
+	label = "Build 102 · 24 Nov · House Tour, exact Gilt rewards, full-screen loading",
 }

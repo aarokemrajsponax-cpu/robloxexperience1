@@ -348,7 +348,8 @@ local function trackZones()
 			if root and root:IsA("BasePart") and visit.funnel[3] then
 				local zone = Layout.zoneAt(root.Position)
 				-- A new guest lingering in the Foyer for a while is offered the walk.
-				if zone == "foyer" and visit.firstVisit and not visit.offered and not TableService.isSeated(player) then
+				-- (Build 102: off. No tour or walk is ever offered by itself; HOUSE TOUR is the way.)
+				if false and zone == "foyer" and visit.firstVisit and not visit.offered and not TableService.isSeated(player) then
 					visit.foyerSince = visit.foyerSince or os.clock()
 					if os.clock() - (visit.foyerSince :: number) > Config.data.Staff.lostAfter and not Concierge.isLeading(player) and not Concierge.isTouring(player) then
 						visit.offered = true

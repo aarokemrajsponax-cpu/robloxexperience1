@@ -32,6 +32,12 @@ Prompts.actionFor = function(_prompt: ProximityPrompt): string?
 	return nil
 end
 
+-- (Build 102) Other words for what a prompt names, on this guest's screen (set by Main: a Steal a
+-- Luxe piece shows the exact Gilt it pays this guest), or nil for its own.
+Prompts.objectFor = function(_prompt: ProximityPrompt): string?
+	return nil
+end
+
 local shown: { [ProximityPrompt]: TextButton } = {}
 local wires: { [ProximityPrompt]: { RBXScriptConnection } } = {}
 local column: Frame? = nil
@@ -164,7 +170,7 @@ local function build(prompt: ProximityPrompt): TextButton
 	local function fit()
 		key.Text = keyLabel(prompt)
 		action.Text = Caps(Prompts.actionFor(prompt) or prompt.ActionText)
-		object.Text = prompt.ObjectText
+		object.Text = Prompts.objectFor(prompt) or prompt.ObjectText
 		local keyW = math.max(30, Theme.measure(key.Text, 14, Brand.Fonts.bodyBold).X + 12)
 		key.Size = UDim2.fromOffset(keyW, 30)
 		local left = 8 + keyW + 12

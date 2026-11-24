@@ -263,17 +263,17 @@ function Welcome.show(name: string, first: boolean)
 	local top = lightLine(holder, "TopLine", 1)
 	local bottom = lightLine(holder, "BottomLine", bandH - 1)
 
-	-- MAISON NOIR, between two diamonds.
-	local kicker = text(holder, "Kicker", "MAISON  NOIR", Brand.Fonts.display, C.lightGold)
+	-- (Build 102) The game's own name, between two diamonds.
+	local kicker = text(holder, "Kicker", Brand.Name, Brand.Fonts.display, C.lightGold)
 	kicker.Position = UDim2.new(0.5, 0, 0, 26 * u)
-	kicker.Size = UDim2.new(0, 220 * u, 0, 15 * u)
+	kicker.Size = UDim2.new(0, 300 * u, 0, 15 * u)
 	kicker.ZIndex = 5
 	local leftMark = diamond(holder, "MarkLeft", math.floor(6 * u + 0.5))
-	leftMark.Position = UDim2.new(0.5, -128 * u, 0, 26 * u)
+	leftMark.Position = UDim2.new(0.5, -166 * u, 0, 26 * u)
 	leftMark.ZIndex = 5
 	leftMark.BackgroundTransparency = 1
 	local rightMark = diamond(holder, "MarkRight", math.floor(6 * u + 0.5))
-	rightMark.Position = UDim2.new(0.5, 128 * u, 0, 26 * u)
+	rightMark.Position = UDim2.new(0.5, 166 * u, 0, 26 * u)
 	rightMark.ZIndex = 5
 	rightMark.BackgroundTransparency = 1
 
@@ -342,7 +342,7 @@ function Welcome.show(name: string, first: boolean)
 	-- A first evening: the Concierge shows new guests round.
 	local line: TextLabel? = nil
 	if first then
-		local l = text(holder, "Line", "The Concierge will show you round  ·  follow him and the gold trail", Brand.Fonts.body, C.smoke)
+		local l = text(holder, "Line", "Press House Tour for a walk round the house  ·  the Concierge is here to help", Brand.Fonts.body, C.smoke)
 		l.AnchorPoint = Vector2.new(0.5, 0)
 		l.Position = UDim2.new(0.5, 0, 0, nameY + 22 * u)
 		l.Size = UDim2.new(0, math.min(vp.X - 48, 560 * u), 0, lineH)

@@ -274,6 +274,23 @@ local ctx: Types.Ctx = {
 		Analytics.step(player, 7)
 		return Gilt.pay(player, data, math.floor(amount), source)
 	end,
+	-- (Build 102) A reward's exact Gilt, quoted before it's earned (shown on the guest's screen)
+	-- and then paid exactly: the same sum, so what was shown is what's paid.
+	giltQuote = function(player: Player, amount: number): number
+		local data = Profiles.get(player)
+		if not data or amount <= 0 then
+			return 0
+		end
+		return Gilt.quote(player, data, math.floor(amount))
+	end,
+	giltExact = function(player: Player, amount: number, source: string): number
+		local data = Profiles.get(player)
+		if not data or amount <= 0 then
+			return 0
+		end
+		Analytics.step(player, 7)
+		return Gilt.payExact(player, data, math.floor(amount), source)
+	end,
 	-- A prize paid in full, outside the day's soft cap: only for what's limited by design (once a
 	-- day, or once an invitation), never for what can be repeated at will.
 	prize = function(player: Player, amount: number, source: string): number

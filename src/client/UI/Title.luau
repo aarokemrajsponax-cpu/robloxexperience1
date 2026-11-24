@@ -692,7 +692,7 @@ function Title.show(choices: Choices)
 		tag.Parent = column
 		corner(tag, 13)
 		stroke(tag, NEON, 1.2, 0.2)
-		local welcome = Theme.text(tag, "WELCOME TO THE MAISON", if small then 11 else 12, "caps", {
+		local welcome = Theme.text(tag, "WELCOME TO", if small then 11 else 12, "caps", {
 			AutomaticSize = Enum.AutomaticSize.None,
 			Size = UDim2.fromScale(1, 1),
 			TextColor3 = ICE,

@@ -22,6 +22,11 @@
         "$path": "src/shared"
       }
     },
+    "ReplicatedFirst": {
+      "LoadScreen": {
+        "$path": "src/first/LoadScreen.client.luau"
+      }
+    },
     "ServerScriptService": {
       "Server": {
         "$path": "src/server"

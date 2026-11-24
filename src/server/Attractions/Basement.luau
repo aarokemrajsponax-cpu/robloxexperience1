@@ -34,6 +34,7 @@ local okAnalytics, Analytics = pcall(function()
 end)
 local Names = require(ReplicatedStorage.Shared.Names)
 local Plan = require(ReplicatedStorage.Shared.Basement)
+local FortuneRules = require(ReplicatedStorage.Shared.Fortune)
 local BasementBuild = require(script.Parent.BasementBuild)
 local Types = require(script.Parent.Types)
 
@@ -300,6 +301,9 @@ local function summary(ctx: Types.Ctx, player: Player, run: Run): { [string]: an
 		skipGems = skipGems(ctx, next),
 		skipNeed = Plan.skipsNeeded(next),
 		skipOnSale = Basement.skipOnSale(),
+		-- (Build 102) What the next checkpoint pays, as raw Gilt (and a part's purse when it ends a
+		-- part): the guest's screen shows it with their boosts, the same sum the server pays with.
+		nextRaw = Basement.stageRaw(next),
 	}
 end
 
@@ -402,6 +406,17 @@ local function finish(ctx: Types.Ctx, player: Player, run: Run, data: any, p: { 
 	push(ctx, player, run)
 end
 
+-- (Build 102) What checkpoint `n` pays in raw Gilt before boosts: its own Gilt, and the purse's
+-- Gilt share when it ends a part of the course. One sum for the screen and the payment.
+function Basement.stageRaw(n: number): number
+	local zone = Plan.Zones[Plan.zoneOf(math.clamp(n, 1, Plan.STAGES))]
+	local raw = 15 + 5 * n
+	if zone and zone.to == n then
+		raw += FortuneRules.cash(zone.purse)
+	end
+	return raw
+end
+
 -- A guest stands on checkpoint `n` (the next in order).
 local function reach(ctx: Types.Ctx, player: Player, run: Run, n: number, skipped: boolean?)
 	run.checkpoint = n
@@ -415,7 +430,9 @@ local function reach(ctx: Types.Ctx, player: Player, run: Run, n: number, skippe
 	if not run.paid[n] then
 		run.paid[n] = true
 		if not skipped then
-			gilt = ctx.gilt(player, 15 + 5 * n, "The Maison Basement")
+			-- (Build 102: the checkpoint and, at a part's end, the purse's Gilt, paid as one sum:
+			-- exactly what the screen showed for this checkpoint.)
+			gilt = ctx.gilt(player, Basement.stageRaw(n), "The Maison Basement")
 		else
 			-- (Build 100) A skipped stage pays its Gilt too. The skip was bought (Gems or Robux),
 			-- so that Gilt is marked as bought and never lifts anyone up the Wealthiest board.
@@ -433,7 +450,8 @@ local function reach(ctx: Types.Ctx, player: Player, run: Run, n: number, skippe
 	-- Estate and XP are only ever for what the guest did.)
 	if zone.to == n and not skipped then
 		purse = zone.purse
-		ctx.estate(player, purse, "The Maison Basement")
+		-- (Its Gilt is already in this checkpoint's pay above: the Estate takes the worth alone.)
+		ctx.estate(player, purse, "The Maison Basement", false)
 	end
 	if not skipped then
 		ctx.tally(player, "basementCheckpoints", 1)

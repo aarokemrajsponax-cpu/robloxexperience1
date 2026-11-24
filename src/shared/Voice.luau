@@ -148,6 +148,8 @@ Voice.Concierge = {
 	newsLaterLine = "Of course. Ask me for the tour any time.",
 	-- (Build 93) Before the first tour: the house's welcome gift.
 	giftFirst = "Good evening, {name}, and welcome to the Maison. Before anything else, a gift from the house: choose your first brainrot. It earns you Gilt every hour from tonight on.",
+	-- (Build 102) A first visit: welcomed, never pushed into a tour.
+	firstWelcome = "Good evening, {name}, and welcome. I'm the Concierge: ask me anything, any time. For a walk round the house, press House Tour.",
 	firstTour = "Good evening, {name}, and welcome to the Maison. I'm the Concierge. Everyone here is out to become the richest guest; let me show you round first. Follow me and the gold trail. You can end the tour whenever you like.",
 	tourOffer = "Welcome to the Maison, where everyone is here to become the richest guest. Shall I show you round? It's quick.",
 	tourYes = "Show me the house",
@@ -391,6 +393,13 @@ Voice.Table = {
 
 -- A guest still new to the house: the arrow to the Concierge, his key, the card under the keys,
 -- and the three steps of the game, said plainly.
+-- (Build 102) The HOUSE TOUR key's gold hand, on a brand-new guest's first visit only.
+Voice.HouseTour = {
+	handTitle = "House Tour",
+	handLine = "Your guide to the whole house, whenever you like.",
+	handSeconds = 14,
+}
+
 Voice.StartHere = {
 	title = "Start here",
 	heading = "Welcome to the Maison",
@@ -466,12 +475,12 @@ Voice.Afk = {
 Voice.Short = { gilt = "Insufficient Gilt", gems = "Insufficient Gems", line = "Gotta get more lol" }
 
 Voice.WhatsNew = {
-	build = 98,
+	build = 102,
 	lines = {
 		-- (One short line each: read at a glance.)
-		"The stun pistol boxes what it will hit.",
-		"Caught in the Executive Suite? You're held still.",
-		"Luxury Island: coming soon.",
+		"House Tour: the whole house, whenever you like.",
+		"Every reward shows its exact Gilt.",
+		"One Satchel key holds everything you carry.",
 	},
 }
 

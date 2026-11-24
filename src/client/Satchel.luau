@@ -160,8 +160,9 @@ local function apply()
 	end
 	pcall(function()
 		local Root = require(script.Parent.UI.Root)
-		local small = Root.size().Y < 520 or Root.size().X < 760
-		Root.setBottom("Satchel", if want then (if small then 70 else 80) / math.max(0.1, Root.scale) else nil)
+		-- (Build 102: the Satchel key lives in the HUD's own scaled layer, so what it needs is in the
+		-- HUD's units: its height and a little air, not Roblox's hotbar's pixels.)
+		Root.setBottom("Satchel", if want then (if Root.phone() then 58 else 74) else nil)
 	end)
 end
 Satchel.apply = apply

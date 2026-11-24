@@ -23,6 +23,8 @@ export type Ctx = {
 	saved: (data: any, id: string) -> { [string]: any }, -- the attraction's page in it
 	estate: (player: Player, worth: number, source: string, cash: boolean?) -> number, -- to the Estate (and Gilt)
 	gilt: (player: Player, amount: number, source: string) -> number, -- earned Gilt (Gilt.pay)
+	giltQuote: (player: Player, amount: number) -> number, -- (Build 102) what gilt() would pay now
+	giltExact: (player: Player, amount: number, source: string) -> number, -- (Build 102) a quoted reward, paid exactly
 	spend: (player: Player, gilt: number, gems: number, sink: string) -> boolean, -- pays a price (or nothing)
 	prize: (player: Player, amount: number, source: string) -> number, -- in full: once a day or an invitation
 	-- (No Gems: they come only from Robux, the owner's gift or a trade. Rewards are Gilt.)

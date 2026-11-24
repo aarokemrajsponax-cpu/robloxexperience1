@@ -863,7 +863,7 @@ function AdminService.newYear(ends: number, byName: string)
 		AdminService.fx("fireworks", byName, nil)
 		AdminService.fx("confetti", byName, nil)
 		broadcast({ op = "headline", text = "HAPPY NEW YEAR!", by = byName, style = "rainbow", seconds = 8 })
-		broadcast({ op = "salute", id = "newYear", by = byName, effects = { "fireworks", "goldLeaf", "chandelier" }, seconds = 14, title = "Happy New Year!", line = "Happy New Year from Maison Noir! A present for everyone here." })
+		broadcast({ op = "salute", id = "newYear", by = byName, effects = { "fireworks", "goldLeaf", "chandelier" }, seconds = 14, title = "Happy New Year!", line = "Happy New Year from Become the Richest Guest! A present for everyone here." })
 		for _, p in Players:GetPlayers() do
 			giftGilt(p, cfg().newYearGilt, "The house")
 			Curios.forEvent(p, "newYearSparkler", "newYear:" .. tostring(ends))

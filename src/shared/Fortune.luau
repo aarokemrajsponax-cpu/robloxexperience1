@@ -99,6 +99,31 @@ function Fortune.total(p: Parts): number
 end
 
 -- The part of a haul's worth paid in Gilt when it's banked (the rest is the Estate alone).
+-- (Build 102) The one sum for what a reward pays in Gilt, used by the server to pay it and by a
+-- screen to show it first, so the two are always the same number: `raw` Gilt, times the guest's
+-- boosts (`boost`, then the Gold Key's `key`), with the day's soft cap (`softCap` times the boost,
+-- less `today` already earned) and what's over it paid at `rate`.
+function Fortune.giltPaid(raw: number, boost: number, key: number, softCap: number, today: number, rate: number): number
+	local earned = math.floor(raw * boost + 0.5)
+	if key > 1 then
+		earned = math.floor(earned * key + 0.5)
+	end
+	local full = math.max(0, math.min(earned, softCap * boost - today))
+	local reduced = math.floor((earned - full) * rate)
+	return full + reduced
+end
+
+-- (Build 102) What `raw` Gilt would pay this guest now, read from what the server publishes on
+-- them ("GiltBoost", "GiltKey", "GiltCap", "GiltToday", "GiltRate"); for a screen to show a
+-- reward before it's earned. The server pays with the same sum (server/Gilt).
+function Fortune.quoteFor(player: Instance, raw: number): number
+	local function num(name: string, default: number): number
+		local v = player:GetAttribute(name)
+		return if type(v) == "number" then v else default
+	end
+	return Fortune.giltPaid(raw, num("GiltBoost", 1), num("GiltKey", 1), num("GiltCap", math.huge), num("GiltToday", 0), num("GiltRate", 1))
+end
+
 function Fortune.cash(worth: number): number
 	local share = tonumber((Config.data :: any).Fortune and (Config.data :: any).Fortune.cashShare) or 0.2
 	return math.floor(math.max(0, worth) * share + 0.5)

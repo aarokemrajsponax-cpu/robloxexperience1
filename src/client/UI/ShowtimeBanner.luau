@@ -14,6 +14,7 @@ local Plan = require(ReplicatedStorage.Shared.Showtime)
 local HudCard = require(script.Parent.HudCard)
 local Root = require(script.Parent.Root)
 local Theme = require(script.Parent.Theme)
+local Announce = require(script.Parent.Announce)
 
 local ShowtimeBanner = {}
 
@@ -129,6 +130,11 @@ function ShowtimeBanner.show(slot: number)
 end
 
 local function check()
+	-- (Build 102) Never on the Home Screen: it waits for Play, then shows if it's still open.
+	if not Announce.ready() then
+		Announce.after("showtime", check)
+		return
+	end
 	if Workspace:GetAttribute("ShowtimeOpen") == true then
 		local slot = Workspace:GetAttribute("ShowtimeSlot")
 		if type(slot) == "number" then
