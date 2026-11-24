@@ -98,7 +98,7 @@ Voice.Concierge = {
 		{ id = "stride", cat = "attractions", place = "velvet", q = "What does Speed do?", a = "It makes you faster in Steal a Luxe, and only there: {stride}% a level. Walk the treadmills in the Luxe Lounge to train it." },
 		{ id = "caught", cat = "attractions", place = "velvet", q = "What if a guard catches me?", a = "Everything in your bag is lost and you're shown out to the courtyard. What you've already banked is safe." },
 		{ id = "skip", cat = "attractions", place = "obsidian", q = "Can I skip a Basement stage?", a = "Yes, and the deeper the stage, the more it costs: {skipGems} Gems for the first, {skipStep} more for each stage after it. A skip bought with Robux is one stage at any depth. A skipped run isn't timed for the boards, but the stage you skip still pays its Gilt." },
-		{ id = "island", cat = "house", place = "terrace", q = "How do I get to Luxury Island?", a = "It's coming soon: it isn't open yet. When it opens, it's by the private jet, from the Jet Lounge on the Terrace. The Island Key is for a Tycoon: {islandGilt} Gilt or {islandGems} Gems, yours for good. Five pearls lie in its lagoon every day." },
+		{ id = "island", cat = "house", place = "terrace", q = "How do I get to Luxury Island?", a = "By the private jet, from the Jet Lounge on the Terrace. The Island Key is for a Tycoon: {islandGilt} Gilt or {islandGems} Gems, yours for good. Every day five new pearls lie in its lagoon and the sunset is toasted at the Lookout, a little more with friends. The Jet Lounge's card shows what each pays." },
 		{ id = "gala", cat = "house", place = "ballroom", q = "What's in the Grand Ballroom?", a = "Through its doors in the Club hall, up the Grand Stair: the Flex Studio (shoot a reel of something you own; guests like it on the Flex Wall), the dance floor and its jukebox, Luxury Trivia, the Runway's themed shows, the Daily Arena, three photo sets, the Exchange and the Hall of Fame. A little Gilt for all of it, up to {galaGilt} a day." },
 		{ id = "trade", cat = "collection", place = "ballroom", q = "How do I trade?", a = "At the Exchange's stands in the Grand Ballroom, or the Trade key on a guest's card: Gilt, Gems, brainrots and curios. You both see every offer, and nothing changes hands until you both confirm the very same trade." },
 		{ id = "boards", cat = "money", q = "Where are the boards?", a = "Tap your Fortune, under your Gilt: the Wealthiest in this house, this week and of all time. The Basement's best times are at the lectern on the Basement Stair." },
@@ -119,7 +119,7 @@ Voice.Concierge = {
 		{ id = "salon", cat = "house", place = "salon", q = "What happens in the Salon?", a = "Sort fine things into their cases for Gilt, at your own pace: sit at a table and press E. Right ones in a row raise your combo; bank the run for Gilt. Tonight's table is there too: one try a day, the same pieces for every guest." },
 		{ id = "luxeHow", cat = "attractions", place = "velvet", q = "How do I play Steal a Luxe?", a = "Through the Luxe Lounge. Inside, hold E on a treasure to lift it: the fuller your bag, the slower you walk. Security sleeps until you lift something; then a guard comes after you. Carry it out to the getaway car to bank it for good." },
 		{ id = "execChallenge", cat = "attractions", place = "midnight", q = "What's the Executive Suite's challenge?", a = "Each run of the Suite has one, the same for everyone in it, said as you go up: Ghost (beat him never seen in the hallway), Steady Hand (no wrong try of yours at the vault door), Untouchable (lose none of your health, and no revive) or Swift Takeover (beat him within three minutes of the door opening). Meet it and it pays its own Gilt when he's beaten. Each run has its own look too, and some walk his guards the other way round." },
-		{ id = "islandStanding", cat = "attractions", place = "terrace", q = "What is Island Standing?", a = "Everything you do on Luxury Island, counted: a pearl is a point, a sunset toasted three, each postcard spot two, each flight one. Each rank (Weekender, Islander, Patron of the Island, The Island's Own) pays its Gilt once. Islanders earn the Starlit lights and Patrons the Island Patron livery: never sold. Your standing is on the Jet Lounge's board." },
+		{ id = "islandStanding", cat = "attractions", place = "terrace", q = "What is Island Standing?", a = "Everything you do on Luxury Island, counted: a pearl is a point, a sunset toasted three, each postcard spot two, each day you fly in one. Each rank (Weekender, Islander, Patron of the Island, The Island's Own) pays its Gilt once. Islanders earn the Starlit lights and Patrons the Island Patron livery: never sold. Your standing is on the Jet Lounge's board." },
 		{ id = "showtime", cat = "house", place = "ballroom", q = "What is Showtime?", a = "Every half hour, at twenty past and ten to, one of the Grand Ballroom's party games has its Showtime for eight minutes: Luxury Trivia, then the Runway, then the Daily Arena, in turn. A card on your screen says which, with a key that takes you there. Play a round of it while it's on and it pays {showtimeGilt} Gilt, once each Showtime. The games are open the rest of the time too: Showtime just brings everyone together." },
 		{ id = "hourlyDrop", cat = "house", place = "hourlyDrop", q = "What is the Hourly Drop?", a = "Every hour, on the hour, a courier's case comes down onto the black marble plinth in the Foyer, west of the red runner, and stays {dropMinutes} minutes. Stand by it and open it, once each hour: {dropGilt} Gilt, and the first time you open a case holding that hour's piece, the piece is yours too. Six pieces take turns, each back every six hours. The sign over the plinth counts down to the next by the house's clock." },
 		{ id = "luxeSleepers", cat = "attractions", place = "velvet", q = "Who's asleep in Steal a Luxe?", a = "The night staff: eight of them, each asleep beside a treasure, from the footman in the Garden Hall to the master of the house in his bedroom. Get close and they stir, quicker if you're moving, carrying something or lifting a piece near them; Quiet Shoes from the Luxe Lounge help. Wake one after you've lifted something and they call the guards (the master locks his bedroom down); wake one empty-handed and they only grumble. Step away and they settle again." },
@@ -294,7 +294,7 @@ Voice.Tour = {
 		stop = "terrace",
 		place = "terraceDoor",
 		title = "The Terrace",
-		line = "A bar, a fire pit and loungers under the stars. Luxury Island, by the jet from here, is coming soon.",
+		line = "A bar, a fire pit and loungers under the stars. The private jet to Luxury Island boards here, at the Jet Lounge.",
 		quick = true,
 	},
 	{
@@ -499,7 +499,7 @@ Voice.WhatsNew = {
 		-- (One short line each: read at a glance.)
 		"Every big moment now has its own glow: lifts, checkpoints, the Executive.",
 		"Sit on any sofa, bench or bar stool, the Grand Ballroom's too.",
-		"A level up plays its fanfare in full.",
+		"Luxury Island is open: fly in from the Jet Lounge on the Terrace.",
 	},
 }
 
@@ -623,7 +623,7 @@ Voice.Guide = {
 			{ place = "concierge", title = "The Concierge", line = "Stands by the front door, ready to help.", how = "Speak to him and pick Show me the house: he walks you round every room and explains it." },
 			{ place = "boutique", title = "The Boutique", line = "The house's shop for looks.", how = "Boosters and brainrots for Gilt, nameplates, trails and emotes for Gilt or Robux (always with the price shown first). The Wardrobe beside it is where you wear what you own." },
 			{ place = "vault", title = "The Vault", line = "Your collection, kept for good.", how = "Every piece you've sorted stands on its shelves. The console under the eight domes shows your curios, how complete your collection is, and who may look round. The Archivist at the desk keeps your badges and records." },
-			{ place = "terrace", title = "The Terrace", line = "A rooftop to relax on. Luxury Island: coming soon.", how = "A bar with treats, a fire pit and loungers under the stars. Luxury Island, by the jet from the Jet Lounge, is coming soon: it isn't open yet." },
+			{ place = "terrace", title = "The Terrace", line = "A rooftop to relax on, and the jet to Luxury Island.", how = "A bar with treats, a fire pit and loungers under the stars. The private jet to Luxury Island boards at the Jet Lounge: the Island Key opens it, for a Tycoon, and its card shows the price first." },
 			{ place = "suite", title = "Your Suite", line = "Your own private rooms upstairs.", how = "Ring the bell inside to furnish them. Only you can go in, unless you invite friends with the Suites key." },
 		} :: { GuideItem },
 	},

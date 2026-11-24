@@ -1,12 +1,16 @@
 --!strict
 -- The Jet Lounge's card (and the Jet Gallery's desk, and the Pearl Exchange's kiosk): four tabs.
---   The Island      the Island Key: the wealth rank it asks (with the guest's own, ticked or not)
---                   and both its prices, before anyone pays; for a key holder, the day at a glance
+--   The Island      the Island Key: the wealth rank it asks (with the guest's own, ticked or not,
+--                   and how far their Fortune has come), both its prices before anyone pays, and
+--                   what waits on the island; for a key holder, the jet (Board the jet, in the
+--                   Jet Lounge) and today on the island: the pearls, the sunset toast and the
+--                   postcards, each with the very Gilt it pays, and Island Standing
 --   Liveries        every livery for their jet: its colours, its line, and its price or Wear
 --   Island light    the four lights the island can be seen in (each guest's own choice)
 --   The Exchange    the island's own pieces for the Suite, for pearls from the lagoon
--- Every figure and price is the server's (AttractionAsk "state"); buying or choosing asks the
--- server, which takes the price or says why not. Robux liveries only open the purchase window.
+-- Every figure, price and reward is the server's (AttractionAsk "state": its `rewards` are the
+-- sums paid); buying or choosing asks the server, which takes the price or says why not. Robux
+-- liveries only open the purchase window.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -124,6 +128,35 @@ local function price(gilt: number?, gems: number?): string
 	return "Free"
 end
 
+-- (Build 103) A slim bar, filled to `fraction`.
+local function bar(parent: Instance, order: number, fraction: number, colour: Color3): Frame
+	local track = Instance.new("Frame")
+	track.Name = "Progress"
+	track.BackgroundColor3 = Color3.fromRGB(58, 48, 34)
+	track.BorderSizePixel = 0
+	track.Size = UDim2.new(1, 0, 0, 8)
+	track.LayoutOrder = order
+	track.Parent = parent
+	corner(track, 4)
+	local fill = Instance.new("Frame")
+	fill.Name = "Fill"
+	fill.BackgroundColor3 = colour
+	fill.BorderSizePixel = 0
+	fill.Size = UDim2.fromScale(math.clamp(fraction, 0, 1), 1)
+	fill.Parent = track
+	corner(fill, 4)
+	return track
+end
+
+-- A figure from the server's state, or nil.
+local function figure(t: any, key: string): number?
+	if type(t) ~= "table" then
+		return nil
+	end
+	local v = tonumber(t[key])
+	return if v and v >= 0 then v else nil
+end
+
 function IslandPanel.open(which: string?)
 	if Root.isOpen(NAME) then
 		Root.close(NAME)
@@ -185,26 +218,101 @@ function IslandPanel.open(which: string?)
 		end)
 	end
 
+	-- (Build 103) Boarding the jet from the card, standing in the Jet Lounge: the server takes them
+	-- (or says why not), and the flight begins on this screen when it does.
+	local function board()
+		if busy then
+			return
+		end
+		busy = true
+		task.spawn(function()
+			local r = ask({ op = "go", id = "island" })
+			busy = false
+			if not r then
+				Toast.show("Not just now", "The house couldn't be reached. Try again in a moment.", 3)
+			elseif r.ok == true then
+				if Root.isOpen(NAME) then
+					Root.close(NAME)
+				end
+			else
+				Toast.refused(r)
+			end
+		end)
+	end
+
+	-- A paragraph of the card's body.
+	local function para(order: number, text: string, size: number, kind: string, colour: Color3?): TextLabel
+		return Theme.text(body, text, size, kind :: any, { LayoutOrder = order, TextColor3 = colour or C.smoke, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left })
+	end
+
 	local function islandTab(s: { [string]: any })
+		local rw = if type(s.rewards) == "table" then s.rewards else nil
+		local pearlGilt, setGilt = figure(rw, "pearl"), figure(rw, "pearlSet")
+		local toastGilt, friendGilt = figure(rw, "toast"), figure(rw, "toastFriend")
+		local friendsMost, minutes = figure(rw, "toastFriendsMost"), figure(rw, "toastMinutes")
+		local cardsGilt = figure(rw, "postcards")
 		if s.key then
-			Theme.text(body, "The island is yours", 18, "display", { LayoutOrder = 1, TextColor3 = SEA, TextXAlignment = Enum.TextXAlignment.Left })
-			Theme.text(body, "Walk through the jet's arch in the Jet Lounge to fly. On the island: five pearls a day on the lagoon's floor, the sunset toast at the Lookout (with friends, a little more), six postcard spots, and your jet in its livery.", 13, "body", { LayoutOrder = 2, TextColor3 = C.smoke, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left })
-			local taken = 0
+			para(1, "The island is yours", 18, "display", SEA)
+			if s.here == true then
+				para(2, "You're on the island. Your jet waits on the airstrip to fly you home, or press Fly home at the foot of the screen.", 13, "body")
+			elseif s.lounge == true then
+				para(2, "The private jet is ready, here in the Jet Lounge.", 13, "body")
+				local go = Theme.key(body, "Board the jet", true, board, 220)
+				go.LayoutOrder = 3
+			else
+				para(2, "Walk through the jet's arch in the Jet Lounge, on the Terrace, to fly.", 13, "body")
+			end
+			Theme.hairline(body, UDim.new(0, 120), 4)
+			Theme.text(body, "Today on the island", 11, "caps", { LayoutOrder = 5, TextXAlignment = Enum.TextXAlignment.Left })
+			-- The day's pearls.
+			local taken, of = 0, 0
 			for _, t in (if type(s.pearlTaken) == "table" then s.pearlTaken else {}) do
+				of += 1
 				if t then
 					taken += 1
 				end
 			end
-			Theme.hairline(body, UDim.new(0, 120), 3)
-			Theme.text(body, string.format("Today: %d of %d pearls  ·  %s  ·  %d of %d postcards", taken, Plan.PEARLS_A_DAY, if s.toasted then "the sunset toasted" else "the sunset to toast", tonumber(s.postcardCount) or 0, tonumber(s.postcardTotal) or 6), 13, "bodyBold", { LayoutOrder = 4, TextColor3 = GOLD, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left })
-			Theme.text(body, string.format("Pearls kept for the Exchange: %d  ·  brought up in all: %d  ·  flights: %d", tonumber(s.pearlBalance) or 0, tonumber(s.pearlsAll) or 0, tonumber(s.flights) or 0), 12, "body", { LayoutOrder = 5, TextColor3 = C.smoke, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left })
+			of = math.max(of, Plan.PEARLS_A_DAY)
+			para(6, string.format("🐚  Pearls: %d of %d brought up today", taken, of), 14, "bodyBold", if taken >= of then GOLD else C.bone)
+			para(7, (if pearlGilt and setGilt then string.format("+%s Gilt for each, and +%s more for all five in a day. ", Rules.format(pearlGilt), Rules.format(setGilt)) else "") .. "They lie on the lagoon's floor, a new five in new places every day, the same for everyone: swim down beside one to bring it up.", 12, "body")
+			-- The sunset toast.
+			para(8, if s.toasted then "🌅  The sunset: toasted today" else "🌅  The sunset: still to toast, at the Lookout", 14, "bodyBold", if s.toasted then GOLD else C.bone)
+			para(9, "Raise a glass at the Sunset Lookout, on the summit (the summit path, by the gardens, takes you up)" .. (if toastGilt and friendGilt and friendsMost and minutes then string.format(": +%s Gilt once a day, and +%s for each friend who toasts within %d minutes of you, up to %d. They have the same for you.", Rules.format(toastGilt), Rules.format(friendGilt), minutes, friendsMost) else "."), 12, "body")
+			-- The postcard spots.
+			local count, total = tonumber(s.postcardCount) or 0, tonumber(s.postcardTotal) or #Plan.Postcards
+			para(10, string.format("📸  Postcards: %d of %d spots", count, total), 14, "bodyBold", if count >= total then GOLD else C.bone)
+			local names = {}
+			for _, c in (if type(s.postcardList) == "table" then s.postcardList else {}) do
+				if type(c) == "table" then
+					table.insert(names, (if c.taken then "✓ " else "○ ") .. tostring(c.name))
+				end
+			end
+			local cardsLine = table.concat(names, "    ")
+			if s.postcardsPaid == true then
+				cardsLine ..= (if #names > 0 then "  ·  " else "") .. "every spot taken"
+			elseif cardsGilt then
+				cardsLine ..= (if #names > 0 then "  ·  " else "") .. string.format("all six: +%s Gilt and a badge, once", Rules.format(cardsGilt))
+			end
+			if cardsLine ~= "" then
+				para(11, cardsLine, 12, "body")
+			end
+			if taken >= of and s.toasted then
+				para(12, "That's the day done. Tomorrow brings five new pearls in new places, and a new sunset.", 12, "body", SEA)
+			end
+			Theme.hairline(body, UDim.new(0, 120), 13)
 			-- (Build 90) Island Standing: the rank, and how far to the next.
 			local st = if type(s.standing) == "table" then s.standing else nil
 			if st then
-				local nextLine = if st.nextAt then string.format("  ·  %d of %d to %s", tonumber(st.points) or 0, tonumber(st.nextAt) or 0, tostring(st.nextName or "")) else "  ·  the highest there is"
-				Theme.text(body, "Island Standing: " .. tostring(st.name or "Visitor") .. nextLine, 13, "bodyBold", { LayoutOrder = 6, TextColor3 = Color3.fromRGB(120, 220, 214), TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left })
-				Theme.text(body, "A pearl is a point, a sunset toasted three, each postcard spot two, each flight one. Each rank pays Gilt once; Islanders earn the Starlit lights and Patrons the Island Patron livery, never sold.", 12, "body", { LayoutOrder = 7, TextColor3 = C.smoke, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left })
+				local points = tonumber(st.points) or 0
+				local nextAt = tonumber(st.nextAt)
+				local nextLine = if nextAt then string.format("  ·  %d of %d to %s", points, nextAt, tostring(st.nextName or "")) else "  ·  the highest there is"
+				para(14, "Island Standing: " .. tostring(st.name or "Visitor") .. nextLine, 13, "bodyBold", Color3.fromRGB(120, 220, 214))
+				local here = Plan.Standing[tonumber(st.rank) or 1]
+				local from = if here then here.at else 0
+				bar(body, 15, if nextAt and nextAt > from then (points - from) / (nextAt - from) else 1, Color3.fromRGB(120, 220, 214))
+				para(16, "A pearl is a point, a sunset toasted three, each postcard spot two, each day you fly in one. Each rank pays Gilt once; Islanders earn the Starlit lights and Patrons the Island Patron livery, never sold.", 12, "body")
 			end
+			para(17, string.format("Pearls kept for the Exchange: %d  ·  brought up in all: %d  ·  flights: %d", tonumber(s.pearlBalance) or 0, tonumber(s.pearlsAll) or 0, tonumber(s.flights) or 0), 12, "body")
 			return
 		end
 		Theme.text(body, "The Island Key", 18, "display", { LayoutOrder = 1, TextColor3 = GOLD, TextXAlignment = Enum.TextXAlignment.Left })
@@ -213,12 +321,18 @@ function IslandPanel.open(which: string?)
 		local rankDef = Rules.Ranks[tonumber(s.keyRank) or 6] or Rules.Ranks[6]
 		local mine = Rules.Ranks[tonumber(s.rank) or 1] or Rules.Ranks[1]
 		Theme.text(body, string.format("%s  A wealth rank of %s (a Fortune of %s): you're %s", if rankOk then "✓" else "○", rankDef.name, Rules.format(rankDef.at), if rankOk then "there" else "a " .. mine.name .. " now"), 14, "bodyBold", { LayoutOrder = 3, TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true, TextColor3 = if rankOk then GREEN else C.bone })
-		Theme.text(body, string.format("○  The key itself: %s Gilt, or %d Gems", Rules.format(tonumber(s.keyGilt) or 0), tonumber(s.keyGems) or 0), 14, "bodyBold", { LayoutOrder = 4, TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true })
+		-- (Build 103) How far their Fortune has come toward it.
+		local fortune = figure(s, "fortune")
+		if not rankOk and fortune and rankDef.at > 0 then
+			para(4, string.format("Your Fortune: %s of %s", Rules.format(fortune), Rules.format(rankDef.at)), 12, "body")
+			bar(body, 5, fortune / rankDef.at, GOLD)
+		end
+		Theme.text(body, string.format("○  The key itself: %s Gilt, or %d Gems", Rules.format(tonumber(s.keyGilt) or 0), tonumber(s.keyGems) or 0), 14, "bodyBold", { LayoutOrder = 6, TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true })
 		local buys = Instance.new("Frame")
 		buys.Name = "Buy"
 		buys.BackgroundTransparency = 1
 		buys.Size = UDim2.new(1, 0, 0, 46)
-		buys.LayoutOrder = 5
+		buys.LayoutOrder = 7
 		buys.Parent = body
 		local line = Theme.list(buys, 10, true)
 		line.HorizontalAlignment = Enum.HorizontalAlignment.Left
@@ -231,7 +345,14 @@ function IslandPanel.open(which: string?)
 			act({ act = "key", what = "gems" }, "The Island Key")
 		end, 140)
 		gm.LayoutOrder = 2
-		Theme.text(body, "Your Fortune grows with every haul, every Basement clear and every Executive beaten: the Fortune plaque under your Gilt shows how far.", 12, "body", { LayoutOrder = 6, TextColor3 = C.smoke, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left })
+		Theme.text(body, "Your Fortune grows with every haul, every Basement clear and every Executive beaten: the Fortune plaque under your Gilt shows how far.", 12, "body", { LayoutOrder = 8, TextColor3 = C.smoke, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left })
+		-- (Build 103) What waits there, with the very Gilt each pays (the server's own figures).
+		Theme.hairline(body, UDim.new(0, 120), 9)
+		Theme.text(body, "On the island", 11, "caps", { LayoutOrder = 10, TextXAlignment = Enum.TextXAlignment.Left })
+		local waits = if pearlGilt and setGilt and toastGilt and friendGilt and cardsGilt
+			then string.format("Five pearls a day on the lagoon's floor (+%s Gilt each, +%s more for all five), the sunset toast at the Lookout (+%s Gilt a day, +%s for each friend toasting with you), six postcard spots (+%s Gilt once, for all six), Island Standing, and liveries for your own jet.", Rules.format(pearlGilt), Rules.format(setGilt), Rules.format(toastGilt), Rules.format(friendGilt), Rules.format(cardsGilt))
+			else "Five pearls a day on the lagoon's floor, the sunset toast at the Lookout (more with friends), six postcard spots, Island Standing, and liveries for your own jet."
+		para(11, waits, 12, "body")
 	end
 
 	local function liveriesTab(s: { [string]: any })

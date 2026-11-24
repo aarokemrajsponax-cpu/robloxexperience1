@@ -1051,15 +1051,22 @@ local defaults = {
 		-- Luxury Island (server/Attractions/Island): the private island, by the jet from the Jet
 		-- Lounge on the Terrace. The Island Key: a wealth rank reached, then Gilt or Gems.
 		island = {
-			-- (Build 98) Closed for now: "Coming soon" on its card, the jet and the key not offered,
-			-- and the server refuses the way in. Set false to open it again; nothing else changes.
-			comingSoon = true,
+			-- (Build 98) While true: closed, "Coming soon" on its card, the jet and the key not
+			-- offered, and the server refuses the way in. (Build 103) Open: the whole loop works (the
+			-- key, the flight, the pearls, the summit path and the toast, the postcards, the
+			-- Exchange, Island Standing, home). Set true to close it again; nothing else changes.
+			comingSoon = false,
 			origin = { 0, 0, 4200 },
 			keyRank = 6, -- Tycoon (shared/Fortune's ranks)
 			keyGilt = 25000,
 			keyGems = 250,
+			-- The island's rewards: fixed sums, each limited by design, paid in full exactly as the
+			-- Jet Lounge's card shows them (server/Attractions/Island).
 			pearlGilt = 250, -- each of the day's five pearls
 			pearlSetGilt = 100, -- all five in a day
+			toastGilt = 300, -- the sunset toast, once a day
+			toastFriendGilt = 50, -- each friend toasting together (for both of them; four at most)
+			postcardsGilt = 1000, -- every postcard spot, once ever
 		},
 		-- The Grand Ballroom (server/Attractions/Gala): the hall of entertainments through the
 		-- great doors at the far end of the Ballroom. Every reward is shared/Gala's REWARDS unless

@@ -18,11 +18,13 @@
 --   The Coastal Circuit  a ribbon of road round the airstrip, for timed laps (World/Coast)
 --
 -- Reasons to come back, every day: five pearls on the lagoon's floor (new places each day), the
--- sunset toast (with friends, a little more), the postcard spots, the Pearl Exchange (the
--- island's own pieces for your Suite, for pearls), and liveries and island lights to choose.
--- How the island is opened, and what everything costs, is shown at the Jet Lounge before anyone
--- pays: nothing here is chance, and nothing is sold for Robux that can't be had otherwise except
--- two jet liveries that are only a look.
+-- sunset toast (with friends, a little more for everyone toasting together), the postcard spots,
+-- the Pearl Exchange (the island's own pieces for your Suite, for pearls), Island Standing, and
+-- liveries and island lights to choose. How the island is opened, what everything costs and what
+-- every reward pays is shown at the Jet Lounge before anyone pays or plays: the island's rewards
+-- are fixed sums (each limited by design: once a day, or once ever), so the Gilt shown is the
+-- Gilt paid. Nothing here is chance, and nothing is sold for Robux that can't be had otherwise
+-- except two jet liveries that are only a look.
 
 local Island = {}
 
@@ -32,11 +34,26 @@ Island.ID = "island"
 Island.SEA = 0 -- the sea's surface (local y)
 Island.GROUND = 6 -- the island's lowland (local y): the airstrip, the gardens, the beach's top
 
--- Where a guest steps out of the jet, by its airstair, facing the island.
-Island.Arrival = CFrame.lookAt(Vector3.new(-132, Island.GROUND + 0.5, -150), Vector3.new(-60, Island.GROUND + 0.5, -40))
--- The jet on the airstrip (its nose east), and the way home: its airstair.
-Island.Jet = CFrame.lookAt(Vector3.new(-150, Island.GROUND, -176), Vector3.new(0, Island.GROUND, -176))
-Island.Airstair = Vector3.new(-150, Island.GROUND, -158)
+-- The jet on the airstrip, and the way home: the foot of its airstair. (Build 103) The jet's door
+-- and airstair are on its left (port) side, as on any jet; it was parked nose east, which put the
+-- airstair on the runway's far side from the red carpet and the way home. Parked nose west, the
+-- airstair comes down on the south side, onto the carpet laid from `Airstair` toward the island.
+Island.Jet = CFrame.lookAt(Vector3.new(-150, Island.GROUND, -176), Vector3.new(-300, Island.GROUND, -176))
+Island.Airstair = Vector3.new(-164.6, Island.GROUND, -164.4)
+-- Where a guest steps out of the jet: at the red carpet's end, the airstair behind them, facing
+-- the island (the gardens, with the Sunset Lookout's hill on the left).
+Island.Arrival = CFrame.lookAt(Vector3.new(-164.6, Island.GROUND + 0.5, -142), Vector3.new(-30, Island.GROUND + 0.5, 10))
+-- (How long the jet's flight is on a guest's screen, about: what the island waits for before it
+-- speaks to someone just landed.)
+Island.FLIGHT_SECONDS = 10
+-- (Build 103) The island's waters end at an unseen edge this far inside its area (shared/Attractions
+-- BOUNDS), so nobody swims out of it; and a guest carried out of the area anyway (still within
+-- ADRIFT of the island's origin, out at sea) is flown home to the Jet Lounge, never left adrift.
+Island.EDGE_INSET = 6
+Island.ADRIFT = 1500
+-- (And anyone on the island who didn't fly in, set down there some other way, is flown home after
+-- this many seconds: nobody is ever there without the island's card and its Fly home.)
+Island.STRAY_SECONDS = 6
 
 -- The places, for signs, the Concierge and the postcards.
 Island.Places = {
@@ -49,6 +66,19 @@ Island.Places = {
 	summit = { name = "The Sunset Lookout", at = Vector3.new(-120, 40, 40) },
 	marina = { name = "The Marina", at = Vector3.new(-230, Island.SEA, 80) },
 } :: { [string]: { name: string, at: Vector3 } }
+
+-- (Build 103) The summit path: from the foot of the Lookout's stair (by the gardens) to its head on
+-- the Lookout's deck, and back, for anyone (the stair is long, and its hill steep): where each end
+-- is asked from, and where it sets a guest down, facing on.
+Island.SummitPath = {
+	foot = Vector3.new(-48, Island.GROUND, 24),
+	-- (Set down just before the stair's bottom step, facing the gardens: clear of the court's bench
+	-- and hedge beside it.)
+	footArrive = CFrame.lookAt(Vector3.new(-47, Island.GROUND + 0.5, 22.8), Vector3.new(-30, Island.GROUND + 0.5, 18)),
+	head = Vector3.new(-104, 40, 40.5),
+	headArrive = CFrame.lookAt(Vector3.new(-108, 40.5, 40.5), Vector3.new(-120, 40.5, 40)),
+	reach = 14, -- how near an end a guest must be to ask
+}
 
 ---------------------------------------------------------------------------------------------------
 -- Opening the island: the Island Key
@@ -64,14 +94,20 @@ Island.KEY_GEMS = 250
 ---------------------------------------------------------------------------------------------------
 -- Where pearls can lie on the lagoon's floor (local, on the sand). Each day, five of them, the same
 -- five for everyone that day, chosen by the day itself.
+-- (Build 103: the fourth lay under Villa IV's deck, out of sight; it's just off the villa's ladder now.)
 Island.PEARL_SPOTS = {
-	Vector3.new(-80, -5.4, 168), Vector3.new(-58, -5.4, 205), Vector3.new(-30, -5.4, 182), Vector3.new(-6, -5.4, 214),
+	Vector3.new(-80, -5.4, 168), Vector3.new(-58, -5.4, 205), Vector3.new(-30, -5.4, 182), Vector3.new(16, -5.4, 212),
 	Vector3.new(18, -5.4, 172), Vector3.new(40, -5.4, 200), Vector3.new(64, -5.4, 222), Vector3.new(-96, -5.4, 214),
 	Vector3.new(-44, -5.4, 236), Vector3.new(-12, -5.4, 244), Vector3.new(30, -5.4, 240), Vector3.new(-70, -5.4, 248),
 	Vector3.new(84, -5.4, 196), Vector3.new(-110, -5.4, 190), Vector3.new(6, -5.4, 192), Vector3.new(52, -5.4, 252),
 } :: { Vector3 }
 Island.PEARLS_A_DAY = 5
-Island.PEARL_REACH = 7 -- how near a guest must be to bring one up
+Island.PEARL_REACH = 8 -- how near a guest's screen must see them to ask for one
+-- (Build 103) What the server allows besides, across the water (where it sees a swimmer can be a
+-- moment behind their screen), and how high above the sea a guest may be: in the water, never on
+-- a deck or the pier above it.
+Island.PEARL_SLACK = 3
+Island.PEARL_ABOVE_SEA = 2.5
 Island.PEARL_GILT = 250 -- each pearl
 Island.PEARL_SET_GILT = 100 -- all five in a day
 
@@ -101,8 +137,11 @@ end
 -- The sunset toast
 ---------------------------------------------------------------------------------------------------
 Island.TOAST_GILT = 300 -- once a day
-Island.TOAST_FRIEND = 50 -- for each friend who toasts in the same few minutes (in the house)
-Island.TOAST_FRIENDS_MOST = 4 -- counted at most
+-- For each friend toasting together (within TOAST_WINDOW of each other, in the house): the one who
+-- toasts second has it at once, and (Build 103) the one who toasted first has it too, when their
+-- friend raises a glass.
+Island.TOAST_FRIEND = 50
+Island.TOAST_FRIENDS_MOST = 4 -- counted at most, for each toast
 Island.TOAST_WINDOW = 180 -- seconds: toasting "together"
 Island.TOAST_REACH = 26 -- how near the Lookout's middle
 
@@ -110,22 +149,30 @@ Island.TOAST_REACH = 26 -- how near the Lookout's middle
 -- The postcard spots: a frame on a post, a view behind it. A photograph at every one: a badge
 -- and Gilt, once.
 ---------------------------------------------------------------------------------------------------
+-- (Build 103: Wheels Down frames the jet from ahead of its nose now, its airstair and carpet in view.)
 Island.Postcards = {
-	{ id = "jet", name = "Wheels Down", at = Vector3.new(-120, Island.GROUND, -146), look = Vector3.new(-150, Island.GROUND + 6, -176) },
-	{ id = "villa", name = "The Infinity Pool", at = Vector3.new(118, 31, -28), look = Vector3.new(60, 28, -60) },
+	{ id = "jet", name = "Wheels Down", at = Vector3.new(-196, Island.GROUND, -140), look = Vector3.new(-150, Island.GROUND + 6, -176) },
+	-- (Build 103: the Grand Villa is a resort in tiers now; its infinity pool is on the Pool Terrace,
+	-- framed from the terrace's south side across the water to the waterfall, between the loungers.)
+	{ id = "villa", name = "The Infinity Pool", at = Vector3.new(174, 18.5, 52), look = Vector3.new(170, 20, 12) },
 	{ id = "pier", name = "Overwater", at = Vector3.new(-24, Island.SEA + 3.3, 150), look = Vector3.new(-30, 6, 236) },
 	{ id = "beach", name = "Barefoot", at = Vector3.new(96, 2.6, 116), look = Vector3.new(60, 2, 260) },
-	{ id = "summit", name = "Golden Hour", at = Vector3.new(-110, 40, 50), look = Vector3.new(-300, 30, 160) },
+	-- (Build 103: on the Lookout's west side, clear of its benches, lamps and telescope.)
+	{ id = "summit", name = "Golden Hour", at = Vector3.new(-130, 40, 42.5), look = Vector3.new(-300, 30, 160) },
 	{ id = "marina", name = "Anchors Aweigh", at = Vector3.new(-236, Island.GROUND, 70), look = Vector3.new(-280, 8, 100) },
 } :: { { id: string, name: string, at: Vector3, look: Vector3 } }
-Island.POSTCARD_REACH = 12
+-- (Build 103) The frame's prompt reaches POSTCARD_PROMPT; the server allows POSTCARD_REACH from the
+-- frame's foot (a little more, so a guest the prompt reached is never told to come closer).
+Island.POSTCARD_PROMPT = 10
+Island.POSTCARD_REACH = 14
 Island.POSTCARDS_GILT = 1000
 
 ---------------------------------------------------------------------------------------------------
 -- (Build 90) Island Standing: everything a guest has done on the island, counted toward a rank.
 -- A pearl brought up is a point, a sunset toasted three, each postcard spot two (the first time),
--- each flight in one. Each rank pays its Gilt once, the moment it's reached; the Islander's
--- Starlit lights and the Patron's jet livery are earned this way only, never sold.
+-- and (Build 103) each day flown in, one (it was every flight, which a guest could repeat at will).
+-- Each rank pays its Gilt once, the moment it's reached; the Islander's Starlit lights and the
+-- Patron's jet livery are earned this way only, never sold.
 ---------------------------------------------------------------------------------------------------
 export type StandingRank = { name: string, at: number, gilt: number, line: string }
 Island.Standing = {
@@ -140,9 +187,11 @@ Island.STANDING_SUNSET = 3
 Island.STANDING_POSTCARD = 2
 Island.STANDING_FLIGHT = 1
 
--- A guest's standing points from their island record's counts.
-function Island.standingPoints(pearlsAll: number, sunsetsAll: number, postcards: number, flights: number): number
-	return pearlsAll * Island.STANDING_PEARL + sunsetsAll * Island.STANDING_SUNSET + postcards * Island.STANDING_POSTCARD + flights * Island.STANDING_FLIGHT
+-- A guest's standing points from their island record's counts (`flightDays`: the days they've
+-- flown in, not every flight; for a record from before Build 103, its flights then as well, each
+-- counted as it always was).
+function Island.standingPoints(pearlsAll: number, sunsetsAll: number, postcards: number, flightDays: number): number
+	return pearlsAll * Island.STANDING_PEARL + sunsetsAll * Island.STANDING_SUNSET + postcards * Island.STANDING_POSTCARD + flightDays * Island.STANDING_FLIGHT
 end
 
 -- The rank for `points` (its number), and the points the next one takes (nil at the top).

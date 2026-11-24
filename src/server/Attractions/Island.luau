@@ -3,16 +3,27 @@
 -- the server's: whether a guest holds the Island Key (a wealth rank reached, and the key bought
 -- for Gilt or Gems at the Jet Lounge, both shown before anyone pays), the day's pearls on the
 -- lagoon's floor (the same five for everyone, each brought up once a day by a guest who is truly
--- beside it), the sunset toast at the Lookout (once a day; a little more for each friend who
--- toasts in the same few minutes), the postcard spots, the liveries and the island's lights each
--- guest owns and chooses, and the Pearl Exchange (the island's own Suite pieces, for pearls).
--- Nothing a guest's screen says is a reward, a price or a place.
+-- in the water beside it), the sunset toast at the Lookout (once a day; a little more for each
+-- friend toasting together, for both of them), the postcard spots, the summit path, the liveries
+-- and the island's lights each guest owns and chooses, the Pearl Exchange (the island's own Suite
+-- pieces, for pearls) and Island Standing. Nothing a guest's screen says is a reward, a price or
+-- a place.
+--
+-- (Build 103) The island's rewards are fixed sums, each limited by design (a pearl once a day, the
+-- toast once a day, the postcards and each Standing rank once ever), so they're paid in full as
+-- prizes: what the Jet Lounge's card shows (Island.state's `rewards`) is exactly what's paid.
+-- Standing counts the days flown in, not every flight. The island's waters have an unseen edge,
+-- and anyone carried out past it is flown home. The summit path takes anyone up to the Sunset
+-- Lookout and down again.
 
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local AttractionList = require(ReplicatedStorage.Shared.Attractions)
 local FortuneRules = require(ReplicatedStorage.Shared.Fortune)
+local Layout = require(ReplicatedStorage.Shared.Layout)
+local Names = require(ReplicatedStorage.Shared.Names)
 local Plan = require(ReplicatedStorage.Shared.Island)
 local Wardrobe = require(ReplicatedStorage.Shared.Wardrobe)
 local Fortune = require(script.Parent.Parent.Fortune)
@@ -38,8 +49,12 @@ end
 -- A guest's Suite pieces changed (the Boutique tells their screen).
 Island.ownedChanged = function(_player: Player) end
 
+-- A toast raised at the Lookout in the last few minutes: who, when, and how many friends' toasts
+-- it has been paid for so far (counted at most TOAST_FRIENDS_MOST).
+type Toast = { player: Player, at: number, friends: number }
+
 local built: IslandBuild.Built? = nil
-local toasts: { { player: Player, at: number } } = {} -- the last few minutes' toasts, for friends
+local toasts: { Toast } = {}
 local now = os.time
 Island.now = now
 
@@ -61,7 +76,27 @@ local function keyGems(ctx: Types.Ctx): number
 	return num(cfg(ctx).keyGems, Plan.KEY_GEMS)
 end
 
--- A guest's page of the island, tidied (made on first asking).
+-- (Build 103) The island's rewards, the very sums paid (shared/Island; Config can change them).
+export type Rewards = { pearl: number, pearlSet: number, toast: number, toastFriend: number, toastFriendsMost: number, toastMinutes: number, postcards: number }
+local function rewards(ctx: Types.Ctx): Rewards
+	local c = cfg(ctx)
+	local function sum(v: any, default: number): number
+		return math.max(0, math.floor(num(v, default)))
+	end
+	return {
+		pearl = sum(c.pearlGilt, Plan.PEARL_GILT),
+		pearlSet = sum(c.pearlSetGilt, Plan.PEARL_SET_GILT),
+		toast = sum(c.toastGilt, Plan.TOAST_GILT),
+		toastFriend = sum(c.toastFriendGilt, Plan.TOAST_FRIEND),
+		toastFriendsMost = Plan.TOAST_FRIENDS_MOST,
+		toastMinutes = math.max(1, math.floor(Plan.TOAST_WINDOW / 60 + 0.5)),
+		postcards = sum(c.postcardsGilt, Plan.POSTCARDS_GILT),
+	}
+end
+Island.rewards = rewards
+
+-- A guest's page of the island, tidied (made on first asking). Every field has a safe default, so
+-- a record from any earlier build reads the same.
 local function page(ctx: Types.Ctx, data: any): { [string]: any }
 	local p = ctx.saved(data, Plan.ID)
 	if type(p.liveries) ~= "table" then
@@ -85,11 +120,19 @@ local function page(ctx: Types.Ctx, data: any): { [string]: any }
 	if type(p.theme) ~= "string" or not Plan.themeById[p.theme] then
 		p.theme = "golden"
 	end
-	p.pearls = num(p.pearls, 0)
-	p.pearlsAll = num(p.pearlsAll, 0)
-	p.flights = num(p.flights, 0)
+	p.pearls = math.max(0, num(p.pearls, 0))
+	p.pearlsAll = math.max(0, num(p.pearlsAll, 0))
+	p.flights = math.max(0, num(p.flights, 0))
 	p.sunsetsAll = num(p.sunsetsAll, 0) -- (Build 90) sunsets toasted, all told (counted from Build 90)
 	p.standingPaid = math.max(1, num(p.standingPaid, 1)) -- the highest Island Standing rank paid
+	if type(p.flightDays) ~= "number" then
+		-- (Build 103) Standing counts the days flown in from now on. The flights in a record from
+		-- before go on counting as they always did (one each), set once here and never added to:
+		-- nobody's standing, rank or Gilt paid changes for the new rule, and nothing is paid twice.
+		p.flightDays = 0
+		p.flightsBefore = p.flights
+	end
+	p.flightsBefore = math.max(0, num(p.flightsBefore, 0))
 	-- (A new day: the day's pearls are new.)
 	local today = Plan.day(Island.now())
 	if p.pearlDay ~= today then
@@ -109,6 +152,27 @@ local function publish(player: Player, p: { [string]: any })
 	player:SetAttribute("IslandTheme", p.theme)
 end
 
+-- (Build 103) Stands a guest up from any seat (a lounger, a bench, a car) before the house moves
+-- them to or from the island: a seat is joined to whoever sits in it, and would come with them.
+local function unseat(player: Player)
+	pcall(function()
+		local character = player.Character
+		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+		if not humanoid then
+			return
+		end
+		local seat = humanoid.SeatPart
+		if seat then
+			local weld = seat:FindFirstChild("SeatWeld")
+			if weld then
+				weld:Destroy()
+			end
+		end
+		humanoid.Sit = false
+	end)
+end
+Island.unseat = unseat
+
 ---------------------------------------------------------------------------------------------------
 -- (Build 90) Island Standing
 ---------------------------------------------------------------------------------------------------
@@ -121,11 +185,11 @@ local function postcardCount(p: { [string]: any }): number
 end
 
 local function standingPoints(p: { [string]: any }): number
-	return Plan.standingPoints(p.pearlsAll, p.sunsetsAll, postcardCount(p), p.flights)
+	return Plan.standingPoints(p.pearlsAll, p.sunsetsAll, postcardCount(p), p.flightDays + p.flightsBefore)
 end
 
 -- After any island deed: a rank reached pays its Gilt (each rank once, ever) and opens what comes
--- with it, and the guest's screen is told.
+-- with it, and the guest's screen is told (the house too, from Islander up).
 local function standingCheck(ctx: Types.Ctx, player: Player, p: { [string]: any })
 	local rank = Plan.standingOf(standingPoints(p))
 	while p.standingPaid < rank do
@@ -133,15 +197,19 @@ local function standingCheck(ctx: Types.Ctx, player: Player, p: { [string]: any 
 		local r = Plan.Standing[p.standingPaid]
 		local gilt = if r.gilt > 0 then ctx.prize(player, r.gilt, "Island Standing: " .. r.name) else 0
 		ctx.send(player, { op = "islandStanding", rank = p.standingPaid, name = r.name, line = r.line, gilt = gilt })
+		if p.standingPaid >= 3 then
+			ctx.herald(player, { kind = "island", title = "ISLAND STANDING", line = "reached Island Standing: " .. r.name, glyph = "🏝️" })
+		end
 	end
 	-- (What standing alone opens.)
+	local opened = math.max(rank, p.standingPaid)
 	for _, t in Plan.Themes do
-		if t.standing and rank >= t.standing then
+		if t.standing and opened >= t.standing then
 			p.themes[t.id] = true
 		end
 	end
 	for _, l in Plan.Liveries do
-		if l.standing and rank >= l.standing then
+		if l.standing and opened >= l.standing then
 			p.liveries[l.id] = true
 		end
 	end
@@ -151,6 +219,13 @@ Island.standingCheck = standingCheck
 ---------------------------------------------------------------------------------------------------
 -- What a guest's screen is told
 ---------------------------------------------------------------------------------------------------
+-- Whether a guest stands in the Jet Lounge's room (where the jet boards), in no attraction.
+local function inLounge(ctx: Types.Ctx, player: Player): boolean
+	local def = AttractionList.byId[Plan.ID]
+	local root = ctx.rootOf(player)
+	return def ~= nil and root ~= nil and ctx.inside(player) == nil and (Layout.zoneAt(root.CFrame.Position) :: any) == def.room
+end
+
 function Island.state(ctx: Types.Ctx, player: Player): { [string]: any }
 	local data = ctx.data(player)
 	if not data then
@@ -158,10 +233,16 @@ function Island.state(ctx: Types.Ctx, player: Player): { [string]: any }
 	end
 	local p = page(ctx, data)
 	local rank = rankReached(data)
+	local need = keyRank(ctx)
+	local needDef = FortuneRules.Ranks[need] or FortuneRules.Ranks[#FortuneRules.Ranks]
 	local today = Plan.pearlsFor(p.pearlDay)
 	local taken = {}
+	local got = 0
 	for i, spot in today do
 		taken[i] = p.pearlTaken[tostring(spot)] == true
+		if taken[i] then
+			got += 1
+		end
 	end
 	local liveries = {}
 	for _, l in Plan.Liveries do
@@ -178,38 +259,53 @@ function Island.state(ctx: Types.Ctx, player: Player): { [string]: any }
 			table.insert(exchange, { id = e.id, name = item.name, line = item.line, pearls = e.pearls, owned = (data.owned or {})[e.id] == true })
 		end
 	end
-	local cards = 0
-	for _ in p.postcards do
-		cards += 1
+	local cards = {}
+	for _, c in Plan.Postcards do
+		table.insert(cards, { id = c.id, name = c.name, taken = p.postcards[c.id] == true })
 	end
+	local fortune = 0
+	local okFortune, total = pcall(Fortune.of, data)
+	if okFortune and type(total) == "number" then
+		fortune = total
+	end
+	-- (Build 90) Island Standing: never shown below a rank already reached and paid.
+	local pts = standingPoints(p)
+	local standingRank = math.max(Plan.standingOf(pts), math.min(p.standingPaid, #Plan.Standing))
+	local nextRank = Plan.Standing[standingRank + 1]
 	return {
 		ok = true,
 		key = p.key == true,
-		keyRank = keyRank(ctx),
-		keyRankName = (FortuneRules.Ranks[keyRank(ctx)] or FortuneRules.Ranks[1]).name,
+		keyRank = need,
+		keyRankName = needDef.name,
+		keyRankAt = needDef.at,
 		rank = rank,
+		fortune = fortune,
 		keyGilt = keyGilt(ctx),
 		keyGems = keyGems(ctx),
+		-- (Build 103) Where they are: on the island, or in the Jet Lounge where the jet boards.
+		here = ctx.inside(player) == Plan.ID,
+		lounge = inLounge(ctx, player),
+		rewards = rewards(ctx),
 		pearlSpots = today,
 		pearlTaken = taken,
+		pearlsGot = got,
 		pearlBalance = p.pearls,
 		pearlsAll = p.pearlsAll,
 		toasted = p.toastDay == Plan.day(Island.now()),
+		sunsetsAll = p.sunsetsAll,
 		postcards = p.postcards,
-		postcardCount = cards,
+		postcardList = cards,
+		postcardCount = postcardCount(p),
 		postcardTotal = #Plan.Postcards,
+		postcardsPaid = p.postcardsPaid == true,
 		liveries = liveries,
 		livery = p.livery,
 		themes = themes,
 		theme = p.theme,
 		exchange = exchange,
 		flights = p.flights,
-		-- (Build 90) Island Standing.
-		standing = (function()
-			local pts = standingPoints(p)
-			local rank, nextAt = Plan.standingOf(pts)
-			return { points = pts, rank = rank, name = Plan.Standing[rank].name, nextAt = nextAt, nextName = if Plan.Standing[rank + 1] then Plan.Standing[rank + 1].name else nil }
-		end)(),
+		flightDays = p.flightDays,
+		standing = { points = pts, rank = standingRank, name = Plan.Standing[standingRank].name, nextAt = if nextRank then nextRank.at else nil, nextName = if nextRank then nextRank.name else nil },
 	}
 end
 
@@ -238,11 +334,11 @@ local function buyKey(ctx: Types.Ctx, player: Player, data: any, p: { [string]: 
 	p.keyAt = Island.now()
 	ctx.award(player, "islandKey")
 	ctx.herald(player, { kind = "island", title = "THE ISLAND KEY", line = "has the key to Luxury Island", glyph = "🏝️" })
-	return { ok = true, title = "The Island Key", line = "Luxury Island is yours: the jet waits in the Jet Lounge." }
+	return { ok = true, title = "The Island Key", line = "Luxury Island is yours: the jet boards in the Jet Lounge, here on the Terrace." }
 end
 
 ---------------------------------------------------------------------------------------------------
--- The pearls, the toast, the postcards
+-- The pearls, the toast, the postcards, the summit path
 ---------------------------------------------------------------------------------------------------
 -- Where a guest stands on the island (from its origin), if they're truly on it.
 local function standing(ctx: Types.Ctx, player: Player): Vector3?
@@ -252,7 +348,16 @@ local function standing(ctx: Types.Ctx, player: Player): Vector3?
 	return ctx.at(player, Plan.ID)
 end
 
-local function pearl(ctx: Types.Ctx, player: Player, data: any, p: { [string]: any }, n: number): { [string]: any }
+-- Whether a guest at `at` is in the lagoon beside the pearl at `pearlAt`: near it across the water
+-- (with a little allowance for where the server sees a swimmer), in the water, not above it on a
+-- deck or the pier, and not far below it.
+local function besidePearl(at: Vector3, pearlAt: Vector3): boolean
+	local flat = Vector3.new(at.X - pearlAt.X, 0, at.Z - pearlAt.Z).Magnitude
+	return flat <= Plan.PEARL_REACH + Plan.PEARL_SLACK and at.Y <= Plan.SEA + Plan.PEARL_ABOVE_SEA and at.Y >= pearlAt.Y - 6
+end
+Island.besidePearl = besidePearl
+
+local function pearl(ctx: Types.Ctx, player: Player, p: { [string]: any }, n: number): { [string]: any }
 	local today = Plan.pearlsFor(p.pearlDay)
 	local spot = today[n]
 	if not spot then
@@ -262,13 +367,14 @@ local function pearl(ctx: Types.Ctx, player: Player, data: any, p: { [string]: a
 		return { ok = false, why = "You've brought that one up already today." }
 	end
 	local at = standing(ctx, player)
-	if not at or (at - Plan.PEARL_SPOTS[spot]).Magnitude > Plan.PEARL_REACH then
+	if not at or not besidePearl(at, Plan.PEARL_SPOTS[spot]) then
 		return { ok = false, why = "Swim down beside it first." }
 	end
 	p.pearlTaken[tostring(spot)] = true
 	p.pearls += 1
 	p.pearlsAll += 1
-	local gilt = ctx.gilt(player, num(cfg(ctx).pearlGilt, Plan.PEARL_GILT), "island pearl")
+	local r = rewards(ctx)
+	local gilt = ctx.prize(player, r.pearl, "island pearl")
 	ctx.tally(player, "pearls", 1)
 	ctx.progress(player, "pearl", 1)
 	local got = 0
@@ -279,9 +385,8 @@ local function pearl(ctx: Types.Ctx, player: Player, data: any, p: { [string]: a
 	end
 	local set = 0
 	if got >= #today then
-		set = ctx.prize(player, num(cfg(ctx).pearlSetGilt, Plan.PEARL_SET_GILT), "island pearls: all five")
+		set = ctx.prize(player, r.pearlSet, "island pearls: all five")
 	end
-	local _ = data
 	standingCheck(ctx, player, p)
 	return { ok = true, pearl = n, got = got, of = #today, gilt = gilt, set = set, balance = p.pearls }
 end
@@ -298,27 +403,52 @@ local function toast(ctx: Types.Ctx, player: Player, p: { [string]: any }): { [s
 		return { ok = false, why = "Raise your glass at the Sunset Lookout, on the summit." }
 	end
 	p.toastDay = today
+	local r = rewards(ctx)
 	-- (Friends who toasted in the last few minutes, still in the house.)
 	local t = Island.now()
-	local friends = 0
-	local kept = {}
+	local kept: { Toast } = {}
+	local together: { Toast } = {}
 	for _, e in toasts do
 		if t - e.at <= Plan.TOAST_WINDOW and e.player.Parent == Players then
 			table.insert(kept, e)
 			if e.player ~= player and Island.friends(player, e.player) then
-				friends += 1
+				table.insert(together, e)
 			end
 		end
 	end
+	local friends = math.min(#together, r.toastFriendsMost)
+	table.insert(kept, { player = player, at = t, friends = friends })
 	toasts = kept
-	table.insert(toasts, { player = player, at = t })
-	friends = math.min(friends, Plan.TOAST_FRIENDS_MOST)
-	local gilt = ctx.gilt(player, Plan.TOAST_GILT + friends * Plan.TOAST_FRIEND, "island sunset")
+	local gilt = ctx.prize(player, r.toast + friends * r.toastFriend, "island sunset")
 	ctx.tally(player, "sunsets", 1)
 	ctx.progress(player, "toast", 1)
 	p.sunsetsAll += 1
 	standingCheck(ctx, player, p)
-	local line = if friends > 0 then string.format("%d Gilt, with %d friend%s toasting beside you.", gilt, friends, if friends == 1 then "" else "s") else string.format("%d Gilt. Bring friends tomorrow: a little more for each who toasts with you.", gilt)
+	local name = Names.of(player)
+	-- (Build 103) The friends who toasted first have a little more too, now their friend has joined
+	-- them: each friend counted once, and at most TOAST_FRIENDS_MOST for any one toast.
+	local told: { [Player]: boolean } = {}
+	for _, e in together do
+		told[e.player] = true
+		if e.friends < r.toastFriendsMost and r.toastFriend > 0 then
+			e.friends += 1
+			local more = ctx.prize(e.player, r.toastFriend, "island sunset: a friend's toast")
+			ctx.send(e.player, { op = "notice", title = "A toast together", line = string.format("%s raised a glass with you at the Lookout  ·  +%s Gilt", name, FortuneRules.format(more)) })
+		end
+	end
+	-- Friends on the island who haven't toasted today hear of it: there's a little more for them
+	-- too if they toast within the next few minutes (the window is real, and said as it is).
+	for _, q in Players:GetPlayers() do
+		if q ~= player and not told[q] and ctx.inside(q) == Plan.ID and Island.friends(player, q) then
+			local qd = ctx.data(q)
+			if qd and page(ctx, qd).toastDay ~= today then
+				ctx.send(q, { op = "notice", title = "A toast at the Lookout", line = string.format("%s is raising a glass to the sunset. Toast at the Lookout within %d minutes: a little more for you both.", name, r.toastMinutes) })
+			end
+		end
+	end
+	local line = if friends > 0
+		then string.format("%s Gilt, with %d friend%s toasting beside you.", FortuneRules.format(gilt), friends, if friends == 1 then "" else "s")
+		else string.format("%s Gilt. Bring friends: a little more for each who toasts with you, within %d minutes.", FortuneRules.format(gilt), r.toastMinutes)
 	ctx.send(player, { op = "toasted", gilt = gilt, friends = friends })
 	return { ok = true, title = "To the sunset", line = line, gilt = gilt, friends = friends }
 end
@@ -339,19 +469,36 @@ local function postcard(ctx: Types.Ctx, player: Player, p: { [string]: any }, id
 	end
 	local first = p.postcards[id] ~= true
 	p.postcards[id] = true
-	local count = 0
-	for _ in p.postcards do
-		count += 1
-	end
+	local count = postcardCount(p)
 	local paid = 0
 	if count >= #Plan.Postcards and not p.postcardsPaid then
 		p.postcardsPaid = true
-		paid = ctx.gilt(player, Plan.POSTCARDS_GILT, "island postcards")
+		-- (Once ever: paid in full, as shown on the Jet Lounge's card.)
+		paid = ctx.prize(player, rewards(ctx).postcards, "island postcards")
 		ctx.award(player, "postcards")
 	end
 	ctx.send(player, { op = "postcard", id = id, name = spot.name, count = count, total = #Plan.Postcards, first = first, paid = paid })
 	standingCheck(ctx, player, p)
 	return { ok = true, count = count, total = #Plan.Postcards }
+end
+
+-- (Build 103) The summit path: up to the Sunset Lookout from the foot of its stair, or down again,
+-- for a guest who is truly at that end.
+local function path(ctx: Types.Ctx, player: Player, which: string): { [string]: any }
+	local sp = Plan.SummitPath
+	if which ~= "up" and which ~= "down" then
+		return { ok = false, why = "That isn't something the house does." }
+	end
+	local from = if which == "up" then sp.foot else sp.head
+	local at = standing(ctx, player)
+	if not at or (at - from).Magnitude > sp.reach then
+		return { ok = false, why = if which == "up" then "The path up starts at the foot of the Lookout's stair, by the gardens." else "The path down starts at the head of the Lookout's stair." }
+	end
+	local to = if which == "up" then sp.headArrive else sp.footArrive
+	if not ctx.teleport(player, to + AttractionList.origin(Plan.ID)) then
+		return { ok = false, why = "Not just now." }
+	end
+	return { ok = true }
 end
 
 ---------------------------------------------------------------------------------------------------
@@ -404,11 +551,12 @@ local function exchange(ctx: Types.Ctx, player: Player, data: any, p: { [string]
 	p.pearls -= cost
 	data.owned[id] = true
 	Island.ownedChanged(player)
-	local _ = ctx
+	-- (A Suite piece counts toward the Fortune.)
+	ctx.fortune(player)
 	return { ok = true, title = item.name, line = "Yours: ring the bell in your Suite to put it where you like.", balance = p.pearls }
 end
 
--- (Build 98) Closed for now (Config's comingSoon): no way in, and no key sold for it.
+-- (Build 98) Closed while Config's comingSoon is on: no way in, and no key sold for it.
 function Island.comingSoon(ctx: Types.Ctx): boolean
 	return cfg(ctx).comingSoon == true
 end
@@ -427,11 +575,13 @@ function Island.ask(ctx: Types.Ctx, player: Player, r: { [string]: unknown }): a
 	elseif act == "key" then
 		result = buyKey(ctx, player, data, p, if what == "gems" then "gems" else "gilt")
 	elseif act == "pearl" and type(n) == "number" and n == math.floor(n) then
-		result = pearl(ctx, player, data, p, n :: number)
+		result = pearl(ctx, player, p, n :: number)
 	elseif act == "toast" then
 		result = toast(ctx, player, p)
 	elseif act == "postcard" and type(what) == "string" then
 		result = postcard(ctx, player, p, what :: string)
+	elseif act == "path" and type(what) == "string" then
+		result = path(ctx, player, what :: string)
 	elseif (act == "livery" or act == "theme") and type(what) == "string" then
 		result = choose(ctx, player, p, act :: string, what :: string)
 	elseif act == "exchange" and type(what) == "string" then
@@ -469,12 +619,45 @@ local function prompt(parent: BasePart, kind: string, action: string, object: st
 	return pr
 end
 
+-- An unseen part: something to hang a prompt on, or a wall.
+local function unseen(parent: Instance, name: string, size: Vector3, at: Vector3, solid: boolean): Part
+	local part = Instance.new("Part")
+	part.Name = name
+	part.Anchored = true
+	part.CanCollide = solid
+	part.CanQuery = false
+	part.CanTouch = false
+	part.CastShadow = false
+	part.Transparency = 1
+	part.Size = size
+	part.CFrame = CFrame.new(at)
+	part.Parent = parent
+	return part
+end
+
+-- (Build 103) The island's unseen edge, just inside its area, all round: nobody swims out of it.
+local function edge(parent: Instance, o: Vector3)
+	local b = AttractionList.BOUNDS[Plan.ID]
+	if not b then
+		return
+	end
+	local inset = Vector3.new(Plan.EDGE_INSET, 0, Plan.EDGE_INSET)
+	local lo, hi = o + b.min + inset, o + b.max - inset
+	local mid = (lo + hi) / 2
+	local size = hi - lo
+	unseen(parent, "EdgeWest", Vector3.new(2, size.Y, size.Z + 4), Vector3.new(lo.X - 1, mid.Y, mid.Z), true)
+	unseen(parent, "EdgeEast", Vector3.new(2, size.Y, size.Z + 4), Vector3.new(hi.X + 1, mid.Y, mid.Z), true)
+	unseen(parent, "EdgeSouth", Vector3.new(size.X + 4, size.Y, 2), Vector3.new(mid.X, mid.Y, lo.Z - 1), true)
+	unseen(parent, "EdgeNorth", Vector3.new(size.X + 4, size.Y, 2), Vector3.new(mid.X, mid.Y, hi.Z + 1), true)
+end
+
 function Island.build(ctx: Types.Ctx, parent: Instance)
 	local o = ctx.cfg(Plan.ID).origin
 	if type(o) ~= "table" then
 		return
 	end
-	local b = IslandBuild.build(parent, Vector3.new(o[1], o[2], o[3]))
+	local origin = Vector3.new(o[1], o[2], o[3])
+	local b = IslandBuild.build(parent, origin)
 	built = b
 	if b.home then
 		prompt(b.home, "home", "Fly home", "Your jet", {}, 14)
@@ -485,9 +668,20 @@ function Island.build(ctx: Types.Ctx, parent: Instance)
 	for _, spot in b.postcards do
 		local id = spot:GetAttribute("Postcard")
 		if type(id) == "string" then
-			prompt(spot, "act", "Take a postcard", "The view", { Act = "postcard", What = id }, 12)
+			prompt(spot, "act", "Take a postcard", "The view", { Act = "postcard", What = id }, Plan.POSTCARD_PROMPT)
 		end
 	end
+	-- (Build 103) The summit path's two ends, and the island's edge (beside the island's model,
+	-- which IslandBuild keeps to itself).
+	local ways = Instance.new("Model")
+	ways.Name = "IslandWays"
+	local sp = Plan.SummitPath
+	local up = unseen(ways, "SummitPathFoot", Vector3.new(3, 5, 3), origin + sp.foot + Vector3.new(0, 2.5, 0), false)
+	prompt(up, "act", "Up to the Lookout", "The summit path", { Act = "path", What = "up" }, 10)
+	local down = unseen(ways, "SummitPathHead", Vector3.new(3, 5, 3), origin + sp.head + Vector3.new(0, 2.5, 0), false)
+	prompt(down, "act", "Down to the gardens", "The summit path", { Act = "path", What = "down" }, 10)
+	edge(ways, origin)
+	ways.Parent = parent
 end
 
 function Island.enter(ctx: Types.Ctx, player: Player): (CFrame?, string?)
@@ -500,18 +694,34 @@ function Island.enter(ctx: Types.Ctx, player: Player): (CFrame?, string?)
 	end
 	local p = page(ctx, data)
 	if not p.key then
-		return nil, "The Island Key opens it: see the desk in the Jet Lounge, on the Terrace."
+		return nil, "The Island Key opens it: see the card in the Jet Lounge, on the Terrace."
 	end
 	p.flights += 1
+	-- (Build 103: Island Standing counts the first flight of each day.)
+	local today = Plan.day(Island.now())
+	if p.flightDay ~= today then
+		p.flightDay = today
+		p.flightDays += 1
+	end
 	ctx.tally(player, "flights", 1)
-	standingCheck(ctx, player, p)
 	publish(player, p)
+	-- (Boarding from a seat on the Terrace: up first, so the seat stays behind.)
+	unseat(player)
+	-- (Island Standing once they've landed: the flight is on their screen first.)
+	task.delay(Plan.FLIGHT_SECONDS, function()
+		if player.Parent and ctx.inside(player) == Plan.ID then
+			local d = ctx.data(player)
+			if d then
+				standingCheck(ctx, player, page(ctx, d))
+			end
+		end
+	end)
 	return Plan.Arrival, nil
 end
 
 -- Without the Island Key, the jet's arch opens the Jet Lounge's card instead (how to have it).
 function Island.locked(ctx: Types.Ctx, player: Player): boolean
-	-- (Build 98: closed for now, the arch never opens the key's card; the way in says why.)
+	-- (While it's closed, coming soon, the arch never opens the key's card; the way in says why.)
 	if Island.comingSoon(ctx) then
 		return false
 	end
@@ -543,9 +753,64 @@ function Island.directory(ctx: Types.Ctx, player: Player): { [string]: any }
 	return out
 end
 
-function Island.leave(_ctx: Types.Ctx, _player: Player, _why: string) end
+-- (Build 103) Leaving. Flying home: up from any seat first (a lounger, a bench, a car), so the
+-- guest arrives standing. A guest carried out of the island's area while still out at sea (past
+-- its edge, by anything at all) is flown home to the Jet Lounge, never left adrift with no way
+-- back. Anyone the house moved elsewhere ("away" too, but nowhere near the island) is left where
+-- the house put them.
+function Island.leave(ctx: Types.Ctx, player: Player, why: string)
+	if player.Parent == nil then
+		return
+	end
+	if why == "home" then
+		unseat(player)
+		return
+	elseif why ~= "away" then
+		return
+	end
+	local root = ctx.rootOf(player)
+	if not root or (root.CFrame.Position - AttractionList.origin(Plan.ID)).Magnitude > Plan.ADRIFT then
+		return
+	end
+	unseat(player)
+	task.defer(function()
+		if player.Parent and ctx.inside(player) == nil then
+			ctx.sendHome(player, Plan.ID)
+			ctx.notice(player, "Home from the island", "You'd gone out past the island's waters: the jet has brought you home to the Jet Lounge.")
+		end
+	end)
+end
 
-function Island.step(_ctx: Types.Ctx, _dt: number) end
+-- (Build 103) Nobody is ever on the island without having flown in (whose screen would have no
+-- island card and no Fly home): someone the house set down there any other way (an owner's
+-- "bring" or "go to") is flown home to the Jet Lounge after a few moments, the owner aside.
+local strays: { [Player]: number } = {}
+function Island.step(ctx: Types.Ctx, _dt: number)
+	local t = os.clock()
+	for _, player in Players:GetPlayers() do
+		local root = ctx.rootOf(player)
+		if root and ctx.inside(player) == nil and AttractionList.areaAt(root.CFrame.Position) == Plan.ID and not ctx.isOwner(player) then
+			local since = strays[player]
+			if since == nil then
+				strays[player] = t
+			elseif since ~= math.huge and t - since >= Plan.STRAY_SECONDS then
+				strays[player] = math.huge -- (on the way: not asked again until they're off the island)
+				unseat(player)
+				task.spawn(function()
+					ctx.sendHome(player, Plan.ID)
+					ctx.notice(player, "Home from the island", "Luxury Island is reached by the private jet: you're back in the Jet Lounge, where it boards.")
+				end)
+			end
+		else
+			strays[player] = nil
+		end
+	end
+	for player in strays do
+		if player.Parent == nil then
+			strays[player] = nil
+		end
+	end
+end
 
 function Island.arrived(ctx: Types.Ctx, player: Player)
 	local data = ctx.data(player)
@@ -557,6 +822,9 @@ end
 -- For tests.
 function Island.built(): IslandBuild.Built?
 	return built
+end
+function Island.toasts(): { Toast }
+	return toasts
 end
 
 return Island

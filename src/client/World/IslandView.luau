@@ -2,17 +2,20 @@
 -- Luxury Island on a guest's own screen (shared/Island has the plan; the server builds it and keeps
 -- every reward):
 --   The island's light  while they're on it, the sky, the sun, the haze, the bloom and the grade of
---                       the light they chose (Golden Hour, Azure Noon, Rosé Dawn, Moonlit), and the
---                       house's own light put back exactly when they leave
+--                       the light they chose (Golden Hour, Azure Noon, Rosé Dawn, Moonlit, Starlit),
+--                       and the house's own light put back exactly when they leave; the island's
+--                       life (firelight, lit rooms, glitter on the water, fireflies, gulls, flags,
+--                       surf) is World/IslandLife's, in step with it
 --   The day's pearls    each one still to find, a pearl in an open shell with a column of bubbles
 --                       rising from it; swim down beside one and it's brought up (the server
 --                       decides, from where it truly sees them)
 --   The jets            theirs on the airstrip in their livery; the Jet Gallery's models in theirs
 --   The flight          a few seconds in the jet's cabin, clouds streaming past the windows, while
---                       the island (or the house) is made ready around them; any key skips it
+--                       the island (or the house) is made ready around them: in from black, out
+--                       through a bright cloud, and the camera brought down to them from above
+--                       before it's theirs again (never left stuck); any key skips it
 -- Only this screen sees any of it.
 
-local CollectionService = game:GetService("CollectionService")
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -27,6 +30,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Plan = require(ReplicatedStorage.Shared.Island)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Sound = require(script.Parent.Parent.Sound)
+local IslandLife = require(script.Parent.IslandLife)
 
 local IslandView = {}
 
@@ -70,51 +74,67 @@ type Preset = {
 	top: Color3,
 	bottom: Color3,
 	exposure: number,
+	diffuse: number, -- EnvironmentDiffuseScale: the sky's light in every surface
+	specular: number, -- EnvironmentSpecularScale: the sky in the water, the glass and the gold
+	softness: number, -- ShadowSoftness
 	atmo: { density: number, offset: number, colour: Color3, decay: Color3, glare: number, haze: number },
 	bloom: { intensity: number, size: number, threshold: number },
 	rays: { intensity: number, spread: number },
 	grade: { tint: Color3, saturation: number, contrast: number, brightness: number },
-	lantern: number, -- the lanterns' transparency (0: lit)
 	sun: number, -- the sun's size in the sky
+	stars: number,
 }
 
 local PRESETS: { [string]: Preset } = {
+	-- The sun low over the sea in the west: warm light raking across the island, long shadows, a
+	-- peach haze on the horizon deepening to rose, a soft bloom on the lamps and the water.
 	golden = {
-		clock = 17.55, latitude = 24, brightness = 2.7,
-		ambient = rgb(118, 92, 82), outdoor = rgb(176, 136, 114), top = rgb(255, 198, 140), bottom = rgb(120, 74, 54), exposure = 0.12,
-		atmo = { density = 0.31, offset = 0.22, colour = rgb(255, 202, 168), decay = rgb(255, 122, 86), glare = 0.65, haze = 1.7 },
-		bloom = { intensity = 0.85, size = 30, threshold = 0.92 }, rays = { intensity = 0.14, spread = 0.78 },
-		grade = { tint = rgb(255, 240, 224), saturation = 0.14, contrast = 0.08, brightness = 0.02 }, lantern = 0.25, sun = 26,
+		clock = 17.55, latitude = 24, brightness = 2.8,
+		ambient = rgb(112, 88, 80), outdoor = rgb(170, 130, 112), top = rgb(255, 196, 132), bottom = rgb(118, 72, 56), exposure = 0.1,
+		diffuse = 1, specular = 1, softness = 0.22,
+		atmo = { density = 0.32, offset = 0.24, colour = rgb(255, 204, 168), decay = rgb(236, 120, 96), glare = 0.7, haze = 1.9 },
+		bloom = { intensity = 0.8, size = 28, threshold = 0.9 }, rays = { intensity = 0.13, spread = 0.8 },
+		grade = { tint = rgb(255, 238, 220), saturation = 0.16, contrast = 0.1, brightness = 0.02 }, sun = 24, stars = 0,
 	},
 	azure = {
 		clock = 13.2, latitude = 18, brightness = 3.1,
 		ambient = rgb(120, 130, 142), outdoor = rgb(152, 164, 178), top = rgb(255, 250, 240), bottom = rgb(120, 150, 170), exposure = 0.02,
-		atmo = { density = 0.2, offset = 0.08, colour = rgb(206, 228, 255), decay = rgb(150, 192, 240), glare = 0.12, haze = 0.5 },
-		bloom = { intensity = 0.55, size = 24, threshold = 0.95 }, rays = { intensity = 0.05, spread = 0.6 },
-		grade = { tint = rgb(246, 252, 255), saturation = 0.2, contrast = 0.06, brightness = 0.01 }, lantern = 0.7, sun = 20,
+		diffuse = 1, specular = 1, softness = 0.15,
+		atmo = { density = 0.22, offset = 0.08, colour = rgb(206, 228, 255), decay = rgb(150, 192, 240), glare = 0.12, haze = 0.5 },
+		bloom = { intensity = 0.5, size = 24, threshold = 0.95 }, rays = { intensity = 0.05, spread = 0.6 },
+		grade = { tint = rgb(246, 252, 255), saturation = 0.2, contrast = 0.06, brightness = 0.01 }, sun = 18, stars = 0,
 	},
 	dawn = {
 		clock = 6.35, latitude = 24, brightness = 2.2,
 		ambient = rgb(128, 100, 122), outdoor = rgb(170, 132, 152), top = rgb(255, 196, 206), bottom = rgb(130, 90, 120), exposure = 0.1,
+		diffuse = 1, specular = 1, softness = 0.3,
 		atmo = { density = 0.3, offset = 0.2, colour = rgb(255, 208, 218), decay = rgb(238, 140, 172), glare = 0.5, haze = 1.4 },
-		bloom = { intensity = 0.8, size = 30, threshold = 0.92 }, rays = { intensity = 0.12, spread = 0.72 },
-		grade = { tint = rgb(255, 238, 242), saturation = 0.1, contrast = 0.05, brightness = 0.02 }, lantern = 0.4, sun = 24,
+		bloom = { intensity = 0.75, size = 28, threshold = 0.92 }, rays = { intensity = 0.12, spread = 0.72 },
+		grade = { tint = rgb(255, 238, 242), saturation = 0.1, contrast = 0.06, brightness = 0.02 }, sun = 22, stars = 0,
 	},
 	moonlit = {
 		clock = 0.6, latitude = 24, brightness = 0.7,
 		ambient = rgb(64, 74, 106), outdoor = rgb(76, 96, 138), top = rgb(170, 190, 255), bottom = rgb(40, 50, 90), exposure = 0.3,
+		diffuse = 0.8, specular = 1, softness = 0.4,
 		atmo = { density = 0.34, offset = 0.14, colour = rgb(124, 144, 196), decay = rgb(72, 92, 152), glare = 0.1, haze = 0.8 },
-		bloom = { intensity = 1.0, size = 36, threshold = 0.84 }, rays = { intensity = 0.03, spread = 0.5 },
-		grade = { tint = rgb(222, 232, 255), saturation = -0.05, contrast = 0.1, brightness = 0.0 }, lantern = 0, sun = 20,
+		bloom = { intensity = 1.0, size = 34, threshold = 0.84 }, rays = { intensity = 0.03, spread = 0.5 },
+		grade = { tint = rgb(222, 232, 255), saturation = -0.05, contrast = 0.1, brightness = 0.0 }, sun = 20, stars = 3000,
+	},
+	starlit = {
+		clock = 23.2, latitude = 24, brightness = 0.5,
+		ambient = rgb(52, 58, 92), outdoor = rgb(60, 72, 118), top = rgb(150, 170, 255), bottom = rgb(30, 36, 70), exposure = 0.35,
+		diffuse = 0.7, specular = 1, softness = 0.45,
+		atmo = { density = 0.28, offset = 0.1, colour = rgb(84, 100, 160), decay = rgb(40, 50, 110), glare = 0, haze = 0.4 },
+		bloom = { intensity = 1.0, size = 34, threshold = 0.84 }, rays = { intensity = 0, spread = 0.5 },
+		grade = { tint = rgb(214, 224, 255), saturation = 0, contrast = 0.12, brightness = 0.0 }, sun = 18, stars = 5000,
 	},
 }
 IslandView.PRESETS = PRESETS
 
-local LIGHT_PROPS = { "ClockTime", "GeographicLatitude", "Brightness", "Ambient", "OutdoorAmbient", "ColorShift_Top", "ColorShift_Bottom", "ExposureCompensation" }
+local LIGHT_PROPS = { "ClockTime", "GeographicLatitude", "Brightness", "Ambient", "OutdoorAmbient", "ColorShift_Top", "ColorShift_Bottom", "ExposureCompensation", "EnvironmentDiffuseScale", "EnvironmentSpecularScale", "ShadowSoftness" }
 type Saved = { props: { [string]: any }, stash: { Instance } }
 local saved: Saved? = nil
 local made: { [string]: Instance } = {}
-local moonLights: { Instance } = {}
 local theme: string? = nil
 
 local function ours(i: Instance): boolean
@@ -145,53 +165,6 @@ local function effect(class: string, name: string): Instance
 	return n
 end
 
-local function setLanterns(p: Preset, id: string)
-	for _, l in CollectionService:GetTagged("IslandLantern") do
-		if l:IsA("BasePart") then
-			l.Transparency = p.lantern
-		end
-	end
-	-- The tiki torches along the sand: firelight on this screen, brighter as the light goes.
-	local fire = if id == "moonlit" then 1.5 elseif id == "golden" or id == "dawn" then 1.1 else 0.6
-	for _, f in CollectionService:GetTagged("IslandTorch") do
-		if f:IsA("BasePart") then
-			local light = f:FindFirstChild("IslandTorchLight") :: PointLight?
-			if not light then
-				local nl = Instance.new("PointLight")
-				nl.Name = "IslandTorchLight"
-				nl.Range = 16
-				nl.Color = rgb(255, 150, 70)
-				nl.Shadows = false
-				nl.Parent = f
-				light = nl
-			end
-			(light :: PointLight).Brightness = fire
-		end
-	end
-	-- (Moonlit: a few of the lanterns really light the night.)
-	if id == "moonlit" and #moonLights == 0 then
-		local n = 0
-		for i, l in CollectionService:GetTagged("IslandLantern") do
-			if l:IsA("BasePart") and i % 3 == 1 and n < 12 then
-				local light = Instance.new("PointLight")
-				light.Name = "IslandMoonLantern"
-				light.Brightness = 1.6
-				light.Range = 18
-				light.Color = rgb(255, 196, 130)
-				light.Shadows = false
-				light.Parent = l
-				table.insert(moonLights, light)
-				n += 1
-			end
-		end
-	elseif id ~= "moonlit" then
-		for _, light in moonLights do
-			light:Destroy()
-		end
-		moonLights = {}
-	end
-end
-
 -- Lights the island in preset `id` (and keeps it so while they're there).
 function IslandView.light(id: string)
 	local p = PRESETS[id] or PRESETS.golden
@@ -208,8 +181,10 @@ function IslandView.light(id: string)
 	end
 	stashHouse(s :: Saved)
 	local L = Lighting :: any
+	local phone = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+	local planned = Plan.themeById[id]
 	pcall(function()
-		L.ClockTime = p.clock
+		L.ClockTime = if planned then planned.clock else p.clock
 		L.GeographicLatitude = p.latitude
 		L.Brightness = p.brightness
 		L.Ambient = p.ambient
@@ -219,21 +194,27 @@ function IslandView.light(id: string)
 		L.ExposureCompensation = p.exposure
 	end)
 	pcall(function()
+		L.EnvironmentDiffuseScale = p.diffuse
+		L.EnvironmentSpecularScale = p.specular
+		L.ShadowSoftness = p.softness
+	end)
+	pcall(function()
 		local sky = effect("Sky", "IslandSky") :: any
 		sky.SunAngularSize = p.sun
 		sky.MoonAngularSize = 14
-		sky.StarCount = 3000
+		sky.StarCount = p.stars
 		sky.CelestialBodiesShown = true
 		local a = effect("Atmosphere", "IslandAtmosphere") :: any
 		a.Density, a.Offset, a.Color, a.Decay, a.Glare, a.Haze = p.atmo.density, p.atmo.offset, p.atmo.colour, p.atmo.decay, p.atmo.glare, p.atmo.haze
 		local b = effect("BloomEffect", "IslandBloom") :: any
-		b.Intensity, b.Size, b.Threshold = p.bloom.intensity, p.bloom.size, p.bloom.threshold
+		-- (A phone draws a softer, smaller bloom.)
+		b.Intensity, b.Size, b.Threshold = p.bloom.intensity * (if phone then 0.7 else 1), if phone then math.min(p.bloom.size, 20) else p.bloom.size, p.bloom.threshold
 		local r = effect("SunRaysEffect", "IslandRays") :: any
 		r.Intensity, r.Spread = p.rays.intensity, p.rays.spread
 		local g = effect("ColorCorrectionEffect", "IslandGrade") :: any
 		g.TintColor, g.Saturation, g.Contrast, g.Brightness = p.grade.tint, p.grade.saturation, p.grade.contrast, p.grade.brightness
 	end)
-	setLanterns(p, id)
+	IslandLife.theme(if PRESETS[id] then id else "golden")
 	theme = id
 end
 
@@ -243,10 +224,6 @@ function IslandView.unlight()
 		e:Destroy()
 	end
 	made = {}
-	for _, light in moonLights do
-		light:Destroy()
-	end
-	moonLights = {}
 	local s = saved
 	if s then
 		for k, v in s.props do
@@ -617,15 +594,23 @@ local function buildSky(parent: Instance, at: CFrame, outbound: boolean): { { pa
 	return puffs
 end
 
--- The flight. `outbound`: to the island (else home). Any key or tap ends it early.
-local FLIGHT = 9 -- seconds
+-- The flight. `outbound`: to the island (else home). Any key or tap ends it early. In from black;
+-- the cabin, the clouds streaming past; then out through a bright cloud, and the camera brought
+-- down from above to the guest (wherever they've been set down) before it's theirs again. A new
+-- flight ends one still showing; a watchdog ends any flight that somehow ran on, so the camera is
+-- never left stuck.
+local FLIGHT = 8.2 -- seconds in the cabin
+local GLIDE = 1.5 -- seconds of the camera coming down to the guest
+local ending: (() -> ())? = nil
+
 function IslandView.flight(outbound: boolean)
-	if flying then
-		return
-	end
 	local camera = Workspace.CurrentCamera
 	if not camera then
 		return
+	end
+	local stop = ending
+	if flying and stop then
+		stop()
 	end
 	flying = true
 	pcall(IslandView.cinematic, true)
@@ -649,7 +634,7 @@ function IslandView.flight(outbound: boolean)
 		b.Parent = screen
 		return b
 	end
-	bar(true)
+	local barTop = bar(true)
 	local foot = bar(false)
 	local caps = Instance.new("TextLabel")
 	caps.Name = "Caps"
@@ -687,7 +672,7 @@ function IslandView.flight(outbound: boolean)
 	aside.TextColor3 = rgb(236, 228, 212)
 	aside.Text = ""
 	aside.TextTransparency = 1
-	aside.Parent = screen:FindFirstChild("BarTop")
+	aside.Parent = barTop
 	local skip = Instance.new("TextLabel")
 	skip.Name = "Skip"
 	skip.BackgroundTransparency = 1
@@ -700,22 +685,25 @@ function IslandView.flight(outbound: boolean)
 	skip.TextColor3 = rgb(180, 172, 160)
 	skip.Text = "any key to skip"
 	skip.Parent = foot
-	local white = Instance.new("Frame")
-	white.Name = "Flash"
-	white.BackgroundColor3 = rgb(255, 250, 240)
-	white.BackgroundTransparency = 1
-	white.BorderSizePixel = 0
-	white.Size = UDim2.fromScale(1, 1)
-	white.ZIndex = 5
-	white.Parent = screen
+	-- The veil: black at first (the cut to the cabin never seen), then a warm white for the cloud
+	-- the jet descends through at the end.
+	local veil = Instance.new("Frame")
+	veil.Name = "Flash"
+	veil.BackgroundColor3 = Color3.new(0, 0, 0)
+	veil.BackgroundTransparency = 0
+	veil.BorderSizePixel = 0
+	veil.Size = UDim2.fromScale(1, 1)
+	veil.ZIndex = 5
+	veil.Parent = screen
+	TweenService:Create(veil, TweenInfo.new(0.9, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), { BackgroundTransparency = 1 }):Play()
 	TweenService:Create(caps, TweenInfo.new(0.8), { TextTransparency = 0 }):Play()
 	task.delay(0.25, function()
 		TweenService:Create(words, TweenInfo.new(0.9), { TextTransparency = 0 }):Play()
 	end)
 	type Aside = { at: number, text: string }
 	local asides: { Aside } = if outbound
-		then { { at = 1.4, text = "Welcome aboard. Champagne is served." }, { at = 4.2, text = "Cruising above the clouds, the sun going gold." }, { at = 6.8, text = "Beginning our descent to Luxury Island." } }
-		else { { at = 1.4, text = "Welcome aboard. A nightcap is served." }, { at = 4.2, text = "Cruising home under the stars." }, { at = 6.8, text = "The lights of the Maison, ahead." } }
+		then { { at = 1.4, text = "Welcome aboard. Champagne is served." }, { at = 4.0, text = "Cruising above the clouds, the sun going gold." }, { at = 6.4, text = "Beginning our descent to Luxury Island." } }
+		else { { at = 1.4, text = "Welcome aboard. A nightcap is served." }, { at = 4.0, text = "Cruising home under the stars." }, { at = 6.4, text = "The lights of the Maison, ahead." } }
 	for _, a in asides do
 		task.delay(a.at, function()
 			if not screen.Parent then
@@ -734,14 +722,54 @@ function IslandView.flight(outbound: boolean)
 	local liveryId = player:GetAttribute("JetLivery")
 	local cabin = buildCabin(at, if type(liveryId) == "string" then liveryId else "ivory", outbound)
 	local puffs = buildSky(cabin, at, outbound)
+	local puffParts: { BasePart } = {}
+	for _, p in puffs do
+		table.insert(puffParts, p.part)
+	end
 	cabin.Parent = Workspace
-	local camWas = camera.CameraType
 	camera.CameraType = Enum.CameraType.Scriptable
-	-- (Standing in the aisle aft: down the cabin to the bulkhead first, then round to the windows.)
+	-- (Standing in the aisle aft: down the cabin to the bulkhead first, then round to the windows,
+	-- drifting a little forward.)
 	local seat = at * CFrame.new(0.4, 4.7, 7.4)
 	local t = 0
 	local done = false
 	local conns: { RBXScriptConnection } = {}
+	local function cabinView(): CFrame
+		local u = math.clamp(t / FLIGHT, 0, 1)
+		local ease = u * u * (3 - 2 * u)
+		local yaw = math.rad(-4) + (math.rad(-58) - math.rad(-4)) * ease
+		local dip = math.clamp((t - 6.4) / 1.8, 0, 1)
+		local pitch = math.rad(-7) + math.rad(-4) * dip * dip * (3 - 2 * dip)
+		local bank = math.sin(t * 0.6) * math.rad(2.2)
+		local sway = Vector3.new(math.sin(t * 1.3) * 0.04, math.sin(t * 2.1) * 0.03, 0)
+		return seat * CFrame.new(0, 0, -1.2 * ease) * CFrame.Angles(pitch, yaw + math.sin(t * 0.4) * math.rad(2), bank) + sway
+	end
+	-- The very end: the camera theirs again, the screen gone.
+	local function release()
+		for _, c in conns do
+			c:Disconnect()
+		end
+		conns = {}
+		pcall(function()
+			cabin:Destroy()
+		end)
+		pcall(function()
+			camera.CameraType = Enum.CameraType.Custom
+			local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+			if hum then
+				camera.CameraSubject = hum
+			end
+		end)
+		pcall(IslandView.cinematic, false)
+		pcall(function()
+			screen:Destroy()
+		end)
+		if ending == release then
+			ending = nil
+		end
+		flying = false
+	end
+	ending = release
 	local function finish()
 		if done then
 			return
@@ -750,40 +778,68 @@ function IslandView.flight(outbound: boolean)
 		for _, c in conns do
 			c:Disconnect()
 		end
-		local flash = TweenService:Create(white, TweenInfo.new(0.35), { BackgroundTransparency = 0 })
-		flash:Play()
-		task.delay(0.4, function()
-			cabin:Destroy()
-			camera.CameraType = if camWas == Enum.CameraType.Scriptable then Enum.CameraType.Custom else camWas
-			local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-			if hum then
-				camera.CameraSubject = hum
+		conns = {}
+		-- Out through a bright cloud...
+		veil.BackgroundColor3 = if outbound then rgb(255, 244, 226) else rgb(226, 232, 246)
+		TweenService:Create(veil, TweenInfo.new(0.4, Enum.EasingStyle.Sine, Enum.EasingDirection.In), { BackgroundTransparency = 0 }):Play()
+		task.delay(0.45, function()
+			if ending ~= release then
+				return
 			end
-			TweenService:Create(white, TweenInfo.new(0.6), { BackgroundTransparency = 1 }):Play()
-			pcall(IslandView.cinematic, false)
-			task.delay(0.7, function()
-				screen:Destroy()
-				flying = false
+			pcall(function()
+				cabin:Destroy()
+			end)
+			-- ...and down from above to the guest, where they've been set down.
+			local character = player.Character
+			local root = character and character:FindFirstChild("HumanoidRootPart")
+			local from: CFrame? = nil
+			local to: CFrame? = nil
+			if root and root:IsA("BasePart") then
+				local p = root.Position
+				local look = root.CFrame.LookVector
+				local flat = Vector3.new(look.X, 0, look.Z)
+				local f = if flat.Magnitude > 0.01 then flat.Unit else Vector3.new(0, 0, -1)
+				to = CFrame.lookAt(p - f * 12 + Vector3.new(0, 4.5, 0), p + f * 4 + Vector3.new(0, 1.5, 0))
+				from = CFrame.lookAt(p - f * 60 + Vector3.new(0, 34, 0), p + f * 40)
+			end
+			TweenService:Create(veil, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), { BackgroundTransparency = 1 }):Play()
+			TweenService:Create(barTop, TweenInfo.new(GLIDE, Enum.EasingStyle.Sine, Enum.EasingDirection.In), { Position = UDim2.fromScale(0, -0.12) }):Play()
+			TweenService:Create(foot, TweenInfo.new(GLIDE, Enum.EasingStyle.Sine, Enum.EasingDirection.In), { Position = UDim2.fromScale(0, 1.12) }):Play()
+			if from and to then
+				local a, b = from :: CFrame, to :: CFrame
+				camera.CFrame = a
+				local g = 0
+				table.insert(conns, RunService.RenderStepped:Connect(function(dt: number)
+					g += dt
+					local u = math.clamp(g / GLIDE, 0, 1)
+					local e = 1 - (1 - u) ^ 3
+					camera.CFrame = a:Lerp(b, e)
+					if u >= 1 then
+						release()
+					end
+				end))
+			end
+			task.delay(GLIDE + 0.1, function()
+				if ending == release then
+					release()
+				end
 			end)
 		end)
 	end
 	table.insert(conns, RunService.RenderStepped:Connect(function(dt: number)
 		t += dt
-		-- From the cabin to the window: the camera turns slowly from the tables to the sky, banks
-		-- gently, sways the faintest bit, and dips its nose as the descent begins.
-		local u = math.clamp(t / FLIGHT, 0, 1)
-		local ease = u * u * (3 - 2 * u)
-		local yaw = math.rad(-4) + (math.rad(-58) - math.rad(-4)) * ease
-		local pitch = math.rad(-7) + (if t > 6.8 then math.rad(-4) * math.clamp((t - 6.8) / 2, 0, 1) else 0)
-		local bank = math.sin(t * 0.6) * math.rad(2.2)
-		local sway = Vector3.new(math.sin(t * 1.3) * 0.04, math.sin(t * 2.1) * 0.03, 0)
-		camera.CFrame = seat * CFrame.Angles(pitch, yaw + math.sin(t * 0.4) * math.rad(2), bank) + sway
-		for _, p in puffs do
-			local z = ((p.offset.Z + t * 150 + 180) % 360) - 180
-			local sink = if t > 6.8 then (t - 6.8) * 6 else 0
-			p.part.CFrame = at * CFrame.new(p.offset.X, p.offset.Y + sink, z)
-		end
-		if t >= FLIGHT then
+		local ok = pcall(function()
+			camera.CFrame = cabinView()
+			-- The clouds stream past (and sink away as the jet descends): moved all at once.
+			local sink = if t > 6.4 then (t - 6.4) * 6 else 0
+			local cfs: { CFrame } = {}
+			for _, p in puffs do
+				local z = ((p.offset.Z + t * 150 + 180) % 360) - 180
+				table.insert(cfs, at * CFrame.new(p.offset.X, p.offset.Y + sink, z))
+			end
+			Workspace:BulkMoveTo(puffParts, cfs, Enum.BulkMoveMode.FireCFrameChanged)
+		end)
+		if not ok or t >= FLIGHT then
 			finish()
 		end
 	end))
@@ -792,6 +848,12 @@ function IslandView.flight(outbound: boolean)
 			finish()
 		end
 	end))
+	-- (The watchdog: whatever happens, the camera is the guest's again soon after.)
+	task.delay(FLIGHT + GLIDE + 3, function()
+		if ending == release then
+			release()
+		end
+	end)
 	sound(if outbound then "enter" else "leave", 0.6)
 end
 
@@ -824,7 +886,9 @@ end
 local function arrive()
 	onIsland = true
 	local id = player:GetAttribute("IslandTheme")
-	IslandView.light(if type(id) == "string" then id else "golden")
+	local chosen = if type(id) == "string" then id else "golden"
+	pcall(IslandLife.enter, if PRESETS[chosen] then chosen else "golden")
+	IslandView.light(chosen)
 	paintAll()
 	task.spawn(function()
 		local st = ask({ op = "state", id = "island" })
@@ -838,6 +902,7 @@ end
 local function depart()
 	onIsland = false
 	clearPearls()
+	pcall(IslandLife.leave)
 	IslandView.unlight()
 end
 

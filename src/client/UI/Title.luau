@@ -86,7 +86,7 @@ function Title.shots(): { Shot }
 	table.insert(shots, slide("THE LIBRARY", "The Grand Auction: rare lots, bid for in every server at once.",
 		Vector3.new(L.minX + 6, club + 12, L.minZ + 6), Vector3.new(L.minX + 12, club + 10, L.maxZ - 6),
 		Vector3.new(L.maxX - 14, club + 4, L.maxZ - 10), Vector3.new(L.maxX - 8, club + 4, L.minZ + 14), 8))
-	table.insert(shots, slide("THE TERRACE", "A rooftop under the stars. Luxury Island: coming soon.",
+	table.insert(shots, slide("THE TERRACE", "A rooftop under the stars, and the Jet Lounge: your jet to Luxury Island.",
 		Vector3.new(T.minX + 6, T.floorY + 14, T.minZ + 6), Vector3.new(T.maxX - 10, T.floorY + 14, T.minZ + 6),
 		Vector3.new(T.maxX - 20, T.floorY + 4, T.maxZ - 8), Vector3.new(T.minX + 30, T.floorY + 4, T.maxZ - 8), 9))
 	return shots
@@ -219,7 +219,7 @@ function Title.tickerItems(): { string }
 	if type(season) == "string" and season ~= "" then
 		table.insert(items, string.upper(season) .. " SEASON")
 	end
-	table.insert(items, "STEAL A LUXE · THE MAISON BASEMENT · THE EXECUTIVE SUITE · THE GRAND AUCTION · LUXURY ISLAND: COMING SOON")
+	table.insert(items, "STEAL A LUXE · THE MAISON BASEMENT · THE EXECUTIVE SUITE · THE GRAND AUCTION · LUXURY ISLAND")
 	table.insert(items, "NEW · FLEX YOUR BRAINROTS FROM THE HOTBAR")
 	return items
 end

@@ -12,6 +12,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local AttractionList = require(ReplicatedStorage.Shared.Attractions)
 local Brand = require(ReplicatedStorage.Shared.Brand)
+local IslandPlan = require(ReplicatedStorage.Shared.Island)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Rules = require(ReplicatedStorage.Shared.Fortune)
 local BasementHud = require(script.Parent.BasementHud)
@@ -252,9 +253,10 @@ function Attraction.start()
 			-- (The very first time: how it works, on a card of its own; after that, a line.)
 			local first = m.first == true
 			if m.id == "island" then
-				-- (The jet: a few seconds in its cabin while the island is made ready.)
+				-- (The jet: a few seconds in its cabin while the island is made ready. Build 103: the
+				-- greeting waits for the whole flight, never speaking over it.)
 				IslandView.flight(true)
-				task.delay(6.4, function()
+				task.delay(IslandPlan.FLIGHT_SECONDS + 0.4, function()
 					if def and player:GetAttribute(AttractionList.ATTRIBUTE) == "island" then
 						if first then
 							FirstVisit.attraction("island")

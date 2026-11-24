@@ -185,7 +185,7 @@ Directory.List = {
 		steps = {
 			"Board the private jet in the Jet Lounge, on the Terrace.",
 			"Bring up the day's five pearls from the lagoon, and toast the sunset at the Lookout.",
-			"Choose your jet's livery and your villa's theme.",
+			"Choose your jet's livery and the island's light.",
 		},
 		rewards = "Gilt for each pearl and for the day's toast (more with friends), and more Gilt for all five pearls.",
 		unlock = "You need the Island Key: reach the rank of {keyRank} ({keyRankAt} Fortune), then buy it at the Jet Lounge for {keyGilt} Gilt or {keyGems} Gems.",
