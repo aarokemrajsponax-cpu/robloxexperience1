@@ -178,7 +178,7 @@ local function present(spec: Spec)
 	glow.Name = "Glow"
 	glow.AnchorPoint = Vector2.new(0.5, 0.5)
 	glow.Position = UDim2.fromScale(0.5, 0.5)
-	glow.Size = UDim2.new(1.5, 0, 2.4, 0)
+	glow.Size = UDim2.new(1.3, 0, 1.9, 0)
 	glow.BackgroundColor3 = tone
 	glow.BackgroundTransparency = 1
 	glow.BorderSizePixel = 0
@@ -271,7 +271,7 @@ local function present(spec: Spec)
 	-- In: the glow blooms, the plate rises and settles, the light passes, the words come up.
 	tween(scale, 0.75, { Scale = Root.scale })
 	tween(holder, 0.75, { Position = UDim2.new(0.5, 0, if big then 0.4 else 0.36, 0) })
-	tween(glow, 1.1, { BackgroundTransparency = if big then 0.45 else 0.6 }, Enum.EasingStyle.Sine)
+	tween(glow, 1.1, { BackgroundTransparency = if big then 0.6 else 0.74 }, Enum.EasingStyle.Sine)
 	tween(plate, 0.6, { BackgroundTransparency = 0.08 }, Enum.EasingStyle.Sine)
 	tween(edge, 0.9, { Transparency = 0.15 }, Enum.EasingStyle.Sine)
 	for _, d in inner:GetChildren() do
@@ -326,7 +326,7 @@ local function present(spec: Spec)
 	task.spawn(function()
 		local t0 = os.clock()
 		while glow.Parent and not state.gone do
-			glow.BackgroundTransparency = (if big then 0.45 else 0.6) + 0.06 * math.sin((os.clock() - t0) * 2)
+			glow.BackgroundTransparency = (if big then 0.6 else 0.74) + 0.05 * math.sin((os.clock() - t0) * 2)
 			task.wait(1 / 30)
 		end
 	end)

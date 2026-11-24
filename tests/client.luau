@@ -9242,8 +9242,9 @@ coroutine.wrap(function()
 	check("Build 103: ...as a moment in the middle of the screen, not a corner notice", find(playerGui, function(d)
 		return d.Name == "Moment" and d.Parent ~= nil and d.Parent.Name == "MaisonMoments"
 	end) ~= nil and textOnScreen("THE BASEMENT  ·  CHECKPOINT 8") ~= nil)
+	advance(1)
 	snapshot("basement-moment")
-	advance(5)
+	advance(4)
 	serverSays("Attraction", { op = "fell", why = "steam", checkpoint = 8 })
 	advance(0.3)
 	check("a fall: back to the checkpoint, and why", textOnScreen("Back to checkpoint 8") ~= nil and textOnScreen("The steam caught you.") ~= nil)
@@ -9637,13 +9638,15 @@ coroutine.wrap(function()
 			end
 		end
 		advance(0.5)
-		local after = 0
+		local after, title = 0, nil
 		for _, d in playerGui:GetDescendants() do
 			if d.Name == "Moment" and d:IsA("Frame") then
 				after += 1
+				local t = d:FindFirstChild("Title", true)
+				title = t and t.Text
 			end
 		end
-		return n <= 2 and after == 1 and textOnScreen("The Executive, beaten") == nil
+		return n <= 2 and after == 1 and title == "A clean getaway"
 	end)())
 	advance(6)
 	LocalPlayer:SetAttribute("Attraction", nil)

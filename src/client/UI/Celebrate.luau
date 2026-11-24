@@ -86,22 +86,34 @@ function Celebrate.levelUp(level: number, title: string, gilt: number)
 	local function ease(inst: Instance, seconds: number, goal: { [string]: any }, style: Enum.EasingStyle?, direction: Enum.EasingDirection?)
 		TweenService:Create(inst, TweenInfo.new(seconds, style or Enum.EasingStyle.Quint, direction or Enum.EasingDirection.Out), goal):Play()
 	end
-	-- The halo: a soft disc of light, and long rays turning slowly through it.
+	-- The halo: soft light round the level's disc, brightest at its heart (three discs of warm
+	-- light, one inside another, each a little stronger), and long rays turning slowly through it.
+	local warm = colour:Lerp(rgb(255, 236, 190), 0.45)
 	local halo = Instance.new("Frame")
 	halo.Name = "Halo"
 	halo.AnchorPoint = Vector2.new(0.5, 0.5)
 	halo.Position = UDim2.fromOffset(260, 117)
-	halo.Size = UDim2.fromOffset(420, 420)
-	halo.BackgroundColor3 = colour
+	halo.Size = UDim2.fromOffset(330, 330)
 	halo.BackgroundTransparency = 1
-	halo.BorderSizePixel = 0
 	halo.ZIndex = 0
 	halo.Parent = box
-	corner(halo, 210)
-	local hg = Instance.new("UIGradient")
-	hg.Color = ColorSequence.new(rgb(255, 246, 214), colour)
-	hg.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0.35), NumberSequenceKeypoint.new(1, 1) })
-	hg.Parent = halo
+	local glows: { [Frame]: number } = {}
+	for i, ring in { { 1, 0.9 }, { 0.72, 0.84 }, { 0.46, 0.76 } } do
+		local g = Instance.new("Frame")
+		g.Name = "Glow" .. i
+		g.AnchorPoint = Vector2.new(0.5, 0.5)
+		g.Position = UDim2.fromScale(0.5, 0.5)
+		g.Size = UDim2.fromScale(ring[1], ring[1])
+		g.BackgroundColor3 = warm
+		g.BackgroundTransparency = 1
+		g.BorderSizePixel = 0
+		g.ZIndex = 0
+		g.Parent = halo
+		local gc = Instance.new("UICorner")
+		gc.CornerRadius = UDim.new(0.5, 0)
+		gc.Parent = g
+		glows[g] = ring[2]
+	end
 	local rays = Instance.new("Frame")
 	rays.Name = "Rays"
 	rays.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -115,9 +127,9 @@ function Celebrate.levelUp(level: number, title: string, gilt: number)
 		local beam = Instance.new("Frame")
 		beam.AnchorPoint = Vector2.new(0.5, 0.5)
 		beam.Position = UDim2.fromScale(0.5, 0.5)
-		beam.Size = UDim2.fromOffset(560, 26)
+		beam.Size = UDim2.fromOffset(460, 22)
 		beam.Rotation = i * 30
-		beam.BackgroundColor3 = rgb(255, 240, 200)
+		beam.BackgroundColor3 = warm
 		beam.BackgroundTransparency = 1
 		beam.BorderSizePixel = 0
 		beam.ZIndex = 0
@@ -216,7 +228,9 @@ function Celebrate.levelUp(level: number, title: string, gilt: number)
 	-- In: the halo blooms first, then everything rises into place, one after another.
 	ease(scale, 1.1, { Scale = 1 })
 	ease(box, 1.1, { Position = UDim2.fromScale(0.5, 0.38) })
-	ease(halo, 1.4, { BackgroundTransparency = 0.55 }, Enum.EasingStyle.Sine)
+	for g, t in glows do
+		ease(g, 1.4, { BackgroundTransparency = t }, Enum.EasingStyle.Sine)
+	end
 	for _, beam in beams do
 		ease(beam, 1.6, { BackgroundTransparency = 0.78 }, Enum.EasingStyle.Sine)
 	end
@@ -249,7 +263,7 @@ function Celebrate.levelUp(level: number, title: string, gilt: number)
 		while box.Parent and rays.Parent do
 			local t = os.clock() - t0
 			rays.Rotation = t * 9
-			halo.Size = UDim2.fromOffset(420 + 18 * math.sin(t * 1.6), 420 + 18 * math.sin(t * 1.6))
+			halo.Size = UDim2.fromOffset(330 + 14 * math.sin(t * 1.6), 330 + 14 * math.sin(t * 1.6))
 			task.wait(1 / 30)
 		end
 	end)
@@ -286,7 +300,9 @@ function Celebrate.levelUp(level: number, title: string, gilt: number)
 		local out = 1.3
 		ease(scale, out, { Scale = 1.06 }, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
 		ease(box, out, { Position = UDim2.new(0.5, 0, 0.38, -16) }, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
-		ease(halo, out, { BackgroundTransparency = 1 }, Enum.EasingStyle.Sine)
+		for g in glows do
+			ease(g, out, { BackgroundTransparency = 1 }, Enum.EasingStyle.Sine)
+		end
 		ease(disc, out, { BackgroundTransparency = 1, TextTransparency = 1 }, Enum.EasingStyle.Sine)
 		ease(ring, out, { Transparency = 1 }, Enum.EasingStyle.Sine)
 		for _, beam in beams do
