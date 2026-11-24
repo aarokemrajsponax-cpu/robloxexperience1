@@ -16,10 +16,10 @@ Every finding below carries one of these labels:
 
 **What was not done:** nobody played the live experience in Roblox Studio or on a device for this audit. There are no real players, no retention numbers, no revenue, no frame-rate or memory measurements, and no live multiplayer load. The "player personas" are structured walkthroughs of the game's actual systems, written from each player's point of view. They are not recordings of real people. Where a persona "reacts", that reaction is a design judgement.
 
-**Verification totals at the end of this audit** (Build 102, before the last client re-run):
+**Verification totals at the end of this audit** (Build 102, final run):
 
 - Server suites: 29, all passing. Among them: wings 36, purchases 511, shop 594, luxe 260, basement 140, executive 174, gala 132, concierge 65, smoke 659 and run (bundle) 221.
-- Client suite: 1562 / 1563 / 1563 checks passing on desktop / phone / tablet.
+- Client suite: 1569 / 1570 / 1570 checks passing on desktop / phone / tablet (0 failed), including the new elevator, wing-drawing, guide and after-event checks.
 - Type check (luau-lsp, strict): clean.
 - All 41 server remotes go through the input guard (`RemoteGuard`). None is connected raw. **[CODE]**
 
