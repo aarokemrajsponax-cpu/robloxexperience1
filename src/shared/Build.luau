@@ -4,6 +4,6 @@
 -- see whether Studio has the latest code from GitHub.
 
 return {
-	number = 102,
-	label = "Build 102 · 24 Nov · private Suites and Vaults, the elevator, House Tour, exact Gilt",
+	number = 103,
+	label = "Build 103 · 24 Nov · the house's moments, seats everywhere, the Lucky reel, Luxury Island",
 }

@@ -31,6 +31,7 @@ local Root = require(script.Parent.Root)
 local Sound = require(script.Parent.Parent.Sound)
 local Theme = require(script.Parent.Theme)
 local Toast = require(script.Parent.Toast)
+local Moment = require(script.Parent.Moment)
 
 local ExecutiveHud = {}
 
@@ -1600,7 +1601,7 @@ function ExecutiveHud.on(m: { [string]: any })
 		Toast.show("The door is open", "The Executive's Office, straight ahead.", 3)
 	elseif op == "phase" then
 		if type(m.name) == "string" then
-			Toast.show(m.name, tostring(m.line or ""), 4)
+			Moment.show({ kicker = "The Executive Suite", title = m.name, line = tostring(m.line or ""), tone = Color3.fromRGB(236, 104, 92), seconds = 4 })
 		end
 		if m.phase ~= "shield" then
 			ExecutiveHud.caption(m.say)
@@ -1624,7 +1625,7 @@ function ExecutiveHud.on(m: { [string]: any })
 		Toast.show("Security is on its way", string.format("The lift down within %d seconds is a clean getaway: +%s Gilt. The safe is open too.", tonumber(m.seconds) or 60, Rules.format(tonumber(m.gilt) or 0)), 5)
 		draw()
 	elseif op == "extracted" then
-		Toast.show("A clean getaway", "+" .. Rules.format(tonumber(m.gilt) or 0) .. " Gilt", 4)
+		Moment.show({ kicker = "The Executive Suite", title = "A clean getaway", line = "+" .. Rules.format(tonumber(m.gilt) or 0) .. " Gilt", tone = GOLD, seconds = 4, sound = "chime", volume = 0.6 })
 	elseif op == "alarm" then
 		if not m.revive then
 			Toast.show("Security", "You were seen too long: you've been shown out. The invitation is spent.", 5)
@@ -1651,7 +1652,9 @@ function ExecutiveHud.on(m: { [string]: any })
 		if m.brainrot then
 			line ..= "  ·  Il Dirigente Supremo for your collection"
 		end
-		Toast.show("The Executive, beaten", line .. ". The safe is open, and the lift down.", 6)
+		-- (Build 103) The boss beaten: the house's biggest moment in the Suite, standing a while.
+		Moment.burst(GOLD, true)
+		Moment.show({ kicker = "The Executive Suite", title = "The Executive, beaten", line = line .. ". The safe is open, and the lift down.", tone = GOLD, seconds = 6, big = true, value = tonumber(m.gilt), sound = "shimmerFall", volume = 0.7 })
 		if type(m.challenge) == "string" and m.challengeMet then
 			task.delay(2, function()
 				Sound.play("crystal", 0.7)

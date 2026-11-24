@@ -29,6 +29,7 @@ local Sleepers = require(script.Parent.Parent.World.LuxeSleepers)
 local Root = require(script.Parent.Root)
 local Theme = require(script.Parent.Theme)
 local Toast = require(script.Parent.Toast)
+local Moment = require(script.Parent.Moment)
 
 local LuxeHud = {}
 
@@ -789,7 +790,15 @@ function LuxeHud.on(m: { [string]: any })
 			pcall(flash, m.at, colour, "+" .. Rules.format(tonumber(m.gilt) or 0) .. " GILT")
 		end
 		pcall(LuxeLift.took, m)
-		Toast.show("Lifted: " .. tostring(m.name), string.format("%s  ·  %s  ·  REWARD +%s GILT when banked", tostring(m.glyph or ""), tostring(m.rarity or ""), Rules.format(tonumber(m.gilt) or 0)), 2.5)
+		-- (Build 103) A moment in the middle of the screen, in the piece's own rarity colour.
+		Moment.show({
+			kicker = "Steal a Luxe  ·  lifted",
+			title = "Lifted: " .. tostring(m.name),
+			line = string.format("%s  ·  %s  ·  REWARD +%s GILT when banked", tostring(m.glyph or ""), tostring(m.rarity or ""), Rules.format(tonumber(m.gilt) or 0)),
+			tone = colour,
+			seconds = 2.8,
+			big = grade ~= nil and grade.order >= 5,
+		})
 	elseif op == "banked" then
 		Sound.play("kaching", 0.8)
 		-- (Build 102) The exact Gilt credited, and the getaway's own bonus when it had one.
@@ -815,10 +824,12 @@ function LuxeHud.on(m: { [string]: any })
 		local Celebrate = require(script.Parent.Celebrate)
 		local okC, kind = pcall(Celebrate.haul, m)
 		local title = if m.record then "A record haul: +" .. Rules.format(tonumber(m.gilt) or 0) .. " Gilt" else "Banked: +" .. Rules.format(tonumber(m.gilt) or 0) .. " Gilt"
+		-- (Build 103) The haul banked: a moment of its own, in gold.
+		local spec = { kicker = "Steal a Luxe  ·  banked", title = title, line = line, tone = GOLD, seconds = 4.5 }
 		if okC and type(kind) == "string" then
-			task.delay(Celebrate.haulSeconds(kind) + 0.4, Toast.show, title, line, 5)
+			task.delay(Celebrate.haulSeconds(kind) + 0.4, Moment.show, spec)
 		else
-			Toast.show(title, line, 5)
+			Moment.show(spec)
 		end
 		-- (Build 82) A wing's set made whole, or a new rank: said after, each on its own.
 		task.delay(2.5, function()

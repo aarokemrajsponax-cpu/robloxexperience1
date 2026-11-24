@@ -537,11 +537,13 @@ function LuckyBoxPanel.reveal(result: { [string]: any })
 	shade.Name = "LuckyOpening"
 	shade.Size = UDim2.fromScale(1, 1)
 	shade.BackgroundColor3 = Color3.fromRGB(6, 5, 8)
-	shade.BackgroundTransparency = 0.15
+	shade.BackgroundTransparency = 1
 	shade.BorderSizePixel = 0
 	shade.ZIndex = 80
 	shade.Active = true
 	shade.Parent = Root.toasts
+	-- (Build 103) The room dims softly rather than going dark at once.
+	Ease.play(shade, Ease.info(0.4, Enum.EasingStyle.Sine), { BackgroundTransparency = 0.15 })
 	local size = Root.size()
 	local W = math.min(780, math.max(280, size.X - 32))
 	local H = R.tile + 34
@@ -560,6 +562,18 @@ function LuckyBoxPanel.reveal(result: { [string]: any })
 	stroke.Color = def.glow
 	stroke.Thickness = 2
 	stroke.Parent = window
+	-- (It settles into place from a touch smaller, and a glow of the box's colour stands behind it.)
+	local wscale = Instance.new("UIScale")
+	wscale.Scale = 0.94
+	wscale.Parent = window
+	Ease.play(wscale, Ease.info(0.55, Enum.EasingStyle.Quint), { Scale = 1 })
+	local aura = frame(shade, "Aura", UDim2.fromOffset(W + 120, H + 120), UDim2.fromScale(0.5, 0.5), def.glow, 80)
+	aura.BackgroundTransparency = 1
+	corner(aura, 60)
+	local ag = Instance.new("UIGradient")
+	ag.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0.55), NumberSequenceKeypoint.new(1, 1) })
+	ag.Parent = aura
+	Ease.play(aura, Ease.info(0.9, Enum.EasingStyle.Sine), { BackgroundTransparency = 0.6 })
 	local strip = Instance.new("Frame")
 	strip.Name = "Strip"
 	strip.BackgroundTransparency = 1
@@ -577,7 +591,9 @@ function LuckyBoxPanel.reveal(result: { [string]: any })
 		t.BackgroundTransparency = 0.78
 		t.BorderSizePixel = 0
 		t.Size = UDim2.fromOffset(R.tile, R.tile)
-		t.Position = UDim2.fromOffset((i - 1) * (R.tile + R.gap), 0)
+		-- (Anchored at its middle, so it swells about its own centre as it passes the marker.)
+		t.AnchorPoint = Vector2.new(0.5, 0.5)
+		t.Position = UDim2.fromOffset((i - 1) * (R.tile + R.gap) + R.tile / 2, R.tile / 2)
 		t.ZIndex = 83
 		t.Parent = strip
 		corner(t, 10)
@@ -594,17 +610,40 @@ function LuckyBoxPanel.reveal(result: { [string]: any })
 		corner(bar, 2)
 		tiles[i] = t
 	end
-	-- The gold marker down the middle.
+	-- The ends of the reel fade into the dark, so the brainrots come and go rather than being cut.
+	for side = 0, 1 do
+		local fade = frame(window, "Fade", UDim2.new(0.2, 0, 1, 0), UDim2.fromScale(if side == 0 then 0.1 else 0.9, 0.5), Color3.fromRGB(14, 12, 16), 85)
+		local fg = Instance.new("UIGradient")
+		fg.Transparency = NumberSequence.new(if side == 0 then 0 else 1, if side == 0 then 1 else 0)
+		fg.Parent = fade
+	end
+	-- The gold marker down the middle, with a soft glow and a point at each end.
+	local markerGlow = frame(window, "MarkerGlow", UDim2.new(0, 22, 1, 0), UDim2.fromScale(0.5, 0.5), Color3.fromRGB(255, 214, 110), 85)
+	local mg = Instance.new("UIGradient")
+	mg.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0.6), NumberSequenceKeypoint.new(1, 1) })
+	mg.Parent = markerGlow
 	local marker = frame(window, "Marker", UDim2.new(0, 3, 1, 0), UDim2.fromScale(0.5, 0.5), Color3.fromRGB(255, 214, 110), 86)
 	marker.BackgroundTransparency = 0.05
+	for side = 0, 1 do
+		local point = frame(window, "Point", UDim2.fromOffset(12, 12), UDim2.new(0.5, 0, side, 0), Color3.fromRGB(255, 226, 140), 86)
+		point.Rotation = 45
+	end
+	-- (Each tile swells a little as it passes the marker.)
+	local lens: { UIScale } = {}
+	for i, t in tiles do
+		local u = Instance.new("UIScale")
+		u.Parent = t
+		lens[i] = u
+	end
 	local caption = Theme.text(shade, "", 22, "display", {
 		Name = "Rarity",
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0.5, H / 2 + 12),
+		Position = UDim2.new(0.5, 0, 0.5, H / 2 + 22),
 		Size = UDim2.fromOffset(W, 30),
 		TextColor3 = colour,
 		ZIndex = 86,
 	})
+	caption.TextTransparency = 1
 	local skip = Instance.new("TextButton")
 	skip.Name = "Skip"
 	skip.Text = "Tap to skip"
@@ -618,10 +657,26 @@ function LuckyBoxPanel.reveal(result: { [string]: any })
 	skip.ZIndex = 86
 	skip.Parent = shade
 
-	-- Where the strip stops: the result's tile under the marker (somewhere inside it).
+	-- Where the strip stops: the result's tile under the marker (somewhere inside it). (Build 103)
+	-- Like a real reel it runs a hair past and eases back to rest, and both the point it runs to
+	-- and the point it rests on are inside the result's own tile: it never seems to land on a
+	-- neighbour first.
 	local step = R.tile + R.gap
-	local stopX = W / 2 - ((R.at - 1) * step + R.tile / 2) + rng:NextNumber(-0.35, 0.35) * R.tile
+	local stopX = W / 2 - ((R.at - 1) * step + R.tile / 2) + rng:NextNumber(-0.25, 0.25) * R.tile
+	local over = 0.14 * R.tile
+	local SETTLE = 0.45
+	local MAIN = R.seconds - SETTLE
 	local startX = W / 2 - R.tile / 2
+	local function magnify(x: number)
+		for i, u in lens do
+			local cx = x + (i - 1) * step + R.tile / 2
+			local d = math.abs(cx - W / 2) / step
+			local want = 1 + 0.1 * math.max(0, 1 - d)
+			if math.abs(u.Scale - want) > 0.002 then
+				u.Scale = want
+			end
+		end
+	end
 	local from = os.clock()
 	local finished = false
 	local lastTile = -1
@@ -636,15 +691,31 @@ function LuckyBoxPanel.reveal(result: { [string]: any })
 			beat:Disconnect()
 		end
 		strip.Position = UDim2.fromOffset(stopX, 17)
+		magnify(stopX)
 		skip.Visible = false
 		local res = tiles[R.at]
-		res.BackgroundTransparency = 0.35
+		Ease.play(res, Ease.info(0.5, Enum.EasingStyle.Sine), { BackgroundTransparency = 0.35 })
 		local ring = Instance.new("UIStroke")
 		ring.Color = colour
 		ring.Thickness = 3
+		ring.Transparency = 1
 		ring.Parent = res
+		Ease.play(ring, Ease.info(0.45, Enum.EasingStyle.Sine), { Transparency = 0 })
+		-- (The find swells, then rests a touch larger than the rest.)
+		local u = lens[R.at]
+		Ease.play(u, Ease.info(0.25, Enum.EasingStyle.Quad), { Scale = 1.2 })
+		task.delay(0.25, function()
+			if u.Parent then
+				Ease.play(u, Ease.info(0.6, Enum.EasingStyle.Quint), { Scale = 1.12 })
+			end
+		end)
+		Ease.play(aura, Ease.info(0.4, Enum.EasingStyle.Sine), { BackgroundColor3 = colour, BackgroundTransparency = 0.35 })
 		caption.Text = string.format("%s  ·  %s%s", string.upper(rarity), CurioList.byId[id].name, if type(result.mut) == "string" and Brainrots.Mutations[result.mut] then "  ·  " .. Brainrots.Mutations[result.mut].name else "")
+		Ease.play(caption, Ease.info(0.5, Enum.EasingStyle.Quint), { TextTransparency = 0, Position = UDim2.new(0.5, 0, 0.5, H / 2 + 12) })
 		Sound.play("bellStrike", 0.6)
+		if rarity == "Legendary" or rarity == "Mythic" or rarity == "Secret" or rarity == "Limited" then
+			pcall(Sound.play, "shimmerFall", 0.6)
+		end
 		local flash = Instance.new("Frame")
 		flash.Size = UDim2.fromScale(1, 1)
 		flash.BackgroundColor3 = colour
@@ -653,9 +724,19 @@ function LuckyBoxPanel.reveal(result: { [string]: any })
 		flash.ZIndex = 79
 		flash.Parent = shade
 		Ease.play(flash, Ease.info(0.6, Enum.EasingStyle.Quad), { BackgroundTransparency = 1 })
-		task.delay(1.3, function()
-			Ease.play(shade, Ease.info(0.4, Enum.EasingStyle.Quad), { BackgroundTransparency = 1 })
-			task.delay(0.1, function()
+		task.delay(1.6, function()
+			-- (Everything lifts away together as the find itself comes up.)
+			for _, d in shade:GetDescendants() do
+				if d:IsA("Frame") then
+					Ease.play(d, Ease.info(0.45, Enum.EasingStyle.Sine), { BackgroundTransparency = 1 })
+				elseif d:IsA("TextLabel") or d:IsA("TextButton") then
+					Ease.play(d, Ease.info(0.45, Enum.EasingStyle.Sine), { TextTransparency = 1 })
+				elseif d:IsA("UIStroke") then
+					Ease.play(d, Ease.info(0.45, Enum.EasingStyle.Sine), { Transparency = 1 })
+				end
+			end
+			Ease.play(shade, Ease.info(0.45, Enum.EasingStyle.Sine), { BackgroundTransparency = 1 })
+			task.delay(0.5, function()
 				shade:Destroy()
 			end)
 			CurioReveal.show(id, line, 0, if type(result.mut) == "string" then result.mut else nil)
@@ -664,20 +745,39 @@ function LuckyBoxPanel.reveal(result: { [string]: any })
 	end
 	skip.Activated:Connect(finish)
 	Sound.play("crystal", 0.5)
+	-- The run: it gathers speed for a moment (no jolt from standing), then slows for a long while,
+	-- runs its hair past, and eases back to rest.
+	local A = 0.07
+	local function travel(tau: number): number
+		local s = if tau < A then tau * tau / (2 * A) else tau - A / 2
+		local t = s / (1 - A / 2)
+		return 1 - (1 - t) ^ 4
+	end
+	local lastX = startX
 	beat = RunService.RenderStepped:Connect(function()
-		local t = math.clamp((os.clock() - from) / R.seconds, 0, 1)
-		local eased = 1 - (1 - t) ^ 4
-		local x = startX + (stopX - startX) * eased
+		local elapsed = os.clock() - from
+		local x: number
+		if elapsed < MAIN then
+			x = startX + (stopX - over - startX) * travel(math.clamp(elapsed / MAIN, 0, 1))
+		else
+			local k = math.clamp((elapsed - MAIN) / SETTLE, 0, 1)
+			local e = 0.5 - 0.5 * math.cos(k * math.pi)
+			x = (stopX - over) + over * e
+		end
 		strip.Position = UDim2.fromOffset(x, 17)
+		magnify(x)
 		local under = math.floor((W / 2 - x) / step)
 		if under ~= lastTile then
 			lastTile = under
 			if os.clock() - lastTick > 0.05 then
 				lastTick = os.clock()
-				Sound.play("tick", 0.18)
+				-- (The ticks lighten as it slows.)
+				local speed = math.clamp(math.abs(lastX - x) / 40, 0, 1)
+				Sound.play("tick", 0.18, 0.92 + 0.2 * speed)
 			end
 		end
-		if t >= 1 then
+		lastX = x
+		if elapsed >= R.seconds then
 			finish()
 		end
 	end)

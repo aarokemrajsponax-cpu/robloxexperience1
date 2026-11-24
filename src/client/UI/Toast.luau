@@ -153,8 +153,19 @@ function Toast.show(title: string, line: string?, seconds: number?)
 		return
 	end
 	if current then
-		current:Destroy()
+		-- (Build 103) The notice before gives way softly, never vanishing mid-read.
+		local old = current
 		current = nil
+		old.Name = "ToastLeaving"
+		local t = Fade.to(old, Ease.info(0.22, Enum.EasingStyle.Sine), 1)
+		t.Completed:Once(function()
+			old:Destroy()
+		end)
+		task.delay(0.4, function()
+			if old.Parent then
+				old:Destroy()
+			end
+		end)
 	end
 	-- At the top; with a panel open, at the foot of the screen instead, clear of its heading.
 	local low = Root.isOpen()

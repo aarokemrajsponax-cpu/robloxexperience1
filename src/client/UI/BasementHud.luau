@@ -20,6 +20,7 @@ local HudCard = require(script.Parent.HudCard)
 local Root = require(script.Parent.Root)
 local Theme = require(script.Parent.Theme)
 local Toast = require(script.Parent.Toast)
+local Moment = require(script.Parent.Moment)
 local BasementMotion = require(script.Parent.Parent.World.BasementMotion)
 
 local BasementHud = {}
@@ -312,14 +313,39 @@ function BasementHud.on(m: { [string]: any })
 		end
 	elseif op == "secret" then
 		BasementMotion.found[tostring(m.id)] = true
-		Toast.show("A secret: " .. tostring(m.name), string.format("+%s Gilt  ·  %d of %d found", Rules.format(tonumber(m.gilt) or 0), tonumber(m.found) or 0, tonumber(m.of) or 0), 4)
+		Moment.show({
+			kicker = "The Basement  ·  a secret",
+			title = "A secret: " .. tostring(m.name),
+			line = string.format("+%s Gilt  ·  %d of %d found", Rules.format(tonumber(m.gilt) or 0), tonumber(m.found) or 0, tonumber(m.of) or 0),
+			tone = GOLD,
+			seconds = 4,
+			sound = "shimmerFall",
+			volume = 0.6,
+		})
 	elseif op == "checkpoint" then
 		local n = tonumber(m.n) or 0
 		local purse = tonumber(m.purse) or 0
 		if purse > 0 then
-			Toast.show(tostring(m.zone) .. ", done", string.format("+%s Gilt  ·  checkpoint %d", Rules.format(tonumber(m.gilt) or 0), n), 4)
+			-- (Build 103) A part of the course done: a moment, with a chime.
+			Moment.show({
+				kicker = "The Basement  ·  checkpoint " .. tostring(n),
+				title = tostring(m.zone) .. ", done",
+				line = string.format("+%s Gilt  ·  checkpoint %d", Rules.format(tonumber(m.gilt) or 0), n),
+				tone = Color3.fromRGB(120, 210, 200),
+				seconds = 4,
+				sound = "chime",
+				volume = 0.6,
+			})
+			Moment.burst(Color3.fromRGB(120, 210, 200), true)
 		elseif n < Plan.STAGES then
-			Toast.show(string.format("Checkpoint %d", n), if m.skipped then string.format("Skipped: +%s Gilt", Rules.format(tonumber(m.gilt) or 0)) elseif (tonumber(m.gilt) or 0) > 0 then string.format("+%s Gilt", Rules.format(m.gilt)) else "Reached.", 2)
+			Moment.burst(Color3.fromRGB(120, 210, 200), false)
+			Moment.show({
+				kicker = "The Basement",
+				title = string.format("Checkpoint %d", n),
+				line = if m.skipped then string.format("Skipped: +%s Gilt", Rules.format(tonumber(m.gilt) or 0)) elseif (tonumber(m.gilt) or 0) > 0 then string.format("+%s Gilt", Rules.format(m.gilt)) else "Reached.",
+				tone = Color3.fromRGB(120, 210, 200),
+				seconds = 2.4,
+			})
 		end
 	elseif op == "fell" then
 		Toast.show(string.format("Back to checkpoint %d", tonumber(m.checkpoint) or 0), FELL[tostring(m.why)] or "Back you go.", 2)

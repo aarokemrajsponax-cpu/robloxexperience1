@@ -6041,7 +6041,11 @@ serverSays("Shop", { op = "levelUp", level = 20, title = "Adept", gilt = 1150 })
 advance(0.6)
 check("LEVEL UP! with the new level, its name and its reward", textOnScreen("LEVEL UP!") ~= nil and textOnScreen("ADEPT") ~= nil and textOnScreen("+1,150 Gilt") ~= nil)
 snapshot("level-up")
-advance(4)
+advance(1)
+-- (Build 103) Settled: the halo, the rays, the words risen into place.
+snapshot("level-up-settled")
+advance(3)
+check("Build 103: the level up stands a good while (it used to snap shut at 3.4 s)", textOnScreen("LEVEL UP!") ~= nil)
 serverSays("Shop", { op = "badge", key = "metOwner", name = "Met the Owner", line = "Be in the house with the owner.", glyph = "👑", tier = "gold", count = 12, total = 155 })
 serverSays("Shop", { op = "badge", key = "firstRound", name = "First Round", line = "Clear your first round at the tables.", glyph = "🃏", tier = "bronze", count = 13, total = 155, nextName = "Warming Up", nextHave = 1, nextTarget = 10 })
 advance(0.8)
@@ -9235,6 +9239,10 @@ coroutine.wrap(function()
 	serverSays("Attraction", { op = "checkpoint", n = 8, gilt = 55, purse = 1500, zone = "The Boiler Room", skipped = false })
 	advance(0.3)
 	check("Build 102: a part's end: its exact Gilt, no Estate sums", textOnScreen("The Boiler Room, done") ~= nil and textOnScreen("+55 Gilt  ·  checkpoint 8") ~= nil and textOnScreen("to your Estate") == nil)
+	check("Build 103: ...as a moment in the middle of the screen, not a corner notice", find(playerGui, function(d)
+		return d.Name == "Moment" and d.Parent ~= nil and d.Parent.Name == "MaisonMoments"
+	end) ~= nil and textOnScreen("THE BASEMENT  ·  CHECKPOINT 8") ~= nil)
+	snapshot("basement-moment")
 	advance(5)
 	serverSays("Attraction", { op = "fell", why = "steam", checkpoint = 8 })
 	advance(0.3)
@@ -9606,6 +9614,9 @@ coroutine.wrap(function()
 	serverSays("Attraction", { op = "phase", phase = "won", say = "Well played. The lift is yours. For now." })
 	advance(0.3)
 	check("beaten: what's paid, plainly", textOnScreen("+600 Gilt  ·  your Fortune +25,000  ·  Il Dirigente Supremo for your collection. The safe is open, and the lift down.") ~= nil)
+	check("Build 103: ...a big moment, its Gilt counting up", textOnScreen("The Executive, beaten") ~= nil and find(playerGui, function(d)
+		return d.Name == "Figure" and d:IsA("TextLabel")
+	end) ~= nil)
 	advance(2.2)
 	check("Build 90: the run's challenge met, and what it paid", textOnScreen("Challenge met: Swift Takeover") ~= nil and textOnScreen("+1,500 Gilt") ~= nil)
 	check("...the red grade lifts, and he has the last word", game:GetService("Lighting"):FindFirstChild("ExecutiveFinale") == nil and textOnScreen("Well played. The lift is yours. For now.") ~= nil)
@@ -9618,6 +9629,22 @@ coroutine.wrap(function()
 	serverSays("Attraction", { op = "extracted", gilt = 2500 })
 	advance(0.3)
 	check("a clean getaway, told", textOnScreen("A clean getaway") ~= nil and textOnScreen("+2,500 Gilt") ~= nil)
+	check("Build 103: ...once the win had stood its good look, it made way for the getaway (one moment at a time)", (function()
+		local n = 0
+		for _, d in playerGui:GetDescendants() do
+			if d.Name == "Moment" and d:IsA("Frame") then
+				n += 1
+			end
+		end
+		advance(0.5)
+		local after = 0
+		for _, d in playerGui:GetDescendants() do
+			if d.Name == "Moment" and d:IsA("Frame") then
+				after += 1
+			end
+		end
+		return n <= 2 and after == 1 and textOnScreen("The Executive, beaten") == nil
+	end)())
 	advance(6)
 	LocalPlayer:SetAttribute("Attraction", nil)
 	signalOf(LocalPlayer, "attr:Attraction"):Fire()
@@ -10836,6 +10863,18 @@ end)()
 	snapshot("lucky-reel")
 	advance(5.2)
 	check("...stops on what came, its rarity named", textOnScreen("MYTHIC") ~= nil)
+	check("Build 103: ...at rest, the marker stands inside the result's own tile (never a neighbour's)", (function()
+		local reel = find(playerGui, function(d)
+			return d.Name == "Reel"
+		end)
+		local strip = reel and reel:FindFirstChild("Strip")
+		local res = strip and strip:FindFirstChild("Result")
+		if not res then
+			return false
+		end
+		local centre = strip.Position.X.Offset + res.Position.X.Offset
+		return math.abs(centre - reel.Size.X.Offset / 2) < Panel.REEL.tile / 2
+	end)())
 	advance(2)
 	check("...then the find itself", textOnScreen("From The Noir Box") ~= nil)
 	advance(8)

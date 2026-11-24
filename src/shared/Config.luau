@@ -1521,6 +1521,9 @@ local defaults = {
 			gong = { { id = "rbxassetid://9125585534", pitch = 1, volume = 2, from = 0, to = 4.5, fade = 1.5 } },
 			coinDrop = { { id = "rbxassetid://9113704038", pitch = 1, volume = 1.4 }, { id = "rbxassetid://9113704199", pitch = 1, volume = 1.4 }, { id = "rbxassetid://9113849445", pitch = 1, volume = 1.4 } },
 			regalFanfare = { { id = "rbxassetid://1845463480", pitch = 1, volume = 1.4, from = 0, to = 3.4, fade = 1.1 } }, -- its opening flourish only
+			-- (Build 103) A level up: the fanfare's whole first phrase (it rests at about 9.8 s), let
+			-- go of gently, never cut mid-note.
+			levelFanfare = { { id = "rbxassetid://1845463480", pitch = 1, volume = 1.4, from = 0, to = 10.2, fade = 2.4 } },
 			bellTree = { { id = "rbxassetid://9119447936", pitch = 1, volume = 1.6 }, { id = "rbxassetid://9119448154", pitch = 1, volume = 1.6 } },
 			-- The Meme Takeover: the air horn, a record scratch, a slide whistle, a kazoo fanfare and
 			-- party horns (Pro Sound Effects).

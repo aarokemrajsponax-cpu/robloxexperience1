@@ -52,8 +52,18 @@ local function seatsFolder(): Folder
 	return nf
 end
 
+-- (Build 103) Every SitSpot the server builds anywhere in the world is a seat: the house's rooms,
+-- and the attractions (the Grand Ballroom's sofas, benches and bar stools, the Executive Suite's,
+-- the Island's), which stand in their own folder, not the house's. A copy of a seat (a private
+-- wing is a copy of the house's Suite and Vault) carries its original's number, so it is given a
+-- number of its own: the number always names the seat where it really is.
 local function register(part: Instance)
-	if part:IsA("BasePart") and part.Name == "SitSpot" and part:GetAttribute("SeatId") == nil then
+	if part.Name ~= "SitSpot" or not part:IsA("BasePart") then
+		return
+	end
+	local had = part:GetAttribute("SeatId")
+	if type(had) ~= "number" or spots[had] ~= part then
+		part:SetAttribute("Taken", nil)
 		nextId += 1
 		part:SetAttribute("SeatId", nextId)
 		spots[nextId] = part
@@ -181,7 +191,7 @@ local function onAsk(player: Player, request: unknown): any
 		local data = Seating.suiteData(player)
 		if not spotId or not index or not data then
 			RemoteGuard.reject(player, "sitAsk", "malformed")
-			return { ok = false }
+			return { ok = false, why = "That seat isn't ready yet. Try again in a moment." }
 		end
 		if Layout.zoneAt(root.Position) ~= "suite" then
 			return { ok = false, why = "That's in your Suite." }
@@ -209,13 +219,14 @@ local function onAsk(player: Player, request: unknown): any
 end
 
 function Seating.start()
-	local maison = Workspace:FindFirstChild("Maison")
-	if maison then
-		for _, d in maison:GetDescendants() do
-			register(d)
-		end
-		maison.DescendantAdded:Connect(register)
+	for _, d in Workspace:GetDescendants() do
+		register(d)
 	end
+	-- (Seats built later, and copies made later: a private wing, the attractions as they're
+	-- built. Only a name is looked at, so the rest of what comes and goes costs nothing.)
+	pcall(function()
+		Workspace.DescendantAdded:Connect(register)
+	end)
 	RemoteGuard.invoke(Remotes.func("SitAsk"), "sitAsk", onAsk)
 	Players.PlayerRemoving:Connect(Seating.release)
 	-- A guest who dies or changes character in a seat leaves it.

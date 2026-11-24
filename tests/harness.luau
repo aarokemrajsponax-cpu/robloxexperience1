@@ -225,6 +225,11 @@ local function newGuest(name: string, userId: number)
 	}
 end
 
+-- (A seat's property signals: nothing in the harness changes an Occupant by itself, so they're
+-- quiet; a test stands a guest up by asking.)
+roblox.implementMethod("Seat", "GetPropertyChangedSignal", function()
+	return signal()
+end)
 roblox.implementMethod("Seat", "Sit", function(self, h)
 	if type(h) == "table" then
 		h.SeatPart = self

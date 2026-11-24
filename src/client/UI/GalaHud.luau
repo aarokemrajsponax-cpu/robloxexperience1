@@ -21,6 +21,7 @@ local Root = require(script.Parent.Root)
 local Sound = require(script.Parent.Parent.Sound)
 local Theme = require(script.Parent.Theme)
 local Toast = require(script.Parent.Toast)
+local Moment = require(script.Parent.Moment)
 
 local GalaHud = {}
 
@@ -608,7 +609,7 @@ function GalaHud.on(m: { [string]: any })
 			if m.correct ~= nil then
 				Sound.play(if m.correct then "chime" else "wrong", 0.55)
 				if m.correct and (tonumber(m.paid) or 0) > 0 then
-					Toast.show("Right", string.format("+%d Gilt  ·  %s points", tonumber(m.paid) or 0, Plan.commas(tonumber(m.score) or 0)), 2.2)
+					Moment.show({ kicker = "Luxury Trivia", title = "Right", line = string.format("+%d Gilt  ·  %s points", tonumber(m.paid) or 0, Plan.commas(tonumber(m.score) or 0)), tone = GOLD, seconds = 2.2 })
 				end
 			end
 		elseif phase == "lobby" then
@@ -627,6 +628,7 @@ function GalaHud.on(m: { [string]: any })
 				banner(if won then "YOU WIN LUXURY TRIVIA" else "LUXURY TRIVIA", string.format("%s  ·  %s points, %d right%s", if won then "The winner" else place1(tonumber(mine.place) or 1) .. " place", Plan.commas(tonumber(mine.score) or 0), tonumber(mine.right) or 0, if #winners > 0 and not won then "  ·  " .. table.concat(winners, " & ") .. " wins" else ""), GOLD)
 				if won then
 					Sound.play("celebrate", 0.7)
+					Moment.show({ kicker = "The Grand Ballroom", title = "Luxury Trivia is yours", line = string.format("%s points, %d right", Plan.commas(tonumber(mine.score) or 0), tonumber(mine.right) or 0), tone = GOLD, seconds = 5, big = true })
 				end
 				task.delay(Plan.TRIVIA_RESULTS, function()
 					if live and live.Name == "GalaLive" then
@@ -671,6 +673,7 @@ function GalaHud.on(m: { [string]: any })
 				banner(if mine then "YOU TAKE THE SHOW" else "THE RUNWAY  ·  " .. string.upper(tostring(m.theme or "")), if mine then "The room voted your look the best of " .. tostring(m.theme or "the show") .. "." else winner .. " takes the show.", GOLD)
 				if mine then
 					Sound.play("celebrate", 0.7)
+					Moment.show({ kicker = "The Grand Ballroom  ·  the Runway", title = "The show is yours", line = "The room voted your look the best of " .. tostring(m.theme or "the show") .. ".", tone = GOLD, seconds = 5, big = true })
 				end
 			else
 				banner("THE RUNWAY", "No votes this time: every model walked beautifully.", rgb(200, 150, 255))
@@ -727,6 +730,7 @@ function GalaHud.on(m: { [string]: any })
 					banner(if won then "YOU WIN THE ARENA" else "THE DAILY ARENA", string.format("%s  ·  %d points  ·  +%d Gilt", if won then "The winner" else place1(i) .. " place", tonumber(row.points) or 0, tonumber(row.paid) or 0), ch.colour)
 					if won then
 						Sound.play("celebrate", 0.7)
+						Moment.show({ kicker = "The Grand Ballroom  ·  the Daily Arena", title = "The Arena is yours", line = string.format("%d points", tonumber(row.points) or 0), tone = ch.colour, seconds = 5, big = true, value = if (tonumber(row.paid) or 0) > 0 then tonumber(row.paid) else nil })
 					end
 					task.delay(Plan.ARENA_RESULTS, function()
 						if live and live.Name == "GalaLive" then

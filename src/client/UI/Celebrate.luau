@@ -69,25 +69,75 @@ function Celebrate.levelUp(level: number, title: string, gilt: number)
 		old:Destroy()
 	end
 	local colour = Levels.colour(level)
+	-- (Build 103) Not a card that pops and snaps shut: a moment. A halo of the level's colour
+	-- blooms and turns slowly behind it, the words rise into place and a band of light passes
+	-- over them, the fanfare plays its whole first phrase (the house's music bows under it), and
+	-- after a good look it all lifts away softly.
 	local box = Instance.new("Frame")
 	box.Name = "LevelUp"
 	box.BackgroundTransparency = 1
 	box.AnchorPoint = Vector2.new(0.5, 0.5)
-	box.Position = UDim2.fromScale(0.5, 0.38)
+	box.Position = UDim2.new(0.5, 0, 0.38, 26)
 	box.Size = UDim2.fromOffset(520, 260)
 	box.Parent = gui
 	local scale = Instance.new("UIScale")
-	scale.Scale = 0.3
+	scale.Scale = 0.72
 	scale.Parent = box
+	local function ease(inst: Instance, seconds: number, goal: { [string]: any }, style: Enum.EasingStyle?, direction: Enum.EasingDirection?)
+		TweenService:Create(inst, TweenInfo.new(seconds, style or Enum.EasingStyle.Quint, direction or Enum.EasingDirection.Out), goal):Play()
+	end
+	-- The halo: a soft disc of light, and long rays turning slowly through it.
+	local halo = Instance.new("Frame")
+	halo.Name = "Halo"
+	halo.AnchorPoint = Vector2.new(0.5, 0.5)
+	halo.Position = UDim2.fromOffset(260, 117)
+	halo.Size = UDim2.fromOffset(420, 420)
+	halo.BackgroundColor3 = colour
+	halo.BackgroundTransparency = 1
+	halo.BorderSizePixel = 0
+	halo.ZIndex = 0
+	halo.Parent = box
+	corner(halo, 210)
+	local hg = Instance.new("UIGradient")
+	hg.Color = ColorSequence.new(rgb(255, 246, 214), colour)
+	hg.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0.35), NumberSequenceKeypoint.new(1, 1) })
+	hg.Parent = halo
+	local rays = Instance.new("Frame")
+	rays.Name = "Rays"
+	rays.AnchorPoint = Vector2.new(0.5, 0.5)
+	rays.Position = UDim2.fromOffset(260, 117)
+	rays.Size = UDim2.fromOffset(10, 10)
+	rays.BackgroundTransparency = 1
+	rays.ZIndex = 0
+	rays.Parent = box
+	local beams: { Frame } = {}
+	for i = 0, 5 do
+		local beam = Instance.new("Frame")
+		beam.AnchorPoint = Vector2.new(0.5, 0.5)
+		beam.Position = UDim2.fromScale(0.5, 0.5)
+		beam.Size = UDim2.fromOffset(560, 26)
+		beam.Rotation = i * 30
+		beam.BackgroundColor3 = rgb(255, 240, 200)
+		beam.BackgroundTransparency = 1
+		beam.BorderSizePixel = 0
+		beam.ZIndex = 0
+		beam.Parent = rays
+		local bg = Instance.new("UIGradient")
+		bg.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0.2), NumberSequenceKeypoint.new(1, 1) })
+		bg.Parent = beam
+		table.insert(beams, beam)
+	end
 	local head = Instance.new("TextLabel")
 	head.BackgroundTransparency = 1
 	head.Size = UDim2.new(1, 0, 0, 56)
 	head.FontFace = IMPACT
 	head.TextScaled = true
 	head.TextColor3 = Color3.new(1, 1, 1)
-	head.TextStrokeTransparency = 0.25
+	head.TextStrokeTransparency = 1
 	head.TextStrokeColor3 = rgb(36, 22, 4)
+	head.TextTransparency = 1
 	head.Text = "LEVEL UP!"
+	head.ClipsDescendants = true
 	-- (In gold metal: bright at the top, deep at the foot.)
 	local metal = Instance.new("UIGradient")
 	metal.Rotation = 90
@@ -98,15 +148,33 @@ function Celebrate.levelUp(level: number, title: string, gilt: number)
 	})
 	metal.Parent = head
 	head.Parent = box
+	-- (A band of light passing along the words, once they're up.)
+	local shine = Instance.new("UIGradient")
+	shine.Name = "Shine"
+	shine.Rotation = 20
+	shine.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.45, 1), NumberSequenceKeypoint.new(0.5, 0.2), NumberSequenceKeypoint.new(0.55, 1), NumberSequenceKeypoint.new(1, 1) })
+	shine.Offset = Vector2.new(-1, 0)
+	local shineLabel = Instance.new("TextLabel")
+	shineLabel.Name = "HeadShine"
+	shineLabel.BackgroundTransparency = 1
+	shineLabel.Size = UDim2.fromScale(1, 1)
+	shineLabel.FontFace = IMPACT
+	shineLabel.TextScaled = true
+	shineLabel.TextColor3 = rgb(255, 255, 255)
+	shineLabel.Text = ""
+	shineLabel.Parent = head
+	shine.Parent = shineLabel
 	local disc = Instance.new("TextLabel")
 	disc.Name = "Level"
 	disc.AnchorPoint = Vector2.new(0.5, 0)
 	disc.Position = UDim2.new(0.5, 0, 0, 62)
 	disc.Size = UDim2.fromOffset(110, 110)
 	disc.BackgroundColor3 = rgb(20, 16, 12)
+	disc.BackgroundTransparency = 1
 	disc.FontFace = HEAVY
 	disc.TextScaled = true
 	disc.TextColor3 = colour
+	disc.TextTransparency = 1
 	disc.Text = tostring(level)
 	disc.Parent = box
 	corner(disc, 55)
@@ -114,6 +182,7 @@ function Celebrate.levelUp(level: number, title: string, gilt: number)
 	ring.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 	ring.Thickness = 5
 	ring.Color = colour
+	ring.Transparency = 1
 	ring.Parent = disc
 	local dp = Instance.new("UIPadding")
 	dp.PaddingTop = UDim.new(0, 22)
@@ -128,7 +197,8 @@ function Celebrate.levelUp(level: number, title: string, gilt: number)
 	name.FontFace = HEAVY
 	name.TextScaled = true
 	name.TextColor3 = colour
-	name.TextStrokeTransparency = 0.3
+	name.TextStrokeTransparency = 1
+	name.TextTransparency = 1
 	name.Text = string.upper(title)
 	name.Parent = box
 	local reward = Instance.new("TextLabel")
@@ -138,14 +208,57 @@ function Celebrate.levelUp(level: number, title: string, gilt: number)
 	reward.FontFace = HEAVY
 	reward.TextScaled = true
 	reward.TextColor3 = rgb(255, 230, 150)
-	reward.TextStrokeTransparency = 0.4
+	reward.TextStrokeTransparency = 1
+	reward.TextTransparency = 1
 	reward.Text = "+" .. format(gilt) .. " Gilt"
 	reward.Parent = box
-	TweenService:Create(scale, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
-	sound("regalFanfare", 0.9)
+
+	-- In: the halo blooms first, then everything rises into place, one after another.
+	ease(scale, 1.1, { Scale = 1 })
+	ease(box, 1.1, { Position = UDim2.fromScale(0.5, 0.38) })
+	ease(halo, 1.4, { BackgroundTransparency = 0.55 }, Enum.EasingStyle.Sine)
+	for _, beam in beams do
+		ease(beam, 1.6, { BackgroundTransparency = 0.78 }, Enum.EasingStyle.Sine)
+	end
+	ease(head, 0.7, { TextTransparency = 0, TextStrokeTransparency = 0.25 }, Enum.EasingStyle.Sine)
+	task.delay(0.25, function()
+		if box.Parent then
+			ease(disc, 0.7, { BackgroundTransparency = 0, TextTransparency = 0 }, Enum.EasingStyle.Sine)
+			ease(ring, 0.8, { Transparency = 0 }, Enum.EasingStyle.Sine)
+		end
+	end)
+	task.delay(0.5, function()
+		if box.Parent then
+			ease(name, 0.7, { TextTransparency = 0, TextStrokeTransparency = 0.3 }, Enum.EasingStyle.Sine)
+		end
+	end)
+	task.delay(0.75, function()
+		if box.Parent then
+			ease(reward, 0.7, { TextTransparency = 0, TextStrokeTransparency = 0.4 }, Enum.EasingStyle.Sine)
+		end
+	end)
+	task.delay(0.9, function()
+		if box.Parent then
+			shineLabel.Text = head.Text
+			TweenService:Create(shine, TweenInfo.new(1.4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { Offset = Vector2.new(1, 0) }):Play()
+		end
+	end)
+	-- (The halo breathes and the rays turn while it stands.)
+	task.spawn(function()
+		local t0 = os.clock()
+		while box.Parent and rays.Parent do
+			local t = os.clock() - t0
+			rays.Rotation = t * 9
+			halo.Size = UDim2.fromOffset(420 + 18 * math.sin(t * 1.6), 420 + 18 * math.sin(t * 1.6))
+			task.wait(1 / 30)
+		end
+	end)
+	-- The fanfare's whole first phrase, the music bowing under it.
+	pcall(Sound.briefDip, 9.5)
+	sound("levelFanfare", 0.9)
 	task.delay(0.15, sound, "shimmerFall", 0.8)
 	-- (A burst of gold flakes round the guest only for every tenth level: the big ones. The rest
-	-- are a card and a fanfare, no fireworks.)
+	-- are the moment and the fanfare, no fireworks.)
 	local big = level % 10 == 0
 	if big then
 		Flakes.fall({
@@ -165,17 +278,28 @@ function Celebrate.levelUp(level: number, title: string, gilt: number)
 			burst = true,
 		})
 	end
-	task.delay(3.4, function()
-		if box.Parent then
-			local t = TweenService:Create(scale, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Scale = 0.01 })
-			t:Play()
-			t.Completed:Once(function()
-				box:Destroy()
-			end)
+	-- Out: after a good look, it lifts and fades away together, unhurried.
+	task.delay(6.2, function()
+		if not box.Parent then
+			return
 		end
+		local out = 1.3
+		ease(scale, out, { Scale = 1.06 }, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
+		ease(box, out, { Position = UDim2.new(0.5, 0, 0.38, -16) }, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
+		ease(halo, out, { BackgroundTransparency = 1 }, Enum.EasingStyle.Sine)
+		ease(disc, out, { BackgroundTransparency = 1, TextTransparency = 1 }, Enum.EasingStyle.Sine)
+		ease(ring, out, { Transparency = 1 }, Enum.EasingStyle.Sine)
+		for _, beam in beams do
+			ease(beam, out, { BackgroundTransparency = 1 }, Enum.EasingStyle.Sine)
+		end
+		for _, l in { head, shineLabel, name, reward } do
+			ease(l, out, { TextTransparency = 1, TextStrokeTransparency = 1 }, Enum.EasingStyle.Sine)
+		end
+		task.delay(out + 0.05, function()
+			box:Destroy()
+		end)
 	end)
 end
-
 
 -- (Build 96) A haul worth celebrating, in Steal a Luxe (the server decides which: server
 -- Attractions/Luxe):

@@ -377,6 +377,36 @@ a Nightly attempt or a Mythic's odds.
 - **The launch kit**: page text, icon, thumbnails and the gameplay video's shot list are in
   [`LAUNCH.md`](LAUNCH.md).
 
+## Build 103 — the house's moments, seats everywhere, the Lucky reel
+
+- **Moments** (`UI/Moment`): the big beats of play are no longer corner notices but moments in the
+  middle of the screen. A soft glow in the moment's colour blooms behind a plate of dark glass, the
+  plate rises into place, a band of light passes across it, gold motes drift away, and it leaves as
+  gently as it came. A reward figure can count up. One at a time; a big one (the Executive beaten,
+  a Ballroom win) always stands for at least 2 s before anything replaces it. Used for: a piece
+  lifted and a haul banked in Steal a Luxe, Basement checkpoints, parts done and secrets, the
+  Executive Suite's phases, the clean getaway and the Executive beaten, a right trivia answer, and
+  winning Luxury Trivia, the Runway or the Daily Arena. The words are exactly the server's.
+- **Level up** (`UI/Celebrate`): a halo of the level's colour blooms with slowly turning rays, the
+  words rise into place one after another, a band of light passes over LEVEL UP, and after about
+  6 s it all lifts away together (it used to snap shut at 3.4 s). The fanfare (`levelFanfare`) now
+  plays its whole first phrase (0 to 10.2 s, fading over the last 2.4 s) instead of being cut at
+  3.4 s mid-note, with the house's music dipping under it.
+- **Lucky Box reel** (`UI/LuckyBoxPanel`): the room dims softly and the reel settles in with a glow.
+  The reel gathers speed with no jolt, slows over a long run, goes a hair past and eases back to
+  rest. Both points are always inside the result's own tile, so it never seems to land on a
+  neighbour first. Tiles swell as they pass the marker, the ends fade into the dark, ticks lighten
+  as it slows, and the landing glows in the find's rarity before everything fades out together.
+- **Seats** (`server/Seating`): every SitSpot the server builds anywhere is a seat now. The
+  Grand Ballroom, the Executive Suite and the Island stand in Workspace's Attractions folder,
+  which was never looked at, so their sofas and benches showed Sit but refused in silence. A
+  copied seat (a private wing's) gets its own number instead of its original's. The champagne
+  bar's nine stools are seats. A refusal always says why. Covered by `tests/seats.luau`.
+- **Notices** (`UI/Toast`): a notice replaced by the next one fades out over 0.22 s instead of
+  vanishing.
+- **Boosters**: by the owner's decision, all earnings, boosted ones included, count toward Fortune
+  and the Wealthiest boards (no change: that was already so). Bought Gilt still never counts.
+
 ## Build 102 — private Suites and Vaults, the elevator, the House Tour, exact Gilt
 
 - **Private wings** (`server/Wings`, `shared/Wing`): every guest gets a real copy of the Suite and the

@@ -494,12 +494,12 @@ Voice.Afk = {
 Voice.Short = { gilt = "Insufficient Gilt", gems = "Insufficient Gems", line = "Gotta get more lol" }
 
 Voice.WhatsNew = {
-	build = 102,
+	build = 103,
 	lines = {
 		-- (One short line each: read at a glance.)
-		"Your own private Suite and Vault, up the elevator.",
-		"Friends ride up to your Suite only when you allow it.",
-		"Every reward shows its exact Gilt. House Tour any time.",
+		"Every big moment now has its own glow: lifts, checkpoints, the Executive.",
+		"Sit on any sofa, bench or bar stool, the Grand Ballroom's too.",
+		"A level up plays its fanfare in full.",
 	},
 }
 

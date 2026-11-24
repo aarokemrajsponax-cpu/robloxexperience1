@@ -169,11 +169,7 @@ See section 9.
 - Every attraction, the Suite, the Vault and the Ballroom are free.
 - Gilt buys bags, invitations, themes and brainrots. Lucky Boxes can be opened with Gilt. **[CODE]**
 - Bought Gilt never counts on the Wealthiest boards. **[CODE]**
-- **Fairness concern (for your decision, not changed):** paid Gilt boosters (Luck Booster 2.5× for 30 minutes, Double Gilt) multiply earned Gilt, and that earned Gilt does count toward Fortune and the boards. A free player can't match a boosted hour. Options:
-  - (a) count only unboosted earnings toward the boards, or
-  - (b) make boosters cosmetic or party-wide.
-  
-  This touches the board standings of existing players, so it's your call.
+- **Boosters on the boards: decided by the owner (Build 103).** Paid Gilt boosters (Luck Booster 2.5× for 30 minutes, Double Gilt) multiply earned Gilt, and the owner has decided that **all earnings, boosted ones included, count** toward Fortune and the Wealthiest boards. This is what the code already does, so nothing changed. Bought Gilt itself (Gilt packs) still never counts. **[CODE]**
 
 ### Persona 8: the collector
 
@@ -201,7 +197,7 @@ See section 9.
   - Wealthiest boards (bought Gilt excluded).
   - Best hauls, Basement times, Grand Prix lap boards.
   - Tonight's single daily table.
-- Weakness: the booster concern above. Wealth ranks lack a seasonal reset or season board, so newcomers can't catch long-time players. **[JUDGEMENT]**
+- Weakness: boosted hours count on the boards (the owner's decision, above). Wealth ranks lack a seasonal reset or season board, so newcomers can't catch long-time players. **[JUDGEMENT]**
 
 ### Persona 11: the returning player
 
@@ -333,7 +329,6 @@ See section 9.
 - **Reliability.** Receipts are idempotent and grants are retried. **[SIM]**
 - **Launch item [NOT VERIFIED here].** The server reports any developer product not yet created in Creator Hub. In the test harness all are "missing" because the harness has no Creator Hub. **Check the owner's error feed after publishing: the "products aren't on sale yet" list must be empty**, or those items can't be bought.
 - **Recommendations:**
-  - Decide on booster fairness (see Persona 7).
   - Bundle cosmetics by theme.
   - Add cosmetic event souvenirs.
   - Keep Gems-only items cosmetic.
@@ -446,7 +441,7 @@ See section 9.
 | Medium | First "next step" pointer came at 75 s | `UI/Guidance` | **Fixed**: 40 s |
 | Medium | "Estate" and purse-conversion wording confusing | `Voice`, `ExecutiveHud`, `Celebrate`, `FortunePanel` | **Fixed** (Build 102) |
 | Low | SATCHEL word unreadable on phones | `UI/SatchelPanel` | **Fixed** (Build 102) |
-| Open | Paid boosters count toward the Wealthiest boards | `server/Gilt` | **Your decision** (see Persona 7) |
+| Decided | Paid boosters count toward the Wealthiest boards | `server/Gilt` | **Owner's decision: all earnings count, boosted included** (current behaviour, no change) |
 | Open | Friend Booster card text about 7 pt on phones | `UI/FriendBooster` | Not changed (layout needs a redesign pass) |
 | Open | Archivist not inside private Vaults | `Staff/Archivist` | Not changed |
 
@@ -480,7 +475,6 @@ Design judgements, informed by the evidence above. Confidence reflects how much 
 
 - lead with the heist and the Suite;
 - shorten the copy;
-- settle booster fairness;
 - add collection sets and a season board;
 - verify performance and readability on a real phone.
 
@@ -488,9 +482,8 @@ Design judgements, informed by the evidence above. Confidence reflects how much 
 
 1. Play the build on a real phone and a PC. Confirm the elevator, Suite privacy with two accounts, and tall cards scrolling.
 2. Confirm in the owner's error feed that no developer product is "not on sale".
-3. Decide booster fairness on the Wealthiest boards.
-4. Make the icon, thumbnails and trailer (section 7).
-5. Friend Booster card readability on phones.
-6. Collection sets with cosmetic rewards; a seasonal Wealthiest board.
-7. An Admin Abuse cosmetic souvenir.
-8. Turn on Creator Hub analytics. Review D1, D7 and D30 and the onboarding funnel after launch.
+3. Make the icon, thumbnails and trailer (section 7).
+4. Friend Booster card readability on phones.
+5. Collection sets with cosmetic rewards; a seasonal Wealthiest board.
+6. An Admin Abuse cosmetic souvenir.
+7. Turn on Creator Hub analytics. Review D1, D7 and D30 and the onboarding funnel after launch.

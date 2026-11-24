@@ -795,6 +795,8 @@ local function lounges(m: Model, o: Vector3)
 		local s = face * CFrame.new(k * 4, 0, -2.8)
 		Kit.post(f, "StoolPost", 2.6, 0.3, s.Position, GILT_DEEP, TRIM)
 		Kit.cylinder(f, "StoolSeat", 0.4, 1.6, s * CFrame.new(0, 2.8, 0) * CFrame.Angles(0, 0, math.rad(90)), CRIMSON)
+		-- (Build 103) A stool to sit on, facing the bar.
+		Furniture.seatsOn(f, "StoolSeats", { s * CFrame.new(0, 3, 0) * CFrame.Angles(0, math.pi, 0) }, "The bar stool", 1.6)
 	end
 	-- And a lounge in the east wing's south corner.
 	for k, x in { 64, 84, 104 } do
