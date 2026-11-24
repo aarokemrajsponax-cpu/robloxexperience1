@@ -522,4 +522,4 @@ Design judgements, informed by the evidence above. Confidence reflects how much 
 - **Test-only fix.** Two stand-in guests in `tests/shop.luau` shared a UserId, so a giveaway check failed at random. The test is fixed; the game code is unchanged.
 - **Final totals on this build:**
   - All 31 server suites pass, including the bundled run (221/0), crowd (14/0), island (143/0), seats (14/0) and shop (594/0, four runs).
-  - Client suite: phone 1575/0, tablet 1575/0, desktop below.
+  - Client suite: desktop 1574/0, phone 1575/0, tablet 1575/0.
