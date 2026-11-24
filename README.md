@@ -377,7 +377,30 @@ a Nightly attempt or a Mythic's odds.
 - **The launch kit**: page text, icon, thumbnails and the gameplay video's shot list are in
   [`LAUNCH.md`](LAUNCH.md).
 
-## Build 103 — the house's moments, seats everywhere, the Lucky reel
+## Build 103 — the house's moments, seats everywhere, the Lucky reel, Luxury Island open
+
+- **Luxury Island is open** (`Config` island `comingSoon = false`), rebuilt after the owner's
+  reference picture in the house's own style (`server/Attractions/IslandBuild`):
+  - a resort on the eastern headland: a tiered glass villa with a rotunda, a waterfall into an
+    infinity pool, an aquarium wall, a glass dome lounge, a spiral slide (a walkable chute, decor),
+    an open-air cinema, a helipad with a helicopter, a tennis court, a fire-pit lounge, a lit pier
+    with a moored yacht and a beach;
+  - the arrival: a fountain plaza, a palm boulevard along the road, a bougainvillea pergola, hedges,
+    flower beds and garden lights; smooth hills and shelving sand; 86 real seats;
+  - `World/IslandView` and the new `World/IslandLife`: Golden Hour and Starlit light, fire, water
+    glitter, surf, mist, fireflies, gulls and fish, all undone on leaving; a smoother flight in.
+  - Gameplay fixes (`server/Attractions/Island`): Island Standing could be farmed by flying in and
+    out (now the first flight each day; earlier flights kept, so nobody's rank or Gilt changes);
+    the Gilt shown is the Gilt paid (fixed island prizes, even past the daily soft cap); a pearl
+    hidden under a deck moved; pearls only while in the water, with room for lag; postcard reach;
+    nobody stranded at sea or set down on the island without flying; seated guests stood up to
+    fly; the jet parked so its airstair meets the red carpet; summit path prompts; friends who
+    toast together both get the friend bonus. `tests/island.luau` has 143 checks.
+- **A full house** (`tests/crowd.luau`): 24 guests in one server for 150 rounds, each doing a random
+  mix of everything (every attraction, lifting and banking, checkpoints, seats, the elevator,
+  the Boutique, owner-only commands, junk requests, leaving and rejoining), checked after every
+  round. No request failed inside the server, no balance went wrong, no seat or wing was shared,
+  no owner-only command worked for a guest, and nothing was left behind when everyone left.
 
 - **Moments** (`UI/Moment`): the big beats of play are no longer corner notices but moments in the
   middle of the screen. A soft glow in the moment's colour blooms behind a plate of dark glass, the
