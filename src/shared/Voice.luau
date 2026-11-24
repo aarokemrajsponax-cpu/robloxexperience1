@@ -170,18 +170,6 @@ Voice.Tour = {
 		line = "Steal treasure. Bank it. Grow your Fortune. The richest guest tops the boards: start with Steal a Luxe.",
 	},
 	{
-		-- (Build 102) The Concierge himself, and how the house's money works.
-		stop = "lectern",
-		title = "The Concierge",
-		line = "That's me, at this lectern. Press E by me any time: I'll answer anything, find any room, or take you round again. The House Tour key does the same.",
-	},
-	{
-		stop = "lectern",
-		title = "Becoming the richest guest",
-		line = "Gilt is what you earn and spend. Your Fortune is your Gilt and everything you own together, and the Wealthiest boards rank it (Gilt bought with Robux never counts there). Every reward shows its exact Gilt before you earn it.",
-		quick = true,
-	},
-	{
 		stop = "salon",
 		place = "salonDoor",
 		title = "The Salon",
@@ -314,6 +302,18 @@ Voice.Tour = {
 		place = "suiteDoor",
 		title = "Your private Suite",
 		line = "Your own rooms, high above the house: the elevator takes you up in 5.5 seconds, and nobody else can come in. Friends ride up in 6.5 seconds, only if you allow it (Suites key). Ring the bell inside to furnish it.",
+	},
+	{
+		-- (Build 102) The Concierge himself, and how the house's money works.
+		stop = "suite",
+		title = "The Concierge",
+		line = "I'm at my lectern in the Foyer. Press E by me any time: I'll answer anything, find any room, or take you round again. The House Tour key does the same.",
+	},
+	{
+		stop = "suite",
+		title = "Becoming the richest guest",
+		line = "Gilt is what you earn and spend. Your Fortune is your Gilt and everything you own together, and the Wealthiest boards rank it (Gilt bought with Robux never counts there). Every reward shows its exact Gilt before you earn it.",
+		quick = true,
 	},
 	{
 		stop = "suite",
