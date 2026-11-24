@@ -11150,6 +11150,52 @@ end)()
 	LocalPlayer:SetAttribute("Wing", nil)
 	WingViewM.refresh()
 	wings:Destroy()
+	-- (Build 102) The quiet guide: one step at a time, each once, remembered; and once after an event.
+	local GuidanceM = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "Guidance")
+	local GuideHandB = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "GuideHand")
+	local StateB = module("StarterPlayer", "StarterPlayerScripts", "Client", "State")
+	local savedTargets, savedBusy = GuidanceM.targets, GuidanceM.busy
+	local key = Instance.new("TextButton")
+	key.Name = "GuideTestKey"
+	key.Size = roblox.UDim2.fromOffset(100, 40)
+	key.Parent = RootM.hud
+	GuidanceM.targets = { play = function() return key end, suites = function() return key end, shop = function() return key end, collection = function() return key end }
+	GuidanceM.busy = function()
+		return false
+	end
+	GuideHandB.clear()
+	RootM.close()
+	LocalPlayer:SetAttribute("Level", 2)
+	StateB.set("guideStep", 0)
+	GuidanceM.reset()
+	local t0 = 100000
+	GuidanceM.check(t0)
+	local early = GuidanceM.check(t0 + 10)
+	local first = GuidanceM.check(t0 + 80)
+	advance(0.3)
+	check("Build 102: the guide waits a while into play, then points at one next step", early == nil and first == "play" and GuideHandB.active() and textOnScreen("Your first Gilt") ~= nil)
+	GuideHandB.done()
+	advance(0.3)
+	check("...Got it: remembered, and the hand goes", StateB.get("guideStep") == 1 and not GuideHandB.active())
+	check("...and the next not for a good while", GuidanceM.check(t0 + 120) == nil)
+	check("...then the next one, never the same twice", GuidanceM.check(t0 + 400) == "suites")
+	GuideHandB.clear()
+	LocalPlayer:SetAttribute("Level", 30)
+	StateB.set("guideStep", 2)
+	check("...and none for a guest long past all this", GuidanceM.check(t0 + 2000) == nil)
+	LocalPlayer:SetAttribute("Level", 2)
+	StateB.set("guideEvent", 0)
+	GuidanceM.afterEvent()
+	advance(0.5)
+	check("Build 102: after an Admin Abuse night, a newcomer is shown the rest of the house, once", textOnScreen("The house is open every night") ~= nil and StateB.get("guideEvent") == 1)
+	GuideHandB.clear()
+	GuidanceM.afterEvent()
+	advance(0.5)
+	check("...and never again", textOnScreen("The house is open every night") == nil)
+	StateB.set("guideStep", #GuidanceM.STEPS)
+	LocalPlayer:SetAttribute("Level", nil)
+	GuidanceM.targets, GuidanceM.busy = savedTargets, savedBusy
+	key:Destroy()
 	check("no errors from the elevator", #errors == errorsBefore, errors[errorsBefore + 1])
 end)()
 

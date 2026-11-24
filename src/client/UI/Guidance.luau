@@ -31,7 +31,7 @@ Guidance.busy = function(): boolean
 	return false
 end
 
-local FIRST = 75 -- seconds into play before the first
+local FIRST = 40 -- seconds into play before the first (after the House Tour hand has had its turn)
 local GAP = 240 -- seconds at least between two
 local SHOW = 14 -- seconds one stays if nothing is pressed
 local MAX_LEVEL = 8 -- past this level, no pointers
@@ -55,7 +55,6 @@ local function advance(id: string)
 	if showing == id then
 		showing = nil
 	end
-	lastAt = os.clock()
 end
 
 -- Whether this guest is new enough to be guided.
@@ -109,6 +108,45 @@ function Guidance.check(now: number?): string?
 		end
 	end)
 	return id
+end
+
+-- (Build 102) After an Admin Abuse night, once ever, for a newcomer who may have come only for it:
+-- the rest of the house is here every night, and Play is where to pick from it.
+Guidance.EVENT = { title = "The house is open every night", line = "Steal a Luxe, the Basement and the Executive Suite are open all the time. Press Play to pick one." }
+
+function Guidance.afterEvent()
+	if (tonumber(State.get("guideEvent")) or 0) >= 1 then
+		return
+	end
+	local level = tonumber(player:GetAttribute("Level")) or 1
+	if level > MAX_LEVEL then
+		return
+	end
+	task.spawn(function()
+		for _ = 1, 30 do
+			local find = Guidance.targets.play
+			local target = find and find()
+			if target and State.phase == "play" and not GuideHand.active() and not Root.isOpen() and not Guidance.busy() and type(player:GetAttribute("Attraction")) ~= "string" then
+				State.set("guideEvent", 1)
+				lastAt = os.clock()
+				GuideHand.point(target, Guidance.EVENT.title, Guidance.EVENT.line)
+				task.delay(SHOW, function()
+					if GuideHand.target() == target then
+						GuideHand.clear()
+					end
+				end)
+				return
+			end
+			task.wait(2)
+		end
+	end)
+end
+
+-- For tests: as if play had just begun.
+function Guidance.reset()
+	playingSince = nil
+	lastAt = -math.huge
+	showing = nil
 end
 
 function Guidance.start()

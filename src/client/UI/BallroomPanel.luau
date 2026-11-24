@@ -263,7 +263,7 @@ local function podium(parent: Instance, order: number)
 				TextTruncate = Enum.TextTruncate.AtEnd,
 				TextColor3 = if you then NEON else Brand.Colours.bone,
 			})
-			Theme.text(col, if you then "YOU · " .. s.keys .. " KEYS" else s.keys .. (if s.keys == 1 then " KEY" else " KEYS"), 10, "caps", {
+			Theme.text(col, if you then "YOU · " .. s.keys .. (if s.keys == 1 then " KEY" else " KEYS") else s.keys .. (if s.keys == 1 then " KEY" else " KEYS"), 10, "caps", {
 				AutomaticSize = Enum.AutomaticSize.None,
 				Position = UDim2.fromOffset(0, 19),
 				Size = UDim2.new(1, 0, 0, 14),

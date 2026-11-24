@@ -186,7 +186,7 @@ local function updateHeader()
 		Hud.setDuelLine(duelRemaining, rival, clockLeft)
 	elseif tableMode == "ballroom" then
 		local cap = Config.data.Ballroom.capacity
-		SortScreen.setLine(string.format("%d of %d", duelRemaining, cap), string.format("On your felt · %d Keys", ballroomKeys))
+		SortScreen.setLine(string.format("%d of %d", duelRemaining, cap), string.format("On your felt · %d %s", ballroomKeys, if ballroomKeys == 1 then "Key" else "Keys"))
 		Hud.setTextLine(string.format("felt %d of %d   ·   %d Keys", duelRemaining, cap, ballroomKeys))
 		BallroomView.setFelt(duelRemaining, ballroomKeys)
 	else

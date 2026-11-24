@@ -52,6 +52,9 @@ AbuseShow.isBusy = function(): boolean
 	return false -- at a table: the camera stays and nothing moves the guest
 end
 AbuseShow.cameraMoment = function(_shot: CFrame, _hold: number) end
+-- (Build 102) Set by Main: the night is over and its finale has played (UI/Guidance shows a
+-- newcomer, once, that the rest of the house runs every night).
+AbuseShow.ended = function() end
 AbuseShow.cameraShake = function(_size: number, _seconds: number) end
 
 local player = Players.LocalPlayer
@@ -3009,6 +3012,9 @@ local function finish()
 		local early = Workspace:GetServerTimeNow() < n.ends - 5
 		OwnerCameo.say(if early then "That's all for tonight! Thank you for coming! 👋" else "That's a wrap! See you at the next Admin Abuse! 👋", "wave", 6)
 		AbuseShow.finale(n, early)
+		task.delay(24, function()
+			pcall(AbuseShow.ended)
+		end)
 	end
 end
 

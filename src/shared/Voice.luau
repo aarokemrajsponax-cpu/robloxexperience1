@@ -497,9 +497,9 @@ Voice.WhatsNew = {
 	build = 102,
 	lines = {
 		-- (One short line each: read at a glance.)
-		"House Tour: the whole house, whenever you like.",
-		"Every reward shows its exact Gilt.",
-		"One Satchel key holds everything you carry.",
+		"Your own private Suite and Vault, up the elevator.",
+		"Friends ride up to your Suite only when you allow it.",
+		"Every reward shows its exact Gilt. House Tour any time.",
 	},
 }
 

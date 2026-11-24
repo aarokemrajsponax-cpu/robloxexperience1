@@ -404,6 +404,8 @@ start("Curios", function()
 			return not ok or busy == true
 		end
 		Guidance.start()
+		-- (After an Admin Abuse night, a newcomer is shown the rest of the house, once.)
+		require(script.Parent.World.AbuseShow).ended = Guidance.afterEvent
 	end
 	QuickDock.openCollection = function()
 		-- (Build 87: opening it is what the guiding hand asked for: noted as done.)

@@ -76,6 +76,9 @@ Settings.Definitions = {
 	-- (Build 102) Not shown in Settings: how far the guide's one-at-a-time pointers have got
 	-- (UI/Guidance), kept so none is ever shown twice.
 	level("guideStep", "Kept", "Guide", 0, true),
+	-- (Build 102) Whether a newcomer has been shown, after their first Admin Abuse, that the rest of
+	-- the house runs every night (0 or 1).
+	level("guideEvent", "Kept", "Guide after an event", 0, true),
 } :: { Definition }
 
 Settings.byKey = {} :: { [string]: Definition }

@@ -113,6 +113,13 @@ local function moveGrid(parent: Instance, order: number, cell: number, onMove: (
 		g.Name = "Glyph"
 		local n = Theme.text(b, m.name, 12, "bodyBold", { AutomaticSize = Enum.AutomaticSize.None, Size = UDim2.new(1, -6, 0, 16), Position = UDim2.new(0, 3, 0.66, 0), TextXAlignment = Enum.TextXAlignment.Center, TextColor3 = C.bone })
 		n.Name = "MoveName"
+		-- (Build 102) A tile's name always fits its tile: down to 8 if a narrow screen needs it,
+		-- never past 12 (on a phone the names ran into each other).
+		n.TextScaled = true
+		local cap = Instance.new("UITextSizeConstraint")
+		cap.MaxTextSize = 12
+		cap.MinTextSize = 8
+		cap.Parent = n
 		b.Activated:Connect(function()
 			if GalaPanel.move(m.id) then
 				for _, other in grid:GetChildren() do
