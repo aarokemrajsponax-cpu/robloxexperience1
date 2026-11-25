@@ -20,6 +20,63 @@ local Vector3, CFrame = H.Vector3, H.CFrame
 local module, profiles = H.module, H.profiles
 local Remotes, Config = H.Remotes, H.Config
 
+local roblox = require("@lune/roblox")
+-- (Build 104) A vehicle seat sits a guest like any seat.
+roblox.implementMethod("VehicleSeat", "Sit", function(self, h)
+	if type(h) == "table" then
+		h.SeatPart = self
+		return
+	end
+	local character = h.Parent
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if root then
+		root.CFrame = self.CFrame * CFrame.new(0, 2, 0)
+	end
+end)
+roblox.implementMethod("VehicleSeat", "GetPropertyChangedSignal", function()
+	return { Connect = function() return { Disconnect = function() end } end }
+end)
+-- (Build 104) A model's pivot (its primary part's frame, or its first part's), moving it moves
+-- every part in it, as Roblox's PivotTo does.
+local function pivotOf(m)
+	local pp = m.PrimaryPart or m:FindFirstChild("HumanoidRootPart")
+	if pp then
+		return pp.CFrame
+	end
+	for _, d in m:GetDescendants() do
+		if d:IsA("BasePart") then
+			return d.CFrame
+		end
+	end
+	return CFrame.new()
+end
+roblox.implementMethod("Model", "GetPivot", function(self)
+	return pivotOf(self)
+end)
+roblox.implementMethod("Model", "PivotTo", function(self, cf)
+	local from = pivotOf(self)
+	local delta = cf * from:Inverse()
+	for _, d in self:GetDescendants() do
+		if d:IsA("BasePart") then
+			d.CFrame = delta * d.CFrame
+		end
+	end
+end)
+roblox.implementMethod("Model", "GetExtentsSize", function(self)
+	local lo, hi = nil, nil
+	for _, d in self:GetDescendants() do
+		if d:IsA("BasePart") then
+			local p = d.CFrame.Position
+			local h = d.Size / 2
+			local a, b = p - h, p + h
+			lo = if lo then Vector3.new(math.min(lo.X, a.X), math.min(lo.Y, a.Y), math.min(lo.Z, a.Z)) else a
+			hi = if hi then Vector3.new(math.max(hi.X, b.X), math.max(hi.Y, b.Y), math.max(hi.Z, b.Z)) else b
+		end
+	end
+	return if lo and hi then hi - lo else Vector3.zero
+end)
+
+
 local Layout = module("ReplicatedStorage", "Shared", "Layout")
 local Plan = module("ReplicatedStorage", "Shared", "Island")
 local Craft = module("ReplicatedStorage", "Shared", "IslandCraft")

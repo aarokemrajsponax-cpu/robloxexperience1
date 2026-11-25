@@ -123,7 +123,7 @@ check("its gates come in order round the lap", Tracks.gate("coast", 0) == 0 and 
 check("the Boulevard is the Grand Prix's own circuit", Tracks.length("boulevard") == GrandPrix.length())
 check("each ace's mark can be beaten, but not by much: above the quickest lap any car could drive", Tracks.byId.boulevard.ace > Tracks.quickest("boulevard") and Tracks.byId.coast.ace > Tracks.quickest("coast"))
 check("their badges are real", BadgeBook.byKey.lapAce ~= nil and BadgeBook.byKey.coastAce ~= nil)
-check("the island's three cars wait in its garage", carOf("coastSpyder") and carOf("coastSpyder").track == "coast" and (carOf("coastSpyder").chassis.CFrame.Position - Tracks.bay(1).Position).Magnitude < 0.01)
+check("Build 104: the island's garage is gone: no island cars to drive", carOf("coastSpyder") == nil and carOf("coastCoral") == nil and carOf("coastLagoon") == nil)
 check("the racing ranks climb from Rookie to Legend", Tracks.RANKS[1].name == "Rookie" and Tracks.RANKS[#Tracks.RANKS].name == "Legend" and select(2, Tracks.rank(0)) == 1 and select(2, Tracks.rank(400)) == 4)
 
 ---------------------------------------------------------------------------------------------------
@@ -165,25 +165,14 @@ check("...no lap counted from it", #inboxOf(ana, "trialLap") == before)
 ---------------------------------------------------------------------------------------------------
 -- 3. The Coastal Circuit, an ace's lap, and the card
 ---------------------------------------------------------------------------------------------------
-local spyder = carOf("coastSpyder")
-local bo, boData = guestAt(Tracks.bay(1).Position + Vector3.new(0, 0, 6))
-ok, why = Service.drive(bo, "coastSpyder")
-check("the island's cars are driven like any other", ok, why)
-local r, rWhy = Service.join(bo)
-check("...but the Grand Prix races on the Boulevard: no race from the island", r == false and string.find(rWhy, "Grand Boulevard", 1, true) ~= nil)
-sNow = run(spyder, "coast", LC - 40, LC + 5, 80)
-sNow = run(spyder, "coast", sNow, 2 * LC + 5, 88)
-local coastLap = inboxOf(bo, "trialLap")[1]
-check("a timed lap of the Coastal Circuit", coastLap ~= nil and coastLap.track == "coast" and coastLap.best == true, coastLap and coastLap.time)
-local ace = false
-for _, a in awards do
-	if a.p == bo and a.key == "coastAce" then
-		ace = true
-	end
-end
-check("under the ace's mark: Coast Ace", coastLap and coastLap.time < Tracks.byId.coast.ace and ace)
+-- (Build 104) The island's garage and its cars are gone: the Coastal Circuit's board keeps the laps
+-- driven before, and the rest of these checks drive a car on the Boulevard.
+local spyder = carOf("aurelia")
+local bo, boData = guestAt(GrandPrix.bay(2).Position + Vector3.new(0, 0, 6))
+ok, why = Service.drive(bo, "aurelia")
+check("(a second guest at the wheel on the Boulevard)", ok, why)
 H.orderedStores.Laps_coast = H.orderedStores.Laps_coast or {}
-H.orderedStores.Laps_coast["9911"] = 7000 -- (a friend a little quicker)
+H.orderedStores.Laps_coast["9911"] = 7000 -- (a friend's lap from before)
 local card = TimeTrials.card(bo)
 local coastCard = nil
 for _, t in card.tracks do
@@ -191,8 +180,8 @@ for _, t in card.tracks do
 		coastCard = t
 	end
 end
-check("the card: their best on each circuit, the boards", card.ok == true and coastCard ~= nil and math.abs(coastCard.pb - coastLap.time) < 0.001 and type(coastCard.all) == "table" and type(coastCard.week) == "table")
-check("...and their friends' bests beside theirs, quickest first", #coastCard.friends == 2 and coastCard.friends[1].userId == 9911 and coastCard.friends[2].userId == bo.UserId)
+check("the Coastal Circuit's board stays on the card, with the laps driven before", card.ok == true and coastCard ~= nil and type(coastCard.all) == "table" and type(coastCard.week) == "table")
+check("...and friends' bests on it", #coastCard.friends >= 1 and coastCard.friends[1].userId == 9911)
 check("...their racing rank and points", card.rankName == "Rookie" and card.points == boData.racing.points)
 
 ---------------------------------------------------------------------------------------------------

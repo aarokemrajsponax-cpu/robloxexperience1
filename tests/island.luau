@@ -196,7 +196,7 @@ local function count(name)
 end
 check("its places: the airstrip and the jet, the Jet Gallery, the Grand Villa, the overwater villas, the beach, the gardens, the Lookout, the marina", isle:FindFirstChild("Airstrip") and isle.Airstrip:FindFirstChild("Jet") and isle:FindFirstChild("JetGallery") and isle:FindFirstChild("GrandVilla") and isle:FindFirstChild("Overwater") and isle:FindFirstChild("SouthBeach") and isle:FindFirstChild("Gardens") and isle:FindFirstChild("SunsetLookout") and isle:FindFirstChild("Marina"))
 check("four overwater villas, each with its own pool", count("VillaDeck") == 4 and count("pool") >= 5, count("pool"))
-check("three yachts in the marina; palms all over", count("Yacht") == 3 and count("Palm") >= 24, count("Palm"))
+check("three yachts in the marina (Build 104: two moored, and the Day Yacht at the third berth); palms all over", count("Yacht") == 2 and workspace:FindFirstChild("DayYacht", true) ~= nil and count("Palm") >= 24, count("Palm"))
 check("every livery in the Jet Gallery, as a model", (function()
 	local seen = 0
 	for _, d in isle.JetGallery:GetChildren() do

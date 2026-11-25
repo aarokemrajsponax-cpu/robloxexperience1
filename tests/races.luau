@@ -92,10 +92,9 @@ end
 -- The cars in their bays
 ---------------------------------------------------------------------------------------------------
 local cars = Service.cars()
-local Tracks = H.module("ReplicatedStorage", "Shared", "Tracks")
-check("six cars, one in each bay along the kerb, the Private Garage's two in theirs, and Luxury Island's three by its Coastal Circuit, parked (anchored)", #cars == 11 and (function()
+check("six cars, one in each bay along the kerb, and the Private Garage's two in theirs, parked (anchored); Build 104: the island's garage is gone", #cars == 8 and (function()
 	for i, car in cars do
-		local want = if i <= 6 then GrandPrix.bay(i).Position elseif i <= 8 then GrandPrix.privateBay(i - 6).Position else Tracks.bay(i - 8).Position
+		local want = if i <= 6 then GrandPrix.bay(i).Position else GrandPrix.privateBay(i - 6).Position
 		if (car.chassis.CFrame.Position - want).Magnitude > 0.01 or not car.chassis.Anchored then
 			return false
 		end
