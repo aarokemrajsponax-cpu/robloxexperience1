@@ -1251,6 +1251,8 @@ workspace:SetAttribute("Season", "autumn")
 workspace:SetAttribute("SeasonName", "Autumn")
 
 local Config = module("ReplicatedStorage", "Shared", "Config")
+-- (Build 104) Base Gilt figures on this screen too (the scale is checked in tests/economy.luau).
+Config.data.Gilt.payoutScale = 1
 -- (This run plays the sorting evening in the Ballroom, kept behind the switch: Lights Out on the
 -- dance floor has a block of its own, after the Ballroom's.)
 Config.data.Ballroom.floor.enabled = false
@@ -3694,8 +3696,8 @@ do
 	local helpKey = find(playerGui, function(d)
 		return d.Name == "HowToPlayKey"
 	end)
-	if module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "Root").phone() then
-		-- (Build 96) On a phone the top row is Play, Shop and Menu: How to play is a Menu tile.
+	if module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "Hud").compact() then
+		-- (Build 96) On a phone (Build 104: or a narrow tablet) the top row is Play, Shop and Menu: How to play is a Menu tile.
 		module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "MenuPanel").open()
 		advance(0.8)
 		check("How to play on a phone: not on the top row, a tile in the Menu (with Settings)", helpKey ~= nil and helpKey.Visible == false and textOnScreen("How to play") ~= nil and textOnScreen("Settings") ~= nil)
@@ -11110,8 +11112,9 @@ end)()
 	local settingsKey = find(playerGui, function(d)
 		return d.Name == "SettingsKey"
 	end)
-	if RootB.phone() then
-		check("on a phone the top row is Play, Shop and Menu: How to play and Settings are in the Menu", how ~= nil and not how.Visible and settingsKey ~= nil and not settingsKey.Visible)
+	local HudC = module("StarterPlayer", "StarterPlayerScripts", "Client", "UI", "Hud")
+	if HudC.compact() then
+		check("on a phone (or a narrow tablet) the top row is Play, Shop and Menu: How to play and Settings are in the Menu", how ~= nil and not how.Visible and settingsKey ~= nil and not settingsKey.Visible)
 	else
 		check("on a computer How to play and Settings stay on the top row", how ~= nil and how.Visible and settingsKey ~= nil and settingsKey.Visible)
 	end
@@ -11122,7 +11125,7 @@ end)()
 	advance(0.5)
 	HudB.coachHelp(VoiceB.Guide.coach, 3)
 	advance(0.5)
-	if RootB.phone() then
+	if HudC.compact() then
 		check("on a phone the New here? note points at the Menu and says so", textOnScreen(VoiceB.Guide.coachPhone) ~= nil)
 	else
 		check("on a computer the New here? note points at How to play", textOnScreen(VoiceB.Guide.coach) ~= nil)

@@ -20,8 +20,21 @@ function Controls.get(): any
 		return controls
 	end
 	local scripts = player:FindFirstChild("PlayerScripts")
+	-- (Build 104) Anywhere in PlayerScripts, not only directly in it: Roblox's own module has moved
+	-- before, and an owner saw the notice below while walking about perfectly well.
 	local module = scripts and scripts:FindFirstChild("PlayerModule")
+	if not module and scripts then
+		pcall(function()
+			module = scripts:FindFirstChild("PlayerModule", true)
+		end)
+	end
 	if not module then
+		return nil
+	end
+	local okIs, isModule = pcall(function()
+		return module:IsA("ModuleScript")
+	end)
+	if okIs and isModule == false then
 		return nil
 	end
 	local ok, found = pcall(function()

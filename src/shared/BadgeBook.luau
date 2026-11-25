@@ -300,7 +300,7 @@ ladder("racing", "trialLaps", "⏱️", "Drive %d timed laps.", {
 	{ 1, "Hot Lap", "firstTrial" }, { 25, "Lapping It Up" }, { 100, "The Hundred Laps" },
 }, "Drive a timed lap.")
 moment("racing", "lapAce", "Lap Ace", "Drive a timed lap of the Grand Boulevard in under 12 seconds.", "⚡", "gold")
-moment("racing", "coastAce", "Coast Ace", "A timed lap of the Coastal Circuit in under 11 seconds.", "🌊", "gold")
+moment("racing", "coastAce", "Coast Ace", "A timed lap of the Coastal Circuit in under 11 seconds (retired with the island's garage: kept by those who earned it).", "🌊", "gold")
 
 -- The Grand Ballroom
 ladder("pavilion", "runwayWins", "👗", "Win %d rounds on the Runway.", {

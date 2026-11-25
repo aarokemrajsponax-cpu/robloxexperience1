@@ -9,6 +9,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Names = require(ReplicatedStorage.Shared.Names)
+local GiltScale = require(ReplicatedStorage.Shared.Fortune)
 local Layout = require(ReplicatedStorage.Shared.Layout)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Voice = require(ReplicatedStorage.Shared.Voice)
@@ -308,10 +309,10 @@ function Concierge.answer(id: string): string?
 					:gsub("{skipStep}", tostring(tonumber(basement.skipGemsStep) or 15))
 					:gsub("{islandGilt}", commas(tonumber(island.keyGilt) or 25000))
 					:gsub("{islandGems}", tostring(tonumber(island.keyGems) or 250))
-					:gsub("{galaGilt}", commas(tonumber((a.gala or {}).dailyGilt) or 2500))
-					:gsub("{dropGilt}", commas(tonumber(((settings :: any).HourlyDrop or {}).gilt) or 250))
+					:gsub("{galaGilt}", commas(GiltScale.scaled(tonumber((a.gala or {}).dailyGilt) or 2500)))
+					:gsub("{dropGilt}", commas(GiltScale.scaled(tonumber(((settings :: any).HourlyDrop or {}).gilt) or 250)))
 					:gsub("{dropMinutes}", tostring(tonumber(((settings :: any).HourlyDrop or {}).openMinutes) or 15))
-					:gsub("{showtimeGilt}", commas(tonumber(((settings :: any).Showtime or {}).gilt) or 400))
+					:gsub("{showtimeGilt}", commas(GiltScale.scaled(tonumber(((settings :: any).Showtime or {}).gilt) or 400)))
 			)
 		end
 	end

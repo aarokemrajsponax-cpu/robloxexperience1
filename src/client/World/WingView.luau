@@ -10,6 +10,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
 local Wing = require(ReplicatedStorage.Shared.Wing)
+local SuiteCity = require(script.Parent.SuiteCity)
 
 local WingView = {}
 
@@ -62,22 +63,12 @@ function WingView.refresh()
 			m.Parent = holder
 		end
 	end
-	-- (Build 104) A wing's open grounds (the country beyond its garden walls) are drawn only while
-	-- standing in that wing: from the house below, nothing hangs in the sky.
+	-- (Build 104) The city beyond a wing's glass walls is drawn only while standing in a wing, round
+	-- that wing: from the house below, nothing hangs in the sky (World/SuiteCity).
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
-	local here = if root and root:IsA("BasePart") then Wing.slotAt(root.Position) else nil
-	for _, m in wings:GetChildren() do
-		local k = m:GetAttribute("Wing")
-		local garden = m:FindFirstChild("Garden")
-		local grounds = garden and garden:FindFirstChild("Grounds")
-		if grounds and grounds:IsA("BasePart") then
-			local want = if k == here then 0 else 1
-			if grounds.Transparency ~= want then
-				grounds.Transparency = want
-			end
-		end
-	end
+	local here = if root and root:IsA("BasePart") then Wing.slotAt(root.CFrame.Position) else nil
+	pcall(SuiteCity.show, here)
 end
 
 function WingView.start()

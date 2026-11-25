@@ -361,7 +361,7 @@ local function summary(ctx: Types.Ctx, player: Player, run: Run): { [string]: an
 	for _, g in run.goals do
 		local o = Plan.objectiveOf[g.id]
 		if o then
-			table.insert(goals, { id = g.id, line = o.line, gilt = o.gilt, done = g.done })
+			table.insert(goals, { id = g.id, line = o.line, gilt = Fortune.scaled(o.gilt), done = g.done })
 		end
 	end
 	local alarm = if wing and alarms[wing] then alarms[wing].level else 0
@@ -868,7 +868,7 @@ local function bank(ctx: Types.Ctx, player: Player, run: Run, way: Plan.Bank?)
 		end
 		if whole and not p.sets[key] then
 			p.sets[key] = true
-			local reward = Plan.SetGilt[w] or 0
+			local reward = Fortune.scaled(Plan.SetGilt[w] or 0) -- (Build 104: at the house's scale)
 			-- (Paid in full: each set pays once, for good.)
 			local paid = if reward > 0 then ctx.prize(player, reward, "Steal a Luxe: " .. Plan.Wings[w].name .. "'s set") else 0
 			table.insert(sets, { wing = w, name = Plan.Wings[w].name, gilt = paid })
@@ -1555,7 +1555,7 @@ local function collectionOf(p: { [string]: any }): { [string]: any }
 				have += 1
 			end
 		end
-		table.insert(wings, { wing = w, name = def.name, have = have, of = #set, gilt = Plan.SetGilt[w] or 0, paid = p.sets[tostring(w)] == true })
+		table.insert(wings, { wing = w, name = def.name, have = have, of = #set, gilt = Fortune.scaled(Plan.SetGilt[w] or 0), paid = p.sets[tostring(w)] == true })
 	end
 	return { rank = rank, rankName = Plan.Ranks[rank].name, nextAt = nextAt, nextName = if Plan.Ranks[rank + 1] then Plan.Ranks[rank + 1].name else nil, banked = p.banked, wings = wings }
 end

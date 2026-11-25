@@ -546,6 +546,32 @@ add({
 	Rules = { OneTime = true, Stackable = false, CooldownSeconds = 0 },
 	UX = { DisplayName = "Sovereign Gold livery", Category = "Luxury Island", Line = "Your jet in gold leaf over black: yours for good, worn whenever you like.", Offer = false, Order = 95, Action = "prompt" },
 })
+-- (Build 104) Luxury Island's rides (shared/IslandCraft): the jet ski and the helicopter, each
+-- for good, for Robux or for Gilt (the Gilt price is shown beside it; the Day Yacht is free).
+-- A ride only: nothing a ride does pays.
+ProductConfig.IslandRides = { "islandJetSki", "islandHelicopter" } :: { string }
+add({
+	Key = "islandJetSki",
+	Name = "Island Jet Ski",
+	ProductType = "DeveloperProduct",
+	Id = 0,
+	Handler = "islandRide",
+	Pricing = { ReferencePrice = 99, Tier = "Entry", Rationale = "A jet ski of your own on Luxury Island, for good. Also had for Gilt; nothing faster at anything else." },
+	Reward = { Type = "IslandRide", Ride = "jetski" },
+	Rules = { OneTime = true, Stackable = false, CooldownSeconds = 0 },
+	UX = { DisplayName = "Island Jet Ski", Category = "Luxury Island", Line = "Your own jet ski on the island's waters, for good. Also yours for Gilt at the Jet Ski Hire.", Offer = false, Order = 96, Action = "prompt" },
+})
+add({
+	Key = "islandHelicopter",
+	Name = "Island Helicopter",
+	ProductType = "DeveloperProduct",
+	Id = 0,
+	Handler = "islandRide",
+	Pricing = { ReferencePrice = 399, Tier = "Premium", Rationale = "Your own helicopter over Luxury Island, for good. Also had for a great deal of Gilt; a ride only." },
+	Reward = { Type = "IslandRide", Ride = "heli" },
+	Rules = { OneTime = true, Stackable = false, CooldownSeconds = 0 },
+	UX = { DisplayName = "Island Helicopter", Category = "Luxury Island", Line = "Your own helicopter from the Grand Villa's pad, for good. Also yours for Gilt.", Offer = false, Order = 97, Action = "prompt" },
+})
 -- The brainrot squad (shared/Brainrots): three more places for good, or eight hours of what the
 -- squad earns, at once. Both at a fixed price, with the amount shown before buying.
 ProductConfig.Brainrot = { "brainrotPenthouse", "brainrotFeast" } :: { string }

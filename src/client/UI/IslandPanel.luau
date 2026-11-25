@@ -16,6 +16,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local Plan = require(ReplicatedStorage.Shared.Island)
+local Craft = require(ReplicatedStorage.Shared.IslandCraft)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Rules = require(ReplicatedStorage.Shared.Fortune)
 local Root = require(script.Parent.Root)
@@ -168,7 +169,7 @@ function IslandPanel.open(which: string?)
 	Theme.list(content, 8).VerticalAlignment = Enum.VerticalAlignment.Top
 	Theme.text(content, "The Jet Lounge", 11, "caps", { LayoutOrder = 1 })
 	Theme.text(content, "Luxury Island", 26, "display", { LayoutOrder = 2 })
-	local tabId = if which == "liveries" or which == "light" or which == "exchange" then which else "island"
+	local tabId = if which == "liveries" or which == "light" or which == "exchange" or which == "rides" then which else "island"
 	local body = Instance.new("ScrollingFrame")
 	body.Name = "Body"
 	body.BackgroundTransparency = 1
@@ -414,6 +415,31 @@ function IslandPanel.open(which: string?)
 		end
 	end
 
+	-- (Build 104) The island's rides: the Day Yacht every guest's; the jet ski and the helicopter
+	-- yours for good, for Gilt (the price on the key is the price paid) or for Robux (the window
+	-- shows its price). Ridden where they wait on the island, never from here.
+	local function ridesTab(s: { [string]: any })
+		Theme.text(body, "The island's rides are for the fun of it: nothing a ride does pays. The Day Yacht is every guest's; the jet ski and the helicopter are yours for good once bought.", 13, "body", { LayoutOrder = 1, TextColor3 = C.smoke, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left })
+		local rides = if type(s.rides) == "table" then s.rides else {}
+		local where = { jetski = "At the Jet Ski Hire on the South Beach.", yacht = "At the marina pier: Take the helm, or Board.", heli = "On the Grand Villa's helipad." }
+		local swatch = { jetski = { Color3.fromRGB(246, 246, 242), Color3.fromRGB(22, 40, 78) }, yacht = { Color3.fromRGB(246, 246, 242), Color3.fromRGB(150, 98, 58) }, heli = { Color3.fromRGB(18, 18, 22), Color3.fromRGB(214, 176, 92) } }
+		for i, id in Craft.ORDER do
+			local k = Craft.KINDS[id]
+			local r = if type(rides[id]) == "table" then rides[id] else {}
+			local line = k.line .. "  " .. where[id]
+			if r.free or r.owned then
+				row(body, 1 + i * 2, swatch[id], k.name, line, if r.free then "Free" else "Yours", false, false, function() end)
+			else
+				row(body, 1 + i * 2, swatch[id], k.name, line, Rules.format(tonumber(k.gilt) or 0) .. " Gilt", true, true, function()
+					act({ act = "buyRide", what = id, how = "gilt" }, k.name)
+				end)
+				row(body, 2 + i * 2, swatch[id], k.name .. ", for Robux", if r.robux then "The same, yours for good: Roblox's window shows its price." else "Not on sale for Robux yet: it's yours for Gilt.", if r.robux then "Robux" else "Not on sale", false, r.robux == true, function()
+					act({ act = "buyRide", what = id, how = "robux" }, k.name)
+				end)
+			end
+		end
+	end
+
 	fill = function()
 		clear(body)
 		local s = state
@@ -427,12 +453,14 @@ function IslandPanel.open(which: string?)
 			liveriesTab(s)
 		elseif tabId == "light" then
 			lightTab(s)
+		elseif tabId == "rides" then
+			ridesTab(s)
 		else
 			exchangeTab(s)
 		end
 	end
 
-	local tabs = Theme.tabs(content, { { "island", "The Island" }, { "liveries", "Liveries" }, { "light", "Island light" }, { "exchange", "The Exchange" } }, tabId, function(id: string)
+	local tabs = Theme.tabs(content, { { "island", "The Island" }, { "rides", "Rides" }, { "liveries", "Liveries" }, { "light", "Island light" }, { "exchange", "The Exchange" } }, tabId, function(id: string)
 		tabId = id
 		fill()
 	end, 3)

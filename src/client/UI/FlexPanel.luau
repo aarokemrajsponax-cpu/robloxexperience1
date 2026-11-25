@@ -10,6 +10,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local Curios = require(ReplicatedStorage.Shared.Curios)
+local GiltScale = require(ReplicatedStorage.Shared.Fortune)
 local Plan = require(ReplicatedStorage.Shared.Flex)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Root = require(script.Parent.Root)
@@ -207,7 +208,7 @@ local function maker(body: GuiObject, w: number)
 	Theme.list(card, 4).HorizontalAlignment = Enum.HorizontalAlignment.Left
 	Theme.text(card, "On the Flex Wall" .. (if set then "  ·  " .. set.name else ""), 11, "caps", { LayoutOrder = 1, TextColor3 = PINK, TextXAlignment = Enum.TextXAlignment.Left })
 	Theme.text(card, "@" .. Players.LocalPlayer.DisplayName .. "  " .. preview, 16, "bodyBold", { LayoutOrder = 2, TextColor3 = Color3.new(1, 1, 1), TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true, AutomaticSize = Enum.AutomaticSize.Y, Size = UDim2.new(1, 0, 0, 0) })
-	Theme.text(card, string.format("Stand on the gold mark to shoot. Your first reel today: +%d Gilt. Each like from another guest: +%d Gilt (%d a day).", Plan.REWARDS.firstReel, Plan.REWARDS.like, Plan.REWARDS.likesPaid), 12, "body", { LayoutOrder = 3, TextColor3 = C.smoke, TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true, AutomaticSize = Enum.AutomaticSize.Y, Size = UDim2.new(1, 0, 0, 0) })
+	Theme.text(card, string.format("Stand on the gold mark to shoot. Your first reel today: +%d Gilt. Each like from another guest: +%d Gilt (%d a day).", GiltScale.scaled(Plan.REWARDS.firstReel), GiltScale.scaled(Plan.REWARDS.like), Plan.REWARDS.likesPaid), 12, "body", { LayoutOrder = 3, TextColor3 = C.smoke, TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true, AutomaticSize = Enum.AutomaticSize.Y, Size = UDim2.new(1, 0, 0, 0) })
 end
 
 -- The Flex Wall: every reel, its likes, and a Like for each that isn't yours.

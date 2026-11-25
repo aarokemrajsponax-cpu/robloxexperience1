@@ -22,6 +22,7 @@ local Workspace = game:GetService("Workspace")
 
 local AbuseNights = require(ReplicatedStorage.Shared.AbuseNights)
 local Config = require(ReplicatedStorage.Shared.Config)
+local GiltScale = require(ReplicatedStorage.Shared.Fortune)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Curios = require(script.Parent.Curios)
 local Gilt = require(script.Parent.Gilt)
@@ -181,7 +182,7 @@ function AbuseShow.offer(player: Player): Gift?
 	Remotes.event("Salute"):FireClient(player, {
 		op = "abuseGift",
 		id = gift.id,
-		gilt = gift.gilt,
+		gilt = GiltScale.scaled(gift.gilt),
 		crown = crown and not hasCrown(player),
 		bonus = if crown and hasCrown(player) then cfg().crownBonus else nil,
 		number = count + 1,

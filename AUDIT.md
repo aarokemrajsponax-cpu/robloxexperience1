@@ -523,3 +523,20 @@ Design judgements, informed by the evidence above. Confidence reflects how much 
 - **Final totals on this build:**
   - All 31 server suites pass, including the bundled run (221/0), crowd (14/0), island (143/0), seats (14/0) and shop (594/0, four runs).
   - Client suite: desktop 1574/0, phone 1575/0, tablet 1575/0.
+
+## 14. Addendum: Build 104 (final fixes, island rides, the residence over the city)
+
+Root causes found and fixed this build, each with a test that would have caught it:
+
+| Issue | Root cause | Fix | Test |
+|---|---|---|---|
+| Caught by the Executive Suite's lasers, Leave: state said home, character still in the Suite | `sendHome` cleared the attraction's state first and moved the character after, unchecked; the character was released from its anchored hold in the same moment it was moved | Move first, while held (server-owned); check the landing and move again if needed; then release state; ease the hold off 0.35 s later; a second look at 1.2 s | tests/executive: caught → Leave ×5, physical position, state, anchor, re-entry |
+| Sinking into the sand at the South Beach's cabanas and loungers | Terrain: the land circles filled sand to the lowland's height over the beach before its slope was filled, so the slope added nothing; decks, torches and the Coral Club sat up to 2.8 studs under the sand | The sand above both beach slopes is cleared before the slopes are filled | tests/island: all 86 island seats above the ground model and sat in; all 10 beach decks clear of it |
+| Postcard: camera could stay fixed on the view | The postcard set the camera to Scriptable before asking photo mode to start; when photo mode refused, nothing restored it. Also: taken home mid-photo, the camera stayed on the island | Camera restored when photo mode doesn't start; photo mode exits on leaving an attraction | Client suite (3 devices) |
+| Buying an island ride was always refused | `how` was missing from the attraction requests' key whitelist | Added | tests/rides |
+| The gold hand on HOUSE TOUR never showed | The key clips its children and its parent is the screen (not a GuiObject), so the hand was drawn inside the key | The hand is laid on the screen, following the key's place | Client snapshot rendered |
+| 4:3 tablet: the top-right row ran into the Gilt bar | Full row shown on any non-phone | Narrow screens keep How to play and Settings in the Menu | Client suite (tablet) |
+
+New: the island's rides (jet ski, Day Yacht, helicopter; tests/rides 58 checks), the garage removed, the enclosed residence with a glass roof (tests/wings), the city view (client, render-checked), the Gilt payout scale ×10 (tests/economy).
+
+Not verifiable here (needs Studio or a live server): Roblox's own network ownership hand-off on the Leave fix (the logic is tested, the engine's replication isn't); terrain voxel results of the beach carve; how the rides feel to steer (the rules and the server's checks are tested, the physics feel isn't); the two Robux ride products (not yet made in Creator Hub, so not on sale); performance of the city view on low-end phones.

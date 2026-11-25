@@ -1120,6 +1120,12 @@ local defaults = {
 		-- great feats: a Legendary, Mythic or Secret find, a holiday's golden prize. Quests pay by
 		-- how hard they are (Commissions). The day's soft cap sits high enough that the ladder holds
 		-- through a good evening's play.
+		-- (Build 104) The house's Gilt scale: every Gilt reward for playing (and every prize, and
+		-- the day's soft cap with them) is this many times its base figure below and in each
+		-- attraction's own plan. What a screen shows before a reward is earned is scaled the same
+		-- way (shared/Fortune.scaled), so the Gilt shown is still the Gilt paid. Robux-priced
+		-- pieces bought with Gilt are scaled too (perRobux), so they keep their worth.
+		payoutScale = 10,
 		runDivisor = 40,
 		runMax = 400,
 		dailySoftCap = 12000,

@@ -56,6 +56,7 @@ Purchases.Sabotage = require(script.Sabotage)
 Purchases.Racing = require(script.Racing)
 Purchases.BasementSkip = require(script.BasementSkip)
 Purchases.JetLivery = require(script.JetLivery)
+Purchases.IslandRide = require(script.IslandRide)
 
 -- How the purchase system started (for the owner's tools and tests).
 Purchases.binding = ""
@@ -138,6 +139,7 @@ function Purchases.start()
 	Purchases.Racing.start() -- the Grand Prix: opening it early, and the Private Garage
 	Purchases.BasementSkip.start() -- the Maison Basement: Skip a Stage
 	Purchases.JetLivery.start() -- Luxury Island: the two Robux liveries
+	Purchases.IslandRide.start() -- (Build 104) Luxury Island: the jet ski and the helicopter
 	Gilt.personal = function(player: Player): number
 		return Luck.multiplier(player, "gilt")
 	end

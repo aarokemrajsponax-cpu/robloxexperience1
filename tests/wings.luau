@@ -153,6 +153,12 @@ do
 	end
 	check("...walled on all four sides, taller than a guest looking over (only sky beyond)", walls == 4 and tallEnough)
 	check("...and an unseen barrier above every wall, so nobody leaves over them", barriers == 4)
+	-- (Build 104) One enclosed residence: a glass roof over it all, glass toward the city.
+	local roof = g and g:FindFirstChild("GlassRoof")
+	check("Build 104: a glass roof over the whole residence, solid, above the Suite's own rooms (nothing open to climb out by)", roof ~= nil and roof.CanCollide == true and roof.CFrame.Position.Y - roof.Size.Y / 2 >= S.floorY + up + S.height and roof.Size.X >= (S.galleryZone.max.X - S.zone.min.X) and roof.Size.Z >= (S.zone.max.Z - S.zone.min.Z))
+	local ws, we = g and g:FindFirstChild("WallS"), g and g:FindFirstChild("WallE")
+	check("...its walls toward the city (south and east) glass from floor to roof, solid", ws ~= nil and we ~= nil and tostring(ws.Material) == "Enum.Material.Glass" and tostring(we.Material) == "Enum.Material.Glass" and ws.CanCollide and we.CanCollide and ws.CFrame.Position.Y + ws.Size.Y / 2 >= roof.CFrame.Position.Y - 0.6)
+	check("...and no open country hanging under the wing any more", g:FindFirstChild("Grounds") == nil)
 	local seats = 0
 	for _, d in g:GetDescendants() do
 		if d.Name == "SitSpot" then

@@ -196,6 +196,9 @@ function Attraction.start()
 	IslandHud.photo = function()
 		require(script.Parent.PhotoMode).enter()
 	end
+	IslandHud.photoActive = function(): boolean
+		return require(script.Parent.PhotoMode).isActive()
+	end
 	IslandView.notice = Toast.show
 	local hudWas = true
 	IslandView.cinematic = function(on: boolean)
@@ -293,6 +296,14 @@ function Attraction.start()
 		elseif op == "left" then
 			LoadIn.finish(true)
 			FirstVisit.hide()
+			-- (Build 104) Taken home while framing a postcard (or any photo): the camera comes home
+			-- with them, not left on the view they were taken from.
+			pcall(function()
+				local PhotoMode = require(script.Parent.PhotoMode)
+				if PhotoMode.isActive() then
+					PhotoMode.exit()
+				end
+			end)
 			follow()
 			if m.id == "island" and m.why == "home" then
 				IslandView.flight(false)

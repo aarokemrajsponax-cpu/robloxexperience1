@@ -18,6 +18,7 @@ local Workspace = game:GetService("Workspace")
 local Names = require(ReplicatedStorage.Shared.Names)
 local Boutique = require(ReplicatedStorage.Shared.Boutique)
 local Config = require(ReplicatedStorage.Shared.Config)
+local GiltScale = require(ReplicatedStorage.Shared.Fortune)
 local ProductConfig = require(ReplicatedStorage.Shared.ProductConfig)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Trophies = require(ReplicatedStorage.Shared.Trophies)
@@ -82,9 +83,14 @@ end
 -- nil for pieces that aren't sold that way.
 local function giltAlt(item: Wardrobe.Item): number?
 	if item.source == "boutique" and item.robux then
-		return math.floor(item.robux * Config.data.Gilt.perRobux)
+		-- (Build 104: at the house's Gilt scale, so a piece keeps its worth as Gilt flows faster.)
+		return math.floor(item.robux * Config.data.Gilt.perRobux * GiltScale.scale())
 	end
 	return nil
+end
+-- (For tests: the same price, read from outside.)
+function Shop.giltAltFor(item: Wardrobe.Item): number?
+	return giltAlt(item)
 end
 
 local function standingOf(data: Profiles.Data): string

@@ -1128,6 +1128,8 @@ CarDrive.openCard = function()
 	require(script.Parent.UI.RacingPanel).open()
 end
 start("The Grand Prix", CarDrive.start)
+-- (Build 104) Luxury Island's rides: at the helm of a jet ski, the Day Yacht or the helicopter.
+start("The island's rides", require(script.Parent.World.CraftDrive).start)
 -- Its music: for a driver on the grid or racing.
 require(script.Parent.World.AbuseMusic).racing = function(): boolean
 	local r = CarDrive.race()

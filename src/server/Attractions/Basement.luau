@@ -342,7 +342,7 @@ local function finish(ctx: Types.Ctx, player: Player, run: Run, data: any, p: { 
 	p.clears += 1
 	-- (The day's first chest in full; the rest, which can be run again and again, as all Gilt is.)
 	local chest = if firstToday
-		then ctx.prize(player, tonumber(c.chestGilt) or 400, "The Maison Basement: the Treasury's chest")
+		then ctx.prize(player, FortuneRules.scaled(tonumber(c.chestGilt) or 400), "The Maison Basement: the Treasury's chest")
 		else ctx.gilt(player, tonumber(c.chestGiltAgain) or 120, "The Maison Basement: the Treasury's chest")
 	local first = not p.firstClear
 	local brainrot = nil

@@ -35,7 +35,7 @@ function GuideHand.target(): GuiObject?
 	return pointing
 end
 
-local function round(parent: Instance, name: string, x: number, y: number, w: number, h: number, colour: Color3, radius: number?, z: number?): Frame
+local function roundAt(parent: Instance, name: string, x: number, y: number, w: number, h: number, colour: Color3, radius: number?, z: number?): Frame
 	local f = Instance.new("Frame")
 	f.Name = name
 	f.BorderSizePixel = 0
@@ -60,13 +60,18 @@ end
 
 -- The hand, pointing left, in a 76 by 46 box: the index finger out with a gold ring and its
 -- stone, the other fingers curled under, the thumb along the top, a lacquered cuff trimmed in gold.
-local function drawHand(parent: Instance): Frame
+-- (Build 104) `mirrored`: pointing right, for a key on the right of the screen (the same hand,
+-- every piece laid from the other side).
+local function drawHand(parent: Instance, mirrored: boolean?): Frame
 	local hand = Instance.new("Frame")
 	hand.Name = "Hand"
 	hand.BackgroundTransparency = 1
 	hand.Size = UDim2.fromOffset(76, 46)
 	hand.ZIndex = 52
 	hand.Parent = parent
+	local function round(p: Instance, name: string, x: number, y: number, w: number, h: number, colour: Color3, radius: number?, z: number?): Frame
+		return roundAt(p, name, if mirrored then 76 - x - w else x, y, w, h, colour, radius, z)
+	end
 	local finger = round(hand, "Finger", 0, 12, 40, 11, GLOVE, nil, 53)
 	edge(finger, GLOVE_EDGE)
 	for i, y in { 22, 28, 34 } do
@@ -126,12 +131,20 @@ function GuideHand.point(target: GuiObject, title: string, line: string, onDone:
 	-- (Laid on the target itself, or on what holds it when it clips what's on it, so it stays with
 	-- it wherever it's placed and goes when it goes; that holder is raised over its neighbours
 	-- meanwhile, so the card beside it is never under the next key.)
-	local host: GuiObject = target
-	if target.ClipsDescendants and target.Parent and target.Parent:IsA("GuiObject") then
-		host = target.Parent :: GuiObject
+	-- (Build 104: what holds a clipping target may be the screen itself, as for the HOUSE TOUR key:
+	-- the hand was laid inside the key then, and clipped away by it; it never showed.)
+	local host: Instance = target
+	local parent = target.Parent
+	if target.ClipsDescendants and parent and (parent:IsA("GuiObject") or parent:IsA("LayerCollector")) then
+		host = parent
 	end
-	raised = { inst = host, z = host.ZIndex }
-	host.ZIndex = math.max(host.ZIndex, 20)
+	if host:IsA("GuiObject") then
+		local g = host :: GuiObject
+		raised = { inst = g, z = g.ZIndex }
+		g.ZIndex = math.max(g.ZIndex, 20)
+	else
+		raised = nil
+	end
 	local layer = Instance.new("Frame")
 	layer.Name = "MaisonGuideHand"
 	layer.BackgroundTransparency = 1
@@ -139,6 +152,33 @@ function GuideHand.point(target: GuiObject, title: string, line: string, onDone:
 	layer.ZIndex = 50
 	layer.Parent = host
 	holder = layer
+	-- (Build 104) Laid on what holds the target, the layer takes the target's own place and size
+	-- (each frame: it may glide), so the ring, the hand and the card stand round the target and
+	-- not round the whole screen. Until now the HOUSE TOUR key's hand was drawn off the screen.
+	local function follow()
+		if host ~= target then
+			layer.AnchorPoint = target.AnchorPoint
+			layer.Position = target.Position
+			layer.Size = target.Size
+		end
+	end
+	follow()
+	-- (Build 104) A target on the right of the screen: the hand points at it from its left, the
+	-- card on that side too (and above the hand, not below it, near the foot of the screen).
+	-- (Read from where the target is placed, its anchoring to the screen's right or foot; and
+	-- where it's drawn, when that can be read.)
+	local mirrored = target.Position.X.Scale >= 0.5
+	local low = target.Position.Y.Scale >= 0.75
+	pcall(function()
+		local camera = workspace.CurrentCamera
+		local vp = if camera then camera.ViewportSize else Vector2.new(1280, 720)
+		local size = target.AbsoluteSize
+		if size.X > 0 and size.Y > 0 then
+			local mid = target.AbsolutePosition + size / 2
+			mirrored = mid.X > vp.X / 2
+			low = mid.Y > vp.Y * 0.6
+		end
+	end)
 	-- The ring round the target, breathing.
 	local halo = Instance.new("Frame")
 	halo.Name = "Halo"
@@ -154,7 +194,7 @@ function GuideHand.point(target: GuiObject, title: string, line: string, onDone:
 	hs.Color = GOLD
 	hs.Thickness = 3
 	hs.Parent = halo
-	local hand = drawHand(layer)
+	local hand = drawHand(layer, mirrored)
 	-- The card beside it: what it is, in a sentence, and Got it.
 	local card = Instance.new("Frame")
 	card.Name = "Card"
@@ -242,9 +282,17 @@ function GuideHand.point(target: GuiObject, title: string, line: string, onDone:
 		hs.Transparency = 0.1 + 0.45 * breathe
 		-- (The tap: toward the target and back.)
 		local tap = math.max(0, math.sin(k * 5)) * 7
-		hand.Position = UDim2.new(1, 14 - tap, 0.5, -23)
-		-- (The card a little lower than the hand, clear of the keys along the dock's top edge.)
-		card.Position = UDim2.new(1, 92, 0.5, 16)
+		follow()
+		if mirrored then
+			hand.Position = UDim2.new(0, -90 + tap, 0.5, -23)
+			card.AnchorPoint = Vector2.new(1, if low then 1 else 0)
+			card.Position = UDim2.new(0, -98, 0.5, if low then 23 else 16)
+		else
+			hand.Position = UDim2.new(1, 14 - tap, 0.5, -23)
+			-- (The card a little lower than the hand, clear of the keys along the dock's top edge.)
+			card.AnchorPoint = Vector2.new(0, if low then 1 else 0)
+			card.Position = UDim2.new(1, 92, 0.5, if low then 23 else 16)
+		end
 	end
 	place()
 	loop = RunService.Heartbeat:Connect(place)

@@ -135,12 +135,44 @@ function Objective.current(): Goal?
 	return nil
 end
 
+-- Under the keys at the top right; a touch lower while the events strip reaches across to it (a
+-- narrow screen), never over it.
+local WIDTH = 300
+local function where(): UDim2
+	local right = Root.size().X - 12
+	return UDim2.new(1, -12, 0, math.max(62, Root.topClearAt(right - WIDTH, right) + 8))
+end
+
+-- (Build 104) How far down the right-hand column the card reaches (Root.rightTop: the HOUSE TOUR
+-- key in the corner below keeps clear of it); just the top keys while there's no card.
+local lastHigh = 210 -- (the card's height when last shown: what it'd need back)
+local function publishFoot()
+	local group = card
+	if not group or not group.Parent then
+		Root.setRightTop(58)
+		return
+	end
+	local high = group.Size.Y.Offset
+	local ok, px = pcall(function()
+		return group.AbsoluteSize.Y
+	end)
+	if ok and type(px) == "number" and px > 0 then
+		high = math.max(high, px / math.max(0.1, Root.scale))
+	end
+	if high <= 0 then
+		high = 210 -- (not laid out yet: as tall as a card with a two-line goal on a phone)
+	end
+	lastHigh = high
+	Root.setRightTop(where().Y.Offset + high)
+end
+
 local function hide()
 	local group = card
 	if not group then
 		return
 	end
 	card = nil
+	publishFoot()
 	shownKey = nil
 	local t = Fade.to(group, Ease.info(0.35, Enum.EasingStyle.Sine), 1)
 	t.Completed:Once(function()
@@ -161,19 +193,13 @@ local function dropTab()
 	end
 end
 
--- Under the keys at the top right; a touch lower while the events strip reaches across to it (a
--- narrow screen), never over it.
-local WIDTH = 300
-local function where(): UDim2
-	local right = Root.size().X - 12
-	return UDim2.new(1, -12, 0, math.max(62, Root.topClearAt(right - WIDTH, right) + 8))
-end
 
 Root.TopChanged:Connect(function()
 	local group = card
 	if group then
 		Ease.play(group, Ease.scaled(Ease.settle), { Position = where() })
 	end
+	publishFoot()
 	local t = tab
 	if t then
 		t.Position = where()
@@ -245,6 +271,14 @@ local function show(goal: Goal)
 	end
 	card = group
 	shownKey = goal.key
+	publishFoot()
+	pcall(function()
+		group:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+			if card == group then
+				publishFoot()
+			end
+		end)
+	end)
 	Fade.set(group, 1)
 	if quiet then
 		-- (Back after stepping aside: no slide, no brightness, just there again, settled.)
@@ -262,9 +296,20 @@ local function show(goal: Goal)
 	end)
 end
 
+-- (Build 104) The Friend Boost's big card open in the corner below, reaching up to where this
+-- card stands (a phone's short screen): this one steps aside quietly until it folds.
+local function crowded(): boolean
+	local c = Root.corner
+	if c.height <= 0 then
+		return false
+	end
+	local top = Root.size().Y - c.up - c.height
+	return top < where().Y.Offset + lastHigh + 8
+end
+
 local function busy(): boolean
 	local ok, yes = pcall(Objective.isBusy)
-	return ok and yes == true
+	return (ok and yes == true) or crowded()
 end
 
 function Objective.refresh()
@@ -308,6 +353,9 @@ function Objective.start(go: (mode: string) -> ())
 	State.Unlocked:Connect(Objective.refresh)
 	State.PhaseChanged:Connect(Objective.refresh)
 	Root.PanelsChanged:Connect(Objective.refresh)
+	Root.CornerChanged:Connect(function()
+		task.defer(Objective.refresh)
+	end)
 	State.watch("goalCard", function()
 		task.defer(Objective.refresh)
 	end)

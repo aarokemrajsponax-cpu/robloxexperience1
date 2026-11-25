@@ -14,7 +14,7 @@ export type Ctx = {
 	folder: () -> Instance, -- where the attractions' places are built (Workspace.Attractions)
 	rootOf: (player: Player) -> BasePart?,
 	trusted: (player: Player) -> boolean, -- not just after a move nobody could make (server/Integrity)
-	moved: (player: Player) -> (), -- the house moved them: their next step isn't a jump of their own
+	moved: (player: Player, seconds: number?) -> (), -- the house moved them: their next step isn't a jump of their own
 	teleport: (player: Player, cf: CFrame) -> boolean,
 	sendHome: (player: Player, id: string) -> (), -- back to the attraction's room off the Foyer
 	inside: (player: Player) -> string?, -- the attraction a guest is in now

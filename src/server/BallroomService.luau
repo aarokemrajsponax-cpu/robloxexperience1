@@ -26,6 +26,7 @@ local Workspace = game:GetService("Workspace")
 local Names = require(ReplicatedStorage.Shared.Names)
 local Catalogue = require(ReplicatedStorage.Shared.Catalogue)
 local Config = require(ReplicatedStorage.Shared.Config)
+local GiltScale = require(ReplicatedStorage.Shared.Fortune) -- (Build 104: the pot shown at the house's scale, as it pays)
 local Deal = require(ReplicatedStorage.Shared.Deal)
 local Duel = require(ReplicatedStorage.Shared.Duel)
 local Layout = require(ReplicatedStorage.Shared.Layout)
@@ -283,7 +284,7 @@ local function publish()
 	end
 	Workspace:SetAttribute("BallroomState", state)
 	Workspace:SetAttribute("BallroomAt", if untilClock > 0 then serverNow() + (untilClock - os.clock()) else nil)
-	Workspace:SetAttribute("BallroomPot", if e and e.state ~= "gathering" then e.pot else potFor(realSeated()))
+	Workspace:SetAttribute("BallroomPot", GiltScale.scaled(if e and e.state ~= "gathering" then e.pot else potFor(realSeated())))
 end
 
 local function openDoor(now: number, by: string?)
@@ -291,7 +292,7 @@ local function openDoor(now: number, by: string?)
 	doorUntil = now + cfg().openSeconds
 	publish()
 	writeBoard({ track("LIGHTS OUT"), "Open now · take any chair", string.format("The last lamp wins %d Gilt or more", potFor(1)) })
-	broadcastAll({ op = "ballroomOpen", by = by, closesIn = cfg().openSeconds, pot = potFor(1), perGuest = cfg().potPerGuest, countdown = cfg().countdown })
+	broadcastAll({ op = "ballroomOpen", by = by, closesIn = cfg().openSeconds, pot = GiltScale.scaled(potFor(1)), perGuest = GiltScale.scaled(cfg().potPerGuest), countdown = cfg().countdown })
 end
 
 local function closeDoor(now: number)
@@ -716,7 +717,7 @@ finish = function(e: Evening)
 				keys = s.keys,
 				points = LightsOut.points(place, s.keys),
 				gilt = gilt,
-				pot = e.pot,
+				pot = GiltScale.scaled(e.pot),
 				counted = e.counts,
 				won = place == 1,
 			})
@@ -734,7 +735,7 @@ finish = function(e: Evening)
 	if winner then
 		BallroomService.onResult(winner.index, winner.name, winner.keys)
 	end
-	broadcastAll({ op = "ballroomWinner", name = if winner then winner.name else nil, standIn = winner ~= nil and winner.player == nil, pot = e.pot })
+	broadcastAll({ op = "ballroomWinner", name = if winner then winner.name else nil, standIn = winner ~= nil and winner.player == nil, pot = GiltScale.scaled(e.pot) })
 	publish()
 	task.delay(cfg().afterEvening, function()
 		if evening ~= e then
@@ -825,12 +826,12 @@ local function eveningStart(e: Evening, now: number)
 		setLamp(s, 2.4, 1)
 		local player = s.player
 		if player then
-			send(player, { op = "eveningStart", seat = s.index, names = names, capacity = cfg().capacity, tab = s.tab, counted = e.counts, real = real, pot = potFor(real) })
+			send(player, { op = "eveningStart", seat = s.index, names = names, capacity = cfg().capacity, tab = s.tab, counted = e.counts, real = real, pot = GiltScale.scaled(potFor(real)) })
 			send(player, { op = "deal", mode = "ballroom", room = "ballroom", round = 1, cases = e.cases, pieces = list, score = s.count })
 			Analytics.custom(player, "Ballroom evening started", real, nil)
 		end
 	end
-	broadcast({ op = "eveningBegins", alive = e.alive, real = real, counted = e.counts, pot = e.pot })
+	broadcast({ op = "eveningBegins", alive = e.alive, real = real, counted = e.counts, pot = GiltScale.scaled(e.pot) })
 	publish()
 	writeBoard({ track("LIGHTS OUT"), string.format("%d lamps lit · %d guests", e.alive, real), LAST_LAMP })
 end
@@ -862,10 +863,10 @@ gather = function(now: number)
 	evening = e
 	publish()
 	for _, s in seats do
-		send(s.player, { op = "gathering", startsIn = math.max(0, e.gatherEndsAt - os.clock()), pot = potFor(realSeated()) })
+		send(s.player, { op = "gathering", startsIn = math.max(0, e.gatherEndsAt - os.clock()), pot = GiltScale.scaled(potFor(realSeated())) })
 	end
 	-- The room hears the countdown has begun (anyone may still take a chair until it ends).
-	broadcastAll({ op = "ballroomCountdown", startsIn = cfg().countdown, pot = potFor(realSeated()) })
+	broadcastAll({ op = "ballroomCountdown", startsIn = cfg().countdown, pot = GiltScale.scaled(potFor(realSeated())) })
 end
 
 local function unseat(player: Player, reason: string)
@@ -955,7 +956,7 @@ function BallroomService.seatGuest(player: Player, index: number): boolean
 		gather(os.clock())
 	elseif e.state == "gathering" then
 		publish()
-		send(player, { op = "gathering", startsIn = math.max(0, e.gatherEndsAt - os.clock()), pot = potFor(realSeated()) })
+		send(player, { op = "gathering", startsIn = math.max(0, e.gatherEndsAt - os.clock()), pot = GiltScale.scaled(potFor(realSeated())) })
 		local full = true
 		for _, other in seats do
 			if not other.player then

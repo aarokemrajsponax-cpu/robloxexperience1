@@ -924,6 +924,7 @@ rv.offerOk = true
 T += Game.REVIVE.window + 1
 steps(1)
 check("the moment passes: security shows them out", Attractions.inside(ada) == nil and last(ada, "caughtEnd") ~= nil)
+advance(0.5) -- (Build 104: held for the move home until their screen has caught up, then let go)
 check("Build 98: ...and shown out, they can move again", ada.root.Anchored == false)
 -- Leave, at once.
 page(ada).invites = 1
@@ -935,6 +936,36 @@ r = askAs(ada, { op = "act", id = "executive", act = "leaveCaught" })
 check("Leave in the moment: home at once", r.ok == true and Attractions.inside(ada) == nil)
 r = askAs(ada, { op = "act", id = "executive", act = "revive" })
 check("...and no revive to take once home", r.ok == false)
+-- (Build 104) Caught by the hall's lasers, then Leave, five times over: where the character
+-- really stands and what every part of the house says must be the same place, the Suite's own
+-- record of them gone, free to walk, and the way back in working each time.
+do
+	local AttList = module("ReplicatedStorage", "Shared", "Attractions")
+	local okAll = true
+	local notes = {}
+	for round = 1, 5 do
+		page(ada).invites = 1
+		stand(ada, Layout.Midnight.arrival)
+		advance(3)
+		r = askAs(ada, { op = "go", id = "executive" })
+		local inNow = r.ok == true and Attractions.inside(ada) == "executive" and AttList.areaAt(ada.root.CFrame.Position) == "executive"
+		advance(8) -- (through the load-in)
+		caughtAt()
+		local wasCaught = Game.guests[ada] ~= nil and Game.guests[ada].out == true and ada.root.Anchored == true and last(ada, "caught") ~= nil
+		r = askAs(ada, { op = "act", id = "executive", act = "leaveCaught" })
+		local pos = ada.root.CFrame.Position
+		local outNow = r.ok == true and AttList.areaAt(pos) == nil and Attractions.inside(ada) == nil and ada:GetAttribute("Attraction") == nil and Game.guests[ada] == nil
+		local near = (Vector3.new(pos.X, 0, pos.Z) - Vector3.new(Layout.Midnight.arrival.X, 0, Layout.Midnight.arrival.Z)).Magnitude
+		advance(2) -- (the hold eases off; the house's second look)
+		local settled = ada.root.Anchored == false and AttList.areaAt(ada.root.CFrame.Position) == nil and Attractions.inside(ada) == nil
+		local fine = inNow and wasCaught and outNow and settled and near < 60
+		if not fine then
+			okAll = false
+			table.insert(notes, string.format("round %d: in %s caught %s out %s settled %s near %.0f", round, tostring(inNow), tostring(wasCaught), tostring(outNow), tostring(settled), near))
+		end
+	end
+	check("Build 104: caught by the lasers, Leave, five times: physically home each time (out of the Suite's place, at its doors in the house), the Suite's state and the guest's own cleared, free to walk, and back in again each time", okAll, table.concat(notes, "; "))
+end
 -- The most one run takes.
 page(ada).invites = 1
 stand(ada, Layout.Midnight.arrival)

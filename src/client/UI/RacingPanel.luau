@@ -105,7 +105,7 @@ function RacingPanel.open()
 		Theme.hairline(body, UDim.new(0, 120), 3)
 		local list = if boardId == "week" then track.week elseif boardId == "friends" then track.friends else track.all
 		if type(list) ~= "table" or #list == 0 then
-			Theme.text(body, if boardId == "friends" then "None of your friends has a timed lap here yet. Be the first." else "Nobody's on this board yet. Drive a timed lap: cross the start line and keep to the road.", 13, "body", { LayoutOrder = 4, TextColor3 = C.smoke, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left })
+			Theme.text(body, if trackId == "coast" then "The island's garage is gone, and its laps with it: this board keeps the laps driven before." elseif boardId == "friends" then "None of your friends has a timed lap here yet. Be the first." else "Nobody's on this board yet. Drive a timed lap: cross the start line and keep to the road.", 13, "body", { LayoutOrder = 4, TextColor3 = C.smoke, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left })
 			return
 		end
 		local me = (game:GetService("Players").LocalPlayer :: Player).UserId
@@ -114,7 +114,7 @@ function RacingPanel.open()
 		end
 	end
 
-	local trackTabs = Theme.tabs(content, { { "boulevard", "Grand Boulevard" }, { "coast", "Coastal Circuit" } }, trackId, function(id: string)
+	local trackTabs = Theme.tabs(content, { { "boulevard", "Grand Boulevard" }, { "coast", "Coastal Circuit · past laps" } }, trackId, function(id: string)
 		trackId = id
 		fill()
 	end, 5)

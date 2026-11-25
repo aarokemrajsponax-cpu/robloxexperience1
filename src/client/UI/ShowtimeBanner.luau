@@ -10,6 +10,7 @@ local Workspace = game:GetService("Workspace")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local Config = require(ReplicatedStorage.Shared.Config)
+local GiltScale = require(ReplicatedStorage.Shared.Fortune)
 local Plan = require(ReplicatedStorage.Shared.Showtime)
 local HudCard = require(script.Parent.HudCard)
 local Root = require(script.Parent.Root)
@@ -41,7 +42,7 @@ end
 
 local function gilt(): number
 	local c = (Config.data :: any).Showtime
-	return if type(c) == "table" then math.floor(tonumber(c.gilt) or 0) else 0
+	return if type(c) == "table" then GiltScale.scaled(math.floor(tonumber(c.gilt) or 0)) else 0
 end
 
 function ShowtimeBanner.hide()

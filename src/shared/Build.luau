@@ -4,6 +4,6 @@
 -- see whether Studio has the latest code from GitHub.
 
 return {
-	number = 103,
-	label = "Build 103 · 24 Nov · the house's moments, seats everywhere, the Lucky reel, Luxury Island",
+	number = 104,
+	label = "Build 104 · 25 Nov · island rides, a residence over the city, the Gilt scale, fixes",
 }

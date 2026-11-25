@@ -14,6 +14,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local Config = require(ReplicatedStorage.Shared.Config)
+local GiltScale = require(ReplicatedStorage.Shared.Fortune)
 local Plan = require(ReplicatedStorage.Shared.Gala)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local HudCard = require(script.Parent.HudCard)
@@ -167,7 +168,7 @@ local function draw()
 	end
 	local today = view.today
 	if type(today) == "table" then
-		parts.gilt.Text = string.format("💰 %s / %s today", Plan.commas(tonumber(today.gilt) or 0), Plan.commas(tonumber(today.cap) or Plan.REWARDS.dailyGilt))
+		parts.gilt.Text = string.format("💰 %s / %s today", Plan.commas(tonumber(today.gilt) or 0), Plan.commas(tonumber(today.cap) or GiltScale.scaled(Plan.REWARDS.dailyGilt)))
 		parts.gilt.TextColor3 = if (tonumber(today.gilt) or 0) >= (tonumber(today.cap) or math.huge) then GOLD else C.smoke
 	end
 	local t = if type(view.trivia) == "table" then view.trivia else {}

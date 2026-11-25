@@ -259,7 +259,7 @@ function Directory.figures(cards: { [string]: any }?): { [string]: string }
 	local f: { [string]: string } = {
 		inviteHaul = Fortune.format(tonumber(ex.inviteHaul) or 8000),
 		invitePrice = Fortune.format(tonumber(ex.invitePrice) or 25000),
-		galaGilt = Fortune.format(tonumber((a.gala or {}).dailyGilt) or tonumber((GalaRules.REWARDS :: any).dailyGilt) or 2500),
+		galaGilt = Fortune.format(Fortune.scaled(tonumber((a.gala or {}).dailyGilt) or tonumber((GalaRules.REWARDS :: any).dailyGilt) or 2500)),
 		keyRank = rank.name,
 		keyRankAt = Fortune.format(rank.at),
 		keyGilt = Fortune.format(tonumber(isl.keyGilt) or 25000),

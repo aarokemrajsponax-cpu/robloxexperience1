@@ -28,6 +28,7 @@ local Plan = require(ReplicatedStorage.Shared.Island)
 local Wardrobe = require(ReplicatedStorage.Shared.Wardrobe)
 local Fortune = require(script.Parent.Parent.Fortune)
 local Types = require(script.Parent.Types)
+local IslandRides = require(script.Parent.IslandRides)
 local IslandBuild = require(script.Parent.IslandBuild)
 
 local Island = {}
@@ -80,8 +81,9 @@ end
 export type Rewards = { pearl: number, pearlSet: number, toast: number, toastFriend: number, toastFriendsMost: number, toastMinutes: number, postcards: number }
 local function rewards(ctx: Types.Ctx): Rewards
 	local c = cfg(ctx)
+	-- (Build 104: each at the house's scale, as shown on the card and as paid.)
 	local function sum(v: any, default: number): number
-		return math.max(0, math.floor(num(v, default)))
+		return FortuneRules.scaled(math.max(0, math.floor(num(v, default))))
 	end
 	return {
 		pearl = sum(c.pearlGilt, Plan.PEARL_GILT),
@@ -195,7 +197,7 @@ local function standingCheck(ctx: Types.Ctx, player: Player, p: { [string]: any 
 	while p.standingPaid < rank do
 		p.standingPaid += 1
 		local r = Plan.Standing[p.standingPaid]
-		local gilt = if r.gilt > 0 then ctx.prize(player, r.gilt, "Island Standing: " .. r.name) else 0
+		local gilt = if r.gilt > 0 then ctx.prize(player, FortuneRules.scaled(r.gilt), "Island Standing: " .. r.name) else 0
 		ctx.send(player, { op = "islandStanding", rank = p.standingPaid, name = r.name, line = r.line, gilt = gilt })
 		if p.standingPaid >= 3 then
 			ctx.herald(player, { kind = "island", title = "ISLAND STANDING", line = "reached Island Standing: " .. r.name, glyph = "🏝️" })
@@ -303,6 +305,7 @@ function Island.state(ctx: Types.Ctx, player: Player): { [string]: any }
 		themes = themes,
 		theme = p.theme,
 		exchange = exchange,
+		rides = IslandRides.state(p), -- (Build 104)
 		flights = p.flights,
 		flightDays = p.flightDays,
 		standing = { points = pts, rank = standingRank, name = Plan.Standing[standingRank].name, nextAt = if nextRank then nextRank.at else nil, nextName = if nextRank then nextRank.name else nil },
@@ -586,6 +589,15 @@ function Island.ask(ctx: Types.Ctx, player: Player, r: { [string]: unknown }): a
 		result = choose(ctx, player, p, act :: string, what :: string)
 	elseif act == "exchange" and type(what) == "string" then
 		result = exchange(ctx, player, data, p, what :: string)
+	-- (Build 104) The island's rides.
+	elseif act == "ride" and type(what) == "string" then
+		result = IslandRides.ride(ctx, player, p, what :: string)
+	elseif act == "buyRide" and type(what) == "string" then
+		result = IslandRides.buy(ctx, player, p, what :: string, if r.how == "robux" then "robux" else "gilt")
+	elseif act == "board" and type(what) == "string" then
+		result = IslandRides.board(ctx, player, what :: string)
+	elseif act == "leap" then
+		result = IslandRides.leap(ctx, player)
 	else
 		return { ok = false, why = "That isn't something the house does." }
 	end
@@ -682,6 +694,19 @@ function Island.build(ctx: Types.Ctx, parent: Instance)
 	prompt(down, "act", "Down to the gardens", "The summit path", { Act = "path", What = "down" }, 10)
 	edge(ways, origin)
 	ways.Parent = parent
+	-- (Build 104) The rides: the Jet Ski Hire, the helicopter's pad, the Day Yacht's berth, and the
+	-- moored Sovereign's gangway and its top deck's leap.
+	local rb = IslandRides.build(parent, origin)
+	prompt(rb.hire, "act", "Ride a jet ski", "Jet Ski Hire", { Act = "ride", What = "jetski" }, 12)
+	prompt(rb.heli, "act", "Fly", "The helicopter", { Act = "ride", What = "heli" }, 14)
+	prompt(rb.yachtHelm, "act", "Take the helm", "The Day Yacht", { Act = "ride", What = "yacht" }, 14)
+	prompt(rb.yachtBoard, "act", "Board", "The Day Yacht", { Act = "board", What = "yacht" }, 14)
+	if rb.gangway then
+		prompt(rb.gangway, "act", "Board", "The Sovereign", { Act = "board", What = "sovereign" }, 14)
+	end
+	for _, spot in rb.leap do
+		prompt(spot, "act", "Leap", "Into the sea", { Act = "leap" }, 10)
+	end
 end
 
 function Island.enter(ctx: Types.Ctx, player: Player): (CFrame?, string?)
@@ -759,6 +784,10 @@ end
 -- back. Anyone the house moved elsewhere ("away" too, but nowhere near the island) is left where
 -- the house put them.
 function Island.leave(ctx: Types.Ctx, player: Player, why: string)
+	-- (Build 104) Their own rides are put away, whatever the reason they've gone.
+	pcall(function()
+		IslandRides.leave(ctx, player)
+	end)
 	if player.Parent == nil then
 		return
 	end
@@ -786,6 +815,12 @@ end
 -- "bring" or "go to") is flown home to the Jet Lounge after a few moments, the owner aside.
 local strays: { [Player]: number } = {}
 function Island.step(ctx: Types.Ctx, _dt: number)
+	local okRides, whyRides = pcall(function()
+		IslandRides.step(ctx)
+	end)
+	if not okRides then
+		warn("[Maison] The island's rides stumbled: " .. tostring(whyRides))
+	end
 	local t = os.clock()
 	for _, player in Players:GetPlayers() do
 		local root = ctx.rootOf(player)
@@ -818,6 +853,8 @@ function Island.arrived(ctx: Types.Ctx, player: Player)
 		publish(player, page(ctx, data))
 	end
 end
+
+Island.rides = IslandRides
 
 -- For tests.
 function Island.built(): IslandBuild.Built?

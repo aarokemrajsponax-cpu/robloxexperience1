@@ -172,6 +172,8 @@ end
 -- phone: turned into the HUD's units, with a little air between.) Where the button can't be
 -- measured, Roblox's own layout: a 70-pixel button 90 pixels up on a small screen, else a
 -- 120-pixel one 210 up.
+local publishCorner: (() -> ())? = nil
+
 local function place()
 	local h = holder
 	if not h then
@@ -184,6 +186,9 @@ local function place()
 		up = math.max(18, math.ceil((px + 14) / math.max(0.1, Root.scale)))
 	end
 	h.Position = UDim2.new(1, -16, 1, -up)
+	if publishCorner then
+		publishCorner()
+	end
 end
 
 local function narrow(): boolean
@@ -200,6 +205,9 @@ local function refreshVisible()
 	local h = holder
 	if h then
 		h.Visible = FriendBooster.visible()
+	end
+	if publishCorner then
+		publishCorner()
 	end
 end
 
@@ -598,6 +606,21 @@ local function drawPill()
 	pill = p
 end
 
+-- (Build 104) What stands in the corner now, for the HOUSE TOUR key above it (Root.corner).
+local function publish()
+	local h = holder
+	local up = 18
+	if h then
+		up = -h.Position.Y.Offset
+	end
+	local shown: GuiObject? = if open then card else pill
+	if h and shown and h.Visible and FriendBooster.visible() then
+		Root.setCorner(up, shown.Size.Y.Offset, shown.Size.X.Offset)
+	else
+		Root.setCorner(up, 0, 0)
+	end
+end
+
 local function show()
 	local c = card
 	local p = pill
@@ -607,7 +630,9 @@ local function show()
 	if p then
 		p.Visible = not open
 	end
+	publish()
 end
+publishCorner = publish
 
 -- Opens the card (for OPEN_SECONDS, then it folds to the pill again).
 function FriendBooster.unfold(arrived: Friend?)
@@ -700,7 +725,15 @@ function FriendBooster.start()
 	holder = h
 	place()
 	lastCount = #friends
-	FriendBooster.unfold(nil)
+	-- (Build 104) Open at first, for a few seconds, where the screen has room for it below the
+	-- NEXT card at the top right; on a short screen (a phone, a tablet) the NEXT card's guidance
+	-- comes first: the pill, and the card opens when a friend arrives or it's tapped.
+	local roomy = Root.size().Y - (-h.Position.Y.Offset) - (if #friends > 0 then 262 else 214) >= 62 + 210 + 8
+	if roomy then
+		FriendBooster.unfold(nil)
+	else
+		FriendBooster.fold()
+	end
 	pcall(function()
 		Remotes.event("Guest").OnClientEvent:Connect(function(m: any)
 			if type(m) == "table" and m.op == "friends" and type(m.friends) == "table" then

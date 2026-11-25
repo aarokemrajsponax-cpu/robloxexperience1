@@ -1082,6 +1082,8 @@ boot("The Empire", function()
 	Island.friends = Friends.are
 	Island.liveryOnSale = Purchases.JetLivery.onSale
 	Island.offerLivery = Purchases.JetLivery.offer
+	Island.rides.offer = Purchases.IslandRide.offer
+	Island.rides.onSale = Purchases.IslandRide.onSale
 	Island.ownedChanged = Shop.push
 	-- The Satchel: the sidearm, a decoy, the squad and starred curios as items in the hotbar.
 	local Satchel = require(script.Parent.Satchel)

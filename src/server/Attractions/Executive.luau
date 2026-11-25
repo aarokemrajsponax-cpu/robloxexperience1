@@ -397,7 +397,7 @@ local function status(ctx: Types.Ctx, player: Player): { [string]: any }
 		challenge = run.challenge,
 		challengeName = (Plan.challengeById[run.challenge] or Plan.Challenges[1]).name,
 		challengeLine = (Plan.challengeById[run.challenge] or Plan.Challenges[1]).line,
-		challengeGilt = (Plan.challengeById[run.challenge] or Plan.Challenges[1]).gilt,
+		challengeGilt = Fortune.scaled((Plan.challengeById[run.challenge] or Plan.Challenges[1]).gilt),
 		onCourse = if g then Executive.onCourse(g, Executive.clock()) else false,
 	}
 end
@@ -759,7 +759,7 @@ local function startPhase(ctx: Types.Ctx, phase: string)
 		-- (The way in: a moment's look at the man behind the desk, on every screen.)
 		broadcast(ctx, { op = "intro", at = origin + Plan.Desk + Vector3.new(0, 4, 3), say = def and def.say })
 	elseif phase == "won" then
-		broadcast(ctx, { op = "extract", seconds = tonumber(cfg(ctx).extractSeconds) or 60, untilAt = run.extractUntil, gilt = tonumber(cfg(ctx).extractGilt) or 2500 })
+		broadcast(ctx, { op = "extract", seconds = tonumber(cfg(ctx).extractSeconds) or 60, untilAt = run.extractUntil, gilt = Fortune.scaled(tonumber(cfg(ctx).extractGilt) or 2500) })
 	end
 	pushAll(ctx)
 end
@@ -776,7 +776,7 @@ local function win(ctx: Types.Ctx)
 				p.wins += 1
 				local worth = tonumber(c.prize) or 25000
 				ctx.estate(player, worth, "The Executive Suite")
-				local gilt = ctx.prize(player, tonumber(c.prizeGilt) or 600, "The Executive Suite: the prize")
+				local gilt = ctx.prize(player, Fortune.scaled(tonumber(c.prizeGilt) or 600), "The Executive Suite: the prize")
 				local brainrot = nil
 				local first = not p.firstWin
 				if first then
@@ -794,7 +794,7 @@ local function win(ctx: Types.Ctx)
 				local met = ch ~= nil and run.openedAt > 0 and Executive.onCourse(g, Executive.clock())
 				local chGilt = 0
 				if ch and met then
-					chGilt = ctx.prize(player, ch.gilt, "The Executive Suite: " .. ch.name)
+					chGilt = ctx.prize(player, Fortune.scaled(ch.gilt), "The Executive Suite: " .. ch.name)
 					ctx.tally(player, "executiveChallenges", 1)
 					note(player, "Executive challenge", { challenge = ch.id })
 				end
@@ -1625,7 +1625,7 @@ function Executive.ask(ctx: Types.Ctx, player: Player, r: { [string]: unknown })
 		looted[spot.id] = true
 		local table_ = (c.loot or {})[spot.id] or {}
 		local worth = math.max(0, math.floor(tonumber(table_.estate) or 0))
-		local giltWant = math.max(0, math.floor(tonumber(table_.gilt) or 0))
+		local giltWant = Fortune.scaled(math.max(0, math.floor(tonumber(table_.gilt) or 0)))
 		if worth > 0 then
 			ctx.estate(player, worth, "The Executive Suite")
 		end

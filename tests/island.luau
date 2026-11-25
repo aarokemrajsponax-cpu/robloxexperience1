@@ -840,4 +840,83 @@ do
 	check("...or one far too long", r.ok == false)
 end
 
+-- (Build 104) Sitting on the island: every seat on it stands above the ground it's on (a guest sat
+-- there sits on the cushion, not in the sand), every beach deck stands clear of the sand at all
+-- four corners, and every seat really sits a guest who walks up to it, one by one.
+do
+	local IB = module("ServerScriptService", "Server", "Attractions", "IslandBuild")
+	local Seating = module("ServerScriptService", "Server", "Seating")
+	local island = nil
+	for _, d in workspace:GetDescendants() do
+		if d.Name == "LuxuryIsland" or (d:IsA("Model") and d:FindFirstChild("SouthBeach")) then
+			island = d
+			break
+		end
+	end
+	local spots, decks = {}, {}
+	for _, d in (island or workspace):GetDescendants() do
+		if d:IsA("BasePart") and d.Name == "SitSpot" then
+			local p = d.CFrame.Position - O
+			if math.abs(p.X) < 600 and math.abs(p.Z) < 600 and p.Y > -60 and p.Y < 300 then
+				table.insert(spots, d)
+			end
+		elseif d:IsA("BasePart") and d.Name == "BeachDeck" then
+			table.insert(decks, d)
+		end
+	end
+	local low = {}
+	for _, s in spots do
+		local p = s.CFrame.Position - O
+		local ground = IB.groundAt(p.X, p.Z)
+		if p.Y - ground < 0.9 then
+			table.insert(low, string.format("%s at (%.0f, %.1f, %.0f) ground %.1f", s.Parent and s.Parent.Name or "?", p.X, p.Y, p.Z, ground))
+		end
+	end
+	check(string.format("every one of the island's %d seats stands on its piece, above the ground under it", #spots), #spots >= 20 and #low == 0, table.concat(low, "; "))
+	local buried = {}
+	for _, d in decks do
+		local c = d.CFrame.Position - O
+		local top = c.Y + d.Size.Y / 2
+		for _, dx in { -1, 1 } do
+			for _, dz in { -1, 1 } do
+				local x, z = c.X + dx * d.Size.X / 2, c.Z + dz * d.Size.Z / 2
+				if top < IB.groundAt(x, z) + 0.25 then
+					table.insert(buried, string.format("(%.0f, %.0f) top %.1f ground %.1f", x, z, top, IB.groundAt(x, z)))
+				end
+			end
+		end
+	end
+	check(string.format("every one of the beach's %d decks stands clear of the sand at all four corners", #decks), #decks >= 8 and #buried == 0, table.concat(buried, "; "))
+	-- Sit in every one, walking up to each.
+	run(Seating.start)
+	local sitAsk = Remotes.funcs.SitAsk.OnServerInvoke
+	local refused = {}
+	local sat = 0
+	for _, s in spots do
+		local id = s:GetAttribute("SeatId")
+		if type(id) ~= "number" then
+			table.insert(refused, "unnumbered " .. (s.Parent and s.Parent.Name or "?"))
+			continue
+		end
+		bo.Character = bo.body
+		bo.root.CFrame = s.CFrame * CFrame.new(0, 0, -2)
+		advance(0.6)
+		local r
+		run(function()
+			r = sitAsk(bo, { op = "sit", seat = id })
+		end)
+		if type(r) == "table" and r.ok == true and Seating.isSeated(bo) then
+			sat += 1
+		else
+			table.insert(refused, (s.Parent and s.Parent.Name or "?") .. ": " .. tostring(r and r.why))
+		end
+		advance(0.6)
+		run(function()
+			sitAsk(bo, { op = "stand" })
+		end)
+	end
+	check(string.format("each island seat sits a guest who walks up to it (%d of %d)", sat, #spots), #refused == 0, table.concat(refused, "; "))
+	print(string.format("  (island seats checked: %d, sat in: %d; beach decks: %d)", #spots, sat, #decks))
+end
+
 H.finish()

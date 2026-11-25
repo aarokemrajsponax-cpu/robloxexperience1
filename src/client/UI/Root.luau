@@ -204,6 +204,44 @@ Root.leftBottom = 0
 -- ...and where it starts (the foot of the Gilt and the Fortune along the top left; 0 before then).
 Root.leftTop = 0
 
+-- (Build 104) The right-hand column, in the UI's own units. Down from the top: the foot of the
+-- top-right keys and the NEXT card under them (set by the Objective). Up from the bottom: the
+-- Friend Boost in the corner (set by FriendBooster: where it begins, how tall and wide it stands
+-- now; 0 tall when it isn't showing), and above it the HOUSE TOUR key (set by QuickDock: how far
+-- up the corner's stack reaches with it, so the companion key stands clear above).
+Root.rightTop = 58
+Root.corner = { up = 18, height = 0, width = 0 }
+Root.cornerReach = 0
+Root.cornerRow = 0
+local cornerChanged = Instance.new("BindableEvent")
+Root.CornerChanged = cornerChanged.Event
+
+function Root.setRightTop(bottom: number)
+	bottom = math.floor(bottom + 0.5)
+	if Root.rightTop ~= bottom then
+		Root.rightTop = bottom
+		cornerChanged:Fire()
+	end
+end
+
+function Root.setCorner(up: number, height: number, width: number)
+	local c = Root.corner
+	if c.up ~= up or c.height ~= height or c.width ~= width then
+		Root.corner = { up = up, height = height, width = width }
+		cornerChanged:Fire()
+	end
+end
+
+-- (`reach`: how far up from the bottom the corner's stack now stands; `row`: how wide its
+-- bottom line is from the right edge, the Friend Boost and the key beside it when it's there.)
+function Root.setCornerReach(reach: number, row: number)
+	if Root.cornerReach ~= reach or Root.cornerRow ~= row then
+		Root.cornerReach = reach
+		Root.cornerRow = row
+		cornerChanged:Fire()
+	end
+end
+
 -- How wide a centred panel may be: what it wants, no wider than the screen, and (when there's
 -- room for a proper panel beside it) clear of the dock down the left, so the two never overlap.
 function Root.panelWidth(want: number): number

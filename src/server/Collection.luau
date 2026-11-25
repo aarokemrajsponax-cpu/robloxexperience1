@@ -10,6 +10,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Catalogue = require(ReplicatedStorage.Shared.Catalogue)
 local Commissions = require(ReplicatedStorage.Shared.Commissions)
 local Config = require(ReplicatedStorage.Shared.Config)
+local GiltScale = require(ReplicatedStorage.Shared.Fortune)
 local Rating = require(ReplicatedStorage.Shared.Rating)
 local Rooms = require(ReplicatedStorage.Shared.Rooms)
 local Standing = require(ReplicatedStorage.Shared.Standing)
@@ -123,7 +124,7 @@ function Collection.commissions(data: Profiles.Data): { { [string]: any } }
 		local state = d.commissions[slot]
 		local progress = if state.key == g.id then state.progress else 0
 		local done = state.key == g.id and state.done
-		table.insert(out, { label = label, text = g.text, progress = progress, target = g.target, done = done, gilt = Commissions.reward(slot ~= "evening", slot == "season") })
+		table.insert(out, { label = label, text = g.text, progress = progress, target = g.target, done = done, gilt = GiltScale.scaled(Commissions.reward(slot ~= "evening", slot == "season")) })
 	end
 	return out
 end

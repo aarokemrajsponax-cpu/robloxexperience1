@@ -414,6 +414,8 @@ local holidaySpec: string? = nil
 local COLUMNS = 2
 -- (Defined below, with the dock's folding away: called whenever a key comes or goes.)
 local refreshVisible: () -> ()
+local placeTour: () -> ()
+local RIGHT = 16 -- (Build 104) the right-hand margin, the Friend Boost's own
 
 -- The dock's size for `n` keys, two by two.
 local function dockSize(n: number): UDim2
@@ -699,6 +701,50 @@ local function rehome(t: Frame?, home: Instance)
 		t.Parent = home
 	end
 end
+-- (Build 104) Where HOUSE TOUR stands: on the right, just above the Friend Boost in the bottom
+-- corner, their right edges in line; where that leaves no room under the keys and the NEXT card
+-- along the top right (a phone's short screen, or while the Friend Boost's big card is open), on
+-- the same line as the Friend Boost, just to its left. It glides from one to the other. What the
+-- corner's stack then reaches goes to Root, for the companion key above it.
+local tourAt: UDim2? = nil
+placeTour = function()
+	local tk = tourKey
+	if not tk then
+		return
+	end
+	local size = Root.size()
+	local c = Root.corner
+	local h = tk.Size.Y.Offset
+	local w = tk.Size.X.Offset
+	local above = c.up + (if c.height > 0 then c.height + GAP else 0)
+	local goal: UDim2
+	local reach: number
+	local row: number
+	if size.Y - above - h >= Root.rightTop + 2 * GAP then
+		goal = UDim2.new(1, -RIGHT, 1, -above)
+		reach = above + h
+		row = math.max(c.width, w)
+	else
+		local beside = if c.width > 0 then c.width + GAP else 0
+		goal = UDim2.new(1, -(RIGHT + beside), 1, -c.up)
+		reach = c.up + math.max(c.height, h)
+		row = beside + w
+	end
+	tk.AnchorPoint = Vector2.new(1, 1)
+	local was = tourAt
+	tourAt = goal
+	if was == nil or not tk.Visible then
+		tk.Position = goal
+	elseif was ~= goal then
+		TweenService:Create(tk, TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { Position = goal }):Play()
+	end
+	if tk.Visible then
+		Root.setCornerReach(reach, row)
+	else
+		Root.setCornerReach(c.up + c.height, c.width)
+	end
+end
+
 refreshVisible = function()
 	local f = dock
 	if not f then
@@ -740,17 +786,13 @@ refreshVisible = function()
 	if fold and events and s then
 		reach = math.max(reach, s.Position.Y.Offset + s.Size.Y.Offset)
 	end
-	-- (Build 102) HOUSE TOUR, just under whatever stands down the left, always there in play.
-	-- (Not inside an attraction: the tour starts in the house, and the attraction's card needs
-	-- the room down the left.)
+	-- (Build 102) HOUSE TOUR, always there in play; (Build 104) on the right, in the corner's
+	-- stack (placeTour). (Not inside an attraction: the tour starts in the house.)
 	local tk = tourKey
 	if tk then
 		local inAttraction = type(Players.LocalPlayer:GetAttribute("Attraction")) == "string"
 		tk.Visible = not away and not inAttraction
-		if tk.Visible then
-			tk.Position = UDim2.fromOffset(16, reach + GAP)
-			reach = reach + GAP + tk.Size.Y.Offset
-		end
+		placeTour()
 	end
 	Root.leftBottom = reach
 	-- (Build 102) ...and where it starts: under the Gilt and the Fortune along the top left, which
@@ -1078,6 +1120,7 @@ function QuickDock.start()
 	spList.Parent = sp
 	special = sp
 	Root.PanelsChanged:Connect(refreshVisible)
+	Root.CornerChanged:Connect(placeTour)
 	State.watch("sideKeys", function()
 		refreshVisible()
 	end)

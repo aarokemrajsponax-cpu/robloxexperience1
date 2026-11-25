@@ -198,9 +198,85 @@ local function release(player: Player, why: string)
 	end
 end
 
+-- (Build 104) Takes a guest home from an attraction: moved first, and only then let go of.
+-- Until now it let go of them first (the attraction's state cleared, their screen, the Concierge
+-- and the owner's panel all saying they were back in the Maison) and moved them after, with
+-- nothing checking the move landed. A guest caught by the Executive Suite's lasers is held still
+-- (their character anchored by the server); letting go of them handed their character back to
+-- their own screen in the same breath as the move, and a screen still simulating the old spot
+-- could carry it back: home on paper, still standing in the Suite. Now the move is made while
+-- they're held (a held character is the server's alone), checked where it landed and made again
+-- if it didn't; then they're let go of, and the hold eased off a moment later, once their screen
+-- has the new place. A second later the house looks once more: a guest still standing inside the
+-- attraction's place (and not gone back in) is brought home again, and the Output says so.
+local function holdFor(player: Player, on: boolean)
+	local root = rootOf(player)
+	if root then
+		pcall(function()
+			root.Anchored = on
+			root.AssemblyLinearVelocity = Vector3.zero
+		end)
+	end
+end
+
+local function landedOutside(player: Player, id: string): boolean
+	local root = rootOf(player)
+	return root == nil or AttractionList.areaAt(root.CFrame.Position) ~= id
+end
+
+-- (Seated, a seat's weld would drag them, or the seat with them: stood up first.)
+local function standUp(player: Player)
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if not humanoid then
+		return
+	end
+	pcall(function()
+		local seat = humanoid.SeatPart
+		if seat then
+			local weld = seat:FindFirstChild("SeatWeld")
+			if weld then
+				weld:Destroy()
+			end
+		end
+		humanoid.Sit = false
+	end)
+end
+
 local function sendHome(player: Player, id: string)
+	local frame = lobbyFrame(id)
+	standUp(player)
+	holdFor(player, true)
+	teleport(player, frame)
+	if not landedOutside(player, id) then
+		-- (The move didn't land: once more, straight away, without waiting on streaming.)
+		local character = player.Character
+		if character then
+			Integrity.teleport(player, character, frame + Vector3.new(0, 3, 0))
+		end
+	end
 	release(player, "home")
-	teleport(player, lobbyFrame(id))
+	-- (Letting go may have eased an attraction's own hold: held until their screen has caught up.)
+	holdFor(player, true)
+	local character = player.Character
+	task.delay(0.35, function()
+		if player.Character == character and not held[player] then
+			holdFor(player, false)
+		end
+	end)
+	task.delay(1.2, function()
+		-- (Not the owner, whose own powers may take them straight back.)
+		if player.Parent and player.Character == character and not inside[player] and not landedOutside(player, id) and not Attractions.isOwner(player) then
+			warn("[Maison] " .. player.Name .. " was still in " .. id .. " after being sent home: sent home again.")
+			holdFor(player, true)
+			teleport(player, frame)
+			task.delay(0.35, function()
+				if player.Character == character and not held[player] then
+					holdFor(player, false)
+				end
+			end)
+		end
+	end)
 end
 
 -- Pays a price from a guest's purse: Gilt and/or Gems, all of it or none of it.
@@ -237,8 +313,8 @@ local ctx: Types.Ctx = {
 	trusted = function(player: Player): boolean
 		return Integrity.trusted(player)
 	end,
-	moved = function(player: Player)
-		Integrity.moved(player)
+	moved = function(player: Player, seconds: number?)
+		Integrity.moved(player, seconds)
 	end,
 	teleport = teleport,
 	sendHome = sendHome,
@@ -508,7 +584,7 @@ end
 -- Requests from a guest's screen
 ---------------------------------------------------------------------------------------------------
 -- (`item`, `set` and `line`: the Flex Studio's picks, a guest's own thing, a set, a caption.)
-local ASK_KEYS = { op = true, id = true, act = true, what = true, n = true, code = true, item = true, set = true, line = true }
+local ASK_KEYS = { op = true, id = true, act = true, what = true, n = true, code = true, item = true, set = true, line = true, how = true } -- (Build 104: `how`, a ride bought with Gilt or Robux)
 
 local function onAsk(player: Player, request: unknown): any
 	local r = RemoteGuard.message(request, 8, 0)
@@ -722,8 +798,18 @@ local function hookPrompt(prompt: Instance)
 				if ok and type(r) == "table" then
 					if r.ok == true and type(r.title) == "string" then
 						event:FireClient(player, { op = "notice", title = r.title, line = tostring(r.line or "") })
+					elseif r.ok ~= true and type(r.panel) == "string" then
+						-- (Build 104) Not theirs yet: the attraction's card at the page that says how.
+						event:FireClient(player, { op = "panel", id = id, which = r.panel })
+						if type(r.why) == "string" then
+							event:FireClient(player, { op = "notice", title = "Not just now", line = r.why })
+						end
 					elseif r.ok ~= true and type(r.why) == "string" then
 						event:FireClient(player, { op = "notice", title = "Not just now", line = r.why })
+					end
+					-- (Build 104) What the guest's own screen does next (a leap off the yacht).
+					if r.ok == true and type(r.send) == "table" then
+						event:FireClient(player, r.send)
 					end
 				end
 			end

@@ -5,6 +5,7 @@
 -- Fly home, and Liveries & light. A postcard taken frames its view for a photograph. Every figure
 -- is the server's; it decides nothing.
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
@@ -21,6 +22,10 @@ local IslandHud = {}
 -- Set by Main: open the island's board (a tab), and photo mode.
 IslandHud.openBoard = function(_which: string?) end
 IslandHud.photo = function() end
+-- (Build 104) Set by Main: whether photo mode took the camera (it can refuse).
+IslandHud.photoActive = function(): boolean
+	return false
+end
 
 local C = Brand.Colours
 local GOLD = Color3.fromRGB(255, 204, 90)
@@ -223,9 +228,16 @@ local function frame(id: string)
 	end
 	local origin = Vector3.new(o[1], o[2], o[3])
 	local from = origin + spot.at + Vector3.new(0, 5.5, 0)
+	-- (Build 104) Photo mode starts from the framed view (it takes the camera from where it is);
+	-- if it can't start just now, the camera goes straight back to following the guest. Until now
+	-- a refused photo mode left the camera fixed on the view with no way out of it.
+	local was = camera.CameraType
 	camera.CameraType = Enum.CameraType.Scriptable
 	camera.CFrame = CFrame.lookAt(from, origin + spot.look)
-	IslandHud.photo()
+	pcall(IslandHud.photo)
+	if not IslandHud.photoActive() then
+		camera.CameraType = if was == Enum.CameraType.Scriptable then Enum.CameraType.Custom else was
+	end
 end
 
 -- What the server says that's the island's own.
@@ -239,7 +251,30 @@ function IslandHud.on(m: { [string]: any })
 	elseif m.op == "toasted" then
 		view.toasted = true
 		draw()
+	elseif m.op == "island" and m.what == "leap" then
+		IslandHud.leap(if typeof(m.dir) == "Vector3" then m.dir else Vector3.new(0, 0, 1))
 	end
+end
+
+-- (Build 104) The leap off the Sovereign's top deck (the server said yes, and told the movement
+-- watch first): out over the rail in a long arc, down into the sea.
+function IslandHud.leap(dir: Vector3)
+	local character = Players.LocalPlayer.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if not root or not root:IsA("BasePart") or not humanoid then
+		return
+	end
+	local flat = Vector3.new(dir.X, 0, dir.Z)
+	flat = if flat.Magnitude > 0.01 then flat.Unit else Vector3.new(0, 0, 1)
+	pcall(function()
+		humanoid:ChangeState(Enum.HumanoidStateType.Freefall)
+	end)
+	root.CFrame = CFrame.lookAt(root.Position, root.Position + flat)
+	root.AssemblyLinearVelocity = flat * 46 + Vector3.new(0, 62, 0)
+	pcall(function()
+		require(script.Parent.Parent.Sound).play("slide", 0.6)
+	end)
 end
 
 return IslandHud

@@ -979,10 +979,9 @@ function Service.start(parent: Instance?)
 	for i, def in GrandPrix.GARAGE do
 		table.insert(fleet, { def = def, home = GrandPrix.privateBay(i) })
 	end
-	-- Luxury Island's cars, for timed laps of the Coastal Circuit (they drive like every other).
-	for i, def in Tracks.COAST_CARS do
-		table.insert(fleet, { def = def, home = Tracks.bay(i) })
-	end
+	-- (Build 104) Luxury Island has no garage now: its rides are the jet skis, the Day Yacht and
+	-- the helicopter (Attractions/IslandRides). The Coastal Circuit's timed laps went with its
+	-- cars; the laps already driven stay in the records.
 	for i, entry in fleet do
 		local def = entry.def
 		local model = Motorcar.build(holder, def, entry.home)

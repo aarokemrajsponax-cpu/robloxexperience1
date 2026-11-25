@@ -514,6 +514,7 @@ module("ReplicatedStorage", "Shared", "Seasons")
 local Config = module("ReplicatedStorage", "Shared", "Config")
 assert(G == module("ReplicatedStorage", "Shared", "Layout").SCALE, "the test's G is Layout.SCALE")
 local C = Config.data.Ballroom
+Config.data.Gilt.payoutScale = 1 -- (the suite reads the pot at its base figures; tests/economy.luau runs the game's own scale)
 local Catalogue = module("ReplicatedStorage", "Shared", "Catalogue")
 local BallroomService = module("ServerScriptService", "Server", "BallroomService")
 local said = {}

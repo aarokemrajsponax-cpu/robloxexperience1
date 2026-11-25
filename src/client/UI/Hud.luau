@@ -13,6 +13,14 @@ local Theme = require(script.Parent.Theme)
 
 local Hud = {}
 
+-- (Build 104) A screen too narrow for the whole top row beside the Gilt bar (a phone, or a 4:3
+-- tablet, where the row ran into the Gilt bar's fold key): How to play and Settings are tiles in
+-- the Menu there, as they always are, and the row keeps to the rest.
+local function compact(): boolean
+	return Root.phone() or Root.size().X < 1000
+end
+Hud.compact = compact
+
 local bar = Instance.new("Frame")
 bar.Name = "TopRight"
 bar.BackgroundTransparency = 1
@@ -64,9 +72,9 @@ function Hud.start(openSettings: () -> (), leave: () -> ())
 	settingsButton.LayoutOrder = 2
 	-- (Build 96) On a phone: Settings lives in the Menu (its own tile there), so the top row is
 	-- Play, Shop and Menu, and the screen stays clear.
-	settingsButton.Visible = not Root.phone()
+	settingsButton.Visible = not compact()
 	table.insert(Root.rescaled, function()
-		settingsButton.Visible = not Root.phone()
+		settingsButton.Visible = not compact()
 	end)
 end
 
@@ -146,9 +154,9 @@ function Hud.setHelpKey(onPress: () -> ())
 	key.LayoutOrder = -15
 	helpKey = key
 	-- (Build 96) On a phone How to play lives in the Menu (its own tile there).
-	key.Visible = not Root.phone()
+	key.Visible = not compact()
 	table.insert(Root.rescaled, function()
-		key.Visible = not Root.phone()
+		key.Visible = not compact()
 	end)
 end
 
@@ -327,7 +335,7 @@ function Hud.setSeated(seated: boolean)
 	end
 	if helpKey then
 		-- (Build 96: never on a phone, where How to play is a tile in the Menu.)
-		helpKey.Visible = not seated and not Root.phone()
+		helpKey.Visible = not seated and not compact()
 	end
 	-- (The Directory's ways there wait until the guest stands up: its key steps aside too.)
 	if playKey then

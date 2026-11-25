@@ -195,70 +195,10 @@ end
 -- The island's lowland, as circles (centre x, z, radius) of sand up to G, with lawns on the inner
 -- ones. The shore shelves from each circle's edge into the sea (a beach all round), except along
 -- the South Beach, which slopes from the lawns into the lagoon on its own.
-local LAND = {
-	{ -30, -60, 175 }, { 110, -40, 124 }, { -150, 20, 112 }, { 10, 40, 92 }, { -60, -150, 120 }, { 40, -150, 110 },
-	{ -170, -170, 70 },
-}
-local LAWNS = { { -30, -60, 150 }, { 110, -40, 100 }, { -150, 20, 88 }, { 10, 30, 64 } }
--- The South Beach: from the lawns' edge (z 94, at G) down to the lagoon's floor (z 170, 6 below
--- the sea), x -160 to 140.
-local BEACH = { x0 = -160, x1 = 140, z0 = 94, z1 = 170 }
-local function sandAt(z: number): number
-	return G - 12 * math.clamp((z - BEACH.z0) / (BEACH.z1 - BEACH.z0), 0, 1)
-end
--- The Grand Villa's beach, beside its pier: from its Quay's edge down into the sea.
-local BEACH2 = { x0 = 140, x1 = 188, z0 = 94, z1 = 130 }
-local function sand2At(z: number): number
-	return G - 12 * math.clamp((z - BEACH2.z0) / (BEACH2.z1 - BEACH2.z0), 0, 1)
-end
--- The lagoon: white sand 6 below the sea inside the reef, south of the beach.
-local LAGOON = { { -90, 210, 80 }, { -10, 220, 90 }, { 70, 210, 80 } }
-local LAGOON_FLOOR = -6
-
--- The hills, smooth: rings of ground narrowing as they climb, a little steeper toward the top.
-type Hill = { x: number, z: number, rings: { { number } } } -- each ring: { radius, its top }
-local function hill(x: number, z: number, top: number, rBase: number, rTop: number, power: number): Hill
-	local rings = {}
-	local h = G + 2
-	while h <= top + 1e-6 do
-		local f = ((top - h) / (top - G)) ^ power
-		table.insert(rings, { rTop + (rBase - rTop) * f, h })
-		h += 2
-	end
-	return { x = x, z = z, rings = rings }
-end
-local HILLS: { Hill } = {
-	hill(168, -78, 28, 44, 20, 1.2), -- the green hill behind the Grand Villa's terraces
-	hill(-120, 40, 34, 56, 21, 1.25), -- the summit (the Lookout's drum on the top)
-	hill(-100, 32, 31, 48, 5, 1), -- the ridge the Lookout's stair climbs, from the gardens
-}
-
--- The ground's height at (x, z) (from the island's origin): for setting things on it.
-local function groundAt(x: number, z: number): number
-	local y = -8
-	for _, c in LAND do
-		local d = math.sqrt((x - c[1]) ^ 2 + (z - c[2]) ^ 2)
-		if d <= c[3] then
-			y = math.max(y, G)
-		elseif d <= c[3] + 10 then
-			y = math.max(y, -4 + math.sqrt(math.max(0, 100 - (d - c[3]) ^ 2)))
-		end
-	end
-	if x >= BEACH.x0 and x <= BEACH.x1 and z >= BEACH.z0 then
-		y = sandAt(z)
-	elseif x >= BEACH2.x0 and x <= BEACH2.x1 and z >= BEACH2.z0 then
-		y = sand2At(z)
-	end
-	for _, h in HILLS do
-		local d = math.sqrt((x - h.x) ^ 2 + (z - h.z) ^ 2)
-		for _, ring in h.rings do
-			if d <= ring[1] then
-				y = math.max(y, ring[2])
-			end
-		end
-	end
-	return y
-end
+-- (Build 104) The ground's plan is shared now (shared/IslandGround): the island's rides need it too.
+local Ground = require(ReplicatedStorage.Shared.IslandGround)
+local LAND, LAWNS, BEACH, BEACH2, LAGOON, LAGOON_FLOOR, HILLS = Ground.LAND, Ground.LAWNS, Ground.BEACH, Ground.BEACH2, Ground.LAGOON, Ground.LAGOON_FLOOR, Ground.HILLS
+local sandAt, sand2At, groundAt = Ground.sandAt, Ground.sand2At, Ground.groundAt
 
 -- The reef: shoals of sand just under the surface along an arc south of the lagoon, and a few
 -- rocks breaking it.
@@ -343,6 +283,17 @@ local function terrain(o: Vector3): boolean
 		end
 		for _, p in shore() do
 			T:FillBall(o + p + Vector3.new(0, -4, 0), 10, Enum.Material.Sand)
+		end
+		-- (Build 104) The beaches' slopes, cleared first: the land circles above fill sand up to the
+		-- lowland's height over most of the South Beach, and a slope filled over that adds nothing
+		-- (sand on sand), so the beach stood flat at the lowland's height while everything on it (the
+		-- loungers' and cabanas' decks, the torches, the Coral Club) was set on the slope below: up to
+		-- three studs under the sand, and whoever sat there sat in it. The air above each slope (the
+		-- same box, turned over) is emptied, then the slope is filled: the sand is where groundAt says.
+		for _, b in { BEACH, BEACH2 } do
+			local box = CFrame.new(o + Vector3.new((b.x0 + b.x1) / 2, 0, (b.z0 + b.z1) / 2)) * CFrame.Angles(0, math.pi, 0)
+			T:FillWedge(box * CFrame.Angles(math.pi, 0, 0), Vector3.new(b.x1 - b.x0, 12, b.z1 - b.z0), Enum.Material.Air)
+			T:FillBlock(CFrame.new(o + Vector3.new((b.x0 + b.x1) / 2, 7.5, (b.z0 + b.z1) / 2)), Vector3.new(b.x1 - b.x0, 3, b.z1 - b.z0), Enum.Material.Air)
 		end
 		-- The South Beach: a long slope of sand from the lowland into the lagoon, its ends rounded.
 		T:FillWedge(CFrame.new(o + Vector3.new((BEACH.x0 + BEACH.x1) / 2, 0, (BEACH.z0 + BEACH.z1) / 2)) * CFrame.Angles(0, math.pi, 0), Vector3.new(BEACH.x1 - BEACH.x0, 12, BEACH.z1 - BEACH.z0), Enum.Material.Sand)
@@ -862,7 +813,7 @@ end
 -- the sand at its highest edge (so nothing on it ever sinks into the slope), its foot sunk below
 -- the sand at its lowest. Returns its top.
 local function deck(parent: Instance, o: Vector3, x: number, z: number, w: number, d: number, ground: (number) -> number): number
-	local top = math.max(ground(z - d / 2), ground(z + d / 2)) + 0.25
+	local top = math.max(ground(z - d / 2), ground(z + d / 2)) + 0.5 -- (clear of terrain's rounding)
 	local foot = math.min(ground(z - d / 2), ground(z + d / 2)) - 1
 	Kit.part(parent, "BeachDeck", Vector3.new(w, top - foot, d), CFrame.new(o + Vector3.new(x, (top + foot) / 2, z)), DECK)
 	return top
@@ -1109,7 +1060,7 @@ end
 
 -- A yacht: a white hull with a raked bow, stacked decks with dark glass, a teak aft deck and a
 -- radar arch, its ensign astern. `cf`: its waterline middle, bow to -Z.
-local function yacht(parent: Instance, cf: CFrame, length: number, name: string, model: string?)
+local function yacht(parent: Instance, cf: CFrame, length: number, name: string, model: string?): Model
 	local m = Kit.model(parent, model or "Yacht")
 	local k = length / 50
 	Kit.part(m, "Hull", Vector3.new(11 * k, 6 * k, 38 * k), cf * CFrame.new(0, 1 * k, 4 * k), HULL)
@@ -1134,6 +1085,7 @@ local function yacht(parent: Instance, cf: CFrame, length: number, name: string,
 	Kit.engrave(plate, Enum.NormalId.Back, { { text = string.upper(name), size = 0.6, font = Brand.Fonts.display, color = rgb(196, 160, 82) } }, { ppu = 60, lit = false })
 	local stern = (cf * CFrame.new(0, 4.3 * k, 22.4 * k)).Position
 	flag(m, stern, 4.5 * k, math.atan2(-cf.LookVector.X, -cf.LookVector.Z) + math.pi / 2, 0.55 * k)
+	return m
 end
 
 local function marina(parent: Instance, o: Vector3)
@@ -1151,7 +1103,7 @@ local function marina(parent: Instance, o: Vector3)
 		lamp(m, o + Vector3.new(x, y + 0.3, 83.2), 5)
 	end
 	yacht(m, CFrame.new(o + Vector3.new(-284, Plan.SEA, 103)) * CFrame.Angles(0, math.rad(90), 0), 62, "Sovereign")
-	yacht(m, CFrame.new(o + Vector3.new(-302, Plan.SEA, 56)) * CFrame.Angles(0, math.rad(90), 0), 44, "Aurelia")
+	-- (Build 104: the Aurelia's berth is the Day Yacht's now: server/Attractions/IslandRides.)
 	yacht(m, CFrame.new(o + Vector3.new(-346, Plan.SEA, 74)) * CFrame.Angles(0, math.rad(80), 0), 36, "Celeste")
 end
 
@@ -1228,7 +1180,7 @@ end
 
 -- The helicopter, parked: black with a gold line, its rotor at rest. `cf`: its skids' middle on
 -- the pad, nose to -Z.
-local function helicopter(parent: Instance, cf: CFrame)
+local function helicopter(parent: Instance, cf: CFrame): Model
 	local m = Kit.model(parent, "Helicopter")
 	local body = look(rgb(18, 18, 22), Enum.Material.SmoothPlastic, 0.2)
 	local along = CFrame.Angles(0, math.rad(90), 0)
@@ -1253,6 +1205,7 @@ local function helicopter(parent: Instance, cf: CFrame)
 	for _, a in { 20, 110 } do
 		Kit.part(m, "Blade", Vector3.new(20, 0.12, 0.8), cf * CFrame.new(0, 7.45, 0) * CFrame.Angles(0, math.rad(a), 0), body, TRIM)
 	end
+	return m
 end
 
 -- The slide: a white chute with walls along a path of points (each { x, y, z }: its floor's top
@@ -1574,7 +1527,7 @@ local function resort(parent: Instance, o: Vector3)
 		local a = k * math.pi / 4
 		tag(Kit.ball(m, "PadLight", 0.5, padAt + Vector3.new(math.cos(a) * 11.2, 0.4, math.sin(a) * 11.2), look(rgb(255, 214, 140), Enum.Material.Neon), TRIM), "IslandLantern")
 	end
-	helicopter(m, CFrame.new(padAt + Vector3.new(0, 0.3, 0)) * CFrame.Angles(0, math.rad(-120), 0))
+	helicopter(m, CFrame.new(padAt + Vector3.new(0, 0.3, 0)) * CFrame.Angles(0, math.rad(-120), 0)).Name = "PadHelicopter"
 	-- The tennis court, east of the villa: its surface, its lines, the net, a fence behind each
 	-- baseline, lamps at its corners.
 	local court = Kit.model(m, "TennisCourt")
@@ -1760,22 +1713,10 @@ local function coast(parent: Instance, o: Vector3)
 	local beam = Kit.part(m, "GantryBeam", Vector3.new(width + 6, 3, 1.8), line * CFrame.new(0, 16.6, 0), L.blackLacquer)
 	Kit.part(m, "GantryBand", Vector3.new(width + 6.2, 0.4, 1.9), line * CFrame.new(0, 15, 0), GILT, TRIM)
 	Kit.engrave(beam, Enum.NormalId.Back, {
-		{ text = "THE COASTAL CIRCUIT", size = 0.6, font = Brand.Fonts.display, color = rgb(255, 214, 120) },
-		{ text = "timed laps · take a car from the island's garage", size = 0.28, font = Brand.Fonts.body, color = rgb(240, 230, 210) },
+		{ text = "THE COASTAL DRIVE", size = 0.6, font = Brand.Fonts.display, color = rgb(255, 214, 120) },
+		{ text = "jet skis at the South Beach · the Day Yacht at the marina · the helicopter at the Grand Villa", size = 0.24, font = Brand.Fonts.body, color = rgb(240, 230, 210) },
 	}, { ppu = 30, lit = false, brightness = 1.4, maxDistance = 260 })
-	-- The island's garage: three bays beside the start straight, and its sign.
-	for i = 1, #Tracks.COAST_CARS do
-		local bay = Tracks.bay(i)
-		for _, dz in { -4.2, 4.2 } do
-			Kit.part(m, "BayLine", Vector3.new(16, 0.06, 0.3), CFrame.new(Vector3.new(bay.Position.X, top + 0.03, bay.Position.Z + dz)), { color = rgb(200, 168, 96), material = Enum.Material.SmoothPlastic, transparency = 0.3 }, TRIM)
-		end
-		Kit.part(m, "BayPad", Vector3.new(18, 2, 10), CFrame.new(Vector3.new(bay.Position.X, top - 1, bay.Position.Z)), ROAD)
-	end
-	local first = Tracks.bay(1).Position
-	Kit.sign(m, "GarageSign", CFrame.lookAt(Vector3.new(first.X - 12, top, first.Z + 2), Vector3.new(first.X - 12, top, first.Z + 20)), 6.4, 2.6, {
-		{ text = "THE ISLAND'S GARAGE", size = 0.4, font = Brand.Fonts.display, color = rgb(255, 214, 120) },
-		{ text = "Any car is yours to drive: cross the line for a timed lap.", size = 0.3, font = Brand.Fonts.body, color = rgb(240, 230, 210) },
-	}, 4)
+	-- (Build 104) The island's garage is gone: its rides are on the water and in the air now.
 end
 
 ---------------------------------------------------------------------------------------------------
@@ -2017,6 +1958,16 @@ function IslandBuild.build(parent: Instance, o: Vector3): Built
 	for i, p in PALMS do
 		local y = groundAt(p[1], p[2])
 		palm(nature, o + Vector3.new(p[1], y - 0.4, p[2]), p[3], p[4], i * 1.37)
+		-- (Build 104) A warm uplight at each palm's foot: the island's evening glow, palm by palm.
+		Kit.part(nature, "PalmUplight", Vector3.new(1.2, 0.25, 1.2), CFrame.new(o + Vector3.new(p[1] + 1.6, y + 0.1, p[2] + 1.6)), look(rgb(255, 210, 140), Enum.Material.Neon), TRIM)
+	end
+	-- (Build 104) The South Beach's promenade, along the top of the sand: low brass bollards, each
+	-- with a warm glow, every few strides.
+	local prom = Kit.model(m, "Promenade")
+	for x = -150, 136, 13 do
+		local base = o + Vector3.new(x, sandAt(95), 95)
+		Kit.part(prom, "Bollard", Vector3.new(0.7, 2.2, 0.7), CFrame.new(base + Vector3.new(0, 1.1, 0)), L.brass, TRIM)
+		Kit.part(prom, "BollardGlow", Vector3.new(0.75, 0.4, 0.75), CFrame.new(base + Vector3.new(0, 1.9, 0)), look(rgb(255, 214, 150), Enum.Material.Neon), TRIM)
 	end
 	local cards = {}
 	for _, p in Plan.Postcards do
@@ -2033,5 +1984,8 @@ end
 
 -- (For the tests and the viewer: the ground's height on the island, from its origin.)
 IslandBuild.groundAt = groundAt
+-- (Build 104) The island's own yacht and helicopter, for its rides (server/Attractions/IslandRides).
+IslandBuild.yachtModel = yacht
+IslandBuild.helicopterModel = helicopter
 
 return IslandBuild

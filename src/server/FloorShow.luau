@@ -23,6 +23,7 @@ local Workspace = game:GetService("Workspace")
 
 local AttractionList = require(ReplicatedStorage.Shared.Attractions)
 local Config = require(ReplicatedStorage.Shared.Config)
+local GiltScale = require(ReplicatedStorage.Shared.Fortune) -- (Build 104: the pot shown at the house's scale, as it pays)
 local Gala = require(ReplicatedStorage.Shared.Gala)
 local Layout = require(ReplicatedStorage.Shared.Layout)
 local LightsOut = require(ReplicatedStorage.Shared.LightsOut)
@@ -218,7 +219,7 @@ local function publish()
 	end
 	Workspace:SetAttribute("BallroomState", state)
 	Workspace:SetAttribute("BallroomAt", if untilClock > 0 then at(untilClock) else nil)
-	Workspace:SetAttribute("BallroomPot", if s and s.state ~= "gathering" then s.pot else FloorShow.potFor(if s then s.real else 1))
+	Workspace:SetAttribute("BallroomPot", GiltScale.scaled(if s and s.state ~= "gathering" then s.pot else FloorShow.potFor(if s then s.real else 1)))
 	Workspace:SetAttribute("LightsOutFloor", true)
 end
 
@@ -438,7 +439,7 @@ local function finish(s: Show)
 				keys = 0,
 				points = LightsOut.points(place, 0),
 				gilt = if g == w then paid else 0,
-				pot = s.pot,
+				pot = GiltScale.scaled(s.pot),
 				counted = s.counts,
 				won = g == w,
 			})
@@ -449,7 +450,7 @@ local function finish(s: Show)
 			FloorShow.onResult(g.seat, g.name, 0)
 		end
 	end
-	broadcastAll({ op = "showEnd", winner = if w then w.name else nil, standIn = w ~= nil and w.standIn, pot = s.pot, results = results })
+	broadcastAll({ op = "showEnd", winner = if w then w.name else nil, standIn = w ~= nil and w.standIn, pot = GiltScale.scaled(s.pot), results = results })
 	s.afterUntil = FloorShow.clock() + 8
 	publish()
 end
@@ -799,7 +800,7 @@ local function begin(s: Show)
 	for _, g in s.guests do
 		table.insert(list, { name = g.name, seat = g.seat, standIn = g.standIn })
 	end
-	broadcastAll({ op = "showStart", of = s.of, real = s.real, pot = s.pot, guests = list, counted = s.counts })
+	broadcastAll({ op = "showStart", of = s.of, real = s.real, pot = GiltScale.scaled(s.pot), guests = list, counted = s.counts })
 	bringIn(s)
 	publish()
 	startRound(s)

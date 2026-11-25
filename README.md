@@ -377,6 +377,43 @@ a Nightly attempt or a Mythic's odds.
 - **The launch kit**: page text, icon, thumbnails and the gameplay video's shot list are in
   [`LAUNCH.md`](LAUNCH.md).
 
+## Build 104 — island rides, a residence over the city, the Gilt scale, fixes
+
+- **The House Tour key is on the right**, in the bottom-right corner's stack: just above the Friend
+  Boost (their right edges in line), or on its line to its left where the screen is too short to
+  stand above it (a phone). The companion key stands above both. The gold hand that points it out
+  on a first visit now actually shows (it was drawn inside the key and clipped away), from the
+  key's left. On narrow screens (a phone, a 4:3 tablet) How to play and Settings are Menu tiles,
+  so the top row no longer runs into the Gilt bar. The Friend Boost's big card no longer covers the
+  NEXT card on a short screen (it starts folded there; NEXT steps aside while it's open).
+- **The Executive Suite's Leave, after the lasers.** Sent home from an attraction, a guest is now
+  moved first (held still while the server moves them, so their own screen can't carry them back),
+  checked where they landed (moved again if not), and only then let go of; the hold eases a moment
+  later, and a second later the house looks once more. Until now the attraction's state was cleared
+  first and the move made after, unchecked. (tests/executive: caught, Leave, five times over.)
+- **Luxury Island.** The beach's sand stood flat at the lowland's height over its slope (the land's
+  sand filled first, the slope over it added nothing), so the loungers' and cabanas' decks, the
+  torches and the Coral Club were set up to three studs under it: guests sat in the sand. The sand
+  above the slopes is cleared now; every one of the island's 86 seats is tested above the ground and
+  sat in, and every beach deck clear of the sand. Postcards: photo mode can no longer leave the
+  camera stuck on a view, and a guest taken home mid-photo gets the camera back.
+- **The island's rides** (shared/IslandCraft, server/Attractions/IslandRides, client/World/CraftDrive):
+  the garage and its cars are gone (the Coastal Circuit's past laps stay on its board). The Jet Ski
+  Hire on the South Beach (yours for good for 60,000 Gilt or Robux), the Day Yacht at the marina
+  (free: one captain, anyone may board), and the helicopter on the Grand Villa's pad (yours for good
+  for 750,000 Gilt or Robux). Ridden from the island; steered on the rider's screen with Roblox's
+  vehicle controls (keys, thumbstick, gamepad; E/Q or on-screen keys to climb), checked by the
+  server (on deep water only, inside the island's edge, under the ceiling), put away when left. The
+  moored Sovereign: board it from the pier, leap from its top deck, stand in the wind at its aura
+  spot. The two Robux products are "Island Jet Ski" and "Island Helicopter": until they're made in
+  Creator Hub the island says so and they're had for Gilt.
+- **Your Suite is one residence.** The walled garden round it is enclosed now: stone walls on the
+  north and west, glass walls toward the terrace's city side, a glass roof over everything. Beyond
+  the glass, the city at dusk (drawn only for whoever stands in the wing): towers lit floor by floor,
+  a lit roundabout with a fountain and an obelisk, avenues of lamps, cars always moving.
+- **Gilt pays ten times over** (Config.Gilt.payoutScale): every reward for playing, quoted and paid
+  through one pipeline (what a screen shows is what's paid), the day's soft cap with it.
+
 ## Build 103 — the house's moments, seats everywhere, the Lucky reel, Luxury Island open
 
 - **Luxury Island is open** (`Config` island `comingSoon = false`), rebuilt after the owner's

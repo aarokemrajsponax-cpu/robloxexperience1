@@ -103,7 +103,24 @@ end
 -- screen to show it first, so the two are always the same number: `raw` Gilt, times the guest's
 -- boosts (`boost`, then the Gold Key's `key`), with the day's soft cap (`softCap` times the boost,
 -- less `today` already earned) and what's over it paid at `rate`.
+-- (Build 104) The house's Gilt scale (Config.Gilt.payoutScale): every reward for playing is this
+-- many times its base figure.
+function Fortune.scale(): number
+	local g = (Config.data :: any).Gilt
+	local s = tonumber(g and g.payoutScale) or 1
+	return if s >= 1 then s else 1
+end
+
+-- A base Gilt figure at the house's scale: what a prize pays, and what a screen shows of it.
+function Fortune.scaled(raw: number): number
+	return math.floor(raw * Fortune.scale() + 0.5)
+end
+
 function Fortune.giltPaid(raw: number, boost: number, key: number, softCap: number, today: number, rate: number): number
+	-- (Build 104) At the house's scale, the reward and the day's soft cap alike.
+	local scale = Fortune.scale()
+	raw *= scale
+	softCap *= scale
 	local earned = math.floor(raw * boost + 0.5)
 	if key > 1 then
 		earned = math.floor(earned * key + 0.5)

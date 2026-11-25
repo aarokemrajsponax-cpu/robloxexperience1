@@ -20,6 +20,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local GiltScale = require(ReplicatedStorage.Shared.Fortune)
 local Names = require(ReplicatedStorage.Shared.Names)
 local Plan = require(ReplicatedStorage.Shared.Gala)
 local Types = require(script.Parent.Types)
@@ -91,7 +92,9 @@ local function pay(ctx: Types.Ctx, player: Player, amount: number, source: strin
 		return 0
 	end
 	local p = page(ctx, data)
-	local give = math.max(0, math.min(amount, R(ctx, "dailyGilt") - p.gilt))
+	-- (Build 104) The day's cap is at the house's Gilt scale, as what's paid is.
+	local scale = GiltScale.scale()
+	local give = math.max(0, math.min(amount, math.floor((GiltScale.scaled(R(ctx, "dailyGilt")) - p.gilt) / scale)))
 	if give <= 0 then
 		return 0
 	end
@@ -1277,7 +1280,7 @@ function Gala.state(ctx: Types.Ctx, player: Player): { [string]: any }
 		busy = busy(player),
 		today = {
 			gilt = if p then p.gilt else 0,
-			cap = R(ctx, "dailyGilt"),
+			cap = GiltScale.scaled(R(ctx, "dailyGilt")),
 			minutes = if p then math.min(p.minutes, R(ctx, "danceMinutes")) else 0,
 			minutesCap = R(ctx, "danceMinutes"),
 			sets = sets,
@@ -1292,7 +1295,7 @@ function Gala.directory(ctx: Types.Ctx, player: Player): { [string]: any }
 	local pages = if data and type(data.attractions) == "table" then data.attractions else nil
 	local p = if pages and type(pages[Plan.ID]) == "table" then pages[Plan.ID] else nil
 	local today = if p and p.day == Plan.day(Gala.time()) then num(p.gilt, 0) else 0
-	return { open = true, galaGilt = R(ctx, "dailyGilt"), giltToday = today }
+	return { open = true, galaGilt = GiltScale.scaled(R(ctx, "dailyGilt")), giltToday = today }
 end
 
 function Gala.ask(ctx: Types.Ctx, player: Player, r: { [string]: unknown }): { [string]: any }

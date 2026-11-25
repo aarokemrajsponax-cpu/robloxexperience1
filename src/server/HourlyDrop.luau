@@ -17,6 +17,7 @@ local Workspace = game:GetService("Workspace")
 
 local Brand = require(ReplicatedStorage.Shared.Brand)
 local Config = require(ReplicatedStorage.Shared.Config)
+local GiltScale = require(ReplicatedStorage.Shared.Fortune)
 local CurioList = require(ReplicatedStorage.Shared.Curios)
 local Layout = require(ReplicatedStorage.Shared.Layout)
 local Plan = require(ReplicatedStorage.Shared.HourlyDrop)
@@ -277,7 +278,7 @@ function HourlyDrop.state(player: Player): { [string]: any }
 		opened = if data then opened(data, hour) else false,
 		count = if data then count(data) else 0,
 		have = if data then held(data) else {},
-		gilt = tonumber(cfg().gilt) or 250,
+		gilt = GiltScale.scaled(tonumber(cfg().gilt) or 250),
 	}
 end
 
