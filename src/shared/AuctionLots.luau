@@ -4,6 +4,8 @@
 -- season adds one of its own while it lasts. Every lot is one of a kind for its winner: a piece
 -- for their collection that's only ever won here, never sold.
 
+local Fortune = require(script.Parent.Fortune)
+
 local AuctionLots = {}
 
 export type Lot = {
@@ -17,24 +19,35 @@ export type Lot = {
 }
 export type Live = Lot & { id: string, week: number, ends: number, seasonal: boolean }
 
+-- (Build 105) The first bids climb with the lot (in Gilt at the house's Gilt scale, shared/Fortune:
+-- x10 as it ships, so from 400,000 Gilt for the Imperial Teacup to 2,500,000 for the Golden Lion),
+-- and three more lots join the pool, four a week. Each is still won by one guest only.
 AuctionLots.Pool = {
-	{ key = "pavone", name = "Il Pavone d'Oro", line = "A golden peacock that has never once lowered its tail.", glyph = "🦚", curio = "pavoneDoro", currency = "Gilt", start = 5000 },
-	{ key = "banchiere", name = "Il Banchiere Bianco", line = "A banker in white tie who counts in his sleep.", glyph = "🎩", curio = "banchiereBianco", currency = "Gilt", start = 8000 },
-	{ key = "uovo", name = "The Midnight Egg", line = "A jewelled egg that opens on a tiny ballroom.", glyph = "🥚", curio = "uovoMezzanotte", currency = "Gilt", start = 12000 },
-	{ key = "tazza", name = "La Tazza Imperiale", line = "An emperor's teacup. Still warm, somehow.", glyph = "🍵", curio = "tazzaImperiale", currency = "Gilt", start = 4000 },
-	{ key = "orologio", name = "L'Orologio del Re", line = "The king's watch: it runs a minute fast, on purpose.", glyph = "⌚", curio = "orologioRe", currency = "Gems", start = 40 },
-	{ key = "lupo", name = "Il Lupo di Borsa", line = "A wolf in a waistcoat who reads the markets aloud.", glyph = "🐺", curio = "lupoBorsa", currency = "Gems", start = 60 },
+	{ key = "pavone", name = "Il Pavone d'Oro", line = "A golden peacock that has never once lowered its tail.", glyph = "🦚", curio = "pavoneDoro", currency = "Gilt", start = 60000 },
+	{ key = "banchiere", name = "Il Banchiere Bianco", line = "A banker in white tie who counts in his sleep.", glyph = "🎩", curio = "banchiereBianco", currency = "Gilt", start = 80000 },
+	{ key = "leone", name = "Il Leone d'Oro", line = "A golden lion in a velvet cape. He has never once queued.", glyph = "🦁", curio = "leoneOro", currency = "Gilt", start = 250000 },
+	{ key = "uovo", name = "The Midnight Egg", line = "A jewelled egg that opens on a tiny ballroom.", glyph = "🥚", curio = "uovoMezzanotte", currency = "Gilt", start = 120000 },
+	{ key = "orologio", name = "L'Orologio del Re", line = "The king's watch: it runs a minute fast, on purpose.", glyph = "⌚", curio = "orologioRe", currency = "Gems", start = 150 },
+	{ key = "tazza", name = "La Tazza Imperiale", line = "An emperor's teacup. Still warm, somehow.", glyph = "🍵", curio = "tazzaImperiale", currency = "Gilt", start = 40000 },
+	{ key = "corvo", name = "Il Corvo di Diamante", line = "A crow that only ever steals diamonds, and only the good ones.", glyph = "🐦‍⬛", curio = "corvoDiamante", currency = "Gems", start = 400 },
+	{ key = "lupo", name = "Il Lupo di Borsa", line = "A wolf in a waistcoat who reads the markets aloud.", glyph = "🐺", curio = "lupoBorsa", currency = "Gems", start = 250 },
 } :: { Lot }
 
 -- The seasons' own lots: on offer while their dates last (month and day, in UTC).
 AuctionLots.Seasonal = {
-	{ key = "cigno", name = "Il Cigno d'Inverno", line = "A swan carved from winter itself. It never melts.", glyph = "🦢", curio = "cignoInverno", currency = "Gilt", start = 10000, from = { 12, 1 }, to = { 1, 6 } },
-	{ key = "coniglio", name = "Il Coniglio di Primavera", line = "A spring hare in a gilded waistcoat.", glyph = "🐇", curio = "coniglioPrimavera", currency = "Gilt", start = 8000, from = { 3, 20 }, to = { 4, 30 } },
-	{ key = "zucca", name = "La Zucca d'Argento", line = "A silver pumpkin with a candle that never burns down.", glyph = "🎃", curio = "zuccaArgento", currency = "Gilt", start = 8000, from = { 10, 1 }, to = { 11, 2 } },
+	{ key = "cigno", name = "Il Cigno d'Inverno", line = "A swan carved from winter itself. It never melts.", glyph = "🦢", curio = "cignoInverno", currency = "Gilt", start = 150000, from = { 12, 1 }, to = { 1, 6 } },
+	{ key = "renna", name = "La Renna di Ghiaccio", line = "A reindeer of blue ice who pulls the Maison's sleigh on Christmas Eve.", glyph = "🦌", curio = "rennaGhiaccio", currency = "Gilt", start = 200000, from = { 12, 1 }, to = { 1, 6 } },
+	{ key = "coniglio", name = "Il Coniglio di Primavera", line = "A spring hare in a gilded waistcoat.", glyph = "🐇", curio = "coniglioPrimavera", currency = "Gilt", start = 100000, from = { 3, 20 }, to = { 4, 30 } },
+	{ key = "zucca", name = "La Zucca d'Argento", line = "A silver pumpkin with a candle that never burns down.", glyph = "🎃", curio = "zuccaArgento", currency = "Gilt", start = 100000, from = { 10, 1 }, to = { 11, 2 } },
 } :: { Lot & { from: { number }, to: { number } } }
 
-AuctionLots.PER_WEEK = 3
+AuctionLots.PER_WEEK = 4
 AuctionLots.WEEK = 7 * 86400
+
+-- (Build 105) A lot's first bid as it's shown and taken: Gilt at the house's Gilt scale, Gems as set.
+function AuctionLots.startOf(lot: Lot): number
+	return if lot.currency == "Gilt" then Fortune.scaled(lot.start) else lot.start
+end
 
 -- The week's number (Mondays, UTC) and when it ends.
 function AuctionLots.week(now: number): number
@@ -65,6 +78,7 @@ function AuctionLots.forWeek(week: number, now: number): { Live }
 	for i = 1, AuctionLots.PER_WEEK do
 		local lot = pool[((week * AuctionLots.PER_WEEK + i - 1) % #pool) + 1]
 		local live = table.clone(lot) :: any
+		live.start = AuctionLots.startOf(lot)
 		live.id = string.format("w%d-%s", week, lot.key)
 		live.week = week
 		live.ends = AuctionLots.ends(week)
@@ -74,6 +88,7 @@ function AuctionLots.forWeek(week: number, now: number): { Live }
 	for _, s in AuctionLots.Seasonal do
 		if inSeason(s, now) then
 			local live = table.clone(s) :: any
+			live.start = AuctionLots.startOf(s)
 			live.from, live.to = nil, nil
 			live.id = string.format("w%d-%s", week, s.key)
 			live.week = week

@@ -373,6 +373,10 @@ function AuctionPanel.isOpen(): boolean
 	return Root.isOpen(NAME)
 end
 
+-- (Build 105) Another guest's bid is said at most this often (seconds).
+local BID_NOTE_EVERY = 90
+local lastBidNote = -math.huge
+
 -- The auction's notices.
 function AuctionPanel.start()
 	Remotes.event("Empire").OnClientEvent:Connect(function(m: any)
@@ -383,6 +387,14 @@ function AuctionPanel.start()
 			Toast.show("Outbid: " .. tostring(m.name), string.format("Your %s is back in your purse.", money(tonumber(m.back) or 0, tostring(m.currency or "Gilt"))), 5)
 		elseif m.op == "auctionWon" then
 			Toast.show("Sold to you: " .. tostring(m.name), string.format("For %s. It's in your collection.", money(tonumber(m.amount) or 0, tostring(m.currency or "Gilt"))), 6)
+		elseif m.op == "auctionBid" then
+			-- (Build 105) A bid that stood, anywhere in this server: said to everyone else, at most
+			-- one in a while (never a stream of them), with where to bid.
+			local now = os.clock()
+			if m.by ~= nil and m.userId ~= game:GetService("Players").LocalPlayer.UserId and now - lastBidNote >= BID_NOTE_EVERY and not Root.isOpen(NAME) then
+				lastBidNote = now
+				Toast.show("🔨 A bid at the Grand Auction", string.format("%s bid %s on %s. Limited: one winner. At the rostrum in the Library.", tostring(m.by), money(tonumber(m.amount) or 0, tostring(m.currency or "Gilt")), tostring(m.name)), 5)
+			end
 		end
 	end)
 end

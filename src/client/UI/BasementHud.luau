@@ -20,6 +20,8 @@ local HudCard = require(script.Parent.HudCard)
 local Root = require(script.Parent.Root)
 local Theme = require(script.Parent.Theme)
 local Toast = require(script.Parent.Toast)
+local MischiefKey = require(script.Parent.MischiefKey)
+local stopMischief: (() -> ())? = nil
 local Moment = require(script.Parent.Moment)
 local BasementMotion = require(script.Parent.Parent.World.BasementMotion)
 
@@ -230,7 +232,7 @@ function BasementHud.mount()
 	k.Name = "BasementKeys"
 	k.AnchorPoint = Vector2.new(0.5, 1)
 	k.BackgroundTransparency = 1
-	k.Size = UDim2.fromOffset(320, 44)
+	k.Size = UDim2.fromOffset(540, 44)
 	k.Parent = Root.hud
 	Theme.list(k, 10, true).HorizontalAlignment = Enum.HorizontalAlignment.Center
 	Theme.key(k, "Leave", false, function()
@@ -255,6 +257,8 @@ function BasementHud.mount()
 			BasementHud.offerSkip()
 		end
 	end, 160)
+	-- (Build 105) Basement Push: only while another guest is in reach.
+	stopMischief = MischiefKey.mount(k, "push")
 	keys = k
 	place()
 	draw()
@@ -265,6 +269,10 @@ function BasementHud.mount()
 end
 
 function BasementHud.unmount()
+	if stopMischief then
+		stopMischief()
+		stopMischief = nil
+	end
 	if beat then
 		beat:Disconnect()
 		beat = nil

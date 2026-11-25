@@ -176,15 +176,22 @@ do
 	local cy = guest("Cy", 4)
 	local d = profiles[cy].Data
 	local four = Boutique.market()
-	check("four brainrots a day", #four == 4)
+	local mythicPool = 0
+	for _, c in CurioList.List do
+		if c.family == "meme" and c.tradeable == true and (c.source == "tables" or c.source == "attraction") and c.rarity == "Mythic" then
+			mythicPool += 1
+		end
+	end
+	check("Build 105: five brainrots a day (a Mythic among them, when there's one found in play to sell)", #four == (if mythicPool > 0 then 5 else 4), #four)
 	local rarities = {}
 	for _, m in four do
 		local c = CurioList.byId[m.id]
 		table.insert(rarities, m.rarity)
-		check(m.id .. " is a brainrot found in play, never a Mythic or Secret", c and c.family == "meme" and c.rarity ~= "Mythic" and c.rarity ~= "Secret")
-		check("...at its rarity's fixed price", m.gilt == Boutique.MarketPrice[c.rarity])
+		check(m.id .. " is a brainrot found in play, never a Secret", c and c.family == "meme" and c.rarity ~= "Secret")
+		check("...at its rarity's fixed price", m.gilt == Boutique.marketGilt(c.rarity))
 	end
-	check("one in each band: Common or Uncommon, Rare, Epic, Legendary", (rarities[1] == "Common" or rarities[1] == "Uncommon") and rarities[2] == "Rare" and rarities[3] == "Epic" and rarities[4] == "Legendary")
+	check("one in each band: Common or Uncommon, Rare, Epic, Legendary (and Mythic)", (rarities[1] == "Common" or rarities[1] == "Uncommon") and rarities[2] == "Rare" and rarities[3] == "Epic" and rarities[4] == "Legendary" and (rarities[5] == nil or rarities[5] == "Mythic"))
+	check("Build 105: the price climbs steeply with rarity", Boutique.marketGilt("Common") < Boutique.marketGilt("Uncommon") and Boutique.marketGilt("Uncommon") < Boutique.marketGilt("Rare") and Boutique.marketGilt("Rare") < Boutique.marketGilt("Epic") and Boutique.marketGilt("Epic") < Boutique.marketGilt("Legendary") and Boutique.marketGilt("Legendary") < Boutique.marketGilt("Mythic") and Boutique.marketGilt("Mythic") >= 2 * Boutique.marketGilt("Legendary"))
 	local same = Boutique.market()
 	check("every server shows the same four today", same[1].id == four[1].id and same[4].id == four[4].id)
 	local tomorrow = Boutique.market(os.time() + 86400)

@@ -4,6 +4,6 @@
 -- see whether Studio has the latest code from GitHub.
 
 return {
-	number = 104,
-	label = "Build 104 · 25 Nov · island rides, a residence over the city, the Gilt scale, fixes",
+	number = 105,
+	label = "Build 105 · 25 Nov · infinity pool, brainrot squads and gallery, the Market and Auction stage, groups, mischief, easier driving",
 }

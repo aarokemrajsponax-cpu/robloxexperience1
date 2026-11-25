@@ -139,6 +139,7 @@ function ExecutivePanel.open()
 	end
 	fill = function(s: { [string]: any })
 		clear(body)
+		local keyW0 = math.min(320, w - 72)
 		local invites, most = tonumber(s.invites) or 0, tonumber(s.most) or 5
 		local price = tonumber(s.invitePrice) or 25000
 		local figures = Directory.figures({ executive = { inviteHaul = s.inviteHaul, invitePrice = s.invitePrice, most = s.most } })
@@ -151,8 +152,77 @@ function ExecutivePanel.open()
 			elseif armed then "One thing left: an invitation (step 2)."
 			else "Two things to go up: your free stun pistol, and an invitation."
 		words(body, needs, 16, "bodyBold", 1, if ready then DONE else GOLD)
+		-- (Build 105) Your group: one to four go up together, one group in the Suite at a time.
+		local gv = if type(s.groups) == "table" then s.groups else nil
+		if gv then
+			local gc = card(body, "Group", 2, GOLD)
+			words(gc, "Your group  ·  one to " .. tostring(gv.most or 4) .. " go up together, one group at a time", 11, "caps", 1, GOLD)
+			local suiteLine = if type(gv.suite) == "table" then string.format("The Suite now: %s's group is up there (%d).", tostring(gv.suite.group), tonumber(gv.suite.count) or 1) else "The Suite is free."
+			if (tonumber(gv.line) or 0) > 0 then
+				suiteLine ..= string.format("  %d group%s waiting.", gv.line, if gv.line == 1 then "" else "s")
+			end
+			words(gc, suiteLine, 12, "body", 2, C.bone)
+			local mine = gv.mine
+			local row = frame(gc, "Sizes", 4)
+			local rl = Theme.list(row, 6, true)
+			rl.HorizontalAlignment = Enum.HorizontalAlignment.Left
+			local leads = type(mine) ~= "table" or mine.leader == true
+			if type(mine) == "table" then
+				local names = {}
+				for _, m in mine.members or {} do
+					table.insert(names, tostring(m.name) .. (if m.leader then " (leads)" else ""))
+				end
+				local where = if mine.called then "It's your group's turn: go up now."
+					elseif mine.holds then "The Suite is your group's: go up any time."
+					elseif mine.place then string.format("Your group is %s in line.", if mine.place == 1 then "first" else ("number " .. tostring(mine.place)))
+					else "Ready when you are."
+				words(gc, string.format("%d of %d: %s. %s", #(mine.members or {}), tonumber(mine.size) or 1, table.concat(names, ", "), where), 13, "bodyBold", 3, if mine.called or mine.holds then DONE else C.bone)
+			else
+				words(gc, "Going up alone, or with others? Choose how many go:", 13, "bodyBold", 3, C.bone)
+			end
+			if leads then
+				for n = 1, tonumber(gv.most) or 4 do
+					local on = type(mine) == "table" and mine.size == n
+					local k = Theme.key(row, if n == 1 then "Just me" else tostring(n), on, function()
+						act({ op = "act", id = "executive", act = "group", n = n })
+					end, 96)
+					k.LayoutOrder = n
+				end
+			end
+			if type(mine) == "table" and mine.leader and #(mine.members or {}) < (tonumber(mine.size) or 1) then
+				local others = gv.others or {}
+				if #others > 0 then
+					words(gc, "Ask someone in the house:", 12, "body", 5)
+					local ask = frame(gc, "Ask", 6)
+					local al = Theme.list(ask, 6, true)
+					al.HorizontalAlignment = Enum.HorizontalAlignment.Left
+					al.Wraps = true
+					for i, o in others do
+						if i > 6 then
+							break
+						end
+						local k = Theme.key(ask, (if o.invited then "Asked: " else "Ask ") .. tostring(o.name), false, function()
+							act({ op = "act", id = "executive", act = "groupInvite", n = o.userId })
+						end, 170)
+						k.LayoutOrder = i
+					end
+				end
+			end
+			for i, inv in gv.invites or {} do
+				local k = Theme.key(gc, string.format("Join %s's group (%d of %d)", tostring(inv.name), tonumber(inv.count) or 1, tonumber(inv.size) or 1), true, function()
+					act({ op = "act", id = "executive", act = "groupJoin", n = inv.userId })
+				end, keyW0)
+				k.LayoutOrder = 7 + i
+			end
+			if type(mine) == "table" and #(mine.members or {}) > 1 then
+				local k = Theme.key(gc, "Leave the group", false, function()
+					act({ op = "act", id = "executive", act = "groupLeave" })
+				end, 180)
+				k.LayoutOrder = 20
+			end
+		end
 		-- The two columns (one above the other on a narrow screen).
-		local columns = frame(body, "Columns", 2)
+		local columns = frame(body, "Columns", 3)
 		local cl = Theme.list(columns, 12, wide)
 		cl.VerticalAlignment = Enum.VerticalAlignment.Top
 		cl.HorizontalAlignment = Enum.HorizontalAlignment.Left

@@ -922,6 +922,13 @@ local function keyAxis(plus: { Enum.KeyCode }, minus: { Enum.KeyCode }): number
 	return v
 end
 
+-- A touch screen with no keyboard (a phone or tablet): the driving assist is on.
+function CarDrive.touchAssist(): boolean
+	return UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+end
+
+local steerNow = 0
+
 -- One frame at the wheel (exposed for tests).
 function CarDrive.step(dt: number)
 	local model = driving
@@ -941,6 +948,7 @@ function CarDrive.step(dt: number)
 	if chassis.Anchored then
 		-- Parked, or on the grid: still, facing as it stands.
 		speed = 0
+		steerNow = 0
 		local look = chassis.CFrame.LookVector
 		yaw = math.atan2(-look.X, -look.Z)
 		drive.VectorVelocity = Vector3.zero
@@ -955,6 +963,14 @@ function CarDrive.step(dt: number)
 	if steering == 0 then
 		steering = keyAxis({ Enum.KeyCode.D, Enum.KeyCode.Right }, { Enum.KeyCode.A, Enum.KeyCode.Left })
 	end
+	-- (Build 105) Easier to drive: on a phone or tablet in a race the car drives itself forward
+	-- (the thumb steers; pulled back, it brakes), and the steering is shaped and eased in, so a
+	-- thumb's small correction is a small turn rather than a swerve.
+	if CarDrive.touchAssist() and race.mine and race.state == "racing" then
+		throttle = GrandPrix.autoThrottle(throttle)
+	end
+	steerNow += (GrandPrix.shapeSteer(steering) - steerNow) * math.min(1, dt * 10)
+	steering = steerNow
 	-- Into a wall: the car is as fast as it truly goes.
 	local forward = Vector3.new(-math.sin(yaw), 0, -math.cos(yaw))
 	local read, velocity = pcall(function()

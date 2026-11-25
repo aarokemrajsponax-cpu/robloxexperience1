@@ -55,9 +55,9 @@ end
 ---------------------------------------------------------------------------------------------------
 local week = Lots.week(T)
 local lots = Lots.forWeek(week, T)
-check("three lots a week (no season in mid-November)", #lots == 3)
+check("Build 105: four lots a week (no season in mid-November)", #lots == Lots.PER_WEEK and Lots.PER_WEEK == 4)
 local again = Lots.forWeek(week, T + 3600)
-check("the same lots in every server, all week", again[1].id == lots[1].id and again[3].id == lots[3].id)
+check("the same lots in every server, all week", again[1].id == lots[1].id and again[4].id == lots[4].id)
 local nextWeek = Lots.forWeek(week + 1, T + 7 * 86400)
 check("next week, others", nextWeek[1].key ~= lots[1].key)
 local endsAt = os.date("!*t", lots[1].ends)
@@ -70,7 +70,27 @@ for _, l in winter do
 		seasonal = l
 	end
 end
-check("in its season, a seasonal lot as well", #winter == 4 and seasonal ~= nil and seasonal.key == "cigno")
+local winterSeasonal = 0
+for _, l in winter do
+	if l.seasonal then
+		winterSeasonal += 1
+	end
+end
+check("in its season, the season's lots as well (Build 105: the swan and the ice reindeer at Christmas)", #winter == Lots.PER_WEEK + 2 and winterSeasonal == 2 and seasonal ~= nil)
+check("Build 105: a lot's first bid in Gilt is at the house's Gilt scale; in Gems as set", (function()
+	for _, l in lots do
+		local base = nil
+		for _, b in Lots.Pool do
+			if b.key == l.key then
+				base = b
+			end
+		end
+		if not base or l.start ~= Lots.startOf(base) then
+			return false
+		end
+	end
+	return true
+end)())
 local allReal = true
 for _, l in Lots.Pool do
 	if not CurioList.byId[l.curio] then
@@ -101,7 +121,7 @@ run(Auction.start)
 local ada, bo = H.guest("Ada", 901), H.guest("Bo", 902)
 data(ada).gilt, data(bo).gilt = 100000, 100000
 local board = askAs(ada, { op = "board" })
-check("the board: this week's lots, their time left, no bids yet", board.ok == true and #board.lots == 3 and board.lots[1].high == 0 and board.lots[1].left > 0 and board.lots[1].minNext == board.lots[1].start)
+check("the board: this week's lots, their time left, no bids yet", board.ok == true and #board.lots == Lots.PER_WEEK and board.lots[1].high == 0 and board.lots[1].left > 0 and board.lots[1].minNext == board.lots[1].start)
 local r = askAs(ada, { op = "bid", lot = giltLot.id, amount = giltLot.start - 1 })
 check("under the least bid: refused, and nothing taken", r.ok == false and string.find(r.why, "least bid", 1, true) ~= nil and data(ada).gilt == 100000, r.why)
 data(ada).gilt = giltLot.start - 1

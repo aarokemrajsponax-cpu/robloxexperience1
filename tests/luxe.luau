@@ -1487,6 +1487,93 @@ do
 	calm()
 end
 
+-- (Build 105) Midway Steal: a piece out of a nearby guest's bag, paid for only when it lands.
+do
+	local function into(g)
+		if Attractions.inside(g) ~= "luxe" then
+			if Attractions.inside(g) then
+				askAs(g, { op = "home" })
+			end
+			advance(3)
+			inLounge(g)
+			local rr = askAs(g, { op = "go", id = "luxe" })
+			check("(" .. g.Name .. " in for the Midway Steal)", rr.ok == true, rr.why)
+			askAs(g, { op = "ready", id = "luxe" })
+			steps(math.ceil(Config.data.Attractions.loadIn * 10) + 2)
+		end
+	end
+	into(ava)
+	into(ben)
+	parkGuards()
+	calm()
+	local held, spent, offered = 0, 0, 0
+	local kept = table.clone(Luxe.mischief)
+	Luxe.mischief.held = function()
+		return held
+	end
+	Luxe.mischief.spend = function()
+		if held > 0 then
+			held -= 1
+			spent += 1
+			return true
+		end
+		return false
+	end
+	Luxe.mischief.onSale = function()
+		return true
+	end
+	Luxe.mischief.offer = function()
+		offered += 1
+		return true, nil
+	end
+	local va, vb = Luxe.runs[ava], Luxe.runs[ben]
+	va.bag, va.giltOf, va.from = {}, {}, {}
+	vb.bag, vb.giltOf, vb.from = {}, {}, {}
+	local A = Plan.Arrival.Position
+	standIn(ava, A)
+	standIn(ben, A + Vector3.new(4, 0, 0))
+	r = askAs(ava, { op = "act", id = "luxe", act = "midway", n = ben.UserId })
+	check("Midway Steal: someone carrying nothing can't be robbed", r.ok == false and spent == 0 and offered == 0 and string.find(r.why, "isn't carrying") ~= nil, r.why)
+	local cheap, dear = Plan.Pieces[1], Plan.Pieces[1]
+	for _, p in Plan.Pieces do
+		if p.worth < cheap.worth then
+			cheap = p
+		end
+		if p.worth > dear.worth then
+			dear = p
+		end
+	end
+	vb.bag, vb.giltOf, vb.from = { cheap, dear }, { 10, 999 }, { 1, 2 }
+	ben:SetAttribute("LuxeBag", 2)
+	r = askAs(ava, { op = "act", id = "luxe", act = "midway", n = ben.UserId })
+	check("...with none held, it opens Roblox's purchase window, and nothing moves", r.ok == false and r.prompted == true and offered == 1 and #vb.bag == 2 and #va.bag == 0)
+	held = 1
+	standIn(ben, A + Vector3.new(Luxe.MIDWAY.reach + 6, 0, 0))
+	r = askAs(ava, { op = "act", id = "luxe", act = "midway", n = ben.UserId })
+	check("...out of reach: refused, and nothing spent", r.ok == false and held == 1 and spent == 0 and #vb.bag == 2, r.why)
+	r = askAs(ava, { op = "act", id = "luxe", act = "midway", n = ava.UserId })
+	check("...nobody robs themselves", r.ok == false and held == 1)
+	standIn(ben, A + Vector3.new(4, 0, 0))
+	r = askAs(ava, { op = "act", id = "luxe", act = "midway", n = ben.UserId })
+	check("in reach with one held: the finest piece moves to the thief's bag, one play spent", r.ok == true and r.piece == dear.id and spent == 1 and held == 0 and #vb.bag == 1 and vb.bag[1] == cheap and #va.bag == 1 and va.bag[1] == dear, r.why)
+	check("...its plinth goes with it, and the victim keeps the rest (and its Gilt)", va.from[1] == 2 and vb.from[1] == 1 and vb.giltOf[1] == 10 and #vb.giltOf == 1)
+	check("...the thief's Gilt for it is quoted afresh for them", type(r.gilt) == "number" and r.gilt > 0 and va.giltOf[1] == r.gilt)
+	check("...both are told", last(ava, "notice") ~= nil and last(ava, "notice").title == "Midway Steal" and last(ben, "notice") ~= nil and last(ben, "notice").title == "Robbed mid-heist")
+	steps(1)
+	check("...and every screen sees who now carries what", ava:GetAttribute("LuxeBag") == 1 and ben:GetAttribute("LuxeBag") == 1)
+	held = 3
+	r = askAs(ben, { op = "act", id = "luxe", act = "midway", n = ava.UserId })
+	check("the one robbed may steal it straight back (with a play of their own)", r.ok == true and r.piece == dear.id and held == 2 and #vb.bag == 2 and #va.bag == 0, r.why)
+	local before = spent
+	r = askAs(ava, { op = "act", id = "luxe", act = "midway", n = ben.UserId })
+	check("a guest just robbed is safe for a while: refused, nothing spent", r.ok == false and spent == before and string.find(r.why, "safe") ~= nil, r.why)
+	for k, v in kept do
+		Luxe.mischief[k] = v
+	end
+	parkGuards()
+	calm()
+end
+
 -- A malformed request.
 r = askAs(ben, "go")
 check("a request that isn't one is refused", type(r) == "table" and r.ok == false)

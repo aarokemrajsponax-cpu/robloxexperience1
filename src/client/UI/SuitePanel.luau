@@ -317,6 +317,52 @@ function SuitePanel.open(start: string?)
 			order += 1
 			return order
 		end
+		-- (Build 105) The Infinity Pool: offered at the top of every room until it's theirs (its
+		-- price in Gilt and in Gems, plainly), then shown as theirs on the first room's page.
+		local pool = v.pool
+		if type(pool) == "table" and (not pool.owned or room == Suite.Rooms[1]) then
+			local pc = card(scroll, add())
+			pc.Name = "Pool"
+			Theme.text(pc, "🏊  " .. tostring(pool.name or "The Infinity Pool"), 17, "bodyMedium", { LayoutOrder = 1, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = C.lightGold })
+			Theme.text(pc, tostring(pool.line or ""), 13, "body", { LayoutOrder = 2, TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true, TextColor3 = C.smoke, AutomaticSize = Enum.AutomaticSize.Y, Size = UDim2.new(1, 0, 0, 0) })
+			local keys = Instance.new("Frame")
+			keys.Name = "Keys"
+			keys.BackgroundTransparency = 1
+			keys.AutomaticSize = Enum.AutomaticSize.Y
+			keys.Size = UDim2.new(1, 0, 0, 0)
+			keys.LayoutOrder = 3
+			keys.Parent = pc
+			local row = Theme.list(keys, 8)
+			row.FillDirection = Enum.FillDirection.Horizontal
+			row.Wraps = true
+			if pool.owned then
+				Theme.text(keys, "Yours: in your garden, by the glass", 13, "caps", { LayoutOrder = 1, TextColor3 = C.lightGold })
+			else
+				local function buy(how: string)
+					task.spawn(function()
+						local r = Closet.ask({ op = "buyPool", how = how })
+						if type(r) == "table" and r.ok then
+							Toast.show("Your Suite", "The Infinity Pool is yours: it's in your garden now, by the glass.", 4)
+							reload()
+						elseif type(r) == "table" and r.short then
+							Toast.refused(r)
+						else
+							Toast.show("Your Suite", tostring(if type(r) == "table" and r.why then r.why else "One moment."), 3)
+						end
+					end)
+				end
+				local giltPrice = tonumber(pool.gilt) or 0
+				local gemPrice = tonumber(pool.gems) or 0
+				local held = tonumber(pool.heldGems) or 0
+				priceKey(keys, 1, RoundPanel.number(giltPrice) .. " Gilt", true, true, function()
+					buy("gilt")
+				end)
+				priceKey(keys, 2, tostring(gemPrice) .. " Gems", false, true, function()
+					buy("gems")
+				end)
+				Theme.text(keys, string.format("You have %s Gilt · %d Gems", RoundPanel.number(gilt), held), 12, "body", { LayoutOrder = 3, TextColor3 = C.dim })
+			end
+		end
 		local spotsHere = {}
 		for _, spot in v.spots do
 			if spot.room == room then

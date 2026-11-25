@@ -10,6 +10,8 @@
 --                   visit (friends, only friends you invite, or nobody), and the photograph
 -- Pure rules, shared by the server (which decides everything) and the screens.
 
+local Fortune = require(script.Parent.Fortune)
+
 local Showcase = {}
 
 local rgb = Color3.fromRGB
@@ -78,9 +80,14 @@ for _, t in Showcase.Themes do
 end
 
 -- What a theme costs or needs, in a few words.
+-- (Build 105) A theme's Gilt price at the house's Gilt scale (what's taken is what's shown).
+function Showcase.themeGilt(t: Theme): number
+	return if t.gilt then Fortune.scaled(t.gilt) else 0
+end
+
 function Showcase.themePrice(t: Theme): string
 	if t.gilt then
-		return Showcase.commas(t.gilt) .. " Gilt"
+		return Showcase.commas(Showcase.themeGilt(t)) .. " Gilt"
 	elseif t.gems then
 		return Showcase.commas(t.gems) .. " Gems"
 	elseif t.islandKey then

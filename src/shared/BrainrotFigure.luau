@@ -73,6 +73,10 @@ BrainrotFigure.Specs = {
 	cignoInverno = { body = "critter", colour = rgb(220, 240, 255), second = rgb(150, 210, 255), mood = "shy", wear = { "snow" }, feature = { beak = true, neck = 0.6, wings = true } },
 	coniglioPrimavera = { body = "critter", colour = rgb(244, 220, 230), second = rgb(220, 180, 90), mood = "happy", wear = { "waistcoat", "flower" }, feature = { ears = "long" } },
 	zuccaArgento = { body = "pumpkin", colour = rgb(200, 200, 212), mood = "smug", wear = { "candle" } },
+	-- (Build 105) The Grand Auction's three new limited lots.
+	leoneOro = { body = "critter", colour = rgb(236, 180, 60), second = rgb(150, 30, 50), mood = "proud", wear = { "crown", "cape", "sparkles" }, feature = { ears = "round", mane = true, snout = "short", tail = "thin" } },
+	corvoDiamante = { body = "critter", colour = rgb(44, 48, 66), second = rgb(150, 232, 255), mood = "smug", wear = { "monocle", "gem", "sparkles" }, feature = { beak = true, wings = true } },
+	rennaGhiaccio = { body = "critter", colour = rgb(206, 232, 255), second = rgb(120, 180, 255), mood = "happy", wear = { "snow", "scarf" }, feature = { ears = "pointed", horns = true, snout = "short" } },
 	midnightOwl = { body = "critter", colour = rgb(50, 50, 80), second = rgb(220, 200, 120), mood = "sleepy", wear = { "moon" }, feature = { beak = true, bigEyes = true, tufts = true, wings = true } },
 } :: { [string]: Spec }
 

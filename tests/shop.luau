@@ -3178,4 +3178,72 @@ do
 	AbuseShowS.home, AbuseShowS.makeAvatar = homeWas, makeWas
 end
 
+---------------------------------------------------------------------------------------------------
+-- (Build 105) The panel prompts in a private wing: a copy of the Suite and the Vault made after
+-- the house started (every guest's own wing). Its Register, Arrange, Furnish and Wardrobe prompts
+-- used to do nothing; each one now opens its panel.
+---------------------------------------------------------------------------------------------------
+do
+	local CollectionService = H.game:GetService("CollectionService")
+	local wingGuest = guest("Wynn", 4401)
+	local before = Shop.wiredPrompts()
+	local function made(tag)
+		local part = Instance.new("Part")
+		part.Name = tag
+		local prompt = Instance.new("ProximityPrompt")
+		prompt.Parent = part
+		CollectionService:AddTag(part, tag)
+		return prompt
+	end
+	local opened = {}
+	for tag, panel in { RegisterBook = "register", VaultLedger = "showcase", SuiteFurnish = "suite", WardrobeMirror = "wardrobe" } do
+		local prompt = made(tag)
+		advance(0.05)
+		local n = #wingGuest.inbox
+		prompt.Triggered:Fire(wingGuest)
+		local m = wingGuest.inbox[#wingGuest.inbox]
+		opened[tag] = #wingGuest.inbox == n + 1 and m.op == "open" and m.panel == panel
+	end
+	check("a wing's Register prompt (made after the house started) opens the Register", opened.RegisterBook == true)
+	check("...its Vault display's Arrange opens the display", opened.VaultLedger == true)
+	check("...its Suite bell's Furnish opens the furnishing", opened.SuiteFurnish == true)
+	check("...and its wardrobe opens your looks", opened.WardrobeMirror == true)
+	check("each prompt wired once, however it arrived", Shop.wiredPrompts() == before + 4, Shop.wiredPrompts() - before)
+end
+
+---------------------------------------------------------------------------------------------------
+-- (Build 105) The Infinity Pool, for a guest's own Suite: 57,000 Gilt or 150 Gems, once.
+---------------------------------------------------------------------------------------------------
+do
+	local swimmer = guest("Swim", 4402)
+	local d = profiles[swimmer].Data
+	local built = {}
+	local was = Shop.poolChanged
+	Shop.poolChanged = function(p)
+		table.insert(built, p)
+	end
+	local view = askAs(swimmer, { op = "suite" })
+	check("the Suite's page offers the Infinity Pool, its prices plain: 57,000 Gilt or 150 Gems", type(view.pool) == "table" and view.pool.owned == false and view.pool.gilt == 57000 and view.pool.gems == 150)
+	d.gilt, d.gems = 56999, 149
+	local r = askAs(swimmer, { op = "buyPool", how = "gilt" })
+	check("a Gilt short of it: refused, nothing taken", r.ok == false and r.short == "Gilt" and d.gilt == 56999 and d.flags.infinityPool ~= true)
+	r = askAs(swimmer, { op = "buyPool", how = "gems" })
+	check("a Gem short of it: refused, nothing taken", r.ok == false and r.short == "Gems" and d.gems == 149 and d.flags.infinityPool ~= true)
+	r = askAs(swimmer, { op = "buyPool", how = "robux" })
+	check("only Gilt or Gems", r.ok == false and d.gilt == 56999)
+	d.gilt = 60000
+	r = askAs(swimmer, { op = "buyPool", how = "gilt" })
+	check("bought for Gilt: exactly 57,000 taken, the pool theirs for good (saved)", r.ok == true and d.gilt == 3000 and d.gems == 149 and d.flags.infinityPool == true and swimmer:GetAttribute("SuitePool") == true)
+	check("...and their wing is told to build it", #built == 1 and built[1] == swimmer)
+	r = askAs(swimmer, { op = "buyPool", how = "gilt" })
+	check("never sold twice: a second try takes nothing", r.ok == false and d.gilt == 3000 and #built == 1)
+	check("...and the page says it's theirs", askAs(swimmer, { op = "suite" }).pool.owned == true)
+	local diver = guest("Dive", 4403)
+	local dd = profiles[diver].Data
+	dd.gems = 400
+	r = askAs(diver, { op = "buyPool", how = "gems" })
+	check("bought for Gems: exactly 150 taken", r.ok == true and dd.gems == 250 and dd.flags.infinityPool == true and diver:GetAttribute("Gems") == 250)
+	Shop.poolChanged = was
+end
+
 H.finish()

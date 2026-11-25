@@ -638,7 +638,7 @@ local function render()
 			boosterRow(frame, b, add())
 		end
 	elseif currentTab == "market" then
-		note(frame, "Four brainrots a day for Gilt, a fixed price by rarity.", add())
+		note(frame, "Five brainrots a day for Gilt, a Mythic among them: a fixed price by rarity, steeper the rarer.", add())
 		note(frame, "The exact one shown, never a random pick. One of each a day.", add())
 		if type(s.turnsIn) == "number" then
 			note(frame, "New brainrots in " .. hm(s.turnsIn) .. ".", add())

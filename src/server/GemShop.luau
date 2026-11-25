@@ -145,7 +145,7 @@ function GemShop.buy(player: Player, data: Profiles.Data, id: string): { [string
 		;(s :: any)[key] = math.min(now + GemList.SURGE_CAP, from + (item.style.seconds :: number))
 		GemShop.award(player, "surge")
 	elseif item.kind == "exchange" then
-		local gilt = item.style.gilt :: number
+		local gilt = GemList.exchangeGilt(item)
 		data.gilt += gilt
 		Analytics.source(player, "Gilt", gilt, data.gilt, "Gems changed for Gilt")
 		Gilt.changed(player)

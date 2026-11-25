@@ -377,6 +377,35 @@ a Nightly attempt or a Mythic's odds.
 - **The launch kit**: page text, icon, thumbnails and the gameplay video's shot list are in
   [`LAUNCH.md`](LAUNCH.md).
 
+## Build 105 — pool, squads, the Market and the Auction stage, groups, mischief, easier driving
+
+- **Prompts answer at once.** Sit, Play and every E prompt ask the server straight away (walking
+  up first only when the server says it's too far). Prompts inside the private Vault and Suite
+  (Register, Arrange displays, Furnish) are wired as they appear, so they work in every wing.
+- **The Infinity Pool** (shared/Suite.Pool): 57,000 Gilt or 150 Gems, all or nothing, built in the
+  Suite's garden with its own loungers. **Suite security**: a guest in their own wing who strays
+  out of it twice is brought back, and the garden counts as the Suite.
+- **Brainrot squads walk behind their owner**: three, or six with the Penthouse, drawn on every
+  screen nearby. **The Vault's Brainrot Gallery**: up to 12 figures on gold-edged steps.
+- **The economy**: a rarity price ladder for the Brainrot Market (Common 1,500 up to Mythic
+  90,000 base Gilt, times the Gilt scale), Gem packs re-sized against Robux, and five Market
+  picks a day. Three new Mythic auction lots and seasonal lots, four a week.
+- **The Boutique and the Auction stand out**: the day's two rarest Market brainrots turn on the
+  Boutique's plinths with their real price, the door glows, and the week's real lots stand on the
+  Auction's plinths with the standing bid and the real close.
+- **Executive Suite groups**: pick a group of one to four before going up. One group is in the
+  Suite at a time; others wait in line and get 60 seconds when it's their turn. (Groups take
+  turns: separate copies of the Suite would mean rebuilding its run state, so it's a queue.)
+- **Mischief** (server/Purchases/Mischief): **Midway Steal** (Steal a Luxe: the finest piece out
+  of a nearby carrier's bag) and **Basement Push**, 19 Robux each, held until used. A play is
+  spent only when it lands. Each has a cooldown, and a guest just hit is safe for a while. The
+  key shows only when someone is in reach. Make both in Creator Hub with these exact names.
+- **The Grand Prix is easier to drive**: tyres hold more in the bends (grip 66 to 84). Steering is
+  shaped (fine near the middle, with a small dead zone) and eased in. On a phone or tablet in a
+  race the car drives itself forward: the thumb steers, and pulling back brakes.
+- **Luxury Island** is marked coming soon. **Marketing**: a trailer from the game's own renders
+  (`marketing/trailer-105.mp4`) and a free posting plan (MARKETING.md section 9).
+
 ## Build 104 — island rides, a residence over the city, the Gilt scale, fixes
 
 - **The House Tour key is on the right**, in the bottom-right corner's stack: just above the Friend

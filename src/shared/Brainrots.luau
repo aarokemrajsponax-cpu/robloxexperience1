@@ -13,6 +13,7 @@
 -- None of it touches a score: the boards stay fair.
 
 local Curios = require(script.Parent.Curios)
+local Fortune = require(script.Parent.Fortune)
 
 local Brainrots = {}
 
@@ -29,7 +30,9 @@ Brainrots.JAR_HOURS = 8 -- the tip jar holds this many hours of what the squad e
 Brainrots.OFFLINE_SHARE = 0.2
 Brainrots.OFFLINE_HOURS = 12
 
--- Gilt an hour for one at ★1, by rarity.
+-- Gilt an hour for one at ★1, by rarity (base figures: Brainrots.rate pays them at the house's
+-- Gilt scale, shared/Fortune, like every other reward: x10 as it ships, so a Legendary earns
+-- 10,000 Gilt an hour at ★1).
 Brainrots.Rate = {
 	Common = 40,
 	Uncommon = 90,
@@ -127,7 +130,8 @@ function Brainrots.rate(id: string, count: number, mut: string?): number
 	end
 	local base = Brainrots.Rate[c.rarity] or 0
 	local stars = math.max(1, Brainrots.stars(count))
-	return math.floor(base * Brainrots.STAR_FACTOR ^ (stars - 1) * mutMult(mut) + 0.5)
+	-- (Build 105) At the house's Gilt scale.
+	return Fortune.scaled(math.floor(base * Brainrots.STAR_FACTOR ^ (stars - 1) * mutMult(mut) + 0.5))
 end
 
 -- (Build 88) Boosters: every brainrot has one ability, and once a day each one in your squad can

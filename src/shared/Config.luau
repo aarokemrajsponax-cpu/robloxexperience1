@@ -885,7 +885,7 @@ local defaults = {
 	-- Fortune (shared/Fortune, server/Fortune): everything a guest owns, in Gilt. The house's aim:
 	-- build your fortune, master the Maison, become the wealthiest.
 	Fortune = {
-		gemWorth = 40, -- a Gem's worth in a Fortune (the Gem Shop's own rate: 25 Gems, 1,000 Gilt)
+		gemWorth = 400, -- a Gem's worth in a Fortune (the Gem Shop's own rate at the house's Gilt scale: 25 Gems, 10,000 Gilt)
 		mythicWorth = 2500, -- a Mythic piece in the Vault
 		cashShare = 0.2, -- the part of a haul's worth paid in Gilt when it's banked (the rest is Estate)
 		syncSeconds = 2, -- how often each guest's Fortune is worked out again
@@ -1055,7 +1055,8 @@ local defaults = {
 			-- offered, and the server refuses the way in. (Build 103) Open: the whole loop works (the
 			-- key, the flight, the pearls, the summit path and the toast, the postcards, the
 			-- Exchange, Island Standing, home). Set true to close it again; nothing else changes.
-			comingSoon = false,
+			-- (Build 105) Closed again, coming soon, while it's finished: set false to open it.
+			comingSoon = true,
 			origin = { 0, 0, 4200 },
 			keyRank = 6, -- Tycoon (shared/Fortune's ranks)
 			keyGilt = 25000,
@@ -1128,7 +1129,7 @@ local defaults = {
 		payoutScale = 10,
 		runDivisor = 40,
 		runMax = 400,
-		dailySoftCap = 12000,
+		dailySoftCap = 18000, -- (Build 105: from 12,000, so a good evening's play reaches the pricier ladder)
 		softCapRate = 0.25,
 		goldKeyBonus = 0.2, -- the Gold Key: +20% on all Gilt
 		-- Every Boutique piece on the shelves can also be bought with Gilt: this many Gilt for

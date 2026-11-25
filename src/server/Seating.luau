@@ -213,7 +213,7 @@ local function onAsk(player: Player, request: unknown): any
 	end
 	local target = at :: CFrame
 	if (target.Position - root.Position).Magnitude > REACH then
-		return { ok = false, why = "Come a little closer." }
+		return { ok = false, far = true, why = "Come a little closer." }
 	end
 	return { ok = sitAt(player, humanoid, target, spot) }
 end

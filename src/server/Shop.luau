@@ -93,6 +93,13 @@ function Shop.giltAltFor(item: Wardrobe.Item): number?
 	return giltAlt(item)
 end
 
+-- (Build 105) A house piece's own Gilt price (the pieces sold only for Gilt, or for a standing),
+-- at the house's Gilt scale like everything it pays: nil for one with no Gilt price.
+local function giltPrice(item: Wardrobe.Item): number?
+	return if type(item.gilt) == "number" then GiltScale.scaled(item.gilt :: number) else nil
+end
+Shop.giltPriceOf = giltPrice
+
 local function standingOf(data: Profiles.Data): string
 	return (Standing.of(data.nights.count, data.stats.rounds))
 end
@@ -144,6 +151,8 @@ end
 -- Called after a guest's state goes to their screen (set by Main: friends visiting their Suite
 -- see it change too).
 Shop.pushed = function(_player: Player) end
+-- (Build 105) A guest's Infinity Pool was just bought (set by Main: server/Wings builds it).
+Shop.poolChanged = function(_player: Player) end
 
 function Shop.push(player: Player)
 	local data = Profiles.get(player)
@@ -165,7 +174,7 @@ local function card(item: Wardrobe.Item, data: Profiles.Data): { [string]: any }
 		kindName = Wardrobe.KindNames[item.kind],
 		line = item.line,
 		robux = robux,
-		gilt = item.gilt,
+		gilt = giltPrice(item),
 		giltAlt = giltAlt(item),
 		standing = item.standing,
 		locked = locked,
@@ -803,7 +812,7 @@ local function buyWithGilt(player: Player, data: Profiles.Data, itemId: string):
 	end
 	-- The house's own pieces have a Gilt price; a Boutique piece can be had for Gilt on the days
 	-- it's on the shelves.
-	local cost: number? = if item.source == "gilt" or item.source == "standing" then item.gilt else nil
+	local cost: number? = if item.source == "gilt" or item.source == "standing" then giltPrice(item) else nil
 	if item.source == "boutique" then
 		if not Boutique.onSale(item.id, Season.current().id) then
 			return { ok = false, why = "That piece isn't on the shelves today." }
@@ -973,6 +982,8 @@ onAsk = function(player: Player, request: unknown): any
 		return CircleService.leave(player, data)
 	elseif op == "suite" then
 		return Shop.suite(data)
+	elseif op == "buyPool" and type(r.how) == "string" and #(r.how :: string) <= 8 then
+		return Shop.buyPool(player, data, r.how :: string)
 	elseif op == "place" and type(r.spot) == "string" and type(r.id) == "string" then
 		return Shop.place(player, data, r.spot :: string, r.id :: string)
 	elseif op == "blackCard" then
@@ -1022,7 +1033,7 @@ function Shop.suite(data: Profiles.Data): { [string]: any }
 				line = item.line,
 				owned = mine,
 				source = item.source,
-				gilt = item.gilt,
+				gilt = giltPrice(item),
 				robux = item.robux,
 				standing = item.standing,
 				standingOk = item.standing == nil or Standing.atLeast(data.nights.count, data.stats.rounds, item.standing),
@@ -1048,7 +1059,46 @@ function Shop.suite(data: Profiles.Data): { [string]: any }
 			options = options,
 		})
 	end
-	return { spots = spots, rooms = Suite.RoomNames, gilt = data.gilt, goldKey = data.goldKey }
+	local P = Suite.Pool
+	return {
+		spots = spots,
+		rooms = Suite.RoomNames,
+		gilt = data.gilt,
+		goldKey = data.goldKey,
+		-- (Build 105) The Infinity Pool: its prices, and whether it's theirs.
+		pool = { owned = data.flags.infinityPool == true, gilt = P.gilt, gems = P.gems, name = P.name, line = P.line, heldGems = data.gems },
+	}
+end
+
+-- (Build 105) Buys the Infinity Pool for a guest's own Suite, once, at the price shown: all of it
+-- in Gilt or all of it in Gems (`how`), or nothing at all. Kept for good.
+function Shop.buyPool(player: Player, data: Profiles.Data, how: string): { [string]: any }
+	local P = Suite.Pool
+	if data.flags.infinityPool == true then
+		return { ok = false, why = "The Infinity Pool is already yours." }
+	end
+	if how == "gilt" then
+		if data.gilt < P.gilt then
+			return { ok = false, short = "Gilt", why = string.format("Insufficient Gilt: %s more.", Gilt.format(P.gilt - data.gilt)) }
+		end
+		data.gilt -= P.gilt
+		Analytics.sink(player, "Gilt", P.gilt, data.gilt, "infinityPool")
+		Gilt.changed(player)
+	elseif how == "gems" then
+		if data.gems < P.gems then
+			return { ok = false, short = "Gems", why = string.format("Not enough Gems yet: %d more.", P.gems - data.gems) }
+		end
+		data.gems -= P.gems
+		player:SetAttribute("Gems", data.gems)
+		Analytics.sink(player, "Gems", P.gems, data.gems, "infinityPool")
+	else
+		return { ok = false, why = "Gilt or Gems." }
+	end
+	data.flags.infinityPool = true
+	player:SetAttribute("SuitePool", true)
+	pcall(Shop.poolChanged, player)
+	Shop.push(player)
+	return { ok = true }
 end
 
 -- Puts a piece in a spot of the guest's Suite ("" takes it away).
@@ -1096,6 +1146,16 @@ local function syncGoldKey(player: Player)
 end
 
 -- Opens a panel on a guest's screen ("boutique", "wardrobe" or "ledger").
+-- (Build 105) The panel prompts wired so far (Shop.start): for tests.
+local wired: { [ProximityPrompt]: boolean } = {}
+function Shop.wiredPrompts(): number
+	local n = 0
+	for _ in wired do
+		n += 1
+	end
+	return n
+end
+
 function Shop.open(player: Player, panel: string)
 	shopEvent:FireClient(player, { op = "open", panel = panel })
 end
@@ -1141,16 +1201,35 @@ function Shop.start()
 	registerEligibility()
 	local CollectionService = game:GetService("CollectionService")
 	local panels: { [string]: string } = { BoutiqueCounter = "boutique", WardrobeMirror = "wardrobe", LedgerBook = "ledger", RegisterBook = "register", BlackCardLectern = "blackCard", SuiteFurnish = "suite", CircleBook = "circles", SaluteDesk = "salutes", GuestBook = "guestBook", VaultLedger = "showcase" }
+	-- (Build 105) Wired as each one comes into the world, not only those standing at start: every
+	-- guest's private wing is a copy of the Suite and the Vault made when they arrive, and until
+	-- now its Register, Arrange, Furnish and Wardrobe prompts were never connected (they did
+	-- nothing when pressed).
+	local function wire(part: Instance, panel: string)
+		local p = part:FindFirstChildOfClass("ProximityPrompt")
+		if not p or wired[p] then
+			return
+		end
+		wired[p] = true
+		p.Triggered:Connect(function(player: Player)
+			Shop.open(player, panel)
+		end)
+		pcall(function()
+			p.Destroying:Connect(function()
+				wired[p] = nil
+			end)
+		end)
+	end
 	for tag, panel in panels do
 		for _, part in CollectionService:GetTagged(tag) do
-			local p = part:FindFirstChildOfClass("ProximityPrompt")
-			if p then
-				p.Triggered:Connect(function(player: Player)
-					Shop.open(player, panel)
-				end)
-			end
+			wire(part, panel)
 		end
+		CollectionService:GetInstanceAddedSignal(tag):Connect(function(part: Instance)
+			-- (Deferred: a part tagged before its prompt is put on it still finds it.)
+			task.defer(wire, part, panel)
+		end)
 	end
+
 	task.spawn(function()
 		while true do
 			dressTheForm()

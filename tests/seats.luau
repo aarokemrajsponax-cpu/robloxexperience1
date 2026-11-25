@@ -148,7 +148,7 @@ sitAs(ann, { op = "stand" })
 -- Refusals always say why.
 ann.root.CFrame = CFrame.new(500, 0, 500)
 r = sitAs(ann, { op = "sit", seat = sofaSeat:GetAttribute("SeatId") })
-check("too far: 'Come a little closer.'", type(r) == "table" and r.ok == false and r.why == "Come a little closer.")
+check("too far: 'Come a little closer.' (and says so, so the guest's screen walks them up and asks once more; Build 105: everyone else sits at once)", type(r) == "table" and r.ok == false and r.why == "Come a little closer." and r.far == true)
 r = sitAs(ann, { op = "sit", seat = 999999 })
 check("a seat that isn't there: said so", type(r) == "table" and r.ok == false and r.why == "That seat isn't there any more.")
 r = sitAs(ann, { op = "sit" })

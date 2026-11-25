@@ -61,8 +61,29 @@ GrandPrix.CAR = {
 	coast = 12, -- slowing with no throttle
 	turn = 2.1, -- the most it turns (radians a second), from turnAt and up
 	turnAt = 22, -- below this speed it turns less (a car parked doesn't spin on the spot)
-	grip = 66, -- the most sideways pull the tyres hold: faster than sqrt(grip × r) a bend of radius r runs wide
+	grip = 84, -- the most sideways pull the tyres hold: faster than sqrt(grip × r) a bend of radius r runs wide (Build 105: 66 to 84, the bends easier for everyone)
 }
+
+-- (Build 105) Easier driving. A stick's steering, shaped: fine near the middle (small corrections
+-- stay small), full at the edge; a little dead zone so a resting thumb doesn't wander the car.
+function GrandPrix.shapeSteer(s: number): number
+	s = math.clamp(s, -1, 1)
+	local a = math.abs(s)
+	if a < 0.08 then
+		return 0
+	end
+	local t = (a - 0.08) / 0.92
+	return (if s < 0 then -1 else 1) * (0.35 * t + 0.65 * t * t)
+end
+
+-- On a touch screen in a race, the car drives itself forward: the thumb only steers, and pulling
+-- the stick back (past a third) brakes and reverses as before.
+function GrandPrix.autoThrottle(throttle: number): number
+	if throttle < -0.33 then
+		return throttle
+	end
+	return 1
+end
 
 -- Boost pads on the straights: a lane-wide plate of gold chevrons; drive over one and the car
 -- surges for a moment, past its usual top speed (still well under what the server's check

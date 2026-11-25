@@ -34,6 +34,7 @@ local LuxePanel = require(script.Parent.LuxePanel)
 local LoadIn = require(script.Parent.LoadIn)
 local Root = require(script.Parent.Root)
 local Toast = require(script.Parent.Toast)
+local MischiefKey = require(script.Parent.MischiefKey)
 
 local Attraction = {}
 
@@ -347,6 +348,9 @@ function Attraction.start()
 			-- (Build 90) A new Island Standing rank: what it paid, and what came with it.
 			local gilt = tonumber(m.gilt) or 0
 			Toast.show("Island Standing: " .. tostring(m.name or ""), tostring(m.line or "") .. (if gilt > 0 then string.format("  ·  +%s Gilt", Rules.format(gilt)) else ""), 5)
+		elseif op == "pushed" then
+			-- (Build 105) A Basement Push landed on this guest.
+			MischiefKey.pushed(m)
 		elseif op == "strideUp" then
 			Toast.show(string.format("Speed level %d", tonumber(m.level) or 1), string.format("%d%% faster in Steal a Luxe", tonumber(m.faster) or 0), 3)
 		elseif LuxeHud.mounted() then

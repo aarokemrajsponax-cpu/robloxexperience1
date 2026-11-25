@@ -57,6 +57,7 @@ Purchases.Racing = require(script.Racing)
 Purchases.BasementSkip = require(script.BasementSkip)
 Purchases.JetLivery = require(script.JetLivery)
 Purchases.IslandRide = require(script.IslandRide)
+Purchases.Mischief = require(script.Mischief) -- (Build 105) Midway Steal and Basement Push
 
 -- How the purchase system started (for the owner's tools and tests).
 Purchases.binding = ""
@@ -140,6 +141,7 @@ function Purchases.start()
 	Purchases.BasementSkip.start() -- the Maison Basement: Skip a Stage
 	Purchases.JetLivery.start() -- Luxury Island: the two Robux liveries
 	Purchases.IslandRide.start() -- (Build 104) Luxury Island: the jet ski and the helicopter
+	Purchases.Mischief.start()
 	Gilt.personal = function(player: Player): number
 		return Luck.multiplier(player, "gilt")
 	end

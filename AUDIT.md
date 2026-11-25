@@ -540,3 +540,25 @@ Root causes found and fixed this build, each with a test that would have caught 
 New: the island's rides (jet ski, Day Yacht, helicopter; tests/rides 58 checks), the garage removed, the enclosed residence with a glass roof (tests/wings), the city view (client, render-checked), the Gilt payout scale ×10 (tests/economy).
 
 Not verifiable here (needs Studio or a live server): Roblox's own network ownership hand-off on the Leave fix (the logic is tested, the engine's replication isn't); terrain voxel results of the beach carve; how the rides feel to steer (the rules and the server's checks are tested, the physics feel isn't); the two Robux ride products (not yet made in Creator Hub, so not on sale); performance of the city view on low-end phones.
+
+## 15. Addendum: Build 105
+
+**Robux purchases, checked in code and in tests/purchases.luau (518 checks):**
+
+- Every Robux key goes through one server function, `Store.prompt`. No client script calls
+  `PromptProductPurchase`. The product ID comes from Creator Hub by the product's exact name
+  (Catalog discovery). No ID is typed into the code.
+- A product that isn't made in Creator Hub shows as not on sale. Its key never opens a window.
+- Receipts are granted once only, and only after the profile is saved. Replays are acknowledged
+  without granting again, and unknown products stay unresolved (tests: "a replayed receipt
+  grants nothing").
+- New in this build: **"Midway Steal"** and **"Basement Push"** (19 Robux each). Make them in
+  Creator Hub with exactly these names. Tested: one receipt grants one play, a replay grants
+  nothing, and at 10 held no purchase window opens.
+- Where the Robux goes: Roblox credits developer-product sales to the experience's owner
+  account (or group), not to this code. Check Creator Hub's sales and transactions pages, and
+  Roblox's DevEx page for current cash-out eligibility.
+
+**Not proven by tests (needs a real playtest in Studio with two players):** the feel of the push
+(physics), the Midway key's reach on a real character, phone thumbstick driving with the new
+assist, and how the walking squads look in a crowded server.

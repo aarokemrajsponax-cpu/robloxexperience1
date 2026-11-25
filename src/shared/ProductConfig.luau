@@ -265,10 +265,12 @@ end
 
 -- Gems: the house's rare currency, for the Cabinet's curios (each sold at a fixed Gem price, the
 -- exact one you choose). Never random. More Gems per Robux in the bigger packs, said plainly.
+-- (Build 105) Close to one Gem for each Robux (a little under it): 180 for 199, 750 for 799, 1,950
+-- for 1,999. The Robux price itself is set on each product in Creator Hub (and shown from Roblox).
 for _, pack in {
-	{ key = "gems1", name = "Gem Pouch", gems = 250, price = 199, tier = "Entry" :: Tier },
-	{ key = "gems2", name = "Gem Case", gems = 1100, price = 799, tier = "Premium" :: Tier },
-	{ key = "gems3", name = "Gem Trunk", gems = 3000, price = 1999, tier = "Prestige" :: Tier },
+	{ key = "gems1", name = "Gem Pouch", gems = 180, price = 199, tier = "Entry" :: Tier },
+	{ key = "gems2", name = "Gem Case", gems = 750, price = 799, tier = "Premium" :: Tier },
+	{ key = "gems3", name = "Gem Trunk", gems = 1950, price = 1999, tier = "Prestige" :: Tier },
 } do
 	add({
 		Key = pack.key,
@@ -326,7 +328,9 @@ add({
 	Rules = { Stackable = true, CooldownSeconds = 0, MaxHeld = 5 },
 	UX = { DisplayName = "Golden Hour for Everyone", Category = "Social", Line = "Double Gilt for every guest in the house for 15 minutes, with your name announced.", Offer = true, Order = 15, Action = "prompt" },
 })
-for i, amount in { 1000, 5500, 18000 } do
+-- (Build 105) At the house's Gilt scale: about 400 Gilt a Robux, more in the bigger ones (the same
+-- worth as a Boutique piece bought with Gilt, Config.Gilt.perRobux at the scale).
+for i, amount in { 40000, 130000, 380000 } do
 	local names = { "Gilt Purse", "Gilt Chest", "Gilt Vault" }
 	local prices = { 97, 299, 799 }
 	local lines = { "%s Gilt, at once.", "%s Gilt, at once. More Gilt for each Robux.", "%s Gilt, at once. The most Gilt for each Robux." }
@@ -549,6 +553,31 @@ add({
 -- (Build 104) Luxury Island's rides (shared/IslandCraft): the jet ski and the helicopter, each
 -- for good, for Robux or for Gilt (the Gilt price is shown beside it; the Day Yacht is free).
 -- A ride only: nothing a ride does pays.
+-- (Build 105) Mischief: prepaid plays, one press each (server/Purchases/Mischief). Each is spent on
+-- the server only when it lands; a guest just hit is safe for a while; never random, never a score.
+ProductConfig.Mischief = { "luxeMidwaySteal", "basementPush" } :: { string }
+add({
+	Key = "luxeMidwaySteal",
+	Name = "Midway Steal",
+	ProductType = "DeveloperProduct",
+	Id = 0,
+	Handler = "mischief",
+	Pricing = { ReferencePrice = 19, Tier = "Entry", Rationale = "A small, fun play: one press, kept until used, spent only when it lands." },
+	Reward = { Type = "Mischief", Kind = "midway" },
+	Rules = { Stackable = true, CooldownSeconds = 0, MaxHeld = 10 },
+	UX = { DisplayName = "Midway Steal", Category = "Fun", Line = "In Steal a Luxe: snatch the finest piece out of a nearby guest's bag while they carry it, and bank it yourself. One press, kept until you use it; nothing is taken if it can't land.", Offer = false, Order = 96, Action = "prompt" },
+})
+add({
+	Key = "basementPush",
+	Name = "Basement Push",
+	ProductType = "DeveloperProduct",
+	Id = 0,
+	Handler = "mischief",
+	Pricing = { ReferencePrice = 19, Tier = "Entry", Rationale = "A small, fun play: one press, kept until used, spent only when it lands." },
+	Reward = { Type = "Mischief", Kind = "push" },
+	Rules = { Stackable = true, CooldownSeconds = 0, MaxHeld = 10 },
+	UX = { DisplayName = "Basement Push", Category = "Fun", Line = "In the Maison Basement: a shove that sends a nearby guest stumbling. One press, kept until you use it; nothing is taken if nobody's in reach.", Offer = false, Order = 97, Action = "prompt" },
+})
 ProductConfig.IslandRides = { "islandJetSki", "islandHelicopter" } :: { string }
 add({
 	Key = "islandJetSki",

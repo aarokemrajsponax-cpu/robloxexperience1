@@ -9,6 +9,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Fortune = require(ReplicatedStorage.Shared.Fortune)
 local List = require(ReplicatedStorage.Shared.Boosters)
 local Analytics = require(script.Parent.Analytics)
 local Gilt = require(script.Parent.Gilt)
@@ -122,7 +123,7 @@ function Boosters.state(player: Player, data: Profiles.Data): { [string]: any }
 			kind = b.kind,
 			mult = b.mult,
 			seconds = b.seconds,
-			gilt = b.gilt,
+			gilt = Fortune.scaled(b.gilt), -- (Build 105: at the house's Gilt scale, as payouts are)
 			glyph = b.glyph,
 			line = b.line,
 			colour = b.colour,
@@ -151,8 +152,10 @@ function Boosters.buy(player: Player, data: Profiles.Data, id: string): { [strin
 	if running and left + b.seconds > List.CAP then
 		return { ok = false, why = string.format("%s already runs %s more: that's as far ahead as it goes.", b.name, List.duration(left)) }
 	end
-	if data.gilt < b.gilt then
-		return { ok = false, short = "Gilt", why = string.format("Insufficient Gilt: %s more.", Gilt.format(b.gilt - data.gilt)) }
+	-- (Build 105) Priced at the house's Gilt scale, like everything it pays.
+	local cost = Fortune.scaled(b.gilt)
+	if data.gilt < cost then
+		return { ok = false, short = "Gilt", why = string.format("Insufficient Gilt: %s more.", Gilt.format(cost - data.gilt)) }
 	end
 	local untilAt: number
 	if b.kind == "squad" then
@@ -164,8 +167,8 @@ function Boosters.buy(player: Player, data: Profiles.Data, id: string): { [strin
 	else
 		untilAt = math.min(now + List.CAP, (if running then now + left else now) + b.seconds)
 	end
-	data.gilt -= b.gilt
-	Analytics.sink(player, "Gilt", b.gilt, data.gilt, "booster_" .. b.id)
+	data.gilt -= cost
+	Analytics.sink(player, "Gilt", cost, data.gilt, "booster_" .. b.id)
 	page(data)[b.kind] = { id = b.id, untilAt = untilAt }
 	Gilt.changed(player)
 	Boosters.apply(player)

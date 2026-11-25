@@ -494,12 +494,12 @@ Voice.Afk = {
 Voice.Short = { gilt = "Insufficient Gilt", gems = "Insufficient Gems", line = "Gotta get more lol" }
 
 Voice.WhatsNew = {
-	build = 104,
+	build = 105,
 	lines = {
 		-- (One short line each: read at a glance.)
-		"On Luxury Island: jet skis, the Day Yacht and a helicopter to fly.",
-		"Your Suite is one glass residence now, the city lit up below it.",
-		"Every game pays far more Gilt: the figure shown is the figure paid.",
+		"Your brainrots walk with you now: three, or six with the Penthouse.",
+		"Build the Infinity Pool in your Suite, and show your brainrots in your Vault's gallery.",
+		"The Executive Suite goes up in groups of one to four.",
 	},
 }
 

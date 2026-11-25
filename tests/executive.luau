@@ -636,6 +636,12 @@ check("stepped out of the lane: nothing", Game.guests[ada].composure == composur
 stand(bo, Layout.Midnight.arrival)
 data(bo).gilt = 0
 askAs(bo, { op = "act", id = "executive", act = "sidearm" })
+-- (Build 105) Only with Ada's group, while the Suite is theirs: alone, he waits his turn.
+r = askAs(bo, { op = "go", id = "executive" })
+check("Build 105: while Ada's group has the Suite, Bo alone can't come up: his group waits its turn in line", r.ok == false and Attractions.inside(bo) == nil and string.find(tostring(r.why), "in line", 1, true) ~= nil, r.why)
+askAs(bo, { op = "act", id = "executive", act = "groupLeave" })
+check("...a group of two, Ada leading, inviting Bo", askAs(ada, { op = "act", id = "executive", act = "group", n = 2 }).ok == true and askAs(ada, { op = "act", id = "executive", act = "groupInvite", n = bo.UserId }).ok == true)
+check("...Bo joins it", askAs(bo, { op = "act", id = "executive", act = "groupJoin", n = ada.UserId }).ok == true)
 r = askAs(bo, { op = "go", id = "executive" })
 check("(Bo comes up)", r.ok == true)
 standIn(bo, Vector3.new(10, 0, 10))
@@ -1149,6 +1155,67 @@ do
 	end
 	check("...and nothing that shoots: no weapon of any kind", not armed)
 	check("...the butler's tie is gone", fig:FindFirstChild("Tie") == nil)
+end
+
+---------------------------------------------------------------------------------------------------
+-- 7. (Build 105) Groups of one to four, one group in the Suite at a time
+---------------------------------------------------------------------------------------------------
+do
+	-- (Everyone down first: the Suite free.)
+	advance(3)
+	for _, g in { ada, bo } do
+		if Attractions.inside(g) then
+			askAs(g, { op = "home" })
+		end
+	end
+	advance(4)
+	local cy, dee, eve, fay, gus = H.guest("Cy", 741), H.guest("Dee", 742), H.guest("Eve", 743), H.guest("Fay", 744), H.guest("Gus", 745)
+	for _, g in { cy, dee, eve, fay, gus } do
+		stand(g, Layout.Midnight.arrival)
+		page(g).invites = 2
+		askAs(g, { op = "act", id = "executive", act = "sidearm" })
+	end
+	check("a group is 1 to 4: 5 refused, 0 refused", askAs(cy, { op = "act", id = "executive", act = "group", n = 5 }).ok == false and askAs(cy, { op = "act", id = "executive", act = "group", n = 0 }).ok == false)
+	check("Cy makes a group of 3", askAs(cy, { op = "act", id = "executive", act = "group", n = 3 }).ok == true)
+	check("...invites Dee and Eve; both join", askAs(cy, { op = "act", id = "executive", act = "groupInvite", n = dee.UserId }).ok == true and askAs(cy, { op = "act", id = "executive", act = "groupInvite", n = eve.UserId }).ok == true and askAs(dee, { op = "act", id = "executive", act = "groupJoin", n = cy.UserId }).ok == true and askAs(eve, { op = "act", id = "executive", act = "groupJoin", n = cy.UserId }).ok == true)
+	check("...it's full: a fourth isn't asked (the size they chose)", askAs(cy, { op = "act", id = "executive", act = "groupInvite", n = fay.UserId }).ok == false)
+	check("nobody joins a group they weren't asked to", askAs(gus, { op = "act", id = "executive", act = "groupJoin", n = cy.UserId }).ok == false)
+	local up = askAs(cy, { op = "go", id = "executive" })
+	check("the Suite free: Cy's group has it, and goes up", up.ok == true and Game.groups().holder ~= nil and Game.groups().holder.leader == cy, up.why)
+	check("...Dee and Eve go up too, any time while it's their group's", askAs(dee, { op = "go", id = "executive" }).ok == true and askAs(eve, { op = "go", id = "executive" }).ok == true)
+	local fr = askAs(fay, { op = "go", id = "executive" })
+	check("Fay (her own group) can't come up into theirs: she's in line, first", fr.ok == false and Attractions.inside(fay) == nil and Game.groups().queue[1] ~= nil and Game.groups().queue[1].leader == fay)
+	local gr = askAs(gus, { op = "go", id = "executive" })
+	check("...Gus behind her, second", gr.ok == false and Game.groups().queue[2] ~= nil and Game.groups().queue[2].leader == gus)
+	check("never more than one group up there at once", (function()
+		local holder = Game.groups().holder
+		for p in Game.guests do
+			if Game.groups().of[p] ~= holder then
+				return false
+			end
+		end
+		return true
+	end)())
+	-- All of Cy's group come down: Fay's is called, with a minute to go up.
+	advance(3)
+	for _, g in { cy, dee, eve } do
+		askAs(g, { op = "home" })
+	end
+	advance(4)
+	check("the Suite empty: free, and Fay is told it's her group's turn", Game.groups().holder == nil and last(fay, "notice") ~= nil and string.find(last(fay, "notice").title, "turn", 1, true) ~= nil)
+	check("...Gus can't jump the line in her minute", askAs(gus, { op = "go", id = "executive" }).ok == false and Attractions.inside(gus) == nil)
+	check("...Fay goes up: hers now", askAs(fay, { op = "go", id = "executive" }).ok == true and Game.groups().holder ~= nil and Game.groups().holder.leader == fay)
+	advance(3)
+	askAs(fay, { op = "home" })
+	advance(4)
+	check("...then it's Gus's turn", last(gus, "notice") ~= nil and askAs(gus, { op = "go", id = "executive" }).ok == true)
+	advance(3)
+	askAs(gus, { op = "home" })
+	advance(4)
+	check("the board shows each guest their group and the Suite's turn", (function()
+		local st = askAs(cy, { op = "state", id = "executive" })
+		return type(st.groups) == "table" and type(st.groups.mine) == "table" and st.groups.mine.size == 3 and #st.groups.mine.members == 3 and st.groups.most == 4
+	end)())
 end
 
 H.finish()

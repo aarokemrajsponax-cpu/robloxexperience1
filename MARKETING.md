@@ -189,6 +189,48 @@ Ready for this one:
 
 ---
 
+## 9. Build 105: the free push (no paid ads)
+
+**The trailer.** `marketing/trailer-105.mp4` (37 s, 1280×720, no sound). It's cut from the
+game's own renders: the five attractions, the Brainrot Market door and room, the Auction stage,
+the Brainrot Gallery, the Infinity Pool and the Suite terrace. Every caption says something the
+game really does. Add music before posting: your own, or a track you're licensed to use (Roblox's
+audio library tracks are cleared for use inside Roblox, not for TikTok or YouTube). Luxury Island
+is left out, because it's marked coming soon.
+
+**Upload it** as the game page's video (Creator Hub, then Places, then Thumbnails & Videos).
+Then post it as a Short or Reel with the hashtags in section 6.
+
+**Real footage to record next** (Studio, then a phone screen recording; 5 to 8 seconds each,
+vertical 1080×1920 for Shorts):
+
+1. A squad of six brainrots walking behind a player through the Foyer.
+2. A Midway Steal: a carrier robbed mid-run, then the thief banking it.
+3. A Basement Push near a jump.
+4. A bid landing at the Grand Auction, with the toast on screen.
+5. The Brainrot Market plinths at midnight UTC, when the picks change.
+6. Diving into the Infinity Pool, then the city at night from the terrace.
+7. A group of four going up to the Executive Suite together.
+
+**Hooks for the first second** (text on screen, with true words only):
+
+- "POV: your brainrot squad follows you everywhere"
+- "He robbed me MID-HEIST"
+- "Bidding on a limited brainrot. One winner."
+- "Building the Infinity Pool in my Suite"
+
+**A free weekly rhythm**
+
+- One Short a day for the first week: rotate the clips above.
+- Run a Roblox Experience Event for each Auction close (Sunday 19:00 UTC). It's free, and it
+  shows on the game page.
+- Post update notes (section 8) on every build. Pin the newest in the group.
+- Ask friends and players for a "Like" and "Favorite" only in plain words. The game never pays
+  for them.
+
+What a post does for the game is measured in Creator Analytics (Discovery and Acquisition). Keep
+what brings players who stay, and drop what doesn't.
+
 ## Sources
 
 - Roblox Creator Hub, Discovery: https://create.roblox.com/docs/discovery

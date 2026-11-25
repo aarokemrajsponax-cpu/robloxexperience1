@@ -57,6 +57,8 @@ local built: { [number]: Model } = {}
 local guestOf: { [Player]: Player } = {}
 local rides: { [Player]: { to: string, ends: number } } = {}
 local rested: { [Player]: number } = {}
+local strays: { [Player]: number } = {} -- (Build 105) watches in a row out of the rooms
+local lastFloor: { [Player]: string } = {} -- the last floor of their wing a guest stood on
 local leaving: { [Player]: boolean } = {}
 
 local REST = 1 -- seconds after arriving before another journey can start
@@ -101,14 +103,15 @@ end
 -- unseen barrier above, so nobody leaves, falls or climbs out. The Vault, below, sits on a floor of
 -- its own, walled in unseen. (Its size follows the Suite's own: the house is built at a scale.)
 local function gardenBounds(): { minX: number, maxX: number, minZ: number, maxZ: number, wall: number, s: number }
-	local z, gal = Layout.Suite.zone, Layout.Suite.galleryZone
+	local z = Layout.Suite.zone
 	local s = math.max(1, (z.max.X - z.min.X) / 47)
-	local margin = math.floor(12 * s + 0.5)
+	-- (Build 105) The same box the rest of the house knows as the Suite's grounds (shared/Layout).
+	local g = Layout.suiteGrounds()
 	return {
-		minX = z.min.X - margin,
-		maxX = math.max(z.max.X, gal.max.X) + margin,
-		minZ = z.min.Z - margin,
-		maxZ = math.max(z.max.Z, gal.max.Z) + margin,
+		minX = g.min.X,
+		maxX = g.max.X,
+		minZ = g.min.Z,
+		maxZ = g.max.Z,
 		wall = math.floor(Layout.Suite.height + 4 * s + 0.5),
 		s = s,
 	}
@@ -247,6 +250,21 @@ local function garden(parent: Instance)
 		local top = CFrame.lookAt(at + Vector3.new(0, 1.6, 0), at + Vector3.new(0, 1.6, -10))
 		Furniture.seatsOn(f, "BenchSeats", { top * CFrame.new(-1.2, 0, 0), top * CFrame.new(1.2, 0, 0) }, "The garden bench", 1.6)
 	end
+	-- (Build 105) By the south wall, a brass plaque where the Infinity Pool goes (it opens the
+	-- Suite's furnishing, where the pool is offered); gone from a wing whose pool is built.
+	local plaque = gardenPart(f, "PoolPlaque", Vector3.new(2.4 * k, 1.4 * k, 0.3), CFrame.new(cx, y + 1.6 * k, G.minZ + 8.5 * k) * CFrame.Angles(math.rad(-20), 0, 0), GOLD, Enum.Material.Metal, false)
+	local pp = Instance.new("ProximityPrompt")
+	pp.Name = "PoolPrompt"
+	pp.ActionText = "The Infinity Pool"
+	pp.ObjectText = "57,000 Gilt or 150 Gems"
+	pp.KeyboardKeyCode = Enum.KeyCode.E
+	pp.GamepadKeyCode = Enum.KeyCode.ButtonX
+	pp.HoldDuration = 0
+	pp.MaxActivationDistance = 10
+	pp.RequiresLineOfSight = false
+	pp.Style = Enum.ProximityPromptStyle.Custom
+	pp.Parent = plaque
+	CollectionService:AddTag(plaque, "SuiteFurnish")
 	-- The Vault, below: a floor under it all, and unseen walls round it.
 	local V = Layout.Vault
 	local vx, vz = (V.minX + V.maxX) / 2, (V.minZ + V.maxZ) / 2
@@ -262,6 +280,122 @@ local function garden(parent: Instance)
 		b.Transparency = 1
 		b.CastShadow = false
 		b.CanQuery = false
+	end
+end
+
+-- (Build 105) Whether a guest owns the Infinity Pool (set by Main, from their saved record).
+Wings.hasPool = function(_player: Player): boolean
+	return false
+end
+
+-- The Infinity Pool in a wing (house coordinates moved up by `up`): along the garden's south glass,
+-- its water level with an unseen lip at the glass so it seems to run on into the city; coping and
+-- steps on the house side, lights under the water, loungers and parasols on its deck. The garden's
+-- south path and the planter there make way for it, and the plaque that offered it goes.
+local function buildPool(model: Instance, up: Vector3)
+	if model:FindFirstChild("InfinityPool") then
+		return
+	end
+	local G = gardenBounds()
+	local k = G.s
+	local y = Layout.Suite.floorY
+	local garden = model:FindFirstChild("Garden")
+	if garden then
+		for _, name in { "PathS", "WallSPlanter", "PoolPlaque" } do
+			local old = garden:FindFirstChild(name)
+			if old then
+				old:Destroy()
+			end
+		end
+	end
+	local f = Instance.new("Folder")
+	f.Name = "InfinityPool"
+	local cx = (G.minX + G.maxX) / 2
+	local length = (G.maxX - G.minX) - 10 * k
+	local z0, z1 = G.minZ + 0.2, G.minZ + 7 * k
+	local depth = z1 - z0
+	local cz = (z0 + z1) / 2
+	local WATER = Color3.fromRGB(64, 186, 226)
+	local TILE = Color3.fromRGB(40, 132, 176)
+	local COPING = Color3.fromRGB(240, 234, 222)
+	local DECK = Color3.fromRGB(196, 170, 132)
+	local GOLD = Color3.fromRGB(206, 168, 92)
+	local function at(x: number, yy: number, z: number): CFrame
+		return CFrame.new(Vector3.new(x, yy, z) + up)
+	end
+	-- The basin's floor and walls (its floor at the lawn, its walls a step high round three sides).
+	gardenPart(f, "PoolFloor", Vector3.new(length, 0.3, depth), at(cx, y + 0.1, cz), TILE, Enum.Material.CeramicTiles)
+	gardenPart(f, "CopingN", Vector3.new(length + 2.4, 1.5, 1.2), at(cx, y + 0.75, z1 + 0.6), COPING, Enum.Material.Marble)
+	gardenPart(f, "CopingW", Vector3.new(1.2, 1.5, depth), at(cx - length / 2 - 0.6, y + 0.75, cz), COPING, Enum.Material.Marble)
+	gardenPart(f, "CopingE", Vector3.new(1.2, 1.5, depth), at(cx + length / 2 + 0.6, y + 0.75, cz), COPING, Enum.Material.Marble)
+	-- The infinity edge: a lip just under the water at the glass, the water spilling over it in light.
+	gardenPart(f, "Lip", Vector3.new(length, 1.2, 0.4), at(cx, y + 0.6, z0 + 0.2), TILE, Enum.Material.CeramicTiles)
+	local spill = gardenPart(f, "Spill", Vector3.new(length, 0.08, 0.5), at(cx, y + 1.26, z0 + 0.15), Color3.fromRGB(170, 236, 255), Enum.Material.Neon, false)
+	spill.Transparency = 0.35
+	spill.CastShadow = false
+	-- The water: walked into, never stood on.
+	local water = gardenPart(f, "Water", Vector3.new(length, 1.05, depth - 0.4), at(cx, y + 0.78, cz + 0.2), WATER, Enum.Material.Glass, false)
+	water.Transparency = 0.42
+	water.Reflectance = 0.18
+	water.CastShadow = false
+	water.CanQuery = false
+	water.CanTouch = false
+	water:SetAttribute("PoolWater", true)
+	-- Steps in from the deck (out of the water and back over the coping without a jump).
+	for i, sx in { -length / 4, length / 4 } do
+		gardenPart(f, "StepOut" .. i, Vector3.new(4 * k, 0.75, 1.4), at(cx + sx, y + 0.375, z1 + 1.9), COPING, Enum.Material.Marble)
+		gardenPart(f, "StepIn" .. i, Vector3.new(4 * k, 0.75, 1.4), at(cx + sx, y + 0.625, z1 - 0.7), COPING, Enum.Material.Marble)
+	end
+	-- Lights under the water.
+	local lights = math.max(3, math.floor(length / (14 * k)))
+	for i = 1, lights do
+		local x = cx - length / 2 + length * (i - 0.5) / lights
+		local lamp = gardenPart(f, "PoolLight", Vector3.new(1.2, 0.12, 1.2), at(x, y + 0.31, cz), Color3.fromRGB(170, 230, 255), Enum.Material.Neon, false)
+		lamp.CastShadow = false
+		local light = Instance.new("SurfaceLight")
+		light.Face = Enum.NormalId.Top
+		light.Color = Color3.fromRGB(120, 210, 255)
+		light.Brightness = 2.2
+		light.Range = 12 * k
+		light.Angle = 120
+		light.Shadows = false
+		light.Parent = lamp
+	end
+	-- The deck: teak boards from the coping to the Suite, loungers and parasols along it.
+	local deckD = (G.minZ + 12 * k) - (z1 + 1.2)
+	if deckD > 1 then
+		gardenPart(f, "Deck", Vector3.new(length + 2.4, 0.2, deckD), at(cx, y - 0.02, z1 + 1.2 + deckD / 2), DECK, Enum.Material.WoodPlanks)
+	end
+	local loungers = math.max(2, math.floor(length / (12 * k)))
+	for i = 1, loungers do
+		local x = cx - length / 2 + length * (i - 0.5) / loungers
+		local base = Vector3.new(x, y, z1 + 4.4 * k)
+		gardenPart(f, "LoungerFrame", Vector3.new(2.6, 0.5, 6), at(base.X, y + 0.65, base.Z), Color3.fromRGB(236, 232, 224), Enum.Material.SmoothPlastic)
+		gardenPart(f, "LoungerCushion", Vector3.new(2.4, 0.3, 4.2), at(base.X, y + 1.05, base.Z - 0.7), Color3.fromRGB(250, 248, 242), Enum.Material.Fabric, false)
+		local back = gardenPart(f, "LoungerBack", Vector3.new(2.4, 0.3, 2.2), at(base.X, y + 1.7, base.Z + 2.2) * CFrame.Angles(math.rad(-40), 0, 0), Color3.fromRGB(250, 248, 242), Enum.Material.Fabric, false)
+		back.CastShadow = false
+		gardenPart(f, "Towel", Vector3.new(1.6, 0.06, 1.2), at(base.X, y + 1.23, base.Z - 1.6), if i % 2 == 0 then Color3.fromRGB(64, 120, 186) else GOLD, Enum.Material.Fabric, false)
+		-- (A seat and its own Sit prompt for each lounger: one prompt for the whole row would only
+		-- show by the middle one.)
+		Furniture.seatsOn(f, "PoolLounger" .. i, { CFrame.lookAt(Vector3.new(base.X, y + 1.2, base.Z) + up, Vector3.new(base.X, y + 1.2, base.Z - 10) + up) }, "A lounger by the pool", 1.6)
+		if i < loungers then
+			local px = x + length / loungers / 2
+			gardenPart(f, "ParasolPole", Vector3.new(0.25, 7, 0.25), at(px, y + 3.5, base.Z), GOLD, Enum.Material.Metal, false)
+			local canopy = gardenPart(f, "Parasol", Vector3.new(1.2, 6.5, 6.5), at(px, y + 7, base.Z) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(246, 240, 226), Enum.Material.Fabric, false)
+			canopy.Shape = Enum.PartType.Cylinder
+		end
+	end
+	f.Parent = model
+end
+Wings.buildPool = buildPool
+
+-- (Build 105) Builds a guest's Infinity Pool in their own wing, once they own it (bought just now,
+-- or found in their record when they arrive).
+function Wings.setPool(player: Player)
+	local slot = own[player]
+	local m = slot and built[slot]
+	if slot and m and m.Parent and Wings.hasPool(player) then
+		buildPool(m, Wing.offset(slot))
 	end
 end
 
@@ -324,18 +458,30 @@ local function folder(): Folder
 	return nf
 end
 
--- Moves every part of a copy up to its wing.
+-- Vector3/CFrame attributes that are offsets, not places (World/Grand keeps the same list).
+local RELATIVE = { Slide = true, FromHinge = true }
+
+-- Moves every part of a copy up to its wing, and every place written on it with it.
+-- (Build 105) Until now only a lift door's "Closed" moved: a Vault cabinet's "Frame" (where its
+-- shelves are) stayed down in the house, so a guest's own pieces were set out in the house's
+-- sealed Vault and their wing's cabinets stood empty; a door's "Hinge" stayed behind too.
 local function lift(model: Instance, by: Vector3)
 	for _, d in model:GetDescendants() do
 		if d:IsA("BasePart") then
 			d.CFrame = d.CFrame + by
-			local closed = d:GetAttribute("Closed")
-			if typeof(closed) == "CFrame" then
-				d:SetAttribute("Closed", closed + by)
+		end
+		for name, v in d:GetAttributes() do
+			if not RELATIVE[name] then
+				if typeof(v) == "CFrame" then
+					d:SetAttribute(name, v + by)
+				elseif typeof(v) == "Vector3" then
+					d:SetAttribute(name, v + by)
+				end
 			end
 		end
 	end
 end
+Wings.lift = lift
 
 -- The elevator's bell in a wing (the old lift's push): rings for the guest standing at it.
 local function wireCalls(model: Model, slot: number)
@@ -368,6 +514,11 @@ function Wings.ensure(slot: number): Model?
 	end
 	lift(model, Wing.offset(slot))
 	wireCalls(model, slot)
+	-- (Build 105) Its owner's Infinity Pool, if they have one.
+	local who = owner[slot]
+	if who and Wings.hasPool(who) then
+		buildPool(model, Wing.offset(slot))
+	end
 	model.Parent = folder()
 	built[slot] = model
 	return model
@@ -646,7 +797,24 @@ function Wings.watch(): number
 			continue
 		end
 		local house, k = Wing.toHouse(root.Position)
-		if k then
+		if k and allowed(player, k) then
+			-- (Build 105) Never out of the rooms: a guest who has slipped through a wall, over the
+			-- glass or off the edge of their wing (anywhere in it that isn't its Suite or its Vault)
+			-- is back at the elevator of the floor they were last on, within a second.
+			local zone = Layout.zoneAt(root.Position)
+			if zone == "suite" or zone == "vault" then
+				lastFloor[player] = zone
+				strays[player] = nil
+			else
+				strays[player] = (strays[player] or 0) + 1
+				if strays[player] >= 2 then
+					strays[player] = nil
+					moved += 1
+					Integrity.teleport(player, character, Wings.arrival(k, lastFloor[player] or "suite"))
+					notice(player, "Your Suite", "That's the edge of your wing: you're back inside.")
+				end
+			end
+		elseif k then
 			if not allowed(player, k) then
 				moved += 1
 				local was = guestOf[player]
@@ -738,6 +906,8 @@ function Wings.start()
 		rides[p] = nil
 		rested[p] = nil
 		guestOf[p] = nil
+		strays[p] = nil
+		lastFloor[p] = nil
 		local slot = own[p]
 		own[p] = nil
 		if slot then

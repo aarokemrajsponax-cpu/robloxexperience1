@@ -83,13 +83,19 @@ local function sit(prompt: ProximityPrompt)
 	end
 	busy = true
 	task.spawn(function()
-		approach(humanoid, root, spot)
 		-- A piece of this guest's own Suite (drawn on their screen) or one of the house's.
 		local suiteSpot = model:GetAttribute("Spot")
 		local request = if type(suiteSpot) == "string" and not spot:GetAttribute("SeatId")
 			then { op = "sit", suite = suiteSpot, index = spot:GetAttribute("SitIndex") }
 			else { op = "sit", seat = spot:GetAttribute("SeatId") }
+		-- (Build 105) Sat at once: the server's reach takes in anywhere the prompt shows from, so
+		-- the walk up to the seat (up to 1.6 s before anything happened) is only for the rare
+		-- seat that's too far, and then it's tried once more.
 		local r = ask(request)
+		if type(r) == "table" and r.far == true then
+			approach(humanoid, root, spot)
+			r = ask(request)
+		end
 		if type(r) == "table" and r.ok then
 			Sound.play("chair", 0.35)
 		elseif type(r) == "table" and type(r.why) == "string" then

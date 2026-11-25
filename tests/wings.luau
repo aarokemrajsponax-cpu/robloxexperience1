@@ -42,6 +42,9 @@ local suite = model("Suite", maison)
 part("Floor", suite, Vector3.new(-45, 21.9, 45))
 local vault = model("Vault", maison)
 part("Floor", vault, Vector3.new(-8, 2.9, 53))
+local cabinetModel = model("Cabinet_test", vault)
+cabinetModel:SetAttribute("Frame", CFrame.new(-14, 3, 48))
+cabinetModel:SetAttribute("Slide", Vector3.new(1, 0, 0))
 local passages = Instance.new("Folder")
 passages.Name = "Passages"
 passages.Parent = maison
@@ -220,6 +223,44 @@ end)())
 advance(1)
 check("the watch leaves a visitor who was let in where he is", Wings.watch() == 0 and Wing.slotAt(rootOf(bo).Position) == Wings.slotOf(ada))
 
+-- (Build 105) The Infinity Pool: in its owner's wing only, along the garden's south glass.
+do
+	local pools = { [ada] = true }
+	Wings.hasPool = function(p)
+		return pools[p] == true
+	end
+	local adaSlot = Wings.slotOf(ada)
+	local wingA = Wings.ensure(adaSlot)
+	check("(no pool before it's bought: the plaque that offers it is in the garden, tagged to open the Suite's furnishing)", wingA:FindFirstChild("InfinityPool") == nil and wingA.Garden:FindFirstChild("PoolPlaque") ~= nil and wingA.Garden.PoolPlaque:FindFirstChildOfClass("ProximityPrompt") ~= nil)
+	Wings.setPool(ada)
+	local pool = wingA:FindFirstChild("InfinityPool")
+	local water = pool and pool:FindFirstChild("Water")
+	check("Build 105: Ada's pool is built in her own wing", pool ~= nil and water ~= nil and water.CanCollide == false)
+	check("...where the garden's south path and planter were (and the plaque goes)", wingA.Garden:FindFirstChild("PathS") == nil and wingA.Garden:FindFirstChild("WallSPlanter") == nil and wingA.Garden:FindFirstChild("PoolPlaque") == nil)
+	local wall = wingA.Garden:FindFirstChild("WallS")
+	check("...its far edge right at the glass toward the city", wall ~= nil and water ~= nil and math.abs((water.CFrame.Position.Z - water.Size.Z / 2) - (wall.CFrame.Position.Z + wall.Size.Z / 2)) < 1)
+	local inPool = water and (water.CFrame.Position + Vector3.new(0, 2, 0))
+	check("...in the Suite as far as the house knows (a swim never moves anyone)", inPool ~= nil and Layout.zoneAt(inPool) == "suite")
+	local loungers = 0
+	for _, d in pool:GetDescendants() do
+		if d.Name == "SitSpot" then
+			loungers += 1
+		end
+	end
+	check("...loungers along its deck, each a real seat", loungers >= 2, loungers)
+	Wings.setPool(ada)
+	local count = 0
+	for _, c in wingA:GetChildren() do
+		if c.Name == "InfinityPool" then
+			count += 1
+		end
+	end
+	check("...built once however often it's asked", count == 1)
+	local wingB = Wings.ensure(Wings.slotOf(bo))
+	Wings.setPool(bo)
+	check("...and nobody else's wing has one", wingB:FindFirstChild("InfinityPool") == nil and wingB.Garden:FindFirstChild("PoolPlaque") ~= nil)
+end
+
 ---------------------------------------------------------------------------------------------------
 -- 3. Nobody where they may not be
 ---------------------------------------------------------------------------------------------------
@@ -234,6 +275,43 @@ check("nobody stands in the house's own (sealed) Vault: put back outside its doo
 standAt(cy, Layout.Suite.arrival + Vector3.new(0, 3, 0))
 Wings.watch()
 check("...nor its Suite", Layout.zoneAt(rootOf(cy).Position) ~= "suite")
+-- (Build 105) Nobody out of their own rooms either: slipped through a wall, over the glass or off
+-- the edge of their own wing, a guest is back at their elevator within a second.
+do
+	local mine = Wings.slotOf(cy)
+	local suiteAt = Wings.arrival(mine, "suite").Position
+	standAt(cy, suiteAt)
+	Wings.watch()
+	standAt(cy, suiteAt + Vector3.new(500, 0, 0))
+	check("(a point in Cy's own wing that's outside its rooms)", Wing.slotAt(rootOf(cy).Position) == mine and Layout.zoneAt(rootOf(cy).Position) == "none")
+	Wings.watch()
+	check("Build 105: one look outside their rooms isn't enough to move a guest (a frame's slip)", (rootOf(cy).Position - (suiteAt + Vector3.new(500, 0, 0))).Magnitude < 0.1)
+	Wings.watch()
+	check("...but the next one puts them back by their own elevator, inside", Layout.zoneAt(rootOf(cy).Position) == "suite" and Wing.slotAt(rootOf(cy).Position) == mine)
+	local vaultAt = Wings.arrival(mine, "vault").Position
+	standAt(cy, vaultAt)
+	Wings.watch()
+	standAt(cy, vaultAt - Vector3.new(0, 60, 0))
+	Wings.watch()
+	Wings.watch()
+	check("...falling through the Vault's floor: back in the Vault (the floor they were on)", Layout.zoneAt(rootOf(cy).Position) == "vault")
+	local up = Wing.offset(Wings.slotOf(ada)).Y
+	local lawn = wa:FindFirstChild("Garden") and wa.Garden:FindFirstChild("Lawn")
+	local inside = lawn ~= nil
+	if lawn then
+		local c = lawn.CFrame.Position
+		local hx, hz = lawn.Size.X / 2 - 2, lawn.Size.Z / 2 - 2
+		for _, d in { Vector3.new(0, 0, 0), Vector3.new(hx, 0, hz), Vector3.new(-hx, 0, hz), Vector3.new(hx, 0, -hz), Vector3.new(-hx, 0, -hz) } do
+			local at = c + d + Vector3.new(0, lawn.Size.Y / 2 + 3, 0)
+			inside = inside and Layout.zoneAt(at) == "suite"
+		end
+	end
+	check("...while anywhere on the walled garden counts as inside the Suite (nobody is moved off it)", inside and up > 0)
+	local cab = wa.Vault:FindFirstChild("Cabinet_test")
+	local frame = cab and cab:GetAttribute("Frame")
+	check("Build 105: a wing's Vault cabinets know where they stand in the wing (where its shelves are), so a guest's pieces fill their own Vault", typeof(frame) == "CFrame" and (frame.Position - (Vector3.new(-14, 3, 48) + Wing.offset(Wings.slotOf(ada)))).Magnitude < 1e-3)
+	check("...while what's only an offset stays as it was", cab ~= nil and cab:GetAttribute("Slide") == Vector3.new(1, 0, 0))
+end
 -- Following someone: a ride takes only the one who asked.
 standAt(cy, rootOf(ada).Position)
 advance(1.1)

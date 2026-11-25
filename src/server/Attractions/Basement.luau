@@ -791,10 +791,88 @@ function Basement.directory(ctx: Types.Ctx, player: Player): { [string]: any }
 	return { open = true, stages = Plan.STAGES, deepest = p.deepest, clears = p.clears, bestTime = p.best, course = up.name, secrets = (secretsFound(p)), secretsOf = #Plan.Secrets }
 end
 
+---------------------------------------------------------------------------------------------------
+-- (Build 105) Basement Push: a prepaid play (server/Purchases/Mischief, 19 Robux each). Pressed
+-- near another guest in the Basement, it shoves them away from you (their own screen gives the
+-- shove: a guest's character moves on their own screen). A fall only ever sends them back to their
+-- checkpoint, as any fall does: nothing they've reached is lost. Spent only when it lands: they
+-- must be in reach and not shoved a moment ago (a grace each time); there's a pause between your
+-- own. With none held, Roblox's window offers one.
+---------------------------------------------------------------------------------------------------
+Basement.mischief = {
+	held = function(_player: Player): number
+		return 0
+	end,
+	spend = function(_player: Player): boolean
+		return false
+	end,
+	onSale = function(): boolean
+		return false
+	end,
+	offer = function(_player: Player): (boolean, string?)
+		return false, "Basement Push isn't on sale yet."
+	end,
+}
+Basement.PUSH = { reach = 12, cooldown = 8, safe = 25, power = 55, lift = 28 }
+local lastPush: { [Player]: number } = {}
+local pushedAt: { [Player]: number } = {}
+
+function Basement.push(ctx: Types.Ctx, player: Player, victimId: number): { [string]: any }
+	if not runs[player] or ctx.inside(player) ~= ID then
+		return { ok = false, why = "Basement Push works in the Maison Basement." }
+	end
+	local victim = Players:GetPlayerByUserId(victimId)
+	if not victim or victim == player or not runs[victim] or ctx.inside(victim) ~= ID then
+		return { ok = false, why = "They aren't in the Basement." }
+	end
+	local now = os.clock()
+	local safe = pushedAt[victim]
+	if safe and now - safe < Basement.PUSH.safe then
+		return { ok = false, why = string.format("%s was pushed a moment ago: safe for %d more seconds.", victim.DisplayName, math.ceil(Basement.PUSH.safe - (now - safe))) }
+	end
+	local last = lastPush[player]
+	if last and now - last < Basement.PUSH.cooldown then
+		return { ok = false, why = string.format("Catch your breath: %d seconds.", math.ceil(Basement.PUSH.cooldown - (now - last))) }
+	end
+	local a, b = ctx.rootOf(player), ctx.rootOf(victim)
+	if not a or not b then
+		return { ok = false, why = "Not just now." }
+	end
+	local gap = b.CFrame.Position - a.CFrame.Position
+	if gap.Magnitude > Basement.PUSH.reach then
+		return { ok = false, why = "Get closer: within a few steps of them." }
+	end
+	if Basement.mischief.held(player) <= 0 then
+		if not Basement.mischief.onSale() then
+			return { ok = false, why = "Basement Push isn't on sale yet." }
+		end
+		local opened, why = Basement.mischief.offer(player)
+		return { ok = false, prompted = opened, why = if opened then nil else why }
+	end
+	if not Basement.mischief.spend(player) then
+		return { ok = false, why = "That couldn't be used just now. Nothing was taken." }
+	end
+	local flat = Vector3.new(gap.X, 0, gap.Z)
+	local dir = if flat.Magnitude > 0.1 then flat.Unit else a.CFrame.LookVector
+	lastPush[player] = now
+	pushedAt[victim] = now
+	ctx.send(victim, { op = "pushed", by = player.DisplayName, x = dir.X * Basement.PUSH.power, y = Basement.PUSH.lift, z = dir.Z * Basement.PUSH.power })
+	ctx.send(player, { op = "notice", title = "Basement Push", line = "Shoved " .. victim.DisplayName .. "." })
+	ctx.tally(player, "basementPush", 1)
+	return { ok = true }
+end
+
 function Basement.ask(ctx: Types.Ctx, player: Player, r: { [string]: unknown }): any
 	local data = ctx.data(player)
 	if not data then
 		return { ok = false, why = "Your ledger is still being opened." }
+	end
+	if r.act == "push" then
+		local id = tonumber(r.n)
+		if not id or id ~= math.floor(id) then
+			return { ok = false, why = "Not that." }
+		end
+		return Basement.push(ctx, player, id)
 	end
 	if r.act == "skip" then
 		local run = runs[player]

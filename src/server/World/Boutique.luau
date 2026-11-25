@@ -144,14 +144,26 @@ local function dress(m: Model)
 	local top = FLOOR + B.height
 	Furniture.build("chandelier", m, CFrame.new(21, top, 51.5), { model = "crystal", accent = Color3.fromRGB(200, 160, 82), drop = 1.6 }, false)
 	-- Display plinths with glass domes, each with a piece of jewellery on velvet.
+	-- (Build 105) Each guest's screen stands the day's rarest Brainrot Market pieces on them, in the
+	-- round (World/MarketShowroom): the plinth is tagged, and what's under its dome is marked so
+	-- that screen can put it aside.
 	for i, at in { Vector3.new(17, FLOOR, 50.5), Vector3.new(25, FLOOR, 51.5) } do
-		Kit.cylinder(m, "Plinth", 3.2, 1.6, CFrame.new(at + Vector3.new(0, 1.6, 0)) * CFrame.Angles(0, 0, math.rad(90)), L.blackLacquer)
+		local plinth = Kit.cylinder(m, "Plinth", 3.2, 1.6, CFrame.new(at + Vector3.new(0, 1.6, 0)) * CFrame.Angles(0, 0, math.rad(90)), L.blackLacquer)
+		plinth:SetAttribute("PlinthIndex", i)
+		CollectionService:AddTag(plinth, "BoutiquePlinth")
 		Kit.cylinder(m, "PlinthCap", 0.15, 1.8, CFrame.new(at + Vector3.new(0, 3.27, 0)) * CFrame.Angles(0, 0, math.rad(90)), L.brass, { collide = false, shadow = false })
 		Kit.cylinder(m, "PlinthVelvet", 0.1, 1.3, CFrame.new(at + Vector3.new(0, 3.38, 0)) * CFrame.Angles(0, 0, math.rad(90)), SATIN, { collide = false, shadow = false, query = false })
-		Kit.ball(m, "Dome", 1.5, at + Vector3.new(0, 3.9, 0), VITRINE, { collide = false, shadow = false, query = false })
+		local dome = Kit.ball(m, "Dome", 1.5, at + Vector3.new(0, 3.9, 0), VITRINE, { collide = false, shadow = false, query = false })
 		local jewel = if i == 1 then Color3.fromRGB(80, 160, 255) else Color3.fromRGB(230, 60, 90)
-		Kit.ball(m, "Jewel", 0.35, at + Vector3.new(0, 3.65, 0), { color = jewel, material = Enum.Material.Glass, reflectance = 0.3, transparency = 0.1 }, { collide = false, shadow = false, query = false })
-		Kit.cylinder(m, "JewelRing", 0.08, 0.6, CFrame.new(at + Vector3.new(0, 3.5, 0)) * CFrame.Angles(0, 0, math.rad(90)), L.brass, { collide = false, shadow = false, query = false })
+		local gem = Kit.ball(m, "Jewel", 0.35, at + Vector3.new(0, 3.65, 0), { color = jewel, material = Enum.Material.Glass, reflectance = 0.3, transparency = 0.1 }, { collide = false, shadow = false, query = false })
+		local ring = Kit.cylinder(m, "JewelRing", 0.08, 0.6, CFrame.new(at + Vector3.new(0, 3.5, 0)) * CFrame.Angles(0, 0, math.rad(90)), L.brass, { collide = false, shadow = false, query = false })
+		for _, under in { dome, gem, ring } do
+			under:SetAttribute("UnderDome", i)
+		end
+		-- (Build 105) A spotlight from the ceiling on each, and a ring of gold light at its foot.
+		local spot = Kit.part(m, "PlinthSpot", Vector3.new(0.4, 0.4, 0.4), CFrame.new(at.X, top - 0.6, at.Z), INVISIBLE, { collide = false, query = false, shadow = false })
+		Kit.spotLight(spot, Enum.NormalId.Bottom, 2.6, B.height + 2, 34, Color3.fromRGB(255, 228, 190), false)
+		Kit.cylinder(m, "PlinthHalo", 0.06, 2.6, CFrame.new(at + Vector3.new(0, 0.04, 0)) * CFrame.Angles(0, 0, math.rad(90)), { color = Color3.fromRGB(255, 206, 110), material = Enum.Material.Neon }, { collide = false, shadow = false, query = false })
 	end
 	-- A tufted velvet bench by the mirror, to sit and look.
 	Furniture.build("bench", m, CFrame.lookAt(Vector3.new(14.6, FLOOR, 56.2), Vector3.new(30, FLOOR, 56.2)), { colour = Color3.fromRGB(110, 24, 40), material = "Fabric" })

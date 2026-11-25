@@ -504,12 +504,26 @@ end
 
 export type ZoneName = "street" | "foyer" | "salon" | "velvet" | "obsidian" | "midnight" | "club" | "library" | "ballroom" | "boutique" | "vault" | "terrace" | "suite" | "none"
 
+-- (Build 105) A private wing's walled grounds round its Suite (server/Wings builds them; the garden,
+-- and the infinity pool that can take its place): part of the Suite, in house terms. The box
+-- reaches out past the Suite's own rooms by the garden's margin, from just under the Suite's floor
+-- to the top of its walls.
+function Layout.suiteGrounds(): Box
+	local z, gal = Layout.Suite.zone, Layout.Suite.galleryZone
+	local s = math.max(1, (z.max.X - z.min.X) / 47)
+	local margin = math.floor(12 * s + 0.5)
+	return {
+		min = Vector3.new(z.min.X - margin, Layout.Suite.floorY - 3, z.min.Z - margin),
+		max = Vector3.new(math.max(z.max.X, gal.max.X) + margin, Layout.Suite.floorY + Layout.Suite.height + 4 * s + 8, math.max(z.max.Z, gal.max.Z) + margin),
+	}
+end
+
 function Layout.zoneAt(p: Vector3): ZoneName
 	-- (Build 102) A guest's private wing, high above the house: its Suite and its Vault are the
 	-- Suite and the Vault (and nothing else is up there).
 	local house, wing = Wing.toHouse(p)
 	if wing then
-		if Layout.inBox(Layout.Suite.zone, house) or Layout.inBox(Layout.Suite.galleryZone, house) then
+		if Layout.inBox(Layout.Suite.zone, house) or Layout.inBox(Layout.Suite.galleryZone, house) or Layout.inBox(Layout.suiteGrounds(), house) then
 			return "suite"
 		elseif Layout.inBox(Layout.Vault.zone, house) then
 			return "vault"

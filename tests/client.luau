@@ -4094,7 +4094,18 @@ root.Position = Vector3.new(-8, 5, 50) * GRAND()
 root.CFrame = CFrame.new(root.Position)
 advance(1.5)
 local vaultFolder = workspace.MaisonLocal:FindFirstChild("Vault")
-check("walking into the Vault fills its cabinets with your finds", vaultFolder ~= nil and #vaultFolder:GetChildren() == 2, vaultFolder and #vaultFolder:GetChildren())
+do
+	local cabinetsFilled = 0
+	if vaultFolder then
+		for _, d in vaultFolder:GetChildren() do
+			if d.Name ~= "BrainrotGallery" then
+				cabinetsFilled += 1
+			end
+		end
+	end
+	check("walking into the Vault fills its cabinets with your finds", vaultFolder ~= nil and cabinetsFilled == 2, cabinetsFilled)
+	check("...and builds its Brainrot Gallery (Build 105)", vaultFolder ~= nil and vaultFolder:FindFirstChild("BrainrotGallery") ~= nil)
+end
 root.Position = Vector3.new(0, 5, -40)
 root.CFrame = CFrame.new(0, 5, -40)
 advance(1.5)
@@ -6195,6 +6206,58 @@ do
 	check("a Mythic wears a crown", Walkers.of(LocalPlayer) ~= nil and Walkers.of(LocalPlayer):FindFirstChild("Crown", true) ~= nil)
 	check("...and the new one is built in the round too (the old figure gone)", Walkers.figure(LocalPlayer) ~= nil and Walkers.figure(LocalPlayer):GetAttribute("Brainrot") == "moonCheese")
 	snapshot("brainrot-walker")
+	-- (Build 105) The rest of the squad walks behind you: every place you have (five more with the
+	-- Brainrot Penthouse), each in the round, in formation, and none of them in anyone's way.
+	LocalPlayer:SetAttribute("BrainrotSquad", "frogKing:gold:2;croissantino::1;baguettone:diamond:3")
+	signalOf(LocalPlayer, "attr:BrainrotSquad"):Fire()
+	advance(1)
+	local behind = Walkers.followersOf(LocalPlayer)
+	check("Build 105: the rest of your squad walks behind you (each one in it)", #behind >= 2 and #behind <= 3, #behind)
+	check("...each close behind you, in its own place (never on top of each other)", (function()
+		if not myRoot or #behind < 2 then
+			return false
+		end
+		for i, a in behind do
+			if (a.CFrame.Position - myRoot.CFrame.Position).Magnitude > 22 then
+				return false
+			end
+			for j = i + 1, #behind do
+				if (a.CFrame.Position - behind[j].CFrame.Position).Magnitude < 1.5 then
+					return false
+				end
+			end
+		end
+		return true
+	end)())
+	check("...and behind you, not in front", (function()
+		if not myRoot then
+			return false
+		end
+		for _, a in behind do
+			local rel = myRoot.CFrame:PointToObjectSpace(a.CFrame.Position)
+			if rel.Z < 0.5 then
+				return false
+			end
+		end
+		return true
+	end)())
+	local spot1, spot5 = Walkers.spot(1, 4), Walkers.spot(5, 4)
+	check("...the six places of a full squad (with the Penthouse) are all different", (function()
+		local seen = {}
+		for k = 0, 5 do
+			local v = Walkers.spot(k, 4)
+			local key = string.format("%.1f,%.1f", v.X, v.Z)
+			if seen[key] then
+				return false
+			end
+			seen[key] = true
+		end
+		return spot5.Z > spot1.Z
+	end)())
+	LocalPlayer:SetAttribute("BrainrotSquad", nil)
+	signalOf(LocalPlayer, "attr:BrainrotSquad"):Fire()
+	advance(0.5)
+	check("...and they go when the squad's places are empty", #Walkers.followersOf(LocalPlayer) == 0)
 	-- (Build 94) Inside Steal a Luxe it steps aside, unless called back in; a key says which.
 	LocalPlayer:SetAttribute("Attraction", "luxe")
 	signalOf(LocalPlayer, "attr:Attraction"):Fire()

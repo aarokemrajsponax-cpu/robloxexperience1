@@ -1146,4 +1146,69 @@ do
 	check("...and on the game's page and in the trends doc", string.find(launch, stages .. " stages", 1, true) ~= nil and string.find(launch, "sixteen stages", 1, true) == nil and string.find(trends, "sixteen stages", 1, true) == nil)
 end
 
+-- (Build 105) Basement Push: a shove at a guest in reach, paid for only when it lands.
+do
+	local function into(g)
+		if Attractions.inside(g) ~= "basement" then
+			if Attractions.inside(g) then
+				askAs(g, { op = "home" })
+			end
+			advance(3)
+			stand(g, Layout.Obsidian.arrival)
+			local rr = askAs(g, { op = "go", id = "basement" })
+			check("(" .. g.Name .. " down for the Push)", rr.ok == true, rr.why)
+			askAs(g, { op = "ready", id = "basement" })
+			steps(math.ceil(Config.data.Attractions.loadInMost * 10) + 2)
+		end
+	end
+	into(ada)
+	into(bo)
+	local held, spent, offered = 0, 0, 0
+	local kept = table.clone(Game.mischief)
+	Game.mischief.held = function()
+		return held
+	end
+	Game.mischief.spend = function()
+		if held > 0 then
+			held -= 1
+			spent += 1
+			return true
+		end
+		return false
+	end
+	Game.mischief.onSale = function()
+		return true
+	end
+	Game.mischief.offer = function()
+		offered += 1
+		return true, nil
+	end
+	local start = ada.root.CFrame.Position - Vector3.new(0, 3, 0)
+	stand(ada, start)
+	stand(bo, start + Vector3.new(Game.PUSH.reach + 8, 0, 0))
+	local r = askAs(ada, { op = "act", id = "basement", act = "push", n = bo.UserId })
+	check("Push: out of reach is refused, and nothing is offered or spent", r.ok == false and offered == 0 and spent == 0, r.why)
+	stand(bo, start + Vector3.new(5, 0, 0))
+	r = askAs(ada, { op = "act", id = "basement", act = "push", n = bo.UserId })
+	check("...in reach with none held: Roblox's purchase window opens, and nobody is shoved", r.ok == false and r.prompted == true and offered == 1 and last(bo, "pushed") == nil)
+	r = askAs(ada, { op = "act", id = "basement", act = "push", n = ada.UserId })
+	check("...nobody pushes themselves", r.ok == false)
+	held = 2
+	r = askAs(ada, { op = "act", id = "basement", act = "push", n = bo.UserId })
+	local shove = last(bo, "pushed")
+	check("with one held: the shove lands on them, away from the pusher, and one play is spent", r.ok == true and spent == 1 and held == 1 and shove ~= nil and shove.x > 0 and shove.y == Game.PUSH.lift and shove.by == ada.DisplayName, r.why)
+	r = askAs(ada, { op = "act", id = "basement", act = "push", n = bo.UserId })
+	check("a guest just pushed is safe for a while: refused, nothing spent", r.ok == false and spent == 1 and string.find(r.why, "safe") ~= nil, r.why)
+	r = askAs(bo, { op = "act", id = "basement", act = "push", n = ada.UserId })
+	check("...but may push back (with a play of their own)", r.ok == true and spent == 2 and last(ada, "pushed") ~= nil, r.why)
+	advance(Game.PUSH.safe + 1)
+	r = askAs(ada, { op = "act", id = "basement", act = "push", n = bo.UserId })
+	check("once the safe window is over, they can be pushed again", r.ok == false and r.prompted == true, r.why)
+	r = askAs(ada, { op = "act", id = "basement", act = "push", n = "everyone" })
+	check("a request that names nobody is refused", r.ok == false)
+	for k, v in kept do
+		Game.mischief[k] = v
+	end
+end
+
 H.finish()

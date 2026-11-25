@@ -111,6 +111,8 @@ local ada = H.guest("Ada", 1901)
 local bo = H.guest("Bo", 1902)
 run(Herald.start)
 run(Attractions.start)
+-- (Build 105: the island ships closed, coming soon; these tests open it to test its rides.)
+Config.data.Attractions.island.comingSoon = false
 local o = Config.data.Attractions.island.origin
 local O = Vector3.new(o[1], o[2], o[3])
 

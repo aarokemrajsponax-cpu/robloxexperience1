@@ -701,7 +701,7 @@ local services = {
 			end
 		end,
 		GetInstanceAddedSignal = function(_, tag)
-			H.tagAdded[tag] = H.tagAdded[tag] or H.signal()
+			H.tagAdded[tag] = H.tagAdded[tag] or signal()
 			return H.tagAdded[tag]
 		end,
 		HasTag = function(_, inst, tag)

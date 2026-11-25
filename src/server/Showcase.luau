@@ -340,7 +340,7 @@ local function onAsk(player: Player, request: unknown): any
 			if op ~= "buyTheme" or (t.gilt == nil and t.gems == nil) then
 				return { ok = false, why = if t.islandKey then "It comes with the Island Key." elseif t.prestige then "It comes with Maison Prestige " .. t.prestige .. "." else "Buy it first." }
 			end
-			if not spend(player, data, t.gilt or 0, t.gems or 0, "Suite theme") then
+			if not spend(player, data, Rules.themeGilt(t), t.gems or 0, "Suite theme") then
 				return { ok = false, short = if (t.gems or 0) > 0 then "Gems" else "Gilt", why = if (t.gems or 0) > 0 then "Insufficient Gems." else "Insufficient Gilt." }
 			end
 			s.themes[t.id] = true

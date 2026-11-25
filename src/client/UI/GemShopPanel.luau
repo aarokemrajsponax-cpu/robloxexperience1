@@ -421,7 +421,7 @@ function GemShopPanel.open(start: string?)
 						buy(item.id, "buy")
 					end
 				end
-				local line = item.line
+				local line = GemList.lineOf(item)
 				if item.season and not away and not has then
 					line = line .. " On sale while the holiday is on; yours for good."
 				end

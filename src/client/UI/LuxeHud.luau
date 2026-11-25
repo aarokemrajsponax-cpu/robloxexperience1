@@ -29,6 +29,8 @@ local Sleepers = require(script.Parent.Parent.World.LuxeSleepers)
 local Root = require(script.Parent.Root)
 local Theme = require(script.Parent.Theme)
 local Toast = require(script.Parent.Toast)
+local MischiefKey = require(script.Parent.MischiefKey)
+local stopMischief: (() -> ())? = nil
 local Moment = require(script.Parent.Moment)
 
 local LuxeHud = {}
@@ -684,7 +686,7 @@ function LuxeHud.mount()
 	k.Name = "LuxeKeys"
 	k.AnchorPoint = Vector2.new(0.5, 1)
 	k.BackgroundTransparency = 1
-	k.Size = UDim2.fromOffset(300, 44)
+	k.Size = UDim2.fromOffset(520, 44)
 	k.Parent = Root.hud
 	Theme.list(k, 10, true).HorizontalAlignment = Enum.HorizontalAlignment.Center
 	Theme.key(k, "Leave", false, function()
@@ -700,6 +702,8 @@ function LuxeHud.mount()
 	Theme.key(k, "Upgrades", true, function()
 		LuxeHud.openBoard()
 	end, 130)
+	-- (Build 105) Midway Steal: only while a guest carrying pieces is in reach.
+	stopMischief = MischiefKey.mount(k, "midway")
 	keys = k
 
 	LuxeHud.draw()
@@ -734,6 +738,10 @@ end
 
 function LuxeHud.unmount()
 	LuxeLift.unmount()
+	if stopMischief then
+		stopMischief()
+		stopMischief = nil
+	end
 	if beat then
 		beat:Disconnect()
 		beat = nil

@@ -236,7 +236,7 @@ function Auction.bid(player: Player, id: string, amount: number): { [string]: an
 		return { ok = false, why = why or ("The auction couldn't take that bid just now: " .. tostring(err)) }
 	end
 	Auction.tally(player, "auctionBids", 1)
-	event:FireAllClients({ op = "auctionBid", lot = l.id, name = l.name, by = Names.of(player), amount = amount, currency = l.currency })
+	event:FireAllClients({ op = "auctionBid", lot = l.id, name = l.name, by = Names.of(player), userId = player.UserId, amount = amount, currency = l.currency })
 	-- The bidder it beat, if they're here: their bid back now.
 	if beaten then
 		local other = Players:GetPlayerByUserId(beaten)

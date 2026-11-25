@@ -400,6 +400,10 @@ local function push(ctx: Types.Ctx, player: Player, run: Run, force: boolean?)
 		run.sentAt = now
 		ctx.send(player, s)
 	end
+	-- (Build 105) How many pieces they carry, for every screen (who a Midway Steal could reach).
+	if player:GetAttribute("LuxeBag") ~= #run.bag then
+		player:SetAttribute("LuxeBag", if #run.bag > 0 then #run.bag else nil)
+	end
 end
 
 local function resetSpeed(ctx: Types.Ctx, player: Player, run: Run)
@@ -1465,6 +1469,7 @@ function Luxe.enter(ctx: Types.Ctx, player: Player): (CFrame?, string?)
 end
 
 function Luxe.leave(ctx: Types.Ctx, player: Player, why: string)
+	player:SetAttribute("LuxeBag", nil)
 	local run = runs[player]
 	if run then
 		local lost = worthOf(run.bag)
@@ -1626,6 +1631,110 @@ function Luxe.directory(ctx: Types.Ctx, player: Player): { [string]: any }
 	return { open = true, hauls = p.hauls, best = p.best, banked = p.banked, stride = level, finds = finds, rank = Plan.Ranks[rank].name }
 end
 
+---------------------------------------------------------------------------------------------------
+-- (Build 105) Midway Steal: a prepaid play (server/Purchases/Mischief, 19 Robux each). Pressed
+-- near a guest carrying a bag, it takes the finest piece out of theirs into yours (its Gilt worked
+-- out for you, as if you'd lifted it), to bank yourself. Spent only when it lands: they must be in
+-- reach, carrying, and not robbed a moment ago (a minute's grace each time); you need room in your
+-- bag; and there's a pause between your own. With none held, Roblox's window offers one.
+---------------------------------------------------------------------------------------------------
+Luxe.mischief = {
+	held = function(_player: Player): number
+		return 0
+	end,
+	spend = function(_player: Player): boolean
+		return false
+	end,
+	onSale = function(): boolean
+		return false
+	end,
+	offer = function(_player: Player): (boolean, string?)
+		return false, "Midway Steal isn't on sale yet."
+	end,
+}
+Luxe.MIDWAY = { reach = 14, cooldown = 12, safe = 60 }
+local lastMidway: { [Player]: number } = {}
+local robbedAt: { [Player]: number } = {}
+
+function Luxe.midway(ctx: Types.Ctx, player: Player, victimId: number): { [string]: any }
+	local run = runs[player]
+	if not run or ctx.inside(player) ~= ID then
+		return { ok = false, why = "Midway Steal works in Steal a Luxe." }
+	end
+	local victim = Players:GetPlayerByUserId(victimId)
+	local theirs = if victim then runs[victim] else nil
+	if not victim or victim == player or not theirs or ctx.inside(victim) ~= ID then
+		return { ok = false, why = "They aren't in the halls." }
+	end
+	if #theirs.bag == 0 then
+		return { ok = false, why = victim.DisplayName .. " isn't carrying anything." }
+	end
+	local now = Luxe.now()
+	local safe = robbedAt[victim]
+	if safe and now - safe < Luxe.MIDWAY.safe then
+		return { ok = false, why = string.format("%s was robbed a moment ago: they're safe for %d more seconds.", victim.DisplayName, math.ceil(Luxe.MIDWAY.safe - (now - safe))) }
+	end
+	local last = lastMidway[player]
+	if last and now - last < Luxe.MIDWAY.cooldown then
+		return { ok = false, why = string.format("Catch your breath: %d seconds.", math.ceil(Luxe.MIDWAY.cooldown - (now - last))) }
+	end
+	local a, b = ctx.rootOf(player), ctx.rootOf(victim)
+	if not a or not b or (a.CFrame.Position - b.CFrame.Position).Magnitude > Luxe.MIDWAY.reach then
+		return { ok = false, why = "Get closer: within arm's reach of them." }
+	end
+	local data = ctx.data(player)
+	if not data then
+		return { ok = false, why = "Your ledger is still being opened." }
+	end
+	local c = cfg(ctx)
+	local p = page(ctx, data)
+	if #run.bag >= c.bag[p.bag] then
+		return { ok = false, why = "Your bag is full: bank it first." }
+	end
+	if Luxe.mischief.held(player) <= 0 then
+		if not Luxe.mischief.onSale() then
+			return { ok = false, why = "Midway Steal isn't on sale yet." }
+		end
+		local opened, why = Luxe.mischief.offer(player)
+		return { ok = false, prompted = opened, why = if opened then nil else why }
+	end
+	-- The finest piece in their bag.
+	local best, at = theirs.bag[1], 1
+	for i, piece in theirs.bag do
+		if piece.worth > best.worth then
+			best, at = piece, i
+		end
+	end
+	if not Luxe.mischief.spend(player) then
+		return { ok = false, why = "That couldn't be used just now. Nothing was taken." }
+	end
+	table.remove(theirs.bag, at)
+	if theirs.giltOf and theirs.giltOf[at] then
+		table.remove(theirs.giltOf, at)
+	end
+	-- (Its plinth goes with it: if the thief is caught, that plinth fills again.)
+	local spotId = if theirs.from[at] then table.remove(theirs.from, at) else nil
+	local bankerBonus = c.banker[p.banker] or 0
+	local gilt = ctx.giltQuote(player, Fortune.cash(math.floor(best.worth * (1 + bankerBonus) + 0.5)))
+	run.giltOf = run.giltOf or {}
+	table.insert(run.bag, best)
+	table.insert(run.giltOf :: { number }, gilt)
+	if spotId then
+		table.insert(run.from, spotId)
+	end
+	lastMidway[player] = now
+	robbedAt[victim] = now
+	resetSpeed(ctx, player, run)
+	resetSpeed(ctx, victim, theirs)
+	push(ctx, player, run, true)
+	push(ctx, victim, theirs, true)
+	ctx.send(player, { op = "notice", title = "Midway Steal", line = string.format("You snatched %s from %s: bank it at a way out for %s Gilt.", best.name, victim.DisplayName, Fortune.format(gilt)) })
+	ctx.send(victim, { op = "notice", title = "Robbed mid-heist", line = string.format("%s snatched your %s with a Midway Steal. You're safe from another for a minute.", player.DisplayName, best.name) })
+	ctx.tally(player, "luxeMidway", 1)
+	note(player, "Luxe midway", { piece = best.id, rarity = best.rarity })
+	return { ok = true, piece = best.id, gilt = gilt }
+end
+
 function Luxe.ask(ctx: Types.Ctx, player: Player, r: { [string]: unknown }): any
 	local data = ctx.data(player)
 	if not data then
@@ -1639,6 +1748,12 @@ function Luxe.ask(ctx: Types.Ctx, player: Player, r: { [string]: unknown }): any
 			return { ok = false, why = "Not that." }
 		end
 		return Luxe.take(ctx, player, n)
+	elseif r.act == "midway" then
+		local id = tonumber(r.n)
+		if not id or id ~= math.floor(id) then
+			return { ok = false, why = "Not that." }
+		end
+		return Luxe.midway(ctx, player, id)
 	elseif r.act == "upgrade" then
 		local kind = r.what
 		local prices = if kind == "bag" then c.bagPrice elseif kind == "quiet" then c.quietPrice elseif kind == "banker" then c.bankerPrice elseif kind == "hands" then c.handsPrice else nil

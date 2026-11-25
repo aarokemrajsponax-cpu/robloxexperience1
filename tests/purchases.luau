@@ -30,6 +30,9 @@ local Config, Remotes, Gilt, LedgerService, Enum = H.Config, H.Remotes, H.Gilt, 
 local fakeOs = H.fakeOs
 
 local ProductConfig = module("ReplicatedStorage", "Shared", "ProductConfig")
+-- (Build 105) What the smallest Gilt purse and Gem pouch give (their amounts were raised).
+local PURSE1 = ProductConfig.byKey.giltPurse1.Reward.Amount
+local POUCH = ProductConfig.byKey.gems1.Reward.Amount
 local Speed = module("ReplicatedStorage", "Shared", "Speed")
 local function purchases(name)
 	return module("ServerScriptService", "Server", "Purchases", name)
@@ -172,10 +175,10 @@ do
 	table.insert(MarketplaceService.devProducts, { Name = "Gilt Chest", ProductId = 7777, PriceInRobux = 199 })
 	run(Catalog.discover)
 	r = receipt(amy, 7777, "U-1", 199)
-	check("once the product exists, Roblox's retry grants it", r == GRANTED and amyData.gilt == 5500, amyData.gilt)
+	check("once the product exists, Roblox's retry grants it", r == GRANTED and amyData.gilt == ProductConfig.byKey.giltPurse2.Reward.Amount, amyData.gilt)
 	check("the ledger says Granted", Ledger.get("U-1").state == "Granted" and type(Ledger.get("U-1").grantedAt) == "number")
 	r = receipt(amy, 7777, "U-1", 199)
-	check("a replayed receipt is acknowledged and grants nothing", r == GRANTED and amyData.gilt == 5500)
+	check("a replayed receipt is acknowledged and grants nothing", r == GRANTED and amyData.gilt == ProductConfig.byKey.giltPurse2.Reward.Amount)
 	check("and the replay is logged", Telemetry.count(E.Duplicate, "giltPurse2", "replayed") == 1)
 	-- A product renamed in the game is still found under the name it was made with (the Gold Leaf
 	-- salute is the Gold Confetti salute now).
@@ -212,7 +215,7 @@ do
 	check("a buyer who isn't in this server: unresolved (Roblox delivers it when they join)", r == LATER)
 	local zed = guest("Zed", 555)
 	r = receipt(zed, 5006, "A-1", 49)
-	check("and granted once they're here", r == GRANTED and profiles[zed].Data.gilt == 1000)
+	check("and granted once they're here", r == GRANTED and profiles[zed].Data.gilt == PURSE1)
 
 	local ghost = H.newGuest("Ghost", 556)
 	ghost.Character = nil
@@ -233,7 +236,7 @@ do
 		late = MarketplaceService.ProcessReceipt({ PlayerId = 101, ProductId = 5006, PurchaseId = "L-1", CurrencySpent = 49 })
 	end)
 	advance(10)
-	check("a lapsed claim is taken over and granted once", late == GRANTED and amyData.gilt == before + 1000 and ledgerStore()["p_L-1"].state == "Granted" and ledgerStore()["p_L-1"].attempts == 2)
+	check("a lapsed claim is taken over and granted once", late == GRANTED and amyData.gilt == before + PURSE1 and ledgerStore()["p_L-1"].state == "Granted" and ledgerStore()["p_L-1"].attempts == 2)
 	-- Granted by another server (the ledger says so) but missing from this profile.
 	ledgerStore()["p_G-1"] = { v = 1, id = "G-1", state = "Granted", playerId = 101, productId = 5006, key = "giltPurse1", spent = 49, firstSeen = 1, updated = 1, server = "other-server", leaseUntil = 0, attempts = 1, grantedAt = 1 }
 	before = amyData.gilt
@@ -250,10 +253,10 @@ do
 	end)
 	advance(ProductConfig.Settings.SaveTimeoutSeconds + 2)
 	check("a grant whose save doesn't land isn't acknowledged", stuck == LATER, tostring(stuck))
-	check("the reward waits in memory, once", amyData.gilt == before + 1000)
+	check("the reward waits in memory, once", amyData.gilt == before + PURSE1)
 	H.savesWork = true
 	r = receipt(amy, 5006, "S-1", 49)
-	check("Roblox's retry is acknowledged when the save lands, without granting again", r == GRANTED and amyData.gilt == before + 1000)
+	check("Roblox's retry is acknowledged when the save lands, without granting again", r == GRANTED and amyData.gilt == before + PURSE1)
 	check("the saved profile holds the reward and its PurchaseId together", table.find(profiles[amy].LastSavedData.receipts, "S-1") ~= nil and profiles[amy].LastSavedData.gilt == amyData.gilt)
 
 	-- A handler that fails halfway: everything it touched is put back.
@@ -299,7 +302,7 @@ do
 	end
 	before = amyData.gilt
 	r = receipt(amy, 5006, "O-1", 49)
-	check("a saved reward is acknowledged even if the ledger can't be marked yet", r == GRANTED and amyData.gilt == before + 1000)
+	check("a saved reward is acknowledged even if the ledger can't be marked yet", r == GRANTED and amyData.gilt == before + PURSE1)
 	check("the ledger entry waits in the buyer's outbox", #amyData.ledgerOutbox == 1 and ledgerStore()["p_O-1"].state == "Granting")
 	H.storeFault = nil
 	run(function()
@@ -316,7 +319,7 @@ do
 	check("with the ledger unavailable, the receipt waits", r == LATER and amyData.gilt == before)
 	H.storeFault = nil
 	r = receipt(amy, 5006, "D-1", 49)
-	check("and is granted when it's back", r == GRANTED and amyData.gilt == before + 1000)
+	check("and is granted when it's back", r == GRANTED and amyData.gilt == before + PURSE1)
 
 	-- A product switched off at start (a broken entry): its receipts wait, never granted from it.
 	local off = table.clone(ProductConfig.byKey.giltPurse1)
@@ -339,7 +342,7 @@ do
 	before = amyData.gilt
 	r = receipt(amy, 5006, long, 49)
 	local key = Ledger.keyOf(long)
-	check("a very long PurchaseId gets a short ledger key and is granted", r == GRANTED and #key <= 50 and amyData.gilt == before + 1000 and ledgerStore()[key].id == long, key)
+	check("a very long PurchaseId gets a short ledger key and is granted", r == GRANTED and #key <= 50 and amyData.gilt == before + PURSE1 and ledgerStore()[key].id == long, key)
 	check("ledger keys don't collide for different ids", Ledger.keyOf(long) ~= Ledger.keyOf(string.rep("9", 79) .. "8"))
 
 	-- Two deliveries of one receipt at once.
@@ -352,7 +355,7 @@ do
 		r2 = MarketplaceService.ProcessReceipt({ PlayerId = 101, ProductId = 5006, PurchaseId = "C-1", CurrencySpent = 49 })
 	end)
 	advance(2)
-	check("two deliveries at once grant once", amyData.gilt == before + 1000 and r1 == GRANTED and r2 == GRANTED, tostring(r1) .. " " .. tostring(r2))
+	check("two deliveries at once grant once", amyData.gilt == before + PURSE1 and r1 == GRANTED and r2 == GRANTED, tostring(r1) .. " " .. tostring(r2))
 
 	-- A gift: both profiles are saved, each with its mark, before Roblox is told.
 	Config.data.Products.goldKeyGift = 8101
@@ -423,7 +426,7 @@ do
 	local allowed, why = Store.prompt(rio, "giltPurse1", "test")
 	check("Restricted pauses new purchase prompts, with a neutral message", allowed == false and string.find(why or "", "safe and yours", 1, true) ~= nil, why)
 	local before = data.gilt
-	check("receipts are still granted while Restricted", receipt(rio, 5006, "V-last", 49) == GRANTED and data.gilt == before + 1000)
+	check("receipts are still granted while Restricted", receipt(rio, 5006, "V-last", 49) == GRANTED and data.gilt == before + PURSE1)
 	check("the change is logged", Telemetry.count(E.Risk) >= 2)
 	H.setWallClock(fakeOs.time() + ProductConfig.Risk.RestrictHours * 3600 + 60)
 	advance(1.1)
@@ -1547,15 +1550,15 @@ do
 	r = curio(mo, { op = "gems", key = "giltPurse1" })
 	check("only Gem packs are sold there", r.ok == false)
 	local result = receipt(mo, 5301, "gems-1", 199)
-	check("the receipt adds the Gems", result == GRANTED and moData.gems == 250)
+	check("the receipt adds the Gems", result == GRANTED and moData.gems == POUCH)
 	result = receipt(mo, 5301, "gems-1", 199)
-	check("the same receipt twice adds nothing", moData.gems == 250)
+	check("the same receipt twice adds nothing", moData.gems == POUCH)
 	r = curio(mo, { op = "buy", id = "truffle" })
-	check("the Cabinet sells the exact curio chosen, at its price", r.ok == true and moData.gems == 190 and CuriosS.count(moData, "truffle") == 1)
+	check("the Cabinet sells the exact curio chosen, at its price", r.ok == true and moData.gems == POUCH - 60 and CuriosS.count(moData, "truffle") == 1)
 	r = curio(mo, { op = "buy", id = "croissantino" })
-	check("a curio found at the tables can't be bought", r.ok == false and moData.gems == 190)
+	check("a curio found at the tables can't be bought", r.ok == false and moData.gems == POUCH - 60)
 	r = curio(mo, { op = "buy", id = "truffle", gems = 0 })
-	check("a price from the screen is refused outright", r.ok == false and moData.gems == 190)
+	check("a price from the screen is refused outright", r.ok == false and moData.gems == POUCH - 60)
 	r = curio(mo, { op = "fav", id = "truffle", on = true })
 	check("a curio can be starred", r.ok == true and moData.curios.favs.truffle == true)
 	r = curio(mo, { op = "fav", id = "moonCheese", on = true })
@@ -2715,6 +2718,38 @@ do
 	end
 	check("Gems: nothing in the server adds to a Gem balance but a receipt, the owner's gift, a trade or an auction's own bid", #stray == 0, table.concat(stray, ", "))
 	check("...and a Gem pack's receipt still grants them", where["src/server/Curios.luau"] == true)
+end
+
+-- (Build 105) Midway Steal and Basement Push: a receipt grants one play, held until it's used.
+do
+	local Mischief = purchases("Mischief")
+	local Perks = purchases("Perks")
+	table.insert(MarketplaceService.devProducts, { Name = "Midway Steal", ProductId = 7901, PriceInRobux = 19 })
+	table.insert(MarketplaceService.devProducts, { Name = "Basement Push", ProductId = 7902, PriceInRobux = 19 })
+	run(Catalog.discover)
+	local mo = guest("Mo", 1979)
+	check("Mischief: both plays are on sale once made in Creator Hub, at their real price", Mischief.onSale("midway") and Mischief.onSale("push") and Mischief.price("midway") == 19 and Mischief.price("push") == 19)
+	local r = receipt(mo, 7901, "M-1", 19)
+	check("a Midway Steal receipt grants exactly one play", r == GRANTED and Mischief.held(mo, "midway") == 1 and Mischief.held(mo, "push") == 0)
+	r = receipt(mo, 7901, "M-1", 19)
+	check("...a replayed receipt grants nothing more", r == GRANTED and Mischief.held(mo, "midway") == 1)
+	r = receipt(mo, 7902, "M-2", 19)
+	check("a Basement Push receipt grants one push", r == GRANTED and Mischief.held(mo, "push") == 1)
+	local ok
+	run(function()
+		ok = Mischief.spend(mo, "midway")
+	end)
+	check("a play spent is gone", ok == true and Mischief.held(mo, "midway") == 0)
+	run(function()
+		ok = Mischief.spend(mo, "midway")
+	end)
+	check("...and with none held, nothing is spent", ok == false and Mischief.held(mo, "midway") == 0)
+	Perks.add(profiles[mo].Data, Mischief.credit("push"), 9)
+	local before = #prompts
+	run(function()
+		Mischief.offer(mo, "push")
+	end)
+	check("holding the most the house keeps (10), Roblox's window isn't opened for another", #prompts == before and Mischief.held(mo, "push") == 10)
 end
 
 H.finish()

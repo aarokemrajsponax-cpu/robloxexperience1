@@ -64,6 +64,7 @@ local DOZE_AFTER = 40 -- seconds of its guest standing still before it dozes
 
 -- (Further than this from the camera, a walker is out of sight: it waits, and catches up.)
 local FAR = 220
+local NEAR = 120 -- (Build 105) another guest's squad behind them moves only this near
 
 local rgb = Color3.fromRGB
 local SPARKLES = "rbxasset://textures/particles/sparkles_main.dds"
@@ -100,8 +101,15 @@ type Walker = {
 	mine: boolean,
 	crown: TextLabel?,
 	figure: Model?, -- (Build 82) the brainrot in the round (shared/BrainrotFigure), when it has one
+	slot: number, -- (Build 105) its place: 0 beside its guest, 1 to 5 the rest of the squad behind
+	follower: boolean,
 }
-local walkers: { [Player]: Walker } = {}
+local walkers: { [Player]: Walker } = {} -- the one beside each guest
+-- (Build 105) The rest of each guest's squad, walking behind them in formation (up to five: six in
+-- all with the Brainrot Penthouse). Another guest's are drawn only while there's room for them
+-- (FOLLOWER_CAP across the house, fewer on a slower screen), nearest first as they're built.
+local followers: { [Player]: { Walker } } = {}
+local FOLLOWER_CAP = 30
 
 local function holder(): Instance
 	return Workspace:FindFirstChild("MaisonLocal") or Workspace
@@ -113,12 +121,7 @@ local function round(f: GuiObject)
 	c.Parent = f
 end
 
-local function clear(p: Player)
-	local w = walkers[p]
-	if not w then
-		return
-	end
-	walkers[p] = nil
+local function drop(w: Walker)
 	w.part:Destroy()
 	w.shadow:Destroy()
 	w.ring:Destroy()
@@ -127,6 +130,38 @@ local function clear(p: Player)
 		f:Destroy()
 	end
 end
+
+local function clear(p: Player)
+	local w = walkers[p]
+	walkers[p] = nil
+	if w then
+		drop(w)
+	end
+	local list = followers[p]
+	followers[p] = nil
+	if list then
+		for _, fw in list do
+			drop(fw)
+		end
+	end
+end
+
+-- Where each place in the squad walks, in its guest's frame (x to their right, z behind them),
+-- given its height: the one beside them at their left shoulder, the rest in two rows behind.
+local FORMATION = {
+	[0] = { x = -1, z = 0 },
+	[1] = { x = 1, z = 0 },
+	[2] = { x = 0, z = 1 },
+	[3] = { x = -1.6, z = 1.7 },
+	[4] = { x = 1.6, z = 1.7 },
+	[5] = { x = 0, z = 2.6 },
+}
+local function spot(slot: number, h: number): Vector3
+	local f = FORMATION[slot] or FORMATION[5]
+	local side = 2.2 + h * 0.35
+	return Vector3.new(f.x * side, 0, 1.6 + h * 0.25 + f.z * (2.6 + h * 0.4))
+end
+BrainrotWalkers.spot = spot
 
 local function flat(name: string, size: number, colour: Color3, transparency: number, neon: boolean): Part
 	local d = Instance.new("Part")
@@ -145,29 +180,15 @@ local function flat(name: string, size: number, colour: Color3, transparency: nu
 	return d
 end
 
-local function build(p: Player)
-	clear(p)
-	-- (Build 94) Put away inside Steal a Luxe, the Basement and the Executive Suite, unless its
-	-- guest called it back in: everyone sees the way.
-	if AttractionList.companionsHidden(p) then
-		return
-	end
-	local id = p:GetAttribute("Brainrot")
-	local c = if type(id) == "string" then Curios.byId[id] else nil
-	local character = p.Character
-	local root = character and character:FindFirstChild("HumanoidRootPart")
-	if not c or c.family ~= "meme" or not root or not root:IsA("BasePart") then
-		return
-	end
-	local mutAttr = p:GetAttribute("BrainrotMut")
+-- One walker: the brainrot `c` (with its mutation, stars and Gilt an hour) at place `slot` of
+-- its guest's squad. The one beside them (slot 0) is drawn in full; the rest of the squad behind
+-- (Build 105) a little smaller, with a shorter label and fewer sparks.
+local function make(p: Player, c: Curios.Curio, mutAttr: unknown, stars: number, rate: number?, slot: number, root: BasePart, character: Model): Walker
 	local mut = if type(mutAttr) == "string" then Brainrots.Mutations[mutAttr] else nil
-	local starsAttr = p:GetAttribute("BrainrotStars")
-	local stars = if type(starsAttr) == "number" then starsAttr else 1
-	local rateAttr = p:GetAttribute("BrainrotRate")
-	local rate = if type(rateAttr) == "number" then rateAttr else 0
+	local follower = slot > 0
 	local rank = RANK[c.rarity] or 1
 	-- (Each star stands it a little taller.)
-	local h = (Brainrots.Height[c.rarity] or 3.4) * (1 + 0.04 * math.max(0, stars - 1))
+	local h = (Brainrots.Height[c.rarity] or 3.4) * (1 + 0.04 * math.max(0, stars - 1)) * (if follower then 0.85 else 1)
 	local colour = if mut then mut.colour else (Curios.RarityColour[c.rarity] or Brand.Colours.gold)
 	if c.rarity == "Secret" and not mut then
 		colour = rgb(200, 190, 255)
@@ -181,7 +202,7 @@ local function build(p: Player)
 	part.CastShadow = false
 	part.Transparency = 1
 	part.Size = Vector3.new(0.2, 0.2, 0.2)
-	part.CFrame = root.CFrame * CFrame.new(-3.5, 0, 2.5)
+	part.CFrame = root.CFrame * CFrame.new(spot(slot, h))
 	part:SetAttribute("Owner", p.UserId)
 	part:SetAttribute("Curio", c.id)
 	-- Its body: the character itself, big, in a soft aura of its colour.
@@ -296,10 +317,10 @@ local function build(p: Player)
 	-- Over its head: its name, its stars and what it earns.
 	local tag = Instance.new("BillboardGui")
 	tag.Name = "Tag"
-	tag.Size = UDim2.fromOffset(260, 52)
+	tag.Size = if follower then UDim2.fromOffset(200, 40) else UDim2.fromOffset(260, 52)
 	tag.StudsOffset = Vector3.new(0, h * 0.55 + 0.9, 0)
 	tag.LightInfluence = 0
-	tag.MaxDistance = 70
+	tag.MaxDistance = if follower then 40 else 70
 	tag.Parent = part
 	local name = Instance.new("TextLabel")
 	name.Name = "Name"
@@ -307,7 +328,7 @@ local function build(p: Player)
 	name.Size = UDim2.new(1, 0, 0, 26)
 	name.Text = c.name
 	name.FontFace = Brand.Fonts.heavy
-	name.TextSize = 20
+	name.TextSize = if follower then 16 else 20
 	name.TextColor3 = colour:Lerp(Color3.new(1, 1, 1), 0.25)
 	name.TextStrokeColor3 = rgb(10, 8, 12)
 	name.TextStrokeTransparency = 0.2
@@ -317,7 +338,7 @@ local function build(p: Player)
 	line.BackgroundTransparency = 1
 	line.Position = UDim2.fromOffset(0, 26)
 	line.Size = UDim2.new(1, 0, 0, 22)
-	line.Text = string.format("%s%s  ·  +%s Gilt/hr", Brainrots.starText(stars), if mut then "  ·  " .. string.upper(mut.name) else "", Brainrots.short(rate))
+	line.Text = if rate then string.format("%s%s  ·  +%s Gilt/hr", Brainrots.starText(stars), if mut then "  ·  " .. string.upper(mut.name) else "", Brainrots.short(rate)) else string.format("%s%s", Brainrots.starText(stars), if mut then "  ·  " .. string.upper(mut.name) else "")
 	line.FontFace = Brand.Fonts.heavy
 	line.TextSize = 14
 	line.TextColor3 = rgb(255, 222, 120)
@@ -330,7 +351,7 @@ local function build(p: Player)
 	local e = Instance.new("ParticleEmitter")
 	e.Name = "Sparks"
 	e.Texture = SPARKLES
-	e.Rate = 3 + rank * 3 + (if mut then 10 else 0)
+	e.Rate = (3 + rank * 3 + (if mut then 10 else 0)) * (if follower then 0.5 else 1)
 	e.Lifetime = NumberRange.new(0.8, 1.6)
 	e.Speed = NumberRange.new(0.4, 1.4)
 	e.SpreadAngle = Vector2.new(180, 180)
@@ -339,7 +360,7 @@ local function build(p: Player)
 	e.Size = NumberSequence.new(0.18 + h * 0.03, 0)
 	e.Color = if mutAttr == "rainbow" then RAINBOW else ColorSequence.new(colour)
 	e.Parent = att
-	if rank >= 5 or mut then
+	if (not follower and rank >= 5) or mut or rank >= 6 then
 		local l = Instance.new("PointLight")
 		l.Color = colour
 		l.Brightness = 1.2
@@ -359,7 +380,7 @@ local function build(p: Player)
 		aura.Visible = false
 	end
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-	walkers[p] = {
+	return {
 		id = c.id,
 		part = part,
 		body = body,
@@ -371,10 +392,10 @@ local function build(p: Player)
 		humanoid = humanoid,
 		at = part.CFrame.Position,
 		height = h,
-		phase = (p.UserId % 89) / 89 * math.pi * 2,
+		phase = ((p.UserId + slot * 17) % 89) / 89 * math.pi * 2,
 		rainbow = rainbow,
 		trick = BY_ACCENT[c.accent] or BY_RARITY[c.rarity] or BY_RARITY.Common,
-		nextTrick = os.clock() + 4 + (p.UserId % 5),
+		nextTrick = os.clock() + 4 + ((p.UserId + slot * 3) % 7),
 		trickAt = nil,
 		trickKind = nil,
 		bubble = bubble,
@@ -383,7 +404,58 @@ local function build(p: Player)
 		mine = p == Players.LocalPlayer,
 		crown = crown,
 		figure = figure,
+		slot = slot,
+		follower = follower,
 	}
+end
+
+-- How many of the others' squads are drawn now (Build 105: FOLLOWER_CAP across the house).
+local function othersDrawn(): number
+	local n = 0
+	for q, list in followers do
+		if q ~= Players.LocalPlayer then
+			n += #list
+		end
+	end
+	return n
+end
+
+local function build(p: Player)
+	clear(p)
+	-- (Build 94) Put away inside Steal a Luxe, the Basement and the Executive Suite, unless its
+	-- guest called it back in: everyone sees the way.
+	if AttractionList.companionsHidden(p) then
+		return
+	end
+	local id = p:GetAttribute("Brainrot")
+	local c = if type(id) == "string" then Curios.byId[id] else nil
+	local character = p.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if not c or c.family ~= "meme" or not root or not root:IsA("BasePart") or not character then
+		return
+	end
+	local starsAttr = p:GetAttribute("BrainrotStars")
+	local rateAttr = p:GetAttribute("BrainrotRate")
+	walkers[p] = make(p, c, p:GetAttribute("BrainrotMut"), if type(starsAttr) == "number" then starsAttr else 1, if type(rateAttr) == "number" then rateAttr else 0, 0, root, character)
+	-- (Build 105) The rest of the squad, behind: "id:mutation:stars;..." (server/Brainrots).
+	local squad = p:GetAttribute("BrainrotSquad")
+	if type(squad) ~= "string" or squad == "" then
+		return
+	end
+	local mine = p == Players.LocalPlayer
+	local room = if mine then 5 else math.max(0, math.min(5, FOLLOWER_CAP - othersDrawn()))
+	local list: { Walker } = {}
+	for entry in string.gmatch(squad, "[^;]+") do
+		if #list >= room then
+			break
+		end
+		local fid, fmut, fstars = string.match(entry, "^([^:]+):([^:]*):(%d+)$")
+		local fc = if fid then Curios.byId[fid] else nil
+		if fc and fc.family == "meme" then
+			table.insert(list, make(p, fc, if fmut ~= "" then fmut else nil, math.max(1, tonumber(fstars) or 1), nil, #list + 1, root, character))
+		end
+	end
+	followers[p] = list
 end
 
 -- Starts a trick (or a jump for joy) with its bubble.
@@ -410,11 +482,35 @@ local function cheer(p: Player)
 	if g and before and g > before and (not w.trickAt or os.clock() - w.trickAt > 3) then
 		w.stillSince = os.clock()
 		perform(w, "joy", "💰", os.clock())
+		-- (Build 105) The whole squad jumps for joy with it, a beat apart (only the first one's
+		-- sound plays: perform sounds only its guest's own, and these are quiet).
+		local behind: { Walker } = followers[p] or {}
+		for i, fw in behind do
+			task.delay(0.12 * i, function()
+				if fw.part.Parent and not fw.trickAt then
+					fw.stillSince = os.clock()
+					fw.trickAt = os.clock()
+					fw.trickKind = "joy"
+					fw.bubble.Text = "💰"
+					fw.bubble.TextTransparency = 0
+				end
+			end)
+		end
 	end
 end
 
+-- For tests: the rest of a guest's squad walking behind them (Build 105).
+function BrainrotWalkers.followersOf(p: Player): { Part }
+	local out = {}
+	local list: { Walker } = followers[p] or {}
+	for _, w in list do
+		table.insert(out, w.part)
+	end
+	return out
+end
+
 local function watch(p: Player)
-	for _, key in { "Brainrot", "BrainrotMut", "BrainrotStars", "BrainrotRate", AttractionList.ATTRIBUTE, AttractionList.COMPANIONS_IN } do
+	for _, key in { "Brainrot", "BrainrotMut", "BrainrotStars", "BrainrotRate", "BrainrotSquad", AttractionList.ATTRIBUTE, AttractionList.COMPANIONS_IN } do
 		p:GetAttributeChangedSignal(key):Connect(function()
 			build(p)
 		end)
@@ -435,6 +531,125 @@ end
 local function floorOf(w: Walker): number
 	local hip = if w.humanoid then w.humanoid.HipHeight else 2
 	return w.root.Position.Y - w.root.Size.Y / 2 - hip
+end
+
+-- Moves one walker for this frame (its parts and their places added to `parts` and `frames`).
+local function move(w: Walker, t: number, k: number, dt: number, parts: { BasePart }, frames: { CFrame })
+	local h = w.height
+	-- Its place in the squad's formation round its guest (the one beside them at their left
+	-- shoulder, the rest behind), further back the bigger it is.
+	local side = (w.root.CFrame * CFrame.new(spot(w.slot, h))).Position
+	local floor = floorOf(w)
+	local goal = Vector3.new(side.X, floor, side.Z)
+	local before = w.at
+	w.at = Vector3.new(before.X, floor, before.Z):Lerp(goal, k)
+	local speed = (Vector3.new(w.at.X, 0, w.at.Z) - Vector3.new(before.X, 0, before.Z)).Magnitude / math.max(dt, 1 / 240)
+	local moving = math.clamp(speed / 10, 0, 1)
+	-- Hopping after its guest, bobbing when still; squashing a little as it lands.
+	local hop = math.abs(math.sin(t * 9 + w.phase)) * 0.55 * moving * (h / 4)
+	local bob = math.sin(t * 2 + w.phase) * 0.1 * (1 - moving)
+	local squash = math.sin(t * 18 + w.phase * 2) * 0.05 * moving + math.sin(t * 2 + w.phase) * 0.025
+	local turn = math.sin(t * 1.6 + w.phase) * 4 + math.sin(t * 9 + w.phase) * 7 * moving
+	local sway = 0
+	-- Its character: tricks while its guest stands still, a doze when left long enough.
+	if moving > 0.15 then
+		w.stillSince = t
+		if w.trickKind == "doze" then
+			w.trickAt, w.trickKind = nil, nil
+			w.bubble.TextTransparency = 1
+		end
+		w.nextTrick = math.max(w.nextTrick, t + 3)
+	elseif not w.trickAt and t - w.stillSince > DOZE_AFTER then
+		perform(w, "doze", "💤", t)
+	elseif not w.trickAt and t >= w.nextTrick then
+		perform(w, w.trick.kind, w.trick.bubble, t)
+	end
+	local at, kind = w.trickAt, w.trickKind
+	if at and kind then
+		local u = (t - at) / TRICK_TIME
+		if kind == "doze" then
+			-- Slow breaths, a tilt, the bubble drifting.
+			squash = math.sin(t * 1.2) * 0.06
+			turn = 14 + math.sin(t * 1.2) * 2
+			bob = -0.12 * h / 4
+			w.bubble.Position = UDim2.fromScale(0.86 + math.sin(t * 0.8) * 0.04, 0.0 - (t % 3) * 0.03)
+		elseif u >= 1 then
+			w.trickAt, w.trickKind = nil, nil
+			w.bubble.TextTransparency = 1
+			w.bubble.Position = UDim2.fromScale(0.86, 0.02)
+			w.nextTrick = t + 6 + (w.phase * 1.7) % 5
+		else
+			local up = math.sin(u * math.pi)
+			w.bubble.TextTransparency = math.clamp((u - 0.75) * 4, 0, 1)
+			w.bubble.Position = UDim2.fromScale(0.86, 0.02 - up * 0.12)
+			if kind == "spin" then
+				turn = u * 360
+				hop = up * 0.35 * (h / 4)
+			elseif kind == "flip" then
+				turn = -u * 360
+				hop = up * 1.1 * (h / 4)
+				squash = -0.08 * up
+			elseif kind == "boing" or kind == "joy" then
+				local bounces = if kind == "joy" then 2 else 3
+				local b = math.abs(math.sin(u * math.pi * bounces))
+				hop = b * (if kind == "joy" then 1.2 else 0.7) * (h / 4)
+				squash = (0.5 - b) * 0.18
+			elseif kind == "wiggle" then
+				turn = math.sin(u * math.pi * 8) * 16
+			elseif kind == "sway" then
+				turn = math.sin(u * math.pi * 3) * 12
+				sway = math.sin(u * math.pi * 3) * 0.35
+			elseif kind == "dance" then
+				turn = math.sin(u * math.pi * 4) * 14
+				sway = math.sin(u * math.pi * 2) * 0.6
+				hop = math.abs(math.sin(u * math.pi * 4)) * 0.4 * (h / 4)
+			elseif kind == "bow" then
+				turn = -up * 22
+				bob -= up * 0.25 * (h / 4)
+				squash = up * 0.08
+			end
+		end
+	end
+	local crown = w.crown
+	if crown then
+		crown.Position = UDim2.fromScale(0.5, -0.02 + math.sin(t * 2.4 + w.phase) * 0.02)
+		crown.Rotation = math.sin(t * 1.3 + w.phase) * 6
+	end
+	local across = (w.root.CFrame.RightVector * sway)
+	table.insert(parts, w.part)
+	table.insert(frames, CFrame.new(w.at + across + Vector3.new(0, h * 0.5 + hop + bob, 0)))
+	local fig = w.figure
+	local figRoot = fig and fig.PrimaryPart
+	if figRoot then
+		-- Facing the way its guest faces; a spin turns it round, a flip turns it over
+		-- backwards, a bow tips it forward, the rest sway it from side to side.
+		local look = w.root.CFrame.LookVector
+		local yaw = math.atan2(-look.X, -look.Z)
+		local trickKind = w.trickKind
+		local spinning = trickKind == "spin"
+		local flipping = trickKind == "flip"
+		local pitch = if trickKind == "bow" then math.rad(turn) elseif flipping then math.rad(turn) else 0
+		local roll = if spinning or flipping or trickKind == "bow" then 0 else math.rad(turn) * 0.6
+		local spin = if spinning then math.rad(turn) else 0
+		local base = CFrame.new(w.at + across + Vector3.new(0, hop + bob, 0)) * CFrame.Angles(0, yaw + spin, 0)
+		-- (A flip turns about its middle, not its feet.)
+		local mid = CFrame.new(0, h * 0.45, 0)
+		table.insert(parts, figRoot)
+		table.insert(frames, base * mid * CFrame.Angles(pitch, 0, roll) * mid:Inverse())
+	end
+	w.body.Size = UDim2.fromScale(h * (1 + squash), h * (1 - squash))
+	w.glyph.Rotation = turn
+	w.aura.BackgroundTransparency = 0.55 + 0.12 * math.sin(t * 2.6 + w.phase)
+	local disc = CFrame.new(w.at + Vector3.new(0, 0.06, 0)) * CFrame.Angles(0, 0, math.pi / 2)
+	table.insert(parts, w.shadow)
+	table.insert(frames, disc)
+	table.insert(parts, w.ring)
+	table.insert(frames, disc * CFrame.new(-0.02, 0, 0))
+	w.ring.Transparency = 0.62 + 0.12 * math.sin(t * 3 + w.phase)
+	local rainbow = w.rainbow
+	if rainbow then
+		rainbow.Rotation = (t * 90) % 360
+	end
 end
 
 function BrainrotWalkers.start()
@@ -460,119 +675,19 @@ function BrainrotWalkers.start()
 			if eye and (w.root.Position - eye).Magnitude > FAR then
 				continue
 			end
-			local h = w.height
-			-- Behind and to the left of its guest, further back the bigger it is.
-			local side = (w.root.CFrame * CFrame.new(-(2.2 + h * 0.35), 0, 1.6 + h * 0.25)).Position
-			local floor = floorOf(w)
-			local goal = Vector3.new(side.X, floor, side.Z)
-			local before = w.at
-			w.at = Vector3.new(before.X, floor, before.Z):Lerp(goal, k)
-			local speed = (Vector3.new(w.at.X, 0, w.at.Z) - Vector3.new(before.X, 0, before.Z)).Magnitude / math.max(dt, 1 / 240)
-			local moving = math.clamp(speed / 10, 0, 1)
-			-- Hopping after its guest, bobbing when still; squashing a little as it lands.
-			local hop = math.abs(math.sin(t * 9 + w.phase)) * 0.55 * moving * (h / 4)
-			local bob = math.sin(t * 2 + w.phase) * 0.1 * (1 - moving)
-			local squash = math.sin(t * 18 + w.phase * 2) * 0.05 * moving + math.sin(t * 2 + w.phase) * 0.025
-			local turn = math.sin(t * 1.6 + w.phase) * 4 + math.sin(t * 9 + w.phase) * 7 * moving
-			local sway = 0
-			-- Its character: tricks while its guest stands still, a doze when left long enough.
-			if moving > 0.15 then
-				w.stillSince = t
-				if w.trickKind == "doze" then
-					w.trickAt, w.trickKind = nil, nil
-					w.bubble.TextTransparency = 1
+			move(w, t, k, dt, parts, frames)
+		end
+		-- (Build 105) The rest of each squad, behind its guest (another guest's only near enough
+		-- to be seen: NEAR).
+		for p, list in followers do
+			for _, w in list do
+				if not w.root.Parent or not w.part.Parent then
+					continue
 				end
-				w.nextTrick = math.max(w.nextTrick, t + 3)
-			elseif not w.trickAt and t - w.stillSince > DOZE_AFTER then
-				perform(w, "doze", "💤", t)
-			elseif not w.trickAt and t >= w.nextTrick then
-				perform(w, w.trick.kind, w.trick.bubble, t)
-			end
-			local at, kind = w.trickAt, w.trickKind
-			if at and kind then
-				local u = (t - at) / TRICK_TIME
-				if kind == "doze" then
-					-- Slow breaths, a tilt, the bubble drifting.
-					squash = math.sin(t * 1.2) * 0.06
-					turn = 14 + math.sin(t * 1.2) * 2
-					bob = -0.12 * h / 4
-					w.bubble.Position = UDim2.fromScale(0.86 + math.sin(t * 0.8) * 0.04, 0.0 - (t % 3) * 0.03)
-				elseif u >= 1 then
-					w.trickAt, w.trickKind = nil, nil
-					w.bubble.TextTransparency = 1
-					w.bubble.Position = UDim2.fromScale(0.86, 0.02)
-					w.nextTrick = t + 6 + (w.phase * 1.7) % 5
-				else
-					local up = math.sin(u * math.pi)
-					w.bubble.TextTransparency = math.clamp((u - 0.75) * 4, 0, 1)
-					w.bubble.Position = UDim2.fromScale(0.86, 0.02 - up * 0.12)
-					if kind == "spin" then
-						turn = u * 360
-						hop = up * 0.35 * (h / 4)
-					elseif kind == "flip" then
-						turn = -u * 360
-						hop = up * 1.1 * (h / 4)
-						squash = -0.08 * up
-					elseif kind == "boing" or kind == "joy" then
-						local bounces = if kind == "joy" then 2 else 3
-						local b = math.abs(math.sin(u * math.pi * bounces))
-						hop = b * (if kind == "joy" then 1.2 else 0.7) * (h / 4)
-						squash = (0.5 - b) * 0.18
-					elseif kind == "wiggle" then
-						turn = math.sin(u * math.pi * 8) * 16
-					elseif kind == "sway" then
-						turn = math.sin(u * math.pi * 3) * 12
-						sway = math.sin(u * math.pi * 3) * 0.35
-					elseif kind == "dance" then
-						turn = math.sin(u * math.pi * 4) * 14
-						sway = math.sin(u * math.pi * 2) * 0.6
-						hop = math.abs(math.sin(u * math.pi * 4)) * 0.4 * (h / 4)
-					elseif kind == "bow" then
-						turn = -up * 22
-						bob -= up * 0.25 * (h / 4)
-						squash = up * 0.08
-					end
+				if eye and (w.root.Position - eye).Magnitude > (if w.mine then FAR else NEAR) then
+					continue
 				end
-			end
-			local crown = w.crown
-			if crown then
-				crown.Position = UDim2.fromScale(0.5, -0.02 + math.sin(t * 2.4 + w.phase) * 0.02)
-				crown.Rotation = math.sin(t * 1.3 + w.phase) * 6
-			end
-			local across = (w.root.CFrame.RightVector * sway)
-			table.insert(parts, w.part)
-			table.insert(frames, CFrame.new(w.at + across + Vector3.new(0, h * 0.5 + hop + bob, 0)))
-			local fig = w.figure
-			local figRoot = fig and fig.PrimaryPart
-			if figRoot then
-				-- Facing the way its guest faces; a spin turns it round, a flip turns it over
-				-- backwards, a bow tips it forward, the rest sway it from side to side.
-				local look = w.root.CFrame.LookVector
-				local yaw = math.atan2(-look.X, -look.Z)
-				local trickKind = w.trickKind
-				local spinning = trickKind == "spin"
-				local flipping = trickKind == "flip"
-				local pitch = if trickKind == "bow" then math.rad(turn) elseif flipping then math.rad(turn) else 0
-				local roll = if spinning or flipping or trickKind == "bow" then 0 else math.rad(turn) * 0.6
-				local spin = if spinning then math.rad(turn) else 0
-				local base = CFrame.new(w.at + across + Vector3.new(0, hop + bob, 0)) * CFrame.Angles(0, yaw + spin, 0)
-				-- (A flip turns about its middle, not its feet.)
-				local mid = CFrame.new(0, h * 0.45, 0)
-				table.insert(parts, figRoot)
-				table.insert(frames, base * mid * CFrame.Angles(pitch, 0, roll) * mid:Inverse())
-			end
-			w.body.Size = UDim2.fromScale(h * (1 + squash), h * (1 - squash))
-			w.glyph.Rotation = turn
-			w.aura.BackgroundTransparency = 0.55 + 0.12 * math.sin(t * 2.6 + w.phase)
-			local disc = CFrame.new(w.at + Vector3.new(0, 0.06, 0)) * CFrame.Angles(0, 0, math.pi / 2)
-			table.insert(parts, w.shadow)
-			table.insert(frames, disc)
-			table.insert(parts, w.ring)
-			table.insert(frames, disc * CFrame.new(-0.02, 0, 0))
-			w.ring.Transparency = 0.62 + 0.12 * math.sin(t * 3 + w.phase)
-			local rainbow = w.rainbow
-			if rainbow then
-				rainbow.Rotation = (t * 90) % 360
+				move(w, t, k, dt, parts, frames)
 			end
 		end
 		if #parts > 0 then

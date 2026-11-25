@@ -182,4 +182,16 @@ function Suite.pieces(placed: { [string]: string }, goldKey: boolean): { [string
 	return out
 end
 
+-- (Build 105) The Infinity Pool: one upgrade for a guest's own Suite, kept for good. It takes the
+-- south of their walled garden, its far edge flush with the glass over the city, with loungers on
+-- its deck and lights under the water (server/Wings builds it in their wing; visitors see it too).
+-- Bought once, for the price shown: in Gilt, or in Gems (the same as the Gem Shop's own exchange,
+-- rounded: 150 Gems would change for 60,000 Gilt there). Nothing in it touches a score.
+Suite.Pool = {
+	name = "The Infinity Pool",
+	gilt = 57000,
+	gems = 150,
+	line = "A pool along your garden's glass wall, its far edge level with the water so it seems to run into the city at night. Loungers on its deck, lights under the water. Yours for good, and every visitor sees it.",
+}
+
 return Suite

@@ -229,4 +229,23 @@ local starts = #inboxOf(cy, "trialStart")
 run(cyCar, "boulevard", L - 20, L + 30, 60)
 check("in a race, laps are the race's: no timed lap starts", #inboxOf(cy, "trialStart") == starts)
 
+-- (Build 105) Easier driving.
+do
+	local S, A = GrandPrix.shapeSteer, GrandPrix.autoThrottle
+	check("steering: a resting thumb (a hair off centre) doesn't turn the car", S(0.05) == 0 and S(-0.07) == 0)
+	check("...full lock is still full lock, both ways", math.abs(S(1) - 1) < 1e-9 and math.abs(S(-1) + 1) < 1e-9)
+	local rising = true
+	local prev = -1
+	for i = 0, 20 do
+		local v = S(i / 20)
+		rising = rising and v >= prev
+		prev = v
+	end
+	check("...it only ever rises with the stick, and a small push is a small turn (finer than the stick)", rising and S(0.3) < 0.3 and S(0.3) > 0 and S(-0.3) == -S(0.3))
+	check("on a touch screen in a race the car drives itself forward: no push, or a light one either way, is full throttle", A(0) == 1 and A(0.4) == 1 and A(-0.2) == 1)
+	check("...and the stick pulled back brakes (and reverses) as before", A(-0.8) == -0.8 and A(-1) == -1)
+	local _, yaw = GrandPrix.step(GrandPrix.CAR.top, 1, 1, 0.1, false)
+	check("at top speed the tyres hold a tighter bend than before (grip 84, was 66)", GrandPrix.CAR.grip == 84 and math.abs(math.abs(yaw) - 84 / GrandPrix.CAR.top) < 1e-6, yaw)
+end
+
 H.finish()

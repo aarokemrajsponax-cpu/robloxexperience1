@@ -4,6 +4,7 @@
 -- Monday.
 
 local Curios = require(script.Parent.Curios)
+local Fortune = require(script.Parent.Fortune)
 local Seed = require(script.Parent.Seed)
 local Wardrobe = require(script.Parent.Wardrobe)
 
@@ -92,12 +93,21 @@ function Boutique.secondsToTurn(time: number?): number
 	return 86400 - (t % 86400)
 end
 
--- (Build 96) The Brainrot Market: four brainrots a day for Gilt, chosen by the date so every
+-- (Build 96) The Brainrot Market: four brainrots a day (five from Build 105) for Gilt, chosen by the date so every
 -- server shows the same four (one Common or Uncommon, one Rare, one Epic, one Legendary). Each is
 -- the exact one shown, never a random pick, at a fixed price by its rarity; a guest can buy each
--- of the day's four once a day. Mythics and Secrets are never sold: they're found.
-Boutique.MarketBands = { { "Common", "Uncommon" }, { "Rare" }, { "Epic" }, { "Legendary" } }
-Boutique.MarketPrice = { Common = 3000, Uncommon = 6000, Rare = 12000, Epic = 25000, Legendary = 60000 } :: { [string]: number }
+-- of the day's four once a day. Secrets are never sold: they're found.
+-- (Build 105) Five a day: a Mythic joins them. The price ladder climbs steeply by rarity, at the
+-- house's Gilt scale (shared/Fortune), so at the payouts that ship (x10) it reads 15,000 for a
+-- Common, 35,000 Uncommon, 80,000 Rare, 160,000 Epic, 350,000 Legendary and 900,000 for a Mythic.
+-- The rarest of all (Secrets, the Auction's numbered limiteds) are never on the Market.
+Boutique.MarketBands = { { "Common", "Uncommon" }, { "Rare" }, { "Epic" }, { "Legendary" }, { "Mythic" } }
+Boutique.MarketPrice = { Common = 1500, Uncommon = 3500, Rare = 8000, Epic = 16000, Legendary = 35000, Mythic = 90000 } :: { [string]: number }
+
+-- What one of `rarity` costs at the Market today, in Gilt (at the house's scale).
+function Boutique.marketGilt(rarity: string): number
+	return Fortune.scaled(Boutique.MarketPrice[rarity] or 0)
+end
 
 export type MarketPick = { id: string, rarity: string, gilt: number }
 
@@ -118,7 +128,7 @@ function Boutique.market(time: number?): { MarketPick }
 		end)
 		if #pool > 0 then
 			local c = pool[rng:NextInteger(1, #pool)]
-			table.insert(out, { id = c.id, rarity = c.rarity :: string, gilt = Boutique.MarketPrice[c.rarity] })
+			table.insert(out, { id = c.id, rarity = c.rarity :: string, gilt = Boutique.marketGilt(c.rarity :: string) })
 		end
 	end
 	return out

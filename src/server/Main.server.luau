@@ -658,6 +658,21 @@ do
 	AdminService.privatePlace = function(player: Player, name: string): CFrame?
 		return Wings.homeSpot(player, name)
 	end
+	-- (Build 105) A guest's Infinity Pool, in their own wing: built when it's bought, and when they
+	-- arrive with it in their record.
+	local ProfilesW = require(script.Parent.Profiles)
+	Wings.hasPool = function(player: Player): boolean
+		local data = ProfilesW.get(player)
+		return data ~= nil and data.flags.infinityPool == true
+	end
+	Shop.poolChanged = Wings.setPool
+	ProfilesW.Loaded:Connect(function(player: Player)
+		local data = ProfilesW.get(player)
+		if data and data.flags.infinityPool == true then
+			player:SetAttribute("SuitePool", true)
+			Wings.setPool(player)
+		end
+	end)
 	boot("Private wings and the elevator", Wings.start)
 end
 Archivist.onSpeak = function(player)
@@ -1101,6 +1116,26 @@ boot("The Empire", function()
 	Executive.revives.spend = Revive.spendAnywhere
 	Executive.revives.offer = Revive.offer
 	table.insert(Revive.windows, { open = Executive.reviveOpen, apply = Executive.reviveNow, closed = Executive.reviveClosed })
+	-- (Build 105) Mischief: Midway Steal in Steal a Luxe, Basement Push in the Basement, each a
+	-- prepaid play spent only when it lands (server/Purchases/Mischief).
+	local Mischief = Purchases.Mischief
+	local LuxeGame = require(script.Parent.Attractions.Luxe)
+	local BasementGame = require(script.Parent.Attractions.Basement)
+	local mischiefGames: { [string]: any } = { midway = LuxeGame, push = BasementGame }
+	for kind: string, game_: any in mischiefGames do
+		game_.mischief.held = function(player: Player): number
+			return Mischief.held(player, kind)
+		end
+		game_.mischief.spend = function(player: Player): boolean
+			return Mischief.spend(player, kind)
+		end
+		game_.mischief.onSale = function(): boolean
+			return Mischief.onSale(kind)
+		end
+		game_.mischief.offer = function(player: Player): (boolean, string?)
+			return Mischief.offer(player, kind)
+		end
+	end
 end)
 
 -- The Grand Auction, in the Library: the week's lots, bid for in every server at once.

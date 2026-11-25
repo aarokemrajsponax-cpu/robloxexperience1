@@ -132,8 +132,7 @@ check("Build 103: a postcard's prompt never reaches a guest the server would cal
 -- soon, even for a guest who holds the key.
 ---------------------------------------------------------------------------------------------------
 do
-	check("Build 103: the island ships open (comingSoon off)", Config.data.Attractions.island.comingSoon == false)
-	Config.data.Attractions.island.comingSoon = true
+	check("Build 105: the island ships closed again, coming soon (comingSoon on; the rest of this file opens it to test it)", Config.data.Attractions.island.comingSoon == true)
 	stand(ada, Layout.Terrace.arrival)
 	data(ada).gilt = 1000000
 	local soonGo = askAs(ada, { op = "go", id = "island" })

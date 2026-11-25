@@ -165,6 +165,19 @@ function Brainrots.dress(player: Player, data: Profiles.Data)
 		player:SetAttribute("BrainrotStars", nil)
 		player:SetAttribute("BrainrotRate", nil)
 	end
+	-- (Build 105) The rest of the squad walks behind them too: every place they have (three, six
+	-- with the Brainrot Penthouse), each "id:mutation:stars", for every screen to draw. Only the
+	-- one beside them adds its bonus to a run; the others are there to be seen.
+	local others: { string } = {}
+	for i, other in s.ids do
+		if i > Brainrots.slots(data) then
+			break
+		end
+		if other ~= id then
+			table.insert(others, string.format("%s:%s:%d", other, s.mut[other] or "", BrainrotList.stars(held(data, other))))
+		end
+	end
+	player:SetAttribute("BrainrotSquad", if #others > 0 then table.concat(others, ";") else nil)
 end
 
 -- What the guest's screen shows (inside the curio state): the squad, the jar and the prices.

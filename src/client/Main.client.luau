@@ -287,6 +287,8 @@ start("The Hourly Drop", function()
 end)
 -- The Grand Auction's notices (outbid, a lot won).
 start("The Grand Auction", require(script.Parent.UI.AuctionPanel).start)
+start("The Grand Auction's stage", require(script.Parent.World.AuctionStage).start)
+start("The Boutique's showroom", require(script.Parent.World.MarketShowroom).start)
 -- The Concierge's way to a place: gold arrows on the floor, walking.
 start("The way about the house", require(script.Parent.World.Wayfinder).start)
 start("Holidays", require(script.Parent.World.HolidayFX).start)

@@ -21,7 +21,10 @@
 --
 -- Prices sit at 250, 500, 1,000 and 2,500 Gems, so each Gem pack buys something whole: a Pouch
 -- (250) a companion or a trail, a Case (1,100) a thousand-Gem piece, a Trunk (3,000) the finest.
+-- (Build 105: the packs are now 180, 750 and 1,950 Gems, close to one Gem a Robux.)
 -- Gems are also earned by playing (levels, badges), more slowly.
+
+local Fortune = require(script.Parent.Fortune)
 
 local GemShop = {}
 
@@ -126,9 +129,11 @@ GemShop.List = {
 	{ id = "comp_rainbow", name = "Little Rainbow", kind = "companion", gems = 500, glyph = "🌈", season = "stPatrick", line = "A tiny rainbow with a pot of gold at its end.", style = { glyph = "🌈", glow = rgb(255, 220, 120), rainbow = true, rate = 16 } },
 	{ id = "title_lucky", name = "Lucky Charm", kind = "title", gems = 150, glyph = "☘️", season = "stPatrick", line = "Luck follows you round the house.", style = { colour = rgb(120, 230, 140) } },
 	-- Gilt for Gems, at a set rate (better for more).
-	{ id = "swap_small", name = "A Purse of Gilt", kind = "exchange", gems = 25, glyph = "👛", line = "1,000 Gilt for 25 Gems.", style = { gilt = 1000 } },
-	{ id = "swap_medium", name = "A Bag of Gilt", kind = "exchange", gems = 100, glyph = "💰", line = "4,500 Gilt for 100 Gems.", style = { gilt = 4500 } },
-	{ id = "swap_large", name = "A Chest of Gilt", kind = "exchange", gems = 250, glyph = "🧰", line = "12,500 Gilt for 250 Gems.", style = { gilt = 12500 } },
+	-- (Build 105) The Gilt is at the house's scale (GemShop.exchangeGilt), and its line says the
+	-- real figure (GemShop.lineOf): 10,000, 45,000 and 125,000 at the payouts that ship.
+	{ id = "swap_small", name = "A Purse of Gilt", kind = "exchange", gems = 25, glyph = "👛", line = "%s Gilt for 25 Gems.", style = { gilt = 1000 } },
+	{ id = "swap_medium", name = "A Bag of Gilt", kind = "exchange", gems = 100, glyph = "💰", line = "%s Gilt for 100 Gems.", style = { gilt = 4500 } },
+	{ id = "swap_large", name = "A Chest of Gilt", kind = "exchange", gems = 250, glyph = "🧰", line = "%s Gilt for 250 Gems.", style = { gilt = 12500 } },
 } :: { Item }
 
 GemShop.byId = {} :: { [string]: Item }
@@ -145,6 +150,19 @@ function GemShop.onSale(item: Item, open: string?): boolean
 		return false
 	end
 	return item.season == nil or item.season == open
+end
+
+-- (Build 105) The Gilt an exchange gives, at the house's Gilt scale (what's paid is what's shown).
+function GemShop.exchangeGilt(item: Item): number
+	return Fortune.scaled(tonumber(item.style.gilt) or 0)
+end
+
+-- What an item's card says: an exchange's line with its real Gilt in it.
+function GemShop.lineOf(item: Item): string
+	if item.kind == "exchange" then
+		return (string.format(item.line, Fortune.format(GemShop.exchangeGilt(item))))
+	end
+	return item.line
 end
 
 return GemShop

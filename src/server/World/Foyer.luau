@@ -545,6 +545,18 @@ local function boutiqueDoor(m: Model)
 	end
 	local sign = Kit.part(model, "Sign", Vector3.new(6, 1.2, 0.1), cf * CFrame.new(0, 11.6, -0.3), { color = Color3.new(), material = Enum.Material.SmoothPlastic, transparency = 1 }, { collide = false, query = false, shadow = false })
 	Kit.engrave(sign, Enum.NormalId.Front, { { text = Voice.Foyer.boutique, size = 0.7, font = Brand.Fonts.display, color = Brand.Colours.lightGold } }, { ppu = 60, lit = false })
+	-- (Build 105) The Boutique shines from across the Foyer: its doorway outlined in gold light, a
+	-- line under its name (what's inside: the Brainrot Market and the rarest pieces), and a warm
+	-- wash of light at its feet.
+	local GLOW = { color = Color3.fromRGB(255, 206, 110), material = Enum.Material.Neon }
+	local NOTHING = { collide = false, query = false, shadow = false }
+	Kit.part(model, "GlowL", Vector3.new(0.18, 10.6, 0.18), cf * CFrame.new(-4.45, 5.3, -0.05), GLOW, NOTHING)
+	Kit.part(model, "GlowR", Vector3.new(0.18, 10.6, 0.18), cf * CFrame.new(4.45, 5.3, -0.05), GLOW, NOTHING)
+	Kit.part(model, "GlowTop", Vector3.new(9.1, 0.18, 0.18), cf * CFrame.new(0, 10.6, -0.05), GLOW, NOTHING)
+	local under = Kit.part(model, "SignLine", Vector3.new(7.6, 0.6, 0.1), cf * CFrame.new(0, 12.55, -0.32), { color = Color3.new(), material = Enum.Material.SmoothPlastic, transparency = 1 }, NOTHING)
+	Kit.engrave(under, Enum.NormalId.Front, { { text = "BRAINROT MARKET  ·  RARE PIECES  ·  NEW EVERY DAY", size = 0.36, font = Brand.Fonts.bodyBold, color = Color3.fromRGB(255, 226, 160) } }, { ppu = 60, lit = false })
+	local wash = Kit.part(model, "Wash", Vector3.new(0.4, 0.4, 0.4), cf * CFrame.new(0, 9.8, -1.6), { color = Color3.new(), material = Enum.Material.SmoothPlastic, transparency = 1 }, NOTHING)
+	Kit.spotLight(wash, Enum.NormalId.Bottom, 1.6, 14, 80, Color3.fromRGB(255, 214, 160), false)
 end
 
 local function entranceDoors(m: Model)

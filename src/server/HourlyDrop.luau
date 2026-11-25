@@ -165,7 +165,7 @@ local function buildCase(): Model
 	prompt.Name = "OpenPrompt"
 	prompt.ActionText = "Open the case"
 	prompt.ObjectText = "The Hourly Drop"
-	prompt.HoldDuration = 0.6
+	prompt.HoldDuration = 0.25 -- (Build 105: quicker to open)
 	prompt.MaxActivationDistance = tonumber(cfg().reach) or 14
 	prompt.RequiresLineOfSight = false
 	prompt.Style = Enum.ProximityPromptStyle.Custom
