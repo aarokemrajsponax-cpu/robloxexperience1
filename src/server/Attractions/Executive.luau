@@ -1,6 +1,6 @@
 --!strict
--- The Executive Suite on the server: invitations, the Quartermaster's gear, and the run (shared by
--- everyone up there at once). Everything is judged here: where the server sees each guest, where
+-- The Executive Suite on the server: invitations, the Quartermaster's gear, and the run (Build 106: each
+-- guest in their own copy of the Suite, at their own pace). Everything is judged here: where the server sees each guest, where
 -- its own cameras, guards and the Executive look and stand, and what each shot hits (a ray from the
 -- guest's own head, never a hit a screen claims).
 --
@@ -232,6 +232,7 @@ end
 
 type Actor = { id: string, kind: string, model: Model, root: BasePart, humanoid: Humanoid?, hp: number, max: number, index: number, lastHit: number, points: { Vector3 }? }
 type Guest = {
+	since: number?, -- (Build 106) when they came up: their run's time, for their best
 	alert: number,
 	composure: number,
 	max: number,
@@ -264,202 +265,75 @@ type Wave = { id: string, at: Vector3, born: number, speed: number, width: numbe
 local origin = Vector3.zero
 local built: ExecutiveBuild.Built? = nil
 local guests: { [Player]: Guest } = {}
-local run = {
-	code = "0000",
-	open = false,
-	phase = "hall" :: string, -- "hall", "shield", "detail", "boss", "won"
-	generators = {} :: { [string]: number },
-	genMax = {} :: { [string]: number }, -- (Build 87) each generator's full charge, for its bar
-	actors = {} :: { [string]: Actor },
-	shots = {} :: { Shot },
-	waves = {} :: { Wave },
-	nextAttack = 0,
-	attackIndex = 0,
-	decoyUntil = -math.huge,
-	decoyAt = Vector3.zero,
-	wonAt = 0,
-	serial = 0,
-	hallGuards = {} :: { Actor },
-	-- Build 78: the attack he's winding up (fires at `fireAt`), his finale, the extraction's end.
-	pending = nil :: { kind: string, fireAt: number, from: Vector3, to: Vector3?, at: Vector3? }?,
-	finale = false,
-	extractUntil = 0,
-	-- (Build 90) This run's look and challenge, and when the vault door opened.
-	look = "midnight",
-	challenge = "ghost",
-	openedAt = 0,
-	-- (Build 94) The beaten Executive on his way out (Executive.step).
-	exit = nil :: { actor: Actor, door: Vector3, goneAt: number }?,
-}
+local function newRun()
+	return {
+		code = "0000",
+		open = false,
+		phase = "hall" :: string, -- "hall", "shield", "detail", "boss", "won"
+		generators = {} :: { [string]: number },
+		genMax = {} :: { [string]: number }, -- (Build 87) each generator's full charge, for its bar
+		actors = {} :: { [string]: Actor },
+		shots = {} :: { Shot },
+		waves = {} :: { Wave },
+		nextAttack = 0,
+		attackIndex = 0,
+		decoyUntil = -math.huge,
+		decoyAt = Vector3.zero,
+		wonAt = 0,
+		serial = 0,
+		hallGuards = {} :: { Actor },
+		-- Build 78: the attack he's winding up (fires at `fireAt`), his finale, the extraction's end.
+		pending = nil :: { kind: string, fireAt: number, from: Vector3, to: Vector3?, at: Vector3? }?,
+		finale = false,
+		extractUntil = 0,
+		-- (Build 90) This run's look and challenge, and when the vault door opened.
+		look = "midnight",
+		challenge = "ghost",
+		openedAt = 0,
+		-- (Build 94) The beaten Executive on his way out (Executive.step).
+		exit = nil :: { actor: Actor, door: Vector3, goneAt: number }?,
+	}
+end
+local run = newRun()
+type Run = typeof(run)
+-- (Build 106) The first copy of the Suite keeps these very tables (what tests and tools read).
+local guests0, run0 = guests, run
 local rng = Random.new()
 
 ---------------------------------------------------------------------------------------------------
--- (Build 105) Groups: one to four guests go up together, and the Suite is one group's at a time
--- (never the whole server in one Suite, never two groups in each other's way). A guest picks how
--- many go (1 to 4) and invites guests in the house; whoever's invited joins with a press. Going up
--- when the Suite is free makes it the group's until the last of them is down (any member may go
--- up while it's theirs); when it's taken, the group waits its turn in line and is called the
--- moment it's free, with a minute to take the lift before the next group's turn.
+-- (Build 106) Every guest's own Suite. Each guest who goes up gets a copy of the Suite to
+-- themselves (shared/Attractions.COPIES: copy k stands 1,000 studs further out than the last),
+-- its own run, guards, code and Executive, at their own pace: no line, nobody in anyone's way.
+-- A copy is built the first time it's needed and taken down after a while unused (copy 0, the
+-- Suite itself, always stands). The run's state below is the copy in use: `use` puts a copy's
+-- origin, build, guests and run in place before anything is judged in it.
 ---------------------------------------------------------------------------------------------------
-export type Group = { id: number, leader: Player, size: number, members: { Player }, invited: { [number]: boolean }, calledUntil: number? }
-local groupOf: { [Player]: Group } = {}
-local queue: { Group } = {}
-local holder: Group? = nil -- the group the Suite belongs to now
-local groupSerial = 0
-Executive.GROUP_MAX = 4
-Executive.CALL_SECONDS = 60
+type Floor = { k: number, origin: Vector3, built: ExecutiveBuild.Built?, guests: { [Player]: Guest }, run: Run, sight: { Instance }, idleSince: number?, edge: Instance? }
+local floors: { [number]: Floor } = {}
+local floorOf: { [Player]: Floor } = {}
+local holderParent: Instance? = nil
+Executive.IDLE_SECONDS = 120 -- an empty copy (not the Suite itself) is taken down after this long
 
-local function newGroup(leader: Player, size: number): Group
-	groupSerial += 1
-	local g: Group = { id = groupSerial, leader = leader, size = math.clamp(math.floor(size), 1, Executive.GROUP_MAX), members = { leader }, invited = {} }
-	groupOf[leader] = g
-	return g
+local function use(f: Floor)
+	origin = f.origin
+	built = f.built
+	guests = f.guests
+	run = f.run
+	sightWalls = f.sight
 end
 
-local function inQueue(g: Group): number?
-	return table.find(queue, g)
-end
-
--- A guest out of their group (leaving it, or the house): the group goes on without them, a new
--- leader if they led it; an empty group is gone (out of the line, and the Suite free of it).
-local function dropMember(player: Player)
-	local g = groupOf[player]
-	if not g then
-		return
+-- The guest's own copy put in place (true), or the Suite itself (false: they aren't up there).
+local function usePlayer(player: Player): boolean
+	local f = floorOf[player]
+	if f then
+		use(f)
+		return true
 	end
-	groupOf[player] = nil
-	local i = table.find(g.members, player)
-	if i then
-		table.remove(g.members, i)
+	local first = floors[0]
+	if first then
+		use(first)
 	end
-	if #g.members == 0 then
-		local k = inQueue(g)
-		if k then
-			table.remove(queue, k)
-		end
-		if holder == g then
-			holder = nil
-		end
-	elseif g.leader == player then
-		g.leader = g.members[1]
-	end
-end
-
--- The next group in line is called: a minute to go up before the turn passes on.
-local function callNext(ctx: Types.Ctx)
-	while #queue > 0 do
-		local g = queue[1]
-		local here = {}
-		for _, m in g.members do
-			if m.Parent == Players then
-				table.insert(here, m)
-			end
-		end
-		if #here == 0 then
-			table.remove(queue, 1)
-			continue
-		end
-		g.calledUntil = Executive.clock() + Executive.CALL_SECONDS
-		for _, m in here do
-			ctx.send(m, { op = "notice", title = "Your group's turn", line = string.format("The Executive Suite is free: it's your group's for the next %d seconds. Take the lift up.", Executive.CALL_SECONDS) })
-		end
-		return
-	end
-end
-
--- Whether a group may go up now (and the Suite is made theirs if it's free), or why not.
-local function mayGoUp(ctx: Types.Ctx, g: Group): (boolean, string?)
-	-- (Only who's really up there counts: anyone the house no longer has in the Suite is let go,
-	-- and a group with nobody up there no longer holds it.)
-	local inside = 0
-	local gone: { Player } = {}
-	for p in guests do
-		if ctx.inside(p) == ID and p.Parent == Players then
-			inside += 1
-		else
-			table.insert(gone, p)
-		end
-	end
-	for _, p in gone do
-		Executive.leave(ctx, p, "gone")
-	end
-	if holder ~= nil and holder ~= g and inside == 0 then
-		holder = nil
-	end
-	if holder == g then
-		if inside >= Executive.GROUP_MAX then
-			return false, string.format("The Suite holds %d at once: your group is all up there.", Executive.GROUP_MAX)
-		end
-		return true, nil
-	end
-	local now = Executive.clock()
-	if holder == nil and inside == 0 then
-		local first = queue[1]
-		if first and first ~= g and first.calledUntil and now < first.calledUntil then
-			if not inQueue(g) then
-				table.insert(queue, g)
-			end
-			return false, string.format("Another group has been called up: they have %d seconds to take the lift. Your group is next in line.", math.ceil(first.calledUntil - now))
-		end
-		if first and first ~= g and first.calledUntil and now >= first.calledUntil then
-			-- (Their minute passed: they go to the back of the line.)
-			table.remove(queue, 1)
-			first.calledUntil = nil
-			table.insert(queue, first)
-		end
-		local k = inQueue(g)
-		if k then
-			table.remove(queue, k)
-		end
-		g.calledUntil = nil
-		holder = g
-		return true, nil
-	end
-	if not inQueue(g) then
-		table.insert(queue, g)
-	end
-	local busy = holder
-	local who = if busy then busy.leader else nil
-	return false, string.format("The Suite is taken by %s group just now. Your group is %s in line: you'll be called the moment it's free.", if who then (who.DisplayName .. "'s") else "another", if inQueue(g) == 1 then "first" else ("number " .. tostring(inQueue(g))))
-end
-
--- What a guest's screen shows of the groups: theirs, who's invited them, and the Suite's turn.
-local function groupView(player: Player): { [string]: any }
-	local g = groupOf[player]
-	local mine: { [string]: any }? = nil
-	if g then
-		local names = {}
-		for _, m in g.members do
-			table.insert(names, { userId = m.UserId, name = m.DisplayName, leader = m == g.leader })
-		end
-		mine = { size = g.size, members = names, leader = g.leader == player, place = inQueue(g), holds = holder == g, called = g.calledUntil ~= nil and Executive.clock() < (g.calledUntil :: number) }
-	end
-	local invites = {}
-	for other, og in groupOf do
-		if other == og.leader and og ~= g and og.invited[player.UserId] and #og.members < og.size then
-			table.insert(invites, { userId = other.UserId, name = other.DisplayName, size = og.size, count = #og.members })
-		end
-	end
-	local others = {}
-	for _, p in Players:GetPlayers() do
-		if p ~= player and groupOf[p] == nil then
-			table.insert(others, { userId = p.UserId, name = p.DisplayName, invited = g ~= nil and g.invited[p.UserId] == true })
-		end
-	end
-	local busy = holder
-	return {
-		mine = mine,
-		invites = invites,
-		others = others,
-		suite = if busy then { group = busy.leader.DisplayName, count = #busy.members } else nil,
-		line = #queue,
-		most = Executive.GROUP_MAX,
-	}
-end
-
--- For tests: the group a guest is in, the line and whose the Suite is.
-function Executive.groups(): { holder: Group?, queue: { Group }, of: { [Player]: Group } }
-	return { holder = holder, queue = queue, of = groupOf }
+	return false
 end
 
 -- (Build 90) Which look and challenge the next run has (tests set their own).
@@ -484,6 +358,7 @@ local function page(ctx: Types.Ctx, data: any): { [string]: any }
 	p.kit = if type(p.kit) == "table" then p.kit else {}
 	p.wins = if type(p.wins) == "number" then p.wins else 0
 	p.firstWin = p.firstWin == true
+	p.best = if type(p.best) == "number" and p.best > 0 then p.best else nil
 	return p
 end
 
@@ -790,15 +665,21 @@ end
 
 -- For Purchases/Revive (a revive moment of its own, beside the tables'): open, spend, closed.
 function Executive.reviveOpen(player: Player): boolean
+	if not usePlayer(player) then
+		return false
+	end
 	local g = guests[player]
 	return g ~= nil and g.revive ~= nil and run.phase ~= "won"
 end
 
 function Executive.reviveNow(player: Player): boolean
-	return suite ~= nil and revive(suite :: Types.Ctx, player)
+	return suite ~= nil and usePlayer(player) and revive(suite :: Types.Ctx, player)
 end
 
 function Executive.reviveClosed(player: Player, purchased: boolean)
+	if not usePlayer(player) then
+		return
+	end
 	local g = guests[player]
 	local r = g and g.revive
 	if not g or not r or not r.prompting or not suite then
@@ -967,7 +848,14 @@ local function win(ctx: Types.Ctx)
 					ctx.tally(player, "executiveChallenges", 1)
 					note(player, "Executive challenge", { challenge = ch.id })
 				end
-				ctx.send(player, { op = "won", worth = worth, gilt = gilt, brainrot = brainrot, first = first, challenge = if ch then ch.name else nil, challengeMet = met, challengeGilt = chGilt })
+				-- (Build 106) Their own Suite, at their own pace: the time of the run, and their best.
+				local took = math.max(1, math.floor(Executive.clock() - (g.since or Executive.clock())))
+				local before = p.best
+				local record = before == nil or took < before
+				if record then
+					p.best = took
+				end
+				ctx.send(player, { op = "won", worth = worth, gilt = gilt, brainrot = brainrot, first = first, challenge = if ch then ch.name else nil, challengeMet = met, challengeGilt = chGilt, took = took, best = p.best, record = record and before ~= nil })
 			end
 		end
 	end
@@ -1076,6 +964,9 @@ end
 
 -- A guest fires their sidearm toward `dir` (from their own head, as the server sees it).
 function Executive.fire(ctx: Types.Ctx, player: Player, dir: unknown): boolean
+	if not usePlayer(player) then
+		return false
+	end
 	local g = guests[player]
 	if not g or g.out or not g.gear.sidearm then
 		return false
@@ -1403,29 +1294,28 @@ end
 ---------------------------------------------------------------------------------------------------
 -- The attraction
 ---------------------------------------------------------------------------------------------------
-local groupsWired = false
-function Executive.build(ctx: Types.Ctx, parent: Instance)
-	suite = ctx
-	origin = AttractionList.origin(ID)
-	-- (Build 105) A guest who leaves the house leaves their group (and its place in line).
-	if not groupsWired then
-		groupsWired = true
-		pcall(function()
-			Players.PlayerRemoving:Connect(function(player: Player)
-				dropMember(player)
-				for _, og in groupOf do
-					og.invited[player.UserId] = nil
-				end
-			end)
-		end)
-	end
+-- One copy of the Suite built (copy 0 is the Suite itself): its rooms, prompts and run.
+local function makeFloor(ctx: Types.Ctx, k: number): Floor
+	local parent = holderParent :: Instance
+	local f: Floor = {
+		k = k,
+		origin = AttractionList.copyOrigin(ID, k),
+		built = nil,
+		guests = if k == 0 then guests0 else {},
+		run = if k == 0 then run0 else newRun(),
+		sight = {},
+	}
+	use(f)
 	built = ExecutiveBuild.build(parent, origin, function(player: Player)
 		if ctx.inside(player) == ID then
 			ctx.sendHome(player, ID)
 		end
 	end)
+	f.built = built
 	local b = built :: ExecutiveBuild.Built
+	b.root:SetAttribute("SuiteCopy", k)
 	sightWalls = b.sight
+	f.sight = b.sight
 	-- (How far and how wide the guards and cameras see, for every screen's drawing of it.)
 	local c = cfg(ctx)
 	b.root:SetAttribute("GuardRange", tonumber(c.guardRange) or 26)
@@ -1439,14 +1329,17 @@ function Executive.build(ctx: Types.Ctx, parent: Instance)
 			ctx.send(player, { op = "notice", title = title, line = r.why })
 		end
 	end
-	for i, p in b.terminals do
-		p.Triggered:Connect(function(player: Player)
+	for i, pr in b.terminals do
+		pr.Triggered:Connect(function(player: Player)
 			answered(player, "Terminal " .. i, Executive.ask(ctx, player, { act = "terminal", n = i }))
 		end)
 	end
 	b.keypad.Triggered:Connect(function(player: Player)
-		if guests[player] and not run.open then
-			ctx.send(player, { op = "keypad" })
+		if floorOf[player] == f then
+			use(f)
+			if guests[player] and not run.open then
+				ctx.send(player, { op = "keypad" })
+			end
 		end
 	end)
 	b.safe.Triggered:Connect(function(player: Player)
@@ -1460,17 +1353,84 @@ function Executive.build(ctx: Types.Ctx, parent: Instance)
 	b.liftDown.Triggered:Connect(function(player: Player)
 		Executive.extract(ctx, player)
 	end)
+	fresh(ctx)
+	floors[k] = f
+	-- (A copy has the Suite's invisible edge too, moved with it.)
+	if k > 0 then
+		pcall(function()
+			local edge = parent:FindFirstChild("Bounds_" .. ID)
+			if edge then
+				local copy = edge:Clone()
+				local shift = f.origin - AttractionList.origin(ID)
+				for _, d in copy:GetChildren() do
+					if d:IsA("BasePart") then
+						d.CFrame = d.CFrame + shift
+					end
+				end
+				copy.Name = "Bounds_" .. ID .. "_" .. k
+				copy.Parent = parent
+				f.edge = copy
+			end
+		end)
+	end
+	return f
+end
+
+-- A copy nobody has used for a while taken down (never the Suite itself).
+local function takeDown(f: Floor)
+	if f.k == 0 then
+		return
+	end
+	floors[f.k] = nil
+	local b = f.built
+	if b then
+		pcall(function()
+			b.root:Destroy()
+		end)
+	end
+	local edge = f.edge
+	if edge then
+		edge:Destroy()
+	end
+end
+
+-- The copy a guest going up gets: an empty one standing (made ready when it was left), or a new
+-- one built; nil when every copy the house allows is in use.
+local function freeFloor(ctx: Types.Ctx): Floor?
+	local most = (AttractionList.COPIES[ID] and AttractionList.COPIES[ID].most) or 1
+	for k = 0, most - 1 do
+		local f = floors[k]
+		if f and next(f.guests) == nil then
+			return f
+		end
+	end
+	for k = 0, most - 1 do
+		if not floors[k] then
+			local ok, made = pcall(makeFloor, ctx, k)
+			if ok then
+				return made
+			end
+			warn("[Maison] A copy of the Executive Suite couldn't be built: " .. tostring(made))
+			return nil
+		end
+	end
+	return nil
+end
+
+function Executive.build(ctx: Types.Ctx, parent: Instance)
+	suite = ctx
+	holderParent = parent
+	makeFloor(ctx, 0)
 	-- The sidearm: a guest's screen sends where they aimed; the server decides what was hit.
 	RemoteGuard.event(Remotes.event("AttractionFire"), "attractionFire", function(player: Player, dir: unknown)
 		Executive.fire(ctx, player, dir)
 	end)
-	fresh(ctx)
 end
 
 -- The lift down after he's beaten: home, and within the extraction's minute a clean getaway's bonus
 -- (once a run, for a guest who was in the fight).
 function Executive.extract(ctx: Types.Ctx, player: Player): boolean
-	if ctx.inside(player) ~= ID or run.phase ~= "won" then
+	if not usePlayer(player) or ctx.inside(player) ~= ID or run.phase ~= "won" then
 		return false
 	end
 	local g = guests[player]
@@ -1498,16 +1458,17 @@ function Executive.enter(ctx: Types.Ctx, player: Player): (CFrame?, string?)
 		local c = cfg(ctx)
 		return nil, string.format("You need an invitation to go up. Finish the Maison Basement, carry %s of loot out of Steal a Luxe in one trip, or buy one from the Quartermaster here for %s Gilt.", Fortune.format(tonumber(c.inviteHaul) or 8000), Fortune.format(tonumber(c.invitePrice) or 25000))
 	end
-	if run.phase == "won" then
-		return nil, "The Executive has just been beaten: the Suite opens again in a moment."
+	-- (Build 106) Their own copy of the Suite, at their own pace.
+	if floorOf[player] then
+		Executive.leave(ctx, player, "again")
 	end
-	-- (Build 105) Up with their group (a guest alone is a group of one), and only when the Suite
-	-- is the group's.
-	local grp = groupOf[player] or newGroup(player, 1)
-	local okGroup, whyGroup = mayGoUp(ctx, grp)
-	if not okGroup then
-		return nil, whyGroup
+	local f = freeFloor(ctx)
+	if not f then
+		return nil, "Every Executive Suite in the house is in use just now: try again in a moment."
 	end
+	use(f)
+	floorOf[player] = f
+	f.idleSince = nil
 	p.invites -= 1
 	local gear: { [string]: boolean } = { sidearm = true }
 	for id, on in p.kit do
@@ -1517,19 +1478,28 @@ function Executive.enter(ctx: Types.Ctx, player: Player): (CFrame?, string?)
 	end
 	p.kit = {}
 	local max = if gear.vest then 150 else 100
-	guests[player] = { alert = 0, composure = max, max = max, gear = gear, decoyUsed = false, digits = {}, tries = 0, lastShot = -math.huge, paid = false, safe = false, hits = {}, out = false }
+	guests[player] = { since = Executive.clock(), alert = 0, composure = max, max = max, gear = gear, decoyUsed = false, digits = {}, tries = 0, lastShot = -math.huge, paid = false, safe = false, hits = {}, out = false }
 	task.defer(function()
-		if guests[player] then
-			push(ctx, player)
+		local fl = floorOf[player]
+		if fl then
+			use(fl)
+			if guests[player] then
+				push(ctx, player)
+			end
 		end
 	end)
 	ctx.tally(player, "executiveVisits", 1)
 	note(player, "Executive entered", { invites = p.invites })
 	Executive.carriedChanged(player)
-	return CFrame.new(Plan.Arrival), nil
+	return CFrame.new(Plan.Arrival + (f.origin - AttractionList.origin(ID))), nil
 end
 
 function Executive.leave(ctx: Types.Ctx, player: Player, why: string)
+	local f = floorOf[player] or floors[0]
+	if f then
+		use(f)
+	end
+	floorOf[player] = nil
 	local was = guests[player] ~= nil
 	if was then
 		still(ctx, player, guests[player], false)
@@ -1541,13 +1511,21 @@ function Executive.leave(ctx: Types.Ctx, player: Player, why: string)
 	if was then
 		Executive.carriedChanged(player)
 	end
-	-- The Suite empty: a new run for whoever comes up next. (Build 105) It's no longer the group's:
-	-- the next group in line is called.
+	-- The copy empty: a new run for whoever comes up next.
 	if next(guests) == nil then
 		fresh(ctx)
-		if holder ~= nil then
-			holder = nil
-			callNext(ctx)
+		if f then
+			local fl = f :: Floor
+			local since = Executive.clock()
+			fl.idleSince = since
+			-- (A copy left empty this long is taken down: the house only steps a game with someone in it.)
+			if fl.k > 0 then
+				task.delay(Executive.IDLE_SECONDS + 1, function()
+					if floors[fl.k] == fl and next(fl.guests) == nil and fl.idleSince == since then
+						takeDown(fl)
+					end
+				end)
+			end
 		end
 	end
 end
@@ -1560,6 +1538,7 @@ function Executive.carried(ctx: Types.Ctx, player: Player): { sidearm: boolean, 
 		return { sidearm = false, decoy = false }
 	end
 	local p = page(ctx, data)
+	usePlayer(player)
 	local g = guests[player]
 	local decoy = p.kit.decoy == true or (g ~= nil and g.gear.decoy == true and not g.decoyUsed)
 	return { sidearm = p.sidearm == true, decoy = decoy }
@@ -1567,7 +1546,7 @@ end
 -- Told whenever that changes (set at boot: the Satchel repacks).
 Executive.carriedChanged = function(_player: Player) end
 
-function Executive.step(ctx: Types.Ctx, dt: number)
+local function stepFloor(ctx: Types.Ctx, dt: number)
 	if not built then
 		return
 	end
@@ -1612,6 +1591,34 @@ function Executive.step(ctx: Types.Ctx, dt: number)
 	end
 end
 
+-- (Build 106) Each copy in use, at its own pace; a guest the house no longer has up there let go;
+-- a copy unused for a while taken down.
+function Executive.step(ctx: Types.Ctx, dt: number)
+	local now = Executive.clock()
+	for _, f in table.clone(floors) do
+		use(f)
+		local gone: { Player } = {}
+		for p in f.guests do
+			if ctx.inside(p) ~= ID then
+				table.insert(gone, p)
+			end
+		end
+		for _, p in gone do
+			Executive.leave(ctx, p, "gone")
+		end
+		if next(f.guests) ~= nil then
+			use(f)
+			stepFloor(ctx, dt)
+		elseif f.k > 0 and f.idleSince and now - (f.idleSince :: number) > Executive.IDLE_SECONDS then
+			takeDown(f)
+		end
+	end
+	local first = floors[0]
+	if first then
+		use(first)
+	end
+end
+
 -- The Quartermaster and the Suite's own requests.
 function Executive.state(ctx: Types.Ctx, player: Player): { [string]: any }
 	local data = ctx.data(player)
@@ -1632,11 +1639,11 @@ function Executive.state(ctx: Types.Ctx, player: Player): { [string]: any }
 		sidearm = p.sidearm,
 		gear = gear,
 		wins = p.wins,
+		best = p.best, -- (Build 106) their fastest win, in seconds
 	}
-	if guests[player] then
+	if usePlayer(player) and guests[player] then
 		out.run = status(ctx, player)
 	end
-	out.groups = groupView(player)
 	return out
 end
 
@@ -1679,75 +1686,8 @@ function Executive.ask(ctx: Types.Ctx, player: Player, r: { [string]: unknown })
 		p.invites += 1
 		return { ok = true, state = Executive.state(ctx, player) }
 	end
-	-- (Build 105) Groups.
-	if act == "group" then
-		local size = tonumber(r.n)
-		if not size or size ~= size or size < 1 or size > Executive.GROUP_MAX then
-			return { ok = false, why = string.format("A group is 1 to %d.", Executive.GROUP_MAX) }
-		end
-		local had = groupOf[player]
-		if had and had.leader ~= player then
-			return { ok = false, why = "You're in someone else's group: leave it first." }
-		end
-		if had then
-			if math.floor(size) < #had.members then
-				return { ok = false, why = "There are more in your group than that already." }
-			end
-			had.size = math.floor(size)
-		else
-			newGroup(player, size)
-		end
-		return { ok = true, state = Executive.state(ctx, player) }
-	elseif act == "groupInvite" then
-		local g = groupOf[player]
-		local id = tonumber(r.n)
-		local other = if id then Players:GetPlayerByUserId(id) else nil
-		if not g or g.leader ~= player then
-			return { ok = false, why = "Make a group first: choose how many go up." }
-		end
-		if not other or other == player then
-			return { ok = false, why = "They aren't in the house." }
-		end
-		if #g.members >= g.size then
-			return { ok = false, why = "Your group is full: choose a bigger one to ask more." }
-		end
-		if groupOf[other] then
-			return { ok = false, why = other.DisplayName .. " is in a group already." }
-		end
-		g.invited[other.UserId] = true
-		ctx.send(other, { op = "notice", title = "An invitation up", line = string.format("%s asks you to go up to the Executive Suite with their group. Accept at the Quartermaster's desk.", player.DisplayName) })
-		return { ok = true, state = Executive.state(ctx, player) }
-	elseif act == "groupJoin" then
-		local id = tonumber(r.n)
-		local lead = if id then Players:GetPlayerByUserId(id) else nil
-		local g = if lead then groupOf[lead] else nil
-		if not g or g.leader ~= lead or not g.invited[player.UserId] then
-			return { ok = false, why = "That invitation isn't open any more." }
-		end
-		if #g.members >= g.size then
-			return { ok = false, why = "That group is full." }
-		end
-		if guests[player] then
-			return { ok = false, why = "Come down from the Suite first." }
-		end
-		dropMember(player)
-		table.insert(g.members, player)
-		groupOf[player] = g
-		g.invited[player.UserId] = nil
-		for _, m in g.members do
-			if m ~= player then
-				ctx.send(m, { op = "notice", title = "Your group", line = player.DisplayName .. " has joined your group." })
-			end
-		end
-		return { ok = true, state = Executive.state(ctx, player) }
-	elseif act == "groupLeave" then
-		if guests[player] then
-			return { ok = false, why = "Come down from the Suite first." }
-		end
-		dropMember(player)
-		return { ok = true, state = Executive.state(ctx, player) }
-	end
-	-- In the Suite.
+	-- In the Suite (their own copy).
+	usePlayer(player)
 	local g = guests[player]
 	if act == "revive" or act == "leaveCaught" then
 		local moment = g and g.revive
@@ -1937,15 +1877,25 @@ function Executive.invite(ctx: Types.Ctx, player: Player, why: string): boolean
 end
 
 -- For tests.
-Executive.guests = guests
-Executive.run = run
+Executive.guests = guests0
+Executive.run = run0
 Executive.page = page
 Executive.origin = function(): Vector3
-	return origin
+	local first = floors[0]
+	return if first then first.origin else AttractionList.origin(ID)
 end
 Executive.built = function(): ExecutiveBuild.Built?
-	return built
+	local first = floors[0]
+	return if first then first.built else built
 end
+-- (Build 106) Each guest's own copy of the Suite: which copy a guest is in, and every copy standing.
+Executive.floorOf = function(player: Player): Floor?
+	return floorOf[player]
+end
+Executive.floors = function(): { [number]: Floor }
+	return floors
+end
+Executive.use = use
 Executive.fresh = fresh
 
 return Executive

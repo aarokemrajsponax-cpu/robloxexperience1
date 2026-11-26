@@ -330,7 +330,7 @@ local ctx: Types.Ctx = {
 		if AttractionList.areaAt(p) ~= id then
 			return nil
 		end
-		return p - AttractionList.origin(id)
+		return p - AttractionList.originNear(id, p)
 	end,
 	data = function(player: Player): any?
 		return Profiles.get(player)

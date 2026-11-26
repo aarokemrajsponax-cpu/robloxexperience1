@@ -35,6 +35,38 @@ local Moment = require(script.Parent.Moment)
 
 local ExecutiveHud = {}
 
+-- (Build 106) Each guest has their own copy of the Suite: the one this guest stands in.
+local function myCopy(): number?
+	local character = Players.LocalPlayer.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	return if root and root:IsA("BasePart") then AttractionList.copyAt("executive", root.CFrame.Position) else nil
+end
+local function myOrigin(): Vector3
+	local k = myCopy()
+	return if k then AttractionList.copyOrigin("executive", k) else AttractionList.origin("executive")
+end
+-- What's tagged in this guest's own copy (the bars, the targets): never another guest's Executive.
+local function myTagged(tag: string): { Instance }
+	local k = myCopy()
+	local out = {}
+	for _, inst in CollectionService:GetTagged(tag) do
+		local at: Vector3? = nil
+		local okAt, where = pcall(function(): Vector3?
+			if inst:IsA("BasePart") then
+				return inst.CFrame.Position
+			elseif inst:IsA("Model") then
+				return inst:GetPivot().Position
+			end
+			return nil
+		end)
+		at = if okAt then where else nil
+		if k == nil or at == nil or AttractionList.copyAt("executive", at) == k then
+			table.insert(out, inst)
+		end
+	end
+	return out
+end
+
 local C = Brand.Colours
 local GOLD = Color3.fromRGB(255, 204, 90)
 local RED = Color3.fromRGB(235, 70, 80)
@@ -284,7 +316,7 @@ function ExecutiveHud.bars()
 	local want = if phase == "shield" then "gen" elseif phase == "detail" then "guard" elseif phase == "boss" then "boss" else nil
 	local seen: { [Instance]: boolean } = {}
 	if want then
-		for _, inst in CollectionService:GetTagged("ExecHp") do
+		for _, inst in myTagged("ExecHp") do
 			local id = inst:GetAttribute("ExecTarget")
 			local hp = tonumber(inst:GetAttribute("Hp")) or 0
 			local most = math.max(1, tonumber(inst:GetAttribute("HpMax")) or 1)
@@ -550,7 +582,7 @@ function ExecutiveHud.aimAt(position: Vector2?): (Instance?, boolean)
 	end
 	-- (Nothing tagged on the line: the near miss the server allows, on what this phase is about.)
 	local best, bestAlong = nil, math.huge
-	for _, inst in CollectionService:GetTagged("ExecHp") do
+	for _, inst in myTagged("ExecHp") do
 		local id = inst:GetAttribute("ExecTarget")
 		local hp = tonumber(inst:GetAttribute("Hp")) or 0
 		if type(id) == "string" and string.sub(id, 1, #wanted) == wanted and hp > 0 and inst.Parent then
@@ -1433,7 +1465,7 @@ end
 
 -- Where a target stands now, from what the server tagged (its "ExecTarget").
 local function targetAt(target: string): Vector3?
-	for _, inst in CollectionService:GetTagged("ExecHp") do
+	for _, inst in myTagged("ExecHp") do
 		if inst:GetAttribute("ExecTarget") == target or (inst:IsA("Model") and target == "boss" and inst.Name == "TheExecutive") then
 			if inst:IsA("BasePart") then
 				return inst.Position
@@ -1655,6 +1687,20 @@ function ExecutiveHud.on(m: { [string]: any })
 		-- (Build 103) The boss beaten: the house's biggest moment in the Suite, standing a while.
 		Moment.burst(GOLD, true)
 		Moment.show({ kicker = "The Executive Suite", title = "The Executive, beaten", line = line .. ". The safe is open, and the lift down.", tone = GOLD, seconds = 6, big = true, value = tonumber(m.gilt), sound = "shimmerFall", volume = 0.7 })
+		-- (Build 106) The run's time, and a new personal best said as one.
+		local took = tonumber(m.took)
+		if took then
+			task.delay(6.5, function()
+				local clock = string.format("%d:%02d", took // 60, took % 60)
+				if m.record then
+					Sound.play("crystal", 0.8)
+					Toast.show("A new personal best", "You beat the Executive in " .. clock .. ".", 5)
+				else
+					local best = tonumber(m.best)
+					Toast.show("Your time: " .. clock, if best then string.format("Your best is %d:%02d.", best // 60, best % 60) else "Beat it next time.", 4)
+				end
+			end)
+		end
 		if type(m.challenge) == "string" and m.challengeMet then
 			task.delay(2, function()
 				Sound.play("crystal", 0.7)
@@ -1673,7 +1719,7 @@ function ExecutiveHud.on(m: { [string]: any })
 		pcall(Sound.play, "crystal", 0.6)
 		local spot = Plan.lootById[tostring(m.loot)]
 		if spot then
-			local at = AttractionList.origin("executive") + spot.at + Vector3.new(0, 3, 0)
+			local at = myOrigin() + spot.at + Vector3.new(0, 3, 0)
 			spark(at, GOLD, 16, 16, 0.4)
 			puff(at, GOLD, 3, 0.4)
 		end

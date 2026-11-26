@@ -116,10 +116,14 @@ local function hide(e: Eye)
 end
 
 -- The suite on this screen: its model, what blocks sight, and how far and wide its eyes see.
+-- (Build 106) Each guest has their own copy of the Suite: the one they stand in.
 local function suite(): Model?
+	local character = Players.LocalPlayer.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	local mine = if root and root:IsA("BasePart") then AttractionList.copyAt("executive", root.CFrame.Position) else nil
 	for _, lens in CollectionService:GetTagged("ExecCamera") do
 		local m = lens:FindFirstAncestor("ExecutiveSuite")
-		if m and m:IsA("Model") then
+		if m and m:IsA("Model") and lens:IsA("BasePart") and (mine == nil or AttractionList.copyAt("executive", lens.CFrame.Position) == mine) then
 			return m
 		end
 	end
@@ -270,7 +274,7 @@ end
 function ExecutiveSight.step()
 	local character = player().Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
-	local origin = AttractionList.origin("executive")
+	local origin = if root and root:IsA("BasePart") then AttractionList.originNear("executive", root.CFrame.Position) else AttractionList.origin("executive")
 	local here = root and root:IsA("BasePart") and AttractionList.areaAt(root.CFrame.Position) == "executive" and Plan.inHall(root.CFrame.Position - origin)
 	local model = if here then suite() else nil
 	if not model or not root or not root:IsA("BasePart") then

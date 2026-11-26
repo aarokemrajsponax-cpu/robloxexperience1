@@ -141,6 +141,45 @@ Attractions.BOUNDS = {
 	gala = { min = Vector3.new(-160, -40, -140), max = Vector3.new(160, 90, 140) },
 } :: { [string]: { min: Vector3, max: Vector3 } }
 
+-- (Build 106) Attractions with a copy of their place for each guest who goes in, each at its own
+-- pace: copy k stands at origin + step × k (copy 0 is the place itself). Copies are only built
+-- while someone is in them.
+Attractions.COPIES = {
+	executive = { step = Vector3.new(0, 0, -1000), most = 16 },
+} :: { [string]: { step: Vector3, most: number } }
+
+-- Where copy `k` of an attraction's place stands.
+function Attractions.copyOrigin(id: string, k: number): Vector3
+	local c = Attractions.COPIES[id]
+	return Attractions.origin(id) + (if c then c.step * k else Vector3.zero)
+end
+
+local function inBox(rel: Vector3, b: { min: Vector3, max: Vector3 }): boolean
+	return rel.X >= b.min.X and rel.X <= b.max.X and rel.Y >= b.min.Y and rel.Y <= b.max.Y and rel.Z >= b.min.Z and rel.Z <= b.max.Z
+end
+
+-- Which copy of an attraction's place a point is in (0 for the place itself), or nil.
+function Attractions.copyAt(id: string, p: Vector3): number?
+	local o = placed(id)
+	local b = Attractions.BOUNDS[id]
+	if not o or not b then
+		return nil
+	end
+	local c = Attractions.COPIES[id]
+	for k = 0, if c then c.most - 1 else 0 do
+		if inBox(p - (o + (if c then c.step * k else Vector3.zero)), b) then
+			return k
+		end
+	end
+	return nil
+end
+
+-- The origin of the copy of an attraction's place that a point is in (its own origin otherwise).
+function Attractions.originNear(id: string, p: Vector3): Vector3
+	local k = Attractions.copyAt(id, p)
+	return if k then Attractions.copyOrigin(id, k) else Attractions.origin(id)
+end
+
 -- Which attraction's place a point is in, or nil (the Maison and everywhere else).
 function Attractions.areaAt(p: Vector3): string?
 	for _, a in Attractions.List do
@@ -148,8 +187,11 @@ function Attractions.areaAt(p: Vector3): string?
 		local o = placed(a.id)
 		local b = Attractions.BOUNDS[a.id]
 		if o and b then
-			local rel = p - o
-			if rel.X >= b.min.X and rel.X <= b.max.X and rel.Y >= b.min.Y and rel.Y <= b.max.Y and rel.Z >= b.min.Z and rel.Z <= b.max.Z then
+			if Attractions.COPIES[a.id] then
+				if Attractions.copyAt(a.id, p) then
+					return a.id
+				end
+			elseif inBox(p - o, b) then
 				return a.id
 			end
 		end

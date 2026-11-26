@@ -30,6 +30,7 @@ end
 local Layout = module("ReplicatedStorage", "Shared", "Layout")
 local Seasons = module("ReplicatedStorage", "Shared", "Seasons")
 local Plan = module("ReplicatedStorage", "Shared", "Executive")
+local AttractionList = module("ReplicatedStorage", "Shared", "Attractions")
 local CurioList = module("ReplicatedStorage", "Shared", "Curios")
 local Attractions = module("ServerScriptService", "Server", "Attractions")
 local Game = module("ServerScriptService", "Server", "Attractions", "Executive")
@@ -636,33 +637,39 @@ check("stepped out of the lane: nothing", Game.guests[ada].composure == composur
 stand(bo, Layout.Midnight.arrival)
 data(bo).gilt = 0
 askAs(bo, { op = "act", id = "executive", act = "sidearm" })
--- (Build 105) Only with Ada's group, while the Suite is theirs: alone, he waits his turn.
+-- (Build 106) He goes straight up while Ada is mid-fight: into his own copy of the Suite, at his
+-- own pace (no line, no group, nobody in anyone's way).
 r = askAs(bo, { op = "go", id = "executive" })
-check("Build 105: while Ada's group has the Suite, Bo alone can't come up: his group waits its turn in line", r.ok == false and Attractions.inside(bo) == nil and string.find(tostring(r.why), "in line", 1, true) ~= nil, r.why)
-askAs(bo, { op = "act", id = "executive", act = "groupLeave" })
-check("...a group of two, Ada leading, inviting Bo", askAs(ada, { op = "act", id = "executive", act = "group", n = 2 }).ok == true and askAs(ada, { op = "act", id = "executive", act = "groupInvite", n = bo.UserId }).ok == true)
-check("...Bo joins it", askAs(bo, { op = "act", id = "executive", act = "groupJoin", n = ada.UserId }).ok == true)
-r = askAs(bo, { op = "go", id = "executive" })
-check("(Bo comes up)", r.ok == true)
-standIn(bo, Vector3.new(10, 0, 10))
+local fa, fb = Game.floorOf(ada), Game.floorOf(bo)
+check("Build 106: Bo goes straight up while Ada is mid-fight: into a Suite of his own", r.ok == true and Attractions.inside(bo) == "executive" and fa ~= nil and fb ~= nil and fa ~= fb and fb.k ~= fa.k, r.why)
+check("...its own run: his own hallway and code, and Ada's fight none of his", fb.run ~= Game.run and fb.run.phase == "hall" and Game.run.phase ~= "hall" and fb.guests[bo] ~= nil and fb.guests[ada] == nil and Game.guests[bo] == nil)
+check("...he stands in his own copy, 1,000 studs out, and the house counts him in the Suite there", AttractionList.copyAt("executive", bo.root.CFrame.Position) == fb.k and AttractionList.areaAt(bo.root.CFrame.Position) == "executive" and (fb.origin - fa.origin).Magnitude >= 1000)
+check("...its own Executive at his own desk", fb.run.actors.boss ~= nil and fb.run.actors.boss ~= Game.run.actors.boss and (fb.run.actors.boss.root.CFrame.Position - (fb.origin + Plan.Desk)).Magnitude < 12)
+-- In his own Suite, at no composure, he's escorted out (his own Executive's briefcase).
+local function standCopy(g, f, v)
+	stand(g, f.origin + v)
+end
+standCopy(bo, fb, Vector3.new(10, 0, 10))
 steps(2)
-Game.guests[bo].composure = 5
-local s2 = nil
-Game.run.attackIndex = 0
-Game.run.nextAttack = T
+fb.guests[bo].composure = 5
+fb.run.phase = "boss"
+fb.run.attackIndex = 0
+fb.run.nextAttack = T
 T += 0.01
 steps(1)
-T = Game.run.pending.fireAt + 0.01
+T = fb.run.pending.fireAt + 0.01
 steps(1)
-for _, sh in Game.run.shots do
+local s2 = nil
+for _, sh in fb.run.shots do
 	s2 = sh
 end
 T = s2.born + 0.2
 local p2 = s2.from + s2.dir * s2.speed * 0.2
-standIn(bo, Vector3.new(p2.X, 0, p2.Z))
+standCopy(bo, fb, Vector3.new(p2.X, 0, p2.Z))
 standIn(ada, Vector3.new(-25, 0, 50))
 steps(1)
 check("no composure left: escorted out", Attractions.inside(bo) == nil and last(bo, "escorted") ~= nil)
+check("...and his copy, empty, is made ready again for whoever goes up next", next(fb.guests) == nil and fb.run.phase == "hall" and Game.floorOf(bo) == nil)
 -- His finale: at the last of his composure, said on every screen; quicker wind-ups; two rings.
 local boss = Game.run.actors.boss
 standIn(ada, Vector3.new(-10, 0, 10))
@@ -710,6 +717,7 @@ check("Build 90: the run's challenge, told with the win: not met by a guest who 
 check("the Executive beaten: everyone in the Office is paid", Game.run.phase == "won" and won ~= nil and Fortune.page(data(ada)).estate == estateWas + C.prize)
 check("...the prize's Gilt, in full (once an invitation: outside the day's soft cap)", won.gilt == C.prizeGilt and data(ada).gilt >= giltWas + C.prizeGilt, won.gilt)
 check("...and never a Gem: those come only from Robux", won.gems == nil and data(ada).gems == gemsWas)
+check("Build 106: the run's time is told with the win, and kept as their best", type(won.took) == "number" and won.took >= 1 and page(ada).best == won.took and won.best == won.took and won.record == false and askAs(ada, { op = "state", id = "executive" }).best == won.took, won.took)
 check("...Il Dirigente Supremo, the first time", won.first == true and won.brainrot == "dirigenteSupremo" and (data(ada).curios.items.dirigenteSupremo or 0) == 1)
 check("...the badge", (function()
 	for _, a in awards do
@@ -1158,10 +1166,9 @@ do
 end
 
 ---------------------------------------------------------------------------------------------------
--- 7. (Build 105) Groups of one to four, one group in the Suite at a time
+-- 7. (Build 106) Each guest's own Suite: everyone goes up at once, each at their own pace
 ---------------------------------------------------------------------------------------------------
 do
-	-- (Everyone down first: the Suite free.)
 	advance(3)
 	for _, g in { ada, bo } do
 		if Attractions.inside(g) then
@@ -1170,51 +1177,72 @@ do
 	end
 	advance(4)
 	local cy, dee, eve, fay, gus = H.guest("Cy", 741), H.guest("Dee", 742), H.guest("Eve", 743), H.guest("Fay", 744), H.guest("Gus", 745)
-	for _, g in { cy, dee, eve, fay, gus } do
+	local five = { cy, dee, eve, fay, gus }
+	for _, g in five do
 		stand(g, Layout.Midnight.arrival)
 		page(g).invites = 2
 		askAs(g, { op = "act", id = "executive", act = "sidearm" })
 	end
-	check("a group is 1 to 4: 5 refused, 0 refused", askAs(cy, { op = "act", id = "executive", act = "group", n = 5 }).ok == false and askAs(cy, { op = "act", id = "executive", act = "group", n = 0 }).ok == false)
-	check("Cy makes a group of 3", askAs(cy, { op = "act", id = "executive", act = "group", n = 3 }).ok == true)
-	check("...invites Dee and Eve; both join", askAs(cy, { op = "act", id = "executive", act = "groupInvite", n = dee.UserId }).ok == true and askAs(cy, { op = "act", id = "executive", act = "groupInvite", n = eve.UserId }).ok == true and askAs(dee, { op = "act", id = "executive", act = "groupJoin", n = cy.UserId }).ok == true and askAs(eve, { op = "act", id = "executive", act = "groupJoin", n = cy.UserId }).ok == true)
-	check("...it's full: a fourth isn't asked (the size they chose)", askAs(cy, { op = "act", id = "executive", act = "groupInvite", n = fay.UserId }).ok == false)
-	check("nobody joins a group they weren't asked to", askAs(gus, { op = "act", id = "executive", act = "groupJoin", n = cy.UserId }).ok == false)
-	local up = askAs(cy, { op = "go", id = "executive" })
-	check("the Suite free: Cy's group has it, and goes up", up.ok == true and Game.groups().holder ~= nil and Game.groups().holder.leader == cy, up.why)
-	check("...Dee and Eve go up too, any time while it's their group's", askAs(dee, { op = "go", id = "executive" }).ok == true and askAs(eve, { op = "go", id = "executive" }).ok == true)
-	local fr = askAs(fay, { op = "go", id = "executive" })
-	check("Fay (her own group) can't come up into theirs: she's in line, first", fr.ok == false and Attractions.inside(fay) == nil and Game.groups().queue[1] ~= nil and Game.groups().queue[1].leader == fay)
-	local gr = askAs(gus, { op = "go", id = "executive" })
-	check("...Gus behind her, second", gr.ok == false and Game.groups().queue[2] ~= nil and Game.groups().queue[2].leader == gus)
-	check("never more than one group up there at once", (function()
-		local holder = Game.groups().holder
-		for p in Game.guests do
-			if Game.groups().of[p] ~= holder then
+	local allUp = true
+	for _, g in five do
+		local rr = askAs(g, { op = "go", id = "executive" })
+		allUp = allUp and rr.ok == true and Attractions.inside(g) == "executive"
+	end
+	check("five guests go up one after another: every one of them straight up, no line", allUp)
+	local seen, distinct = {}, true
+	for _, g in five do
+		local f = Game.floorOf(g)
+		if not f or seen[f.k] then
+			distinct = false
+		else
+			seen[f.k] = true
+			distinct = distinct and AttractionList.copyAt("executive", g.root.CFrame.Position) == f.k and next(f.guests) == g and next(f.guests, g) == nil
+		end
+	end
+	check("...each in a Suite of their own (one guest in each, standing in it)", distinct)
+	check("...each with its own run (its own door code, its own Executive)", (function()
+		local bosses = {}
+		for _, g in five do
+			local f = Game.floorOf(g)
+			local b = f and f.run.actors.boss
+			if not b or bosses[b] then
 				return false
 			end
+			bosses[b] = true
 		end
 		return true
 	end)())
-	-- All of Cy's group come down: Fay's is called, with a minute to go up.
+	local fc = Game.floorOf(cy)
+	fc.run.open = true
+	check("one opening their door opens nobody else's", Game.floorOf(dee).run.open == false and Game.floorOf(eve).run.open == false)
+	-- Down again: the copy is free, then reused by the next guest up.
+	local kc = fc.k
 	advance(3)
-	for _, g in { cy, dee, eve } do
-		askAs(g, { op = "home" })
+	askAs(cy, { op = "home" })
+	check("down: their copy is empty and made ready again", Game.floorOf(cy) == nil and next(fc.guests) == nil and fc.run.open == false and fc.run.phase == "hall")
+	advance(3)
+	stand(cy, Layout.Midnight.arrival)
+	askAs(cy, { op = "go", id = "executive" })
+	check("...the next guest up takes an empty copy standing (none built twice)", Game.floorOf(cy) ~= nil and Game.floorOf(cy).k <= kc)
+	-- Everyone down: the extra copies are taken down after a while unused, the Suite itself stays.
+	advance(3)
+	for _, g in five do
+		if Attractions.inside(g) then
+			askAs(g, { op = "home" })
+		end
 	end
-	advance(4)
-	check("the Suite empty: free, and Fay is told it's her group's turn", Game.groups().holder == nil and last(fay, "notice") ~= nil and string.find(last(fay, "notice").title, "turn", 1, true) ~= nil)
-	check("...Gus can't jump the line in her minute", askAs(gus, { op = "go", id = "executive" }).ok == false and Attractions.inside(gus) == nil)
-	check("...Fay goes up: hers now", askAs(fay, { op = "go", id = "executive" }).ok == true and Game.groups().holder ~= nil and Game.groups().holder.leader == fay)
-	advance(3)
-	askAs(fay, { op = "home" })
-	advance(4)
-	check("...then it's Gus's turn", last(gus, "notice") ~= nil and askAs(gus, { op = "go", id = "executive" }).ok == true)
-	advance(3)
-	askAs(gus, { op = "home" })
-	advance(4)
-	check("the board shows each guest their group and the Suite's turn", (function()
+	advance(Game.IDLE_SECONDS + 5)
+	local left = 0
+	for k in Game.floors() do
+		left += 1
+		if k ~= 0 then
+			left += 100
+		end
+	end
+	check("unused for a while: every extra copy taken down, the Suite itself still standing", left == 1 and Game.built() ~= nil and Game.floors()[0] ~= nil, left)
+	check("...the state still answers (no groups, no line)", (function()
 		local st = askAs(cy, { op = "state", id = "executive" })
-		return type(st.groups) == "table" and type(st.groups.mine) == "table" and st.groups.mine.size == 3 and #st.groups.mine.members == 3 and st.groups.most == 4
+		return type(st) == "table" and st.groups == nil and st.invites ~= nil
 	end)())
 end
 

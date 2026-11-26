@@ -377,6 +377,21 @@ a Nightly attempt or a Mythic's odds.
 - **The launch kit**: page text, icon, thumbnails and the gameplay video's shot list are in
   [`LAUNCH.md`](LAUNCH.md).
 
+## Build 106 — a private Executive Suite for every guest
+
+- **No more groups or lines.** Everyone who goes up gets a copy of the Executive Suite to
+  themselves: their own hallway, door code, guards and Executive, at their own pace
+  (`shared/Attractions.COPIES`: copy k stands 1,000 studs further out; up to 16 at once). A copy
+  is built the first time it's needed, made ready again when its guest leaves, and taken down
+  after two minutes unused (the Suite itself always stands). The server switches the Suite's run
+  state to the guest's own copy before judging anything in it (`Executive.use`); each screen draws
+  only its own copy's guards, cameras and health bars.
+- **Personal best**: the time of each win is told with it and the fastest kept; a new record is
+  announced, and the Quartermaster's board shows it.
+- **Brainrot squads** are put right once a second on every screen (drawn again after a guest
+  comes back from a game). **Badges**: Millionaire, The Crown Jewel, The Treasury, Wheels Up and
+  Turkey Catcher made on Roblox.
+
 ## Build 105 — pool, squads, the Market and the Auction stage, groups, mischief, easier driving
 
 - **Prompts answer at once.** Sit, Play and every E prompt ask the server straight away (walking
