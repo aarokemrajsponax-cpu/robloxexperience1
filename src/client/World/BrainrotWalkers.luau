@@ -509,6 +509,57 @@ function BrainrotWalkers.followersOf(p: Player): { Part }
 	return out
 end
 
+-- (Build 105) Whether `p`'s squad should be drawn on this screen now, and whether it is, as it
+-- should be (on their character as it stands). A guest back from an attraction, respawned, or come
+-- back into view after their character had left this screen (streamed out) is drawn again here:
+-- the moment they came back, their character may not have been on this screen yet.
+function BrainrotWalkers.shouldShow(p: Player): boolean
+	if AttractionList.companionsHidden(p) then
+		return false
+	end
+	local id = p:GetAttribute("Brainrot")
+	local c = if type(id) == "string" then Curios.byId[id] else nil
+	local character = p.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	return c ~= nil and c.family == "meme" and root ~= nil and root:IsA("BasePart")
+end
+
+local function drawnRight(p: Player): boolean
+	local w = walkers[p]
+	local character = p.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if not w or w.root ~= root or not w.root.Parent or not w.part.Parent then
+		return false
+	end
+	local squad = p:GetAttribute("BrainrotSquad")
+	if type(squad) == "string" and squad ~= "" then
+		local list: { Walker } = followers[p] or {}
+		local room = p == Players.LocalPlayer or othersDrawn() < FOLLOWER_CAP
+		if #list == 0 and room then
+			return false
+		end
+		for _, fw in list do
+			if fw.root ~= root or not fw.part.Parent then
+				return false
+			end
+		end
+	end
+	return true
+end
+
+-- Every squad on this screen put right: drawn where it should be, gone where it shouldn't.
+function BrainrotWalkers.reconcile()
+	for _, p in Players:GetPlayers() do
+		if BrainrotWalkers.shouldShow(p) then
+			if not drawnRight(p) then
+				build(p)
+			end
+		elseif walkers[p] or followers[p] then
+			clear(p)
+		end
+	end
+end
+
 local function watch(p: Player)
 	for _, key in { "Brainrot", "BrainrotMut", "BrainrotStars", "BrainrotRate", "BrainrotSquad", AttractionList.ATTRIBUTE, AttractionList.COMPANIONS_IN } do
 		p:GetAttributeChangedSignal(key):Connect(function()
@@ -658,6 +709,12 @@ function BrainrotWalkers.start()
 	end
 	Players.PlayerAdded:Connect(watch)
 	Players.PlayerRemoving:Connect(clear)
+	task.spawn(function()
+		while true do
+			task.wait(1)
+			pcall(BrainrotWalkers.reconcile)
+		end
+	end)
 	RunService.RenderStepped:Connect(function(dt: number)
 		local t = os.clock()
 		local k = 1 - math.exp(-4 * math.min(dt, 0.1))

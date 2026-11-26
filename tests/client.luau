@@ -6254,6 +6254,16 @@ do
 		end
 		return spot5.Z > spot1.Z
 	end)())
+	-- (Build 105) Back from an attraction while their character wasn't on this screen yet: the
+	-- squad was put away, and the change that should bring it back came before the character did.
+	-- Within a second or so the house sees it missing, and draws it again.
+	LocalPlayer:SetAttribute("Attraction", "luxe")
+	signalOf(LocalPlayer, "attr:Attraction"):Fire()
+	advance(0.3)
+	check("Build 105: put away inside an attraction (the squad too)", Walkers.of(LocalPlayer) == nil and #Walkers.followersOf(LocalPlayer) == 0)
+	LocalPlayer:SetAttribute("Attraction", nil)
+	advance(1.5)
+	check("...back out, even with the change missed, the brainrot and its squad are drawn again", Walkers.of(LocalPlayer) ~= nil and #Walkers.followersOf(LocalPlayer) >= 2, #Walkers.followersOf(LocalPlayer))
 	LocalPlayer:SetAttribute("BrainrotSquad", nil)
 	signalOf(LocalPlayer, "attr:BrainrotSquad"):Fire()
 	advance(0.5)
