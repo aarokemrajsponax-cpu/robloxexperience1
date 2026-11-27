@@ -53,17 +53,21 @@ check("the date there: still the 25th at 3:30 UTC on the 26th", here.day == 25 a
 ---------------------------------------------------------------------------------------------------
 local w = Cal.window("thanksgiving", 2026, "America/New_York")
 check("a holiday begins at midnight in the reference zone (Thanksgiving week: Monday 23 November, 05:00 UTC)", w.starts == utc(2026, 11, 23, 5))
-check("...and ends at midnight after its last day (Sunday 29 November)", w.ends == utc(2026, 11, 30, 5))
+check("...and ends at midnight after its last day (Build 107: Thanksgiving Day itself, Thursday 26 November)", w.ends == utc(2026, 11, 27, 5))
 local on = Cal.active(utc(2026, 11, 26, 15), "America/New_York")
 check("on Thanksgiving Day: Thanksgiving is on", on ~= nil and on.id == "thanksgiving")
 local same = true
-for h = 0, 6 * 24, 6 do
+for h = 0, 4 * 24 - 6, 6 do
 	local a = Cal.active(w.starts + h * 3600, "America/New_York")
 	if not a or a.id ~= "thanksgiving" then
 		same = false
 	end
 end
 check("one holiday the whole window long (begun once, never twice)", same)
+check("Build 107: and Christmas from the next midnight, 27 November, to 28 December", (function()
+	local x = Cal.window("christmas", 2026, "America/New_York")
+	return x ~= nil and x.starts == utc(2026, 11, 27, 5) and x.ends == utc(2026, 12, 29, 5) and Cal.active(utc(2026, 11, 28, 15), "America/New_York").id == "christmas"
+end)())
 check("nothing on in mid-June", Cal.active(utc(2026, 6, 15, 12), "America/New_York") == nil)
 local overlap = Cal.active(utc(2026, 12, 24, 12), "America/New_York")
 check("two at once (Hanukkah and Christmas): the one begun most recently", overlap ~= nil and overlap.id == "christmas")

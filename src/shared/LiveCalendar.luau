@@ -39,9 +39,9 @@ LiveCalendar.Holidays = {
 	{ id = "easter", name = "Easter", glyph = "🥚", region = "global", lead = 2, linger = 1, game = "easter", line = "The Great Egg Hunt, all through the house." },
 	{ id = "halloween", name = "All Hallows'", glyph = "🎃", region = "global", lead = 7, linger = 1, game = "halloween", line = "Trick or treat on Hallows Lane." },
 	{ id = "diwali", name = "Diwali", glyph = "🕯️", region = "global", lead = 1, linger = 1, line = "The house lit with a thousand lamps for Diwali." },
-	{ id = "thanksgiving", name = "Thanksgiving", glyph = "🦃", region = "US", lead = 3, linger = 3, game = "thanksgiving", line = "The Turkey Round-Up in the Harvest Field." },
+	{ id = "thanksgiving", name = "Thanksgiving", glyph = "🦃", region = "US", lead = 3, linger = 0, game = "thanksgiving", line = "The Turkey Round-Up in the Harvest Field." },
 	{ id = "hanukkah", name = "Hanukkah", glyph = "🕎", region = "global", lead = 0, linger = 7, line = "Candles in the windows, eight nights of light." },
-	{ id = "christmas", name = "Christmas", glyph = "🎄", region = "global", lead = 7, linger = 4, game = "christmas", line = "Santa's sleigh waits at the kerb." },
+	{ id = "christmas", name = "Christmas", glyph = "🎄", region = "global", lead = 28, linger = 3, game = "christmas", line = "Santa's sleigh waits at the kerb." },
 } :: { Holiday }
 
 LiveCalendar.byId = {} :: { [string]: Holiday }

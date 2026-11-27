@@ -629,8 +629,8 @@ local defaults = {
 		-- How many days before and after its day each is open (UTC).
 		windows = {
 			halloween = { lead = 7, linger = 1 }, -- 24 October to 1 November
-			thanksgiving = { lead = 3, linger = 3 }, -- the Monday to the Sunday of Thanksgiving week
-			christmas = { lead = 7, linger = 4 }, -- 18 to 29 December
+			thanksgiving = { lead = 3, linger = 0 }, -- the Monday of Thanksgiving week to Thanksgiving itself
+			christmas = { lead = 28, linger = 3 }, -- (Build 107) 27 November to 28 December: Christmas from the day after Thanksgiving
 			easter = { lead = 2, linger = 1 }, -- Good Friday to Easter Monday
 			stPatrick = { lead = 3, linger = 1 }, -- 14 to 18 March
 		},

@@ -274,6 +274,12 @@ do
 		{ 2026, 11, 17, game = nil, season = "longtable", suite = "thanksgiving" },
 		{ 2026, 11, 25, game = "thanksgiving", season = "longtable", suite = "thanksgiving" },
 		{ 2026, 12, 24, game = "christmas", season = "yule", suite = "christmas" },
+		-- (Build 107) Christmas from the day after Thanksgiving to 28 December.
+		{ 2026, 11, 27, game = "christmas", season = "yule", suite = "christmas" },
+		{ 2026, 12, 1, game = "christmas", season = "yule", suite = "christmas" },
+		{ 2026, 12, 28, game = "christmas", season = "yule", suite = "christmas" },
+		{ 2026, 12, 29, game = nil, season = "toast", suite = "newYear" },
+		{ 2026, 11, 26, game = "thanksgiving", season = "longtable", suite = "thanksgiving" },
 		{ 2027, 1, 20, game = nil, season = "frost", suite = "winter" },
 		{ 2027, 2, 14, game = nil, season = "rose", suite = "valentine", live = "valentines" },
 		{ 2027, 3, 17, game = "stPatrick", season = "emerald", suite = "stPatrick" },

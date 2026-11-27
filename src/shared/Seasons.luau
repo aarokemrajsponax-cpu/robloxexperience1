@@ -33,7 +33,7 @@ Seasons.List = {
 		weatherColours = hexes("ff9a4a", "e8622a", "ffc27a", "b06ad0"),
 	},
 	{
-		id = "toast", name = "Midnight Toast", from = { 12, 27 }, to = { 1, 6 }, weather = "confetti",
+		id = "toast", name = "Midnight Toast", from = { 12, 29 }, to = { 1, 6 }, weather = "confetti",
 		line = "One year closing, another poured.",
 		key = Color3.fromRGB(240, 220, 168), fill = Color3.fromRGB(178, 198, 240), grade = Color3.fromRGB(196, 188, 236),
 		weatherColours = hexes("ecd8a6", "dfe6ee", "c6a052", "f0c0d0"),
@@ -57,13 +57,13 @@ Seasons.List = {
 		weatherColours = hexes("c67a3a", "a85c2a", "d9a24e", "8a4b28"),
 	},
 	{
-		id = "longtable", name = "The Long Table", from = { 11, 1 }, to = { 11, 30 }, weather = "leaves",
+		id = "longtable", name = "The Long Table", from = { 11, 1 }, to = { 11, 26 }, weather = "leaves",
 		line = "Everything is copper and candlelight this month.",
 		key = Color3.fromRGB(244, 158, 80), fill = Color3.fromRGB(122, 54, 18), grade = Color3.fromRGB(190, 96, 38),
 		weatherColours = hexes("c0763c", "9a5427", "e0a35a", "7a4423"),
 	},
 	{
-		id = "yule", name = "Yuletide", from = { 12, 1 }, to = { 12, 31 }, weather = "snow",
+		id = "yule", name = "Yuletide", from = { 11, 27 }, to = { 12, 28 }, weather = "snow",
 		line = "Snow on the glass and the good boxes out.",
 		key = Color3.fromRGB(214, 242, 230), fill = Color3.fromRGB(34, 122, 88), grade = Color3.fromRGB(110, 184, 158),
 		weatherColours = hexes("ffffff", "dbeafe", "eef6ff", "cfe6d8"),
