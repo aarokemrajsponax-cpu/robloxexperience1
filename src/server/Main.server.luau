@@ -997,6 +997,8 @@ local WelcomeGift = require(script.Parent.WelcomeGift)
 Concierge.offerGift = WelcomeGift.offer
 Concierge.giftSettled = WelcomeGift.settled
 boot("The welcome gift", WelcomeGift.start)
+-- (Build 107) The house's codes (Config.Codes), typed in at the Codes key under the dock.
+boot("Codes", require(script.Parent.Codes).start)
 -- (Build 93) Showtime: every half hour one of the Grand Ballroom's party games is called for eight
 -- minutes; a round of it played then pays its bonus once (server/Showtime). Its XP comes with the
 -- count, like everything else's.

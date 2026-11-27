@@ -4,6 +4,6 @@
 -- see whether Studio has the latest code from GitHub.
 
 return {
-	number = 106,
-	label = "Build 106 · 26 Nov · a private Executive Suite for every guest, personal bests, squads always drawn, new badges",
+	number = 107,
+	label = "Build 107 · 27 Nov · Christmas in the house, the Codes key and the RICHMAS code (50,000 Gilt)",
 }

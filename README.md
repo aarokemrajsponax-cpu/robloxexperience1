@@ -377,6 +377,17 @@ a Nightly attempt or a Mythic's odds.
 - **The launch kit**: page text, icon, thumbnails and the gameplay video's shot list are in
   [`LAUNCH.md`](LAUNCH.md).
 
+## Build 107 — Christmas, and the Codes key
+
+- **Christmas** decorations from the day after Thanksgiving to 28 December (`HolidayGames`
+  christmas lead 28 days, `LiveCalendar` the same).
+- **Codes**: a 🎁 Codes key is the last key in the dock. The code **RICHMAS** pays 50,000 Gilt once
+  per guest from 27 November to the end of Christmas Day (05:00 UTC on 26 December, midnight in New
+  York). Codes live in `Config.Codes` (`gilt`, `from`, `to` in UTC); the server checks the window,
+  pays through `Gilt.give` and remembers the code in the guest's save (`codes`), so it can't be used
+  twice. Typing is forgiving (case, spaces, dashes) and limited to 8 tries a minute. Nothing the
+  client sends sets the amount.
+
 ## Build 106 — a private Executive Suite for every guest
 
 - **No more groups or lines.** Everyone who goes up gets a copy of the Executive Suite to

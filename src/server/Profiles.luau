@@ -34,6 +34,7 @@ export type Data = {
 	bestRound: { [string]: number },
 	gilt: number,
 	giltDay: { day: number, earned: number },
+	codes: { [string]: number }, -- (Build 107) each code redeemed, and when (os.time)
 	purchases: { [string]: number },
 	-- The Boutique (Delivery 5)
 	owned: { [string]: boolean },
@@ -115,6 +116,7 @@ local TEMPLATE: Data = {
 	bestRound = { salon = 0, velvet = 0, obsidian = 0, midnight = 0 },
 	gilt = 0,
 	giltDay = { day = -1, earned = 0 },
+	codes = {},
 	purchases = {},
 	owned = {},
 	equipped = { look = "", table = "", lamp = "", chime = "", trail = "", nameplate = "", card = "", flourish = "", gesture = "" },

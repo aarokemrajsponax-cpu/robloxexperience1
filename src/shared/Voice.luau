@@ -494,12 +494,12 @@ Voice.Afk = {
 Voice.Short = { gilt = "Insufficient Gilt", gems = "Insufficient Gems", line = "Gotta get more lol" }
 
 Voice.WhatsNew = {
-	build = 106,
+	build = 107,
 	lines = {
 		-- (One short line each: read at a glance.)
-		"Your own Executive Suite: no waiting, no line, at your own pace.",
-		"Beat the Executive faster: your best time is kept now.",
-		"Your brainrots walk with you: three, or six with the Penthouse.",
+		"Christmas is in the house, until 28 December.",
+		"New Codes key: type RICHMAS for 50,000 Gilt (until Christmas).",
+		"Your own Executive Suite: no line, at your own pace.",
 	},
 }
 

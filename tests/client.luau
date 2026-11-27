@@ -5598,6 +5598,55 @@ do
 	QuickDockM.setWatch(false)
 	QuickDockM.setHoliday(nil, nil)
 	advance(0.3)
+	-- (Build 107) The Codes key: the last key, opening the Codes card. What a code pays is the
+	-- server's answer, never the screen's.
+	do
+		local codesKey = dockFrame and dockFrame:FindFirstChild("Codes")
+		local last = true
+		if codesKey and dockFrame then
+			for _, k in dockFrame:GetChildren() do
+				if k:IsA("Frame") and k ~= codesKey and (k :: Frame).LayoutOrder > (codesKey :: Frame).LayoutOrder then
+					last = false
+				end
+			end
+		end
+		check("the Codes key is in the dock, the last key", codesKey ~= nil and last)
+		local codesButton = codesKey and find(codesKey, function(d)
+			return d:IsA("TextButton")
+		end)
+		if codesButton then
+			signalOf(codesButton, "Activated"):Fire()
+		end
+		advance(0.6)
+		check("...and opens the Codes card", textOnScreen("Redeem a code") ~= nil and textOnScreen("Each one works once") ~= nil)
+		snapshot("codes")
+		local box = find(playerGui, function(d)
+			return d.Name == "CodeText" and d:IsA("TextBox")
+		end)
+		-- (The card's own Redeem key, found beside the box.)
+		local function redeem()
+			local key = box and box.Parent and find(box.Parent, function(d)
+				return d:IsA("TextButton") and norm(d.Text) == norm("Redeem")
+			end)
+			if key then
+				signalOf(key, "Activated"):Fire()
+			end
+		end
+		invokeResults.CodeAsk = { ok = false, why = "That code isn't open yet." }
+		if box then
+			box.Text = "richmas"
+		end
+		redeem()
+		advance(0.5)
+		local asked = sent[#sent]
+		check("a code is sent as typed, and a refusal is shown on the card", asked ~= nil and asked.remote == "CodeAsk" and asked.message[1].code == "richmas" and textOnScreen("That code isn't open yet.") ~= nil and textOnScreen("Redeem a code") ~= nil)
+		invokeResults.CodeAsk = { ok = true, code = "RICHMAS", gilt = 50000, title = "Merry Richmas" }
+		redeem()
+		advance(0.8)
+		check("redeemed: the card closes and the house celebrates the server's amount", textOnScreen("Redeem a code") == nil and textOnScreen("Merry Richmas") ~= nil and textOnScreen("50,000") ~= nil)
+		invokeResults.CodeAsk = nil
+		advance(5)
+	end
 	check("no errors at the dock", #errors == 0, errors[1])
 end
 

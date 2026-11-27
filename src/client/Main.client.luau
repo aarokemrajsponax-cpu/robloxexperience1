@@ -418,6 +418,9 @@ start("Curios", function()
 		CuriosPanel.open("trades")
 	end
 	QuickDock.openWardrobe = WardrobePanel.open
+	QuickDock.openCodes = function()
+		require(script.Parent.UI.CodesPanel).open()
+	end
 	QuickDock.openGems = function()
 		GemShopPanel.open()
 	end

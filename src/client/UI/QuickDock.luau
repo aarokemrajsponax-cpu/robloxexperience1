@@ -33,6 +33,8 @@ QuickDock.openTrades = function() end
 QuickDock.openWardrobe = function() end
 QuickDock.openGems = function() end
 QuickDock.inviteFriend = function() end
+-- (Build 107) The Codes key under the dock (set by Main: opens UI/CodesPanel).
+QuickDock.openCodes = function() end
 -- (Build 102) The HOUSE TOUR key's press: the optional tour (set by Main).
 QuickDock.houseTour = function() end
 QuickDock.invite = function(_userId: number, _name: string) end
@@ -169,7 +171,7 @@ local WIDE_TOUCH = 1.6
 local function keyWidth(): number
 	return math.floor(SIZE * (if UserInputService.TouchEnabled then WIDE_TOUCH else WIDE) + 0.5)
 end
-local KEYS = 6
+local KEYS = 7 -- (Build 107: six, and Codes)
 local GAP = 10
 
 local TweenService = game:GetService("TweenService")
@@ -190,6 +192,7 @@ local ACCENTS: { [string]: { Color3 } } = {
 	Gifts = { Color3.fromRGB(255, 120, 110), Color3.fromRGB(30, 110, 70) },
 	Eggs = { Color3.fromRGB(255, 180, 220), Color3.fromRGB(110, 150, 230) },
 	Home = { Color3.fromRGB(255, 222, 150), Color3.fromRGB(150, 110, 40) },
+	Codes = { Color3.fromRGB(255, 120, 110), Color3.fromRGB(180, 30, 40) },
 }
 
 -- A key on the dock: a tile of dark smoked glass with a hairline edge and a soft shadow under it;
@@ -1068,6 +1071,10 @@ function QuickDock.start()
 	tile(f, 5, "🛋️", "Suites", nil, QuickDock.openSuites)
 	tile(f, 6, "✉️", "Invite", nil, function()
 		QuickDock.inviteFriend()
+	end)
+	-- (Build 107) Codes: the last key, under the others (always last, after Watch and a holiday key).
+	tile(f, 9, "🎁", "Codes", nil, function()
+		QuickDock.openCodes()
 	end)
 	dock = f
 	tourKey = buildTourKey(COLUMNS * keyWidth() + (COLUMNS - 1) * GAP, if touch then 50 else 52)

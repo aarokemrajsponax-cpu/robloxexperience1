@@ -769,6 +769,17 @@ local defaults = {
 	-- its name and description from README "Roblox badges"), then paste its id here, or set it
 	-- live in Roblox Configs. 0 = not on Roblox yet (still earned in the game). Guests who earned
 	-- one before its id was set are given it the next time they come in.
+	-- (Build 107) Codes: typed in at the Codes key under the dock, once each per guest, while open.
+	-- Times are UTC. The server checks every one; a screen only sends what was typed.
+	Codes = {
+		RICHMAS = {
+			gilt = 50000, -- exactly this much Gilt, outside the day's soft cap
+			from = { 2026, 11, 27, 0 }, -- year, month, day, hour (UTC)
+			to = { 2026, 12, 26, 5 }, -- the end of Christmas Day in New York
+			title = "Merry Richmas",
+		},
+	},
+
 	Badges = {
 		-- The first five (free to make: Roblox lets a game make a few each day at no cost).
 		nights_1 = 3237541883464793, -- Welcome to the Maison: every guest's first evening (made on Roblox with assets/badge-icons/nights_1.png)
