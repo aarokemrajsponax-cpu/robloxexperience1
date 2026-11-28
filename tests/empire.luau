@@ -1,7 +1,7 @@
 --!nocheck
 -- The Empire on the server (server/Empire, Fortune, Herald), under Lune on a fake clock, in the
 -- house's test harness: what a Fortune is made of, the Estate and its cash share, the wealth ranks
--- (told once, the high ones to the house), bought Gilt left out of the boards, the Wealthiest
+-- (told once, the high ones to the house), bought Gilt counted on the boards (Build 108), the Wealthiest
 -- boards (all time, this week, in this house; off them by choice), and the herald (never a flood,
 -- never a guest who chose not to be told about).
 --
@@ -192,7 +192,7 @@ advance(2.5)
 check("a guest who was rich before Fortunes began isn't announced for it", last(old, "rank") == nil and old:GetAttribute("FortuneRank") >= 5 and data(old).empire.rank == old:GetAttribute("FortuneRank"), old:GetAttribute("FortuneRank"))
 
 ---------------------------------------------------------------------------------------------------
--- 5. Bought Gilt and Gems: in your Fortune, off the boards
+-- 5. Bought Gilt and Gems: in your Fortune, and on the boards (Build 108)
 ---------------------------------------------------------------------------------------------------
 local buyer = H.guest("Buyer", 503)
 advance(2.5)
@@ -203,10 +203,20 @@ H.receipt(buyer, 9102, "EMP-GP-1")
 advance(2.5)
 local purse = module("ReplicatedStorage", "Shared", "ProductConfig").byKey.giltPurse1.Reward.Amount
 check("a Gilt purse shows in the buyer's own Fortune", buyer:GetAttribute("Fortune") == bd.gilt + (bd.gems or 0) * F.gemWorth and bd.gilt >= purse, buyer:GetAttribute("Fortune"))
-check("but not in the Fortune they've earned (what the boards rank)", buyer:GetAttribute("FortuneEarned") == buyer:GetAttribute("Fortune") - purse and bd.empire.bought == purse, buyer:GetAttribute("FortuneEarned"))
-bd.gilt -= 400 -- (spent on something with no Gilt price: the bought Gilt still isn't "earned")
+check("...and in the Fortune the boards rank, all of it (tallied as bought, a record only)", buyer:GetAttribute("FortuneEarned") == buyer:GetAttribute("Fortune") and bd.empire.bought == purse, buyer:GetAttribute("FortuneEarned"))
+bd.gilt -= 400 -- (spent on something with no Gilt price)
 advance(2.5)
-check("spending bought Gilt never makes the earned Fortune negative", buyer:GetAttribute("FortuneEarned") == 0 or buyer:GetAttribute("FortuneEarned") == buyer:GetAttribute("Fortune") - purse, buyer:GetAttribute("FortuneEarned"))
+check("spending Gilt lowers the ranked Fortune with it", buyer:GetAttribute("FortuneEarned") == buyer:GetAttribute("Fortune") and buyer:GetAttribute("Fortune") == bd.gilt + (bd.gems or 0) * F.gemWorth, buyer:GetAttribute("FortuneEarned"))
+-- A guest who bought before Build 108: this week's start moves up by what they bought, once, so
+-- this week's gain doesn't jump by old purchases; the all-time number is the whole Fortune.
+do
+	local rec = { gilt = 9000, gems = 0, empire = { estate = 0, bought = 5000, boughtGems = 0, rank = 1, week = 1, weekStart = 4000, hauls = 0 } } :: any
+	local total, ranked = Fortune.of(rec)
+	check("an old record: the ranked Fortune is the whole Fortune", total == 9000 and ranked == 9000, ranked)
+	check("...this week's start moves up by what was bought, once", rec.empire.weekStart == 9000 and rec.empire.allCounts == true, rec.empire.weekStart)
+	Fortune.of(rec)
+	check("...and never again", rec.empire.weekStart == 9000)
+end
 
 ---------------------------------------------------------------------------------------------------
 -- 6. The Wealthiest boards
@@ -274,7 +284,7 @@ do
 	check("...here: who's in this house, richest first, by name", string.find(hereText, "I   Ada", 1, true) ~= nil)
 	check("...nobody who keeps their Fortune to themselves", string.find(hereText, Names.of(old), 1, true) == nil and string.find(allText, Names.of(old), 1, true) == nil)
 	check("...the earned Fortune, the same number the boards rank", string.find(hereText, Rules.short(select(2, Fortune.of(d))), 1, true) ~= nil)
-	check("...and it says so plainly: what's bought with Robux doesn't count", string.find(hereText, "bought with Robux don't count", 1, true) ~= nil)
+	check("...and it says so plainly: what's bought with Robux counts too", string.find(hereText, "bought with Robux count too", 1, true) ~= nil)
 	local gui = hereFace:FindFirstChild("WealthGui")
 	run(WealthBoards.refresh)
 	check("written again only when something on it changes", hereFace:FindFirstChild("WealthGui") == gui)
@@ -282,7 +292,7 @@ do
 	Fortune.bought(d, 50000, 0)
 	d.gilt += 50000
 	run(WealthBoards.refresh)
-	check("Gilt bought with Robux moves nobody up the board", hereFace:FindFirstChild("WealthGui") == gui)
+	check("Gilt bought with Robux moves its buyer up the board", hereFace:FindFirstChild("WealthGui") ~= gui and string.find(texts(hereFace), Rules.short(select(2, Fortune.of(d))), 1, true) ~= nil)
 	d.gilt -= 50000
 	Fortune.page(d).bought = boughtBefore
 	for _, f in { hereFace, allFace } do

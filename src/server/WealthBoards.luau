@@ -1,11 +1,11 @@
 --!strict
 -- (Build 93) The Wealthiest boards in the Foyer, high on the back wall either side of the Grand
 -- Stair, in sight of everyone who comes through the front door:
---   * In this house now: every guest in this server who shows their Fortune, by the Fortune
---     they've earned (server/Fortune.here);
+--   * In this house now: every guest in this server who shows their Fortune, by their Fortune
+--     (server/Fortune.here);
 --   * Of all time: the Wealthiest board every server shares (server/Fortune.top).
--- Earned Fortune only, on both: Gilt and Gems bought with Robux are left out, so the top of
--- either can't be bought, and a guest who turns "Show my Fortune" off is on neither. Written by
+-- The whole Fortune on both (Build 108: Gilt and Gems bought with Robux count), and a guest who
+-- turns "Show my Fortune" off is on neither. Written by
 -- the server for everyone (a SurfaceGui on each board's face), only when what's on it changes.
 
 local CollectionService = game:GetService("CollectionService")
@@ -146,7 +146,7 @@ local function draw(face: BasePart, p: Page)
 		local e = p.entries[i]
 		row(sheet, 3 + i, i, e.name, e.score)
 	end
-	label(sheet, 20, "Fortune earned in play. Gilt and Gems bought with Robux don't count.", 0.04, Brand.Fonts.body, C.dim)
+	label(sheet, 20, "Your whole Fortune: Gilt, Gems, collection, Suite and Estate. Gilt and Gems bought with Robux count too.", 0.04, Brand.Fonts.body, C.dim)
 end
 
 -- Writes every Wealthiest board whose page has changed since it was last written.

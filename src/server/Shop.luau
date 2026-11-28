@@ -572,8 +572,8 @@ local function registerHandlers()
 		local amount = ctx.product.Reward.Amount :: number
 		local player, data = ctx.player, ctx.data
 		data.gilt += amount
-		-- (Bought Gilt is counted on the guest's Fortune page: the Wealthiest boards rank what was
-		-- earned, so they leave it out. server/Fortune.)
+		-- (Bought Gilt is tallied on the guest's Fortune page, a record only: it counts on the
+		-- Wealthiest boards like all Gilt. server/Fortune.)
 		local d = data :: any
 		if type(d.empire) ~= "table" then
 			d.empire = {}

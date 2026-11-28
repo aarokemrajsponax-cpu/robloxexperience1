@@ -7,8 +7,8 @@
 --   xp:    more XP from everything you play.
 -- One of each kind runs at a time. Buying the same one again while it runs adds its time (up to
 -- two hours ahead); a different one of the same kind waits until the first has finished.
--- Boosters never touch a score, the Estate or the Wealthiest boards' ranking: Gilt bought with
--- Robux is still left out of the boards (server/Fortune).
+-- Boosters never touch a score or the Estate; the Gilt they add counts in the Fortune like any
+-- other Gilt (server/Fortune).
 
 local Boosters = {}
 

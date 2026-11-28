@@ -2,8 +2,8 @@
 -- The Fortune screen: the house's aim in one place. Your Fortune and wealth rank (and how far to
 -- the next), what it's made of (Gilt, Gems, your collection, your Suite and wardrobe, your
 -- Estate), and the Wealthiest boards: this house now, this week's gain, and all time. Every figure
--- is the server's (EmpireAsk "fortune"). The boards rank what was earned: Gilt and Gems bought with
--- Robux aren't counted there, and the screen says so.
+-- is the server's (EmpireAsk "fortune"). The boards rank the whole Fortune: Gilt and Gems bought with
+-- Robux count too (Build 108), and the screen says so.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -86,7 +86,7 @@ function FortunePanel.open()
 	boardRows.LayoutOrder = 10
 	boardRows.Parent = content
 	Theme.list(boardRows, 0).VerticalAlignment = Enum.VerticalAlignment.Top
-	local note = Theme.text(content, "The boards rank what you've earned: Gilt and Gems bought with Robux aren't counted.", 12, "body", { LayoutOrder = 11, TextColor3 = C.smoke })
+	local note = Theme.text(content, "The boards rank your whole Fortune: Gilt and Gems bought with Robux count too.", 12, "body", { LayoutOrder = 11, TextColor3 = C.smoke })
 
 	local view: { [string]: any }? = nil
 	local function headline()
@@ -123,7 +123,7 @@ function FortunePanel.open()
 			local amount = tonumber(v.parts and v.parts[p.key]) or 0
 			row(made, i, p.label, Rules.format(amount))
 		end
-		note.Text = if v.shown == false then "You've chosen not to show your Fortune: you're left off the boards (Settings, The Club)." else "The boards rank what you've earned: Gilt and Gems bought with Robux aren't counted."
+		note.Text = if v.shown == false then "You've chosen not to show your Fortune: you're left off the boards (Settings, The Club)." else "The boards rank your whole Fortune: Gilt and Gems bought with Robux count too."
 		fillBoard()
 	end
 	headline()

@@ -307,7 +307,7 @@ local function gemsGrant(ctx: Grants.Context)
 	local amount = ctx.product.Reward.Amount :: number
 	local d = ctx.data :: any
 	d.gems = (if type(d.gems) == "number" then d.gems else 0) + amount
-	-- (Bought Gems are counted on the guest's Fortune page: the Wealthiest boards leave them out.)
+	-- (Bought Gems are tallied on the guest's Fortune page, a record only: they count on the boards.)
 	if type(d.empire) ~= "table" then
 		d.empire = {}
 	end

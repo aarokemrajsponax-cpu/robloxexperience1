@@ -372,7 +372,7 @@ end
 ---------------------------------------------------------------------------------------------------
 export type Board = { id: string, name: string, line: string, glyph: string, colour: Color3 }
 Gala.Boards = {
-	{ id = "fortune", name = "The Wealthiest", line = "Fortune earned", glyph = "👑", colour = rgb(255, 204, 90) },
+	{ id = "fortune", name = "The Wealthiest", line = "The whole Fortune", glyph = "👑", colour = rgb(255, 204, 90) },
 	{ id = "gilt", name = "Gilt in Hand", line = "Gilt held", glyph = "💰", colour = rgb(240, 196, 90) },
 	{ id = "gems", name = "The Gem Keepers", line = "Gems held", glyph = "💎", colour = rgb(130, 200, 255) },
 	{ id = "brainrots", name = "The Brainrot Squad", line = "Brainrots held", glyph = "🐈", colour = rgb(240, 120, 150) },

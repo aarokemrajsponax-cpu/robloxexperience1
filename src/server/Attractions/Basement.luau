@@ -435,7 +435,7 @@ local function reach(ctx: Types.Ctx, player: Player, run: Run, n: number, skippe
 			gilt = ctx.gilt(player, Basement.stageRaw(n), "The Maison Basement")
 		else
 			-- (Build 100) A skipped stage pays its Gilt too. The skip was bought (Gems or Robux),
-			-- so that Gilt is marked as bought and never lifts anyone up the Wealthiest board.
+			-- so that Gilt is tallied as bought (a record; it counts on the boards like all Gilt).
 			gilt = ctx.gilt(player, 15 + 5 * n, "The Maison Basement: a skipped stage")
 			if gilt > 0 then
 				pcall(function()

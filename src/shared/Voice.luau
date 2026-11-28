@@ -312,7 +312,7 @@ Voice.Tour = {
 	{
 		stop = "suite",
 		title = "Becoming the richest guest",
-		line = "Gilt is what you earn and spend. Your Fortune is your Gilt and everything you own together, and the Wealthiest boards rank it (Gilt bought with Robux never counts there). Every reward shows its exact Gilt before you earn it.",
+		line = "Gilt is what you earn and spend. Your Fortune is your Gilt and everything you own together, and the Wealthiest boards rank it (Gilt and Gems bought with Robux count too). Every reward shows its exact Gilt before you earn it.",
 		quick = true,
 	},
 	{
@@ -494,12 +494,12 @@ Voice.Afk = {
 Voice.Short = { gilt = "Insufficient Gilt", gems = "Insufficient Gems", line = "Gotta get more lol" }
 
 Voice.WhatsNew = {
-	build = 107,
+	build = 108,
 	lines = {
 		-- (One short line each: read at a glance.)
+		"Everything counts on the Wealthiest boards now, Robux Gilt and Gems too.",
 		"Christmas is in the house, until 28 December.",
 		"New Codes key: type RICHMAS for 50,000 Gilt (until Christmas).",
-		"Your own Executive Suite: no line, at your own pace.",
 	},
 }
 
@@ -632,7 +632,7 @@ Voice.Guide = {
 		items = {
 			{ title = "Gilt", line = "Earned everywhere: the tables, Steal a Luxe, the Basement, the Grand Ballroom and the races.", how = "Your Gilt is shown at the top left of the screen." },
 			{ title = "Gems", line = "Rarer than Gilt.", how = "Bought with Robux (a Gem pack in the shop), or traded with another guest. No game, race, present or streak pays them: those all pay Gilt. Spend Gems in the Gem Shop and the Cabinet." },
-			{ title = "Your Fortune", line = "Everything you own, added up.", how = "Your Gilt, Gems, collection, Suite and all you've banked in the games. It's under your Gilt: tap it for the Wealthiest boards, which count only what you earned, never what was bought." },
+			{ title = "Your Fortune", line = "Everything you own, added up.", how = "Your Gilt, Gems, collection, Suite and all you've banked in the games. It's under your Gilt: tap it for the Wealthiest boards, which rank all of it, Gilt and Gems bought with Robux included." },
 			{ title = "The Shop", line = "Everything for sale, in one place.", how = "Looks, table styles, lamps and more for Gilt. Some special things are for Robux, always with the price shown first.", key = "Shop", action = "shop" },
 			{ title = "Levels and badges", line = "Everything you do counts.", how = "Sorting, racing and playing earn XP and raise your level. Badges in the Badge Book mark what you've done." },
 			{ place = "tonight", title = "Tonight's table", line = "Optional: once a day, everyone plays the same table.", how = "Press Play and you're seated at a free Salon table: five rounds against tonight's clock, with the same pieces for every guest in every server. One try a day; the best scores go up on the board in the Foyer.", key = "Play", action = "nightly" },

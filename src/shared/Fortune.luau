@@ -7,8 +7,8 @@
 --   * their Estate: everything carried out of Steal a Luxe, won in the Maison Basement, taken from
 --     the Executive's office and won at the Grand Auction. The Estate never goes down.
 -- The server works it out from the saved record (server/Fortune); nothing a screen says counts.
--- The boards rank the Fortune a guest has EARNED: Gilt and Gems bought with Robux are left out of
--- the ranking (they still show in the guest's own Fortune), so nobody buys the top of the board.
+-- The boards rank the whole Fortune: Gilt and Gems bought with Robux count, the same as what was
+-- won in play (Build 108).
 
 local Config = require(script.Parent.Config)
 

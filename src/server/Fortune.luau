@@ -4,8 +4,9 @@
 -- "FortuneEarned", "Estate"), so every screen shows the server's number and never its own.
 --   * Fortune.estate adds to the Estate (a haul banked, a chest won) and pays its cash share in
 --     Gilt through Gilt.pay (the house's boosts and its daily soft cap). The Estate never falls.
---   * The Wealthiest boards rank the Fortune EARNED: Gilt and Gems bought with Robux are taken off
---     (Fortune.bought is told of every purse and Gem pack), so the top of the board can't be bought.
+--   * The Wealthiest boards rank the whole Fortune: Gilt and Gems bought with Robux count, the
+--     same as what was won in play (Build 108). Fortune.bought still keeps a tally of what was
+--     bought (a record only; it takes nothing off).
 --     All-time, and this week's gain (weeks start Monday, UTC). A guest who turns "Show my Fortune"
 --     off in Settings is left off the boards and out of the house's announcements.
 --   * A new wealth rank is told to the guest, and from Config.Fortune.announceFrom to the house.
@@ -35,8 +36,9 @@ Fortune.added = function(_player: Player, _worth: number, _source: string) end
 
 export type Page = {
 	estate: number, -- everything banked from the attractions; never falls
-	bought: number, -- Gilt bought with Robux (left out of the boards)
-	boughtGems: number, -- Gems bought with Robux (left out of the boards)
+	bought: number, -- Gilt bought with Robux (a tally only: it counts on the boards)
+	boughtGems: number, -- Gems bought with Robux (a tally only: it counts on the boards)
+	allCounts: boolean?, -- (Build 108) this week's start moved up once when bought Fortune began to count
 	rank: number, -- the highest wealth rank reached (its number), so each is told once
 	week: number, -- the week the weekly board's start was taken in
 	weekStart: number, -- the Fortune earned as that week began
@@ -70,6 +72,14 @@ function Fortune.page(data: Profiles.Data): Page
 	e.week = if type(e.week) == "number" then e.week else -1
 	e.weekStart = count(e.weekStart)
 	e.hauls = count(e.hauls)
+	-- (Build 108) Bought Gilt and Gems count on the boards now. Before, this week's start was taken
+	-- without them: it's moved up by them once, so this week's gain doesn't jump by past purchases.
+	if e.allCounts ~= true then
+		e.allCounts = true
+		if e.week >= 0 then
+			e.weekStart += e.bought + e.boughtGems * (tonumber(cfg().gemWorth) or 0)
+		end
+	end
 	return e :: Page
 end
 
@@ -110,12 +120,12 @@ function Fortune.parts(data: Profiles.Data): Rules.Parts
 	}
 end
 
--- A guest's Fortune, and the part of it they've earned (what the boards rank).
+-- A guest's Fortune, and the Fortune the boards rank: the same number. Everything counts, earned
+-- in play or bought with Robux (Build 108). (Two values, so every caller keeps working.)
 function Fortune.of(data: Profiles.Data): (number, number)
-	local page = Fortune.page(data)
+	Fortune.page(data)
 	local total = Rules.total(Fortune.parts(data))
-	local earned = math.max(0, total - page.bought - page.boughtGems * (tonumber(cfg().gemWorth) or 0))
-	return total, earned
+	return total, total
 end
 
 local function shown(data: Profiles.Data): boolean
@@ -174,7 +184,7 @@ function Fortune.estate(player: Player, worth: number, source: string, cash: boo
 	return paid
 end
 
--- Gilt or Gems bought with Robux: counted, so the boards can leave them out.
+-- Gilt or Gems bought with Robux: tallied on the Fortune page (a record; it all counts on the boards).
 function Fortune.bought(data: Profiles.Data, gilt: number, gems: number)
 	local page = Fortune.page(data)
 	page.bought += count(gilt)

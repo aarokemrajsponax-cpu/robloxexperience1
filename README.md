@@ -377,6 +377,15 @@ a Nightly attempt or a Mythic's odds.
 - **The launch kit**: page text, icon, thumbnails and the gameplay video's shot list are in
   [`LAUNCH.md`](LAUNCH.md).
 
+## Build 108 — everything counts on the Wealthiest boards
+
+- **Gilt and Gems bought with Robux count** on the Wealthiest boards (in this house, of all time and
+  this week), the same as what's won in play: the boards rank the whole Fortune. The boards, the
+  Fortune screen and the Concierge's answers say so. `Fortune.bought` still keeps a tally of what
+  was bought, as a record only. For a guest who bought before, this week's start is moved up once
+  by what they bought, so this week's board doesn't jump by old purchases; the all-time board takes
+  their whole Fortune the next time they play.
+
 ## Build 107 — Christmas, and the Codes key
 
 - **Christmas** decorations from the day after Thanksgiving to 28 December (`HolidayGames`
@@ -591,7 +600,7 @@ a Nightly attempt or a Mythic's odds.
   a booster's id only; price, strength and time are the server's. One of each kind at a time; the
   same one again adds its time, two hours ahead at most. Kept in the guest's record, shown as chips
   with their real time left. Gilt boosts still sit under the house's cap on every boost together;
-  the Wealthiest boards still leave out Gilt bought with Robux.
+  on the Wealthiest boards all Gilt counts (Build 108).
 - **The Brainrot Market, for Gilt** (`shared/Boutique.market`): four brainrots a day, the same in
   every server (one Common or Uncommon, one Rare, one Epic, one Legendary), the exact one shown,
   at a fixed price by rarity (3,000 to 60,000), each once a day. Mythics and Secrets are never sold.
@@ -739,8 +748,8 @@ and the gaps built:
 - **The Wealthiest boards in the Foyer** (`World/WealthWall`, `server/WealthBoards`). Two tall
   boards high on the back wall, either side of the Grand Stair, over the Vault's door and the
   Boutique's: in sight of the front door. *In this house now* ranks the guests in this server;
-  *Of all time* is the board every server shares. Both rank earned Fortune only (Gilt and Gems
-  bought with Robux don't count, and the boards say so), and a guest who turns "Show my Fortune"
+  *Of all time* is the board every server shares. Both rank the whole Fortune (since Build 108,
+  Gilt and Gems bought with Robux count too, and the boards say so), and a guest who turns "Show my Fortune"
   off is on neither. Built at the grown size after the Grand Scale, in black lacquer and brass with
   their own picture lights; written by the server only when a name or a number on them changes.
   (The Fortune screen's *here* list now comes from the same place, `Fortune.here`.)
