@@ -621,6 +621,18 @@ function Foyer.build(parent: Instance): Model
 	spawn.CanQuery = false
 	spawn.Duration = 0
 	spawn.Parent = root
+	-- (Build 109) A round gold carpet where guests appear: a brass rim, gold velvet, and a small
+	-- bright medallion at its heart. Flat on the marble, nothing to trip on.
+	do
+		local at = Vector3.new(F.spawn.Position.X, FLOOR, F.spawn.Position.Z)
+		local flat = CFrame.Angles(0, 0, math.rad(90))
+		local soft = { collide = false, query = false, shadow = false }
+		Kit.cylinder(root, "SpawnCarpetRim", 0.08, 10, CFrame.new(at + Vector3.new(0, 0.04, 0)) * flat, { color = Color3.fromRGB(176, 128, 46), material = Enum.Material.Metal }, soft)
+		Kit.cylinder(root, "SpawnCarpet", 0.12, 9.2, CFrame.new(at + Vector3.new(0, 0.06, 0)) * flat, { color = Color3.fromRGB(226, 178, 72), material = Enum.Material.Fabric }, soft)
+		Kit.cylinder(root, "SpawnCarpetRing", 0.14, 6.4, CFrame.new(at + Vector3.new(0, 0.07, 0)) * flat, { color = Color3.fromRGB(176, 128, 46), material = Enum.Material.Fabric }, soft)
+		Kit.cylinder(root, "SpawnCarpetInner", 0.16, 6, CFrame.new(at + Vector3.new(0, 0.08, 0)) * flat, { color = Color3.fromRGB(236, 192, 88), material = Enum.Material.Fabric }, soft)
+		Kit.cylinder(root, "SpawnCarpetHeart", 0.18, 1.6, CFrame.new(at + Vector3.new(0, 0.09, 0)) * flat, { color = Color3.fromRGB(255, 222, 130), material = Enum.Material.Metal }, soft)
+	end
 	local decal = spawn:FindFirstChildOfClass("Decal")
 	if decal then
 		decal:Destroy()
